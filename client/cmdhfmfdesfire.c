@@ -58,8 +58,7 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     //DES_set_key((DES_cblock *)key2,&ks2);
 
     //Auth1
-    PacketCommandOLD c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_DES_AUTH1, blockNo, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -94,11 +93,9 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     PrintAndLogEx(NORMAL, "b2:%s", sprint_hex(b2, 8));
 
     //Auth2
-    PacketCommandOLD d = {CMD_MIFARE_DES_AUTH2, {cuid}};
     memcpy(reply, b1, 8);
     memcpy(reply + 8, b2, 8);
-    memcpy(d.d.asBytes, reply, 16);
-    SendCommand(&d);
+    SendCommandOLD(CMD_MIFARE_DES_AUTH2, cuid, 0, 0, reply, sizeof(reply));
 
     PacketResponseNG respb;
     if (WaitForResponseTimeout(CMD_ACK, &respb, 1500)) {
@@ -158,8 +155,7 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     AES_set_decrypt_key(key, 128, &key_d);
 
     //Auth1
-    PacketCommandOLD c = {CMD_MIFARE_DES_AUTH1, {blockNo}};
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_DES_AUTH1, blockNo, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -201,11 +197,9 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     PrintAndLogEx(NORMAL, "b2:%s", sprint_hex(b2, 16));
 
     //Auth2
-    PacketCommandOLD d = {CMD_MIFARE_DES_AUTH2, {cuid}};
     memcpy(reply, b1, 16);
     memcpy(reply + 16, b2, 16);
-    memcpy(d.d.asBytes, reply, 32);
-    SendCommand(&d);
+    SendCommandOLD(CMD_MIFARE_DES_AUTH2, cuid, 0, 0, reply, sizeof(reply));
 
     PacketResponseNG respb;
     if (WaitForResponseTimeout(CMD_ACK, &respb, 1500)) {

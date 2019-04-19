@@ -9,9 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfmfdes.h"
 
-uint8_t CMDPOS = 0;
-uint8_t LENPOS = 1;
-
 uint8_t key_zero_data[16] = { 0x00 };
 uint8_t key_ones_data[16] = { 0x01 };
 uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
@@ -51,10 +48,10 @@ static int CmdHF14ADesWb(const char *Cmd) {
         PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s", blockNo, keyType, sprint_hex(key, 6));
         PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
 
-      PacketCommandOLD c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}, {{0}}};
-        memcpy(c.d.asBytes, key, 6);
-        memcpy(c.d.asBytes + 10, bldata, 16);
-      SendCommand(&c);
+        uint8_t data[26];
+        memcpy(data, key, 6);
+        memcpy(data + 10, bldata, 16);
+        SendCommandOLD(CMD_MIFARE_WRITEBL, blockNo, keyType, 0, data, sizeof(data));
 
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -93,9 +90,7 @@ static int CmdHF14ADesRb(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
 
-    PacketCommandOLD c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}, {{0}}};
-    memcpy(c.d.asBytes, key, 6);
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_READBL, blockNo, keyType, 0, key, 6);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -116,8 +111,7 @@ static int CmdHF14ADesRb(const char *Cmd) {
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
-    PacketCommandOLD c = {CMD_MIFARE_DESFIRE_INFO, {0, 0, 0}, {{0}}};
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_DESFIRE_INFO, 0, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -168,11 +162,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     getKeySettings(NULL);
 
     // Free memory on card
-    c.cmd = CMD_MIFARE_DESFIRE;
-    c.arg[0] = (INIT | DISCONNECT);
-    c.arg[1] = 0x01;
-    c.d.asBytes[0] = GET_FREE_MEMORY;
-    SendCommand(&c);
+    uint8_t data[1] = {GET_FREE_MEMORY};
+    SendCommandOLD(CMD_MIFARE_DESFIRE, (INIT | DISCONNECT), 0x01, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         return 0;
 
@@ -255,8 +246,6 @@ void getKeySettings(uint8_t *aid) {
     char messStr[512] = {0x00};
     const char *str = messStr;
     uint8_t isOK = 0;
-    uint32_t options;
-    PacketCommandOLD c = {CMD_MIFARE_DESFIRE, {0, 0, 0}, {{0}}};
     PacketResponseNG resp;
 
     //memset(messStr, 0x00, 512);
@@ -264,10 +253,10 @@ void getKeySettings(uint8_t *aid) {
     if (aid == NULL) {
         PrintAndLogEx(NORMAL, " CMK - PICC, Card Master Key settings ");
         PrintAndLogEx(NORMAL, "");
-        c.arg[CMDPOS] = (INIT | DISCONNECT);
-        c.arg[LENPOS] =  0x01;
-        c.d.asBytes[0] = GET_KEY_SETTINGS;  // 0x45
-        SendCommand(&c);
+        {
+            uint8_t data[1] = {GET_KEY_SETTINGS};  // 0x45
+            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.oldarg[0] & 0xff;
         if (!isOK) {
@@ -283,11 +272,10 @@ void getKeySettings(uint8_t *aid) {
         PrintAndLogEx(NORMAL, "   [0x02] Directory list access with CMK : %s", str);
         str = (resp.data.asBytes[3] & (1 << 0)) ? "YES" : "NO";
         PrintAndLogEx(NORMAL, "   [0x01] CMK is changeable              : %s", str);
-
-        c.arg[LENPOS] = 0x02; //LEN
-        c.d.asBytes[0] = GET_KEY_VERSION; //0x64
-        c.d.asBytes[1] = 0x00;
-        SendCommand(&c);
+        {
+            uint8_t data[2] = {GET_KEY_VERSION, 0};  // 0x64
+            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) { return; }
         isOK  = resp.oldarg[0] & 0xff;
         if (!isOK) {
@@ -299,22 +287,26 @@ void getKeySettings(uint8_t *aid) {
         PrintAndLogEx(NORMAL, "   Master key Version       : %d (0x%02x)", resp.data.asBytes[3], resp.data.asBytes[3]);
         PrintAndLogEx(NORMAL, "   ----------------------------------------------------------");
 
-        c.arg[LENPOS] = 0x02; //LEN
-        c.d.asBytes[0] = AUTHENTICATE; //0x0A
-        c.d.asBytes[1] = 0x00; // KEY 0
-        SendCommand(&c);
+        {
+            uint8_t data[2] = {AUTHENTICATE, 0};  // 0x0A, KEY 0
+            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0x0A] Authenticate      : %s", (isOK == 0xAE) ? "NO" : "YES");
 
-        c.d.asBytes[0] = AUTHENTICATE_ISO; //0x1A
-        SendCommand(&c);
+        {
+            uint8_t data[2] = {AUTHENTICATE_ISO, 0};  // 0x1A, KEY 0
+            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0x1A] Authenticate ISO  : %s", (isOK == 0xAE) ? "NO" : "YES");
 
-        c.d.asBytes[0] = AUTHENTICATE_AES; //0xAA
-        SendCommand(&c);
+        {
+            uint8_t data[2] = {AUTHENTICATE_AES, 0};  // 0xAA, KEY 0
+            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0xAA] Authenticate AES  : %s", (isOK == 0xAE) ? "NO" : "YES");
@@ -325,12 +317,11 @@ void getKeySettings(uint8_t *aid) {
         PrintAndLogEx(NORMAL, " AMK - Application Master Key settings");
 
         // SELECT AID
-        c.arg[0] = (INIT | CLEARTRACE);
-        c.arg[LENPOS] = 0x04;
-        c.d.asBytes[0] = SELECT_APPLICATION;  // 0x5a
-        memcpy(c.d.asBytes + 1, aid, 3);
-        SendCommand(&c);
-
+        {
+            uint8_t data[4] = {SELECT_APPLICATION};  // 0x5a
+            memcpy(data + 1, aid, 3);
+            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | CLEARTRACE, sizeof(data), 0, data, sizeof(data));
+        }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
             return;
@@ -342,11 +333,10 @@ void getKeySettings(uint8_t *aid) {
         }
 
         // KEY SETTINGS
-        options = NONE;
-        c.arg[0] = options;
-        c.arg[LENPOS] = 0x01;
-        c.d.asBytes[0] = GET_KEY_SETTINGS; // 0x45
-        SendCommand(&c);
+        {
+            uint8_t data[1] = {GET_KEY_SETTINGS};  // 0x45
+            SendCommandOLD(CMD_MIFARE_DESFIRE, NONE, sizeof(data), 0, data, sizeof(data));
+        }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             return;
         }
@@ -385,11 +375,10 @@ void getKeySettings(uint8_t *aid) {
         }
 
         // KEY VERSION  - AMK
-        c.arg[0] = NONE;
-        c.arg[LENPOS] = 0x02;
-        c.d.asBytes[0] = GET_KEY_VERSION; //0x64
-        c.d.asBytes[1] = 0x00;
-        SendCommand(&c);
+        {
+            uint8_t data[2] = {GET_KEY_VERSION, 0};  // 0x64
+            SendCommandOLD(CMD_MIFARE_DESFIRE, NONE, sizeof(data), 0, data, sizeof(data));
+        }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
             return;
@@ -425,12 +414,10 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
     uint8_t isOK = 0x00;
     uint8_t aid[3];
-    uint32_t options = (INIT | DISCONNECT);
-
-    PacketCommandOLD c = {CMD_MIFARE_DESFIRE, {options, 0x01 }, {{0}}};
-    c.d.asBytes[0] = GET_APPLICATION_IDS;  //0x6a
-
-    SendCommand(&c);
+    {
+        uint8_t data[1] = {GET_APPLICATION_IDS}; //0x6a
+        SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+    }
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -461,13 +448,11 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         getKeySettings(aid);
 
         // Select Application
-        c.arg[CMDPOS] = INIT;
-        c.arg[LENPOS] = 0x04;
-        c.d.asBytes[0] = SELECT_APPLICATION;  // 0x5a
-        c.d.asBytes[1] = resp.data.asBytes[i];
-        c.d.asBytes[2] = resp.data.asBytes[i + 1];
-        c.d.asBytes[3] = resp.data.asBytes[i + 2];
-        SendCommand(&c);
+        {
+            uint8_t data[4] = {SELECT_APPLICATION};  // 0x5a
+            memcpy(data + 1, &resp.data.asBytes[i], 3);
+            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT, sizeof(data), 0, data, sizeof(data));
+        }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respAid, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
@@ -480,10 +465,10 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         }
 
         // Get File IDs
-        c.arg[CMDPOS] = NONE;
-        c.arg[LENPOS] = 0x01;
-        c.d.asBytes[0] = GET_FILE_IDS; // 0x6f
-        SendCommand(&c);
+        {
+            uint8_t data[1] = {GET_FILE_IDS};  // 0x6f
+            SendCommandOLD(CMD_MIFARE_DESFIRE, NONE, sizeof(data), 0, data, sizeof(data));
+        }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
@@ -501,10 +486,10 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         }
 
         // Get ISO File IDs
-        c.arg[CMDPOS] = DISCONNECT;
-        c.arg[LENPOS] = 0x01;
-        c.d.asBytes[0] = GET_ISOFILE_IDS; // 0x61
-        SendCommand(&c);
+        {
+            uint8_t data[1] = {GET_ISOFILE_IDS};  // 0x61
+            SendCommandOLD(CMD_MIFARE_DESFIRE, DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
@@ -610,13 +595,11 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
         return 1;
     }
-    // algo, nyckell�ngd,
-    PacketCommandOLD c = {CMD_MIFARE_DESFIRE_AUTH1, { cmdAuthMode, cmdAuthAlgo, cmdKeyNo }, {{0}}};
-
-    c.d.asBytes[0] = keylength;
-    memcpy(c.d.asBytes + 1, key, keylength);
+    // algo, keylength,
+    uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
+    memcpy(data + 1, key, keylength);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength+1);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {

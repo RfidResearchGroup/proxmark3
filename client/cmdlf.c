@@ -144,28 +144,33 @@ static int usage_lf_find(void) {
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
 
-    PacketCommandOLD c = {CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, {0, 0, 0}, {{0}}};
     bool errors = false;
 
+    uint32_t arg0 = 0;
+    uint32_t arg1 = 0;
+    uint32_t arg2 = 0;
+    uint8_t data[USB_CMD_DATA_SIZE];
+    uint16_t datalen = 0;
+    
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_lf_cmdread();
             case 'c':
-                param_getstr(Cmd, cmdp + 1, (char *)&c.d.asBytes, sizeof(c.d.asBytes));
+                datalen = param_getstr(Cmd, cmdp + 1, (char *)&data, sizeof(data));
                 cmdp += 2;
                 break;
             case 'd':
-                c.arg[0] = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                arg0 = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'z':
-                c.arg[1] = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+                arg1 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
                 break;
             case 'o':
-                c.arg[2] = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+                arg2 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
                 break;
             default:
@@ -179,7 +184,7 @@ int CmdLFCommandRead(const char *Cmd) {
     if (errors || cmdp == 0)  return usage_lf_cmdread();
 
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, arg0, arg1, arg2, data, datalen);
 
     WaitForResponse(CMD_ACK, NULL);
     getSamples(0, true);
@@ -322,18 +327,15 @@ int CmdLFSetConfig(const char *Cmd) {
 
     sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
 
-    PacketCommandOLD c = {CMD_SET_LF_SAMPLING_CONFIG, {0, 0, 0}, {{0}}};
-    memcpy(c.d.asBytes, &config, sizeof(sample_config));
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_SET_LF_SAMPLING_CONFIG, 0, 0, 0, &config, sizeof(sample_config));
     return 0;
 }
 
 bool lf_read(bool silent, uint32_t samples) {
     if (IsOffline()) return false;
-    PacketCommandOLD c = {CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, {silent, samples, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, silent, samples, 0, NULL, 0);
 
     PacketResponseNG resp;
     if (g_lf_threshold_set) {
@@ -387,9 +389,8 @@ int CmdLFSniff(const char *Cmd) {
     uint8_t cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_sniff();
 
-    PacketCommandOLD c = {CMD_LF_SNIFF_RAW_ADC_SAMPLES, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_LF_SNIFF_RAW_ADC_SAMPLES, 0, 0, 0, NULL, 0);
     WaitForResponse(CMD_ACK, NULL);
     getSamples(0, false);
     return 0;
@@ -420,13 +421,8 @@ int CmdLFSim(const char *Cmd) {
 
     //can send only 512 bits at a time (1 byte sent per bit...)
     for (uint16_t i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
-        PacketCommandOLD c = {CMD_UPLOAD_SIM_SAMPLES_125K, {i, FPGA_LF, 0}, {{0}}};
-
-        for (uint16_t j = 0; j < USB_CMD_DATA_SIZE; j++)
-            c.d.asBytes[j] = GraphBuffer[i + j];
-
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_UPLOAD_SIM_SAMPLES_125K, i, FPGA_LF, 0, &GraphBuffer[i], USB_CMD_DATA_SIZE);
         WaitForResponse(CMD_ACK, NULL);
         printf(".");
         fflush(stdout);
@@ -434,9 +430,8 @@ int CmdLFSim(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "Simulating");
 
-    PacketCommandOLD c = {CMD_SIMULATE_TAG_125K, {GraphTraceLen, gap, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_SIMULATE_TAG_125K, GraphTraceLen, gap, 0, NULL, 0);
     return 0;
 }
 
@@ -515,19 +510,13 @@ int CmdLFfskSim(const char *Cmd) {
     if (fcHigh == 0) fcHigh = 10;
     if (fcLow == 0) fcLow = 8;
 
-    uint16_t arg1, arg2;
-    arg1 = fcHigh << 8 | fcLow;
-    arg2 = (separator << 8) | clk;
     size_t size = DemodBufferLen;
     if (size > USB_CMD_DATA_SIZE) {
         PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
         size = USB_CMD_DATA_SIZE;
     }
-    PacketCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-
-    memcpy(c.d.asBytes, DemodBuffer, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_FSK_SIM_TAG, fcHigh << 8 | fcLow, (separator << 8) | clk, size, DemodBuffer, size);
 
     setClockGrid(clk, 0);
     return 0;
@@ -607,22 +596,14 @@ int CmdLFaskSim(const char *Cmd) {
     if (encoding == 0) clk /= 2; //askraw needs to double the clock speed
 
     size_t size = DemodBufferLen;
-
     if (size > USB_CMD_DATA_SIZE) {
         PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
         size = USB_CMD_DATA_SIZE;
     }
 
     PrintAndLogEx(NORMAL, "preparing to sim ask data: %d bits", size);
-
-    uint16_t arg1, arg2;
-    arg1 = clk << 8 | encoding;
-    arg2 = invert << 8 | separator;
-
-    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, DemodBuffer, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, size, DemodBuffer, size);
     return 0;
 }
 
@@ -718,19 +699,14 @@ int CmdLFpskSim(const char *Cmd) {
             PrintAndLogEx(NORMAL, "Sorry, PSK3 not yet available");
         }
     }
-    uint16_t arg1, arg2;
-    arg1 = clk << 8 | carrier;
-    arg2 = invert;
     size_t size = DemodBufferLen;
     if (size > USB_CMD_DATA_SIZE) {
         PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
         size = USB_CMD_DATA_SIZE;
     }
-    PacketCommandOLD c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
     PrintAndLogEx(DEBUG, "DEBUG: Sending DemodBuffer Length: %d", size);
-    memcpy(c.d.asBytes, DemodBuffer, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_PSK_SIM_TAG, clk << 8 | carrier, invert, size, DemodBuffer, size);
     return 0;
 }
 
@@ -739,8 +715,7 @@ int CmdLFSimBidir(const char *Cmd) {
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
-    PacketCommandOLD c = {CMD_LF_SIMULATE_BIDIR, {47, 384, 0}, {{0}}};
-    SendCommand(&c);
+    SendCommandOLD(CMD_LF_SIMULATE_BIDIR, 47, 384, 0, NULL, 0);
     return 0;
 }
 

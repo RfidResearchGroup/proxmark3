@@ -66,9 +66,8 @@ static int usage_lf_io_clone(void) {
 static int CmdIOProxRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_read();
     int findone = (Cmd[0] == '1') ? 1 : 0;
-    PacketCommandOLD c = {CMD_IO_DEMOD_FSK, {findone, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_IO_DEMOD_FSK, findone, 0, 0, NULL, 0);
     return 0;
 }
 */
@@ -181,8 +180,7 @@ static int CmdIOProxSim(const char *Cmd) {
     uint16_t cn = 0;
     uint8_t version = 0, fc = 0;
     uint8_t bits[64];
-    size_t size = sizeof(bits);
-    memset(bits, 0x00, size);
+    memset(bits, 0x00, sizeof(bits));
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_sim();
@@ -200,9 +198,6 @@ static int CmdIOProxSim(const char *Cmd) {
 
     // clock 64, FSK2a fcHIGH 10 | fcLOW 8
     uint8_t clk = 64, invert = 1, high = 10, low = 8;
-    uint16_t arg1, arg2;
-    arg1 = high << 8 | low;
-    arg2 = invert << 8 | clk;
 
     PrintAndLogEx(SUCCESS, "Simulating IOProx version: %u FC: %u; CN: %u\n", version, fc, cn);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
@@ -215,10 +210,8 @@ static int CmdIOProxSim(const char *Cmd) {
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Invert and clk setting
     // size --- 64 bits == 8 bytes
-    PacketCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, bits, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_FSK_SIM_TAG, high << 8 | low, invert << 8 | clk, sizeof(bits), bits, sizeof(bits));
     return 0;
 }
 
@@ -258,10 +251,8 @@ static int CmdIOProxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
     print_blocks(blocks, 3);
 
-    //PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}, {{0}}};
-    PacketCommandOLD c = {CMD_IO_CLONE_TAG, {blocks[1], blocks[2], 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_IO_CLONE_TAG, blocks[1], blocks[2], 0, NULL, 0);
     return 0;
 }
 

@@ -121,13 +121,10 @@ static int CmdPrescoClone(const char *Cmd) {
     print_blocks(blocks, 5);
 
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 5; i++) {
-        c.arg[0] = blocks[i];
-        c.arg[1] = i;
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
@@ -145,17 +142,12 @@ static int CmdPrescoSim(const char *Cmd) {
     if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) return usage_lf_presco_sim();
 
     uint8_t clk = 32, encoding = 1, separator = 1, invert = 0;
-    uint16_t arg1, arg2;
-    size_t size = 128;
-    arg1 = clk << 8 | encoding;
-    arg2 = invert << 8 | separator;
 
     PrintAndLogEx(SUCCESS, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X", sitecode, usercode, fullcode);
 
-    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    getPrescoBits(fullcode, c.d.asBytes);
-    clearCommandBuffer();
-    SendCommand(&c);
+    uint8_t data[128];
+    getPrescoBits(fullcode, data);
+    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
     return 0;
 }
 

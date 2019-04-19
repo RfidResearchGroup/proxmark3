@@ -275,27 +275,26 @@ out:
 // read a TI tag and return its ID
 static int CmdTIRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    PacketCommandOLD c = {CMD_READ_TI_TYPE};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_READ_TI_TYPE, 0, 0, 0, NULL, 0);
     return 0;
 }
 
 // write new data to a r/w TI tag
 static int CmdTIWrite(const char *Cmd) {
     int res = 0;
-    PacketCommandOLD c = {CMD_WRITE_TI_TYPE};
-    res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &c.arg[0], &c.arg[1], &c.arg[2]);
+    uint64_t arg0, arg1, arg2;
+    res = sscanf(Cmd, "%012" SCNx64 " %012" SCNx64 " %012" SCNx64 "", &arg0, &arg1, &arg2);
 
     if (res == 2)
-        c.arg[2] = 0;
+        arg2 = 0;
 
     if (res < 2) {
         PrintAndLogEx(WARNING, "Please specify the data as two hex strings, optionally the CRC as a third");
         return 1;
     }
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_WRITE_TI_TYPE, arg0, arg1, arg2, NULL, 0);
     return 0;
 }
 

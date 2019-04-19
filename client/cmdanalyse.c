@@ -512,10 +512,8 @@ static int CmdAnalyseA(const char *Cmd) {
     if (errors || cmdp == 0) return usage_analyse_a();
 
 
-    PacketCommandOLD c = {CMD_FPC_SEND, {0, 0, 0}, {{0}}};
-    memcpy(c.d.asBytes, data, USB_CMD_DATA_SIZE);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_FPC_SEND, 0, 0, 0, data, USB_CMD_DATA_SIZE);
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {

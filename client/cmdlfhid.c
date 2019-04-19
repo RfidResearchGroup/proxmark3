@@ -93,10 +93,9 @@ static int usage_lf_hid_brute(void) {
 
 // sending three times.  Didn't seem to break the previous sim?
 static bool sendPing(void) {
-    PacketCommandOLD ping = {CMD_PING, {1, 2, 3}, {{0}}};
-    SendCommand(&ping);
-    SendCommand(&ping);
-    SendCommand(&ping);
+    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
@@ -111,11 +110,8 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
 
     calcWiegand(fmtlen, fc, cn, bits, 0);
 
-    uint64_t arg1 = bytebits_to_byte(bits, 32);
-    uint64_t arg2 = bytebits_to_byte(bits + 32, 32);
-    PacketCommandOLD c = {CMD_HID_SIM_TAG, {arg1, arg2, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_HID_SIM_TAG, bytebits_to_byte(bits, 32), bytebits_to_byte(bits + 32, 32), 0, NULL, 0);
 
     msleep(delay);
     sendPing();
@@ -242,9 +238,8 @@ static int CmdHIDRead_device(const char *Cmd) {
 
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_hid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
-    PacketCommandOLD c = {CMD_HID_DEMOD_FSK, {findone, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_HID_DEMOD_FSK, findone, 0, 0, NULL, 0);
     return 0;
 }
 */
@@ -263,9 +258,8 @@ static int CmdHIDSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating HID tag with ID %x%08x", hi, lo);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
-    PacketCommandOLD c = {CMD_HID_SIM_TAG, {hi, lo, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_HID_SIM_TAG, hi, lo, 0, NULL, 0);
     return 0;
 }
 
@@ -273,11 +267,10 @@ static int CmdHIDClone(const char *Cmd) {
 
     uint32_t hi2 = 0, hi = 0, lo = 0;
     uint32_t n = 0, i = 0;
-    PacketCommandOLD c = {CMD_HID_CLONE_TAG, {0, 0, 0}, {{0}}};
 
     uint8_t ctmp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h') return usage_lf_hid_clone();
-
+    uint8_t longid[1] = {0};
     if (strchr(Cmd, 'l') != 0) {
         while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
             hi2 = (hi2 << 4) | (hi >> 28);
@@ -287,7 +280,7 @@ static int CmdHIDClone(const char *Cmd) {
 
         PrintAndLogEx(INFO, "Preparing to clone HID tag with long ID %x%08x%08x", hi2, hi, lo);
 
-        c.d.asBytes[0] = 1;
+        longid[0] = 1;
     } else {
         while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
             hi = (hi << 4) | (lo >> 28);
@@ -295,15 +288,10 @@ static int CmdHIDClone(const char *Cmd) {
         }
         PrintAndLogEx(INFO, "Preparing to clone HID tag with ID %x%08x", hi, lo);
         hi2 = 0;
-        c.d.asBytes[0] = 0;
     }
 
-    c.arg[0] = hi2;
-    c.arg[1] = hi;
-    c.arg[2] = lo;
-
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_HID_CLONE_TAG, hi2, hi, lo, longid, sizeof(longid));
     return 0;
 }
 

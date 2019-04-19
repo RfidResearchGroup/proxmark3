@@ -260,9 +260,8 @@ static int CmdLFHitagSniff(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_sniff();
 
-    PacketCommandOLD c = {CMD_SNIFF_HITAG, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_SNIFF_HITAG, 0, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -277,8 +276,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     int res = 0;
     char filename[FILE_PATH_SIZE] = { 0x00 };
 
-    PacketCommandOLD c = {CMD_SIMULATE_HITAG, {0, 0, 0}, {{0}}};
-
+    uint16_t cmd = CMD_SIMULATE_HITAG;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -289,7 +287,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 's':
-                c.cmd = CMD_SIMULATE_HITAG_S;
+                cmd = CMD_SIMULATE_HITAG_S;
                 maxdatalen = 4 * 64;
                 cmdp++;
                 break;
@@ -337,12 +335,12 @@ static int CmdLFHitagSim(const char *Cmd) {
         return usage_hitag_sim();
     }
 
-    c.arg[0] = (uint32_t)tag_mem_supplied;
-    if (tag_mem_supplied) {
-        memcpy(c.d.asBytes, data, datalen);
-    }
     clearCommandBuffer();
-    SendCommand(&c);
+    if (tag_mem_supplied) {
+        SendCommandOLD(cmd, 1, 0, 0, data, datalen);
+    } else {
+        SendCommandOLD(cmd, 0, 0, 0, NULL, 0);
+    }
 
     free(data);
     return 0;
@@ -458,9 +456,8 @@ static void printHitagConfiguration(uint8_t config) {
 
 static bool getHitagUid(uint32_t *uid) {
 
-    PacketCommandOLD c = {CMD_READER_HITAG, {RHT2F_UID_ONLY, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_READER_HITAG, RHT2F_UID_ONLY, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -513,33 +510,33 @@ static int CmdLFHitagInfo(const char *Cmd) {
 //
 static int CmdLFHitagReader(const char *Cmd) {
 
-    PacketCommandOLD c = {CMD_READER_HITAG, {0, 0, 0}, {{0}}};
-    hitag_data *htd = (hitag_data *)c.d.asBytes;
+    uint16_t cmd = CMD_READER_HITAG;
+    hitag_data htd;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
     switch (htf) {
         case RHTSF_CHALLENGE: {
-            c.cmd = CMD_READ_HITAG_S;
-            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
-            num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr + 4);
+            cmd = CMD_READ_HITAG_S;
+            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd.auth.NrAr);
+            num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd.auth.NrAr + 4);
             break;
         }
         case RHTSF_KEY: {
-            c.cmd = CMD_READ_HITAG_S;
-            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
+            cmd = CMD_READ_HITAG_S;
+            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd.crypto.key);
             break;
         }
         case RHT2F_PASSWORD: {
-            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->pwd.password);
+            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd.pwd.password);
             break;
         }
         case RHT2F_AUTHENTICATE: {
-            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd->auth.NrAr);
-            num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd->auth.NrAr + 4);
+            num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd.auth.NrAr);
+            num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd.auth.NrAr + 4);
             break;
         }
         case RHT2F_CRYPTO: {
-            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
+            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd.crypto.key);
             break;
         }
         case RHT2F_TEST_AUTH_ATTEMPTS: {
@@ -556,9 +553,8 @@ static int CmdLFHitagReader(const char *Cmd) {
             return usage_hitag_reader();
     }
 
-    c.arg[0] = htf;
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -595,7 +591,6 @@ static int CmdLFHitagReader(const char *Cmd) {
 
 static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
-    PacketCommandOLD c = { CMD_TEST_HITAGS_TRACES, {0, 0, 0}, {{0}}};
     char filename[FILE_PATH_SIZE] = { 0x00 };
     size_t datalen = 0;
     int res = 0;
@@ -610,14 +605,13 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
                 free(data);
                 return usage_hitag_checkchallenges();
             case 'f':
+                //file with all the challenges to try
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 res = loadFile(filename, "cc", data, 8 * 60, &datalen);
                 if (res > 0) {
                     errors = true;
                     break;
                 }
-
-                memcpy(c.d.asBytes, data, datalen);
                 file_given = true;
                 cmdp += 2;
                 break;
@@ -634,32 +628,33 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
         return usage_hitag_checkchallenges();
     }
 
-    //file with all the challenges to try
-    c.arg[0] = (uint32_t)file_given;
     clearCommandBuffer();
-    SendCommand(&c);
+    if (file_given)
+        SendCommandOLD(CMD_TEST_HITAGS_TRACES, 1, 0, 0, data, datalen);
+    else
+        SendCommandOLD(CMD_TEST_HITAGS_TRACES, 0, 0, 0, NULL, 0);
 
     free(data);
     return 0;
 }
 
 static int CmdLFHitagWriter(const char *Cmd) {
-    PacketCommandOLD c = { CMD_WR_HITAG_S, {0, 0, 0}, {{0}}};
-    hitag_data *htd = (hitag_data *)c.d.asBytes;
+    hitag_data htd;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
+    uint32_t arg2 = 0;
     switch (htf) {
         case WHTSF_CHALLENGE: {
-            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 8, htd->auth.NrAr);
-            c.arg[2] = param_get32ex(Cmd, 2, 0, 10);
-            num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd->auth.data);
+            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 8, htd.auth.NrAr);
+            arg2 = param_get32ex(Cmd, 2, 0, 10);
+            num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.auth.data);
             break;
         }
         case WHTSF_KEY:
         case WHT2F_CRYPTO: {
-            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd->crypto.key);
-            c.arg[2] = param_get32ex(Cmd, 2, 0, 10);
-            num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd->crypto.data);
+            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd.crypto.key);
+            arg2 = param_get32ex(Cmd, 2, 0, 10);
+            num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.crypto.data);
             break;
         }
         case RHTSF_CHALLENGE:
@@ -672,10 +667,8 @@ static int CmdLFHitagWriter(const char *Cmd) {
             return usage_hitag_writer();
     }
 
-    c.arg[0] = htf;
-
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_WR_HITAG_S, htf, 0, arg2, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");

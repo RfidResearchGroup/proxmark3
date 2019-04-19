@@ -31,9 +31,8 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
     // repeat n times
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
-        PacketCommandOLD c = {CMD_EPA_PACE_COLLECT_NONCE, {(int)m, 0, 0}, {{0}}};
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_EPA_PACE_COLLECT_NONCE, (int)m, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
 
@@ -109,28 +108,23 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     }
 
     // transfer the APDUs to the Proxmark
-    PacketCommandOLD usb_cmd;
-    usb_cmd.cmd = CMD_EPA_PACE_REPLAY;
+    uint8_t data[USB_CMD_DATA_SIZE];
     for (int i = 0; i < sizeof(apdu_lengths); i++) {
-        // APDU number
-        usb_cmd.arg[0] = i + 1;
         // transfer the APDU in several parts if necessary
-        for (int j = 0; j * sizeof(usb_cmd.d.asBytes) < apdu_lengths[i]; j++) {
-            // offset into the APDU
-            usb_cmd.arg[1] = j * sizeof(usb_cmd.d.asBytes);
+        for (int j = 0; j * sizeof(data) < apdu_lengths[i]; j++) {
             // amount of data in this packet
-            int packet_length = apdu_lengths[i] - (j * sizeof(usb_cmd.d.asBytes));
-            if (packet_length > sizeof(usb_cmd.d.asBytes)) {
-                packet_length = sizeof(usb_cmd.d.asBytes);
+            int packet_length = apdu_lengths[i] - (j * sizeof(data));
+            if (packet_length > sizeof(data)) {
+                packet_length = sizeof(data);
             }
-            usb_cmd.arg[2] = packet_length;
-
-            memcpy(usb_cmd.d.asBytes, // + (j * sizeof(usb_cmd.d.asBytes)),
-                   apdus[i] + (j * sizeof(usb_cmd.d.asBytes)),
+            memcpy(data, // + (j * sizeof(data)),
+                   apdus[i] + (j * sizeof(data)),
                    packet_length);
 
             clearCommandBuffer();
-            SendCommand(&usb_cmd);
+            // arg0: APDU number
+            // arg1: offset into the APDU
+            SendCommandOLD(CMD_EPA_PACE_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
             WaitForResponse(CMD_ACK, &resp);
             if (resp.oldarg[0] != 0) {
                 PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
@@ -140,9 +134,8 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     }
 
     // now perform the replay
-    usb_cmd.arg[0] = 0;
     clearCommandBuffer();
-    SendCommand(&usb_cmd);
+    SendCommandOLD(CMD_EPA_PACE_REPLAY, 0, 0, 0, NULL, 0);
     WaitForResponse(CMD_ACK, &resp);
     if (resp.oldarg[0] != 0) {
         PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);

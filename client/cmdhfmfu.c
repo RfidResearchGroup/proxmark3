@@ -458,16 +458,13 @@ static char *getUlev1CardSizeStr(uint8_t fsize) {
 }
 
 static void ul_switch_on_field(void) {
-    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
 }
 
 static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
-    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0}, {{0}}};
-    memcpy(c.d.asBytes, cmd, cmdlen);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
     if (!resp.oldarg[0] && responseLength) return -1;
@@ -533,10 +530,8 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 
 static int ulc_authentication(uint8_t *key, bool switch_off_field) {
 
-    PacketCommandOLD c = {CMD_MIFAREUC_AUTH, {switch_off_field}, {{0}}};
-    memcpy(c.d.asBytes, key, 16);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 0;
     if (resp.oldarg[0] == 1) return 1;
@@ -621,12 +616,9 @@ static int ul_fudan_check(void) {
     if (!ul_select(&card))
         return UL_ERROR;
 
-    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0}, {{0}}};
-
     uint8_t cmd[4] = {0x30, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
-    memcpy(c.d.asBytes, cmd, 4);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_READER_ISO_14443a,ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return UL_ERROR;
     if (resp.oldarg[0] != 1) return UL_ERROR;
@@ -1475,19 +1467,22 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Block: %0d (0x%02X) [ %s]", blockNo, blockNo, sprint_hex(blockdata, 4));
 
     //Send write Block
-    PacketCommandOLD c = {CMD_MIFAREU_WRITEBL, {blockNo}, {{0}}};
-    memcpy(c.d.asBytes, blockdata, 4);
-
+    uint8_t cmddata[20];
+    memcpy(cmddata, blockdata, 4);
+    uint8_t datalen = 4;
+    uint8_t keytype = 0;
     if (hasAuthKey) {
-        c.arg[1] = 1;
-        memcpy(c.d.asBytes + 4, authKeyPtr, 16);
+        keytype = 1;
+        memcpy(cmddata + datalen, authKeyPtr, 16);
+        datalen += 16;
     } else if (hasPwdKey) {
-        c.arg[1] = 2;
-        memcpy(c.d.asBytes + 4, authKeyPtr, 4);
+        keytype = 2;
+        memcpy(cmddata + datalen, authKeyPtr, 4);
+        datalen += 4;
     }
 
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -1581,17 +1576,18 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     if (swapEndian && hasPwdKey)  authKeyPtr = SwapEndian64(authenticationkey, 4, 4);
 
     //Read Block
-    PacketCommandOLD c = {CMD_MIFAREU_READBL, {blockNo}, {{0}}};
+    uint8_t keytype = 0;
+    uint8_t datalen = 0;
     if (hasAuthKey) {
-        c.arg[1] = 1;
-        memcpy(c.d.asBytes, authKeyPtr, 16);
+        keytype = 1;
+        datalen = 16;
     } else if (hasPwdKey) {
-        c.arg[1] = 2;
-        memcpy(c.d.asBytes, authKeyPtr, 4);
+        keytype = 2;
+        datalen = 4;
     }
 
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREU_READBL, blockNo, keytype, 0, authKeyPtr, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK = resp.oldarg[0] & 0xff;
@@ -1846,18 +1842,17 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
     ul_print_type(tagtype, 0);
     PrintAndLogEx(SUCCESS, "Reading tag memory...");
-    PacketCommandOLD c = {CMD_MIFAREU_READCARD, {startPage, pages}, {{0}}};
+    uint8_t keytype = 0;
     if (hasAuthKey) {
         if (tagtype & UL_C)
-            c.arg[2] = 1; //UL_C auth
+            keytype = 1; //UL_C auth
         else
-            c.arg[2] = 2; //UL_EV1/NTAG auth
-
-        memcpy(c.d.asBytes, authKeyPtr, dataLen);
+            keytype = 2; //UL_EV1/NTAG auth
     }
 
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREU_READCARD, startPage, pages, keytype, authKeyPtr, dataLen);
+
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "Command execute time-out");
@@ -2010,7 +2005,6 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool read_key = false;
     size_t filelen = 0;
     FILE *f;
-    PacketCommandOLD c = {CMD_MIFAREU_WRITEBL, {0, 0, 0}, {{0}}};
 
     memset(authkey, 0x00, sizeof(authkey));
 
@@ -2114,10 +2108,12 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             p_authkey = SwapEndian64(authkey, keylen, 4);
     }
 
+    uint8_t data[20] = {0};
+    uint8_t keytype = 0;
     // set key - only once
     if (hasKey) {
-        c.arg[1] = (keylen == 16) ? 1 : 2;
-        memcpy(c.d.asBytes + 4, p_authkey, keylen);
+        keytype = (keylen == 16) ? 1 : 2;
+        memcpy(data + 4, p_authkey, keylen);
     }
 
     // write version, signature, pack
@@ -2130,54 +2126,51 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 #define MFU_NTAG_SPECIAL_SIGNATURE  0xF2
         // pwd
         if (hasKey || read_key) {
-            c.arg[0] = MFU_NTAG_SPECIAL_PWD;
 
             if (read_key) {
                 // try reading key from dump and use.
-                memcpy(c.d.asBytes, mem->data + (bytes_read - 48 - 8), 4);
+                memcpy(data, mem->data + (bytes_read - 48 - 8), 4);
             } else {
-                memcpy(c.d.asBytes,  p_authkey, 4);
+                memcpy(data,  p_authkey, 4);
             }
 
-            PrintAndLogEx(NORMAL, "special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(c.d.asBytes, 4));
+            PrintAndLogEx(NORMAL, "special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommand(&c);
+            SendCommandOLD(CMD_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
+
             wait4response(MFU_NTAG_SPECIAL_PWD);
 
             // copy the new key
-            c.arg[1] = 2;
-            memcpy(authkey, c.d.asBytes, 4);
-            memcpy(c.d.asBytes + 4, authkey, 4);
+            keytype = 2;
+            memcpy(authkey, data, 4);
+            memcpy(data + 4, authkey, 4);
         }
 
         // pack
-        c.arg[0] = MFU_NTAG_SPECIAL_PACK;
-        c.d.asBytes[0] = mem->pack[0];
-        c.d.asBytes[1] = mem->pack[1];
-        c.d.asBytes[2] = 0;
-        c.d.asBytes[3] = 0;
-        PrintAndLogEx(NORMAL, "special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(c.d.asBytes, 4));
+        data[0] = mem->pack[0];
+        data[1] = mem->pack[1];
+        data[2] = 0;
+        data[3] = 0;
+        PrintAndLogEx(NORMAL, "special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
         wait4response(MFU_NTAG_SPECIAL_PACK);
 
         // Signature
         for (uint8_t s = MFU_NTAG_SPECIAL_SIGNATURE, i = 0; s < MFU_NTAG_SPECIAL_SIGNATURE + 8; s++, i += 4) {
-            c.arg[0] = s;
-            memcpy(c.d.asBytes, mem->signature + i, 4);
-            PrintAndLogEx(NORMAL, "special SIG     block written 0x%X - %s\n", s, sprint_hex(c.d.asBytes, 4));
+            memcpy(data, mem->signature + i, 4);
+            PrintAndLogEx(NORMAL, "special SIG     block written 0x%X - %s\n", s, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommand(&c);
+            SendCommandOLD(CMD_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
             wait4response(s);
         }
 
         // Version
         for (uint8_t s = MFU_NTAG_SPECIAL_VERSION, i = 0; s < MFU_NTAG_SPECIAL_VERSION + 2; s++, i += 4) {
-            c.arg[0] = s;
-            memcpy(c.d.asBytes, mem->version + i, 4);
-            PrintAndLogEx(NORMAL, "special VERSION block written 0x%X - %s\n", s, sprint_hex(c.d.asBytes, 4));
+            memcpy(data, mem->version + i, 4);
+            PrintAndLogEx(NORMAL, "special VERSION block written 0x%X - %s\n", s, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommand(&c);
+            SendCommandOLD(CMD_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
             wait4response(s);
         }
     }
@@ -2189,10 +2182,9 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     for (uint8_t b = 4; b < pages - 5; b++) {
 
         //Send write Block
-        c.arg[0] = b;
-        memcpy(c.d.asBytes, mem->data + (b * 4), 4);
+        memcpy(data, mem->data + (b * 4), 4);
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
         wait4response(b);
         printf(".");
         fflush(stdout);
@@ -2204,18 +2196,17 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
         PrintAndLogEx(INFO, "Restoring configuration blocks.\n");
 
-        PrintAndLogEx(NORMAL, "authentication with keytype[%x]  %s\n", (uint8_t)(c.arg[1] & 0xff), sprint_hex(p_authkey, 4));
+        PrintAndLogEx(NORMAL, "authentication with keytype[%x]  %s\n", (uint8_t)(keytype & 0xff), sprint_hex(p_authkey, 4));
 
         // otp, uid, lock, cfg1, cfg0, dynlockbits
         uint8_t blocks[] = {3, 0, 1, 2, pages - 5, pages - 4, pages - 3};
         for (uint8_t i = 0; i < sizeof(blocks); i++) {
             uint8_t b = blocks[i];
-            c.arg[0] = b;
-            memcpy(c.d.asBytes, mem->data + (b * 4), 4);
+            memcpy(data, mem->data + (b * 4), 4);
             clearCommandBuffer();
-            SendCommand(&c);
+            SendCommandOLD(CMD_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
             wait4response(b);
-            PrintAndLogEx(NORMAL, "special block written %u - %s\n", b, sprint_hex(c.d.asBytes, 4));
+            PrintAndLogEx(NORMAL, "special block written %u - %s\n", b, sprint_hex(data, 4));
         }
     }
 
@@ -2387,10 +2378,8 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
         return 1;
     }
 
-    PacketCommandOLD c = {CMD_MIFAREUC_SETPWD, {0, 0, 0}, {{0}}};
-    memcpy(c.d.asBytes, pwd, 16);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREUC_SETPWD, 0, 0, 0, pwd, 16);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -2412,7 +2401,6 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
 //
 static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
-    PacketCommandOLD c = {CMD_MIFAREU_READBL, {0, 0, 0}, {{0}}};
     PacketResponseNG resp;
     uint8_t uid[7] = {0x00};
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -2425,9 +2413,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     }
 
     // read block2.
-    c.arg[0] = 2;
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREU_READBL, 2, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 2;
@@ -2438,40 +2425,37 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     memcpy(resp.data.asBytes, oldblock2, 4);
 
     // block 0.
-    c.cmd = CMD_MIFAREU_WRITEBL;
-    c.arg[0] = 0;
-    c.d.asBytes[0] = uid[0];
-    c.d.asBytes[1] = uid[1];
-    c.d.asBytes[2] = uid[2];
-    c.d.asBytes[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+    uint8_t data[4];
+    data[0] = uid[0];
+    data[1] = uid[1];
+    data[2] = uid[2];
+    data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 3;
     }
 
     // block 1.
-    c.arg[0] = 1;
-    c.d.asBytes[0] = uid[3];
-    c.d.asBytes[1] = uid[4];
-    c.d.asBytes[2] = uid[5];
-    c.d.asBytes[3] = uid[6];
+    data[0] = uid[3];
+    data[1] = uid[4];
+    data[2] = uid[5];
+    data[3] = uid[6];
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 4;
     }
 
     // block 2.
-    c.arg[0] = 2;
-    c.d.asBytes[0] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
-    c.d.asBytes[1] = oldblock2[1];
-    c.d.asBytes[2] = oldblock2[2];
-    c.d.asBytes[3] = oldblock2[3];
+    data[0] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
+    data[1] = oldblock2[1];
+    data[2] = oldblock2[2];
+    data[3] = oldblock2[3];
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 5;
@@ -2487,9 +2471,8 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
 
     if (cmdp == 'r') {
         // read uid from tag
-        PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
         iso14a_card_select_t card;
@@ -2602,9 +2585,8 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 
     if (cmdp == 'r') {
         // read uid from tag
-        PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0}, {{0}}};
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
         iso14a_card_select_t card;

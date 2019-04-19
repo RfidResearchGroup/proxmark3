@@ -203,13 +203,10 @@ static int CmdLFNedapClone(const char *Cmd) {
     print_blocks(blocks, 5);
 
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0,0,0}, {{0}}};
 
     for (uint8_t i = 0; i<5; ++i ) {
-        c.arg[0] = blocks[i];
-        c.arg[1] = i;
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)){
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
@@ -231,14 +228,10 @@ static int CmdLFNedapSim(const char *Cmd) {
     cardnumber = (cn & 0x00FFFFFF);
 
     uint8_t bs[128];
-    size_t size = sizeof(bs);
-    memset(bs, 0x00, size);
+    memset(bs, 0x00, sizeof(bs));
 
     // NEDAP,  Biphase = 2, clock 64, inverted,  (DIPhase == inverted BIphase
     uint8_t  clk = 64, encoding = 2, separator = 0, invert = 1;
-    uint16_t arg1, arg2;
-    arg1 = clk << 8 | encoding;
-    arg2 = invert << 8 | separator;
 
     if (!getNedapBits(cardnumber, bs)) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
@@ -248,10 +241,8 @@ static int CmdLFNedapSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "bin  %s", sprint_bin_break(bs, 128, 32));
     PrintAndLogEx(SUCCESS, "Simulating Nedap - CardNumber: %u", cardnumber);
 
-    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, bs, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(bs), bs, sizeof(bs));
     return 0;
 }
 

@@ -100,9 +100,8 @@ static int CmdLFPCF7931Read(const char *Cmd) {
     if (ctmp == 'H' || ctmp == 'h') return usage_pcf7931_read();
 
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_PCF7931_READ, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_PCF7931_READ, 0, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 1;
@@ -145,14 +144,14 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     PrintAndLogEx(NORMAL, "          pos: %d", bytepos);
     PrintAndLogEx(NORMAL, "         data: 0x%02X", data);
 
-    PacketCommandOLD c = {CMD_PCF7931_WRITE, { block, bytepos, data}, {{0}}};
-    memcpy(c.d.asDwords, configPcf.Pwd, sizeof(configPcf.Pwd));
-    c.d.asDwords[7] = (configPcf.OffsetWidth + 128);
-    c.d.asDwords[8] = (configPcf.OffsetPosition + 128);
-    c.d.asDwords[9] = configPcf.InitDelay;
+    uint32_t buf[10]; // TODO sparse struct, 7 *bytes* then words at offset 4*7!
+    memcpy(buf, configPcf.Pwd, sizeof(configPcf.Pwd));
+    buf[7] = (configPcf.OffsetWidth + 128);
+    buf[8] = (configPcf.OffsetPosition + 128);
+    buf[9] = configPcf.InitDelay;
 
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_PCF7931_WRITE, block, bytepos, data, buf, sizeof(buf));
     //no ack?
     return 0;
 }

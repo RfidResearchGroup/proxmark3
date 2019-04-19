@@ -155,13 +155,10 @@ static int CmdNoralsyClone(const char *Cmd) {
     print_blocks(blocks, 4);
 
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 4; i++) {
-        c.arg[0] = blocks[i];
-        c.arg[1] = i;
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
@@ -173,8 +170,7 @@ static int CmdNoralsyClone(const char *Cmd) {
 static int CmdNoralsySim(const char *Cmd) {
 
     uint8_t bits[96];
-    uint8_t *bs = bits;
-    memset(bs, 0, sizeof(bits));
+    memset(bits, 0, sizeof(bits));
 
     uint16_t year = 0;
     uint32_t id = 0;
@@ -186,22 +182,16 @@ static int CmdNoralsySim(const char *Cmd) {
     year = param_get32ex(Cmd, 1, 2000, 10);
 
     uint8_t clk = 32, encoding = 1, separator = 1, invert = 0;
-    uint16_t arg1, arg2;
-    size_t size = 96;
-    arg1 = clk << 8 | encoding;
-    arg2 = invert << 8 | separator;
 
-    if (!getnoralsyBits(id, year, bs)) {
+    if (!getnoralsyBits(id, year, bits)) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return 1;
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Noralsy - CardId: %u", id);
 
-    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, bs, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(bits), bits, sizeof(bits));
     return 0;
 }
 

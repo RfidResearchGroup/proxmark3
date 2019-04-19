@@ -135,7 +135,7 @@ void RunMod() {
                     SendCommandOLD(CMD_MIFARE_CSETBLOCK, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
 
                 Block read is similar:
-                    PacketCommandOLD c = {CMD_MIFARE_CGETBLOCK, {params, blockNo, 0}};
+                    SendCommandOLD(CMD_MIFARE_CGETBLOCK, params, blockNo, 0,...};
                 We need to imitate that call with blockNo 0 to set a uid.
 
                 The get and set commands are handled in this file:

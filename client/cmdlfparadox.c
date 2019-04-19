@@ -117,14 +117,10 @@ static int CmdParadoxSim(const char *Cmd) {
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
 
     uint8_t bs[96];
-    size_t size = sizeof(bs);
-    memset(bs, 0x00, size);
+    memset(bs, 0x00, sizeof(bs));
 
     // Paradox uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 1  FSK2a
     uint8_t clk = 50, invert = 1, high = 10, low = 8;
-    uint16_t arg1, arg2;
-    arg1 = high << 8 | low;
-    arg2 = invert << 8 | clk;
 
     if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_paradox_sim();
 
@@ -138,10 +134,8 @@ static int CmdParadoxSim(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
-    PacketCommandOLD c = {CMD_FSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, bs, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_FSK_SIM_TAG, high << 8 | low, invert << 8 | clk, sizeof(bs), bs, sizeof(bs));
 
     PrintAndLogEx(NORMAL, "UNFINISHED");
     return 0;

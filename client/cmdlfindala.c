@@ -373,8 +373,7 @@ static int CmdIndalaSim(const char *Cmd) {
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_indala_sim();
 
     uint8_t bits[224];
-    size_t size = sizeof(bits);
-    memset(bits, 0x00, size);
+    memset(bits, 0x00, sizeof(bits));
 
     // uid
     uint8_t hexuid[100];
@@ -394,9 +393,6 @@ static int CmdIndalaSim(const char *Cmd) {
 
     // indala PSK
     uint8_t clk = 32, carrier = 2, invert = 0;
-    uint16_t arg1, arg2;
-    arg1 = clk << 8 | carrier;
-    arg2 = invert;
 
     // It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
     // lf simpsk 1 c 32 r 2 d 0102030405060708
@@ -404,10 +400,8 @@ static int CmdIndalaSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating Indala UID: %s",  sprint_hex(hexuid, len));
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
-    PacketCommandOLD c = {CMD_PSK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, bits, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_PSK_SIM_TAG, clk << 8 | carrier, invert, sizeof(bits), bits, sizeof(bits));
     return 0;
 }
 
@@ -438,27 +432,27 @@ static int CmdIndalaClone(const char *Cmd) {
     CLIGetHexWithReturn(2, data, &datalen);
     CLIParserFree();
 
-    PacketCommandOLD c = {0, {0, 0, 0}, {{0}}};
-
     if (isLongUid) {
         PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with RawID %s", sprint_hex(data, datalen));
-        c.cmd = CMD_INDALA_CLONE_TAG_L;
-        c.d.asDwords[0] = bytes_to_num(data, 4);
-        c.d.asDwords[1] = bytes_to_num(data +  4, 4);
-        c.d.asDwords[2] = bytes_to_num(data +  8, 4);
-        c.d.asDwords[3] = bytes_to_num(data + 12, 4);
-        c.d.asDwords[4] = bytes_to_num(data + 16, 4);
-        c.d.asDwords[5] = bytes_to_num(data + 20, 4);
-        c.d.asDwords[6] = bytes_to_num(data + 24, 4);
+        uint32_t datawords[7] = {0};
+        datawords[0] = bytes_to_num(data, 4);
+        datawords[1] = bytes_to_num(data +  4, 4);
+        datawords[2] = bytes_to_num(data +  8, 4);
+        datawords[3] = bytes_to_num(data + 12, 4);
+        datawords[4] = bytes_to_num(data + 16, 4);
+        datawords[5] = bytes_to_num(data + 20, 4);
+        datawords[6] = bytes_to_num(data + 24, 4);
+        clearCommandBuffer();
+        SendCommandOLD(CMD_INDALA_CLONE_TAG_L, 0, 0, 0, datawords, sizeof(datawords));
     } else {
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with RawID %s", sprint_hex(data, datalen));
-        c.cmd = CMD_INDALA_CLONE_TAG;
-        c.d.asDwords[0] = bytes_to_num(data, 4);
-        c.d.asDwords[1] = bytes_to_num(data + 4, 4);
+        uint32_t datawords[2] = {0};
+        datawords[0] = bytes_to_num(data, 4);
+        datawords[1] = bytes_to_num(data + 4, 4);
+        clearCommandBuffer();
+        SendCommandOLD(CMD_INDALA_CLONE_TAG, 0, 0, 0, datawords, sizeof(datawords));
     }
 
-    clearCommandBuffer();
-    SendCommand(&c);
     return 0;
 }
 

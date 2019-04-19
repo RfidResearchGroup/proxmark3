@@ -172,13 +172,10 @@ static int CmdGuardClone(const char *Cmd) {
     print_blocks(blocks, 4);
 
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (i = 0; i < 4; ++i) {
-        c.arg[0] = blocks[i];
-        c.arg[1] = i;
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
@@ -199,8 +196,7 @@ static int CmdGuardSim(const char *Cmd) {
     if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_sim();
 
     uint8_t bs[96];
-    size_t size = sizeof(bs);
-    memset(bs, 0x00, size);
+    memset(bs, 0x00, sizeof(bs));
 
     fmtlen &= 0x7F;
     facilitycode = (fc & 0x000000FF);
@@ -213,14 +209,8 @@ static int CmdGuardSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
-    uint64_t arg1, arg2;
-    arg1 = (clock1 << 8) | encoding;
-    arg2 = (invert << 8) | separator;
-
-    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    memcpy(c.d.asBytes, bs, size);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_ASK_SIM_TAG, (clock1 << 8) | encoding, (invert << 8) | separator, sizeof(bs), bs, sizeof(bs));
     return 0;
 }
 

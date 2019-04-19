@@ -167,13 +167,10 @@ static int CmdVisa2kClone(const char *Cmd) {
     print_blocks(blocks, 4);
 
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (uint8_t i = 0; i < 4; i++) {
-        c.arg[0] = blocks[i];
-        c.arg[1] = i;
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
@@ -191,22 +188,17 @@ static int CmdVisa2kSim(const char *Cmd) {
     id = param_get32ex(Cmd, 0, 0, 10);
 
     uint8_t clk = 64, encoding = 1, separator = 1, invert = 0;
-    uint16_t arg1, arg2;
-    size_t size = 96;
-    arg1 = clk << 8 | encoding;
-    arg2 = invert << 8 | separator;
 
     PrintAndLogEx(SUCCESS, "Simulating Visa2000 - CardId: %u", id);
 
-    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-
     uint32_t blocks[3] = { BL0CK1, id, (visa_parity(id) << 4) | visa_chksum(id) };
 
+    uint8_t data[96];
     for (int i = 0; i < 3; ++i)
-        num_to_bytebits(blocks[i], 32, c.d.asBytes + i * 32);
+        num_to_bytebits(blocks[i], 32, data + i * 32);
 
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
     return 0;
 }
 

@@ -411,9 +411,8 @@ static int usage_hf14_nack(void) {
 }
 
 static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
-    PacketCommandOLD c = {CMD_READER_ISO_14443a, {ISO14A_CONNECT, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
@@ -522,11 +521,11 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
     PrintAndLogEx(NORMAL, "--data: %s", sprint_hex(bldata, 16));
 
-    PacketCommandOLD c = {CMD_MIFARE_WRITEBL, {blockNo, keyType, 0}, {{0}}};
-    memcpy(c.d.asBytes, key, 6);
-    memcpy(c.d.asBytes + 10, bldata, 16);
+    uint8_t data[26];
+    memcpy(data, key, 6);
+    memcpy(data + 10, bldata, 16);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_WRITEBL, blockNo, keyType, 0, data, sizeof(data));
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -568,10 +567,8 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s ", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
-    PacketCommandOLD c = {CMD_MIFARE_READBL, {blockNo, keyType, 0}, {{0}}};
-    memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_READBL, blockNo, keyType, 0, key, 6);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -638,10 +635,8 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--sector no:%d key type:%c key:%s ", sectorNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
-    PacketCommandOLD c = {CMD_MIFARE_READSC, {sectorNo, keyType, 0}, {{0}}};
-    memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
     PrintAndLogEx(NORMAL, "");
 
     PacketResponseNG resp;
@@ -803,10 +798,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
 
-            PacketCommandOLD c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 0, 0}, {{0}}};
-            memcpy(c.d.asBytes, keyA[sectorNo], 6);
             clearCommandBuffer();
-            SendCommand(&c);
+            SendCommandOLD(CMD_MIFARE_READBL, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 0, 0, keyA[sectorNo], 6);
 
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                 uint8_t isOK = resp.oldarg[0] & 0xff;
@@ -840,27 +833,21 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
             for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
                 if (blockNo == NumBlocksPerSector(sectorNo) - 1) { // sector trailer. At least the Access Conditions can always be read with key A.
-                    PacketCommandOLD c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}, {{0}}};
-                    memcpy(c.d.asBytes, keyA[sectorNo], 6);
                     clearCommandBuffer();
-                    SendCommand(&c);
+                    SendCommandOLD(CMD_MIFARE_READBL, FirstBlockOfSector(sectorNo) + blockNo, 0, 0, keyA[sectorNo], 6);
                     received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
                 } else {                                           // data block. Check if it can be read with key A or key B
                     uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
                     if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) { // only key B would work
-                        PacketCommandOLD c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 1, 0}, {{0}}};
-                        memcpy(c.d.asBytes, keyB[sectorNo], 6);
-                        SendCommand(&c);
+                        SendCommandOLD(CMD_MIFARE_READBL, FirstBlockOfSector(sectorNo) + blockNo, 1, 0, keyB[sectorNo], 6);
                         received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
                     } else if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
                         isOK = false;
                         PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
                         tries = MIFARE_SECTOR_RETRY;
                     } else {                                                                              // key A would work
-                        PacketCommandOLD c = {CMD_MIFARE_READBL, {FirstBlockOfSector(sectorNo) + blockNo, 0, 0}, {{0}}};
-                        memcpy(c.d.asBytes, keyA[sectorNo], 6);
                         clearCommandBuffer();
-                        SendCommand(&c);
+                        SendCommandOLD(CMD_MIFARE_READBL, FirstBlockOfSector(sectorNo) + blockNo, 0, 0, keyA[sectorNo], 6);
                         received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
                     }
                 }
@@ -1019,8 +1006,8 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
-            PacketCommandOLD c = {CMD_MIFARE_WRITEBL, {FirstBlockOfSector(sectorNo) + blockNo, keyType, 0}, {{0}}};
-            memcpy(c.d.asBytes, key, 6);
+            uint8_t data[26];
+            memcpy(data, key, 6);
             bytes_read = fread(bldata, 1, 16, fdump);
             if (bytes_read != 16) {
                 PrintAndLogEx(WARNING, "File reading error " _YELLOW_("%s"), dataFilename);
@@ -1046,9 +1033,9 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "Writing to block %3d: %s", FirstBlockOfSector(sectorNo) + blockNo, sprint_hex(bldata, 16));
 
-            memcpy(c.d.asBytes + 10, bldata, 16);
+            memcpy(data + 10, bldata, 16);
             clearCommandBuffer();
-            SendCommand(&c);
+            SendCommandOLD(CMD_MIFARE_WRITEBL, FirstBlockOfSector(sectorNo) + blockNo, keyType, 0, data, sizeof(data));
 
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -1251,10 +1238,10 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
                 PrintAndLogEx(SUCCESS, "reading block %d", sectrail);
 
-                PacketCommandOLD c = {CMD_MIFARE_READBL, {sectrail, 0, 0}, {{0}}};
-                num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
+                uint8_t txdata[6];
+                num_to_bytes(e_sector[i].Key[0], 6, txdata); // KEY A
                 clearCommandBuffer();
-                SendCommand(&c);
+                SendCommandOLD(CMD_MIFARE_READBL, sectrail, 0, 0, txdata, sizeof(txdata));
 
                 PacketResponseNG resp;
                 if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
@@ -1997,10 +1984,10 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 PrintAndLogEx(NORMAL, "Reading block %d", sectrail);
 
-                PacketCommandOLD c = {CMD_MIFARE_READBL, {sectrail, 0, 0}, {{0}}};
-                num_to_bytes(e_sector[i].Key[0], 6, c.d.asBytes); // KEY A
+                uint8_t txdata[6];
+                num_to_bytes(e_sector[i].Key[0], 6, txdata); // KEY A
                 clearCommandBuffer();
-                SendCommand(&c);
+                SendCommandOLD(CMD_MIFARE_READBL, sectrail, 0, 0, txdata, sizeof(txdata));
 
                 PacketResponseNG resp;
                 if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
@@ -2231,10 +2218,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   , flags
                   , flags);
 
-    PacketCommandOLD c = {CMD_SIMULATE_MIFARE_CARD, {flags, exitAfterNReads, 0}, {{0}}};
-    memcpy(c.d.asBytes, uid, sizeof(uid));
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_SIMULATE_MIFARE_CARD, flags, exitAfterNReads, 0, uid, sizeof(uid));
     PacketResponseNG resp;
 
     if (flags & FLAG_INTERACTIVE) {
@@ -2291,9 +2276,8 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     PrintAndLogEx(NORMAL, "Press the key on pc keyboard to abort the client.\n");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
 
-    PacketCommandOLD c = {CMD_MIFARE_SNIFFER, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_SNIFFER, 0, 0, 0, NULL, 0);
 
     PacketResponseNG resp;
 
@@ -2422,8 +2406,7 @@ int CmdHF14AMfDbg(const char *Cmd) {
     uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
     if (dbgMode > 4) return usage_hf14_dbg();
 
-    PacketCommandOLD c = {CMD_MIFARE_SET_DBGMODE, {dbgMode, 0, 0}, {{0}}};
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_SET_DBGMODE, dbgMode, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -2508,9 +2491,8 @@ static int CmdHF14AMfEClear(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h') return usage_hf14_eclr();
 
-    PacketCommandOLD cmd = {CMD_MIFARE_EML_MEMCLR, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&cmd);
+    SendCommandOLD(CMD_MIFARE_EML_MEMCLR, 0, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -2693,9 +2675,8 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     numSectors = NumOfSectors(c);
 
     PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType == 0) ? 'A' : 'B');
-    PacketCommandOLD cmd = {CMD_MIFARE_EML_CARDLOAD, {numSectors, keyType, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&cmd);
+    SendCommandOLD(CMD_MIFARE_EML_CARDLOAD, numSectors, keyType, 0, NULL, 0);
     return 0;
 }
 
@@ -3155,10 +3136,8 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
         return 1;
     }
 
-    PacketCommandOLD c = {CMD_MIFARE_SETMOD, {mod, 0, 0}, {{0}}};
-    memcpy(c.d.asBytes, key, 6);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_SETMOD, mod, 0, 0, key, 6);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -3256,9 +3235,8 @@ static int CmdHF14AMfice(const char *Cmd) {
         flags = 0;
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
-        PacketCommandOLD c = {CMD_MIFARE_ACQUIRE_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags}, {{0}}};
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_MIFARE_ACQUIRE_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, NULL, 0);
 
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) goto out;
         if (resp.oldarg[0])  goto out;
@@ -3289,9 +3267,8 @@ out:
         fclose(fnonces);
     }
 
-    PacketCommandOLD c = {CMD_MIFARE_ACQUIRE_NONCES, {blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_MIFARE_ACQUIRE_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, NULL, 0);
     return 0;
 }
 

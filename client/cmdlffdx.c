@@ -282,13 +282,10 @@ static int CmdFdxClone(const char *Cmd) {
     print_blocks(blocks, 5);
 
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {0, 0, 0}, {{0}}};
 
     for (int i = 4; i >= 0; --i) {
-        c.arg[0] = blocks[i];
-        c.arg[1] = i;
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
@@ -311,19 +308,14 @@ static int CmdFdxSim(const char *Cmd) {
 
     // 32, no STT, BIPHASE INVERTED == diphase
     uint8_t clk = 32, encoding = 2, separator = 0, invert = 1;
-    uint16_t arg1, arg2;
-    size_t size = 128;
-    arg1 = clk << 8 | encoding;
-    arg2 = invert << 8 | separator;
 
     PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: %04u-%"PRIu64, countryid, animalid);
 
-    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-
+    uint8_t data[128];
     //getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
-    getFDXBits(animalid, countryid, 1, 0, 0, c.d.asBytes);
+    getFDXBits(animalid, countryid, 1, 0, 0, data);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
     return 0;
 }
 

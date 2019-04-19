@@ -1018,9 +1018,8 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     }
     if (errors) return usage_t55xx_wakup();
 
-    PacketCommandOLD c = {CMD_T55XX_WAKEUP, {password, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_T55XX_WAKEUP, password, 0, 0, NULL, 0);
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
     return 0;
 }
@@ -1074,24 +1073,25 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
         return 0;
     }
 
-    PacketCommandOLD c = {CMD_T55XX_WRITE_BLOCK, {data, block, 0}, {{0}}};
     PacketResponseNG resp;
-    c.d.asBytes[0] = (page1) ? 0x2 : 0;
-    c.d.asBytes[0] |= (testMode) ? 0x4 : 0;
+    uint8_t flags[1] = {0};
+    flags[0] = (page1) ? 0x2 : 0;
+    flags[0] |= (testMode) ? 0x4 : 0;
 
     char pwdStr[16] = {0};
     snprintf(pwdStr, sizeof(pwdStr), "pwd: 0x%08X", password);
 
     PrintAndLogEx(INFO, "Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data, (usepwd) ? pwdStr : "");
 
+    uint64_t arg_pwd = 0;
     //Password mode
     if (usepwd) {
-        c.arg[2] = password;
-        c.d.asBytes[0] |= 0x1;
+        arg_pwd = password;
+        flags[0] |= 0x1;
     }
 
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_T55XX_WRITE_BLOCK, data, block, arg_pwd, flags, sizeof(flags));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not ACK write operation. (May be due to old firmware)");
         return 0;
@@ -1515,9 +1515,8 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     // arg1: which block to read
     // arg2: password
     uint8_t arg0 = (page << 1 | (pwdmode));
-    PacketCommandOLD c = {CMD_T55XX_READ_BLOCK, {arg0, block, password}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_T55XX_READ_BLOCK, arg0, block, password, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
@@ -1775,9 +1774,8 @@ static void t55x7_create_config_block(int tagtype) {
 
 static int CmdResetRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    PacketCommandOLD c = {CMD_T55XX_RESET_READ, {0, 0, 0}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_T55XX_RESET_READ, 0, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 0;
@@ -1856,9 +1854,8 @@ static int CmdT55xxChkPwds(const char *Cmd) {
     uint64_t t1 = msclock();
 
     if (cmdp == 'm') {
-        PacketCommandOLD c = {CMD_T55XX_CHKPWDS, {0, 0, 0}, {{0}}};
         clearCommandBuffer();
-        SendCommand(&c);
+        SendCommandOLD(CMD_T55XX_CHKPWDS, 0, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -2299,10 +2296,8 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
 
     t55xx_config conf = { startgap * 8, writegap * 8, write0 * 8, write1 * 8, readgap * 8 };
 
-    PacketCommandOLD c = {CMD_SET_LF_T55XX_CONFIG, {shall_persist, 0, 0}, {{0}}};
-    memcpy(c.d.asBytes, &conf, sizeof(t55xx_config));
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_SET_LF_T55XX_CONFIG, shall_persist, 0, 0, &conf, sizeof(t55xx_config));
     return 0;
 }
 

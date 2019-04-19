@@ -88,9 +88,8 @@ static int CmdVikingClone(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID: %08X, Raw: %08X%08X", id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
-    PacketCommandOLD c = {CMD_VIKING_CLONE_TAG, {rawID >> 32, rawID & 0xFFFFFFFF, Q5}, {{0}}};
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_VIKING_CLONE_TAG, rawID >> 32, rawID & 0xFFFFFFFF, Q5, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
@@ -112,17 +111,12 @@ static int CmdVikingSim(const char *Cmd) {
 
     rawID = getVikingBits(id);
 
-    uint16_t arg1, arg2;
-    size_t size = 64;
-    arg1 = clk << 8 | encoding;
-    arg2 = invert << 8 | separator;
-
     PrintAndLogEx(SUCCESS, "Simulating Viking - ID: %08X, Raw: %08X%08X", id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
-    PacketCommandOLD c = {CMD_ASK_SIM_TAG, {arg1, arg2, size}, {{0}}};
-    num_to_bytebits(rawID, size, c.d.asBytes);
+    uint8_t data[64];
+    num_to_bytebits(rawID, sizeof(data), data);
     clearCommandBuffer();
-    SendCommand(&c);
+    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
     return 0;
 }
 
