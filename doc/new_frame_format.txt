@@ -1,0 +1,179 @@
+
+A major change is the support of variable length frames between host and Proxmark3.
+This is a step especially important for usage over FPC/USART/BT.
+
+Old format
+==========
+
+Previously, frames were, in both directions like this:
+
+    uint64_t cmd;
+    uint64_t arg[3];
+    union {
+        uint8_t  asBytes[USB_CMD_DATA_SIZE];
+        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+    } d;
+
+with USB_CMD_DATA_SIZE = 512 and there was no API abstraction, everybody was forging/parsing these frames.
+So the frame size was fixed, 544 bytes, even for simple ACKs.
+When snooping the USB transfers, we can observe the host is sending 544b Bulk USB frames while the Proxmark3 is limited by its internal buffers and is sending 128b, 128b, 128b, 128b, 32b, so in total 5 packets.
+
+New format
+==========
+
+Even if we make the payload part variable in the old format, we've still a minimum of 32 bytes per frame with fields arbitrarily large.
+So we designed a new format from scratch:
+
+For commands being sent to the Proxmark:
+
+    uint32_t magic;
+    uint16_t length;
+    uint16_t cmd;
+    uint8_t  data[length];
+    uint16_t crc;
+
+* magic:  arbitrary magic ("PM3a") to help re-sync if needed
+* length: length of the variable payload, 0 if none, max 512 (USB_CMD_DATA_SIZE) for now.
+* cmd:    as previously, on 16b as it's enough
+* data:   variable length payload
+* crc:    either an actual CRC (crc14a) or a Magic placeholder ("a3")
+
+For responses from the Proxmark:
+
+    uint32_t magic;
+    uint16_t length;
+    int16_t  status;
+    uint16_t cmd;
+    uint8_t  data[length];
+    uint16_t crc;
+
+* magic:  arbitrary magic ("PM3a") to help re-sync if needed
+* length: length of the variable payload, 0 if none, max 512 (USB_CMD_DATA_SIZE) for now.
+* status: a field to send back the status of the command execution
+* cmd:    as previously, on 16b as it's enough
+* data:   variable length payload
+* crc:    either an actual CRC (crc14a) or a Magic placeholder ("a3")
+
+We used to send an anonymous ACK, now we're replying with the corresponding command name and a status.
+CRC is optional and on reception, the magic "a3" is accepted as placeholder. If it's different then it's checked as a CRC.
+By default CRC is user over USART and is disabled over USB, on both directions.
+
+Internal structures used to handle these packets are:
+* PacketCommandNGPreamble
+* PacketCommandNGPostamble
+* PacketCommandNGRaw
+* PacketResponseNGPreamble
+* PacketResponseNGPostamble
+* PacketResponseNGRaw
+
+But they are abstracted from the developer view with a new API.
+
+Transition
+==========
+
+Because it's a long transition to clean all the code from the old format and because we don't want to break stuffs when flashing the bootloader, the old frames are still supported together with the new frames. The old structure is now called PacketCommandOLD and PacketResponseOLD and it's also abstracted from the developer view with the new API.
+
+New format API
+==============
+
+So the new API is a merge of the old and the new frame formats, to ensure a smooth transition.
+The boolean "ng" indicates if the structure is storing data from the old or the new format.
+After the full transition, we might remove the fields "oldarg" and "ng".
+
+typedef struct {
+    uint16_t cmd;
+    uint16_t length;
+    uint32_t magic;      //  NG
+    uint16_t crc;        //  NG
+    uint64_t oldarg[3];  //  OLD
+    union {
+        uint8_t  asBytes[USB_CMD_DATA_SIZE];
+        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+    } data;
+    bool ng;             // does it store NG data or OLD data?
+} PACKED PacketCommandNG;
+
+typedef struct {
+    uint16_t cmd;
+    uint16_t length;
+    uint32_t magic;      //  NG
+    int16_t  status;     //  NG
+    uint16_t crc;        //  NG
+    uint64_t oldarg[3];  //  OLD
+    union {
+        uint8_t  asBytes[USB_CMD_DATA_SIZE];
+        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+    } data;
+    bool ng;             // does it store NG data or OLD data?
+} PACKED PacketResponseNG;
+
+
+On the client, for sending frames:
+----------------------------------
+(client->comms.c)
+*****************************************
+void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
+void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+*****************************************
+
+So cmds should make the transition from SendCommandOLD to SendCommandNG to benefit from smaller frames (and armsrc handlers adjusted accordingly of course).
+
+Internally these functions prepare the new or old frames and call uart_communication which calls uart_send.
+
+On the Proxmark3, for receiving frames:
+---------------------------------------
+(armsrc/appmain.c)
+*****************************************
+PacketCommandNG
+*****************************************
+AppMain calls receive_ng(common/cmd.c) which calls usb_read_ng to get a PacketCommandNG, then passes it to PacketReceived.
+(no matter if it's an old frame or a new frame, check PacketCommandNG "ng" field to know)
+PacketReceive is the commands broker.
+Old handlers will still find their stuff in "oldarg" field.
+
+TODO AppMain still calls directly usart_readbuffer for USART and does not support new frames on USART.
+
+
+On the Proxmark3, for sending frames:
+-------------------------------------
+(common/cmd.c)
+*****************************************
+int16_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len)
+int16_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
+*****************************************
+
+So replies should make the transition from reply_old to reply_ng to benefit from smaller frames (and client reception adjusted accordingly of course).
+
+Example with CMD_PING that supports both styles (from client CmdPing or CmdPingNG) and replies with the new frame format when it receives new command format:
+    if (packet->ng) {
+        reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
+    } else {
+        reply_old(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+    }
+
+On the client, for receiving frames:
+------------------------------------
+(client->comms.c)
+*****************************************
+WaitForResponseTimeout -> PacketResponseNG
+*****************************************
+uart_communication calls uart_receive and create a PacketResponseNG, then passes it to PacketResponseReceived.
+PacketResponseReceived treats it immediately (prints) or stores it with storeReply.
+Commands do WaitForResponseTimeoutW (or dl_it) which uses getReply to fetch responses.
+
+API transition
+==============
+
+In short, to mode from one format to the other, we need for each command:
+
+* (client TX) SendCommandOLD -> SendCommandNG (with all stuff in ad-hoc structs in "data" field)
+* (pm3 RX) PacketCommandNG parsing, from "oldarg" to only the "data" field
+* (pm3 TX) reply_old -> reply_ng (with all stuff in ad-hoc structs in "data" field)
+* (client RX) PacketResponseNG parsing, from "oldarg" to only the "data" field
+
+Bootrom
+=======
+TODO
+We need to be very careful to make a flasher that can deal with old & new bootroms.
+New bootrom might need to also still support old frame format, to ease flashing back to repos supporting the old format...
+
