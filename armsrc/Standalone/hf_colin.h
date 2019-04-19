@@ -17,6 +17,7 @@
 #define __HF_COLIN_H
 
 #include "proxmark3.h"
+#include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
 #include "iso14443a.h"
 #include "protocols.h"
