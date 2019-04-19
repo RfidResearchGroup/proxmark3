@@ -260,8 +260,7 @@ fail:
 
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state) {
-    PacketCommandOLD c = {CMD_DEVICE_INFO};
-    SendCommand(&c);
+    SendCommandOLD(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
     PacketResponseOLD resp;
     ReceiveCommand(&resp);
 
@@ -303,20 +302,16 @@ static int enter_bootloader(void) {
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
         fprintf(stderr, "Entering bootloader...\n");
-        PacketCommandOLD c;
-        memset(&c, 0, sizeof(c));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
                 && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
-            c.cmd = CMD_START_FLASH;
-            SendCommand(&c);
+            SendCommandOLD(CMD_START_FLASH, 0, 0, 0, NULL, 0);
             fprintf(stderr, "(Press and release the button only to abort)\n");
         } else {
             // Old style handover: Ask the user to press the button, then reset the board
-            c.cmd = CMD_HARDWARE_RESET;
-            SendCommand(&c);
+            SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
             fprintf(stderr, "Press and hold down button NOW if your bootloader requires it.\n");
         }
         fprintf(stderr, "Waiting for Proxmark3 to reappear on USB...");
@@ -360,18 +355,11 @@ int flash_start_flashing(int enable_bl_writes) {
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
         // This command is stupid. Why the heck does it care which area we're
         // flashing, as long as it's not the bootloader area? The mind boggles.
-        PacketCommandOLD c = {CMD_START_FLASH};
-
         if (enable_bl_writes) {
-            c.arg[0] = FLASH_START;
-            c.arg[1] = FLASH_END;
-            c.arg[2] = START_FLASH_MAGIC;
+            SendCommandOLD(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
         } else {
-            c.arg[0] = BOOTLOADER_END;
-            c.arg[1] = FLASH_END;
-            c.arg[2] = 0;
+            SendCommandOLD(CMD_START_FLASH,BOOTLOADER_END, FLASH_END, 0, NULL, 0);
         }
-        SendCommand(&c);
         return wait_for_ack();
     } else {
         fprintf(stderr, "Note: Your bootloader does not understand the new START_FLASH command\n");
@@ -387,19 +375,13 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
 
-    PacketCommandOLD c = {CMD_SETUP_WRITE};
     for (int i = 0; i < 240; i += 48) {
-        memcpy(c.d.asBytes, block_buf + i, 48);
-        c.arg[0] = i / 4;
-        SendCommand(&c);
+        SendCommandOLD(CMD_SETUP_WRITE, i / 4, 0, 0, block_buf + i, 48);
         if (wait_for_ack() < 0)
             return -1;
     }
 
-    c.cmd = CMD_FINISH_WRITE;
-    c.arg[0] = address;
-    memcpy(c.d.asBytes, block_buf + 240, 16);
-    SendCommand(&c);
+    SendCommandOLD(CMD_FINISH_WRITE, address, 0, 0, block_buf + 240, 16);
     return wait_for_ack();
 }
 
@@ -458,8 +440,7 @@ void flash_free(flash_file_t *ctx) {
 
 // just reset the unit
 int flash_stop_flashing(void) {
-    PacketCommandOLD c = {CMD_HARDWARE_RESET};
-    SendCommand(&c);
+    SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
     msleep(100);
     return 0;
 }
