@@ -219,9 +219,8 @@ static int getReply(PacketResponseNG *packet) {
 //-----------------------------------------------------------------------------
 static void PacketResponseReceived(PacketResponseNG *packet) {
 
-//DOEGOX
-//PrintAndLogEx(NORMAL, "RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
-//              packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
+//  PrintAndLogEx(NORMAL, "RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
+//                packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
 
     switch (packet->cmd) {
         // First check if we are handling a debug message
