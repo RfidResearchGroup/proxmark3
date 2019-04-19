@@ -486,8 +486,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 int TestProxmark(void) {
     clearCommandBuffer();
     PacketResponseNG resp;
-    PacketCommandOLD c = {CMD_PING, {0, 0, 0}, {{0}}};
-    SendCommand(&c);
+    SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 5000)) {
         send_via_fpc = resp.oldarg[0] == 1;
         PrintAndLogEx(INFO, "Communicating with PM3 over %s.", send_via_fpc ? "FPC" : "USB");
@@ -603,23 +602,19 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 
     switch (memtype) {
         case BIG_BUF: {
-            PacketCommandOLD c = {CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, {start_index, bytes, 0}, {{0}}};
-            SendCommand(&c);
+            SendCommandOLD(CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K, start_index, bytes, 0, NULL, 0);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K);
         }
         case BIG_BUF_EML: {
-            PacketCommandOLD c = {CMD_DOWNLOAD_EML_BIGBUF, {start_index, bytes, 0}, {{0}}};
-            SendCommand(&c);
+            SendCommandOLD(CMD_DOWNLOAD_EML_BIGBUF, start_index, bytes, 0, NULL, 0);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
         }
         case FLASH_MEM: {
-            PacketCommandOLD c = {CMD_FLASHMEM_DOWNLOAD, {start_index, bytes, 0}, {{0}}};
-            SendCommand(&c);
+            SendCommandOLD(CMD_FLASHMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED);
         }
         case SIM_MEM: {
-            //PacketCommandOLD c = {CMD_DOWNLOAD_SIM_MEM, {start_index, bytes, 0}, {{0}}};
-            //SendCommand(&c);
+            //SendCommandOLD(CMD_DOWNLOAD_SIM_MEM, start_index, bytes, 0, NULL, 0);
             //return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
             return false;
         }
