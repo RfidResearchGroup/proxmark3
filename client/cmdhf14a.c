@@ -481,7 +481,7 @@ int CmdHF14ASim(const char *Cmd) {
         flags |= FLAG_UID_IN_EMUL;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SIMULATE_TAG_ISO_14443a,  tagtype, flags, 0 , uid, uidlen >> 1);
+    SendCommandOLD(CMD_SIMULATE_TAG_ISO_14443a,  tagtype, flags, 0, uid, uidlen >> 1);
     PacketResponseNG resp;
 
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");

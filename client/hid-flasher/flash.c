@@ -358,7 +358,7 @@ int flash_start_flashing(int enable_bl_writes) {
         if (enable_bl_writes) {
             SendCommandOLD(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
         } else {
-            SendCommandOLD(CMD_START_FLASH,BOOTLOADER_END, FLASH_END, 0, NULL, 0);
+            SendCommandOLD(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
         }
         return wait_for_ack();
     } else {

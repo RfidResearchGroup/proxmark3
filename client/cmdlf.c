@@ -151,7 +151,7 @@ int CmdLFCommandRead(const char *Cmd) {
     uint32_t arg2 = 0;
     uint8_t data[USB_CMD_DATA_SIZE];
     uint16_t datalen = 0;
-    
+
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {

@@ -599,7 +599,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
     memcpy(data + 1, key, keylength);
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength+1);
+    SendCommandOLD(CMD_MIFARE_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength + 1);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {

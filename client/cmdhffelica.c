@@ -129,7 +129,7 @@ static int CmdHFFelicaSim(const char *Cmd) {
     if (errors || cmdp == 0) return usage_hf_felica_sim();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FELICA_SIMULATE_TAG,  tagtype, flags, 0 , uid, uidlen >> 1);
+    SendCommandOLD(CMD_FELICA_SIMULATE_TAG,  tagtype, flags, 0, uid, uidlen >> 1);
     PacketResponseNG resp;
 
     if (verbose)
