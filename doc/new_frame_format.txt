@@ -174,7 +174,7 @@ Commands do WaitForResponseTimeoutW (or dl_it) which uses getReply to fetch resp
 API transition
 ==============
 
-In short, to mode from one format to the other, we need for each command:
+In short, to move from one format to the other, we need for each command:
 
 * (client TX) SendCommandOLD -> SendCommandNG (with all stuff in ad-hoc structs in "data" field)
 * (pm3 RX) PacketCommandNG parsing, from "oldarg" to only the "data" field

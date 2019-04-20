@@ -1567,7 +1567,7 @@ void  __attribute__((noreturn)) AppMain(void) {
         int16_t ret = receive_ng(&rx);
         if (ret == PM3_SUCCESS) {
             PacketReceived(&rx);
-        } else if (ret != PM3_NODATA) {
+        } else if (ret != PM3_ENODATA) {
             Dbprintf("Error in frame reception");
             // TODO DOEGOX if error, shall we resync ?
         }

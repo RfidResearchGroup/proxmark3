@@ -158,7 +158,7 @@ static int16_t receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t
     PacketCommandNGRaw rx_raw;
     size_t bytes = read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
     if (bytes == 0)
-        return PM3_NODATA;
+        return PM3_ENODATA;
     if (bytes != sizeof(PacketCommandNGPreamble))
         return PM3_EIO;
     rx->magic = rx_raw.pre.magic;
@@ -229,6 +229,6 @@ int16_t receive_ng(PacketCommandNG *rx) {
     // Check if there is a FPC packet available
     return receive_ng_internal(rx, usart_read_ng, true);
 #else
-    return PM3_NODATA;
+    return PM3_ENODATA;
 #endif
 }

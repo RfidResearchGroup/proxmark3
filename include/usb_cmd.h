@@ -393,39 +393,41 @@ typedef struct {
 #define FLAG_NONEWLINE   0x0010
 #define FLAG_NOPROMPT    0x0100
 
-// Error codes
+// Error codes                          Usages:
 
 // Success (no error)
 #define PM3_SUCCESS             0
+
 // Undefined error
 #define PM3_EUNDEF             -1
-// Invalid argument(s)
+// Invalid argument(s)                  client:     user input parsing
 #define PM3_EINVARG            -2
-// Operation not supported by device
+// Operation not supported by device    client/pm3: probably only on pm3 once client becomes universal
 #define PM3_EDEVNOTSUPP        -3
-// Operation timed out
+// Operation timed out                  client:     no response in time from pm3
 #define PM3_ETIMEOUT           -4
-// Operation aborted (by user)
+// Operation aborted (by user)          client/pm3: kbd/button pressed
 #define PM3_EOPABORTED         -5
-// Not (yet) implemented
+// Not (yet) implemented                client/pm3: TBD placeholder
 #define PM3_ENOTIMPL           -6
-// Error while RF transmission
+// Error while RF transmission          client/pm3: fail between pm3 & card
 #define PM3_ERFTRANS           -7
-// Input / output error
+// Input / output error                 pm3:        error in client frame reception
 #define PM3_EIO                -8
-// Buffer overflow
+// Buffer overflow                      client/pm3: specified buffer too large for the operation
 #define PM3_EOVFLOW            -9
-// Software error
+// Software error                       client/pm3: e.g. error in parsing some data
 #define PM3_ESOFT             -10
-// Flash error
+// Flash error                          client/pm3: error in RDV4 Flash operation
 #define PM3_EFLASH            -11
-// Memory allocation error
+// Memory allocation error              client:     error in memory allocation (maybe also for pm3 BigBuff?)
 #define PM3_EMALLOC           -12
-// File error
+// File error                           client:     error related to file access on host
 #define PM3_EFILE             -13
-// No data
-#define PM3_NODATA            -98
-// Quit program
+
+// No data                              pm3:        reserved, no host frame available (not really an error)
+#define PM3_ENODATA           -98
+// Quit program                         client:     reserved, order to quit the program
 #define PM3_EFATAL            -99
 
 
