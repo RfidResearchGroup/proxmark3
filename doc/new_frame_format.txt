@@ -27,13 +27,15 @@ So we designed a new format from scratch:
 For commands being sent to the Proxmark:
 
     uint32_t magic;
-    uint16_t length;
+    uint16_t length : 15;
+    bool ng : 1;
     uint16_t cmd;
     uint8_t  data[length];
     uint16_t crc;
 
 * magic:  arbitrary magic ("PM3a") to help re-sync if needed
 * length: length of the variable payload, 0 if none, max 512 (USB_CMD_DATA_SIZE) for now.
+* ng:     flag to tell if the data is following the new format (ng) or the old one, see transition notes below
 * cmd:    as previously, on 16b as it's enough
 * data:   variable length payload
 * crc:    either an actual CRC (crc14a) or a Magic placeholder ("a3")
@@ -41,7 +43,8 @@ For commands being sent to the Proxmark:
 For responses from the Proxmark:
 
     uint32_t magic;
-    uint16_t length;
+    uint16_t length : 15;
+    bool ng : 1;
     int16_t  status;
     uint16_t cmd;
     uint8_t  data[length];
@@ -49,6 +52,7 @@ For responses from the Proxmark:
 
 * magic:  arbitrary magic ("PM3a") to help re-sync if needed
 * length: length of the variable payload, 0 if none, max 512 (USB_CMD_DATA_SIZE) for now.
+* ng:     flag to tell if the data is following the new format (ng) or the old one, see transition notes below
 * status: a field to send back the status of the command execution
 * cmd:    as previously, on 16b as it's enough
 * data:   variable length payload
@@ -78,6 +82,7 @@ New format API
 
 So the new API is a merge of the old and the new frame formats, to ensure a smooth transition.
 The boolean "ng" indicates if the structure is storing data from the old or the new format.
+Old format can come from either old 544b frames or mixed frames (variable length but still with oldargs).
 After the full transition, we might remove the fields "oldarg" and "ng".
 
 typedef struct {
@@ -114,9 +119,11 @@ On the client, for sending frames:
 *****************************************
 void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
 void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 *****************************************
 
 So cmds should make the transition from SendCommandOLD to SendCommandNG to benefit from smaller frames (and armsrc handlers adjusted accordingly of course).
+SendCommandMIX is a transition fct: it uses the same API as SendCommandOLD but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to USB_CMD_DATA_SIZE - 24. Besides the size limitation, the receiver handler doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
 
 Internally these functions prepare the new or old frames and call uart_communication which calls uart_send.
 
@@ -127,7 +134,7 @@ On the Proxmark3, for receiving frames:
 PacketCommandNG
 *****************************************
 AppMain calls receive_ng(common/cmd.c) which calls usb_read_ng to get a PacketCommandNG, then passes it to PacketReceived.
-(no matter if it's an old frame or a new frame, check PacketCommandNG "ng" field to know)
+(no matter if it's an old frame or a new frame, check PacketCommandNG "ng" field to know if there are oldargs)
 PacketReceive is the commands broker.
 Old handlers will still find their stuff in "oldarg" field.
 
@@ -140,15 +147,18 @@ On the Proxmark3, for sending frames:
 *****************************************
 int16_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len)
 int16_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
+int16_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
 *****************************************
 
 So replies should make the transition from reply_old to reply_ng to benefit from smaller frames (and client reception adjusted accordingly of course).
+reply_mix is a transition fct: it uses the same API as reply_old but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to USB_CMD_DATA_SIZE - 24. Besides the size limitation, the client command doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
 
 Example with CMD_PING that supports both styles (from client CmdPing or CmdPingNG) and replies with the new frame format when it receives new command format:
     if (packet->ng) {
         reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
     } else {
-        reply_old(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+        // reply_old(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+        reply_mix(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
     }
 
 On the client, for receiving frames:
@@ -170,6 +180,11 @@ In short, to mode from one format to the other, we need for each command:
 * (pm3 RX) PacketCommandNG parsing, from "oldarg" to only the "data" field
 * (pm3 TX) reply_old -> reply_ng (with all stuff in ad-hoc structs in "data" field)
 * (client RX) PacketResponseNG parsing, from "oldarg" to only the "data" field
+
+Meanwhile, a fast transition to MIX frames can be done with:
+
+* (client TX) SendCommandOLD -> SendCommandMIX (but check the limited data size)
+* (pm3 TX) reply_old -> reply_mix (but check the limited data size)
 
 Bootrom
 =======
