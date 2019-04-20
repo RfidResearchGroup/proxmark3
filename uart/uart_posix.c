@@ -60,6 +60,9 @@
 # define SOL_TCP IPPROTO_TCP
 #endif
 
+// To memorise baudrate, we don't want to call get_speed systematically
+uint32_t uart_speed;
+
 typedef struct termios term_info;
 typedef struct {
     int fd;           // Serial port file descriptor
@@ -206,7 +209,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             }
         }
     }
-    printf("[=] UART Setting serial baudrate %u\n", speed);
+    uart_speed = uart_get_speed(sp);
+    printf("[=] UART Setting serial baudrate %u\n", uart_speed);
     return sp;
 }
 
@@ -408,7 +412,10 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     // Set port speed (Input and Output)
     cfsetispeed(&ti, stPortSpeed);
     cfsetospeed(&ti, stPortSpeed);
-    return (tcsetattr(spu->fd, TCSANOW, &ti) != -1);
+    bool result = tcsetattr(spu->fd, TCSANOW, &ti) != -1;
+    if (result)
+        uart_speed = uiPortSpeed;
+    return result;
 }
 
 uint32_t uart_get_speed(const serial_port sp) {

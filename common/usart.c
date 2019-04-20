@@ -38,119 +38,123 @@ void usart_close(void) {
 }
 */
 
-static uint8_t us_inbuf[sizeof(PacketCommandOLD)];
-static uint8_t us_outbuf[sizeof(PacketResponseOLD)];
-/*
-// transfer from client to device
-inline int16_t usart_readbuffer(uint8_t *data) {
-    uint32_t rcr = pUS1->US_RCR;
-    if (rcr < sizeof(us_inbuf)) {
-        pUS1->US_PTCR = AT91C_PDC_RXTDIS;
-        memcpy(data, us_inbuf, sizeof(us_inbuf) - rcr);
-        // Reset DMA buffer
-        pUS1->US_RPR = (uint32_t)us_inbuf;
-        pUS1->US_RCR = sizeof(us_inbuf);
-        pUS1->US_PTCR = AT91C_PDC_RXTEN;
-        return sizeof(us_inbuf) - rcr;
-    } else {
-        return 0;
-    }
-}
-*/
+static uint8_t us_inbuf1[USART_BUFFLEN];
+static uint8_t us_inbuf2[USART_BUFFLEN];
+uint8_t *usart_cur_inbuf = NULL;
+uint16_t usart_cur_inbuf_off = 0;
+static uint8_t us_rxfifo[USART_FIFOLEN];
+static size_t us_rxfifo_low = 0;
+static size_t us_rxfifo_high = 0;
 
-uint8_t check = 0;
-inline int16_t usart_readbuffer(uint8_t *data) {
-    // Check if the first PDC bank is free
-    if (pUS1->US_RCR == 0) {
-        pUS1->US_RPR = (uint32_t)data;
-        pUS1->US_RCR = sizeof(PacketCommandOLD);
-        pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTEN;
-        check = 0;
-        return 2;
-    } else {
-        return 0;
-    }
-}
 
-void usart_readcheck(uint8_t *data, size_t len) {
-    if (pUS1->US_RCR < len) {
-        if (check == 0) {
-            StartCountUS();
-            check = 1;
+static void usart_fill_rxfifo(void) {
+    if (pUS1->US_RNCR == 0) { // One buffer got filled, backup buffer being used
+// TODO check if we have room...
+        uint16_t available = USART_BUFFLEN - usart_cur_inbuf_off;
+        for (uint16_t i = 0; i < available; i++) {
+            us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
+            if (us_rxfifo_high == sizeof(us_rxfifo))
+                us_rxfifo_high = 0;
         }
-        //300ms
-        if (GetCountUS() > 300000) {
-            pUS1->US_RPR = (uint32_t)data;
-            pUS1->US_RCR = len;
-            check = 0;
+        // Give next buffer
+        pUS1->US_RNPR = (uint32_t)usart_cur_inbuf;
+        pUS1->US_RNCR = USART_BUFFLEN;
+        // Swap current buff
+        if (usart_cur_inbuf == us_inbuf1)
+            usart_cur_inbuf = us_inbuf2;
+        else
+            usart_cur_inbuf = us_inbuf1;
+        usart_cur_inbuf_off = 0;
+    }
+    if (pUS1->US_RCR < USART_BUFFLEN - usart_cur_inbuf_off) { // Current buffer partially filled
+        uint16_t available = USART_BUFFLEN - pUS1->US_RCR - usart_cur_inbuf_off;
+// TODO check if we have room...
+        for (uint16_t i = 0; i < available; i++) {
+            us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
+            if (us_rxfifo_high == sizeof(us_rxfifo))
+                us_rxfifo_high = 0;
         }
-    } else {
-        check = 0;
+        usart_cur_inbuf_off += available;
     }
 }
 
-inline bool usart_dataavailable(void) {
-    return pUS1->US_RCR < sizeof(us_inbuf);
+uint16_t usart_rxdata_available(void) {
+    usart_fill_rxfifo();
+    if (us_rxfifo_low <= us_rxfifo_high)
+        return us_rxfifo_high - us_rxfifo_low;
+    else
+        return sizeof(us_rxfifo) - us_rxfifo_low + us_rxfifo_high;
 }
 
-inline int16_t usart_readcommand(uint8_t *data) {
-    if (pUS1->US_RCR == 0)
-        return usart_readbuffer(data);
-
-    return 0;
-}
+extern bool reply_via_fpc;
+extern void Dbprintf(const char *fmt, ...);
+#define Dbprintf_usb(...) {\
+        bool tmp = reply_via_fpc;\
+        reply_via_fpc = false;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = tmp;}
 
 uint32_t usart_read_ng(uint8_t *data, size_t len) {
-    // TODO DOEGOX
-    return 0;
+    if (len == 0) return 0;
+    uint32_t packetSize, nbBytesRcv = 0;
+    uint32_t try = 0;
+//    uint32_t highest_observed_try = 0;
+    // Empirical max try observed: 3000000 / USART_BAUD_RATE
+    // Let's take 10x
+    uint32_t maxtry = 10 * ( 3000000 / USART_BAUD_RATE );
+
+    while (len) {
+        uint32_t available = usart_rxdata_available();
+
+        packetSize = MIN(available, len);
+        if (available > 0) {
+//            Dbprintf_usb("Dbg USART ask %d bytes, available %d bytes, packetsize %d bytes", len, available, packetSize);
+//            highest_observed_try = MAX(highest_observed_try, try);
+            try = 0;
+        }
+        len -= packetSize;
+        while (packetSize--) {
+            data[nbBytesRcv++] = us_rxfifo[us_rxfifo_low++];
+            if (us_rxfifo_low == sizeof(us_rxfifo))
+                us_rxfifo_low = 0;
+        }
+        if (try++ == maxtry) {
+            Dbprintf_usb("Dbg USART TIMEOUT");
+            break;
+        }
+    }
+//    highest_observed_try = MAX(highest_observed_try, try);
+//    Dbprintf_usb("Dbg USART max observed try %i", highest_observed_try);
+    return nbBytesRcv;
 }
 
-inline bool usart_commandavailable(void) {
-    return (pUS1->US_RCR == 0);
-}
-/*
 // transfer from device to client
 inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
 
+    // Wait for one free PDC bank
+    while (pUS1->US_TCR && pUS1->US_TNCR) {};
+    // ? alternative to wait for end of transmissions?
+    // while (!(pUS1->US_CSR & AT91C_US_ENDTX)) {};
 
-    if (pUS1->US_CSR & AT91C_US_ENDTX) {
-        memcpy(us_outbuf, data, len);
-        pUS1->US_TPR = (uint32_t)us_outbuf;
+    // Check if the current PDC bank is free
+    if (pUS1->US_TCR == 0) {
+        pUS1->US_TPR = (uint32_t)data;
         pUS1->US_TCR = len;
-        pUS1->US_PTCR = AT91C_PDC_TXTEN;
-        while (!(pUS1->US_CSR & AT91C_US_ENDTX)) {};
-        pUS1->US_PTCR = AT91C_PDC_TXTDIS;
-        return len;
+    }
+    // Check if the backup PDC bank is free
+    else if (pUS1->US_TNCR == 0) {
+        pUS1->US_TNPR = (uint32_t)data;
+        pUS1->US_TNCR = len;
     } else {
+        // we shouldn't be here
         return 0;
     }
+    // Make sure TX transfer is enabled
+    pUS1->US_PTCR = AT91C_PDC_TXTEN;// | AT91C_PDC_RXTEN;
+    //wait until finishing all transfers
+    while (pUS1->US_TNCR || pUS1->US_TCR) {};
+    return len;
 }
-*/
-
-// transfer from device to client
-inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
-
-    while (pUS1->US_TCR && pUS1->US_TNCR) {};
-
-    // Check if the first PDC bank is free
-    if (pUS1->US_TCR == 0) {
-        memcpy(us_outbuf, data, len);
-        pUS1->US_TPR = (uint32_t)us_outbuf;
-        pUS1->US_TCR = sizeof(us_outbuf);
-        pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTEN;
-    }
-    // Check if the second PDC bank is free
-    else if (pUS1->US_TNCR == 0) {
-        memcpy(us_outbuf, data, len);
-        pUS1->US_TNPR = (uint32_t)us_outbuf;
-        pUS1->US_TNCR = sizeof(us_outbuf);
-        pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTEN;
-    }
-    //wait until finishing transfer
-    while (pUS1->US_TCR && pUS1->US_TNCR) {};
-    return 0;
-}
-
 
 void usart_init(void) {
 
@@ -185,9 +189,7 @@ void usart_init(void) {
     // all interrupts disabled
     pUS1->US_IDR = 0xFFFF;
 
-    pUS1->US_BRGR =  48054841 / (AT91_BAUD_RATE << 3);
-    // Need speed?
-    //pUS1->US_BRGR =  48054841 / (460800 << 3);
+    pUS1->US_BRGR =  48054841 / (USART_BAUD_RATE << 3);
 
     // Write the Timeguard Register
     pUS1->US_TTGR = 0;
@@ -195,9 +197,13 @@ void usart_init(void) {
     pUS1->US_FIDI = 0;
     pUS1->US_IF = 0;
 
-    // Disable double buffers for now
+    // Initialize DMA buffers
+    pUS1->US_TPR = (uint32_t)0;
+    pUS1->US_TCR = 0;
     pUS1->US_TNPR = (uint32_t)0;
     pUS1->US_TNCR = 0;
+    pUS1->US_RPR = (uint32_t)0;
+    pUS1->US_RCR = 0;
     pUS1->US_RNPR = (uint32_t)0;
     pUS1->US_RNCR = 0;
 
@@ -205,8 +211,10 @@ void usart_init(void) {
     pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);
 
     // ready to receive
-    pUS1->US_RPR = (uint32_t)us_inbuf;
-    pUS1->US_RCR = 0;
-    pUS1->US_RNCR = 0;
+    pUS1->US_RPR = (uint32_t)us_inbuf1;
+    pUS1->US_RCR = USART_BUFFLEN;
+    usart_cur_inbuf = us_inbuf1;
+    pUS1->US_RNPR = (uint32_t)us_inbuf2;
+    pUS1->US_RNCR = USART_BUFFLEN;
     pUS1->US_PTCR = AT91C_PDC_RXTEN;
 }

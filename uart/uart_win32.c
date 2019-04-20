@@ -42,6 +42,9 @@
 #ifdef _WIN32
 #include <windows.h>
 
+// To memorise baudrate, we don't want to call get_speed systematically
+uint32_t uart_speed;
+
 typedef struct {
     HANDLE hPort;     // Serial port handle
     DCB dcb;          // Device control settings
@@ -121,7 +124,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             }
         }
     }
-    printf("[=] UART Setting serial baudrate %i\n", speed);
+    uart_speed = uart_get_speed(sp);
+    printf("[=] UART Setting serial baudrate %u\n", uart_speed);
     return sp;
 }
 
@@ -152,6 +156,8 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     spw->dcb.BaudRate = uiPortSpeed;
     bool result = SetCommState(spw->hPort, &spw->dcb);
     PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
+    if (result)
+        uart_speed = uiPortSpeed;
     return result;
 }
 

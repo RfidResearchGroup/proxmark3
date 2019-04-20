@@ -1106,16 +1106,17 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint8_t my_rx[20];
             memset(my_rx, 0, sizeof(my_rx));
-            res = usart_readbuffer(my_rx, sizeof(my_rx));
+            res = usart_readbuffer(my_rx);
             WaitMS(1);
             Dbprintf("GOT  %d | %c%c%c%c%c%c%c%c", res,  my_rx[0], my_rx[1], my_rx[2], my_rx[3], my_rx[4], my_rx[5], my_rx[6], my_rx[7]);
             */
 
 
-            char dest[USB_CMD_DATA_SIZE] = {'\0'};
-            if (usart_dataavailable()) {
+            char dest[USART_FIFOLEN] = {'\0'};
+            uint16_t available = usart_rxdata_available();
+            if (available > 0) {
                 Dbprintf("RX DATA!");
-                uint16_t len = usart_readbuffer((uint8_t *)dest);
+                uint16_t len = usart_read_ng((uint8_t *)dest, available);
                 dest[len] = '\0';
                 Dbprintf("RX: %d | %02X %02X %02X %02X %02X %02X %02X %02X ", len,  dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
             }
@@ -1142,7 +1143,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t my_rx[sizeof(PacketCommandOLD)];
             while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
                 LED_B_INV();
-                if (usart_readbuffer(my_rx) ) {
+                if (usart_read_ng(my_rx) ) {
                     //PacketReceived(my_rx, sizeof(my_rx));
 
                     PacketCommandOLD *my = (PacketCommandOLD *)my_rx;
@@ -1568,7 +1569,7 @@ void  __attribute__((noreturn)) AppMain(void) {
         if (ret == PM3_SUCCESS) {
             PacketReceived(&rx);
         } else if (ret != PM3_ENODATA) {
-            Dbprintf("Error in frame reception");
+            Dbprintf("Error in frame reception: %d", ret);
             // TODO DOEGOX if error, shall we resync ?
         }
 

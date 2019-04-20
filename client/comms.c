@@ -563,6 +563,21 @@ void CloseProxmark(void) {
     memset(&USB_communication_thread, 0, sizeof(pthread_t));
 }
 
+// Gives a rough estimate of the communication delay based on channel & baudrate
+// Max communication delay is when sending largest frame and receiving largest frame
+// Empirical measures on FTDI with physical cable:
+// "hw pingng 512"
+//    usb ->    6..32ms
+// 460800 ->   40..70ms
+//   9600 -> 1100..1150ms
+//           ~ = 12000000 / USART_BAUD_RATE
+// Let's take 2x (maybe we need more for BT link?)
+static size_t communication_delay(void) {
+    if (send_via_fpc)  // needed also for Windows USB USART??
+        return 2 * (12000000 / uart_speed);
+    return 100;
+}
+
 /**
  * @brief Waits for a certain response type. This method waits for a maximum of
  * ms_timeout milliseconds for a specified response command.
@@ -580,14 +595,18 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
     if (response == NULL)
         response = &resp;
 
+    // Add delay depending on the communication channel & speed
+    ms_timeout += communication_delay();
     uint64_t start_time = msclock();
 
     // Wait until the command is received
     while (true) {
 
         while (getReply(response)) {
-            if (cmd == CMD_UNKNOWN || response->cmd == cmd)
+            if (cmd == CMD_UNKNOWN || response->cmd == cmd) {
+//                PrintAndLogEx(INFO, "Waited %i ms", msclock() - start_time);
                 return true;
+            }
         }
 
         if (msclock() - start_time > ms_timeout)
@@ -600,6 +619,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             show_warning = false;
         }
     }
+//    PrintAndLogEx(INFO, "Wait timeout after %i ms", msclock() - start_time);
     return false;
 }
 

@@ -227,8 +227,8 @@ int16_t receive_ng(PacketCommandNG *rx) {
 
 #ifdef WITH_FPC_HOST
     // Check if there is a FPC packet available
-    return receive_ng_internal(rx, usart_read_ng, true);
-#else
-    return PM3_ENODATA;
+    if (usart_rxdata_available() > 0)
+        return receive_ng_internal(rx, usart_read_ng, true);
 #endif
+    return PM3_ENODATA;
 }

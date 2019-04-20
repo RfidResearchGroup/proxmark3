@@ -431,7 +431,7 @@ int main(int argc, char *argv[]) {
     if (speed == 0)
 #ifdef WITH_FPC_HOST
         // Let's assume we're talking by default to pm3 over usart in this mode
-        speed = AT91_BAUD_RATE;
+        speed = USART_BAUD_RATE;
 #else
         speed = 460800;
 #endif
