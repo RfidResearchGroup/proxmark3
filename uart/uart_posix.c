@@ -234,8 +234,8 @@ void uart_close(const serial_port sp) {
     free(sp);
 }
 
-bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size_t *pszRxLen) {
-    size_t byteCount;
+bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
+    uint32_t byteCount;  // FIONREAD returns size on 32b
     fd_set rfds;
     struct timeval tv;
 
@@ -267,10 +267,12 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size
 
         // Retrieve the count of the incoming bytes
         res = ioctl(((serial_port_unix *)sp)->fd, FIONREAD, &byteCount);
+        printf("UART:: RX ioctl res %d byteCount %u\n", res, byteCount);
         if (res < 0) return false;
 
         // Cap the number of bytes, so we don't overrun the buffer
         if (pszMaxRxLen - (*pszRxLen) < byteCount) {
+            printf("UART:: RX buffer overrun (have %u, need %u)\n", pszMaxRxLen - (*pszRxLen), byteCount);
             byteCount = pszMaxRxLen - (*pszRxLen);
         }
 
@@ -292,8 +294,8 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, size_t pszMaxRxLen, size
     return true;
 }
 
-bool uart_send(const serial_port sp, const uint8_t *pbtTx, const size_t len) {
-    size_t pos = 0;
+bool uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
+    uint32_t pos = 0;
     fd_set rfds;
     struct timeval tv;
 

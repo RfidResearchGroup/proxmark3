@@ -169,11 +169,11 @@ uint32_t uart_get_speed(const serial_port sp) {
     return 0;
 }
 
-bool uart_receive(const serial_port sp, uint8_t *p_rx, size_t pszMaxRxLen, size_t *len) {
-    return ReadFile(((serial_port_windows *)sp)->hPort, p_rx, pszMaxRxLen, (LPDWORD)len, NULL);
+bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
+    return ReadFile(((serial_port_windows *)sp)->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL);
 }
 
-bool uart_send(const serial_port sp, const uint8_t *p_tx, const size_t len) {
+bool uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
     DWORD txlen = 0;
     return WriteFile(((serial_port_windows *)sp)->hPort, p_tx, len, &txlen, NULL);
 }

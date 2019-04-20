@@ -319,7 +319,7 @@ __attribute__((force_align_arg_pointer))
 #endif
 *uart_communication(void *targ) {
     communication_arg_t *connection = (communication_arg_t *)targ;
-    size_t rxlen;
+    uint32_t rxlen;
 
     PacketResponseNG rx;
     PacketResponseNGRaw rx_raw;
