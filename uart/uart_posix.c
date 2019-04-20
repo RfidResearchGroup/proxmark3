@@ -70,10 +70,11 @@ typedef struct {
     term_info tiNew;  // Terminal info during the transaction
 } serial_port_unix;
 
-// Set time-out on 30 miliseconds
+// Set time-out on 300 milliseconds
+// It was 30 ms for USB but we need more to receive from USART
 struct timeval timeout = {
     .tv_sec  =     0, // 0 second
-    .tv_usec = 30000  // 30 000 micro seconds
+    .tv_usec = 300000  // 300 000 micro seconds
 };
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
@@ -257,7 +258,7 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, ui
         // Read time-out
         if (res == 0) {
             if (*pszRxLen == 0) {
-                // Error, we received no data
+                // We received no data
                 return false;
             } else {
                 // We received some data, but nothing more is available
@@ -267,12 +268,12 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, ui
 
         // Retrieve the count of the incoming bytes
         res = ioctl(((serial_port_unix *)sp)->fd, FIONREAD, &byteCount);
-        printf("UART:: RX ioctl res %d byteCount %u\n", res, byteCount);
+//        printf("UART:: RX ioctl res %d byteCount %u\n", res, byteCount);
         if (res < 0) return false;
 
         // Cap the number of bytes, so we don't overrun the buffer
         if (pszMaxRxLen - (*pszRxLen) < byteCount) {
-            printf("UART:: RX buffer overrun (have %u, need %u)\n", pszMaxRxLen - (*pszRxLen), byteCount);
+//            printf("UART:: RX prevent overrun (have %u, need %u)\n", pszMaxRxLen - (*pszRxLen), byteCount);
             byteCount = pszMaxRxLen - (*pszRxLen);
         }
 
@@ -280,7 +281,9 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, ui
         res = read(((serial_port_unix *)sp)->fd, pbtRx + (*pszRxLen), byteCount);
 
         // Stop if the OS has some troubles reading the data
-        if (res <= 0) return false;
+        if (res <= 0) {
+            return false;
+        }
 
         *pszRxLen += res;
 
@@ -288,7 +291,6 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, ui
             // We have all the data we wanted.
             return true;
         }
-
     } while (byteCount);
 
     return true;
