@@ -1452,7 +1452,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (packet->ng) {
                 reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
             } else {
-                reply_old(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+                reply_mix(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
             }
             break;
 #ifdef WITH_LCD

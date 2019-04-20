@@ -335,20 +335,40 @@ __attribute__((force_align_arg_pointer))
         bool error = false;
         if (uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen) && (rxlen == sizeof(PacketResponseNGPreamble))) {
             rx.magic = rx_raw.pre.magic;
-            rx.length = rx_raw.pre.length;
+            uint16_t length = rx_raw.pre.length;
+            rx.ng = rx_raw.pre.ng;
             rx.status = rx_raw.pre.status;
             rx.cmd = rx_raw.pre.cmd;
             if (rx.magic == RESPONSENG_PREAMBLE_MAGIC) { // New style NG reply
-                if (rx.length > USB_CMD_DATA_SIZE) {
-                    PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", rx.length);
+                if (length > USB_CMD_DATA_SIZE) {
+                    PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", length);
                     error = true;
                 }
-                if ((!error) && (rx.length > 0)) { // Get the variable length payload
-                    if ((!uart_receive(sp, (uint8_t *)&rx_raw.data, rx.length, &rxlen)) || (rxlen != rx.length)) {
-                        PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, rx.length);
+                if ((!error) && (length > 0)) { // Get the variable length payload
+                    if ((!uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen)) || (rxlen != length)) {
+                        PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, length);
                         error = true;
                     } else {
-                        memcpy(&rx.data, &rx_raw.data, rx.length);
+
+
+                        if (rx.ng) {
+                            memcpy(&rx.data, &rx_raw.data, length);
+                            rx.length = length;
+                        } else {
+                            uint64_t arg[3];
+                            if (length < sizeof(arg)) {
+                                PrintAndLogEx(WARNING, "Received MIX packet frame with incompatible length: 0x%04x", length);
+                                error = true;
+                            }
+                            if (!error) {
+                                memcpy(arg, &rx_raw.data, sizeof(arg));
+                                rx.oldarg[0] = arg[0];
+                                rx.oldarg[1] = arg[1];
+                                rx.oldarg[2] = arg[2];
+                                memcpy(&rx.data, ((uint8_t *)&rx_raw.data) + sizeof(arg), length - sizeof(arg));
+                                rx.length = length - sizeof(arg);
+                            }
+                        }
                     }
                 }
                 if (!error) {                        // Get the postamble
@@ -361,7 +381,7 @@ __attribute__((force_align_arg_pointer))
                     rx.crc = rx_raw.foopost.crc;
                     if (rx.crc != RESPONSENG_POSTAMBLE_MAGIC) {
                         uint8_t first, second;
-                        compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + rx.length, &first, &second);
+                        compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + length, &first, &second);
                         if ((first << 8) + second != rx.crc) {
                             PrintAndLogEx(WARNING, "Received packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
                             error = true;
@@ -370,7 +390,6 @@ __attribute__((force_align_arg_pointer))
                 }
                 if (!error) {
 //                    PrintAndLogEx(NORMAL, "Received reply NG full !!");
-                    rx.ng = true;
                     PacketResponseReceived(&rx);
 //TODO DOEGOX NG don't send ACK anymore but reply with the corresponding cmd, still things seem to work fine...
                     if (rx.cmd == CMD_ACK) {
