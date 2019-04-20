@@ -192,3 +192,32 @@ TODO
 We need to be very careful to make a flasher that can deal with old & new bootroms.
 New bootrom might need to also still support old frame format, to ease flashing back to repos supporting the old format...
 
+
+
+Timings
+=======
+
+Needed to increase client RX uart timeout: it was 30ms, we put arbitrarily 300ms as for TCP
+(uart/uart_posix.c)
+struct timeval timeout = {
+    .tv_sec  =     0, // 0 second
+    .tv_usec = 300000  // 300 000 micro seconds
+};
+
+Add automatically some communication delay in the WaitForResponseTimeout timeout
+Only when using FPC, timeout = 2* empirically measured delay (FTDI cable)
+(client/comms.c)
+static size_t communication_delay(void) {
+    if (send_via_fpc)  // needed also for Windows USB USART??
+        return 2 * (12000000 / uart_speed);
+    return 100;
+}
+
+Needed to tune pm3 RX usart maxtry
+(common/usart.c)
+uint32_t usart_read_ng(uint8_t *data, size_t len) {
+// Empirical max try observed: 3000000 / USART_BAUD_RATE
+// Let's take 10x
+uint32_t maxtry = 10 * ( 3000000 / USART_BAUD_RATE );
+
+
