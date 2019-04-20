@@ -106,8 +106,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
     SendCommand(&c);
 }
 
-void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
-
+static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool ng) {
 #ifdef COMMS_DEBUG
     PrintAndLogEx(NORMAL, "Sending %d bytes of payload | cmd %04x\n", len, cmd);
 #endif
@@ -134,6 +133,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
     }
 
     txBufferNG.pre.magic = COMMANDNG_PREAMBLE_MAGIC;
+    txBufferNG.pre.ng = ng;
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
     memcpy(&txBufferNG.data, data, len);
@@ -157,6 +157,24 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
+
+void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
+    SendCommandNG_internal(cmd, data, len, true);
+}
+
+void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+    uint64_t arg[3] = {arg0, arg1, arg2};
+    if (len > USB_CMD_DATA_SIZE - sizeof(arg)) {
+        PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much for MIX frames, abort", len);
+        return;
+    }
+    uint8_t cmddata[USB_CMD_DATA_SIZE];
+    memcpy(cmddata, arg, sizeof(arg));
+    if (len && data)
+        memcpy(cmddata + sizeof(arg), data, len);
+    SendCommandNG_internal(cmd, cmddata, len + sizeof(arg), false);
+}
+
 
 /**
  * @brief This method should be called when sending a new command to the pm3. In case any old

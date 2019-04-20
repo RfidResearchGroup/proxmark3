@@ -37,7 +37,8 @@ typedef struct {
 
 typedef struct {
     uint32_t magic;
-    uint16_t length;  // length of the variable part, 0 if none.
+    uint16_t length : 15;  // length of the variable part, 0 if none.
+    bool ng : 1;
     uint16_t cmd;
 } PACKED PacketCommandNGPreamble;
 

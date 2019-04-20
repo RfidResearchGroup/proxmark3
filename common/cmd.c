@@ -143,6 +143,7 @@ static int16_t receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t
     if (bytes != sizeof(PacketCommandNGPreamble))
         return PM3_EIO;
     rx->magic = rx_raw.pre.magic;
+    rx->ng = rx_raw.pre.ng;
     rx->length = rx_raw.pre.length;
     rx->cmd = rx_raw.pre.cmd;
     if (rx->magic == COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
@@ -152,7 +153,18 @@ static int16_t receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t
         bytes = read_ng((uint8_t *)&rx_raw.data, rx->length);
         if (bytes != rx->length)
             return PM3_EIO;
-        memcpy(rx->data.asBytes, rx_raw.data, rx->length);
+        if (rx->ng)
+            memcpy(rx->data.asBytes, rx_raw.data, rx->length);
+        else {
+            uint64_t arg[3];
+            if (rx->length < sizeof(arg))
+                return PM3_EIO;
+            memcpy(arg, rx_raw.data, sizeof(arg));
+            rx->oldarg[0] = arg[0];
+            rx->oldarg[1] = arg[1];
+            rx->oldarg[2] = arg[2];
+            memcpy(rx->data.asBytes, rx_raw.data + sizeof(arg), rx->length - sizeof(arg));
+        }
         // Get the postamble
         bytes = read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
         if (bytes != sizeof(PacketCommandNGPostamble))
@@ -166,7 +178,6 @@ static int16_t receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t
                 return PM3_EIO;
         }
         reply_via_fpc = fpc;
-        rx->ng = true;
     } else {                               // Old style command
         PacketCommandOLD rx_old;
         memcpy(&rx_old, &rx_raw.pre, sizeof(PacketCommandNGPreamble));
