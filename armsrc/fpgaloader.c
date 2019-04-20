@@ -468,16 +468,18 @@ void SetAdcMuxFor(uint32_t whichGpio) {
     LOW(GPIO_MUXSEL_LOPKD);
     LOW(GPIO_MUXSEL_HIRAW);
     LOW(GPIO_MUXSEL_LORAW);
-
+    HIGH(whichGpio);
 #else
+    if ((whichGpio == GPIO_MUXSEL_LORAW) || (whichGpio == GPIO_MUXSEL_HIRAW))
+        return;
     // FPC serial uses HIRAW/LOWRAW pins, so they are excluded here.
     AT91C_BASE_PIOA->PIO_OER = GPIO_MUXSEL_HIPKD | GPIO_MUXSEL_LOPKD;
     AT91C_BASE_PIOA->PIO_PER = GPIO_MUXSEL_HIPKD | GPIO_MUXSEL_LOPKD;
     LOW(GPIO_MUXSEL_HIPKD);
     LOW(GPIO_MUXSEL_LOPKD);
+    HIGH(whichGpio);
 #endif
 
-    HIGH(whichGpio);
 }
 
 void Fpga_print_status(void) {
