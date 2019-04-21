@@ -220,6 +220,10 @@ struct timeval timeout = {
 
 Add automatically some communication delay in the WaitForResponseTimeout timeout
 Only when using FPC, timeout = 2* empirically measured delay (FTDI cable)
+Empirically measured delay (FTDI cable) with "hw pingng 512" :
+   usb ->    6..32ms
+460800 ->   40..70ms
+  9600 -> 1100..1150ms
 (client/comms.c)
 static size_t communication_delay(void) {
     if (send_via_fpc)  // needed also for Windows USB USART??
