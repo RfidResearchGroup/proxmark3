@@ -119,7 +119,7 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
                 us_rxfifo_low = 0;
         }
         if (try++ == maxtry) {
-            Dbprintf_usb("Dbg USART TIMEOUT");
+//            Dbprintf_usb("Dbg USART TIMEOUT");
             break;
         }
     }
@@ -133,8 +133,6 @@ inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
 
     // Wait for one free PDC bank
     while (pUS1->US_TCR && pUS1->US_TNCR) {};
-    // ? alternative to wait for end of transmissions?
-    // while (!(pUS1->US_CSR & AT91C_US_ENDTX)) {};
 
     // Check if the current PDC bank is free
     if (pUS1->US_TCR == 0) {
@@ -149,8 +147,6 @@ inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
         // we shouldn't be here
         return 0;
     }
-    // Make sure TX transfer is enabled
-    pUS1->US_PTCR = AT91C_PDC_TXTEN;// | AT91C_PDC_RXTEN;
     //wait until finishing all transfers
     while (pUS1->US_TNCR || pUS1->US_TCR) {};
     return len;
@@ -202,19 +198,15 @@ void usart_init(void) {
     pUS1->US_TCR = 0;
     pUS1->US_TNPR = (uint32_t)0;
     pUS1->US_TNCR = 0;
-    pUS1->US_RPR = (uint32_t)0;
-    pUS1->US_RCR = 0;
-    pUS1->US_RNPR = (uint32_t)0;
-    pUS1->US_RNCR = 0;
-
-    // re-enable receiver / transmitter
-    pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);
-
-    // ready to receive
     pUS1->US_RPR = (uint32_t)us_inbuf1;
     pUS1->US_RCR = USART_BUFFLEN;
     usart_cur_inbuf = us_inbuf1;
     pUS1->US_RNPR = (uint32_t)us_inbuf2;
     pUS1->US_RNCR = USART_BUFFLEN;
-    pUS1->US_PTCR = AT91C_PDC_RXTEN;
+
+    // re-enable receiver / transmitter
+    pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);
+
+    // ready to receive and transmit
+    pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTEN;
 }

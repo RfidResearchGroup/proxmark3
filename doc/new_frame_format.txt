@@ -197,11 +197,25 @@ New bootrom might need to also still support old frame format, to ease flashing 
 Timings
 =======
 
-Needed to increase client RX uart timeout: it was 30ms, we put arbitrarily 300ms as for TCP
+(common/usart.h)
+USART_BAUD_RATE defined
+
+     9600: #db#   USB Transfer Speed PM3 -> Client =    934 Bytes/s
+   115200: #db#   USB Transfer Speed PM3 -> Client =  11137 Bytes/s
+   460800: #db#   USB Transfer Speed PM3 -> Client =  43119 Bytes/s
+linux usb: #db#   USB Transfer Speed PM3 -> Client = 666624 Bytes/s (~7Mbaud)
+
+
+At some point, when still activating AT91C_PDC_TXTEN in usart_writebuffer, we needed to increase client uart timeout.
+We tried 300ms, but then USB flasher failed :
+[=] UART Setting serial baudrate 460800
+.Found
+Error: Unknown Proxmark3 mode
+Now we're at 60ms
 (uart/uart_posix.c)
 struct timeval timeout = {
     .tv_sec  =     0, // 0 second
-    .tv_usec = 300000  // 300 000 micro seconds
+    .tv_usec = 60000  // 60 000 micro seconds
 };
 
 Add automatically some communication delay in the WaitForResponseTimeout timeout

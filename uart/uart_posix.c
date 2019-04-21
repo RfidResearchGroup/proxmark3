@@ -70,11 +70,12 @@ typedef struct {
     term_info tiNew;  // Terminal info during the transaction
 } serial_port_unix;
 
-// Set time-out on 300 milliseconds
-// It was 30 ms for USB but we need more to receive from USART
+// To be checked, receiving from USART might need more than 30ms
+// if we get errors about partial packet reception
+// but e.g. extending to 300ms makes USB flasher failing
 struct timeval timeout = {
     .tv_sec  =     0, // 0 second
-    .tv_usec = 300000  // 300 000 micro seconds
+    .tv_usec = 60000  // 60 000 micro seconds
 };
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
