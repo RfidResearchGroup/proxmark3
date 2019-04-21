@@ -253,9 +253,23 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
 
             char s[USB_CMD_DATA_SIZE + 1];
             memset(s, 0x00, sizeof(s));
-            size_t len = MIN(packet->oldarg[0], USB_CMD_DATA_SIZE);
-            memcpy(s, packet->data.asBytes, len);
-            uint64_t flag = packet->oldarg[1];
+
+            size_t len;
+            uint16_t flag;
+            if (packet->ng) {
+                struct d {
+                    uint16_t flag;
+                    uint8_t buf[USB_CMD_DATA_SIZE - sizeof(uint16_t)];
+                } PACKED;
+                struct d* data = (struct d*)&packet->data.asBytes;
+                len = packet->length - sizeof(data->flag);
+                memcpy(s, data->buf, len);
+                flag = data->flag;
+            } else {
+                len = MIN(packet->oldarg[0], USB_CMD_DATA_SIZE);
+                memcpy(s, packet->data.asBytes, len);
+                flag = packet->oldarg[1];
+            }
 
             switch (flag) {
                 case FLAG_RAWPRINT:

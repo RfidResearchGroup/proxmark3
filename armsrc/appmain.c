@@ -116,8 +116,14 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 
 void DbpStringEx(char *str, uint32_t cmd) {
 #if DEBUG
-    uint8_t len = strlen(str);
-    reply_mix(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t *)str, len);
+    struct {
+        uint16_t flag;
+        uint8_t buf[USB_CMD_DATA_SIZE - sizeof(uint16_t)];
+    } PACKED data;
+    data.flag = cmd;
+    uint16_t len = MIN(strlen(str), sizeof(data.buf));
+    memcpy(data.buf, str, len);
+    reply_ng(CMD_DEBUG_PRINT_STRING, PM3_SUCCESS, (uint8_t*)&data, sizeof(data.flag) + len);
 #endif
 }
 
