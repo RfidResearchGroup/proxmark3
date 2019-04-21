@@ -129,25 +129,15 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 }
 
 // transfer from device to client
-inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
+inline int16_t usart_writebuffer_sync(uint8_t *data, size_t len) {
 
-    // Wait for one free PDC bank
-    while (pUS1->US_TCR && pUS1->US_TNCR) {};
-
-    // Check if the current PDC bank is free
-    if (pUS1->US_TCR == 0) {
-        pUS1->US_TPR = (uint32_t)data;
-        pUS1->US_TCR = len;
-    }
-    // Check if the backup PDC bank is free
-    else if (pUS1->US_TNCR == 0) {
-        pUS1->US_TNPR = (uint32_t)data;
-        pUS1->US_TNCR = len;
-    } else {
-        // we shouldn't be here
-        return 0;
-    }
-    //wait until finishing all transfers
+    // Wait for current PDC bank to be free
+    // (and check next bank too, in case there will be a usart_writebuffer_async)
+    while (pUS1->US_TNCR || pUS1->US_TCR) {};
+    pUS1->US_TPR = (uint32_t)data;
+    pUS1->US_TCR = len;
+    // Wait until finishing all transfers to make sure "data" buffer can be discarded
+    // (if we don't wait here, bulk send as e.g. "hw status" will fail)
     while (pUS1->US_TNCR || pUS1->US_TCR) {};
     return len;
 }

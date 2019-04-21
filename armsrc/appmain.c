@@ -1100,7 +1100,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             strncat(at, s_at, sizeof(at) - strlen(at) - 1);
             DbpString("Try AT baud rate setting");
             usart_init();
-            int16_t res = usart_writebuffer((uint8_t*)&at, sizeof(at));
+            int16_t res = usart_writebuffer_sync((uint8_t*)&at, sizeof(at));
             WaitMS(1);
             Dbprintf("SEND %d | %c%c%c%c%c%c%c%c%c%c%c", res,  at[0], at[1], at[2], at[3], at[4], at[5], at[6], at[7], at[8], at[9], at[10]);
 
@@ -1122,7 +1122,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             static const char *welcome = "Proxmark3 Serial interface via FPC ready\r\n";
-            usart_writebuffer((uint8_t *)welcome, strlen(welcome));
+            usart_writebuffer_sync((uint8_t *)welcome, strlen(welcome));
 
             sprintf(dest, "| bytes 0x%02x 0x%02x 0x%02x 0x%02x\r\n"
                     , packet->data.asBytes[0]
@@ -1130,7 +1130,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     , packet->data.asBytes[2]
                     , packet->data.asBytes[3]
                    );
-            usart_writebuffer((uint8_t *)dest, strlen(dest));
+            usart_writebuffer_sync((uint8_t *)dest, strlen(dest));
 
 
             LED_A_ON();

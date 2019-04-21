@@ -72,7 +72,7 @@ int16_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, voi
 
     if (reply_via_fpc) {
 #ifdef WITH_FPC_HOST
-        sendlen = usart_writebuffer((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
+        sendlen = usart_writebuffer_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 //        Dbprintf_usb("Sent %i bytes over usart", len);
 #else
         return PM3_EDEVNOTSUPP;
@@ -124,7 +124,7 @@ static int16_t reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, si
 
     if (reply_via_fpc) {
 #ifdef WITH_FPC_HOST
-        sendlen = usart_writebuffer((uint8_t *)&txBufferNG, txBufferNGLen);
+        sendlen = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
 //        Dbprintf_usb("Sent %i bytes over usart", len);
 #else
         return PM3_EDEVNOTSUPP;
