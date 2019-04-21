@@ -363,7 +363,7 @@ void SendVersion(void) {
 }
 
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
-// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandOLD structure included.
+// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 void printUSBSpeed(void) {
     Dbprintf("USB Speed");
     Dbprintf("  Sending USB packets to client...");

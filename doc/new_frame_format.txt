@@ -226,13 +226,20 @@ usart_fill_rxfifo:
 Timings
 =======
 
-(common/usart.h)
-USART_BAUD_RATE defined
+Reference (before new format):
 
-     9600: #db#   USB Transfer Speed PM3 -> Client =    934 Bytes/s
-   115200: #db#   USB Transfer Speed PM3 -> Client =  11137 Bytes/s
-   460800: #db#   USB Transfer Speed PM3 -> Client =  43119 Bytes/s
-linux usb: #db#   USB Transfer Speed PM3 -> Client = 666624 Bytes/s (~7Mbaud)
+    linux usb: #db#   USB Transfer Speed PM3 -> Client = 545109 Bytes/s
+On a Windows VM:
+proxspace usb: #db#   USB Transfer Speed PM3 -> Client = 233998 Bytes/s
+
+
+(common/usart.h)
+USART_BAUD_RATE defined there
+
+         9600: #db#   USB Transfer Speed PM3 -> Client =    934 Bytes/s
+       115200: #db#   USB Transfer Speed PM3 -> Client =  11137 Bytes/s
+       460800: #db#   USB Transfer Speed PM3 -> Client =  43119 Bytes/s
+    linux usb: #db#   USB Transfer Speed PM3 -> Client = 666624 Bytes/s (equiv. to ~7Mbaud)
 
 
 At some point, when still activating AT91C_PDC_TXTEN in usart_writebuffer, we needed to increase client uart timeout.
@@ -267,4 +274,46 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 // Let's take 10x
 uint32_t maxtry = 10 * ( 3000000 / USART_BAUD_RATE );
 
+Reference frames
+================
+
+Captured on linux USB.
+
+For helping debug...
+
+Initial connection:
+TestProxmark: SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
+->544=0901000000000000000000000000000000000000000000000000000000000000  -> OLD
+CMD_PING: reply_mix(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+<-36=504d336218000000ff0000000000000000000000000000000000000000000000   <- MIX
+main_loop pm3_version: SendCommandOLD(CMD_VERSION, 0, 0, 0, NULL, 0);
+->544=0701000000000000000000000000000000000000000000000000000000000000  -> OLD
+SendVersion:  reply_old(CMD_ACK,...);
+<-128=ff000000000000004f0a0b270000000009710300000000000000000000000000  <- OLD
+<-128=6572696d656e74616c5f7661726c656e2f33646431663163372d64697274792d
+<-128=484620696d616765206275696c7420666f7220327333307671313030206f6e20
+<-128=0000000000000000000000000000000000000000000000000000000000000000
+<-32=0000000000000000000000000000000000000000000000000000000000000000
+
+"hw ping"
+CmdPing  SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+->34=504d336118000901000000000000000000000000000000000000000000000000   -> MIX
+CMD_PING reply_mix(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+<-36=504d336218000000ff0000000000000000000000000000000000000000000000   <- MIX
+
+"hw pingng"
+CmdPingNG  SendCommandNG(CMD_PING, data, len);
+->10=504d3361008009016133                                               -> NG
+CMD_PING reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
+<-12=504d33620080000009016233                                           <- NG
+
+"hw pingng 512"
+CmdPingNG  SendCommandNG(CMD_PING, data, len);
+->522=504d336100820901000102030405060708090a0b0c0d0e0f1011121314151617  -> NG
+CMD_PING reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
+<-128=504d3362008200000901000102030405060708090a0b0c0d0e0f101112131415  <- NG
+<-128=767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495
+<-128=f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f101112131415
+<-128=767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495
+<-12=f6f7f8f9fafbfcfdfeff6233
 
