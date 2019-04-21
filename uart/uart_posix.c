@@ -70,12 +70,15 @@ typedef struct {
     term_info tiNew;  // Terminal info during the transaction
 } serial_port_unix;
 
-// To be checked, receiving from USART might need more than 30ms
-// if we get errors about partial packet reception
-// but e.g. extending to 300ms makes USB flasher failing
+// Receiving from USART need more than 30ms as we used on USB
+// else we get errors about partial packet reception
+// Now we're using 100ms
+// FTDI   9600 hw status -> we need 20ms
+// FTDI 115200 hw status -> we need 50ms
+// FTDI 460800 hw status -> we need 30ms
 struct timeval timeout = {
-    .tv_sec  =     0, // 0 second
-    .tv_usec = 60000  // 60 000 micro seconds
+    .tv_sec  =      0, // 0 second
+    .tv_usec = 100000  // 100 000 micro seconds
 };
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
