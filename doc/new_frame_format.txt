@@ -133,13 +133,10 @@ On the Proxmark3, for receiving frames:
 *****************************************
 PacketCommandNG
 *****************************************
-AppMain calls receive_ng(common/cmd.c) which calls usb_read_ng to get a PacketCommandNG, then passes it to PacketReceived.
+AppMain calls receive_ng(common/cmd.c) which calls usb_read_ng/usart_read_ng to get a PacketCommandNG, then passes it to PacketReceived.
 (no matter if it's an old frame or a new frame, check PacketCommandNG "ng" field to know if there are oldargs)
 PacketReceive is the commands broker.
 Old handlers will still find their stuff in "oldarg" field.
-
-TODO AppMain still calls directly usart_readbuffer for USART and does not support new frames on USART.
-
 
 On the Proxmark3, for sending frames:
 -------------------------------------
@@ -192,7 +189,39 @@ TODO
 We need to be very careful to make a flasher that can deal with old & new bootroms.
 New bootrom might need to also still support old frame format, to ease flashing back to repos supporting the old format...
 
+New usart RX FIFO
+=================
 
+USART code has been rewritten to cope with unknown size packets.
+* using USART full duplex with double DMA buffer on RX & TX
+* using internal FIFO for RX
+
+usart_init:
+* USART is activated all way long from usart_init(), no need to touch it in RX/TX routines: pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTEN
+
+usart_writebuffer:
+* still using double DMA but accepts arbitrary packet sizes
+* removed unneeded memcpy.
+* wait for both DMA buffers to be treated before returning (TODO still needed?)
+
+usart_read_ng:
+* user tells expected packet length
+* relies on usart_rxdata_available to know if there is data in our FIFO buffer
+* fetches data from our FIFO
+* dynamic number of tries (depending on FPC speed) to wait for asked data
+
+usart_rxdata_available:
+* polls usart_fill_rxfifo
+* returns number of bytes available in our FIFO
+
+usart_fill_rxfifo:
+* if next DMA buffer got moved to current buffer (US_RNCR == 0), it means one DMA buffer is full
+  * transfer current DMA buffer data to our FIFO
+  * swap to the other DMA buffer
+  * provide the emptied DMA buffer as next DMA buffer
+* if current DMA buffer is partially filled
+  * transfer available data to our FIFO
+  * remember how many bytes we already copied to our FIFO
 
 Timings
 =======
