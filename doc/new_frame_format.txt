@@ -199,10 +199,12 @@ USART code has been rewritten to cope with unknown size packets.
 usart_init:
 * USART is activated all way long from usart_init(), no need to touch it in RX/TX routines: pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTEN
 
-usart_writebuffer:
-* still using double DMA but accepts arbitrary packet sizes
-* removed unneeded memcpy.
-* wait for both DMA buffers to be treated before returning (TODO still needed?)
+usart_writebuffer_sync:
+* still using DMA but accepts arbitrary packet sizes
+* removed unneeded memcpy
+* wait for DMA buffer to be treated before returning, therefore "sync"
+* we could make an async version but caller must be sure the DMA buffer remains available!
+* as it's sync, no need for next DMA buffer
 
 usart_read_ng:
 * user tells expected packet length
@@ -242,16 +244,16 @@ USART_BAUD_RATE defined there
     linux usb: #db#   USB Transfer Speed PM3 -> Client = 666624 Bytes/s (equiv. to ~7Mbaud)
 
 
-At some point, when still activating AT91C_PDC_TXTEN in usart_writebuffer, we needed to increase client uart timeout.
-We tried 300ms, but then USB flasher failed :
-[=] UART Setting serial baudrate 460800
-.Found
-Error: Unknown Proxmark3 mode
-Now we're at 60ms
 (uart/uart_posix.c)
+// Receiving from USART need more than 30ms as we used on USB
+// else we get errors about "Received packet frame ... too short"
+// Now we're using 100ms
+// FTDI   9600 hw status -> we need 20ms
+// FTDI 115200 hw status -> we need 50ms
+// FTDI 460800 hw status -> we need 30ms
 struct timeval timeout = {
-    .tv_sec  =     0, // 0 second
-    .tv_usec = 60000  // 60 000 micro seconds
+    .tv_sec  =      0, // 0 second
+    .tv_usec = 100000  // 100 000 micro seconds
 };
 
 Add automatically some communication delay in the WaitForResponseTimeout timeout
@@ -273,6 +275,34 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 // Empirical max try observed: 3000000 / USART_BAUD_RATE
 // Let's take 10x
 uint32_t maxtry = 10 * ( 3000000 / USART_BAUD_RATE );
+
+
+
+DbpStringEx using reply_old:
+time client/proxmark3 -p /dev/ttyACM0 -c "hw status"
+2.52s
+time client/proxmark3 -p /dev/ttyUSB0 -b 460800 -c "hw status"
+3.03s
+time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "hw status"
+4.88s
+DbpStringEx using reply_old:
+time client/proxmark3 -p /dev/ttyUSB0 -b 9600 -c "hw status"
+26.5s
+
+DbpStringEx using reply_mix:
+time client/proxmark3 -p /dev/ttyUSB0 -b 9600 -c "hw status"
+7.08s
+
+DbpStringEx using reply_ng:
+time client/proxmark3 -p /dev/ttyACM0 -c "hw status"
+2.10s
+time client/proxmark3 -p /dev/ttyUSB0 -b 460800 -c "hw status"
+2.22s
+time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "hw status"
+2.43s
+time client/proxmark3 -p /dev/ttyUSB0 -b 9600 -c "hw status"
+5.75s
+
 
 Reference frames
 ================
