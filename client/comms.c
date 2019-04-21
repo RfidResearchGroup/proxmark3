@@ -596,7 +596,9 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
         response = &resp;
 
     // Add delay depending on the communication channel & speed
-    ms_timeout += communication_delay();
+    if (ms_timeout != (size_t)-1)
+        ms_timeout += communication_delay();
+
     uint64_t start_time = msclock();
 
     // Wait until the command is received
