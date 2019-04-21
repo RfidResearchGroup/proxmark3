@@ -117,7 +117,7 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 void DbpStringEx(char *str, uint32_t cmd) {
 #if DEBUG
     uint8_t len = strlen(str);
-    reply_old(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t *)str, len);
+    reply_mix(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t *)str, len);
 #endif
 }
 
