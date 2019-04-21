@@ -832,8 +832,6 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
 
     // PACK response to PWD AUTH for EV1/NTAG
     uint8_t response8[4] = {0, 0, 0, 0};
-    // Counter for EV1/NTAG
-    uint32_t counters[] = {0, 0, 0};
 
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
     uint8_t response1[] = {0, 0};
@@ -847,6 +845,9 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     nonces_t ar_nr_nonces[ATTACK_KEY_COUNT]; // for attack types moebius
     memset(ar_nr_nonces, 0x00, sizeof(ar_nr_nonces));
     uint8_t    moebius_count = 0;
+
+    // some first pages of UL/NTAG dump is special data
+    mfu_dump_prefix_t *mfu_header =  tagType == 2 || tagType == 7 ? (mfu_dump_prefix_t *) BigBuf_get_EM_addr() : NULL;
 
     switch (tagType) {
         case 1: { // MIFARE Classic 1k
@@ -884,13 +885,12 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         case 7: { // NTAG
             response1[0] = 0x44;
             sak = 0x00;
-            // PACK
-            response8[0] = 0x80;
-            response8[1] = 0x80;
+            // PACK, from last page of dump
+            emlGetMemBt(response8, MFU_DUMP_PREFIX_LENGTH + mfu_header->pages * 4, 2);
             compute_crc(CRC_14443_A, response8, 2, &response8[2], &response8[3]);
             // uid not supplied then get from emulator memory
             if (data[0] == 0) {
-                uint16_t start = 4 * (0 + 12);
+                uint16_t start = MFU_DUMP_PREFIX_LENGTH;
                 uint8_t emdata[8];
                 emlGetMemBt(emdata, start, sizeof(emdata));
                 memcpy(data, emdata, 3); // uid bytes 0-2
@@ -1086,12 +1086,17 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             uint8_t block = receivedCmd[1];
             // if Ultralight or NTAG (4 byte blocks)
             if (tagType == 7 || tagType == 2) {
-                // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
-                uint16_t start = 4 * (block + 12);
-                uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
-                emlGetMemBt(emdata, start, 16);
-                AddCrc14A(emdata, 16);
-                EmSendCmd(emdata, sizeof(emdata));
+                if (block > mfu_header->pages) {
+                    // send NACK 0x0 == invalid argument
+                    EmSend4bit(CARD_NACK_IV);
+                } else {
+                    // first blocks of emu are header
+                    uint16_t start = block * 4 + MFU_DUMP_PREFIX_LENGTH;
+                    uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
+                    emlGetMemBt(emdata, start, 16);
+                    AddCrc14A(emdata, 16);
+                    EmSendCmd(emdata, sizeof(emdata));
+                }
                 // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
                 p_response = NULL;
             } else if (tagType == 9 && block == 1) {
@@ -1110,23 +1115,36 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 p_response = NULL;
             }
         } else if (receivedCmd[0] == MIFARE_ULEV1_FASTREAD) {    // Received a FAST READ (ranged read)
-            uint8_t emdata[MAX_FRAME_SIZE];
-            // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
-            int start = (receivedCmd[1] + 12) * 4;
-            len   = (receivedCmd[2] - receivedCmd[1] + 1) * 4;
-            emlGetMemBt(emdata, start, len);
-            AddCrc14A(emdata, len);
-            EmSendCmd(emdata, len + 2);
+            uint8_t block1 = receivedCmd[1];
+            uint8_t block2 = receivedCmd[2];
+            if (block1 > mfu_header->pages) {
+                // send NACK 0x0 == invalid argument
+                EmSend4bit(CARD_NACK_IV);
+            } else {
+                uint8_t emdata[MAX_FRAME_SIZE];
+                // first blocks of emu are header
+                int start = block1 * 4 + MFU_DUMP_PREFIX_LENGTH;
+                len   = (block2 - block1 + 1) * 4;
+                emlGetMemBt(emdata, start, len);
+                AddCrc14A(emdata, len);
+                EmSendCmd(emdata, len + 2);
+            }
             p_response = NULL;
         } else if ((receivedCmd[0] == MIFARE_ULC_WRITE || receivedCmd[0] == MIFARE_ULC_COMP_WRITE) && (tagType == 2 || tagType == 7)) {        // Received a WRITE
             // cmd + block + 4/16 bytes data + 2 bytes crc
             if (len == 8 || len == 20) {
                 bool isCrcCorrect = CheckCrc14A(receivedCmd, len);
                 if (isCrcCorrect) {
-                    int block = receivedCmd[1] + 12; // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
-                    emlSetMem_xt(&receivedCmd[2], block, 1, 4);
-                    // send ACK
-                    EmSend4bit(CARD_ACK);
+                    uint8_t block = receivedCmd[1];
+                    if (block > mfu_header->pages) {
+                        // send NACK 0x0 == invalid argument
+                        EmSend4bit(CARD_NACK_IV);
+                    } else {
+                        // first blocks of emu are header
+                        emlSetMem_xt(&receivedCmd[2], block + MFU_DUMP_PREFIX_LENGTH / 4, 1, 4);
+                        // send ACK
+                        EmSend4bit(CARD_ACK);
+                    }
                 } else {
                     // send NACK 0x1 == crc/parity error
                     EmSend4bit(CARD_NACK_PA);
@@ -1137,10 +1155,9 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             }
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {    // Received a READ SIGNATURE --
-            // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
-            uint16_t start = 4 * 4;
+            // first blocks of emu are header
             uint8_t emdata[34];
-            emlGetMemBt(emdata, start, 32);
+            memcpy(emdata, mfu_header->signature, 32);
             AddCrc14A(emdata, 32);
             EmSendCmd(emdata, sizeof(emdata));
             p_response = NULL;
@@ -1151,7 +1168,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 EmSend4bit(0x00);
             } else {
                 uint8_t cmd[] =  {0x00, 0x00, 0x00, 0x14, 0xa5};
-                num_to_bytes(counters[index], 3, cmd);
+                memcpy(cmd, mfu_header->counter_tearing[index], 3);
                 AddCrc14A(cmd, sizeof(cmd) - 2);
                 EmSendCmd(cmd, sizeof(cmd));
             }
@@ -1162,15 +1179,13 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 // send NACK 0x0 == invalid argument
                 EmSend4bit(0x00);
             } else {
-
-                uint32_t val = bytes_to_num(receivedCmd + 2, 4);
-
+                uint32_t val = le24toh(receivedCmd + 2) + le24toh(mfu_header->counter_tearing[index]);
                 // if new value + old value is bigger 24bits,  fail
-                if (val + counters[index] > 0xFFFFFF) {
+                if (val > 0xFFFFFF) {
                     // send NACK 0x4 == counter overflow
                     EmSend4bit(CARD_NACK_NA);
                 } else {
-                    counters[index] = val;
+                    htole24(val, mfu_header->counter_tearing[index]);
                     // send ACK
                     EmSend4bit(CARD_ACK);
                 }
@@ -1184,7 +1199,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 // send NACK 0x0 == invalid argument
                 EmSend4bit(0x00);
             } else {
-                emlGetMemBt(emdata, 10 + index, 1);
+                emdata[0] = mfu_header->counter_tearing[index][3];
                 AddCrc14A(emdata, sizeof(emdata) - 2);
                 EmSendCmd(emdata, sizeof(emdata));
             }
@@ -1195,7 +1210,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         } else if (receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) {    // Received an authentication request
             if (tagType == 7) {     // IF NTAG /EV1  0x60 == GET_VERSION, not a authentication request.
                 uint8_t emdata[10];
-                emlGetMemBt(emdata, 0, 8);
+                memcpy(emdata, mfu_header->version, 8);
                 AddCrc14A(emdata, sizeof(emdata) - 2);
                 EmSendCmd(emdata, sizeof(emdata));
                 p_response = NULL;
@@ -1291,15 +1306,17 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         } else if (receivedCmd[0] == MIFARE_ULC_AUTH_1) {  // ULC authentication, or Desfire Authentication
         } else if (receivedCmd[0] == MIFARE_ULEV1_AUTH) { // NTAG / EV-1 authentication
             if (tagType == 7) {
-                uint16_t start = 13; // first 4 blocks of emu are [getversion answer - check tearing - pack - 0x00]
-                uint8_t emdata[4];
-                emlGetMemBt(emdata, start, 2);
-                AddCrc14A(emdata, 2);
-                EmSendCmd(emdata, sizeof(emdata));
-                p_response = NULL;
-                uint32_t pwd = bytes_to_num(receivedCmd + 1, 4);
-
-                if (MF_DBGLEVEL >= 3) Dbprintf("Auth attempt: %08x", pwd);
+                // PWD stored in dump now
+                uint8_t pwd[4];
+                emlGetMemBt(pwd, (mfu_header->pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
+                if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
+                    p_response = &responses[7]; // precompiled PACK
+                } else {
+                    EmSend4bit(CARD_NACK_NA);
+                    uint32_t pwd = bytes_to_num(receivedCmd + 1, 4);
+                    if (MF_DBGLEVEL >= 3) Dbprintf("Auth attempt: %08x", pwd);
+                    p_response = NULL;
+                }
             }
         } else {
             // Check for ISO 14443A-4 compliant commands, look at left nibble

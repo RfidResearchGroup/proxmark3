@@ -221,13 +221,16 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
             JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
             JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp->tbo, sizeof(tmp->tbo));
-            JsonSaveBufAsHexCompact(root, "$.Card.Tearing", tmp->tearing, sizeof(tmp->tearing));
-            JsonSaveBufAsHexCompact(root, "$.Card.Pack",  tmp->pack, sizeof(tmp->pack));
             JsonSaveBufAsHexCompact(root, "$.Card.TBO_1", tmp->tbo1, sizeof(tmp->tbo1));
             JsonSaveBufAsHexCompact(root, "$.Card.Signature", tmp->signature, sizeof(tmp->signature));
-            JsonSaveStr(root, "$.Card.Counter", "N/A");
+            JsonSaveBufAsHexCompact(root, "$.Card.Counter0", tmp->counter_tearing[0], 3);
+            JsonSaveBufAsHexCompact(root, "$.Card.Tearing0", tmp->counter_tearing[0] + 3, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.Counter1", tmp->counter_tearing[1], 3);
+            JsonSaveBufAsHexCompact(root, "$.Card.Tearing1", tmp->counter_tearing[1] + 3, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.Counter2", tmp->counter_tearing[2], 3);
+            JsonSaveBufAsHexCompact(root, "$.Card.Tearing2", tmp->counter_tearing[2] + 3, 1);
 
-            // size of header 48b
+            // size of header 56b
             size_t len = (datalen - DUMP_PREFIX_LENGTH) / 4;
 
             for (size_t i = 0; i < len; i++) {

@@ -12,16 +12,16 @@
 #include "comms.h"
 #include "loclass/fileutils.h"
 
-#define DUMP_PREFIX_LENGTH 48
+// Length must be aligned to 4 bytes (UL/NTAG page)
+#define DUMP_PREFIX_LENGTH 56
 
 typedef struct {
     uint8_t version[8];
     uint8_t tbo[2];
-    uint8_t tearing[3];
-    uint8_t pack[2];
     uint8_t tbo1[1];
+    uint8_t pages;                  // max page number in dump
     uint8_t signature[32];
-    //uint8_t counter[3];
+    uint8_t counter_tearing[3][4];  // 3 bytes counter, 1 byte tearing flag
     uint8_t data[1024];
 } mfu_dump_t;
 
