@@ -1203,7 +1203,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
                 int16_t result = reply_old(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
                 if (result <= 0)
-                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
+                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
             // iceman,  when did sending samplingconfig array got attached here?!?
@@ -1247,7 +1247,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
                 int16_t result = reply_old(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
                 if (result <= 0)
-                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
+                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
             reply_old(CMD_ACK, 1, 0, 0, 0, 0);

@@ -129,7 +129,7 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 }
 
 // transfer from device to client
-inline int16_t usart_writebuffer_sync(uint8_t *data, size_t len) {
+inline int32_t usart_writebuffer_sync(uint8_t *data, size_t len) {
 
     // Wait for current PDC bank to be free
     // (and check next bank too, in case there will be a usart_writebuffer_async)

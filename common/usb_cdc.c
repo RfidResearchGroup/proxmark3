@@ -709,13 +709,13 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
 //* \fn    usb_write
 //* \brief Send through endpoint 2 (device to host)
 //*----------------------------------------------------------------------------
-uint32_t usb_write(const uint8_t *data, const size_t len) {
+int32_t usb_write(const uint8_t *data, const size_t len) {
 
-    if (!len) return 0;
-    if (!usb_check()) return 0;
+    if (!len) return PM3_EINVARG;
+    if (!usb_check()) return PM3_EIO;
 
     // can we write?
-    if ((pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) != 0) return 0;
+    if ((pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) != 0) return PM3_EIO;
 
     size_t length = len;
     uint32_t cpt = 0;
@@ -741,7 +741,7 @@ uint32_t usb_write(const uint8_t *data, const size_t len) {
         // Wait for previous chunk to be sent
         // (iceman) when is the bankswapping done?
         while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
-            if (!usb_check()) return length;
+            if (!usb_check()) return PM3_EIO;
         }
 
         UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
@@ -752,13 +752,13 @@ uint32_t usb_write(const uint8_t *data, const size_t len) {
 
     // Wait for the end of transfer
     while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
-        if (!usb_check()) return length;
+        if (!usb_check()) return PM3_EIO;
     }
 
     UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
     while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
 
-    return length;
+    return len;
 }
 
 //*----------------------------------------------------------------------------

@@ -12,7 +12,7 @@
 void usart_init(void);
 void usart_close(void);
 
-int16_t usart_writebuffer_sync(uint8_t *data, size_t len);
+int32_t usart_writebuffer_sync(uint8_t *data, size_t len);
 uint32_t usart_read_ng(uint8_t *data, size_t len);
 uint16_t usart_rxdata_available(void);
 #define USART_BUFFLEN 512

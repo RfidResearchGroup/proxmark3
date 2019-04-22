@@ -47,7 +47,7 @@ extern void Dbprintf(const char *fmt, ...);
         reply_via_fpc = tmp;}
 #endif
 
-int16_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+int32_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketResponseOLD txcmd;
 
     for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
@@ -67,7 +67,7 @@ int16_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, voi
         }
     }
 
-    uint32_t sendlen = 0;
+    int32_t sendlen = 0;
     // Send frame and make sure all bytes are transmitted
 
     if (reply_via_fpc) {
@@ -84,7 +84,7 @@ int16_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, voi
     return sendlen;
 }
 
-static int16_t reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t len, bool ng) {
+static int32_t reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t len, bool ng) {
     PacketResponseNGRaw txBufferNG;
     size_t txBufferNGLen;
 //    for (size_t i = 0; i < sizeof(txBufferNG); i++)
@@ -119,7 +119,7 @@ static int16_t reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, si
     }
     txBufferNGLen = sizeof(PacketResponseNGPreamble) + len + sizeof(PacketResponseNGPostamble);
 
-    uint32_t sendlen = 0;
+    int32_t sendlen = 0;
     // Send frame and make sure all bytes are transmitted
 
     if (reply_via_fpc) {
@@ -136,11 +136,11 @@ static int16_t reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, si
     return sendlen;
 }
 
-int16_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
+int32_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
     return reply_ng_internal(cmd, status, data, len, true);
 }
 
-int16_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+int32_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     uint16_t status = PM3_SUCCESS;
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > USB_CMD_DATA_SIZE - sizeof(arg)) {
