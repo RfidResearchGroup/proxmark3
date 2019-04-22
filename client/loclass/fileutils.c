@@ -218,23 +218,24 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
             memcpy(uid, tmp->data, 3);
             memcpy(uid + 3, tmp->data + 4, 4);
 
+            char path[PATH_MAX_LENGTH] = {0};
+
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
             JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
             JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp->tbo, sizeof(tmp->tbo));
             JsonSaveBufAsHexCompact(root, "$.Card.TBO_1", tmp->tbo1, sizeof(tmp->tbo1));
             JsonSaveBufAsHexCompact(root, "$.Card.Signature", tmp->signature, sizeof(tmp->signature));
-            JsonSaveBufAsHexCompact(root, "$.Card.Counter0", tmp->counter_tearing[0], 3);
-            JsonSaveBufAsHexCompact(root, "$.Card.Tearing0", tmp->counter_tearing[0] + 3, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.Counter1", tmp->counter_tearing[1], 3);
-            JsonSaveBufAsHexCompact(root, "$.Card.Tearing1", tmp->counter_tearing[1] + 3, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.Counter2", tmp->counter_tearing[2], 3);
-            JsonSaveBufAsHexCompact(root, "$.Card.Tearing2", tmp->counter_tearing[2] + 3, 1);
+            for (uint8_t i = 0; i < 3; i ++) {
+                sprintf(path, "$.Card.Counter%d", i);
+                JsonSaveBufAsHexCompact(root, path, tmp->counter_tearing[i], 3);
+                sprintf(path, "$.Card.Tearing%d", i);
+                JsonSaveBufAsHexCompact(root, path, tmp->counter_tearing[i] + 3, 1);
+            }
 
             // size of header 56b
             size_t len = (datalen - DUMP_PREFIX_LENGTH) / 4;
 
             for (size_t i = 0; i < len; i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);
             }

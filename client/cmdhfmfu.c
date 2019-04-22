@@ -1622,12 +1622,10 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
     PrintAndLogEx(NORMAL, "TBD       | %-24s| %s", sprint_hex(card->tbo1, sizeof(card->tbo1)), sprint_ascii(card->tbo1, sizeof(card->tbo1)));
     PrintAndLogEx(NORMAL, "Signature1| %s| %s", sprint_hex(card->signature, 16), sprint_ascii(card->signature, 16));
     PrintAndLogEx(NORMAL, "Signature2| %s| %s", sprint_hex(card->signature + 16, 16), sprint_ascii(card->signature + 16, 16));
-    PrintAndLogEx(NORMAL, "Counter0  | %-24s| %s", sprint_hex(card->counter_tearing[0],     3), sprint_ascii(card->counter_tearing[0],     3));
-    PrintAndLogEx(NORMAL, "Tearing0  | %-24s| %s", sprint_hex(card->counter_tearing[0] + 3, 1), sprint_ascii(card->counter_tearing[0] + 3, 1));
-    PrintAndLogEx(NORMAL, "Counter1  | %-24s| %s", sprint_hex(card->counter_tearing[1],     3), sprint_ascii(card->counter_tearing[1],     3));
-    PrintAndLogEx(NORMAL, "Tearing1  | %-24s| %s", sprint_hex(card->counter_tearing[1] + 3, 1), sprint_ascii(card->counter_tearing[1] + 3, 1));
-    PrintAndLogEx(NORMAL, "Counter2  | %-24s| %s", sprint_hex(card->counter_tearing[2],     3), sprint_ascii(card->counter_tearing[2],     3));
-    PrintAndLogEx(NORMAL, "Tearing3  | %-24s| %s", sprint_hex(card->counter_tearing[2] + 3, 1), sprint_ascii(card->counter_tearing[2] + 3, 1));
+    for (uint8_t i = 0; i < 3; i ++) {
+        PrintAndLogEx(NORMAL, "Counter%d  | %-24s| %s", i, sprint_hex(card->counter_tearing[i],     3), sprint_ascii(card->counter_tearing[i],     3));
+        PrintAndLogEx(NORMAL, "Tearing%d  | %-24s| %s", i, sprint_hex(card->counter_tearing[i] + 3, 1), sprint_ascii(card->counter_tearing[i] + 3, 1));
+    }
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, "\nBlock#   | Data        |lck| Ascii");
     PrintAndLogEx(NORMAL, "---------+-------------+---+------");
