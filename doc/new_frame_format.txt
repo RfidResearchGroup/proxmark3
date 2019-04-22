@@ -256,7 +256,7 @@ struct timeval timeout = {
     .tv_usec = 100000  // 100 000 micro seconds
 };
 
-Add automatically some communication delay in the WaitForResponseTimeout timeout
+Add automatically some communication delay in the WaitForResponseTimeout & dl_it timeouts
 Only when using FPC, timeout = 2* empirically measured delay (FTDI cable)
 Empirically measured delay (FTDI cable) with "hw pingng 512" :
    usb ->    6..  32ms
@@ -268,6 +268,11 @@ static size_t communication_delay(void) {
         return 2 * (12000000 / uart_speed);
     return 100;
 }
+
+Because some commands send a lot of frames before finishing (hw status, lf read,...),
+WaitForResponseTimeout & dl_it timeouts are reset at each packet reception,
+so timeout is actually counted after latest received packet,
+it doesn't depend anymore on the number of received packets.
 
 Needed to tune pm3 RX usart maxtry
 (common/usart.c)
@@ -303,6 +308,10 @@ time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "hw status"
 time client/proxmark3 -p /dev/ttyUSB0 -b 9600 -c "hw status"
 5.75s
 
+time client/proxmark3 -p /dev/ttyUSB0 -b 9600 -c "lf read"
+50.38s
+time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "lf read"
+6.28s
 
 Reference frames
 ================

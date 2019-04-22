@@ -706,6 +706,10 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
     uint32_t bytes_completed = 0;
     timeout_start_time = msclock();
 
+    // Add delay depending on the communication channel & speed
+    if (ms_timeout != (size_t)-1)
+        ms_timeout += communication_delay();
+
     while (true) {
 
         if (getReply(response)) {
