@@ -3555,7 +3555,7 @@ static command_t CommandTable[] = {
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
     {"-----------", CmdHelp,                0, ""},
     {"sim",         CmdHF14AMfSim,        0, "Simulate MIFARE card"},
-    {"eclr",        CmdHF14AMfEClear,       0, "Clear simulator memory block"},
+    {"eclr",        CmdHF14AMfEClear,       0, "Clear simulator memory"},
     {"eget",        CmdHF14AMfEGet,         0, "Get simulator memory block"},
     {"eset",        CmdHF14AMfESet,         0, "Set simulator memory block"},
     {"eload",       CmdHF14AMfELoad,        0, "Load from file emul dump"},
