@@ -47,7 +47,7 @@ extern void Dbprintf(const char *fmt, ...);
         reply_via_fpc = tmp;}
 #endif
 
-int32_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketResponseOLD txcmd;
 
     for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
@@ -67,24 +67,24 @@ int32_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, voi
         }
     }
 
-    int32_t sendlen = 0;
+    int result = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
 
     if (reply_via_fpc) {
 #ifdef WITH_FPC_HOST
-        sendlen = usart_writebuffer_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
+        result = usart_writebuffer_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 //        Dbprintf_usb("Sent %i bytes over usart", len);
 #else
         return PM3_EDEVNOTSUPP;
 #endif
     } else {
-        sendlen = usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
+        result = usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
     }
 
-    return sendlen;
+    return result;
 }
 
-static int32_t reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t len, bool ng) {
+static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t len, bool ng) {
     PacketResponseNGRaw txBufferNG;
     size_t txBufferNGLen;
 //    for (size_t i = 0; i < sizeof(txBufferNG); i++)
@@ -119,28 +119,28 @@ static int32_t reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, si
     }
     txBufferNGLen = sizeof(PacketResponseNGPreamble) + len + sizeof(PacketResponseNGPostamble);
 
-    int32_t sendlen = 0;
+    int result = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
 
     if (reply_via_fpc) {
 #ifdef WITH_FPC_HOST
-        sendlen = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
+        result = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
 //        Dbprintf_usb("Sent %i bytes over usart", len);
 #else
         return PM3_EDEVNOTSUPP;
 #endif
     } else {
-        sendlen = usb_write((uint8_t *)&txBufferNG, txBufferNGLen);
+        result = usb_write((uint8_t *)&txBufferNG, txBufferNGLen);
     }
 
-    return sendlen;
+    return result;
 }
 
-int32_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
+int reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
     return reply_ng_internal(cmd, status, data, len, true);
 }
 
-int32_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     uint16_t status = PM3_SUCCESS;
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > USB_CMD_DATA_SIZE - sizeof(arg)) {
@@ -154,7 +154,7 @@ int32_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, voi
     return reply_ng_internal(cmd, status, cmddata, len + sizeof(arg), false);
 }
 
-static int16_t receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool fpc) {
+static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool fpc) {
     PacketCommandNGRaw rx_raw;
     size_t bytes = read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
     if (bytes == 0)
@@ -219,7 +219,7 @@ static int16_t receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t
     return PM3_SUCCESS;
 }
 
-int16_t receive_ng(PacketCommandNG *rx) {
+int receive_ng(PacketCommandNG *rx) {
 
     // Check if there is a packet available
     if (usb_poll_validate_length())

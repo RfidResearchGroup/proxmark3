@@ -709,7 +709,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
 //* \fn    usb_write
 //* \brief Send through endpoint 2 (device to host)
 //*----------------------------------------------------------------------------
-int32_t usb_write(const uint8_t *data, const size_t len) {
+int usb_write(const uint8_t *data, const size_t len) {
 
     if (!len) return PM3_EINVARG;
     if (!usb_check()) return PM3_EIO;
@@ -758,7 +758,7 @@ int32_t usb_write(const uint8_t *data, const size_t len) {
     UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
     while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
 
-    return len;
+    return PM3_SUCCESS;
 }
 
 //*----------------------------------------------------------------------------

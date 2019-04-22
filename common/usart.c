@@ -129,7 +129,7 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 }
 
 // transfer from device to client
-inline int32_t usart_writebuffer_sync(uint8_t *data, size_t len) {
+inline int usart_writebuffer_sync(uint8_t *data, size_t len) {
 
     // Wait for current PDC bank to be free
     // (and check next bank too, in case there will be a usart_writebuffer_async)
@@ -139,7 +139,7 @@ inline int32_t usart_writebuffer_sync(uint8_t *data, size_t len) {
     // Wait until finishing all transfers to make sure "data" buffer can be discarded
     // (if we don't wait here, bulk send as e.g. "hw status" will fail)
     while (pUS1->US_TNCR || pUS1->US_TCR) {};
-    return len;
+    return PM3_SUCCESS;
 }
 
 void usart_init(void) {

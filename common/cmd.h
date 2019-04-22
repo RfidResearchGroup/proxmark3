@@ -39,10 +39,10 @@
 #include "usart.h"
 #include "proxmark3.h"
 
-int32_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
-int32_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len);
-int32_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
-int16_t receive_ng(PacketCommandNG *rx);
+int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+int reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len);
+int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+int receive_ng(PacketCommandNG *rx);
 
 // Flags to tell where to add CRC on sent replies
 extern bool reply_with_crc_on_usb;
