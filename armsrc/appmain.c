@@ -1201,8 +1201,8 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
                 size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
-                bool isok = reply_old(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
-                if (isok != 0)
+                int16_t result = reply_old(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
+                if (result <= 0)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
             }
             // Trigger a finish downloading signal with an ACK frame
@@ -1235,7 +1235,6 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_DOWNLOAD_EML_BIGBUF: {
             LED_B_ON();
             uint8_t *mem = BigBuf_get_EM_addr();
-            bool isok = false;
             size_t len = 0;
             uint32_t startidx = packet->oldarg[0];
             uint32_t numofbytes = packet->oldarg[1];
@@ -1246,8 +1245,8 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
                 len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
-                isok = reply_old(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
-                if (isok != 0)
+                int16_t result = reply_old(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
+                if (result <= 0)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d)", i, i + len, len);
             }
             // Trigger a finish downloading signal with an ACK frame
