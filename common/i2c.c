@@ -26,7 +26,8 @@
 
 volatile unsigned long c;
 
-// 直接使用循环来延时，一个循环 6 条指令，48M， Delay=1 大概为 200kbps
+// Direct use the loop to delay. 6 instructions loop, Masterclock 48Mhz, 
+// delay=1 is about 200kbps
 // timer.
 // I2CSpinDelayClk(4) = 12.31us
 // I2CSpinDelayClk(1) = 3.07us
@@ -89,11 +90,9 @@ void I2C_init(void) {
     AT91C_BASE_PIOA->PIO_OER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
     AT91C_BASE_PIOA->PIO_PER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
 
-
     bool isok = (SCL_read && SDA_read);
     if (!isok)
         I2C_recovery();
-
 }
 
 // set the reset state
