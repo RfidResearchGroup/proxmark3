@@ -71,7 +71,7 @@ static int usage_hf14_mfsim(void) {
     PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
     PrintAndLogEx(NORMAL, "      t    (Optional)   0 = MIFARE Mini");
     PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 1k (Default)");
-    PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 2k plus in SL0 mode");
+    PrintAndLogEx(NORMAL, "                        2 = MIFARE Classic 2k plus in SL0 mode");
     PrintAndLogEx(NORMAL, "                        4 = MIFARE Classic 4k");
     PrintAndLogEx(NORMAL, "      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
     PrintAndLogEx(NORMAL, "      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
@@ -3532,7 +3532,7 @@ static command_t CommandTable[] = {
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
     {"-----------", CmdHelp,                0, ""},
     {"sim",         CmdHF14AMfSim,        0, "Simulate MIFARE card"},
-    {"eclr",        CmdHF14AMfEClear,       0, "Clear simulator memory block"},
+    {"eclr",        CmdHF14AMfEClear,       0, "Clear simulator memory"},
     {"eget",        CmdHF14AMfEGet,         0, "Get simulator memory block"},
     {"eset",        CmdHF14AMfESet,         0, "Set simulator memory block"},
     {"eload",       CmdHF14AMfELoad,        0, "Load from file emul dump"},
