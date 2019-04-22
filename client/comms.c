@@ -50,9 +50,9 @@ static int cmd_tail = 0;
 // to lock rxBuffer operations from different threads
 static pthread_mutex_t rxBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Global start time for WaitForResponseTimeout, so we can reset timeout when we get Dbprintf packets
-// as sending lot of these packets can slow down things wuite a lot on slow links (e.g. hw status at 9600)
-static uint64_t WaitForResponseTimeout_start_time;
+// Global start time for WaitForResponseTimeout & dl_it, so we can reset timeout when we get packets
+// as sending lot of these packets can slow down things wuite a lot on slow links (e.g. hw status or lf read at 9600)
+static uint64_t timeout_start_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
@@ -245,7 +245,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
 //                packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
 
     // we got a packet, reset WaitForResponseTimeout timeout
-    WaitForResponseTimeout_start_time = msclock();
+    timeout_start_time = msclock();
 
     switch (packet->cmd) {
         // First check if we are handling a debug message
@@ -620,29 +620,29 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
     if (ms_timeout != (size_t)-1)
         ms_timeout += communication_delay();
 
-    WaitForResponseTimeout_start_time = msclock();
+    timeout_start_time = msclock();
 
     // Wait until the command is received
     while (true) {
 
         while (getReply(response)) {
             if (cmd == CMD_UNKNOWN || response->cmd == cmd) {
-//                PrintAndLogEx(INFO, "Waited %i ms", msclock() - WaitForResponseTimeout_start_time);
+//                PrintAndLogEx(INFO, "Waited %i ms", msclock() - timeout_start_time);
                 return true;
             }
         }
 
-        if (msclock() - WaitForResponseTimeout_start_time > ms_timeout)
+        if (msclock() - timeout_start_time > ms_timeout)
             break;
 
-        if (msclock() - WaitForResponseTimeout_start_time > 3000 && show_warning) {
+        if (msclock() - timeout_start_time > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
             PrintAndLogEx(INFO, "Waiting for a response from the proxmark3...");
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
     }
-//    PrintAndLogEx(INFO, "Wait timeout after %i ms", msclock() - WaitForResponseTimeout_start_time);
+//    PrintAndLogEx(INFO, "Wait timeout after %i ms", msclock() - timeout_start_time);
     return false;
 }
 
@@ -704,7 +704,7 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
 
     uint32_t bytes_completed = 0;
-    uint64_t start_time = msclock();
+    timeout_start_time = msclock();
 
     while (true) {
 
@@ -737,12 +737,12 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
             }
         }
 
-        if (msclock() - start_time > ms_timeout) {
+        if (msclock() - timeout_start_time > ms_timeout) {
             PrintAndLogEx(FAILED, "Timed out while trying to download data from device");
             break;
         }
 
-        if (msclock() - start_time > 3000 && show_warning) {
+        if (msclock() - timeout_start_time > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
             PrintAndLogEx(NORMAL, "Waiting for a response from the Proxmark3...");
             PrintAndLogEx(NORMAL, "You can cancel this operation by pressing the pm3 button");
