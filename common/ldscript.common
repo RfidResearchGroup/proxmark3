@@ -11,6 +11,8 @@ ms of the GNU GPL, version 2 or,
 
 /* AT91SAM7S256 has 256k Flash and 64k RAM */
 /* AT91SAM7S512 has 512k Flash and 64k RAM */
+/* boot space = 8192bytes (0x2000) */
+/* osimage space =   (512k - 0x2000 == 524288 - 8192 == 516096bytes == 0x7E000 ) */
 MEMORY
 {
     bootphase1 : ORIGIN = 0x00100000, LENGTH = 0x200             /* Phase 1 bootloader: Copies real bootloader to RAM */
