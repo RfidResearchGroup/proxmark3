@@ -376,7 +376,7 @@ void printUSBSpeed(void) {
     uint32_t bytes_transferred = 0;
 
     LED_B_ON();
-    
+
     while (end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
         cmd_send(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, 0, USB_CMD_DATA_SIZE, 0, test_data, USB_CMD_DATA_SIZE);
         end_time = GetTickCount();

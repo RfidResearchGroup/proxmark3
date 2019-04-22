@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Change/Add new dump format for Ultralight/NTAG, counters support, simulation (@mceloff)
+ - Add 'hf mf sim' full-byte split anticollision support (@mceloff)
  - Fix/Add 'hf mf sim' bugs fix, RATS support, etc (@mceloff)
  - Fix serial of FPC. (@ryan)
  - Fix 'data shiftgraphzero' corrupting end of GraphBuffer (@doegox)
