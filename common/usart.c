@@ -48,27 +48,48 @@ static size_t us_rxfifo_high = 0;
 
 
 static void usart_fill_rxfifo(void) {
+    uint16_t rxfifo_free = 0;
     if (pUS1->US_RNCR == 0) { // One buffer got filled, backup buffer being used
-// TODO check if we have room...
-        uint16_t available = USART_BUFFLEN - usart_cur_inbuf_off;
-        for (uint16_t i = 0; i < available; i++) {
-            us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
-            if (us_rxfifo_high == sizeof(us_rxfifo))
-                us_rxfifo_high = 0;
-        }
-        // Give next buffer
-        pUS1->US_RNPR = (uint32_t)usart_cur_inbuf;
-        pUS1->US_RNCR = USART_BUFFLEN;
-        // Swap current buff
-        if (usart_cur_inbuf == us_inbuf1)
-            usart_cur_inbuf = us_inbuf2;
+        if (us_rxfifo_low > us_rxfifo_high)
+            rxfifo_free = us_rxfifo_low - us_rxfifo_high;
         else
-            usart_cur_inbuf = us_inbuf1;
-        usart_cur_inbuf_off = 0;
+            rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
+        uint16_t available = USART_BUFFLEN - usart_cur_inbuf_off;
+        if (available <= rxfifo_free) {
+            for (uint16_t i = 0; i < available; i++) {
+                us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
+                if (us_rxfifo_high == sizeof(us_rxfifo))
+                    us_rxfifo_high = 0;
+            }
+            // Give next buffer
+            pUS1->US_RNPR = (uint32_t)usart_cur_inbuf;
+            pUS1->US_RNCR = USART_BUFFLEN;
+            // Swap current buff
+            if (usart_cur_inbuf == us_inbuf1)
+                usart_cur_inbuf = us_inbuf2;
+            else
+                usart_cur_inbuf = us_inbuf1;
+            usart_cur_inbuf_off = 0;
+        } else {
+            // Take only what we have room for
+            available = rxfifo_free;
+            for (uint16_t i = 0; i < available; i++) {
+                us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
+                if (us_rxfifo_high == sizeof(us_rxfifo))
+                    us_rxfifo_high = 0;
+            }
+            usart_cur_inbuf_off += available;
+            return;
+        }
     }
     if (pUS1->US_RCR < USART_BUFFLEN - usart_cur_inbuf_off) { // Current buffer partially filled
+        if (us_rxfifo_low > us_rxfifo_high)
+            rxfifo_free = us_rxfifo_low - us_rxfifo_high;
+        else
+            rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
         uint16_t available = USART_BUFFLEN - pUS1->US_RCR - usart_cur_inbuf_off;
-// TODO check if we have room...
+        if (available > rxfifo_free)
+            available = rxfifo_free;
         for (uint16_t i = 0; i < available; i++) {
             us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
             if (us_rxfifo_high == sizeof(us_rxfifo))
