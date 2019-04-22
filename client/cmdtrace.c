@@ -517,7 +517,7 @@ static int CmdTraceLoad(const char *Cmd) {
     param_getstr(Cmd, 0, filename, sizeof(filename));
 
     if ((f = fopen(filename, "rb")) == NULL) {
-        PrintAndLogEx(FAILED, "Could not open file %s", filename);
+        PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
         return 0;
     }
 
