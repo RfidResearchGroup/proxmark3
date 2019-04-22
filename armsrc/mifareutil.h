@@ -48,16 +48,14 @@
 //mifare emulator states
 #define MFEMUL_NOFIELD      0
 #define MFEMUL_IDLE         1
-#define MFEMUL_SELECT1      2
-#define MFEMUL_SELECT2      3
-#define MFEMUL_SELECT3      4
-#define MFEMUL_AUTH1        5
-#define MFEMUL_WORK         7
-#define MFEMUL_WRITEBL2     8
-#define MFEMUL_INTREG_INC   9
-#define MFEMUL_INTREG_DEC   10
-#define MFEMUL_INTREG_REST  11
-#define MFEMUL_HALTED       12
+#define MFEMUL_SELECT       2
+#define MFEMUL_AUTH1        3
+#define MFEMUL_WORK         4
+#define MFEMUL_WRITEBL2     5
+#define MFEMUL_INTREG_INC   6
+#define MFEMUL_INTREG_DEC   7
+#define MFEMUL_INTREG_REST  8
+#define MFEMUL_HALTED       9
 
 #define cardSTATE_TO_IDLE() cardSTATE = MFEMUL_IDLE; LED_B_OFF(); LED_C_OFF();
 
