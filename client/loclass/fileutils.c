@@ -313,8 +313,8 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
         goto out;
     }
 
-    if (bytes_read != maxdatalen) {
-        PrintAndLogDevice(WARNING, "Warning, bytes read exeed calling array limit. Max bytes is %d bytes", maxdatalen);
+    if (bytes_read > maxdatalen) {
+        PrintAndLogDevice(WARNING, "Warning, bytes read exceed calling array limit. Max bytes is %d bytes", maxdatalen);
         bytes_read = maxdatalen;
     }
 
