@@ -584,13 +584,11 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     mfu_dump = (mfu_dump_t *) calloc(new_dump_len, sizeof(uint8_t));
 
     memcpy(mfu_dump->version, old_mfu_dump->version, 8);
-    mfu_dump->tbo[0] = old_mfu_dump->tbo[0];
-    mfu_dump->tbo[1] = old_mfu_dump->tbo[1];
+    memcpy(mfu_dump->tbo, old_mfu_dump->tbo, 2);
     mfu_dump->tbo1[0] = old_mfu_dump->tbo1[0];
     memcpy(mfu_dump->signature, old_mfu_dump->signature, 32);
-    mfu_dump->counter_tearing[0][3] = old_mfu_dump->tearing[0];
-    mfu_dump->counter_tearing[1][3] = old_mfu_dump->tearing[1];
-    mfu_dump->counter_tearing[2][3] = old_mfu_dump->tearing[2];
+    for (int i = 0; i < 3; i++)
+        mfu_dump->counter_tearing[i][3] = old_mfu_dump->tearing[i];
 
     memcpy(mfu_dump->data, old_mfu_dump->data, old_data_len);
     mfu_dump->pages = old_data_len / 4 - 1;

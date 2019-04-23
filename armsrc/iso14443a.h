@@ -95,18 +95,6 @@ typedef struct {
     uint8_t *parity;
 } tUart;
 
-// Length must be aligned to 4 bytes (UL/NTAG page)
-#define MFU_DUMP_PREFIX_LENGTH 56
-
-typedef struct {
-    uint8_t version[8];
-    uint8_t tbo[2];
-    uint8_t tbo1[1];
-    uint8_t pages;                  // max page number in dump
-    uint8_t signature[32];
-    uint8_t counter_tearing[3][4];  // 3 bytes counter, 1 byte tearing flag
-} mfu_dump_prefix_t;
-
 #ifndef AddCrc14A
 # define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
 #endif

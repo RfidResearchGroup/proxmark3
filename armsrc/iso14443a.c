@@ -624,7 +624,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
     } // end main loop
 
-    if (MF_DBGLEVEL >= 1) {
+    if (MF_DBGLEVEL >= MF_DBG_ERROR) {
         Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
         Dbprintf("traceLen=%d, Uart.output[0]=%08x", BigBuf_get_traceLen(), (uint32_t)Uart.output[0]);
     }
@@ -847,7 +847,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     uint8_t    moebius_count = 0;
 
     // some first pages of UL/NTAG dump is special data
-    mfu_dump_prefix_t *mfu_header =  tagType == 2 || tagType == 7 ? (mfu_dump_prefix_t *) BigBuf_get_EM_addr() : NULL;
+    mfu_dump_t *mfu_header =  tagType == 2 || tagType == 7 ? (mfu_dump_t *) BigBuf_get_EM_addr() : NULL;
 
     switch (tagType) {
         case 1: { // MIFARE Classic 1k
@@ -1314,7 +1314,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 } else {
                     EmSend4bit(CARD_NACK_NA);
                     uint32_t pwd = bytes_to_num(receivedCmd + 1, 4);
-                    if (MF_DBGLEVEL >= 3) Dbprintf("Auth attempt: %08x", pwd);
+                    if (MF_DBGLEVEL >= MF_DBG_DEBUG) Dbprintf("Auth attempt: %08x", pwd);
                     p_response = NULL;
                 }
             }
@@ -1374,7 +1374,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 default: {
                     // Never seen this command before
                     LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
-                    if (MF_DBGLEVEL >= 3) {
+                    if (MF_DBGLEVEL >= MF_DBG_DEBUG) {
                         Dbprintf("Received unknown command (len=%d):", len);
                         Dbhexdump(len, receivedCmd, false);
                     }
@@ -1393,7 +1393,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 dynamic_response_info.response_n += 2;
 
                 if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
-                    if (MF_DBGLEVEL >= 3) DbpString("Error preparing tag response");
+                    if (MF_DBGLEVEL >= MF_DBG_DEBUG) DbpString("Error preparing tag response");
                     LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                     break;
                 }
@@ -1420,7 +1420,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     set_tracing(false);
     BigBuf_free_keep_EM();
 
-    if (MF_DBGLEVEL >= 4) {
+    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
         Dbprintf("-[ Wake ups after halt  [%d]", happened);
         Dbprintf("-[ Messages after halt  [%d]", happened2);
         Dbprintf("-[ Num of received cmd  [%d]", cmdsRecvd);
@@ -1470,7 +1470,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
         else
             PrepareDelayedTransfer(*timing & 0x00000007);        // Delay transfer (fine tuning - up to 7 MF clock ticks)
 
-        if (MF_DBGLEVEL >= 4 && GetCountSspClk() >= (*timing & 0xfffffff8))
+        if (MF_DBGLEVEL >= MF_DBG_EXTENDED && GetCountSspClk() >= (*timing & 0xfffffff8))
             Dbprintf("TransmitFor14443a: Missed timing");
         while (GetCountSspClk() < (*timing & 0xfffffff8)) {};    // Delay transfer (multiple of 8 MF clock ticks)
         LastTimeProxToAirStart = *timing;
@@ -1952,12 +1952,12 @@ void iso14443a_antifuzz(uint32_t flags) {
             }
 
             EmSendCmdEx(resp, 5, true);
-            if (MF_DBGLEVEL >= 4) Dbprintf("ANTICOLL or SELECT %x", received[1]);
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("ANTICOLL or SELECT %x", received[1]);
             LED_D_INV();
 
             continue;
         } else if (received[1] == 0x20 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {  // Received request for UID (cascade 2)
-            if (MF_DBGLEVEL >= 4) Dbprintf("ANTICOLL or SELECT_2");
+            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("ANTICOLL or SELECT_2");
         } else if (received[1] == 0x70 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {    // Received a SELECT (cascade 1)
         } else if (received[1] == 0x70 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {  // Received a SELECT (cascade 2)
         } else {
@@ -2575,7 +2575,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
             if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-                if (MF_DBGLEVEL >= 1)    Dbprintf("Mifare: Can't select card (ALL)");
+                if (MF_DBGLEVEL >= MF_DBG_ERROR)    Dbprintf("Mifare: Can't select card (ALL)");
                 continue;
             }
             switch (card_info.uidlen) {
@@ -2594,7 +2594,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
             if (!iso14443a_fast_select_card(uid, cascade_levels)) {
-                if (MF_DBGLEVEL >= 1)    Dbprintf("Mifare: Can't select card (UID)");
+                if (MF_DBGLEVEL >= MF_DBG_ERROR)    Dbprintf("Mifare: Can't select card (UID)");
                 continue;
             }
         }
@@ -2666,7 +2666,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
                     sync_time = GetCountSspClk() & 0xfffffff8;
                 }
 
-                if (MF_DBGLEVEL >= 4)
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
                     Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
 
                 LED_B_OFF();
@@ -2693,13 +2693,13 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
             }
 
             if (consecutive_resyncs < 3) {
-                if (MF_DBGLEVEL >= 4) {
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
                     Dbprintf("Lost sync in cycle %d. nt_distance=%d. Consecutive Resyncs = %d. Trying one time catch up...\n", i, catch_up_cycles, consecutive_resyncs);
                 }
             } else {
                 sync_cycles += catch_up_cycles;
 
-                if (MF_DBGLEVEL >= 4)
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
                     Dbprintf("Lost sync in cycle %d for the fourth time consecutively (nt_distance = %d). Adjusting sync_cycles to %d.\n", i, catch_up_cycles, sync_cycles);
 
                 last_catch_up = 0;
@@ -2749,7 +2749,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 
     mf_nr_ar[3] &= 0x1F;
 
-    if (MF_DBGLEVEL >= 4) Dbprintf("Number of sent auth requestes: %u", i);
+    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("Number of sent auth requestes: %u", i);
 
     uint8_t buf[32] = {0x00};
     memset(buf, 0x00, sizeof(buf));
@@ -2824,7 +2824,7 @@ void DetectNACKbug() {
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
             if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-                if (MF_DBGLEVEL >= 1)    Dbprintf("Mifare: Can't select card (ALL)");
+                if (MF_DBGLEVEL >= MF_DBG_ERROR)    Dbprintf("Mifare: Can't select card (ALL)");
                 continue;
             }
             switch (card_info.uidlen) {
@@ -2843,7 +2843,7 @@ void DetectNACKbug() {
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
             if (!iso14443a_fast_select_card(uid, cascade_levels)) {
-                if (MF_DBGLEVEL >= 1)    Dbprintf("Mifare: Can't select card (UID)");
+                if (MF_DBGLEVEL >= MF_DBG_ERROR)    Dbprintf("Mifare: Can't select card (UID)");
                 continue;
             }
         }
@@ -2921,7 +2921,7 @@ void DetectNACKbug() {
                     break;
                 }
 
-                if (MF_DBGLEVEL >= 4)
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
                     Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
 
                 continue;
@@ -2948,13 +2948,13 @@ void DetectNACKbug() {
             }
 
             if (consecutive_resyncs < 3) {
-                if (MF_DBGLEVEL >= 4) {
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
                     Dbprintf("Lost sync in cycle %d. nt_distance=%d. Consecutive Resyncs = %d. Trying one time catch up...\n", i, catch_up_cycles, consecutive_resyncs);
                 }
             } else {
                 sync_cycles += catch_up_cycles;
 
-                if (MF_DBGLEVEL >= 4) {
+                if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
                     Dbprintf("Lost sync in cycle %d for the fourth time consecutively (nt_distance = %d). Adjusting sync_cycles to %d.\n", i, catch_up_cycles, sync_cycles);
                     Dbprintf("nt [%08x] attacted [%08x]", nt, nt_attacked);
                 }
