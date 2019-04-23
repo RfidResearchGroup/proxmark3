@@ -17,7 +17,6 @@
 #include "usb_cmd.h"    // mifare1ksim flags
 #include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
-#include "mifaresim.h"
 
 #define OPTS 2
 
