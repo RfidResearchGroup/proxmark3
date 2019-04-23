@@ -13,6 +13,9 @@
 #ifndef __USB_CMD_H
 #define __USB_CMD_H
 
+// Use it e.g. when using slow links such as BT
+#define USART_SLOW_LINK
+
 #ifdef _MSC_VER
 typedef DWORD uint32_t;
 typedef BYTE uint8_t;

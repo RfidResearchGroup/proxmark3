@@ -122,7 +122,14 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 //    uint32_t highest_observed_try = 0;
     // Empirical max try observed: 3000000 / USART_BAUD_RATE
     // Let's take 10x
-    uint32_t maxtry = 10 * (3000000 / USART_BAUD_RATE);
+
+    uint32_t tryconstant = 0;
+#ifdef USART_SLOW_LINK
+    // Experienced up to 13200 tries on BT link even at 460800
+    tryconstant = 50000;
+#endif
+
+    uint32_t maxtry = 10 * (3000000 / USART_BAUD_RATE) + tryconstant;
 
     while (len) {
         uint32_t available = usart_rxdata_available();

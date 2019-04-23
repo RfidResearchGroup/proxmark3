@@ -491,7 +491,14 @@ void pm3_version(bool verbose) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandOLD(CMD_VERSION, 0, 0, 0, NULL, 0);
+#ifdef USART_SLOW_LINK
+    // 10s timeout for slow FPC, e.g. over BT
+    // as this is the very first command sent to the pm3
+    // that initiates the BT connection
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 10000)) {
+#else
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+#endif
 #ifdef __WIN32
         PrintAndLogEx(NORMAL, "\n [ Proxmark3 RFID instrument ]\n");
 #else
