@@ -158,6 +158,15 @@ int loadFileJSON(const char *preferredName, const char *suffix, void *data, size
 */
 int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
 
+/**
+ * @brief  Utility function to check and convert old mfu dump format to new
+ *
+ * @param dump pointer to loaded dump to check and convert format
+ * @param dumplen the number of bytes loaded dump and converted
+ * @return 0 for ok, 1 for fails
+*/
+int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
+
 #define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
 #else
 
@@ -169,6 +178,7 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data
 * @param fmt
 */
 #define PrintAndLogDevice(level, format, args...) { }
+
 
 
 #endif //ON_DEVICE

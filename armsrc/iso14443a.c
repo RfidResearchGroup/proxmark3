@@ -1318,6 +1318,9 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                     p_response = NULL;
                 }
             }
+        } else if (receivedCmd[0] == MIFARE_ULEV1_VCSL) {
+            EmSend4bit(CARD_NACK_NA);
+            p_response = NULL;
         } else {
             // Check for ISO 14443A-4 compliant commands, look at left nibble
             switch (receivedCmd[0]) {
@@ -1371,8 +1374,10 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 default: {
                     // Never seen this command before
                     LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
-                    Dbprintf("Received unknown command (len=%d):", len);
-                    Dbhexdump(len, receivedCmd, false);
+                    if (MF_DBGLEVEL >= 3) {
+                        Dbprintf("Received unknown command (len=%d):", len);
+                        Dbhexdump(len, receivedCmd, false);
+                    }
                     // Do not respond
                     dynamic_response_info.response_n = 0;
                 }
@@ -1388,7 +1393,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 dynamic_response_info.response_n += 2;
 
                 if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
-                    DbpString("Error preparing tag response");
+                    if (MF_DBGLEVEL >= 3) DbpString("Error preparing tag response");
                     LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                     break;
                 }

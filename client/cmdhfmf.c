@@ -2590,6 +2590,16 @@ int CmdHF14AMfELoad(const char *Cmd) {
         return 2;
     }
 
+    // convert old mfu format to new
+    if (blockWidth == 4) {
+        res = convertOldMfuDump(&data, &datalen);
+        if (res) {
+            PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
+            free(data);
+            return res;
+        }
+    }
+
     PrintAndLogEx(INFO, "Copying to emulator memory");
 
     blockNum = 0;

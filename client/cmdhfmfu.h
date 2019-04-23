@@ -12,8 +12,10 @@
 #include "comms.h"
 #include "loclass/fileutils.h"
 
+
+// New Ultralight/NTAG dump file format
 // Length must be aligned to 4 bytes (UL/NTAG page)
-#define DUMP_PREFIX_LENGTH 56
+#define MFU_DUMP_PREFIX_LENGTH 56
 
 typedef struct {
     uint8_t version[8];
@@ -24,6 +26,22 @@ typedef struct {
     uint8_t counter_tearing[3][4];  // 3 bytes counter, 1 byte tearing flag
     uint8_t data[1024];
 } mfu_dump_t;
+
+// Old Ultralight/NTAG dump file format
+// It is used only for converting
+#define OLD_MFU_DUMP_PREFIX_LENGTH 48
+
+typedef struct {
+    uint8_t version[8];
+    uint8_t tbo[2];
+    uint8_t tearing[3];
+    uint8_t pack[2];
+    uint8_t tbo1[1];
+    uint8_t signature[32];
+    //uint8_t counter[3];
+    uint8_t data[1024];
+} old_mfu_dump_t;
+
 
 uint32_t GetHF14AMfU_Type(void);
 int ul_print_type(uint32_t tagtype, uint8_t spaces);
