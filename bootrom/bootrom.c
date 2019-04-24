@@ -8,12 +8,39 @@
 
 #include <proxmark3.h>
 #include "usb_cdc.h"
-#include "cmd.h"
 
 struct common_area common_area __attribute__((section(".commonarea")));
 unsigned int start_addr, end_addr, bootrom_unlocked;
 extern char _bootrom_start, _bootrom_end, _flash_start, _flash_end;
 extern uint32_t _osimage_entry;
+
+static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+    PacketResponseOLD txcmd;
+
+    for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
+        ((uint8_t *)&txcmd)[i] = 0x00;
+
+    // Compose the outgoing command frame
+    txcmd.cmd = cmd;
+    txcmd.arg[0] = arg0;
+    txcmd.arg[1] = arg1;
+    txcmd.arg[2] = arg2;
+
+    // Add the (optional) content to the frame, with a maximum size of USB_CMD_DATA_SIZE
+    if (data && len) {
+        len = MIN(len, USB_CMD_DATA_SIZE);
+        for (size_t i = 0; i < len; i++) {
+            txcmd.d.asBytes[i] = ((uint8_t *)data)[i];
+        }
+    }
+
+    int result = PM3_EUNDEF;
+    // Send frame and make sure all bytes are transmitted
+
+    result = usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
+
+    return result;
+}
 
 void DbpString(char *str) {
     uint8_t len = 0;
@@ -84,13 +111,16 @@ static void Fatal(void) {
     for (;;) {};
 }
 
-void PacketReceived(PacketCommandNG *packet) {
+void UsbPacketReceived(uint8_t *packet, int len) {
     int i, dont_ack = 0;
+    PacketCommandOLD *c = (PacketCommandOLD *)packet;
     volatile uint32_t *p;
 
-    uint32_t arg0 = (uint32_t)packet->oldarg[0];
+    //if ( len != sizeof(PacketCommandOLD`)) Fatal();
 
-    switch (packet->cmd) {
+    uint32_t arg0 = (uint32_t)c->arg[0];
+
+    switch (c->cmd) {
         case CMD_DEVICE_INFO: {
             dont_ack = 1;
             arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
@@ -108,7 +138,7 @@ void PacketReceived(PacketCommandNG *packet) {
             */
             p = (volatile uint32_t *)&_flash_start;
             for (i = 0; i < 12; i++)
-                p[i + arg0] = packet->data.asDwords[i];
+                p[i + arg0] = c->d.asDwords[i];
         }
         break;
 
@@ -116,7 +146,7 @@ void PacketReceived(PacketCommandNG *packet) {
             uint32_t *flash_mem = (uint32_t *)(&_flash_start);
             for (int j = 0; j < 2; j++) {
                 for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
-                    flash_mem[i] = packet->data.asDwords[i];
+                    flash_mem[i] = c->d.asDwords[i];
                 }
 
                 uint32_t flash_address = arg0 + (0x100 * j);
@@ -152,7 +182,7 @@ void PacketReceived(PacketCommandNG *packet) {
         break;
 
         case CMD_START_FLASH: {
-            if (packet->oldarg[2] == START_FLASH_MAGIC)
+            if (c->arg[2] == START_FLASH_MAGIC)
                 bootrom_unlocked = 1;
             else
                 bootrom_unlocked = 0;
@@ -161,8 +191,8 @@ void PacketReceived(PacketCommandNG *packet) {
             int prot_end = (int)&_bootrom_end;
             int allow_start = (int)&_flash_start;
             int allow_end = (int)&_flash_end;
-            int cmd_start = packet->oldarg[0];
-            int cmd_end = packet->oldarg[1];
+            int cmd_start = c->arg[0];
+            int cmd_end = c->arg[1];
 
             /* Only allow command if the bootrom is unlocked, or the parameters are outside of the protected
             * bootrom area. In any case they must be within the flash area.
@@ -194,7 +224,7 @@ static void flash_mode(int externally_entered) {
     start_addr = 0;
     end_addr = 0;
     bootrom_unlocked = 0;
-    PacketCommandNG rx;
+    uint8_t rx[sizeof(PacketCommandOLD)];
 
     usb_enable();
 
@@ -206,9 +236,9 @@ static void flash_mode(int externally_entered) {
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
-// TODO DOEGOX
-            if (usb_read((uint8_t *)&rx, sizeof(rx)))
-                PacketReceived(&rx);
+            if (usb_read(rx, sizeof(rx))) {
+                UsbPacketReceived(rx, sizeof(rx));
+            }
         }
 
         if (!externally_entered && !BUTTON_PRESS()) {
