@@ -50,7 +50,7 @@ CBORLIB = $(CBORLIBPATH)/tinycbor.a
 LIBS = -I../zlib -I../uart -I../liblua -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
 INCLUDES_CLIENT = -I. -I../include -I../common -I/opt/local/include $(LIBS)
 LDFLAGS = $(ENV_LDFLAGS)
-CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3
+CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3 -mno-ms-bitfields
 CXXFLAGS = -I../include -Wall -O3
 
 LUAPLATFORM = generic
