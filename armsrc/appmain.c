@@ -1575,7 +1575,7 @@ void  __attribute__((noreturn)) AppMain(void) {
             PacketReceived(&rx);
         } else if (ret != PM3_ENODATA) {
             Dbprintf("Error in frame reception: %d", ret);
-            // TODO DOEGOX if error, shall we resync ?
+            // TODO if error, shall we resync ?
         }
 
         // Press button for one second to enter a possible standalone mode

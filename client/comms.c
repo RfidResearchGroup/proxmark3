@@ -412,7 +412,7 @@ __attribute__((force_align_arg_pointer))
                 if (!error) {
 //                    PrintAndLogEx(NORMAL, "Received reply NG full !!");
                     PacketResponseReceived(&rx);
-//TODO DOEGOX NG don't send ACK anymore but reply with the corresponding cmd, still things seem to work fine...
+//TODO NG don't send ACK anymore but reply with the corresponding cmd, still things seem to work fine...
                     if (rx.cmd == CMD_ACK) {
                         ACK_received = true;
                     }
@@ -448,7 +448,7 @@ __attribute__((force_align_arg_pointer))
                 error = true;
             }
         }
-        // TODO DOEGOX if error, shall we resync ?
+        // TODO if error, shall we resync ?
 
         pthread_mutex_lock(&txBufferMutex);
 
