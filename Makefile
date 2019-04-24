@@ -52,7 +52,7 @@ armsrc/%: FORCE
 	$(MAKE) -C armsrc $(patsubst armsrc/%,%,$@)
 client/%: FORCE
 	$(MAKE) -C client $(patsubst client/%,%,$@)
-recovery/%: FORCE
+recovery/%: FORCE bootrom/% armsrc/%
 	$(MAKE) -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
