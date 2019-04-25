@@ -1615,11 +1615,13 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
     PrintAndLogEx(NORMAL, "----------+-------------------------+---------");
     PrintAndLogEx(NORMAL, "Version   | %s| %s", sprint_hex(card->version, sizeof(card->version)), sprint_ascii(card->version, sizeof(card->version)));
     PrintAndLogEx(NORMAL, "TBD       | %-24s| %s", sprint_hex(card->tbo, sizeof(card->tbo)), sprint_ascii(card->tbo, sizeof(card->tbo)));
-    PrintAndLogEx(NORMAL, "Tearing   | %-24s| %s", sprint_hex(card->tearing, sizeof(card->tearing)), sprint_ascii(card->tearing, sizeof(card->tearing)));
-    PrintAndLogEx(NORMAL, "Pack      | %-24s| %s", sprint_hex(card->pack, sizeof(card->pack)), sprint_ascii(card->pack, sizeof(card->pack)));
     PrintAndLogEx(NORMAL, "TBD       | %-24s| %s", sprint_hex(card->tbo1, sizeof(card->tbo1)), sprint_ascii(card->tbo1, sizeof(card->tbo1)));
     PrintAndLogEx(NORMAL, "Signature1| %s| %s", sprint_hex(card->signature, 16), sprint_ascii(card->signature, 16));
     PrintAndLogEx(NORMAL, "Signature2| %s| %s", sprint_hex(card->signature + 16, 16), sprint_ascii(card->signature + 16, 16));
+    for (uint8_t i = 0; i < 3; i ++) {
+        PrintAndLogEx(NORMAL, "Counter%d  | %-24s| %s", i, sprint_hex(card->counter_tearing[i],     3), sprint_ascii(card->counter_tearing[i],     3));
+        PrintAndLogEx(NORMAL, "Tearing%d  | %-24s| %s", i, sprint_hex(card->counter_tearing[i] + 3, 1), sprint_ascii(card->counter_tearing[i] + 3, 1));
+    }
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, "\nBlock#   | Data        |lck| Ascii");
     PrintAndLogEx(NORMAL, "---------+-------------+---+------");
@@ -1884,8 +1886,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     mfu_dump_t dump_file_data;
     uint8_t get_pack[] = {0, 0};
     uint8_t get_version[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t get_tearing[] = {0, 0, 0};
-    uint8_t get_counter[] = {0, 0, 0};
+    uint8_t get_counter_tearing[][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
     uint8_t dummy_pack[] = {0, 0};
     uint8_t get_signature[32];
     memset(get_signature, 0, sizeof(get_signature));
@@ -1915,8 +1916,8 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
         ulev1_getVersion(get_version, sizeof(get_version));
         for (uint8_t n = 0; n < 3; ++n) {
-            ulev1_readTearing(n, get_tearing + n, 1);
-            ulev1_readCounter(n, get_counter, sizeof(get_counter));
+            ulev1_readTearing(n, &get_counter_tearing[n][3], 1);
+            ulev1_readCounter(n, &get_counter_tearing[n][0], 3);
         }
 
         DropField();
@@ -1930,7 +1931,8 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     // format and add keys to block dump output
-    if (hasAuthKey) {
+    // only add keys if not partial read, and complete pages read
+    if (!is_partial && pages == card_mem_size && hasAuthKey) {
         // if we didn't swapendian before - do it now for the sprint_hex call
         // NOTE: default entry is bigendian (unless swapped), sprint_hex outputs little endian
         //       need to swap to keep it the same
@@ -1949,11 +1951,11 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     //add *special* blocks to dump
-    //iceman:  need to add counters and pwd values to the dump format
+    // pack and pwd saved into last pages of dump, if was not partial read
+    dump_file_data.pages = pages - 1;
     memcpy(dump_file_data.version, get_version, sizeof(dump_file_data.version));
-    memcpy(dump_file_data.tearing, get_tearing, sizeof(dump_file_data.tearing));
-    memcpy(dump_file_data.pack, get_pack, sizeof(dump_file_data.pack));
     memcpy(dump_file_data.signature, get_signature, sizeof(dump_file_data.signature));
+    memcpy(dump_file_data.counter_tearing, get_counter_tearing, sizeof(dump_file_data.counter_tearing));
     memcpy(dump_file_data.data, data, pages * 4);
 
     printMFUdumpEx(&dump_file_data, pages, startPage);
@@ -1966,7 +1968,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         fptr += sprintf(fptr, "hf-mfu-");
         FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
     }
-    uint16_t datalen = pages * 4 + DUMP_PREFIX_LENGTH;
+    uint16_t datalen = pages * 4 + MFU_DUMP_PREFIX_LENGTH;
     saveFile(filename, "bin", (uint8_t *)&dump_file_data, datalen);
     saveFileJSON(filename, "json", jsfMfuMemory, (uint8_t *)&dump_file_data, datalen);
 
@@ -2086,16 +2088,30 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     // read all data
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
-    if (bytes_read < 48) {
+    if (bytes_read < MFU_DUMP_PREFIX_LENGTH) {
         PrintAndLogEx(WARNING, "Error, dump file is too small");
         free(dump);
         return 1;
     }
 
-    PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
+    // convert old format to new format, if need
+    int res = convertOldMfuDump(&dump, &bytes_read);
+    if (res) {
+        PrintAndLogEx(WARNING, "Failed convert on load to new Ultralight/NTAG format");
+        free(dump);
+        return res;
+    }
 
     mfu_dump_t *mem = (mfu_dump_t *)dump;
-    uint8_t pages = (bytes_read - 48) / 4;
+    uint8_t pages = (bytes_read - MFU_DUMP_PREFIX_LENGTH) / 4;
+
+    if (pages - 1 != mem->pages) {
+        PrintAndLogEx(WARNING, "Error, invalid dump, wrong page count");
+        free(dump);
+        return 1;
+    }
+
+    PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
     // print dump
     printMFUdumpEx(mem, pages, 0);
@@ -2129,7 +2145,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
             if (read_key) {
                 // try reading key from dump and use.
-                memcpy(data, mem->data + (bytes_read - 48 - 8), 4);
+                memcpy(data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 8), 4);
             } else {
                 memcpy(data,  p_authkey, 4);
             }
@@ -2147,8 +2163,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         }
 
         // pack
-        data[0] = mem->pack[0];
-        data[1] = mem->pack[1];
+        memcpy(data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 4), 2);
         data[2] = 0;
         data[3] = 0;
         PrintAndLogEx(NORMAL, "special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));

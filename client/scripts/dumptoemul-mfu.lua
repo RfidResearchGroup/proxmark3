@@ -104,11 +104,11 @@ local function main(args)
     -- lua uses start index and endindex,  not count.
     -- UID is  3three skip bcc0 then 4bytes.
     -- 1 lua is one-index.
-    -- 1 + 96 (48*2)  new dump format has version/signature/counter data here
-    -- 97,98,99,100,101,102   UID first three bytes
-    -- 103,104 bcc0
-    -- 105---  UID last four bytes
-    local uid = string.sub(dumpdata, 97, 97+5)..string.sub(dumpdata, 97+8, 97+8+7)
+    -- 1 + 112 (56*2)  new dump format has version/signature/counter data here
+    -- 113,114,115,116,117,118   UID first three bytes
+    -- 119,120 bcc0
+    -- 121---  UID last four bytes
+    local uid = string.sub(dumpdata, 113, 113+5)..string.sub(dumpdata, 113+8, 113+8+7)
     output = output or (uid .. ".eml")
 
     -- Format some linebreaks

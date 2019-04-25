@@ -51,5 +51,6 @@ uint64_t bytes_to_num(uint8_t *src, size_t len);
 void rol(uint8_t *data, const size_t len);
 void lsl(uint8_t *data, size_t len);
 int32_t le24toh(uint8_t data[3]);
+void htole24(uint32_t val, uint8_t data[3]);
 
 #endif

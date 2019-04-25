@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change/Add new dump format for Ultralight/NTAG, counters support, simulation (@mceloff)
  - Add 'hf mf sim' full-byte split anticollision support (@mceloff)
  - Fix/Add 'hf mf sim' bugs fix, RATS support, etc (@mceloff)
  - Fix serial of FPC. (@ryan)

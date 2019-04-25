@@ -797,9 +797,22 @@ int num_CPUs(void) {
     SYSTEM_INFO sysinfo;
     GetSystemInfo(&sysinfo);
     return sysinfo.dwNumberOfProcessors;
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) && defined(_SC_NPROCESSORS_ONLN)
 #include <unistd.h>
-    return sysconf(_SC_NPROCESSORS_ONLN);
+    int count = sysconf(_SC_NPROCESSORS_ONLN);
+    if (count <= 0) 
+        count = 1;
+    return count;   
+#elif defined(__APPLE__)
+/*
+   TODO ICEMAN 2019, its commented out until someone finds a better solution
+#include "sys/sysctl.h"
+    uint32_t logicalcores = 0;
+    size_t size = sizeof( logicalcores );
+    sysctlbyname( "hw.logicalcpu", &logicalcores, &size, NULL, 0 );
+    return logicalcores;
+    */
+    return 1;    
 #else
     return 1;
 #endif

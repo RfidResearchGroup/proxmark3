@@ -2132,6 +2132,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false, verbose = false, setEmulatorMem = false;
     nonces_t data[1];
+    char csize[13] = { 0 };
+    char uidsize[8] = { 0 };
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -2152,24 +2154,21 @@ static int CmdHF14AMfSim(const char *Cmd) {
             case 't':
                 switch (param_get8(Cmd, cmdp + 1)) {
                     case 0:
-                        // Mifare MINI
                         flags |= FLAG_MF_MINI;
-                        break;
-                    case 1:
-                        // Mifare Classic 1k
-                        flags |= FLAG_MF_1K;
+                        sprintf(csize, "MINI");
                         break;
                     case 2:
-                        // Mifare Classic 2k
                         flags |= FLAG_MF_2K;
+                        sprintf(csize, "2K with RATS");
                         break;
                     case 4:
-                        // Mifare Classic 4k
                         flags |= FLAG_MF_4K;
+                        sprintf(csize, "4K");
                         break;
+                    case 1:
                     default:
-                        // Mifare Classic 1k
                         flags |= FLAG_MF_1K;
+                        sprintf(csize, "1K");
                         break;
                 }
                 cmdp += 2;
@@ -2179,12 +2178,15 @@ static int CmdHF14AMfSim(const char *Cmd) {
                 switch (uidlen) {
                     case 20:
                         flags |= FLAG_10B_UID_IN_DATA;
+                        sprintf(uidsize, "10 byte");
                         break;
                     case 14:
                         flags |= FLAG_7B_UID_IN_DATA;
+                        sprintf(uidsize, "7 byte");
                         break;
                     case  8:
                         flags |= FLAG_4B_UID_IN_DATA;
+                        sprintf(uidsize, "4 byte");
                         break;
                     default:
                         return usage_hf14_mfsim();
@@ -2209,11 +2211,17 @@ static int CmdHF14AMfSim(const char *Cmd) {
     if (errors) return usage_hf14_mfsim();
 
     // Use UID, SAK, ATQA from EMUL, if uid not defined
-    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0)
+    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
         flags |= FLAG_UID_IN_EMUL;
+    }
 
-    PrintAndLogEx(NORMAL, " uid:%s, numreads:%d, flags:%d (0x%02x) "
+    PrintAndLogEx(INFO, _YELLOW_("Mifare %s") " | %s UID  " _YELLOW_("%s") ""
+                  , csize
+                  , uidsize
                   , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen >> 1)
+    );
+    
+    PrintAndLogEx(INFO, "Options [ numreads: %d, flags: %d (0x%02x) ]"
                   , exitAfterNReads
                   , flags
                   , flags);
@@ -2570,6 +2578,16 @@ int CmdHF14AMfELoad(const char *Cmd) {
         PrintAndLogEx(FAILED, "File content error. Size doesn't match blockwidth ");
         free(data);
         return 2;
+    }
+
+    // convert old mfu format to new
+    if (blockWidth == 4) {
+        res = convertOldMfuDump(&data, &datalen);
+        if (res) {
+            PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
+            free(data);
+            return res;
+        }
     }
 
     PrintAndLogEx(INFO, "Copying to emulator memory");
