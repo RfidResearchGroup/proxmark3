@@ -78,7 +78,7 @@ typedef struct {
 // FTDI 460800 hw status -> we need 30ms
 struct timeval timeout = {
     .tv_sec  =      0, // 0 second
-    .tv_usec = 100000  // 100 000 micro seconds
+    .tv_usec = 200000  // 200 000 micro seconds
 };
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
