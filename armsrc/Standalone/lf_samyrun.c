@@ -10,6 +10,10 @@
 //-----------------------------------------------------------------------------
 #include "lf_samyrun.h"
 
+void ModInfo(void) {
+    DbpString("   LF HID26 standalone - aka SamyRun (Samy Kamkar)");
+}
+
 // samy's sniff and repeat routine for LF
 void RunMod() {
     StandAloneMode();

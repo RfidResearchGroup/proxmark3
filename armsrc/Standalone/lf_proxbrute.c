@@ -11,6 +11,10 @@
 //-----------------------------------------------------------------------------
 #include "lf_proxbrute.h"
 
+void ModInfo(void) {
+    DbpString("   LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
+}
+
 // samy's sniff and repeat routine for LF
 void RunMod() {
     StandAloneMode();

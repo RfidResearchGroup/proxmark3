@@ -103,7 +103,7 @@ endif
 SRC_STANDALONE =
 # WITH_LF_ICERUN
 ifneq (,$(findstring WITH_LF_ICERUN,$(APP_CFLAGS)))
-	SRC_STANDALONE =
+	SRC_STANDALONE = lf_icerun.c
 endif
 # WITH_LF_SAMYRUN
 ifneq (,$(findstring WITH_LF_SAMYRUN,$(APP_CFLAGS)))

@@ -18,6 +18,10 @@ typedef struct {
 } __attribute__((__packed__)) card_clone_t;
 
 
+void ModInfo(void) {
+    DbpString("   HF Mifare sniff/simulation - (Craig Young)");
+}
+
 void RunMod() {
     StandAloneMode();
     Dbprintf(">>  Craig Young Mifare sniff UID/clone uid 2 magic/sim  a.k.a YoungRun Started  <<");
