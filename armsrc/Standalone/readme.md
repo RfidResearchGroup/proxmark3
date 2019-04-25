@@ -3,6 +3,7 @@
 This contains functionality for different StandAlone modes. The fullimage will be built given the correct compiler flags used. Build targets for these files are contained in `armsrc/Makefile`.
 
 If you want to implement a new standalone mode, you need to implement the methods provided in `standalone.h`.
+Have a look at the skeleton standalone mode called  IceRun, in the files `lf_icerun.c lf_icerun.h`.
 
 ## Implementing a standalone mode
 
@@ -10,7 +11,11 @@ Each standalone mod needs to have its own compiler flag to be added in `armsrc\m
 
 The RunMod function is your "main" function when running.  You need to check for Usb commands,  in order to let the pm3 client break the standalone mode.  See this basic skeleton of main function RunMod().
 ````
-void RunMod() {
+void ModInfo(void) {
+    DbpString("   HF good description of your mode - (my name)");
+}
+
+void RunMod(void) {
     // led show
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -56,16 +61,12 @@ endif
 ```
 
 ## Adding identification of your mode
-Do please add a identification string in the function `printStandAloneModes` inside `armsrc\appmain.c`
+Do please add a identification string in a function called `ModInfo` inside your source code file.
 This will enable an easy way to detect on client side which standalone mods has been installed on the device.
-```
-#if defined(WITH_STANDALONE_HF_COLIN)
-    DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
-#endif
-````
 
+## Compiling your standalone mode
 Once all this is done, you and others can now easily compile different standalone modes by just selecting one of the standalone modes in `common/Makefile.hal`, e.g.:
 
-````
+```
 PLATFORM_DEFS += -DWITH_STANDALONE_HF_COLIN
-````
+```

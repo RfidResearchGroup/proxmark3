@@ -195,6 +195,10 @@ void WriteTagToFlash(uint8_t index, size_t size) {
     return;
 }
 
+void ModInfo(void) {
+    DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
+}
+
 void RunMod() {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);

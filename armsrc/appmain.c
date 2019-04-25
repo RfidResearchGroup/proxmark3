@@ -411,7 +411,15 @@ void SendStatus(void) {
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
-    printStandAloneModes();
+    DbpString("Installed StandAlone Mode");
+    ModInfo();
+
+    //DbpString("Running ");
+    //Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No");
+    //Dbprintf("  Is Device attached to FPC| %s", send_using_0 ? "Yes" : "No");
+    //Dbprintf("  Is USB_reconnect value   | %d", GetUSBreconnect() );
+    //Dbprintf("  Is USB_configured value  | %d", GetUSBconfigured() );
+    
     cmd_send(CMD_ACK, 1, 0, 0, 0, 0);
 }
 
@@ -426,48 +434,6 @@ void StandAloneMode(void) {
     SpinOff(50);
     SpinDown(50);
     SpinDelay(500);
-}
-// detection of which Standalone Modes is installed
-// (iceman)
-void printStandAloneModes(void) {
-
-    DbpString("Installed StandAlone Mode");
-
-#if defined(WITH_STANDALONE_LF_ICERUN)
-    DbpString("   LF sniff/clone/simulation -  aka IceRun (iceman)");
-#endif
-#if defined(WITH_STANDALONE_HF_YOUNG)
-    DbpString("   HF Mifare sniff/simulation - (Craig Young)");
-#endif
-#if defined(WITH_STANDALONE_LF_SAMYRUN)
-    DbpString("   LF HID26 standalone - aka SamyRun (Samy Kamkar)");
-#endif
-#if defined(WITH_STANDALONE_LF_PROXBRUTE)
-    DbpString("   LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
-#endif
-#if defined(WITH_STANDALONE_LF_HIDBRUTE)
-    DbpString("   LF HID corporate 1000 bruteforce - aka Corporatebrute (Federico dotta & Maurizio Agazzini)");
-#endif
-#if defined(WITH_STANDALONE_HF_MATTYRUN)
-    DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
-#endif
-#if defined(WITH_STANDALONE_HF_COLIN)
-    DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
-#endif
-#if defined(WITH_STANDALONE_HF_BOG)
-    DbpString("   HF 14a sniff standalone with ULC/ULEV1/NTAG auth storing in flashmem - aka BogitoRun (Bogito)");
-#endif
-
-    //DbpString("Running ");
-    //Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No");
-    //Dbprintf("  Is Device attached to FPC| %s", 0 ? "Yes" : "No");
-    //Dbprintf("  Is USB_reconnect value   | %d", GetUSBreconnect() );
-    //Dbprintf("  Is USB_configured value  | %d", GetUSBconfigured() );
-
-    //.. add your own standalone detection based on with compiler directive you are used.
-    // don't "reuse" the already taken ones, this will make things easier when trying to detect the different modes
-    // 2017-08-06  must adapt the makefile and have individual compilation flags for all mods
-    //
 }
 
 /*

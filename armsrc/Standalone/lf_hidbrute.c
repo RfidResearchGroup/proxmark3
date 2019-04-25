@@ -26,6 +26,10 @@
 //-----------------------------------------------------------------------------------
 #include "lf_hidbrute.h"
 
+void ModInfo(void) {
+    DbpString("   LF HID corporate 1000 bruteforce - aka Corporatebrute (Federico dotta & Maurizio Agazzini)");
+}
+
 // samy's sniff and repeat routine for LF
 void RunMod() {
     StandAloneMode();

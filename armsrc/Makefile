@@ -75,10 +75,12 @@ else
 endif
 
 # Generic standalone Mode injection of source code
+
+
 SRC_STANDALONE =
 # WITH_STANDALONE_LF_ICERUN
 ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
-	SRC_STANDALONE =
+	SRC_STANDALONE = lf_icerun.c
 endif
 # WITH_STANDALONE_LF_SAMYRUN
 ifneq (,$(findstring WITH_STANDALONE_LF_SAMYRUN,$(APP_CFLAGS)))
