@@ -433,28 +433,28 @@ void printStandAloneModes(void) {
 
     DbpString("Installed StandAlone Mode");
 
-#if defined(WITH_LF_ICERUN)
+#if defined(WITH_STANDALONE_LF_ICERUN)
     DbpString("   LF sniff/clone/simulation -  aka IceRun (iceman)");
 #endif
-#if defined(WITH_HF_YOUNG)
+#if defined(WITH_STANDALONE_HF_YOUNG)
     DbpString("   HF Mifare sniff/simulation - (Craig Young)");
 #endif
-#if defined(WITH_LF_SAMYRUN)
+#if defined(WITH_STANDALONE_LF_SAMYRUN)
     DbpString("   LF HID26 standalone - aka SamyRun (Samy Kamkar)");
 #endif
-#if defined(WITH_LF_PROXBRUTE)
+#if defined(WITH_STANDALONE_LF_PROXBRUTE)
     DbpString("   LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
 #endif
-#if defined(WITH_LF_HIDBRUTE)
+#if defined(WITH_STANDALONE_LF_HIDBRUTE)
     DbpString("   LF HID corporate 1000 bruteforce - aka Corporatebrute (Federico dotta & Maurizio Agazzini)");
 #endif
-#if defined(WITH_HF_MATTYRUN)
+#if defined(WITH_STANDALONE_HF_MATTYRUN)
     DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
 #endif
-#if defined(WITH_HF_COLIN)
+#if defined(WITH_STANDALONE_HF_COLIN)
     DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
 #endif
-#if defined(WITH_HF_BOG)
+#if defined(WITH_STANDALONE_HF_BOG)
     DbpString("   HF 14a sniff standalone with ULC/ULEV1/NTAG auth storing in flashmem - aka BogitoRun (Bogito)");
 #endif
 
@@ -1585,11 +1585,11 @@ void  __attribute__((noreturn)) AppMain(void) {
             * All standalone mod "main loop" should be the RunMod() function.
             * Since the standalone is either LF or HF, the somewhat bisarr defines below exists.
             */
-#if defined (WITH_LF) && ( defined (WITH_LF_SAMYRUN) || defined (WITH_LF_HIDBRUTE) || defined (WITH_LF_PROXBRUTE) )
+#if defined (WITH_LF) && ( defined (WITH_STANDALONE_LF_SAMYRUN) || defined (WITH_STANDALONE_LF_HIDBRUTE) || defined (WITH_STANDALONE_LF_PROXBRUTE) )
             RunMod();
 #endif
 
-#if defined (WITH_ISO14443a) && ( defined (WITH_HF_YOUNG) || defined(WITH_HF_COLIN) || defined(WITH_HF_MATTYRUN) || defined(WITH_HF_BOG) )
+#if defined (WITH_ISO14443a) && ( defined (WITH_STANDALONE_HF_YOUNG) || defined(WITH_STANDALONE_HF_COLIN) || defined(WITH_STANDALONE_HF_MATTYRUN) || defined(WITH_STANDALONE_HF_BOG) )
             RunMod();
 #endif
 
