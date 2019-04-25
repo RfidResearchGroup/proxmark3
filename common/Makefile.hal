@@ -56,12 +56,62 @@ else
   $(error Invalid or empty PLATFORM: $(PLATFORM). Known platforms: $(KNOWN_PLATFORMS))
 endif
 
-# Add flags dependencies
+# common LF support
+PLATFORM_DEFS += \
+	-DWITH_LF \
+	-DWITH_HITAG
+
+# common HF support
+PLATFORM_DEFS += \
+	-DWITH_ISO15693 \
+	-DWITH_LEGICRF \
+	-DWITH_ISO14443b \
+	-DWITH_ISO14443a \
+	-DWITH_ICLASS \
+	-DWITH_FELICA \
+	-DWITH_HFSNIFF
+
+# Standalone mode
+# !! Choose only one !!
+PLATFORM_DEFS += -DWITH_STANDALONE_LF_SAMYRUN
+#PLATFORM_DEFS += -DWITH_STANDALONE_LF_ICERUN
+#PLATFORM_DEFS += -DWITH_STANDALONE_LF_SAMYRUN
+#PLATFORM_DEFS += -DWITH_STANDALONE_LF_PROXBRUTE
+#PLATFORM_DEFS += -DWITH_STANDALONE_LF_HIDBRUTE
+#PLATFORM_DEFS += -DWITH_STANDALONE_HF_YOUNG
+#PLATFORM_DEFS += -DWITH_STANDALONE_HF_MATTYRUN
+#PLATFORM_DEFS += -DWITH_STANDALONE_HF_COLIN
+#PLATFORM_DEFS += -DWITH_STANDALONE_HF_BOG
+
+$(info $(findstring WITH_STANDALONE_*,$(PLATFORM_DEFS)))
+
+# Misc
+#PLATFORM_DEFS += -DWITH_LCD
+
+
+# Add flags dependencies :
+
+# WITH_FPC_* needs WITH_FPC :
 ifneq (,$(findstring WITH_FPC_,$(PLATFORM_DEFS)))
   PLATFORM_DEFS += -DWITH_FPC
 endif
+# WITH_EMV possible if WITH_ISO14443a :
+ifneq (,$(findstring WITH_ISO14443a,$(PLATFORM_DEFS)))
+  PLATFORM_DEFS += -DWITH_EMV
+endif
+
+PLATFORM_DEFS_INFO = $(strip $(filter-out STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS))))
+PLATFORM_DEFS_INFO_STANDALONE = $(strip $(subst STANDALONE_,, $(filter STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS)))))
+
+# Check that only one Standalone mode has been chosen
+ifneq (,$(word 2, $(PLATFORM_DEFS_INFO_STANDALONE)))
+  $(error You must choose only one Standalone mode!: $(PLATFORM_DEFS_INFO_STANDALONE))
+endif
+
 
 export PLATFORM
 export PLTNAME
 export MCU
 export PLATFORM_DEFS
+export PLATFORM_DEFS_INFO
+export PLATFORM_DEFS_INFO_STANDALONE

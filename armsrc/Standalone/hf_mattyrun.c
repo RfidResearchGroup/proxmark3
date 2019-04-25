@@ -191,6 +191,10 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
     return -1;
 }
 
+void ModInfo(void) {
+    DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
+}
+
 void RunMod() {
     StandAloneMode();
     Dbprintf(">>  Matty mifare chk/dump/sim  a.k.a MattyRun Started  <<");

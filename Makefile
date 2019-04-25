@@ -35,9 +35,10 @@ endif
 include common/Makefile.hal
 
 $(info ===================================================================)
-$(info PLATFORM: $(PLATFORM))
-$(info $(PLTNAME))
-$(info Included supports: $(PLATFORM_DEFS))
+$(info PLATFORM:          $(PLATFORM))
+$(info Platform name:     $(PLTNAME))
+$(info Included options:  $(PLATFORM_DEFS_INFO))
+$(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
 $(info ===================================================================)
 
 all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/%

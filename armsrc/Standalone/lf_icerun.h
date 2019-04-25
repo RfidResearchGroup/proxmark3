@@ -1,20 +1,17 @@
 //-----------------------------------------------------------------------------
-// Christian Herrmann, 2017
+// Iceman, Christian Herrmann, 2019
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// StandAlone Mod header file
+// StandAlone Mod
 //-----------------------------------------------------------------------------
 
-#ifndef __STANDALONE_H
-#define __STANDALONE_H
+#ifndef __LF_ICERUN_H
+#define __LF_ICERUN_H
 
-#include <stdbool.h> // for bool
-#include <inttypes.h> // PRIu64
+#include "standalone.h" // standalone definitions
+#include "apps.h" // debugstatements, lfops?
 
-void RunMod();
-void ModInfo();
-
-#endif /* __STANDALONE_H */
+#endif /* __LF_ICERUN_H */

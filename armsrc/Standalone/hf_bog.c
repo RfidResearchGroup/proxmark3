@@ -281,6 +281,10 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     }
 }
 
+void ModInfo(void) {
+    DbpString("   HF 14a sniff standalone with ULC/ULEV1/NTAG auth storing in flashmem - aka BogitoRun (Bogito)");
+}
+
 void RunMod() {
 
     StandAloneMode();

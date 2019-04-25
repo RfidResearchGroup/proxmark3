@@ -18,9 +18,10 @@ ifeq ($(PLTNAME),)
   endif
   include ../common/Makefile.hal
   $(info ===================================================================)
-  $(info PLATFORM: $(PLATFORM))
-  $(info $(PLTNAME))
-  $(info Included supports: $(PLATFORM_DEFS))
+  $(info PLATFORM:          $(PLATFORM))
+  $(info Platform name:     $(PLTNAME))
+  $(info Included options:  $(PLATFORM_DEFS_INFO))
+  $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
   $(info ===================================================================)
 endif
 
@@ -29,33 +30,7 @@ endif
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS) \
 			 -DON_DEVICE \
-			 -DWITH_LF \
-			 -DWITH_HITAG \
- 			 -DWITH_ISO15693 \
-			 -DWITH_LEGICRF \
-			 -DWITH_ISO14443b \
-			 -DWITH_ISO14443a \
-			 -DWITH_ICLASS \
-			 -DWITH_FELICA \
-			 -DWITH_HFSNIFF \
-			 -DWITH_LF_SAMYRUN \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
-
-### IMPORTANT -  move the commented variable below this line
-#			 -DWITH_FPC \
-#			 -DWITH_LCD \
-#			 -DWITH_EMV \
-#
-# Standalone Mods
-#-------------------------------------------------------
-#			 -DWITH_LF_ICERUN
-#			 -DWITH_LF_SAMYRUN
-#			 -DWITH_LF_PROXBRUTE
-#			 -DWITH_LF_HIDBRUTE
-#			 -DWITH_HF_YOUNG
-#			 -DWITH_HF_MATTYRUN
-#			 -DWITH_HF_COLIN
-#			 -DWITH_HF_BOG
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
@@ -100,37 +75,39 @@ else
 endif
 
 # Generic standalone Mode injection of source code
-SRC_STANDALONE =
-# WITH_LF_ICERUN
-ifneq (,$(findstring WITH_LF_ICERUN,$(APP_CFLAGS)))
-	SRC_STANDALONE =
+
+
+SRC_STANDALONE = placeholder.c
+# WITH_STANDALONE_LF_ICERUN
+ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
+	SRC_STANDALONE = lf_icerun.c
 endif
-# WITH_LF_SAMYRUN
-ifneq (,$(findstring WITH_LF_SAMYRUN,$(APP_CFLAGS)))
+# WITH_STANDALONE_LF_SAMYRUN
+ifneq (,$(findstring WITH_STANDALONE_LF_SAMYRUN,$(APP_CFLAGS)))
 	SRC_STANDALONE = lf_samyrun.c
 endif
-# WITH_LF_PROXBRUTE
-ifneq (,$(findstring WITH_LF_PROXBRUTE,$(APP_CFLAGS)))
+# WITH_STANDALONE_LF_PROXBRUTE
+ifneq (,$(findstring WITH_STANDALONE_LF_PROXBRUTE,$(APP_CFLAGS)))
 	SRC_STANDALONE = lf_proxbrute.c
 endif
-# WITH_LF_HIDBRUTE
-ifneq (,$(findstring WITH_LF_HIDBRUTE,$(APP_CFLAGS)))
+# WITH_STANDALONE_LF_HIDBRUTE
+ifneq (,$(findstring WITH_STANDALONE_LF_HIDBRUTE,$(APP_CFLAGS)))
 	SRC_STANDALONE = lf_hidbrute.c
 endif
-# WITH_HF_YOUNG
-ifneq (,$(findstring WITH_HF_YOUNG,$(APP_CFLAGS)))
+# WITH_STANDALONE_HF_YOUNG
+ifneq (,$(findstring WITH_STANDALONE_HF_YOUNG,$(APP_CFLAGS)))
 	SRC_STANDALONE = hf_young.c
 endif
-# WITH_HF_MATTYRUN
-ifneq (,$(findstring WITH_HF_MATTYRUN,$(APP_CFLAGS)))
+# WITH_STANDALONE_HF_MATTYRUN
+ifneq (,$(findstring WITH_STANDALONE_HF_MATTYRUN,$(APP_CFLAGS)))
 	SRC_STANDALONE = hf_mattyrun.c
 endif
-# WITH_HF_COLIN
-ifneq (,$(findstring WITH_HF_COLIN,$(APP_CFLAGS)))
+# WITH_STANDALONE_HF_COLIN
+ifneq (,$(findstring WITH_STANDALONE_HF_COLIN,$(APP_CFLAGS)))
 	SRC_STANDALONE = vtsend.c hf_colin.c
 endif
-# WITH_HF_BOG
-ifneq (,$(findstring WITH_HF_BOG,$(APP_CFLAGS)))
+# WITH_STANDALONE_HF_BOG
+ifneq (,$(findstring WITH_STANDALONE_HF_BOG,$(APP_CFLAGS)))
 	SRC_STANDALONE = hf_bog.c
 endif
 
