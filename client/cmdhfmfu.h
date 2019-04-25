@@ -12,7 +12,10 @@
 #include "comms.h"
 #include "loclass/fileutils.h"
 
-#define DUMP_PREFIX_LENGTH 48
+
+// Old Ultralight/NTAG dump file format
+// It is used only for converting
+#define OLD_MFU_DUMP_PREFIX_LENGTH 48
 
 typedef struct {
     uint8_t version[8];
@@ -23,7 +26,8 @@ typedef struct {
     uint8_t signature[32];
     //uint8_t counter[3];
     uint8_t data[1024];
-} mfu_dump_t;
+} old_mfu_dump_t;
+
 
 uint32_t GetHF14AMfU_Type(void);
 int ul_print_type(uint32_t tagtype, uint8_t spaces);
