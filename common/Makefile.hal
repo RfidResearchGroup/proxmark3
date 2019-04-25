@@ -95,10 +95,6 @@ $(info $(findstring WITH_STANDALONE_*,$(PLATFORM_DEFS)))
 ifneq (,$(findstring WITH_FPC_,$(PLATFORM_DEFS)))
   PLATFORM_DEFS += -DWITH_FPC
 endif
-# WITH_EMV possible if WITH_ISO14443a :
-ifneq (,$(findstring WITH_ISO14443a,$(PLATFORM_DEFS)))
-  PLATFORM_DEFS += -DWITH_EMV
-endif
 
 PLATFORM_DEFS_INFO = $(strip $(filter-out STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS))))
 PLATFORM_DEFS_INFO_STANDALONE = $(strip $(subst STANDALONE_,, $(filter STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS)))))
