@@ -43,7 +43,6 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 			 -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 ### IMPORTANT -  move the commented variable below this line
-#			 -DWITH_HITAG \
 #			 -DWITH_FPC \
 #			 -DWITH_LCD \
 #			 -DWITH_EMV \
