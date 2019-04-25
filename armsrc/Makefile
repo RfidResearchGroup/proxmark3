@@ -28,7 +28,6 @@ endif
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS) \
-			 -DWITH_CRC \
 			 -DON_DEVICE \
 			 -DWITH_LF \
 			 -DWITH_HITAG \
