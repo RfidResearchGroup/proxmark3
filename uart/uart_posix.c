@@ -72,10 +72,10 @@ typedef struct {
 
 // Receiving from USART need more than 30ms as we used on USB
 // else we get errors about partial packet reception
-// Now we're using 100ms
-// FTDI   9600 hw status -> we need 20ms
-// FTDI 115200 hw status -> we need 50ms
-// FTDI 460800 hw status -> we need 30ms
+// FTDI   9600 hw status        -> we need 20ms
+// FTDI 115200 hw status        -> we need 50ms
+// FTDI 460800 hw status        -> we need 30ms
+// BT   115200 hf mf fchk 1 dic -> we need 140ms
 struct timeval timeout = {
     .tv_sec  =      0, // 0 second
     .tv_usec = 200000  // 200 000 micro seconds
