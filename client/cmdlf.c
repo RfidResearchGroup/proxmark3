@@ -858,7 +858,9 @@ int CmdLFfind(const char *Cmd) {
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
 
+#ifdef WITH_HITAG
             if (readHitagUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!"); return 1;}
+#endif
             if (readCOTAGUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!"); return 1;}
 
             PrintAndLogEx(FAILED, "\n" _YELLOW_("No data found!") " - Signal looks like noise. Maybe not an LF tag?");
@@ -947,7 +949,9 @@ static command_t CommandTable[] = {
     {"fdx",         CmdLFFdx,           1, "{ FDX-B RFIDs...             }"},
     {"gproxii",     CmdLFGuard,         1, "{ Guardall Prox II RFIDs...  }"},
     {"hid",         CmdLFHID,           1, "{ HID RFIDs...               }"},
+#ifdef WITH_HITAG
     {"hitag",       CmdLFHitag,         1, "{ Hitag CHIPs...             }"},
+#endif
     {"indala",      CmdLFINDALA,        1, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            1, "{ ioProx RFIDs...            }"},
     {"jablotron",   CmdLFJablotron,     1, "{ Jablotron RFIDs...         }"},
