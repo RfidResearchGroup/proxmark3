@@ -185,9 +185,38 @@ Meanwhile, a fast transition to MIX frames can be done with:
 
 Bootrom
 =======
-TODO
-We need to be very careful to make a flasher that can deal with old & new bootroms.
-New bootrom might need to also still support old frame format, to ease flashing back to repos supporting the old format...
+
+Bootrom code will still use the old frame format to remain compatible with other repos supporting the old format and because it would hardly gain anything from the new format:
+* almost all frames convey 512b of payload, so difference in overhead is neglictible
+* bringing flash over usart sounds risky and would be terribly slow anyway (115200 bauds vs. 7M bauds).
+
+On the Proxmark3, for receiving frames:
+---------------------------------------
+(bootrom/bootrom.c)
+usb_read (common/usb_cdc.c) -> UsbPacketReceived (bootrom.c)
+  -> CMD_DEVICE_INFO / CMD_START_FLASH / CMD_FINISH_WRITE / CMD_HARDWARE_RESET / CMD_SETUP_WRITE
+also usb_enable, usb_disable (common/usb_cdc.c)
+
+On the Proxmark3, for sending frames:
+-------------------------------------
+(bootrom/bootrom.c)
+reply_old (bootrom.c) -> usb_write (common/usb_cdc.c)
+also usb_enable, usb_disable (common/usb_cdc.c)
+
+On the client, for sending frames:
+-------------------------------------
+
+Therefore, the flasher client (client/flasher.c + client->flash.c) must still use these old frames.
+It uses a few commands in common with current client code:
+OpenProxmark
+CloseProxmark
+SendCommandOLD
+  -> CMD_DEVICE_INFO / CMD_START_FLASH / CMD_FINISH_WRITE / CMD_HARDWARE_RESET
+
+On the client, for receiving frames:
+------------------------------------
+As usual, old frames are still supported
+WaitForResponseTimeout -> PacketResponseNG
 
 New usart RX FIFO
 =================
@@ -323,9 +352,14 @@ time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "mem save f foo_fpc"
 Reference frames
 ================
 
-Captured on linux USB.
-
 For helping debug...
+
+On linux USB
+* sent packets can be 544
+* received packets are max 128, so 544 = 128+128+128+128+32
+On linux UART (FTDI)
+* sent packets are max 256, so 544 = 256+256+32
+* received packets are max 512, so 544 = 512+32
 
 Initial connection:
 TestProxmark: SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
