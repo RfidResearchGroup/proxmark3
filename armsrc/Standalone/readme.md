@@ -68,8 +68,7 @@ Once all this is done, you and others can now easily compile different standalon
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
-APP_CFLAGS = -DWITH_CRC \
-             -DON_DEVICE \
+APP_CFLAGS = -DON_DEVICE \
              -DWITH_LF \
              -DWITH_HITAG \
              -DWITH_ISO15693 \

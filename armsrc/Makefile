@@ -28,7 +28,6 @@ endif
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS) \
-			 -DWITH_CRC \
 			 -DON_DEVICE \
 			 -DWITH_LF \
 			 -DWITH_HITAG \
@@ -88,13 +87,13 @@ else
 	SRC_FPC =
 endif
 
-ifneq (,$(findstring WITH_HITAG,$(APP_CLAGS)))
+ifneq (,$(findstring WITH_HITAG,$(APP_CFLAGS)))
     SRC_HITAG = hitag2_crypto.c hitag2.c hitagS.c
 else
     SRC_HITAG =
 endif
 
-ifneq (,$(findstring WITH_LCD,$(APP_CLAGS)))
+ifneq (,$(findstring WITH_LCD,$(APP_CFLAGS)))
     SRC_LCD = fonts.c LCD.c
 else
     SRC_LCD =
