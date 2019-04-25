@@ -874,7 +874,7 @@ int num_CPUs(void) {
     return count;   
 #elif defined(__APPLE__)
 #include "sys/sysctl.h"
-    uint32 logicalcores = 0;
+    uint32_t logicalcores = 0;
     size_t size = sizeof( logicalcores );
     sysctlbyname( "hw.logicalcpu", &logicalcores, &size, NULL, 0 );
     return logicalcores;
