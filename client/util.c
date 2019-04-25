@@ -873,11 +873,15 @@ int num_CPUs(void) {
         count = 1;
     return count;   
 #elif defined(__APPLE__)
+/*
+   TODO ICEMAN 2019, its commented out until someone finds a better solution
 #include "sys/sysctl.h"
     uint32_t logicalcores = 0;
     size_t size = sizeof( logicalcores );
     sysctlbyname( "hw.logicalcpu", &logicalcores, &size, NULL, 0 );
     return logicalcores;
+    */
+    return 1;    
 #else
     return 1;
 #endif
