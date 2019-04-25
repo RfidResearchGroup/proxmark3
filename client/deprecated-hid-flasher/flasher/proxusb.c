@@ -9,6 +9,7 @@
 // USB utilities
 //-----------------------------------------------------------------------------
 #include "proxusb.h"
+#include "sleep.h"
 
 // It seems to be missing for mingw
 #ifndef ETIMEDOUT
