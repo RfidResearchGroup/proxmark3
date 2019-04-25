@@ -9,17 +9,17 @@ As it is now, you can only have one standalone mode installed at the time.
 
 ## Implementing a standalone mode
 
-We suggest you keep your standalone code inside the Armsrc/Standalone folder. And that you name your files according to your standalone mode name.
+We suggest you keep your standalone code inside the `armsrc/Standalone` folder. And that you name your files according to your standalone mode name.
 
-The `standalone.h` states that you must have two function implemented. 
+The `standalone.h` states that you must have two functions implemented. 
 
 The ModInfo function, which is your identification of your standalone mode.  This string will show when running the command `hw status` on the client.
 
-The RunMod function, which is your "main" function when running.  You need to check for Usb commands,  in order to let the pm3 client break the standalone mode.  See this basic skeleton of main function RunMod() and Modinfo() below.
+The RunMod function, which is your "main" function when running.  You need to check for Usb commands, in order to let the pm3 client break the standalone mode.  See this basic skeleton of main function RunMod() and Modinfo() below.
 
 ````
 void ModInfo(void) {
-    DbpString("   LF good description of your mode - aka FooRun (my name)");
+    DbpString("   LF good description of your mode - aka FooRun (your name)");
 }
 
 void RunMod(void) {
@@ -40,27 +40,27 @@ void RunMod(void) {
     }
 ````
 
-Each standalone mode needs to have its own compiler flag to be added in `armsrc\makefile`.
+Each standalone mode needs to have its own compiler flag to be added in `armsrc/Makefile`.
 
 ## Naming your standalone mode
 
-We suggest that you follow these guidelines,
-- Use HF/LF to denote which frequence your mod is targeting.  
+We suggest that you follow these guidelines:
+- Use HF/LF to denote which frequency your mode is targeting.  
 - Use you own github name/similar for perpetual honour to denote your mode.
 
 sample:
- `LF_FOORUN`
+ `LF_FOO`
 
 Which indicates your mode targets LF and is called FOO.
 
 This leads to your next step, your DEFINE name needed in Makefile.
 
-`WITH_STANDALONE_LF_FOORUN`
+`WITH_STANDALONE_LF_FOO`
 
 
 ## Update COMMON/MAKEFILE.HAL
 
-Samples of directive flag used in the `common/Makefile.ha` and your suggested DEFINE.
+Add your suggested DEFINE to the samples of directive flag provided in the `common/Makefile.hal`.
 ```
 #PLATFORM_DEFS += -DWITH_STANDALONE_LF_SAMYRUN
 #PLATFORM_DEFS += -DWITH_STANDALONE_LF_ICERUN
@@ -70,7 +70,7 @@ Samples of directive flag used in the `common/Makefile.ha` and your suggested DE
 #PLATFORM_DEFS += -DWITH_STANDALONE_HF_MATTYRUN
 #PLATFORM_DEFS += -DWITH_STANDALONE_HF_COLIN
 #PLATFORM_DEFS += -DWITH_STANDALONE_HF_BOG
-#PLATFORM_DEFS += -DWITH_STANDALONE_LF_FOORUN
+#PLATFORM_DEFS += -DWITH_STANDALONE_LF_FOO
 ```
 
 ## Update ARMSRC/MAKEFILE
@@ -90,11 +90,11 @@ endif
 
 ## Adding identification string of your mode
 Do please add a identification string in a function called `ModInfo` inside your source code file.
-This will enable an easy way to detect on client side which standalone mods has been installed on the device.
+This will enable an easy way to detect on client side which standalone mode has been installed on the device.
 
 ````
 void ModInfo(void) {
-    DbpString("   LF good description of your mode - aka FooRun (my name)");
+    DbpString("   LF good description of your mode - aka FooRun (your name)");
 }
 ````
 
