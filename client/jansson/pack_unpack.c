@@ -480,9 +480,14 @@ static int unpack_object(scanner_t *s, json_t *root, va_list *ap) {
         return -1;
     }
 
+
     if (root && !json_is_object(root)) {
-        set_error(s, "<validation>", json_error_wrong_type, "Expected object, got %s",
-                  type_name(root));
+        set_error(s,
+                  "<validation>",
+                  json_error_wrong_type,
+                  "Expected object, got %s",
+                  (root) ? type_name(root) : "NULL"
+                 );
         goto out;
     }
     next_token(s);

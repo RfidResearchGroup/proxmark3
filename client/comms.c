@@ -261,7 +261,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
                     uint16_t flag;
                     uint8_t buf[USB_CMD_DATA_SIZE - sizeof(uint16_t)];
                 } PACKED;
-                struct d* data = (struct d*)&packet->data.asBytes;
+                struct d *data = (struct d *)&packet->data.asBytes;
                 len = packet->length - sizeof(data->flag);
                 memcpy(s, data->buf, len);
                 flag = data->flag;
@@ -617,7 +617,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
         response = &resp;
 
     // Add delay depending on the communication channel & speed
-    if (ms_timeout != (size_t)-1)
+    if (ms_timeout != (size_t) -1)
         ms_timeout += communication_delay();
 
     timeout_start_time = msclock();
@@ -707,7 +707,7 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
     timeout_start_time = msclock();
 
     // Add delay depending on the communication channel & speed
-    if (ms_timeout != (size_t)-1)
+    if (ms_timeout != (size_t) -1)
         ms_timeout += communication_delay();
 
     while (true) {

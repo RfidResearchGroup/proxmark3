@@ -123,7 +123,7 @@ void DbpStringEx(char *str, uint32_t cmd) {
     data.flag = cmd;
     uint16_t len = MIN(strlen(str), sizeof(data.buf));
     memcpy(data.buf, str, len);
-    reply_ng(CMD_DEBUG_PRINT_STRING, PM3_SUCCESS, (uint8_t*)&data, sizeof(data.flag) + len);
+    reply_ng(CMD_DEBUG_PRINT_STRING, PM3_SUCCESS, (uint8_t *)&data, sizeof(data.flag) + len);
 #endif
 }
 
