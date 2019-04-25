@@ -22,7 +22,6 @@
 #include <errno.h>
 #include "proxmark3.h"
 #include "usb_cmd.h"
-#include "util_posix.h"
 
 extern unsigned char return_on_error;
 extern unsigned char error_occured;

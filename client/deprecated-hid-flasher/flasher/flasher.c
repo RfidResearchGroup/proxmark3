@@ -9,9 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "util_posix.h"
 #include "proxusb.h"
 #include "flash.h"
+#include "sleep.h"
 
 static void usage(char *argv0) {
     fprintf(stderr, "Usage:   %s [-b] image.elf [image.elf...]\n\n", argv0);
