@@ -91,6 +91,12 @@ int32_t le24toh(uint8_t data[3]) {
     return (data[2] << 16) | (data[1] << 8) | data[0];
 }
 
+void htole24(uint32_t val, uint8_t data[3]) {
+    data[0] = (uint8_t) val;
+    data[1] = (uint8_t)(val >> 8);
+    data[2] = (uint8_t)(val >> 16);
+}
+
 //convert hex digit to integer
 uint8_t hex2int(char hexchar) {
     switch (hexchar) {

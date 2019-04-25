@@ -218,20 +218,24 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
             memcpy(uid, tmp->data, 3);
             memcpy(uid + 3, tmp->data + 4, 4);
 
+            char path[PATH_MAX_LENGTH] = {0};
+
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
             JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
             JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp->tbo, sizeof(tmp->tbo));
-            JsonSaveBufAsHexCompact(root, "$.Card.Tearing", tmp->tearing, sizeof(tmp->tearing));
-            JsonSaveBufAsHexCompact(root, "$.Card.Pack",  tmp->pack, sizeof(tmp->pack));
             JsonSaveBufAsHexCompact(root, "$.Card.TBO_1", tmp->tbo1, sizeof(tmp->tbo1));
             JsonSaveBufAsHexCompact(root, "$.Card.Signature", tmp->signature, sizeof(tmp->signature));
-            JsonSaveStr(root, "$.Card.Counter", "N/A");
+            for (uint8_t i = 0; i < 3; i ++) {
+                sprintf(path, "$.Card.Counter%d", i);
+                JsonSaveBufAsHexCompact(root, path, tmp->counter_tearing[i], 3);
+                sprintf(path, "$.Card.Tearing%d", i);
+                JsonSaveBufAsHexCompact(root, path, tmp->counter_tearing[i] + 3, 1);
+            }
 
-            // size of header 48b
-            size_t len = (datalen - DUMP_PREFIX_LENGTH) / 4;
+            // size of header 56b
+            size_t len = (datalen - MFU_DUMP_PREFIX_LENGTH) / 4;
 
             for (size_t i = 0; i < len; i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);
             }
@@ -563,6 +567,39 @@ out:
     free(fileName);
     return retval;
 }
+
+int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
+    if (!dump || !dumplen || *dumplen < OLD_MFU_DUMP_PREFIX_LENGTH)
+        return 1;
+    // try to check new file format
+    mfu_dump_t *mfu_dump = (mfu_dump_t *) *dump;
+    if ((*dumplen - MFU_DUMP_PREFIX_LENGTH) / 4 - 1 == mfu_dump->pages)
+        return 0;
+    // convert old format
+    old_mfu_dump_t *old_mfu_dump = (old_mfu_dump_t *) *dump;
+
+    size_t old_data_len = *dumplen - OLD_MFU_DUMP_PREFIX_LENGTH;
+    size_t new_dump_len = old_data_len + MFU_DUMP_PREFIX_LENGTH;
+
+    mfu_dump = (mfu_dump_t *) calloc(new_dump_len, sizeof(uint8_t));
+
+    memcpy(mfu_dump->version, old_mfu_dump->version, 8);
+    memcpy(mfu_dump->tbo, old_mfu_dump->tbo, 2);
+    mfu_dump->tbo1[0] = old_mfu_dump->tbo1[0];
+    memcpy(mfu_dump->signature, old_mfu_dump->signature, 32);
+    for (int i = 0; i < 3; i++)
+        mfu_dump->counter_tearing[i][3] = old_mfu_dump->tearing[i];
+
+    memcpy(mfu_dump->data, old_mfu_dump->data, old_data_len);
+    mfu_dump->pages = old_data_len / 4 - 1;
+    // free old buffer, return new buffer
+    *dumplen = new_dump_len;
+    free(*dump);
+    *dump = (uint8_t *) mfu_dump;
+    PrintAndLogDevice(SUCCESS, "old mfu dump format, was converted on load to " _GREEN_("%d") " pages", mfu_dump->pages + 1);
+    return 0;
+}
+
 
 #else //if we're on ARM
 
