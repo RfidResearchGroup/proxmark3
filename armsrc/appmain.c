@@ -1549,16 +1549,8 @@ void  __attribute__((noreturn)) AppMain(void) {
             /*
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
             * All standalone mod "main loop" should be the RunMod() function.
-            * Since the standalone is either LF or HF, the somewhat bisarr defines below exists.
             */
-#if defined (WITH_LF) && ( defined (WITH_STANDALONE_LF_SAMYRUN) || defined (WITH_STANDALONE_LF_HIDBRUTE) || defined (WITH_STANDALONE_LF_PROXBRUTE) )
             RunMod();
-#endif
-
-#if defined (WITH_ISO14443a) && ( defined (WITH_STANDALONE_HF_YOUNG) || defined(WITH_STANDALONE_HF_COLIN) || defined(WITH_STANDALONE_HF_MATTYRUN) || defined(WITH_STANDALONE_HF_BOG) )
-            RunMod();
-#endif
-
         }
     }
 }

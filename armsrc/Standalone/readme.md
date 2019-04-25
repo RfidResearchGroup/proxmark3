@@ -7,7 +7,7 @@ Have a look at the skeleton standalone mode called  IceRun, in the files `lf_ice
 
 ## Implementing a standalone mode
 
-Each standalone mod needs to have its own compiler flag to be added in `armsrc\makefile` and inside the function `AppMain` inside  AppMain.c.  Inside Appmain a call to RunMod is needed.  It looks strange because of what kinds of dependencies your mode will have.  
+Each standalone mod needs to have its own compiler flag to be added in `armsrc\makefile`.
 
 The RunMod function is your "main" function when running.  You need to check for Usb commands,  in order to let the pm3 client break the standalone mode.  See this basic skeleton of main function RunMod().
 ````
@@ -49,7 +49,7 @@ Samples of directive flag used in the `common/Makefile.hal`:
 #PLATFORM_DEFS += -DWITH_STANDALONE_HF_COLIN
 #PLATFORM_DEFS += -DWITH_STANDALONE_HF_BOG
 ```
-Add your source code file like the following sample in the `armsrc\makefile`
+Add your source code file like the following sample in the `armsrc/Makefile`
 
 ```
 # WITH_STANDALONE_HF_COLIN
