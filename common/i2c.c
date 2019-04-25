@@ -26,7 +26,7 @@
 
 volatile unsigned long c;
 
-// Direct use the loop to delay. 6 instructions loop, Masterclock 48Mhz, 
+// Direct use the loop to delay. 6 instructions loop, Masterclock 48Mhz,
 // delay=1 is about 200kbps
 // timer.
 // I2CSpinDelayClk(4) = 12.31us
