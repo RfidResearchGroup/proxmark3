@@ -77,7 +77,7 @@ endif
 # Generic standalone Mode injection of source code
 
 
-SRC_STANDALONE =
+SRC_STANDALONE = placeholder.c
 # WITH_STANDALONE_LF_ICERUN
 ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
 	SRC_STANDALONE = lf_icerun.c
