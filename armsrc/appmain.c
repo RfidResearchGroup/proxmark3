@@ -464,20 +464,8 @@ current compared to the maximum current detected. Basically, once you know
 what kind of external reader is present, it will help you spot the best location to place
 your antenna. You will probably not get some good results if there is a LF and a HF reader
 at the same place! :-)
-
-LIGHT SCHEME USED:
 */
-static const char LIGHT_SCHEME[] = {
-    0x0, /* ----     | No field detected */
-    0x1, /* X---     | 14% of maximum current detected */
-    0x2, /* -X--     | 29% of maximum current detected */
-    0x4, /* --X-     | 43% of maximum current detected */
-    0x8, /* ---X     | 57% of maximum current detected */
-    0xC, /* --XX     | 71% of maximum current detected */
-    0xE, /* -XXX     | 86% of maximum current detected */
-    0xF, /* XXXX     | 100% of maximum current detected */
-};
-static const int LIGHT_LEN = sizeof(LIGHT_SCHEME) / sizeof(LIGHT_SCHEME[0]);
+#define LIGHT_LEVELS 20
 
 void ListenReaderField(int limit) {
 #define LF_ONLY 1
@@ -486,7 +474,7 @@ void ListenReaderField(int limit) {
 
     uint16_t lf_av, lf_av_new, lf_baseline = 0, lf_max;
     uint16_t hf_av, hf_av_new,  hf_baseline = 0, hf_max;
-    uint16_t mode = 1, display_val, display_max, i;
+    uint16_t mode = 1, display_val, display_max;
 
     // switch off FPGA - we don't want to measure our own signal
     // 20180315 - iceman,  why load this before and then turn off?
@@ -588,23 +576,54 @@ void ListenReaderField(int limit) {
                     display_max = lf_max;
                 }
             }
-            for (i = 0; i < LIGHT_LEN; i++) {
-                if (display_val >= ((display_max / LIGHT_LEN)*i) && display_val <= ((display_max / LIGHT_LEN) * (i + 1))) {
-                    if (LIGHT_SCHEME[i] & 0x1) LED_C_ON();
-                    else LED_C_OFF();
-                    if (LIGHT_SCHEME[i] & 0x2) LED_A_ON();
-                    else LED_A_OFF();
-                    if (LIGHT_SCHEME[i] & 0x4) LED_B_ON();
-                    else LED_B_OFF();
-                    if (LIGHT_SCHEME[i] & 0x8) LED_D_ON();
-                    else LED_D_OFF();
-                    break;
-                }
+            display_val = display_val * (4*LIGHT_LEVELS) / MAX(1,display_max);
+            uint32_t duty_a = MIN(MAX(display_val, 0*LIGHT_LEVELS), 1*LIGHT_LEVELS) - 0*LIGHT_LEVELS;
+            uint32_t duty_b = MIN(MAX(display_val, 1*LIGHT_LEVELS), 2*LIGHT_LEVELS) - 1*LIGHT_LEVELS;
+            uint32_t duty_c = MIN(MAX(display_val, 2*LIGHT_LEVELS), 3*LIGHT_LEVELS) - 2*LIGHT_LEVELS;
+            uint32_t duty_d = MIN(MAX(display_val, 3*LIGHT_LEVELS), 4*LIGHT_LEVELS) - 3*LIGHT_LEVELS;
+            if (duty_a == 0) {
+                LED_A_OFF();
+            } else if (duty_a == LIGHT_LEVELS) {
+                LED_A_ON();
+            } else {
+                LED_A_ON();
+                SpinDelay(duty_a);
+                LED_A_OFF();
+                SpinDelay(LIGHT_LEVELS - duty_a);
+            }
+            if (duty_b == 0) {
+                LED_B_OFF();
+            } else if (duty_b == LIGHT_LEVELS) {
+                LED_B_ON();
+            } else {
+                LED_B_ON();
+                SpinDelay(duty_b);
+                LED_B_OFF();
+                SpinDelay(LIGHT_LEVELS - duty_b);
+            }
+            if (duty_c == 0) {
+                LED_C_OFF();
+            } else if (duty_c == LIGHT_LEVELS) {
+                LED_C_ON();
+            } else {
+                LED_C_ON();
+                SpinDelay(duty_c);
+                LED_C_OFF();
+                SpinDelay(LIGHT_LEVELS - duty_c);
+            }
+            if (duty_d == 0) {
+                LED_D_OFF();
+            } else if (duty_d == LIGHT_LEVELS) {
+                LED_D_ON();
+            } else {
+                LED_D_ON();
+                SpinDelay(duty_d);
+                LED_D_OFF();
+                SpinDelay(LIGHT_LEVELS - duty_d);
             }
         }
     }
 }
-
 static void PacketReceived(PacketCommandNG *packet) {
     /*
     if (packet->ng) {
