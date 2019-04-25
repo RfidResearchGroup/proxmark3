@@ -54,12 +54,13 @@ sample:
 Which indicates your mode targets LF and is called FOO.
 
 This leads to your next step, your DEFINE name needed in Makefile.
+
 `WITH_STANDALONE_LF_FOORUN`
 
 
 ## Update COMMON/MAKEFILE.HAL
 
-Samples of directive flag used in the `common/Makefile.hal`:
+Samples of directive flag used in the `common/Makefile.ha` and your suggested DEFINE.
 ```
 #PLATFORM_DEFS += -DWITH_STANDALONE_LF_SAMYRUN
 #PLATFORM_DEFS += -DWITH_STANDALONE_LF_ICERUN
@@ -69,12 +70,18 @@ Samples of directive flag used in the `common/Makefile.hal`:
 #PLATFORM_DEFS += -DWITH_STANDALONE_HF_MATTYRUN
 #PLATFORM_DEFS += -DWITH_STANDALONE_HF_COLIN
 #PLATFORM_DEFS += -DWITH_STANDALONE_HF_BOG
+#PLATFORM_DEFS += -DWITH_STANDALONE_LF_FOORUN
 ```
 
 ## Update ARMSRC/MAKEFILE
 Add your source code files like the following sample in the `armsrc/Makefile`
 
 ```
+# WITH_STANDALONE_LF_ICERUN
+ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
+	SRC_STANDALONE = lf_icerun.c
+endif
+
 # WITH_STANDALONE_LF_FOO
 ifneq (,$(findstring WITH_STANDALONE_LF_FOO,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_foo.c
