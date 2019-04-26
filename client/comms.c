@@ -24,7 +24,7 @@ bool send_with_crc_on_fpc = true;
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
 bool send_via_fpc = false;
 
-static communication_arg_t conn;
+communication_arg_t conn;
 
 static pthread_t USB_communication_thread;
 //static pthread_t FPC_communication_thread;
@@ -476,7 +476,7 @@ __attribute__((force_align_arg_pointer))
 
         if (connection->block_after_ACK) {
             // if we just received an ACK, wait here until a new command is to be transmitted
-            // This is only working on OLD frames, and only used by flasher
+            // This is only working on OLD frames, and only used by flasher and flashmem
             if (ACK_received) {
                 while (!txBuffer_pending) {
                     pthread_cond_wait(&txBufferSig, &txBufferMutex);

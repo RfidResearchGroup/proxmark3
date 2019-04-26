@@ -280,11 +280,13 @@ static int CmdFlashMemLoad(const char *Cmd) {
     //Send to device
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining = datalen;
-
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 
         clearCommandBuffer();
+        if (bytes_remaining > bytes_in_packet)
+            // fast push mode
+            conn.block_after_ACK = true;
         SendCommandOLD(CMD_FLASHMEM_WRITE, start_index + bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);
 
         bytes_remaining -= bytes_in_packet;
@@ -293,9 +295,11 @@ static int CmdFlashMemLoad(const char *Cmd) {
         PacketResponseNG resp;
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            conn.block_after_ACK = false;
             free(data);
             return PM3_ETIMEOUT;
         }
+        conn.block_after_ACK = false;
 
         uint8_t isok  = resp.oldarg[0] & 0xFF;
         if (!isok) {

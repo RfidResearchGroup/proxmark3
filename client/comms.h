@@ -49,6 +49,7 @@ extern bool send_with_crc_on_usb;
 extern bool send_with_crc_on_fpc;
 // "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
 extern bool send_via_fpc;
+extern communication_arg_t conn;
 
 void SetOffline(bool value);
 bool IsOffline(void);
