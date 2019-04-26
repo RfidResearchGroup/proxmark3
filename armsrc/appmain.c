@@ -365,8 +365,8 @@ void SendVersion(void) {
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
 void printUSBSpeed(void) {
-    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("USB Speed"));
-    Dbprintf("  Sending USB packets to client...");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Transfer Speed"));
+    Dbprintf("  Sending packets to client...");
 
 #define USB_SPEED_TEST_MIN_TIME 1500 // in milliseconds
     uint8_t *test_data = BigBuf_get_addr();
@@ -386,7 +386,7 @@ void printUSBSpeed(void) {
 
     Dbprintf("  Time elapsed............%dms", end_time - start_time);
     Dbprintf("  Bytes transferred.......%d", bytes_transferred);
-    Dbprintf("  USB Transfer Speed PM3 -> Client = %d Bytes/s", 1000 * bytes_transferred / (end_time - start_time));
+    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / (end_time - start_time));
 }
 
 /**
