@@ -11,11 +11,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "util_posix.h"
 #include "proxusb.h"
 #include "flash.h"
 #include "elf.h"
 #include "proxendian.h"
+#include "sleep.h"
 
 #define FLASH_START            0x100000
 #define FLASH_SIZE             (256*1024)

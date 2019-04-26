@@ -235,6 +235,39 @@ static int getReply(PacketResponseNG *packet) {
     return 1;
 }
 
+static void memcpy_filtered(void *dest, const void *src, size_t n, bool filter) {
+#if defined(__linux__) || (__APPLE__)
+    memcpy(dest, src, n);
+#else
+    if (filter)
+        // Filter out ANSI sequences on these OS
+        uint16_t si=0;
+        for (uint16_t i=0; i < n; i++) {
+            if ((src[i] == '\x1b') && (i < n - 1) && (src[i+1] >= 0x40) && (src[i+1] <= 0x5F)) { // entering ANSI sequence
+                i++;
+                if ((src[i] == '[') && (i < n - 1)) { // entering CSI sequence
+                    i++;
+                    while ((i < n - 1) && (src[i] >= 0x30) && (src[i] <= 0x3F)) { // parameter bytes
+                        i++;
+                    }
+                    while ((i < n - 1) && (src[i] >= 0x20) && (src[i] <= 0x2F)) { // intermediate bytes
+                        i++;
+                    }
+                    if ((src[i] >= 0x40) && (src[i] <= 0x7F)) { // final byte
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+            }
+            dest[si++] = src[i];
+        }
+    } else {
+        memcpy(dest, src, n);
+    }
+#endif
+}
+
 //-----------------------------------------------------------------------------
 // Entry point into our code: called whenever we received a packet over USB
 // that we weren't necessarily expecting, for example a debug print.
@@ -263,31 +296,24 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
                 } PACKED;
                 struct d *data = (struct d *)&packet->data.asBytes;
                 len = packet->length - sizeof(data->flag);
-                memcpy(s, data->buf, len);
                 flag = data->flag;
+                memcpy_filtered(s, data->buf, len, flag & FLAG_ANSI);
             } else {
                 len = MIN(packet->oldarg[0], USB_CMD_DATA_SIZE);
-                memcpy(s, packet->data.asBytes, len);
                 flag = packet->oldarg[1];
+                memcpy_filtered(s, packet->data.asBytes, len, flag & FLAG_ANSI);
             }
 
-            switch (flag) {
-                case FLAG_RAWPRINT:
-                    printf("%s", s);
-                    break;
-                case FLAG_NONEWLINE:
-                    printf("\r%s", s);
-                    break;
-                case FLAG_NOLOG:
-                    printf("%s\r\n", s);
-                    break;
-                //case FLAG_NOPROMPT:
-                //  break;
-                case FLAG_NOOPT:
-                default:
-                    PrintAndLogEx(NORMAL, "#db# %s", s);
-                    break;
+            if (flag & FLAG_LOG) {
+                PrintAndLogEx(NORMAL, "#db# %s", s);
+            } else {
+                if (flag & FLAG_INPLACE)
+                    printf("\r");
+                printf("%s", s);
+                if (flag & FLAG_NEWLINE)
+                    printf("\r\n");
             }
+
             fflush(stdout);
             break;
         }

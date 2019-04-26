@@ -32,12 +32,12 @@
 static void showBanner(void) {
     printf("\n\n");
 #if defined(__linux__) || (__APPLE__)
-    printf("\e[34m██████╗ ███╗   ███╗ ████╗\e[0m     ...iceman fork\n");
-    printf("\e[34m██╔══██╗████╗ ████║   ══█║\e[0m      ...dedicated to \e[34mRDV40\e[0m\n");
-    printf("\e[34m██████╔╝██╔████╔██║ ████╔╝\e[0m\n");
-    printf("\e[34m██╔═══╝ ██║╚██╔╝██║   ══█║\e[0m    iceman@icesql.net\n");
-    printf("\e[34m██║     ██║ ╚═╝ ██║ ████╔╝\e[0m   https://github.com/rfidresearchgroup/proxmark3/\n");
-    printf("\e[34m╚═╝     ╚═╝     ╚═╝ ╚═══╝\e[0m pre-release v4.0\n");
+    printf(_BLUE_("██████╗ ███╗   ███╗ ████╗ ") "    ...iceman fork\n");
+    printf(_BLUE_("██╔══██╗████╗ ████║   ══█║") "      ...dedicated to " _BLUE_("RDV40") "\n");
+    printf(_BLUE_("██████╔╝██╔████╔██║ ████╔╝") "\n");
+    printf(_BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net\n");
+    printf(_BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/\n");
+    printf(_BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0\n");
 #else
     printf("======. ===.   ===. ====.     ...iceman fork\n");
     printf("==...==.====. ====.   ..=.      ...dedicated to RDV40\n");

@@ -499,11 +499,7 @@ void pm3_version(bool verbose) {
 #else
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
 #endif
-#ifdef __WIN32
-        PrintAndLogEx(NORMAL, "\n [ Proxmark3 RFID instrument ]\n");
-#else
-        PrintAndLogEx(NORMAL, "\n\e[34m [ Proxmark3 RFID instrument ]\e[0m\n");
-#endif
+        PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
         char s[60] = {0};
 #if defined(WITH_FLASH) || defined(WITH_SMARTCARD) || defined(WITH_FPC)
         strncat(s, "build for RDV40 with ", sizeof(s) - strlen(s) - 1);

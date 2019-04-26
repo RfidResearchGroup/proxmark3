@@ -3,26 +3,23 @@
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
 #-----------------------------------------------------------------------------
-include ../../common/Makefile.common
 
 CC=gcc
 CXX=g++
 #COMMON_FLAGS = -m32
 
-VPATH = ../../common
 OBJDIR = obj
 
+LDLIBS = -lreadline -lpthread
+CFLAGS = -std=gnu99 -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
 ifeq ($(platform),Darwin)
-	LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb-1.0 -lreadline -lpthread
-	CFLAGS = -std=gnu99 -I. -I../include -I../common -I/usr/local/include -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
+	LDLIBS += -lusb-1.0
 else
-	LDLIBS = -L/opt/local/lib -L/usr/local/lib -lusb -lreadline -lpthread
-	CFLAGS = -std=gnu99 -I. -I../include -I../common -I/opt/local/include -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
+	LDLIBS += -lusb
 endif
 
 LDFLAGS = $(COMMON_FLAGS)
 CXXFLAGS =
-QTLDLIBS =
 
 RM = rm -f
 BINS = flasher

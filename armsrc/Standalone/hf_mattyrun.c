@@ -75,12 +75,12 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
         // get UID from chip
         if (workFlags & 0x01) {
             if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-                DbprintfEx(FLAG_NOLOG, "Can't select card");
+                DbprintfEx(FLAG_NEWLINE, "Can't select card");
                 break;
             };
 
             if (mifare_classic_halt(NULL, cuid)) {
-                DbprintfEx(FLAG_NOLOG, "Halt error");
+                DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
         };
@@ -89,18 +89,18 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
         if (needWipe) {
             ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
             if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-                DbprintfEx(FLAG_NOLOG, "wupC1 error");
+                DbprintfEx(FLAG_NEWLINE, "wupC1 error");
                 break;
             };
 
             ReaderTransmit(wipeC, sizeof(wipeC), NULL);
             if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-                DbprintfEx(FLAG_NOLOG, "wipeC error");
+                DbprintfEx(FLAG_NEWLINE, "wipeC error");
                 break;
             };
 
             if (mifare_classic_halt(NULL, cuid)) {
-                DbprintfEx(FLAG_NOLOG, "Halt error");
+                DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
         };
@@ -110,19 +110,19 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
         if (workFlags & 0x02) {
             ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
             if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-                DbprintfEx(FLAG_NOLOG, "wupC1 error");
+                DbprintfEx(FLAG_NEWLINE, "wupC1 error");
                 break;
             };
 
             ReaderTransmit(wupC2, sizeof(wupC2), NULL);
             if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
-                DbprintfEx(FLAG_NOLOG, "wupC2 errorv");
+                DbprintfEx(FLAG_NEWLINE, "wupC2 errorv");
                 break;
             };
         }
 
         if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
-            DbprintfEx(FLAG_NOLOG, "write block send command error");
+            DbprintfEx(FLAG_NEWLINE, "write block send command error");
             break;
         };
 
@@ -130,13 +130,13 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
         AddCrc14A(d_block, 16);
         ReaderTransmit(d_block, sizeof(d_block), NULL);
         if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
-            DbprintfEx(FLAG_NOLOG, "write block send data error");
+            DbprintfEx(FLAG_NEWLINE, "write block send data error");
             break;
         };
 
         if (workFlags & 0x04) {
             if (mifare_classic_halt(NULL, cuid)) {
-                DbprintfEx(FLAG_NOLOG, "Halt error");
+                DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
         }
@@ -168,7 +168,7 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
         /* no need for anticollision. just verify tag is still here */
         // if (!iso14443a_fast_select_card(cjuid, 0)) {
         if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-            DbprintfEx(FLAG_NOLOG, "FATAL : E_MF_LOSTTAG");
+            DbprintfEx(FLAG_NEWLINE, "FATAL : E_MF_LOSTTAG");
             return -1;
         }
 

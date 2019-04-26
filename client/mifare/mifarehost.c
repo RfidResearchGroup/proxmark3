@@ -916,7 +916,7 @@ int detect_classic_nackbug(bool verbose) {
         } else {
             printf(
 #if defined(__linux__) || (__APPLE__)
-                "\e[32m\e[s%c\e[u\e[0m", star[(staridx++ % 4) ]
+                _GREEN_("\e[s%c\e[u"), star[(staridx++ % 4) ]
 #else
                 "."
 #endif
