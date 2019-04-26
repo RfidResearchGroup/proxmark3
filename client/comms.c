@@ -154,26 +154,48 @@ static void UsbCommandReceived(UsbCommand *c) {
             char s[USB_CMD_DATA_SIZE + 1];
             memset(s, 0x00, sizeof(s));
             size_t len = MIN(c->arg[0], USB_CMD_DATA_SIZE);
-            memcpy(s, c->d.asBytes, len);
             uint64_t flag = c->arg[1];
 
-            switch (flag) {
-                case FLAG_RAWPRINT:
-                    printf("%s", s);
-                    break;
-                case FLAG_NONEWLINE:
-                    printf("\r%s", s);
-                    break;
-                case FLAG_NOLOG:
-                    printf("%s\r\n", s);
-                    break;
-                //case FLAG_NOPROMPT:
-                //  break;
-                case FLAG_NOOPT:
-                default:
-                    PrintAndLogEx(NORMAL, "#db# %s", s);
-                    break;
+#if defined(__linux__) || (__APPLE__)
+            memcpy(s, c->d.asBytes, len);
+#else
+            if (flag & FLAG_ANSI)
+                // Filter out ANSI sequences on these OS
+                uint16_t si=0;
+                for (uint16_t i=0; i < len; i++) {
+                    if ((c->d.asBytes[i] == '\x1b') && (i < len - 1) && (c->d.asBytes[i+1] >= 0x40) && (c->d.asBytes[i+1] <= 0x5F)) { // entering ANSI sequence
+                        i++;
+                        if ((c->d.asBytes[i] == '[') && (i < len - 1)) { // entering CSI sequence
+                            i++;
+                            while ((i < len - 1) && (c->d.asBytes[i] >= 0x30) && (c->d.asBytes[i] <= 0x3F)) { // parameter bytes
+                                i++;
+                            }
+                            while ((i < len - 1) && (c->d.asBytes[i] >= 0x20) && (c->d.asBytes[i] <= 0x2F)) { // intermediate bytes
+                                i++;
+                            }
+                            if ((c->d.asBytes[i] >= 0x40) && (c->d.asBytes[i] <= 0x7F)) { // final byte
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+                    s[si++] = c->d.asBytes[i];
+                }
+            } else {
+                memcpy(s, c->d.asBytes, len);
             }
+#endif
+            if (flag & FLAG_LOG) {
+                PrintAndLogEx(NORMAL, "#db# %s", s);
+            } else {
+                if (flag & FLAG_INPLACE)
+                    printf("\r");
+                printf("%s", s);
+                if (flag & FLAG_NEWLINE)
+                    printf("\r\n");
+            }
+
             fflush(stdout);
             break;
         }

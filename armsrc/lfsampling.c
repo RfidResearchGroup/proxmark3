@@ -19,7 +19,7 @@ Default LF config is set to:
 sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig() {
-    Dbprintf("LF Sampling config");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("LF Sampling config"));
     Dbprintf("  [q] divisor.............%d (%d KHz)", config.divisor, 12000 / (config.divisor + 1));
     Dbprintf("  [b] bps.................%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);

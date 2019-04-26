@@ -96,10 +96,10 @@ void BigBuf_free_keep_EM(void) {
 }
 
 void BigBuf_print_status(void) {
-    Dbprintf("Memory");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Memory"));
     Dbprintf("  BIGBUF_SIZE.............%d", BIGBUF_SIZE);
     Dbprintf("  Available memory........%d", BigBuf_hi);
-    Dbprintf("Tracing");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Tracing"));
     Dbprintf("  tracing ................%d", tracing);
     Dbprintf("  traceLen ...............%d", traceLen);
 }
