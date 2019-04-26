@@ -817,6 +817,211 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
         return false;
     }
 }
+
+static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_info_t **responses, uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
+    uint8_t sak = 0;
+    // The first response contains the ATQA (note: bytes are transmitted in reverse order).
+    static uint8_t rATQA[2] = { 0x00 };
+    // The second response contains the (mandatory) first 24 bits of the UID
+    static uint8_t rUIDc1[5] = { 0x00 };
+    // For UID size 7,
+    static uint8_t rUIDc2[5] = { 0x00 };
+    // Prepare the mandatory SAK (for 4 and 7 byte UID)
+    static uint8_t rSAKc1[3]  = { 0x00 };
+    // Prepare the optional second SAK (for 7 byte UID), drop the cascade bit
+    static uint8_t rSAKc2[3]  = { 0x00 };
+    // dummy ATS (pseudo-ATR), answer to RATS
+    static uint8_t rRATS[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 };
+    // PACK response to PWD AUTH for EV1/NTAG
+    static uint8_t rPACK[4] = { 0x00 };
+    // GET_VERSION response for EV1/NTAG
+    static uint8_t rVERSION[10] = { 0x00 };
+    // READ_SIG response for EV1/NTAG
+    static uint8_t rSIGN[34] = { 0x00 };
+
+    switch (tagType) {
+        case 1: { // MIFARE Classic 1k
+            rATQA[0] = 0x04;
+            sak = 0x08;
+        }
+        break;
+        case 2: { // MIFARE Ultralight
+            rATQA[0] = 0x44;
+            sak = 0x00;
+            // some first pages of UL/NTAG dump is special data
+            mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
+            *pages = mfu_header->pages;
+        }
+        break;
+        case 3: { // MIFARE DESFire
+            rATQA[0] = 0x04;
+            rATQA[1] = 0x03;
+            sak = 0x20;
+        }
+        break;
+        case 4: { // ISO/IEC 14443-4 - javacard (JCOP)
+            rATQA[0] = 0x04;
+            sak = 0x28;
+        }
+        break;
+        case 5: { // MIFARE TNP3XXX
+            rATQA[0] = 0x01;
+            rATQA[1] = 0x0f;
+            sak = 0x01;
+        }
+        break;
+        case 6: { // MIFARE Mini 320b
+            rATQA[0] = 0x44;
+            sak = 0x09;
+        }
+        break;
+        case 7: { // NTAG
+            rATQA[0] = 0x44;
+            sak = 0x00;
+            // some first pages of UL/NTAG dump is special data
+            mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
+            *pages = mfu_header->pages;
+            // counters and tearing flags
+            for (int i = 0; i < 3; i++) {
+                counters[i] = le24toh(mfu_header->counter_tearing[i]);
+                tearings[i] = mfu_header->counter_tearing[i][3];
+            }
+            // GET_VERSION
+            memcpy(rVERSION, mfu_header->version, 8);
+            AddCrc14A(rVERSION, sizeof(rVERSION) - 2);
+            // READ_SIG
+            memcpy(rSIGN, mfu_header->signature, 32);
+            AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
+            // PACK, from last page of dump
+            emlGetMemBt(rPACK, MFU_DUMP_PREFIX_LENGTH + mfu_header->pages * 4, 2);
+            AddCrc14A(rPACK, sizeof(rPACK) - 2);
+        }
+        break;
+        case 8: { // MIFARE Classic 4k
+            rATQA[0] = 0x02;
+            sak = 0x18;
+        }
+        break;
+        case 9 : { // FM11RF005SH (Shanghai Metro)
+            rATQA[0] = 0x03;
+            rATQA[1] = 0x00;
+            sak = 0x0A;
+        }
+        break;
+        default: {
+            if (MF_DBGLEVEL >= MF_DBG_ERROR)    Dbprintf("Error: unkown tagtype (%d)", tagType);
+            return false;
+        }
+        break;
+    }
+
+    // if uid not supplied then get from emulator memory
+    if (data[0] == 0 || (flags & FLAG_UID_IN_EMUL) == FLAG_UID_IN_EMUL) {
+        if (tagType == 2 || tagType == 7) {
+            uint16_t start = MFU_DUMP_PREFIX_LENGTH;
+            uint8_t emdata[8];
+            emlGetMemBt(emdata, start, sizeof(emdata));
+            memcpy(data, emdata, 3); // uid bytes 0-2
+            memcpy(data + 3, emdata + 4, 4); // uid bytes 3-7
+            flags |= FLAG_7B_UID_IN_DATA;
+        } else {
+            emlGetMemBt(data, 0, 4);
+            flags |= FLAG_4B_UID_IN_DATA;
+        }
+    }
+
+    if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
+        rUIDc1[0] = 0x88;  // Cascade Tag marker
+        rUIDc1[1] = data[0];
+        rUIDc1[2] = data[1];
+        rUIDc1[3] = data[2];
+
+        rUIDc2[0] = data[3];
+        rUIDc2[1] = data[4];
+        rUIDc2[2] = data[5];
+        rUIDc2[3] = data[6];
+        rUIDc2[4] = rUIDc2[0] ^ rUIDc2[1] ^ rUIDc2[2] ^ rUIDc2[3];
+
+        // Configure the ATQA and SAK accordingly
+        rATQA[0] |= 0x40;
+        sak |= 0x04;
+
+        *cuid = bytes_to_num(data + 3, 4);
+    } else if ((flags & FLAG_4B_UID_IN_DATA) == FLAG_4B_UID_IN_DATA) {
+        memcpy(rUIDc1, data, 4);
+        // Configure the ATQA and SAK accordingly
+        rATQA[0] &= 0xBF;
+        sak &= 0xFB;
+        *cuid = bytes_to_num(data, 4);
+    } else {
+        if (MF_DBGLEVEL >= MF_DBG_ERROR)    Dbprintf("[-] ERROR: UID size not defined");
+        return false;
+    }
+
+    // Calculate the BitCountCheck (BCC) for the first 4 bytes of the UID.
+    rUIDc1[4] = rUIDc1[0] ^ rUIDc1[1] ^ rUIDc1[2] ^ rUIDc1[3];
+
+    rSAKc1[0] = sak;
+    AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
+
+    rSAKc2[0] = sak & 0xFB;
+    AddCrc14A(rSAKc2, sizeof(rSAKc2) - 2);
+
+    // Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present,
+    // TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
+    // TB(1) = not present. Defaults: FWI = 4 (FWT = 256 * 16 * 2^4 * 1/fc = 4833us), SFGI = 0 (SFG = 256 * 16 * 2^0 * 1/fc = 302us)
+    // TC(1) = 0x02: CID supported, NAD not supported
+    AddCrc14A(rRATS, sizeof(rRATS) - 2);
+
+#define TAG_RESPONSE_COUNT 9
+    static tag_response_info_t responses_init[TAG_RESPONSE_COUNT] = {
+        { .response = rATQA,      .response_n = sizeof(rATQA)      },  // Answer to request - respond with card type
+        { .response = rUIDc1,     .response_n = sizeof(rUIDc1)     },  // Anticollision cascade1 - respond with uid
+        { .response = rUIDc2,     .response_n = sizeof(rUIDc2)     },  // Anticollision cascade2 - respond with 2nd half of uid if asked
+        { .response = rSAKc1,     .response_n = sizeof(rSAKc1)     },  // Acknowledge select - cascade 1
+        { .response = rSAKc2,     .response_n = sizeof(rSAKc2)     },  // Acknowledge select - cascade 2
+        { .response = rRATS,      .response_n = sizeof(rRATS)      },  // dummy ATS (pseudo-ATR), answer to RATS
+        { .response = rPACK,      .response_n = sizeof(rPACK)      },  // EV1/NTAG PACK response
+        { .response = rVERSION,   .response_n = sizeof(rVERSION)   },  // EV1/NTAG GET_VERSION response
+        { .response = rSIGN,      .response_n = sizeof(rSIGN)      }   // EV1/NTAG READ_SIG response
+    };
+
+    // "precompile" responses. There are 9 predefined responses with a total of 72 bytes data to transmit.
+    // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
+    // 72 * 8 data bits, 72 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits -- 675 bytes buffer
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 675
+
+    uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+    // modulation buffer pointer and current buffer free space size
+    uint8_t *free_buffer_pointer = free_buffer;
+    size_t free_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
+
+    // Prepare the responses of the anticollision phase
+    // there will be not enough time to do this at the moment the reader sends it REQA
+    for (size_t i = 0; i < TAG_RESPONSE_COUNT; i++) {
+        if (prepare_allocated_tag_modulation(&responses_init[i], &free_buffer_pointer, &free_buffer_size) == false) {
+            BigBuf_free_keep_EM();
+            if (MF_DBGLEVEL >= MF_DBG_ERROR)    Dbprintf("Not enough modulation buffer size, exit after %d elements", i);
+            return false;
+        }
+    }
+
+    *responses = responses_init;
+
+    // indices into responses array:
+#define ATQA      0
+#define UIDC1     1
+#define UIDC2     2
+#define SAKC1     3
+#define SAKC2     4
+#define RATS      5
+#define PACK      6
+#define VERSION   7
+#define SIGNATURE 8
+
+    return true;
+}
+
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
@@ -826,15 +1031,12 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
 
 #define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
 
-    uint8_t sak = 0;
+    tag_response_info_t *responses;
     uint32_t cuid = 0;
     uint32_t nonce = 0;
-
-    // PACK response to PWD AUTH for EV1/NTAG
-    uint8_t response8[4] = {0, 0, 0, 0};
-
-    // The first response contains the ATQA (note: bytes are transmitted in reverse order).
-    uint8_t response1[] = {0, 0};
+    uint32_t counters[3] = { 0x00, 0x00, 0x00 };
+    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
+    uint8_t pages = 0;
 
     // Here, we collect CUID, block1, keytype1, NT1, NR1, AR1, CUID, block2, keytyp2, NT2, NR2, AR2
     // it should also collect block, keytype.
@@ -846,159 +1048,9 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     memset(ar_nr_nonces, 0x00, sizeof(ar_nr_nonces));
     uint8_t    moebius_count = 0;
 
-    // some first pages of UL/NTAG dump is special data
-    mfu_dump_t *mfu_header =  tagType == 2 || tagType == 7 ? (mfu_dump_t *) BigBuf_get_EM_addr() : NULL;
-
-    switch (tagType) {
-        case 1: { // MIFARE Classic 1k
-            response1[0] = 0x04;
-            sak = 0x08;
-        }
-        break;
-        case 2: { // MIFARE Ultralight
-            response1[0] = 0x44;
-            sak = 0x00;
-        }
-        break;
-        case 3: { // MIFARE DESFire
-            response1[0] = 0x04;
-            response1[1] = 0x03;
-            sak = 0x20;
-        }
-        break;
-        case 4: { // ISO/IEC 14443-4 - javacard (JCOP)
-            response1[0] = 0x04;
-            sak = 0x28;
-        }
-        break;
-        case 5: { // MIFARE TNP3XXX
-            response1[0] = 0x01;
-            response1[1] = 0x0f;
-            sak = 0x01;
-        }
-        break;
-        case 6: { // MIFARE Mini 320b
-            response1[0] = 0x44;
-            sak = 0x09;
-        }
-        break;
-        case 7: { // NTAG
-            response1[0] = 0x44;
-            sak = 0x00;
-            // PACK, from last page of dump
-            emlGetMemBt(response8, MFU_DUMP_PREFIX_LENGTH + mfu_header->pages * 4, 2);
-            compute_crc(CRC_14443_A, response8, 2, &response8[2], &response8[3]);
-            // uid not supplied then get from emulator memory
-            if (data[0] == 0) {
-                uint16_t start = MFU_DUMP_PREFIX_LENGTH;
-                uint8_t emdata[8];
-                emlGetMemBt(emdata, start, sizeof(emdata));
-                memcpy(data, emdata, 3); // uid bytes 0-2
-                memcpy(data + 3, emdata + 4, 4); // uid bytes 3-7
-                flags |= FLAG_7B_UID_IN_DATA;
-            }
-        }
-        break;
-        case 8: { // MIFARE Classic 4k
-            response1[0] = 0x02;
-            sak = 0x18;
-        }
-        break;
-        case 9 : { // FM11RF005SH (Shanghai Metro)
-            response1[0] = 0x03;
-            response1[1] = 0x00;
-            sak = 0x0A;
-        }
-        break;
-        default: {
-            Dbprintf("Error: unkown tagtype (%d)", tagType);
-            return;
-        }
-        break;
-    }
-
-    // The second response contains the (mandatory) first 24 bits of the UID
-    uint8_t response2[5] = {0x00};
-
-    // For UID size 7,
-    uint8_t response2a[5] = {0x00};
-
-    if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
-        response2[0] = 0x88;  // Cascade Tag marker
-        response2[1] = data[0];
-        response2[2] = data[1];
-        response2[3] = data[2];
-
-        response2a[0] = data[3];
-        response2a[1] = data[4];
-        response2a[2] = data[5];
-        response2a[3] = data[6]; //??
-        response2a[4] = response2a[0] ^ response2a[1] ^ response2a[2] ^ response2a[3];
-
-        // Configure the ATQA and SAK accordingly
-        response1[0] |= 0x40;
-        sak |= 0x04;
-
-        cuid = bytes_to_num(data + 3, 4);
-    } else {
-        memcpy(response2, data, 4);
-        // Configure the ATQA and SAK accordingly
-        response1[0] &= 0xBF;
-        sak &= 0xFB;
-        cuid = bytes_to_num(data, 4);
-    }
-
-    // Calculate the BitCountCheck (BCC) for the first 4 bytes of the UID.
-    response2[4] = response2[0] ^ response2[1] ^ response2[2] ^ response2[3];
-
-    // Prepare the mandatory SAK (for 4 and 7 byte UID)
-    uint8_t response3[3]  = {sak, 0x00, 0x00};
-    compute_crc(CRC_14443_A, response3, 1, &response3[1], &response3[2]);
-
-    // Prepare the optional second SAK (for 7 byte UID), drop the cascade bit
-    uint8_t response3a[3]  = {0x00};
-    response3a[0] = sak & 0xFB;
-    compute_crc(CRC_14443_A, response3a, 1, &response3a[1], &response3a[2]);
-
-    // Tag NONCE.
-    uint8_t response5[4];
-
-    uint8_t response6[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 };     // dummy ATS (pseudo-ATR), answer to RATS:
-
-    // Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present,
-    // TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
-    // TB(1) = not present. Defaults: FWI = 4 (FWT = 256 * 16 * 2^4 * 1/fc = 4833us), SFGI = 0 (SFG = 256 * 16 * 2^0 * 1/fc = 302us)
-    // TC(1) = 0x02: CID supported, NAD not supported
-    compute_crc(CRC_14443_A, response6, 4, &response6[4], &response6[5]);
-
-    // Prepare GET_VERSION (different for UL EV-1 / NTAG)
-    // uint8_t response7_EV1[] = {0x00, 0x04, 0x03, 0x01, 0x01, 0x00, 0x0b, 0x03, 0xfd, 0xf7};  //EV1 48bytes VERSION.
-    // uint8_t response7_NTAG[] = {0x00, 0x04, 0x04, 0x02, 0x01, 0x00, 0x11, 0x03, 0x01, 0x9e}; //NTAG 215
-    // Prepare CHK_TEARING
-    // uint8_t response9[] =  {0xBD,0x90,0x3f};
-
-#define TAG_RESPONSE_COUNT 8
-    tag_response_info_t responses[TAG_RESPONSE_COUNT] = {
-        { .response = response1,  .response_n = sizeof(response1)  },  // Answer to request - respond with card type
-        { .response = response2,  .response_n = sizeof(response2)  },  // Anticollision cascade1 - respond with uid
-        { .response = response2a, .response_n = sizeof(response2a) },  // Anticollision cascade2 - respond with 2nd half of uid if asked
-        { .response = response3,  .response_n = sizeof(response3)  },  // Acknowledge select - cascade 1
-        { .response = response3a, .response_n = sizeof(response3a) },  // Acknowledge select - cascade 2
-        { .response = response5,  .response_n = sizeof(response5)  },  // Authentication answer (random nonce)
-        { .response = response6,  .response_n = sizeof(response6)  },  // dummy ATS (pseudo-ATR), answer to RATS
-
-        { .response = response8,   .response_n = sizeof(response8) }  // EV1/NTAG PACK response
-    };
-    // { .response = response7_NTAG, .response_n = sizeof(response7_NTAG)}, // EV1/NTAG GET_VERSION response
-    // { .response = response9,      .response_n = sizeof(response9)     }  // EV1/NTAG CHK_TEAR response
-
-    // "precompile" responses. There are 8 predefined responses with a total of 32 bytes data to transmit.
-    // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-    // 32 * 8 data bits, 32 * 1 parity bits, 8 start bits, 8 stop bits, 8 correction bits
-    // -> need 312 bytes buffer
-    // 42 * 8 data bits, 42 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits --405
-    // 45 * 8 data bits, 45 * 1 parity bits, 10 start bits, 10 stop bits, 10 correction bits --435
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 453
+    // command buffers
+    uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
+    uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
 
     // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
     // Such a response is less time critical, so we can prepare them on the fly
@@ -1016,22 +1068,10 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
 
-    // allocate buffers:
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
-    uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
-    // modulation buffer pointer and current buffer free space size
-    uint8_t *free_buffer_pointer = free_buffer;
-    size_t free_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
 
-    // Prepare the responses of the anticollision phase
-    // there will be not enough time to do this at the moment the reader sends it REQA
-    for (size_t i = 0; i < TAG_RESPONSE_COUNT; i++) {
-        if (prepare_allocated_tag_modulation(&responses[i], &free_buffer_pointer, &free_buffer_size) == false) {
-            BigBuf_free_keep_EM();
-            Dbprintf("Not enough modulation buffer size, exit after %d elements", i);
-            return;
-        }
+    if (SimulateIso14443aInit(tagType, flags, data, &responses, &cuid, counters, tearings, &pages) == false) {
+        BigBuf_free_keep_EM();
+        return;
     }
 
     // We need to listen to the high-frequency, peak-detected path.
@@ -1065,28 +1105,28 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         // Okay, look at the command now.
         lastorder = order;
         if (receivedCmd[0] == ISO14443A_CMD_REQA) { // Received a REQUEST
-            p_response = &responses[0];
+            p_response = &responses[ATQA];
             order = 1;
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA) { // Received a WAKEUP
-            p_response = &responses[0];
+            p_response = &responses[ATQA];
             order = 6;
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {    // Received request for UID (cascade 1)
-            p_response = &responses[1];
+            p_response = &responses[UIDC1];
             order = 2;
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {  // Received request for UID (cascade 2)
-            p_response = &responses[2];
+            p_response = &responses[UIDC2];
             order = 20;
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {    // Received a SELECT (cascade 1)
-            p_response = &responses[3];
+            p_response = &responses[SAKC1];
             order = 3;
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {  // Received a SELECT (cascade 2)
-            p_response = &responses[4];
+            p_response = &responses[SAKC2];
             order = 30;
         } else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK) {    // Received a (plain) READ
             uint8_t block = receivedCmd[1];
             // if Ultralight or NTAG (4 byte blocks)
             if (tagType == 7 || tagType == 2) {
-                if (block > mfu_header->pages) {
+                if (block > pages) {
                     // send NACK 0x0 == invalid argument
                     EmSend4bit(CARD_NACK_IV);
                 } else {
@@ -1103,7 +1143,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 // FM11005SH.   16blocks,  4bytes / block.
                 //   block0 = 2byte Customer ID (CID), 2byte Manufacture ID (MID)
                 //   block1 = 4byte UID.
-                p_response = &responses[1];
+                p_response = &responses[UIDC1];
             } else { // all other tags (16 byte block tags)
                 uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
                 emlGetMemBt(emdata, block, 16);
@@ -1117,7 +1157,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         } else if (receivedCmd[0] == MIFARE_ULEV1_FASTREAD) {    // Received a FAST READ (ranged read)
             uint8_t block1 = receivedCmd[1];
             uint8_t block2 = receivedCmd[2];
-            if (block1 > mfu_header->pages) {
+            if (block1 > pages) {
                 // send NACK 0x0 == invalid argument
                 EmSend4bit(CARD_NACK_IV);
             } else {
@@ -1136,7 +1176,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 bool isCrcCorrect = CheckCrc14A(receivedCmd, len);
                 if (isCrcCorrect) {
                     uint8_t block = receivedCmd[1];
-                    if (block > mfu_header->pages) {
+                    if (block > pages) {
                         // send NACK 0x0 == invalid argument
                         EmSend4bit(CARD_NACK_IV);
                     } else {
@@ -1155,12 +1195,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             }
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {    // Received a READ SIGNATURE --
-            // first blocks of emu are header
-            uint8_t emdata[34];
-            memcpy(emdata, mfu_header->signature, 32);
-            AddCrc14A(emdata, 32);
-            EmSendCmd(emdata, sizeof(emdata));
-            p_response = NULL;
+            p_response = &responses[SIGNATURE];
         } else if (receivedCmd[0] == MIFARE_ULEV1_READ_CNT && tagType == 7) {    // Received a READ COUNTER --
             uint8_t index = receivedCmd[1];
             if (index > 2) {
@@ -1168,7 +1203,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 EmSend4bit(0x00);
             } else {
                 uint8_t cmd[] =  {0x00, 0x00, 0x00, 0x14, 0xa5};
-                memcpy(cmd, mfu_header->counter_tearing[index], 3);
+                htole24(counters[index], cmd);
                 AddCrc14A(cmd, sizeof(cmd) - 2);
                 EmSendCmd(cmd, sizeof(cmd));
             }
@@ -1179,13 +1214,13 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 // send NACK 0x0 == invalid argument
                 EmSend4bit(0x00);
             } else {
-                uint32_t val = le24toh(receivedCmd + 2) + le24toh(mfu_header->counter_tearing[index]);
+                uint32_t val = le24toh(receivedCmd + 2) + counters[index];
                 // if new value + old value is bigger 24bits,  fail
                 if (val > 0xFFFFFF) {
                     // send NACK 0x4 == counter overflow
                     EmSend4bit(CARD_NACK_NA);
                 } else {
-                    htole24(val, mfu_header->counter_tearing[index]);
+                    counters[index] = val;
                     // send ACK
                     EmSend4bit(CARD_ACK);
                 }
@@ -1193,15 +1228,15 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULEV1_CHECKTEAR && tagType == 7) {    // Received a CHECK_TEARING_EVENT --
             // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
-            uint8_t emdata[3];
             uint8_t index = receivedCmd[1];
             if (index > 2) {
                 // send NACK 0x0 == invalid argument
                 EmSend4bit(0x00);
             } else {
-                emdata[0] = mfu_header->counter_tearing[index][3];
-                AddCrc14A(emdata, sizeof(emdata) - 2);
-                EmSendCmd(emdata, sizeof(emdata));
+                uint8_t cmd[3];
+                cmd[0] = tearings[index];
+                AddCrc14A(cmd, sizeof(cmd) - 2);
+                EmSendCmd(cmd, sizeof(cmd));
             }
             p_response = NULL;
         } else if (receivedCmd[0] == ISO14443A_CMD_HALT) {    // Received a HALT
@@ -1209,26 +1244,18 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) {    // Received an authentication request
             if (tagType == 7) {     // IF NTAG /EV1  0x60 == GET_VERSION, not a authentication request.
-                uint8_t emdata[10];
-                memcpy(emdata, mfu_header->version, 8);
-                AddCrc14A(emdata, sizeof(emdata) - 2);
-                EmSendCmd(emdata, sizeof(emdata));
-                p_response = NULL;
+                p_response = &responses[VERSION];
             } else {
-
                 cardAUTHKEY = receivedCmd[0] - 0x60;
                 cardAUTHSC = receivedCmd[1] / 4; // received block num
 
                 // incease nonce at AUTH requests. this is time consuming.
                 nonce = prng_successor(GetTickCount(), 32);
-                //num_to_bytes(nonce, 4, response5);
                 num_to_bytes(nonce, 4, dynamic_response_info.response);
                 dynamic_response_info.response_n = 4;
 
-                //prepare_tag_modulation(&responses[5], DYNAMIC_MODULATION_BUFFER_SIZE);
                 prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
                 p_response = &dynamic_response_info;
-                //p_response = &responses[5];
                 order = 7;
             }
         } else if (receivedCmd[0] == ISO14443A_CMD_RATS) {    // Received a RATS request
@@ -1236,7 +1263,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                 EmSend4bit(CARD_NACK_NA);
                 p_response = NULL;
             } else {
-                p_response = &responses[6];
+                p_response = &responses[RATS];
                 order = 70;
             }
         } else if (order == 7 && len == 8) { // Received {nr] and {ar} (part of authentication)
@@ -1308,9 +1335,9 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
             if (tagType == 7) {
                 // PWD stored in dump now
                 uint8_t pwd[4];
-                emlGetMemBt(pwd, (mfu_header->pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
+                emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
                 if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
-                    p_response = &responses[7]; // precompiled PACK
+                    p_response = &responses[PACK]; // precompiled PACK
                 } else {
                     EmSend4bit(CARD_NACK_NA);
                     uint32_t pwd = bytes_to_num(receivedCmd + 1, 4);
