@@ -159,9 +159,9 @@ static void UsbCommandReceived(UsbCommand *c) {
 #if defined(__linux__) || (__APPLE__)
             memcpy(s, c->d.asBytes, len);
 #else
-            if (flag & FLAG_ANSI)
+            if (flag & FLAG_ANSI) {
                 // Filter out ANSI sequences on these OS
-                uint16_t si=0;
+                uint16_t si = 0;
                 for (uint16_t i=0; i < len; i++) {
                     if ((c->d.asBytes[i] == '\x1b') && (i < len - 1) && (c->d.asBytes[i+1] >= 0x40) && (c->d.asBytes[i+1] <= 0x5F)) { // entering ANSI sequence
                         i++;
