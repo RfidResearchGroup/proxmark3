@@ -1,5 +1,10 @@
 #!/bin/bash
 
+FULLIMAGE="armsrc/obj/fullimage.elf"
+if [ "$1" == "-b" ]; then
+  FLASHBOOT="-b bootrom/obj/bootrom.elf"
+fi
+
 function wait4proxmark_Linux {
     echo >&2 "Waiting for Proxmark to appear..."
     while [ ! -c /dev/ttyACM? -a ! -L /dev/pm3-? ]; do
@@ -26,7 +31,7 @@ function wait4proxmark_macOS {
 # Detect OS and flash bootroom & system image
 
 if [[ $(uname | awk '{print toupper($0)}') == "LINUX" ]]; then
-    client/flasher $(wait4proxmark_Linux) -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+    client/flasher $(wait4proxmark_Linux) $FLASHBOOT $FULLIMAGE
 elif [[ $(uname | awk '{print toupper($0)}') == "DARWIN" ]]; then
-    client/flasher $(wait4proxmark_macOS) -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+    client/flasher $(wait4proxmark_macOS) $FLASHBOOT $FULLIMAGE
 fi
