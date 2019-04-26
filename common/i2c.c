@@ -593,7 +593,7 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 }
 
 void I2C_print_status(void) {
-    DbpString("Smart card module (ISO 7816)");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Smart card module (ISO 7816"));
     uint8_t resp[] = {0, 0, 0, 0};
     I2C_Reset_EnterMainProgram();
     uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);

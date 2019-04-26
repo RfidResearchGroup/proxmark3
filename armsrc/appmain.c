@@ -114,16 +114,16 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
 
-void DbpStringEx(char *str, uint32_t cmd) {
+void DbpStringEx(uint32_t flags, char *str) {
 #if DEBUG
     uint8_t len = strlen(str);
-    cmd_send(CMD_DEBUG_PRINT_STRING, len, cmd, 0, (uint8_t *)str, len);
+    cmd_send(CMD_DEBUG_PRINT_STRING, len, flags, 0, (uint8_t *)str, len);
 #endif
 }
 
 void DbpString(char *str) {
 #if DEBUG
-    DbpStringEx(str, 0);
+    DbpStringEx(FLAG_LOG, str);
 #endif
 }
 
@@ -132,7 +132,7 @@ void DbpIntegers(int x1, int x2, int x3) {
     cmd_send(CMD_DEBUG_PRINT_INTEGERS, x1, x2, x3, 0, 0);
 }
 #endif
-void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
+void DbprintfEx(uint32_t flags, const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
     char output_string[128] = {0x00};
@@ -141,7 +141,7 @@ void DbprintfEx(uint32_t cmd, const char *fmt, ...) {
     kvsprintf(fmt, output_string, 10, ap);
     va_end(ap);
 
-    DbpStringEx(output_string, cmd);
+    DbpStringEx(flags, output_string);
 #endif
 }
 
@@ -310,10 +310,10 @@ void MeasureAntennaTuningHf(void) {
         } else {
             volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
         }
-        DbprintfEx(FLAG_NONEWLINE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
+        DbprintfEx(FLAG_INPLACE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbprintfEx(FLAG_NOOPT, "\n[+] cancelled", 1);
+    DbprintfEx(FLAG_LOG, "\n[+] cancelled", 1);
 }
 
 void ReadMem(int addr) {
@@ -365,7 +365,7 @@ void SendVersion(void) {
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the UsbCommand structure included.
 void printUSBSpeed(void) {
-    Dbprintf("USB Speed");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("USB Speed"));
     Dbprintf("  Sending USB packets to client...");
 
 #define USB_SPEED_TEST_MIN_TIME 1500 // in milliseconds
@@ -406,12 +406,12 @@ void SendStatus(void) {
     printT55xxConfig(); // LF T55XX Config
 #endif
     printUSBSpeed();
-    Dbprintf("Various");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Various"));
     Dbprintf("  MF_DBGLEVEL.............%d", MF_DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
-    DbpString("Installed StandAlone Mode");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Installed StandAlone Mode"));
     ModInfo();
 
     //DbpString("Running ");

@@ -512,7 +512,7 @@ void Flash_EraseChip(void) {
 */
 
 void Flashmem_print_status(void) {
-    DbpString("Flash memory");
+    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Flash memory"));
     Dbprintf("  Baudrate................%dMHz", FLASHMEM_SPIBAUDRATE / 1000000);
 
     if (!FlashInit()) {
