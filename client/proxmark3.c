@@ -259,7 +259,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed");
         PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS");
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
-        PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one proxmark3 command.");
+        PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one proxmark3 command (or several separated by ';').");
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one proxmark3 command per line");
         PrintAndLogEx(NORMAL, "\nsamples:");
