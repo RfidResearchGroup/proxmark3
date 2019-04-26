@@ -438,10 +438,6 @@ __attribute__((force_align_arg_pointer))
                 if (!error) {
 //                    PrintAndLogEx(NORMAL, "Received reply NG full !!");
                     PacketResponseReceived(&rx);
-//TODO NG don't send ACK anymore but reply with the corresponding cmd, still things seem to work fine...
-                    if (rx.cmd == CMD_ACK) {
-                        ACK_received = true;
-                    }
                 }
             } else {                               // Old style reply
                 PacketResponseOLD rx_old;
@@ -480,6 +476,7 @@ __attribute__((force_align_arg_pointer))
 
         if (connection->block_after_ACK) {
             // if we just received an ACK, wait here until a new command is to be transmitted
+            // This is only working on OLD frames, and only used by flasher
             if (ACK_received) {
                 while (!txBuffer_pending) {
                     pthread_cond_wait(&txBufferSig, &txBufferMutex);
