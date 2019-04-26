@@ -568,7 +568,14 @@ int TestProxmark(void) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 5000)) {
+#ifdef USART_SLOW_LINK
+    // 10s timeout for slow FPC, e.g. over BT
+    // as this is the very first command sent to the pm3
+    // that initiates the BT connection
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 10000)) {
+#else
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+#endif
         conn.send_via_fpc = resp.oldarg[0] == 1;
         PrintAndLogEx(INFO, "Communicating with PM3 over %s.", conn.send_via_fpc ? _YELLOW_("FPC") : _YELLOW_("USB-CDC"));
         if (conn.send_via_fpc)
