@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "common.h"
+#include "comms.h"
 #include "util_posix.h" // msclock
 
 
@@ -103,7 +104,6 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed);
 /* Gets the current speed of the serial port, in baud.
  */
 uint32_t uart_get_speed(const serial_port sp);
-extern uint32_t uart_speed;
 
 #endif // _UART_H_
 

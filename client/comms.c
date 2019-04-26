@@ -570,7 +570,9 @@ int TestProxmark(void) {
     SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 5000)) {
         conn.send_via_fpc = resp.oldarg[0] == 1;
-        PrintAndLogEx(INFO, "Communicating with PM3 over %s.", conn.send_via_fpc ? "FPC" : "USB");
+        PrintAndLogEx(INFO, "Communicating with PM3 over %s.", conn.send_via_fpc ? _YELLOW_("FPC") : _YELLOW_("USB-CDC"));
+        if (conn.send_via_fpc)
+            PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
         return 1;
     } else {
         return 0;
@@ -619,7 +621,7 @@ void CloseProxmark(void) {
 // Let's take 2x (maybe we need more for BT link?)
 static size_t communication_delay(void) {
     if (conn.send_via_fpc)  // needed also for Windows USB USART??
-        return 2 * (12000000 / uart_speed);
+        return 2 * (12000000 / conn.uart_speed);
     return 100;
 }
 
