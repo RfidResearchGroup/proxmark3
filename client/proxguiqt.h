@@ -99,7 +99,7 @@ class WorkerThread : public QThread {
   private:
     char *script_cmds_file = NULL;
     char *script_cmd = NULL;
-    bool usb_present;
+    bool pm3_present;
 };
 
 class ProxGuiQT : public QObject {

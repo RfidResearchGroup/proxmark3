@@ -80,10 +80,14 @@ void FlashSetup(uint32_t baudrate) {
 
     uint8_t csaat = 1;
     uint32_t dlybct = 0;
+    uint8_t ncpha = 1;
+    uint8_t cpol = 0;
     if (baudrate > FLASH_MINFAST) {
         baudrate = FLASH_FASTBAUD;
         //csaat = 0;
         dlybct = 1500;
+        ncpha = 0;
+        cpol = 0;
     }
 
     AT91C_BASE_SPI->SPI_CSR[2] =
@@ -119,9 +123,10 @@ void FlashSetup(uint32_t baudrate) {
             1    0    1    1       clock normally low    read on falling edge
             2    1    0    0       clock normally high   read on falling edge
             3    1    1    1       clock normally high   read on rising edge
+            Update: for 24MHz, writing is more stable with ncpha=1, else bitflips occur.
         */
-        (0 << 1)             |  // Clock Phase data captured on leading edge, changes on following edge
-        (0 << 0);               // Clock Polarity inactive state is logic 0
+        (ncpha << 1)             |  // Clock Phase data captured on leading edge, changes on following edge
+        (cpol << 0);               // Clock Polarity inactive state is logic 0
 
     // read first, empty buffer
     if (AT91C_BASE_SPI->SPI_RDR == 0) {};
