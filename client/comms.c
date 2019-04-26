@@ -239,7 +239,7 @@ static void memcpy_filtered(void *dest, const void *src, size_t n, bool filter) 
 #if defined(__linux__) || (__APPLE__)
     memcpy(dest, src, n);
 #else
-    if (filter)
+    if (filter) {
         // Filter out ANSI sequences on these OS
         uint16_t si=0;
         for (uint16_t i=0; i < n; i++) {

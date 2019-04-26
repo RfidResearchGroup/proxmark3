@@ -28,9 +28,6 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "    14b    - interpret data as iso14443b communications");
     PrintAndLogEx(NORMAL, "    15     - interpret data as iso15693 communications");
     PrintAndLogEx(NORMAL, "    des    - interpret data as DESFire communications");
-#ifdef WITH_EMV
-    PrintAndLogEx(NORMAL, "    emv    - interpret data as EMV / communications");
-#endif
     PrintAndLogEx(NORMAL, "    iclass - interpret data as iclass communications");
     PrintAndLogEx(NORMAL, "    topaz  - interpret data as topaz communications");
     PrintAndLogEx(NORMAL, "    7816   - interpret data as iso7816-4 communications");
