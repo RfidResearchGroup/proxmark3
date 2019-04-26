@@ -42,13 +42,13 @@ typedef enum {
 typedef struct {
     bool run; // If TRUE, continue running the uart_communication thread
     bool block_after_ACK; // if true, block after receiving an ACK package
+    // Flags to tell where to add CRC on sent replies
+    bool send_with_crc_on_usb;
+    bool send_with_crc_on_fpc;
+    // "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
+    bool send_via_fpc;
 } communication_arg_t;
 
-// Flags to tell where to add CRC on sent replies
-extern bool send_with_crc_on_usb;
-extern bool send_with_crc_on_fpc;
-// "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
-extern bool send_via_fpc;
 extern communication_arg_t conn;
 
 void SetOffline(bool value);
