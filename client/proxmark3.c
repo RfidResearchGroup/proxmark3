@@ -58,7 +58,7 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
+main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
@@ -68,7 +68,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
 
     PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
 
-    if (usb_present) {
+    if (pm3_present) {
         SetOffline(false);
         // cache Version information now:
         if (execCommand || script_cmds_file || stdinOnPipe)
@@ -98,10 +98,10 @@ main_loop(char *script_cmds_file, char *script_cmd, bool usb_present) {
         if ( IsOffline() ) {
 
             // sets the global variable, SP and offline)
-            usb_present = hookUpPM3();
+            pm3_present = hookUpPM3();
 
             // usb and the reader_thread is NULL,  create a new reader thread.
-            if (usb_present && !IsOffline() ) {
+            if (pm3_present && !IsOffline() ) {
                 rarg.run = 1;
                 pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
                 // cache Version information now:
@@ -275,7 +275,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
 int main(int argc, char *argv[]) {
     srand(time(0));
 
-    bool usb_present = false;
+    bool pm3_present = false;
     bool waitCOMPort = false;
     bool addLuaExec = false;
     char *script_cmds_file = NULL;
@@ -465,35 +465,35 @@ int main(int argc, char *argv[]) {
 
     // try to open USB connection to Proxmark
     if (port != NULL)
-        usb_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
+        pm3_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
 
-    if (usb_present && (TestProxmark() == 0))
-        usb_present = false;
-    if (!usb_present)
+    if (pm3_present && (TestProxmark() == 0))
+        pm3_present = false;
+    if (!pm3_present)
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
 
 #ifdef HAVE_GUI
 
 #  ifdef _WIN32
-    InitGraphics(argc, argv, script_cmds_file, script_cmd, usb_present);
+    InitGraphics(argc, argv, script_cmds_file, script_cmd, pm3_present);
     MainGraphics();
 #  else
     // for *nix distro's,  check enviroment variable to verify a display
     char *display = getenv("DISPLAY");
     if (display && strlen(display) > 1) {
-        InitGraphics(argc, argv, script_cmds_file, script_cmd, usb_present);
+        InitGraphics(argc, argv, script_cmds_file, script_cmd, pm3_present);
         MainGraphics();
     } else {
-        main_loop(script_cmds_file, script_cmd, usb_present);
+        main_loop(script_cmds_file, script_cmd, pm3_present);
     }
 #  endif
 
 #else
-    main_loop(script_cmds_file, script_cmd, usb_present);
+    main_loop(script_cmds_file, script_cmd, pm3_present);
 #endif
 
     // Clean up the port
-    if (usb_present) {
+    if (pm3_present) {
         CloseProxmark();
     }
 
