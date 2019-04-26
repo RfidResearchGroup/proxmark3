@@ -108,7 +108,7 @@
 //NVDD goes LOW when USB is attached.
 #define USB_ATTACHED()    !((AT91C_BASE_PIOA->PIO_PDSR & GPIO_NVDD_ON) == GPIO_NVDD_ON)
 
-#define VERSION_INFORMATION_MAGIC 0x56334d50
+#define VERSION_INFORMATION_MAGIC 0x56334d50 // "PM3V"
 struct version_information {
     int magic; /* Magic sequence to identify this as a correct version information structure. Must be VERSION_INFORMATION_MAGIC */
     char versionversion; /* Must be 1 */
@@ -118,7 +118,7 @@ struct version_information {
     char buildtime[30]; /* string with the build time */
 } __attribute__((packed));
 
-#define COMMON_AREA_MAGIC 0x43334d50
+#define COMMON_AREA_MAGIC 0x43334d50 // "PM3C"
 #define COMMON_AREA_COMMAND_NONE 0
 #define COMMON_AREA_COMMAND_ENTER_FLASH_MODE 1
 struct common_area {
