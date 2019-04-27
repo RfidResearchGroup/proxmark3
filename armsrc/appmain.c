@@ -485,6 +485,7 @@ void ListenReaderField(int limit) {
     uint16_t lf_av, lf_av_new, lf_baseline = 0, lf_max;
     uint16_t hf_av, hf_av_new,  hf_baseline = 0, hf_max;
     uint16_t mode = 1, display_val, display_max;
+    bool use_high = false;
 
     // switch off FPGA - we don't want to measure our own signal
     // 20180315 - iceman,  why load this before and then turn off?
@@ -493,28 +494,29 @@ void ListenReaderField(int limit) {
 
     LEDsoff();
 
+    if (limit == LF_ONLY) {
     lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
-
-    if (limit != HF_ONLY) {
         Dbprintf("LF 125/134kHz Baseline: %dmV", (MAX_ADC_LF_VOLTAGE * lf_av) >> 10);
         lf_baseline = lf_av;
     }
 
+    if (limit == HF_ONLY) {
+        
     hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
 
     // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
     // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-    bool use_high = (((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE - 300);
+        use_high = (((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE - 300);
     if (use_high) {
         hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
     }
 
-    if (limit != LF_ONLY) {
         Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
         hf_baseline = hf_av;
     }
 
     for (;;) {
+        
         // Switch modes with button
         if (BUTTON_PRESS()) {
             SpinDelay(500);
@@ -526,14 +528,14 @@ void ListenReaderField(int limit) {
                 case 2:
                 default:
                     DbpString("Stopped");
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);                    
                     LEDsoff();
                     return;
-                    break;
             }
         }
         WDT_HIT();
 
-        if (limit != HF_ONLY) {
+        if (limit == LF_ONLY) {
             if (mode == 1) {
                 if (ABS(lf_av - lf_baseline) > REPORT_CHANGE)
                     LED_D_ON();
@@ -551,7 +553,7 @@ void ListenReaderField(int limit) {
             }
         }
 
-        if (limit != LF_ONLY) {
+        if (limit == HF_ONLY) {
             if (mode == 1) {
                 if (ABS(hf_av - hf_baseline) > REPORT_CHANGE)
                     LED_B_ON();
@@ -586,11 +588,14 @@ void ListenReaderField(int limit) {
                     display_max = lf_max;
                 }
             }
+            
             display_val = display_val * (4*LIGHT_LEVELS) / MAX(1,display_max);
             uint32_t duty_a = MIN(MAX(display_val, 0*LIGHT_LEVELS), 1*LIGHT_LEVELS) - 0*LIGHT_LEVELS;
             uint32_t duty_b = MIN(MAX(display_val, 1*LIGHT_LEVELS), 2*LIGHT_LEVELS) - 1*LIGHT_LEVELS;
             uint32_t duty_c = MIN(MAX(display_val, 2*LIGHT_LEVELS), 3*LIGHT_LEVELS) - 2*LIGHT_LEVELS;
             uint32_t duty_d = MIN(MAX(display_val, 3*LIGHT_LEVELS), 4*LIGHT_LEVELS) - 3*LIGHT_LEVELS;
+            
+            // LED A
             if (duty_a == 0) {
                 LED_A_OFF();
             } else if (duty_a == LIGHT_LEVELS) {
@@ -601,6 +606,8 @@ void ListenReaderField(int limit) {
                 LED_A_OFF();
                 SpinDelay(LIGHT_LEVELS - duty_a);
             }
+
+            // LED B            
             if (duty_b == 0) {
                 LED_B_OFF();
             } else if (duty_b == LIGHT_LEVELS) {
@@ -611,6 +618,8 @@ void ListenReaderField(int limit) {
                 LED_B_OFF();
                 SpinDelay(LIGHT_LEVELS - duty_b);
             }
+
+            // LED C
             if (duty_c == 0) {
                 LED_C_OFF();
             } else if (duty_c == LIGHT_LEVELS) {
@@ -621,6 +630,8 @@ void ListenReaderField(int limit) {
                 LED_C_OFF();
                 SpinDelay(LIGHT_LEVELS - duty_c);
             }
+
+            // LED D
             if (duty_d == 0) {
                 LED_D_OFF();
             } else if (duty_d == LIGHT_LEVELS) {
