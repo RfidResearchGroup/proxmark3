@@ -20,6 +20,7 @@ static char *serial_port_name = NULL;
 static bool offline;
 
 communication_arg_t conn;
+capabilities_t pm3_capabilities;
 
 static pthread_t USB_communication_thread;
 //static pthread_t FPC_communication_thread;
@@ -567,22 +568,40 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 int TestProxmark(void) {
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
+    uint16_t len = 32;
+    uint8_t data[len];
+    for (uint16_t i = 0; i < len; i++)
+        data[i] = i & 0xFF;
+    SendCommandNG(CMD_PING, data, len);
 #ifdef USART_SLOW_LINK
     // 10s timeout for slow FPC, e.g. over BT
     // as this is the very first command sent to the pm3
     // that initiates the BT connection
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 10000)) {
+    if (WaitForResponseTimeoutW(CMD_PING, &resp, 10000, false)) {
 #else
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+    if (WaitForResponseTimeoutW(CMD_PING, &resp, 1000, false)) {
 #endif
-        conn.send_via_fpc = resp.oldarg[0] == 1;
-        PrintAndLogEx(INFO, "Communicating with PM3 over %s.", conn.send_via_fpc ? _YELLOW_("FPC") : _YELLOW_("USB-CDC"));
-        if (conn.send_via_fpc)
-            PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
-        return 1;
+
+        bool error = false;
+        if (len)
+            error = memcmp(data, resp.data.asBytes, len) != 0;
+        if (error)
+            return PM3_EIO;
+
+        SendCommandNG(CMD_CAPABILITIES, NULL, 0);
+        if (WaitForResponseTimeoutW(CMD_PING, &resp, 1000, false)) {
+            memcpy(&pm3_capabilities, resp.data.asBytes, resp.length);
+            conn.send_via_fpc = pm3_capabilities.via_fpc;
+            conn.uart_speed = pm3_capabilities.baudrate;
+            PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
+            if (conn.send_via_fpc)
+                PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
+            return PM3_SUCCESS;
+        } else {
+            return PM3_ETIMEOUT;
+        }
     } else {
-        return 0;
+        return PM3_ETIMEOUT;
     }
 }
 

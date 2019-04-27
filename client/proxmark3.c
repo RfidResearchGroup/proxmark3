@@ -468,8 +468,11 @@ int main(int argc, char *argv[]) {
     if (port != NULL)
         pm3_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
 
-    if (pm3_present && (TestProxmark() == 0))
+    if (pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
+        CloseProxmark();
         pm3_present = false;
+    }
     if (!pm3_present)
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
 

@@ -429,6 +429,16 @@ void SendStatus(void) {
     reply_old(CMD_ACK, 1, 0, 0, 0, 0);
 }
 
+void SendCapabilities(void) {
+    capabilities_t capabilities;
+    capabilities.via_fpc = reply_via_fpc;
+    if (reply_via_fpc)
+        capabilities.baudrate = USART_BAUD_RATE;
+    else
+        capabilities.baudrate = 0; // no real baudrate for USB-CDC
+    reply_ng(CMD_CAPABILITIES, PM3_SUCCESS, (uint8_t *)&capabilities, sizeof(capabilities));
+}
+
 // Show some leds in a pattern to identify StandAlone mod is running
 void StandAloneMode(void) {
 
@@ -1439,6 +1449,8 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_STATUS:
             SendStatus();
             break;
+        case CMD_CAPABILITIES:
+            SendCapabilities();
         case CMD_PING:
             if (packet->ng) {
                 reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);

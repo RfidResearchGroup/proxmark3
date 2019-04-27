@@ -136,6 +136,14 @@ typedef struct {
     uint16_t read_gap;
 } t55xx_config;
 
+// TODO add more fields to report all hw & sw capabilities of pm3
+typedef struct {
+    uint32_t baudrate;
+    bool via_fpc;
+} PACKED capabilities_t;
+
+extern capabilities_t pm3_capabilities;
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 #define CMD_SETUP_WRITE                                                   0x0001
@@ -156,12 +164,9 @@ typedef struct {
 #define CMD_VERSION                                                       0x0107
 #define CMD_STATUS                                                        0x0108
 #define CMD_PING                                                          0x0109
-
 #define CMD_DOWNLOAD_EML_BIGBUF                                           0x0110
 #define CMD_DOWNLOADED_EML_BIGBUF                                         0x0111
-
-
-
+#define CMD_CAPABILITIES                                                  0x0112
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_READ                                                 0x0120
