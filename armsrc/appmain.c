@@ -482,8 +482,8 @@ void ListenReaderField(int limit) {
 #define HF_ONLY 2
 #define REPORT_CHANGE 10    // report new values only if they have changed at least by REPORT_CHANGE
 
-    uint16_t lf_av, lf_av_new, lf_baseline = 0, lf_max;
-    uint16_t hf_av, hf_av_new,  hf_baseline = 0, hf_max;
+    uint16_t lf_av = 0, lf_av_new, lf_baseline = 0, lf_max = 0;
+    uint16_t hf_av = 0, hf_av_new,  hf_baseline = 0, hf_max = 0;
     uint16_t mode = 1, display_val, display_max;
     bool use_high = false;
 
@@ -495,7 +495,7 @@ void ListenReaderField(int limit) {
     LEDsoff();
 
     if (limit == LF_ONLY) {
-    lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
+        lf_av = lf_max = AvgAdc(ADC_CHAN_LF);
         Dbprintf("LF 125/134kHz Baseline: %dmV", (MAX_ADC_LF_VOLTAGE * lf_av) >> 10);
         lf_baseline = lf_av;
     }
