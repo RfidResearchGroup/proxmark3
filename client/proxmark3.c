@@ -62,9 +62,11 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
-    uint16_t script_cmd_len = strlen(script_cmd);
-    if (execCommand)
+    uint16_t script_cmd_len = 0;
+    if (execCommand) {
+        script_cmd_len = strlen(script_cmd);
         strcreplace(script_cmd, script_cmd_len, ';', '\0');
+    }
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     FILE *sf = NULL;
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
