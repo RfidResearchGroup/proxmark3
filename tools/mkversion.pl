@@ -14,7 +14,7 @@ $ENV{'LC_ALL'} = "C";
 $ENV{'LANG'} = "C";
 
 # if you are making your own fork,  change this line to reflect your fork-name
-my $fullgitinfo = 'iceman';
+my $fullgitinfo = 'RRG';
 my $ctime;
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 my $clean = 2;
@@ -32,7 +32,8 @@ my $commandGIT = "env which git";
 
 if ( defined($commandGIT) )  {
 
-    my $githistory = `git fetch --all`;
+    # this goes on Internet and cause major slowdowns on poor connections or intranets, let's comment it
+    #my $githistory = `git fetch --all`;
     # now avoiding the "fatal: No names found, cannot describe anything." error by fallbacking to abbrev hash in such case
     my $gitversion = `git describe --dirty --always`;
     my $gitbranch = `git rev-parse --abbrev-ref HEAD`;
