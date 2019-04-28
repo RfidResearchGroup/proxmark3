@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add support new frame format in all Lua scripts (@iceman)
+ - Add CMD_CAPABILITIES for pm3 to inform dynamically the client (@doegox)
+ - Change baudrate handling, make it clear it's only indicative for USB-CDC & BT (@doegox)
+ - Change much faster flashmem writes (@doegox)
+ - Change: new progressive light scheme for 'hw detectreader' (@doegox)
+ - Add common error definitions system for retvals (@doegox)
+ - Change USART RX & TX code and fix delays handling to make it more robust, especially over BT (@doegox)
+ - Add support for new frames format, speedup & huge changes, see doc/new_frame_format.txt (@doegox)
  - Change: loadFile* & saveFile* accept filenames with (or still without) extension (@doegox)
  - Fix LoadEML to accept final "\n", e.g. from pm3_mfd2eml.py (@doegox)
  - Change: rework shell scripts for easy client or flasher (@doegox)
