@@ -2584,7 +2584,8 @@ int CmdHF14AMfELoad(const char *Cmd) {
     if (numblk2 > 0)
         numBlocks = numblk2;
 
-    param_getstr(Cmd, nameParamNo, filename, sizeof(filename));
+    if (0 == param_getstr(Cmd, nameParamNo, filename, sizeof(filename)))
+        return usage_hf14_eload();
 
     uint8_t *data = calloc(4096, sizeof(uint8_t));
     size_t datalen = 0;
