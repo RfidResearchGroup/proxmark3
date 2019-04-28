@@ -1,9 +1,10 @@
 local getopt = require('getopt')
 local lib14a = require('read14a')
+local utils = require('utils')
 
 copyright = 'Copyright (c) 2017 IceSQL AB. All rights reserved.'
 author = "Christian Herrmann"
-version = 'v1.0.3'
+version = 'v1.0.4'
 desc = [[
 This script writes a empty template for 3D printing system onto a empty NTAG213 or MAGIC NTAG21*
 
@@ -143,7 +144,6 @@ end
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-
     if type(args) == 'table' then
         local i = 1
         while result[i] do
@@ -157,17 +157,20 @@ end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print('ERROR: ',err)
-    return nil,err
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
 local function help()
     print(copyright)
+    print(author)
     print(version)
     print(desc)
     print('Example usage')
     print(example)
+    print(usage)
 end
 --
 -- Exit message
@@ -183,6 +186,7 @@ local function write_tag(uid, t)
 
     print('Writing to tag')
     core.console('hf mf dbg 0')
+    utils.Sleep(0.5)
 
     local cmd = ''
     local pwd, pack = core.keygen_algo_d(uid)
@@ -200,6 +204,7 @@ local function write_tag(uid, t)
     core.console(('hf mfu wrbl b 40 d %s k %08X'):format(t[40], pwd))
 
     core.console('hf mf dbg 1')
+    utils.Sleep(0.5)
     print('Done')
 end
 ---
@@ -228,7 +233,7 @@ end
 ---
 -- generates random hex numbers between 31-39
 local function random_num_hex(length)
-    local str = ""
+    local str = ''
     local i
     for i = 1, length, 1 do
         str = str..math.random(31, 39)
@@ -325,15 +330,15 @@ local function main(args)
 
     -- Read the parameters
     for o, a in getopt.getopt(args, 'ht1u:l:m:c:p:s:') do
-        if o == "h" then return help() end
-        if o == "t" then return selftest() end
-        if o == "u" then uid = a; useUID = true end
-        if o == "m" then material = a end
-        if o == "c" then color = a end
-        if o == "l" then length = tonumber(a) end
-        if o == "p" then producer = a end
-        if o == "s" then sales = a end
-        if o == "1" then useMAGIC = true end
+        if o == 'h' then return help() end
+        if o == 't' then return selftest() end
+        if o == 'u' then uid = a; useUID = true end
+        if o == 'm' then material = a end
+        if o == 'c' then color = a end
+        if o == 'l' then length = tonumber(a) end
+        if o == 'p' then producer = a end
+        if o == 's' then sales = a end
+        if o == '1' then useMAGIC = true end
     end
 
     color = find(_colors, color)

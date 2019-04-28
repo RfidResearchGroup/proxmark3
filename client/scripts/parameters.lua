@@ -1,19 +1,34 @@
-
 -- The getopt-functionality is loaded from pm3/getopt.lua
 -- Have a look there for further details
 getopt = require('getopt')
 
-usage = "script run parameters.lua -a 1 -blala -c -de"
-author = "Martin Holst Swende"
-desc =[[
+copyright = ''
+usage = 'script run parameters.lua -a 1 -blala -c -de'
+author = 'Martin Holst Swende'
+version = 'v1.0.1'
+desc = [[
 This is an example script to demonstrate handle parameters in scripts.
 For more info, check the comments in the code
 ]]
+example = [[
+]]
+usage = [[
+]]
+---
+-- Usage help
+local function help()
+    print(copyright)
+    print(author)
+    print(version)
+    print(desc)
+    print('Example usage')
+    print(example)
+    print(usage)
+end
 
 local function main(args)
 
-    print(desc)
-    print("These parameters were passed")
+    print('These parameters were passed')
     --[[
     When passing parameters,
     x:      means that a value should follow x
@@ -31,7 +46,8 @@ local function main(args)
     4. The format b lala (without -) is *not* supported
     --]]
 
-    for o, a in getopt.getopt(args, 'a:b:ced') do
+    for o, a in getopt.getopt(args, 'ha:b:ced') do
+        if o == 'h' then return help() end
         print(o, a)
     end
 end
