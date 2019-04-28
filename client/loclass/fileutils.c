@@ -365,6 +365,8 @@ int loadFileEML(const char *preferredName, const char *suffix, void *data, size_
         memset(line, 0, sizeof(line));
 
         if (fgets(line, sizeof(line), f) == NULL) {
+            if (feof(f))
+                break;
             fclose(f);
             PrintAndLogEx(FAILED, "File reading error.");
             retval = 2;
