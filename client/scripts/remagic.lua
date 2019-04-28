@@ -1,12 +1,21 @@
 local getopt = require('getopt')
 
-example = "script run remagic"
-author = "Iceman"
+copyright = ''
+author = 'Iceman'
+version = 'v1.0.1'
 desc =
 [[
 This is a script that tries to bring back a chinese magic card (1k generation1)
 from the dead when it's block 0 has been written with bad values.
 or mifare Ultralight magic card which answers to chinese backdoor commands
+]]
+example = [[
+    -- target a Ultralight based card
+    1. script run remagic -u
+
+]]
+usage = [[
+script run remagic
 
 Arguments:
     -h      this help
@@ -15,55 +24,64 @@ Arguments:
 ---
 -- A debug printout-function
 local function dbg(args)
-    if DEBUG then
+    if not DEBUG then return end
+    if type(args) == 'table' then
+        local i = 1
+        while result[i] do
+            dbg(result[i])
+            i = i+1
+        end
+    else
         print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print('ERROR: ',err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
 local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
     print('Example usage')
     print(example)
+    print(usage)
 end
 
 local function cmdUltralight()
     return {
-    --[[
-    --]]
-    [0] = "hf 14a raw -p -a -b 7 40",
-    [1] = "hf 14a raw -p -a 43",
-    [2] = "hf 14a raw -c -a A2005380712A",
-    [3] = "hf 14a raw -p -a -b 7 40",
-    [4] = "hf 14a raw -p -a 43",
-    [5] = "hf 14a raw -c -a A2010200D980",
-    [6] = "hf 14a raw -p -a -b 7 40",
-    [7] = "hf 14a raw -p -a 43",
-    [8] = "hf 14a raw -c -a A2025B480000",
-    [9] = "hf 14a raw -c -a 5000",
+    [0] = 'hf 14a raw -p -a -b 7 40',
+    [1] = 'hf 14a raw -p -a 43',
+    [2] = 'hf 14a raw -c -a A2005380712A',
+    [3] = 'hf 14a raw -p -a -b 7 40',
+    [4] = 'hf 14a raw -p -a 43',
+    [5] = 'hf 14a raw -c -a A2010200D980',
+    [6] = 'hf 14a raw -p -a -b 7 40',
+    [7] = 'hf 14a raw -p -a 43',
+    [8] = 'hf 14a raw -c -a A2025B480000',
+    [9] = 'hf 14a raw -c -a 5000',
     }
 end
 local function cmdClassic()
     return {
-    --[[
-    --]]
-    [0] = "hf 14a raw -p -a -b 7 40",
-    [1] = "hf 14a raw -p -a 43",
-    [2] = "hf 14a raw -c -p -a A000",
-    [3] = "hf 14a raw -c -p -a 01020304049802000000000000001001",
-    [4] = "hf 14a raw -c -a 5000",
+    [0] = 'hf 14a raw -p -a -b 7 40',
+    [1] = 'hf 14a raw -p -a 43',
+    [2] = 'hf 14a raw -c -p -a A000',
+    [3] = 'hf 14a raw -c -p -a 01020304049802000000000000001001',
+    [4] = 'hf 14a raw -c -a 5000',
     }
 end
 local function cmdRestoreST()
     local arr = {}
     for i = 0, 15 do
         local blk = 3 + (4*i)
-        arr[i] = "hf mf csetbl "..blk.." FFFFFFFFFFFFFF078000FFFFFFFFFFFF"
+        arr[i] = 'hf mf csetbl '..blk..' FFFFFFFFFFFFFF078000FFFFFFFFFFFF'
     end
     return arr
 end
@@ -86,8 +104,8 @@ function main(args)
 
     -- Read the parameters
     for o, a in getopt.getopt(args, 'hu') do
-        if o == "h" then return help() end
-        if o == "u" then isUltralight = true end
+        if o == 'h' then return help() end
+        if o == 'u' then isUltralight = true end
     end
 
     core.clearCommandBuffer()
