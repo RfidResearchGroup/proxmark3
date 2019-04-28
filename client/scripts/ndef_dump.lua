@@ -99,7 +99,6 @@ local function getBlock(blockno)
     if #block < 32 then
         return nil, ('Expected at least 16 bytes, got %d - this tag is not NDEF-compliant'):format(string.len(data))
     end
-    print('block', block)
     -- Now, parse out the block data
     -- 0534 00B9 049C AD7F 4A00 0000 E110 1000 2155
     -- b0b0 b0b0 b1b1 b1b1 b2b2 b2b2 b3b3 b3b3 CRCC
@@ -175,7 +174,7 @@ local function main( args)
     removing bytes from 5 to 18 from each answer.
     --]]
     print('Dumping data...please wait')
-    for i=4,numBlocks-1,1 do
+    for i = 4, numBlocks - 1, 1 do
         blocks, err = getBlock(i)
         if err then 
             disconnect(); 

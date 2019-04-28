@@ -2,7 +2,7 @@ local getopt = require('getopt')
 
 copyright = ''
 author = 'Kenzy Carey'
-version = ''
+version = 'v1.0.1'
 desc = [[
 
   .-----------------------------------------------------------------.
@@ -64,21 +64,23 @@ local lshift = bit32.lshift
 ---
 -- A debug printout-function
 local function dbg(args)
-    if type(args) == "table" then
+    if not DEBUG then return end
+    if type(args) == 'table' then
         local i = 1
-        while args[i] do
-            dbg(args[i])
+        while result[i] do
+            dbg(result[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
-    return nil,err
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
@@ -87,12 +89,13 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 --
 -- Exit message
-function exitMsg(msg)
+local function exitMsg(msg)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
     print(msg)
@@ -117,7 +120,7 @@ end
 --
 -- check for parity in bit-string.
 local function evenparity(s)
-    local _, count = string.gsub(s, "1", "")
+    local _, count = string.gsub(s, '1', '')
     local p = count % 2
     if (p == 0) then
         return false
@@ -136,7 +139,7 @@ local function cardHex(i, f)
     bits = bor(bits, lshift(high, 25))
     preamble = bor(0, lshift(1, 5))
     bits = bor(bits, lshift(1, 26))
-    return ("%04x%08x"):format(preamble, bits)
+    return ('%04x%08x'):format(preamble, bits)
 end
 --
 --
@@ -160,7 +163,7 @@ local function main(args)
 
     -- Check to see if -r argument was passed
     if isempty(rfidtag) then
-        print("You must supply the flag -r (rfid tag)")
+        print('You must supply the flag -r (rfid tag)')
         print(usage)
         return
     end
@@ -196,13 +199,13 @@ local function main(args)
         facilityrequired = 0
     elseif rfidtag == '14a' then
         consolecommand = 'hf 14a sim'
-        if facility == "1" then rfidtagname = 'MIFARE Classic' -- Here we use the -f option to read the 14a type instead of the facility code
-        elseif facility == "2" then rfidtagname = 'MIFARE Ultralight'
-        elseif facility == "3" then rfidtagname = 'MIFARE Desfire'
-        elseif facility == "4" then rfidtagname = 'ISO/IEC 14443-4'
-        elseif facility == "5" then rfidtagname = 'MIFARE Tnp3xxx'
+        if facility == '1' then rfidtagname = 'MIFARE Classic' -- Here we use the -f option to read the 14a type instead of the facility code
+        elseif facility == '2' then rfidtagname = 'MIFARE Ultralight'
+        elseif facility == '3' then rfidtagname = 'MIFARE Desfire'
+        elseif facility == '4' then rfidtagname = 'ISO/IEC 14443-4'
+        elseif facility == '5' then rfidtagname = 'MIFARE Tnp3xxx'
         else
-            print("Invalid 14a type (-f) supplied. Must be 1-5")
+            print('Invalid 14a type (-f) supplied. Must be 1-5')
             print(usage)
             return
         end
@@ -212,36 +215,36 @@ local function main(args)
         rfidtagname = 'HID'
         facilityrequired = 1
     else                                  -- Display error and exit out if bad RFID tag was supplied
-        print("Invalid rfid tag (-r) supplied")
+        print('Invalid rfid tag (-r) supplied')
         print(usage)
         return
     end
 
     if isempty(baseid) then               -- Display error and exit out if no starting id is set
-        print("You must supply the flag -b (base id)")
+        print('You must supply the flag -b (base id)')
         print(usage)
         return
     end
 
     if isempty(count) then                -- Display error and exit out of no count is set
-        print("You must supply the flag -c (count)")
+        print('You must supply the flag -c (count)')
         print(usage)
         return
     end
 
     if facilityrequired == 1 then         -- If FC is required
-        facilitymessage = " - Facility Code: " -- Add FC to status message
+        facilitymessage = ' - Facility Code: ' -- Add FC to status message
         if isempty(facility) then         -- If FC was left blank, display warning and set FC to 0
-            print("Using 0 for the facility code as -f was not supplied")
+            print('Using 0 for the facility code as -f was not supplied')
             facility = 0
         end
     else                                  -- If FC is not required
-        facility = ""                     -- Clear FC
-        facilitymessage = ""              -- Remove FC from status message
+        facility = ''                     -- Clear FC
+        facilitymessage = ''              -- Remove FC from status message
     end
 
     if isempty(timeout) then              -- If timeout was not supplied, show warning and set timeout to 0
-        print("Using 0 for the timeout as -t was not supplied")
+        print('Using 0 for the timeout as -t was not supplied')
         timeout = 0
     end
 
@@ -251,7 +254,7 @@ local function main(args)
     end
 
     if tonumber(count) < 1 then
-        print("Count -c must be set to 1 or higher")
+        print('Count -c must be set to 1 or higher')
         return
     else
         count = count -1                  -- Make our count accurate by removing 1, because math
@@ -264,16 +267,15 @@ local function main(args)
         endid = baseid + count
         fordirection = 1
     else                                  -- If invalid direction was set, show warning and set up our for loop to count down
-        print("Invalid direction (-d) supplied, using down")
+        print('Invalid direction (-d) supplied, using down')
         endid = baseid - count
         fordirection = -1
     end
 
 
-
     -- display status message
-    print("")
-    print("BruteForcing "..rfidtagname..""..facilitymessage..""..facility.." - CardNumber Start: "..baseid.." - CardNumber End: "..endid.." - TimeOut: "..timeout)
+    print('')
+    print('BruteForcing '..rfidtagname..''..facilitymessage..''..facility..' - CardNumber Start: '..baseid..' - CardNumber End: '..endid..' - TimeOut: '..timeout)
     print("")
 
     -- loop through for each count (-c)
@@ -286,10 +288,10 @@ local function main(args)
         core.console(consolecommand..' '..facility..' '..cardnum)
 
         if timeout == 'pause' then
-            print("Press enter to continue ...")
+            print('Press enter to continue ...')
             io.read()
         else
-            os.execute("sleep "..timeout.."")
+            os.execute('sleep '..timeout..'')
         end
     end
 
