@@ -207,7 +207,7 @@ int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, si
                 "CBOR parsing failure at offset %" PRId32 " : %s\n",
                 (uint32_t)(cb.ptr - data),
                 cbor_error_string(err)
-                );
+               );
         return 1;
     }
 

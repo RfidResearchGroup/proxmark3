@@ -63,7 +63,7 @@ static int l_SendCommandOLD(lua_State *L) {
 // (uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
 
     uint64_t cmd, arg0, arg1, arg2;
-    uint8_t data[USB_CMD_DATA_SIZE] = {0}; 
+    uint8_t data[USB_CMD_DATA_SIZE] = {0};
     size_t len = 0, size;
 
     //Check number of arguments
@@ -78,13 +78,13 @@ static int l_SendCommandOLD(lua_State *L) {
     if (size != 4)
         return returnToLuaWithError(L, "Wrong size of cmd, got %d bytes, expected 2", (int) size);
     sscanf(p_cmd, " %" SCNx64, &cmd);
-    
+
     // arg0
     const char *p_arg0 = luaL_checklstring(L, 2, &size);
     if (size != 16)
         return returnToLuaWithError(L, "Wrong size of arg0, got %d bytes, expected 16", (int) size);
     sscanf(p_arg0, " %" SCNx64, &arg0);
-    
+
     // arg1
     const char *p_arg1 = luaL_checklstring(L, 3, &size);
     if (size != 16)
@@ -96,14 +96,14 @@ static int l_SendCommandOLD(lua_State *L) {
     if (size != 16)
         return returnToLuaWithError(L, "Wrong size of arg2, got %d bytes, expected 16", (int) size);
     sscanf(p_arg2, " %" SCNx64, &arg2);
-    
+
     // data
     const char *p_data = luaL_checklstring(L, 5, &size);
-    
-    if ( size ) {
-        if ( size > 1024 )
+
+    if (size) {
+        if (size > 1024)
             size = 1024;
-         
+
         uint32_t tmp;
         for (int i = 0; i < size; i += 2) {
             sscanf(&p_data[i], "%02x", &tmp);
@@ -118,7 +118,7 @@ static int l_SendCommandOLD(lua_State *L) {
 /**
  * The following params expected:
  * @brief l_SendCommandMIX
- * @param L - a lua string with the following five params. 
+ * @param L - a lua string with the following five params.
  * @param cmd  must be hexstring, max u64
  * @param arg0  must be hexstring, max u64
  * @param arg1  must be hexstring, max u64
@@ -136,20 +136,20 @@ static int l_SendCommandMIX(lua_State *L) {
     int n = lua_gettop(L);
     if (n != 5)
         return returnToLuaWithError(L, "You need to supply five parameters");
-       
+
     // parse input
     // cmd
     const char *p_cmd = luaL_checklstring(L, 1, &size);
     if (size != 4)
         return returnToLuaWithError(L, "Wrong size of cmd, got %d bytes, expected 2", (int) size);
     sscanf(p_cmd, " %" SCNx64, &cmd);
-    
+
     // arg0
     const char *p_arg0 = luaL_checklstring(L, 2, &size);
     if (size != 16)
         return returnToLuaWithError(L, "Wrong size of arg0, got %d bytes, expected 16", (int) size);
     sscanf(p_arg0, " %" SCNx64, &arg0);
-    
+
     // arg1
     const char *p_arg1 = luaL_checklstring(L, 3, &size);
     if (size != 16)
@@ -161,13 +161,13 @@ static int l_SendCommandMIX(lua_State *L) {
     if (size != 16)
         return returnToLuaWithError(L, "Wrong size of arg2, got %d bytes, expected 16", (int) size);
     sscanf(p_arg2, " %" SCNx64, &arg2);
-    
+
     // data
-    const char *p_data = luaL_checklstring(L, 5, &size);    
-    if ( size ) {
-        if ( size > 1024 )
+    const char *p_data = luaL_checklstring(L, 5, &size);
+    if (size) {
+        if (size > 1024)
             size = 1024;
-         
+
         uint32_t tmp;
         for (int i = 0; i < size; i += 2) {
             sscanf(&p_data[i], "%02x", &tmp);
@@ -196,7 +196,7 @@ static int l_GetFromBigBuf(lua_State *L) {
     if (n == 0) {
         return returnToLuaWithError(L, "You need to supply number of bytes and startindex");
     }
-    
+
     if (n >= 2) {
         startindex = luaL_checknumber(L, 1);
         len = luaL_checknumber(L, 2);
@@ -240,7 +240,7 @@ static int l_GetFromFlashMem(lua_State *L) {
     int n = lua_gettop(L);
     if (n == 0)
         return returnToLuaWithError(L, "You need to supply number of bytes and startindex");
-    
+
     if (n >= 2) {
         startindex = luaL_checknumber(L, 1);
         len = luaL_checknumber(L, 2);
@@ -824,19 +824,19 @@ static int l_T55xx_readblock(lua_State *L) {
     const char *p_blockno = luaL_checklstring(L, 1, &size);
     if (size < 1 || size > 2)
         return returnToLuaWithError(L, "Wrong size of blockNo, got %d, expected 1 or 2", (int) size);
-    
+
     sscanf(p_blockno, "%x", &block);
 
     const char *p_usepage1 = luaL_checklstring(L, 2, &size);
     if (size != 1)
         return returnToLuaWithError(L, "Wrong size of usePage1, got %d, expected 1", (int) size);
-    
+
     sscanf(p_usepage1, "%x", &usepage1);
 
     const char *p_override = luaL_checklstring(L, 3, &size);
     if (size != 1)
         return returnToLuaWithError(L, "Wrong size of override, got %d, expected 1", (int) size);
-    
+
     sscanf(p_override, "%x", &override);
 
     const char *p_pwd = luaL_checklstring(L, 4, &size);
@@ -846,7 +846,7 @@ static int l_T55xx_readblock(lua_State *L) {
 
         if (size != 8)
             return returnToLuaWithError(L, "Wrong size of pwd, got %d , expected 8", (int) size);
-        
+
         sscanf(p_pwd, "%08x", &password);
         usepwd = true;
     }
@@ -905,7 +905,7 @@ static int l_T55xx_detect(lua_State *L) {
             const char *p_gb = luaL_checklstring(L, 2, &size);
             if (size != 1)
                 return returnToLuaWithError(L, "Wrong size of useGB, got %d , expected 1", (int) size);
-            
+
             sscanf(p_gb, "%u", &gb);
             useGB = (gb) ? true : false;
             printf("p_gb size  %zu | %c \n", size, useGB ? 'Y' : 'N');
@@ -918,7 +918,7 @@ static int l_T55xx_detect(lua_State *L) {
 
                 if (size != 8)
                     return returnToLuaWithError(L, "Wrong size of pwd, got %d , expected 8", (int) size);
-                
+
                 sscanf(p_pwd, "%08x", &password);
                 usepwd = true;
             }

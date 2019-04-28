@@ -596,11 +596,15 @@ plast(const poly_t poly) {
     unsigned long idx, size = SIZE(poly.length);
     bmp_t accu;
     unsigned int probe = BMP_SUB, ofs = 0;
-
     if (!poly.length) return (0UL);
     idx = size - 1UL;
     while (idx && !(accu = poly.bitmap[idx])) --idx;
+
+    if (poly.length == 24)
+        printf("ICE plast B - poly.length %lu vs size %lu idx %lu bitmap %ld\n", poly.length, size, idx,  poly.bitmap[idx]);
+
     if (!idx && !(accu = poly.bitmap[idx])) return (0UL);
+
     /* now accu == poly.bitmap[idx] and contains last significant term */
     while (probe) {
 #ifndef BMP_POF2
@@ -609,7 +613,6 @@ plast(const poly_t poly) {
         if (accu << (ofs | probe)) ofs |= probe;
         probe >>= 1;
     }
-
     return (idx * BMP_BIT + ofs + 1UL);
 }
 
@@ -1074,20 +1077,34 @@ praloc(poly_t *poly, unsigned long length) {
     if (oldsize != size)
         /* reallocate if array pointer is null or array resized */
         poly->bitmap = (bmp_t *) realloc((void *)poly->bitmap, size * sizeof(bmp_t));
+
     if (poly->bitmap) {
+
+        if (poly->length == 24)
+            printf("ICE praloc - poly->length %lu\n", poly->length);
+
+
         if (poly->length < length) {
             /* poly->length >= 0, length > 0, size > 0.
              * poly expanded. clear old last word and all new words
              */
             if (LOFS(poly->length))
                 poly->bitmap[oldsize - 1UL] &= ~(~BMP_C(0) >> LOFS(poly->length));
+
             while (oldsize < size)
                 poly->bitmap[oldsize++] = BMP_C(0);
-        } else if (LOFS(length))
+
+            if (poly->length == 24) printf("ICE praloc MISS A\n");
+
+        } else if (LOFS(length)) {
             /* poly->length >= length > 0.
              * poly shrunk. clear new last word
              */
             poly->bitmap[size - 1UL] &= ~(~BMP_C(0) >> LOFS(length));
+
+            if (poly->length == 24) printf("ICE praloc B  size %lu,  bm %lu \n", size, poly->bitmap[size - 1UL]);
+        }
+
         poly->length = length;
     } else
         uerror("cannot reallocate memory for poly");

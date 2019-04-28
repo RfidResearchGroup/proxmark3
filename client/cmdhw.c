@@ -309,22 +309,22 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 
 static int CmdDetectReader(const char *Cmd) {
     uint16_t arg = 0;
-    char c = tolower(Cmd[0]);   
-    switch ( c ) {
-        case 'l': 
-        arg = 1;
+    char c = tolower(Cmd[0]);
+    switch (c) {
+        case 'l':
+            arg = 1;
             break;
         case 'h':
-        arg = 2;
+            arg = 2;
             break;
         default: {
             PrintAndLogEx(NORMAL, "use 'detectreader'");
             PrintAndLogEx(NORMAL, "    'detectreader l'   -- 125/134 kHz");
             PrintAndLogEx(NORMAL, "    'detectreader h'   -- 13.56 mHz");
-        return PM3_EINVARG;
+            return PM3_EINVARG;
+        }
     }
-    }
-    
+
     clearCommandBuffer();
     SendCommandOLD(CMD_LISTEN_READER_FIELD, arg, 0, 0, NULL, 0);
     return PM3_SUCCESS;

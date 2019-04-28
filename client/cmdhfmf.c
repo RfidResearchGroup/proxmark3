@@ -2219,8 +2219,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   , csize
                   , uidsize
                   , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen >> 1)
-    );
-    
+                 );
+
     PrintAndLogEx(INFO, "Options [ numreads: %d, flags: %d (0x%02x) ]"
                   , exitAfterNReads
                   , flags

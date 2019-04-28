@@ -414,6 +414,17 @@ static int CmdrevengSearch(const char *Cmd) {
         // can't test a model that has more crc digits than our data
         if (crcChars >= dataLen)
             continue;
+
+        PrintAndLogEx(DEBUG
+                      , "DEBUG: dataLen %d, crcChars %u,  width[i] %u"
+                      , dataLen
+                      , crcChars
+                      , width[i]
+                     );
+
+        if (crcChars == 0)
+            continue;
+
         memset(result, 0, 30);
         char *inCRC = calloc(crcChars + 1, sizeof(char));
         memcpy(inCRC, inHexStr + (dataLen - crcChars), crcChars);
@@ -421,7 +432,6 @@ static int CmdrevengSearch(const char *Cmd) {
         char *outHex = calloc(dataLen - crcChars + 1, sizeof(char));
         memcpy(outHex, inHexStr, dataLen - crcChars);
 
-        PrintAndLogEx(DEBUG, "DEBUG: dataLen: %d, crcChars: %d, Model: %s, CRC: %s, width: %d, outHex: %s", dataLen, crcChars, Models[i], inCRC, width[i], outHex);
         ans = RunModel(Models[i], outHex, false, 0, result);
         if (ans) {
             // test for match

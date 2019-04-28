@@ -241,23 +241,23 @@ static void memcpy_filtered(void *dest, const void *src, size_t n, bool filter) 
         uint8_t *rsrc = (uint8_t *)src;
         uint16_t si = 0;
         for (uint16_t i = 0; i < n; i++) {
-            if ( (rsrc[i] == '\x1b') 
-                && (i < n - 1) 
-                && (rsrc[i + 1] >= 0x40) 
-                && (rsrc[i + 1] <= 0x5F) ) { // entering ANSI sequence
-                
+            if ((rsrc[i] == '\x1b')
+                    && (i < n - 1)
+                    && (rsrc[i + 1] >= 0x40)
+                    && (rsrc[i + 1] <= 0x5F)) {  // entering ANSI sequence
+
                 i++;
                 if ((rsrc[i] == '[') && (i < n - 1)) { // entering CSI sequence
                     i++;
-                    
+
                     while ((i < n - 1) && (rsrc[i] >= 0x30) && (rsrc[i] <= 0x3F)) { // parameter bytes
                         i++;
                     }
-                    
+
                     while ((i < n - 1) && (rsrc[i] >= 0x20) && (rsrc[i] <= 0x2F)) { // intermediate bytes
                         i++;
                     }
-                    
+
                     if ((rsrc[i] >= 0x40) && (rsrc[i] <= 0x7F)) { // final byte
                         continue;
                     }
