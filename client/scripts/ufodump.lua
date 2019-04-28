@@ -62,25 +62,6 @@ local function help()
     print(usage)    
 end
 --
--- writes data to ascii textfile.
-function writeDumpFile(uid, blockData)
-        local destination = string.format('%s.eml', uid)
-        local file = io.open(destination, 'w')
-        if file == nil then
-            return nil, string.format('Could not write to file %s', destination)
-        end
-        local rowlen = string.len(blockData[1])
-
-        for i,block in ipairs(blockData) do
-            if rowlen ~= string.len(block) then
-                print(string.format('WARNING: Dumpdata seems corrupted, line %d was not the same length as line 1',i))
-            end
-            file:write(block..'\n')
-        end
-        file:close()
-        return destination
-end
---
 --- Picks out and displays the data read from a tag
 -- Specifically, takes a usb packet, converts to a Command
 -- (as in commands.lua), takes the data-array and
@@ -174,7 +155,7 @@ function main(args)
     print("----+------------------+-------------------")
     disconnect()
 
-    local filename, err = writeDumpFile(info.uid, blockData)
+    local filename, err = utils.WriteDumpFile(info.uid, blockData)
     if err then return oops(err) end
 
     print(string.format('\nDumped data into %s', filename))

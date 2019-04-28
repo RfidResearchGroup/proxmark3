@@ -11,6 +11,7 @@
 
 --]]
 -- Loads the commands-library
+local taglib = require('taglib')
 local cmds = require('commands')
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local ISO14A_COMMAND = {
@@ -43,16 +44,12 @@ ISO14443a_TYPES[0x38] = "Nokia 6212 or 6131 MIFARE CLASSIC 4K"
 ISO14443a_TYPES[0x88] = "Infineon MIFARE CLASSIC 1K"
 ISO14443a_TYPES[0x98] = "Gemplus MPCOS"
 
-
 local function tostring_14443a(sak)
     return ISO14443a_TYPES[sak] or ("Unknown (SAK=%x)"):format(sak)
 end
 
 local function parse14443a(data)
     --[[
-
-    Based on this struct :
-
     typedef struct {
         uint8_t uid[10];
         uint8_t uidlen;
@@ -61,14 +58,20 @@ local function parse14443a(data)
         uint8_t ats_len;
         uint8_t ats[256];
     } __attribute__((__packed__)) iso14a_card_select_t;
-
     --]]
 
     local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CC',data)
-    uid = uid:sub(1, 2*uidlen)
-    --print("uid, atqa, sak: ",uid, atqa, sak)
-    --print("TYPE: ", tostring_1443a(sak))
-    return { uid = uid, atqa  = atqa, sak = sak, name = tostring_14443a(sak), data = data}
+    uid = uid:sub(1, 2 * uidlen)
+    local man_byte = tonumber(uid:sub(1,2), 16)
+
+    return { 
+        uid = uid,
+        atqa  = atqa,
+        sak = sak,
+        name = tostring_14443a(sak),
+        data = data,
+        manufacturer = taglib.lookupManufacturer(man_byte)
+    }
 end
 
 -- This function does a connect and retrieves som einfo
