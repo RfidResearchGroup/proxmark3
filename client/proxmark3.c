@@ -62,6 +62,11 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
+    uint16_t script_cmd_len = 0;
+    if (execCommand) {
+        script_cmd_len = strlen(script_cmd);
+        strcreplace(script_cmd, script_cmd_len, ';', '\0');
+    }
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     FILE *sf = NULL;
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
@@ -134,11 +139,13 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
         } else {
             // If there is a script command
             if (execCommand) {
-
                 if ((cmd = strmcopy(script_cmd)) != NULL)
                     PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
-
-                execCommand = false;
+                uint16_t len = strlen(script_cmd) + 1;
+                script_cmd += len;
+                if (script_cmd_len == len - 1)
+                    execCommand = false;
+                script_cmd_len -= len;
             } else {
                 // exit after exec command
                 if (script_cmd)
@@ -255,7 +262,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed");
         PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS");
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
-        PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one proxmark3 command.");
+        PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one proxmark3 command (or several separated by ';').");
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one proxmark3 command per line");
         PrintAndLogEx(NORMAL, "\nsamples:");

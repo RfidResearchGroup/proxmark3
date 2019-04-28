@@ -1,5 +1,10 @@
 #!/bin/bash
 
+FULLIMAGE="armsrc/obj/fullimage.elf"
+BOOTIMAGE="bootrom/obj/bootrom.elf"
+
+cd $(dirname "$0")
+
 function wait4proxmark_Linux {
     echo >&2 "Waiting for Proxmark to appear..."
     while [ ! -c /dev/ttyACM? -a ! -c /dev/pm3-? ]; do
@@ -23,10 +28,38 @@ function wait4proxmark_macOS {
     echo $PM3
 }
 
-# start proxmark with first detected interface
+SCRIPT=$(basename -- "$0")
 
-if [[ $(uname | awk '{print toupper($0)}') == "LINUX" ]]; then
-    client/proxmark3 $(wait4proxmark_Linux) "$@"
-elif [[ $(uname | awk '{print toupper($0)}') == "DARWIN" ]]; then
-    client/proxmark3 $(wait4proxmark_macOS) "$@"
+if [ "$SCRIPT" = "proxmark3.sh" ]; then
+  CMD=client/proxmark3
+elif [ "$SCRIPT" = "flash-all.sh" ]; then
+  CMD=client/flasher
+  ARG1="-b $BOOTIMAGE"
+  ARG2="$FULLIMAGE"
+elif [ "$SCRIPT" = "flash-fullimage.sh" ]; then
+  CMD=client/flasher
+  ARG2="$FULLIMAGE"
+elif [ "$SCRIPT" = "flash-bootrom.sh" ]; then
+  CMD=client/flasher
+  ARG1="-b $BOOTIMAGE"
+else
+  echo "Script ran under unknown name, abort: $SCRIPT"
+  exit 1
 fi
+HOSTOS=$(uname | awk '{print toupper($0)}')
+if [ "$HOSTOS" = "LINUX" ]; then
+    PORT=$(wait4proxmark_Linux)
+elif [ "$HOSTOS" = "DARWIN" ]; then
+    PORT=$(wait4proxmark_macOS)
+else
+    echo "Host OS not recognized, abort: $HOSTOS"
+    exit 1
+fi
+if [ "$PORT" = "" ]; then
+    echo "No port, abort"
+    exit 1
+fi
+
+echo Running "$CMD" "$PORT" $ARG1 $ARG2 "$@"
+"$CMD" "$PORT" $ARG1 $ARG2 "$@"
+exit $?
