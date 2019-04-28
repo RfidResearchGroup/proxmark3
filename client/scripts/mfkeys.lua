@@ -88,7 +88,7 @@ local function checkBlock(blockno, testkeys, keytype)
                                 arg1 =  arg1,
                                 arg3 = chunksize,
                                 data = d1}
-        status, err = checkCommand(cmd:sendMIX(false, TIMEOUT))
+        status, err = checkCommand(c:sendMIX(false, TIMEOUT))
 
         if status then return status, blockno end
         start = start + chunksize

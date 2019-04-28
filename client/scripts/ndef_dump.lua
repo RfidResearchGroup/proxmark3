@@ -91,8 +91,8 @@ end
 -- @return nil, errormessage if unsuccessfull
 local function getBlock(blockno)
     local block, err
-    local cmd = Command:newMIX{cmd = cmds.CMD_MIFAREU_READBL, arg1 = blockno, data = 0}
-    block, err = getblockdata(cmd:sendMIX(false))
+    local c = Command:newMIX{cmd = cmds.CMD_MIFAREU_READBL, arg1 = blockno, data = 0}
+    block, err = getblockdata(c:sendMIX(false))
     if not block then return oops(err) end
     
     if #block < 32 then
