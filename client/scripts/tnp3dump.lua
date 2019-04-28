@@ -7,7 +7,14 @@ local md5 = require('md5')
 local dumplib = require('html_dumplib')
 local toys = require('default_toys')
 
-example =[[
+copyright = ''
+author = 'Iceman'
+version = 'v1.0.1'
+desc =[[
+This script will try to dump the contents of a Mifare TNP3xxx card.
+It will need a valid KeyA in order to find the other keys and decode the card.
+]]
+example = [[
     script run tnp3dump
     script run tnp3dump -n
     script run tnp3dump -p
@@ -18,11 +25,9 @@ example =[[
     script run tnp3dump -p -o myfile
     script run tnp3dump -k aabbccddeeff -n -o myfile
 ]]
-author = "Iceman"
-usage = "script run tnp3dump -k <key> -n -p -o <filename>"
-desc =[[
-This script will try to dump the contents of a Mifare TNP3xxx card.
-It will need a valid KeyA in order to find the other keys and decode the card.
+usage = [[
+script run tnp3dump -k <key> -n -p -o <filename>
+
 Arguments:
     -h             : this help
     -k <key>       : Sector 0 Key A.
@@ -31,41 +36,44 @@ Arguments:
     -o             : filename for the saved dumps
 ]]
 local RANDOM = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
-local TIMEOUT = 2500 -- Shouldn't take longer than 2 seconds
 local DEBUG = false -- the debug flag
 local numBlocks = 64
 local numSectors = 16
 ---
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
     if not DEBUG then return end
-
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while result[i] do
             dbg(result[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
-function oops(err)
-    print("ERROR: ",err)
-    return nil,err
+local function oops(err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
-function help()
+local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 --
 -- Exit message
-function ExitMsg(msg)
+local function ExitMsg(msg)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
     print(msg)
@@ -79,18 +87,18 @@ local function readdumpkeys(infile)
      return hex
 end
 
-local function waitCmd()
-    local response = core.WaitForResponseTimeout(cmds.CMD_ACK, TIMEOUT)
-    if response then
-        local count, cmd, arg0 = bin.unpack('LL',response)
-        if(arg0==1) then
-            local count,arg1,arg2,data = bin.unpack('LLH511',response,count)
-            return data:sub(1,32)
-        else
-            return nil, "Couldn't read block.. ["..arg0.."]"
-        end
+local function getblockdata(response)
+    if not response then
+        return nil, 'No response from device'
     end
-    return nil, 'No response from device'
+    
+    local count, cmd, arg0 = bin.unpack('LL', response)
+    if arg0 == 1 then
+        local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
+        return data:sub(1, 32)
+    else
+        return nil, "Couldn't read block.. ["..arg0.."]"
+    end
 end
 
 local function main(args)
@@ -98,9 +106,7 @@ local function main(args)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
 
-    local keyA
-    local cmd
-    local err
+    local keyA, cmd, err
     local useNested = false
     local usePreCalc = false
     local cmdReadBlockString = 'hf mf rdbl %d A %s'
@@ -127,9 +133,7 @@ local function main(args)
     core.console( cmdSetDbgOff)
 
     result, err = lib14a.read(false, true)
-    if not result then
-        return oops(err)
-    end
+    if not result then return oops(err) end
 
     core.clearCommandBuffer()
 
@@ -159,23 +163,20 @@ local function main(args)
         akeys = hex:sub(0,12*16)
     end
 
+    local block0, block1
     -- Read block 0
     dbg('Reading block 0')
-    cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0, arg2 = 0, arg3 = 0, data = keyA}
-    err = core.SendCommand(cmd:getBytes())
-    if err then return oops(err) end
-    local block0, err = waitCmd()
-    if err then return oops(err) end
-
+    cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, data = keyA}
+    block0, err = getblockdata(cmd:sendMIX(false))
+    if not block0 then return oops(err) end
+    
     core.clearCommandBuffer()
 
     -- Read block 1
     dbg('Reading block 1')
-    cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = 1, arg2 = 0, arg3 = 0, data = keyA}
-    err = core.SendCommand(cmd:getBytes())
-    if err then return oops(err) end
-    local block1, err = waitCmd()
-    if err then return oops(err) end
+    cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = 1, data = keyA}
+    block1, err = getblockdata(cmd:sendMIX(false))
+    if not block1 then return oops(err) end
 
     core.clearCommandBuffer()
 
@@ -201,12 +202,9 @@ local function main(args)
 
         pos = (math.floor( blockNo / 4 ) * 12)+1
         key = akeys:sub(pos, pos + 11 )
-        cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo ,arg2 = 0,arg3 = 0, data = key}
-        local err = core.SendCommand(cmd:getBytes())
-        if err then return oops(err) end
-        local blockdata, err = waitCmd()
-        if err then return oops(err) end
-
+        cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo, data = key}
+        local blockdata, err = getblockdata(cmd:sendMIX(false))
+        if not blockdata then return oops(err) end
 
         if  blockNo%4 ~= 3 then
 

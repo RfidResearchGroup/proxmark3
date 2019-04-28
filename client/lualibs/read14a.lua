@@ -71,26 +71,6 @@ local function parse14443a(data)
     return { uid = uid, atqa  = atqa, sak = sak, name = tostring_14443a(sak), data = data}
 end
 
---- Sends a USBpacket to the device
--- @param command - the usb packet to send
--- @param ignoreresponse - if set to true, we don't read the device answer packet
---     which is usually recipe for fail. If not sent, the host will wait 2s for a
---     response of type CMD_ACK
--- @return packet,nil if successfull
---         nil, errormessage if unsuccessfull
-local function sendToDevice(command, ignoreresponse)
-    --core.clearCommandBuffer()
-    local err = core.SendCommand(command:getBytes())
-    if err then
-        print(err)
-        return nil, err
-    end
-    if ignoreresponse then return nil,nil end
-
-    local response = core.WaitForResponseTimeout(cmds.CMD_ACK, TIMEOUT)
-    return response,nil
-end
-
 -- This function does a connect and retrieves som einfo
 -- @param dont_disconnect - if true, does not disable the field
 -- @return if successfull: an table containing card info
@@ -98,7 +78,10 @@ end
 local function read14443a(dont_disconnect, no_rats)
     local command, result, info, err, data
 
-    command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, arg1 = ISO14A_COMMAND.ISO14A_CONNECT }
+    command = Command:newMIX{
+            cmd = cmds.CMD_READER_ISO_14443a,
+            arg1 = ISO14A_COMMAND.ISO14A_CONNECT
+            }
 
     if dont_disconnect then
         command.arg1 = command.arg1 + ISO14A_COMMAND.ISO14A_NO_DISCONNECT
@@ -106,17 +89,17 @@ local function read14443a(dont_disconnect, no_rats)
     if no_rats then
         command.arg1 = command.arg1 + ISO14A_COMMAND.ISO14A_NO_RATS
     end
-
-    local result,err = sendToDevice(command)
+    
+    local result,err = command:sendMIX()
     if result then
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
         if arg0 == 0 then
-            return nil, "iso14443a card select failed"
+            return nil, 'iso14443a card select failed'
         end
         data = string.sub(result,count)
         info, err = parse14443a(data)
     else
-        err ="No response from card"
+        err = 'No response from card'
     end
 
     if err then
@@ -143,7 +126,6 @@ local library = {
     read = read14443a,
     waitFor14443a = waitFor14443a,
     parse14443a = parse14443a,
-    sendToDevice = sendToDevice,
     ISO14A_COMMAND = ISO14A_COMMAND,
 }
 

@@ -4,6 +4,7 @@ Handle Proxmark USB Commands
 
 local _commands = require('usb_cmd')
 local util = require('utils')
+local TIMEOUT = 2000
 
 local _reverse_lookup,k,v = {}
     for k, v in pairs(_commands) do
@@ -131,6 +132,14 @@ function Command:__responsetostring()
     print('package ::', self.resp_response)
 end
 
+
+--- Sends a packet to the device
+-- @param command - the usb packet to send
+-- @param ignoreresponse - if set to true, we don't read the device answer packet
+--     which is usually recipe for fail. If not sent, the host will wait 2s for a
+--     response of type CMD_ACK
+-- @return packet,nil if successfull
+--         nil, errormessage if unsuccessfull
 function Command:sendMIX( ignore_response, timeout )
     local data = self.data
     local cmd = self.cmd
@@ -139,7 +148,9 @@ function Command:sendMIX( ignore_response, timeout )
     local err, msg = core.SendCommandMIX(cmd, arg1, arg2, arg3, data)
     if err == nil then return err, msg end
     
-    if ignoreresponse then return true, nil end
+    if ignore_response then return true, nil end
+
+    if timeout == nil then timeout = TIMEOUT end
 
     local response, msg = core.WaitForResponseTimeout(_commands.CMD_ACK, timeout)
     if response == nil then
@@ -174,8 +185,10 @@ function Command:sendNG( ignore_response, timeout )
     local err, msg = core.SendCommandNG(cmd, data)
     if err == nil then return err, msg end
     
-    if ignoreresponse then return true, nil end
-
+    if ignore_response then return true, nil end
+    
+    if timeout == nil then timeout = TIMEOUT end
+    
     local response, msg = core.WaitForResponseTimeout(cmd, timeout)
     if response == nil then
         return nil, 'Error, waiting for response timed out :: '..msg

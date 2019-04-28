@@ -7,27 +7,29 @@ local md5 = require('md5')
 local toys = require('default_toys')
 local pre = require('precalc')
 
-example =[[
-    1. script run tnp3sim
-    2. script run tnp3sim -m
-    3. script run tnp3sim -m -i myfile
-]]
-author = "Iceman"
-usage = "script run tnp3sim -h -m -i <filename>"
+copyright = ''
+author = 'Iceman'
+version = 'v1.0.1'
 desc =[[
 This script will try to load a binary datadump of a Mifare TNP3xxx card.
 It vill try to validate all checksums and view some information stored in the dump
 For an experimental mode, it tries to manipulate some data.
 At last it sends all data to the PM3 device memory where it can be used in the command  "hf mf sim"
+]]
+example =[[
+    1. script run tnp3sim
+    2. script run tnp3sim -m
+    3. script run tnp3sim -m -i myfile
+]]
+usage = [[
+script run tnp3sim -h -m -i <filename>
 
 Arguments:
     -h             : this help
     -m             : Maxed out items (experimental)
     -i             : filename for the datadump to read (bin)
+]]
 
-    ]]
-
-local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
 local RANDOM = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 
@@ -42,35 +44,39 @@ local format = string.format
 
 ---
 -- A debug printout-function
-function dbg(args)
+local function dbg(args)
     if not DEBUG then return end
-
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while result[i] do
             dbg(result[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
-function oops(err)
-    print("ERROR: ",err)
-    return nil,err
+local function oops(err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
-function help()
+local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 --
 -- Exit message
-function ExitMsg(msg)
+local function ExitMsg(msg)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
     print(msg)
@@ -78,9 +84,9 @@ function ExitMsg(msg)
 end
 
 local function writedumpfile(infile)
-     t = infile:read("*all")
+     t = infile:read('*all')
      len = string.len(t)
-     local len,hex = bin.unpack(("H%d"):format(len),t)
+     local len,hex = bin.unpack(('H%d'):format(len),t)
      return hex
 end
 -- blocks with data
@@ -238,9 +244,9 @@ local function LoadEmulator(uid, blocks)
             end
         end
         core.clearCommandBuffer()
-        cmd = Command:new{cmd = cmds.CMD_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 16, data = blockdata}
-        local err = core.SendCommand(cmd:getBytes())
-        if err then return err end
+        cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 16, data = blockdata}
+        local err, msg = cmd:sendMIX(true)
+        if err == nil then return err, msg end
     end
     io.write('\n')
 end
@@ -348,30 +354,30 @@ local function main(args)
 
     local result, err, hex
     local maxed = false
-    local inputTemplate = "dumpdata.bin"
-    local outputTemplate = os.date("toydump_%Y-%m-%d_%H%M");
+    local inputTemplate = 'dumpdata.bin'
+    local outputTemplate = os.date('toydump_%Y-%m-%d_%H%M');
 
         -- Arguments for the script
     for o, a in getopt.getopt(args, 'hmi:o:') do
-        if o == "h" then return help() end
-        if o == "m" then maxed = true end
-        if o == "o" then outputTemplate = a end
-        if o == "i" then inputTemplate = a end
+        if o == 'h' then return help() end
+        if o == 'm' then maxed = true end
+        if o == 'o' then outputTemplate = a end
+        if o == 'i' then inputTemplate = a end
     end
 
     -- Turn off Debug
-    local cmdSetDbgOff = "hf mf dbg 0"
+    local cmdSetDbgOff = 'hf mf dbg 0'
     core.console( cmdSetDbgOff)
 
     -- Load dump.bin file
-    print( (' Load data from %s'):format(inputTemplate))
+    print( ('Load data from %s'):format(inputTemplate))
     hex, err = utils.ReadDumpFile(inputTemplate)
     if not hex then return oops(err) end
 
     local blocks = {}
     local blockindex = 0
     for i = 1, #hex, 32 do
-        blocks[blockindex] = hex:sub(i,i+31)
+        blocks[blockindex] = hex:sub(i, i+31)
         blockindex = blockindex + 1
     end
 
@@ -397,8 +403,8 @@ local function main(args)
         print( (' ITEM TYPE : 0x%s 0x%s'):format(toytype, subtype) )
     end
 
-    print( ('       UID : 0x%s'):format(uid) )
-    print( ('    CARDID : 0x%s %s [%s]'):format(
+    print( ('       UID : %s'):format(uid) )
+    print( ('    CARDID : %s %s [%s]'):format(
                                 cardidMsw,cardidLsw,
                                 --Num2Card(cardidMsw, cardidLsw))
                                 '')

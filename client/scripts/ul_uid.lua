@@ -3,7 +3,7 @@ local utils =  require('utils')
 
 copyright = ''
 author = "Iceman"
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 This script tries to set UID on a mifare Ultralight magic card which either
  - answers to chinese backdoor commands
@@ -31,20 +31,21 @@ local bxor = bit32.bxor
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()    
     return nil, err
 end
 ---
@@ -56,6 +57,7 @@ local function help()
     print(desc)
     print('Example usage')
     print(example)
+    print(usage)    
 end
 --
 --- Set UID on magic command enabled
@@ -64,19 +66,19 @@ function magicUID(b0, b1, b2)
     print('Using backdoor Magic tag function')
 
     -- write block 0
-    core.console("hf 14a raw -p -a -b 7 40")
-    core.console("hf 14a raw -p -a 43")
-    core.console("hf 14a raw -c -a A200"..b0)
+    core.console('hf 14a raw -p -a -b 7 40')
+    core.console('hf 14a raw -p -a 43')
+    core.console('hf 14a raw -c -a A200'..b0)
 
     -- write block 1
-    core.console("hf 14a raw -p -a -b 7 40")
-    core.console("hf 14a raw -p -a 43")
-    core.console("hf 14a raw -c -a A201"..b1)
+    core.console('hf 14a raw -p -a -b 7 40')
+    core.console('hf 14a raw -p -a 43')
+    core.console('hf 14a raw -c -a A201'..b1)
 
     -- write block 2
-    core.console("hf 14a raw -p -a -b 7 40")
-    core.console("hf 14a raw -p -a 43")
-    core.console("hf 14a raw -c -a A202"..b2)
+    core.console('hf 14a raw -p -a -b 7 40')
+    core.console('hf 14a raw -p -a 43')
+    core.console('hf 14a raw -c -a A202'..b2)
 end
 --
 --- Set UID on magic but brickable
@@ -84,16 +86,16 @@ function brickableUID(b0, b1, b2)
 
     print('Using BRICKABLE Magic tag function')
 
-    core.console("hf 14a raw -p -s -3")
+    core.console('hf 14a raw -p -s -3')
 
     -- write block 0
-    core.console("hf 14a raw -p -c A200"..b0)
+    core.console('hf 14a raw -p -c A200'..b0)
 
     -- write block 1
-    core.console("hf 14a raw -p -c A201"..b1)
+    core.console('hf 14a raw -p -c A201'..b1)
 
     -- write block 2
-    core.console("hf 14a raw -p -c A202"..b2)
+    core.console('hf 14a raw -p -c A202'..b2)
 end
 ---
 -- The main entry point
@@ -108,9 +110,9 @@ function main(args)
 
     -- Read the parameters
     for o, a in getopt.getopt(args, 'hu:b') do
-        if o == "h" then return help() end
-        if o == "u" then uid = a end
-        if o == "b" then tagtype = 2 end
+        if o == 'h' then return help() end
+        if o == 'u' then uid = a end
+        if o == 'b' then tagtype = 2 end
     end
 
     -- uid string checks
@@ -138,7 +140,7 @@ function main(args)
     end
 
         --halt
-    core.console("hf 14a raw -c -a 5000")
+    core.console('hf 14a raw -c -a 5000')
 end
 
 main(args)
