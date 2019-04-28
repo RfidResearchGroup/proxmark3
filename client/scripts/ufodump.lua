@@ -15,7 +15,7 @@ xor:  the first three block (0,1,2) is not XORED.  The rest seems to be xored.
 example = [[
     -- default
     script run ufodump
-    
+
     -- stop at block 10
     script run ufodump -b 10
 ]]
@@ -48,7 +48,7 @@ end
 local function oops(err)
     print('ERROR:', err)
     core.clearCommandBuffer()
-    return nil, err    
+    return nil, err
 end
 ---
 -- Usage help
@@ -59,7 +59,7 @@ local function help()
     print(desc)
     print('Example usage')
     print(example)
-    print(usage)    
+    print(usage)
 end
 --
 --- Picks out and displays the data read from a tag
@@ -103,7 +103,7 @@ function sendRaw(rawdata, options)
                                 -- of the ASCII-string rawdata
                                 arg2 = string.len(rawdata)/2,
                                 data = rawdata}
-                                
+
     return command:sendMIX(options.ignore_response)
 end
 --

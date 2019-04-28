@@ -293,7 +293,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 break;
             case 'e':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFileEML(filename, "eml", data, &datalen);
+                res = loadFileEML(filename, data, &datalen);
                 if (res > 0 || datalen != maxdatalen) {
                     PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
                     errors = true;
@@ -304,7 +304,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 break;
             case 'j':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFileJSON(filename, "json", data, maxdatalen, &datalen);
+                res = loadFileJSON(filename, data, maxdatalen, &datalen);
                 if (res > 0) {
                     errors = true;
                     break;
@@ -314,7 +314,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 break;
             case 'b':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFile(filename, "bin", data, maxdatalen, &datalen);
+                res = loadFile(filename, ".bin", data, maxdatalen, &datalen);
                 if (res > 0) {
                     errors = true;
                     break;
@@ -579,9 +579,9 @@ static int CmdLFHitagReader(const char *Cmd) {
         fnameptr += sprintf(fnameptr, "lf-hitag-");
         FillFileNameByUID(fnameptr, data, "-dump", 4);
 
-        saveFile(filename, "bin", data, 48);
-        saveFileEML(filename, "eml", data, 48, 4);
-        saveFileJSON(filename, "json", jsfHitag, data, 48);
+        saveFile(filename, ".bin", data, 48);
+        saveFileEML(filename, data, 48, 4);
+        saveFileJSON(filename, jsfHitag, data, 48);
 
         // block3, 1 byte
         printHitagConfiguration(data[4 * 3]);
@@ -607,7 +607,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
             case 'f':
                 //file with all the challenges to try
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFile(filename, "cc", data, 8 * 60, &datalen);
+                res = loadFile(filename, ".cc", data, 8 * 60, &datalen);
                 if (res > 0) {
                     errors = true;
                     break;

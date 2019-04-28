@@ -242,7 +242,7 @@ local function LoadEmulator(uid, blocks)
                 blockdata = AddKey(keys, _, blockdata)
             end
         end
-        
+
         io.write( _..',')
         io.flush()
         core.clearCommandBuffer()

@@ -57,15 +57,49 @@ int fileExists(const char *filename) {
     return result == 0;
 }
 
-int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
+static char *filenamemcopy(const char *preferredName, const char *suffix) {
+    if (preferredName == NULL) return NULL;
+    if (suffix == NULL) return NULL;
+    char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
+    if (fileName == NULL)
+        return NULL;
+    strcpy(fileName, preferredName);
+    if (str_endswith(fileName, suffix))
+        return fileName;
+    strcat(fileName, suffix);
+    return fileName;
+}
+
+static char *newfilenamemcopy(const char *preferredName, const char *suffix) {
+    if (preferredName == NULL) return NULL;
+    if (suffix == NULL) return NULL;
+    char *preferredNameTmp = (char *) calloc(strlen(preferredName) + 1, sizeof(uint8_t));
+    if (preferredNameTmp == NULL)
+        return NULL;
+    strcpy(preferredNameTmp, preferredName);
+    if (str_endswith(preferredNameTmp, suffix))
+        preferredNameTmp[strlen(preferredNameTmp) - strlen(suffix)] = '\0';
+    char *fileName = (char *) calloc(strlen(preferredNameTmp) + strlen(suffix) + 1 + 10, sizeof(uint8_t)); // 10: room for filenum to ensure new filename
+    if (fileName == NULL) {
+        free(preferredNameTmp);
+        return NULL;
+    }
     int num = 1;
-    sprintf(fileName, "%s.%s", preferredName, suffix);
+    sprintf(fileName, "%s%s", preferredNameTmp, suffix);
     while (fileExists(fileName)) {
-        sprintf(fileName, "%s-%d.%s", preferredName, num, suffix);
+        sprintf(fileName, "%s-%d%s", preferredNameTmp, num, suffix);
         num++;
     }
+    free(preferredNameTmp);
+    return fileName;
+}
+
+int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
+
+    if (data == NULL) return 1;
+    char *fileName = newfilenamemcopy(preferredName, suffix);
+    if (fileName == NULL) return 1;
+
     /* We should have a valid filename now, e.g. dumpdata-3.bin */
 
     /*Opening file for writing in binary mode*/
@@ -83,23 +117,15 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     return 0;
 }
 
-int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, size_t datalen, size_t blocksize) {
+int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
     if (data == NULL) return 1;
+    char *fileName = newfilenamemcopy(preferredName, ".eml");
+    if (fileName == NULL) return 1;
 
     int retval = 0;
     int blocks = datalen / blocksize;
     uint16_t currblock = 1;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    int num = 1;
-    sprintf(fileName, "%s.%s", preferredName, suffix);
-    while (fileExists(fileName)) {
-        sprintf(fileName, "%s-%d.%s", preferredName, num, suffix);
-        num++;
-    }
 
     /* We should have a valid filename now, e.g. dumpdata-3.bin */
 
@@ -136,20 +162,13 @@ out:
     return retval;
 }
 
-int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t *data, size_t datalen) {
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
+int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen) {
+
     if (data == NULL) return 1;
+    char *fileName = newfilenamemcopy(preferredName, ".json");
+    if (fileName == NULL) return 1;
 
     int retval = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    int num = 1;
-    sprintf(fileName, "%s.%s", preferredName, suffix);
-    while (fileExists(fileName)) {
-        sprintf(fileName, "%s-%d.%s", preferredName, num, suffix);
-        num++;
-    }
 
     json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
@@ -274,14 +293,11 @@ out:
 
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
     if (data == NULL) return 1;
+    char *fileName = filenamemcopy(preferredName, suffix);
+    if (fileName == NULL) return 1;
 
     int retval = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "rb");
     if (!f) {
@@ -336,17 +352,14 @@ out:
     return retval;
 }
 
-int loadFileEML(const char *preferredName, const char *suffix, void *data, size_t *datalen) {
+int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
     if (data == NULL) return 1;
+    char *fileName = filenamemcopy(preferredName, ".eml");
+    if (fileName == NULL) return 1;
 
     size_t counter = 0;
     int retval = 0, hexlen = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "r");
     if (!f) {
@@ -365,6 +378,8 @@ int loadFileEML(const char *preferredName, const char *suffix, void *data, size_
         memset(line, 0, sizeof(line));
 
         if (fgets(line, sizeof(line), f) == NULL) {
+            if (feof(f))
+                break;
             fclose(f);
             PrintAndLogEx(FAILED, "File reading error.");
             retval = 2;
@@ -391,20 +406,17 @@ out:
     return retval;
 }
 
-int loadFileJSON(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
+int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
     if (data == NULL) return 1;
+    char *fileName = filenamemcopy(preferredName, ".json");
+    if (fileName == NULL) return 1;
 
     *datalen = 0;
     json_t *root;
     json_error_t error;
 
     int retval = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     root = json_load_file(fileName, 0, &error);
     if (!root) {
@@ -500,11 +512,12 @@ out:
     return retval;
 }
 
-int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
+int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
+
     if (data == NULL) return 1;
+    char *fileName = filenamemcopy(preferredName, ".dic");
+    if (fileName == NULL) return 1;
 
     // t5577 == 4bytes
     // mifare == 6 bytes
@@ -521,9 +534,6 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data
 
     size_t counter = 0;
     int retval = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "r");
     if (!f) {

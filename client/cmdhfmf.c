@@ -678,7 +678,7 @@ static uint16_t NumOfBlocks(char card) {
         case '4' :
             return MIFARE_4K_MAXBLOCK;
         default  :
-            return MIFARE_1K_MAXBLOCK;
+            return 0;
     }
 }
 
@@ -693,7 +693,7 @@ static uint8_t NumOfSectors(char card) {
         case '4' :
             return MIFARE_4K_MAXSECTOR;
         default  :
-            return MIFARE_1K_MAXSECTOR;
+            return 0;
     }
 }
 
@@ -748,6 +748,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
             default:
                 if (cmdp == 0) {
                     numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
+                    if (numSectors == 0) return usage_hf14_dump();
                     cmdp++;
                 } else {
                     PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
@@ -904,9 +905,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     uint16_t bytes = 16 * (FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1));
 
-    saveFile(dataFilename, "bin", (uint8_t *)carddata, bytes);
-    saveFileEML(dataFilename, "eml", (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
-    saveFileJSON(dataFilename, "json", jsfCardMemory, (uint8_t *)carddata, bytes);
+    saveFile(dataFilename, ".bin", (uint8_t *)carddata, bytes);
+    saveFileEML(dataFilename, (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
+    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t *)carddata, bytes);
     return 0;
 }
 
@@ -948,6 +949,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             default:
                 if (cmdp == 0) {
                     numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
+                    if (numSectors == 0) return usage_hf14_restore();
                     cmdp++;
                 } else {
                     PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
@@ -1101,6 +1103,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         }
     } else {
         SectorsCnt = NumOfSectors(cmdp);
+        if (SectorsCnt == 0) return usage_hf14_nested();
     }
 
     uint8_t j = 4;
@@ -1803,6 +1806,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     if (param_getchar(Cmd, 0) == '*') {
         blockNo = 3;
         SectorsCnt = NumOfSectors(param_getchar(Cmd + 1, 0));
+        if (SectorsCnt == 0) return usage_hf14_chk();
     } else {
         blockNo = param_get8(Cmd, 0);
     }
@@ -2562,12 +2566,13 @@ int CmdHF14AMfELoad(const char *Cmd) {
     if (numblk2 > 0)
         numBlocks = numblk2;
 
-    param_getstr(Cmd, nameParamNo, filename, sizeof(filename));
+    if (0 == param_getstr(Cmd, nameParamNo, filename, sizeof(filename)))
+        return usage_hf14_eload();
 
     uint8_t *data = calloc(4096, sizeof(uint8_t));
     size_t datalen = 0;
-    //int res = loadFile(filename, "bin", data, maxdatalen, &datalen);
-    int res = loadFileEML(filename, "eml", data, &datalen);
+    //int res = loadFile(filename, ".bin", data, maxdatalen, &datalen);
+    int res = loadFileEML(filename, data, &datalen);
     if (res) {
         free(data);
         return 1;
@@ -2641,7 +2646,12 @@ static int CmdHF14AMfESave(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h') return usage_hf14_esave();
 
-    blocks = NumOfBlocks(c);
+    if (c != 0) {
+        blocks = NumOfBlocks(c);
+        if (blocks == 0) return usage_hf14_esave();
+    } else {
+        blocks = MIFARE_1K_MAXBLOCK;
+    }
     bytes = blocks * MFBLOCK_SIZE;
 
     dump = calloc(bytes, sizeof(uint8_t));
@@ -2667,9 +2677,9 @@ static int CmdHF14AMfESave(const char *Cmd) {
         FillFileNameByUID(fnameptr, dump, "-dump", 4);
     }
 
-    saveFile(filename, "bin", dump, bytes);
-    saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, "json", jsfCardMemory, dump, bytes);
+    saveFile(filename, ".bin", dump, bytes);
+    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
+    saveFileJSON(filename, jsfCardMemory, dump, bytes);
     free(dump);
     return 0;
 }
@@ -2690,7 +2700,12 @@ static int CmdHF14AMfECFill(const char *Cmd) {
         keyType = 1;
 
     c = tolower(param_getchar(Cmd, 1));
-    numSectors = NumOfSectors(c);
+    if (c != 0) {
+        numSectors = NumOfSectors(c);
+        if (numSectors == 0) return usage_hf14_ecfill();
+    } else {
+        numSectors = MIFARE_1K_MAXSECTOR;
+    }
 
     PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType == 0) ? 'A' : 'B');
     clearCommandBuffer();
@@ -2708,7 +2723,12 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     if (c == 'h')
         return usage_hf14_ekeyprn();
 
-    numSectors = NumOfSectors(c);
+    if (c != 0) {
+        numSectors = NumOfSectors(c);
+        if (numSectors == 0) return usage_hf14_ekeyprn();
+    } else {
+        numSectors = MIFARE_1K_MAXSECTOR;
+    }
 
     PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
     PrintAndLogEx(NORMAL, "|sec|key A           |key B           |");
@@ -2861,12 +2881,12 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     size_t datalen = 0;
     int res = 0;
     if (fillFromBin) {
-        res = loadFile(fileName, "bin", data, maxdatalen, &datalen);
+        res = loadFile(fileName, ".bin", data, maxdatalen, &datalen);
     } else {
         if (fillFromJson) {
-            res = loadFileJSON(fileName, "json", data, maxdatalen, &datalen);
+            res = loadFileJSON(fileName, data, maxdatalen, &datalen);
         } else {
-            res = loadFileEML(Cmd, "eml", data, &datalen);
+            res = loadFileEML(Cmd, data, &datalen);
         }
     }
 
@@ -3100,9 +3120,9 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "uploaded %d bytes to emulator memory", bytes);
     }
 
-    saveFile(filename, "bin", dump, bytes);
-    saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, "json", jsfCardMemory, dump, bytes);
+    saveFile(filename, ".bin", dump, bytes);
+    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
+    saveFileJSON(filename, jsfCardMemory, dump, bytes);
     free(dump);
     return 0;
 }

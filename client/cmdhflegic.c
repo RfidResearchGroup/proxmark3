@@ -1199,8 +1199,8 @@ static int CmdLegicESave(const char *Cmd) {
     else
         sprintf(fnameptr + fileNlen, ".bin");
 
-    saveFileEML(filename, "eml", data, numofbytes, 8);
-    saveFile(filename, "bin", data, numofbytes);
+    saveFileEML(filename, data, numofbytes, 8);
+    saveFile(filename, ".bin", data, numofbytes);
     return 0;
 }
 

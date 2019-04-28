@@ -63,7 +63,7 @@ local function getblockdata(response)
     if not response then
         return nil, 'No response from device'
     end
-    
+
     local count, cmd, arg0 = bin.unpack('LL', response)
     if arg0 == 1 then
         local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
@@ -81,7 +81,7 @@ local function readblock( blocknum, keyA )
     return b
 end
 ---
--- decode response and get the blockdata from backdoor magic command 
+-- decode response and get the blockdata from backdoor magic command
 local function readmagicblock( blocknum )
     -- Read block N
     local CSETBLOCK_SINGLE_OPERATION = 0x1F

@@ -80,7 +80,7 @@ local function help()
     print(desc)
     print("Example usage")
     print(example)
-    print(usage)    
+    print(usage)
 end
 ---
 -- Exit message
@@ -261,7 +261,7 @@ local function test(modulation)
                                 , arg2 = block
                                 }
         local response, err = wc:sendMIX(false)
-        if not response then return oops(err) end        
+        if not response then return oops(err) end
 
         -- Detect
         local res, msg = core.t55xx_detect()
@@ -323,7 +323,7 @@ local function main(args)
     end
 
     exitMsg('Tests finished')
-    core.console( 
+    core.console(
             format('rem [SUMMARY] Success rate: %d/%d tests passed%s'
                 , total_pass
                 , total_tests

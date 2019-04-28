@@ -37,6 +37,7 @@
 
 #include <wchar.h>
 #include "at91sam7s512.h"
+#include "usart.h"
 #include "config_gpio.h"
 #include "proxmark3.h" // USB_CONNECT()
 #include "common.h"
