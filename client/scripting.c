@@ -73,33 +73,13 @@ static int l_SendCommandOLD(lua_State *L) {
     }
 
     // parse input
-    // cmd
-    const char *p_cmd = luaL_checklstring(L, 1, &size);
-    if (size != 4)
-        return returnToLuaWithError(L, "Wrong size of cmd, got %d bytes, expected 2", (int) size);
-    sscanf(p_cmd, " %" SCNx64, &cmd);
-
-    // arg0
-    const char *p_arg0 = luaL_checklstring(L, 2, &size);
-    if (size != 16)
-        return returnToLuaWithError(L, "Wrong size of arg0, got %d bytes, expected 16", (int) size);
-    sscanf(p_arg0, " %" SCNx64, &arg0);
-
-    // arg1
-    const char *p_arg1 = luaL_checklstring(L, 3, &size);
-    if (size != 16)
-        return returnToLuaWithError(L, "Wrong size of arg1, got %d bytes, expected 16", (int) size);
-    sscanf(p_arg1, " %" SCNx64, &arg1);
-
-    // arg2
-    const char *p_arg2 = luaL_checklstring(L, 4, &size);
-    if (size != 16)
-        return returnToLuaWithError(L, "Wrong size of arg2, got %d bytes, expected 16", (int) size);
-    sscanf(p_arg2, " %" SCNx64, &arg2);
+    cmd = luaL_checknumber(L, 1);   
+    arg0 = luaL_checknumber(L, 2);
+    arg1 = luaL_checknumber(L, 3);
+    arg2 = luaL_checknumber(L, 4);    
 
     // data
     const char *p_data = luaL_checklstring(L, 5, &size);
-
     if (size) {
         if (size > 1024)
             size = 1024;
@@ -111,8 +91,11 @@ static int l_SendCommandOLD(lua_State *L) {
             len++;
         }
     }
+    
+    printf("Sending old\n");
     SendCommandOLD(cmd, arg0, arg1, arg2, data, len);
-    return 0;
+    lua_pushboolean(L, true);    
+    return 1;
 }
 
 /**
@@ -138,29 +121,10 @@ static int l_SendCommandMIX(lua_State *L) {
         return returnToLuaWithError(L, "You need to supply five parameters");
 
     // parse input
-    // cmd
-    const char *p_cmd = luaL_checklstring(L, 1, &size);
-    if (size != 4)
-        return returnToLuaWithError(L, "Wrong size of cmd, got %d bytes, expected 2", (int) size);
-    sscanf(p_cmd, " %" SCNx64, &cmd);
-
-    // arg0
-    const char *p_arg0 = luaL_checklstring(L, 2, &size);
-    if (size != 16)
-        return returnToLuaWithError(L, "Wrong size of arg0, got %d bytes, expected 16", (int) size);
-    sscanf(p_arg0, " %" SCNx64, &arg0);
-
-    // arg1
-    const char *p_arg1 = luaL_checklstring(L, 3, &size);
-    if (size != 16)
-        return returnToLuaWithError(L, "Wrong size of arg1, got %d bytes, expected 16", (int) size);
-    sscanf(p_arg1, " %" SCNx64, &arg1);
-
-    // arg2
-    const char *p_arg2 = luaL_checklstring(L, 4, &size);
-    if (size != 16)
-        return returnToLuaWithError(L, "Wrong size of arg2, got %d bytes, expected 16", (int) size);
-    sscanf(p_arg2, " %" SCNx64, &arg2);
+    cmd = luaL_checknumber(L, 1);   
+    arg0 = luaL_checknumber(L, 2);
+    arg1 = luaL_checknumber(L, 3);
+    arg2 = luaL_checknumber(L, 4);    
 
     // data
     const char *p_data = luaL_checklstring(L, 5, &size);
@@ -176,8 +140,12 @@ static int l_SendCommandMIX(lua_State *L) {
         }
     }
 
+    printf("Sending MIX\n cmd %016" PRIx64 "\n" , cmd);
+    printf("arg %016" PRIx64 " %016" PRIx64 " %016" PRIx64 "\n", arg0,arg1,arg2);
+    printf("len %d\n", len);
     SendCommandMIX(cmd, arg0, arg1, arg2, data, len);
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 /**
  * @brief The following params expected:
