@@ -392,7 +392,7 @@ void printUSBSpeed(void) {
 
     Dbprintf("  Time elapsed............%dms", end_time - start_time);
     Dbprintf("  Bytes transferred.......%d", bytes_transferred);
-    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / (end_time - start_time));
+    DbprintfEx(FLAG_LOG | FLAG_ANSI, "  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / (end_time - start_time));
 }
 
 /**
