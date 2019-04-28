@@ -97,7 +97,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
 
     // loops every time enter is pressed...
     while (1) {
-
+        bool printprompt = false;
         // this should hook up the PM3 again.
         /*
         if ( IsOffline() ) {
@@ -134,13 +134,13 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
                 strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
                 if ((cmd = strmcopy(script_cmd_buf)) != NULL)
-                    PrintAndLogEx(NORMAL, PROXPROMPT"%s\n", cmd);
+                    printprompt = true;
             }
         } else {
             // If there is a script command
             if (execCommand) {
                 if ((cmd = strmcopy(script_cmd)) != NULL)
-                    PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
+                    printprompt = true;
                 uint16_t len = strlen(script_cmd) + 1;
                 script_cmd += len;
                 if (script_cmd_len == len - 1)
@@ -165,7 +165,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
                     strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
                     if ((cmd = strmcopy(script_cmd_buf)) != NULL)
-                        PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
+                        printprompt = true;
 
                 } else {
                     cmd = readline(PROXPROMPT);
@@ -179,10 +179,20 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
 
             // rtrim
             size_t l = strlen(cmd);
-            if (l > 0 && isspace(cmd[l - 1]))
-                cmd[l - 1] = 0x00;
+            while (l > 0 && isspace(cmd[l - 1])) {
+                cmd[--l] = '\0';
+            }
+            // ltrim
+            size_t off=0;
+            while ((cmd[off] != '\0') && isspace(cmd[off]))
+                off++;
+            for (size_t i=0; i < strlen(cmd) - off; i++)
+                cmd[i] = cmd[i+off];
+            cmd[strlen(cmd) - off] = '\0';
 
-            if (cmd[0] != 0x00) {
+            if (cmd[0] != '\0') {
+                if (printprompt)
+                    PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
                 int ret = CommandReceived(cmd);
                 HIST_ENTRY *entry = history_get(history_length);
                 if ((!entry) || (strcmp(entry->line, cmd) != 0))

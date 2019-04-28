@@ -222,7 +222,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
     switch (d) {
         case DICTIONARY_MIFARE:
             start_index = DEFAULT_MF_KEYS_OFFSET;
-            res = loadFileDICTIONARY(filename, "dic", data + 2, &datalen, 6, &keycount);
+            res = loadFileDICTIONARY(filename, data + 2, &datalen, 6, &keycount);
             if (res || !keycount) {
                 free(data);
                 return PM3_EFILE;
@@ -233,7 +233,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             break;
         case DICTIONARY_T55XX:
             start_index = DEFAULT_T55XX_KEYS_OFFSET;
-            res = loadFileDICTIONARY(filename, "dic", data + 2, &datalen, 4, &keycount);
+            res = loadFileDICTIONARY(filename, data + 2, &datalen, 4, &keycount);
             if (res || !keycount) {
                 free(data);
                 return PM3_EFILE;
@@ -244,7 +244,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             break;
         case DICTIONARY_ICLASS:
             start_index = DEFAULT_ICLASS_KEYS_OFFSET;
-            res = loadFileDICTIONARY(filename, "dic", data + 2, &datalen, 8, &keycount);
+            res = loadFileDICTIONARY(filename, data + 2, &datalen, 8, &keycount);
             if (res || !keycount) {
                 free(data);
                 return PM3_EFILE;
@@ -254,8 +254,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
             datalen += 2;
             break;
         case DICTIONARY_NONE:
-            res = loadFile(filename, "bin", data, FLASH_MEM_MAX_SIZE, &datalen);
-            //int res = loadFileEML( filename, "eml", data, &datalen);
+            res = loadFile(filename, ".bin", data, FLASH_MEM_MAX_SIZE, &datalen);
+            //int res = loadFileEML( filename, data, &datalen);
             if (res) {
                 free(data);
                 return PM3_EFILE;
@@ -367,8 +367,8 @@ static int CmdFlashMemSave(const char *Cmd) {
         return PM3_EFLASH;
     }
 
-    saveFile(filename, "bin", dump, len);
-    saveFileEML(filename, "eml", dump, len, 16);
+    saveFile(filename, ".bin", dump, len);
+    saveFileEML(filename, dump, len, 16);
     free(dump);
     return PM3_SUCCESS;
 }

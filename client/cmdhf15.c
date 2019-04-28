@@ -833,8 +833,8 @@ static int CmdHF15Dump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\n");
 
     size_t datalen = blocknum * 4;
-    saveFileEML(filename, "eml", data, datalen, 4);
-    saveFile(filename, "bin", data, datalen);
+    saveFileEML(filename, data, datalen, 4);
+    saveFile(filename, ".bin", data, datalen);
     return 0;
 }
 
