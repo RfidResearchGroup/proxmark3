@@ -174,7 +174,7 @@ local function main( args)
     local blocks, err = getBlock(0)
     if err then
         close()
-        return oops(err) 
+        return oops(err)
     end
     -- Block 3 contains number of blocks
     local b3chars = {string.byte(blocks[4], 1,4)}

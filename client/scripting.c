@@ -73,10 +73,10 @@ static int l_SendCommandOLD(lua_State *L) {
     }
 
     // parse input
-    cmd = luaL_checknumber(L, 1);   
+    cmd = luaL_checknumber(L, 1);
     arg0 = luaL_checknumber(L, 2);
     arg1 = luaL_checknumber(L, 3);
-    arg2 = luaL_checknumber(L, 4);    
+    arg2 = luaL_checknumber(L, 4);
 
     // data
     const char *p_data = luaL_checklstring(L, 5, &size);
@@ -93,7 +93,7 @@ static int l_SendCommandOLD(lua_State *L) {
     }
 
     SendCommandOLD(cmd, arg0, arg1, arg2, data, len);
-    lua_pushboolean(L, true);    
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -120,10 +120,10 @@ static int l_SendCommandMIX(lua_State *L) {
         return returnToLuaWithError(L, "You need to supply five parameters");
 
     // parse input
-    cmd = luaL_checknumber(L, 1);   
+    cmd = luaL_checknumber(L, 1);
     arg0 = luaL_checknumber(L, 2);
     arg1 = luaL_checknumber(L, 3);
-    arg2 = luaL_checknumber(L, 4);    
+    arg2 = luaL_checknumber(L, 4);
 
     // data
     const char *p_data = luaL_checklstring(L, 5, &size);
@@ -162,7 +162,7 @@ static int l_SendCommandNG(lua_State *L) {
         return returnToLuaWithError(L, "You need to supply two parameters");
 
     // parse input
-    uint64_t cmd = luaL_checknumber(L, 1);   
+    uint64_t cmd = luaL_checknumber(L, 1);
 
     // data
     const char *p_data = luaL_checklstring(L, 2, &size);

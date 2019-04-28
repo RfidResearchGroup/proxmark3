@@ -92,13 +92,13 @@ Command = {
         end
         o.data = data
         return o
-    end,    
+    end,
     parse = function (packet)
             local count, cmd, arg1, arg2, arg3, data = bin.unpack('LLLLH511', packet)
             return Command:new{cmd = cmd, arg1 = arg1, arg2 = arg2, arg3 = arg3, data = data}
-    end    
+    end
 }
--- commented out,  not used.   
+-- commented out,  not used.
 function Command:__tostring()
     local output = ("%s\r\nargs : (%s, %s, %s)\r\ndata:\r\n%s\r\n"):format(
         _commands.tostring(self.cmd),
@@ -128,7 +128,7 @@ function Command:__responsetostring()
                     tostring(self.resp_arg1),
                     tostring(self.resp_arg2),
                     tostring(self.resp_arg3)))
-    print('NG     ::', self.resp_ng)    
+    print('NG     ::', self.resp_ng)
     print('package ::', self.resp_response)
 end
 
@@ -144,10 +144,10 @@ function Command:sendMIX( ignore_response, timeout )
     local data = self.data
     local cmd = self.cmd
     local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
-        
+
     local err, msg = core.SendCommandMIX(cmd, arg1, arg2, arg3, data)
     if err == nil then return err, msg end
-    
+
     if ignore_response then return true, nil end
 
     if timeout == nil then timeout = TIMEOUT end
@@ -156,13 +156,13 @@ function Command:sendMIX( ignore_response, timeout )
     if response == nil then
         return nil, 'Error, waiting for response timed out :: '..msg
     end
-    
-    -- lets digest 
+
+    -- lets digest
     local data
     local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
-    
---[[  uncomment if you want to debug    
+
+--[[  uncomment if you want to debug
     self.resp_cmd = cmd
     self.resp_length = length
     self.resp_magic = magic
@@ -181,20 +181,20 @@ function Command:sendMIX( ignore_response, timeout )
 end
 function Command:sendNG( ignore_response, timeout )
     local data = self.data
-    local cmd = self.cmd       
+    local cmd = self.cmd
     local err, msg = core.SendCommandNG(cmd, data)
     if err == nil then return err, msg end
-    
+
     if ignore_response then return true, nil end
-    
+
     if timeout == nil then timeout = TIMEOUT end
-    
+
     local response, msg = core.WaitForResponseTimeout(cmd, timeout)
     if response == nil then
         return nil, 'Error, waiting for response timed out :: '..msg
     end
-    
-    -- lets digest 
+
+    -- lets digest
     local data
     local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)

@@ -91,7 +91,7 @@ local function getblockdata(response)
     if not response then
         return nil, 'No response from device'
     end
-    
+
     local count, cmd, arg0 = bin.unpack('LL', response)
     if arg0 == 1 then
         local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
@@ -132,7 +132,7 @@ local function main(args)
     local cmdSetDbgOff = "hf mf dbg 0"
     core.console( cmdSetDbgOff)
     utils.Sleep(0.5)
-    
+
     result, err = lib14a.read(false, true)
     if not result then return oops(err) end
 
@@ -170,7 +170,7 @@ local function main(args)
     cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0, data = keyA}
     block0, err = getblockdata(cmd:sendMIX(false))
     if not block0 then return oops(err) end
-    
+
     core.clearCommandBuffer()
 
     -- Read block 1

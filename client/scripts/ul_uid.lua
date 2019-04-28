@@ -57,7 +57,7 @@ local function help()
     print(desc)
     print('Example usage')
     print(example)
-    print(usage)    
+    print(usage)
 end
 --
 --- Set UID on magic command enabled

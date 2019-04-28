@@ -832,8 +832,7 @@ bool str_startswith(const char *s,  const char *pre) {
 bool str_endswith(const char *s,  const char *suffix) {
     size_t ls = strlen(s);
     size_t lsuffix = strlen(suffix);
-    if (ls >= lsuffix)
-    {
+    if (ls >= lsuffix) {
         return strncmp(suffix, s + (ls - lsuffix), lsuffix) == 0;
     }
     return false;

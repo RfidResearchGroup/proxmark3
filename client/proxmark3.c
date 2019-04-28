@@ -183,11 +183,11 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
                 cmd[--l] = '\0';
             }
             // ltrim
-            size_t off=0;
+            size_t off = 0;
             while ((cmd[off] != '\0') && isspace(cmd[off]))
                 off++;
-            for (size_t i=0; i < strlen(cmd) - off; i++)
-                cmd[i] = cmd[i+off];
+            for (size_t i = 0; i < strlen(cmd) - off; i++)
+                cmd[i] = cmd[i + off];
             cmd[strlen(cmd) - off] = '\0';
 
             if (cmd[0] != '\0') {
