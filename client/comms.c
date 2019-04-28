@@ -12,6 +12,9 @@
 #include "comms.h"
 #include "crc16.h"
 
+//#define COMMS_DEBUG
+//#define COMMS_DEBUG_RAW
+
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
 static char *serial_port_name = NULL;
@@ -65,7 +68,10 @@ bool IsOffline() {
 void SendCommand(PacketCommandOLD *c) {
 
 #ifdef COMMS_DEBUG
-    PrintAndLogEx(NORMAL, "Sending %d bytes | cmd %04x\n", sizeof(PacketCommandOLD), c->cmd);
+    PrintAndLogEx(NORMAL, "Sending %d bytes | cmd %04x", sizeof(PacketCommandOLD), c->cmd);
+#endif
+#ifdef COMMS_DEBUG_RAW
+    print_hex_break((uint8_t *)c, sizeof(PacketCommandOLD), 32);
 #endif
 
     if (offline) {
@@ -108,7 +114,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 
 static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool ng) {
 #ifdef COMMS_DEBUG
-    PrintAndLogEx(NORMAL, "Sending %d bytes of payload | cmd %04x\n", len, cmd);
+    PrintAndLogEx(NORMAL, "Sending %d bytes of payload | cmd %04x", len, cmd);
 #endif
 
     if (offline) {
@@ -146,8 +152,11 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         tx_post->crc = COMMANDNG_POSTAMBLE_MAGIC;
     }
 
-
     txBufferNGLen = sizeof(PacketCommandNGPreamble) + len + sizeof(PacketCommandNGPostamble);
+
+#ifdef COMMS_DEBUG_RAW
+    print_hex_break((uint8_t *)&txBufferNG, txBufferNGLen, 32);
+#endif
     txBuffer_pending = true;
 
     // tell communication thread that a new command can be send
@@ -223,6 +232,12 @@ static int getReply(PacketResponseNG *packet) {
 
     //Pick out the next unread command
     memcpy(packet, &rxBuffer[cmd_tail], sizeof(PacketResponseNG));
+#ifdef COMMS_DEBUG
+    PrintAndLogEx(NORMAL, "Receiving");
+#endif
+#ifdef COMMS_DEBUG_RAW
+    print_hex_break((uint8_t *)packet, sizeof(PacketResponseNG), 32);
+#endif
 
     //Increment tail - this is a circular buffer, so modulo buffer size
     cmd_tail = (cmd_tail + 1) % CMD_BUFFER_SIZE;
