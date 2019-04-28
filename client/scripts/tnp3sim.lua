@@ -235,7 +235,6 @@ local function LoadEmulator(uid, blocks)
                 local key = md5.sumhexa(baseStr)
                 local enc = core.aes128_encrypt(key, blockdata)
                 blockdata = utils.ConvertAsciiToHex(enc)
-                io.write( _..',')
             end
         else
             -- add keys if not existing..
@@ -243,6 +242,9 @@ local function LoadEmulator(uid, blocks)
                 blockdata = AddKey(keys, _, blockdata)
             end
         end
+        
+        io.write( _..',')
+        io.flush()
         core.clearCommandBuffer()
         cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 16, data = blockdata}
         local err, msg = cmd:sendMIX(true)
@@ -368,6 +370,7 @@ local function main(args)
     -- Turn off Debug
     local cmdSetDbgOff = 'hf mf dbg 0'
     core.console( cmdSetDbgOff)
+    utils.Sleep(0.5)
 
     -- Load dump.bin file
     print( ('Load data from %s'):format(inputTemplate))

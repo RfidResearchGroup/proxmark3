@@ -3,13 +3,10 @@ local getopt = require('getopt')
 local bin = require('bin')
 local utils = require('utils')
 
-example =[[
-    1. script run test_t55x7_psk
-    2. script run test_t55x7_psk -o
-]]
-author = "Iceman"
-usage = "script run test_t55x7_psk"
-desc =[[
+copyright = ''
+author = 'Iceman'
+version = 'v1.0.1'
+desc = [[
 This script will program a T55x7 TAG with the configuration: block 0x00 data 0x00088040
 The outlined procedure is as following:
 
@@ -30,12 +27,18 @@ Loop OUTER:
             XXXXX8XX = PSK RF/8
 
 In all 12 individual test for the PSK demod
+]]
+example = [[
+    1. script run test_t55x7_psk
+    2. script run test_t55x7_psk -o
+]]
+usage = [[
+script run test_t55x7_psk
 
 Arguments:
     -h             : this help
 ]]
 
-local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
 
 -- --BLOCK 0 = 00 08 80 40 PSK
@@ -53,31 +56,34 @@ local procedurecmds = {
 ---
 -- A debug printout-function
 local function dbg(args)
-    if not DEBUG then
-        return
-    end
-
-    if type(args) == "table" then
+    if not DEBUG then return end
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
 local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 --
 -- Exit message
@@ -91,7 +97,7 @@ end
 local function test(modulation)
     local bitrate
     local clockrate
-    local block = "00"
+    local block = '00'
     for bitrate = 0x0, 0x1d, 0x4 do
 
         for clockrate = 0,8,4 do
@@ -103,16 +109,19 @@ local function test(modulation)
 
                 elseif _ == 1 then
 
-                    dbg("Writing to T55x7 TAG")
+                    dbg('Writing to T55x7 TAG')
 
                     local config = cmd:format(bitrate, modulation, clockrate)
-                    dbg(('lf t55xx write b 0  d %s'):format(config))
+                    dbg(('lf t55xx write b 0 d %s'):format(config))
 
-                    config = tonumber(config,16)
-                    local writecmd = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK,arg1 = config, arg2 = block, arg3 = "00", data = "00"}
-                    local err = core.SendCommand(writecmd:getBytes())
-                    if err then return oops(err) end
-                    local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+                    config = tonumber(config, 16)
+                    local wc = Command:newMIX{
+                                            cmd = cmds.CMD_T55XX_WRITE_BLOCK
+                                            , arg1 = config
+                                            , arg2 = block
+                                            }
+                    local reponse, err = wc:sendMIX(false)
+                    if not response then return oops(err) end
                 else
                     dbg(cmd)
                     core.console( cmd )
@@ -131,7 +140,7 @@ local function main(args)
 
     -- Arguments for the script
     for o, arg in getopt.getopt(args, 'h') do
-        if o == "h" then return help() end
+        if o == 'h' then return help() end
     end
 
     core.clearCommandBuffer()

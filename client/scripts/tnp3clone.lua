@@ -10,6 +10,12 @@ local rsh = bit32.rshift
 local bor = bit32.bor
 local band = bit32.band
 
+copyright = ''
+author = "Iceman"
+version = 'v1.0.1'
+desc =[[
+This script will try making a barebone clone of a tnp3 tag on to a magic generation1 card.
+]]
 example =[[
     script run tnp3clone
     script run tnp3clone -h
@@ -17,10 +23,8 @@ example =[[
     script run tnp3clone -t aa00 -s 0030
 
 ]]
-author = "Iceman"
-usage = "script run tnp3clone -t <toytype> -s <subtype>"
-desc =[[
-This script will try making a barebone clone of a tnp3 tag on to a magic generation1 card.
+usage = [[
+script run tnp3clone -t <toytype> -s <subtype>
 
 Arguments:
     -h             : this help
@@ -36,51 +40,59 @@ Arguments:
     023c - Special
     0020 - Swapforce
 ]]
-
+---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 -- Usage help
 local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
-
-local function waitCmd()
-    local response = core.WaitForResponseTimeout(cmds.CMD_ACK,2000)
-    if response then
-        local count,cmd,arg0 = bin.unpack('LL',response)
-        if(arg0==1) then
-            local count,arg1,arg2,data = bin.unpack('LLH511',response,count)
-            return data:sub(1,32)
-        else
-            return nil, "Couldn't read block."
-        end
+---
+-- decode response and get the blockdata from a normal mifare read command
+local function getblockdata(response)
+    if not response then
+        return nil, 'No response from device'
     end
-    return nil, "No response from device"
+    
+    local count, cmd, arg0 = bin.unpack('LL', response)
+    if arg0 == 1 then
+        local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
+        return data:sub(1, 32)
+    else
+        return nil, "Couldn't read block.. ["..arg0.."]"
+    end
 end
 
 local function readblock( blocknum, keyA )
     -- Read block N
-    cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blocknum, arg2 = 0, arg3 = 0, data = keyA}
-    err = core.SendCommand(cmd:getBytes())
-    if err then return nil, err end
-    local block0, err = waitCmd()
-    if err then return nil, err end
-    return block0
+    local c = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = blocknum, data = keyA}
+    local b, err = getblockdata(c:sendMIX())
+    if not b then return oops(err) end
+    return b
 end
-
+---
+-- decode response and get the blockdata from backdoor magic command 
 local function readmagicblock( blocknum )
     -- Read block N
     local CSETBLOCK_SINGLE_OPERATION = 0x1F
-    cmd = Command:new{cmd = cmds.CMD_MIFARE_CGETBLOCK, arg1 = CSETBLOCK_SINGLE_OPERATION, arg2 = 0, arg3 = blocknum}
-    err = core.SendCommand(cmd:getBytes())
-    if err then return nil, err end
-    local block0, err = waitCmd()
-    if err then return nil, err end
-    return block0
+    local c = Command:newMIX{
+                    cmd = cmds.CMD_MIFARE_CGETBLOCK
+                    , arg1 = CSETBLOCK_SINGLE_OPERATION
+                    , arg3 = blocknum
+                    }
+    local b, err = getblockdata(c:sendMIX())
+    if not b then return oops(err) end
+    return b
 end
 
 local function main(args)
@@ -103,10 +115,10 @@ local function main(args)
 
     -- Arguments for the script
     for o, a in getopt.getopt(args, 'ht:s:l') do
-        if o == "h" then return help() end
-        if o == "t" then toytype = a end
-        if o == "s" then subtype = a end
-        if o == "l" then return toys.List() end
+        if o == 'h' then return help() end
+        if o == 't' then toytype = a end
+        if o == 's' then subtype = a end
+        if o == 'l' then return toys.List() end
     end
 
     if #toytype ~= 4 then return oops('[!] Wrong size - toytype. (4hex symbols)') end
@@ -115,7 +127,7 @@ local function main(args)
     -- look up type, find & validate types
     local item = toys.Find( toytype, subtype)
     if item then
-        print( ('[+] Looking up input: Found %s - %s (%s)'):format(item[6],item[5], item[4]) )
+        print( ('[+] Looking up input: Found %s - %s (%s)'):format(item[6], item[5], item[4]) )
     else
         print('[-] Didn\'t find item type. If you are sure about it, post on forum')
     end

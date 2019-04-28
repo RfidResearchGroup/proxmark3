@@ -3,12 +3,10 @@ local getopt = require('getopt')
 local bin = require('bin')
 local utils = require('utils')
 
-example =[[
-    1. script run test_t55x7_bi
-]]
-author = "Iceman"
-usage = "script run test_t55x7_bi"
-desc =[[
+copyright = ''
+author = 'Iceman'
+version = 'v1.0.1'
+desc = [[
 This script will program a T55x7 TAG with the configuration: block 0x00 data 0x00010040
 The outlined procedure is as following:
 
@@ -32,12 +30,17 @@ Loop:
 
 
 testsuit for the BIPHASE demod
+]]
+example = [[
+    1. script run test_t55x7_bi
+]]
+usage = [[
+script run test_t55x7_bi
 
 Arguments:
     -h             : this help
 ]]
 
-local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
 
 --BLOCK 0 = 00010040 BIPHASE
@@ -52,31 +55,34 @@ local procedurecmds = {
 ---
 -- A debug printout-function
 local function dbg(args)
-    if not DEBUG then
-        return
-    end
-
-    if type(args) == "table" then
+    if not DEBUG then return end
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
 local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 --
 -- Exit message
@@ -89,7 +95,7 @@ end
 
 local function test()
     local y
-    local block = "00"
+    local block = '00'
     for y = 1, 0x1D, 4 do
         for _ = 1, #procedurecmds do
             local pcmd = procedurecmds[_]
@@ -101,11 +107,14 @@ local function test()
                 local config = pcmd:format(config1, y, config2)
                 dbg(('lf t55xx write b 0 d %s'):format(config))
 
-                config = tonumber(config,16)
-                local writecmd = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK,arg1 = config, arg2 = block, arg3 = "00", data = "00"}
-                local err = core.SendCommand(writecmd:getBytes())
-                if err then return oops(err) end
-                local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+                config = tonumber(config, 16)
+                local wc = Command:newMIX{
+                                        cmd = cmds.CMD_T55XX_WRITE_BLOCK
+                                        , arg1 = config
+                                        , arg2 = block
+                                        }
+                local reponse, err = wc:sendMIX(false)
+                if not response then return oops(err) end
             else
                 dbg(pcmd)
                 core.console( pcmd )
@@ -124,7 +133,7 @@ local function main(args)
 
     -- Arguments for the script
     for o, arg in getopt.getopt(args, 'h') do
-        if o == "h" then return help() end
+        if o == 'h' then return help() end
     end
 
     core.clearCommandBuffer()

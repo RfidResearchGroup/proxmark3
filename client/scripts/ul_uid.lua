@@ -45,7 +45,7 @@ end
 -- This is only meant to be used when errors occur
 local function oops(err)
     print('ERROR:', err)
-    core.clearCommandBuffer()    
+    core.clearCommandBuffer()
     return nil, err
 end
 ---

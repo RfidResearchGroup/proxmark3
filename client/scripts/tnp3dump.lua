@@ -131,7 +131,8 @@ local function main(args)
     -- Turn off Debug
     local cmdSetDbgOff = "hf mf dbg 0"
     core.console( cmdSetDbgOff)
-
+    utils.Sleep(0.5)
+    
     result, err = lib14a.read(false, true)
     if not result then return oops(err) end
 
@@ -166,7 +167,7 @@ local function main(args)
     local block0, block1
     -- Read block 0
     dbg('Reading block 0')
-    cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, data = keyA}
+    cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0, data = keyA}
     block0, err = getblockdata(cmd:sendMIX(false))
     if not block0 then return oops(err) end
     
