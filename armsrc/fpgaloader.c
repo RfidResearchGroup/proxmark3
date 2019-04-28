@@ -483,7 +483,7 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 }
 
 void Fpga_print_status(void) {
-    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Currently loaded FPGA image"));
+    DbpStringEx(FLAG_LOG | FLAG_ANSI, _BLUE_("Currently loaded FPGA image"));
     Dbprintf("  mode....................%s", fpga_version_information[downloaded_bitstream - 1]);
 }
 

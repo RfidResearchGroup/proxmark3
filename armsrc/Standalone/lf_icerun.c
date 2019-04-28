@@ -30,8 +30,8 @@ void RunMod() {
         int button_pressed = BUTTON_HELD(1000);
 
         Dbprintf("button %d", button_pressed);
-        
-        if ( button_pressed )
+
+        if (button_pressed)
             break;
     }
 

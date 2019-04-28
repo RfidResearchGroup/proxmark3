@@ -371,7 +371,7 @@ void SendVersion(void) {
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 void printUSBSpeed(void) {
-    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Transfer Speed"));
+    DbpStringEx(FLAG_LOG | FLAG_ANSI, _BLUE_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
 #define USB_SPEED_TEST_MIN_TIME 1500 // in milliseconds
@@ -412,12 +412,12 @@ void SendStatus(void) {
     printT55xxConfig(); // LF T55XX Config
 #endif
     printUSBSpeed();
-    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Various"));
+    DbpStringEx(FLAG_LOG | FLAG_ANSI, _BLUE_("Various"));
     Dbprintf("  MF_DBGLEVEL.............%d", MF_DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
-    DbpStringEx(FLAG_LOG|FLAG_ANSI, _BLUE_("Installed StandAlone Mode"));
+    DbpStringEx(FLAG_LOG | FLAG_ANSI, _BLUE_("Installed StandAlone Mode"));
     ModInfo();
 
     //DbpString("Running ");
@@ -425,7 +425,7 @@ void SendStatus(void) {
     //Dbprintf("  Is Device attached to FPC| %s", send_using_0 ? "Yes" : "No");
     //Dbprintf("  Is USB_reconnect value   | %d", GetUSBreconnect() );
     //Dbprintf("  Is USB_configured value  | %d", GetUSBconfigured() );
-    
+
     reply_old(CMD_ACK, 1, 0, 0, 0, 0);
 }
 
@@ -501,22 +501,22 @@ void ListenReaderField(int limit) {
     }
 
     if (limit == HF_ONLY) {
-        
-    hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
 
-    // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-    // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
+
+        // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
+        // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
         use_high = (((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE - 300);
-    if (use_high) {
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
-    }
+        if (use_high) {
+            hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
+        }
 
         Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
         hf_baseline = hf_av;
     }
 
     for (;;) {
-        
+
         // Switch modes with button
         if (BUTTON_PRESS()) {
             SpinDelay(500);
@@ -528,7 +528,7 @@ void ListenReaderField(int limit) {
                 case 2:
                 default:
                     DbpString("Stopped");
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);                    
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     LEDsoff();
                     return;
             }
@@ -588,13 +588,13 @@ void ListenReaderField(int limit) {
                     display_max = lf_max;
                 }
             }
-            
-            display_val = display_val * (4*LIGHT_LEVELS) / MAX(1,display_max);
-            uint32_t duty_a = MIN(MAX(display_val, 0*LIGHT_LEVELS), 1*LIGHT_LEVELS) - 0*LIGHT_LEVELS;
-            uint32_t duty_b = MIN(MAX(display_val, 1*LIGHT_LEVELS), 2*LIGHT_LEVELS) - 1*LIGHT_LEVELS;
-            uint32_t duty_c = MIN(MAX(display_val, 2*LIGHT_LEVELS), 3*LIGHT_LEVELS) - 2*LIGHT_LEVELS;
-            uint32_t duty_d = MIN(MAX(display_val, 3*LIGHT_LEVELS), 4*LIGHT_LEVELS) - 3*LIGHT_LEVELS;
-            
+
+            display_val = display_val * (4 * LIGHT_LEVELS) / MAX(1, display_max);
+            uint32_t duty_a = MIN(MAX(display_val, 0 * LIGHT_LEVELS), 1 * LIGHT_LEVELS) - 0 * LIGHT_LEVELS;
+            uint32_t duty_b = MIN(MAX(display_val, 1 * LIGHT_LEVELS), 2 * LIGHT_LEVELS) - 1 * LIGHT_LEVELS;
+            uint32_t duty_c = MIN(MAX(display_val, 2 * LIGHT_LEVELS), 3 * LIGHT_LEVELS) - 2 * LIGHT_LEVELS;
+            uint32_t duty_d = MIN(MAX(display_val, 3 * LIGHT_LEVELS), 4 * LIGHT_LEVELS) - 3 * LIGHT_LEVELS;
+
             // LED A
             if (duty_a == 0) {
                 LED_A_OFF();
@@ -607,7 +607,7 @@ void ListenReaderField(int limit) {
                 SpinDelay(LIGHT_LEVELS - duty_a);
             }
 
-            // LED B            
+            // LED B
             if (duty_b == 0) {
                 LED_B_OFF();
             } else if (duty_b == LIGHT_LEVELS) {
