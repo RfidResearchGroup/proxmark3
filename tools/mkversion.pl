@@ -14,7 +14,7 @@ $ENV{'LC_ALL'} = "C";
 $ENV{'LANG'} = "C";
 
 # if you are making your own fork,  change this line to reflect your fork-name
-my $fullgitinfo = 'RRG';
+my $fullgitinfo = 'RRG/Iceman';
 my $ctime;
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 my $clean = 2;
