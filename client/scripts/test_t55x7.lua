@@ -3,12 +3,12 @@ local getopt = require('getopt')
 local bin = require('bin')
 local utils = require('utils')
 
-local format=string.format
-local floor=math.floor
+local format = string.format
+local floor = math.floor
 
 copyright = ''
 author = "Iceman"
-version  = ''
+version  = 'v1.0.1'
 desc =[[
 This script will program a T55x7 TAG with a configuration and four blocks of data.
 It will then try to detect and read back those block data and compare if read data matches the expected data.
@@ -39,7 +39,6 @@ Arguments:
     -h       this help
 ]]
 
-local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = false -- the debug flag
 local total_tests = 0
 local total_pass = 0
@@ -54,24 +53,23 @@ local data_blocks_cmds = {
 ---
 -- A debug printout-function
 local function dbg(args)
-    if not DEBUG then
-        return
-    end
-
-    if type(args) == "table" then
+    if not DEBUG then return end
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
@@ -82,6 +80,7 @@ local function help()
     print(desc)
     print("Example usage")
     print(example)
+    print(usage)    
 end
 ---
 -- Exit message
@@ -210,10 +209,10 @@ local function WipeCard()
     local res, msg = core.t55xx_detect()
     if not res then
         oops("Can't detect modulation. Test failed.")
-        core.console("rem [ERR:DETECT:WIPED] Failed to detect after wipe")
+        core.console('rem [ERR:DETECT:WIPED] Failed to detect after wipe')
         return false
     else
-        local wipe_data_cmd = "lf t55xx write b %s d %s"
+        local wipe_data_cmd = 'lf t55xx write b %s d %s'
         for _ = 1, #data_blocks_cmds do
             local val = data_blocks_cmds[_]
             local c = string.format(wipe_data_cmd, _, val)
@@ -227,9 +226,9 @@ end
 local function CheckReadBlock(block)
     local data, msg
     -- blockno, page1, override, pwd
-    data, msg = core.t55xx_readblock(block, "0", "0", "")
+    data, msg = core.t55xx_readblock(block, '0', '0', '')
     if not data then
-        return ""
+        return ''
     end
     return ('%08X'):format(data)
 end
@@ -238,7 +237,7 @@ local function test(modulation)
 
     local process_block0_cmds = {}
     local y
-    local block = "00"
+    local block = '00'
 
     local s = ('Start test of %s'):format(modulation)
     print(s)
@@ -256,16 +255,19 @@ local function test(modulation)
         -- Write Config block
         dbg(('lf t55xx write b 0 d %s'):format(p_config_cmd))
         local config = tonumber(p_config_cmd, 16)
-        local writecmd = Command:new{cmd = cmds.CMD_T55XX_WRITE_BLOCK,arg1 = config, arg2 = block, arg3 = '00', data = '00'}
-        local err = core.SendCommand(writecmd:getBytes())
-        if err then return oops(err) end
-        local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
+        local wc = Command:newMIX{
+                                cmd = cmds.CMD_T55XX_WRITE_BLOCK
+                                , arg1 = config
+                                , arg2 = block
+                                }
+        local response, err = wc:sendMIX(false)
+        if not response then return oops(err) end        
 
         -- Detect
         local res, msg = core.t55xx_detect()
         if not res then
             print("can't detect modulation, skip to next config")
-            core.console(format("rem [ERR:DETECT:%s] Failed to detect modulation", p_config_cmd))
+            core.console(format('rem [ERR:DETECT:%s] Failed to detect modulation', p_config_cmd))
             core.console(format('rem [SUMMARY:%s] FAIL detection', p_config_cmd))
             total_tests = total_tests + #data_blocks_cmds
         else
@@ -299,7 +301,7 @@ local function main(args)
 
     -- Arguments for the script
     for o, arg in getopt.getopt(args, 'h') do
-        if o == "h" then return help() end
+        if o == 'h' then return help() end
     end
 
     core.clearCommandBuffer()
@@ -321,7 +323,12 @@ local function main(args)
     end
 
     exitMsg('Tests finished')
-    core.console( format('rem [SUMMARY] Success rate: %d/%d tests passed%s', total_pass, total_tests, total_pass < total_tests and ", help me improving that number!" or " \\o/"))
-
+    core.console( 
+            format('rem [SUMMARY] Success rate: %d/%d tests passed%s'
+                , total_pass
+                , total_tests
+                , total_pass < total_tests and ', help me improving that number!' or ' \\o/'
+           )
+    )
 end
 main(args)
