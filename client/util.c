@@ -891,8 +891,21 @@ void str_lower(char *s) {
     for (size_t i = 0; i < strlen(s); i++)
         s[i] = tolower(s[i]);
 }
+
+// check for prefix in string
 bool str_startswith(const char *s,  const char *pre) {
     return strncmp(pre, s, strlen(pre)) == 0;
+}
+
+// check for suffix in string
+bool str_endswith(const char *s,  const char *suffix) {
+    size_t ls = strlen(s);
+    size_t lsuffix = strlen(suffix);
+    if (ls >= lsuffix)
+    {
+        return strncmp(suffix, s + (ls - lsuffix), lsuffix) == 0;
+    }
+    return false;
 }
 
 // Replace unprintable characters with a dot in char buffer
@@ -917,11 +930,24 @@ void strcreplace(char *buf, size_t len, char from, char to) {
     }
 }
 
-char *strmcopy(char *buf) {
+char *strmcopy(const char *buf) {
     char *str = (char *) calloc(strlen(buf) + 1, sizeof(uint8_t));
     if (str != NULL) {
         memset(str, 0, strlen(buf) + 1);
         strcpy(str, buf);
     }
     return str;
+}
+
+char *filenamemcopy(const char *preferredName, const char *suffix) {
+    if (preferredName == NULL) return NULL;
+    if (suffix == NULL) return NULL;
+    char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
+    if (fileName == NULL)
+        return NULL;
+    strcpy(fileName, preferredName);
+    if (str_endswith(fileName, suffix))
+        return fileName;
+    strcat(fileName, suffix);
+    return fileName;
 }

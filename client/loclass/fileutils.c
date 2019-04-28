@@ -274,14 +274,11 @@ out:
 
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
     if (data == NULL) return 1;
+    char *fileName = filenamemcopy(preferredName, suffix);
+    if (fileName == NULL) return 1;
 
     int retval = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "rb");
     if (!f) {
@@ -336,17 +333,14 @@ out:
     return retval;
 }
 
-int loadFileEML(const char *preferredName, const char *suffix, void *data, size_t *datalen) {
+int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
     if (data == NULL) return 1;
+    char *fileName = filenamemcopy(preferredName, ".eml");
+    if (fileName == NULL) return 1;
 
     size_t counter = 0;
     int retval = 0, hexlen = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "r");
     if (!f) {
@@ -393,20 +387,17 @@ out:
     return retval;
 }
 
-int loadFileJSON(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
+int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
     if (data == NULL) return 1;
+    char *fileName = filenamemcopy(preferredName, ".json");
+    if (fileName == NULL) return 1;
 
     *datalen = 0;
     json_t *root;
     json_error_t error;
 
     int retval = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     root = json_load_file(fileName, 0, &error);
     if (!root) {
@@ -502,11 +493,12 @@ out:
     return retval;
 }
 
-int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
+int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
 
-    if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
+
     if (data == NULL) return 1;
+    char *fileName = filenamemcopy(preferredName, ".dic");
+    if (fileName == NULL) return 1;
 
     // t5577 == 4bytes
     // mifare == 6 bytes
@@ -523,9 +515,6 @@ int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data
 
     size_t counter = 0;
     int retval = 0;
-    int size = sizeof(char) * (strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s.%s", preferredName, suffix);
 
     FILE *f = fopen(fileName, "r");
     if (!f) {

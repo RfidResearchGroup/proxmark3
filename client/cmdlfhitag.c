@@ -295,7 +295,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 break;
             case 'e':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFileEML(filename, "eml", data, &datalen);
+                res = loadFileEML(filename, data, &datalen);
                 if (res > 0 || datalen != maxdatalen) {
                     PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
                     errors = true;
@@ -306,7 +306,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 break;
             case 'j':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFileJSON(filename, "json", data, maxdatalen, &datalen);
+                res = loadFileJSON(filename, data, maxdatalen, &datalen);
                 if (res > 0) {
                     errors = true;
                     break;
@@ -316,7 +316,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 break;
             case 'b':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFile(filename, "bin", data, maxdatalen, &datalen);
+                res = loadFile(filename, ".bin", data, maxdatalen, &datalen);
                 if (res > 0) {
                     errors = true;
                     break;
@@ -611,7 +611,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
                 return usage_hitag_checkchallenges();
             case 'f':
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                res = loadFile(filename, "cc", data, 8 * 60, &datalen);
+                res = loadFile(filename, ".cc", data, 8 * 60, &datalen);
                 if (res > 0) {
                     errors = true;
                     break;

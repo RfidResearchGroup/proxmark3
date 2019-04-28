@@ -1906,7 +1906,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return 1;
         }
 
-        int res = loadFileDICTIONARY(filename, "dic", keyBlock, &datalen, 4, &keycount);
+        int res = loadFileDICTIONARY(filename, keyBlock, &datalen, 4, &keycount);
         if (res || keycount == 0) {
             PrintAndLogEx(WARNING, "No keys found in file");
             free(keyBlock);

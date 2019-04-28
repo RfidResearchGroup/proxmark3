@@ -110,7 +110,7 @@ int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType fty
  * E.g. dumpdata-15.bin
  *
  * @param preferredName
- * @param suffix the file suffix. Leave out the ".".
+ * @param suffix the file suffix. Including the ".".
  * @param data The data array to store the loaded bytes from file
  * @param maxdatalen the number of bytes that your data array has
  * @param datalen the number of bytes loaded from file
@@ -123,25 +123,23 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
  * E.g. dumpdata-15.txt
  *
  * @param preferredName
- * @param suffix the file suffix. Leave out the ".".
  * @param data The data array to store the loaded bytes from file
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-int loadFileEML(const char *preferredName, const char *suffix, void *data, size_t *datalen);
+int loadFileEML(const char *preferredName, void *data, size_t *datalen);
 
 /**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.
  * E.g. dumpdata-15.json
  *
  * @param preferredName
- * @param suffix the file suffix. Leave out the ".".
  * @param data The data array to store the loaded bytes from file
  * @param maxdatalen maximum size of data array in bytes
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-int loadFileJSON(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
+int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen);
 
 
 /**
@@ -149,14 +147,13 @@ int loadFileJSON(const char *preferredName, const char *suffix, void *data, size
  * E.g. default_keys.dic
  *
  * @param preferredName
- * @param suffix the file suffix. Leave out the ".".
  * @param data The data array to store the loaded bytes from file
  * @param maxdatalen maximum size of data array in bytes
  * @param datalen the number of bytes loaded from file
  * @param keylen  the number of bytes a key per row is
  * @return 0 for ok, 1 for failz
 */
-int loadFileDICTIONARY(const char *preferredName, const char *suffix, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
+int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
 
 /**
  * @brief  Utility function to check and convert old mfu dump format to new
