@@ -91,8 +91,7 @@ static int l_SendCommandOLD(lua_State *L) {
             len++;
         }
     }
-    
-    printf("Sending old\n");
+
     SendCommandOLD(cmd, arg0, arg1, arg2, data, len);
     lua_pushboolean(L, true);    
     return 1;
@@ -140,13 +139,51 @@ static int l_SendCommandMIX(lua_State *L) {
         }
     }
 
-    printf("Sending MIX\n cmd %016" PRIx64 "\n" , cmd);
-    printf("arg %016" PRIx64 " %016" PRIx64 " %016" PRIx64 "\n", arg0,arg1,arg2);
-    printf("len %d\n", len);
     SendCommandMIX(cmd, arg0, arg1, arg2, data, len);
     lua_pushboolean(L, true);
     return 1;
 }
+/**
+ * The following params expected:
+ * @brief l_SendCommandMIX
+ * @param L - a lua string with the following two params.
+ * @param cmd  must be hexstring, max u64
+ * @param data  must be hexstring less than 1024 chars(512bytes)
+ * @return
+ */
+static int l_SendCommandNG(lua_State *L) {
+
+    uint8_t data[USB_CMD_DATA_SIZE] = {0};
+    size_t len = 0, size;
+
+    // check number of arguments
+    int n = lua_gettop(L);
+    if (n != 2)
+        return returnToLuaWithError(L, "You need to supply two parameters");
+
+    // parse input
+    uint64_t cmd = luaL_checknumber(L, 1);   
+
+    // data
+    const char *p_data = luaL_checklstring(L, 2, &size);
+    if (size) {
+        if (size > 1024)
+            size = 1024;
+
+        uint32_t tmp;
+        for (int i = 0; i < size; i += 2) {
+            sscanf(&p_data[i], "%02x", &tmp);
+            data[i >> 1] = tmp & 0xFF;
+            len++;
+        }
+    }
+
+    SendCommandNG(cmd, data, len);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+
 /**
  * @brief The following params expected:
  * uint8_t *dest
@@ -942,6 +979,7 @@ int set_pm3_libraries(lua_State *L) {
         {"SendCommand",                 l_SendCommand},
         {"SendCommandOLD",              l_SendCommandOLD},
         {"SendCommandMIX",              l_SendCommandMIX},
+        {"SendCommandNG",               l_SendCommandNG},
         {"GetFromBigBuf",               l_GetFromBigBuf},
         {"GetFromFlashMem",             l_GetFromFlashMem},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
