@@ -683,7 +683,7 @@ static uint16_t NumOfBlocks(char card) {
         case '4' :
             return MIFARE_4K_MAXBLOCK;
         default  :
-            return MIFARE_1K_MAXBLOCK;
+            return 0;
     }
 }
 
@@ -698,7 +698,7 @@ static uint8_t NumOfSectors(char card) {
         case '4' :
             return MIFARE_4K_MAXSECTOR;
         default  :
-            return MIFARE_1K_MAXSECTOR;
+            return 0;
     }
 }
 
@@ -753,6 +753,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
             default:
                 if (cmdp == 0) {
                     numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
+                    if (numSectors == 0) return usage_hf14_dump();
                     cmdp++;
                 } else {
                     PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
@@ -961,6 +962,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             default:
                 if (cmdp == 0) {
                     numSectors = NumOfSectors(param_getchar(Cmd, cmdp));
+                    if (numSectors == 0) return usage_hf14_restore();
                     cmdp++;
                 } else {
                     PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
@@ -1114,6 +1116,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         }
     } else {
         SectorsCnt = NumOfSectors(cmdp);
+        if (SectorsCnt == 0) return usage_hf14_nested();
     }
 
     uint8_t j = 4;
@@ -1816,6 +1819,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     if (param_getchar(Cmd, 0) == '*') {
         blockNo = 3;
         SectorsCnt = NumOfSectors(param_getchar(Cmd + 1, 0));
+        if (SectorsCnt == 0) return usage_hf14_chk();
     } else {
         blockNo = param_get8(Cmd, 0);
     }
@@ -2659,7 +2663,12 @@ static int CmdHF14AMfESave(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h') return usage_hf14_esave();
 
-    blocks = NumOfBlocks(c);
+    if (c != 0) {
+        blocks = NumOfBlocks(c);
+        if (blocks == 0) return usage_hf14_esave();
+    } else {
+        blocks = MIFARE_1K_MAXBLOCK;
+    }
     bytes = blocks * MFBLOCK_SIZE;
 
     dump = calloc(bytes, sizeof(uint8_t));
@@ -2708,7 +2717,12 @@ static int CmdHF14AMfECFill(const char *Cmd) {
         keyType = 1;
 
     c = tolower(param_getchar(Cmd, 1));
-    numSectors = NumOfSectors(c);
+    if (c != 0) {
+        numSectors = NumOfSectors(c);
+        if (numSectors == 0) return usage_hf14_ecfill();
+    } else {
+        numSectors = MIFARE_1K_MAXSECTOR;
+    }
 
     PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType == 0) ? 'A' : 'B');
     UsbCommand cmd = {CMD_MIFARE_EML_CARDLOAD, {numSectors, keyType, 0}, {{0}}};
@@ -2727,7 +2741,12 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     if (c == 'h')
         return usage_hf14_ekeyprn();
 
-    numSectors = NumOfSectors(c);
+    if (c != 0) {
+        numSectors = NumOfSectors(c);
+        if (numSectors == 0) return usage_hf14_ekeyprn();
+    } else {
+        numSectors = MIFARE_1K_MAXSECTOR;
+    }
 
     PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
     PrintAndLogEx(NORMAL, "|sec|key A           |key B           |");
