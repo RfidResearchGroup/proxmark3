@@ -115,7 +115,7 @@ local function test(modulation)
                                         , arg1 = config
                                         , arg2 = block
                                         }
-                local reponse, err = wc:sendMIX(false)
+                local response, err = wc:sendMIX(false)
                 if not response then return oops(err) end
             else
                 dbg(pcmd)
