@@ -77,15 +77,14 @@ end
 local function getblockdata(response)
     if not response then
         return nil, 'No response from device'
-end
+    end
     
-    local count, cmd, arg0 = bin.unpack('LL', response)
+    local count, cmd, arg0, arg1, arg2, data = bin.unpack('LLLLH40', response)
     if arg0 == 1 then
-        local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
         return data:sub(1, 32)
-    else
-        return nil, "Couldn't read block"
-end
+    end
+
+    return nil, "Couldn't read block"
 end
 ---_ Gets data from a block
 -- @return {block, block+1, block+2, block+3} if successfull

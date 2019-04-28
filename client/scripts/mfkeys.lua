@@ -8,26 +8,22 @@
 
     Copyright (C) 2013 m h swende <martin at swende.se>
 --]]
--- Loads the commands-library
 local cmds = require('commands')
--- Load the default keys
 local keylist = require('mf_default_keys')
--- Ability to read what card is there
 local lib14a = require('read14a')
 local getopt = require('getopt')
--- Asks the user for input
 local utils = require('utils')
 
-example =[[
-     script run mfkeys
-]]
+copyright = ''
 author = "Holiman"
-usage = "script run mfkeys"
+version = 'v1.0.1'
 desc = ("This script implements Mifare check keys.\
 It utilises a large list of default keys (currently %d keys).\
-If you want to add more, just put them inside /lualibs/mf_default_keys.lua\n"):format(#keylist) ..
-[[
-
+If you want to add more, just put them inside /lualibs/mf_default_keys.lua\n"):format(#keylist)
+example = [[
+    1. script run mfkeys
+]]
+usage = [[
 Arguments:
     -h             : this help
     -p             : print keys
@@ -37,36 +33,36 @@ local TIMEOUT = 10000 -- 10 seconds
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print('ERROR: ',err)
-    return nil,err
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
 local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 --
 -- waits for answer from pm3 device
-local function checkCommand(command)
-    core.clearCommandBuffer()
-    local usb = command:getBytes()
-    core.SendCommand(usb)
-    local result = core.WaitForResponseTimeout(cmds.CMD_ACK, TIMEOUT)
-    if result then
-        local count, cmd, arg0 = bin.unpack('LL',result)
-        if(arg0==1) then
-            local count, arg1, arg2, data = bin.unpack('LLH511',result,count)
-            key = data:sub(1,12)
-            return key
-        else
-            return nil
-        end
-    else
+local function checkCommand(response)
+    if not response then
         print("Timeout while waiting for response. Increase TIMEOUT in mfkeys.lua to wait longer")
         return nil, "Timeout while waiting for device to respond"
     end
+   
+    local count, cmd, arg0, arg1, arg2, data = bin.unpack('LLLLH40',result)    
+    if arg0 == 1 then
+        key = data:sub(1, 12)
+        return key
+    end
+    
+    return nil
 end
 
 local function checkBlock(blockno, testkeys, keytype)
@@ -85,13 +81,15 @@ local function checkBlock(blockno, testkeys, keytype)
 
         local d1 = table.concat(testkeys, "", start, n)
 
+        core.clearCommandBuffer() 
+        
         print(("Testing block %d, keytype %d, with %d keys"):format(blockno, keytype, chunksize))
-        local command = Command:new{cmd = cmds.CMD_MIFARE_CHKKEYS,
+        local c = Command:newMIX{cmd = cmds.CMD_MIFARE_CHKKEYS,
                                 arg1 =  arg1,
-                                arg2 = 0,
                                 arg3 = chunksize,
                                 data = d1}
-        local status = checkCommand(command)
+        status, err = checkCommand(cmd:sendMIX(false, TIMEOUT))
+
         if status then return status, blockno end
         start = start + chunksize
         remaining = remaining - chunksize
@@ -101,7 +99,7 @@ local function checkBlock(blockno, testkeys, keytype)
     end
     return nil
 end
-
+---
 -- A function to display the results
 local function display_results(keys)
     local sector, keyA, keyB, succA, succB
@@ -116,6 +114,7 @@ local function display_results(keys)
     end
     print('|---|----------------|---|----------------|---|')
 end
+---
 -- A little helper to place an item first in the list
 local function placeFirst(akey, list)
     akey = akey:lower()
@@ -179,12 +178,16 @@ local function dumptofile(keys)
         file:close()
     end
 end
+---
+--
 local function printkeys()
     for i=1, #keylist do
         print(i, keylist[i])
     end
     print ('Number of keys: '..#keylist)
 end
+---
+--
 local function perform_check(numsectors)
 
     local keyType = 0 -- A=0, B=1
@@ -256,8 +259,8 @@ local function main(args)
 
     -- Arguments for the script
     for o, a in getopt.getopt(args, 'hp') do
-        if o == "h" then return help() end
-        if o == "p" then return printkeys() end
+        if o == 'h' then return help() end
+        if o == 'p' then return printkeys() end
     end
     -- identify tag
     tag, err = lib14a.read(false, true)
