@@ -266,5 +266,4 @@ void clean_ascii(unsigned char *buf, size_t len);
 void strcleanrn(char *buf, size_t len);
 void strcreplace(char *buf, size_t len, char from, char to);
 char *strmcopy(const char *buf);
-char *filenamemcopy(const char *preferredName, const char *suffix);
 #endif

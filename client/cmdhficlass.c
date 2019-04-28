@@ -425,7 +425,7 @@ static int CmdHFiClassSim(const char *Cmd) {
                 memcpy(dump + i * 24 + 16, resp.d.asBytes + i * 16 + 8, 8);
             }
             /** Now, save to dumpfile **/
-            saveFile("iclass_mac_attack", "bin", dump, datalen);
+            saveFile("iclass_mac_attack", ".bin", dump, datalen);
             free(dump);
             break;
         }
@@ -479,7 +479,7 @@ static int CmdHFiClassSim(const char *Cmd) {
                 // copy NR_MAC (eight bytes from the response)  ( 8b csn + 8b epurse == 16)
                 memcpy(dump + i * MAC_ITEM_SIZE + 16, resp.d.asBytes + i * 16 + 8, 8);
             }
-            saveFile("iclass_mac_attack_keyroll_A", "bin", dump, datalen);
+            saveFile("iclass_mac_attack_keyroll_A", ".bin", dump, datalen);
 
             //KEYROLL 2
             memset(dump, 0, datalen);
@@ -494,7 +494,7 @@ static int CmdHFiClassSim(const char *Cmd) {
                 memcpy(dump + i * MAC_ITEM_SIZE + 16, resp.d.asBytes + resp_index + 8, 8);
                 resp_index++;
             }
-            saveFile("iclass_mac_attack_keyroll_B", "bin", dump, datalen);
+            saveFile("iclass_mac_attack_keyroll_B", ".bin", dump, datalen);
             free(dump);
             break;
         }
@@ -720,7 +720,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
     }
 
-    saveFile(outfilename, "bin", decrypted, fsize);
+    saveFile(outfilename, ".bin", decrypted, fsize);
     printIclassDumpContents(decrypted, 1, (fsize / 8), fsize);
     free(decrypted);
     return 0;
@@ -1087,7 +1087,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     // save the dump to .bin file
     PrintAndLogEx(SUCCESS, "saving dump file - %d blocks read", gotBytes / 8);
-    saveFile(filename, "bin", tag_data, gotBytes);
+    saveFile(filename, ".bin", tag_data, gotBytes);
     return 1;
 }
 

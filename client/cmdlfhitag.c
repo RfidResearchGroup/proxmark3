@@ -583,9 +583,9 @@ static int CmdLFHitagReader(const char *Cmd) {
         fnameptr += sprintf(fnameptr, "lf-hitag-");
         FillFileNameByUID(fnameptr, data, "-dump", 4);
 
-        saveFile(filename, "bin", data, 48);
-        saveFileEML(filename, "eml", data, 48, 4);
-        saveFileJSON(filename, "json", jsfHitag, data, 48);
+        saveFile(filename, ".bin", data, 48);
+        saveFileEML(filename, data, 48, 4);
+        saveFileJSON(filename, jsfHitag, data, 48);
 
         // block3, 1 byte
         printHitagConfiguration(data[4 * 3]);

@@ -70,7 +70,7 @@ int fileExists(const char *filename);
  * E.g. dumpdata-15.txt
  *
  * @param preferredName
- * @param suffix the file suffix. Leave out the ".".
+ * @param suffix the file suffix. Including the ".".
  * @param data The binary data to write to the file
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
@@ -83,13 +83,12 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
  * E.g. dumpdata-15.txt
  *
  * @param preferredName
- * @param suffix the file suffix. Leave out the ".".
  * @param data The binary data to write to the file
  * @param datalen the length of the data
  * @param blocksize the length of one row
  * @return 0 for ok, 1 for failz
 */
-int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, size_t datalen, size_t blocksize);
+int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize);
 
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
@@ -97,13 +96,12 @@ int saveFileEML(const char *preferredName, const char *suffix, uint8_t *data, si
  * E.g. dumpdata-15.json
  *
  * @param preferredName
- * @param suffix the file suffix. Leave out the ".".
  * @param ftype type of file.
  * @param data The binary data to write to the file
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
  */
-int saveFileJSON(const char *preferredName, const char *suffix, JSONFileType ftype, uint8_t *data, size_t datalen);
+int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
 
 /** STUB
  * @brief Utility function to load data from a binary file. This method takes a preferred name.

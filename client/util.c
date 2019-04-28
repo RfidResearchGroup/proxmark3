@@ -938,16 +938,3 @@ char *strmcopy(const char *buf) {
     }
     return str;
 }
-
-char *filenamemcopy(const char *preferredName, const char *suffix) {
-    if (preferredName == NULL) return NULL;
-    if (suffix == NULL) return NULL;
-    char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
-    if (fileName == NULL)
-        return NULL;
-    strcpy(fileName, preferredName);
-    if (str_endswith(fileName, suffix))
-        return fileName;
-    strcat(fileName, suffix);
-    return fileName;
-}

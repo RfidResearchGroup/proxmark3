@@ -351,8 +351,8 @@ static int CmdFlashMemSave(const char *Cmd) {
         return 1;
     }
 
-    saveFile(filename, "bin", dump, len);
-    saveFileEML(filename, "eml", dump, len, 16);
+    saveFile(filename, ".bin", dump, len);
+    saveFileEML(filename, dump, len, 16);
     free(dump);
     return 0;
 }

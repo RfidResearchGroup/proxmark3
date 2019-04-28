@@ -917,9 +917,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     uint16_t bytes = 16 * (FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1));
 
-    saveFile(dataFilename, "bin", (uint8_t *)carddata, bytes);
-    saveFileEML(dataFilename, "eml", (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
-    saveFileJSON(dataFilename, "json", jsfCardMemory, (uint8_t *)carddata, bytes);
+    saveFile(dataFilename, ".bin", (uint8_t *)carddata, bytes);
+    saveFileEML(dataFilename, (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
+    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t *)carddata, bytes);
     return 0;
 }
 
@@ -2685,9 +2685,9 @@ static int CmdHF14AMfESave(const char *Cmd) {
         FillFileNameByUID(fnameptr, dump, "-dump", 4);
     }
 
-    saveFile(filename, "bin", dump, bytes);
-    saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, "json", jsfCardMemory, dump, bytes);
+    saveFile(filename, ".bin", dump, bytes);
+    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
+    saveFileJSON(filename, jsfCardMemory, dump, bytes);
     free(dump);
     return 0;
 }
@@ -3119,9 +3119,9 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "uploaded %d bytes to emulator memory", bytes);
     }
 
-    saveFile(filename, "bin", dump, bytes);
-    saveFileEML(filename, "eml", dump, bytes, MFBLOCK_SIZE);
-    saveFileJSON(filename, "json", jsfCardMemory, dump, bytes);
+    saveFile(filename, ".bin", dump, bytes);
+    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
+    saveFileJSON(filename, jsfCardMemory, dump, bytes);
     free(dump);
     return 0;
 }
