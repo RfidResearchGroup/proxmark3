@@ -259,7 +259,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -t/--text                           dump all interactive command's help at once");
         PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive help at once in markdown syntax");
         PrintAndLogEx(NORMAL, "      -p/--port                           serial port to connect to");
-        PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed");
+        PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS");
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
         PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one proxmark3 command (or several separated by ';').");
@@ -433,15 +433,9 @@ int main(int argc, char *argv[]) {
     if (!script_cmds_file && !stdinOnPipe)
         showBanner();
 
-
-    // default speed for USB 460800,  USART(FPC serial) 115200 baud
+    // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
-#ifdef WITH_FPC_HOST
-        // Let's assume we're talking by default to pm3 over usart in this mode
         speed = USART_BAUD_RATE;
-#else
-        speed = 460800;
-#endif
 
     if (script_cmd) {
         while (script_cmd[strlen(script_cmd) - 1] == ' ')

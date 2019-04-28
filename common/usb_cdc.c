@@ -420,7 +420,7 @@ const char *getStringDescriptor(uint8_t idx) {
         reg |= REG_NO_EFFECT_1_ALL; \
         reg &= ~(flags); \
         pUdp->UDP_CSR[(endpoint)] = reg; \
-    } \
+    }
 
 // reset flags in the UDP_CSR register and waits for synchronization
 #define UDP_SET_EP_FLAGS(endpoint, flags) { \
@@ -429,7 +429,7 @@ const char *getStringDescriptor(uint8_t idx) {
         reg |= REG_NO_EFFECT_1_ALL; \
         reg |= (flags); \
         pUdp->UDP_CSR[(endpoint)] = reg; \
-    } \
+    }
 
 
 typedef struct {
@@ -439,12 +439,12 @@ typedef struct {
     uint8_t DataBits;
 } AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
 
-AT91S_CDC_LINE_CODING line = {
-    115200, // baudrate
-    0,      // 1 Stop Bit
-    0,      // None Parity
-    8
-};     // 8 Data bits
+AT91S_CDC_LINE_CODING line = { // purely informative, actual values don't matter
+    USART_BAUD_RATE, // baudrate
+    0,               // 1 Stop Bit
+    0,               // None Parity
+    8                // 8 Data bits
+};
 
 static void SpinDelay(int ms) {
     int us = ms * 1000;
