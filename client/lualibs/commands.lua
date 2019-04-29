@@ -196,7 +196,7 @@ function Command:sendNG( ignore_response, timeout )
 
 --[[  uncomment if you want to debug
 
-    -- lets digest response NG package.  
+    -- lets digest response NG package.
     local data
     local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)

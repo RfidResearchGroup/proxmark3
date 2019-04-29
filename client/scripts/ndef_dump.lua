@@ -80,7 +80,7 @@ local function getblockdata(response)
     if not response then
         return nil, 'No response from device'
     end
-    
+
     local count, cmd, arg0, arg1, arg2, data = bin.unpack('LLLLH40', response)
     if arg0 == 1 then
         return data:sub(1, 32)
@@ -96,7 +96,7 @@ local function getBlock(blockno)
     local c = Command:newMIX{cmd = cmds.CMD_MIFAREU_READBL, arg1 = blockno, data = 0}
     block, err = getblockdata(c:sendMIX(false))
     if not block then return oops(err) end
-    
+
     if #block < 32 then
         return nil, ('Expected at least 16 bytes, got %d - this tag is not NDEF-compliant'):format(string.len(data))
     end
@@ -115,7 +115,7 @@ local function main( args)
 
     print( string.rep('--',20) )
     print( string.rep('--',20) )
-    
+
     local err, data, data2, k, v, i
     local verbose = 0
     -- Read the parameters
@@ -127,7 +127,7 @@ local function main( args)
 
     -- First of all, connect
     info, err = lib14a.read(true, true)
-    if err then 
+    if err then
         disconnect();
         return oops(err)
     end
@@ -139,7 +139,7 @@ local function main( args)
         disconnect()
         return oops('[!] Not a Ultralightbased card. This script reads NDEF formatted UL/NTAGS')
     end
-    
+
     -- Info contained within the tag (block 0 example)
     -- 0534 00B9 049C AD7F 4A00 0000 E110 1000 2155
     -- b0b0 b0b0 b1b1 b1b1 b2b2 b2b2 b3b3 b3b3 CRCC
@@ -176,8 +176,8 @@ local function main( args)
     print('[=] Dumping data...')
     for i = 4, t5tarea_blocks - 1, 1 do
         blocks, err = getBlock(i)
-        if err then 
-            disconnect(); 
+        if err then
+            disconnect();
             return oops(err)
         end
         table.insert(blockData, blocks[1])
@@ -196,7 +196,7 @@ local function main( args)
     local vLow = band(b3[2], 0xF)
     local vHi = band(rshift(b3[2], 4), 0xF)
     print(('[=]     %02X : version %d.%d supported by tag'):format(b3[2], vHi, vLow) )
-    
+
     print(('[=]     %02X : Physical Memory Size: %d bytes'):format(b3[3], t5tarea) )
     if b3[3] == 0x96 then
        print(('  %02X : NDEF Memory Size: %d bytes'):format(b3[3], 48))
@@ -242,7 +242,7 @@ local function main( args)
 	print(string.format(' %02x | %s', k-1, v) )
     end
    print('|---|-------------------|')
-    
+
     local filename, err = utils.WriteDumpFile(info.uid, blockData)
     if err then return oops(err) end
 

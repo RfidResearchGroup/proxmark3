@@ -969,11 +969,11 @@ static int l_ndefparse(lua_State *L) {
     if (data == 0) {
         return returnToLuaWithError(L, "Allocating memory failed");
     }
-    
+
     // data
     const char *p_data = luaL_checklstring(L, 3, &size);
     if (size) {
-        if (size > (datalen << 1) )
+        if (size > (datalen << 1))
             size = (datalen << 1);
 
         uint32_t tmp;
@@ -983,7 +983,7 @@ static int l_ndefparse(lua_State *L) {
             len++;
         }
     }
-    
+
     int res = NDEFDecodeAndPrint(data, datalen, verbose);
     lua_pushinteger(L, res);
     return 1;
@@ -1048,7 +1048,7 @@ int set_pm3_libraries(lua_State *L) {
         {"keygen_algo_d",               l_keygen_algoD},
         {"t55xx_readblock",             l_T55xx_readblock},
         {"t55xx_detect",                l_T55xx_detect},
-        {"ndefparse"   ,                l_ndefparse},
+        {"ndefparse",                l_ndefparse},
         {NULL, NULL}
     };
 

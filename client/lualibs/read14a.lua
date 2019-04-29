@@ -67,7 +67,7 @@ local function parse14443a(data)
     uid = uid:sub(1, 2 * uidlen)
     local man_byte = tonumber(uid:sub(1,2), 16)
 
-    return { 
+    return {
         uid = uid,
         atqa  = atqa,
         sak = sak,

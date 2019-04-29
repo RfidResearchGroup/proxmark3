@@ -57,7 +57,7 @@ local function checkCommand(response)
         print("Timeout while waiting for response. Increase TIMEOUT in mfkeys.lua to wait longer")
         return nil, "Timeout while waiting for device to respond"
     end
-   
+
     local data
     local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
@@ -66,7 +66,7 @@ local function checkCommand(response)
         key = data:sub(1, 12)
         return key
     end
-    
+
     return nil
 end
 
@@ -83,20 +83,20 @@ local function checkBlock(blockno, testkeys, keytype)
     local chunksize = remaining
     if remaining > maxchunk then chunksize = maxchunk end
     local n = chunksize
-    
+
     while remaining > 0 do
 --        print('start', start, 'chunksize', chunksize, 'testkeys kvar', remaining, 'N-index=', n)
 
         local d0 = ('%04X%02X%02X'):format(arg1, arg2, chunksize)
         local d1 = table.concat(testkeys, "", start, n)
-	
+
         core.clearCommandBuffer()
 
         print(("Testing block %d, keytype %d, with %d keys"):format(blockno, keytype, chunksize))
 
         local c = Command:newNG{cmd = cmds.CMD_MIFARE_CHKKEYS, data = d0..d1}
         key, err = checkCommand(c:sendNG(false, TIMEOUT))
-	
+
         if key then return key, blockno end
 
         start = start + chunksize

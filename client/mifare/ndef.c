@@ -226,11 +226,11 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
 
             if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {
                 PrintAndLogEx(NORMAL
-                    , "\turi    : %s%.*s"
-                    , (ndef->Payload[0] <= 0x23 ? URI_s[ndef->Payload[0]] : "[err]")
-                    , ndef->PayloadLen-1
-                    , &ndef->Payload[1]
-                    );
+                              , "\turi    : %s%.*s"
+                              , (ndef->Payload[0] <= 0x23 ? URI_s[ndef->Payload[0]] : "[err]")
+                              , ndef->PayloadLen - 1
+                              , &ndef->Payload[1]
+                             );
             }
 
             if (!strncmp((char *)ndef->Type, "Sig", ndef->TypeLen)) {
