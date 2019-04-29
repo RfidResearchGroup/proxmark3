@@ -27,6 +27,7 @@ script run ndef_dump
 Arguments:
     -h              this help
     -d              debug logging on
+    -v              verbose output (from ndef parsing)
 
 ]]
 
@@ -117,9 +118,10 @@ local function main( args)
     dbg('script started')
     local err, data, data2, k, v, i
     -- Read the parameters
-    for o, a in getopt.getopt(args, 'hd') do
+    for o, a in getopt.getopt(args, 'hdv') do
         if o == 'h' then return help() end
         if o == 'd' then DEBUG = true end
+        if o == 'v' then verbose = 1 end
     end
 
     -- First of all, connect
@@ -192,7 +194,7 @@ local function main( args)
     print('Type        ', info.name)
 
     local ndefdata = table.concat(blockData, '', 5)
-    core.ndefparse(t5tarea, 1, ndefdata)
+    core.ndefparse(t5tarea, verbose, ndefdata)
 
     for k,v in ipairs(blockData) do
         print(string.format('Block %02x: %02x %02x %02x %02x', k-1, string.byte(v, 1,4)))
