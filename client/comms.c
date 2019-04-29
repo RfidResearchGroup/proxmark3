@@ -164,7 +164,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         print_hex_break((uint8_t *)&txBufferNG.data, 3 * sizeof(uint64_t), 32);
         print_hex_break((uint8_t *)&txBufferNG.data + 3 * sizeof(uint64_t), len - 3 * sizeof(uint64_t), 32);
     }
-    print_hex_break((uint8_t *)&tx_post, sizeof(PacketCommandNGPostamble), 32);
+    print_hex_break((uint8_t *)tx_post, sizeof(PacketCommandNGPostamble), 32);
 #endif
     txBuffer_pending = true;
 
