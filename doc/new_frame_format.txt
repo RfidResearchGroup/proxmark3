@@ -123,7 +123,10 @@ void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 *****************************************
 
 So cmds should make the transition from SendCommandOLD to SendCommandNG to benefit from smaller frames (and armsrc handlers adjusted accordingly of course).
-SendCommandMIX is a transition fct: it uses the same API as SendCommandOLD but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to USB_CMD_DATA_SIZE - 24. Besides the size limitation, the receiver handler doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
+SendCommandMIX is a transition fct: it uses the same API as SendCommandOLD but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to USB_CMD_DATA_SIZE - 24 (defined as USB_CMD_DATA_SIZE_MIX). Besides the size limitation, the receiver handler doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
+Warning : it makes sense to move from SendCommandOLD to SendCommandMIX only for *commands with small payloads*.
+* otherwise both have about the same size
+* SendCommandMIX has a smaller payload (USB_CMD_DATA_SIZE_MIX < USB_CMD_DATA_SIZE) so it's risky to blindly move from OLD to MIX if there is a large payload.
 
 Internally these functions prepare the new or old frames and call uart_communication which calls uart_send.
 
@@ -347,6 +350,41 @@ time client/proxmark3 -p /dev/ttyACM0 -c "mem save f foo_usb"
 time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "mem save f foo_fpc"
 25.34s
 
+
+Sending multiple commands can still be slow because it waits regularly for incoming RX frames and the timings are quite conservative because of BT (see struct timeval timeout in uart_posix.c, now at 200ms). When one knows there is no response to wait before the next command, he can use the same trick as in the flasher:
+
+    // fast push mode
+    conn.block_after_ACK = true;
+    some loop {
+        if (sending_last_command)
+            // Disable fast mode
+            conn.block_after_ACK = false;
+        SendCommandOLD / SendCommandMix
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, some_timeout)) {
+            ....
+            conn.block_after_ACK = false;
+            return PM3_ETIMEOUT;
+        }
+    }
+    return PM3_SUCCESS;
+
+Or if it's too complex to determine when we're sending the last command:
+
+    // fast push mode
+    conn.block_after_ACK = true;
+    some loop {
+        SendCommandOLD / SendCommandMIX
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, some_timeout)) {
+            ....
+            conn.block_after_ACK = false;
+            return PM3_ETIMEOUT;
+        }
+    }
+    // Disable fast mode and send a dummy command to make it effective
+    conn.block_after_ACK = false;
+    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    WaitForResponseTimeout(CMD_ACK, NULL, 1000);
+    return PM3_SUCCESS;
 
 
 Reference frames
