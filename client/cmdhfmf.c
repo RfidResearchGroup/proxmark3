@@ -1938,6 +1938,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
     // time
     uint64_t t1 = msclock();
 
+    // fast push mode
+    conn.block_after_ACK = true;
 
     // check keys.
     for (trgKeyType = (keyType == 2) ? 0 : keyType; trgKeyType < 2; (keyType == 2) ? (++trgKeyType) : (trgKeyType = 2)) {
@@ -2011,6 +2013,10 @@ static int CmdHF14AMfChk(const char *Cmd) {
     }
 
 out:
+    // Disable fast mode and send a dummy command to make it effective
+    conn.block_after_ACK = false;
+    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    WaitForResponseTimeout(CMD_ACK, NULL, 1000);
 
     //print keys
     printKeyTable(SectorsCnt, e_sector);
