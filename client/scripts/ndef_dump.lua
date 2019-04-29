@@ -115,8 +115,8 @@ local function main( args)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
     
-    dbg('script started')
-    local err, data, data2, k, v, i, verbose = 0
+    local err, data, data2, k, v, i
+    local verbose = 0
     -- Read the parameters
     for o, a in getopt.getopt(args, 'hdv') do
         if o == 'h' then return help() end
@@ -133,10 +133,10 @@ local function main( args)
     core.clearCommandBuffer()
 
     if info.name:match("Ultralight") then
-        dbg('Found a tag')
+        print('[=]  Found a tag')
     else
         disconnect()
-        return oops('Not a Ultralightbased card. This script reads NDEF formatted UL/NTAGS')
+        return oops('[!]  Not a Ultralightbased card. This script reads NDEF formatted UL/NTAGS')
     end
     
     -- Info contained within the tag (block 0 example)
@@ -157,12 +157,12 @@ local function main( args)
     local b3chars = utils.ConvertHexToBytes(blocks[4]);
     local t5tarea = b3chars[3] * 8
     local t5tarea_blocks = t5tarea / 4;
-    print("Number of blocks:", t5tarea_blocks)
+    print("[=]  Number of blocks:", t5tarea_blocks)
 
     -- NDEF compliant?
     if b3chars[1] ~= 0xE1 then
         disconnect()
-        return oops('This tag is not NDEF-Compliant')
+        return oops('[!]  This tag is not NDEF-Compliant')
     end
 
     local ndefversion = b3chars[2]
@@ -175,7 +175,7 @@ local function main( args)
     the only way to avoid this is to send the read command as many times as block numbers
     removing bytes from 5 to 18 from each answer.
     --]]
-    print('Dumping data...please wait')
+    print('[=]  Dumping data...please wait')
     for i = 4, t5tarea_blocks - 1, 1 do
         blocks, err = getBlock(i)
         if err then 
@@ -187,11 +187,12 @@ local function main( args)
     -- Deactivate field
     disconnect()
     -- Print results
-    print('Tag info')    
-    print('UID         ', info.uid)
-    print('NDEF version', ('%02x'):format(ndefversion))
-    print('Manufacturer', info.manufacturer)
-    print('Type        ', info.name)
+    print('[=]  Tag NDEF info')
+    print('[=]  ------------------------------------------------')
+    print('[=]  UID         ', info.uid)
+    print('[=]  NDEF version', ('%02x'):format(ndefversion))
+    print('[=]  Manufacturer', info.manufacturer)
+    print('[=]  Type        ', info.name)
 
     local ndefdata = table.concat(blockData, '', 5)
     core.ndefparse(t5tarea, verbose, ndefdata)
@@ -203,7 +204,7 @@ local function main( args)
     local filename, err = utils.WriteDumpFile(info.uid, blockData)
     if err then return oops(err) end
 
-    print(string.format('Dumped data into %s', filename))
+    print(string.format('[+]  Dumped data into %s', filename))
 
 end
 main(args)
