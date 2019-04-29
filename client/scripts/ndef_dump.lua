@@ -92,7 +92,7 @@ end
 local function getBlock(blockno)
     local block, err
     local c = Command:newMIX{cmd = cmds.CMD_MIFAREU_READBL, arg1 = blockno, data = 0}
-    block, err = getblockdata(c:sendMIX(false))
+    block, err = getblockdata(c:scr(false))
     if not block then return oops(err) end
     
     if #block < 32 then
@@ -153,8 +153,9 @@ local function main( args)
     end
     -- Block 3 contains number of blocks
     local b3chars = utils.ConvertHexToBytes(blocks[4]);
-    local numBlocks = b3chars[3] * 2 + 6
-    print("Number of blocks:", numBlocks)
+    local t5tarea = b3chars[3] * 8
+    local t5tarea_blocks = t5tarea / 4;
+    print("Number of blocks:", t5tarea_blocks)
 
     -- NDEF compliant?
     if b3chars[1] ~= 0xE1 then
@@ -173,7 +174,7 @@ local function main( args)
     removing bytes from 5 to 18 from each answer.
     --]]
     print('Dumping data...please wait')
-    for i = 4, numBlocks - 1, 1 do
+    for i = 4, t5tarea_blocks - 1, 1 do
         blocks, err = getBlock(i)
         if err then 
             disconnect(); 
@@ -189,6 +190,9 @@ local function main( args)
     print('NDEF version', ('%02x'):format(ndefversion))
     print('Manufacturer', info.manufacturer)
     print('Type        ', info.name)
+
+
+    core.ndefparse( t5tarea, true, blockData);
 
     for k,v in ipairs(blockData) do
         print(string.format('Block %02x: %02x %02x %02x %02x', k-1, string.byte(v, 1,4)))

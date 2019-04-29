@@ -951,6 +951,45 @@ static int l_T55xx_detect(lua_State *L) {
     return 2;
 }
 
+//
+static int l_ndefparse(lua_State *L) {
+
+    size_t len = 0, size;
+
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if (n != 3)  {
+        return returnToLuaWithError(L, "You need to supply three parameters");
+    }
+
+    size_t datalen = luaL_checknumber(L, 1);
+    bool verbose = luaL_checknumber(L, 2);
+
+    uint8_t *data = calloc(datalen, sizeof(uint8_t));
+    if (data == 0) {
+        return returnToLuaWithError(L, "Allocating memory failed");
+    }
+    
+    // data
+    const char *p_data = luaL_checklstring(L, 3, &size);
+    if (size) {
+        if (size > (datalen << 1) )
+            size = (datalen << 1);
+
+        uint32_t tmp;
+        for (int i = 0; i < size; i += 2) {
+            sscanf(&p_data[i], "%02x", &tmp);
+            data[i >> 1] = tmp & 0xFF;
+            len++;
+        }
+    }
+    
+    int res = NDEFDecodeAndPrint(data, datalen, verbose);
+    lua_pushinteger(L, res);
+    return 1;
+}
+
+
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
  * able to do "require('foobar')" if foobar.lua is within lualibs folder.
@@ -1009,6 +1048,7 @@ int set_pm3_libraries(lua_State *L) {
         {"keygen_algo_d",               l_keygen_algoD},
         {"t55xx_readblock",             l_T55xx_readblock},
         {"t55xx_detect",                l_T55xx_detect},
+        {"ndefparse"   ,                l_ndefparse},
         {NULL, NULL}
     };
 
