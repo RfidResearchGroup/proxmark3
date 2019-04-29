@@ -68,10 +68,12 @@ bool IsOffline() {
 void SendCommand(PacketCommandOLD *c) {
 
 #ifdef COMMS_DEBUG
-    PrintAndLogEx(NORMAL, "Sending %d bytes | cmd %04x", sizeof(PacketCommandOLD), c->cmd);
+    PrintAndLogEx(NORMAL, "Sending %s", "OLD");
 #endif
 #ifdef COMMS_DEBUG_RAW
-    print_hex_break((uint8_t *)c, sizeof(PacketCommandOLD), 32);
+    print_hex_break((uint8_t *)&c->cmd, sizeof(c->cmd), 32);
+    print_hex_break((uint8_t *)&c->arg, sizeof(c->arg), 32);
+    print_hex_break((uint8_t *)&c->d, sizeof(c->d), 32);
 #endif
 
     if (offline) {
@@ -114,7 +116,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 
 static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool ng) {
 #ifdef COMMS_DEBUG
-    PrintAndLogEx(NORMAL, "Sending %d bytes of payload | cmd %04x", len, cmd);
+    PrintAndLogEx(NORMAL, "Sending %s", ng ? "NG" : "MIX");
 #endif
 
     if (offline) {
@@ -155,7 +157,14 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     txBufferNGLen = sizeof(PacketCommandNGPreamble) + len + sizeof(PacketCommandNGPostamble);
 
 #ifdef COMMS_DEBUG_RAW
-    print_hex_break((uint8_t *)&txBufferNG, txBufferNGLen, 32);
+    print_hex_break((uint8_t *)&txBufferNG.pre, sizeof(PacketCommandNGPreamble), 32);
+    if (ng) {
+        print_hex_break((uint8_t *)&txBufferNG.data, len, 32);
+    } else {
+        print_hex_break((uint8_t *)&txBufferNG.data, 3 * sizeof(uint64_t), 32);
+        print_hex_break((uint8_t *)&txBufferNG.data + 3 * sizeof(uint64_t), len - 3 * sizeof(uint64_t), 32);
+    }
+    print_hex_break((uint8_t *)&tx_post, sizeof(PacketCommandNGPostamble), 32);
 #endif
     txBuffer_pending = true;
 
@@ -232,12 +241,6 @@ static int getReply(PacketResponseNG *packet) {
 
     //Pick out the next unread command
     memcpy(packet, &rxBuffer[cmd_tail], sizeof(PacketResponseNG));
-#ifdef COMMS_DEBUG
-    PrintAndLogEx(NORMAL, "Receiving");
-#endif
-#ifdef COMMS_DEBUG_RAW
-    print_hex_break((uint8_t *)packet, sizeof(PacketResponseNG), 32);
-#endif
 
     //Increment tail - this is a circular buffer, so modulo buffer size
     cmd_tail = (cmd_tail + 1) % CMD_BUFFER_SIZE;
@@ -456,7 +459,14 @@ __attribute__((force_align_arg_pointer))
                     }
                 }
                 if (!error) {
-//                    PrintAndLogEx(NORMAL, "Received reply NG full !!");
+#ifdef COMMS_DEBUG
+                    PrintAndLogEx(NORMAL, "Receiving %s:", rx.ng ? "NG" : "MIX");
+#endif
+#ifdef COMMS_DEBUG_RAW
+                    print_hex_break((uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), 32);
+                    print_hex_break((uint8_t *)&rx_raw.data, rx_raw.pre.length, 32);
+                    print_hex_break((uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), 32);
+#endif
                     PacketResponseReceived(&rx);
                 }
             } else {                               // Old style reply
@@ -467,7 +477,14 @@ __attribute__((force_align_arg_pointer))
                     error = true;
                 }
                 if (!error) {
-//                    PrintAndLogEx(NORMAL, "Received reply old full !!");
+#ifdef COMMS_DEBUG
+                    PrintAndLogEx(NORMAL, "Receiving OLD:");
+#endif
+#ifdef COMMS_DEBUG_RAW
+                    print_hex_break((uint8_t *)&rx_old.cmd, sizeof(rx_old.cmd), 32);
+                    print_hex_break((uint8_t *)&rx_old.arg, sizeof(rx_old.arg), 32);
+                    print_hex_break((uint8_t *)&rx_old.d, sizeof(rx_old.d), 32);
+#endif
                     rx.ng = false;
                     rx.magic = 0;
                     rx.status = 0;
@@ -498,6 +515,9 @@ __attribute__((force_align_arg_pointer))
             // if we just received an ACK, wait here until a new command is to be transmitted
             // This is only working on OLD frames, and only used by flasher and flashmem
             if (ACK_received) {
+#ifdef COMMS_DEBUG
+                PrintAndLogEx(NORMAL, "Received ACK, fast TX mode: ignoring other RX till TX");
+#endif
                 while (!txBuffer_pending) {
                     pthread_cond_wait(&txBufferSig, &txBufferMutex);
                 }
