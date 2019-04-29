@@ -193,10 +193,11 @@ local function main( args)
     print('[=]  NDEF version', ('%02x'):format(ndefversion))
     print('[=]  Manufacturer', info.manufacturer)
     print('[=]  Type        ', info.name)
-
+    print('[=]  ------------------------------------------------')
     local ndefdata = table.concat(blockData, '', 5)
     core.ndefparse(t5tarea, verbose, ndefdata)
-
+    print('[=]  ------------------------------------------------')
+    
     for k,v in ipairs(blockData) do
         print(string.format('Block %02x: %02x %02x %02x %02x', k-1, string.byte(v, 1,4)))
     end
