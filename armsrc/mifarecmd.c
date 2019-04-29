@@ -1529,13 +1529,22 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain, b
     uint64_t key = 0;
     uint32_t cuid = 0;
     int i, res;
-    uint8_t blockNo = arg0 & 0xFF;
-    uint8_t keyType = (arg0 >> 8) & 0xFF;
-    uint8_t keyCount = arg2;
-    uint8_t cascade_levels = 0;
-    uint8_t isOK = 0;
-    bool have_uid = false;
-    bool clearTrace = arg1 & 0xFF;
+    uint8_t cascade_levels = 0, isOK = 0;
+    uint8_t blockNo, keyType, keyCount;
+    bool clearTrace, have_uid = false;
+
+    if (ng) {
+        keyType = datain[0];
+        blockNo = datain[1];
+        clearTrace = datain[2];
+        keyCount = datain[3];
+        datain += 4;
+    } else {
+        blockNo = arg0 & 0xFF;
+        keyType = (arg0 >> 8) & 0xFF;
+        clearTrace = arg1;
+        keyCount = arg2;
+    }
 
     LEDsoff();
     LED_A_ON();

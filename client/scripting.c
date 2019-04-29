@@ -162,7 +162,7 @@ static int l_SendCommandNG(lua_State *L) {
         return returnToLuaWithError(L, "You need to supply two parameters");
 
     // parse input
-    uint64_t cmd = luaL_checknumber(L, 1);
+    uint16_t cmd = luaL_checknumber(L, 1);
 
     // data
     const char *p_data = luaL_checklstring(L, 2, &size);

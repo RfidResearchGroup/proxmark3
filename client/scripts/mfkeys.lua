@@ -29,6 +29,8 @@ Arguments:
     -p             : print keys
 ]]
 
+local PM3_SUCCESS = 0 -- needs to be refactored into own like usb_cmd
+
 local TIMEOUT = 10000 -- 10 seconds
 ---
 -- This is only meant to be used when errors occur
@@ -56,8 +58,11 @@ local function checkCommand(response)
         return nil, "Timeout while waiting for device to respond"
     end
    
-    local count, cmd, arg0, arg1, arg2, data = bin.unpack('LLLLH40',result)    
-    if arg0 == 1 then
+    local data
+    local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
+    count, data, ng = bin.unpack('H'..length..'C', response, count)
+
+    if status == PM3_SUCCESS then
         key = data:sub(1, 12)
         return key
     end
@@ -67,34 +72,37 @@ end
 
 local function checkBlock(blockno, testkeys, keytype)
 
-    -- The command data is only 512 bytes, each key is 6 bytes, meaning that we can send max 85 keys in one go.
+    -- The command data is only 512 bytes,
+    -- each key is 6 bytes,
+    -- NG args inside dataarray is 4 bytes.  That give us (512-4)/6 or max 84 keys in one go.
     -- If there's more, we need to split it up
     local arg1 = bit32.bor(bit32.lshift(keytype, 8), blockno)
-
+    local arg2 = '00' -- don't clear trace
     local start, remaining = 1, #testkeys
+    local maxchunk = math.floor((512-4)/6)
     local chunksize = remaining
-    if remaining > 85 then chunksize = 85 end
+    if remaining > maxchunk then chunksize = maxchunk end
     local n = chunksize
-
+    
     while remaining > 0 do
-        --print('start', start, 'chunksize', chunksize, 'testkeys kvar', remaining, 'N-index=', n)
+--        print('start', start, 'chunksize', chunksize, 'testkeys kvar', remaining, 'N-index=', n)
 
+        local d0 = ('%04X%02X%02X'):format(arg1, arg2, chunksize)
         local d1 = table.concat(testkeys, "", start, n)
+	
+        core.clearCommandBuffer()
 
-        core.clearCommandBuffer() 
-        
         print(("Testing block %d, keytype %d, with %d keys"):format(blockno, keytype, chunksize))
-        local c = Command:newNG{cmd = cmds.CMD_MIFARE_CHKKEYS,
-                                arg1 =  arg1,
-                                arg3 = chunksize,
-                                data = d1}
-        status, err = checkCommand(c:sendNG(false, TIMEOUT))
 
-        if status then return status, blockno end
+        local c = Command:newNG{cmd = cmds.CMD_MIFARE_CHKKEYS, data = d0..d1}
+        key, err = checkCommand(c:sendNG(false, TIMEOUT))
+	
+        if key then return key, blockno end
+
         start = start + chunksize
         remaining = remaining - chunksize
 
-        if remaining < 85 then chunksize = remaining end
+        if remaining < maxchunk then chunksize = remaining end
         n = n + chunksize
     end
     return nil

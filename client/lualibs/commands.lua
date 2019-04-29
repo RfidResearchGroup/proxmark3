@@ -33,7 +33,7 @@ Command = {
 
         if (type(data) == 'string') then
             -- We need to check if it is correct length, otherwise pad it
-            local len = string.len(data)
+            local len = #data
             if (len < 1024) then
                 --Should be 1024 hex characters to represent 512 bytes of data
                 data = data .. string.rep("0",1024 - len )
@@ -42,7 +42,7 @@ Command = {
                 -- OOps, a bit too much data here
                 print( ( "WARNING: data size too large, was %s chars, will be truncated "):format(len) )
                 --
-                data = data:sub(1,1024)
+                data = data:sub(1, 1024)
             end
         else
             print(("WARNING; data was NOT a (hex-) string, but was %s"):format(type(data)))
@@ -67,7 +67,7 @@ Command = {
                 -- OOps, a bit too much data here
                 print( ( "WARNING: data size too large, was %s chars, will be truncated "):format( #data) )
                 --
-                data = data:sub(1,1024)
+                data = data:sub(1, 1024)
             end
         end
         o.data = data
@@ -87,7 +87,7 @@ Command = {
                 -- OOps, a bit too much data here
                 print( ( "WARNING: data size too large, was %s chars, will be truncated "):format( #data) )
                 --
-                data = data:sub(1,1024)
+                data = data:sub(1, 1024)
             end
         end
         o.data = data
@@ -129,7 +129,7 @@ function Command:__responsetostring()
                     tostring(self.resp_arg2),
                     tostring(self.resp_arg3)))
     print('NG     ::', self.resp_ng)
-    print('package ::', self.resp_response)
+    print('Data   ::', self.resp_data)
 end
 
 
@@ -194,12 +194,13 @@ function Command:sendNG( ignore_response, timeout )
         return nil, 'Error, waiting for response timed out :: '..msg
     end
 
-    -- lets digest
+--[[  uncomment if you want to debug
+
+    -- lets digest response NG package.  
     local data
     local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
 
---[[  uncomment if you want to debug
     self.resp_cmd = cmd
     self.resp_length = length
     self.resp_magic = magic
@@ -213,8 +214,7 @@ function Command:sendNG( ignore_response, timeout )
     self:__responsetostring()
 --]]
 
-    local packed = bin.pack("LLLLH", cmd, arg1, arg2, arg3, data)
-    return packed, nil;
+    return response
 end
 
 return _commands
