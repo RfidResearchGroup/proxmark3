@@ -28,6 +28,7 @@ typedef BYTE uint8_t;
 #endif
 
 #define USB_CMD_DATA_SIZE 512
+#define USB_CMD_DATA_SIZE_MIX ( USB_CMD_DATA_SIZE - 3 * sizeof(uint64_t) )
 
 typedef struct {
     uint64_t cmd;

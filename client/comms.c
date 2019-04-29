@@ -173,7 +173,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 
 void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     uint64_t arg[3] = {arg0, arg1, arg2};
-    if (len > USB_CMD_DATA_SIZE - sizeof(arg)) {
+    if (len > USB_CMD_DATA_SIZE_MIX) {
         PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much for MIX frames, abort", len);
         return;
     }
