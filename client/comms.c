@@ -437,6 +437,9 @@ __attribute__((force_align_arg_pointer))
                                 rx.oldarg[2] = arg[2];
                                 memcpy(&rx.data, ((uint8_t *)&rx_raw.data) + sizeof(arg), length - sizeof(arg));
                                 rx.length = length - sizeof(arg);
+                                if (rx.cmd == CMD_ACK) {
+                                    ACK_received = true;
+                                }
                             }
                         }
                     }
