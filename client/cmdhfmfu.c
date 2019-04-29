@@ -690,7 +690,7 @@ static int ndef_print_CC(uint8_t *data) {
     PrintAndLogEx(NORMAL, "Capability Container: %s", sprint_hex(data, 4));
     PrintAndLogEx(NORMAL, "  %02X : NDEF Magic Number", data[0]);
     PrintAndLogEx(NORMAL, "  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0F);
-    PrintAndLogEx(NORMAL, "  %02X : Physical Memory Size: %d bytes", data[2], (data[2] + 1) * 8);
+    PrintAndLogEx(NORMAL, "  %02X : Physical Memory Size: %d bytes", data[2], (data[2] + 1) * 4);
     if (data[2] == 0x96)
         PrintAndLogEx(NORMAL, "  %02X : NDEF Memory Size: %d bytes", data[2], 48);
     else if (data[2] == 0x12)
