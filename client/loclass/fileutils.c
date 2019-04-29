@@ -73,24 +73,19 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
 static char *newfilenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
-    char *preferredNameTmp = (char *) calloc(strlen(preferredName) + 1, sizeof(uint8_t));
-    if (preferredNameTmp == NULL)
-        return NULL;
-    strcpy(preferredNameTmp, preferredName);
-    if (str_endswith(preferredNameTmp, suffix))
-        preferredNameTmp[strlen(preferredNameTmp) - strlen(suffix)] = '\0';
-    char *fileName = (char *) calloc(strlen(preferredNameTmp) + strlen(suffix) + 1 + 10, sizeof(uint8_t)); // 10: room for filenum to ensure new filename
+    uint16_t preferredNameLen = strlen(preferredName);
+    if (str_endswith(preferredName, suffix))
+        preferredNameLen -= strlen(suffix);
+    char *fileName = (char *) calloc(preferredNameLen + strlen(suffix) + 1 + 10, sizeof(uint8_t)); // 10: room for filenum to ensure new filename
     if (fileName == NULL) {
-        free(preferredNameTmp);
         return NULL;
     }
     int num = 1;
-    sprintf(fileName, "%s%s", preferredNameTmp, suffix);
+    sprintf(fileName, "%.*s%s", preferredNameLen, preferredName, suffix);
     while (fileExists(fileName)) {
-        sprintf(fileName, "%s-%d%s", preferredNameTmp, num, suffix);
+        sprintf(fileName, "%.*s-%d%s", preferredNameLen, preferredName, num, suffix);
         num++;
     }
-    free(preferredNameTmp);
     return fileName;
 }
 
