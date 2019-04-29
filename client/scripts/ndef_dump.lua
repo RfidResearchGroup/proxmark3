@@ -116,7 +116,7 @@ local function main( args)
     print( string.rep('--',20) )
     
     dbg('script started')
-    local err, data, data2, k, v, i
+    local err, data, data2, k, v, i, verbose = 0
     -- Read the parameters
     for o, a in getopt.getopt(args, 'hdv') do
         if o == 'h' then return help() end
