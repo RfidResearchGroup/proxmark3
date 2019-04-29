@@ -15,7 +15,7 @@
 #include "proxmark3.h"
 #include "apps.h"
 #include "parity.h"
-#include "commonutil.h"
+#include "util.h"
 #include "string.h"
 #include "iso14443a.h"
 #include "crapto1/crapto1.h"

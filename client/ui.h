@@ -39,6 +39,7 @@ void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
 void SetLogFilename(char *fn);
 void SetFlushAfterWrite(bool value);
+void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter);
 
 extern double CursorScaleFactor;
 extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;

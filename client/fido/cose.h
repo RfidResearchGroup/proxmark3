@@ -16,7 +16,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <cbor.h>
-#include "commonutil.h"
 #include "util.h"
 
 const char *GetCOSEAlgName(int id);

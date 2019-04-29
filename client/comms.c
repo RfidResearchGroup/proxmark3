@@ -11,6 +11,10 @@
 
 #include "comms.h"
 #include "crc16.h"
+#if defined(__linux__) || (__APPLE__)
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
@@ -249,48 +253,6 @@ static int getReply(PacketResponseNG *packet) {
     return 1;
 }
 
-static void memcpy_filtered(void *dest, const void *src, size_t n, bool filter) {
-#if defined(__linux__) || (__APPLE__)
-    memcpy(dest, src, n);
-#else
-    if (filter) {
-        // Filter out ANSI sequences on these OS
-        uint8_t *rdest = (uint8_t *)dest;
-        uint8_t *rsrc = (uint8_t *)src;
-        uint16_t si = 0;
-        for (uint16_t i = 0; i < n; i++) {
-            if ((rsrc[i] == '\x1b')
-                    && (i < n - 1)
-                    && (rsrc[i + 1] >= 0x40)
-                    && (rsrc[i + 1] <= 0x5F)) {  // entering ANSI sequence
-
-                i++;
-                if ((rsrc[i] == '[') && (i < n - 1)) { // entering CSI sequence
-                    i++;
-
-                    while ((i < n - 1) && (rsrc[i] >= 0x30) && (rsrc[i] <= 0x3F)) { // parameter bytes
-                        i++;
-                    }
-
-                    while ((i < n - 1) && (rsrc[i] >= 0x20) && (rsrc[i] <= 0x2F)) { // intermediate bytes
-                        i++;
-                    }
-
-                    if ((rsrc[i] >= 0x40) && (rsrc[i] <= 0x7F)) { // final byte
-                        continue;
-                    }
-                } else {
-                    continue;
-                }
-            }
-            rdest[si++] = rsrc[i];
-        }
-    } else {
-        memcpy(dest, src, n);
-    }
-#endif
-}
-
 //-----------------------------------------------------------------------------
 // Entry point into our code: called whenever we received a packet over USB
 // that we weren't necessarily expecting, for example a debug print.
@@ -302,6 +264,13 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
 
     // we got a packet, reset WaitForResponseTimeout timeout
     timeout_start_time = msclock();
+
+    bool filter_ansi = true;
+#if defined(__linux__) || (__APPLE__)
+    struct stat tmp_stat;
+    if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+        filter_ansi = false;
+#endif
 
     switch (packet->cmd) {
         // First check if we are handling a debug message
@@ -320,11 +289,11 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
                 struct d *data = (struct d *)&packet->data.asBytes;
                 len = packet->length - sizeof(data->flag);
                 flag = data->flag;
-                memcpy_filtered(s, data->buf, len, flag & FLAG_ANSI);
+                memcpy_filter_ansi(s, data->buf, len, (flag & FLAG_ANSI) && filter_ansi);
             } else {
                 len = MIN(packet->oldarg[0], USB_CMD_DATA_SIZE);
                 flag = packet->oldarg[1];
-                memcpy_filtered(s, packet->data.asBytes, len, flag & FLAG_ANSI);
+                memcpy_filter_ansi(s, packet->data.asBytes, len, (flag & FLAG_ANSI) && filter_ansi);
             }
 
             if (flag & FLAG_LOG) {

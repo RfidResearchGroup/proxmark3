@@ -16,6 +16,10 @@
 #endif
 
 #include "ui.h"
+#if defined(__linux__) || (__APPLE__)
+#include <unistd.h>
+#include <sys/stat.h>
+#endif
 
 double CursorScaleFactor = 1;
 int PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64;
@@ -138,10 +142,11 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 void PrintAndLog(const char *fmt, ...) {
     char *saved_line;
     int saved_point;
-    va_list argptr, argptr2;
+    va_list argptr;
     static FILE *logfile = NULL;
     static int logging = 1;
-
+    char buffer[MAX_PRINT_BUFFER] = {0};
+    char buffer2[MAX_PRINT_BUFFER] = {0};
     // lock this section to avoid interlacing prints from different threads
     pthread_mutex_lock(&print_lock);
 
@@ -171,10 +176,18 @@ void PrintAndLog(const char *fmt, ...) {
 #endif
 
     va_start(argptr, fmt);
-    va_copy(argptr2, argptr);
-    vprintf(fmt, argptr);
-    printf("          "); // cleaning prompt
+    vsnprintf(buffer, sizeof(buffer), fmt, argptr);
     va_end(argptr);
+
+    bool filter_ansi = true;
+#if defined(__linux__) || (__APPLE__)
+    struct stat tmp_stat;
+    if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+        filter_ansi = false;
+#endif
+    memcpy_filter_ansi(buffer2, buffer, sizeof(buffer), filter_ansi);
+    printf("%s", buffer2);
+    printf("          "); // cleaning prompt
     printf("\n");
 
 #ifdef RL_STATE_READCMD
@@ -189,11 +202,14 @@ void PrintAndLog(const char *fmt, ...) {
 #endif
 
     if (logging && logfile) {
-        vfprintf(logfile, fmt, argptr2);
-        fprintf(logfile, "\n");
+        if (filter_ansi) { // already done
+            fprintf(logfile, "%s\n", buffer2);
+        } else {
+            memcpy_filter_ansi(buffer, buffer2, sizeof(buffer2), true);
+            fprintf(logfile, "%s\n", buffer);
+        }
         fflush(logfile);
     }
-    va_end(argptr2);
 
     if (flushAfterWrite)
         fflush(stdout);
@@ -208,6 +224,44 @@ void SetLogFilename(char *fn) {
 
 void SetFlushAfterWrite(bool value) {
     flushAfterWrite = value;
+}
+
+void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter) {
+    if (filter) {
+        // Filter out ANSI sequences on these OS
+        uint8_t *rdest = (uint8_t *)dest;
+        uint8_t *rsrc = (uint8_t *)src;
+        uint16_t si = 0;
+        for (uint16_t i = 0; i < n; i++) {
+            if ((rsrc[i] == '\x1b')
+                    && (i < n - 1)
+                    && (rsrc[i + 1] >= 0x40)
+                    && (rsrc[i + 1] <= 0x5F)) {  // entering ANSI sequence
+
+                i++;
+                if ((rsrc[i] == '[') && (i < n - 1)) { // entering CSI sequence
+                    i++;
+
+                    while ((i < n - 1) && (rsrc[i] >= 0x30) && (rsrc[i] <= 0x3F)) { // parameter bytes
+                        i++;
+                    }
+
+                    while ((i < n - 1) && (rsrc[i] >= 0x20) && (rsrc[i] <= 0x2F)) { // intermediate bytes
+                        i++;
+                    }
+
+                    if ((rsrc[i] >= 0x40) && (rsrc[i] <= 0x7F)) { // final byte
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+            }
+            rdest[si++] = rsrc[i];
+        }
+    } else {
+        memcpy(dest, src, n);
+    }
 }
 
 void iceIIR_Butterworth(int *data, const size_t len) {
