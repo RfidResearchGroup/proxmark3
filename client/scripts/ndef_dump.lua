@@ -32,7 +32,8 @@ Arguments:
 ]]
 
 local DEBUG = true -- the debug flag
-
+local band = bit32.band
+local rshift = bit32.rshift
 ---
 -- A debug printout-function
 local function dbg(args)
@@ -133,10 +134,10 @@ local function main( args)
     core.clearCommandBuffer()
 
     if info.name:match("Ultralight") then
-        print('[=]  Found a tag')
+        print('[=] Found a tag')
     else
         disconnect()
-        return oops('[!]  Not a Ultralightbased card. This script reads NDEF formatted UL/NTAGS')
+        return oops('[!] Not a Ultralightbased card. This script reads NDEF formatted UL/NTAGS')
     end
     
     -- Info contained within the tag (block 0 example)
@@ -154,18 +155,15 @@ local function main( args)
         return oops(err)
     end
     -- Block 3 contains number of blocks
-    local b3chars = utils.ConvertHexToBytes(blocks[4]);
-    local t5tarea = b3chars[3] * 8
+    local b3 = utils.ConvertHexToBytes(blocks[4]);
+    local t5tarea = b3[3] * 8
     local t5tarea_blocks = t5tarea / 4;
-    print("[=]  Number of blocks:", t5tarea_blocks)
 
     -- NDEF compliant?
-    if b3chars[1] ~= 0xE1 then
+    if b3[1] ~= 0xE1 then
         disconnect()
-        return oops('[!]  This tag is not NDEF-Compliant')
+        return oops('[!] This tag is not NDEF-Compliant')
     end
-
-    local ndefversion = b3chars[2]
 
     -- Reuse existing info
     local blockData = {blocks[1], blocks[2], blocks[3], blocks[4]}
@@ -175,7 +173,7 @@ local function main( args)
     the only way to avoid this is to send the read command as many times as block numbers
     removing bytes from 5 to 18 from each answer.
     --]]
-    print('[=]  Dumping data...please wait')
+    print('[=] Dumping data...')
     for i = 4, t5tarea_blocks - 1, 1 do
         blocks, err = getBlock(i)
         if err then 
@@ -187,25 +185,68 @@ local function main( args)
     -- Deactivate field
     disconnect()
     -- Print results
-    print('[=]  Tag NDEF info')
-    print('[=]  ------------------------------------------------')
-    print('[=]  UID         ', info.uid)
-    print('[=]  NDEF version', ('%02x'):format(ndefversion))
-    print('[=]  Manufacturer', info.manufacturer)
-    print('[=]  Type        ', info.name)
-    print('[=]  ------------------------------------------------')
+    print('[=] --- Tag NDEF Message info')
+    print('[=] '.. string.rep('--', 50) )
+    print('[=]          Type : ', info.name)
+    print('[=]           UID : ', info.uid)
+    print('[=]  Manufacturer : ', info.manufacturer)
+    print('[=]  Capacity Container : '.. blockData[4])
+    print(('[=]     %02X : NDEF Magic Number'):format(b3[1]) )
+
+    local vLow = band(b3[2], 0xF)
+    local vHi = band(rshift(b3[2], 4), 0xF)
+    print(('[=]     %02X : version %d.%d supported by tag'):format(b3[2], vHi, vLow) )
+    
+    print(('[=]     %02X : Physical Memory Size: %d bytes'):format(b3[3], t5tarea) )
+    if b3[3] == 0x96 then
+       print(('  %02X : NDEF Memory Size: %d bytes'):format(b3[3], 48))
+    elseif b3[3] == 0x12 then
+       print(('  %02X : NDEF Memory Size: %d bytes'):format(b3[3], 144))
+    elseif b3[3] == 0x3E then
+       print(('  %02X : NDEF Memory Size: %d bytes'):format(b3[3], 496))
+    elseif b3[3] == 0x6D then
+       print(('  %02X : NDEF Memory Size: %d bytes'):format(b3[3], 872))
+    end
+
+    local rLow = band(b3[4], 0xF)
+    local rHi = band(rshift(b3[4], 4), 0xF)
+    local wstr, rstr
+
+    if rLow == 0 then
+       wstr = 'Write access granted without any security'
+    elseif rLow == 0x0F then
+       wstr = 'No write access granted at all'
+    else
+       wstr = '(RFU)'
+    end
+
+    if rHi ~= 0x00 then
+       rstr = '(RFU)'
+    else
+       rstr = 'Read access granted without any security'
+    end
+
+    print( ('[=]     %02X : %s / %s'):format(b3[4], rstr, wstr))
+
+    print('[=] '.. string.rep('--', 50) )
     local ndefdata = table.concat(blockData, '', 5)
     core.ndefparse(t5tarea, verbose, ndefdata)
-    print('[=]  ------------------------------------------------')
-    
+    print('[=] '.. string.rep('--', 50) )
+
+    print('')
+    print('[=] Tag dump')
+    print('|---|-------------------|')
     for k,v in ipairs(blockData) do
-        print(string.format('Block %02x: %02x %02x %02x %02x', k-1, string.byte(v, 1,4)))
+
+--        print(string.format('Block %02x: %02x %02x %02x %02x', k-1, string.byte(v, 1,4)))
+	print(string.format(' %02x | %s', k-1, v) )
     end
+   print('|---|-------------------|')
     
     local filename, err = utils.WriteDumpFile(info.uid, blockData)
     if err then return oops(err) end
 
-    print(string.format('[+]  Dumped data into %s', filename))
+    print(string.format('[+] Dumped data into %s', filename))
 
 end
 main(args)
