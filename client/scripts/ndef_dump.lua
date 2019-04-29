@@ -92,7 +92,7 @@ end
 local function getBlock(blockno)
     local block, err
     local c = Command:newMIX{cmd = cmds.CMD_MIFAREU_READBL, arg1 = blockno, data = 0}
-    block, err = getblockdata(c:scr(false))
+    block, err = getblockdata(c:sendMIX(false))
     if not block then return oops(err) end
     
     if #block < 32 then
@@ -191,8 +191,8 @@ local function main( args)
     print('Manufacturer', info.manufacturer)
     print('Type        ', info.name)
 
-
-    core.ndefparse( t5tarea, true, blockData);
+    local ndefdata = table.concat(blockData, '', 5)
+    core.ndefparse(t5tarea, 1, ndefdata)
 
     for k,v in ipairs(blockData) do
         print(string.format('Block %02x: %02x %02x %02x %02x', k-1, string.byte(v, 1,4)))
