@@ -949,7 +949,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareNested(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         case CMD_MIFARE_CHKKEYS: {
-            MifareChkKeys(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareChkKeys(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes, packet->ng);            
             break;
         }
         case CMD_MIFARE_CHKKEYS_FAST: {

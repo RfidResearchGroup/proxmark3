@@ -1516,7 +1516,7 @@ OUT:
     }
 }
 
-void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
+void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain, bool ng) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
@@ -1592,8 +1592,13 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
     }
 
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, 0, 0, datain + i * 6, 6);
 
+    if (ng) {
+        reply_ng(CMD_MIFARE_CHKKEYS, PM3_SUCCESS, datain + i * 6, 6);
+    } else {
+        reply_mix(CMD_ACK, isOK, 0, 0, datain + i * 6, 6);
+    }
+//    reply_old(CMD_ACK, isOK, 0, 0, datain + i * 6, 6);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 

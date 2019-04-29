@@ -13,7 +13,10 @@
 -- Loads the commands-library
 local taglib = require('taglib')
 local cmds = require('commands')
-local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
+
+-- Shouldn't take longer than 2 seconds
+local TIMEOUT = 2000
+
 local ISO14A_COMMAND = {
     ISO14A_CONNECT = 1,
     ISO14A_NO_DISCONNECT = 2,
@@ -99,7 +102,7 @@ local function read14443a(dont_disconnect, no_rats)
         if arg0 == 0 then
             return nil, 'iso14443a card select failed'
         end
-        data = string.sub(result,count)
+        data = string.sub(result, count)
         info, err = parse14443a(data)
     else
         err = 'No response from card'

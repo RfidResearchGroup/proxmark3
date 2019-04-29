@@ -84,11 +84,11 @@ local function checkBlock(blockno, testkeys, keytype)
         core.clearCommandBuffer() 
         
         print(("Testing block %d, keytype %d, with %d keys"):format(blockno, keytype, chunksize))
-        local c = Command:newMIX{cmd = cmds.CMD_MIFARE_CHKKEYS,
+        local c = Command:newNG{cmd = cmds.CMD_MIFARE_CHKKEYS,
                                 arg1 =  arg1,
                                 arg3 = chunksize,
                                 data = d1}
-        status, err = checkCommand(c:sendMIX(false, TIMEOUT))
+        status, err = checkCommand(c:sendNG(false, TIMEOUT))
 
         if status then return status, blockno end
         start = start + chunksize
