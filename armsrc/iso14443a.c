@@ -2406,7 +2406,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
     uint32_t timeout = c->oldarg[2];
     uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
-    uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
     uint8_t par[MAX_PARITY_SIZE] = {0x00};
 
     if ((param & ISO14A_CONNECT))

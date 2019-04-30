@@ -121,7 +121,7 @@ static int switch_off_field_14b(void) {
 
 static bool waitCmd14b(bool verbose) {
 
-    uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
@@ -188,7 +188,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     bool reply = true, power = false, select = false, hasTimeout = false;
     char buf[5] = "";
     int i = 0;
-    uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     uint16_t datalen = 0;
     uint32_t flags = ISO14B_CONNECT;
     uint32_t temp = 0, user_timeout = 0, time_wait = 0;
@@ -270,8 +270,8 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     if (datalen > 0)
         flags |= ISO14B_RAW;
 
-    // Max buffer is USB_CMD_DATA_SIZE
-    datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
+    // Max buffer is PM3_CMD_DATA_SIZE
+    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
     SendCommandOLD(CMD_ISO_14443B_COMMAND, flags, datalen, time_wait, data, datalen);

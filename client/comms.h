@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "uart.h"
 #include "ui.h"
 #include "common.h"

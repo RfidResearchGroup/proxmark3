@@ -592,7 +592,7 @@ static int CmdHF15Info(const char *Cmd) {
 
     PacketResponseNG resp;
     uint8_t *recv;
-    uint8_t req[USB_CMD_DATA_SIZE] = {0};
+    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
     uint16_t reqlen;
     uint8_t arg1 = 1;
     char cmdbuf[100] = {0};
@@ -932,7 +932,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     PacketResponseNG resp;
     uint8_t *recv;
-    uint8_t req[USB_CMD_DATA_SIZE] = {0};
+    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
     uint16_t reqlen = 0;
     uint8_t arg1 = 1;
     uint8_t pagenum, pagecount;
@@ -1018,7 +1018,7 @@ static int CmdHF15Read(const char *Cmd) {
     // arg0 (datalen,  cmd len?  .arg0 == crc?)
     // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
     // arg2 (recv == 1 == expect a response)
-    uint8_t req[USB_CMD_DATA_SIZE] = {0};
+    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
     uint16_t reqlen = 0;
     uint8_t arg1 = 1;
     int blocknum;
@@ -1085,7 +1085,7 @@ static int CmdHF15Write(const char *Cmd) {
 
     PacketResponseNG resp;
     uint8_t *recv;
-    uint8_t req[USB_CMD_DATA_SIZE] = {0};
+    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
     uint16_t reqlen = 0;
     uint8_t arg1 = 1;
     int pagenum, temp;

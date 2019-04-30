@@ -1573,7 +1573,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     uint8_t *cmd = c->data.asBytes;
     uint8_t status;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
-    uint8_t buf[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
 
     if (MF_DBGLEVEL > 3) Dbprintf("14b raw: param, %04x", param);
 
@@ -1621,7 +1621,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
         CodeAndTransmit14443bAsReader(cmd, len); // raw
         GetTagSamplesFor14443bDemod(); // raw
 
-        sendlen = MIN(Demod.len, USB_CMD_DATA_SIZE);
+        sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
         status = (Demod.len > 0) ? 0 : 1;
         reply_old(CMD_ACK, status, sendlen, 0, Demod.output, sendlen);
     }

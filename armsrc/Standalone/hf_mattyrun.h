@@ -14,7 +14,7 @@
 
 #include "standalone.h" // standalone definitions
 #include "apps.h"       // debugstatements, lfops?
-#include "usb_cmd.h"    // mifare1ksim flags
+#include "pm3_cmd.h"    // mifare1ksim flags
 #include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
 

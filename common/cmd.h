@@ -34,7 +34,7 @@
 #define _PROXMARK_CMD_H_
 
 #include "common.h"
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "usb_cdc.h"
 #include "usart.h"
 #include "proxmark3.h"

@@ -59,9 +59,9 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
     txcmd.arg[1] = arg1;
     txcmd.arg[2] = arg2;
 
-    // Add the (optional) content to the frame, with a maximum size of USB_CMD_DATA_SIZE
+    // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE
     if (data && len) {
-        len = MIN(len, USB_CMD_DATA_SIZE);
+        len = MIN(len, PM3_CMD_DATA_SIZE);
         for (size_t i = 0; i < len; i++) {
             txcmd.d.asBytes[i] = ((uint8_t *)data)[i];
         }
@@ -95,14 +95,14 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
     txBufferNG.pre.cmd = cmd;
     txBufferNG.pre.status = status;
     txBufferNG.pre.ng = ng;
-    if (len > USB_CMD_DATA_SIZE) {
-        len = USB_CMD_DATA_SIZE;
+    if (len > PM3_CMD_DATA_SIZE) {
+        len = PM3_CMD_DATA_SIZE;
         // overwrite status
         txBufferNG.pre.status = PM3_EOVFLOW;
     }
     txBufferNG.pre.length = len;
 
-    // Add the (optional) content to the frame, with a maximum size of USB_CMD_DATA_SIZE
+    // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE
     if (data && len) {
         for (size_t i = 0; i < len; i++) {
             txBufferNG.data[i] = data[i];
@@ -143,11 +143,11 @@ int reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
 int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     uint16_t status = PM3_SUCCESS;
     uint64_t arg[3] = {arg0, arg1, arg2};
-    if (len > USB_CMD_DATA_SIZE - sizeof(arg)) {
-        len = USB_CMD_DATA_SIZE - sizeof(arg);
+    if (len > PM3_CMD_DATA_SIZE - sizeof(arg)) {
+        len = PM3_CMD_DATA_SIZE - sizeof(arg);
         status = PM3_EOVFLOW;
     }
-    uint8_t cmddata[USB_CMD_DATA_SIZE];
+    uint8_t cmddata[PM3_CMD_DATA_SIZE];
     memcpy(cmddata, arg, sizeof(arg));
     if (len && data)
         memcpy(cmddata + sizeof(arg), data, len);
@@ -166,7 +166,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
     uint16_t length = rx_raw.pre.length;
     rx->cmd = rx_raw.pre.cmd;
     if (rx->magic == COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
-        if (length > USB_CMD_DATA_SIZE)
+        if (length > PM3_CMD_DATA_SIZE)
             return PM3_EOVFLOW;
         // Get the core and variable length payload
         bytes = read_ng((uint8_t *)&rx_raw.data, length);
@@ -213,7 +213,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         rx->oldarg[0] = rx_old.arg[0];
         rx->oldarg[1] = rx_old.arg[1];
         rx->oldarg[2] = rx_old.arg[2];
-        rx->length = USB_CMD_DATA_SIZE;
+        rx->length = PM3_CMD_DATA_SIZE;
         memcpy(&rx->data, &rx_old.d.asBytes, rx->length);
     }
     return PM3_SUCCESS;

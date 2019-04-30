@@ -442,12 +442,12 @@ static int CmdPing(const char *Cmd) {
 
 static int CmdPingNG(const char *Cmd) {
     uint32_t len = strtol(Cmd, NULL, 0);
-    if (len > USB_CMD_DATA_SIZE)
-        len = USB_CMD_DATA_SIZE;
+    if (len > PM3_CMD_DATA_SIZE)
+        len = PM3_CMD_DATA_SIZE;
     PrintAndLogEx(NORMAL, "PingNG sent with payload len=%d", len);
     clearCommandBuffer();
     PacketResponseNG resp;
-    uint8_t data[USB_CMD_DATA_SIZE] = {0};
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
     SendCommandNG(CMD_PING, data, len);

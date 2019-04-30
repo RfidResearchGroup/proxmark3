@@ -16,7 +16,7 @@
 #include "util.h"
 #include "flash.h"
 #include "comms.h"
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 
 #define MAX_FILES 4
 

@@ -488,7 +488,7 @@ static int CmdAnalyseA(const char *Cmd) {
     int hexlen = 0;
     uint8_t cmdp = 0;
     bool errors = false;
-    uint8_t data[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -513,7 +513,7 @@ static int CmdAnalyseA(const char *Cmd) {
 
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FPC_SEND, 0, 0, 0, data, USB_CMD_DATA_SIZE);
+    SendCommandOLD(CMD_FPC_SEND, 0, 0, 0, data, PM3_CMD_DATA_SIZE);
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {

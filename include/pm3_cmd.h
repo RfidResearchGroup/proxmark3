@@ -27,15 +27,15 @@ typedef BYTE uint8_t;
 #define PACKED __attribute__((packed))
 #endif
 
-#define USB_CMD_DATA_SIZE 512
-#define USB_CMD_DATA_SIZE_MIX ( USB_CMD_DATA_SIZE - 3 * sizeof(uint64_t) )
+#define PM3_CMD_DATA_SIZE 512
+#define PM3_CMD_DATA_SIZE_MIX ( PM3_CMD_DATA_SIZE - 3 * sizeof(uint64_t) )
 
 typedef struct {
     uint64_t cmd;
     uint64_t arg[3];
     union {
-        uint8_t  asBytes[USB_CMD_DATA_SIZE];
-        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+        uint8_t  asBytes[PM3_CMD_DATA_SIZE];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } d;
 } PACKED PacketCommandOLD;
 
@@ -61,8 +61,8 @@ typedef struct {
     uint16_t crc;        //  NG
     uint64_t oldarg[3];  //  OLD
     union {
-        uint8_t  asBytes[USB_CMD_DATA_SIZE];
-        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+        uint8_t  asBytes[PM3_CMD_DATA_SIZE];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } data;
     bool ng;             // does it store NG data or OLD data?
 } PACKED PacketCommandNG;
@@ -70,7 +70,7 @@ typedef struct {
 // For reception and CRC check
 typedef struct {
     PacketCommandNGPreamble pre;
-    uint8_t data[USB_CMD_DATA_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE];
     PacketCommandNGPostamble foopost; // Probably not at that offset!
 } PACKED PacketCommandNGRaw;
 
@@ -78,8 +78,8 @@ typedef struct {
     uint64_t cmd;
     uint64_t arg[3];
     union {
-        uint8_t  asBytes[USB_CMD_DATA_SIZE];
-        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+        uint8_t  asBytes[PM3_CMD_DATA_SIZE];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } d;
 } PACKED PacketResponseOLD;
 
@@ -107,8 +107,8 @@ typedef struct {
     uint16_t crc;        //  NG
     uint64_t oldarg[3];  //  OLD
     union {
-        uint8_t  asBytes[USB_CMD_DATA_SIZE];
-        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+        uint8_t  asBytes[PM3_CMD_DATA_SIZE];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } data;
     bool ng;             // does it store NG data or OLD data?
 } PACKED PacketResponseNG;
@@ -116,7 +116,7 @@ typedef struct {
 // For reception and CRC check
 typedef struct {
     PacketResponseNGPreamble pre;
-    uint8_t data[USB_CMD_DATA_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE];
     PacketResponseNGPostamble foopost; // Probably not at that offset!
 } PACKED PacketResponseNGRaw;
 

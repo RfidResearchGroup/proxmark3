@@ -18,7 +18,7 @@
 #include "proxmark3.h"
 #include "elf.h"
 #include "proxendian.h"
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "at91sam7s512.h"
 #include "util_posix.h"
 #include "util.h"

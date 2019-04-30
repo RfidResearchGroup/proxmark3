@@ -1661,7 +1661,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         return 1;
     }
 
-    uint32_t chunksize = keycnt > (USB_CMD_DATA_SIZE / 6) ? (USB_CMD_DATA_SIZE / 6) : keycnt;
+    uint32_t chunksize = keycnt > (PM3_CMD_DATA_SIZE / 6) ? (PM3_CMD_DATA_SIZE / 6) : keycnt;
     bool firstChunk = true, lastChunk = false;
 
     // time
@@ -1933,7 +1933,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
 
     uint8_t trgKeyType = 0;
-    uint32_t max_keys = keycnt > ((USB_CMD_DATA_SIZE - 4) / 6) ? ((USB_CMD_DATA_SIZE - 4) / 6) : keycnt;
+    uint32_t max_keys = keycnt > ((PM3_CMD_DATA_SIZE - 4) / 6) ? ((PM3_CMD_DATA_SIZE - 4) / 6) : keycnt;
 
     // time
     uint64_t t1 = msclock();

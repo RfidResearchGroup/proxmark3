@@ -19,7 +19,7 @@
 #include <string.h>
 #include "util_posix.h"
 #include "proxmark3.h"
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "util.h"
 #include "ui.h"
 #include "cmdparser.h"

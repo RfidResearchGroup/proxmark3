@@ -90,7 +90,7 @@ static int l_SendCommandOLD(lua_State *L) {
 // (uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
 
     uint64_t cmd, arg0, arg1, arg2;
-    uint8_t data[USB_CMD_DATA_SIZE] = {0};
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     size_t len = 0, size;
 
     //Check number of arguments
@@ -138,7 +138,7 @@ static int l_SendCommandOLD(lua_State *L) {
 static int l_SendCommandMIX(lua_State *L) {
 
     uint64_t cmd, arg0, arg1, arg2;
-    uint8_t data[USB_CMD_DATA_SIZE] = {0};
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     size_t len = 0, size;
 
     // check number of arguments
@@ -180,7 +180,7 @@ static int l_SendCommandMIX(lua_State *L) {
  */
 static int l_SendCommandNG(lua_State *L) {
 
-    uint8_t data[USB_CMD_DATA_SIZE] = {0};
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     size_t len = 0, size;
 
     // check number of arguments
@@ -414,7 +414,7 @@ static int l_CmdConsole(lua_State *L) {
 
 static int l_iso15693_crc(lua_State *L) {
     uint32_t tmp;
-    unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
+    unsigned char buf[PM3_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;
     const char *data = luaL_checklstring(L, 1, &size);
 
@@ -431,7 +431,7 @@ static int l_iso15693_crc(lua_State *L) {
 
 static int l_iso14443b_crc(lua_State *L) {
     uint32_t tmp;
-    unsigned char buf[USB_CMD_DATA_SIZE] = {0x00};
+    unsigned char buf[PM3_CMD_DATA_SIZE] = {0x00};
     size_t size = 0;
     const char *data = luaL_checklstring(L, 1, &size);
 

@@ -1168,7 +1168,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
     //Use the emulator memory for SIM
     uint8_t *emulator = BigBuf_get_EM_addr();
-    uint8_t mac_responses[USB_CMD_DATA_SIZE] = { 0 };
+    uint8_t mac_responses[PM3_CMD_DATA_SIZE] = { 0 };
 
     if (simType == 0) {
         // Use the CSN from commandline
@@ -1188,7 +1188,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
         // in order to obtain the keys, as in the "dismantling iclass"-paper.
 #define EPURSE_MAC_SIZE 16
         int i = 0;
-        for (; i < numberOfCSNS && i * EPURSE_MAC_SIZE + 8 < USB_CMD_DATA_SIZE; i++) {
+        for (; i < numberOfCSNS && i * EPURSE_MAC_SIZE + 8 < PM3_CMD_DATA_SIZE; i++) {
             // The usb data is 512 bytes, fitting 65 8-byte CSNs in there.
 
             memcpy(emulator, datain + (i * 8), 8);
@@ -1220,7 +1220,7 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
         // attack below is same as SIM 2, but we run the CSN twice to collected the mac for both keys.
         int i = 0;
         // The usb data is 512 bytes, fitting 65 8-byte CSNs in there.  iceman fork uses 9 CSNS
-        for (; i < numberOfCSNS && i * EPURSE_MAC_SIZE + 8 < USB_CMD_DATA_SIZE; i++) {
+        for (; i < numberOfCSNS && i * EPURSE_MAC_SIZE + 8 < PM3_CMD_DATA_SIZE; i++) {
 
             memcpy(emulator, datain + (i * 8), 8);
 
@@ -2110,7 +2110,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
     uint8_t mem = 0;
     uint8_t check[] = { 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t read[]  = { 0x0c, 0x00, 0x00, 0x00 };
-    uint8_t card_data[USB_CMD_DATA_SIZE] = {0};
+    uint8_t card_data[PM3_CMD_DATA_SIZE] = {0};
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
 
     static struct memory_t {
@@ -2158,7 +2158,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
 
         WDT_HIT();
         //Set card_data to all zeroes, we'll fill it with data
-        memset(card_data, 0x0, USB_CMD_DATA_SIZE);
+        memset(card_data, 0x0, PM3_CMD_DATA_SIZE);
         uint8_t failedRead = 0;
         uint32_t stored_data_length = 0;
 
@@ -2178,7 +2178,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
                 //Fill up the buffer
                 memcpy(card_data + stored_data_length, resp, 8);
                 stored_data_length += 8;
-                if (stored_data_length + 8 > USB_CMD_DATA_SIZE) {
+                if (stored_data_length + 8 > PM3_CMD_DATA_SIZE) {
                     //Time to send this off and start afresh
                     reply_old(CMD_ACK,
                               stored_data_length,//data length

@@ -29,7 +29,7 @@
 #include "loclass/elite_crack.h"
 #include "loclass/fileutils.h"
 #include "protocols.h"
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "cmdhfmfu.h"
 #include "cmdhf.h"
 #include "protocols.h" // picopass structs,

@@ -595,7 +595,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     uint32_t bytes_remaining  = bytes_read;
 
     while (bytes_remaining > 0) {
-        uint32_t bytes_in_packet = MIN(USB_CMD_DATA_SIZE, bytes_remaining);
+        uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
         clearCommandBuffer();
         SendCommandOLD(CMD_ICLASS_EML_MEMSET, bytes_sent, bytes_in_packet, 0, dump + bytes_sent, bytes_in_packet);
         bytes_remaining -= bytes_in_packet;
@@ -1272,10 +1272,10 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
 
     FILE *f;
 
-    iclass_block_t tag_data[USB_CMD_DATA_SIZE / 12];
+    iclass_block_t tag_data[PM3_CMD_DATA_SIZE / 12];
 
-    if ((endblock - startblock + 1) * 12 > USB_CMD_DATA_SIZE) {
-        PrintAndLogEx(NORMAL, "Trying to write too many blocks at once.  Max: %d", USB_CMD_DATA_SIZE / 8);
+    if ((endblock - startblock + 1) * 12 > PM3_CMD_DATA_SIZE) {
+        PrintAndLogEx(NORMAL, "Trying to write too many blocks at once.  Max: %d", PM3_CMD_DATA_SIZE / 8);
     }
     // file handling and reading
     f = fopen(filename, "rb");
@@ -1944,7 +1944,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     //PrintPreCalcMac(keyBlock, keycnt, pre);
 
     // max 42 keys inside USB_COMMAND.  512/4 = 103 mac
-    uint32_t chunksize = keycnt > (USB_CMD_DATA_SIZE / 4) ? (USB_CMD_DATA_SIZE / 4) : keycnt;
+    uint32_t chunksize = keycnt > (PM3_CMD_DATA_SIZE / 4) ? (PM3_CMD_DATA_SIZE / 4) : keycnt;
     bool lastChunk = false;
 
     // fast push mode

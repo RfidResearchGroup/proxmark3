@@ -315,7 +315,7 @@ void RAMFUNC MfSniffSend() {
 
     while (packlen > 0) {
         LED_B_ON();
-        chunksize = MIN(USB_CMD_DATA_SIZE, packlen); // chunk size 512
+        chunksize = MIN(PM3_CMD_DATA_SIZE, packlen); // chunk size 512
         reply_old(CMD_ACK, 1, tracelen, chunksize, data + tracelen - packlen, chunksize);
         packlen -= chunksize;
         LED_B_OFF();

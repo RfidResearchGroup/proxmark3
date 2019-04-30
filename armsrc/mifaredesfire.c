@@ -88,8 +88,8 @@ void MifareDesfireGetInformation() {
 
     int len = 0;
     iso14a_card_select_t card;
-    uint8_t resp[USB_CMD_DATA_SIZE] = {0x00};
-    uint8_t dataout[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t resp[PM3_CMD_DATA_SIZE] = {0x00};
+    uint8_t dataout[PM3_CMD_DATA_SIZE] = {0x00};
 
     /*
         1 = PCB                 1
@@ -505,7 +505,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
 
     size_t len = 0;
     size_t wrappedLen = 0;
-    uint8_t wCmd[USB_CMD_DATA_SIZE] = {0x00};
+    uint8_t wCmd[PM3_CMD_DATA_SIZE] = {0x00};
     uint8_t resp[MAX_FRAME_SIZE];
     uint8_t par[MAX_PARITY_SIZE];
 
@@ -537,7 +537,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
 // CreateAPDU
 size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 
-    size_t cmdlen = MIN(len + 4, USB_CMD_DATA_SIZE - 1);
+    size_t cmdlen = MIN(len + 4, PM3_CMD_DATA_SIZE - 1);
 
     uint8_t cmd[cmdlen];
     memset(cmd, 0, cmdlen);

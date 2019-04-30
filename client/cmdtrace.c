@@ -664,18 +664,18 @@ int CmdTraceList(const char *Cmd) {
 
     // reserv some space.
     if (!trace)
-        trace = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
+        trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
 
     if (isOnline) {
-        // Query for the size of the trace,  downloading USB_CMD_DATA_SIZE
+        // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
         PacketResponseNG response;
-        if (!GetFromDevice(BIG_BUF, trace, USB_CMD_DATA_SIZE, 0, &response, 4000, true)) {
+        if (!GetFromDevice(BIG_BUF, trace, PM3_CMD_DATA_SIZE, 0, &response, 4000, true)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             return 1;
         }
 
         traceLen = response.oldarg[2];
-        if (traceLen > USB_CMD_DATA_SIZE) {
+        if (traceLen > PM3_CMD_DATA_SIZE) {
             uint8_t *p = realloc(trace, traceLen);
             if (p == NULL) {
                 PrintAndLogEx(FAILED, "Cannot allocate memory for trace");

@@ -149,7 +149,7 @@ int CmdLFCommandRead(const char *Cmd) {
     uint32_t arg0 = 0;
     uint32_t arg1 = 0;
     uint32_t arg2 = 0;
-    uint8_t data[USB_CMD_DATA_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE];
     uint16_t datalen = 0;
 
     uint8_t cmdp = 0;
@@ -423,9 +423,9 @@ int CmdLFSim(const char *Cmd) {
     conn.block_after_ACK = true;
     
     //can send only 512 bits at a time (1 byte sent per bit...)
-    for (uint16_t i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
+    for (uint16_t i = 0; i < GraphTraceLen; i += PM3_CMD_DATA_SIZE) {
         clearCommandBuffer();
-        SendCommandOLD(CMD_UPLOAD_SIM_SAMPLES_125K, i, FPGA_LF, 0, &GraphBuffer[i], USB_CMD_DATA_SIZE);
+        SendCommandOLD(CMD_UPLOAD_SIM_SAMPLES_125K, i, FPGA_LF, 0, &GraphBuffer[i], PM3_CMD_DATA_SIZE);
         WaitForResponse(CMD_ACK, NULL);
         printf(".");
         fflush(stdout);
@@ -518,9 +518,9 @@ int CmdLFfskSim(const char *Cmd) {
     if (fcLow == 0) fcLow = 8;
 
     size_t size = DemodBufferLen;
-    if (size > USB_CMD_DATA_SIZE) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
-        size = USB_CMD_DATA_SIZE;
+    if (size > PM3_CMD_DATA_SIZE) {
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE);
+        size = PM3_CMD_DATA_SIZE;
     }
     clearCommandBuffer();
     SendCommandOLD(CMD_FSK_SIM_TAG, fcHigh << 8 | fcLow, (separator << 8) | clk, size, DemodBuffer, size);
@@ -603,9 +603,9 @@ int CmdLFaskSim(const char *Cmd) {
     if (encoding == 0) clk /= 2; //askraw needs to double the clock speed
 
     size_t size = DemodBufferLen;
-    if (size > USB_CMD_DATA_SIZE) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
-        size = USB_CMD_DATA_SIZE;
+    if (size > PM3_CMD_DATA_SIZE) {
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE);
+        size = PM3_CMD_DATA_SIZE;
     }
 
     PrintAndLogEx(NORMAL, "preparing to sim ask data: %d bits", size);
@@ -707,9 +707,9 @@ int CmdLFpskSim(const char *Cmd) {
         }
     }
     size_t size = DemodBufferLen;
-    if (size > USB_CMD_DATA_SIZE) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, USB_CMD_DATA_SIZE);
-        size = USB_CMD_DATA_SIZE;
+    if (size > PM3_CMD_DATA_SIZE) {
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE);
+        size = PM3_CMD_DATA_SIZE;
     }
     PrintAndLogEx(DEBUG, "DEBUG: Sending DemodBuffer Length: %d", size);
     clearCommandBuffer();

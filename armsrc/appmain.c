@@ -118,7 +118,7 @@ void DbpStringEx(uint32_t flags, char *str) {
 #if DEBUG
     struct {
         uint16_t flag;
-        uint8_t buf[USB_CMD_DATA_SIZE - sizeof(uint16_t)];
+        uint8_t buf[PM3_CMD_DATA_SIZE - sizeof(uint16_t)];
     } PACKED data;
     data.flag = flags;
     uint16_t len = MIN(strlen(str), sizeof(data.buf));
@@ -333,8 +333,8 @@ extern struct version_information version_information;
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, _bootrom_start, _bootrom_end, __data_src_start__;
 void SendVersion(void) {
-    char temp[USB_CMD_DATA_SIZE]; /* Limited data payload in USB packets */
-    char VersionString[USB_CMD_DATA_SIZE] = { '\0' };
+    char temp[PM3_CMD_DATA_SIZE]; /* Limited data payload in USB packets */
+    char VersionString[PM3_CMD_DATA_SIZE] = { '\0' };
 
     /* Try to find the bootrom version information. Expect to find a pointer at
      * symbol _bootphase1_version_pointer, perform slight sanity checks on the
@@ -384,9 +384,9 @@ void printUSBSpeed(void) {
     LED_B_ON();
 
     while (end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
-        reply_ng(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, test_data, USB_CMD_DATA_SIZE);
+        reply_ng(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
         end_time = GetTickCount();
-        bytes_transferred += USB_CMD_DATA_SIZE;
+        bytes_transferred += PM3_CMD_DATA_SIZE;
     }
     LED_B_OFF();
 
@@ -1089,7 +1089,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_SMART_UPLOAD: {
             // upload file from client
             uint8_t *mem = BigBuf_get_addr();
-            memcpy(mem + packet->oldarg[0], packet->data.asBytes, USB_CMD_DATA_SIZE);
+            memcpy(mem + packet->oldarg[0], packet->data.asBytes, PM3_CMD_DATA_SIZE);
             reply_old(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
@@ -1205,8 +1205,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             // arg2 = BigBuf tracelen
             //Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, packet->oldarg[2]);
 
-            for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
-                size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+            for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
+                size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
                 int result = reply_old(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
                 if (result != PM3_SUCCESS)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
@@ -1234,7 +1234,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
             uint8_t *mem = BigBuf_get_addr();
-            memcpy(mem + packet->oldarg[0], packet->data.asBytes, USB_CMD_DATA_SIZE);
+            memcpy(mem + packet->oldarg[0], packet->data.asBytes, PM3_CMD_DATA_SIZE);
             reply_old(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
@@ -1249,8 +1249,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             // arg1 = length bytes to transfer
             // arg2 = RFU
 
-            for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
-                len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+            for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
+                len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
                 int result = reply_old(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
                 if (result != PM3_SUCCESS)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
@@ -1274,7 +1274,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             Dbprintf("FlashMem read | %d - %d | ", startidx, len);
 
-            size_t size = MIN(USB_CMD_DATA_SIZE, len);
+            size_t size = MIN(PM3_CMD_DATA_SIZE, len);
 
             if (!FlashInit()) {
                 break;
@@ -1383,7 +1383,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_FLASHMEM_DOWNLOAD: {
 
             LED_B_ON();
-            uint8_t *mem = BigBuf_malloc(USB_CMD_DATA_SIZE);
+            uint8_t *mem = BigBuf_malloc(PM3_CMD_DATA_SIZE);
             uint32_t startidx = packet->oldarg[0];
             uint32_t numofbytes = packet->oldarg[1];
             // arg0 = startindex
@@ -1394,8 +1394,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
 
-            for (size_t i = 0; i < numofbytes; i += USB_CMD_DATA_SIZE) {
-                size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+            for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
+                size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
 
                 bool isok = Flash_ReadDataCont(startidx + i, mem, len);
                 if (!isok)

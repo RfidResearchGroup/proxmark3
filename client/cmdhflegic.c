@@ -833,9 +833,9 @@ void legic_chk_iv(uint32_t *iv) {
 }
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
-    for (size_t i = offset; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+    for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
 
-        size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+        size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
         clearCommandBuffer();
         SendCommandOLD(CMD_LEGIC_ESET, i, len, 0, src + i, len);
     }
@@ -1041,9 +1041,9 @@ static int CmdLegicRestore(const char *Cmd) {
 
     // transfer to device
     PacketResponseNG resp;
-    for (size_t i = 7; i < numofbytes; i += USB_CMD_DATA_SIZE) {
+    for (size_t i = 7; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
 
-        size_t len = MIN((numofbytes - i), USB_CMD_DATA_SIZE);
+        size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
         clearCommandBuffer();
         SendCommandOLD(CMD_WRITER_LEGIC_RF, i, len, 0x55, data + i, len);
 
@@ -1230,11 +1230,11 @@ static int CmdLegicWipe(const char *Cmd) {
 
     // transfer to device
     PacketResponseNG resp;
-    for (size_t i = 7; i < card.cardsize; i += USB_CMD_DATA_SIZE) {
+    for (size_t i = 7; i < card.cardsize; i += PM3_CMD_DATA_SIZE) {
 
         printf(".");
         fflush(stdout);
-        size_t len = MIN((card.cardsize - i), USB_CMD_DATA_SIZE);
+        size_t len = MIN((card.cardsize - i), PM3_CMD_DATA_SIZE);
         clearCommandBuffer();
         SendCommandOLD(CMD_WRITER_LEGIC_RF, i, len, 0x55, data + i, len);
 

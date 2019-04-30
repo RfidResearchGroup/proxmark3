@@ -12,7 +12,7 @@
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "cmdscript.h"  // CmdScriptRun
 
 #define PROXPROMPT "pm3 --> "

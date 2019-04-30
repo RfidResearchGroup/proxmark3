@@ -123,7 +123,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
         return;
     }
-    if (len > USB_CMD_DATA_SIZE) {
+    if (len > PM3_CMD_DATA_SIZE) {
         PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much, abort", len);
         return;
     }
@@ -182,11 +182,11 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 
 void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     uint64_t arg[3] = {arg0, arg1, arg2};
-    if (len > USB_CMD_DATA_SIZE_MIX) {
+    if (len > PM3_CMD_DATA_SIZE_MIX) {
         PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much for MIX frames, abort", len);
         return;
     }
-    uint8_t cmddata[USB_CMD_DATA_SIZE];
+    uint8_t cmddata[PM3_CMD_DATA_SIZE];
     memcpy(cmddata, arg, sizeof(arg));
     if (len && data)
         memcpy(cmddata + sizeof(arg), data, len);
@@ -307,7 +307,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
         // First check if we are handling a debug message
         case CMD_DEBUG_PRINT_STRING: {
 
-            char s[USB_CMD_DATA_SIZE + 1];
+            char s[PM3_CMD_DATA_SIZE + 1];
             memset(s, 0x00, sizeof(s));
 
             size_t len;
@@ -315,14 +315,14 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
             if (packet->ng) {
                 struct d {
                     uint16_t flag;
-                    uint8_t buf[USB_CMD_DATA_SIZE - sizeof(uint16_t)];
+                    uint8_t buf[PM3_CMD_DATA_SIZE - sizeof(uint16_t)];
                 } PACKED;
                 struct d *data = (struct d *)&packet->data.asBytes;
                 len = packet->length - sizeof(data->flag);
                 flag = data->flag;
                 memcpy_filtered(s, data->buf, len, flag & FLAG_ANSI);
             } else {
-                len = MIN(packet->oldarg[0], USB_CMD_DATA_SIZE);
+                len = MIN(packet->oldarg[0], PM3_CMD_DATA_SIZE);
                 flag = packet->oldarg[1];
                 memcpy_filtered(s, packet->data.asBytes, len, flag & FLAG_ANSI);
             }
@@ -410,7 +410,7 @@ __attribute__((force_align_arg_pointer))
             rx.status = rx_raw.pre.status;
             rx.cmd = rx_raw.pre.cmd;
             if (rx.magic == RESPONSENG_PREAMBLE_MAGIC) { // New style NG reply
-                if (length > USB_CMD_DATA_SIZE) {
+                if (length > PM3_CMD_DATA_SIZE) {
                     PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", length);
                     error = true;
                 }
@@ -496,7 +496,7 @@ __attribute__((force_align_arg_pointer))
                     rx.oldarg[0] = rx_old.arg[0];
                     rx.oldarg[1] = rx_old.arg[1];
                     rx.oldarg[2] = rx_old.arg[2];
-                    rx.length = USB_CMD_DATA_SIZE;
+                    rx.length = PM3_CMD_DATA_SIZE;
                     memcpy(&rx.data, &rx_old.d, rx.length);
                     PacketResponseReceived(&rx);
                     if (rx.cmd == CMD_ACK) {
@@ -829,9 +829,9 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
                 uint32_t copy_bytes = MIN(bytes - bytes_completed, response->oldarg[1]);
                 //uint32_t tracelen = response->oldarg[2];
 
-                // extended bounds check1.  upper limit is USB_CMD_DATA_SIZE
+                // extended bounds check1.  upper limit is PM3_CMD_DATA_SIZE
                 // shouldn't happen
-                copy_bytes = MIN(copy_bytes, USB_CMD_DATA_SIZE);
+                copy_bytes = MIN(copy_bytes, PM3_CMD_DATA_SIZE);
 
                 // extended bounds check2.
                 if (offset + copy_bytes > bytes) {

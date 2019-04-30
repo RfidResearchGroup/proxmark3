@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "cmd.h"
 #include "apps.h"
 #include "util.h"

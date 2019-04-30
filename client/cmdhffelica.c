@@ -429,7 +429,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     uint16_t numbits = 0;
     char buf[5] = "";
     int i = 0;
-    uint8_t data[USB_CMD_DATA_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE];
     uint16_t datalen = 0;
     uint32_t temp;
 
@@ -518,8 +518,8 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
         flags |= FELICA_RAW;
     }
 
-    // Max buffer is USB_CMD_DATA_SIZE
-    datalen = (datalen > USB_CMD_DATA_SIZE) ? USB_CMD_DATA_SIZE : datalen;
+    // Max buffer is PM3_CMD_DATA_SIZE
+    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
     SendCommandOLD(CMD_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);

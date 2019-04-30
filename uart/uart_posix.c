@@ -67,7 +67,7 @@ typedef struct {
     term_info tiNew;  // Terminal info during the transaction
 } serial_port_unix;
 
-// see usb_cmd.h
+// see pm3_cmd.h
 struct timeval timeout = {
     .tv_sec  = 0, // 0 second
     .tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000

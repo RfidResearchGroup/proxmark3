@@ -128,7 +128,7 @@ static int CmdLFHitagList(const char *Cmd) {
     return 0;
 
     /*
-    uint8_t *got = calloc(USB_CMD_DATA_SIZE, sizeof(uint8_t));
+    uint8_t *got = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!got) {
         PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
         return 2;
@@ -136,14 +136,14 @@ static int CmdLFHitagList(const char *Cmd) {
 
     // Query for the actual size of the trace
     PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, got, USB_CMD_DATA_SIZE, 0, &response, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, got, PM3_CMD_DATA_SIZE, 0, &response, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(got);
         return 2;
     }
 
     uint16_t traceLen = response.arg[2];
-    if (traceLen > USB_CMD_DATA_SIZE) {
+    if (traceLen > PM3_CMD_DATA_SIZE) {
         uint8_t *p = realloc(got, traceLen);
         if (p == NULL) {
             PrintAndLogEx(WARNING, "Cannot allocate memory for trace");

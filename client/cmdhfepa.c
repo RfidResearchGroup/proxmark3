@@ -108,7 +108,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     }
 
     // transfer the APDUs to the Proxmark
-    uint8_t data[USB_CMD_DATA_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE];
     for (int i = 0; i < sizeof(apdu_lengths); i++) {
         // transfer the APDU in several parts if necessary
         for (int j = 0; j * sizeof(data) < apdu_lengths[i]; j++) {

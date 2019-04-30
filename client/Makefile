@@ -283,7 +283,7 @@ ifeq "$(SUPPORTS_AVX512)" "True"
 endif
 
 BINS = proxmark3 flasher fpga_compress
-CLEAN = $(BINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
+CLEAN = $(BINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
 all: lua_build jansson_build mbedtls_build cbor_build $(BINS)
@@ -292,7 +292,7 @@ all-static: LDLIBS:=-static $(LDLIBS)
 all-static: proxmark3 flasher fpga_compress
 
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/usb_cmd.lua lualibs/mf_default_keys.lua
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
 
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
@@ -309,8 +309,8 @@ proxguiqt.moc.cpp: proxguiqt.h
 ui/ui_overlays.h: ui/overlays.ui
 	$(UIC) $^ > $@
 
-lualibs/usb_cmd.lua: ../include/usb_cmd.h
-	awk -f usb_cmd_h2lua.awk $^ > $@
+lualibs/pm3_cmd.lua: ../include/pm3_cmd.h
+	awk -f pm3_cmd_h2lua.awk $^ > $@
 
 lualibs/mf_default_keys.lua : default_keys.dic
 	awk -f default_keys_dic2lua.awk $^ > $@
