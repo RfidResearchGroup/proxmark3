@@ -73,8 +73,9 @@ struct timeval timeout = {
     .tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000
 };
 
-bool uart_reconfigure_timeouts(serial_port *sp, uint32_t value ) {
+int uart_reconfigure_timeouts(serial_port *sp, uint32_t value ) {
     timeout.tv_usec = value * 1000;
+    return PM3_SUCCESS;
 }
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
