@@ -206,6 +206,10 @@ local function perform_check(numsectors)
         keys[i] = {0,0,'',''}
     end
 
+    core.fast_push_mode(true)
+
+    local start_time = os.time()
+    
     for sector = 0, #keys do
         -- Check if user aborted
         if core.ukbhit() then
@@ -227,9 +231,15 @@ local function perform_check(numsectors)
 
         keys[sector] = {succA, succB, keyA, keyB}
     end
-
+    
+    local end_time = os.time()
+    print('')
+    print('[+] mfkeys - Checkkey execution time: '..os.difftime(end_time, start_time)..' sec')
+    
+    core.fast_push_mode(false)
+    
     display_results(keys)
-
+   
     -- save to dumpkeys.bin
     dumptofile(keys)
 end
@@ -262,7 +272,6 @@ end
 -- The main entry point
 local function main(args)
 
-    local start_time = os.time()
     local numSectors = 16
 
     -- Arguments for the script
@@ -273,14 +282,11 @@ local function main(args)
     -- identify tag
     tag, err = lib14a.read(false, true)
     if not tag then return oops(err) end
-
+    
     -- detect sectors and print taginfo
     numsectors = taginfo(tag)
 
     perform_check(numsectors)
-
-    local end_time = os.time()
-    print('mfkeys - Total execution time: '..os.difftime(end_time, start_time)..' sec')
 end
 
 main( args)
