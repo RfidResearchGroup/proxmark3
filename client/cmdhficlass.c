@@ -589,7 +589,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     // fast push mode
     conn.block_after_ACK = true;
-    
+
     //Send to device
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining  = bytes_read;
@@ -607,7 +607,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     conn.block_after_ACK = false;
     SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
     WaitForResponseTimeout(CMD_ACK, NULL, 1000);
-    
+
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
     return 0;
 }
@@ -1949,7 +1949,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     // fast push mode
     conn.block_after_ACK = true;
-    
+
     // main keychunk loop
     for (uint32_t i = 0; i < keycnt; i += chunksize) {
 

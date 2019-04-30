@@ -592,12 +592,12 @@ int TestProxmark(void) {
             if (conn.send_via_fpc) {
                 PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
             }
-            
+
             // reconfigure.
-            if ( conn.send_via_fpc == false ) {
-                uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS );
+            if (conn.send_via_fpc == false) {
+                uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
             }
-           
+
             return PM3_SUCCESS;
         } else {
             return PM3_ETIMEOUT;

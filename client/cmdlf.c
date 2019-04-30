@@ -421,7 +421,7 @@ int CmdLFSim(const char *Cmd) {
 
     // fast push mode
     conn.block_after_ACK = true;
-    
+
     //can send only 512 bits at a time (1 byte sent per bit...)
     for (uint16_t i = 0; i < GraphTraceLen; i += PM3_CMD_DATA_SIZE) {
         clearCommandBuffer();

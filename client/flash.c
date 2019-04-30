@@ -63,14 +63,14 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
             continue;
         }
         PrintAndLogEx(NORMAL, "%d: V 0x%08x P 0x%08x (0x%08x->0x%08x) [%c%c%c] @0x%x",
-                i, vaddr, paddr, filesz, memsz,
-                (flags & PF_R) ? 'R' : ' ',
-                (flags & PF_W) ? 'W' : ' ',
-                (flags & PF_X) ? 'X' : ' ',
-                offset);
+                      i, vaddr, paddr, filesz, memsz,
+                      (flags & PF_R) ? 'R' : ' ',
+                      (flags & PF_W) ? 'W' : ' ',
+                      (flags & PF_X) ? 'X' : ' ',
+                      offset);
         if (filesz != memsz) {
             PrintAndLogEx(ERR, "Error: PHDR file size does not equal memory size\n"
-                    "(DATA+BSS PHDRs do not make sense on ROM platforms!)");
+                          "(DATA+BSS PHDRs do not make sense on ROM platforms!)");
             return -1;
         }
         if (paddr < last_end) {
@@ -121,7 +121,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                     memcpy(new_data, prev_seg->data, prev_seg->length);
                     memcpy(new_data + this_offset, data, filesz);
                     PrintAndLogEx(NORMAL, "Note: Extending previous segment from 0x%x to 0x%x bytes",
-                            prev_seg->length, new_length);
+                                  prev_seg->length, new_length);
                     if (hole)
                         PrintAndLogEx(NORMAL, "Note: 0x%x-byte hole created", hole);
                     free(data);
@@ -335,9 +335,9 @@ static int wait_for_ack(PacketResponseNG *ack) {
 
     if (ack->cmd != CMD_ACK) {
         PrintAndLogEx(ERR, "Error: Unexpected reply 0x%04x %s (expected ACK)",
-               ack->cmd,
-               (ack->cmd == CMD_NACK) ? "NACK" : ""
-              );
+                      ack->cmd,
+                      (ack->cmd == CMD_NACK) ? "NACK" : ""
+                     );
         return -1;
     }
     return 0;

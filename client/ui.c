@@ -75,7 +75,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     char *tmp_ptr = NULL;
     //   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
     static const char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
-    FILE* stream = stdout;
+    FILE *stream = stdout;
 
     switch (level) {
         case ERR:

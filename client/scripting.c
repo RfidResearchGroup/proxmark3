@@ -30,25 +30,25 @@ static int l_clearCommandBuffer(lua_State *L) {
 /**
  * Enable / Disable fast push mode for lua scripts like mfkeys
  * The following params expected:
- *  
+ *
  *@brief l_fast_push_mode
  * @param L
  * @return
  */
-static int l_fast_push_mode(lua_State *L){
-    
+static int l_fast_push_mode(lua_State *L) {
+
     luaL_checktype(L, 1, LUA_TBOOLEAN);
-    
+
     bool enable = lua_toboolean(L, 1);
 
     conn.block_after_ACK = enable;
-    
+
     // Disable fast mode and send a dummy command to make it effective
     if (enable == false) {
         SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
         WaitForResponseTimeout(CMD_ACK, NULL, 1000);
     }
-    
+
     //Push the retval on the stack
     lua_pushboolean(L, enable);
     return 1;

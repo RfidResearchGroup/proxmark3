@@ -49,7 +49,7 @@ typedef struct {
 } serial_port_windows;
 
 int uart_reconfigure_timeouts(serial_port sp, uint32_t value) {
-    
+
     serial_port_windows *spw;
     spw = (serial_port_windows *)sp;
     spw->ct.ReadIntervalTimeout         = value;
@@ -152,7 +152,7 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
     if (result)
         conn.uart_speed = uiPortSpeed;
-    
+
     return result;
 }
 

@@ -122,15 +122,15 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 }
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
     *key = -1;
-    clearCommandBuffer();   
+    clearCommandBuffer();
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     data[0] = keyType;
     data[1] = blockNo;
     data[2] = clear_trace;
     data[3] = keycnt;
     memcpy(data + 4, keyBlock, 6 * keycnt);
-    SendCommandNG(CMD_MIFARE_CHKKEYS, data, (4 + 6 * keycnt) );
-    
+    SendCommandNG(CMD_MIFARE_CHKKEYS, data, (4 + 6 * keycnt));
+
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_MIFARE_CHKKEYS, &resp, 2500)) return PM3_ETIMEOUT;
     if (resp.status != PM3_SUCCESS) return PM3_EUNDEF;
