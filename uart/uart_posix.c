@@ -70,11 +70,11 @@ typedef struct {
 // see usb_cmd.h
 struct timeval timeout = {
     .tv_sec  = 0, // 0 second
-    .tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_US
+    .tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000
 };
 
 bool uart_reconfigure_timeouts(serial_port *sp, uint32_t value ) {
-    timeout.usec = value * 1000;
+    timeout.tv_usec = value * 1000;
 }
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
@@ -91,7 +91,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             return INVALID_SERIAL_PORT;
         }
 
-        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_US;
+        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
 
         char *colon = strrchr(addrstr, ':');
         const char *portstr;
