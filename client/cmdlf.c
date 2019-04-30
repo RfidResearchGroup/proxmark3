@@ -419,6 +419,9 @@ int CmdLFSim(const char *Cmd) {
 
     PrintAndLogEx(DEBUG, "DEBUG: Sending [%d bytes]\n", GraphTraceLen);
 
+    // fast push mode
+    conn.block_after_ACK = true;
+    
     //can send only 512 bits at a time (1 byte sent per bit...)
     for (uint16_t i = 0; i < GraphTraceLen; i += USB_CMD_DATA_SIZE) {
         clearCommandBuffer();
@@ -427,6 +430,10 @@ int CmdLFSim(const char *Cmd) {
         printf(".");
         fflush(stdout);
     }
+    printf("\n");
+
+    // Disable fast mode and send a dummy command to make it effective
+    conn.block_after_ACK = false;
 
     PrintAndLogEx(NORMAL, "Simulating");
 
