@@ -588,7 +588,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     }
 
     // fast push mode
-    conn.block_after_ACK = false;
+    conn.block_after_ACK = true;
     
     //Send to device
     uint32_t bytes_sent = 0;
@@ -1947,6 +1947,9 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     uint32_t chunksize = keycnt > (USB_CMD_DATA_SIZE / 4) ? (USB_CMD_DATA_SIZE / 4) : keycnt;
     bool lastChunk = false;
 
+    // fast push mode
+    conn.block_after_ACK = true;
+    
     // main keychunk loop
     for (uint32_t i = 0; i < keycnt; i += chunksize) {
 
@@ -2031,6 +2034,11 @@ out:
     t1 = msclock() - t1;
 
     PrintAndLogEx(SUCCESS, "\nTime in iclass checkkeys: %.0f seconds\n", (float)t1 / 1000.0);
+
+    // Disable fast mode and send a dummy command to make it effective
+    conn.block_after_ACK = false;
+    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    WaitForResponseTimeout(CMD_ACK, NULL, 1000);
 
     DropField();
     free(pre);
