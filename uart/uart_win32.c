@@ -88,10 +88,10 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     // took settings from libnfc/buses/uart.c
 #ifdef WITH_FPC
     // Still relevant?
-    sp->ct.ReadIntervalTimeout         = 1000;
+    sp->ct.ReadIntervalTimeout         = 150; //200;
     sp->ct.ReadTotalTimeoutMultiplier  = 0;
-    sp->ct.ReadTotalTimeoutConstant    = 1500;
-    sp->ct.WriteTotalTimeoutMultiplier = 1000;
+    sp->ct.ReadTotalTimeoutConstant    = 150; //200;
+    sp->ct.WriteTotalTimeoutMultiplier = 150; //200;
     sp->ct.WriteTotalTimeoutConstant   = 0;
 #else
     sp->ct.ReadIntervalTimeout         = 30;
