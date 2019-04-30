@@ -586,6 +586,10 @@ static int CmdHFiClassELoad(const char *Cmd) {
         free(dump);
         return 1;
     }
+
+    // fast push mode
+    conn.block_after_ACK = false;
+    
     //Send to device
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining  = bytes_read;
@@ -598,6 +602,12 @@ static int CmdHFiClassELoad(const char *Cmd) {
         bytes_sent += bytes_in_packet;
     }
     free(dump);
+
+    // Disable fast mode and send a dummy command to make it effective
+    conn.block_after_ACK = false;
+    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    WaitForResponseTimeout(CMD_ACK, NULL, 1000);
+    
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
     return 0;
 }
