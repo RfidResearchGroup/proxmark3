@@ -40,13 +40,13 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
 
     ctx->segments = calloc(sizeof(flash_seg_t) * num_phdrs, sizeof(uint8_t));
     if (!ctx->segments) {
-        fprintf(stderr, "Out of memory\n");
+        PrintAndLogEx(ERR, "Out of memory");
         return -1;
     }
     ctx->num_segs = 0;
     seg = ctx->segments;
 
-    fprintf(stdout, "Loading usable ELF segments:\n");
+    PrintAndLogEx(NORMAL, "Loading usable ELF segments:");
     for (int i = 0; i < num_phdrs; i++) {
         if (le32(phdr->p_type) != PT_LOAD) {
             phdr++;
@@ -62,27 +62,27 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
             phdr++;
             continue;
         }
-        fprintf(stdout, "%d: V 0x%08x P 0x%08x (0x%08x->0x%08x) [%c%c%c] @0x%x\n",
+        PrintAndLogEx(NORMAL, "%d: V 0x%08x P 0x%08x (0x%08x->0x%08x) [%c%c%c] @0x%x",
                 i, vaddr, paddr, filesz, memsz,
                 (flags & PF_R) ? 'R' : ' ',
                 (flags & PF_W) ? 'W' : ' ',
                 (flags & PF_X) ? 'X' : ' ',
                 offset);
         if (filesz != memsz) {
-            fprintf(stderr, "Error: PHDR file size does not equal memory size\n"
-                    "(DATA+BSS PHDRs do not make sense on ROM platforms!)\n");
+            PrintAndLogEx(ERR, "Error: PHDR file size does not equal memory size\n"
+                    "(DATA+BSS PHDRs do not make sense on ROM platforms!)");
             return -1;
         }
         if (paddr < last_end) {
-            fprintf(stderr, "Error: PHDRs not sorted or overlap\n");
+            PrintAndLogEx(ERR, "Error: PHDRs not sorted or overlap");
             return -1;
         }
         if (paddr < FLASH_START || (paddr + filesz) > FLASH_END) {
-            fprintf(stderr, "Error: PHDR is not contained in Flash\n");
+            PrintAndLogEx(ERR, "Error: PHDR is not contained in Flash");
             return -1;
         }
         if (vaddr >= FLASH_START && vaddr < FLASH_END && (flags & PF_W)) {
-            fprintf(stderr, "Error: Flash VMA segment is writable\n");
+            PrintAndLogEx(ERR, "Error: Flash VMA segment is writable");
             return -1;
         }
 
@@ -90,11 +90,11 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
         // make extra space if we need to move the data forward
         data = calloc(filesz + BLOCK_SIZE, sizeof(uint8_t));
         if (!data) {
-            fprintf(stderr, "Error: Out of memory\n");
+            PrintAndLogEx(ERR, "Error: Out of memory");
             return -1;
         }
         if (fseek(fd, offset, SEEK_SET) < 0 || fread(data, 1, filesz, fd) != filesz) {
-            fprintf(stderr, "Error while reading PHDR payload\n");
+            PrintAndLogEx(ERR, "Error while reading PHDR payload");
             free(data);
             return -1;
         }
@@ -113,17 +113,17 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                     uint32_t hole = this_offset - prev_seg->length;
                     uint8_t *new_data = calloc(new_length, sizeof(uint8_t));
                     if (!new_data) {
-                        fprintf(stderr, "Error: Out of memory\n");
+                        PrintAndLogEx(ERR, "Error: Out of memory");
                         free(data);
                         return -1;
                     }
                     memset(new_data, 0xff, new_length);
                     memcpy(new_data, prev_seg->data, prev_seg->length);
                     memcpy(new_data + this_offset, data, filesz);
-                    fprintf(stderr, "Note: Extending previous segment from 0x%x to 0x%x bytes\n",
+                    PrintAndLogEx(NORMAL, "Note: Extending previous segment from 0x%x to 0x%x bytes",
                             prev_seg->length, new_length);
                     if (hole)
-                        fprintf(stderr, "Note: 0x%x-byte hole created\n", hole);
+                        PrintAndLogEx(NORMAL, "Note: 0x%x-byte hole created", hole);
                     free(data);
                     free(prev_seg->data);
                     prev_seg->data = new_data;
@@ -133,7 +133,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                     continue;
                 }
             }
-            fprintf(stderr, "Warning: segment does not begin on a block boundary, will pad\n");
+            PrintAndLogEx(WARNING, "Warning: segment does not begin on a block boundary, will pad");
             memmove(data + block_offset, data, filesz);
             memset(data, 0xFF, block_offset);
             filesz += block_offset;
@@ -158,19 +158,19 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
         flash_seg_t *seg = &ctx->segments[i];
 
         if (seg->start & (BLOCK_SIZE - 1)) {
-            fprintf(stderr, "Error: Segment is not aligned\n");
+            PrintAndLogEx(ERR, "Error: Segment is not aligned");
             return -1;
         }
         if (seg->start < FLASH_START) {
-            fprintf(stderr, "Error: Segment is outside of flash bounds\n");
+            PrintAndLogEx(ERR, "Error: Segment is outside of flash bounds");
             return -1;
         }
         if (seg->start + seg->length > FLASH_END) {
-            fprintf(stderr, "Error: Segment is outside of flash bounds\n");
+            PrintAndLogEx(ERR, "Error: Segment is outside of flash bounds");
             return -1;
         }
         if (!can_write_bl && seg->start < BOOTLOADER_END) {
-            fprintf(stderr, "Attempted to write bootloader but bootloader writes are not enabled\n");
+            PrintAndLogEx(ERR, "Attempted to write bootloader but bootloader writes are not enabled");
             return -1;
         }
     }
@@ -187,52 +187,52 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
 
     fd = fopen(name, "rb");
     if (!fd) {
-        fprintf(stderr, _RED_("Could not open file") "%s  >>> ", name);
+        PrintAndLogEx(ERR, _RED_("Could not open file") "%s  >>> ", name);
         perror(NULL);
         goto fail;
     }
 
-    fprintf(stdout, _BLUE_("Loading ELF file") _YELLOW_("%s") "\n", name);
+    PrintAndLogEx(NORMAL, _BLUE_("Loading ELF file") _YELLOW_("%s"), name);
 
     if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
-        fprintf(stderr, "Error while reading ELF file header\n");
+        PrintAndLogEx(ERR, "Error while reading ELF file header");
         goto fail;
     }
     if (memcmp(ehdr.e_ident, elf_ident, sizeof(elf_ident))
             || le32(ehdr.e_version) != 1) {
-        fprintf(stderr, "Not an ELF file or wrong ELF type\n");
+        PrintAndLogEx(ERR, "Not an ELF file or wrong ELF type");
         goto fail;
     }
     if (le16(ehdr.e_type) != ET_EXEC) {
-        fprintf(stderr, "ELF is not executable\n");
+        PrintAndLogEx(ERR, "ELF is not executable");
         goto fail;
     }
     if (le16(ehdr.e_machine) != EM_ARM) {
-        fprintf(stderr, "Wrong ELF architecture\n");
+        PrintAndLogEx(ERR, "Wrong ELF architecture");
         goto fail;
     }
     if (!ehdr.e_phnum || !ehdr.e_phoff) {
-        fprintf(stderr, "ELF has no PHDRs\n");
+        PrintAndLogEx(ERR, "ELF has no PHDRs");
         goto fail;
     }
     if (le16(ehdr.e_phentsize) != sizeof(Elf32_Phdr)) {
         // could be a structure padding issue...
-        fprintf(stderr, "Either the ELF file or this code is made of fail\n");
+        PrintAndLogEx(ERR, "Either the ELF file or this code is made of fail");
         goto fail;
     }
     num_phdrs = le16(ehdr.e_phnum);
 
     phdrs = calloc(le16(ehdr.e_phnum) * sizeof(Elf32_Phdr), sizeof(uint8_t));
     if (!phdrs) {
-        fprintf(stderr, "Out of memory\n");
+        PrintAndLogEx(ERR, "Out of memory");
         goto fail;
     }
     if (fseek(fd, le32(ehdr.e_phoff), SEEK_SET) < 0) {
-        fprintf(stderr, "Error while reading ELF PHDRs\n");
+        PrintAndLogEx(ERR, "Error while reading ELF PHDRs");
         goto fail;
     }
     if (fread(phdrs, sizeof(Elf32_Phdr), num_phdrs, fd) != num_phdrs) {
-        fprintf(stderr, "Error while reading ELF PHDRs\n");
+        PrintAndLogEx(ERR, "Error while reading ELF PHDRs");
         goto fail;
     }
 
@@ -279,7 +279,7 @@ static int get_proxmark_state(uint32_t *state) {
             *state = resp.oldarg[0];
             break;
         default:
-            fprintf(stderr, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04x\n", resp.cmd);
+            PrintAndLogEx(ERR, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04x", resp.cmd);
             return -1;
             break;
     }
@@ -298,18 +298,18 @@ static int enter_bootloader(char *serial_port_name) {
         return 0;
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
-        fprintf(stdout, _BLUE_("Entering bootloader...") "\n");
+        PrintAndLogEx(NORMAL, _BLUE_("Entering bootloader..."));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
                 && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
             SendCommandOLD(CMD_START_FLASH, 0, 0, 0, NULL, 0);
-            fprintf(stdout, "(Press and release the button only to abort)\n");
+            PrintAndLogEx(NORMAL, "(Press and release the button only to abort)");
         } else {
             // Old style handover: Ask the user to press the button, then reset the board
             SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
-            fprintf(stdout, "Press and hold down button NOW if your bootloader requires it.\n");
+            PrintAndLogEx(NORMAL, "Press and hold down button NOW if your bootloader requires it.");
         }
         msleep(100);
         CloseProxmark();
@@ -318,15 +318,15 @@ static int enter_bootloader(char *serial_port_name) {
 
         bool opened = OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED);
         if (opened) {
-            fprintf(stdout, " " _GREEN_("Found") "\n");
+            PrintAndLogEx(NORMAL, " " _GREEN_("Found"));
             return 0;
         } else {
-            fprintf(stdout, _RED_("Error:") "Proxmark3 not found.\n");
+            PrintAndLogEx(ERR, _RED_("Error:") "Proxmark3 not found.");
             return -1;
         }
     }
 
-    fprintf(stderr, _RED_("Error:") "Unknown Proxmark3 mode\n");
+    PrintAndLogEx(ERR, _RED_("Error:") "Unknown Proxmark3 mode");
     return -1;
 }
 
@@ -334,7 +334,7 @@ static int wait_for_ack(PacketResponseNG *ack) {
     WaitForResponse(CMD_UNKNOWN, ack);
 
     if (ack->cmd != CMD_ACK) {
-        printf("Error: Unexpected reply 0x%04x %s (expected ACK)\n",
+        PrintAndLogEx(ERR, "Error: Unexpected reply 0x%04x %s (expected ACK)",
                ack->cmd,
                (ack->cmd == CMD_NACK) ? "NACK" : ""
               );
@@ -365,8 +365,8 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
         }
         return wait_for_ack(&resp);
     } else {
-        fprintf(stderr, _RED_("Note: Your bootloader does not understand the new START_FLASH command") "\n");
-        fprintf(stderr, _RED_("It is recommended that you update your bootloader") "\n\n");
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new START_FLASH command"));
+        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
     }
     return 0;
 }
@@ -383,17 +383,17 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
         bool lock_error = resp.oldarg[0] & AT91C_MC_LOCKE;
         bool prog_error = resp.oldarg[0] & AT91C_MC_PROGE;
         bool security_bit = resp.oldarg[0] & AT91C_MC_SECURITY;
-        printf("%s", lock_error ? "       Lock Error\n" : "");
-        printf("%s", prog_error ? "       Invalid Command or bad Keyword\n" : "");
-        printf("%s", security_bit ? "       Security Bit is set!\n" : "");
-        printf("       Lock Bits:      0x%04x\n", lock_bits);
+        PrintAndLogEx(NORMAL, "%s", lock_error ? "       Lock Error" : "");
+        PrintAndLogEx(NORMAL, "%s", prog_error ? "       Invalid Command or bad Keyword" : "");
+        PrintAndLogEx(NORMAL, "%s", security_bit ? "       Security Bit is set!" : "");
+        PrintAndLogEx(NORMAL, "       Lock Bits:      0x%04x", lock_bits);
     }
     return ret;
 }
 
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
-    fprintf(stdout, "Writing segments for file: %s\n", ctx->filename);
+    PrintAndLogEx(NORMAL, "Writing segments for file: %s", ctx->filename);
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
@@ -401,7 +401,7 @@ int flash_write(flash_file_t *ctx) {
         uint32_t blocks = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
         uint32_t end = seg->start + length;
 
-        fprintf(stdout, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
+        PrintAndLogEx(NORMAL, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
         fflush(stdout);
         int block = 0;
         uint8_t *data = seg->data;
@@ -413,8 +413,7 @@ int flash_write(flash_file_t *ctx) {
                 block_size = BLOCK_SIZE;
 
             if (write_block(baddr, data, block_size) < 0) {
-                fprintf(stderr, " ERROR\n");
-                fprintf(stderr, "Error writing block %d of %u\n", block, blocks);
+                PrintAndLogEx(ERR, "Error writing block %d of %u", block, blocks);
                 return -1;
             }
 
@@ -425,7 +424,7 @@ int flash_write(flash_file_t *ctx) {
             fprintf(stdout, ".");
             fflush(stdout);
         }
-        fprintf(stdout, _GREEN_("OK") "\n");
+        PrintAndLogEx(NORMAL, _GREEN_("OK"));
         fflush(stdout);
     }
     return 0;

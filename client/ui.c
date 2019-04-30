@@ -28,6 +28,7 @@ bool showDemod = true;
 
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static const char *logfilename = "proxmark3.log";
+static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 
 /*
 static float complex cexpf(float complex Z) {
@@ -74,10 +75,12 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     char *tmp_ptr = NULL;
     //   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
     static const char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
+    FILE* stream = stdout;
 
     switch (level) {
         case ERR:
             strncpy(prefix, _RED_("[!!]"), sizeof(prefix) - 1);
+            stream = stderr;
             break;
         case FAILED:
             strncpy(prefix, _RED_("[-]"), sizeof(prefix) - 1);
@@ -104,7 +107,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
     // no prefixes for normal
     if (level == NORMAL) {
-        PrintAndLog("%s", buffer);
+        fPrintAndLog(stream, "%s", buffer);
         return;
     }
 
@@ -114,7 +117,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
         // line starts with newline
         if (buffer[0] == '\n')
-            PrintAndLog("");
+            fPrintAndLog(stream, "");
 
         token = strtok_r(buffer, delim, &tmp_ptr);
 
@@ -129,14 +132,14 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
             token = strtok_r(NULL, delim, &tmp_ptr);
         }
-        PrintAndLog("%s", buffer2);
+        fPrintAndLog(stream, "%s", buffer2);
     } else {
         snprintf(buffer2, sizeof(buffer2), "%s%s", prefix, buffer);
-        PrintAndLog("%s", buffer2);
+        fPrintAndLog(stream, "%s", buffer2);
     }
 }
 
-void PrintAndLog(const char *fmt, ...) {
+static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     char *saved_line;
     int saved_point;
     va_list argptr;
@@ -178,9 +181,9 @@ void PrintAndLog(const char *fmt, ...) {
 
     bool filter_ansi = !session.supports_colors;
     memcpy_filter_ansi(buffer2, buffer, sizeof(buffer), filter_ansi);
-    printf("%s", buffer2);
-    printf("          "); // cleaning prompt
-    printf("\n");
+    fprintf(stream, "%s", buffer2);
+    fprintf(stream, "          "); // cleaning prompt
+    fprintf(stream, "\n");
 
 #ifdef RL_STATE_READCMD
     // We are using GNU readline. libedit (OSX) doesn't support this flag.

@@ -42,7 +42,6 @@ void ShowGui(void);
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
-void PrintAndLog(const char *fmt, ...);
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
 void SetLogFilename(char *fn);
