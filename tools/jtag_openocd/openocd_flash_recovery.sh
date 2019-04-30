@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Example for 512kb version, using Segger Jlink:
+# Example using Segger Jlink:
 CONFIG_CHIP=chip-at91sam7s.cfg
 CONFIG_IF=interface-jlink.cfg
 IMAGE=../../recovery/proxmark3_recovery.bin
