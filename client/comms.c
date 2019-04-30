@@ -577,7 +577,6 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
             printf(".");
             fflush(stdout);
         } while (++openCount < timeout && (sp == INVALID_SERIAL_PORT || sp == CLAIMED_SERIAL_PORT));
-        //PrintAndLogEx(NORMAL, "\n");
     }
 
     // check result of uart opening
@@ -641,8 +640,15 @@ int TestProxmark(void) {
             conn.send_via_fpc = pm3_capabilities.via_fpc;
             conn.uart_speed = pm3_capabilities.baudrate;
             PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
-            if (conn.send_via_fpc)
+            if (conn.send_via_fpc) {
                 PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
+            }
+            
+            // reconfigure.
+            if ( conn.send_via_fpc == false ) {
+                uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS );
+            }
+           
             return PM3_SUCCESS;
         } else {
             return PM3_ETIMEOUT;

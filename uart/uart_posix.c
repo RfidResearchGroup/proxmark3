@@ -67,16 +67,15 @@ typedef struct {
     term_info tiNew;  // Terminal info during the transaction
 } serial_port_unix;
 
-// Receiving from USART need more than 30ms as we used on USB
-// else we get errors about partial packet reception
-// FTDI   9600 hw status        -> we need 20ms
-// FTDI 115200 hw status        -> we need 50ms
-// FTDI 460800 hw status        -> we need 30ms
-// BT   115200 hf mf fchk 1 dic -> we need 140ms
+// see usb_cmd.h
 struct timeval timeout = {
-    .tv_sec  =      0, // 0 second
-    .tv_usec = 200000  // 200 000 micro seconds
+    .tv_sec  = 0, // 0 second
+    .tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_US
 };
+
+bool uart_reconfigure_timeouts(serial_port *sp, uint32_t value ) {
+    timeout.usec = value * 1000;
+}
 
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
     serial_port_unix *sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
@@ -92,7 +91,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             return INVALID_SERIAL_PORT;
         }
 
-        timeout.tv_usec = 300000;  // 300 000 micro seconds
+        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_US;
 
         char *colon = strrchr(addrstr, ':');
         const char *portstr;

@@ -48,6 +48,24 @@ typedef struct {
     COMMTIMEOUTS ct;  // Serial port time-out configuration
 } serial_port_windows;
 
+bool uart_reconfigure_timeouts(serial_port *sp, uint32_t value) {
+    
+    serial_port_windows *spw = (serial_port_windows*)sp;
+    spw->ct.ReadIntervalTimeout         = value;
+    spw->ct.ReadTotalTimeoutMultiplier  = 0;
+    spw->ct.ReadTotalTimeoutConstant    = value;
+    spw->ct.WriteTotalTimeoutMultiplier = value;
+    spw->ct.WriteTotalTimeoutConstant   = 0;
+
+    if (!SetCommTimeouts(spw->hPort, &spw->ct)) {
+        uart_close(spw);
+        printf("[!] UART error while setting comm time outs\n");
+        return INVALID_SERIAL_PORT;
+    }
+
+    PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
+}
+
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
     char acPortName[255] = {0};
     serial_port_windows *sp = calloc(sizeof(serial_port_windows), sizeof(uint8_t));
@@ -84,30 +102,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         printf("[!] UART error while setting com state\n");
         return INVALID_SERIAL_PORT;
     }
-    // all zero's configure: no timeout for read/write used.
-    // took settings from libnfc/buses/uart.c
-#ifdef WITH_FPC
-    // Still relevant?
-    sp->ct.ReadIntervalTimeout         = 150; //200;
-    sp->ct.ReadTotalTimeoutMultiplier  = 0;
-    sp->ct.ReadTotalTimeoutConstant    = 150; //200;
-    sp->ct.WriteTotalTimeoutMultiplier = 150; //200;
-    sp->ct.WriteTotalTimeoutConstant   = 0;
-#else
-    sp->ct.ReadIntervalTimeout         = 30;
-    sp->ct.ReadTotalTimeoutMultiplier  = 0;
-    sp->ct.ReadTotalTimeoutConstant    = 30;
-    sp->ct.WriteTotalTimeoutMultiplier = 30;
-    sp->ct.WriteTotalTimeoutConstant   = 0;
-#endif
 
-    if (!SetCommTimeouts(sp->hPort, &sp->ct)) {
-        uart_close(sp);
-        printf("[!] UART error while setting comm time outs\n");
-        return INVALID_SERIAL_PORT;
-    }
-
-    PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
+    uart_reconfigure_timeouts(sp, UART_FPC_CLIENT_RX_TIMEOUT_MS);
 
     if (!uart_set_speed(sp, speed)) {
         // trying some fallbacks automatically
@@ -154,6 +150,7 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
     if (result)
         conn.uart_speed = uiPortSpeed;
+    
     return result;
 }
 
