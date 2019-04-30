@@ -28,6 +28,33 @@ static int l_clearCommandBuffer(lua_State *L) {
 }
 
 /**
+ * Enable / Disable fast push mode for lua scripts like mfkeys
+ * The following params expected:
+ *  
+ *@brief l_fast_push_mode
+ * @param L
+ * @return
+ */
+static int l_fast_push_mode(lua_State *L){
+    
+    luaL_checktype(L, 1, LUA_TBOOLEAN);
+    
+    bool enable = lua_toboolean(L, 1);
+
+    conn.block_after_ACK = enable;
+    
+    // Disable fast mode and send a dummy command to make it effective
+    if (enable == false) {
+        SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+        WaitForResponseTimeout(CMD_ACK, NULL, 1000);
+    }
+    
+    //Push the retval on the stack
+    lua_pushboolean(L, enable);
+    return 1;
+}
+
+/**
  * The following params expected:
  *  UsbCommand c
  *@brief l_SendCommand
@@ -1048,7 +1075,8 @@ int set_pm3_libraries(lua_State *L) {
         {"keygen_algo_d",               l_keygen_algoD},
         {"t55xx_readblock",             l_T55xx_readblock},
         {"t55xx_detect",                l_T55xx_detect},
-        {"ndefparse",                l_ndefparse},
+        {"ndefparse",                   l_ndefparse},
+        {"fast_push_mode",              l_fast_push_mode},
         {NULL, NULL}
     };
 
