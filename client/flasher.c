@@ -11,6 +11,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "util_posix.h"
 #include "proxmark3.h"
 #include "util.h"
