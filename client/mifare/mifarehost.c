@@ -220,9 +220,9 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
 // ref: https://github.com/J-Run/mf_key_brute
 int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey) {
 
-#define KEYS_IN_BLOCK 84
-#define KEYBLOCK_SIZE 510
-#define CANDIDATE_SIZE 0xFFFF * 6
+#define KEYS_IN_BLOCK   ((USB_CMD_DATA_SIZE - 4) / 6)
+#define KEYBLOCK_SIZE   (KEYS_IN_BLOCK * 6)
+#define CANDIDATE_SIZE  (0xFFFF * 6)
 
     uint64_t key64;
     uint8_t found = false;
