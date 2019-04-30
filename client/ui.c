@@ -16,10 +16,7 @@
 #endif
 
 #include "ui.h"
-#if defined(__linux__) || (__APPLE__)
-#include <unistd.h>
-#include <sys/stat.h>
-#endif
+session_arg_t session;
 
 double CursorScaleFactor = 1;
 int PlotGridX = 0, PlotGridY = 0, PlotGridXdefault = 64, PlotGridYdefault = 64;
@@ -179,12 +176,7 @@ void PrintAndLog(const char *fmt, ...) {
     vsnprintf(buffer, sizeof(buffer), fmt, argptr);
     va_end(argptr);
 
-    bool filter_ansi = true;
-#if defined(__linux__) || (__APPLE__)
-    struct stat tmp_stat;
-    if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
-        filter_ansi = false;
-#endif
+    bool filter_ansi = !session.supports_colors;
     memcpy_filter_ansi(buffer2, buffer, sizeof(buffer), filter_ansi);
     printf("%s", buffer2);
     printf("          "); // cleaning prompt

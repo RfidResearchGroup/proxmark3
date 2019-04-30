@@ -265,13 +265,6 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
     // we got a packet, reset WaitForResponseTimeout timeout
     timeout_start_time = msclock();
 
-    bool filter_ansi = true;
-#if defined(__linux__) || (__APPLE__)
-    struct stat tmp_stat;
-    if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
-        filter_ansi = false;
-#endif
-
     switch (packet->cmd) {
         // First check if we are handling a debug message
         case CMD_DEBUG_PRINT_STRING: {
@@ -289,11 +282,11 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
                 struct d *data = (struct d *)&packet->data.asBytes;
                 len = packet->length - sizeof(data->flag);
                 flag = data->flag;
-                memcpy_filter_ansi(s, data->buf, len, (flag & FLAG_ANSI) && filter_ansi);
+                memcpy(s, data->buf, len);
             } else {
                 len = MIN(packet->oldarg[0], USB_CMD_DATA_SIZE);
                 flag = packet->oldarg[1];
-                memcpy_filter_ansi(s, packet->data.asBytes, len, (flag & FLAG_ANSI) && filter_ansi);
+                memcpy(s, packet->data.asBytes, len);
             }
 
             if (flag & FLAG_LOG) {

@@ -319,7 +319,7 @@ void MeasureAntennaTuningHf(void) {
         DbprintfEx(FLAG_INPLACE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbprintfEx(FLAG_LOG, "\n[+] cancelled", 1);
+    Dbprintf("\n[+] cancelled", 1);
 }
 
 void ReadMem(int addr) {
@@ -371,7 +371,7 @@ void SendVersion(void) {
 // measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 void printUSBSpeed(void) {
-    DbpStringEx(FLAG_LOG | FLAG_ANSI, _BLUE_("Transfer Speed"));
+    DbpString(_BLUE_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
 #define USB_SPEED_TEST_MIN_TIME 1500 // in milliseconds
@@ -392,7 +392,7 @@ void printUSBSpeed(void) {
 
     Dbprintf("  Time elapsed............%dms", end_time - start_time);
     Dbprintf("  Bytes transferred.......%d", bytes_transferred);
-    DbprintfEx(FLAG_LOG | FLAG_ANSI, "  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / (end_time - start_time));
+    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / (end_time - start_time));
 }
 
 /**
@@ -412,12 +412,12 @@ void SendStatus(void) {
     printT55xxConfig(); // LF T55XX Config
 #endif
     printUSBSpeed();
-    DbpStringEx(FLAG_LOG | FLAG_ANSI, _BLUE_("Various"));
+    DbpString(_BLUE_("Various"));
     Dbprintf("  MF_DBGLEVEL.............%d", MF_DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
-    DbpStringEx(FLAG_LOG | FLAG_ANSI, _BLUE_("Installed StandAlone Mode"));
+    DbpString(_BLUE_("Installed StandAlone Mode"));
     ModInfo();
 
     //DbpString("Running ");

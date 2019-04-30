@@ -438,9 +438,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // ascii art
-    bool stdinOnPipe = !isatty(STDIN_FILENO);
-    if (!script_cmds_file && !stdinOnPipe)
+    session.supports_colors = false;
+    session.stdinOnTTY = isatty(STDIN_FILENO);
+    session.stdoutOnTTY = isatty(STDOUT_FILENO);
+#if defined(__linux__) || (__APPLE__)
+    // it's okay to use color if:
+    // * Linux or OSX
+    // * Not redirected to a file but printed to term
+    // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
+    //   struct stat tmp_stat;
+    //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+    if (session.stdinOnTTY && session.stdoutOnTTY)
+        session.supports_colors = true;
+#endif
+    // ascii art only in interactive client
+    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY)
         showBanner();
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway

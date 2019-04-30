@@ -55,7 +55,7 @@ Default LF T55xx config is set to:
 t55xx_config t_config = { 29 * 8, 17 * 8, 15 * 8, 47 * 8, 15 * 8 } ;
 
 void printT55xxConfig(void) {
-    DbpStringEx(FLAG_LOG | FLAG_ANSI, _BLUE_("LF T55XX config"));
+    DbpString(_BLUE_("LF T55XX config"));
     Dbprintf("  [a] startgap............%d*8 (%d)", t_config.start_gap / 8, t_config.start_gap);
     Dbprintf("  [b] writegap............%d*8 (%d)", t_config.write_gap / 8, t_config.write_gap);
     Dbprintf("  [c] write_0.............%d*8 (%d)", t_config.write_0 / 8,   t_config.write_0);

@@ -24,6 +24,14 @@
 #include <complex.h>
 #include "util.h"
 
+typedef struct {
+    bool stdinOnTTY;
+    bool stdoutOnTTY;
+    bool supports_colors;
+} session_arg_t;
+
+extern session_arg_t session;
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327
 #endif
