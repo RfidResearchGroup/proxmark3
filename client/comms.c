@@ -11,6 +11,10 @@
 
 #include "comms.h"
 #include "crc16.h"
+#if defined(__linux__) || (__APPLE__)
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
@@ -249,48 +253,6 @@ static int getReply(PacketResponseNG *packet) {
     return 1;
 }
 
-static void memcpy_filtered(void *dest, const void *src, size_t n, bool filter) {
-#if defined(__linux__) || (__APPLE__)
-    memcpy(dest, src, n);
-#else
-    if (filter) {
-        // Filter out ANSI sequences on these OS
-        uint8_t *rdest = (uint8_t *)dest;
-        uint8_t *rsrc = (uint8_t *)src;
-        uint16_t si = 0;
-        for (uint16_t i = 0; i < n; i++) {
-            if ((rsrc[i] == '\x1b')
-                    && (i < n - 1)
-                    && (rsrc[i + 1] >= 0x40)
-                    && (rsrc[i + 1] <= 0x5F)) {  // entering ANSI sequence
-
-                i++;
-                if ((rsrc[i] == '[') && (i < n - 1)) { // entering CSI sequence
-                    i++;
-
-                    while ((i < n - 1) && (rsrc[i] >= 0x30) && (rsrc[i] <= 0x3F)) { // parameter bytes
-                        i++;
-                    }
-
-                    while ((i < n - 1) && (rsrc[i] >= 0x20) && (rsrc[i] <= 0x2F)) { // intermediate bytes
-                        i++;
-                    }
-
-                    if ((rsrc[i] >= 0x40) && (rsrc[i] <= 0x7F)) { // final byte
-                        continue;
-                    }
-                } else {
-                    continue;
-                }
-            }
-            rdest[si++] = rsrc[i];
-        }
-    } else {
-        memcpy(dest, src, n);
-    }
-#endif
-}
-
 //-----------------------------------------------------------------------------
 // Entry point into our code: called whenever we received a packet over USB
 // that we weren't necessarily expecting, for example a debug print.
@@ -320,11 +282,11 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
                 struct d *data = (struct d *)&packet->data.asBytes;
                 len = packet->length - sizeof(data->flag);
                 flag = data->flag;
-                memcpy_filtered(s, data->buf, len, flag & FLAG_ANSI);
+                memcpy(s, data->buf, len);
             } else {
                 len = MIN(packet->oldarg[0], PM3_CMD_DATA_SIZE);
                 flag = packet->oldarg[1];
-                memcpy_filtered(s, packet->data.asBytes, len, flag & FLAG_ANSI);
+                memcpy(s, packet->data.asBytes, len);
             }
 
             if (flag & FLAG_LOG) {
@@ -581,12 +543,12 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, _RED_("ERROR:") "invalid serial port " _YELLOW_("%s"), portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") "invalid serial port " _YELLOW_("%s"), portname);
         sp = NULL;
         serial_port_name = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, _RED_("ERROR:") "serial port " _YELLOW_("%s") " is claimed by another process", portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") "serial port " _YELLOW_("%s") " is claimed by another process", portname);
         sp = NULL;
         serial_port_name = NULL;
         return false;

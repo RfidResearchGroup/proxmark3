@@ -24,6 +24,14 @@
 #include <complex.h>
 #include "util.h"
 
+typedef struct {
+    bool stdinOnTTY;
+    bool stdoutOnTTY;
+    bool supports_colors;
+} session_arg_t;
+
+extern session_arg_t session;
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327
 #endif
@@ -34,11 +42,11 @@ void ShowGui(void);
 void HideGraphWindow(void);
 void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
-void PrintAndLog(const char *fmt, ...);
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
 void SetLogFilename(char *fn);
 void SetFlushAfterWrite(bool value);
+void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter);
 
 extern double CursorScaleFactor;
 extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;

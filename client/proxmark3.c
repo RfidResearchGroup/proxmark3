@@ -30,25 +30,25 @@
 #include "usart.h"
 
 static void showBanner(void) {
-    printf("\n\n");
+    PrintAndLogEx(NORMAL, "\n");
 #if defined(__linux__) || (__APPLE__)
-    printf(_BLUE_("██████╗ ███╗   ███╗ ████╗ ") "    ...iceman fork\n");
-    printf(_BLUE_("██╔══██╗████╗ ████║   ══█║") "      ...dedicated to " _BLUE_("RDV40") "\n");
-    printf(_BLUE_("██████╔╝██╔████╔██║ ████╔╝") "\n");
-    printf(_BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net\n");
-    printf(_BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/\n");
-    printf(_BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0\n");
+    PrintAndLogEx(NORMAL, _BLUE_("██████╗ ███╗   ███╗ ████╗ ") "    ...iceman fork");
+    PrintAndLogEx(NORMAL, _BLUE_("██╔══██╗████╗ ████║   ══█║") "      ...dedicated to " _BLUE_("RDV40"));
+    PrintAndLogEx(NORMAL, _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
+    PrintAndLogEx(NORMAL, _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/");
+    PrintAndLogEx(NORMAL, _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0");
 #else
-    printf("======. ===.   ===. ====.     ...iceman fork\n");
-    printf("==...==.====. ====.   ..=.      ...dedicated to RDV40\n");
-    printf("======..==.====.==. ====..\n");
-    printf("==..... ==..==..==.   ..=.    iceman@icesql.net\n");
-    printf("==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/\n");
-    printf("...     ...     ... .....  pre-release v4.0\n");
+    PrintAndLogEx(NORMAL, "======. ===.   ===. ====.     ...iceman fork");
+    PrintAndLogEx(NORMAL, "==...==.====. ====.   ..=.      ...dedicated to RDV40");
+    PrintAndLogEx(NORMAL, "======..==.====.==. ====..");
+    PrintAndLogEx(NORMAL, "==..... ==..==..==.   ..=.    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, "==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
+    PrintAndLogEx(NORMAL, "...     ...     ... .....  pre-release v4.0");
 #endif
-    printf("\nSupport iceman on patreon,   https://www.patreon.com/iceman1001/");
+    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon,   https://www.patreon.com/iceman1001/");
 //    printf("\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
-    printf("\n\n\n");
+    PrintAndLogEx(NORMAL, "\n");
     fflush(stdout);
 }
 
@@ -438,9 +438,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // ascii art
-    bool stdinOnPipe = !isatty(STDIN_FILENO);
-    if (!script_cmds_file && !stdinOnPipe)
+    session.supports_colors = false;
+    session.stdinOnTTY = isatty(STDIN_FILENO);
+    session.stdoutOnTTY = isatty(STDOUT_FILENO);
+#if defined(__linux__) || (__APPLE__)
+    // it's okay to use color if:
+    // * Linux or OSX
+    // * Not redirected to a file but printed to term
+    // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
+    //   struct stat tmp_stat;
+    //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+    if (session.stdinOnTTY && session.stdoutOnTTY)
+        session.supports_colors = true;
+#endif
+    // ascii art only in interactive client
+    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY)
         showBanner();
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
