@@ -21,21 +21,6 @@
 
 #define MAX_FILES 4
 
-void cmd_debug(PacketCommandOLD *c) {
-    //  Debug
-    PrintAndLogEx(NORMAL, "PacketCommandOLD length[len=%zu]", sizeof(PacketCommandOLD));
-    PrintAndLogEx(NORMAL, "  cmd[len=%zu]: %016" PRIx64, sizeof(c->cmd), c->cmd);
-    PrintAndLogEx(NORMAL, " arg0[len=%zu]: %016" PRIx64, sizeof(c->arg[0]), c->arg[0]);
-    PrintAndLogEx(NORMAL, " arg1[len=%zu]: %016" PRIx64, sizeof(c->arg[1]), c->arg[1]);
-    PrintAndLogEx(NORMAL, " arg2[len=%zu]: %016" PRIx64, sizeof(c->arg[2]), c->arg[2]);
-    PrintAndLogEx(NORMAL, " data[len=%zu]: ", sizeof(c->d.asBytes));
-
-    for (size_t i = 0; i < 16; i++)
-        PrintAndLogEx(NORMAL, "%02x", c->d.asBytes[i]);
-
-    PrintAndLogEx(NORMAL, "...");
-}
-
 static void usage(char *argv0) {
     PrintAndLogEx(NORMAL, "Usage:   %s <port> [-b] image.elf [image.elf...]\n", argv0);
     PrintAndLogEx(NORMAL, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n");
