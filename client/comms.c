@@ -608,7 +608,7 @@ int TestProxmark(void) {
             
             // reconfigure.
             if ( conn.send_via_fpc == false ) {
-                uart_reconfigure_timeouts(&sp, UART_USB_CLIENT_RX_TIMEOUT_MS );
+                uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS );
             }
            
             return PM3_SUCCESS;

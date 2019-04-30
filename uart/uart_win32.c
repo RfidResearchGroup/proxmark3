@@ -48,9 +48,10 @@ typedef struct {
     COMMTIMEOUTS ct;  // Serial port time-out configuration
 } serial_port_windows;
 
-int uart_reconfigure_timeouts(serial_port *sp, uint32_t value) {
+int uart_reconfigure_timeouts(serial_port sp, uint32_t value) {
     
-    serial_port_windows *spw = (serial_port_windows*)sp;
+    serial_port_windows *spw;
+    spw = (serial_port_windows *)sp;
     spw->ct.ReadIntervalTimeout         = value;
     spw->ct.ReadTotalTimeoutMultiplier  = 0;
     spw->ct.ReadTotalTimeoutConstant    = value;
