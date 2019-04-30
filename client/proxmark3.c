@@ -58,7 +58,7 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
+main_loop(char *script_cmds_file, char *script_cmd) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
@@ -73,15 +73,12 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
 
     PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
 
-    if (pm3_present) {
-        SetOffline(false);
+    if (session.pm3_present) {
         // cache Version information now:
         if (execCommand || script_cmds_file || stdinOnPipe)
             pm3_version(false);
         else
             pm3_version(true);
-    } else {
-        SetOffline(true);
     }
 
     if (script_cmds_file) {
@@ -100,13 +97,13 @@ main_loop(char *script_cmds_file, char *script_cmd, bool pm3_present) {
         bool printprompt = false;
         // this should hook up the PM3 again.
         /*
-        if ( IsOffline() ) {
+        if ( !session.pm3_present ) {
 
             // sets the global variable, SP and offline)
-            pm3_present = hookUpPM3();
+            session.pm3_present = hookUpPM3();
 
             // usb and the reader_thread is NULL,  create a new reader thread.
-            if (pm3_present && !IsOffline() ) {
+            if (session.pm3_present) {
                 rarg.run = 1;
                 pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
                 // cache Version information now:
@@ -293,7 +290,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
 int main(int argc, char *argv[]) {
     srand(time(0));
 
-    bool pm3_present = false;
+    session.pm3_present = false;
     bool waitCOMPort = false;
     bool addLuaExec = false;
     char *script_cmds_file = NULL;
@@ -489,38 +486,38 @@ int main(int argc, char *argv[]) {
 
     // try to open USB connection to Proxmark
     if (port != NULL)
-        pm3_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
+        session.pm3_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
 
-    if (pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+    if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
         CloseProxmark();
-        pm3_present = false;
+        session.pm3_present = false;
     }
-    if (!pm3_present)
+    if (!session.pm3_present)
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
 
 #ifdef HAVE_GUI
 
 #  ifdef _WIN32
-    InitGraphics(argc, argv, script_cmds_file, script_cmd, pm3_present);
+    InitGraphics(argc, argv, script_cmds_file, script_cmd);
     MainGraphics();
 #  else
     // for *nix distro's,  check enviroment variable to verify a display
     char *display = getenv("DISPLAY");
     if (display && strlen(display) > 1) {
-        InitGraphics(argc, argv, script_cmds_file, script_cmd, pm3_present);
+        InitGraphics(argc, argv, script_cmds_file, script_cmd);
         MainGraphics();
     } else {
-        main_loop(script_cmds_file, script_cmd, pm3_present);
+        main_loop(script_cmds_file, script_cmd);
     }
 #  endif
 
 #else
-    main_loop(script_cmds_file, script_cmd, pm3_present);
+    main_loop(script_cmds_file, script_cmd);
 #endif
 
     // Clean up the port
-    if (pm3_present) {
+    if (session.pm3_present) {
         CloseProxmark();
     }
 

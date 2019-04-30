@@ -21,7 +21,7 @@ void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;
     int i = 0;
     while (Commands[i].Name) {
-        if (!IsOffline() || Commands[i].Offline)
+        if (session.pm3_present || Commands[i].Offline)
             PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
         ++i;
     }
@@ -44,8 +44,17 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     sscanf(Cmd, "%127s%n", cmd_name, &len);
     str_lower(cmd_name);
     int i = 0;
-    while (Commands[i].Name && strcmp(Commands[i].Name, cmd_name))
+    while (Commands[i].Name) {
+        if (0 == strcmp(Commands[i].Name, cmd_name)) {
+            if (session.pm3_present || Commands[i].Offline) {
+                break;
+            } else {
+                PrintAndLogEx(WARNING, "This command is only available in " _YELLOW_("online") "mode");
+                return PM3_ENOTIMPL;
+            }
+        }
         ++i;
+    }
 
     /* try to find exactly one prefix-match */
     if (!Commands[i].Name) {
@@ -53,7 +62,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         int matches = 0;
 
         for (i = 0; Commands[i].Name; i++) {
-            if (!strncmp(Commands[i].Name, cmd_name, strlen(cmd_name))) {
+            if (!strncmp(Commands[i].Name, cmd_name, strlen(cmd_name)) && (session.pm3_present || Commands[i].Offline)) {
                 last_match = i;
                 matches++;
             }

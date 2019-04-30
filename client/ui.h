@@ -28,6 +28,7 @@ typedef struct {
     bool stdinOnTTY;
     bool stdoutOnTTY;
     bool supports_colors;
+    bool pm3_present;
 } session_arg_t;
 
 extern session_arg_t session;

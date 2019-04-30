@@ -23,9 +23,6 @@
 static serial_port sp = NULL;
 static char *serial_port_name = NULL;
 
-// If TRUE, then there is no active connection to the PM3, and we will drop commands sent.
-static bool offline;
-
 communication_arg_t conn;
 capabilities_t pm3_capabilities;
 
@@ -59,16 +56,6 @@ static uint64_t timeout_start_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
-// These wrappers are required because it is not possible to access a static
-// global variable outside of the context of a single file.
-void SetOffline(bool value) {
-    offline = value;
-}
-
-bool IsOffline() {
-    return offline;
-}
-
 void SendCommand(PacketCommandOLD *c) {
 
 #ifdef COMMS_DEBUG
@@ -80,7 +67,7 @@ void SendCommand(PacketCommandOLD *c) {
     print_hex_break((uint8_t *)&c->d, sizeof(c->d), 32);
 #endif
 
-    if (offline) {
+    if (!session.pm3_present) {
         PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed." _YELLOW_("offline"));
         return;
     }
@@ -123,7 +110,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     PrintAndLogEx(NORMAL, "Sending %s", ng ? "NG" : "MIX");
 #endif
 
-    if (offline) {
+    if (!session.pm3_present) {
         PrintAndLogEx(NORMAL, "Sending bytes to proxmark failed - offline");
         return;
     }
@@ -326,18 +313,18 @@ bool hookUpPM3() {
         sp = NULL;
         serial_port_name = NULL;
         ret = false;
-        offline = 1;
+        session.pm3_present = false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
         PrintAndLogEx(WARNING, "Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
         sp = NULL;
         serial_port_name = NULL;
         ret = false;
-        offline = 1;
+        session.pm3_present = false;
     } else {
         PrintAndLogEx(SUCCESS, "Proxmark3 reconnected\n");
         serial_port_name = ;
         ret = true;
-        offline = 0;
+        session.pm3_present = true;
     }
     return ret;
 }

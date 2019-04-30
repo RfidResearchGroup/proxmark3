@@ -15,14 +15,14 @@
 static ProxGuiQT *gui = NULL;
 static WorkerThread *main_loop_thread = NULL;
 
-WorkerThread::WorkerThread(char *script_cmds_file, char *script_cmd, bool pm3_present) : script_cmds_file(script_cmds_file), script_cmd(script_cmd), pm3_present(pm3_present) {
+WorkerThread::WorkerThread(char *script_cmds_file, char *script_cmd) : script_cmds_file(script_cmds_file), script_cmd(script_cmd) {
 }
 
 WorkerThread::~WorkerThread() {
 }
 
 void WorkerThread::run() {
-    main_loop(script_cmds_file, script_cmd, pm3_present);
+    main_loop(script_cmds_file, script_cmd);
 }
 
 extern "C" void ShowGraphWindow(void) {
@@ -53,12 +53,12 @@ extern "C" void MainGraphics(void) {
     gui->MainLoop();
 }
 
-extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool pm3_present) {
+extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd) {
 #ifdef Q_WS_X11
     if (getenv("DISPLAY") == NULL)
         return;
 #endif
-    main_loop_thread = new WorkerThread(script_cmds_file, script_cmd, pm3_present);
+    main_loop_thread = new WorkerThread(script_cmds_file, script_cmd);
     gui = new ProxGuiQT(argc, argv, main_loop_thread);
 }
 

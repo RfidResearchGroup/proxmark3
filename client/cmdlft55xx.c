@@ -505,7 +505,7 @@ static bool DecodeT5555TraceBlock(void) {
 
 // sanity check. Don't use proxmark if it is offline and you didn't specify useGraphbuf
 static int SanityOfflineCheck(bool useGraphBuffer) {
-    if (!useGraphBuffer && IsOffline()) {
+    if (!useGraphBuffer && !session.pm3_present) {
         PrintAndLogEx(WARNING, "Your proxmark3 device is offline. Specify [1] to use graphbuffer data instead");
         return 0;
     }
@@ -1914,7 +1914,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         uint64_t curr_password = 0x00;
         for (uint16_t c = 0; c < keycount; ++c) {
 
-            if (IsOffline()) {
+            if (!session.pm3_present) {
                 PrintAndLogEx(WARNING, "Device offline\n");
                 free(keyBlock);
                 return 2;

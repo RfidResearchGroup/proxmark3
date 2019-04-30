@@ -333,7 +333,7 @@ int CmdLFSetConfig(const char *Cmd) {
 }
 
 bool lf_read(bool silent, uint32_t samples) {
-    if (IsOffline()) return false;
+    if (!session.pm3_present) return false;
     clearCommandBuffer();
     SendCommandOLD(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, silent, samples, 0, NULL, 0);
 
@@ -354,7 +354,7 @@ bool lf_read(bool silent, uint32_t samples) {
 
 int CmdLFRead(const char *Cmd) {
 
-    if (IsOffline()) return 0;
+    if (!session.pm3_present) return 0;
 
     bool errors = false;
     bool silent = false;
@@ -843,7 +843,7 @@ int CmdLFfind(const char *Cmd) {
 
     if (cmdp == 'u') testRaw = 'u';
 
-    bool isOnline = (!IsOffline() && (cmdp != '1'));
+    bool isOnline = (session.pm3_present && (cmdp != '1'));
 
     if (isOnline)
         lf_read(true, 30000);
