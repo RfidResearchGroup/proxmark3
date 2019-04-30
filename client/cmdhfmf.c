@@ -1933,7 +1933,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
 
     uint8_t trgKeyType = 0;
-    uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE / 6) ? (USB_CMD_DATA_SIZE / 6) : keycnt;
+    uint32_t max_keys = keycnt > ((USB_CMD_DATA_SIZE - 4) / 6) ? ((USB_CMD_DATA_SIZE - 4) / 6) : keycnt;
 
     // time
     uint64_t t1 = msclock();

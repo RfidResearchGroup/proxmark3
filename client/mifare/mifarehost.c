@@ -90,7 +90,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
         *key = UINT64_C(-1);
         uint8_t keyBlock[USB_CMD_DATA_SIZE];
-        uint32_t max_keys = USB_CMD_DATA_SIZE / 6;
+        uint32_t max_keys = (USB_CMD_DATA_SIZE - 4) / 6;
         for (uint32_t i = 0; i < keycount; i += max_keys) {
 
             uint32_t size = keycount - i > max_keys ? max_keys : keycount - i;
@@ -122,11 +122,18 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 }
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
     *key = -1;
-    clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_CHKKEYS, (blockNo | (keyType << 8)), clear_trace, keycnt, keyBlock, 6 * keycnt);
+    clearCommandBuffer();   
+    uint8_t data[USB_CMD_DATA_SIZE] = {0};
+    data[0] = keyType;
+    data[1] = blockNo;
+    data[2] = clear_trace;
+    data[3] = keycnt;
+    memcpy(data + 4, keyBlock, 6 * keycnt);
+    SendCommandNG(CMD_MIFARE_CHKKEYS, data, (4 + 6 * keycnt) );
+    
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) return PM3_ETIMEOUT;
-    if ((resp.oldarg[0] & 0xff) != 0x01) return PM3_EUNDEF;
+    if (!WaitForResponseTimeout(CMD_MIFARE_CHKKEYS, &resp, 2500)) return PM3_ETIMEOUT;
+    if (resp.status != PM3_SUCCESS) return PM3_EUNDEF;
     *key = bytes_to_num(resp.data.asBytes, 6);
     return PM3_SUCCESS;
 }
@@ -213,7 +220,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
 // ref: https://github.com/J-Run/mf_key_brute
 int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey) {
 
-#define KEYS_IN_BLOCK 85
+#define KEYS_IN_BLOCK 84
 #define KEYBLOCK_SIZE 510
 #define CANDIDATE_SIZE 0xFFFF * 6
 
@@ -372,7 +379,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
-    uint32_t max_keys = keycnt > (USB_CMD_DATA_SIZE / 6) ? (USB_CMD_DATA_SIZE / 6) : keycnt;
+    uint32_t max_keys = keycnt > ((USB_CMD_DATA_SIZE - 4) / 6) ? ((USB_CMD_DATA_SIZE - 4) / 6) : keycnt;
     uint8_t keyBlock[USB_CMD_DATA_SIZE] = {0x00};
 
     for (i = 0; i < keycnt; i += max_keys) {
