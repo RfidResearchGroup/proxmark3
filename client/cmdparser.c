@@ -27,11 +27,96 @@ bool IfPm3Present(void) {
     return session.pm3_present;
 }
 
+bool IfPm3Flash(void) {
+    if (!IfPm3Present())
+        return false;
+// TODO
+//    capabilities.hw_available_flash
+    return pm3_capabilities.compiled_with_flash;
+}
+
+bool IfPm3Smartcard(void) {
+    if (!IfPm3Present())
+        return false;
+// TODO
+//    capabilities.hw_available_smartcard
+    return pm3_capabilities.compiled_with_smartcard;
+}
+
+bool IfPm3Fpc(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_fpc;
+}
+
+bool IfPm3FpcHost(void) {
+    if (!IfPm3Present())
+        return false;
+// TODO
+//    capabilities.hw_available_fpc_host
+    return pm3_capabilities.compiled_with_fpc_host;
+}
+
+bool IfPm3Lf(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_lf;
+}
+
+bool IfPm3Hitag(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_hitag;
+}
+
 bool IfPm3Hfsniff(void) {
     if (!IfPm3Present())
         return false;
     return pm3_capabilities.compiled_with_hfsniff;
 }
+
+bool IfPm3Iso14443a(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_iso14443a;
+}
+
+bool IfPm3Iso14443a(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_iso14443b;
+}
+
+bool IfPm3Iso15693(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_iso15693;
+}
+
+bool IfPm3Felica(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_felica;
+}
+
+bool IfPm3Legicrf(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_legicrf;
+}
+
+bool IfPm3Iclass(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_iclass;
+}
+
+bool IfPm3Lcd(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_lcd;
+}
+
 
 void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;

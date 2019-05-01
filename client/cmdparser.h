@@ -19,9 +19,23 @@ typedef struct command_s {
 } command_t;
 // command_t array are expected to be NULL terminated
 
+// helpers for command_t IsAvailable
 bool AlwaysAvailable(void);
 bool IfPm3Present(void);
+bool IfPm3Flash(void);
+bool IfPm3Smartcard(void);
+bool IfPm3Fpc(void);
+bool IfPm3FpcHost(void);
+bool IfPm3Lf(void);
+bool IfPm3Hitag(void);
 bool IfPm3Hfsniff(void);
+bool IfPm3Iso14443a(void);
+bool IfPm3Iso14443a(void);
+bool IfPm3Iso15693(void);
+bool IfPm3Felica(void);
+bool IfPm3Legicrf(void);
+bool IfPm3Iclass(void);
+bool IfPm3Lcd(void);
 
 // Print help for each command in the command array
 void CmdsHelp(const command_t Commands[]);
