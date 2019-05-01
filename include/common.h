@@ -82,7 +82,6 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 # define FLASH_MEM_SIGNATURE_OFFSET (FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN)
 #endif
 
-#ifdef WITH_FLASH
 #ifndef T55XX_CONFIG_LEN
 # define T55XX_CONFIG_LEN sizeof( t55xx_config )
 #endif
@@ -101,7 +100,6 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 
 #ifndef DEFAULT_ICLASS_KEYS_OFFSET
 # define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x5000)
-#endif
 #endif
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
