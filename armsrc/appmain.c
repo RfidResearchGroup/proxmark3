@@ -1564,14 +1564,15 @@ void  __attribute__((noreturn)) AppMain(void) {
     usart_init();
 #endif
 
-#ifdef WITH_FLASH
-    loadT55xxConfig();
-#endif
-
     // This is made as late as possible to ensure enumeration without timeout
     // against device such as http://www.hobbytronics.co.uk/usb-host-board-v2
     usb_disable();
     usb_enable();
+
+#ifdef WITH_FLASH
+    // If flash is not present, BUSY_TIMEOUT kicks in, let's do it after USB
+    loadT55xxConfig();
+#endif
 
     for (;;) {
         WDT_HIT();

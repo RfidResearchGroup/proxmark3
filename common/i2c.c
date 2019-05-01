@@ -600,7 +600,7 @@ void I2C_print_status(void) {
     if (len > 0)
         Dbprintf("  version.................v%x.%02d", resp[0], resp[1]);
     else
-        DbpString("  version.................FAILED");
+        DbpString("  version................." _RED_("FAILED"));
 }
 
 // Will read response from smart card module,  retries 3 times to get the data.
