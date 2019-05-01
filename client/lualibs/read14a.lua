@@ -128,10 +128,20 @@ local function waitFor14443a()
     end
     return nil, "Aborted by user"
 end
+
+-- Sends an instruction to do nothing, only disconnect
+local function disconnect14443a()
+    local c = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a}
+    -- We can ignore the response here, no ACK is returned for this command
+    -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
+    return c.sendMIX(true)
+end
+
 local library = {
     read = read14443a,
     waitFor14443a = waitFor14443a,
     parse14443a = parse14443a,
+    disconnect = disconnect14443a,
     ISO14A_COMMAND = ISO14A_COMMAND,
 }
 
