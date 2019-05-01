@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
     if (res < 0)
         return -1;
 
-    PrintAndLogEx(NORMAL, "\n" _BLUE_("Flashing..."));
+    PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
 
     for (int i = 0; i < num_files; i++) {
         res = flash_write(&files[i]);
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
         PrintAndLogEx(NORMAL, "\n");
     }
 
-    PrintAndLogEx(NORMAL, _BLUE_("Resetting hardware..."));
+    PrintAndLogEx(SUCCESS, _BLUE_("Resetting hardware..."));
 
     res = flash_stop_flashing();
     if (res < 0)
@@ -106,6 +106,6 @@ int main(int argc, char **argv) {
 
     CloseProxmark();
 
-    PrintAndLogEx(NORMAL, _BLUE_("All done.") "\n\nHave a nice day!");
+    PrintAndLogEx(SUCCESS, _BLUE_("All done.") "\n\nHave a nice day!");
     return 0;
 }

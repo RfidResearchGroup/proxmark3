@@ -46,7 +46,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
     ctx->num_segs = 0;
     seg = ctx->segments;
 
-    PrintAndLogEx(NORMAL, "Loading usable ELF segments:");
+    PrintAndLogEx(SUCCESS, "Loading usable ELF segments:");
     for (int i = 0; i < num_phdrs; i++) {
         if (le32(phdr->p_type) != PT_LOAD) {
             phdr++;
@@ -62,7 +62,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
             phdr++;
             continue;
         }
-        PrintAndLogEx(NORMAL, "%d: V 0x%08x P 0x%08x (0x%08x->0x%08x) [%c%c%c] @0x%x",
+        PrintAndLogEx(SUCCESS, "   "_YELLOW_("%d")": V 0x%08x P 0x%08x (0x%08x->0x%08x) [%c%c%c] @0x%x",
                       i, vaddr, paddr, filesz, memsz,
                       (flags & PF_R) ? 'R' : ' ',
                       (flags & PF_W) ? 'W' : ' ',
@@ -120,10 +120,10 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                     memset(new_data, 0xff, new_length);
                     memcpy(new_data, prev_seg->data, prev_seg->length);
                     memcpy(new_data + this_offset, data, filesz);
-                    PrintAndLogEx(NORMAL, "Note: Extending previous segment from 0x%x to 0x%x bytes",
+                    PrintAndLogEx(INFO, "Note: Extending previous segment from 0x%x to 0x%x bytes",
                                   prev_seg->length, new_length);
                     if (hole)
-                        PrintAndLogEx(NORMAL, "Note: 0x%x-byte hole created", hole);
+                        PrintAndLogEx(INFO, "Note: 0x%x-byte hole created", hole);
                     free(data);
                     free(prev_seg->data);
                     prev_seg->data = new_data;
@@ -192,7 +192,7 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
         goto fail;
     }
 
-    PrintAndLogEx(NORMAL, _BLUE_("Loading ELF file") _YELLOW_("%s"), name);
+    PrintAndLogEx(SUCCESS, _BLUE_("Loading ELF file") _YELLOW_("%s"), name);
 
     if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
         PrintAndLogEx(ERR, "Error while reading ELF file header");
@@ -298,18 +298,18 @@ static int enter_bootloader(char *serial_port_name) {
         return 0;
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
-        PrintAndLogEx(NORMAL, _BLUE_("Entering bootloader..."));
+        PrintAndLogEx(SUCCESS, _BLUE_("Entering bootloader..."));
 
         if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
                 && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
             SendCommandOLD(CMD_START_FLASH, 0, 0, 0, NULL, 0);
-            PrintAndLogEx(NORMAL, "(Press and release the button only to abort)");
+            PrintAndLogEx(SUCCESS, "(Press and release the button only to " _YELLOW_("abort") ")");
         } else {
             // Old style handover: Ask the user to press the button, then reset the board
             SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
-            PrintAndLogEx(NORMAL, "Press and hold down button NOW if your bootloader requires it.");
+            PrintAndLogEx(SUCCESS, "Press and hold down button NOW if your bootloader requires it.");
         }
         msleep(100);
         CloseProxmark();
@@ -393,7 +393,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
 
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
-    PrintAndLogEx(NORMAL, "Writing segments for file: %s", ctx->filename);
+    PrintAndLogEx(SUCCESS, "Writing segments for file: %s", ctx->filename);
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
@@ -401,7 +401,7 @@ int flash_write(flash_file_t *ctx) {
         uint32_t blocks = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
         uint32_t end = seg->start + length;
 
-        PrintAndLogEx(NORMAL, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
+        PrintAndLogEx(SUCCESS, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
         fflush(stdout);
         int block = 0;
         uint8_t *data = seg->data;
@@ -424,7 +424,7 @@ int flash_write(flash_file_t *ctx) {
             fprintf(stdout, ".");
             fflush(stdout);
         }
-        PrintAndLogEx(NORMAL, _GREEN_("OK"));
+        PrintAndLogEx(NORMAL, " " _GREEN_("OK"));
         fflush(stdout);
     }
     return 0;
