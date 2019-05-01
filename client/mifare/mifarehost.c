@@ -102,7 +102,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
                 }
             }
 
-            if (!mfCheckKeys(blockno, key_type - 0x60, false, size, keyBlock, key)) {
+            if (mfCheckKeys(blockno, key_type - 0x60, false, size, keyBlock, key) == PM3_SUCCESS) {
                 break;
             }
         }
@@ -133,8 +133,15 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_MIFARE_CHKKEYS, &resp, 2500)) return PM3_ETIMEOUT;
-    if (resp.status != PM3_SUCCESS) return PM3_EUNDEF;
-    *key = bytes_to_num(resp.data.asBytes, 6);
+    if (resp.status != PM3_SUCCESS) return resp.status;
+
+    struct kr {
+        uint8_t key[6];
+        bool found;
+    } PACKED;
+    struct kr *keyresult = (struct kr *)&resp.data.asBytes;
+    if (!keyresult->found) return PM3_ESOFT;
+    *key = bytes_to_num(keyresult->key, sizeof(keyresult->key));
     return PM3_SUCCESS;
 }
 
@@ -251,7 +258,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
         memcpy(keyBlock, candidates + i, KEYBLOCK_SIZE);
 
         // check a block of generated candidate keys.
-        if (!mfCheckKeys(blockNo, keyType, true, KEYS_IN_BLOCK, keyBlock, &key64)) {
+        if (mfCheckKeys(blockNo, keyType, true, KEYS_IN_BLOCK, keyBlock, &key64) == PM3_SUCCESS) {
             *resultkey = key64;
             found = true;
             break;
@@ -391,7 +398,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             num_to_bytes(key64, 6, keyBlock + i * 6);
         }
 
-        if (!mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, size, keyBlock, &key64)) {
+        if (mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, size, keyBlock, &key64) == PM3_SUCCESS) {
             free(statelists[0].head.slhead);
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);

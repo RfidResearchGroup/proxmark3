@@ -1117,8 +1117,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
     }
 
     // check if we can authenticate to sector
-    res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
-    if (res) {
+    if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
         return 3;
     }
@@ -1179,6 +1178,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
         PrintAndLogEx(SUCCESS, "Testing known keys. Sector count=%d", SectorsCnt);
         res = mfCheckKeys_fast(SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector, false);
+        // TODO check result!!
 
         uint64_t t2 = msclock() - t1;
         PrintAndLogEx(SUCCESS, "Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2 / 1000.0);
@@ -1464,8 +1464,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (!know_target_key && nonce_file_read == false) {
         uint64_t key64 = 0;
         // check if we can authenticate to sector
-        int res = mfCheckKeys(blockNo, keyType, true, 1, key, &key64);
-        if (res) {
+        if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
             return 3;
         }
@@ -1795,7 +1794,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     int clen = 0;
     int transferToEml = 0;
     int createDumpFile = 0;
-    int i, res, keycnt = 0;
+    int i, keycnt = 0;
 
     keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
     if (keyBlock == NULL) return 1;
@@ -1963,8 +1962,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 uint32_t size = keycnt - c > max_keys ? max_keys : keycnt - c;
 
-                res = mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6 * c], &key64);
-                if (!res) {
+                if (mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6 * c], &key64) == PM3_SUCCESS) {
                     e_sector[i].Key[trgKeyType] = key64;
                     e_sector[i].foundKey[trgKeyType] = true;
                     break;
