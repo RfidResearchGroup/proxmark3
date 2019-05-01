@@ -338,7 +338,6 @@ static int CmdFPGAOff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-#ifdef WITH_LCD
 static int CmdLCD(const char *Cmd) {
     int i, j;
     sscanf(Cmd, "%x %d", &i, &j);
@@ -354,7 +353,6 @@ static int CmdLCDReset(const char *Cmd) {
     SendCommandOLD(CMD_LCD_RESET, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
-#endif
 
 static int CmdReadmem(const char *Cmd) {
     clearCommandBuffer();
@@ -465,10 +463,8 @@ static command_t CommandTable[] = {
     {"help",          CmdHelp,        AlwaysAvailable, "This help"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
     {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
-#ifdef WITH_LCD
-    {"lcd",           CmdLCD,         IfPm3Present,    "<HEX command> <count> -- Send command/data to LCD"},
-    {"lcdreset",      CmdLCDReset,    IfPm3Present,    "Hardware reset LCD"},
-#endif
+    {"lcd",           CmdLCD,         IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
+    {"lcdreset",      CmdLCDReset,    IfPm3Lcd,        "Hardware reset LCD"},
     {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
     {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
     {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
