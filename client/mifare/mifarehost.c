@@ -90,7 +90,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
         *key = UINT64_C(-1);
         uint8_t keyBlock[PM3_CMD_DATA_SIZE];
-        uint32_t max_keys = (PM3_CMD_DATA_SIZE - 4) / 6;
+        uint32_t max_keys = KEYS_IN_BLOCK;
         for (uint32_t i = 0; i < keycount; i += max_keys) {
 
             uint32_t size = keycount - i > max_keys ? max_keys : keycount - i;
@@ -226,10 +226,6 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
 // PM3 imp of J-Run mf_key_brute (part 2)
 // ref: https://github.com/J-Run/mf_key_brute
 int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey) {
-
-#define KEYS_IN_BLOCK   ((PM3_CMD_DATA_SIZE - 4) / 6)
-#define KEYBLOCK_SIZE   (KEYS_IN_BLOCK * 6)
-#define CANDIDATE_SIZE  (0xFFFF * 6)
 
     uint64_t key64;
     uint8_t found = false;
@@ -386,7 +382,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
-    uint32_t max_keys = keycnt > ((PM3_CMD_DATA_SIZE - 4) / 6) ? ((PM3_CMD_DATA_SIZE - 4) / 6) : keycnt;
+    uint32_t max_keys = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
     uint8_t keyBlock[PM3_CMD_DATA_SIZE] = {0x00};
 
     for (i = 0; i < keycnt; i += max_keys) {

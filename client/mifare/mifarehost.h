@@ -68,6 +68,9 @@ typedef struct {
 } icesector_t;
 
 extern char logHexFileName[FILE_PATH_SIZE];
+#define KEYS_IN_BLOCK   ((PM3_CMD_DATA_SIZE - 4) / 6)
+#define KEYBLOCK_SIZE   (KEYS_IN_BLOCK * 6)
+#define CANDIDATE_SIZE  (0xFFFF * 6)
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate);

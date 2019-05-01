@@ -1932,7 +1932,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
 
     uint8_t trgKeyType = 0;
-    uint16_t max_keys = keycnt > ((PM3_CMD_DATA_SIZE - 4) / 6) ? ((PM3_CMD_DATA_SIZE - 4) / 6) : keycnt;
+    uint16_t max_keys = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
 
     // time
     uint64_t t1 = msclock();
