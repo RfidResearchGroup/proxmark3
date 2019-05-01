@@ -535,14 +535,14 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",      CmdHelp,              AlwaysAvailable, "This help"},
-    {"list",      CmdHFFelicaList,      IfPm3Present,    "List ISO 18092/FeliCa history"},
-    {"reader",    CmdHFFelicaReader,    IfPm3Present,    "Act like an ISO18092/FeliCa reader"},
-    {"sim",       CmdHFFelicaSim,       IfPm3Present,    "<UID> -- Simulate ISO 18092/FeliCa tag"},
-    {"sniff",     CmdHFFelicaSniff,     IfPm3Present,    "sniff ISO 18092/Felica traffic"},
-    {"raw",       CmdHFFelicaCmdRaw,    IfPm3Present,    "Send raw hex data to tag"},
+    {"list",      CmdHFFelicaList,      IfPm3Felica,     "List ISO 18092/FeliCa history"},
+    {"reader",    CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
+    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
+    {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "sniff ISO 18092/Felica traffic"},
+    {"raw",       CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
 
-    {"litesim",   CmdHFFelicaSimLite,   IfPm3Present,    "<NDEF2> - only reply to poll request"},
-    {"litedump",  CmdHFFelicaDumpLite,  IfPm3Present,    "Wait for and try dumping FelicaLite"},
+    {"litesim",   CmdHFFelicaSimLite,   IfPm3Felica,     "<NDEF2> - only reply to poll request"},
+    {"litedump",  CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
     {NULL, NULL, NULL, NULL}
 };
 
