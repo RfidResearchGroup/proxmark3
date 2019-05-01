@@ -1299,7 +1299,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
-#endif
         case CMD_UPLOAD_SIM_SAMPLES_125K: {
             // iceman; since changing fpga_bitstreams clears bigbuff, Its better to call it before.
             // to be able to use this one for uploading data to device
@@ -1316,6 +1315,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_old(CMD_ACK, 1, 0, 0, 0, 0);
             break;
         }
+#endif
         case CMD_DOWNLOAD_EML_BIGBUF: {
             LED_B_ON();
             uint8_t *mem = BigBuf_get_EM_addr();
