@@ -436,6 +436,84 @@ void SendCapabilities(void) {
         capabilities.baudrate = USART_BAUD_RATE;
     else
         capabilities.baudrate = 0; // no real baudrate for USB-CDC
+
+#ifdef WITH_FLASH
+    capabilities.compiled_with_flash = true;
+#else
+    capabilities.compiled_with_flash = false;
+#endif
+#ifdef WITH_SMARTCARD
+    capabilities.compiled_with_smartcard = true;
+#else
+    capabilities.compiled_with_smartcard = false;
+#endif
+
+#ifdef WITH_FPC
+    capabilities.compiled_with_fpc = true;
+#else
+    capabilities.compiled_with_fpc = false;
+#endif
+#ifdef WITH_FPC_HOST
+    capabilities.compiled_with_fpc_host = true;
+#else
+    capabilities.compiled_with_fpc_host = false;
+#endif
+#ifdef WITH_LF
+    capabilities.compiled_with_lf = true;
+#else
+    capabilities.compiled_with_lf = false;
+#endif
+#ifdef WITH_HITAG
+    capabilities.compiled_with_hitag = true;
+#else
+    capabilities.compiled_with_hitag = false;
+#endif
+#ifdef WITH_HFSNIFF
+    capabilities.compiled_with_hfsniff = true;
+#else
+    capabilities.compiled_with_hfsniff = false;
+#endif
+#ifdef WITH_ISO14443a
+    capabilities.compiled_with_iso14443a = true;
+#else
+    capabilities.compiled_with_iso14443a = false;
+#endif
+#ifdef WITH_ISO14443b
+    capabilities.compiled_with_iso14443b = true;
+#else
+    capabilities.compiled_with_iso14443b = false;
+#endif
+#ifdef WITH_ISO15693
+    capabilities.compiled_with_iso15693 = true;
+#else
+    capabilities.compiled_with_iso15693 = false;
+#endif
+#ifdef WITH_FELICA
+    capabilities.compiled_with_felica = true;
+#else
+    capabilities.compiled_with_felica = false;
+#endif
+#ifdef WITH_LEGICRF
+    capabilities.compiled_with_legicrf = true;
+#else
+    capabilities.compiled_with_legicrf = false;
+#endif
+#ifdef WITH_ICLASS
+    capabilities.compiled_with_iclass = true;
+#else
+    capabilities.compiled_with_iclass = false;
+#endif
+#ifdef WITH_LCD
+    capabilities.compiled_with_lcd = true;
+#else
+    capabilities.compiled_with_lcd = false;
+#endif
+
+// TODO
+//    capabilities.hw_available_flash
+//    capabilities.hw_available_smartcard
+//    capabilities.hw_available_fpc_host
+
     reply_ng(CMD_CAPABILITIES, PM3_SUCCESS, (uint8_t *)&capabilities, sizeof(capabilities));
 }
 

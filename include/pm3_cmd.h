@@ -141,6 +141,31 @@ typedef struct {
 typedef struct {
     uint32_t baudrate;
     bool via_fpc;
+    // rdv4
+    bool compiled_with_flash;
+    bool compiled_with_smartcard;
+    bool compiled_with_fpc;
+    bool compiled_with_fpc_host;
+    // lf
+    bool compiled_with_lf;
+    bool compiled_with_hitag;
+    // hf
+    bool compiled_with_hfsniff;
+    bool compiled_with_iso14443a;
+    bool compiled_with_iso14443b;
+    bool compiled_with_iso15693;
+    bool compiled_with_felica;
+    bool compiled_with_legicrf;
+    bool compiled_with_iclass;
+    // misc
+    bool compiled_with_lcd;
+
+    // Following are not yet implemented:
+    // rdv4
+    bool hw_available_flash;
+    bool hw_available_smartcard;
+    // rdv4 bt addon
+    bool hw_available_fpc_host;
 } PACKED capabilities_t;
 
 extern capabilities_t pm3_capabilities;
