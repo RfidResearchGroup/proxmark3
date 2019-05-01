@@ -1274,22 +1274,22 @@ static int CmdHF15Restore(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",        CmdHF15Help,        1, "This help"},
-    {"demod",       CmdHF15Demod,       1, "Demodulate ISO15693 from tag"},
-    {"dump",        CmdHF15Dump,        0, "Read all memory pages of an ISO15693 tag, save to file"},
-    {"findafi",     CmdHF15Afi,         0, "Brute force AFI of an ISO15693 tag"},
-    {"info",        CmdHF15Info,        0, "Tag information"},
-    {"list",        CmdHF15List,        0, "List ISO15693 history"},
-    {"raw",         CmdHF15Raw,         0, "Send raw hex data to tag"},
-    {"reader",      CmdHF15Reader,      0, "Act like an ISO15693 reader"},
-    {"record",      CmdHF15Record,      0, "Record Samples (ISO15693)"},
-    {"restore",     CmdHF15Restore,     0, "Restore from file to all memory pages of an ISO15693 tag"},
-    {"sim",         CmdHF15Sim,         0, "Fake an ISO15693 tag"},
-    {"samples",     CmdHF15Samples,     0, "Acquire Samples as Reader (enables carrier, sends inquiry)"},
-    {"read",        CmdHF15Read,        0, "Read a block"},
-    {"write",       CmdHF15Write,       0, "Write a block"},
-    {"readmulti",   CmdHF15Readmulti,   0, "Reads multiple Blocks"},
-    {NULL, NULL, 0, NULL}
+    {"help",        CmdHF15Help,        AlwaysAvailable, "This help"},
+    {"demod",       CmdHF15Demod,       AlwaysAvailable, "Demodulate ISO15693 from tag"},
+    {"dump",        CmdHF15Dump,        IfPm3Present,    "Read all memory pages of an ISO15693 tag, save to file"},
+    {"findafi",     CmdHF15Afi,         IfPm3Present,    "Brute force AFI of an ISO15693 tag"},
+    {"info",        CmdHF15Info,        IfPm3Present,    "Tag information"},
+    {"list",        CmdHF15List,        IfPm3Present,    "List ISO15693 history"},
+    {"raw",         CmdHF15Raw,         IfPm3Present,    "Send raw hex data to tag"},
+    {"reader",      CmdHF15Reader,      IfPm3Present,    "Act like an ISO15693 reader"},
+    {"record",      CmdHF15Record,      IfPm3Present,    "Record Samples (ISO15693)"},
+    {"restore",     CmdHF15Restore,     IfPm3Present,    "Restore from file to all memory pages of an ISO15693 tag"},
+    {"sim",         CmdHF15Sim,         IfPm3Present,    "Fake an ISO15693 tag"},
+    {"samples",     CmdHF15Samples,     IfPm3Present,    "Acquire Samples as Reader (enables carrier, sends inquiry)"},
+    {"read",        CmdHF15Read,        IfPm3Present,    "Read a block"},
+    {"write",       CmdHF15Write,       IfPm3Present,    "Write a block"},
+    {"readmulti",   CmdHF15Readmulti,   IfPm3Present,    "Reads multiple Blocks"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHF15Help(const char *Cmd) {

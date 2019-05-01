@@ -2699,21 +2699,21 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 // Menu Stuff
 //------------------------------------
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            1, "This help"},
-    {"dbg",     CmdHF14AMfDbg,      0, "Set default debug mode"},
-    {"info",    CmdHF14AMfUInfo,    0, "Tag information"},
-    {"dump",    CmdHF14AMfUDump,    0, "Dump Ultralight / Ultralight-C / NTAG tag to binary file"},
-    {"restore", CmdHF14AMfURestore, 0, "Restore a dump onto a MFU MAGIC tag"},
-    {"eload",   CmdHF14AMfUeLoad,   0, "load Ultralight .eml dump file into emulator memory"},
-    {"rdbl",    CmdHF14AMfURdBl,    0, "Read block"},
-    {"wrbl",    CmdHF14AMfUWrBl,    0, "Write block"},
-    {"cauth",   CmdHF14AMfUCAuth,   0, "Authentication    - Ultralight C"},
-    {"setpwd",  CmdHF14AMfUCSetPwd, 0, "Set 3des password - Ultralight-C"},
-    {"setuid",  CmdHF14AMfUCSetUid, 0, "Set UID - MAGIC tags only"},
-    {"sim",     CmdHF14AMfUSim,     0, "Simulate Ultralight from emulator memory"},
-    {"gen",     CmdHF14AMfUGenDiverseKeys, 1, "Generate 3des mifare diversified keys"},
-    {"pwdgen",  CmdHF14AMfUPwdGen,  1, "Generate pwd from known algos"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
+    {"dbg",     CmdHF14AMfDbg,      IfPm3Present,    "Set default debug mode"},
+    {"info",    CmdHF14AMfUInfo,    IfPm3Present,    "Tag information"},
+    {"dump",    CmdHF14AMfUDump,    IfPm3Present,    "Dump Ultralight / Ultralight-C / NTAG tag to binary file"},
+    {"restore", CmdHF14AMfURestore, IfPm3Present,    "Restore a dump onto a MFU MAGIC tag"},
+    {"eload",   CmdHF14AMfUeLoad,   IfPm3Present,    "load Ultralight .eml dump file into emulator memory"},
+    {"rdbl",    CmdHF14AMfURdBl,    IfPm3Present,    "Read block"},
+    {"wrbl",    CmdHF14AMfUWrBl,    IfPm3Present,    "Write block"},
+    {"cauth",   CmdHF14AMfUCAuth,   IfPm3Present,    "Authentication    - Ultralight C"},
+    {"setpwd",  CmdHF14AMfUCSetPwd, IfPm3Present,    "Set 3des password - Ultralight-C"},
+    {"setuid",  CmdHF14AMfUCSetUid, IfPm3Present,    "Set UID - MAGIC tags only"},
+    {"sim",     CmdHF14AMfUSim,     IfPm3Present,    "Simulate Ultralight from emulator memory"},
+    {"gen",     CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3des mifare diversified keys"},
+    {"pwdgen",  CmdHF14AMfUPwdGen,  AlwaysAvailable, "Generate pwd from known algos"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

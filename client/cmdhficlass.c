@@ -2418,27 +2418,27 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,                    1, "This help"},
-    {"calcnewkey",  CmdHFiClassCalcNewKey,      1, "[options..] Calc Diversified keys (blocks 3 & 4) to write new keys"},
-    {"chk",         CmdHFiClassCheckKeys,       1, "            Check keys"},
-    {"clone",       CmdHFiClassCloneTag,        0, "[options..] Authenticate and Clone from iClass bin file"},
-    {"decrypt",     CmdHFiClassDecrypt,         1, "[f <fname>] Decrypt tagdump" },
-    {"dump",        CmdHFiClassReader_Dump,     0, "[options..] Authenticate and Dump iClass tag's AA1"},
-    {"eload",       CmdHFiClassELoad,           0, "[f <fname>] (experimental) Load data into iClass emulator memory"},
-    {"encryptblk",  CmdHFiClassEncryptBlk,      1, "<BlockData> Encrypt given block data"},
-    {"list",        CmdHFiClassList,            0, "            List iClass history"},
-    {"loclass",     CmdHFiClass_loclass,        1, "[options..] Use loclass to perform bruteforce of reader attack dump"},
-    {"lookup",      CmdHFiClassLookUp,          1, "[options..] Uses authentication trace to check for key in dictionary file"},
-    {"managekeys",  CmdHFiClassManageKeys,      1, "[options..] Manage the keys to use with iClass"},
-    {"permutekey",  CmdHFiClassPermuteKey,      0, "            Permute function from 'heart of darkness' paper"},
-    {"readblk",     CmdHFiClass_ReadBlock,      0, "[options..] Authenticate and Read iClass block"},
-    {"reader",      CmdHFiClassReader,          0, "            Act like an iClass reader"},
-    {"readtagfile", CmdHFiClassReadTagFile,     1, "[options..] Display Content from tagfile"},
-    {"replay",      CmdHFiClassReader_Replay,   0, "<mac>       Read an iClass tag via Replay Attack"},
-    {"sim",         CmdHFiClassSim,             0, "[options..] Simulate iClass tag"},
-    {"sniff",       CmdHFiClassSniff,           0, "            Eavesdrop iClass communication"},
-    {"writeblk",    CmdHFiClass_WriteBlock,     0, "[options..] Authenticate and Write iClass block"},
-    {NULL, NULL, 0, NULL}
+    {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
+    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc Diversified keys (blocks 3 & 4) to write new keys"},
+    {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "            Check keys"},
+    {"clone",       CmdHFiClassCloneTag,        IfPm3Present,    "[options..] Authenticate and Clone from iClass bin file"},
+    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[f <fname>] Decrypt tagdump" },
+    {"dump",        CmdHFiClassReader_Dump,     IfPm3Present,    "[options..] Authenticate and Dump iClass tag's AA1"},
+    {"eload",       CmdHFiClassELoad,           IfPm3Present,    "[f <fname>] (experimental) Load data into iClass emulator memory"},
+    {"encryptblk",  CmdHFiClassEncryptBlk,      AlwaysAvailable, "<BlockData> Encrypt given block data"},
+    {"list",        CmdHFiClassList,            IfPm3Present,    "            List iClass history"},
+    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce of reader attack dump"},
+    {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
+    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage the keys to use with iClass"},
+    {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Present,    "            Permute function from 'heart of darkness' paper"},
+    {"readblk",     CmdHFiClass_ReadBlock,      IfPm3Present,    "[options..] Authenticate and Read iClass block"},
+    {"reader",      CmdHFiClassReader,          IfPm3Present,    "            Act like an iClass reader"},
+    {"readtagfile", CmdHFiClassReadTagFile,     AlwaysAvailable, "[options..] Display Content from tagfile"},
+    {"replay",      CmdHFiClassReader_Replay,   IfPm3Present,    "<mac>       Read an iClass tag via Replay Attack"},
+    {"sim",         CmdHFiClassSim,             IfPm3Present,    "[options..] Simulate iClass tag"},
+    {"sniff",       CmdHFiClassSniff,           IfPm3Present,    "            Eavesdrop iClass communication"},
+    {"writeblk",    CmdHFiClass_WriteBlock,     IfPm3Present,    "[options..] Authenticate and Write iClass block"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

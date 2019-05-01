@@ -457,13 +457,13 @@ static int CmdIndalaClone(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,            1, "this help"},
-    {"demod",    CmdIndalaDemod,     1, "demodulate an indala tag (PSK1) from GraphBuffer"},
-    {"altdemod", CmdIndalaDemodAlt,  1, "alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
-    {"read",     CmdIndalaRead,      0, "read an Indala Prox tag from the antenna"},
-    {"clone",    CmdIndalaClone,     0, "clone Indala to T55x7"},
-    {"sim",      CmdIndalaSim,       0, "simulate Indala tag"},
-    {NULL, NULL, 0, NULL}
+    {"help",     CmdHelp,            AlwaysAvailable, "this help"},
+    {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an indala tag (PSK1) from GraphBuffer"},
+    {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
+    {"read",     CmdIndalaRead,      IfPm3Present,    "read an Indala Prox tag from the antenna"},
+    {"clone",    CmdIndalaClone,     IfPm3Present,    "clone Indala to T55x7"},
+    {"sim",      CmdIndalaSim,       IfPm3Present,    "simulate Indala tag"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

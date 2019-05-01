@@ -32,14 +32,8 @@
 #include "cmdcrc.h"
 #include "cmdanalyse.h"
 #include "emv/cmdemv.h"   // EMV
-
-#ifdef WITH_FLASH
 #include "cmdflashmem.h"  // rdv40 flashmem commands
-#endif
-
-#ifdef WITH_SMARTCARD
 #include "cmdsmartcard.h" // rdv40 smart card ISO7816 commands
-#endif
 
 int CommandReceived(char *Cmd);
 command_t *getTopLevelCommandTable(void);

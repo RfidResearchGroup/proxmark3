@@ -257,12 +257,12 @@ static int CmdIOProxClone(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        1, "this help"},
-    {"demod",   CmdIOProxDemod, 1, "demodulate an IOProx tag from the GraphBuffer"},
-    {"read",    CmdIOProxRead,  1, "attempt to read and extract tag data"},
-    {"clone",   CmdIOProxClone, 0, "clone IOProx to T55x7"},
-    {"sim",     CmdIOProxSim,   0, "simulate IOProx tag"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,        AlwaysAvailable, "this help"},
+    {"demod",   CmdIOProxDemod, AlwaysAvailable, "demodulate an IOProx tag from the GraphBuffer"},
+    {"read",    CmdIOProxRead,  AlwaysAvailable, "attempt to read and extract tag data"},
+    {"clone",   CmdIOProxClone, IfPm3Present,    "clone IOProx to T55x7"},
+    {"sim",     CmdIOProxSim,   IfPm3Present,    "simulate IOProx tag"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

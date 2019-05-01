@@ -193,12 +193,12 @@ static int CmdJablotronSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            1, "This help"},
-    {"demod",   CmdJablotronDemod,  1, "Demodulate an Jablotron tag from the GraphBuffer"},
-    {"read",    CmdJablotronRead,   0, "Attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdJablotronClone,  0, "clone jablotron tag"},
-    {"sim",     CmdJablotronSim,    0, "simulate jablotron tag"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
+    {"demod",   CmdJablotronDemod,  AlwaysAvailable, "Demodulate an Jablotron tag from the GraphBuffer"},
+    {"read",    CmdJablotronRead,   IfPm3Present,    "Attempt to read and extract tag data from the antenna"},
+    {"clone",   CmdJablotronClone,  IfPm3Present,    "clone jablotron tag"},
+    {"sim",     CmdJablotronSim,    IfPm3Present,    "simulate jablotron tag"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

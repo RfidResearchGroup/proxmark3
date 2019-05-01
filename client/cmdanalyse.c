@@ -903,16 +903,16 @@ static int CmdAnalyseNuid(const char *Cmd) {
     return 0;
 }
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            1, "This help"},
-    {"lcr",     CmdAnalyseLCR,      1, "Generate final byte for XOR LRC"},
-    {"crc",     CmdAnalyseCRC,      1, "Stub method for CRC evaluations"},
-    {"chksum",  CmdAnalyseCHKSUM,   1, "Checksum with adding, masking and one's complement"},
-    {"dates",   CmdAnalyseDates,    1, "Look for datestamps in a given array of bytes"},
-    {"tea",     CmdAnalyseTEASelfTest, 1, "Crypto TEA test"},
-    {"lfsr",    CmdAnalyseLfsr,     1, "LFSR tests"},
-    {"a",       CmdAnalyseA,        1, "num bits test"},
-    {"nuid",    CmdAnalyseNuid,     1, "create NUID from 7byte UID"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
+    {"lcr",     CmdAnalyseLCR,      AlwaysAvailable, "Generate final byte for XOR LRC"},
+    {"crc",     CmdAnalyseCRC,      AlwaysAvailable, "Stub method for CRC evaluations"},
+    {"chksum",  CmdAnalyseCHKSUM,   AlwaysAvailable, "Checksum with adding, masking and one's complement"},
+    {"dates",   CmdAnalyseDates,    AlwaysAvailable, "Look for datestamps in a given array of bytes"},
+    {"tea",     CmdAnalyseTEASelfTest, AlwaysAvailable, "Crypto TEA test"},
+    {"lfsr",    CmdAnalyseLfsr,     AlwaysAvailable, "LFSR tests"},
+    {"a",       CmdAnalyseA,        AlwaysAvailable, "num bits test"},
+    {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

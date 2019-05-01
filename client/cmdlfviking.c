@@ -121,12 +121,12 @@ static int CmdVikingSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        1, "This help"},
-    {"demod",   CmdVikingDemod, 1, "Demodulate a Viking tag from the GraphBuffer"},
-    {"read",    CmdVikingRead,  0, "Attempt to read and Extract tag data from the antenna"},
-    {"clone",   CmdVikingClone, 0, "<8 digit ID number> clone viking tag"},
-    {"sim",     CmdVikingSim,   0, "<8 digit ID number> simulate viking tag"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,        AlwaysAvailable, "This help"},
+    {"demod",   CmdVikingDemod, AlwaysAvailable, "Demodulate a Viking tag from the GraphBuffer"},
+    {"read",    CmdVikingRead,  IfPm3Present,    "Attempt to read and Extract tag data from the antenna"},
+    {"clone",   CmdVikingClone, IfPm3Present,    "<8 digit ID number> clone viking tag"},
+    {"sim",     CmdVikingSim,   IfPm3Present,    "<8 digit ID number> simulate viking tag"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

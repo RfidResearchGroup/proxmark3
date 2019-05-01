@@ -462,23 +462,23 @@ static int CmdPingNG(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",          CmdHelp,        1, "This help"},
-    {"detectreader",  CmdDetectReader, 0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
-    {"fpgaoff",       CmdFPGAOff,     0, "Set FPGA off"},
+    {"help",          CmdHelp,        AlwaysAvailable, "This help"},
+    {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
+    {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
 #ifdef WITH_LCD
-    {"lcd",           CmdLCD,         0, "<HEX command> <count> -- Send command/data to LCD"},
-    {"lcdreset",      CmdLCDReset,    0, "Hardware reset LCD"},
+    {"lcd",           CmdLCD,         IfPm3Present,    "<HEX command> <count> -- Send command/data to LCD"},
+    {"lcdreset",      CmdLCDReset,    IfPm3Present,    "Hardware reset LCD"},
 #endif
-    {"readmem",       CmdReadmem,     0, "[address] -- Read memory at decimal address from flash"},
-    {"reset",         CmdReset,       0, "Reset the Proxmark3"},
-    {"setlfdivisor",  CmdSetDivisor,  0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
-    {"setmux",        CmdSetMux,      0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
-    {"tune",          CmdTune,        0, "Measure antenna tuning"},
-    {"version",       CmdVersion,     0, "Show version information about the connected Proxmark3"},
-    {"status",        CmdStatus,      0, "Show runtime status information about the connected Proxmark3"},
-    {"ping",          CmdPing,        0, "Test if the Proxmark3 is responding"},
-    {"pingng",        CmdPingNG,      0, "Test if the Proxmark3 is responsive, using new frame format (experimental)"},
-    {NULL, NULL, 0, NULL}
+    {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
+    {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
+    {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
+    {"setmux",        CmdSetMux,      IfPm3Present,    "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
+    {"tune",          CmdTune,        IfPm3Present,    "Measure antenna tuning"},
+    {"version",       CmdVersion,     IfPm3Present,    "Show version information about the connected Proxmark3"},
+    {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
+    {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responding"},
+    {"pingng",        CmdPingNG,      IfPm3Present,    "Test if the Proxmark3 is responsive, using new frame format (experimental)"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

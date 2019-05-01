@@ -694,14 +694,14 @@ static int CmdLFHitagDump(const char *Cmd) {
 */
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,                   1, "This help" },
-    {"list",     CmdLFHitagList,            0, "List Hitag trace history" },
-    {"info",     CmdLFHitagInfo,            1, "Tag information" },
-    {"reader",   CmdLFHitagReader,          1, "Act like a Hitag Reader" },
-    {"sim",      CmdLFHitagSim,             1, "Simulate Hitag transponder" },
-    {"sniff",    CmdLFHitagSniff,           1, "Eavesdrop Hitag communication" },
-    {"writer",   CmdLFHitagWriter,          1, "Act like a Hitag Writer" },
-    {"cc",       CmdLFHitagCheckChallenges, 1, "Test all challenges" },
+    {"help",     CmdHelp,                   AlwaysAvailable, "This help" },
+    {"list",     CmdLFHitagList,            IfPm3Present,    "List Hitag trace history" },
+    {"info",     CmdLFHitagInfo,            AlwaysAvailable, "Tag information" },
+    {"reader",   CmdLFHitagReader,          AlwaysAvailable, "Act like a Hitag Reader" },
+    {"sim",      CmdLFHitagSim,             AlwaysAvailable, "Simulate Hitag transponder" },
+    {"sniff",    CmdLFHitagSniff,           AlwaysAvailable, "Eavesdrop Hitag communication" },
+    {"writer",   CmdLFHitagWriter,          AlwaysAvailable, "Act like a Hitag Writer" },
+    {"cc",       CmdLFHitagCheckChallenges, AlwaysAvailable, "Test all challenges" },
     { NULL, NULL, 0, NULL }
 };
 

@@ -491,13 +491,13 @@ static int CmdAWIDBrute(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        1, "this help"},
-    {"demod",   CmdAWIDDemod,   0, "demodulate an AWID FSK tag from the GraphBuffer"},
-    {"read",    CmdAWIDRead,    0, "attempt to read and extract tag data"},
-    {"clone",   CmdAWIDClone,   0, "clone AWID to T55x7"},
-    {"sim",     CmdAWIDSim,     0, "simulate AWID tag"},
-    {"brute",   CmdAWIDBrute,   0, "Bruteforce card number against reader"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,        AlwaysAvailable, "this help"},
+    {"demod",   CmdAWIDDemod,   IfPm3Present,    "demodulate an AWID FSK tag from the GraphBuffer"},
+    {"read",    CmdAWIDRead,    IfPm3Present,    "attempt to read and extract tag data"},
+    {"clone",   CmdAWIDClone,   IfPm3Present,    "clone AWID to T55x7"},
+    {"sim",     CmdAWIDSim,     IfPm3Present,    "simulate AWID tag"},
+    {"brute",   CmdAWIDBrute,   IfPm3Present,    "Bruteforce card number against reader"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

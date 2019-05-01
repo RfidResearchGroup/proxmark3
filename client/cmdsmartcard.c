@@ -1118,15 +1118,15 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,               1, "This help"},
-    {"list",     CmdSmartList,          0, "List ISO 7816 history"},
-    {"info",     CmdSmartInfo,          1, "Tag information"},
-    {"reader",   CmdSmartReader,        1, "Act like an IS07816 reader"},
-    {"raw",      CmdSmartRaw,           1, "Send raw hex data to tag"},
-    {"upgrade",  CmdSmartUpgrade,       1, "Upgrade sim module firmware"},
-    {"setclock", CmdSmartSetClock,      1, "Set clock speed"},
-    {"brute",    CmdSmartBruteforceSFI, 1, "Bruteforce SFI"},
-    {NULL, NULL, 0, NULL}
+    {"help",     CmdHelp,               AlwaysAvailable, "This help"},
+    {"list",     CmdSmartList,          IfPm3Present,    "List ISO 7816 history"},
+    {"info",     CmdSmartInfo,          AlwaysAvailable, "Tag information"},
+    {"reader",   CmdSmartReader,        AlwaysAvailable, "Act like an IS07816 reader"},
+    {"raw",      CmdSmartRaw,           AlwaysAvailable, "Send raw hex data to tag"},
+    {"upgrade",  CmdSmartUpgrade,       AlwaysAvailable, "Upgrade sim module firmware"},
+    {"setclock", CmdSmartSetClock,      AlwaysAvailable, "Set clock speed"},
+    {"brute",    CmdSmartBruteforceSFI, AlwaysAvailable, "Bruteforce SFI"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

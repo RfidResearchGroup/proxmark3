@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
     if (session.stdinOnTTY && session.stdoutOnTTY)
         session.supports_colors = true;
 #endif
+    session.help_dump_mode = false;
 
     if (argc < 3) {
         usage(argv[0]);

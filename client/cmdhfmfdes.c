@@ -624,13 +624,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,                    1, "This help"},
-    {"info",    CmdHF14ADesInfo,            0, "Tag information"},
-    {"enum",    CmdHF14ADesEnumApplications, 0, "Tries enumerate all applications"},
-    {"auth",    CmdHF14ADesAuth,            0, "Tries a MIFARE DesFire Authentication"},
+    {"help",    CmdHelp,                    AlwaysAvailable, "This help"},
+    {"info",    CmdHF14ADesInfo,            IfPm3Present,    "Tag information"},
+    {"enum",    CmdHF14ADesEnumApplications, IfPm3Present,    "Tries enumerate all applications"},
+    {"auth",    CmdHF14ADesAuth,            IfPm3Present,    "Tries a MIFARE DesFire Authentication"},
 //    {"rdbl",    CmdHF14ADesRb,              0, "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,              0, "write MIFARE DesFire block"},
-    {NULL, NULL, 0, NULL}
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

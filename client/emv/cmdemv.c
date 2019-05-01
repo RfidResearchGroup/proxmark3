@@ -1940,28 +1940,28 @@ out:
 }
 
 static command_t CommandTable[] =  {
-    {"help",        CmdHelp,                        1, "This help"},
-    {"exec",        CmdEMVExec,                     0, "Executes EMV contactless transaction."},
-    {"pse",         CmdEMVPPSE,                     0, "Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory."},
-    {"search",      CmdEMVSearch,                   0, "Try to select all applets from applets list and print installed applets."},
-    {"select",      CmdEMVSelect,                   0, "Select applet."},
-    {"gpo",         CmdEMVGPO,                      0, "Execute GetProcessingOptions."},
-    {"readrec",     CmdEMVReadRecord,               0, "Read files from card."},
-    {"genac",       CmdEMVAC,                       0, "Generate ApplicationCryptogram."},
-    {"challenge",   CmdEMVGenerateChallenge,        0, "Generate challenge."},
-    {"intauth",     CmdEMVInternalAuthenticate,     0, "Internal authentication."},
-    {"scan",        CmdEMVScan,                     0, "Scan EMV card and save it contents to json file for emulator."},
-    {"test",        CmdEMVTest,                     0, "Crypto logic test."},
+    {"help",        CmdHelp,                        AlwaysAvailable, "This help"},
+    {"exec",        CmdEMVExec,                     IfPm3Present,    "Executes EMV contactless transaction."},
+    {"pse",         CmdEMVPPSE,                     IfPm3Present,    "Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory."},
+    {"search",      CmdEMVSearch,                   IfPm3Present,    "Try to select all applets from applets list and print installed applets."},
+    {"select",      CmdEMVSelect,                   IfPm3Present,    "Select applet."},
+    {"gpo",         CmdEMVGPO,                      IfPm3Present,    "Execute GetProcessingOptions."},
+    {"readrec",     CmdEMVReadRecord,               IfPm3Present,    "Read files from card."},
+    {"genac",       CmdEMVAC,                       IfPm3Present,    "Generate ApplicationCryptogram."},
+    {"challenge",   CmdEMVGenerateChallenge,        IfPm3Present,    "Generate challenge."},
+    {"intauth",     CmdEMVInternalAuthenticate,     IfPm3Present,    "Internal authentication."},
+    {"scan",        CmdEMVScan,                     IfPm3Present,    "Scan EMV card and save it contents to json file for emulator."},
+    {"test",        CmdEMVTest,                     IfPm3Present,    "Crypto logic test."},
     /*
-    {"getrng",      CmdEMVGetrng,                   0, "get random number from terminal"},
-    {"eload",       CmdEmvELoad,                    0, "load EMV tag into device"},
-    {"dump",        CmdEmvDump,                     0, "dump EMV tag values"},
-    {"sim",         CmdEmvSim,                      0, "simulate EMV tag"},
-    {"clone",       CmdEmvClone,                    0, "clone an EMV tag"},
+    {"getrng",      CmdEMVGetrng,                   IfPm3Present,    "get random number from terminal"},
+    {"eload",       CmdEmvELoad,                    IfPm3Present,    "load EMV tag into device"},
+    {"dump",        CmdEmvDump,                     IfPm3Present,    "dump EMV tag values"},
+    {"sim",         CmdEmvSim,                      IfPm3Present,    "simulate EMV tag"},
+    {"clone",       CmdEmvClone,                    IfPm3Present,    "clone an EMV tag"},
     */
-    {"list",        CmdEMVList,                     0, "List ISO7816 history"},
-    {"roca",        CmdEMVRoca,                     0, "Extract public keys and run ROCA test"},
-    {NULL, NULL, 0, NULL}
+    {"list",        CmdEMVList,                     IfPm3Present,    "List ISO7816 history"},
+    {"roca",        CmdEMVRoca,                     IfPm3Present,    "Extract public keys and run ROCA test"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

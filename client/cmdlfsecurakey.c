@@ -100,12 +100,12 @@ static int CmdSecurakeyRead(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,          1, "This help"},
-    {"demod", CmdSecurakeyDemod, 1, "Demodulate an Securakey tag from the GraphBuffer"},
-    {"read",  CmdSecurakeyRead, 0, "Attempt to read and extract tag data from the antenna"},
+    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
+    {"demod", CmdSecurakeyDemod, AlwaysAvailable, "Demodulate an Securakey tag from the GraphBuffer"},
+    {"read",  CmdSecurakeyRead, IfPm3Present,    "Attempt to read and extract tag data from the antenna"},
     //{"clone", CmdSecurakeyClone,0, "clone Securakey tag"},
     //{"sim",   CmdSecurakeydSim, 0, "simulate Securakey tag"},
-    {NULL, NULL, 0, NULL}
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

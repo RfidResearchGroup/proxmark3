@@ -220,12 +220,14 @@ main_loop(char *script_cmds_file, char *script_cmd) {
 }
 
 static void dumpAllHelp(int markdown) {
+    session.help_dump_mode = true;
     PrintAndLogEx(NORMAL, "\n%sProxmark3 command dump%s\n\n", markdown ? "# " : "", markdown ? "" : "\n======================");
     PrintAndLogEx(NORMAL, "Some commands are available only if a Proxmark3 is actually connected.%s\n", markdown ? "  " : "");
     PrintAndLogEx(NORMAL, "Check column \"offline\" for their availability.\n");
     PrintAndLogEx(NORMAL, "\n");
     command_t *cmds = getTopLevelCommandTable();
     dumpCommandsRecursive(cmds, markdown);
+    session.help_dump_mode = false;
 }
 
 static char *my_executable_path = NULL;
@@ -291,6 +293,7 @@ int main(int argc, char *argv[]) {
     srand(time(0));
 
     session.pm3_present = false;
+    session.help_dump_mode = false;
     bool waitCOMPort = false;
     bool addLuaExec = false;
     char *script_cmds_file = NULL;

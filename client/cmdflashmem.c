@@ -617,14 +617,14 @@ static int CmdFlashMemInfo(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            1, "This help"},
-    {"spibaud", CmdFlashmemSpiBaudrate, 1, "Set Flash memory Spi baudrate [rdv40]"},
-    {"read",    CmdFlashMemRead,    1, "Read Flash memory [rdv40]"},
-    {"info",    CmdFlashMemInfo,    1, "Flash memory information [rdv40]"},
-    {"load",    CmdFlashMemLoad,    1, "Load data into flash memory [rdv40]"},
-    {"save",    CmdFlashMemSave,    1, "Save data from flash memory [rdv40]"},
-    {"wipe",    CmdFlashMemWipe,    1, "Wipe data from flash memory [rdv40]"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
+    {"spibaud", CmdFlashmemSpiBaudrate, AlwaysAvailable, "Set Flash memory Spi baudrate [rdv40]"},
+    {"read",    CmdFlashMemRead,    AlwaysAvailable, "Read Flash memory [rdv40]"},
+    {"info",    CmdFlashMemInfo,    AlwaysAvailable, "Flash memory information [rdv40]"},
+    {"load",    CmdFlashMemLoad,    AlwaysAvailable, "Load data into flash memory [rdv40]"},
+    {"save",    CmdFlashMemSave,    AlwaysAvailable, "Save data from flash memory [rdv40]"},
+    {"wipe",    CmdFlashMemWipe,    AlwaysAvailable, "Wipe data from flash memory [rdv40]"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

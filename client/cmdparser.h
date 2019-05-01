@@ -14,11 +14,14 @@
 typedef struct command_s {
     const char *Name;
     int (*Parse)(const char *Cmd);
-    int Offline;
+    bool (*IsAvailable)(void);
     const char *Help;
 } command_t;
-
 // command_t array are expected to be NULL terminated
+
+bool AlwaysAvailable(void);
+bool IfPm3Present(void);
+bool IfPm3Hfsniff(void);
 
 // Print help for each command in the command array
 void CmdsHelp(const command_t Commands[]);

@@ -203,12 +203,12 @@ static int CmdVisa2kSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        1, "This help"},
-    {"demod",   CmdVisa2kDemod, 1, "demodulate an VISA2000 tag from the GraphBuffer"},
-    {"read",    CmdVisa2kRead,  0, "attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdVisa2kClone, 0, "clone Visa2000 to t55x7"},
-    {"sim",     CmdVisa2kSim,   0, "simulate Visa2000 tag"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,        AlwaysAvailable, "This help"},
+    {"demod",   CmdVisa2kDemod, AlwaysAvailable, "demodulate an VISA2000 tag from the GraphBuffer"},
+    {"read",    CmdVisa2kRead,  IfPm3Present,    "attempt to read and extract tag data from the antenna"},
+    {"clone",   CmdVisa2kClone, IfPm3Present,    "clone Visa2000 to t55x7"},
+    {"sim",     CmdVisa2kSim,   IfPm3Present,    "simulate Visa2000 tag"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

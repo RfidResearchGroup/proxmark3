@@ -895,12 +895,12 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 };
 
 static command_t CommandTable[] = {
-    {"help",             CmdHelp,                    1, "This help."},
-    {"info",             CmdHFFidoInfo,              0, "Info about FIDO tag."},
-    {"reg",              CmdHFFidoRegister,          0, "FIDO U2F Registration Message."},
-    {"auth",             CmdHFFidoAuthenticate,      0, "FIDO U2F Authentication Message."},
-    {"make",             CmdHFFido2MakeCredential,   0, "FIDO2 MakeCredential command."},
-    {"assert",           CmdHFFido2GetAssertion,     0, "FIDO2 GetAssertion command."},
+    {"help",             CmdHelp,                    AlwaysAvailable, "This help."},
+    {"info",             CmdHFFidoInfo,              IfPm3Present,    "Info about FIDO tag."},
+    {"reg",              CmdHFFidoRegister,          IfPm3Present,    "FIDO U2F Registration Message."},
+    {"auth",             CmdHFFidoAuthenticate,      IfPm3Present,    "FIDO U2F Authentication Message."},
+    {"make",             CmdHFFido2MakeCredential,   IfPm3Present,    "FIDO2 MakeCredential command."},
+    {"assert",           CmdHFFido2GetAssertion,     IfPm3Present,    "FIDO2 GetAssertion command."},
     {NULL,               NULL,                       0, NULL}
 };
 

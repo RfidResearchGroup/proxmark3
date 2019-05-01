@@ -1115,18 +1115,18 @@ static int CmdHF14AChaining(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,              1, "This help"},
-    {"list",        CmdHF14AList,         0, "List ISO 14443-a history"},
-    {"info",        CmdHF14AInfo,         0, "Tag information"},
-    {"reader",      CmdHF14AReader,       0, "Act like an ISO14443-a reader"},
-    {"cuids",       CmdHF14ACUIDs,        0, "<n> Collect n>0 ISO14443-a UIDs in one go"},
-    {"sim",         CmdHF14ASim,          0, "<UID> -- Simulate ISO 14443-a tag"},
-    {"sniff",       CmdHF14ASniff,        0, "sniff ISO 14443-a traffic"},
-    {"apdu",        CmdHF14AAPDU,         0, "Send ISO 14443-4 APDU to tag"},
-    {"chaining",    CmdHF14AChaining,     0, "Control ISO 14443-4 input chaining"},
-    {"raw",         CmdHF14ACmdRaw,       0, "Send raw hex data to tag"},
-    {"antifuzz",    CmdHF14AAntiFuzz,     0, "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
-    {NULL, NULL, 0, NULL}
+    {"help",        CmdHelp,              AlwaysAvailable, "This help"},
+    {"list",        CmdHF14AList,         IfPm3Present,    "List ISO 14443-a history"},
+    {"info",        CmdHF14AInfo,         IfPm3Present,    "Tag information"},
+    {"reader",      CmdHF14AReader,       IfPm3Present,    "Act like an ISO14443-a reader"},
+    {"cuids",       CmdHF14ACUIDs,        IfPm3Present,    "<n> Collect n>0 ISO14443-a UIDs in one go"},
+    {"sim",         CmdHF14ASim,          IfPm3Present,    "<UID> -- Simulate ISO 14443-a tag"},
+    {"sniff",       CmdHF14ASniff,        IfPm3Present,    "sniff ISO 14443-a traffic"},
+    {"apdu",        CmdHF14AAPDU,         IfPm3Present,    "Send ISO 14443-4 APDU to tag"},
+    {"chaining",    CmdHF14AChaining,     IfPm3Present,    "Control ISO 14443-4 input chaining"},
+    {"raw",         CmdHF14ACmdRaw,       IfPm3Present,    "Send raw hex data to tag"},
+    {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Present,    "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

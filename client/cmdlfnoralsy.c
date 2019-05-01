@@ -196,12 +196,12 @@ static int CmdNoralsySim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        1, "This help"},
-    {"demod",   CmdNoralsyDemod, 1, "Demodulate an Noralsy tag from the GraphBuffer"},
-    {"read",    CmdNoralsyRead, 0, "Attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdNoralsyClone, 0, "clone Noralsy to T55x7"},
-    {"sim",     CmdNoralsySim,  0, "simulate Noralsy tag"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,        AlwaysAvailable, "This help"},
+    {"demod",   CmdNoralsyDemod, AlwaysAvailable, "Demodulate an Noralsy tag from the GraphBuffer"},
+    {"read",    CmdNoralsyRead, IfPm3Present,    "Attempt to read and extract tag data from the antenna"},
+    {"clone",   CmdNoralsyClone, IfPm3Present,    "clone Noralsy to T55x7"},
+    {"sim",     CmdNoralsySim,  IfPm3Present,    "simulate Noralsy tag"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

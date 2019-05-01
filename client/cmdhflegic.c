@@ -1270,20 +1270,20 @@ static int CmdLegicList(const char *Cmd) {
 }
 
 static command_t CommandTable[] =  {
-    {"help",    CmdHelp,          1, "This help"},
-    {"reader",  CmdLegicReader,   1, "LEGIC Prime Reader UID and tag info"},
-    {"info",    CmdLegicInfo,     0, "Display deobfuscated and decoded LEGIC Prime tag data"},
-    {"dump",    CmdLegicDump,     0, "Dump LEGIC Prime tag to binary file"},
-    {"restore", CmdLegicRestore,  0, "Restore a dump file onto a LEGIC Prime tag"},
-    {"rdmem",   CmdLegicRdmem,    0, "Read bytes from a LEGIC Prime tag"},
-    {"sim",     CmdLegicRfSim,    0, "Start tag simulator"},
-    {"write",   CmdLegicRfWrite,  0, "Write data to a LEGIC Prime tag"},
-    {"crc",     CmdLegicCalcCrc,  1, "Calculate Legic CRC over given bytes"},
-    {"eload",   CmdLegicELoad,    1, "Load binary dump to emulator memory"},
-    {"esave",   CmdLegicESave,    1, "Save emulator memory to binary file"},
-    {"list",    CmdLegicList,     1, "List LEGIC history"},
-    {"wipe",    CmdLegicWipe,     1, "Wipe a LEGIC Prime tag"},
-    {NULL, NULL, 0, NULL}
+    {"help",    CmdHelp,          AlwaysAvailable, "This help"},
+    {"reader",  CmdLegicReader,   AlwaysAvailable, "LEGIC Prime Reader UID and tag info"},
+    {"info",    CmdLegicInfo,     IfPm3Present,    "Display deobfuscated and decoded LEGIC Prime tag data"},
+    {"dump",    CmdLegicDump,     IfPm3Present,    "Dump LEGIC Prime tag to binary file"},
+    {"restore", CmdLegicRestore,  IfPm3Present,    "Restore a dump file onto a LEGIC Prime tag"},
+    {"rdmem",   CmdLegicRdmem,    IfPm3Present,    "Read bytes from a LEGIC Prime tag"},
+    {"sim",     CmdLegicRfSim,    IfPm3Present,    "Start tag simulator"},
+    {"write",   CmdLegicRfWrite,  IfPm3Present,    "Write data to a LEGIC Prime tag"},
+    {"crc",     CmdLegicCalcCrc,  AlwaysAvailable, "Calculate Legic CRC over given bytes"},
+    {"eload",   CmdLegicELoad,    AlwaysAvailable, "Load binary dump to emulator memory"},
+    {"esave",   CmdLegicESave,    AlwaysAvailable, "Save emulator memory to binary file"},
+    {"list",    CmdLegicList,     AlwaysAvailable, "List LEGIC history"},
+    {"wipe",    CmdLegicWipe,     AlwaysAvailable, "Wipe a LEGIC Prime tag"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

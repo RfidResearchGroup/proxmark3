@@ -102,25 +102,25 @@ int CmdHFSniff(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,          1, "This help"},
-    {"14a",         CmdHF14A,         1, "{ ISO14443A RFIDs...               }"},
-    {"14b",         CmdHF14B,         1, "{ ISO14443B RFIDs...               }"},
-    {"15",          CmdHF15,          1, "{ ISO15693 RFIDs...                }"},
-    {"epa",         CmdHFEPA,         1, "{ German Identification Card...    }"},
-    {"felica",      CmdHFFelica,      1, "{ ISO18092 / Felica RFIDs...       }"},
-    {"legic",       CmdHFLegic,       1, "{ LEGIC RFIDs...                   }"},
-    {"iclass",      CmdHFiClass,      1, "{ ICLASS RFIDs...                  }"},
-    {"mf",          CmdHFMF,          1, "{ MIFARE RFIDs...                  }"},
-    {"mfp",         CmdHFMFP,         1, "{ MIFARE Plus RFIDs...             }"},
-    {"mfu",         CmdHFMFUltra,     1, "{ MIFARE Ultralight RFIDs...       }"},
-    {"mfdes",       CmdHFMFDes,       1, "{ MIFARE Desfire RFIDs...          }"},
-    {"topaz",       CmdHFTopaz,       1, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
-    {"fido",        CmdHFFido,        1, "{ FIDO and FIDO2 authenticators... }"},
-    {"list",        CmdTraceList,     0, "List protocol data in trace buffer"},
-    {"tune",        CmdHFTune,        0, "Continuously measure HF antenna tuning"},
-    {"search",      CmdHFSearch,      1, "Search for known HF tags [preliminary]"},
-    {"sniff",       CmdHFSniff,       0, "<samples to skip (10000)> <triggers to skip (1)> Generic HF Sniff"},
-    {NULL, NULL, 0, NULL}
+    {"help",        CmdHelp,          AlwaysAvailable, "This help"},
+    {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...               }"},
+    {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...               }"},
+    {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                }"},
+    {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...    }"},
+    {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / Felica RFIDs...       }"},
+    {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                   }"},
+    {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                  }"},
+    {"mf",          CmdHFMF,          AlwaysAvailable, "{ MIFARE RFIDs...                  }"},
+    {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...             }"},
+    {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...       }"},
+    {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...          }"},
+    {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
+    {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
+    {"list",        CmdTraceList,     IfPm3Present,    "List protocol data in trace buffer"},
+    {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},
+    {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags [preliminary]"},
+    {"sniff",       CmdHFSniff,       IfPm3Hfsniff,    "<samples to skip (10000)> <triggers to skip (1)> Generic HF Sniff"},
+    {NULL, NULL, NULL, NULL}
 };
 
 int CmdHF(const char *Cmd) {

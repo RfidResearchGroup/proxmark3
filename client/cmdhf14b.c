@@ -1074,18 +1074,18 @@ static int srix4kValid(const char *Cmd) {
 }
 */
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,        1, "This help"},
-    {"dump",        CmdHF14BDump,   0, "Read all memory pages of an ISO14443-B tag, save to file"},
-    {"info",        CmdHF14Binfo,   0, "Tag information"},
-    {"list",        CmdHF14BList,   0, "List ISO 14443B history"},
-    {"raw",         CmdHF14BCmdRaw, 0, "Send raw hex data to tag"},
-    {"reader",      CmdHF14BReader, 0, "Act as a 14443B reader to identify a tag"},
-    {"sim",         CmdHF14BSim,    0, "Fake ISO 14443B tag"},
-    {"sniff",       CmdHF14BSniff,  0, "Eavesdrop ISO 14443B"},
-    {"sriread",     CmdHF14BReadSri,  0, "Read contents of a SRI512 | SRIX4K tag"},
-    {"sriwrite",    CmdHF14BWriteSri, 0, "Write data to a SRI512 | SRIX4K tag"},
+    {"help",        CmdHelp,        AlwaysAvailable, "This help"},
+    {"dump",        CmdHF14BDump,   IfPm3Present,    "Read all memory pages of an ISO14443-B tag, save to file"},
+    {"info",        CmdHF14Binfo,   IfPm3Present,    "Tag information"},
+    {"list",        CmdHF14BList,   IfPm3Present,    "List ISO 14443B history"},
+    {"raw",         CmdHF14BCmdRaw, IfPm3Present,    "Send raw hex data to tag"},
+    {"reader",      CmdHF14BReader, IfPm3Present,    "Act as a 14443B reader to identify a tag"},
+    {"sim",         CmdHF14BSim,    IfPm3Present,    "Fake ISO 14443B tag"},
+    {"sniff",       CmdHF14BSniff,  IfPm3Present,    "Eavesdrop ISO 14443B"},
+    {"sriread",     CmdHF14BReadSri,  IfPm3Present,    "Read contents of a SRI512 | SRIX4K tag"},
+    {"sriwrite",    CmdHF14BWriteSri, IfPm3Present,    "Write data to a SRI512 | SRIX4K tag"},
     //{"valid",     srix4kValid,    1, "srix4k checksum test"},
-    {NULL, NULL, 0, NULL}
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

@@ -103,10 +103,10 @@ static int CmdCOTAGRead(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",      CmdHelp,         1, "This help"},
-    {"demod",     CmdCOTAGDemod,   1, "Tries to decode a COTAG signal"},
-    {"read",      CmdCOTAGRead,    0, "Attempt to read and extract tag data"},
-    {NULL, NULL, 0, NULL}
+    {"help",      CmdHelp,         AlwaysAvailable, "This help"},
+    {"demod",     CmdCOTAGDemod,   AlwaysAvailable, "Tries to decode a COTAG signal"},
+    {"read",      CmdCOTAGRead,    IfPm3Present,    "Attempt to read and extract tag data"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

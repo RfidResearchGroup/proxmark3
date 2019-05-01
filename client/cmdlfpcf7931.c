@@ -157,11 +157,11 @@ static int CmdLFPCF7931Write(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",   CmdHelp,            1, "This help"},
-    {"read",   CmdLFPCF7931Read,   0, "Read content of a PCF7931 transponder"},
-    {"write",  CmdLFPCF7931Write,  0, "Write data on a PCF7931 transponder."},
-    {"config", CmdLFPCF7931Config, 1, "Configure the password, the tags initialization delay and time offsets (optional)"},
-    {NULL, NULL, 0, NULL}
+    {"help",   CmdHelp,            AlwaysAvailable, "This help"},
+    {"read",   CmdLFPCF7931Read,   IfPm3Present,    "Read content of a PCF7931 transponder"},
+    {"write",  CmdLFPCF7931Write,  IfPm3Present,    "Write data on a PCF7931 transponder."},
+    {"config", CmdLFPCF7931Config, AlwaysAvailable, "Configure the password, the tags initialization delay and time offsets (optional)"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

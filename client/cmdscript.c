@@ -167,10 +167,10 @@ static int CmdScriptRun(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,          1, "This help"},
-    {"list",  CmdScriptList,    1, "List available scripts"},
-    {"run",   CmdScriptRun,     1, "<name> -- Execute a script"},
-    {NULL, NULL, 0, NULL}
+    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
+    {"list",  CmdScriptList,    AlwaysAvailable, "List available scripts"},
+    {"run",   CmdScriptRun,     AlwaysAvailable, "<name> -- Execute a script"},
+    {NULL, NULL, NULL, NULL}
 };
 
 /**

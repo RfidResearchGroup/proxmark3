@@ -142,12 +142,12 @@ static int CmdParadoxSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,          1, "This help"},
-    {"demod", CmdParadoxDemod,  1, "Demodulate a Paradox FSK tag from the GraphBuffer"},
-    {"read",  CmdParadoxRead,   0, "Attempt to read and Extract tag data from the antenna"},
+    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
+    {"demod", CmdParadoxDemod,  AlwaysAvailable, "Demodulate a Paradox FSK tag from the GraphBuffer"},
+    {"read",  CmdParadoxRead,   IfPm3Present,    "Attempt to read and Extract tag data from the antenna"},
 //  {"clone", CmdParadoxClone,  0, "clone paradox tag"},
-    {"sim",   CmdParadoxSim,    0, "simulate paradox tag"},
-    {NULL, NULL, 0, NULL}
+    {"sim",   CmdParadoxSim,    IfPm3Present,    "simulate paradox tag"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

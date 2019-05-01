@@ -42,26 +42,26 @@ static int CmdRev(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,      1, "This help. Use '<command> help' for details of a particular command."},
-    {"analyse", CmdAnalyse,   1, "{ Analyse utils... }"},
-    {"data",    CmdData,      1, "{ Plot window / data buffer manipulation... }"},
-    {"hf",      CmdHF,        1, "{ High Frequency commands... }"},
-    {"hw",      CmdHW,        1, "{ Hardware commands... }"},
-    {"lf",      CmdLF,        1, "{ Low Frequency commands... }"},
-    {"emv",     CmdEMV,       1, "{ EMV iso14443 and iso7816... }"},
-    {"rem",     CmdRem,       1, "{ Add text to row in log file }"},
-    {"reveng",  CmdRev,       1, "{ Crc calculations from the RevEng software... }"},
-    {"script",  CmdScript,    1, "{ Scripting commands }"},
-    {"trace",   CmdTrace,     1, "{ Trace manipulation... }"},
+    {"help",    CmdHelp,      AlwaysAvailable, "This help. Use '<command> help' for details of a particular command."},
+    {"analyse", CmdAnalyse,   AlwaysAvailable, "{ Analyse utils... }"},
+    {"data",    CmdData,      AlwaysAvailable, "{ Plot window / data buffer manipulation... }"},
+    {"hf",      CmdHF,        AlwaysAvailable, "{ High Frequency commands... }"},
+    {"hw",      CmdHW,        AlwaysAvailable, "{ Hardware commands... }"},
+    {"lf",      CmdLF,        AlwaysAvailable, "{ Low Frequency commands... }"},
+    {"emv",     CmdEMV,       AlwaysAvailable, "{ EMV iso14443 and iso7816... }"},
+    {"rem",     CmdRem,       AlwaysAvailable, "{ Add text to row in log file }"},
+    {"reveng",  CmdRev,       AlwaysAvailable, "{ Crc calculations from the RevEng software... }"},
+    {"script",  CmdScript,    AlwaysAvailable, "{ Scripting commands }"},
+    {"trace",   CmdTrace,     AlwaysAvailable, "{ Trace manipulation... }"},
 #ifdef WITH_FLASH
-    {"mem",     CmdFlashMem,  1, "{ Flash Memory manipulation... }"},
+    {"mem",     CmdFlashMem,  AlwaysAvailable, "{ Flash Memory manipulation... }"},
 #endif
 #ifdef WITH_SMARTCARD
-    {"sc",      CmdSmartcard, 1, "{ Smart card ISO7816 commands... }"},
+    {"sc",      CmdSmartcard, AlwaysAvailable, "{ Smart card ISO7816 commands... }"},
 #endif
-    {"quit",    CmdQuit,      1, ""},
-    {"exit",    CmdQuit,      1, "Exit program"},
-    {NULL, NULL, 0, NULL}
+    {"quit",    CmdQuit,      AlwaysAvailable, ""},
+    {"exit",    CmdQuit,      AlwaysAvailable, "Exit program"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {
