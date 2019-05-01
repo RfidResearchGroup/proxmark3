@@ -840,16 +840,16 @@ static int CmdHFMFPNDEF(const char *cmd) {
 
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                 AlwaysAvailable, "This help"},
-    {"info",             CmdHFMFPInfo,            IfPm3Present,    "Info about Mifare Plus tag"},
-    {"wrp",              CmdHFMFPWritePerso,      IfPm3Present,    "Write Perso command"},
-    {"initp",            CmdHFMFPInitPerso,       IfPm3Present,    "Fills all the card's keys"},
-    {"commitp",          CmdHFMFPCommitPerso,     IfPm3Present,    "Move card to SL1 or SL3 mode"},
-    {"auth",             CmdHFMFPAuth,            IfPm3Present,    "Authentication"},
-    {"rdbl",             CmdHFMFPRdbl,            IfPm3Present,    "Read blocks"},
-    {"rdsc",             CmdHFMFPRdsc,            IfPm3Present,    "Read sectors"},
-    {"wrbl",             CmdHFMFPWrbl,            IfPm3Present,    "Write blocks"},
-    {"mad",              CmdHFMFPMAD,             IfPm3Present,    "Checks and prints MAD"},
-    {"ndef",             CmdHFMFPNDEF,            IfPm3Present,    "Prints NDEF records from card"},
+    {"info",             CmdHFMFPInfo,            IfPm3Iso14443a,  "Info about Mifare Plus tag"},
+    {"wrp",              CmdHFMFPWritePerso,      IfPm3Iso14443a,  "Write Perso command"},
+    {"initp",            CmdHFMFPInitPerso,       IfPm3Iso14443a,  "Fills all the card's keys"},
+    {"commitp",          CmdHFMFPCommitPerso,     IfPm3Iso14443a,  "Move card to SL1 or SL3 mode"},
+    {"auth",             CmdHFMFPAuth,            IfPm3Iso14443a,  "Authentication"},
+    {"rdbl",             CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks"},
+    {"rdsc",             CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors"},
+    {"wrbl",             CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write blocks"},
+    {"mad",              CmdHFMFPMAD,             IfPm3Iso14443a,  "Checks and prints MAD"},
+    {"ndef",             CmdHFMFPNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL,               NULL,                    0, NULL}
 };
 

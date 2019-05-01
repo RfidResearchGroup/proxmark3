@@ -158,8 +158,8 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,                   AlwaysAvailable, "This help"},
-    {"cnonces", CmdHFEPACollectPACENonces, IfPm3Present,    "<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses"},
-    {"preplay", CmdHFEPAPACEReplay,        IfPm3Present,    "<mse> <get> <map> <pka> <ma> Perform PACE protocol by replaying given APDUs"},
+    {"cnonces", CmdHFEPACollectPACENonces, IfPm3Iso14443,   "<m> <n> <d> Acquire n>0 encrypted PACE nonces of size m>0 with d sec pauses"},
+    {"preplay", CmdHFEPAPACEReplay,        IfPm3Iso14443,   "<mse> <get> <map> <pka> <ma> Perform PACE protocol by replaying given APDUs"},
     {NULL, NULL, NULL, NULL}
 };
 

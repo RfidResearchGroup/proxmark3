@@ -87,6 +87,12 @@ bool IfPm3Iso14443b(void) {
     return pm3_capabilities.compiled_with_iso14443b;
 }
 
+bool IfPm3Iso14443(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_iso14443a || pm3_capabilities.compiled_with_iso14443b;
+}
+
 bool IfPm3Iso15693(void) {
     if (!IfPm3Present())
         return false;

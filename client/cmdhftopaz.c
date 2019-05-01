@@ -505,11 +505,11 @@ static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"reader",  CmdHFTopazReader,   IfPm3Present,    "Act like a Topaz reader"},
-    {"sim",     CmdHFTopazSim,      IfPm3Present,    "<UID> -- Simulate Topaz tag"},
-    {"sniff",   CmdHF14ASniff,      IfPm3Present,    "Sniff Topaz reader-tag communication"},
-    {"raw",     CmdHFTopazCmdRaw,   IfPm3Present,    "Send raw hex data to tag"},
-    {"list",    CmdHFTopazList,     IfPm3Present,    "List Topaz history"},
+    {"reader",  CmdHFTopazReader,   IfPm3Iso14443a,  "Act like a Topaz reader"},
+    {"sim",     CmdHFTopazSim,      IfPm3Iso14443a,  "<UID> -- Simulate Topaz tag"},
+    {"sniff",   CmdHF14ASniff,      IfPm3Iso14443a,  "Sniff Topaz reader-tag communication"},
+    {"raw",     CmdHFTopazCmdRaw,   IfPm3Iso14443a,  "Send raw hex data to tag"},
+    {"list",    CmdHFTopazList,     IfPm3Iso14443a,  "List Topaz history"},
     {NULL,      NULL,               0, NULL}
 };
 

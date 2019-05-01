@@ -1116,16 +1116,16 @@ static int CmdHF14AChaining(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
-    {"list",        CmdHF14AList,         IfPm3Present,    "List ISO 14443-a history"},
-    {"info",        CmdHF14AInfo,         IfPm3Present,    "Tag information"},
-    {"reader",      CmdHF14AReader,       IfPm3Present,    "Act like an ISO14443-a reader"},
-    {"cuids",       CmdHF14ACUIDs,        IfPm3Present,    "<n> Collect n>0 ISO14443-a UIDs in one go"},
-    {"sim",         CmdHF14ASim,          IfPm3Present,    "<UID> -- Simulate ISO 14443-a tag"},
-    {"sniff",       CmdHF14ASniff,        IfPm3Present,    "sniff ISO 14443-a traffic"},
-    {"apdu",        CmdHF14AAPDU,         IfPm3Present,    "Send ISO 14443-4 APDU to tag"},
-    {"chaining",    CmdHF14AChaining,     IfPm3Present,    "Control ISO 14443-4 input chaining"},
-    {"raw",         CmdHF14ACmdRaw,       IfPm3Present,    "Send raw hex data to tag"},
-    {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Present,    "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
+    {"list",        CmdHF14AList,         IfPm3Iso14443a,  "List ISO 14443-a history"},
+    {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
+    {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
+    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "<n> Collect n>0 ISO14443-a UIDs in one go"},
+    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "<UID> -- Simulate ISO 14443-a tag"},
+    {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
+    {"apdu",        CmdHF14AAPDU,         IfPm3Iso14443a,  "Send ISO 14443-4 APDU to tag"},
+    {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
+    {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
+    {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
     {NULL, NULL, NULL, NULL}
 };
 

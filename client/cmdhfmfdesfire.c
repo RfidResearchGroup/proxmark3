@@ -220,10 +220,10 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
 // Menu Stuff
 //------------------------------------
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"dbg",     CmdHF14AMfDbg,      IfPm3Present,    "Set default debug mode"},
-    {"des-auth", CmdHF14AMfDESAuth,  IfPm3Present,    "Desfire Authentication"},
-    {"ev1-auth", CmdHF14AMfAESAuth,  IfPm3Present,    "EV1 Authentication"},
+    {"help",     CmdHelp,            AlwaysAvailable, "This help"},
+    {"dbg",      CmdHF14AMfDbg,      IfPm3Iso14443a,  "Set default debug mode"},
+    {"des-auth", CmdHF14AMfDESAuth,  IfPm3Iso14443a,  "Desfire Authentication"},
+    {"ev1-auth", CmdHF14AMfAESAuth,  IfPm3Iso14443a,  "EV1 Authentication"},
     {NULL, NULL, NULL, NULL}
 };
 
