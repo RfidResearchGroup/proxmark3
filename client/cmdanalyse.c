@@ -490,7 +490,7 @@ static int CmdAnalyseA(const char *Cmd) {
     bool errors = false;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
 
-    if (!IfPm3Fpc) {
+    if (!IfPm3Fpc()) {
         PrintAndLogEx(ERR, "Device has no FPC USART support");
         return PM3_EDEVNOTSUPP;
     }
