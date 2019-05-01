@@ -30,7 +30,7 @@ bool IfPm3Lf(void);
 bool IfPm3Hitag(void);
 bool IfPm3Hfsniff(void);
 bool IfPm3Iso14443a(void);
-bool IfPm3Iso14443a(void);
+bool IfPm3Iso14443b(void);
 bool IfPm3Iso15693(void);
 bool IfPm3Felica(void);
 bool IfPm3Legicrf(void);
