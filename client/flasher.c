@@ -68,19 +68,20 @@ int main(int argc, char **argv) {
             res = flash_load(&files[num_files], argv[i], can_write_bl);
             if (res < 0)
                 return -1;
-
+    
             PrintAndLogEx(NORMAL, "");
             num_files++;
         }
     }
 
     char *serial_port_name = argv[1];
-
-    if (!OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+    
+    session.pm3_present = OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED);
+    if (session.pm3_present) {
+        PrintAndLogEx(NORMAL, _GREEN_("Found"));
+    } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
         return -1;
-    } else {
-        PrintAndLogEx(NORMAL, _GREEN_("Found"));
     }
 
     res = flash_start_flashing(can_write_bl, serial_port_name);
