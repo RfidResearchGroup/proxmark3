@@ -293,11 +293,10 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
             }
             break;
         case ECC_CONTACT:
-#ifdef WITH_SMARTCARD
-            res = ExchangeAPDUSC(data, (IncludeLe ? 6 : 5) + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
-#else
-            res = 1;
-#endif
+            if (IfPm3Smartcard())
+                res = ExchangeAPDUSC(data, (IncludeLe ? 6 : 5) + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+            else
+                res = 1;
             if (res) {
                 return res;
             }

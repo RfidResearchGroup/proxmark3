@@ -809,13 +809,12 @@ static int CmdEMVExec(const char *Cmd) {
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
     CLIParserFree();
 
-#ifndef WITH_SMARTCARD
-    // not compiled with smartcard functionality,  we need to exit
-    if (channel == ECC_CONTACT) {
-        PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
-        return PM3_EDEVNOTSUPP;
+    if (!IfPm3Smartcard()) {
+        if (channel == ECC_CONTACT) {
+            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support. Exiting.");
+            return PM3_EDEVNOTSUPP;
+        }
     }
-#endif
 
     SetAPDULogging(showAPDU);
 
@@ -1400,13 +1399,12 @@ static int CmdEMVScan(const char *Cmd) {
     CLIGetStrWithReturn(12, relfname, &relfnamelen);
     CLIParserFree();
 
-#ifndef WITH_SMARTCARD
-    // not compiled with smartcard functionality,  we need to exit
-    if (channel == ECC_CONTACT) {
-        PrintAndLogEx(ERR, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
-        return PM3_EDEVNOTSUPP;
+    if (!IfPm3Smartcard()) {
+        if (channel == ECC_CONTACT) {
+            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support. Exiting.");
+            return PM3_EDEVNOTSUPP;
+        }
     }
-#endif
 
     SetAPDULogging(showAPDU);
 
@@ -1736,13 +1734,12 @@ static int CmdEMVRoca(const char *Cmd) {
     PrintChannel(channel);
     CLIParserFree();
 
-#ifndef WITH_SMARTCARD
-    // not compiled with smartcard functionality,  we need to exit
-    if (channel == ECC_CONTACT) {
-        PrintAndLogEx(WARNING, "PM3 Client is not compiled with support for SMARTCARD. Exiting.");
-        return PM3_EDEVNOTSUPP;
+    if (!IfPm3Smartcard()) {
+        if (channel == ECC_CONTACT) {
+            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support. Exiting.");
+            return PM3_EDEVNOTSUPP;
+        }
     }
-#endif
 
     // select card
     uint8_t psenum = (channel == ECC_CONTACT) ? 1 : 2;
