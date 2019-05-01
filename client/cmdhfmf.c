@@ -1932,7 +1932,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
 
     uint8_t trgKeyType = 0;
-    uint32_t max_keys = keycnt > ((PM3_CMD_DATA_SIZE - 4) / 6) ? ((PM3_CMD_DATA_SIZE - 4) / 6) : keycnt;
+    uint16_t max_keys = keycnt > ((PM3_CMD_DATA_SIZE - 4) / 6) ? ((PM3_CMD_DATA_SIZE - 4) / 6) : keycnt;
 
     // time
     uint64_t t1 = msclock();
@@ -1949,7 +1949,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
             // skip already found keys.
             if (e_sector[i].foundKey[trgKeyType]) continue;
 
-            for (uint32_t c = 0; c < keycnt; c += max_keys) {
+            for (uint16_t c = 0; c < keycnt; c += max_keys) {
 
                 printf(".");
                 fflush(stdout);
@@ -1960,15 +1960,13 @@ static int CmdHF14AMfChk(const char *Cmd) {
                     goto out;
                 }
 
-                uint32_t size = keycnt - c > max_keys ? max_keys : keycnt - c;
+                uint16_t size = keycnt - c > max_keys ? max_keys : keycnt - c;
 
                 if (mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6 * c], &key64) == PM3_SUCCESS) {
                     e_sector[i].Key[trgKeyType] = key64;
                     e_sector[i].foundKey[trgKeyType] = true;
                     break;
                 }
-
-
             }
             b < 127 ? (b += 4) : (b += 16);
         }
@@ -2011,11 +2009,6 @@ static int CmdHF14AMfChk(const char *Cmd) {
     }
 
 out:
-    // Disable fast mode and send a dummy command to make it effective
-    conn.block_after_ACK = false;
-    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
-    WaitForResponseTimeout(CMD_ACK, NULL, 1000);
-
     //print keys
     printKeyTable(SectorsCnt, e_sector);
 
@@ -2032,6 +2025,12 @@ out:
         PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
     }
 
+    // Disable fast mode and send a dummy command to make it effective
+    conn.block_after_ACK = false;
+    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    WaitForResponseTimeout(CMD_ACK, NULL, 1000);
+    
+    
     if (createDumpFile) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
         if (fptr == NULL) {

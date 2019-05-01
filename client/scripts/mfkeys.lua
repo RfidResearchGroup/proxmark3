@@ -58,15 +58,14 @@ local function checkCommand(response)
         return nil, "Timeout while waiting for device to respond"
     end
 
-    local data
-    local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
-    count, data, ng = bin.unpack('H'..length..'C', response, count)
-
-    if status == PM3_SUCCESS then
-        key = data:sub(1, 12)
-        return key
+    if response.Status == PM3_SUCCESS then
+        --decode data array
+        key = response.Data:sub(1, 12)
+        found = tonumber(response.Data:sub(13,14))
+        if found == 1 then
+            return key
+        end
     end
-
     return nil
 end
 
@@ -76,8 +75,6 @@ local function checkBlock(blockno, testkeys, keytype)
     -- each key is 6 bytes,
     -- NG args inside dataarray is 4 bytes.  That give us (512-4)/6 or max 84 keys in one go.
     -- If there's more, we need to split it up
-    local arg1 = bit32.bor(bit32.lshift(keytype, 8), blockno)
-    local arg2 = '00' -- don't clear trace
     local start, remaining = 1, #testkeys
     local maxchunk = math.floor((512-4)/6)
     local chunksize = remaining
@@ -85,9 +82,8 @@ local function checkBlock(blockno, testkeys, keytype)
     local n = chunksize
 
     while remaining > 0 do
---        print('start', start, 'chunksize', chunksize, 'testkeys kvar', remaining, 'N-index=', n)
 
-        local d0 = ('%04X%02X%02X'):format(arg1, arg2, chunksize)
+        local d0 = ('%02X%02X00%02X'):format(keytype, blockno, chunksize)
         local d1 = table.concat(testkeys, "", start, n)
 
         core.clearCommandBuffer()
@@ -95,7 +91,7 @@ local function checkBlock(blockno, testkeys, keytype)
         print(("Testing block %d, keytype %d, with %d keys"):format(blockno, keytype, chunksize))
 
         local c = Command:newNG{cmd = cmds.CMD_MIFARE_CHKKEYS, data = d0..d1}
-        key, err = checkCommand(c:sendNG(false, TIMEOUT))
+        key, err = checkCommand(c:sendNG(false))
 
         if key then return key, blockno end
 

@@ -117,22 +117,6 @@ function Command:getBytes()
     return bin.pack("LLLLH",cmd, arg1, arg2, arg3, data);
 end
 
-function Command:__responsetostring()
-    print('NG package received')
-    print('CMD    ::', _commands.tostring(self.resp_cmd))
-    print('Length ::', tostring(self.resp_length))
-    print('Magic  ::', string.format("0x%08X", self.resp_magic), util.ConvertHexToAscii(string.format("0x%08X", self.resp_magic)))
-    print('Status ::', tostring(self.resp_status))
-    print('crc    ::', string.format("0x%02X", self.resp_crc))
-    print('Args   ::', ("(%s, %s, %s)\r\n"):format(
-                    tostring(self.resp_arg1),
-                    tostring(self.resp_arg2),
-                    tostring(self.resp_arg3)))
-    print('NG     ::', self.resp_ng)
-    print('Data   ::', self.resp_data)
-end
-
-
 --- Sends a packet to the device
 -- @param command - the usb packet to send
 -- @param ignoreresponse - if set to true, we don't read the device answer packet
@@ -177,13 +161,21 @@ function Command:sendMIX( ignore_response, timeout )
 --]]
 
     local packed = bin.pack("LLLLH", cmd, arg1, arg2, arg3, data)
+    --[[
+    return { Cmd = cmd,
+            Arg1 = arg1,
+            Arg2 = arg2,
+            Arg3 = arg3,
+            Data = data,
+    }
+    --]]
     return packed, nil;
 end
 function Command:sendNG( ignore_response, timeout )
     local data = self.data
     local cmd = self.cmd
     local err, msg = core.SendCommandNG(cmd, data)
-    if err == nil then return err, msg end
+    if err == nil then return nil, msg end
 
     if ignore_response then return true, nil end
 
@@ -193,28 +185,36 @@ function Command:sendNG( ignore_response, timeout )
     if response == nil then
         return nil, 'Error, waiting for response timed out :: '..msg
     end
+    local data
+    local count, cmd, length, magic, status, crc, arg0, arg1, arg2 = bin.unpack('SSIsSLLL', response)
+    count, data, ng = bin.unpack('H'..length..'C', response, count)
 
 --[[  uncomment if you want to debug
 
-    -- lets digest response NG package.
-    local data
-    local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
-    count, data, ng = bin.unpack('H'..length..'C', response, count)
-
-    self.resp_cmd = cmd
-    self.resp_length = length
-    self.resp_magic = magic
-    self.resp_status = status
-    self.resp_crc = crc
-    self.resp_arg1 = arg1
-    self.resp_arg2 = arg2
-    self.resp_arg3 = arg3
-    self.resp_data = data
-    self.resp_ng = ng
-    self:__responsetostring()
+    print('NG package received')
+    print('CMD    ::', tostring(cmd))
+    print('Length ::', tostring(length))
+    print('Magic  ::', string.format("0x%08X", magic), util.ConvertHexToAscii(string.format("0x%08X", magic)))
+    print('Status ::', tostring(status))
+    print('crc    ::', string.format("0x%02X", crc))
+    print('Args   ::', ("(%s, %s, %s)\r\n"):format(
+                    tostring(arg0),
+                    tostring(arg1),
+                    tostring(arg2)))
+    print('NG     ::', ng)
+    print('Data   ::', data)
 --]]
-
-    return response
+    return { Cmd = cmd,
+            Length = length,
+            Magic = magic,
+            Status = status,
+            Crc = crc,
+            Oldarg0 = arg0,
+            Oldarg1 = arg1,
+            Oldarg2 = arg2,
+            Data = data,
+            Ng = ng
+    }
 end
 
 return _commands
