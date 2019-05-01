@@ -264,36 +264,36 @@ static int l_GetFromBigBuf(lua_State *L) {
  */
 static int l_GetFromFlashMem(lua_State *L) {
 
-#ifndef WITH_FLASH
-    return returnToLuaWithError(L, "Not compiled with FLASH MEM support");
-#else
-    int len = 0, startindex = 0;
+    if (IfPm3Flash()) {
+        int len = 0, startindex = 0;
 
-    int n = lua_gettop(L);
-    if (n == 0)
-        return returnToLuaWithError(L, "You need to supply number of bytes and startindex");
+        int n = lua_gettop(L);
+        if (n == 0)
+            return returnToLuaWithError(L, "You need to supply number of bytes and startindex");
 
-    if (n >= 2) {
-        startindex = luaL_checknumber(L, 1);
-        len = luaL_checknumber(L, 2);
-    }
+        if (n >= 2) {
+            startindex = luaL_checknumber(L, 1);
+            len = luaL_checknumber(L, 2);
+        }
 
-    if (len == 0)
-        return returnToLuaWithError(L, "You need to supply number of bytes larger than zero");
+        if (len == 0)
+            return returnToLuaWithError(L, "You need to supply number of bytes larger than zero");
 
-    uint8_t *data = calloc(len, sizeof(uint8_t));
-    if (!data)
-        return returnToLuaWithError(L, "Allocating memory failed");
+        uint8_t *data = calloc(len, sizeof(uint8_t));
+        if (!data)
+            return returnToLuaWithError(L, "Allocating memory failed");
 
-    if (!GetFromDevice(FLASH_MEM, data, len, startindex, NULL, -1, false)) {
+        if (!GetFromDevice(FLASH_MEM, data, len, startindex, NULL, -1, false)) {
+            free(data);
+            return returnToLuaWithError(L, "command execution time out");
+        }
+
+        lua_pushlstring(L, (const char *)data, len);
         free(data);
-        return returnToLuaWithError(L, "command execution time out");
+        return 1;
+    } else {
+        return returnToLuaWithError(L, "No FLASH MEM support");
     }
-
-    lua_pushlstring(L, (const char *)data, len);
-    free(data);
-    return 1;
-#endif
 }
 
 

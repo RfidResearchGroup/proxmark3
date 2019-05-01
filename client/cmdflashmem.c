@@ -7,8 +7,6 @@
 //-----------------------------------------------------------------------------
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
-#ifdef WITH_FLASH
-
 #include "cmdflashmem.h"
 
 #include "mbedtls/rsa.h"
@@ -618,12 +616,12 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"spibaud", CmdFlashmemSpiBaudrate, AlwaysAvailable, "Set Flash memory Spi baudrate [rdv40]"},
-    {"read",    CmdFlashMemRead,    AlwaysAvailable, "Read Flash memory [rdv40]"},
-    {"info",    CmdFlashMemInfo,    AlwaysAvailable, "Flash memory information [rdv40]"},
-    {"load",    CmdFlashMemLoad,    AlwaysAvailable, "Load data into flash memory [rdv40]"},
-    {"save",    CmdFlashMemSave,    AlwaysAvailable, "Save data from flash memory [rdv40]"},
-    {"wipe",    CmdFlashMemWipe,    AlwaysAvailable, "Wipe data from flash memory [rdv40]"},
+    {"spibaud", CmdFlashmemSpiBaudrate, IfPm3Flash,  "Set Flash memory Spi baudrate [rdv40]"},
+    {"read",    CmdFlashMemRead,    IfPm3Flash,      "Read Flash memory [rdv40]"},
+    {"info",    CmdFlashMemInfo,    IfPm3Flash,      "Flash memory information [rdv40]"},
+    {"load",    CmdFlashMemLoad,    IfPm3Flash,      "Load data into flash memory [rdv40]"},
+    {"save",    CmdFlashMemSave,    IfPm3Flash,      "Save data from flash memory [rdv40]"},
+    {"wipe",    CmdFlashMemWipe,    IfPm3Flash,      "Wipe data from flash memory [rdv40]"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -637,5 +635,3 @@ int CmdFlashMem(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
-#endif

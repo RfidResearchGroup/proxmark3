@@ -500,25 +500,12 @@ void pm3_version(bool verbose) {
     SendCommandOLD(CMD_VERSION, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
-        char s[60] = {0};
-#if defined(WITH_FLASH) || defined(WITH_SMARTCARD) || defined(WITH_FPC)
-        strncat(s, "build for RDV40 with ", sizeof(s) - strlen(s) - 1);
-#endif
-#ifdef WITH_FLASH
-        strncat(s, "flashmem; ", sizeof(s) - strlen(s) - 1);
-#endif
-#ifdef WITH_SMARTCARD
-        strncat(s, "smartcard; ", sizeof(s) - strlen(s) - 1);
-#endif
-#ifdef WITH_FPC
-#ifdef WITH_FPC_HOST
-        strncat(s, "fpc-host; ", sizeof(s) - strlen(s) - 1);
-#else
-        strncat(s, "fpc; ", sizeof(s) - strlen(s) - 1);
-#endif
-#endif
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
-        PrintAndLogEx(NORMAL, "  client: iceman %s \n", s);
+        PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
+        PrintAndLogEx(NORMAL, "\n [ PROXMARK ]");
+        PrintAndLogEx(NORMAL, "  external flash:          %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+        PrintAndLogEx(NORMAL, "  smartcard reader:        %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+        PrintAndLogEx(NORMAL, "  USART for addon support: %s\n", IfPm3FpcHost() ? _GREEN_("present") : _YELLOW_("absent"));
 
         PrintAndLogEx(NORMAL, (char *)resp.data.asBytes);
         lookupChipID(resp.oldarg[0], resp.oldarg[1]);

@@ -8,8 +8,6 @@
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
 
-#ifdef WITH_FLASH
-
 #ifndef CMDFLASHMEM_H__
 #define CMDFLASHMEM_H__
 
@@ -34,7 +32,5 @@ typedef enum {
 } Dictionary_t;
 
 int CmdFlashMem(const char *Cmd);
-
-#endif
 
 #endif

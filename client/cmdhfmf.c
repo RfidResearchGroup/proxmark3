@@ -202,9 +202,8 @@ static int usage_hf14_chk_fast(void) {
     PrintAndLogEx(NORMAL, "      hf mf fchk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
     PrintAndLogEx(NORMAL, "      hf mf fchk 1 t                        -- target 1K, write to emulator memory");
     PrintAndLogEx(NORMAL, "      hf mf fchk 1 d                        -- target 1K, write to file");
-#ifdef WITH_FLASH
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                        -- target 1K, use dictionary from flashmemory");
-#endif
+    if (IfPm3Flash())
+        PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                        -- target 1K, use dictionary from flashmemory");
     return 0;
 }
 static int usage_hf14_keybrute(void) {
@@ -1593,9 +1592,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         } else if (clen == 1) {
             if (ctmp == 't') { transferToEml = 1; continue; }
             if (ctmp == 'd') { createDumpFile = 1; continue; }
-#ifdef WITH_FLASH
-            if (ctmp == 'm') { use_flashmemory = true; continue; }
-#endif
+            if ((ctmp == 'm') && (IfPm3Flash())){ use_flashmemory = true; continue; }
         } else {
             // May be a dic file
             if (param_getstr(Cmd, i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {

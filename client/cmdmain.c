@@ -53,12 +53,8 @@ static command_t CommandTable[] = {
     {"reveng",  CmdRev,       AlwaysAvailable, "{ Crc calculations from the RevEng software... }"},
     {"script",  CmdScript,    AlwaysAvailable, "{ Scripting commands }"},
     {"trace",   CmdTrace,     AlwaysAvailable, "{ Trace manipulation... }"},
-#ifdef WITH_FLASH
-    {"mem",     CmdFlashMem,  AlwaysAvailable, "{ Flash Memory manipulation... }"},
-#endif
-#ifdef WITH_SMARTCARD
-    {"sc",      CmdSmartcard, AlwaysAvailable, "{ Smart card ISO7816 commands... }"},
-#endif
+    {"mem",     CmdFlashMem,  IfPm3Flash,      "{ Flash Memory manipulation... }"},
+    {"sc",      CmdSmartcard, IfPm3Smartcard,  "{ Smart card ISO7816 commands... }"},
     {"quit",    CmdQuit,      AlwaysAvailable, ""},
     {"exit",    CmdQuit,      AlwaysAvailable, "Exit program"},
     {NULL, NULL, NULL, NULL}
