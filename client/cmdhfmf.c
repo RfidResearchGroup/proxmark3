@@ -180,7 +180,7 @@ static int usage_hf14_chk(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf mf chk 0 A 1234567890ab keys.dic     -- target block 0, Key A");
-    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? t                        -- target all blocks, all keys, 1K, write to emul");
+    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? t                        -- target all blocks, all keys, 1K, write to emulator memory");
     PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
     return 0;
 }
@@ -1728,12 +1728,13 @@ out:
         if (transferToEml) {
             uint8_t block[16] = {0x00};
             for (i = 0; i < sectorsCnt; ++i) {
-                mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+                uint8_t blockno = FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1;
+                mfEmlGetMem(block, blockno, 1);
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, block);
                 if (e_sector[i].foundKey[1])
                     num_to_bytes(e_sector[i].Key[1], 6, block + 10);
-                mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+                mfEmlSetMem(block, blockno, 1);
             }
             PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
         }
@@ -2015,12 +2016,13 @@ out:
     if (transferToEml) {
         uint8_t block[16] = {0x00};
         for (i = 0; i < SectorsCnt; ++i) {
-            mfEmlGetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+            uint8_t blockno = FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1;
+            mfEmlGetMem(block, blockno, 1);
             if (e_sector[i].foundKey[0])
                 num_to_bytes(e_sector[i].Key[0], 6, block);
             if (e_sector[i].foundKey[1])
                 num_to_bytes(e_sector[i].Key[1], 6, block + 10);
-            mfEmlSetMem(block, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+            mfEmlSetMem(block, blockno, 1);
         }
         PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
     }
