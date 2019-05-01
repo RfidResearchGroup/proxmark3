@@ -190,9 +190,9 @@ static int CmdKeriSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",  CmdHelp,      AlwaysAvailable, "This help"},
     {"demod", CmdKeriDemod, AlwaysAvailable, "Demodulate an KERI tag from the GraphBuffer"},
-    {"read",  CmdKeriRead,  IfPm3Present,    "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdKeriClone, IfPm3Present,    "clone KERI to T55x7"},
-    {"sim",   CmdKeriSim,   IfPm3Present,    "simulate KERI tag"},
+    {"read",  CmdKeriRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone", CmdKeriClone, IfPm3Lf,         "clone KERI to T55x7"},
+    {"sim",   CmdKeriSim,   IfPm3Lf,         "simulate KERI tag"},
     {NULL, NULL, NULL, NULL}
 };
 

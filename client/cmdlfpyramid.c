@@ -276,11 +276,11 @@ static int CmdPyramidSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        AlwaysAvailable, "this help"},
-    {"demod",   CmdPyramidDemod, IfPm3Present,    "demodulate a Pyramid FSK tag from the GraphBuffer"},
-    {"read",    CmdPyramidRead, IfPm3Present,    "attempt to read and extract tag data"},
-    {"clone",   CmdPyramidClone, IfPm3Present,    "clone pyramid tag"},
-    {"sim",     CmdPyramidSim,  IfPm3Present,    "simulate pyramid tag"},
+    {"help",    CmdHelp,         AlwaysAvailable, "this help"},
+    {"demod",   CmdPyramidDemod, AlwaysAvailable, "demodulate a Pyramid FSK tag from the GraphBuffer"},
+    {"read",    CmdPyramidRead,  IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",   CmdPyramidClone, IfPm3Lf,         "clone pyramid tag"},
+    {"sim",     CmdPyramidSim,   IfPm3Lf,         "simulate pyramid tag"},
     {NULL, NULL, NULL, NULL}
 };
 

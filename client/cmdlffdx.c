@@ -320,11 +320,11 @@ static int CmdFdxSim(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,    AlwaysAvailable, "this help"},
+    {"help",    CmdHelp,     AlwaysAvailable, "this help"},
     {"demod",   CmdFdxDemod, AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
-    {"read",    CmdFdxRead, IfPm3Present,    "attempt to read and extract tag data"},
-    {"clone",   CmdFdxClone, IfPm3Present,    "clone animal ID tag to T55x7 (or to q5/T5555)"},
-    {"sim",     CmdFdxSim,  IfPm3Present,    "simulate Animal ID tag"},
+    {"read",    CmdFdxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",   CmdFdxClone, IfPm3Lf,         "clone animal ID tag to T55x7 (or to q5/T5555)"},
+    {"sim",     CmdFdxSim,   IfPm3Lf,         "simulate Animal ID tag"},
     {NULL, NULL, NULL, NULL}
 };
 

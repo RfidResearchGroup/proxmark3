@@ -153,9 +153,9 @@ static int CmdPrescoSim(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
-    {"read",    CmdPrescoRead,  IfPm3Present,    "Attempt to read and Extract tag data"},
-    {"clone",   CmdPrescoClone, IfPm3Present,    "clone presco tag"},
-    {"sim",     CmdPrescoSim,   IfPm3Present,    "simulate presco tag"},
+    {"read",    CmdPrescoRead,  IfPm3Lf,         "Attempt to read and Extract tag data"},
+    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag"},
+    {"sim",     CmdPrescoSim,   IfPm3Lf,         "simulate presco tag"},
     {NULL, NULL, NULL, NULL}
 };
 

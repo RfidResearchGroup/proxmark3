@@ -57,9 +57,9 @@ static int CmdPacRead(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,    AlwaysAvailable, "This help"},
+    {"help",  CmdHelp,     AlwaysAvailable, "This help"},
     {"demod", CmdPacDemod, AlwaysAvailable, "Demodulate an PAC tag from the GraphBuffer"},
-    {"read",  CmdPacRead, IfPm3Present,    "Attempt to read and extract tag data from the antenna"},
+    {"read",  CmdPacRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
     {NULL, NULL, NULL, NULL}
 };
 

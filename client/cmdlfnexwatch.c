@@ -77,7 +77,7 @@ static int CmdNexWatchRead(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",  CmdHelp,          AlwaysAvailable, "This help"},
     {"demod", CmdNexWatchDemod, AlwaysAvailable, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
-    {"read",  CmdNexWatchRead,  IfPm3Present,    "Attempt to Read and Extract tag data from the antenna"},
+    {"read",  CmdNexWatchRead,  IfPm3Lf,         "Attempt to Read and Extract tag data from the antenna"},
     {NULL, NULL, NULL, NULL}
 };
 

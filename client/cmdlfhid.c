@@ -595,12 +595,12 @@ static int CmdHIDBrute(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
-    {"demod",   CmdHIDDemod,    IfPm3Present,    "demodulate HID Prox tag from the GraphBuffer"},
-    {"read",    CmdHIDRead,     IfPm3Present,    "attempt to read and extract tag data"},
-    {"clone",   CmdHIDClone,    IfPm3Present,    "clone HID to T55x7"},
-    {"sim",     CmdHIDSim,      IfPm3Present,    "simulate HID tag"},
+    {"demod",   CmdHIDDemod,    AlwaysAvailable, "demodulate HID Prox tag from the GraphBuffer"},
+    {"read",    CmdHIDRead,     IfPm3Lf,         "attempt to read and extract tag data"},
+    {"clone",   CmdHIDClone,    IfPm3Lf,         "clone HID to T55x7"},
+    {"sim",     CmdHIDSim,      IfPm3Lf,         "simulate HID tag"},
     {"wiegand", CmdHIDWiegand,  AlwaysAvailable, "convert facility code/card number to Wiegand code"},
-    {"brute",   CmdHIDBrute,    IfPm3Present,    "bruteforce card number against reader"},
+    {"brute",   CmdHIDBrute,    IfPm3Lf,         "bruteforce card number against reader"},
     {NULL, NULL, NULL, NULL}
 };
 
