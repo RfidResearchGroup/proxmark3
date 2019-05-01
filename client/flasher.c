@@ -69,14 +69,14 @@ int main(int argc, char **argv) {
             res = flash_load(&files[num_files], argv[i], can_write_bl);
             if (res < 0)
                 return -1;
-    
+
             PrintAndLogEx(NORMAL, "");
             num_files++;
         }
     }
 
     char *serial_port_name = argv[1];
-    
+
     session.pm3_present = OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED);
     if (session.pm3_present) {
         PrintAndLogEx(NORMAL, _GREEN_("Found"));

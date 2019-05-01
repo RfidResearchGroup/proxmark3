@@ -1592,7 +1592,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         } else if (clen == 1) {
             if (ctmp == 't') { transferToEml = 1; continue; }
             if (ctmp == 'd') { createDumpFile = 1; continue; }
-            if ((ctmp == 'm') && (IfPm3Flash())){ use_flashmemory = true; continue; }
+            if ((ctmp == 'm') && (IfPm3Flash())) { use_flashmemory = true; continue; }
         } else {
             // May be a dic file
             if (param_getstr(Cmd, i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
@@ -2028,8 +2028,8 @@ out:
     conn.block_after_ACK = false;
     SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
     WaitForResponseTimeout(CMD_ACK, NULL, 1000);
-    
-    
+
+
     if (createDumpFile) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
         if (fptr == NULL) {

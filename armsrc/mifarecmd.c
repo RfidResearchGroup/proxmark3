@@ -1608,9 +1608,9 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain, b
     LED_B_ON();
 
     if (ng) {
-        reply_ng(CMD_MIFARE_CHKKEYS, PM3_SUCCESS, (uint8_t*)&keyresult, sizeof(keyresult));
+        reply_ng(CMD_MIFARE_CHKKEYS, PM3_SUCCESS, (uint8_t *)&keyresult, sizeof(keyresult));
     } else {
-        reply_mix(CMD_ACK, keyresult.found, 0, 0, (uint8_t*)&keyresult.key, sizeof(keyresult.key));
+        reply_mix(CMD_ACK, keyresult.found, 0, 0, (uint8_t *)&keyresult.key, sizeof(keyresult.key));
     }
 //    reply_old(CMD_ACK, keyresult.found, 0, 0, (uint8_t*)&keyresult.key, sizeof(keyresult.key));
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
