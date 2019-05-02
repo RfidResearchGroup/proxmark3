@@ -50,7 +50,7 @@ The official PM3-GUI from Gaucho will not work.
 The new universial GUI will work. [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) 
 
 ## Notices
-Kali and ArchLinux users usually must kill their modem manager in order for the proxmark3 to enumerate properly.   
+Kali, Ubuntu and ArchLinux users usually must kill their modem manager in order for the proxmark3 to enumerate properly.   
 `sudo apt remove modemmanager`
 		   
 ## Issues
