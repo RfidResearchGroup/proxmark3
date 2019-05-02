@@ -509,7 +509,7 @@ static command_t CommandTable[] = {
     {"sim",     CmdHFTopazSim,      IfPm3Iso14443a,  "<UID> -- Simulate Topaz tag"},
     {"sniff",   CmdHF14ASniff,      IfPm3Iso14443a,  "Sniff Topaz reader-tag communication"},
     {"raw",     CmdHFTopazCmdRaw,   IfPm3Iso14443a,  "Send raw hex data to tag"},
-    {"list",    CmdHFTopazList,     IfPm3Iso14443a,  "List Topaz history"},
+    {"list",    CmdHFTopazList,     AlwaysAvailable,  "List Topaz history"},
     {NULL,      NULL,               0, NULL}
 };
 

@@ -535,7 +535,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",      CmdHelp,              AlwaysAvailable, "This help"},
-    {"list",      CmdHFFelicaList,      IfPm3Felica,     "List ISO 18092/FeliCa history"},
+    {"list",      CmdHFFelicaList,      AlwaysAvailable,     "List ISO 18092/FeliCa history"},
     {"reader",    CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
     {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
     {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "sniff ISO 18092/Felica traffic"},

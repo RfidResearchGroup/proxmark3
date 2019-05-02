@@ -1077,7 +1077,7 @@ static command_t CommandTable[] = {
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"dump",        CmdHF14BDump,     IfPm3Iso14443b,  "Read all memory pages of an ISO14443-B tag, save to file"},
     {"info",        CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},
-    {"list",        CmdHF14BList,     IfPm3Iso14443b,  "List ISO 14443B history"},
+    {"list",        CmdHF14BList,     AlwaysAvailable,  "List ISO 14443B history"},
     {"raw",         CmdHF14BCmdRaw,   IfPm3Iso14443b,  "Send raw hex data to tag"},
     {"reader",      CmdHF14BReader,   IfPm3Iso14443b,  "Act as a 14443B reader to identify a tag"},
     {"sim",         CmdHF14BSim,      IfPm3Iso14443b,  "Fake ISO 14443B tag"},
