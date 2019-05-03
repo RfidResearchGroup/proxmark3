@@ -250,7 +250,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
 //                packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
 
     // we got a packet, reset WaitForResponseTimeout timeout
-    timeout_start_time = msclock();
+    __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
     switch (packet->cmd) {
         // First check if we are handling a debug message
@@ -674,29 +674,29 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
     if (ms_timeout != (size_t) -1)
         ms_timeout += communication_delay();
 
-    timeout_start_time = msclock();
-
+    __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
+    uint64_t tmp_clk;
+    
     // Wait until the command is received
     while (true) {
 
         while (getReply(response)) {
             if (cmd == CMD_UNKNOWN || response->cmd == cmd) {
-//                PrintAndLogEx(INFO, "Waited %i ms", msclock() - timeout_start_time);
                 return true;
             }
         }
 
-        if (msclock() - timeout_start_time > ms_timeout)
+        tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
+        if (msclock() - tmp_clk > ms_timeout)
             break;
 
-        if (msclock() - timeout_start_time > 3000 && show_warning) {
+        if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
             PrintAndLogEx(INFO, "Waiting for a response from the proxmark3...");
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
     }
-//    PrintAndLogEx(INFO, "Wait timeout after %i ms", msclock() - timeout_start_time);
     return false;
 }
 
@@ -758,8 +758,9 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
 
     uint32_t bytes_completed = 0;
-    timeout_start_time = msclock();
-
+    __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
+    uint64_t tmp_clk;
+    
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) -1)
         ms_timeout += communication_delay();
@@ -795,12 +796,13 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
             }
         }
 
-        if (msclock() - timeout_start_time > ms_timeout) {
+        tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
+        if (msclock() - tmp_clk > ms_timeout) {
             PrintAndLogEx(FAILED, "Timed out while trying to download data from device");
             break;
         }
 
-        if (msclock() - timeout_start_time > 3000 && show_warning) {
+        if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
             PrintAndLogEx(NORMAL, "Waiting for a response from the Proxmark3...");
             PrintAndLogEx(NORMAL, "You can cancel this operation by pressing the pm3 button");
