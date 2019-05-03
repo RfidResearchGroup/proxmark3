@@ -27,7 +27,6 @@ communication_arg_t conn;
 capabilities_t pm3_capabilities;
 
 static pthread_t USB_communication_thread;
-//static pthread_t FPC_communication_thread;
 
 // Transmit buffer.
 static PacketCommandOLD txBuffer;
@@ -355,7 +354,6 @@ __attribute__((force_align_arg_pointer))
         bool ACK_received = false;
         bool error = false;
         
-        
         pthread_mutex_lock(&spMutex);
 
         if (uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen) && (rxlen == sizeof(PacketResponseNGPreamble))) {
@@ -486,6 +484,8 @@ __attribute__((force_align_arg_pointer))
         }
 
         if (txBuffer_pending) {
+            
+            pthread_mutex_lock(&spMutex);
             if (txBufferNGLen) { // NG packet
                 if (!uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen)) {
                     //counter_to_offline++;
@@ -498,6 +498,8 @@ __attribute__((force_align_arg_pointer))
                     PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
                 }
             }
+            pthread_mutex_unlock(&spMutex);
+            
             txBuffer_pending = false;
 
             // tell main thread that txBuffer is empty
@@ -560,7 +562,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         conn.send_via_fpc = false;
 
         pthread_create(&USB_communication_thread, NULL, &uart_communication, &conn);
-        //pthread_create(&FPC_communication_thread, NULL, &uart_communication, &conn);
+
         fflush(stdout);
         // create a mutex to avoid interlacing print commands from our different threads
         //pthread_mutex_init(&print_lock, NULL);
@@ -604,11 +606,14 @@ int TestProxmark(void) {
            
             // reconfigure.
             if (conn.send_via_fpc == false) {
-                
-                pthread_mutex_lock(&spMutex);
-                int res = uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
-                pthread_mutex_unlock(&spMutex);
 
+#if defined(_WIN32)
+                pthread_mutex_lock(&spMutex);
+#endif                
+                int res = uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
+#if defined(_WIN32)
+                pthread_mutex_unlock(&spMutex);
+#endif
                 if ( res != PM3_SUCCESS ) {
                     PrintAndLogEx(ERR, "UART reconfigure failed");
                     return res;
@@ -633,7 +638,6 @@ void CloseProxmark(void) {
     }
 #else
     pthread_join(USB_communication_thread, NULL);
-    //pthread_join(FPC_communication_thread, NULL);
 #endif
 
     if (sp) {
