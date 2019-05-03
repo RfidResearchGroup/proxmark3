@@ -606,7 +606,6 @@ int I2C_get_version(uint8_t *maj, uint8_t *min) {
     I2C_Reset_EnterMainProgram();
     uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
     if (len > 0) {
-        Dbprintf("  version.................v%x.%02d", maj, min);
         *maj = resp[0];
         *min = resp[1];
         return PM3_SUCCESS;
