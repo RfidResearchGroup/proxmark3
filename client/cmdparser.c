@@ -30,17 +30,17 @@ bool IfPm3Present(void) {
 bool IfPm3Flash(void) {
     if (!IfPm3Present())
         return false;
-// TODO
-//    capabilities.hw_available_flash
-    return pm3_capabilities.compiled_with_flash;
+    if (!pm3_capabilities.compiled_with_flash)
+        return false;
+    return pm3_capabilities.hw_available_flash;
 }
 
 bool IfPm3Smartcard(void) {
     if (!IfPm3Present())
         return false;
-// TODO
-//    capabilities.hw_available_smartcard
-    return pm3_capabilities.compiled_with_smartcard;
+    if (!pm3_capabilities.compiled_with_smartcard)
+        return false;
+    return pm3_capabilities.hw_available_smartcard;
 }
 
 bool IfPm3Fpc(void) {
@@ -52,9 +52,9 @@ bool IfPm3Fpc(void) {
 bool IfPm3FpcHost(void) {
     if (!IfPm3Present())
         return false;
-// TODO
-//    capabilities.hw_available_fpc_host
-    return pm3_capabilities.compiled_with_fpc_host;
+    if (!pm3_capabilities.compiled_with_fpc_host)
+        return false;
+    return pm3_capabilities.hw_available_fpc_host;
 }
 
 bool IfPm3Lf(void) {

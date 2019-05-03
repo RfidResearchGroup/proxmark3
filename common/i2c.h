@@ -47,4 +47,5 @@ void SmartCardUpgrade(uint64_t arg0);
 void SmartCardSetBaud(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);
 void I2C_print_status(void);
+int I2C_get_version(uint8_t *maj, uint8_t *min);
 #endif

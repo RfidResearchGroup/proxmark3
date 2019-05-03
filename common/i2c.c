@@ -594,13 +594,25 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 
 void I2C_print_status(void) {
     DbpString(_BLUE_("Smart card module (ISO 7816)"));
+    uint8_t maj, min;
+    if (I2C_get_version(&maj, &min) == PM3_SUCCESS)
+        Dbprintf("  version.................v%x.%02d", maj, min);
+    else
+        DbpString("  version................." _RED_("FAILED"));
+}
+
+int I2C_get_version(uint8_t *maj, uint8_t *min) {
     uint8_t resp[] = {0, 0, 0, 0};
     I2C_Reset_EnterMainProgram();
     uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
-    if (len > 0)
-        Dbprintf("  version.................v%x.%02d", resp[0], resp[1]);
-    else
-        DbpString("  version................." _RED_("FAILED"));
+    if (len > 0) {
+        Dbprintf("  version.................v%x.%02d", maj, min);
+        *maj = resp[0];
+        *min = resp[1];
+        return PM3_SUCCESS;
+    } else {
+        return PM3_EDEVNOTSUPP;
+    }
 }
 
 // Will read response from smart card module,  retries 3 times to get the data.

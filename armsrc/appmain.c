@@ -441,15 +441,20 @@ void SendCapabilities(void) {
 
 #ifdef WITH_FLASH
     capabilities.compiled_with_flash = true;
+    // TODO
+    capabilities.hw_available_flash = true;
 #else
     capabilities.compiled_with_flash = false;
+    capabilities.hw_available_flash = false;
 #endif
 #ifdef WITH_SMARTCARD
     capabilities.compiled_with_smartcard = true;
+    uint8_t maj, min;
+    capabilities.hw_available_smartcard = I2C_get_version(&maj, &min) == PM3_SUCCESS;
 #else
     capabilities.compiled_with_smartcard = false;
+    capabilities.hw_available_smartcard = false;
 #endif
-
 #ifdef WITH_FPC
     capabilities.compiled_with_fpc = true;
 #else
@@ -457,8 +462,11 @@ void SendCapabilities(void) {
 #endif
 #ifdef WITH_FPC_HOST
     capabilities.compiled_with_fpc_host = true;
+    // TODO
+    capabilities.hw_available_fpc_host = true;
 #else
     capabilities.compiled_with_fpc_host = false;
+    capabilities.hw_available_fpc_host = false;
 #endif
 #ifdef WITH_LF
     capabilities.compiled_with_lf = true;
@@ -510,12 +518,6 @@ void SendCapabilities(void) {
 #else
     capabilities.compiled_with_lcd = false;
 #endif
-
-// TODO
-//    capabilities.hw_available_flash
-//    capabilities.hw_available_smartcard
-//    capabilities.hw_available_fpc_host
-
     reply_ng(CMD_CAPABILITIES, PM3_SUCCESS, (uint8_t *)&capabilities, sizeof(capabilities));
 }
 
