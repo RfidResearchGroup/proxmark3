@@ -85,8 +85,15 @@ int CmdHFTune(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(SUCCESS, "Measuring HF antenna, press button to exit");
     clearCommandBuffer();
-    SendCommandOLD(CMD_MEASURE_ANTENNA_TUNING_HF, 0, 0, 0, NULL, 0);
-    return 0;
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, NULL, 0);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 int CmdHFSniff(const char *Cmd) {

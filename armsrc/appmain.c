@@ -319,7 +319,9 @@ void MeasureAntennaTuningHf(void) {
         DbprintfEx(FLAG_INPLACE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    Dbprintf("\n[+] cancelled", 1);
+    DbprintfEx(FLAG_NEWLINE, "");
+    Dbprintf("[+] cancelled", 1);
+    reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EOPABORTED, NULL, 0);
 }
 
 void ReadMem(int addr) {
