@@ -60,6 +60,6 @@ if [ "$PORT" = "" ]; then
     exit 1
 fi
 
-echo Running "$CMD" "$PORT" $ARG1 $ARG2 "$@"
+#echo Running "$CMD" "$PORT" $ARG1 $ARG2 "$@"
 "$CMD" "$PORT" $ARG1 $ARG2 "$@"
 exit $?
