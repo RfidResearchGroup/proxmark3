@@ -49,6 +49,8 @@ static int cmd_tail = 0;
 
 // to lock rxBuffer operations from different threads
 static pthread_mutex_t rxBufferMutex = PTHREAD_MUTEX_INITIALIZER;
+// serial port access from different threads
+static pthread_mutex_t spMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Global start time for WaitForResponseTimeout & dl_it, so we can reset timeout when we get packets
 // as sending lot of these packets can slow down things wuite a lot on slow links (e.g. hw status or lf read at 9600)
@@ -352,6 +354,10 @@ __attribute__((force_align_arg_pointer))
         rxlen = 0;
         bool ACK_received = false;
         bool error = false;
+        
+        
+        pthread_mutex_lock(&spMutex);
+
         if (uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen) && (rxlen == sizeof(PacketResponseNGPreamble))) {
             rx.magic = rx_raw.pre.magic;
             uint16_t length = rx_raw.pre.length;
@@ -459,6 +465,9 @@ __attribute__((force_align_arg_pointer))
                 error = true;
             }
         }
+        
+        pthread_mutex_unlock(&spMutex);
+                        
         // TODO if error, shall we resync ?
 
         pthread_mutex_lock(&txBufferMutex);
@@ -592,12 +601,20 @@ int TestProxmark(void) {
             if (conn.send_via_fpc) {
                 PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
             }
-
+           
             // reconfigure.
             if (conn.send_via_fpc == false) {
-                uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
-            }
+                
+                pthread_mutex_lock(&spMutex);
+                int res = uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
+                pthread_mutex_unlock(&spMutex);
 
+                if ( res != PM3_SUCCESS ) {
+                    PrintAndLogEx(ERR, "UART reconfigure failed");
+                    return res;
+                }
+
+            }
             return PM3_SUCCESS;
         } else {
             return PM3_ETIMEOUT;

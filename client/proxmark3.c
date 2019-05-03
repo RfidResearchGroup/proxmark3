@@ -496,6 +496,7 @@ int main(int argc, char *argv[]) {
         CloseProxmark();
         session.pm3_present = false;
     }
+    
     if (!session.pm3_present)
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
 

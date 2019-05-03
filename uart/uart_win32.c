@@ -49,7 +49,6 @@ typedef struct {
 } serial_port_windows;
 
 int uart_reconfigure_timeouts(serial_port sp, uint32_t value) {
-
     serial_port_windows *spw;
     spw = (serial_port_windows *)sp;
     spw->ct.ReadIntervalTimeout         = value;
@@ -60,7 +59,6 @@ int uart_reconfigure_timeouts(serial_port sp, uint32_t value) {
 
     if (!SetCommTimeouts(spw->hPort, &spw->ct)) {
         uart_close(spw);
-        printf("[!] UART error while setting comm time outs\n");
         return PM3_EIO;
     }
 
