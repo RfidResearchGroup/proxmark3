@@ -43,18 +43,27 @@ bool IfPm3Smartcard(void) {
     return pm3_capabilities.hw_available_smartcard;
 }
 
-bool IfPm3Fpc(void) {
+bool IfPm3FpcUsart(void) {
     if (!IfPm3Present())
         return false;
-    return pm3_capabilities.compiled_with_fpc;
+    return pm3_capabilities.compiled_with_fpc_usart;
 }
 
-bool IfPm3FpcHost(void) {
+bool IfPm3FpcUsartHost(void) {
     if (!IfPm3Present())
         return false;
-    if (!pm3_capabilities.compiled_with_fpc_host)
+    return pm3_capabilities.compiled_with_fpc_usart_host;
+}
+
+bool IfPm3FpcUsartDevFromUsb(void) {
+    // true if FPC USART developer support and if talking from USB-CDC interface
+    if (!IfPm3Present())
         return false;
-    return pm3_capabilities.hw_available_fpc_host;
+    if (!pm3_capabilities.compiled_with_fpc_usart_dev)
+        return false;
+    if (conn.send_via_fpc_usart)
+        PrintAndLogEx(WARNING, "This command is not available via FPC, only via " _YELLOW_("USB-CDC"));
+    return !conn.send_via_fpc_usart;
 }
 
 bool IfPm3Lf(void) {
@@ -156,7 +165,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
             if (Commands[i].IsAvailable()) {
                 break;
             } else {
-                PrintAndLogEx(WARNING, "This command is only available in " _YELLOW_("online") "mode");
+                PrintAndLogEx(WARNING, "This command is " _YELLOW_("not available") "in this mode");
                 return PM3_ENOTIMPL;
             }
         }

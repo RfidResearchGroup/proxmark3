@@ -38,7 +38,7 @@ bool reply_with_crc_on_fpc = true;
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
 bool reply_via_fpc = false;
 
-#ifdef WITH_FPC_HOST
+#ifdef WITH_FPC_USART_HOST
 extern void Dbprintf(const char *fmt, ...);
 #define Dbprintf_usb(...) {\
         bool tmp = reply_via_fpc;\
@@ -71,7 +71,7 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
     // Send frame and make sure all bytes are transmitted
 
     if (reply_via_fpc) {
-#ifdef WITH_FPC_HOST
+#ifdef WITH_FPC_USART_HOST
         result = usart_writebuffer_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 //        Dbprintf_usb("Sent %i bytes over usart", len);
 #else
@@ -123,7 +123,7 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
     // Send frame and make sure all bytes are transmitted
 
     if (reply_via_fpc) {
-#ifdef WITH_FPC_HOST
+#ifdef WITH_FPC_USART_HOST
         result = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
 //        Dbprintf_usb("Sent %i bytes over usart", len);
 #else
@@ -225,7 +225,7 @@ int receive_ng(PacketCommandNG *rx) {
     if (usb_poll_validate_length())
         return receive_ng_internal(rx, usb_read_ng, false);
 
-#ifdef WITH_FPC_HOST
+#ifdef WITH_FPC_USART_HOST
     // Check if there is a FPC packet available
     if (usart_rxdata_available() > 0)
         return receive_ng_internal(rx, usart_read_ng, true);

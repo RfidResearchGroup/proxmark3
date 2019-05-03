@@ -34,6 +34,7 @@
 #include "emv/cmdemv.h"   // EMV
 #include "cmdflashmem.h"  // rdv40 flashmem commands
 #include "cmdsmartcard.h" // rdv40 smart card ISO7816 commands
+#include "cmdusart.h"     // rdv40 FPC USART commands
 
 int CommandReceived(char *Cmd);
 command_t *getTopLevelCommandTable(void);

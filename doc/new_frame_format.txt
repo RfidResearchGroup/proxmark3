@@ -296,7 +296,7 @@ Empirically measured delay (FTDI cable) with "hw pingng 512" :
   9600 -> 1100..1150ms
 (client/comms.c)
 static size_t communication_delay(void) {
-    if (conn.send_via_fpc)  // needed also for Windows USB USART??
+    if (conn.send_via_fpc_usart)  // needed also for Windows USB USART??
         return 2 * (12000000 / uart_speed);
     return 100;
 }

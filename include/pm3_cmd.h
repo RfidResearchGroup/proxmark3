@@ -144,8 +144,9 @@ typedef struct {
     // rdv4
     bool compiled_with_flash;
     bool compiled_with_smartcard;
-    bool compiled_with_fpc;
-    bool compiled_with_fpc_host;
+    bool compiled_with_fpc_usart;
+    bool compiled_with_fpc_usart_dev;
+    bool compiled_with_fpc_usart_host;
     // lf
     bool compiled_with_lf;
     bool compiled_with_hitag;
@@ -165,7 +166,7 @@ typedef struct {
     bool hw_available_flash;
     bool hw_available_smartcard;
     // rdv4 bt addon
-    bool hw_available_fpc_host;
+    bool hw_available_fpc_usart_btaddon;
 } PACKED capabilities_t;
 
 extern capabilities_t pm3_capabilities;
@@ -211,9 +212,10 @@ extern capabilities_t pm3_capabilities;
 #define CMD_SMART_SETBAUD                                                 0x0144
 #define CMD_SMART_SETCLOCK                                                0x0145
 
-// RDV40,  FPC serial
-#define CMD_FPC_SEND                                                      0x0160
-#define CMD_FPC_READ                                                      0x0161
+// RDV40,  FPC USART
+#define CMD_USART_RX                                                      0x0160
+#define CMD_USART_TX                                                      0x0161
+#define CMD_USART_TXRX                                                    0x0162
 
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
@@ -459,7 +461,7 @@ extern capabilities_t pm3_capabilities;
 // File error                           client:     error related to file access on host
 #define PM3_EFILE             -13
 
-// No data                              pm3:        reserved, no host frame available (not really an error)
+// No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
 #define PM3_EFATAL            -99

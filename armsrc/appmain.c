@@ -36,7 +36,7 @@
 #include "i2c.h"
 #endif
 
-#ifdef WITH_FPC
+#ifdef WITH_FPC_USART
 #include "usart.h"
 #endif
 
@@ -441,8 +441,7 @@ void SendCapabilities(void) {
 
 #ifdef WITH_FLASH
     capabilities.compiled_with_flash = true;
-    // TODO
-    capabilities.hw_available_flash = true;
+    capabilities.hw_available_flash = FlashInit();
 #else
     capabilities.compiled_with_flash = false;
     capabilities.hw_available_flash = false;
@@ -455,18 +454,23 @@ void SendCapabilities(void) {
     capabilities.compiled_with_smartcard = false;
     capabilities.hw_available_smartcard = false;
 #endif
-#ifdef WITH_FPC
-    capabilities.compiled_with_fpc = true;
+#ifdef WITH_FPC_USART
+    capabilities.compiled_with_fpc_usart = true;
 #else
-    capabilities.compiled_with_fpc = false;
+    capabilities.compiled_with_fpc_usart = false;
 #endif
-#ifdef WITH_FPC_HOST
-    capabilities.compiled_with_fpc_host = true;
-    // TODO
-    capabilities.hw_available_fpc_host = true;
+#ifdef WITH_FPC_USART_DEV
+    capabilities.compiled_with_fpc_usart_dev = true;
 #else
-    capabilities.compiled_with_fpc_host = false;
-    capabilities.hw_available_fpc_host = false;
+    capabilities.compiled_with_fpc_usart_dev = false;
+#endif
+#ifdef WITH_FPC_USART_HOST
+    capabilities.compiled_with_fpc_usart_host = true;
+    // TODO
+    capabilities.hw_available_fpc_usart_btaddon = true;
+#else
+    capabilities.compiled_with_fpc_usart_host = false;
+    capabilities.hw_available_fpc_usart_btaddon = false;
 #endif
 #ifdef WITH_LF
     capabilities.compiled_with_lf = true;
@@ -1181,79 +1185,45 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #endif
 
-#ifdef WITH_FPC
-        case CMD_FPC_SEND: {
-
-
-            StartTicks();
-            DbpString("Mutual USB/FPC sending from device to client");
-
-            /*
-            char at[11] = {'\0'};
-            static const char* s_at = "AT+BAUD8\0D\0A";
-            strncat(at, s_at, sizeof(at) - strlen(at) - 1);
-            DbpString("Try AT baud rate setting");
-            usart_init();
-            int16_t res = usart_writebuffer_sync((uint8_t*)&at, sizeof(at));
-            WaitMS(1);
-            Dbprintf("SEND %d | %c%c%c%c%c%c%c%c%c%c%c", res,  at[0], at[1], at[2], at[3], at[4], at[5], at[6], at[7], at[8], at[9], at[10]);
-
-            uint8_t my_rx[20];
-            memset(my_rx, 0, sizeof(my_rx));
-            res = usart_readbuffer(my_rx);
-            WaitMS(1);
-            Dbprintf("GOT  %d | %c%c%c%c%c%c%c%c", res,  my_rx[0], my_rx[1], my_rx[2], my_rx[3], my_rx[4], my_rx[5], my_rx[6], my_rx[7]);
-            */
-
-
-            char dest[USART_FIFOLEN] = {'\0'};
+#ifdef WITH_FPC_USART_DEV
+        case CMD_USART_TX: {
+            usart_writebuffer_sync(packet->data.asBytes, packet->length);
+            reply_ng(CMD_USART_TX, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+        case CMD_USART_RX: {
+            uint8_t dest[USART_FIFOLEN] = {'\0'};
             uint16_t available = usart_rxdata_available();
             if (available > 0) {
-                Dbprintf("RX DATA!");
-                uint16_t len = usart_read_ng((uint8_t *)dest, available);
-                dest[len] = '\0';
-                Dbprintf("RX: %d | %02X %02X %02X %02X %02X %02X %02X %02X ", len,  dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
+                uint16_t len = usart_read_ng(dest, available);
+                reply_ng(CMD_USART_RX, PM3_SUCCESS, dest, len);
+            } else {
+                reply_ng(CMD_USART_RX, PM3_ENODATA, NULL, 0);
             }
-
-            static const char *welcome = "Proxmark3 Serial interface via FPC ready\r\n";
-            usart_writebuffer_sync((uint8_t *)welcome, strlen(welcome));
-
-            sprintf(dest, "| bytes 0x%02x 0x%02x 0x%02x 0x%02x\r\n"
-                    , packet->data.asBytes[0]
-                    , packet->data.asBytes[1]
-                    , packet->data.asBytes[2]
-                    , packet->data.asBytes[3]
-                   );
-            usart_writebuffer_sync((uint8_t *)dest, strlen(dest));
-
-
-            LED_A_ON();
-
-
-            //usb
-            reply_old(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
-            LED_A_OFF();
-            /*
-            uint8_t my_rx[sizeof(PacketCommandOLD)];
-            while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
-                LED_B_INV();
-                if (usart_read_ng(my_rx) ) {
-                    //PacketReceived(my_rx, sizeof(my_rx));
-
-                    PacketCommandOLD *my = (PacketCommandOLD *)my_rx;
-                    if (my->cmd > 0 ) {
-                        Dbprintf("received command: 0x%04x and args: %d %d %d", my->cmd, my->arg[0], my->arg[1], my->arg[2]);
-                    }
-                }
+            break;
+        }
+        case CMD_USART_TXRX: {
+            struct p {
+                uint32_t waittime;
+                uint8_t data[PM3_CMD_DATA_SIZE - sizeof(uint32_t)];
+            } PACKED;
+            struct p *payload = (struct p *) &packet->data.asBytes;
+            usart_writebuffer_sync(payload->data, packet->length - sizeof(payload->waittime));
+            uint16_t available;
+            WaitMS(payload->waittime);
+            uint8_t dest[USART_FIFOLEN] = {'\0'};
+            available = usart_rxdata_available();
+            // Dbprintf("avail (%u)",  available);
+            if (available > 0) {
+                uint16_t len = usart_read_ng(dest, available);
+                reply_ng(CMD_USART_TXRX, PM3_SUCCESS, dest, len);
+            } else {
+                reply_ng(CMD_USART_TXRX, PM3_ENODATA, NULL, 0);
             }
-            */
-            //reply_old(CMD_DEBUG_PRINT_STRING, strlen(dest), 0, 0, dest, strlen(dest));
-
-            reply_old(CMD_ACK, 0, 0, 0, 0, 0);
-            StopTicks();
             break;
         }
 #endif
+
         case CMD_BUFF_CLEAR:
             BigBuf_Clear();
             BigBuf_free();
@@ -1525,7 +1495,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 case 2:
                     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
                     break;
-#ifndef WITH_FPC
+#ifndef WITH_FPC_USART
                 case 1:
                     SetAdcMuxFor(GPIO_MUXSEL_LORAW);
                     break;
@@ -1642,7 +1612,7 @@ void  __attribute__((noreturn)) AppMain(void) {
     I2C_init();
 #endif
 
-#ifdef WITH_FPC
+#ifdef WITH_FPC_USART
     usart_init();
 #endif
 

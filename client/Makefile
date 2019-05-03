@@ -10,12 +10,16 @@ ifeq ($(PLTNAME),)
   ifeq ($(PLATFORM),)
     PLATFORM=PM3RDV4
   else
-    ${info using saved PLATFORM '$(PLATFORM)'}
+    ${info using saved PLATFORM:        '$(PLATFORM)'}
+  endif
+  ifneq ($(PLATFORM_EXTRAS),)
+    ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
   endif
   include ../common/Makefile.hal
   $(info ===================================================================)
-  $(info PLATFORM:          $(PLATFORM))
   $(info Platform name:     $(PLTNAME))
+  $(info PLATFORM:          $(PLATFORM))
+  $(info PLATFORM_EXTRAS:   $(PLATFORM_EXTRAS))
   $(info Included options:  $(PLATFORM_DEFS_INFO))
   $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
   $(info ===================================================================)
@@ -222,6 +226,7 @@ CMDSRCS =	crapto1/crapto1.c \
 			cmdtrace.c \
 			cmdflashmem.c \
 			cmdsmartcard.c \
+			cmdusart.c \
 			cmdparser.c \
 			cmdmain.c \
 			pm3_binlib.c \

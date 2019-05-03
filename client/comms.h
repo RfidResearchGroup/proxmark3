@@ -46,7 +46,7 @@ typedef struct {
     bool send_with_crc_on_usb;
     bool send_with_crc_on_fpc;
     // "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
-    bool send_via_fpc;
+    bool send_via_fpc_usart;
     // To memorise baudrate
     uint32_t uart_speed;
 } communication_arg_t;

@@ -450,8 +450,8 @@ void FpgaWriteConfWord(uint8_t v) {
 //-----------------------------------------------------------------------------
 void SetAdcMuxFor(uint32_t whichGpio) {
 
-#ifndef WITH_FPC
-    // When compiled without FPC support
+#ifndef WITH_FPC_USART
+    // When compiled without FPC USART support
     AT91C_BASE_PIOA->PIO_OER =
         GPIO_MUXSEL_HIPKD |
         GPIO_MUXSEL_LOPKD |
@@ -472,7 +472,7 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 #else
     if ((whichGpio == GPIO_MUXSEL_LORAW) || (whichGpio == GPIO_MUXSEL_HIRAW))
         return;
-    // FPC serial uses HIRAW/LOWRAW pins, so they are excluded here.
+    // FPC USART uses HIRAW/LOWRAW pins, so they are excluded here.
     AT91C_BASE_PIOA->PIO_OER = GPIO_MUXSEL_HIPKD | GPIO_MUXSEL_LOPKD;
     AT91C_BASE_PIOA->PIO_PER = GPIO_MUXSEL_HIPKD | GPIO_MUXSEL_LOPKD;
     LOW(GPIO_MUXSEL_HIPKD);

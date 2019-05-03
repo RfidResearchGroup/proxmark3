@@ -138,7 +138,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     txBufferNG.pre.cmd = cmd;
     memcpy(&txBufferNG.data, data, len);
 
-    if ((conn.send_via_fpc && conn.send_with_crc_on_fpc) || ((!conn.send_via_fpc) && conn.send_with_crc_on_usb)) {
+    if ((conn.send_via_fpc_usart && conn.send_with_crc_on_fpc) || ((!conn.send_via_fpc_usart) && conn.send_with_crc_on_usb)) {
         uint8_t first, second;
         compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketCommandNGPreamble) + len, &first, &second);
         tx_post->crc = (first << 8) + second;
@@ -559,7 +559,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         conn.send_with_crc_on_usb = false;
         conn.send_with_crc_on_fpc = true;
         // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
-        conn.send_via_fpc = false;
+        conn.send_via_fpc_usart = false;
 
         pthread_create(&USB_communication_thread, NULL, &uart_communication, &conn);
 
@@ -597,16 +597,15 @@ int TestProxmark(void) {
         SendCommandNG(CMD_CAPABILITIES, NULL, 0);
         if (WaitForResponseTimeoutW(CMD_PING, &resp, 1000, false)) {
             memcpy(&pm3_capabilities, resp.data.asBytes, resp.length);
-            conn.send_via_fpc = pm3_capabilities.via_fpc;
+            conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
             conn.uart_speed = pm3_capabilities.baudrate;
-            PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
-            if (conn.send_via_fpc) {
+            PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
+            if (conn.send_via_fpc_usart) {
                 PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
             }
            
             // reconfigure.
-            if (conn.send_via_fpc == false) {
-
+            if (conn.send_via_fpc_usart == false) {
 #if defined(_WIN32)
                 pthread_mutex_lock(&spMutex);
 #endif                
@@ -669,7 +668,7 @@ void CloseProxmark(void) {
 //           ~ = 12000000 / USART_BAUD_RATE
 // Let's take 2x (maybe we need more for BT link?)
 static size_t communication_delay(void) {
-    if (conn.send_via_fpc)  // needed also for Windows USB USART??
+    if (conn.send_via_fpc_usart)  // needed also for Windows USB USART??
         return 2 * (12000000 / conn.uart_speed);
     return 100;
 }

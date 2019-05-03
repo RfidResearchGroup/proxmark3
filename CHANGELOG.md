@@ -43,7 +43,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change better strong wave detection for biphase (@iceman)
  - Add 'script run test_t55x7' (@iceman)
  - Add new lua scripting support for some t55xx commands (@iceman)
- - *WIP* Add FPC usart with pm3 client: WITH_FPC_HOST. (@doegox)
+ - Add FPC USART for BT add-on with pm3 client. (@doegox)
  - Add '-b baudrate' option to the pm3 client. (@doegox)
  - Change 'lf t55xx info': tell if known configuration block0. (@iceman)
  - Fix/Add FPC usart: fix TX, bring RX, full speed. (@doegox)

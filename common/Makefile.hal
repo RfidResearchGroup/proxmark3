@@ -1,22 +1,26 @@
 define KNOWN_PLATFORMS
 
-+--------------------------------------------------------+
-| PLATFORM      | DESCRIPTION                            |
-+--------------------------------------------------------+
-| PM3RDV4 (def) | Proxmark3 rdv4      with AT91SAM7S512  |
-+--------------------------------------------------------+
-| PM3RDV4FPC    | Proxmark3 rdv4+FPC     (experimental)  |
-+--------------------------------------------------------+
-| PM3EVO        | Proxmark3 EVO       with AT91SAM7S512  |
-+--------------------------------------------------------+
-| PM3EASY       | Proxmark3 rdv3 Easy with AT91SAM7S256  |
-+--------------------------------------------------------+
-| PM3RDV2       | Proxmark3 rdv2      with AT91SAM7S512  |
-+--------------------------------------------------------+
-| PM3OLD256     | Proxmark3 V1        with AT91SAM7S256  |
-+--------------------------------------------------------+
-| PM3OLD512     | Proxmark3 V1        with AT91SAM7S512  |
-+--------------------------------------------------------+
++==========================================================+
+| PLATFORM        | DESCRIPTION                            |
++==========================================================+
+| PM3RDV4 (def)   | Proxmark3 rdv4      with AT91SAM7S512  |
++----------------------------------------------------------+
+| PM3EVO          | Proxmark3 EVO       with AT91SAM7S512  |
++----------------------------------------------------------+
+| PM3EASY         | Proxmark3 rdv3 Easy with AT91SAM7S256  |
++----------------------------------------------------------+
+| PM3RDV2         | Proxmark3 rdv2      with AT91SAM7S512  |
++----------------------------------------------------------+
+| PM3OLD256       | Proxmark3 V1        with AT91SAM7S256  |
++----------------------------------------------------------+
+| PM3OLD512       | Proxmark3 V1        with AT91SAM7S512  |
++----------------------------------------------------------+
+
++==========================================================+
+| PLATFORM_EXTRAS | DESCRIPTION                            |
++==========================================================+
+| BTADDON         | Proxmark3 rdv4 BT add-on               |
++----------------------------------------------------------+
 
 Options to define platform:
 (1) Run make with PLATFORM specified as follows:
@@ -25,6 +29,12 @@ make PLATFORM=PM3EASY
 (2) Save a file called Makefile.platform with contents:
 PLATFORM=PM3EASY
 
+or if you have a Proxmark 3 RDV4 with the BT add-on:
+PLATFORM=PM3RDV4
+PLATFORM_EXTRAS=BTADDON
+
+!! Make sure to "make clean" when you change platform settings !!
+
 endef
 
 PLTNAME = Unknown Platform
@@ -32,10 +42,6 @@ PLTNAME = Unknown Platform
 ifeq ($(PLATFORM),PM3RDV4)
   MCU = AT91SAM7S512
   PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH
-  PLTNAME = Proxmark3 rdv4
-else ifeq ($(PLATFORM),PM3RDV4FPC)
-  MCU = AT91SAM7S512
-  PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DWITH_FPC_HOST
   PLTNAME = Proxmark3 rdv4
 else ifeq ($(PLATFORM),PM3EVO)
   MCU = AT91SAM7S512
@@ -54,6 +60,20 @@ else ifeq ($(PLATFORM),PM3OLD512)
   PLTNAME = Proxmark3 V1 with AT91SAM7S512
 else
   $(error Invalid or empty PLATFORM: $(PLATFORM). Known platforms: $(KNOWN_PLATFORMS))
+endif
+
+# parsing additional PLATFORM_EXTRAS tokens
+PLATFORM_EXTRAS_TMP:=$(PLATFORM_EXTRAS)
+ifneq (,$(findstring BTADDON,$(PLATFORM_EXTRAS_TMP)))
+  PLATFORM_DEFS += -DWITH_FPC_USART_HOST
+  PLATFORM_EXTRAS_TMP := $(strip $(filter-out BTADDON,$(PLATFORM_EXTRAS_TMP)))
+endif
+ifneq (,$(findstring FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
+  PLATFORM_DEFS += -DWITH_FPC_USART_DEV
+  PLATFORM_EXTRAS_TMP := $(strip $(filter-out FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
+endif
+ifneq (,$(PLATFORM_EXTRAS_TMP))
+  $(error Unknown PLATFORM_EXTRAS token(s): $(PLATFORM_EXTRAS_TMP))
 endif
 
 # common LF support
@@ -90,9 +110,9 @@ $(info $(findstring WITH_STANDALONE_*,$(PLATFORM_DEFS)))
 
 # Add flags dependencies :
 
-# WITH_FPC_* needs WITH_FPC :
-ifneq (,$(findstring WITH_FPC_,$(PLATFORM_DEFS)))
-  PLATFORM_DEFS += -DWITH_FPC
+# WITH_FPC_USART_* needs WITH_FPC_USART :
+ifneq (,$(findstring WITH_FPC_USART_,$(PLATFORM_DEFS)))
+  PLATFORM_DEFS += -DWITH_FPC_USART
 endif
 
 PLATFORM_DEFS_INFO = $(strip $(filter-out STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS))))
@@ -105,6 +125,7 @@ endif
 
 
 export PLATFORM
+export PLATFORM_EXTRAS
 export PLTNAME
 export MCU
 export PLATFORM_DEFS
