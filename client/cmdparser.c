@@ -61,8 +61,6 @@ bool IfPm3FpcUsartDevFromUsb(void) {
         return false;
     if (!pm3_capabilities.compiled_with_fpc_usart_dev)
         return false;
-    if (conn.send_via_fpc_usart)
-        PrintAndLogEx(WARNING, "This command is not available via FPC, only via " _YELLOW_("USB-CDC"));
     return !conn.send_via_fpc_usart;
 }
 
