@@ -30,16 +30,6 @@ pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
 static const char *logfilename = "proxmark3.log";
 static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 
-/*
-static float complex cexpf(float complex Z) {
-    float complex  Res;
-    double rho = exp(__real__ Z);
-    __real__ Res = rho * cosf(__imag__ Z);
-    __imag__ Res = rho * sinf(__imag__ Z);
-    return Res;
-}
-*/
-
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     char buff[2000] = "Options:\n";
     char format[2000] = "";
@@ -94,8 +84,10 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         case WARNING:
             strncpy(prefix, _CYAN_("[!]"), sizeof(prefix) - 1);
             break;
+        case INFO:       
+            strncpy(prefix, _YELLOW_("[=]"), sizeof(prefix) - 1);
+            break;
         case NORMAL:
-        case INFO:
             strncpy(prefix, prefixes[level], sizeof(prefix) - 1);
             break;
     }
