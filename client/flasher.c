@@ -99,14 +99,13 @@ int main(int argc, char **argv) {
         PrintAndLogEx(NORMAL, "\n");
     }
 
-    PrintAndLogEx(SUCCESS, _BLUE_("Resetting hardware..."));
-
     res = flash_stop_flashing();
     if (res < 0)
         return -1;
 
     CloseProxmark();
 
-    PrintAndLogEx(SUCCESS, _BLUE_("All done.") "\n\nHave a nice day!");
+    PrintAndLogEx(SUCCESS, _BLUE_("All done."));
+    PrintAndLogEx(SUCCESS, "\nHave a nice day!");
     return 0;
 }
