@@ -43,6 +43,8 @@ This fork now compiles just fine on
    - ParrotOS
    - WSL (Windows subsystem linux) on Windows 10
    - Docker container
+
+If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
 ---	
 ## Why didn't you base it on official PM3 Master?
 The separation from official pm3 repo gives us a lot of freedom to create a firmware/client that suits the RDV40 features. We don't want to mess up the official pm3 repo with RDV40 specific code.
