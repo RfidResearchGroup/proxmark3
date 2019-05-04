@@ -386,7 +386,7 @@ void printUSBSpeed(void) {
     LED_B_ON();
 
     while (end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
-        reply_ng(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
+        reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
         end_time = GetTickCount();
         bytes_transferred += PM3_CMD_DATA_SIZE;
     }
@@ -1246,8 +1246,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             SpinDelay(200);
             LED_D_OFF(); // LED D indicates field ON or OFF
             break;
-#ifdef WITH_LF
-        case CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K: {
+        case CMD_DOWNLOAD_BIGBUF: {
             LED_B_ON();
             uint8_t *mem = BigBuf_get_addr();
             uint32_t startidx = packet->oldarg[0];
@@ -1259,7 +1258,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
                 size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
-                int result = reply_old(CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
+                int result = reply_old(CMD_DOWNLOADED_BIGBUF, i, len, BigBuf_get_traceLen(), mem + startidx + i, len);
                 if (result != PM3_SUCCESS)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
@@ -1273,6 +1272,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
+#ifdef WITH_LF
         case CMD_UPLOAD_SIM_SAMPLES_125K: {
             // iceman; since changing fpga_bitstreams clears bigbuff, Its better to call it before.
             // to be able to use this one for uploading data to device

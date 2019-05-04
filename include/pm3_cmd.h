@@ -223,8 +223,8 @@ extern capabilities_t pm3_capabilities;
 #define CMD_DOWNLOADED_RAW_BITS_TI_TYPE                                   0x0204
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_125K                                  0x0205
 #define CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K                         0x0206
-#define CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K                                 0x0207
-#define CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K                               0x0208
+#define CMD_DOWNLOAD_BIGBUF                                               0x0207
+#define CMD_DOWNLOADED_BIGBUF                                             0x0208
 #define CMD_UPLOAD_SIM_SAMPLES_125K                                       0x0209
 #define CMD_SIMULATE_TAG_125K                                             0x020A
 #define CMD_HID_DEMOD_FSK                                                 0x020B
