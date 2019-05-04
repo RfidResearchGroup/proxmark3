@@ -10,11 +10,11 @@ Previously, frames were, in both directions like this:
     uint64_t cmd;
     uint64_t arg[3];
     union {
-        uint8_t  asBytes[USB_CMD_DATA_SIZE];
-        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+        uint8_t  asBytes[PM3_CMD_DATA_SIZE];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } d;
 
-with USB_CMD_DATA_SIZE = 512 and there was no API abstraction, everybody was forging/parsing these frames.
+with PM3_CMD_DATA_SIZE = 512 and there was no API abstraction, everybody was forging/parsing these frames.
 So the frame size was fixed, 544 bytes, even for simple ACKs.
 When snooping the USB transfers, we can observe the host is sending 544b Bulk USB frames while the Proxmark3 is limited by its internal buffers and is sending 128b, 128b, 128b, 128b, 32b, so in total 5 packets.
 
@@ -34,7 +34,7 @@ For commands being sent to the Proxmark:
     uint16_t crc;
 
 * magic:  arbitrary magic ("PM3a") to help re-sync if needed
-* length: length of the variable payload, 0 if none, max 512 (USB_CMD_DATA_SIZE) for now.
+* length: length of the variable payload, 0 if none, max 512 (PM3_CMD_DATA_SIZE) for now.
 * ng:     flag to tell if the data is following the new format (ng) or the old one, see transition notes below
 * cmd:    as previously, on 16b as it's enough
 * data:   variable length payload
@@ -51,7 +51,7 @@ For responses from the Proxmark:
     uint16_t crc;
 
 * magic:  arbitrary magic ("PM3a") to help re-sync if needed
-* length: length of the variable payload, 0 if none, max 512 (USB_CMD_DATA_SIZE) for now.
+* length: length of the variable payload, 0 if none, max 512 (PM3_CMD_DATA_SIZE) for now.
 * ng:     flag to tell if the data is following the new format (ng) or the old one, see transition notes below
 * status: a field to send back the status of the command execution
 * cmd:    as previously, on 16b as it's enough
@@ -92,8 +92,8 @@ typedef struct {
     uint16_t crc;        //  NG
     uint64_t oldarg[3];  //  OLD
     union {
-        uint8_t  asBytes[USB_CMD_DATA_SIZE];
-        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+        uint8_t  asBytes[PM3_CMD_DATA_SIZE];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } data;
     bool ng;             // does it store NG data or OLD data?
 } PACKED PacketCommandNG;
@@ -106,8 +106,8 @@ typedef struct {
     uint16_t crc;        //  NG
     uint64_t oldarg[3];  //  OLD
     union {
-        uint8_t  asBytes[USB_CMD_DATA_SIZE];
-        uint32_t asDwords[USB_CMD_DATA_SIZE / 4];
+        uint8_t  asBytes[PM3_CMD_DATA_SIZE];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } data;
     bool ng;             // does it store NG data or OLD data?
 } PACKED PacketResponseNG;
@@ -123,10 +123,10 @@ void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 *****************************************
 
 So cmds should make the transition from SendCommandOLD to SendCommandNG to benefit from smaller frames (and armsrc handlers adjusted accordingly of course).
-SendCommandMIX is a transition fct: it uses the same API as SendCommandOLD but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to USB_CMD_DATA_SIZE - 24 (defined as USB_CMD_DATA_SIZE_MIX). Besides the size limitation, the receiver handler doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
+SendCommandMIX is a transition fct: it uses the same API as SendCommandOLD but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to PM3_CMD_DATA_SIZE - 24 (defined as PM3_CMD_DATA_SIZE_MIX). Besides the size limitation, the receiver handler doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
 Warning : it makes sense to move from SendCommandOLD to SendCommandMIX only for *commands with small payloads*.
 * otherwise both have about the same size
-* SendCommandMIX has a smaller payload (USB_CMD_DATA_SIZE_MIX < USB_CMD_DATA_SIZE) so it's risky to blindly move from OLD to MIX if there is a large payload.
+* SendCommandMIX has a smaller payload (PM3_CMD_DATA_SIZE_MIX < PM3_CMD_DATA_SIZE) so it's risky to blindly move from OLD to MIX if there is a large payload.
 
 Internally these functions prepare the new or old frames and call uart_communication which calls uart_send.
 
@@ -151,7 +151,7 @@ int16_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, voi
 *****************************************
 
 So replies should make the transition from reply_old to reply_ng to benefit from smaller frames (and client reception adjusted accordingly of course).
-reply_mix is a transition fct: it uses the same API as reply_old but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to USB_CMD_DATA_SIZE - 24. Besides the size limitation, the client command doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
+reply_mix is a transition fct: it uses the same API as reply_old but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to PM3_CMD_DATA_SIZE - 24. Besides the size limitation, the client command doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
 
 Example with CMD_PING that supports both styles (from client CmdPing or CmdPingNG) and replies with the new frame format when it receives new command format:
     if (packet->ng) {

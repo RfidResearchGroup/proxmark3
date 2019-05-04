@@ -28,7 +28,7 @@ int curlline;
 /*
 void cjPrintBigArray(const char *bigar, int len, uint8_t newlines, uint8_t debug)
 {
-    uint32_t chunksize = (USB_CMD_DATA_SIZE / 4);
+    uint32_t chunksize = (PM3_CMD_DATA_SIZE / 4);
     uint8_t totalchunks = len / chunksize;
     uint8_t last_chunksize = len - (totalchunks * chunksize);
     char chunk[chunksize + 1];

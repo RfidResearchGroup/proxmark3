@@ -10,8 +10,8 @@
 // own protocol.
 //-----------------------------------------------------------------------------
 
-#ifndef __USB_CMD_H
-#define __USB_CMD_H
+#ifndef __PM3_CMD_H
+#define __PM3_CMD_H
 
 // Use it e.g. when using slow links such as BT
 #define USART_SLOW_LINK
