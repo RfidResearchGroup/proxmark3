@@ -370,13 +370,13 @@ void SendVersion(void) {
     reply_old(CMD_ACK, *(AT91C_DBGU_CIDR), text_and_rodata_section_size + compressed_data_section_size, 0, VersionString, strlen(VersionString));
 }
 
-// measure the USB Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
+// measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
-void printUSBSpeed(void) {
+void printConnSpeed(void) {
     DbpString(_BLUE_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
-#define USB_SPEED_TEST_MIN_TIME 1500 // in milliseconds
+#define CONN_SPEED_TEST_MIN_TIME 500 // in milliseconds
     uint8_t *test_data = BigBuf_get_addr();
     uint32_t end_time;
 
@@ -385,7 +385,7 @@ void printUSBSpeed(void) {
 
     LED_B_ON();
 
-    while (end_time < start_time + USB_SPEED_TEST_MIN_TIME) {
+    while (end_time < start_time + CONN_SPEED_TEST_MIN_TIME) {
         reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
         end_time = GetTickCount();
         bytes_transferred += PM3_CMD_DATA_SIZE;
@@ -413,7 +413,7 @@ void SendStatus(void) {
     printConfig();      // LF Sampling config
     printT55xxConfig(); // LF T55XX Config
 #endif
-    printUSBSpeed();
+    printConnSpeed();
     DbpString(_BLUE_("Various"));
     Dbprintf("  MF_DBGLEVEL.............%d", MF_DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
