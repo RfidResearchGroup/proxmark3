@@ -16,19 +16,24 @@ alt="Yuotube" width="100%" height="auto" border="10" /></a>
 
 | FAQ's & Updates     | Installation        | Use of the Proxmark |
 | ------------- |:-------------:| -----:|
-|[Whats changed?](#whats-changed)  | [Setup and build for ArchLinux](/Installation_Instructions/Arch-Linux-Installation-Instructions.md) | [Validating proxmark client functionality](/Use_of_Proxmark/1_Validation.md)|
-|[Development](#development) | [Setup and build for UBUNTU](/Installation_Instructions/Ubuntu-Installation-Instructions.md)  | [First Use and Verification](/Use_of_Proxmark/2_Configuration-and-Verification.md) |
-| [Why don't you add this or that functionality?](#why-dont-you-add-this-or-that-functionality)  | [Homebrew (Mac OS X) & Upgrading HomeBrew Tap Forumula](/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [Commands & Features](/Use_of_Proxmark/3_Commands-and-Features.md)|
-|[Why didn't you based it on offical PM3 Master?](#why-didnt-you-based-it-on-offical-pm3-master) |[ParrotOS Installation ](/Installation_Instructions/Parrot-OS-Proxmark3-RDV4-installation.md)|[PM3 GUI](#pm3-gui)
-|[Notices](#notices)|[Setup and build for Windows](/Installation_Instructions/Windows-Installation-Instructions.md)||
-|[Issues](#issues)|[Coverity Scan Config & Run](/Installation_Instructions/Coverity-Scan-Config-%26-Run.md)||
-||[Kali Linux Installation Instructions](/Installation_Instructions/Kali-Installation-Instructions.md)|
+|[Whats changed?](#whats-changed)  | [Setup and build for ArchLinux](/doc/md/Installation_Instructions/Arch-Linux-Installation-Instructions.md) | [Validating proxmark client functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
+|[Development](#development) | [Setup and build for UBUNTU](/doc/md/Installation_Instructions/Ubuntu-Installation-Instructions.md)  | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md) |
+| [Why don't you add this or that functionality?](#why-dont-you-add-this-or-that-functionality)  | [Homebrew (Mac OS X) & Upgrading HomeBrew Tap Forumula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+|[Why didn't you based it on offical PM3 Master?](#why-didnt-you-based-it-on-offical-pm3-master) |[ParrotOS Installation ](/doc/md/Installation_Instructions/Parrot-OS-Proxmark3-RDV4-installation.md)|[PM3 GUI](#pm3-gui)
+|[Notices](#notices)|[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)||
+|[Issues](#issues)|[Coverity Scan Config & Run](/doc/md/Installation_Instructions/Coverity-Scan-Config-%26-Run.md)||
+||[Kali Linux Installation Instructions](/doc/md/Installation_Instructions/Kali-Installation-Instructions.md)|
 
 ---
 ## Whats changed?
-	* added flash memory 256kb.
-	* added smart card module
-	* added FPC connector
+
+On the hardware side:
+
+  * added flash memory 256kb.
+  * added smart card module
+  * added FPC connector
+
+On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 
 ## Development
 This fork now compiles just fine on 
