@@ -61,7 +61,7 @@ recovery/%: FORCE bootrom/% armsrc/%
 	$(MAKE) -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style checks FORCE
+.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style checks FORCE udev accessrights
 
 help:
 	@echo "Multi-OS Makefile"
@@ -114,14 +114,16 @@ newtarbin:
 tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
 	$(GZIP) proxmark3-$(platform)-bin.tar
 
-# configure system
-#  - to ignore PM3 device as a modem (blacklist)
-#  - add user to the dialout group
-# you may need to logout, relogin to get this access right correct.
-# Finally,  you might need to run the proxmark3 client under SUDO on some systems
+# configure system to ignore PM3 device as a modem (ModemManager blacklist, effective *only* if ModemManager is not using _strict_ policy)
+# Read doc/md/ModemManager-Must-Be-Discarded.md for more info
 udev:
 	sudo cp -rf driver/77-pm3-usb-device-blacklist.rules /etc/udev/rules.d/77-pm3-usb-device-blacklist.rules
 	sudo udevadm control --reload-rules
+
+# configure system to add user to the dialout group
+# you need to logout, relogin to get this access right correct.
+# Finally,  you might need to run the proxmark3 client under SUDO on some systems
+accessrights:
 ifneq ($(wildcard /etc/arch-release),) #If user is running ArchLinux
 	sudo usermod -aG uucp $(USER) #Use specific command and group
 else

@@ -16,13 +16,11 @@ alt="Yuotube" width="100%" height="auto" border="10" /></a>
 
 | FAQ's & Updates     | Installation        | Use of the Proxmark |
 | ------------- |:-------------:| -----:|
-|[What has changed?](#what-has-changed)  | [Setup and build for ArchLinux](/doc/md/Installation_Instructions/Arch-Linux-Installation-Instructions.md) | [Validating proxmark client functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
-|[Development](#development) | [Setup and build for UBUNTU](/doc/md/Installation_Instructions/Ubuntu-Installation-Instructions.md)  | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md) |
-| [Why don't you add this or that functionality?](#why-dont-you-add-this-or-that-functionality)  | [Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-|[Why didn't you base it on official PM3 Master?](#why-didnt-you-base-it-on-official-pm3-master) |[ParrotOS Installation ](/doc/md/Installation_Instructions/Parrot-OS-Proxmark3-RDV4-installation.md)|[PM3 GUI](#pm3-gui)
-|[Notices](#notices)|[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)||
-|[Issues](#issues)|[Coverity Scan Config & Run](/doc/md/Installation_Instructions/Coverity-Scan-Config-%26-Run.md)||
-||[Kali Linux Installation Instructions](/doc/md/Installation_Instructions/Kali-Installation-Instructions.md)|
+|[What has changed?](#what-has-changed)  | [Setup and build for Linux](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) | [Compilation Instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)|
+|[Development](#development) | [Important notes on ModemManager for Linux users](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md) | [Validating proxmark client functionality](/doc/md/Use_of_Proxmark/1_Validation.md) |
+| [Why don't you add this or that functionality?](#why-dont-you-add-this-or-that-functionality)  | [Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
+|[Why didn't you base it on official PM3 Master?](#why-didnt-you-base-it-on-official-pm3-master) |[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)
+|[Issues](#issues)||[PM3 GUI](#pm3-gui)|
 
 ---
 ## What has changed?
@@ -46,6 +44,8 @@ This fork now compiles just fine on
 
 If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
 
+Internal notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
+
 ---	
 ## Why didn't you base it on official PM3 Master?
 The separation from official pm3 repo gives us a lot of freedom to create a firmware/client that suits the RDV40 features. We don't want to mess up the official pm3 repo with RDV40 specific code.
@@ -57,10 +57,6 @@ Give us a hint, and we'll see if we can't merge in the stuff you have.
 The official PM3-GUI from Gaucho will not work.
 The new universal GUI will work. [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) 
 
-## Notices
-Kali and ArchLinux users usually must kill their modem manager in order for the proxmark3 to enumerate properly.   
-`sudo apt remove modemmanager`
-		   
 ## Issues
 Please see the [Proxmark Forum](http://www.proxmark.org/forum/index.php) and see if your issue is listed in the first instance Google is your friend :) Questions will be answered via the forum by Iceman and the team. 
 

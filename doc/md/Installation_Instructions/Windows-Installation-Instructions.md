@@ -30,54 +30,37 @@ Download the required proxspace repo. https://github.com/Gator96100/ProxSpace/
 Extract 'ProxSpace' to a location on drive without spaces. 
 For example D:\OneDrive\Documents\GitHub is ok whereas C:\My Documents\My Projects\proxspace is not.
 
-### Clone RFID RESEARCH GROUP files
+### Clone the RRG/Iceman repository
 
-Clone fork
 ```sh
 git clone https://github.com/RfidResearchGroup/proxmark3.git
 ```
+
 ### Copy files to Proxspace
 
-Copy all the contents from the proxmark3 folder into the proxspace pm3 folder
+Copy all the contents from the `proxmark3` folder into the proxspace `pm3` folder
 
 ### Run the .bat
 
-Run runme.bat or runme64.bat depending on your Windows architecture.
+Run `runme.bat` or `runme64.bat` depending on your Windows architecture.
 
-Please note you will need to use / as you are using BASH.
+Please note you will need to use `/` as you are using BASH.
 
-### Make 
+### Compile and use the project
 
-CLEAN COMPILE inside the pm3 window.
-```sh
-make clean && make all
-```
-### Flash the image
+Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-Flash the BOOTROM & FULLIMAGE
+The only differences are that executables end with `.exe` (e.g. `client/flasher.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows.
+
+So flashing will resemble
+
 ```sh
 client/flasher.exe comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
-	
-### Run the client
 
-Assuming you have Proxmark3 Windows drivers installed you can run the Proxmark software where "X" is the com port number assigned to proxmark3 under Windows. 
+And running the client will resemble
 
-Change into the client folder
 ```sh
 cd client
-```
-
-Run the client	
-```sh
 ./proxmark3.exe comX
 ```
-
-### Test
-
-Check your firmware revision on the Proxmark III with 
-```sh
-hw ver
-```
-For basic help type help. Or for help on a set of sub commands type the command followed by help. For example hf mf help.
-Make sure you head over to the use of [proxmark area](https://github.com/5w0rdfish/proxmark3/tree/master/Use_of_Proxmark) to help you get on your way!

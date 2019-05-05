@@ -1,57 +1,86 @@
 ## 1. Validating proxmark client functionality
 
 If all went well you should get some information about the firmware and memory usage as well as the prompt,  something like this.
-We should be able to answer ..can I connect to my proxmark device?   does it respond?
 
->[=] UART Setting serial baudrate 460800
->
->Proxmark3 RFID instrument
->
-> [ CLIENT ]
->
-> client: iceman build for RDV40 with flashmem; smartcard;
->
-> [ ARM ]
->
-> bootrom: iceman/master/4517531c-dirty-unclean 2018-12-13 15:42:24
->
->   os: iceman/master/5a34550a-dirty-unclean 2019-01-07 23:04:07
->
-> [ FPGA ]
->
-> LF image built for 2s30vq100 on 2018/ 9/ 8 at 13:57:51
->
-> HF image built for 2s30vq100 on 2018/ 9/ 3 at 21:40:23
->
-> [ Hardware ]
->
->--= uC: AT91SAM7S512 Rev B
->
->--= Embedded Processor: ARM7TDMI
->
->--= Nonvolatile Program Memory Size: 512K bytes, Used: 247065 bytes (47%) Free: 277223 bytes (53%)
->
->--= Second Nonvolatile Program Memory Size: None
->
->--= Internal SRAM Size: 64K bytes
->
->--= Architecture Identifier: AT91SAM7Sxx Series
->
->--= Nonvolatile Program Memory Type: Embedded Flash Memory
->
-> pm3 -->
+```
 
-### Run the following commands
-    pm3 --> hw status
-    pm3 --> hw version
-    pm3 --> hw tune
+██████╗ ███╗   ███╗ ████╗      ...iceman fork
+██╔══██╗████╗ ████║   ══█║       ...dedicated to RDV40 
+██████╔╝██╔████╔██║ ████╔╝ 
+██╔═══╝ ██║╚██╔╝██║   ══█║     iceman@icesql.net
+██║     ██║ ╚═╝ ██║ ████╔╝    https://github.com/rfidresearchgroup/proxmark3/
+╚═╝     ╚═╝     ╚═╝ ╚═══╝  pre-release v4.0
 
-You are now ready to use your newly upgraded proxmark3 device.  Many commands uses the **h** parameter to show a help text. The client uses a arcaic command structure which will be hard to grasp at first.  Here are some commands to start off with.
+Support iceman on patreon,   https://www.patreon.com/iceman1001/
 
-    pm3 --> hf
-    pm3 --> hf 14a info
-    pm3 --> lf
-    pm3 --> lf search
 
-### Quit client
-    pm3 --> quit
+[=] Using UART port /dev/pm3-0 
+[=] Communicating with PM3 over USB-CDC 
+
+ [ Proxmark3 RFID instrument ] 
+
+
+ [ CLIENT ]
+  client: RRG/Iceman
+
+ [ PROXMARK RDV4 ]
+  external flash:                  present 
+  smartcard reader:                present 
+
+ [ PROXMARK RDV4 Extras ]
+  FPC USART for BT add-on support: absent 
+
+ [ ARM ]
+ bootrom: RRG/Iceman/master/5ab9716e 2019-05-01 11:02:08
+      os: RRG/Iceman/master/6b5a0f83 2019-05-04 23:57:47
+
+ [ FPGA ]
+ LF image built for 2s30vq100 on 2019/ 4/18 at  9:35:32
+ HF image built for 2s30vq100 on 2018/ 9/ 3 at 21:40:23
+
+ [ Hardware ] 
+  --= uC: AT91SAM7S512 Rev B
+  --= Embedded Processor: ARM7TDMI
+  --= Nonvolatile Program Memory Size: 512K bytes, Used: 250913 bytes (48%) Free: 273375 bytes (52%)
+  --= Second Nonvolatile Program Memory Size: None
+  --= Internal SRAM Size: 64K bytes
+  --= Architecture Identifier: AT91SAM7Sxx Series
+  --= Nonvolatile Program Memory Type: Embedded Flash Memory
+
+
+pm3 --> 
+```
+
+This `pm3 --> ` is the Proxmark3 interactive prompt.
+
+
+### To get interactive help
+
+For basic help type `help`. Or for help on a set of sub commands type the command followed by `help`. For example `hf mf help`.
+
+### First tests
+
+These commands will return some info about your Proxmark software and hardware status.
+```
+pm3 --> hw status
+pm3 --> hw version
+pm3 --> hw tune
+```
+
+You are now ready to use your newly flashed proxmark3 device.  Many commands uses the `h` parameter to show a help text.
+
+### To quit the client
+```
+pm3 --> quit
+```
+or simple press `CTRL-D`.
+
+## Next steps
+
+Some configuration steps are still needed.
+
+For the next steps, please read the following pages:
+
+* [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)
+* [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+ 

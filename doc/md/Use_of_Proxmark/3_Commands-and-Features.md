@@ -1,21 +1,37 @@
 
 # Commands and Features
 
+Please make sure you've gone through the following pages firstly:
+
+* [Compilation Instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)
+* [Validating proxmark client functionality](/doc/md/Use_of_Proxmark/1_Validation.md)
+* [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)
+
+## To get interactive help
+
+As seen before, for basic help type `help`. Or for help on a set of sub commands type the command followed by `help`. For example `hf mf help`.  Many commands uses the `h` parameter to show a help text.
+
 ## New Features in RDV4
 
 Further details coming soon
 
-### Run the following commands
-    pm3 --> hw status
-    pm3 --> hw version
-    pm3 --> hw tune
+## Useful commands
 
-You are now ready to use your newly upgraded proxmark3 device.  Many commands uses the **h** parameter to show a help text. The client uses a arcaic command structure which will be hard to grasp at first.  Here are some commands to start off with.
+Here are some commands to start off with.
 
-    pm3 --> hf
-    pm3 --> hf 14a info
-    pm3 --> lf
-    pm3 --> lf search
+To get an overview of the available commands for LF RFID and HF RFID:
+```
+pm3 --> lf
+pm3 --> hf
+```
 
-### Quit client
-    pm3 --> quit
+To search quickly for known LF or HF tags:
+```
+pm3 --> lf search
+pm3 --> hf search
+```
+
+To get info on a ISO14443-A tag:
+```
+pm3 --> hf 14a info
+```
