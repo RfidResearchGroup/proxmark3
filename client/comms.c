@@ -374,16 +374,19 @@ __attribute__((force_align_arg_pointer))
                     } else {
 
 
-                        if (rx.ng) {
+                        if (rx.ng) {      // Received a valid NG frame
                             memcpy(&rx.data, &rx_raw.data, length);
                             rx.length = length;
+                            if ((rx.cmd == conn.last_command) && (rx.status == PM3_SUCCESS)) {
+                                ACK_received = true;
+                            }
                         } else {
                             uint64_t arg[3];
                             if (length < sizeof(arg)) {
                                 PrintAndLogEx(WARNING, "Received MIX packet frame with incompatible length: 0x%04x", length);
                                 error = true;
                             }
-                            if (!error) {
+                            if (!error) { // Received a valid MIX frame
                                 memcpy(arg, &rx_raw.data, sizeof(arg));
                                 rx.oldarg[0] = arg[0];
                                 rx.oldarg[1] = arg[1];
@@ -414,7 +417,7 @@ __attribute__((force_align_arg_pointer))
                         }
                     }
                 }
-                if (!error) {
+                if (!error) {             // Received a valid OLD frame
 #ifdef COMMS_DEBUG
                     PrintAndLogEx(NORMAL, "Receiving %s:", rx.ng ? "NG" : "MIX");
 #endif
@@ -491,12 +494,14 @@ __attribute__((force_align_arg_pointer))
                     //counter_to_offline++;
                     PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
                 }
+                conn.last_command = txBufferNG.pre.cmd;
                 txBufferNGLen = 0;
             } else {
                 if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(PacketCommandOLD))) {
                     //counter_to_offline++;
                     PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
                 }
+                conn.last_command = txBuffer.cmd;
             }
             pthread_mutex_unlock(&spMutex);
 
