@@ -353,7 +353,7 @@ __attribute__((force_align_arg_pointer))
         rxlen = 0;
         bool ACK_received = false;
         bool error = false;
-        
+
         pthread_mutex_lock(&spMutex);
 
         if (uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen) && (rxlen == sizeof(PacketResponseNGPreamble))) {
@@ -463,9 +463,9 @@ __attribute__((force_align_arg_pointer))
                 error = true;
             }
         }
-        
+
         pthread_mutex_unlock(&spMutex);
-                        
+
         // TODO if error, shall we resync ?
 
         pthread_mutex_lock(&txBufferMutex);
@@ -484,7 +484,7 @@ __attribute__((force_align_arg_pointer))
         }
 
         if (txBuffer_pending) {
-            
+
             pthread_mutex_lock(&spMutex);
             if (txBufferNGLen) { // NG packet
                 if (!uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen)) {
@@ -499,7 +499,7 @@ __attribute__((force_align_arg_pointer))
                 }
             }
             pthread_mutex_unlock(&spMutex);
-            
+
             txBuffer_pending = false;
 
             // tell main thread that txBuffer is empty
@@ -603,17 +603,17 @@ int TestProxmark(void) {
             if (conn.send_via_fpc_usart) {
                 PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
             }
-           
+
             // reconfigure.
             if (conn.send_via_fpc_usart == false) {
 #if defined(_WIN32)
                 pthread_mutex_lock(&spMutex);
-#endif                
+#endif
                 int res = uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
 #if defined(_WIN32)
                 pthread_mutex_unlock(&spMutex);
 #endif
-                if ( res != PM3_SUCCESS ) {
+                if (res != PM3_SUCCESS) {
                     PrintAndLogEx(ERR, "UART reconfigure failed");
                     return res;
                 }
@@ -696,7 +696,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
 
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
     uint64_t tmp_clk;
-    
+
     // Wait until the command is received
     while (true) {
 
@@ -780,7 +780,7 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
     uint32_t bytes_completed = 0;
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
     uint64_t tmp_clk;
-    
+
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) -1)
         ms_timeout += communication_delay();

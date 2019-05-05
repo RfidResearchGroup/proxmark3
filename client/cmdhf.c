@@ -91,7 +91,7 @@ int CmdHFTune(const char *Cmd) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
         return PM3_ETIMEOUT;
     }
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }
