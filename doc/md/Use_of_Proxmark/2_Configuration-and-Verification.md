@@ -52,5 +52,5 @@ You get the following output if the execution was successful:
 
 For the next steps, please read the following page:
 
-* [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+* [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)
  

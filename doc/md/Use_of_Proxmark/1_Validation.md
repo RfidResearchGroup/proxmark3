@@ -82,5 +82,5 @@ Some configuration steps are still needed.
 For the next steps, please read the following pages:
 
 * [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)
-* [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+* [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)
  
