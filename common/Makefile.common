@@ -89,15 +89,15 @@ $(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 # without touching start address or RAM addresses (.bss and .data sections)
 # See ldscript.common. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27
 OBJCOPY_TRANSLATIONS = --no-change-warnings \
-	--change-addresses -0x100000 --change-start 0 \
-	--change-section-address .bss+0 --change-section-address .data-0x100000 \
-	--change-section-address .commonarea+0
+    --change-addresses -0x100000 --change-start 0 \
+    --change-section-address .bss+0 --change-section-address .data-0x100000 \
+    --change-section-address .commonarea+0
 $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
 	$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*) 
-	
+
 # Automatic dependency generation
 DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
 	$(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(ARMSRC))) \

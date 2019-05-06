@@ -3,36 +3,36 @@ GZIP=gzip
 #  amount of shell command line parsing going on. echo "" on
 #  Windows yields literal "", on Linux yields an empty line
 ifeq ($(shell echo ""),)
-  # This is probably a proper system, so we can use uname
-  DELETE=rm -rf
-  FLASH_TOOL=client/flasher
-  platform=$(shell uname)
-  ifneq (,$(findstring MINGW,$(platform)))
+    # This is probably a proper system, so we can use uname
+    DELETE=rm -rf
+    FLASH_TOOL=client/flasher
+    platform=$(shell uname)
+    ifneq (,$(findstring MINGW,$(platform)))
+        FLASH_PORT=com3
+        PATHSEP=\\#
+    else
+        FLASH_PORT=/dev/ttyACM0
+        PATHSEP=/
+    endif
+else
+    # Assume that we are running on native Windows
+    DELETE=del /q
+    FLASH_TOOL=client/flasher.exe
+    platform=Windows
     FLASH_PORT=com3
     PATHSEP=\\#
-  else
-    FLASH_PORT=/dev/ttyACM0
-    PATHSEP=/
-  endif
-else
-  # Assume that we are running on native Windows
-  DELETE=del /q
-  FLASH_TOOL=client/flasher.exe
-  platform=Windows
-  FLASH_PORT=com3
-  PATHSEP=\\#
 endif
 
 ifeq ($(PLATFORM),)
-  -include Makefile.platform
-  ifeq ($(PLATFORM),)
-    PLATFORM=PM3RDV4
-  else
-    ${info using saved PLATFORM:        '$(PLATFORM)'}
-  endif
-  ifneq ($(PLATFORM_EXTRAS),)
-    ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
-  endif
+    -include Makefile.platform
+    ifeq ($(PLATFORM),)
+        PLATFORM=PM3RDV4
+    else
+        ${info using saved PLATFORM:        '$(PLATFORM)'}
+    endif
+    ifneq ($(PLATFORM_EXTRAS),)
+        ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
+    endif
 endif
 
 include common/Makefile.hal

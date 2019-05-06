@@ -2,12 +2,6 @@
 You will need to use the Gator96100 Proxspace package to assist in your windows installation.
 This can be downloaded from https://github.com/Gator96100/ProxSpace/
 
-## Notes
-If you receive gcc errors using v3.1 during build, download and use v2.2. This may help resolve the issue.
-
-- https://github.com/Gator96100/ProxSpace/releases/tag/v3.1   (release v3.1 with gcc v7.3.0 )
-- https://github.com/Gator96100/ProxSpace/releases/tag/v2.2   (release v2.2 with gcc v5.3.0 arm-none-eabi-gcc v7.1.0)
-
 ---
 # Video Installation guide
 [![Windows Installation tutorial](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)](https://youtu.be/zzF0NCMJnYU "Windows Installation Tutorial")
