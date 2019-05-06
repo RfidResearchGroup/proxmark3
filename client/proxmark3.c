@@ -52,6 +52,7 @@ static void showBanner(void) {
     fflush(stdout);
 }
 
+// Main thread of PM3 Client
 void
 #ifdef __has_attribute
 #if __has_attribute(force_align_arg_pointer)
@@ -95,25 +96,16 @@ main_loop(char *script_cmds_file, char *script_cmd) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        // this should hook up the PM3 again.
-        /*
-        if ( !session.pm3_present ) {
-
-            // sets the global variable, SP and offline)
-            session.pm3_present = hookUpPM3();
-
-            // usb and the reader_thread is NULL,  create a new reader thread.
-            if (session.pm3_present) {
-                rarg.run = 1;
-                pthread_create(&reader_thread, NULL, &uart_receiver, &rarg);
-                // cache Version information now:
-                if ( execCommand || script_cmds_file || stdinOnPipe)
-                    CmdVersion("s");
-                else
-                    CmdVersion("");
+        
+        // If communications thread goes down. Device disconnected then this should hook up PM3 again.
+        if ( IsCommunicationThreadDead() ) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark, waiting for device to reconnect...");
+            session.pm3_present = ReConnectProxmark();
+            if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+                session.pm3_present = false;
+                continue;
             }
         }
-        */
 
         // If there is a script file
         if (sf) {
@@ -190,12 +182,13 @@ main_loop(char *script_cmds_file, char *script_cmd) {
             if (cmd[0] != '\0') {
                 if (printprompt)
                     PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
+                
                 int ret = CommandReceived(cmd);
+                
                 HIST_ENTRY *entry = history_get(history_length);
                 if ((!entry) || (strcmp(entry->line, cmd) != 0))
                     add_history(cmd);
 
-//                PrintAndLogEx(NORMAL, "RETVAL: %d\n", ret);
                 // exit or quit
                 if (ret == PM3_EFATAL)
                     break;
@@ -409,7 +402,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        // execute pm3 command
+        // execute pm3 command file
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--script-file") == 0) {
             if (i + 1 == argc) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") "missing script file specification after -s\n");

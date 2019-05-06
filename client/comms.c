@@ -22,11 +22,13 @@
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
 static char *serial_port_name = NULL;
+static uint32_t _speed = 0;
 
 communication_arg_t conn;
 capabilities_t pm3_capabilities;
 
-static pthread_t USB_communication_thread;
+static pthread_t communication_thread;
+static bool comm_thread_dead = false;
 
 // Transmit buffer.
 static PacketCommandOLD txBuffer;
@@ -304,33 +306,10 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
     }
 }
 
-/*
-bool hookUpPM3() {
-    bool ret = false;
-    sp = uart_open( comport, speed );
 
-    if (sp == INVALID_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "Reconnect failed, retrying...  (reason: invalid serial port)\n");
-        sp = NULL;
-        serial_port_name = NULL;
-        ret = false;
-        session.pm3_present = false;
-    } else if (sp == CLAIMED_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "Reconnect failed, retrying... (reason: serial port is claimed by another process)\n");
-        sp = NULL;
-        serial_port_name = NULL;
-        ret = false;
-        session.pm3_present = false;
-    } else {
-        PrintAndLogEx(SUCCESS, "Proxmark3 reconnected\n");
-        serial_port_name = ;
-        ret = true;
-        session.pm3_present = true;
-    }
-    return ret;
-}
-*/
-
+// The communications thread.
+// signals to main thread when a response is ready to process.
+// 
 static void
 #ifdef __has_attribute
 #if __has_attribute(force_align_arg_pointer)
@@ -340,19 +319,26 @@ __attribute__((force_align_arg_pointer))
 *uart_communication(void *targ) {
     communication_arg_t *connection = (communication_arg_t *)targ;
     uint32_t rxlen;
-
+    uint8_t counter_to_offline = 0;
     PacketResponseNG rx;
     PacketResponseNGRaw rx_raw;
-    //int counter_to_offline = 0;
 
 #if defined(__MACH__) && defined(__APPLE__)
     disableAppNap("Proxmark3 polling UART");
 #endif
 
+// is this connection->run a cross thread call?
+
     while (connection->run) {
         rxlen = 0;
         bool ACK_received = false;
         bool error = false;
+
+        // three failed attempts
+        if ( counter_to_offline >= 3 ) {
+            __atomic_test_and_set(&comm_thread_dead, __ATOMIC_SEQ_CST);
+            break;
+        }
 
         pthread_mutex_lock(&spMutex);
 
@@ -491,14 +477,14 @@ __attribute__((force_align_arg_pointer))
             pthread_mutex_lock(&spMutex);
             if (txBufferNGLen) { // NG packet
                 if (!uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen)) {
-                    //counter_to_offline++;
+                    counter_to_offline++;
                     PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
                 }
                 conn.last_command = txBufferNG.pre.cmd;
                 txBufferNGLen = 0;
             } else {
                 if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(PacketCommandOLD))) {
-                    //counter_to_offline++;
+                    counter_to_offline++;
                     PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
                 }
                 conn.last_command = txBuffer.cmd;
@@ -514,16 +500,28 @@ __attribute__((force_align_arg_pointer))
         pthread_mutex_unlock(&txBufferMutex);
     }
 
-    // when this reader thread dies, we close the serial port.
+    // when thread dies, we close the serial port.
     uart_close(sp);
     sp = NULL;
 
 #if defined(__MACH__) && defined(__APPLE__)
     enableAppNap();
 #endif
-
+   
     pthread_exit(NULL);
     return NULL;
+}
+
+bool IsCommunicationThreadDead(void) {
+    return comm_thread_dead;
+}
+
+bool ReConnectProxmark(void) {   
+   char *port = serial_port_name;
+   bool res = OpenProxmark(port, true, 20, false, _speed);
+   if ( res )
+        __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
+   return res;
 }
 
 bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
@@ -548,16 +546,17 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
     if (sp == INVALID_SERIAL_PORT) {
         PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") "invalid serial port " _YELLOW_("%s"), portname);
         sp = NULL;
-        serial_port_name = NULL;
+        //serial_port_name = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
         PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") "serial port " _YELLOW_("%s") " is claimed by another process", portname);
         sp = NULL;
-        serial_port_name = NULL;
+        //serial_port_name = NULL;
         return false;
     } else {
-        // start the USB communication thread
+        // start the communication thread
         serial_port_name = portname;
+        _speed = speed;
         conn.run = true;
         conn.block_after_ACK = flash_mode;
         // Flags to tell where to add CRC on sent replies
@@ -566,7 +565,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
         conn.send_via_fpc_usart = false;
 
-        pthread_create(&USB_communication_thread, NULL, &uart_communication, &conn);
+        pthread_create(&communication_thread, NULL, &uart_communication, &conn);
 
         fflush(stdout);
         // create a mutex to avoid interlacing print commands from our different threads
@@ -583,16 +582,20 @@ int TestProxmark(void) {
     uint8_t data[len];
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
+    
     SendCommandNG(CMD_PING, data, len);
+
+    uint32_t timeout = 1000;
+    
 #ifdef USART_SLOW_LINK
+    timeout = 10000;
     // 10s timeout for slow FPC, e.g. over BT
     // as this is the very first command sent to the pm3
-    // that initiates the BT connection
-    if (WaitForResponseTimeoutW(CMD_PING, &resp, 10000, false)) {
-#else
-    if (WaitForResponseTimeoutW(CMD_PING, &resp, 1000, false)) {
+    // that initiates the BT connection    
 #endif
 
+    if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false)) {
+        
         bool error = false;
         if (len)
             error = memcmp(data, resp.data.asBytes, len) != 0;
@@ -600,6 +603,7 @@ int TestProxmark(void) {
             return PM3_EIO;
 
         SendCommandNG(CMD_CAPABILITIES, NULL, 0);
+        
         if (WaitForResponseTimeoutW(CMD_PING, &resp, 1000, false)) {
             memcpy(&pm3_capabilities, resp.data.asBytes, resp.length);
             conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
@@ -619,10 +623,8 @@ int TestProxmark(void) {
                 pthread_mutex_unlock(&spMutex);
 #endif
                 if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(ERR, "UART reconfigure failed");
                     return res;
                 }
-
             }
             return PM3_SUCCESS;
         } else {
@@ -637,11 +639,11 @@ void CloseProxmark(void) {
     conn.run = false;
 
 #ifdef __BIONIC__
-    if (USB_communication_thread != 0) {
-        pthread_join(USB_communication_thread, NULL);
+    if (communication_thread != 0) {
+        pthread_join(communication_thread, NULL);
     }
 #else
-    pthread_join(USB_communication_thread, NULL);
+    pthread_join(communication_thread, NULL);
 #endif
 
     if (sp) {
@@ -660,7 +662,7 @@ void CloseProxmark(void) {
     // Clean up our state
     sp = NULL;
     serial_port_name = NULL;
-    memset(&USB_communication_thread, 0, sizeof(pthread_t));
+    memset(&communication_thread, 0, sizeof(pthread_t));
 }
 
 // Gives a rough estimate of the communication delay based on channel & baudrate
