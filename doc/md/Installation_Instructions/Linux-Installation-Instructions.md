@@ -1,6 +1,6 @@
 # External resources
 
-You might want to follow one of these external resources to get an overview, but please still read carefully this page as some instructions may vary.
+You might want to follow one of these external resources to get an overview, but please still read carefully this page as some instructions may have evolved.
 
 * [Kali Video Installation guide](https://youtu.be/t5eBPS6lV3E "Kali Linux Installation Tutorial")
 * [Ubuntu Video Installation guide](https://youtu.be/DThmkH8CdMo "Ubuntu Installation Tutorial")
@@ -9,10 +9,7 @@ You might want to follow one of these external resources to get an overview, but
 ![Linux Installation Video Screenshot](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)
 
 * ParrotOS: some further notes can be found at @5w0rdfish repo [Proxmark Installation for Parrot OS](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS)
-* Ubuntu 14.04.2 LTS, 15.10 or 16.04 GC updates on the [Proxmark3 Ubuntu wiki page](https://github.com/Proxmark/proxmark3/wiki/Ubuntu%20Linux)
-* A nice and cool install script made by @daveio is found here: https://github.com/daveio/attacksurface/blob/master/proxmark3/pm3-setup.sh (unavailable?)
 * Iceman has also added this script to the fork. https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
-
 
 # Install the required dependencies
 
@@ -31,14 +28,21 @@ sudo apt-get install p7zip git ca-certificates build-essential libreadline5 libr
 libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib
 ```
 
+If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.
+
+If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_ you may have to install `libcanberra-gtk-module`.
+
 ## On ArchLinux
 
 ```sh
-sudo pacman -Sy base-devel p7zip libusb readline ncurses arm-none-eabi-newlib --needed
+sudo pacman -Sy base-devel p7zip libusb readline ncurses arm-none-eabi-gcc arm-none-eabi-newlib git --needed
 ```
+Additional AUR packages:
 ```sh
 yaourt -S termcap
 ```
+
+Note that with only these requirements, you will not get the graphical components of the Proxmark3 client. (Untested: how to get it? `yaourt -S qt4` ?)
 
 # Clone the RRG/Iceman repository
 
