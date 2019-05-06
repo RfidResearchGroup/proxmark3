@@ -468,7 +468,7 @@ static int CmdPingNG(const char *Cmd) {
     uint32_t len = strtol(Cmd, NULL, 0);
     if (len > PM3_CMD_DATA_SIZE)
         len = PM3_CMD_DATA_SIZE;
-    PrintAndLogEx(NORMAL, "PingNG sent with payload len=%d", len);
+    PrintAndLogEx(INFO, "PingNG sent with payload len=%d", len);
     clearCommandBuffer();
     PacketResponseNG resp;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
@@ -479,9 +479,9 @@ static int CmdPingNG(const char *Cmd) {
         bool error = false;
         if (len)
             error = memcmp(data, resp.data.asBytes, len) != 0;
-        PrintAndLogEx(NORMAL, "PingNG response received, content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
+        PrintAndLogEx((error)? ERR:SUCCESS, "PingNG response received, content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
     } else
-        PrintAndLogEx(NORMAL, "PingNG response " _RED_("timeout"));
+        PrintAndLogEx(WARNING, "PingNG response " _RED_("timeout"));
     return PM3_SUCCESS;
 }
 
