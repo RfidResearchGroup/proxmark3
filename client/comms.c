@@ -319,7 +319,7 @@ __attribute__((force_align_arg_pointer))
 *uart_communication(void *targ) {
     communication_arg_t *connection = (communication_arg_t *)targ;
     uint32_t rxlen;
-    bool sendfailed = false;
+    bool commfailed = false;
     PacketResponseNG rx;
     PacketResponseNGRaw rx_raw;
 
@@ -336,8 +336,8 @@ __attribute__((force_align_arg_pointer))
 
         // Signal to main thread that communications seems off.
         // main thread will kill and restart this thread.
-        if ( sendfailed ) {
-            PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
+        if ( commfailed ) {
+            PrintAndLogEx(WARNING, "Communicating with Proxmark3 device " _RED_("failed"));
             __atomic_test_and_set(&comm_thread_dead, __ATOMIC_SEQ_CST);
             break;
         }
@@ -458,6 +458,9 @@ __attribute__((force_align_arg_pointer))
                 PrintAndLogEx(WARNING, "Received packet frame preamble too short: %d/%d", rxlen, sizeof(PacketResponseNGPreamble));
                 error = true;
             }
+            if (res == PM3_ENOTTY) {
+                commfailed = true;
+            }
         }
 
         pthread_mutex_unlock(&spMutex);
@@ -485,14 +488,14 @@ __attribute__((force_align_arg_pointer))
             if (txBufferNGLen) { // NG packet
                 res = uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen);
                 if (res == PM3_EIO) {
-                    sendfailed = true;
+                    commfailed = true;
                 }
                 conn.last_command = txBufferNG.pre.cmd;
                 txBufferNGLen = 0;
             } else {
                 res = uart_send(sp, (uint8_t *) &txBuffer, sizeof(PacketCommandOLD));
                 if (res == PM3_EIO) {
-                    sendfailed = true;
+                    commfailed = true;
                 }
                 conn.last_command = txBuffer.cmd;
             }
