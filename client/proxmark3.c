@@ -52,6 +52,17 @@ static void showBanner(void) {
     fflush(stdout);
 }
 
+int check_comm(void) {
+    // If communications thread goes down. Device disconnected then this should hook up PM3 again.
+    if ( IsCommunicationThreadDead() ) {
+        session.pm3_present = ReConnectProxmark();
+        if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+            session.pm3_present = false;
+        }
+    }
+    return 0;
+}
+
 // Main thread of PM3 Client
 void
 #ifdef __has_attribute
@@ -96,14 +107,6 @@ main_loop(char *script_cmds_file, char *script_cmd) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        
-        // If communications thread goes down. Device disconnected then this should hook up PM3 again.
-        if ( IsCommunicationThreadDead() ) {
-            session.pm3_present = ReConnectProxmark();
-            if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
-                session.pm3_present = false;
-            }
-        }
 
         // If there is a script file
         if (sf) {
@@ -155,6 +158,7 @@ main_loop(char *script_cmds_file, char *script_cmd) {
                         printprompt = true;
 
                 } else {
+                    rl_event_hook = check_comm;
                     cmd = readline(PROXPROMPT);
                     fflush(NULL);
                 }
