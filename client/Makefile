@@ -68,10 +68,10 @@ LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
     LUAPLATFORM = mingw
 else
-	ifeq ($(platform),Darwin)
+    ifeq ($(platform),Darwin)
     LUAPLATFORM = macosx
-	OBJCSRCS = util_darwin.m
-	LDFLAGS += -framework Foundation -framework AppKit
+    OBJCSRCS = util_darwin.m
+    LDFLAGS += -framework Foundation -framework AppKit
 else
     LUALIB +=  -ldl
     LDLIBS +=  -ltermcap -lncurses
@@ -86,26 +86,26 @@ MOC = $(shell pkg-config --variable=host_bins Qt5Core)/moc
 UIC = $(shell pkg-config --variable=host_bins Qt5Core)/uic
 ifeq ($(QTINCLUDES), )
 # if Qt5 not found check for correctly configured Qt4
-	QTINCLUDES = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null)
-	QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
-	MOC = $(shell pkg-config --variable=moc_location QtCore)
-	UIC = $(shell pkg-config --variable=uic_location QtCore)
+    QTINCLUDES = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null)
+    QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
+    MOC = $(shell pkg-config --variable=moc_location QtCore)
+    UIC = $(shell pkg-config --variable=uic_location QtCore)
 else
-	CXXFLAGS += -std=c++11 -fPIC
+    CXXFLAGS += -std=c++11 -fPIC
 endif
 ifeq ($(QTINCLUDES), )
 # if both pkg-config commands failed, search in common places
-	ifneq ($(QTDIR), )
-		QTINCLUDES = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
-		QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
-		ifneq ($(wildcard $(QTDIR)/include/QtWidgets),)
-			QTINCLUDES += -I$(QTDIR)/include/QtWidgets
-			QTLDLIBS = -L$(QTDIR)/lib -lQt5Widgets -lQt5Gui -lQt5Core
-			CXXFLAGS += -std=c++11 -fPIC
-		endif
-		MOC = $(QTDIR)/bin/moc
-		UIC = $(QTDIR)/bin/uic
-	endif
+    ifneq ($(QTDIR), )
+        QTINCLUDES = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
+        QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
+        ifneq ($(wildcard $(QTDIR)/include/QtWidgets),)
+            QTINCLUDES += -I$(QTDIR)/include/QtWidgets
+            QTLDLIBS = -L$(QTDIR)/lib -lQt5Widgets -lQt5Gui -lQt5Core
+            CXXFLAGS += -std=c++11 -fPIC
+        endif
+        MOC = $(QTDIR)/bin/moc
+        UIC = $(QTDIR)/bin/uic
+    endif
 endif
 
 
@@ -124,139 +124,139 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
 POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
 
 CORESRCS =  uart_posix.c \
-			uart_win32.c \
-			ui.c \
-			commonutil.c \
-			util.c \
-			util_posix.c \
-			scandir.c \
-			crc16.c \
-			comms.c
+            uart_win32.c \
+            ui.c \
+            commonutil.c \
+            util.c \
+            util_posix.c \
+            scandir.c \
+            crc16.c \
+            comms.c
 
-CMDSRCS =	crapto1/crapto1.c \
-			crapto1/crypto1.c \
-			mifare/mfkey.c \
-			tea.c \
-			fido/additional_ca.c \
-			fido/cose.c \
-			fido/cbortools.c \
-			fido/fidocore.c \
-			crypto/asn1dump.c \
-			crypto/libpcrypto.c\
-			crypto/asn1utils.c\
-			cliparser/argtable3.c\
-			cliparser/cliparser.c\
-			loclass/cipher.c \
-			loclass/cipherutils.c \
-			loclass/ikeys.c \
-			loclass/elite_crack.c \
-			loclass/fileutils.c \
-			whereami.c \
-			mifare/mifarehost.c \
-			parity.c \
-			crc.c \
-			crc64.c \
-			legic_prng.c \
-			iso15693tools.c \
-			prng.c \
-			graph.c \
-			cmddata.c \
-			lfdemod.c \
-			emv/crypto_polarssl.c\
-			emv/crypto.c\
-			emv/emv_pk.c\
-			emv/emv_pki.c\
-			emv/emv_pki_priv.c\
-			emv/test/cryptotest.c\
-			emv/apduinfo.c \
-			emv/dump.c \
-			emv/tlv.c \
-			emv/emv_tags.c \
-			emv/dol.c \
-			emv/emvjson.c\
-			emv/emvcore.c \
-			emv/test/crypto_test.c\
-			emv/test/sda_test.c\
-			emv/test/dda_test.c\
-			emv/test/cda_test.c\
-			emv/cmdemv.c \
-			emv/emv_roca.c \
+CMDSRCS =    crapto1/crapto1.c \
+            crapto1/crypto1.c \
+            mifare/mfkey.c \
+            tea.c \
+            fido/additional_ca.c \
+            fido/cose.c \
+            fido/cbortools.c \
+            fido/fidocore.c \
+            crypto/asn1dump.c \
+            crypto/libpcrypto.c\
+            crypto/asn1utils.c\
+            cliparser/argtable3.c\
+            cliparser/cliparser.c\
+            loclass/cipher.c \
+            loclass/cipherutils.c \
+            loclass/ikeys.c \
+            loclass/elite_crack.c \
+            loclass/fileutils.c \
+            whereami.c \
+            mifare/mifarehost.c \
+            parity.c \
+            crc.c \
+            crc64.c \
+            legic_prng.c \
+            iso15693tools.c \
+            prng.c \
+            graph.c \
+            cmddata.c \
+            lfdemod.c \
+            emv/crypto_polarssl.c\
+            emv/crypto.c\
+            emv/emv_pk.c\
+            emv/emv_pki.c\
+            emv/emv_pki_priv.c\
+            emv/test/cryptotest.c\
+            emv/apduinfo.c \
+            emv/dump.c \
+            emv/tlv.c \
+            emv/emv_tags.c \
+            emv/dol.c \
+            emv/emvjson.c\
+            emv/emvcore.c \
+            emv/test/crypto_test.c\
+            emv/test/sda_test.c\
+            emv/test/dda_test.c\
+            emv/test/cda_test.c\
+            emv/cmdemv.c \
+            emv/emv_roca.c \
             mifare/mifare4.c \
             mifare/mad.c \
             mifare/ndef.c \
-			cmdanalyse.c \
-			cmdhf.c \
-			cmdhflist.c \
-			cmdhf14a.c \
-			cmdhf14b.c \
-			cmdhf15.c \
-			cmdhfepa.c \
-			cmdhflegic.c \
-			cmdhficlass.c \
-			cmdhfmf.c \
+            cmdanalyse.c \
+            cmdhf.c \
+            cmdhflist.c \
+            cmdhf14a.c \
+            cmdhf14b.c \
+            cmdhf15.c \
+            cmdhfepa.c \
+            cmdhflegic.c \
+            cmdhficlass.c \
+            cmdhfmf.c \
             cmdhfmfu.c \
             cmdhfmfp.c \
-			cmdhfmfhard.c \
+            cmdhfmfhard.c \
             hardnested/hardnested_bruteforce.c \
-			cmdhfmfdes.c \
-			cmdhftopaz.c \
-			cmdhffido.c \
-			cmdhffelica.c \
-			cmdhw.c \
-			cmdlf.c \
-			cmdlfawid.c \
-			cmdlfcotag.c \
-			cmdlfem4x.c \
-			cmdlffdx.c \
-			cmdlfguard.c \
-			cmdlfhid.c \
-			cmdlfhitag.c \
-			cmdlfio.c \
-			cmdlfindala.c \
-			cmdlfjablotron.c \
-			cmdlfkeri.c \
-			cmdlfnexwatch.c \
-			cmdlfnedap.c \
-			cmdlfnoralsy.c \
-			cmdlfpac.c \
-			cmdlfparadox.c \
-			cmdlfpcf7931.c \
-			cmdlfpresco.c \
-			cmdlfpyramid.c \
-			cmdlfsecurakey.c \
-			cmdlft55xx.c \
-			cmdlfti.c \
-			cmdlfviking.c \
-			cmdlfvisa2000.c \
-			cmdtrace.c \
-			cmdflashmem.c \
-			cmdsmartcard.c \
-			cmdusart.c \
-			cmdparser.c \
-			cmdmain.c \
-			pm3_binlib.c \
-			scripting.c \
-			cmdscript.c \
-			pm3_bitlib.c \
-			protocols.c \
-			cmdcrc.c \
-			reveng/preset.c \
-			reveng/reveng.c \
-			reveng/cli.c \
-			reveng/bmpbit.c \
-			reveng/model.c \
-			reveng/poly.c \
-			bucketsort.c
+            cmdhfmfdes.c \
+            cmdhftopaz.c \
+            cmdhffido.c \
+            cmdhffelica.c \
+            cmdhw.c \
+            cmdlf.c \
+            cmdlfawid.c \
+            cmdlfcotag.c \
+            cmdlfem4x.c \
+            cmdlffdx.c \
+            cmdlfguard.c \
+            cmdlfhid.c \
+            cmdlfhitag.c \
+            cmdlfio.c \
+            cmdlfindala.c \
+            cmdlfjablotron.c \
+            cmdlfkeri.c \
+            cmdlfnexwatch.c \
+            cmdlfnedap.c \
+            cmdlfnoralsy.c \
+            cmdlfpac.c \
+            cmdlfparadox.c \
+            cmdlfpcf7931.c \
+            cmdlfpresco.c \
+            cmdlfpyramid.c \
+            cmdlfsecurakey.c \
+            cmdlft55xx.c \
+            cmdlfti.c \
+            cmdlfviking.c \
+            cmdlfvisa2000.c \
+            cmdtrace.c \
+            cmdflashmem.c \
+            cmdsmartcard.c \
+            cmdusart.c \
+            cmdparser.c \
+            cmdmain.c \
+            pm3_binlib.c \
+            scripting.c \
+            cmdscript.c \
+            pm3_bitlib.c \
+            protocols.c \
+            cmdcrc.c \
+            reveng/preset.c \
+            reveng/reveng.c \
+            reveng/cli.c \
+            reveng/bmpbit.c \
+            reveng/model.c \
+            reveng/poly.c \
+            bucketsort.c
 
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )
-	MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
 ifneq ($(findstring amd64, $(cpu_arch)), )
-	MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
 ifeq ($(MULTIARCHSRCS), )
-	CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
 
 ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
@@ -270,10 +270,10 @@ CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 OBJCOBJS = $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 ZLIBOBJS = $(ZLIBSRCS:%.c=$(OBJDIR)/%.o)
 MULTIARCHOBJS = $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
-			$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_MMX.o) \
-			$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_SSE2.o) \
-			$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX.o) \
-			$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX2.o)
+            $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_MMX.o) \
+            $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_SSE2.o) \
+            $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX.o) \
+            $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX2.o)
 
 SUPPORTS_AVX512 :=  $(shell echo | gcc -E -mavx512f - > /dev/null 2>&1 && echo "True" )
 
@@ -284,12 +284,12 @@ HARD_SWITCH_AVX = -mmmx -msse2 -mavx -mno-avx2
 HARD_SWITCH_AVX2 = -mmmx -msse2 -mavx -mavx2
 HARD_SWITCH_AVX512 = -mmmx -msse2 -mavx -mavx2 -mavx512f
 ifeq "$(SUPPORTS_AVX512)" "True"
-	HARD_SWITCH_NOSIMD += -mno-avx512f
-	HARD_SWITCH_MMX += -mno-avx512f
-	HARD_SWITCH_SSE2 += -mno-avx512f
-	HARD_SWITCH_AVX += -mno-avx512f
-	HARD_SWITCH_AVX2 += -mno-avx512f
-	MULTIARCHOBJS +=  $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX512.o)
+    HARD_SWITCH_NOSIMD += -mno-avx512f
+    HARD_SWITCH_MMX += -mno-avx512f
+    HARD_SWITCH_SSE2 += -mno-avx512f
+    HARD_SWITCH_AVX += -mno-avx512f
+    HARD_SWITCH_AVX2 += -mno-avx512f
+    MULTIARCHOBJS +=  $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX512.o)
 endif
 
 BINS = proxmark3 flasher fpga_compress

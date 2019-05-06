@@ -10,31 +10,31 @@ APP_INCLUDES = apps.h
 
 # This Makefile might have been called directly, not via the root Makefile, so:
 ifeq ($(PLTNAME),)
-  -include ../Makefile.platform
-  ifeq ($(PLATFORM),)
-    PLATFORM=PM3RDV4
-  else
-    ${info using saved PLATFORM:        '$(PLATFORM)'}
-  endif
-  ifneq ($(PLATFORM_EXTRAS),)
-    ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
-  endif
-  include ../common/Makefile.hal
-  $(info ===================================================================)
-  $(info Platform name:     $(PLTNAME))
-  $(info PLATFORM:          $(PLATFORM))
-  $(info PLATFORM_EXTRAS:   $(PLATFORM_EXTRAS))
-  $(info Included options:  $(PLATFORM_DEFS_INFO))
-  $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
-  $(info ===================================================================)
+    -include ../Makefile.platform
+    ifeq ($(PLATFORM),)
+        PLATFORM=PM3RDV4
+    else
+        ${info using saved PLATFORM:        '$(PLATFORM)'}
+    endif
+    ifneq ($(PLATFORM_EXTRAS),)
+        ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
+    endif
+    include ../common/Makefile.hal
+    $(info ===================================================================)
+    $(info Platform name:     $(PLTNAME))
+    $(info PLATFORM:          $(PLATFORM))
+    $(info PLATFORM_EXTRAS:   $(PLATFORM_EXTRAS))
+    $(info Included options:  $(PLATFORM_DEFS_INFO))
+    $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
+    $(info ===================================================================)
 endif
 
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS) \
-			 -DON_DEVICE \
-			 -fno-strict-aliasing -ffunction-sections -fdata-sections
+             -DON_DEVICE \
+             -fno-strict-aliasing -ffunction-sections -fdata-sections
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
@@ -49,21 +49,21 @@ SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
 
 # RDV40 related hardware support
 ifneq (,$(findstring WITH_FLASH,$(APP_CFLAGS)))
-	SRC_FLASH = flashmem.c
+    SRC_FLASH = flashmem.c
 else
-	SRC_FLASH =
+    SRC_FLASH =
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
-	SRC_SMARTCARD = i2c.c
+    SRC_SMARTCARD = i2c.c
 else
-	SRC_SMARTCARD =
+    SRC_SMARTCARD =
 endif
 
 ifneq (,$(findstring WITH_FPC_USART,$(APP_CFLAGS)))
-	SRC_FPC = usart.c
+    SRC_FPC = usart.c
 else
-	SRC_FPC =
+    SRC_FPC =
 endif
 
 ifneq (,$(findstring WITH_HITAG,$(APP_CFLAGS)))
@@ -84,35 +84,35 @@ endif
 SRC_STANDALONE = placeholder.c
 # WITH_STANDALONE_LF_ICERUN
 ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
-	SRC_STANDALONE = lf_icerun.c
+    SRC_STANDALONE = lf_icerun.c
 endif
 # WITH_STANDALONE_LF_SAMYRUN
 ifneq (,$(findstring WITH_STANDALONE_LF_SAMYRUN,$(APP_CFLAGS)))
-	SRC_STANDALONE = lf_samyrun.c
+    SRC_STANDALONE = lf_samyrun.c
 endif
 # WITH_STANDALONE_LF_PROXBRUTE
 ifneq (,$(findstring WITH_STANDALONE_LF_PROXBRUTE,$(APP_CFLAGS)))
-	SRC_STANDALONE = lf_proxbrute.c
+    SRC_STANDALONE = lf_proxbrute.c
 endif
 # WITH_STANDALONE_LF_HIDBRUTE
 ifneq (,$(findstring WITH_STANDALONE_LF_HIDBRUTE,$(APP_CFLAGS)))
-	SRC_STANDALONE = lf_hidbrute.c
+    SRC_STANDALONE = lf_hidbrute.c
 endif
 # WITH_STANDALONE_HF_YOUNG
 ifneq (,$(findstring WITH_STANDALONE_HF_YOUNG,$(APP_CFLAGS)))
-	SRC_STANDALONE = hf_young.c
+    SRC_STANDALONE = hf_young.c
 endif
 # WITH_STANDALONE_HF_MATTYRUN
 ifneq (,$(findstring WITH_STANDALONE_HF_MATTYRUN,$(APP_CFLAGS)))
-	SRC_STANDALONE = hf_mattyrun.c
+    SRC_STANDALONE = hf_mattyrun.c
 endif
 # WITH_STANDALONE_HF_COLIN
 ifneq (,$(findstring WITH_STANDALONE_HF_COLIN,$(APP_CFLAGS)))
-	SRC_STANDALONE = vtsend.c hf_colin.c
+    SRC_STANDALONE = vtsend.c hf_colin.c
 endif
 # WITH_STANDALONE_HF_BOG
 ifneq (,$(findstring WITH_STANDALONE_HF_BOG,$(APP_CFLAGS)))
-	SRC_STANDALONE = hf_bog.c
+    SRC_STANDALONE = hf_bog.c
 endif
 
 #the FPGA bitstream files. Note: order matters!
@@ -132,42 +132,42 @@ APP_CFLAGS += -I. -fno-stack-protector -fno-pie
 
 # Compile these in thumb mode (small size)
 THUMBSRC = start.c \
-	protocols.c \
-	$(SRC_LCD) \
-	$(SRC_ISO15693) \
-	$(SRC_LF) \
-	$(SRC_ZLIB) \
-	$(SRC_LEGIC) \
-	$(SRC_FLASH) \
-	$(SRC_SMARTCARD) \
-	$(SRC_FPC) \
+    protocols.c \
+    $(SRC_LCD) \
+    $(SRC_ISO15693) \
+    $(SRC_LF) \
+    $(SRC_ZLIB) \
+    $(SRC_LEGIC) \
+    $(SRC_FLASH) \
+    $(SRC_SMARTCARD) \
+    $(SRC_FPC) \
     $(SRC_HITAG) \
-	appmain.c \
-	printf.c \
-	commonutil.c \
-	util.c \
-	string.c \
-	BigBuf.c \
-	ticks.c \
-	hfsnoop.c
+    appmain.c \
+    printf.c \
+    commonutil.c \
+    util.c \
+    string.c \
+    BigBuf.c \
+    ticks.c \
+    hfsnoop.c
 
 
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
-	$(SRC_ISO14443a) \
-	$(SRC_ISO14443b) \
-	$(SRC_CRAPTO1) \
-	$(SRC_ICLASS) \
-	$(SRC_EMV) \
-	$(SRC_CRC) \
-	$(SRC_FELICA) \
-	$(SRC_STANDALONE) \
-	parity.c \
-	usb_cdc.c \
-	cmd.c
+    $(SRC_ISO14443a) \
+    $(SRC_ISO14443b) \
+    $(SRC_CRAPTO1) \
+    $(SRC_ICLASS) \
+    $(SRC_EMV) \
+    $(SRC_CRC) \
+    $(SRC_FELICA) \
+    $(SRC_STANDALONE) \
+    parity.c \
+    usb_cdc.c \
+    cmd.c
 
 VERSIONSRC = version.c \
-	fpga_version_info.c
+    fpga_version_info.c
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common/Makefile.common

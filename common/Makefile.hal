@@ -40,56 +40,56 @@ endef
 PLTNAME = Unknown Platform
 
 ifeq ($(PLATFORM),PM3RDV4)
-  MCU = AT91SAM7S512
-  PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH
-  PLTNAME = Proxmark3 rdv4
+    MCU = AT91SAM7S512
+    PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH
+    PLTNAME = Proxmark3 rdv4
 else ifeq ($(PLATFORM),PM3EVO)
-  MCU = AT91SAM7S512
-  PLTNAME = Proxmark3 EVO
+    MCU = AT91SAM7S512
+    PLTNAME = Proxmark3 EVO
 else ifeq ($(PLATFORM),PM3EASY)
-  MCU = AT91SAM7S256
-  PLTNAME = Proxmark3 rdv3 Easy
+    MCU = AT91SAM7S256
+    PLTNAME = Proxmark3 rdv3 Easy
 else ifeq ($(PLATFORM),PM3RDV2)
-  MCU = AT91SAM7S512
-  PLTNAME = Proxmark3 rdv2
+    MCU = AT91SAM7S512
+    PLTNAME = Proxmark3 rdv2
 else ifeq ($(PLATFORM),PM3OLD256)
-  MCU = AT91SAM7S256
-  PLTNAME = Proxmark3 V1 with AT91SAM7S256
+    MCU = AT91SAM7S256
+    PLTNAME = Proxmark3 V1 with AT91SAM7S256
 else ifeq ($(PLATFORM),PM3OLD512)
-  MCU = AT91SAM7S512
-  PLTNAME = Proxmark3 V1 with AT91SAM7S512
+    MCU = AT91SAM7S512
+    PLTNAME = Proxmark3 V1 with AT91SAM7S512
 else
-  $(error Invalid or empty PLATFORM: $(PLATFORM). Known platforms: $(KNOWN_PLATFORMS))
+    $(error Invalid or empty PLATFORM: $(PLATFORM). Known platforms: $(KNOWN_PLATFORMS))
 endif
 
 # parsing additional PLATFORM_EXTRAS tokens
 PLATFORM_EXTRAS_TMP:=$(PLATFORM_EXTRAS)
 ifneq (,$(findstring BTADDON,$(PLATFORM_EXTRAS_TMP)))
-  PLATFORM_DEFS += -DWITH_FPC_USART_HOST
-  PLATFORM_EXTRAS_TMP := $(strip $(filter-out BTADDON,$(PLATFORM_EXTRAS_TMP)))
+    PLATFORM_DEFS += -DWITH_FPC_USART_HOST
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out BTADDON,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(findstring FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
-  PLATFORM_DEFS += -DWITH_FPC_USART_DEV
-  PLATFORM_EXTRAS_TMP := $(strip $(filter-out FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
+    PLATFORM_DEFS += -DWITH_FPC_USART_DEV
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(PLATFORM_EXTRAS_TMP))
-  $(error Unknown PLATFORM_EXTRAS token(s): $(PLATFORM_EXTRAS_TMP))
+    $(error Unknown PLATFORM_EXTRAS token(s): $(PLATFORM_EXTRAS_TMP))
 endif
 
 # common LF support
 PLATFORM_DEFS += \
-	-DWITH_LF \
-	-DWITH_HITAG
+    -DWITH_LF \
+    -DWITH_HITAG
 
 # common HF support
 PLATFORM_DEFS += \
-	-DWITH_ISO15693 \
-	-DWITH_LEGICRF \
-	-DWITH_ISO14443b \
-	-DWITH_ISO14443a \
-	-DWITH_ICLASS \
-	-DWITH_FELICA \
-	-DWITH_HFSNIFF
+    -DWITH_ISO15693 \
+    -DWITH_LEGICRF \
+    -DWITH_ISO14443b \
+    -DWITH_ISO14443a \
+    -DWITH_ICLASS \
+    -DWITH_FELICA \
+    -DWITH_HFSNIFF
 
 # Standalone mode
 # !! Choose only one !!
@@ -112,7 +112,7 @@ $(info $(findstring WITH_STANDALONE_*,$(PLATFORM_DEFS)))
 
 # WITH_FPC_USART_* needs WITH_FPC_USART :
 ifneq (,$(findstring WITH_FPC_USART_,$(PLATFORM_DEFS)))
-  PLATFORM_DEFS += -DWITH_FPC_USART
+    PLATFORM_DEFS += -DWITH_FPC_USART
 endif
 
 PLATFORM_DEFS_INFO = $(strip $(filter-out STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS))))
@@ -120,7 +120,7 @@ PLATFORM_DEFS_INFO_STANDALONE = $(strip $(subst STANDALONE_,, $(filter STANDALON
 
 # Check that only one Standalone mode has been chosen
 ifneq (,$(word 2, $(PLATFORM_DEFS_INFO_STANDALONE)))
-  $(error You must choose only one Standalone mode!: $(PLATFORM_DEFS_INFO_STANDALONE))
+    $(error You must choose only one Standalone mode!: $(PLATFORM_DEFS_INFO_STANDALONE))
 endif
 
 
