@@ -23,6 +23,32 @@
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_hw_detectreader(void) {
+    PrintAndLogEx(NORMAL, "Start to detect presences of reader field");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  hw detectreader [h] <L|H>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h          This help");
+    PrintAndLogEx(NORMAL, "           <type>     L = 125/134 kHz, H = 13.56 mHz");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      hw detectreader L");
+    return PM3_SUCCESS;
+}
+
+static int usage_hw_setmux(void) {
+    PrintAndLogEx(NORMAL, "Set mux mode");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  hw setmux [h] <lopkd | loraw | hipkd | hiraw>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h          This help");
+    PrintAndLogEx(NORMAL, "           <type>     Low peak, Low raw, Hi peak, Hi raw");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      hw setmux lopkd");
+    return PM3_SUCCESS;
+}
+
 static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     char asBuff[120];
     memset(asBuff, 0, sizeof(asBuff));
@@ -309,18 +335,16 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 
 static int CmdDetectReader(const char *Cmd) {
     uint16_t arg = 0;
-    char c = tolower(Cmd[0]);
+    char c = toupper(Cmd[0]);
     switch (c) {
-        case 'l':
+        case 'L':
             arg = 1;
             break;
-        case 'h':
+        case 'H':
             arg = 2;
             break;
         default: {
-            PrintAndLogEx(NORMAL, "use 'detectreader'");
-            PrintAndLogEx(NORMAL, "    'detectreader l'   -- 125/134 kHz");
-            PrintAndLogEx(NORMAL, "    'detectreader h'   -- 13.56 mHz");
+            usage_hw_detectreader();
             return PM3_EINVARG;
         }
     }
@@ -388,17 +412,19 @@ static int CmdSetDivisor(const char *Cmd) {
 static int CmdSetMux(const char *Cmd) {
 
     if (strlen(Cmd) < 5) {
-        PrintAndLogEx(NORMAL, "expected:  lopkd | loraw | hipkd | hiraw");
+        usage_hw_setmux();
         return PM3_EINVARG;
     }
 
-    uint16_t arg = 0;
+    str_lower((char *)Cmd);
+ 
+    uint8_t arg = 0;
     if (strcmp(Cmd, "lopkd") == 0)      arg = 0;
     else if (strcmp(Cmd, "loraw") == 0) arg = 1;
     else if (strcmp(Cmd, "hipkd") == 0) arg = 2;
     else if (strcmp(Cmd, "hiraw") == 0) arg = 3;
     else {
-        PrintAndLogEx(NORMAL, "expected:  lopkd | loraw | hipkd | hiraw");
+        usage_hw_setmux();
         return PM3_EINVARG;
     }
     clearCommandBuffer();
@@ -421,8 +447,8 @@ static int CmdStatus(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandOLD(CMD_STATUS, 0, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1900))
-        PrintAndLogEx(NORMAL, "Status command failed. USB Speed Test timed out");
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
+        PrintAndLogEx(NORMAL, "Status command failed. Communication speed test timed out");
     return PM3_SUCCESS;
 }
 
