@@ -162,13 +162,38 @@ uint32_t uart_get_speed(const serial_port sp) {
     return 0;
 }
 
-bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
-    return ReadFile(((serial_port_windows *)sp)->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL);
+int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
+	int res = ReadFile(((serial_port_windows *)sp)->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL); 
+    if ( res )      
+        return PM3_SUCCESS;
+
+    int errorcode = GetLastError();
+
+    // disconnected device
+    if (res == 0 && errorcode == 2) {
+        return PM3_EIO;
+    }
+
+    printf("[!]res %d | rx errorcode == %d \n",res, errorcode);    
+    return res; 
 }
 
-bool uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
+int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
     DWORD txlen = 0;
-    return WriteFile(((serial_port_windows *)sp)->hPort, p_tx, len, &txlen, NULL);
+    int res = WriteFile(((serial_port_windows *)sp)->hPort, p_tx, len, &txlen, NULL);
+    int errorcode = GetLastError();
+    if ( res == 0 ) {
+        printf("[!]res %d | send errorcode == %d \n",res, errorcode);
+    }
+    
+    if (res == 0 && errorcode == 2) {
+        return PM3_EIO;
+    }
+    if ( res )      
+        return PM3_SUCCESS;
+
+    printf("[!!]res %d | send errorcode == %d \n",res, errorcode); 
+    return PM3_ENOTTY;
 }
 
 #endif

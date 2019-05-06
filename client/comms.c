@@ -319,7 +319,7 @@ __attribute__((force_align_arg_pointer))
 *uart_communication(void *targ) {
     communication_arg_t *connection = (communication_arg_t *)targ;
     uint32_t rxlen;
-    uint8_t counter_to_offline = 0;
+    bool sendfailed = false;
     PacketResponseNG rx;
     PacketResponseNGRaw rx_raw;
 
@@ -327,22 +327,25 @@ __attribute__((force_align_arg_pointer))
     disableAppNap("Proxmark3 polling UART");
 #endif
 
-// is this connection->run a cross thread call?
-
+    // is this connection->run a cross thread call?
     while (connection->run) {
         rxlen = 0;
         bool ACK_received = false;
         bool error = false;
+        int res;
 
-        // three failed attempts
-        if ( counter_to_offline >= 3 ) {
+        // Signal to main thread that communications seems off.
+        // main thread will kill and restart this thread.
+        if ( sendfailed ) {
+            PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
             __atomic_test_and_set(&comm_thread_dead, __ATOMIC_SEQ_CST);
             break;
         }
 
         pthread_mutex_lock(&spMutex);
-
-        if (uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen) && (rxlen == sizeof(PacketResponseNGPreamble))) {
+        
+        res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
+        if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
             rx.magic = rx_raw.pre.magic;
             uint16_t length = rx_raw.pre.length;
             rx.ng = rx_raw.pre.ng;
@@ -354,11 +357,12 @@ __attribute__((force_align_arg_pointer))
                     error = true;
                 }
                 if ((!error) && (length > 0)) { // Get the variable length payload
-                    if ((!uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen)) || (rxlen != length)) {
+                
+                    res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
+                    if ( (res != PM3_SUCCESS) || (rxlen != length)) {
                         PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, length);
                         error = true;
                     } else {
-
 
                         if (rx.ng) {      // Received a valid NG frame
                             memcpy(&rx.data, &rx_raw.data, length);
@@ -387,7 +391,8 @@ __attribute__((force_align_arg_pointer))
                     }
                 }
                 if (!error) {                        // Get the postamble
-                    if ((!uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen)) || (rxlen != sizeof(PacketResponseNGPostamble))) {
+                    res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
+                    if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
                         PrintAndLogEx(WARNING, "Received packet frame error fetching postamble");
                         error = true;
                     }
@@ -417,7 +422,9 @@ __attribute__((force_align_arg_pointer))
             } else {                               // Old style reply
                 PacketResponseOLD rx_old;
                 memcpy(&rx_old, &rx_raw.pre, sizeof(PacketResponseNGPreamble));
-                if ((!uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen)) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
+                
+                res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
+                if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
                     PrintAndLogEx(WARNING, "Received packet OLD frame payload error too short? %d/%d", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
                     error = true;
                 }
@@ -476,23 +483,25 @@ __attribute__((force_align_arg_pointer))
 
             pthread_mutex_lock(&spMutex);
             if (txBufferNGLen) { // NG packet
-                if (!uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen)) {
-                    counter_to_offline++;
-                    PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
+                res = uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen);
+                if (res == PM3_EIO) {
+                    sendfailed = true;
                 }
                 conn.last_command = txBufferNG.pre.cmd;
                 txBufferNGLen = 0;
             } else {
-                if (!uart_send(sp, (uint8_t *) &txBuffer, sizeof(PacketCommandOLD))) {
-                    counter_to_offline++;
-                    PrintAndLogEx(WARNING, "sending bytes to Proxmark3 device " _RED_("failed"));
+                res = uart_send(sp, (uint8_t *) &txBuffer, sizeof(PacketCommandOLD));
+                if (res == PM3_EIO) {
+                    sendfailed = true;
                 }
                 conn.last_command = txBuffer.cmd;
             }
             pthread_mutex_unlock(&spMutex);
 
             txBuffer_pending = false;
-
+            
+            // main thread doesn't know send failed...
+            
             // tell main thread that txBuffer is empty
             pthread_cond_signal(&txBufferSig);
         }
@@ -513,7 +522,8 @@ __attribute__((force_align_arg_pointer))
 }
 
 bool IsCommunicationThreadDead(void) {
-    return comm_thread_dead;
+    bool ret = __atomic_load_n(&comm_thread_dead, __ATOMIC_SEQ_CST);
+    return ret;
 }
 
 bool ReConnectProxmark(void) {   

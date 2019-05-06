@@ -235,7 +235,7 @@ void uart_close(const serial_port sp) {
     free(sp);
 }
 
-bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
+int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
     uint32_t byteCount;  // FIONREAD returns size on 32b
     fd_set rfds;
     struct timeval tv;
@@ -252,24 +252,24 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, ui
 
         // Read error
         if (res < 0) {
-            return false;
+            return PM3_EIO;
         }
 
         // Read time-out
         if (res == 0) {
             if (*pszRxLen == 0) {
                 // We received no data
-                return false;
+                return PM3_ENODATA;
             } else {
                 // We received some data, but nothing more is available
-                return true;
+                return PM3_SUCCESS;
             }
         }
 
         // Retrieve the count of the incoming bytes
         res = ioctl(((serial_port_unix *)sp)->fd, FIONREAD, &byteCount);
 //        printf("UART:: RX ioctl res %d byteCount %u\n", res, byteCount);
-        if (res < 0) return false;
+        if (res < 0) return PM3_ENOTTY;
 
         // Cap the number of bytes, so we don't overrun the buffer
         if (pszMaxRxLen - (*pszRxLen) < byteCount) {
@@ -282,21 +282,21 @@ bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, ui
 
         // Stop if the OS has some troubles reading the data
         if (res <= 0) {
-            return false;
+            return PM3_EIO;
         }
 
         *pszRxLen += res;
 
         if (*pszRxLen == pszMaxRxLen) {
             // We have all the data we wanted.
-            return true;
+            return PM3_SUCCESS;
         }
     } while (byteCount);
 
-    return true;
+    return PM3_SUCCESS;
 }
 
-bool uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
+int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     uint32_t pos = 0;
     fd_set rfds;
     struct timeval tv;
@@ -311,24 +311,25 @@ bool uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
         // Write error
         if (res < 0) {
             printf("UART:: write error (%d)\n", res);
-            return false;
+            return PM3_ENOTTY;
         }
 
         // Write time-out
         if (res == 0) {
             printf("UART:: write time-out\n");
-            return false;
+            return PM3_ETIMEOUT;
         }
 
         // Send away the bytes
         res = write(((serial_port_unix *)sp)->fd, pbtTx + pos, len - pos);
 
         // Stop if the OS has some troubles sending the data
-        if (res <= 0) return false;
+        if (res <= 0) 
+            return PM3_EIO;
 
         pos += res;
     }
-    return true;
+    return PM3_SUCCESS;
 }
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {

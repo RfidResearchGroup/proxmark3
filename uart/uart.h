@@ -89,13 +89,13 @@ void uart_close(const serial_port sp);
  * partial read may have completed into the buffer by the corresponding
  * implementation, so pszRxLen should be checked to see if any data was written.
  */
-bool uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen);
+int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen);
 
 /* Sends a buffer to a given serial port.
  *   pbtTx: A pointer to a buffer containing the data to send.
  *   len: The amount of data to be sent.
  */
-bool uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len);
+int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len);
 
 /* Sets the current speed of the serial port, in baud.
  */

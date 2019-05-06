@@ -460,7 +460,8 @@ extern capabilities_t pm3_capabilities;
 #define PM3_EMALLOC           -12
 // File error                           client:     error related to file access on host
 #define PM3_EFILE             -13
-
+// Generic TTY error
+#define PM3_ENOTTY            -14
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

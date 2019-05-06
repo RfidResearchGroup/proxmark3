@@ -99,11 +99,9 @@ main_loop(char *script_cmds_file, char *script_cmd) {
         
         // If communications thread goes down. Device disconnected then this should hook up PM3 again.
         if ( IsCommunicationThreadDead() ) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark, waiting for device to reconnect...");
             session.pm3_present = ReConnectProxmark();
             if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
                 session.pm3_present = false;
-                continue;
             }
         }
 
