@@ -82,6 +82,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     serial_port_unix *sp = calloc(sizeof(serial_port_unix), sizeof(uint8_t));
     if (sp == 0) return INVALID_SERIAL_PORT;
 
+    // init timeouts
+    uart_reconfigure_timeouts(sp, UART_FPC_CLIENT_RX_TIMEOUT_MS);
+
     if (memcmp(pcPortName, "tcp:", 4) == 0) {
         struct addrinfo *addr, *rp;
         char *addrstr = strdup(pcPortName + 4);
@@ -147,7 +150,6 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         return sp;
     }
 
-
     sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
     if (sp->fd == -1) {
         uart_close(sp);
@@ -200,15 +202,12 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     tcflush(sp->fd, TCIOFLUSH);
 
     if (!uart_set_speed(sp, speed)) {
-        // trying some fallbacks automatically
+        // try fallback automatically
         speed = 115200;
         if (!uart_set_speed(sp, speed)) {
-            speed = 9600;
-            if (!uart_set_speed(sp, speed)) {
-                uart_close(sp);
-                printf("[!] UART error while setting baudrate\n");
-                return INVALID_SERIAL_PORT;
-            }
+            uart_close(sp);
+            printf("[!] UART error while setting baudrate\n");
+            return INVALID_SERIAL_PORT;
         }
     }
     conn.uart_speed = uart_get_speed(sp);
