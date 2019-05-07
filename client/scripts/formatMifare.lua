@@ -4,6 +4,19 @@ local bin = require('bin')
 local lib14a = require('read14a')
 local utils = require('utils')
 
+copyright = ''
+author = 'Iceman'
+version = 'v1.0.1'
+desc = [[
+This script will generate 'hf mf wrbl' commands for each block to format a Mifare card.
+
+Alla datablocks gets 0x00
+As default the script sets the keys A/B to 0xFFFFFFFFFFFF
+and the access bytes will become 0x78,0x77,0x88
+The GDB will become 0x00
+
+The script will skip the manufactoring block 0.
+]]
 example = [[
     -- generate commands
     1. script run formatMifare
@@ -14,22 +27,8 @@ example = [[
     -- generate commands and execute them against card.
     3. script run formatMifare -x
 ]]
-copyright = ''
-version = ''
-author = 'Iceman'
 usage = [[
-   script run formatMifare -k <key> -n <key> -a <access> -x
-]]
-desc = [[
-This script will generate 'hf mf wrbl' commands for each block to format a Mifare card.
-
-Alla datablocks gets 0x00
-As default the script sets the keys A/B to 0xFFFFFFFFFFFF
-and the access bytes will become 0x78,0x77,0x88
-The GDB will become 0x00
-
-The script will skip the manufactoring block 0.
-
+script run formatMifare -k <key> -n <key> -a <access> -x
 
 Arguments:
     -h             - this help
@@ -38,6 +37,7 @@ Arguments:
     -a <access>    - the new access bytes that will be written to the card
     -x             - execute the commands aswell.
 ]]
+
 local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 local DEBUG = true -- the debug flag
 local CmdString = 'hf mf wrbl %d B %s %s'
@@ -45,39 +45,39 @@ local numBlocks = 64
 local numSectors = 16
 ---
 -- A debug printout-function
-function dbg(args)
-    if not DEBUG then
-        return
-    end
-
-    if type(args) == "table" then
+local function dbg(args)
+    if not DEBUG then return end
+    if type(args) == 'table' then
         local i = 1
-        while result[i] do
-            dbg(result[i])
+        while args[i] do
+            dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
-function oops(err)
-    print("ERROR: ",err)
+local function oops(err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
-function help()
+local function help()
     print(copyright)
     print(author)
     print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 --
 -- Exit message
-function ExitMsg(msg)
+local function ExitMsg(msg)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
     print(msg)
@@ -91,7 +91,7 @@ function GetCardInfo()
         print(err)
         return
     end
-    print(("Found:  %s"):format(result.name))
+    print(('Found:  %s'):format(result.name))
 
     core.clearCommandBuffer()
 
@@ -138,11 +138,11 @@ local function main(args)
 
     -- Arguments for the script
     for o, a in getopt.getopt(args, 'hk:n:a:x') do
-        if o == "h" then return help() end
-        if o == "k" then OldKey = a end
-        if o == "n" then NewKey = a end
-        if o == "a" then Accessbytes = a end
-        if o == "x" then x = true end
+        if o == 'h' then return help() end
+        if o == 'k' then OldKey = a end
+        if o == 'n' then NewKey = a end
+        if o == 'a' then Accessbytes = a end
+        if o == 'x' then x = true end
     end
 
     -- validate input args.
@@ -169,29 +169,29 @@ local function main(args)
     print( string.format('Old key:    %s', OldKey))
     print( string.format('New key:    %s', NewKey))
     print( string.format('New Access: %s', Accessbytes))
-    print( string.rep('--',20) )
+    print( string.rep('--', 20) )
 
-        -- Set new block data
-    local EMPTY_BL = string.rep('00',16)
-    local EMPTY_SECTORTRAIL = string.format('%s%s%s%s',NewKey,Accessbytes,'00',NewKey)
+    -- Set new block data
+    local EMPTY_BL = string.rep('00', 16)
+    local EMPTY_SECTORTRAIL = string.format('%s%s%s%s', NewKey, Accessbytes, '00', NewKey)
 
-    dbg( string.format('New sector-trailer : %s',EMPTY_SECTORTRAIL))
-    dbg( string.format('New emptyblock: %s',EMPTY_BL))
+    dbg( string.format('New sector-trailer : %s', EMPTY_SECTORTRAIL))
+    dbg( string.format('New emptyblock: %s', EMPTY_BL))
     dbg('')
 
     if x then
         print('[Warning] you have used the EXECUTE parameter, which means this will run these commands against card.')
     end
     -- Ask
-    local dialogResult = utils.confirm("Do you want to erase this card")
+    local dialogResult = utils.confirm('Do you want to erase this card')
     if dialogResult == false then
         return ExitMsg('Quiting it is then. Your wish is my command...')
     end
 
-    print( string.rep('--',20) )
+    print( string.rep('--', 20) )
 
     -- main loop
-    for block=0,numBlocks,1 do
+    for block = 0, numBlocks, 1 do
 
         local reminder = (block+1) % 4
         local cmd
@@ -207,7 +207,7 @@ local function main(args)
         end
 
         if core.ukbhit() then
-            print("aborted by user")
+            print('aborted by user')
             break
         end
     end
