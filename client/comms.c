@@ -571,6 +571,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 
         pthread_create(&communication_thread, NULL, &uart_communication, &conn);
         __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
+        session.pm3_present = true;
 
         fflush(stdout);
 

@@ -77,8 +77,7 @@ int main(int argc, char **argv) {
 
     char *serial_port_name = argv[1];
 
-    session.pm3_present = OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED);
-    if (session.pm3_present) {
+    if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         PrintAndLogEx(NORMAL, _GREEN_("Found"));
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);

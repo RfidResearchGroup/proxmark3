@@ -488,7 +488,7 @@ int main(int argc, char *argv[]) {
 
     // try to open USB connection to Proxmark
     if (port != NULL) {
-        session.pm3_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
+        OpenProxmark(port, waitCOMPort, 20, false, speed);
     }
 
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {

@@ -522,7 +522,7 @@ static int CmdConnect(const char *Cmd) {
         CloseProxmark();
     }
 
-    session.pm3_present = OpenProxmark(port, false, 20, false, USART_BAUD_RATE);
+    OpenProxmark(port, false, 20, false, USART_BAUD_RATE);
 
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
