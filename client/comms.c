@@ -21,8 +21,6 @@
 
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
-static char *serial_port_name = NULL;
-static uint32_t _speed = 0;
 
 communication_arg_t conn;
 capabilities_t pm3_capabilities;
@@ -60,7 +58,7 @@ static uint64_t timeout_start_time;
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
 void GetSavedSerialPortName( char **dest ) {
-    *dest = serial_port_name;
+    *dest = conn.serial_port_name;
 }
 
 void SendCommand(PacketCommandOLD *c) {
@@ -555,17 +553,14 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
     if (sp == INVALID_SERIAL_PORT) {
         PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") "invalid serial port " _YELLOW_("%s"), portname);
         sp = NULL;
-        //serial_port_name = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
         PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") "serial port " _YELLOW_("%s") " is claimed by another process", portname);
         sp = NULL;
-        //serial_port_name = NULL;
         return false;
     } else {
         // start the communication thread
-        serial_port_name = portname;
-        _speed = speed;
+        conn.serial_port_name = portname;
         conn.run = true;
         conn.block_after_ACK = flash_mode;
         // Flags to tell where to add CRC on sent replies
@@ -664,14 +659,10 @@ void CloseProxmark(void) {
     // Fix for linux, it seems that it is extremely slow to release the serial port file descriptor /dev/*
     //
     // This may be disabled at compile-time with -DNO_UNLINK (used for a JNI-based serial port on Android).
-    if (serial_port_name) {
-        unlink(serial_port_name);
-    }
 #endif
 
     // Clean up our state
     sp = NULL;
-    serial_port_name = NULL;
     memset(&communication_thread, 0, sizeof(pthread_t));
 }
 

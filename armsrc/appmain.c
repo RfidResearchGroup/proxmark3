@@ -1641,7 +1641,8 @@ void  __attribute__((noreturn)) AppMain(void) {
         if (ret == PM3_SUCCESS) {
             PacketReceived(&rx);
         } else if (ret != PM3_ENODATA) {
-            Dbprintf("Error in frame reception: %d", ret);
+            
+            Dbprintf("Error in frame reception: %d %s", ret, (ret == PM3_EIO)?"PM3_EIO":"");
             // TODO if error, shall we resync ?
         }
 

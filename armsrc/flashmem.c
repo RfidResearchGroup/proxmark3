@@ -529,13 +529,13 @@ void Flashmem_print_status(void) {
     uint8_t dev_id = Flash_ReadID();
     switch (dev_id) {
         case 0x11 :
-            DbpString("  Memory size.............2 mbits / 256kb");
+            DbpString("  Memory size............." _YELLOW_("2 mbits / 256kb"));
             break;
         case 0x10 :
-            DbpString("  Memory size..... .......1 mbits / 128kb");
+            DbpString("  Memory size..... ......." _YELLOW_("1 mbits / 128kb"));
             break;
         case 0x05 :
-            DbpString("  Memory size.............512 kbits / 64kb");
+            DbpString("  Memory size............." _YELLOW_("512 kbits / 64kb"));
             break;
         default :
             DbpString("  Device ID..............." _YELLOW_(" -->  Unknown  <--"));

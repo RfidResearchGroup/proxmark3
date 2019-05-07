@@ -50,6 +50,7 @@ typedef struct {
     // To memorise baudrate
     uint32_t uart_speed;
     uint16_t last_command;
+    uint8_t *serial_port_name;
 } communication_arg_t;
 
 extern communication_arg_t conn;
