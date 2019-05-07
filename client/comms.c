@@ -608,7 +608,7 @@ int TestProxmark(void) {
             return PM3_EIO;
 
         SendCommandNG(CMD_CAPABILITIES, NULL, 0);
-        if (WaitForResponseTimeoutW(CMD_PING, &resp, 1000, false)) {
+        if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false)) {
             memcpy(&pm3_capabilities, resp.data.asBytes, resp.length);
             conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
             conn.uart_speed = pm3_capabilities.baudrate;
