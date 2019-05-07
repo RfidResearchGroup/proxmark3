@@ -1,8 +1,8 @@
 --[[
-Handle Proxmark USB Commands
+Handle Proxmark Communication Commands
 --]]
 
-local _commands = require('usb_cmd')
+local _commands = require('pm3_cmd')
 local util = require('utils')
 local TIMEOUT = 2000
 

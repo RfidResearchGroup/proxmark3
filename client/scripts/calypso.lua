@@ -4,27 +4,22 @@ local lib14b = require('read14b')
 local utils = require('utils')
 local iso7816 = require('7816_error')
 
-example = "script runs 14b raw commands to query a CAPLYPSO tag"
-author = "Iceman, 2016"
-desc =
-[[
+copyright = ''
+author = 'Iceman'
+version = 'v1.0.1'
+desc = [[
 This is a script to communicate with a CALYSPO / 14443b tag using the '14b raw' commands
+]]
+example = [[
+    script run calypso -b 11223344
+
+]]
+usage = [[
+script run calypso -h -b
 
 Arguments:
-    -b              123
-Examples :
-    script run f -b 11223344
-    script run f
-
-Examples :
-
-# 1. Connect and don't disconnect
-script run f
-# 2. Send mf auth, read response
-script run f
-# 3. disconnect
-script run f
-
+      h   this helptext
+      b   raw bytes to send
 ]]
 
 --[[
@@ -32,21 +27,6 @@ This script communicates with  /armsrc/iso14443b.c,
 Check there for details about data format and how commands are interpreted on the
 device-side.
 ]]
-
----
---
-local function calypso_switch_on_field()
-    local flags = lib14b.ISO14B_COMMAND.ISO14B_CONNECT
-    local c = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = flags}
-    return lib14b.sendToDevice(c, true)
-end
----
--- Disconnect (poweroff) the antenna forcing a disconnect of a 14b tag.
-local function calypso_switch_off_field()
-    local flags = lib14b.ISO14B_COMMAND.ISO14B_DISCONNECT
-    local c = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = flags}
-    return lib14b.sendToDevice(c, true)
-end
 
 local function calypso_parse(result)
     local r = Command.parse(result)
@@ -61,23 +41,34 @@ end
 ---
 -- A debug printout-function
 local function dbg(args)
-    if DEBUG then
-        print("###", args)
+    if not DEBUG then return end
+    if type(args) == 'table' then
+        local i = 1
+        while args[i] do
+            dbg(args[i])
+            i = i+1
+        end
+    else
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ", err)
-    calypso_switch_off_field()
+    print('ERROR: ', err)
+    lib14b.disconnect()
     return nil, err
 end
 ---
 -- Usage help
 local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage))
 end
 --
 -- helper function,  give current count of items in lua-table.
@@ -122,15 +113,13 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
 
     data = data or "00"
 
-    command = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND,
-                            arg1 = flags,
-                            arg2 = #data/2, -- LEN of data, half the length of the ASCII-string hex string
-                            arg3 = 0,
-                            data = data}    -- data bytes (commands etc)
-    result, err = lib14b.sendToDevice(command, false)
-
-    if ignoreresponse then return response, err end
-
+    command = Command:newMIX{
+            cmd = cmds.CMD_ISO_14443B_COMMAND,
+            arg1 = flags,
+            arg2 = #data/2, -- LEN of data, half the length of the ASCII-string hex string
+            data = data}    -- data bytes (commands etc)
+            
+    result, err = command:sendMIX(ignoreresponse)
     if result then
         local r = calypso_parse(result)
         return r, nil
@@ -185,26 +174,26 @@ local _calypso_cmds = {
 --  Electronic Transaction log file
 
 
-    --["01.Select ICC file"]    = '0294 a4 00 0002 3f00',
-    ["01.Select ICC file"]    = '0294 a4 080004 3f00 0002',
-    ["02.ICC"]                = '0394 b2 01 041d',
-    ["03.Select EnvHol file"] = '0294 a4 080004 2000 2001',
-    ["04.EnvHol1"]            = '0394 b2 01 041d',
-    ["05.Select EvLog file"]  = '0294 a4 080004 2000 2010',
-    ["06.EvLog1"]             = '0394 b2 01 041d',
-    ["07.EvLog2"]             = '0294 b2 02 041d',
-    ["08.EvLog3"]             = '0394 b2 03 041d',
-    ["09.Select ConList file"]= '0294 a4 080004 2000 2050',
-    ["10.ConList"]            = '0394 b2 01 041d',
-    ["11.Select Contra file"] = '0294 a4 080004 2000 2020',
-    ["12.Contra1"]            = '0394 b2 01 041d',
-    ["13.Contra2"]            = '0294 b2 02 041d',
-    ["14.Contra3"]            = '0394 b2 03 041d',
-    ["15.Contra4"]            = '0294 b2 04 041d',
-    ["16.Select Counter file"]= '0394 a4 080004 2000 2069',
-    ["17.Counter"]            = '0294 b2 01 041d',
-    ["18.Select SpecEv file"] = '0394 a4 080004 2000 2040',
-    ["19.SpecEv1"]            = '0294 b2 01 041d',
+    --['01.Select ICC file']    = '0294 a4 00 0002 3f00',
+    ['01.Select ICC file']    = '0294 a4 080004 3f00 0002',
+    ['02.ICC']                = '0394 b2 01 041d',
+    ['03.Select EnvHol file'] = '0294 a4 080004 2000 2001',
+    ['04.EnvHol1']            = '0394 b2 01 041d',
+    ['05.Select EvLog file']  = '0294 a4 080004 2000 2010',
+    ['06.EvLog1']             = '0394 b2 01 041d',
+    ['07.EvLog2']             = '0294 b2 02 041d',
+    ['08.EvLog3']             = '0394 b2 03 041d',
+    ['09.Select ConList file']= '0294 a4 080004 2000 2050',
+    ['10.ConList']            = '0394 b2 01 041d',
+    ['11.Select Contra file'] = '0294 a4 080004 2000 2020',
+    ['12.Contra1']            = '0394 b2 01 041d',
+    ['13.Contra2']            = '0294 b2 02 041d',
+    ['14.Contra3']            = '0394 b2 03 041d',
+    ['15.Contra4']            = '0294 b2 04 041d',
+    ['16.Select Counter file']= '0394 a4 080004 2000 2069',
+    ['17.Counter']            = '0294 b2 01 041d',
+    ['18.Select SpecEv file'] = '0394 a4 080004 2000 2040',
+    ['19.SpecEv1']            = '0294 b2 01 041d',
 }
 
 ---
@@ -218,11 +207,12 @@ function main(args)
     local data, apdu, flags, uid, cid, result, err, card
     -- Read the parameters
     for o, a in getopt.getopt(args, 'h') do
-        if o == "h" then return help() end
+        if o == 'h' then return help() end
+        if o == 'b' then bytes = a end
     end
 
-    calypso_switch_on_field()
-
+    lib14b.connect()
+    
     -- Select 14b tag.
     card, err = lib14b.waitFor14443b()
     if not card then return oops(err) end
@@ -248,7 +238,7 @@ function main(args)
         --result, err = calypso_send_cmd_raw('0294a40800043f000002',false)  --select ICC file
         for i, apdu in spairs(_calypso_cmds) do
             print('>>', i )
-            apdu = apdu:gsub("%s+","")
+            apdu = apdu:gsub('%s+', '')
             result, err = calypso_send_cmd_raw(apdu , false)
             if result then
                 calypso_apdu_status(result.data)
@@ -257,18 +247,18 @@ function main(args)
                 print('<< no answer')
             end
         end
-    calypso_switch_off_field()
+    lib14b.disconnect()
 end
 ---
 -- a simple selftest function, tries to convert
 function selftest()
     DEBUG = true
-    dbg("Performing test")
-    dbg("Tests done")
+    dbg('Performing test')
+    dbg('Tests done')
 end
 -- Flip the switch here to perform a sanity check.
 -- It read a nonce in two different ways, as specified in the usage-section
-if "--test"==args then
+if '--test'==args then
     selftest()
 else
     -- Call the main

@@ -13,27 +13,15 @@
 -- Loads the commands-library
 local cmds = require('commands')
 local utils = require('utils')
-local TIMEOUT = 2000 -- Shouldn't take longer than 2 seconds
 
+ -- Shouldn't take longer than 2 seconds
+local TIMEOUT = 2000
 
---- Sends a USBpacket to the device
--- @param command - the usb packet to send
--- @param ignoreresponse - if set to true, we don't read the device answer packet
---      which is usually recipe for fail. If not sent, the host will wait 2s for a
---      response of type CMD_ACK
--- @return packet,nil if successfull
---         nil, errormessage if unsuccessfull
-local function sendToDevice(command, ignoreresponse)
-    local err = core.SendCommand(command:getBytes())
-    if err then
-        print(err)
-        return nil, err
-    end
-    if ignoreresponse then return nil, nil end
-
-    local response = core.WaitForResponseTimeout(cmds.CMD_ACK, TIMEOUT)
-    return response, nil
-end
+local ISO15_COMMAND = {
+    ISO15_REQ_SUBCARRIER_SINGLE = 0,
+    ISO15_REQ_DATARATE_HIGH = 2,
+    ISO15_REQ_NONINVENTORY = 0,
+}
 
 local function errorString15693(number)
     local errors = {}
@@ -50,7 +38,6 @@ local function errorString15693(number)
     return errors[number] or "Reserved for Future Use or Custom command error."
 end
 
-
 local function parse15693(data)
     local bytes = utils.ConvertAsciiToBytes(data)
     local tmp = utils.ConvertAsciiToHex(data)
@@ -59,14 +46,14 @@ local function parse15693(data)
     local crcStr = utils.Crc15(tmp, #tmp)
 
     if string.sub(crcStr, #crcStr - 3) ~= '470F' then
-        print("CRC", crc )
-        return nil, "CRC failed"
+        print('CRC', crc )
+        return nil, 'CRC failed'
     end
 
     if bytes[1] % 2 == 1 then
         -- Above is a poor-mans bit check:
         -- recv[0] & ISO15_RES_ERROR //(0x01)
-        local err = "Tag returned error %i: %s"
+        local err = 'Tag returned error %i: %s'
         err = string.format(err, bytes[1], errorString15693(bytes[1]))
         return nil, err
     end
@@ -82,7 +69,6 @@ end
 local function read15693(slow, dont_readresponse)
 
 --[[
-
     We start by trying this command:
     MANDATORY (present in ALL iso15693 tags) command (the example below is sent to a tag different from the above one):
 
@@ -108,11 +94,13 @@ local function read15693(slow, dont_readresponse)
 
     data = utils.Crc15("260100")
 
-    command = Command:new{cmd = cmds.CMD_ISO_15693_COMMAND,
-                                arg1 = #data / 2,
-                                arg2 = 1,
-                                arg3 = 1,
-                                data = data}
+    command = Command:newMIX{
+            cmd = cmds.CMD_ISO_15693_COMMAND,
+            arg1 = #data / 2,
+            arg2 = 1,
+            arg3 = 1,
+            data = data
+            }
 
     if slow then
         command.arg2 = 0
@@ -121,24 +109,23 @@ local function read15693(slow, dont_readresponse)
         command.arg3 = 0
     end
 
-    local result, err = sendToDevice(command, dont_readresponse)
-    if not result then
-        print(err)
-        return nil, "15693 identify: no answer"
-    end
-
-    local count, cmd, len, arg2, arg3 = bin.unpack('LLLL', result)
-    if  len > 0 then
+    local result, err = command:sendMIX()
+    if result then
+        local count, cmd, len, arg2, arg3 = bin.unpack('LLLL', result)
+        if len == 0 then
+            return nil, 'iso15693 card select failed'
+        end
         data = string.sub(result, count, count+len-1)
         info, err = parse15693(data)
-        if err then
-            print(err)
-            return nil, err
-        end
-        return info
     else
-        return nil, "Failed to get response"
+        err = 'No response from card'
     end
+    
+    if err then
+        print(err)
+        return nil, err
+    end
+    return info
 end
 
 ---
@@ -146,19 +133,28 @@ end
 -- @return if successfull: an table containing card info
 -- @return if unsuccessfull : nil, error
 local function waitFor15693()
-    print("Waiting for card... press any key to quit")
+    print('Waiting for card... press any key to quit')
     while not core.ukbhit() do
         res, err = read15693()
         if res then return res end
         -- err means that there was no response from card
     end
-    return nil, "Aborted by user"
+    return nil, 'Aborted by user'
 end
+
+-- Sends an instruction to do nothing, only disconnect
+local function disconnect15693()
+    local c = Command:newMIX{cmd = cmds.CMD_ISO_15693_COMMAND}
+    -- We can ignore the response here, no ACK is returned for this command
+    -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
+    return c.sendMIX(true)
+end
+
 local library = {
     read = read15693,
     waitFor15693 = waitFor15693,
     parse15693 = parse15693,
-    sendToDevice = sendToDevice,
+    disconnect = disconnect15693,
 }
 
 return library

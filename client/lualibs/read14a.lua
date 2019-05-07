@@ -96,7 +96,7 @@ local function read14443a(dont_disconnect, no_rats)
         command.arg1 = command.arg1 + ISO14A_COMMAND.ISO14A_NO_RATS
     end
 
-    local result,err = command:sendMIX()
+    local result, err = command:sendMIX()
     if result then
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
         if arg0 == 0 then
@@ -120,13 +120,13 @@ end
 -- @return if successfull: an table containing card info
 -- @return if unsuccessfull : nil, error
 local function waitFor14443a()
-    print("Waiting for card... press any key to quit")
+    print('Waiting for card... press any key to quit')
     while not core.ukbhit() do
         res, err = read14443a()
         if res then return res end
         -- err means that there was no response from card
     end
-    return nil, "Aborted by user"
+    return nil, 'Aborted by user'
 end
 
 -- Sends an instruction to do nothing, only disconnect

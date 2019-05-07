@@ -115,10 +115,10 @@ return {
     lookupManufacturer = function (value)
         if type(value) == 'string' then
             local v = tonumber(value, 16)
-            print(string.format("WARNING: lookupManufacturer expects numeric value, converted %s into %x", value,v))
+            print(string.format('WARNING: lookupManufacturer expects numeric value, converted %s into %x', value,v))
             value = v
         end
 
-        return m[value] or "no tag-info available"
+        return m[value] or 'no tag-info available'
     end,
 }
