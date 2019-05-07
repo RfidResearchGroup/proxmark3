@@ -556,9 +556,11 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         return false;
     } else {
         // start the communication thread
-        uint16_t len = MIN( strlen(portname), FILE_PATH_SIZE - 1);
-        memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
-        memcpy(conn.serial_port_name, portname, len);
+        if ( portname != (char*)conn.serial_port_name) {
+            uint16_t len = MIN( strlen(portname), FILE_PATH_SIZE - 1);
+            memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
+            memcpy(conn.serial_port_name, portname, len);
+        }
         conn.run = true;
         conn.block_after_ACK = flash_mode;
         // Flags to tell where to add CRC on sent replies
@@ -571,8 +573,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
 
         fflush(stdout);
-        // create a mutex to avoid interlacing print commands from our different threads
-        //pthread_mutex_init(&print_lock, NULL);
+
         return true;
     }
 }
