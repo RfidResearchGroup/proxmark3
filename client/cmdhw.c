@@ -370,7 +370,7 @@ static int CmdDetectReader(const char *Cmd) {
 static int CmdFPGAOff(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    SendCommandOLD(CMD_FPGA_MAJOR_MODE_OFF, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_FPGA_MAJOR_MODE_OFF, 0, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -399,7 +399,7 @@ static int CmdReadmem(const char *Cmd) {
 static int CmdReset(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -458,7 +458,7 @@ static int CmdStatus(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandOLD(CMD_STATUS, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_STATUS, 0, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
         PrintAndLogEx(WARNING, "Status command failed. Communication speed test timed out");
     return PM3_SUCCESS;
@@ -564,9 +564,12 @@ int CmdHW(const char *Cmd) {
 void pm3_version(bool verbose) {
     if (!verbose)
         return;
+    
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_VERSION, 0, 0, 0, NULL, 0);
+    
+    SendCommandMIX(CMD_VERSION, 0, 0, 0, NULL, 0);
+    
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
@@ -576,8 +579,10 @@ void pm3_version(bool verbose) {
         PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
         PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 Extras ]");
         PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+        
         if (IfPm3FpcUsartDevFromUsb())
             PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
+        
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, (char *)resp.data.asBytes);
         lookupChipID(resp.oldarg[0], resp.oldarg[1]);

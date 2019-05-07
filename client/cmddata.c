@@ -876,7 +876,7 @@ static int CmdBuffClear(const char *Cmd) {
     if (cmdp == 'h') return usage_data_buffclear();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_BUFF_CLEAR, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_BUFF_CLEAR, 0, 0, 0, NULL, 0);
     ClearGraph(true);
     return 0;
 }

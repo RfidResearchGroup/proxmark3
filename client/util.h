@@ -115,7 +115,7 @@
 
 #ifndef DropField
 #define DropField() { \
-        clearCommandBuffer(); SendCommandOLD(CMD_READER_ISO_14443a, 0, 0, 0, NULL, 0); \
+        clearCommandBuffer(); SendCommandMIX(CMD_READER_ISO_14443a, 0, 0, 0, NULL, 0); \
     }
 #endif
 
