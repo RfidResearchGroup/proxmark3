@@ -411,13 +411,13 @@ static int CmdSetDivisor(const char *Cmd) {
     uint16_t arg = strtol(Cmd, NULL, 0);
 
     if (arg < 19 || arg > 255) {
-        PrintAndLogEx(NORMAL, "divisor must be between 19 and 255");
+        PrintAndLogEx(ERR, "divisor must be between 19 and 255");
         return PM3_EINVARG;
     }
     // 12 000 000 (12Mhz)
     clearCommandBuffer();
     SendCommandOLD(CMD_SET_LF_DIVISOR, arg, 0, 0, NULL, 0);
-    PrintAndLogEx(NORMAL, "Divisor set, expected %.1f KHz", ((double)12000 / (arg + 1)));
+    PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f KHz", ((double)12000 / (arg + 1)));
     return PM3_SUCCESS;
 }
 
@@ -460,7 +460,7 @@ static int CmdStatus(const char *Cmd) {
     PacketResponseNG resp;
     SendCommandOLD(CMD_STATUS, 0, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
-        PrintAndLogEx(NORMAL, "Status command failed. Communication speed test timed out");
+        PrintAndLogEx(WARNING, "Status command failed. Communication speed test timed out");
     return PM3_SUCCESS;
 }
 
