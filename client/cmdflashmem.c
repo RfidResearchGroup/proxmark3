@@ -122,8 +122,7 @@ static int CmdFlashMemRead(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'h':
-                usage_flashmem_read();
-                return PM3_SUCCESS;
+                return usage_flashmem_read();
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -142,7 +141,7 @@ static int CmdFlashMemRead(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FLASHMEM_READ, start_index, len, 0, NULL, 0);
+    SendCommandMIX(CMD_FLASHMEM_READ, start_index, len, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -150,16 +149,16 @@ static int CmdFlashmemSpiBaudrate(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') {
-        usage_flashmem_spibaud();
-        return PM3_EINVARG;
+        return usage_flashmem_spibaud();
     }
+    
     uint32_t baudrate = param_get32ex(Cmd, 0, 0, 10);
     baudrate = baudrate * 1000000;
     if (baudrate != FLASH_BAUD && baudrate != FLASH_MINBAUD) {
         usage_flashmem_spibaud();
         return PM3_EINVARG;
     }
-    SendCommandOLD(CMD_FLASHMEM_SET_SPIBAUDRATE, baudrate, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_FLASHMEM_SET_SPIBAUDRATE, baudrate, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -174,8 +173,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                usage_flashmem_load();
-                return PM3_SUCCESS;
+                return usage_flashmem_load();
             case 'f':
                 if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
                     PrintAndLogEx(FAILED, "Filename too long");
@@ -278,13 +276,15 @@ static int CmdFlashMemLoad(const char *Cmd) {
     //Send to device
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining = datalen;
+
+    // fast push mode
+    conn.block_after_ACK = true;
+    
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 
         clearCommandBuffer();
-        if (bytes_remaining > bytes_in_packet)
-            // fast push mode
-            conn.block_after_ACK = true;
+
         SendCommandOLD(CMD_FLASHMEM_WRITE, start_index + bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);
 
         bytes_remaining -= bytes_in_packet;
@@ -297,16 +297,17 @@ static int CmdFlashMemLoad(const char *Cmd) {
             free(data);
             return PM3_ETIMEOUT;
         }
-        conn.block_after_ACK = false;
 
         uint8_t isok  = resp.oldarg[0] & 0xFF;
         if (!isok) {
+            conn.block_after_ACK = false;            
             PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
             return PM3_EFLASH;
         }
     }
-    free(data);
 
+    conn.block_after_ACK = false;
+    free(data);
     PrintAndLogEx(SUCCESS, "Wrote %u bytes to offset %u", datalen, start_index);
     return PM3_SUCCESS;
 }
@@ -320,8 +321,7 @@ static int CmdFlashMemSave(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                usage_flashmem_save();
-                return PM3_EINVARG;
+                return usage_flashmem_save();
             case 'l':
                 len = param_get32ex(Cmd, cmdp + 1, FLASH_MEM_MAX_SIZE, 10);
                 cmdp += 2;
@@ -379,8 +379,7 @@ static int CmdFlashMemWipe(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                usage_flashmem_wipe();
-                return PM3_SUCCESS;
+                return usage_flashmem_wipe();
             case 'p':
                 page = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 if (page > 2) {
@@ -408,7 +407,7 @@ static int CmdFlashMemWipe(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FLASHMEM_WIPE, page, initalwipe, 0, NULL, 0);
+    SendCommandMIX(CMD_FLASHMEM_WIPE, page, initalwipe, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 8000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -434,8 +433,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                usage_flashmem_info();
-                return PM3_SUCCESS;
+                return usage_flashmem_info();
             case 's': {
                 shall_sign = true;
                 cmdp++;
@@ -459,7 +457,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FLASHMEM_INFO, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_FLASHMEM_INFO, 0, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
