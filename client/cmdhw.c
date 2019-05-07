@@ -51,10 +51,10 @@ static int usage_hw_setmux(void) {
 static int usage_hw_connect(void) {
     PrintAndLogEx(NORMAL, "Connects to a Proxmark3 device via specified serial port");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] <port>");
+    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] [<port>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <port>   serial port to connect to");
+    PrintAndLogEx(NORMAL, "           <port>     Serial port to connect to, else retry the last used one");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hw connect "SERIAL_PORT_EXAMPLE_H);
