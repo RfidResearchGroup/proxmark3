@@ -57,7 +57,8 @@ int check_comm(void) {
     if ( IsCommunicationThreadDead() && session.pm3_present) {
         rl_set_prompt("[offline] "PROXPROMPT);
         session.pm3_present = false;
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use \"hw connect\" to reconnect\n");
+        PrintAndLogEx(INFO, "\nRunning in " _YELLOW_("OFFLINE") "mode. Use \"hw connect\" to reconnect\n");
+        
     }
     return 0;
 }
