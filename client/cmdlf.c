@@ -390,7 +390,7 @@ int CmdLFSniff(const char *Cmd) {
     if (cmdp == 'h') return usage_lf_sniff();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_LF_SNIFF_RAW_ADC_SAMPLES, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_SNIFF_RAW_ADC_SAMPLES, 0, 0, 0, NULL, 0);
     WaitForResponse(CMD_ACK, NULL);
     getSamples(0, false);
     return 0;

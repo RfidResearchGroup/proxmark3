@@ -2291,7 +2291,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_SNIFFER, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_SNIFFER, 0, 0, 0, NULL, 0);
 
     PacketResponseNG resp;
 
@@ -2420,7 +2420,7 @@ int CmdHF14AMfDbg(const char *Cmd) {
     uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
     if (dbgMode > 4) return usage_hf14_dbg();
 
-    SendCommandOLD(CMD_MIFARE_SET_DBGMODE, dbgMode, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_SET_DBGMODE, dbgMode, 0, 0, NULL, 0);
     return 0;
 }
 

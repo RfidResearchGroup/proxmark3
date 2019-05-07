@@ -906,7 +906,7 @@ returns:
 int detect_classic_nackbug(bool verbose) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_NACK_DETECT, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_NACK_DETECT, 0, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (verbose)
@@ -991,7 +991,7 @@ void detect_classic_magic(void) {
     uint8_t isGeneration = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_CIDENT, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_CIDENT, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         isGeneration = resp.oldarg[0] & 0xff;
 

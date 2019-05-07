@@ -1079,7 +1079,7 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
 
     CLIParserFree();
     clearCommandBuffer();
-    SendCommandOLD(CMD_ANTIFUZZ_ISO_14443a, arg0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ANTIFUZZ_ISO_14443a, arg0, 0, 0, NULL, 0);
     return 0;
 }
 

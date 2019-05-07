@@ -808,7 +808,7 @@ int legic_get_type(legic_card_select_t *card) {
     if (card == NULL) return 1;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_LEGIC_INFO, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LEGIC_INFO, 0, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         return 2;

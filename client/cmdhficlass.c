@@ -281,7 +281,7 @@ static int CmdHFiClassList(const char *Cmd) {
 static int CmdHFiClassSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_sniff();
-    SendCommandOLD(CMD_SNIFF_ICLASS, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_SNIFF_ICLASS, 0, 0, 0, NULL, 0);
     return 0;
 }
 
