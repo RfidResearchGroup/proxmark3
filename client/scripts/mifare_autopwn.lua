@@ -5,7 +5,7 @@ local utils = require('utils')
 
 copyright = ''
 author = "Martin Holst Swende"
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This is a script which automates cracking and dumping mifare classic cards. It sets itself into
 'listening'-mode, after which it cracks and dumps any mifare classic card that you
@@ -148,7 +148,7 @@ end
 -- The main entry point
 local function main(args)
 
-    local verbose, exit, res, uid, err, _, sak
+    local verbose, _exit, res, uid, err, _, sak
     local seen_uids = {}
     local key = ''
     local print_message = true
@@ -159,7 +159,7 @@ local function main(args)
         if o == 'k' then key = a end
     end
 
-    while not exit do
+    while not _exit do
         if print_message then
             print('Waiting for card or press any key to stop')
             print_message = false
@@ -205,7 +205,7 @@ local function main(args)
                 -- Dump info
                 dump(uid, sak)
 
-                if #key == 12 then exit = true end
+                if #key == 12 then _exit = true end
             else
                 print('Card found, darkside attack useless PRNG hardend on UID', uid)
             end
