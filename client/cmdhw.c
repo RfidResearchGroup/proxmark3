@@ -503,22 +503,29 @@ static int CmdConnect(const char *Cmd) {
         return usage_hw_connect();
 
     char *port = NULL;
-    port = (char *)Cmd;
-
+    bool shall_free = false;
+    
     // default back to previous used serial port
-    if (strlen(port) == 0 )
-        GetSavedSerialPortName( &port );
+    if (strlen(Cmd) == 0 ) {
+        int len = strlen((char *)conn.serial_port_name);
+        if ( len == 0 ) {
+            return usage_hw_connect();
+        }
+        port = calloc(len + 1, sizeof(uint8_t));
+        memcpy(port, conn.serial_port_name, len);
+        shall_free = true;
+    } else {
+        port = (char *)Cmd;
+    }
 
     if ( port == NULL ) {
         return usage_hw_connect();
     }
     
-    // if we were already connected,  disconnect first.
-    //if (session.pm3_present) {
-        PrintAndLogEx(INFO, "Disconnecting from current serial port");
-        CloseProxmark();
-        session.pm3_present = false;
-    //}
+    // always disconnect first.
+    PrintAndLogEx(INFO, "Disconnecting from current serial port");
+    CloseProxmark();
+    session.pm3_present = false;
     
     // try to open serial port
     session.pm3_present = OpenProxmark(port, false, 20, false, USART_BAUD_RATE);
@@ -528,6 +535,10 @@ static int CmdConnect(const char *Cmd) {
         CloseProxmark();
         session.pm3_present = false;
     }
+
+    if ( shall_free )
+        free(port);
+    
     return PM3_SUCCESS;
 }
 

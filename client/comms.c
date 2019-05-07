@@ -57,10 +57,6 @@ static uint64_t timeout_start_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
-void GetSavedSerialPortName( char **dest ) {
-    *dest = conn.serial_port_name;
-}
-
 void SendCommand(PacketCommandOLD *c) {
 
 #ifdef COMMS_DEBUG
@@ -560,7 +556,9 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         return false;
     } else {
         // start the communication thread
-        conn.serial_port_name = portname;
+        uint16_t len = MIN( strlen(portname), FILE_PATH_SIZE - 1);
+        memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
+        memcpy(conn.serial_port_name, portname, len);
         conn.run = true;
         conn.block_after_ACK = flash_mode;
         // Flags to tell where to add CRC on sent replies
@@ -654,12 +652,6 @@ void CloseProxmark(void) {
     if (sp) {
         uart_close(sp);
     }
-
-#if defined(__linux__) && !defined(NO_UNLINK)
-    // Fix for linux, it seems that it is extremely slow to release the serial port file descriptor /dev/*
-    //
-    // This may be disabled at compile-time with -DNO_UNLINK (used for a JNI-based serial port on Android).
-#endif
 
     // Clean up our state
     sp = NULL;
@@ -763,19 +755,19 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 
     switch (memtype) {
         case BIG_BUF: {
-            SendCommandOLD(CMD_DOWNLOAD_BIGBUF, start_index, bytes, 0, NULL, 0);
+            SendCommandMIX(CMD_DOWNLOAD_BIGBUF, start_index, bytes, 0, NULL, 0);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_BIGBUF);
         }
         case BIG_BUF_EML: {
-            SendCommandOLD(CMD_DOWNLOAD_EML_BIGBUF, start_index, bytes, 0, NULL, 0);
+            SendCommandMIX(CMD_DOWNLOAD_EML_BIGBUF, start_index, bytes, 0, NULL, 0);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
         }
         case FLASH_MEM: {
-            SendCommandOLD(CMD_FLASHMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
+            SendCommandMIX(CMD_FLASHMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED);
         }
         case SIM_MEM: {
-            //SendCommandOLD(CMD_DOWNLOAD_SIM_MEM, start_index, bytes, 0, NULL, 0);
+            //SendCommandMIX(CMD_DOWNLOAD_SIM_MEM, start_index, bytes, 0, NULL, 0);
             //return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
             return false;
         }
