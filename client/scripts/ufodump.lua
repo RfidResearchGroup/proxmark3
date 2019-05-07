@@ -6,8 +6,7 @@ local utils = require('utils')
 copyright = ''
 author = 'Iceman'
 version = 'v1.0.1'
-desc =
-[[
+desc = [[
 This is a script that reads AZTEK iso14443a tags.
 It starts from block 0,  and ends at default block 20.  Use 'b' to say different endblock.
 xor:  the first three block (0,1,2) is not XORED.  The rest seems to be xored.
@@ -106,14 +105,6 @@ function sendRaw(rawdata, options)
 
     return command:sendMIX(options.ignore_response)
 end
---
--- Sends an instruction to do nothing, only disconnect
-function disconnect()
-    local command = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a, arg1 = 0,}
-    -- We can ignore the response here, no ACK is returned for this command
-    -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
-    return command:sendMIX(true)
-end
 ---
 -- The main entry point
 function main(args)
@@ -130,7 +121,10 @@ function main(args)
 
     -- First of all, connect
     info, err = lib14a.read(true, true)
-    if err then disconnect() return oops(err) end
+    if err then 
+        lib14a.disconnect()
+        return oops(err)
+    end
     core.clearCommandBuffer()
 
     local blockData = {}
@@ -143,7 +137,10 @@ function main(args)
     for block = 00, endblock do
         local cmd = string.format('10%02x00', block)
         res, err = sendRaw(cmd , {ignore_response = ignore_response})
-        if err then disconnect() return oops(err) end
+        if err then 
+            lib14a.disconnect()
+            return oops(err)
+        end
 
         local cmd_response = Command.parse(res)
         local len = tonumber(cmd_response.arg1) * 2
@@ -153,7 +150,7 @@ function main(args)
         table.insert(blockData, data)
     end
     print("----+------------------+-------------------")
-    disconnect()
+    lib14a.disconnect()
 
     local filename, err = utils.WriteDumpFile(info.uid, blockData)
     if err then return oops(err) end
