@@ -55,6 +55,15 @@ bool IfPm3FpcUsartHost(void) {
     return pm3_capabilities.compiled_with_fpc_usart_host;
 }
 
+bool IfPm3FpcUsartHostFromUsb(void) {
+    // true if FPC USART Host support and if talking from USB-CDC interface
+    if (!IfPm3Present())
+        return false;
+    if (!pm3_capabilities.compiled_with_fpc_usart_host)
+        return false;
+    return !conn.send_via_fpc_usart;
+}
+
 bool IfPm3FpcUsartDevFromUsb(void) {
     // true if FPC USART developer support and if talking from USB-CDC interface
     if (!IfPm3Present())

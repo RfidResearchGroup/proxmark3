@@ -26,6 +26,7 @@ bool IfPm3Flash(void);
 bool IfPm3Smartcard(void);
 bool IfPm3FpcUsart(void);
 bool IfPm3FpcUsartHost(void);
+bool IfPm3FpcUsartHostFromUsb(void);
 bool IfPm3FpcUsartDevFromUsb(void);
 bool IfPm3Lf(void);
 bool IfPm3Hitag(void);

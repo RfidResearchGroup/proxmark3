@@ -11,6 +11,24 @@
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_usart_bt_pin(void) {
+    PrintAndLogEx(NORMAL, "Change BT add-on PIN");
+    PrintAndLogEx(NORMAL, "WARNING: this requires");
+    PrintAndLogEx(NORMAL, "      1) BTpower to be turned ON");
+    PrintAndLogEx(NORMAL, "      2) BT add-on to NOT be connected");
+    PrintAndLogEx(NORMAL, "      => the blue LED must blink");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  usart btpin [h] d NNNN");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h          This help");
+    PrintAndLogEx(NORMAL, "           d NNNN     Desired PIN");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "      usart btpin 1234");
+    PrintAndLogEx(NORMAL, "expected output: nothing");
+    return PM3_SUCCESS;
+}
+
 static int usage_usart_tx(void) {
     PrintAndLogEx(NORMAL, "Send string over USART");
     PrintAndLogEx(NORMAL, "WARNING: it will have side-effects if used in USART HOST mode!");
@@ -131,6 +149,64 @@ static int usart_txrx(uint8_t *srcdata, size_t srclen, uint8_t *dstdata, size_t 
         memcpy(dstdata, resp.data.asBytes, resp.length);
     }
     return resp.status;
+}
+
+static int CmdUsartBtPin(const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = false;
+    char pin[5] = {0};
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_usart_bt_pin();
+            case 'd':
+                if (param_getstr(Cmd, cmdp + 1, pin, sizeof(pin)) != sizeof(pin)-1) {
+                    PrintAndLogEx(FAILED, "PIN has wrong length, must be 4 digits");
+                    errors = true;
+                    break;
+                }
+                for (size_t i = 0; i < sizeof(pin) - 1; i++) {
+                    if ((pin[i] < '0') || (pin[i] > '9')) {
+                        PrintAndLogEx(FAILED, "PIN has wrong char \"%c\", must be 4 digits", pin[i]);
+                        errors = true;
+                        break;
+                    }
+                }
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    //Validations
+    if (errors || cmdp == 0) {
+        usage_usart_bt_pin();
+        return PM3_EINVARG;
+    }
+    char string[6 + sizeof(pin)] = {0};
+    sprintf(string, "AT+PIN%s", pin);
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+    size_t len = 0;
+//    PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+    int ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 600);
+    if (ret == PM3_ENODATA) {
+        PrintAndLogEx(FAILED, "No response from add-on, is it ON and blinking?");
+        return ret;
+    }
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Command failed, ret=%i", ret);
+        return ret;
+    }
+//    PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+    if (strcmp((char*)data, "OKsetPIN") == 0) {
+        PrintAndLogEx(NORMAL, "PIN changed " _GREEN_("successfully"));
+    } else {
+        PrintAndLogEx(WARNING, "Unexpected answer: %.*s", len, data);
+    }
+    return PM3_SUCCESS;
 }
 
 static int CmdUsartTX(const char *Cmd) {
@@ -352,13 +428,14 @@ static int CmdUsartRXhex(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",         CmdHelp,            AlwaysAvailable,         "This help"},
-    {"tx",           CmdUsartTX,         IfPm3FpcUsartDevFromUsb, "Send string over USART"},
-    {"rx",           CmdUsartRX,         IfPm3FpcUsartDevFromUsb, "Receive string over USART"},
-    {"txrx",         CmdUsartTXRX,       IfPm3FpcUsartDevFromUsb, "Send string over USART and wait for response"},
-    {"txhex",        CmdUsartTXhex,      IfPm3FpcUsartDevFromUsb, "Send bytes over USART"},
-    {"rxhex",        CmdUsartRXhex,      IfPm3FpcUsartDevFromUsb, "Receive bytes over USART"},
-//    {"bridge",       CmdUsartBridge,     IfPm3FpcUsartDevFromUsb, "Bridge USB-CDC & USART"},
+    {"help",         CmdHelp,            AlwaysAvailable,          "This help"},
+    {"btpin",        CmdUsartBtPin,      IfPm3FpcUsartHostFromUsb, "Change BT add-on PIN"},
+    {"tx",           CmdUsartTX,         IfPm3FpcUsartDevFromUsb,  "Send string over USART"},
+    {"rx",           CmdUsartRX,         IfPm3FpcUsartDevFromUsb,  "Receive string over USART"},
+    {"txrx",         CmdUsartTXRX,       IfPm3FpcUsartDevFromUsb,  "Send string over USART and wait for response"},
+    {"txhex",        CmdUsartTXhex,      IfPm3FpcUsartDevFromUsb,  "Send bytes over USART"},
+    {"rxhex",        CmdUsartRXhex,      IfPm3FpcUsartDevFromUsb,  "Receive bytes over USART"},
+//    {"bridge",       CmdUsartBridge,     IfPm3FpcUsartDevFromUsb,  "Bridge USB-CDC & USART"},
     {NULL, NULL, NULL, NULL}
 };
 
