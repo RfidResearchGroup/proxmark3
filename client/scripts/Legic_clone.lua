@@ -84,12 +84,20 @@
     as seen on this example: addr 0x05..0x08 & 0x0c must have been set to this values - otherwise kghCRC will not be created by a official reader (not accepted)
 --]]
 
-example = "Script create a clone-dump of a dump from a Legic Prime Tag"
-author = "Mosci"
-desc =
-[[
+copyright = ''
+author = 'Mosci'
+version = 'v1.0.1'
+desc = [[
 This is a script which create a clone-dump of a dump from a Legic Prime Tag (MIM256 or MIM1024)
 (created with 'hf legic save my_dump.hex')
+]]
+example = [[
+    script run legic_clone -i my_dump.hex -o my_clone.hex -c f8
+    script run legic_clone -i my_dump.hex -d -s
+]]
+usage = [[
+script run legic_clone -h -i <file> -o <file> -c <crc> -d -s -w
+
 requiered arguments:
     -i <input file>     (file to read data from)
 
@@ -103,55 +111,58 @@ optional arguments :
 
     e.g.:
     hint: using the CRC '00' will result in a plain dump ( -c 00 )
-
-Examples :
-    script run legic_clone -i my_dump.hex -o my_clone.hex -c f8
-    script run legic_clone -i my_dump.hex -d -s
 ]]
-
 local utils = require('utils')
 local getopt = require('getopt')
 local bxor = bit32.bxor
 
 -- we need always 2 digits
-function prepend_zero(s)
-    if (string.len(s)==1) then return "0" .. s
+local function prepend_zero(s)
+    if (string.len(s) == 1) then 
+        return '0' .. s
     else
-        if (string.len(s)==0) then return "00"
-        else return s
+        if (string.len(s) == 0) then 
+            return '00'
+        else
+            return s
         end
     end
 end
 
 ---
 -- This is only meant to be used when errors occur
-function oops(err)
-    print("ERROR: ",err)
+local function oops(err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
     return nil, err
 end
 
 ---
 -- Usage help
-function help()
+local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 
 -- Check availability of file
-function file_check(file_name)
-  local file_found=io.open(file_name, "r")
-  if file_found==nil then
-    file_found=false
-  else
-    file_found=true
-  end
-  return file_found
+local function file_check(file_name)
+    local file_found = io.open(file_name, "r")
+    if not file_found then
+        file_found = false
+    else
+        file_found = true
+    end
+    return file_found
 end
 
 --- xor-wrapper
 -- xor all from addr 0x22 (start counting from 1 => 23)
-function xorme(hex, xor, index)
+local function xorme(hex, xor, index)
     if ( index >= 23 ) then
         return ('%02x'):format(bxor( tonumber(hex,16) , tonumber(xor,16) ))
     else
@@ -160,7 +171,7 @@ function xorme(hex, xor, index)
 end
 
 -- read input-file into array
-function getInputBytes(infile)
+local function getInputBytes(infile)
     local line
     local bytes = {}
 
@@ -183,26 +194,26 @@ function getInputBytes(infile)
 end
 
 -- write to file
-function writeOutputBytes(bytes, outfile)
+local function writeOutputBytes(bytes, outfile)
     local line
-    local bcnt=0
+    local bcnt = 0
     local fho,err = io.open(outfile,"w")
     if err then print("OOps ... faild to open output-file ".. outfile); return false; end
 
     for i = 1, #bytes do
         if (bcnt == 0) then
-            line=bytes[i]
+            line = bytes[i]
         elseif (bcnt <= 7) then
-            line=line.." "..bytes[i]
+            line = line.." "..bytes[i]
         end
         if (bcnt == 7) then
             -- write line to new file
             fho:write(line.."\n")
             -- reset counter & line
-            bcnt=-1
-            line=""
+            bcnt = -1
+            line = ""
         end
-        bcnt=bcnt+1
+        bcnt = bcnt + 1
     end
     fho:close()
     print("\nwrote ".. #bytes .." bytes to " .. outfile)
@@ -210,7 +221,7 @@ function writeOutputBytes(bytes, outfile)
 end
 
 -- xore certain bytes
-function xorBytes(inBytes, crc)
+local function xorBytes(inBytes, crc)
     local bytes = {}
     for index = 1, #inBytes do
         bytes[index] = xorme(inBytes[index], crc, index)
@@ -229,27 +240,27 @@ end
 function getSegmentData(bytes, start, index)
     local raw, len, valid, last, wrp, wrc, rd, crc
     local segment = {}
-    segment[0] = bytes[start].." "..bytes[start+1].." "..bytes[start+2].." "..bytes[start+3]
+    segment[0] = bytes[start]..' '..bytes[start+1]..' '..bytes[start+2]..' '..bytes[start+3]
     -- flag = high nibble of byte 1
     segment[1] = string.sub(bytes[start+1],0,1)
 
     -- valid = bit 6 of byte 1
-    segment[2] = tonumber(bit32.extract("0x"..bytes[start+1],6,1),16)
+    segment[2] = tonumber(bit32.extract('0x'..bytes[start+1],6,1),16)
 
     -- last = bit 7 of byte 1
-    segment[3] = tonumber(bit32.extract("0x"..bytes[start+1],7,1),16)
+    segment[3] = tonumber(bit32.extract('0x'..bytes[start+1],7,1),16)
 
     -- len = (byte 0)+(bit0-3 of byte 1)
-  segment[4] = tonumber(("%03x"):format(tonumber(bit32.extract("0x"..bytes[start+1],0,3),16)..tonumber(bytes[start],16)),16)
+  segment[4] = tonumber(('%03x'):format(tonumber(bit32.extract('0x'..bytes[start+1],0,3),16)..tonumber(bytes[start],16)),16)
 
     -- wrp (write proteted) = byte 2
     segment[5] = tonumber(bytes[start+2])
 
     -- wrc (write control) - bit 4-6 of byte 3
-    segment[6] = tonumber(bit32.extract("0x"..bytes[start+3],4,3),16)
+    segment[6] = tonumber(bit32.extract('0x'..bytes[start+3],4,3),16)
 
     -- rd (read disabled) - bit 7 of byte 3
-    segment[7] = tonumber(bit32.extract("0x"..bytes[start+3],7,1),16)
+    segment[7] = tonumber(bit32.extract('0x'..bytes[start+3],7,1),16)
 
     -- crc byte 4
     segment[8] = bytes[start+4]
@@ -266,40 +277,40 @@ end
 -- checks if a segment does have a kghCRC
 -- returns boolean false if no kgh has being detected or the kghCRC if a kgh was detected
 function CheckKgh(bytes, segStart, segEnd)
-  if (bytes[8]=='9f' and bytes[9]=='ff' and bytes[13]=='11') then
-    local i
-    local data = {}
-    segStart=tonumber(segStart,10)
-    segEnd=tonumber(segEnd,10)
-    local dataLen = segEnd-segStart-5
-    --- gather creadentials for verify
-    local WRP = bytes[(segStart+2)]
-    local WRC = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3],4,3),16))
-    local RD = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3],7,1),16))
-    local XX = "00"
-    cmd = bytes[1]..bytes[2]..bytes[3]..bytes[4]..WRP..WRC..RD..XX
-    for i=(segStart+5), (segStart+5+dataLen-2) do
-      cmd = cmd..bytes[i]
-    end
-    local KGH=("%02x"):format(utils.Crc8Legic(cmd))
-    if (KGH==bytes[segEnd-1]) then
-      return KGH
+    if (bytes[8]=='9f' and bytes[9]=='ff' and bytes[13]=='11') then
+        local i
+        local data = {}
+        segStart = tonumber(segStart, 10)
+        segEnd = tonumber(segEnd, 10)
+        local dataLen = segEnd-segStart-5
+        --- gather creadentials for verify
+        local WRP = bytes[(segStart+2)]
+        local WRC = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3],4,3),16))
+        local RD = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3],7,1),16))
+        local XX = "00"
+        cmd = bytes[1]..bytes[2]..bytes[3]..bytes[4]..WRP..WRC..RD..XX
+        for i = (segStart+5), (segStart+5+dataLen-2) do
+            cmd = cmd..bytes[i]
+        end
+        local KGH = ("%02x"):format(utils.Crc8Legic(cmd))
+        if (KGH == bytes[segEnd-1]) then
+            return KGH
+        else
+            return false
+        end
     else
-      return false
+        return false
     end
-  else
-    return false
-  end
 end
 
 -- get only the addresses of segemnt-crc's and the length of bytes
 function getSegmentCrcBytes(bytes)
-    local start=23
-    local index=0
+    local start = 23
+    local index = 0
     local crcbytes = {}
     repeat
         seg = getSegmentData(bytes,start,index)
-        crcbytes[index]= seg[10]
+        crcbytes[index] = seg[10]
         start = start + seg[4]
         index = index + 1
     until (seg[3] == 1 or tonumber(seg[9]) == 126 )
@@ -310,33 +321,33 @@ end
 -- print segment-data (hf legic decode like)
 function displaySegments(bytes)
     --display segment header(s)
-    start=23
-    index="00"
+    start = 23
+    index = '00'
 
     --repeat until last-flag ist set to 1 or segment-index has reached 126
     repeat
-        wrc=""
-        wrp=""
-        pld=""
-        Seg = getSegmentData(bytes,start,index)
-    KGH = CheckKgh(bytes,start,(start+tonumber(Seg[4],10)))
+        wrc = ''
+        wrp = ''
+        pld = ''
+        Seg = getSegmentData(bytes, start, index)
+        KGH = CheckKgh(bytes, start, (start+tonumber(Seg[4],10)))
         printSegment(Seg)
 
         -- wrc
-        if(Seg[6]>0) then
+        if (Seg[6] > 0) then
             print("WRC protected area:")
             -- length of wrc = wrc
             for i=1, Seg[6] do
                 -- starts at (segment-start + segment-header + segment-crc)-1
-                wrc = wrc..bytes[(start+4+1+i)-1].." "
+                wrc = wrc..bytes[(start+4+1+i)-1]..' '
             end
             print(wrc)
-        elseif(Seg[5]>0) then
+        elseif (Seg[5] > 0) then
             print("Remaining write protected area:")
             -- length of wrp = (wrp-wrc)
             for i=1, (Seg[5]-Seg[6]) do
                 -- starts at (segment-start + segment-header + segment-crc + wrc)-1
-                wrp = wrp..bytes[(start+4+1+Seg[6]+i)-1].." "
+                wrp = wrp..bytes[(start+4+1+Seg[6]+i)-1]..' '
             end
             print(wrp)
         end
@@ -346,10 +357,12 @@ function displaySegments(bytes)
         --length of payload = segment-len - segment-header - segment-crc - wrp -wrc
         for i=1, (Seg[4]-4-1-Seg[5]-Seg[6]) do
             -- starts at (segment-start + segment-header + segment-crc + segment-wrp + segemnt-wrc)-1
-            pld = pld..bytes[(start+4+1+Seg[5]+Seg[6]+i)-1].." "
+            pld = pld..bytes[(start+4+1+Seg[5]+Seg[6]+i)-1]..' '
         end
         print(pld)
-    if (KGH) then print("'Kaba Group Header' detected"); end
+        if (KGH) then 
+            print("'Kaba Group Header' detected")
+        end
         start = start+Seg[4]
         index = prepend_zero(tonumber(Seg[9])+1)
 
@@ -382,7 +395,7 @@ function writeToTag(plainBytes)
     print("\nthese are the MCD MSN0 MSN1 MSN2 from the Tag that has being read:")
     cmd = 'data hexsamples 4'
     core.console(cmd)
-  print("^^ use this values as input for the following answers (one 2-digit-value per question/answer):")
+    print("^^ use this values as input for the following answers (one 2-digit-value per question/answer):")
     -- enter MCD & MSN (in hex)
     MCD  = utils.input("type in  MCD as 2-digit value - e.g.: 00", plainBytes[1])
     MSN0 = utils.input("type in MSN0 as 2-digit value - e.g.: 01", plainBytes[2])
@@ -398,10 +411,10 @@ function writeToTag(plainBytes)
     SegCrcs = getSegmentCrcBytes(plainBytes)
     for i=0, (#SegCrcs-1) do
     -- SegCrcs[i]-4 = address of first byte of segmentHeader (low byte segment-length)
-    segLen=tonumber(("%1x"):format(tonumber(bit32.extract("0x"..plainBytes[(SegCrcs[i]-3)],0,3),16))..("%02x"):format(tonumber(plainBytes[SegCrcs[i]-4],16)),16)
-    segStart=(SegCrcs[i]-4)
-    segEnd=(SegCrcs[i]-4+segLen)
-    KGH=CheckKgh(plainBytes,segStart,segEnd)
+    segLen = tonumber(("%1x"):format(tonumber(bit32.extract("0x"..plainBytes[(SegCrcs[i]-3)],0,3),16))..("%02x"):format(tonumber(plainBytes[SegCrcs[i]-4],16)),16)
+    segStart = (SegCrcs[i]-4)
+    segEnd = (SegCrcs[i]-4+segLen)
+    KGH = CheckKgh(plainBytes,segStart,segEnd)
     if (KGH) then
       print("'Kaba Group Header' detected - re-calculate...")
     end
@@ -424,17 +437,17 @@ function writeToTag(plainBytes)
         WriteBytes = utils.input("enter number of bytes to write?", SegCrcs[#SegCrcs])
 
         -- load file into pm3-buffer
-        cmd = 'hf legic load myLegicClone.hex'
+        cmd = 'hf legic eload myLegicClone.hex'
         core.console(cmd)
 
         -- write pm3-buffer to Tag
         for i=0, WriteBytes do
             if ( i<5 or i>6) then
-                cmd = ('hf legic write 0x%02x 0x01'):format(i)
+                cmd = ('hf legic write o %02x d 01'):format(i)
                 core.console(cmd)
             elseif (i == 6) then
                 -- write DCF in reverse order (requires 'mosci-patch')
-                cmd = 'hf legic write 0x05 0x02'
+                cmd = 'hf legic write o 05 d 02'
                 core.console(cmd)
             else
                 print("skipping byte 0x05 - will be written next step")
@@ -447,7 +460,7 @@ end
 -- main function
 function main(args)
     -- some variables
-    local i=0
+    local i = 0
     local oldcrc, newcrc, infile, outfile
     local bytes = {}
     local segments = {}
@@ -455,19 +468,19 @@ function main(args)
     -- parse arguments for the script
     for o, a in getopt.getopt(args, 'hwsdc:i:o:') do
         -- output file
-        if o == "o" then
+        if o == 'o' then
             outfile = a
             ofs = true
             if (file_check(a)) then
-                local answer = utils.confirm("\nthe output-file "..a.." alredy exists!\nthis will delete the previous content!\ncontinue?")
-                if (answer==false) then return oops("quiting") end
+                local answer = utils.confirm('\nthe output-file '..a..' alredy exists!\nthis will delete the previous content!\ncontinue?')
+                if (answer==false) then return oops('quiting') end
             end
         end
         -- input file
-        if o == "i" then
+        if o == 'i' then
             infile = a
             if (file_check(infile)==false) then
-                return oops("input file: "..infile.." not found")
+                return oops('input file: '..infile..' not found')
             else
                 bytes = getInputBytes(infile)
                 oldcrc = bytes[5]
@@ -477,21 +490,21 @@ function main(args)
             i = i+1
         end
         -- new crc
-        if o == "c" then
+        if o == 'c' then
             newcrc = a
             ncs = true
         end
         -- display segments switch
-        if o == "d" then ds = true; end
+        if o == 'd' then ds = true; end
         -- display summary switch
-        if o == "s" then ss = true; end
+        if o == 's' then ss = true; end
         -- write to tag switch
-        if o == "w" then ws = true; end
+        if o == 'w' then ws = true; end
         -- help
-        if o == "h" then return help() end
+        if o == 'h' then return help() end
     end
 
-    if (not ifs) then return oops("option -i <input file> is required but missing") end
+    if (not ifs) then return oops('option -i <input file> is required but missing') end
 
     -- bytes to plain
     bytes = xorBytes(bytes, oldcrc)
