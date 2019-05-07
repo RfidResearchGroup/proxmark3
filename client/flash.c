@@ -316,8 +316,7 @@ static int enter_bootloader(char *serial_port_name) {
         // Let time to OS to make the port disappear
         msleep(1000);
 
-        bool opened = OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED);
-        if (opened) {
+        if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
             PrintAndLogEx(NORMAL, " " _GREEN_("Found"));
             return 0;
         } else {
@@ -445,6 +444,7 @@ void flash_free(flash_file_t *ctx) {
 
 // just reset the unit
 int flash_stop_flashing(void) {
+    PrintAndLogEx(SUCCESS, _BLUE_("Resetting hardware...") "Subsequent communication error is " _BLUE_("normal"));
     SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
     msleep(100);
     return 0;
