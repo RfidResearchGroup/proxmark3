@@ -135,11 +135,11 @@ local function main(args)
     --13-14
 
     -- find tag
-    result, err = lib14a.read(false, true)
-    if not result then return oops(err) end
+    local card, err = lib14a.read(false, true)
+    if not card then return oops(err) end
 
     -- load keys
-    local akeys  = pre.GetAll(result.uid)
+    local akeys  = pre.GetAll(card.uid)
     local keyA = akeys:sub(1, 12 )
 
     local b0 = readblock(0, keyA)
@@ -154,7 +154,7 @@ local function main(args)
     core.clearCommandBuffer()
 
     -- wipe card.
-    local cmd  = (csetuid..'%s %s %s w'):format(result.uid, atqa, sak)
+    local cmd  = (csetuid..'%s %s %s w'):format(card.uid, atqa, sak)
     core.console(cmd)
     core.clearCommandBuffer()
 

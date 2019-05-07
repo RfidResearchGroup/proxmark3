@@ -31,22 +31,22 @@ local bxor = bit32.bxor
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
-    return nil,err
+    print('ERROR: ', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
@@ -57,10 +57,11 @@ local function help()
     print(desc)
     print("Example usage")
     print(example)
+    print(usage)    
 end
 --
 -- Exit message
-function exitMsg(msg)
+local function exitMsg(msg)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
     print(msg)
@@ -138,6 +139,7 @@ local function pwdgen(uid)
     local pwd3 = bxor( entry[4], uidbytes[7])
     return string.format('%02X%02X%02X%02X', pwd0, pwd1, pwd2, pwd3)
 end
+
 --
 -- main
 local function main(args)
@@ -151,8 +153,8 @@ local function main(args)
 
     -- Arguments for the script
     for o, a in getopt.getopt(args, 'hu:') do
-        if o == "h" then return help() end
-        if o == "u" then uid = a; useUID = true end
+        if o == 'h' then return help() end
+        if o == 'u' then uid = a; useUID = true end
     end
 
     if useUID then
