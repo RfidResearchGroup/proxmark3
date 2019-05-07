@@ -75,7 +75,7 @@ static int CmdCOTAGRead(const char *Cmd) {
     sscanf(Cmd, "%u", &rawsignal);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_COTAG, rawsignal, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_COTAG, rawsignal, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 7000)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return -1;

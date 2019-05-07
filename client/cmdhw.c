@@ -362,7 +362,7 @@ static int CmdDetectReader(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_LISTEN_READER_FIELD, arg, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LISTEN_READER_FIELD, arg, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -370,7 +370,7 @@ static int CmdDetectReader(const char *Cmd) {
 static int CmdFPGAOff(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    SendCommandMIX(CMD_FPGA_MAJOR_MODE_OFF, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -379,27 +379,27 @@ static int CmdLCD(const char *Cmd) {
     sscanf(Cmd, "%x %d", &i, &j);
     while (j--) {
         clearCommandBuffer();
-        SendCommandOLD(CMD_LCD, i & 0x1ff, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_LCD, i & 0x1ff, 0, 0, NULL, 0);
     }
     return PM3_SUCCESS;
 }
 
 static int CmdLCDReset(const char *Cmd) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_LCD_RESET, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LCD_RESET, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
 static int CmdReadmem(const char *Cmd) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_READ_MEM, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READ_MEM, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
 static int CmdReset(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    SendCommandMIX(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -416,7 +416,7 @@ static int CmdSetDivisor(const char *Cmd) {
     }
     // 12 000 000 (12Mhz)
     clearCommandBuffer();
-    SendCommandOLD(CMD_SET_LF_DIVISOR, arg, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_SET_LF_DIVISOR, arg, 0, 0, NULL, 0);
     PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f KHz", ((double)12000 / (arg + 1)));
     return PM3_SUCCESS;
 }
@@ -440,7 +440,7 @@ static int CmdSetMux(const char *Cmd) {
         return PM3_EINVARG;
         }
     clearCommandBuffer();
-    SendCommandOLD(CMD_SET_ADC_MUX, arg, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_SET_ADC_MUX, arg, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -458,7 +458,7 @@ static int CmdStatus(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandMIX(CMD_STATUS, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_STATUS, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
         PrintAndLogEx(WARNING, "Status command failed. Communication speed test timed out");
     return PM3_SUCCESS;
@@ -468,7 +468,7 @@ static int CmdPing(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
         PrintAndLogEx(SUCCESS, "Ping " _GREEN_("successful"));
     else
@@ -568,7 +568,7 @@ void pm3_version(bool verbose) {
     PacketResponseNG resp;
     clearCommandBuffer();
     
-    SendCommandMIX(CMD_VERSION, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_VERSION, NULL, 0);
     
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");

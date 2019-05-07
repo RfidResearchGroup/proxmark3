@@ -575,7 +575,7 @@ static int CmdHF15Samples(const char *Cmd) {
     if (cmdp == 'h') return usage_15_samples();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, NULL, 0);
 
     getSamples(0, false);
     return 0;
@@ -672,7 +672,7 @@ static int CmdHF15Record(const char *Cmd) {
     if (cmdp == 'h') return usage_15_record();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, NULL, 0);
     return 0;
 }
 
@@ -713,7 +713,7 @@ static int CmdHF15Afi(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_15693_FIND_AFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ISO_15693_FIND_AFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
     return 0;
 }
 

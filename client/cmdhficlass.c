@@ -281,7 +281,7 @@ static int CmdHFiClassList(const char *Cmd) {
 static int CmdHFiClassSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_sniff();
-    SendCommandMIX(CMD_SNIFF_ICLASS, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SNIFF_ICLASS, NULL, 0);
     return 0;
 }
 
@@ -605,7 +605,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     // Disable fast mode and send a dummy command to make it effective
     conn.block_after_ACK = false;
-    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
     WaitForResponseTimeout(CMD_ACK, NULL, 1000);
 
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
@@ -771,7 +771,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
         flags |= FLAG_ICLASS_READER_CEDITKEY;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return false;
@@ -937,7 +937,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     uint8_t tag_data[255 * 8];
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         DropField();
@@ -975,7 +975,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     // begin dump
     clearCommandBuffer();
-    SendCommandOLD(CMD_ICLASS_DUMP, blockno, numblks - blockno + 1, 0, NULL, 0);
+    SendCommandMIX(CMD_ICLASS_DUMP, blockno, numblks - blockno + 1, 0, NULL, 0);
     while (true) {
         printf(".");
         fflush(stdout);
@@ -1031,7 +1031,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
         if (maxBlk > blockno + numblks + 1) {
             // setup dump and start
             clearCommandBuffer();
-            SendCommandOLD(CMD_ICLASS_DUMP, blockno + blocksRead, maxBlk - (blockno + blocksRead), 0, NULL, 0);
+            SendCommandMIX(CMD_ICLASS_DUMP, blockno + blocksRead, maxBlk - (blockno + blocksRead), 0, NULL, 0);
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
                 PrintAndLogEx(WARNING, "command execute timeout 2");
                 return 0;
@@ -1359,7 +1359,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_ICLASS_READBLOCK, blockno, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ICLASS_READBLOCK, blockno, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 0;
@@ -2037,7 +2037,7 @@ out:
 
     // Disable fast mode and send a dummy command to make it effective
     conn.block_after_ACK = false;
-    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
     WaitForResponseTimeout(CMD_ACK, NULL, 1000);
 
     DropField();
@@ -2464,7 +2464,7 @@ int readIclass(bool loop, bool verbose) {
     while (!ukbhit()) {
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
             uint8_t readStatus = resp.oldarg[0] & 0xff;
             uint8_t *data = resp.data.asBytes;

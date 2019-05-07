@@ -109,13 +109,13 @@ static int usage_hf_14b_dump(void) {
 /*
 static void switch_on_field_14b(void) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT, 0, 0, NULL, 0);
 }
 */
 
 static int switch_off_field_14b(void) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_14443B_COMMAND, ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_DISCONNECT, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -170,7 +170,7 @@ static int CmdHF14BSim(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SIMULATE_TAG_ISO_14443B, pupi, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_SIMULATE_TAG_ISO_14443B, pupi, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -180,7 +180,7 @@ static int CmdHF14BSniff(const char *Cmd) {
     if (cmdp == 'h') return usage_hf_14b_sniff();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SNIFF_ISO_14443B, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SNIFF_ISO_14443B, NULL, 0);
     return 0;
 }
 
@@ -301,7 +301,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     while (retry--) {
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
             uint8_t status = resp.oldarg[0];
@@ -317,7 +317,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     while (retry--) {
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
             uint8_t status = resp.oldarg[0];
@@ -501,7 +501,7 @@ static bool HF14B_Std_Info(bool verbose) {
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
@@ -541,7 +541,7 @@ static bool HF14B_Std_Info(bool verbose) {
 static bool HF14B_ST_Info(bool verbose) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
@@ -597,7 +597,7 @@ static bool HF14B_ST_Reader(bool verbose) {
 
     // SRx get and print general info about SRx chip from UID
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
@@ -636,7 +636,7 @@ static bool HF14B_Std_Reader(bool verbose) {
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
@@ -745,7 +745,7 @@ static int CmdHF14BReadSri(const char *Cmd) {
     uint8_t blocks = (tagtype == 1) ? 0x7F : 0x0F;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_READ_SRI_TAG, blocks, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READ_SRI_TAG, blocks, 0, 0, NULL, 0);
     return 0;
 }
 // New command to write a SRI512/SRIX4K tag.
@@ -884,7 +884,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_14443B_COMMAND,  ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_ISO_14443B_COMMAND,  ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
 
     //select
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {

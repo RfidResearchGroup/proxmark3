@@ -876,7 +876,7 @@ static int CmdBuffClear(const char *Cmd) {
     if (cmdp == 'h') return usage_data_buffclear();
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_BUFF_CLEAR, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
     ClearGraph(true);
     return 0;
 }
@@ -1530,7 +1530,7 @@ int CmdTuneSamples(const char *Cmd) {
     PrintAndLogEx(INFO, "\nMeasuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MEASURE_ANTENNA_TUNING, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
     PacketResponseNG resp;
     while (!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
         timeout++;

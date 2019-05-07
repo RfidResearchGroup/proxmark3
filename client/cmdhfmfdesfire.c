@@ -58,7 +58,7 @@ static int CmdHF14AMfDESAuth(const char *Cmd) {
     //DES_set_key((DES_cblock *)key2,&ks2);
 
     //Auth1
-    SendCommandOLD(CMD_MIFARE_DES_AUTH1, blockNo, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_DES_AUTH1, blockNo, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -155,7 +155,7 @@ static int CmdHF14AMfAESAuth(const char *Cmd) {
     AES_set_decrypt_key(key, 128, &key_d);
 
     //Auth1
-    SendCommandOLD(CMD_MIFARE_DES_AUTH1, blockNo, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_DES_AUTH1, blockNo, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;

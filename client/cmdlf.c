@@ -335,7 +335,7 @@ int CmdLFSetConfig(const char *Cmd) {
 bool lf_read(bool silent, uint32_t samples) {
     if (!session.pm3_present) return false;
     clearCommandBuffer();
-    SendCommandOLD(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, silent, samples, 0, NULL, 0);
+    SendCommandMIX(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, silent, samples, 0, NULL, 0);
 
     PacketResponseNG resp;
     if (g_lf_threshold_set) {
@@ -390,7 +390,7 @@ int CmdLFSniff(const char *Cmd) {
     if (cmdp == 'h') return usage_lf_sniff();
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_SNIFF_RAW_ADC_SAMPLES, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_LF_SNIFF_RAW_ADC_SAMPLES, NULL, 0);
     WaitForResponse(CMD_ACK, NULL);
     getSamples(0, false);
     return 0;
@@ -438,7 +438,7 @@ int CmdLFSim(const char *Cmd) {
     PrintAndLogEx(NORMAL, "Simulating");
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SIMULATE_TAG_125K, GraphTraceLen, gap, 0, NULL, 0);
+    SendCommandMIX(CMD_SIMULATE_TAG_125K, GraphTraceLen, gap, 0, NULL, 0);
     return 0;
 }
 
@@ -722,7 +722,7 @@ int CmdLFSimBidir(const char *Cmd) {
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
-    SendCommandOLD(CMD_LF_SIMULATE_BIDIR, 47, 384, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_SIMULATE_BIDIR, 47, 384, 0, NULL, 0);
     return 0;
 }
 

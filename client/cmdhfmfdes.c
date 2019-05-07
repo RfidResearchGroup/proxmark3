@@ -111,7 +111,7 @@ static int CmdHF14ADesRb(const char *Cmd) {
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
-    SendCommandOLD(CMD_MIFARE_DESFIRE_INFO, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_MIFARE_DESFIRE_INFO, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {

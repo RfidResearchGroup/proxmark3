@@ -104,7 +104,7 @@ int CmdHFSniff(const char *Cmd) {
     int skiptriggers =  param_get32ex(Cmd, 1, 0, 10);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_SNIFFER, skippairs, skiptriggers, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_SNIFFER, skippairs, skiptriggers, 0, NULL, 0);
     return 0;
 }
 

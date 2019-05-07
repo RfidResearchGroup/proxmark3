@@ -411,7 +411,7 @@ static int usage_hf14_nack(void) {
 
 static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
@@ -2026,7 +2026,7 @@ out:
 
     // Disable fast mode and send a dummy command to make it effective
     conn.block_after_ACK = false;
-    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
     WaitForResponseTimeout(CMD_ACK, NULL, 1000);
 
 
@@ -2291,7 +2291,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_MIFARE_SNIFFER, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_MIFARE_SNIFFER, NULL, 0);
 
     PacketResponseNG resp;
 
@@ -2506,7 +2506,7 @@ static int CmdHF14AMfEClear(const char *Cmd) {
     if (c == 'h') return usage_hf14_eclr();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_EML_MEMCLR, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_MIFARE_EML_MEMCLR, NULL, 0);
     return 0;
 }
 
@@ -2711,7 +2711,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType == 0) ? 'A' : 'B');
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_EML_CARDLOAD, numSectors, keyType, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_EML_CARDLOAD, numSectors, keyType, 0, NULL, 0);
     return 0;
 }
 
@@ -3276,7 +3276,7 @@ static int CmdHF14AMfice(const char *Cmd) {
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
         clearCommandBuffer();
-        SendCommandOLD(CMD_MIFARE_ACQUIRE_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, NULL, 0);
+        SendCommandMIX(CMD_MIFARE_ACQUIRE_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, NULL, 0);
 
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) goto out;
         if (resp.oldarg[0])  goto out;
@@ -3308,7 +3308,7 @@ out:
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_ACQUIRE_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_ACQUIRE_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, NULL, 0);
     return 0;
 }
 

@@ -67,7 +67,7 @@ static int CmdIOProxRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_read();
     int findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
-    SendCommandOLD(CMD_IO_DEMOD_FSK, findone, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_IO_DEMOD_FSK, findone, 0, 0, NULL, 0);
     return 0;
 }
 */
@@ -252,7 +252,7 @@ static int CmdIOProxClone(const char *Cmd) {
     print_blocks(blocks, 3);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_IO_CLONE_TAG, blocks[1], blocks[2], 0, NULL, 0);
+    SendCommandMIX(CMD_IO_CLONE_TAG, blocks[1], blocks[2], 0, NULL, 0);
     return 0;
 }
 

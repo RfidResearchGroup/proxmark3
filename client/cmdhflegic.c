@@ -527,7 +527,7 @@ static int CmdLegicRfSim(const char *Cmd) {
     uint64_t id = 1;
     sscanf(Cmd, " %" SCNi64, &id);
     clearCommandBuffer();
-    SendCommandOLD(CMD_SIMULATE_TAG_LEGIC_RF, id, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_SIMULATE_TAG_LEGIC_RF, id, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -755,7 +755,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     legic_chk_iv(&iv);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_LEGIC_RF, offset, len, iv, NULL, 0);
+    SendCommandMIX(CMD_READER_LEGIC_RF, offset, len, iv, NULL, 0);
     PacketResponseNG resp;
 
     uint8_t timeout = 0;
@@ -808,7 +808,7 @@ int legic_get_type(legic_card_select_t *card) {
     if (card == NULL) return 1;
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LEGIC_INFO, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_LEGIC_INFO, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         return 2;
@@ -893,7 +893,7 @@ static int CmdLegicDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reading tag memory %d b...", dumplen);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_LEGIC_RF, 0x00, dumplen, 0x55, NULL, 0);
+    SendCommandMIX(CMD_READER_LEGIC_RF, 0x00, dumplen, 0x55, NULL, 0);
     PacketResponseNG resp;
 
     uint8_t timeout = 0;

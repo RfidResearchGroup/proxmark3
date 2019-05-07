@@ -93,9 +93,9 @@ static int usage_lf_hid_brute(void) {
 
 // sending three times.  Didn't seem to break the previous sim?
 static bool sendPing(void) {
-    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
-    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
-    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
@@ -111,7 +111,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
     calcWiegand(fmtlen, fc, cn, bits, 0);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HID_SIM_TAG, bytebits_to_byte(bits, 32), bytebits_to_byte(bits + 32, 32), 0, NULL, 0);
+    SendCommandMIX(CMD_HID_SIM_TAG, bytebits_to_byte(bits, 32), bytebits_to_byte(bits + 32, 32), 0, NULL, 0);
 
     msleep(delay);
     sendPing();
@@ -239,7 +239,7 @@ static int CmdHIDRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_hid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
-    SendCommandOLD(CMD_HID_DEMOD_FSK, findone, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HID_DEMOD_FSK, findone, 0, 0, NULL, 0);
     return 0;
 }
 */
@@ -259,7 +259,7 @@ static int CmdHIDSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HID_SIM_TAG, hi, lo, 0, NULL, 0);
+    SendCommandMIX(CMD_HID_SIM_TAG, hi, lo, 0, NULL, 0);
     return 0;
 }
 

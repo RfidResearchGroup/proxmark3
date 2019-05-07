@@ -285,7 +285,7 @@ static int CmdFdxClone(const char *Cmd) {
 
     for (int i = 4; i >= 0; --i) {
         clearCommandBuffer();
-        SendCommandOLD(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
+        SendCommandMIX(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;

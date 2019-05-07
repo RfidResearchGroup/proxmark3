@@ -87,9 +87,9 @@ static int usage_lf_awid_brute(void) {
 }
 
 static bool sendPing(void) {
-    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
-    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
-    SendCommandOLD(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
@@ -167,7 +167,7 @@ static int CmdAWIDRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
-    SendCommandOLD(CMD_AWID_DEMOD_FSK, findone, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_AWID_DEMOD_FSK, findone, 0, 0, NULL, 0);
     return 0;
 }
 */
@@ -385,7 +385,7 @@ static int CmdAWIDClone(const char *Cmd) {
 
     for (uint8_t i = 0; i < 4; i++) {
         clearCommandBuffer();
-        SendCommandOLD(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
+        SendCommandMIX(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;

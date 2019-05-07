@@ -1019,7 +1019,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     if (errors) return usage_t55xx_wakup();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_T55XX_WAKEUP, password, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_T55XX_WAKEUP, password, 0, 0, NULL, 0);
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
     return 0;
 }
@@ -1516,7 +1516,7 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     // arg2: password
     uint8_t arg0 = (page << 1 | (pwdmode));
     clearCommandBuffer();
-    SendCommandOLD(CMD_T55XX_READ_BLOCK, arg0, block, password, NULL, 0);
+    SendCommandMIX(CMD_T55XX_READ_BLOCK, arg0, block, password, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
@@ -1775,7 +1775,7 @@ static void t55x7_create_config_block(int tagtype) {
 static int CmdResetRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    SendCommandOLD(CMD_T55XX_RESET_READ, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_T55XX_RESET_READ, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 0;
@@ -1855,7 +1855,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
     if (cmdp == 'm') {
         clearCommandBuffer();
-        SendCommandOLD(CMD_T55XX_CHKPWDS, 0, 0, 0, NULL, 0);
+        SendCommandNG(CMD_T55XX_CHKPWDS, NULL, 0);
         PacketResponseNG resp;
 
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {

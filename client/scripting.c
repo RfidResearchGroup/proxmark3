@@ -45,7 +45,7 @@ static int l_fast_push_mode(lua_State *L) {
 
     // Disable fast mode and send a dummy command to make it effective
     if (enable == false) {
-        SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+        SendCommandNG(CMD_PING, NULL, 0);
         WaitForResponseTimeout(CMD_ACK, NULL, 1000);
     }
 
@@ -86,7 +86,7 @@ static int l_SendCommand(lua_State *L) {
  * @return
  */
 static int l_SendCommandOLD(lua_State *L) {
-//  SendCommandOLD(CMD_HF_SNIFFER, skippairs, skiptriggers, 0, NULL, 0);
+//  SendCommandMIX(CMD_HF_SNIFFER, skippairs, skiptriggers, 0, NULL, 0);
 // (uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
 
     uint64_t cmd, arg0, arg1, arg2;

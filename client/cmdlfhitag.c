@@ -261,7 +261,7 @@ static int CmdLFHitagSniff(const char *Cmd) {
     if (ctmp == 'h') return usage_hitag_sniff();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SNIFF_HITAG, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SNIFF_HITAG, NULL, 0);
     return 0;
 }
 
@@ -339,7 +339,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     if (tag_mem_supplied) {
         SendCommandOLD(cmd, 1, 0, 0, data, datalen);
     } else {
-        SendCommandOLD(cmd, 0, 0, 0, NULL, 0);
+        SendCommandNG(cmd, NULL, 0);
     }
 
     free(data);
@@ -457,7 +457,7 @@ static void printHitagConfiguration(uint8_t config) {
 static bool getHitagUid(uint32_t *uid) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_HITAG, RHT2F_UID_ONLY, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READER_HITAG, RHT2F_UID_ONLY, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -632,7 +632,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
     if (file_given)
         SendCommandOLD(CMD_TEST_HITAGS_TRACES, 1, 0, 0, data, datalen);
     else
-        SendCommandOLD(CMD_TEST_HITAGS_TRACES, 0, 0, 0, NULL, 0);
+        SendCommandNG(CMD_TEST_HITAGS_TRACES, NULL, 0);
 
     free(data);
     return 0;

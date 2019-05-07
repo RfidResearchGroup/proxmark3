@@ -101,7 +101,7 @@ static int CmdLFPCF7931Read(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_PCF7931_READ, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_PCF7931_READ, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 1;

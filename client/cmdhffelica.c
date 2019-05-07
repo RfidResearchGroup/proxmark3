@@ -173,7 +173,7 @@ static int CmdHFFelicaSniff(const char *Cmd) {
     if (errors || cmdp == 0) return usage_hf_felica_sniff();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FELICA_SNIFF, samples2skip, triggers2skip, 0, NULL, 0);
+    SendCommandMIX(CMD_FELICA_SNIFF, samples2skip, triggers2skip, 0, NULL, 0);
     return 0;
 }
 
@@ -186,7 +186,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
         return usage_hf_felica_simlite();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FELICA_LITE_SIM, uid, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_FELICA_LITE_SIM, uid, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -349,7 +349,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "FeliCa lite - dump started");
     PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
     clearCommandBuffer();
-    SendCommandOLD(CMD_FELICA_LITE_DUMP, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_FELICA_LITE_DUMP, NULL, 0);
     PacketResponseNG resp;
 
     uint8_t timeout = 0;
@@ -560,11 +560,11 @@ int CmdHFFelica(const char *Cmd) {
 int readFelicaUid(bool verbose) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
-        //SendCommandOLD(CMD_FELICA_COMMAND, 0, 0, 0, NULL, 0);
+        //SendCommandNG(CMD_FELICA_COMMAND, NULL, 0);
         return 0;
     }
 

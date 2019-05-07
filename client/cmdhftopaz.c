@@ -31,11 +31,11 @@ static struct {
 } topaz_tag;
 
 static void topaz_switch_on_field(void) {
-    SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, 0, 0, NULL, 0);
 }
 
 static void topaz_switch_off_field(void) {
-    SendCommandOLD(CMD_READER_ISO_14443a, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_READER_ISO_14443a, NULL, 0);
 }
 
 // send a raw topaz command, returns the length of the response (0 in case of error)

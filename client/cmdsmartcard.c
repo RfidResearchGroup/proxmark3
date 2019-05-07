@@ -664,7 +664,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
 
     // trigger the firmware upgrade
     clearCommandBuffer();
-    SendCommandOLD(CMD_SMART_UPGRADE, firmware_size, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_SMART_UPGRADE, firmware_size, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -702,7 +702,7 @@ static int CmdSmartInfo(const char *Cmd) {
     if (errors) return usage_sm_info();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SMART_ATR, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
@@ -776,7 +776,7 @@ static int CmdSmartReader(const char *Cmd) {
     if (errors) return usage_sm_reader();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SMART_ATR, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
@@ -821,7 +821,7 @@ static int CmdSmartSetClock(const char *Cmd) {
     if (errors || cmdp == 0) return usage_sm_setclock();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SMART_SETCLOCK, clock1, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_SMART_SETCLOCK, clock1, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "smart card select failed");
@@ -1185,7 +1185,7 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
         memset(atr, 0, sizeof(smart_card_atr_t));
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SMART_ATR, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");

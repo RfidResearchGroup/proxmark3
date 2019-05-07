@@ -457,7 +457,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_FLASHMEM_INFO, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_FLASHMEM_INFO, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");

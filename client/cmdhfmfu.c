@@ -459,7 +459,7 @@ static char *getUlev1CardSizeStr(uint8_t fsize) {
 
 static void ul_switch_on_field(void) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
 }
 
 static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
@@ -2485,7 +2485,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
     // read block2.
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREU_READBL, 2, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFAREU_READBL, 2, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 2;
@@ -2543,7 +2543,7 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
     if (cmdp == 'r') {
         // read uid from tag
         clearCommandBuffer();
-        SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
         iso14a_card_select_t card;
@@ -2657,7 +2657,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     if (cmdp == 'r') {
         // read uid from tag
         clearCommandBuffer();
-        SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
         iso14a_card_select_t card;

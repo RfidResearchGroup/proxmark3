@@ -25,7 +25,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
     while (true) {
         clearCommandBuffer();
-        SendCommandOLD(CMD_READER_MIFARE, arg0, blockno, key_type, NULL, 0);
+        SendCommandMIX(CMD_READER_MIFARE, arg0, blockno, key_type, NULL, 0);
 
         //flush queue
         while (ukbhit()) {
@@ -446,7 +446,7 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_EML_MEMGET, blockNum, blocksCount, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_EML_MEMGET, blockNum, blocksCount, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return PM3_ETIMEOUT;
     memcpy(data, resp.data.asBytes, blocksCount * 16);
@@ -517,7 +517,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_CGETBLOCK, params, blockNo, 0, NULL, 0);
+    SendCommandMIX(CMD_MIFARE_CGETBLOCK, params, blockNo, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -906,7 +906,7 @@ returns:
 int detect_classic_nackbug(bool verbose) {
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_MIFARE_NACK_DETECT, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_MIFARE_NACK_DETECT, NULL, 0);
     PacketResponseNG resp;
 
     if (verbose)
@@ -991,7 +991,7 @@ void detect_classic_magic(void) {
     uint8_t isGeneration = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_MIFARE_CIDENT, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_MIFARE_CIDENT, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         isGeneration = resp.oldarg[0] & 0xff;
 
