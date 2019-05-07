@@ -422,11 +422,6 @@ void SendStatus(void) {
     DbpString(_BLUE_("Installed StandAlone Mode"));
     ModInfo();
 
-    //DbpString("Running ");
-    //Dbprintf("  Is Device attached to USB| %s", USB_ATTACHED() ? "Yes" : "No");
-    //Dbprintf("  Is Device attached to FPC| %s", send_using_0 ? "Yes" : "No");
-    //Dbprintf("  Is USB_reconnect value   | %d", GetUSBreconnect() );
-    //Dbprintf("  Is USB_configured value  | %d", GetUSBconfigured() );
 
     reply_old(CMD_ACK, 1, 0, 0, 0, 0);
 }
@@ -1187,22 +1182,29 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_FPC_USART_DEV
         case CMD_USART_TX: {
+            LED_B_ON();
             usart_writebuffer_sync(packet->data.asBytes, packet->length);
             reply_ng(CMD_USART_TX, PM3_SUCCESS, NULL, 0);
+            LED_B_OFF();
             break;
         }
         case CMD_USART_RX: {
-            uint8_t dest[USART_FIFOLEN] = {'\0'};
+            LED_B_ON();
+            uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
             uint16_t available = usart_rxdata_available();
+            
             if (available > 0) {
                 uint16_t len = usart_read_ng(dest, available);
                 reply_ng(CMD_USART_RX, PM3_SUCCESS, dest, len);
             } else {
                 reply_ng(CMD_USART_RX, PM3_ENODATA, NULL, 0);
             }
+            BigBuf_free();
+            LED_B_OFF();
             break;
         }
         case CMD_USART_TXRX: {
+            LED_B_ON();
             struct p {
                 uint32_t waittime;
                 uint8_t data[PM3_CMD_DATA_SIZE - sizeof(uint32_t)];
@@ -1211,7 +1213,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             usart_writebuffer_sync(payload->data, packet->length - sizeof(payload->waittime));
             uint16_t available;
             WaitMS(payload->waittime);
-            uint8_t dest[USART_FIFOLEN] = {'\0'};
+
+            uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
+            
             available = usart_rxdata_available();
             // Dbprintf("avail (%u)",  available);
             if (available > 0) {
@@ -1220,6 +1224,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             } else {
                 reply_ng(CMD_USART_TXRX, PM3_ENODATA, NULL, 0);
             }
+            BigBuf_free();
+            LED_B_OFF();
             break;
         }
 #endif
