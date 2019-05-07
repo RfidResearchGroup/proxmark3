@@ -33,21 +33,22 @@ local bxor = bit32.bxor
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
-    return nil,err
+    print('ERROR: ', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
@@ -58,6 +59,7 @@ local function help()
     print(desc)
     print('Example usage')
     print(example)
+    print(usage)
 end
 ---
 -- Exit message
@@ -142,8 +144,8 @@ local function main(args)
 
     -- Arguments for the script
     for o, a in getopt.getopt(args, 'hu:') do
-        if o == "h" then return help() end
-        if o == "u" then uid = a; useUID = true end
+        if o == 'h' then return help() end
+        if o == 'u' then uid = a; useUID = true end
     end
 
     if useUID then
@@ -160,7 +162,7 @@ local function main(args)
         -- simple tag check
         if 0x09 ~= tag.sak then
             if 0x4400 ~= tag.atqa then
-                return oops(('[fail] found tag %s :: looking for Mifare Mini 0.3k'):format(tag.name))
+                return oops(('[!] found tag %s :: looking for Mifare Mini 0.3k'):format(tag.name))
             end
         end
         uid = tag.uid
