@@ -468,7 +468,7 @@ static int CmdPing(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandNG(CMD_PING, NULL, 0);
+    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
         PrintAndLogEx(SUCCESS, "Ping " _GREEN_("successful"));
     else
