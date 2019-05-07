@@ -5,7 +5,7 @@ local utils =  require('utils')
 
 copyright = 'Copyright (c) 2018 IceSQL AB. All rights reserved.'
 author = 'Christian Herrmann'
-version = 'v1.0.4'
+version = 'v1.0.5'
 desc = [[
 This script tries to set UID on a IS15693 SLIX magic card
 Remember the UID  ->MUST<- start with 0xE0
@@ -32,20 +32,21 @@ local DEBUG = true
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
     return nil, err
 end
 ---
@@ -57,24 +58,25 @@ local function help()
     print(desc)
     print('Example usage')
     print(example)
+    print(usage)
 end
 --
 --- Set UID on magic command enabled on a ICEMAN based REPO
 local function magicUID_iceman(b0, b1)
     print('Using backdoor Magic tag function')
-    core.console("hf 15 raw -2 -c 02213E00000000")
-    core.console("hf 15 raw -2 -c 02213F69960000")
-    core.console("hf 15 raw -2 -c 022138"..b1)
-    core.console("hf 15 raw -2 -c 022139"..b0)
+    core.console('hf 15 raw -2 -c 02213E00000000')
+    core.console('hf 15 raw -2 -c 02213F69960000')
+    core.console('hf 15 raw -2 -c 022138'..b1)
+    core.console('hf 15 raw -2 -c 022139'..b0)
 end
 --
 --- Set UID on magic command enabled,  OFFICAL REPO
 local function magicUID_offical(b0, b1)
     print('Using backdoor Magic tag function OFFICAL REPO')
-    core.console("hf 15 cmd raw -c 02213E00000000")
-    core.console("hf 15 cmd raw -c 02213F69960000")
-    core.console("hf 15 cmd raw -c 022138"..b1)
-    core.console("hf 15 cmd raw -c 022139"..b0)
+    core.console('hf 15 cmd raw -c 02213E00000000')
+    core.console('hf 15 cmd raw -c 02213F69960000')
+    core.console('hf 15 cmd raw -c 022138'..b1)
+    core.console('hf 15 cmd raw -c 022139'..b0)
 end
 ---
 -- The main entry point
@@ -89,9 +91,9 @@ function main(args)
 
     -- Read the parameters
     for o, a in getopt.getopt(args, 'hu:a') do
-        if o == "h" then return help() end
-        if o == "u" then uid = a end
-        if o == "a" then use_iceman = false end
+        if o == 'h' then return help() end
+        if o == 'u' then uid = a end
+        if o == 'a' then use_iceman = false end
     end
 
     -- uid string checks
