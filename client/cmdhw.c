@@ -57,7 +57,7 @@ static int usage_hw_connect(void) {
     PrintAndLogEx(NORMAL, "           <port>   serial port to connect to");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw connect "SERIAL_PORT_H);
+    PrintAndLogEx(NORMAL, "      hw connect "SERIAL_PORT_EXAMPLE_H);
     return PM3_SUCCESS;
 }
 

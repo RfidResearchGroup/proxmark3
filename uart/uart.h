@@ -45,11 +45,11 @@
 
 
 #if defined (_WIN32)
-#define SERIAL_PORT_H   "com3"
+#define SERIAL_PORT_EXAMPLE_H   "com3"
 #elif defined(__APPLE__)
-#define SERIAL_PORT_H   "/dev/cu.usbmodem"
+#define SERIAL_PORT_EXAMPLE_H   "/dev/cu.usbmodem"
 #else
-#define SERIAL_PORT_H   "/dev/ttyACM0"
+#define SERIAL_PORT_EXAMPLE_H   "/dev/ttyACM0"
 #endif
 
 /* serial_port is declared as a void*, which you should cast to whatever type
