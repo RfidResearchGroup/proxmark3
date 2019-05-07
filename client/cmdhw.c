@@ -512,15 +512,13 @@ static int CmdConnect(const char *Cmd) {
     if ( port == NULL ) {
         return usage_hw_connect();
     }
+    
     // if we were already connected,  disconnect first.
     //if (session.pm3_present) {
         PrintAndLogEx(INFO, "Disconnecting from current serial port");
         CloseProxmark();
         session.pm3_present = false;
     //}
-
-    // set timeouts
-    //int res = uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
     
     // try to open serial port
     session.pm3_present = OpenProxmark(port, false, 20, false, USART_BAUD_RATE);
