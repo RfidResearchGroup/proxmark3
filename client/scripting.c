@@ -56,26 +56,6 @@ static int l_fast_push_mode(lua_State *L) {
 
 /**
  * The following params expected:
- *  UsbCommand c
- *@brief l_SendCommand
- * @param L
- * @return
- */
-static int l_SendCommand(lua_State *L) {
-    size_t size;
-    const char *data = luaL_checklstring(L, 1, &size);
-    if (size != sizeof(PacketCommandOLD)) {
-        printf("Got data size %d, expected %d", (int) size, (int) sizeof(PacketCommandOLD));
-        lua_pushstring(L, "Wrong data size");
-        return 1;
-    }
-
-    SendCommand((PacketCommandOLD *)data);
-    return 0;
-}
-
-/**
- * The following params expected:
  * @brief l_SendCommandOLD
  * @param L - a lua string with the following five params.
  * @param cmd  must be hexstring, max u64
@@ -1042,7 +1022,6 @@ static int setLuaPath(lua_State *L, const char *path) {
 
 int set_pm3_libraries(lua_State *L) {
     static const luaL_Reg libs[] = {
-        {"SendCommand",                 l_SendCommand},
         {"SendCommandOLD",              l_SendCommandOLD},
         {"SendCommandMIX",              l_SendCommandMIX},
         {"SendCommandNG",               l_SendCommandNG},

@@ -57,15 +57,22 @@ static uint64_t timeout_start_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
-void SendCommand(PacketCommandOLD *c) {
+void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+    PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
+    c.cmd = cmd;
+    c.arg[0] = arg0;
+    c.arg[1] = arg1;
+    c.arg[2] = arg2;
+    if (len && data)
+        memcpy(&c.d, data, len);
 
 #ifdef COMMS_DEBUG
     PrintAndLogEx(NORMAL, "Sending %s", "OLD");
 #endif
 #ifdef COMMS_DEBUG_RAW
-    print_hex_break((uint8_t *)&c->cmd, sizeof(c->cmd), 32);
-    print_hex_break((uint8_t *)&c->arg, sizeof(c->arg), 32);
-    print_hex_break((uint8_t *)&c->d, sizeof(c->d), 32);
+    print_hex_break((uint8_t *)&c.cmd, sizeof(c.cmd), 32);
+    print_hex_break((uint8_t *)&c.arg, sizeof(c.arg), 32);
+    print_hex_break((uint8_t *)&c.d, sizeof(c.d), 32);
 #endif
 
     if (!session.pm3_present) {
@@ -83,7 +90,7 @@ void SendCommand(PacketCommandOLD *c) {
         pthread_cond_wait(&txBufferSig, &txBufferMutex);
     }
 
-    txBuffer = *c;
+    txBuffer = c;
     txBuffer_pending = true;
 
     // tell communication thread that a new command can be send
@@ -92,18 +99,6 @@ void SendCommand(PacketCommandOLD *c) {
     pthread_mutex_unlock(&txBufferMutex);
 
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
-}
-
-// Let's move slowly to an API closer to SendCommandNG
-void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
-    PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
-    c.cmd = cmd;
-    c.arg[0] = arg0;
-    c.arg[1] = arg1;
-    c.arg[2] = arg2;
-    if (len && data)
-        memcpy(&c.d, data, len);
-    SendCommand(&c);
 }
 
 static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool ng) {
