@@ -106,15 +106,12 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     uart_reconfigure_timeouts(sp, UART_FPC_CLIENT_RX_TIMEOUT_MS);
 
     if (!uart_set_speed(sp, speed)) {
-        // trying some fallbacks automatically
+        // try fallback automatically
         speed = 115200;
         if (!uart_set_speed(sp, speed)) {
-            speed = 9600;
-            if (!uart_set_speed(sp, speed)) {
-                uart_close(sp);
-                printf("[!] UART error while setting baudrate\n");
-                return INVALID_SERIAL_PORT;
-            }
+            uart_close(sp);
+            printf("[!] UART error while setting baudrate\n");
+            return INVALID_SERIAL_PORT;
         }
     }
     conn.uart_speed = uart_get_speed(sp);
