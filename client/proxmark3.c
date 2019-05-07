@@ -55,6 +55,7 @@ static void showBanner(void) {
 int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if ( IsCommunicationThreadDead() && session.pm3_present) {
+        rl_set_prompt("[offline] "PROXPROMPT);
         session.pm3_present = false;
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use \"hw connect\" to reconnect\n");
     }
