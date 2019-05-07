@@ -4,7 +4,7 @@ local getopt = require('getopt')
 
 copyright = ''
 author = 'Dominic Celiano'
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc =
 [[
 Purpose: Lua script to communicate with the Mifare Plus EV1, including personalization (setting the keys) and proximity check. Manually edit the file to add to the commands you can send the card.
@@ -14,8 +14,13 @@ Please read the NXP manual before running this script to prevent making irrevers
     - Make sure you choose your card size correctly (2kB or 4kB).
 Small changes can be to made this script to communicate with the Mifare Plus S, X, or SE.
 ]]
+example = [[
+    -- default
+    script run mifareplus
+]]
 usage = [[
 script run mifareplus -h
+
 Arguments:
     -h             : this help
 ]]
@@ -41,7 +46,8 @@ READPLAINNOMACUNMACED = '0336'
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print('ERROR: ',err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
     return nil, err
 end
 ---
@@ -53,6 +59,7 @@ local function help()
     print(desc)
     print('Example usage')
     print(example)
+    print(usage)
 end
 ---
 -- Used to send raw data to the firmware to subsequently forward the data to the card.
@@ -67,12 +74,13 @@ local function sendRaw(rawdata, crc, power)
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT
     end
 
-    local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a,
+    local command = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a,
                                 arg1 = flags, -- Send raw
                                 arg2 = string.len(rawdata) / 2, -- arg2 contains the length, which is half the length of the ASCII-string rawdata
-                                data = rawdata}
+                                data = rawdata
+                                }
     local ignore_response = false
-    local result, err = lib14a.sendToDevice(command, ignore_response)
+    local result, err = command.sendMIX(ignore_response)
     if result then
         --unpack the first 4 parts of the result as longs, and the last as an extremely long string to later be cut down based on arg1, the number of bytes returned
         local count,cmd,arg1,arg2,arg3,data = bin.unpack('LLLLH512',result)
@@ -88,14 +96,6 @@ local function sendRaw(rawdata, crc, power)
         oops("Error sending the card raw data.")
         return nil
     end
-end
-
--- Sends an instruction to do nothing, only disconnect
-local function disconnect()
-    local command = Command:new{cmd = cmds.CMD_READER_ISO_14443a, arg1 = 0,}
-    -- We can ignore the response here, no ACK is returned for this command
-    -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
-    return lib14a.sendToDevice(command,true)
 end
 
 local function writePerso()
@@ -311,11 +311,17 @@ function main(args)
     -- Initialize the card using the already-present read14a library
     -- Perform RATS and PPS (Protocol and Parameter Selection) check to finish the ISO 14443-4 protocol.
     info,err = lib14a.read(true, false)
-    if not info then oops(err); disconnect(); return; end
+    if not info then 
+        lib14a.disconnect()
+        return oops(err)
+    end
 
     --
     response = sendRaw("D01100", true, true)
-    if not response then oops("No response from PPS check"); disconnect(); return;  end
+    if not response then 
+        lib14a.disconnect()
+        return oops("No response from PPS check")
+    end
 
     print("Connected to")
     print(" Type : "..info.name)
@@ -343,7 +349,7 @@ function main(args)
     -- Power off the Proxmark
     sendRaw(POWEROFF, false, false)
 
-    disconnect()
+    lib14a.disconnect()
 end
 
 main(args)
