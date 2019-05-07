@@ -6,7 +6,7 @@ local getopt = require('getopt')
 
 copyright = ''
 author = "Brian Redbeard"
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 Perform bulk enrollment of 26 bit H10301 style RFID Tags
 For more info, check the comments in the code
@@ -32,21 +32,22 @@ local lshift = bit32.lshift
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
-    return nil,err
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, errr
 end
 ---
 -- Usage help
@@ -57,6 +58,7 @@ local function help()
     print(desc)
     print('Example usage')
     print(example)
+    print(usage)    
 end
 ---
 -- Exit message
@@ -68,7 +70,7 @@ local function exitMsg(msg)
 end
 --[[Implement a function to simply visualize the bitstream in a text format
 --This is especially helpful for troubleshooting bitwise math issues]]--
-function toBits(num,bits)
+local function toBits(num,bits)
     -- returns a table of bits, most significant first.
     bits = bits or math.max(1, select(2, math.frexp(num)))
     local t = {} -- will contain the bits
@@ -86,7 +88,7 @@ end
   default to this and so counting some ones is good enough for me
 ]]--
 local function evenparity(s)
-    local _, count = string.gsub(s, "1", "")
+    local _, count = string.gsub(s, '1', '')
     local p = count % 2
     if (p == 0) then
         return false
@@ -126,7 +128,7 @@ local function cardHex(i, f)
     preamble = bor(0, lshift(1, 5))
     bits = bor(bits, lshift(1, 26))
 
-    return ("%04x%08x"):format(preamble, bits)
+    return ('%04x%08x'):format(preamble, bits)
 end
 ---
 -- main
@@ -145,31 +147,31 @@ local function main(args)
         if o == 'h' then return help() end
         if o == 'f' then
             if isempty(a) then
-                print("You did not supply a facility code, using 0")
+                print('You did not supply a facility code, using 0')
                 facility = 0
             else
                 facility = a
             end
         end
         if o == 'b' then
-            if isempty(a) then return oops("You must supply the flag -b (base id)") end
+            if isempty(a) then return oops('You must supply the flag -b (base id)') end
             baseid = a
         end
         if o == 'c' then
-            if isempty(a) then return oops("You must supply the flag -c (count)") end
+            if isempty(a) then return oops('You must supply the flag -c (count)') end
             count = a
         end
     end
 
     --Due to my earlier complaints about how this specific getopt library
-    --works, specifying ":" does not enforce supplying a value, thus we
+    --works, specifying ':' does not enforce supplying a value, thus we
     --need to do these checks all over again.
-    if isempty(baseid) then return oops("You must supply the flag -b (base id)") end
-    if isempty(count) then return oops("You must supply the flag -c (count)") end
+    if isempty(baseid) then return oops('You must supply the flag -b (base id)') end
+    if isempty(count) then return oops('You must supply the flag -c (count)') end
 
     --If the facility ID is non specified, ensure we code it as zero
     if isempty(facility) then
-        print("Using 0 for the facility code as -f was not supplied")
+        print('Using 0 for the facility code as -f was not supplied')
         facility = 0
     end
 
@@ -183,8 +185,8 @@ local function main(args)
 
     for cardnum = baseid, endid do
         local card = cardHex(cardnum, facility)
-        print("Press enter to program card "..cardnum..":"..facility.." (hex: "..card..")")
-        --This would be better with "press any key", but we'll take what we can get.
+        print('Press enter to program card '..cardnum..':'..facility..' (hex: '..card..')')
+        --This would be better with 'press any key', but we'll take what we can get.
         io.read()
         core.console( ('lf hid clone %s'):format(card) )
     end
