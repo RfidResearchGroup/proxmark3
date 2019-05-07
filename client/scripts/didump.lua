@@ -16,16 +16,28 @@ The dump is decrypted. If a raw dump is wanted, use the -r parameter
 ]]
 example = [[
     script run didump
+    
+    -- selftest
     script run didump -t
+    
+    -- Generate raw dump,  into json.
     script run didump -r
+    
+    -- load file
+    script run didump -i dumpdata.json
 ]]
 usage = [[
-script run didump -h -t -r
+script run didump -h -t -r -d -e -v -i dumpdata.json
 
 Arguments:
-      h   this helptext
-      r   raw
-      t   selftest
+      h                 this helptext
+      r                 raw
+      t                 selftest
+      d                 decrypt data
+      e                 encrypt data
+      v                 validate data
+      i dumpdata.json   load json dump file
+    end      
 ]]
 
 -- Some shortcuts
