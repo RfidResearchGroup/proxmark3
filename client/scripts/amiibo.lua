@@ -15,9 +15,13 @@ local luamiibo = luamiibo_open()
 
 local function nfc_read_amiibo ()
 
-   local command = Command:new{cmd = cmds.CMD_MIFAREU_READCARD, arg1 = 0, arg2 = 135}
+   local command = Command:newMIX{
+                cmd = cmds.CMD_MIFAREU_READCARD,
+                arg1 = 0,
+                arg2 = 135
+                }
 
-   local result, err = reader.sendToDevice(command)
+   local result, err = command.sendMIX()
    if result then
       -- Do Mifare Ultralight read
       local count, cmd, arg0, data_len, offset = bin.unpack('LLLL', result)
@@ -85,8 +89,13 @@ local function emulate_amiibo (amiibo_data)
    print(string.format('Simulating with UID: 0x%04x 0x%04x', uid_first, uid_second))
 
    -- Begin simulating NTAG215
-   local simCmd = Command:new{cmd = cmds.CMD_SIMULATE_TAG_ISO_14443a, arg1 = 7, arg2 = uid_first, arg3 = uid_second}
-   local _, err = reader.sendToDevice(simCmd)
+   local simCmd = Command:newMIX{
+                cmd = cmds.CMD_SIMULATE_TAG_ISO_14443a,
+                arg1 = 7,
+                arg2 = uid_first,
+                arg3 = uid_second
+                }
+   local _, err = simCmd.sendMIX()
    if err then
       print('Failed to start simulator', err)
       return
