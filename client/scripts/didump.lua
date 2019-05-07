@@ -7,29 +7,36 @@ local lib14a = require('read14a')
 local json = require('dkjson')
 local toys = require('default_toys_di')
 
-example =[[
+copyright = ''
+author = 'Iceman'
+version = 'v1.0.1'
+desc = [[
+This is a script to dump and decrypt the data of a specific type of Mifare Mini token.
+The dump is decrypted. If a raw dump is wanted, use the -r parameter
+]]
+example = [[
     script run didump
     script run didump -t
     script run didump -r
 ]]
-author = "Iceman"
-usage = "script run didump -h -t"
-desc = [[
-This is a script to dump and decrypt the data of a specific type of Mifare Mini token.
-The dump is decrypted. If a raw dump is wanted, use the -r parameter
+usage = [[
+script run didump -h -t -r
+
 Arguments:
-    -h             : this help
-    -r             : raw
-    -t             : selftest
+      h   this helptext
+      r   raw
+      t   selftest
 ]]
 
-local band=bit32.band
-local bor=bit32.bor
-local bnot=bit32.bnot
-local bxor=bit32.bxor
-local lsh=bit32.lshift
-local rsh=bit32.rshift
+-- Some shortcuts
+local band = bit32.band
+local bor = bit32.bor
+local bnot = bit32.bnot
+local bxor = bit32.bxor
+local lsh = bit32.lshift
+local rsh = bit32.rshift
 
+-- Some globals
 local FOO = 'AF62D2EC0491968CC52A1A7165F865FE'
 local BAR = '286329204469736E65792032303133'
 local MIS = '0A14FD0507FF4BCD026BA83F0A3B89A9'
@@ -44,29 +51,33 @@ local CHECKSUM_OFFSET = 12; -- +1???
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
-            print("###", args[i])
+            print('###', args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
+    print('ERROR: ', err)
     core.clearCommandBuffer()
-    return false
+    return nil, err
 end
 ---
 -- Usage help
 local function help()
+    print(copyright)
+    print(author)
+    print(version)
     print(desc)
-    print("Example usage")
+    print('Example usage')
     print(example)
+    print(usage)
 end
 ---
 --
@@ -370,21 +381,7 @@ local function updateChecksum(data)
     return string.format("%s%X", part, chksum)
 end
 ---
--- receives the answer from deviceside, used with a readblock command
-local function waitCmd()
-    local response = core.WaitForResponseTimeout(cmds.CMD_ACK,TIMEOUT)
-    if response then
-        local count,cmd,arg0 = bin.unpack('LL',response)
-        if(arg0==1) then
-            local count,arg1,arg2,data = bin.unpack('LLH511',response,count)
-            return data:sub(1,32)
-        else
-            return nil, "Couldn't read block.."
-        end
-    end
-    return nil, "No response from device"
-end
-
+--
 local function keygen(uid)
     local data = MIS..uid..BAR
     local hash = utils.ConvertAsciiToBytes(utils.Sha1Hex(data))
@@ -397,7 +394,6 @@ local function keygen(uid)
         hash[6+1]
         )
 end
-
 --- encode 'table' into a json formatted string
 --
 local function convert_to_json( obj )
@@ -449,6 +445,29 @@ local function create_key(uid)
     key = key..utils.SwapEndiannessStr( sha:sub(25,32), 32 )
     return key
 end
+---
+-- decode response and get the blockdata from a normal mifare read command
+local function getblockdata(response)
+    if not response then
+        return nil, 'No response from device'
+    end
+
+    local count, cmd, arg0 = bin.unpack('LL', response)
+    if arg0 == 1 then
+        local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
+        return data:sub(1, 32)
+    else
+        return nil, "Couldn't read block.. ["..arg0.."]"
+    end
+end
+
+local function readblock( blocknum, key )
+    -- Read block N
+    local c = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = blocknum, data = key}
+    local b, err = getblockdata(c:sendMIX())
+    if not b then return oops(err) end
+    return b
+end
 --- reads all blocks from tag
 --
 local function readtag(mfkey, aeskey )
@@ -463,11 +482,8 @@ local function readtag(mfkey, aeskey )
         end
 
         -- read block from tag.
-        cmd = Command:new{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo ,arg2 = 0,arg3 = 0, data = mfkey}
-        local err = core.SendCommand(cmd:getBytes())
-        if err then return oops(err) end
-        local blockdata, err = waitCmd()
-        if err then return oops(err) end
+        local blockdata = readblock(blockNo, mfkey)
+        if not blockdata then return oops('[!] failed reading block') end
 
         -- rules:
         -- the following blocks is NOT encrypted
@@ -488,7 +504,6 @@ local function readtag(mfkey, aeskey )
         else
             -- Sectorblocks, not encrypted, but we add our known key to it since it is normally zeros.
             blockdata = mfkey..blockdata:sub(13,20)..mfkey
-            --dbg(blockdata:sub(13,20))
         end
         table.insert(tagdata, blockdata)
     end
@@ -549,12 +564,12 @@ function main(args)
 
     -- Read the parameters
     for o, a in getopt.getopt(args, 'htdevi:') do
-        if o == "h" then help() return end
-        if o == "t" then return selftest() end
-        if o == "d" then shall_dec = true end
-        if o == "e" then shall_enc = true end
-        if o == "v" then shall_validate = true end
-        if o == "i" then input = load_json(a) end
+        if o == 'h' then help() return end
+        if o == 't' then return selftest() end
+        if o == 'd' then shall_dec = true end
+        if o == 'e' then shall_enc = true end
+        if o == 'v' then shall_validate = true end
+        if o == 'i' then input = load_json(a) end
     end
 
     -- Turn off Debug
@@ -562,7 +577,10 @@ function main(args)
 
     -- GET TAG UID
     tag, err = lib14a.read(false, true)
-    if not tag then return oops(err) end
+    if err then 
+        lib14a.disconnect()
+        return oops(err)
+    end
     core.clearCommandBuffer()
 
     -- simple tag check
