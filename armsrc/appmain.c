@@ -1520,6 +1520,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         case CMD_CAPABILITIES:
             SendCapabilities();
+            break;
         case CMD_PING:
             reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
             break;
