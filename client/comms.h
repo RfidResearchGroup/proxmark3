@@ -62,6 +62,7 @@ void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800
+void GetSavedSerialPortName( char **dest );
 bool IsCommunicationThreadDead(void);
 bool ReConnectProxmark(void);
 bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);

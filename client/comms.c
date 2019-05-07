@@ -59,6 +59,10 @@ static uint64_t timeout_start_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
+void GetSavedSerialPortName( char **dest ) {
+    *dest = serial_port_name;
+}
+
 void SendCommand(PacketCommandOLD *c) {
 
 #ifdef COMMS_DEBUG

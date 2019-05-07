@@ -6,6 +6,7 @@
 // the license.
 //-----------------------------------------------------------------------------
 // Hardware commands
+// low-level hardware control
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
@@ -18,8 +19,6 @@
 #include "cmdhw.h"
 #include "cmdmain.h"
 #include "cmddata.h"
-
-/* low-level hardware control */
 
 static int CmdHelp(const char *Cmd);
 
@@ -58,8 +57,7 @@ static int usage_hw_connect(void) {
     PrintAndLogEx(NORMAL, "           <port>   serial port to connect to");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw connect /dev/ttyACM0    -- *nix ");
-    PrintAndLogEx(NORMAL, "      hw connect com3            -- windows");
+    PrintAndLogEx(NORMAL, "      hw connect "SERIAL_PORT_H);
     return PM3_SUCCESS;
 }
 
@@ -507,24 +505,24 @@ static int CmdConnect(const char *Cmd) {
     char *port = NULL;
     port = (char *)Cmd;
 
-    if (port != NULL) {
+    // default back to previous used serial port
+    if (strlen(port) == 0 )
+        GetSavedSerialPortName( &port );
         
-        // if we were already connected,  disconnect first.
-        if (session.pm3_present) {
-            PrintAndLogEx(INFO, "Disconnecting from current serial port");
-            CloseProxmark();
-            session.pm3_present = false;
-        }
+    // if we were already connected,  disconnect first.
+    if (session.pm3_present) {
+        PrintAndLogEx(INFO, "Disconnecting from current serial port");
+        CloseProxmark();
+        session.pm3_present = false;
+    }
 
-        // try to open serial port
-        session.pm3_present = OpenProxmark(port, false, 20, false, USART_BAUD_RATE);
+    // try to open serial port
+    session.pm3_present = OpenProxmark(port, false, 20, false, USART_BAUD_RATE);
 
-        if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
-            CloseProxmark();
-            session.pm3_present = false;
-        } else {
-        }
+    if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
+        CloseProxmark();
+        session.pm3_present = false;
     }
     return PM3_SUCCESS;
 }
