@@ -28,21 +28,6 @@ Check there for details about data format and how commands are interpreted on th
 device-side.
 ]]
 
----
---
-local function calypso_switch_on_field()
-    local flags = lib14b.ISO14B_COMMAND.ISO14B_CONNECT
-    local c = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = flags}
-    return lib14b.sendToDevice(c, true)
-end
----
--- Disconnect (poweroff) the antenna forcing a disconnect of a 14b tag.
-local function calypso_switch_off_field()
-    local flags = lib14b.ISO14B_COMMAND.ISO14B_DISCONNECT
-    local c = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = flags}
-    return lib14b.sendToDevice(c, true)
-end
-
 local function calypso_parse(result)
     local r = Command.parse(result)
     local len = r.arg2 * 2
@@ -71,7 +56,7 @@ end
 -- This is only meant to be used when errors occur
 local function oops(err)
     print('ERROR: ', err)
-    calypso_switch_off_field()
+    lib14b.disconnect()
     return nil, err
 end
 ---
@@ -128,15 +113,13 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
 
     data = data or "00"
 
-    command = Command:new{cmd = cmds.CMD_ISO_14443B_COMMAND,
-                            arg1 = flags,
-                            arg2 = #data/2, -- LEN of data, half the length of the ASCII-string hex string
-                            arg3 = 0,
-                            data = data}    -- data bytes (commands etc)
-    result, err = lib14b.sendToDevice(command, false)
-
-    if ignoreresponse then return response, err end
-
+    command = Command:newMIX{
+            cmd = cmds.CMD_ISO_14443B_COMMAND,
+            arg1 = flags,
+            arg2 = #data/2, -- LEN of data, half the length of the ASCII-string hex string
+            data = data}    -- data bytes (commands etc)
+            
+    result, err = command:sendMIX(ignoreresponse)
     if result then
         local r = calypso_parse(result)
         return r, nil
@@ -228,8 +211,8 @@ function main(args)
         if o == 'b' then bytes = a end
     end
 
-    calypso_switch_on_field()
-
+    lib14b.connect()
+    
     -- Select 14b tag.
     card, err = lib14b.waitFor14443b()
     if not card then return oops(err) end
@@ -264,7 +247,7 @@ function main(args)
                 print('<< no answer')
             end
         end
-    calypso_switch_off_field()
+    lib14b.disconnect()
 end
 ---
 -- a simple selftest function, tries to convert
