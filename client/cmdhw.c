@@ -37,7 +37,7 @@ static int usage_hw_detectreader(void) {
 }
 
 static int usage_hw_setmux(void) {
-    PrintAndLogEx(NORMAL, "Set mux mode");
+    PrintAndLogEx(NORMAL, "Set the ADC mux to a specific value");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hw setmux [h] <lopkd | loraw | hipkd | hiraw>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -46,6 +46,20 @@ static int usage_hw_setmux(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hw setmux lopkd");
+    return PM3_SUCCESS;
+}
+
+static int usage_hw_connect(void) {
+    PrintAndLogEx(NORMAL, "Connects to a Proxmark3 device via specified serial port");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] <port>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h          This help");
+    PrintAndLogEx(NORMAL, "           <port>   serial port to connect to");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      hw connect /dev/ttyACM0    -- *nix ");
+    PrintAndLogEx(NORMAL, "      hw connect com3            -- windows");
     return PM3_SUCCESS;
 }
 
@@ -426,7 +440,7 @@ static int CmdSetMux(const char *Cmd) {
     else {
         usage_hw_setmux();
         return PM3_EINVARG;
-    }
+        }
     clearCommandBuffer();
     SendCommandOLD(CMD_SET_ADC_MUX, arg, 0, 0, NULL, 0);
     return PM3_SUCCESS;
@@ -458,9 +472,9 @@ static int CmdPing(const char *Cmd) {
     PacketResponseNG resp;
     SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
-        PrintAndLogEx(NORMAL, "Ping " _GREEN_("successful"));
+        PrintAndLogEx(SUCCESS, "Ping " _GREEN_("successful"));
     else
-        PrintAndLogEx(NORMAL, "Ping " _RED_("failed"));
+        PrintAndLogEx(WARNING, "Ping " _RED_("failed"));
     return PM3_SUCCESS;
 }
 
@@ -485,21 +499,52 @@ static int CmdPingNG(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdConnect(const char *Cmd) {
+
+    if (tolower(Cmd[0] == 'h'))
+        return usage_hw_connect();
+
+    char *port = NULL;
+    port = (char *)Cmd;
+
+    if (port != NULL) {
+        
+        // if we were already connected,  disconnect first.
+        if (session.pm3_present) {
+            PrintAndLogEx(INFO, "Disconnecting from current serial port");
+            CloseProxmark();
+            session.pm3_present = false;
+        }
+
+        // try to open serial port
+        session.pm3_present = OpenProxmark(port, false, 20, false, USART_BAUD_RATE);
+
+        if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
+            CloseProxmark();
+            session.pm3_present = false;
+        } else {
+        }
+    }
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",          CmdHelp,        AlwaysAvailable, "This help"},
+    {"connect",       CmdConnect,     AlwaysAvailable, "connect Proxmark3 to serial port"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
     {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
     {"lcd",           CmdLCD,         IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
     {"lcdreset",      CmdLCDReset,    IfPm3Lcd,        "Hardware reset LCD"},
+    {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responding"},
+    {"pingng",        CmdPingNG,      IfPm3Present,    "Test if the Proxmark3 is responsive, using new frame format (experimental)"},
     {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
     {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
     {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
-    {"setmux",        CmdSetMux,      IfPm3Present,    "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
+    {"setmux",        CmdSetMux,      IfPm3Present,    "Set the ADC mux to a specific value"},
+    {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
     {"tune",          CmdTune,        IfPm3Present,    "Measure antenna tuning"},
     {"version",       CmdVersion,     IfPm3Present,    "Show version information about the connected Proxmark3"},
-    {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
-    {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responding"},
-    {"pingng",        CmdPingNG,      IfPm3Present,    "Test if the Proxmark3 is responsive, using new frame format (experimental)"},
     {NULL, NULL, NULL, NULL}
 };
 

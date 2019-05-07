@@ -158,8 +158,12 @@ main_loop(char *script_cmds_file, char *script_cmd) {
                         printprompt = true;
 
                 } else {
-                    rl_event_hook = check_comm;
-                    cmd = readline(PROXPROMPT);
+                    //rl_event_hook = check_comm;
+                    if (session.pm3_present )
+                        cmd = readline(PROXPROMPT);
+                    else
+                        cmd = readline("[offline] "PROXPROMPT);
+                    
                     fflush(NULL);
                 }
             }

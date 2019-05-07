@@ -181,16 +181,13 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
     DWORD txlen = 0;
     int res = WriteFile(((serial_port_windows *)sp)->hPort, p_tx, len, &txlen, NULL);
-    int errorcode = GetLastError();
-    if ( res == 0 ) {
-        printf("[!]res %d | send errorcode == %d \n",res, errorcode);
-    }
+    if ( res )      
+        return PM3_SUCCESS;
     
+    int errorcode = GetLastError();
     if (res == 0 && errorcode == 2) {
         return PM3_EIO;
     }
-    if ( res )      
-        return PM3_SUCCESS;
 
     printf("[!!]res %d | send errorcode == %d \n",res, errorcode); 
     return PM3_ENOTTY;
