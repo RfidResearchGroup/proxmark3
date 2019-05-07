@@ -3,8 +3,9 @@ local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils =  require('utils')
 
+copyright = ''
 author = 'Iceman'
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 This script calculates mifare keys based on uid diversification for mizip.
 Algo not found by me.
@@ -28,30 +29,31 @@ local bxor = bit32.bxor
 local _xortable = {
     --[[ sector key A/B, 6byte xor
     --]]
-    {1, "09125a2589e5", "F12C8453D821"},
-    {2, "AB75C937922F", "73E799FE3241"},
-    {3, "E27241AF2C09", "AA4D137656AE"},
-    {4, "317AB72F4490", "B01327272DFD"},
+    {1, '09125a2589e5', 'F12C8453D821'},
+    {2, 'AB75C937922F', '73E799FE3241'},
+    {3, 'E27241AF2C09', 'AA4D137656AE'},
+    {4, '317AB72F4490', 'B01327272DFD'},
 }
 ---
 -- A debug printout-function
 local function dbg(args)
     if not DEBUG then return end
-    if type(args) == "table" then
+    if type(args) == 'table' then
         local i = 1
         while args[i] do
             dbg(args[i])
             i = i+1
         end
     else
-        print("###", args)
+        print('###', args)
     end
 end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
-    print("ERROR: ",err)
-    return nil,err
+    print('ERROR: ', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help
@@ -62,6 +64,7 @@ local function help()
     print(desc)
     print("Example usage")
     print(example)
+    print(usage)    
 end
 --
 -- Exit message
@@ -163,8 +166,8 @@ local function main(args)
 
     -- Arguments for the script
     for o, a in getopt.getopt(args, 'hu:') do
-        if o == "h" then return help() end
-        if o == "u" then uid = a ; useUID = true end
+        if o == 'h' then return help() end
+        if o == 'u' then uid = a ; useUID = true end
     end
 
     if useUID then
@@ -181,7 +184,7 @@ local function main(args)
         -- simple tag check
         if 0x09 ~= tag.sak then
             if 0x4400 ~= tag.atqa then
-                return oops(('[fail] found tag %s :: looking for Mifare Mini 0.3k'):format(tag.name))
+                return oops(('[!] found tag %s :: looking for Mifare Mini 0.3k'):format(tag.name))
             end
         end
         uid = tag.uid
