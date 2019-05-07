@@ -87,12 +87,12 @@ static int usage_lf_awid_brute(void) {
 }
 
 static bool sendPing(void) {
-    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
-    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
-    SendCommandMIX(CMD_PING, 1, 2, 3, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000))
+    if (!WaitForResponseTimeout(CMD_PING, &resp, 1000))
         return false;
     return true;
 }

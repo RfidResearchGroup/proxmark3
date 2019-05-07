@@ -606,7 +606,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     // Disable fast mode and send a dummy command to make it effective
     conn.block_after_ACK = false;
     SendCommandNG(CMD_PING, NULL, 0);
-    WaitForResponseTimeout(CMD_ACK, NULL, 1000);
+    WaitForResponseTimeout(CMD_PING, NULL, 1000);
 
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
     return 0;
@@ -2038,7 +2038,7 @@ out:
     // Disable fast mode and send a dummy command to make it effective
     conn.block_after_ACK = false;
     SendCommandNG(CMD_PING, NULL, 0);
-    WaitForResponseTimeout(CMD_ACK, NULL, 1000);
+    WaitForResponseTimeout(CMD_PING, NULL, 1000);
 
     DropField();
     free(pre);

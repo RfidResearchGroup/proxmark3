@@ -46,7 +46,7 @@ static int l_fast_push_mode(lua_State *L) {
     // Disable fast mode and send a dummy command to make it effective
     if (enable == false) {
         SendCommandNG(CMD_PING, NULL, 0);
-        WaitForResponseTimeout(CMD_ACK, NULL, 1000);
+        WaitForResponseTimeout(CMD_PING, NULL, 1000);
     }
 
     //Push the retval on the stack

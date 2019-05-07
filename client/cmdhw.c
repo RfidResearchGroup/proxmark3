@@ -465,22 +465,14 @@ static int CmdStatus(const char *Cmd) {
 }
 
 static int CmdPing(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    PacketResponseNG resp;
-    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
-        PrintAndLogEx(SUCCESS, "Ping " _GREEN_("successful"));
-    else
-        PrintAndLogEx(WARNING, "Ping " _RED_("failed"));
-    return PM3_SUCCESS;
-}
-
-static int CmdPingNG(const char *Cmd) {
     uint32_t len = strtol(Cmd, NULL, 0);
     if (len > PM3_CMD_DATA_SIZE)
         len = PM3_CMD_DATA_SIZE;
-    PrintAndLogEx(INFO, "PingNG sent with payload len=%d", len);
+    if (len) {
+        PrintAndLogEx(INFO, "Ping sent with payload len=%d", len);
+    } else {
+        PrintAndLogEx(INFO, "Ping sent");
+    }
     clearCommandBuffer();
     PacketResponseNG resp;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
@@ -489,11 +481,14 @@ static int CmdPingNG(const char *Cmd) {
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         bool error = false;
-        if (len)
+        if (len) {
             error = memcmp(data, resp.data.asBytes, len) != 0;
-        PrintAndLogEx((error)? ERR:SUCCESS, "PingNG response received, content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
+            PrintAndLogEx((error)? ERR:SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
+        } else {
+            PrintAndLogEx((error)? ERR:SUCCESS, "Ping response " _GREEN_("received"));
+        }
     } else
-        PrintAndLogEx(WARNING, "PingNG response " _RED_("timeout"));
+        PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
     return PM3_SUCCESS;
 }
 
@@ -538,8 +533,7 @@ static command_t CommandTable[] = {
     {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
     {"lcd",           CmdLCD,         IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
     {"lcdreset",      CmdLCDReset,    IfPm3Lcd,        "Hardware reset LCD"},
-    {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responding"},
-    {"pingng",        CmdPingNG,      IfPm3Present,    "Test if the Proxmark3 is responsive, using new frame format (experimental)"},
+    {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responsive"},
     {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
     {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
     {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
