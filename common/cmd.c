@@ -73,7 +73,6 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
     if (reply_via_fpc) {
 #ifdef WITH_FPC_USART_HOST
         result = usart_writebuffer_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
-//        Dbprintf_usb("Sent %i bytes over usart", len);
 #else
         return PM3_EDEVNOTSUPP;
 #endif
@@ -87,8 +86,6 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
 static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t len, bool ng) {
     PacketResponseNGRaw txBufferNG;
     size_t txBufferNGLen;
-//    for (size_t i = 0; i < sizeof(txBufferNG); i++)
-//        ((uint8_t *)&txBufferNG)[i] = 0x00;
 
     // Compose the outgoing command frame
     txBufferNG.pre.magic = RESPONSENG_PREAMBLE_MAGIC;
@@ -125,14 +122,12 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, uint8_t *data, size_t
     if (reply_via_fpc) {
 #ifdef WITH_FPC_USART_HOST
         result = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
-//        Dbprintf_usb("Sent %i bytes over usart", len);
 #else
         return PM3_EDEVNOTSUPP;
 #endif
     } else {
         result = usb_write((uint8_t *)&txBufferNG, txBufferNGLen);
     }
-
     return result;
 }
 
@@ -151,27 +146,34 @@ int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
     memcpy(cmddata, arg, sizeof(arg));
     if (len && data)
         memcpy(cmddata + sizeof(arg), data, len);
+    
     return reply_ng_internal(cmd, status, cmddata, len + sizeof(arg), false);
 }
 
 static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool fpc) {
     PacketCommandNGRaw rx_raw;
     size_t bytes = read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
+    
     if (bytes == 0)
         return PM3_ENODATA;
+    
     if (bytes != sizeof(PacketCommandNGPreamble))
         return PM3_EIO;
+    
     rx->magic = rx_raw.pre.magic;
     rx->ng = rx_raw.pre.ng;
     uint16_t length = rx_raw.pre.length;
     rx->cmd = rx_raw.pre.cmd;
+    
     if (rx->magic == COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
         if (length > PM3_CMD_DATA_SIZE)
             return PM3_EOVFLOW;
+        
         // Get the core and variable length payload
         bytes = read_ng((uint8_t *)&rx_raw.data, length);
         if (bytes != length)
             return PM3_EIO;
+        
         if (rx->ng) {
             memcpy(rx->data.asBytes, rx_raw.data, length);
             rx->length = length;
@@ -179,6 +181,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
             uint64_t arg[3];
             if (length < sizeof(arg))
                 return PM3_EIO;
+            
             memcpy(arg, rx_raw.data, sizeof(arg));
             rx->oldarg[0] = arg[0];
             rx->oldarg[1] = arg[1];
@@ -190,6 +193,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         bytes = read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
         if (bytes != sizeof(PacketCommandNGPostamble))
             return PM3_EIO;
+        
         // Check CRC, accept MAGIC as placeholder
         rx->crc = rx_raw.foopost.crc;
         if (rx->crc != COMMANDNG_POSTAMBLE_MAGIC) {
@@ -205,6 +209,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         bytes = read_ng(((uint8_t *)&rx_old) + sizeof(PacketCommandNGPreamble), sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble));
         if (bytes != sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble))
             return PM3_EIO;
+        
         reply_via_fpc = fpc;
         rx->ng = false;
         rx->magic = 0;
