@@ -259,7 +259,7 @@ fail:
 
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state) {
-    SendCommandNG(CMD_DEVICE_INFO, NULL, 0);
+    SendCommandOLD(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_UNKNOWN, &resp);  // wait for any response. No timeout.
 
@@ -304,11 +304,11 @@ static int enter_bootloader(char *serial_port_name) {
                 && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
-            SendCommandNG(CMD_START_FLASH, NULL, 0);
+            SendCommandOLD(CMD_START_FLASH, 0, 0, 0, NULL, 0);
             PrintAndLogEx(SUCCESS, "(Press and release the button only to " _YELLOW_("abort") ")");
         } else {
             // Old style handover: Ask the user to press the button, then reset the board
-            SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
+            SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
             PrintAndLogEx(SUCCESS, "Press and hold down button NOW if your bootloader requires it.");
         }
         msleep(100);
@@ -359,9 +359,9 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
         PacketResponseNG resp;
 
         if (enable_bl_writes) {
-            SendCommandMIX(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
+            SendCommandOLD(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
         } else {
-            SendCommandMIX(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
+            SendCommandOLD(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
         }
         return wait_for_ack(&resp);
     } else {
@@ -445,7 +445,7 @@ void flash_free(flash_file_t *ctx) {
 
 // just reset the unit
 int flash_stop_flashing(void) {
-    SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
+    SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
     msleep(100);
     return 0;
 }
