@@ -137,7 +137,6 @@ typedef struct {
     uint16_t read_gap;
 } t55xx_config;
 
-// TODO add more fields to report all hw & sw capabilities of pm3
 typedef struct {
     uint32_t baudrate;
     bool via_fpc;
@@ -161,12 +160,9 @@ typedef struct {
     // misc
     bool compiled_with_lcd;
 
-    // Following are not yet implemented:
     // rdv4
     bool hw_available_flash;
     bool hw_available_smartcard;
-    // rdv4 bt addon
-    bool hw_available_fpc_usart_btaddon;
 } PACKED capabilities_t;
 
 extern capabilities_t pm3_capabilities;

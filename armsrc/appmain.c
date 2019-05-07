@@ -461,11 +461,8 @@ void SendCapabilities(void) {
 #endif
 #ifdef WITH_FPC_USART_HOST
     capabilities.compiled_with_fpc_usart_host = true;
-    // TODO
-    capabilities.hw_available_fpc_usart_btaddon = true;
 #else
     capabilities.compiled_with_fpc_usart_host = false;
-    capabilities.hw_available_fpc_usart_btaddon = false;
 #endif
 #ifdef WITH_LF
     capabilities.compiled_with_lf = true;
