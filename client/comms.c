@@ -657,6 +657,8 @@ void CloseProxmark(void) {
     // Clean up our state
     sp = NULL;
     memset(&communication_thread, 0, sizeof(pthread_t));
+    
+    session.pm3_present = false;
 }
 
 // Gives a rough estimate of the communication delay based on channel & baudrate

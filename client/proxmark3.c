@@ -56,9 +56,9 @@ int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if ( IsCommunicationThreadDead() && session.pm3_present) {
         rl_set_prompt("[offline] "PROXPROMPT);
-        session.pm3_present = false;
-        PrintAndLogEx(INFO, "\nRunning in " _YELLOW_("OFFLINE") "mode. Use \"hw connect\" to reconnect\n");
-        
+        rl_forced_update_display (); 
+        CloseProxmark();     
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use \"hw connect\" to reconnect\n");
     }
     return 0;
 }
@@ -487,13 +487,13 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
 
     // try to open USB connection to Proxmark
-    if (port != NULL)
+    if (port != NULL) {
         session.pm3_present = OpenProxmark(port, waitCOMPort, 20, false, speed);
+    }
 
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
         CloseProxmark();
-        session.pm3_present = false;
     }
 
     if (!session.pm3_present)
