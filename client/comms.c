@@ -302,7 +302,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
 
 // The communications thread.
 // signals to main thread when a response is ready to process.
-// 
+//
 static void
 #ifdef __has_attribute
 #if __has_attribute(force_align_arg_pointer)
@@ -329,14 +329,14 @@ __attribute__((force_align_arg_pointer))
 
         // Signal to main thread that communications seems off.
         // main thread will kill and restart this thread.
-        if ( commfailed ) {
+        if (commfailed) {
             PrintAndLogEx(WARNING, "Communicating with Proxmark3 device " _RED_("failed"));
             __atomic_test_and_set(&comm_thread_dead, __ATOMIC_SEQ_CST);
             break;
         }
 
         pthread_mutex_lock(&spMutex);
-        
+
         res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
         if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
             rx.magic = rx_raw.pre.magic;
@@ -350,9 +350,9 @@ __attribute__((force_align_arg_pointer))
                     error = true;
                 }
                 if ((!error) && (length > 0)) { // Get the variable length payload
-                
+
                     res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
-                    if ( (res != PM3_SUCCESS) || (rxlen != length)) {
+                    if ((res != PM3_SUCCESS) || (rxlen != length)) {
                         PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, length);
                         error = true;
                     } else {
@@ -415,7 +415,7 @@ __attribute__((force_align_arg_pointer))
             } else {                               // Old style reply
                 PacketResponseOLD rx_old;
                 memcpy(&rx_old, &rx_raw.pre, sizeof(PacketResponseNGPreamble));
-                
+
                 res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
                 if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
                     PrintAndLogEx(WARNING, "Received packet OLD frame payload error too short? %d/%d", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
@@ -495,9 +495,9 @@ __attribute__((force_align_arg_pointer))
             pthread_mutex_unlock(&spMutex);
 
             txBuffer_pending = false;
-            
+
             // main thread doesn't know send failed...
-            
+
             // tell main thread that txBuffer is empty
             pthread_cond_signal(&txBufferSig);
         }
@@ -512,7 +512,7 @@ __attribute__((force_align_arg_pointer))
 #if defined(__MACH__) && defined(__APPLE__)
     enableAppNap();
 #endif
-   
+
     pthread_exit(NULL);
     return NULL;
 }
@@ -551,8 +551,8 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         return false;
     } else {
         // start the communication thread
-        if ( portname != (char*)conn.serial_port_name) {
-            uint16_t len = MIN( strlen(portname), FILE_PATH_SIZE - 1);
+        if (portname != (char *)conn.serial_port_name) {
+            uint16_t len = MIN(strlen(portname), FILE_PATH_SIZE - 1);
             memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
             memcpy(conn.serial_port_name, portname, len);
         }
@@ -582,20 +582,20 @@ int TestProxmark(void) {
     uint8_t data[len];
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
-    
+
     SendCommandNG(CMD_PING, data, len);
 
     uint32_t timeout = 1000;
-    
+
 #ifdef USART_SLOW_LINK
     timeout = 10000;
     // 10s timeout for slow FPC, e.g. over BT
     // as this is the very first command sent to the pm3
-    // that initiates the BT connection    
+    // that initiates the BT connection
 #endif
 
     if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false)) {
-        
+
         bool error = false;
         if (len)
             error = memcmp(data, resp.data.asBytes, len) != 0;
@@ -652,7 +652,7 @@ void CloseProxmark(void) {
     // Clean up our state
     sp = NULL;
     memset(&communication_thread, 0, sizeof(pthread_t));
-    
+
     session.pm3_present = false;
 }
 

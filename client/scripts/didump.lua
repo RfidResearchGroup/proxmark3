@@ -16,13 +16,13 @@ The dump is decrypted. If a raw dump is wanted, use the -r parameter
 ]]
 example = [[
     script run didump
-    
+
     -- selftest
     script run didump -t
-    
+
     -- Generate raw dump,  into json.
     script run didump -r
-    
+
     -- load file
     script run didump -i dumpdata.json
 ]]
@@ -37,7 +37,7 @@ Arguments:
       e                 encrypt data
       v                 validate data
       i dumpdata.json   load json dump file
-    end      
+    end
 ]]
 
 -- Some shortcuts
@@ -589,7 +589,7 @@ function main(args)
 
     -- GET TAG UID
     tag, err = lib14a.read(false, true)
-    if err then 
+    if err then
         lib14a.disconnect()
         return oops(err)
     end

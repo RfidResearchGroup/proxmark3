@@ -45,7 +45,7 @@ local function parse1443b(data)
 
     local count, uid, uidlen, atqb, chipid, cid = bin.unpack('H10CH7CC',data)
     uid = uid:sub(1, 2 * uidlen)
-    return { 
+    return {
         uid = uid,
         uidlen = uidlen,
         atqb = atqb,
@@ -73,7 +73,7 @@ local function read14443b(disconnect)
             cmd = cmds.CMD_ISO_14443B_COMMAND,
             arg1 = flags
             }
-    
+
     local result, err = command:sendMIX()
     if result then
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)

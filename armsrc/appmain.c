@@ -1189,7 +1189,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_ON();
             uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
             uint16_t available = usart_rxdata_available();
-            
+
             if (available > 0) {
                 uint16_t len = usart_read_ng(dest, available);
                 reply_ng(CMD_USART_RX, PM3_SUCCESS, dest, len);
@@ -1212,7 +1212,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             WaitMS(payload->waittime);
 
             uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
-            
+
             available = usart_rxdata_available();
             // Dbprintf("avail (%u)",  available);
             if (available > 0) {
@@ -1635,8 +1635,8 @@ void  __attribute__((noreturn)) AppMain(void) {
         if (ret == PM3_SUCCESS) {
             PacketReceived(&rx);
         } else if (ret != PM3_ENODATA) {
-            
-            Dbprintf("Error in frame reception: %d %s", ret, (ret == PM3_EIO)?"PM3_EIO":"");
+
+            Dbprintf("Error in frame reception: %d %s", ret, (ret == PM3_EIO) ? "PM3_EIO" : "");
             // TODO if error, shall we resync ?
         }
 

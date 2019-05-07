@@ -323,7 +323,7 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
         res = write(((serial_port_unix *)sp)->fd, pbtTx + pos, len - pos);
 
         // Stop if the OS has some troubles sending the data
-        if (res <= 0) 
+        if (res <= 0)
             return PM3_EIO;
 
         pos += res;

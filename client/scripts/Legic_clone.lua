@@ -118,10 +118,10 @@ local bxor = bit32.bxor
 
 -- we need always 2 digits
 local function prepend_zero(s)
-    if (string.len(s) == 1) then 
+    if (string.len(s) == 1) then
         return '0' .. s
     else
-        if (string.len(s) == 0) then 
+        if (string.len(s) == 0) then
             return '00'
         else
             return s
@@ -360,7 +360,7 @@ function displaySegments(bytes)
             pld = pld..bytes[(start+4+1+Seg[5]+Seg[6]+i)-1]..' '
         end
         print(pld)
-        if (KGH) then 
+        if (KGH) then
             print("'Kaba Group Header' detected")
         end
         start = start+Seg[4]

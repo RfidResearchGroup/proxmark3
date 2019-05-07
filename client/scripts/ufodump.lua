@@ -121,7 +121,7 @@ function main(args)
 
     -- First of all, connect
     info, err = lib14a.read(true, true)
-    if err then 
+    if err then
         lib14a.disconnect()
         return oops(err)
     end
@@ -137,7 +137,7 @@ function main(args)
     for block = 00, endblock do
         local cmd = string.format('10%02x00', block)
         res, err = sendRaw(cmd , {ignore_response = ignore_response})
-        if err then 
+        if err then
             lib14a.disconnect()
             return oops(err)
         end

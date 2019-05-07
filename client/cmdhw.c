@@ -429,7 +429,7 @@ static int CmdSetMux(const char *Cmd) {
     }
 
     str_lower((char *)Cmd);
- 
+
     uint8_t arg = 0;
     if (strcmp(Cmd, "lopkd") == 0)      arg = 0;
     else if (strcmp(Cmd, "loraw") == 0) arg = 1;
@@ -438,7 +438,7 @@ static int CmdSetMux(const char *Cmd) {
     else {
         usage_hw_setmux();
         return PM3_EINVARG;
-        }
+    }
     clearCommandBuffer();
     SendCommandMIX(CMD_SET_ADC_MUX, arg, 0, 0, NULL, 0);
     return PM3_SUCCESS;
@@ -483,9 +483,9 @@ static int CmdPing(const char *Cmd) {
         bool error = false;
         if (len) {
             error = memcmp(data, resp.data.asBytes, len) != 0;
-            PrintAndLogEx((error)? ERR:SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
         } else {
-            PrintAndLogEx((error)? ERR:SUCCESS, "Ping response " _GREEN_("received"));
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received"));
         }
     } else
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
@@ -498,11 +498,11 @@ static int CmdConnect(const char *Cmd) {
         return usage_hw_connect();
 
     char *port = NULL;
-    
+
     // default back to previous used serial port
-    if (strlen(Cmd) == 0 ) {
+    if (strlen(Cmd) == 0) {
         int len = strlen((char *)conn.serial_port_name);
-        if ( len == 0 ) {
+        if (len == 0) {
             return usage_hw_connect();
         }
         port = (char *)conn.serial_port_name;
@@ -510,10 +510,10 @@ static int CmdConnect(const char *Cmd) {
         port = (char *)Cmd;
     }
 
-    if ( port == NULL )
+    if (port == NULL)
         return usage_hw_connect();
 
-    if ( session.pm3_present ) {
+    if (session.pm3_present) {
         CloseProxmark();
     }
 
@@ -558,12 +558,12 @@ int CmdHW(const char *Cmd) {
 void pm3_version(bool verbose) {
     if (!verbose)
         return;
-    
+
     PacketResponseNG resp;
     clearCommandBuffer();
-    
+
     SendCommandNG(CMD_VERSION, NULL, 0);
-    
+
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
@@ -573,10 +573,10 @@ void pm3_version(bool verbose) {
         PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
         PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 Extras ]");
         PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
-        
+
         if (IfPm3FpcUsartDevFromUsb())
             PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
-        
+
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, (char *)resp.data.asBytes);
         lookupChipID(resp.oldarg[0], resp.oldarg[1]);

@@ -161,7 +161,7 @@ static int CmdUsartBtPin(const char *Cmd) {
             case 'h':
                 return usage_usart_bt_pin();
             case 'd':
-                if (param_getstr(Cmd, cmdp + 1, pin, sizeof(pin)) != sizeof(pin)-1) {
+                if (param_getstr(Cmd, cmdp + 1, pin, sizeof(pin)) != sizeof(pin) - 1) {
                     PrintAndLogEx(FAILED, "PIN has wrong length, must be 4 digits");
                     errors = true;
                     break;
@@ -201,7 +201,7 @@ static int CmdUsartBtPin(const char *Cmd) {
         return ret;
     }
 //    PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
-    if (strcmp((char*)data, "OKsetPIN") == 0) {
+    if (strcmp((char *)data, "OKsetPIN") == 0) {
         PrintAndLogEx(NORMAL, "PIN changed " _GREEN_("successfully"));
     } else {
         PrintAndLogEx(WARNING, "Unexpected answer: %.*s", len, data);

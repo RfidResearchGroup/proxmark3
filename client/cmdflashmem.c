@@ -151,7 +151,7 @@ static int CmdFlashmemSpiBaudrate(const char *Cmd) {
     if (strlen(Cmd) < 1 || ctmp == 'h') {
         return usage_flashmem_spibaud();
     }
-    
+
     uint32_t baudrate = param_get32ex(Cmd, 0, 0, 10);
     baudrate = baudrate * 1000000;
     if (baudrate != FLASH_BAUD && baudrate != FLASH_MINBAUD) {
@@ -279,7 +279,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
     // fast push mode
     conn.block_after_ACK = true;
-    
+
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 
@@ -300,7 +300,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
         uint8_t isok  = resp.oldarg[0] & 0xFF;
         if (!isok) {
-            conn.block_after_ACK = false;            
+            conn.block_after_ACK = false;
             PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
             return PM3_EFLASH;
         }

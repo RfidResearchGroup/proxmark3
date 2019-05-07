@@ -118,7 +118,7 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
             arg1 = flags,
             arg2 = #data/2, -- LEN of data, half the length of the ASCII-string hex string
             data = data}    -- data bytes (commands etc)
-            
+
     result, err = command:sendMIX(ignoreresponse)
     if result then
         local r = calypso_parse(result)
@@ -212,7 +212,7 @@ function main(args)
     end
 
     lib14b.connect()
-    
+
     -- Select 14b tag.
     card, err = lib14b.waitFor14443b()
     if not card then return oops(err) end

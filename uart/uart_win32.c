@@ -160,8 +160,8 @@ uint32_t uart_get_speed(const serial_port sp) {
 }
 
 int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
-	int res = ReadFile(((serial_port_windows *)sp)->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL); 
-    if ( res )      
+    int res = ReadFile(((serial_port_windows *)sp)->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL);
+    if (res)
         return PM3_SUCCESS;
 
     int errorcode = GetLastError();
@@ -171,22 +171,22 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         return PM3_EIO;
     }
 
-    printf("[!]res %d | rx errorcode == %d \n",res, errorcode);    
-    return res; 
+    printf("[!]res %d | rx errorcode == %d \n", res, errorcode);
+    return res;
 }
 
 int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
     DWORD txlen = 0;
     int res = WriteFile(((serial_port_windows *)sp)->hPort, p_tx, len, &txlen, NULL);
-    if ( res )      
+    if (res)
         return PM3_SUCCESS;
-    
+
     int errorcode = GetLastError();
     if (res == 0 && errorcode == 2) {
         return PM3_EIO;
     }
 
-    printf("[!!]res %d | send errorcode == %d \n",res, errorcode); 
+    printf("[!!]res %d | send errorcode == %d \n", res, errorcode);
     return PM3_ENOTTY;
 }
 

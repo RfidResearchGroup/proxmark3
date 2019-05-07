@@ -139,30 +139,30 @@ typedef struct {
 
 typedef struct {
     uint32_t baudrate;
-    bool via_fpc                       :1;
+    bool via_fpc                       : 1;
     // rdv4
-    bool compiled_with_flash           :1;
-    bool compiled_with_smartcard       :1;
-    bool compiled_with_fpc_usart       :1;
-    bool compiled_with_fpc_usart_dev   :1;
-    bool compiled_with_fpc_usart_host  :1;
+    bool compiled_with_flash           : 1;
+    bool compiled_with_smartcard       : 1;
+    bool compiled_with_fpc_usart       : 1;
+    bool compiled_with_fpc_usart_dev   : 1;
+    bool compiled_with_fpc_usart_host  : 1;
     // lf
-    bool compiled_with_lf              :1;
-    bool compiled_with_hitag           :1;
+    bool compiled_with_lf              : 1;
+    bool compiled_with_hitag           : 1;
     // hf
-    bool compiled_with_hfsniff         :1;
-    bool compiled_with_iso14443a       :1;
-    bool compiled_with_iso14443b       :1;
-    bool compiled_with_iso15693        :1;
-    bool compiled_with_felica          :1;
-    bool compiled_with_legicrf         :1;
-    bool compiled_with_iclass          :1;
+    bool compiled_with_hfsniff         : 1;
+    bool compiled_with_iso14443a       : 1;
+    bool compiled_with_iso14443b       : 1;
+    bool compiled_with_iso15693        : 1;
+    bool compiled_with_felica          : 1;
+    bool compiled_with_legicrf         : 1;
+    bool compiled_with_iclass          : 1;
     // misc
-    bool compiled_with_lcd             :1;
+    bool compiled_with_lcd             : 1;
 
     // rdv4
-    bool hw_available_flash            :1;
-    bool hw_available_smartcard        :1;
+    bool hw_available_flash            : 1;
+    bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
 
 extern capabilities_t pm3_capabilities;

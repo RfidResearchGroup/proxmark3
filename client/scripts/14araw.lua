@@ -11,17 +11,17 @@ This is a script to allow raw 1444a commands to be sent and received.
 example = [[
     # 1. Connect and don't disconnect
     script run 14araw -p
-    
+
     # 2. Send mf auth, read response (nonce)
     script run 14araw -o -x 6000F57b -p
-    
+
     # 3. disconnect
     script run 14araw -o
 
     # All three steps in one go:
     script run 14araw -x 6000F57b
 ]]
-usage = [[ 
+usage = [[
 script run 14araw -x 6000F57b
 
 Arguments:
@@ -124,7 +124,7 @@ function main(args)
     -- The actual raw payload, if any
     if payload then
         res, err = sendRaw(payload,{ignore_response = ignore_response, topaz_mode = topaz_mode, append_crc = append_crc})
-        if err then 
+        if err then
             lib14a.disconnect()
             return oops(err)
         end

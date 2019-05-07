@@ -120,7 +120,7 @@ local function read15693(slow, dont_readresponse)
     else
         err = 'No response from card'
     end
-    
+
     if err then
         print(err)
         return nil, err

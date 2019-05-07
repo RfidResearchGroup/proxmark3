@@ -64,7 +64,7 @@ local function help()
     print(desc)
     print("Example usage")
     print(example)
-    print(usage)    
+    print(usage)
 end
 --
 -- Exit message
