@@ -1,0 +1,3 @@
+# If you want to use it, copy this file as Makefile.platform and adjust it to your needs
+PLATFORM=PM3RDV4
+#PLATFORM_EXTRAS=BTADDON
