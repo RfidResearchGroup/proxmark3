@@ -533,14 +533,6 @@ bool IsCommunicationThreadDead(void) {
     return ret;
 }
 
-bool ReConnectProxmark(void) {   
-   char *port = serial_port_name;
-   bool res = OpenProxmark(port, true, 20, false, _speed);
-   if ( res )
-        __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
-   return res;
-}
-
 bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
     char *portname = (char *)port;
@@ -583,6 +575,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         conn.send_via_fpc_usart = false;
 
         pthread_create(&communication_thread, NULL, &uart_communication, &conn);
+        __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
 
         fflush(stdout);
         // create a mutex to avoid interlacing print commands from our different threads

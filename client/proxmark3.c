@@ -54,11 +54,9 @@ static void showBanner(void) {
 
 int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
-    if ( IsCommunicationThreadDead() ) {
-        session.pm3_present = ReConnectProxmark();
-        if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
-            session.pm3_present = false;
-        }
+    if ( IsCommunicationThreadDead() && session.pm3_present) {
+        session.pm3_present = false;
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use \"hw connect\" to reconnect\n");
     }
     return 0;
 }
@@ -158,7 +156,7 @@ main_loop(char *script_cmds_file, char *script_cmd) {
                         printprompt = true;
 
                 } else {
-                    //rl_event_hook = check_comm;
+                    rl_event_hook = check_comm;
                     if (session.pm3_present )
                         cmd = readline(PROXPROMPT);
                     else
