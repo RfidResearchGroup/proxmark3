@@ -259,7 +259,7 @@ fail:
 
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state) {
-    SendCommandOLD(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
+    SendCommandBL(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_UNKNOWN, &resp);  // wait for any response. No timeout.
 
@@ -304,11 +304,11 @@ static int enter_bootloader(char *serial_port_name) {
                 && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
-            SendCommandOLD(CMD_START_FLASH, 0, 0, 0, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, 0, 0, 0, NULL, 0);
             PrintAndLogEx(SUCCESS, "(Press and release the button only to " _YELLOW_("abort") ")");
         } else {
             // Old style handover: Ask the user to press the button, then reset the board
-            SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
+            SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
             PrintAndLogEx(SUCCESS, "Press and hold down button NOW if your bootloader requires it.");
         }
         msleep(100);
@@ -358,9 +358,9 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
         PacketResponseNG resp;
 
         if (enable_bl_writes) {
-            SendCommandOLD(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
         } else {
-            SendCommandOLD(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
         }
         return wait_for_ack(&resp);
     } else {
@@ -375,7 +375,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     memset(block_buf, 0xFF, BLOCK_SIZE);
     memcpy(block_buf, data, length);
     PacketResponseNG resp;
-    SendCommandOLD(CMD_FINISH_WRITE, address, 0, 0, block_buf, length);
+    SendCommandBL(CMD_FINISH_WRITE, address, 0, 0, block_buf, length);
     int ret = wait_for_ack(&resp);
     if (ret && resp.oldarg[0]) {
         uint32_t lock_bits = resp.oldarg[0] >> 16;
@@ -444,7 +444,7 @@ void flash_free(flash_file_t *ctx) {
 
 // just reset the unit
 int flash_stop_flashing(void) {
-    SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
+    SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
     msleep(100);
     return 0;
 }

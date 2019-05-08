@@ -56,6 +56,7 @@ typedef struct {
 extern communication_arg_t conn;
 
 void *uart_receiver(void *targ);
+void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
 void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);

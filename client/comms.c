@@ -57,6 +57,13 @@ static uint64_t timeout_start_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
+// Simple alias to track usages linked to the Bootloader, these commands must not be migrated.
+// - commands sent to enter bootloader mode as we might have to talk to old firmwares
+// - commands sent to the bootloader as it only supports OLD frames (which will always be the case for old BL)
+void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+    SendCommandOLD(cmd, arg0, arg1, arg2, data, len);
+}
+
 void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
     c.cmd = cmd;
