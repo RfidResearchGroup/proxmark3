@@ -59,8 +59,8 @@ uint32_t DoAcquisition_config(bool silent, int sample_size);
 /**
 * Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
 * if not already loaded, sets divisor and starts up the antenna.
-* @param divisor : 1, 88> 255 or negative ==> 134.8 KHz
-*                  0 or 95 ==> 125 KHz
+* @param divisor : 1, 88> 255 or negative ==> 134.8 kHz
+*                  0 or 95 ==> 125 kHz
 *
 **/
 void LFSetupFPGAForADC(int divisor, bool lf_field);

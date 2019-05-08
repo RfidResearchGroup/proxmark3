@@ -28,7 +28,7 @@ static int usage_hw_detectreader(void) {
     PrintAndLogEx(NORMAL, "Usage:  hw detectreader [h] <L|H>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <type>     L = 125/134 kHz, H = 13.56 mHz");
+    PrintAndLogEx(NORMAL, "           <type>     L = 125/134 kHz, H = 13.56 MHz");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hw detectreader L");
@@ -418,7 +418,7 @@ static int CmdSetDivisor(const char *Cmd) {
     // 12 000 000 (12Mhz)
     clearCommandBuffer();
     SendCommandMIX(CMD_SET_LF_DIVISOR, arg, 0, 0, NULL, 0);
-    PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f KHz", ((double)12000 / (arg + 1)));
+    PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f kHz", ((double)12000 / (arg + 1)));
     return PM3_SUCCESS;
 }
 

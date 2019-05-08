@@ -751,7 +751,7 @@ static int CmdSmartInfo(const char *Cmd) {
 
     if (Di && Fi) {
         PrintAndLogEx(NORMAL, "\t- Cycles/ETU %d", Fi / Di);
-        PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at 4MHz", (float)4000000 / (Fi / Di));
+        PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at 4 MHz", (float)4000000 / (Fi / Di));
         PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at Fmax (%.1fMHz)", (F * 1000000) / (Fi / Di), F);
     } else {
         PrintAndLogEx(WARNING, "\t- Di or Fi is RFU.");

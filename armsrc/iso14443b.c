@@ -180,7 +180,7 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
     * Reader to card | ASK  - Amplitude Shift Keying Modulation (PCD to PICC for Type B) (NRZ-L encodig)
     * Card to reader | BPSK - Binary Phase Shift Keying Modulation, (PICC to PCD for Type B)
     *
-    * fc - carrier frequency 13.56mHz
+    * fc - carrier frequency 13.56 MHz
     * TR0 - Guard Time per 14443-2
     * TR1 - Synchronization Time per 14443-2
     * TR2 - PICC to PCD Frame Delay Time (per 14443-3 Amendment 1)

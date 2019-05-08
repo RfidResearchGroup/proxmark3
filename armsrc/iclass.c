@@ -1071,7 +1071,7 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len) {
     /*
      * SOF comprises 3 parts;
      * * An unmodulated time of 56.64 us
-     * * 24 pulses of 423.75 KHz (fc/32)
+     * * 24 pulses of 423.75 kHz (fc/32)
      * * A logic 1, which starts with an unmodulated time of 18.88us
      *   followed by 8 pulses of 423.75kHz (fc/32)
      *

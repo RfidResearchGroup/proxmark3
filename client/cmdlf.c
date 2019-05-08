@@ -55,18 +55,18 @@ static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "Usage: lf config [h] [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       L             Low frequency (125 KHz)");
-    PrintAndLogEx(NORMAL, "       H             High frequency (134 KHz)");
-    PrintAndLogEx(NORMAL, "       q <divisor>   Manually set divisor. 88-> 134KHz, 95-> 125 Hz");
+    PrintAndLogEx(NORMAL, "       L             Low frequency (125 kHz)");
+    PrintAndLogEx(NORMAL, "       H             High frequency (134 kHz)");
+    PrintAndLogEx(NORMAL, "       q <divisor>   Manually set divisor. 88-> 134 kHz, 95-> 125 kHz");
     PrintAndLogEx(NORMAL, "       b <bps>       Sets resolution of bits per sample. Default (max): 8");
     PrintAndLogEx(NORMAL, "       d <decim>     Sets decimation. A value of N saves only 1 in N samples. Default: 1");
     PrintAndLogEx(NORMAL, "       a [0|1]       Averaging - if set, will average the stored sample value when decimating. Default: 1");
     PrintAndLogEx(NORMAL, "       t <threshold> Sets trigger threshold. 0 means no threshold (range: 0-128)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf config b 8 L");
-    PrintAndLogEx(NORMAL, "                    Samples at 125KHz, 8bps.");
+    PrintAndLogEx(NORMAL, "                    Samples at 125 kHz, 8bps.");
     PrintAndLogEx(NORMAL, "      lf config H b 4 d 3");
-    PrintAndLogEx(NORMAL, "                    Samples at 134KHz, averages three samples into one, stored with ");
+    PrintAndLogEx(NORMAL, "                    Samples at 134 kHz, averages three samples into one, stored with ");
     PrintAndLogEx(NORMAL, "                    a resolution of 4 bits per sample.");
     PrintAndLogEx(NORMAL, "      lf read");
     PrintAndLogEx(NORMAL, "                    Performs a read (active field)");
@@ -919,7 +919,7 @@ int CmdLFfind(const char *Cmd) {
     //if (demodFermax())          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") " found!"); goto out;}
     //if (demodFlex())            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Flex ID") " found!"); goto out;}
 
-    PrintAndLogEx(FAILED, _RED_("No known 125/134 KHz tags found!"));
+    PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
 
     if (testRaw == 'u') {
         //test unknown tag formats (raw mode)

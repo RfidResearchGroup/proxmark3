@@ -20,7 +20,7 @@ sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig() {
     DbpString(_BLUE_("LF Sampling config"));
-    Dbprintf("  [q] divisor.............%d (%d KHz)", config.divisor, 12000 / (config.divisor + 1));
+    Dbprintf("  [q] divisor.............%d (%d kHz)", config.divisor, 12000 / (config.divisor + 1));
     Dbprintf("  [b] bps.................%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
@@ -76,8 +76,8 @@ void pushBit(BitstreamOut *stream, uint8_t bit) {
 /**
 * Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
 * if not already loaded, sets divisor and starts up the antenna.
-* @param divisor : 1, 88> 255 or negative ==> 134.8 KHz
-*                  0 or 95 ==> 125 KHz
+* @param divisor : 1, 88> 255 or negative ==> 134.8 kHz
+*                  0 or 95 ==> 125 kHz
 *
 **/
 void LFSetupFPGAForADC(int divisor, bool lf_field) {
