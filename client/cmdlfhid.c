@@ -260,7 +260,11 @@ static int CmdHIDSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HID_SIM_TAG, hi, lo, 0, NULL, 0);
-    return 0;
+    PacketResponseNG resp;
+    WaitForResponse(CMD_HID_SIM_TAG, &resp);
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 static int CmdHIDClone(const char *Cmd) {

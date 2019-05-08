@@ -278,7 +278,11 @@ static int CmdPyramidSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandOLD(CMD_FSK_SIM_TAG, high << 8 | low, invert << 8 | clk, sizeof(bs), bs, sizeof(bs));
-    return 0;
+    PacketResponseNG resp;
+    WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {

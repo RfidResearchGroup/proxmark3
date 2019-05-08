@@ -117,7 +117,11 @@ static int CmdVikingSim(const char *Cmd) {
     num_to_bytebits(rawID, sizeof(data), data);
     clearCommandBuffer();
     SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
-    return 0;
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {

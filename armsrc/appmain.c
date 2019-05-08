@@ -799,6 +799,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_SIMULATE_TAG_125K:
             LED_A_ON();
             SimulateTagLowFrequency(packet->oldarg[0], packet->oldarg[1], 1);
+            reply_ng(CMD_SIMULATE_TAG_125K, PM3_EOPABORTED, NULL, 0);
             LED_A_OFF();
             break;
         case CMD_LF_SIMULATE_BIDIR:

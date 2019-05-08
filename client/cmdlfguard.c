@@ -216,7 +216,11 @@ static int CmdGuardSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandOLD(CMD_ASK_SIM_TAG, (clock1 << 8) | encoding, (invert << 8) | separator, sizeof(bs), bs, sizeof(bs));
-    return 0;
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {

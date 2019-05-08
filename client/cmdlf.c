@@ -439,7 +439,11 @@ int CmdLFSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_SIMULATE_TAG_125K, GraphTraceLen, gap, 0, NULL, 0);
-    return 0;
+    PacketResponseNG resp;
+    WaitForResponse(CMD_SIMULATE_TAG_125K, &resp);
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 // by marshmellow - sim fsk data given clock, fcHigh, fcLow, invert
@@ -526,7 +530,11 @@ int CmdLFfskSim(const char *Cmd) {
     SendCommandOLD(CMD_FSK_SIM_TAG, fcHigh << 8 | fcLow, (separator << 8) | clk, size, DemodBuffer, size);
 
     setClockGrid(clk, 0);
-    return 0;
+    PacketResponseNG resp;
+    WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 // by marshmellow - sim ask data given clock, invert, manchester or raw, separator
@@ -611,7 +619,11 @@ int CmdLFaskSim(const char *Cmd) {
     PrintAndLogEx(NORMAL, "preparing to sim ask data: %d bits", size);
     clearCommandBuffer();
     SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, size, DemodBuffer, size);
-    return 0;
+    PacketResponseNG resp;
+    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 // by marshmellow - sim psk data given carrier, clock, invert
@@ -714,7 +726,11 @@ int CmdLFpskSim(const char *Cmd) {
     PrintAndLogEx(DEBUG, "DEBUG: Sending DemodBuffer Length: %d", size);
     clearCommandBuffer();
     SendCommandOLD(CMD_PSK_SIM_TAG, clk << 8 | carrier, invert, size, DemodBuffer, size);
-    return 0;
+    PacketResponseNG resp;
+    WaitForResponse(CMD_PSK_SIM_TAG, &resp);
+    if (resp.status!=PM3_EOPABORTED)
+        return resp.status;
+    return PM3_SUCCESS;
 }
 
 int CmdLFSimBidir(const char *Cmd) {

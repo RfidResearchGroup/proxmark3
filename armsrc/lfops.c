@@ -595,7 +595,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
             if (x != numcycles) {
                 ++x;
             } else {
-                // exit without turning of field
+                // exit without turning off field
                 return;
             }
         }
@@ -819,6 +819,7 @@ void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol) {
     CmdHIDsimTAGEx(hi, lo, ledcontrol, -1);
     DbpString("[!] simulation finished");
+    reply_ng(CMD_HID_SIM_TAG, PM3_EOPABORTED, NULL, 0);
 }
 
 // prepare a waveform pattern in the buffer based on the ID given then
@@ -859,6 +860,7 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
     if (ledcontrol) LED_A_OFF();
+    reply_ng(CMD_FSK_SIM_TAG, PM3_EOPABORTED, NULL, 0);
 }
 
 // compose ask waveform for one bit(ASK)
@@ -943,6 +945,7 @@ void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
     if (ledcontrol) LED_A_OFF();
+    reply_ng(CMD_ASK_SIM_TAG, PM3_EOPABORTED, NULL, 0);
 }
 
 //carrier can be 2,4 or 8
@@ -992,6 +995,7 @@ void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
     if (ledcontrol) LED_A_OFF();
+    reply_ng(CMD_PSK_SIM_TAG, PM3_EOPABORTED, NULL, 0);
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
