@@ -1267,12 +1267,18 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
         // transfer them to the emulator
         if (transferToEml) {
+            // fast push mode
+            conn.block_after_ACK = true;
             for (i = 0; i < SectorsCnt; i++) {
                 mfEmlGetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, keyBlock);
                 if (e_sector[i].foundKey[1])
                     num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
+                if (i == SectorsCnt - 1) {
+                    // Disable fast mode on last packet
+                    conn.block_after_ACK = false;
+                }
                 mfEmlSetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
             }
             PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
@@ -1723,6 +1729,8 @@ out:
         printKeyTable(sectorsCnt, e_sector);
 
         if (transferToEml) {
+            // fast push mode
+            conn.block_after_ACK = true;
             uint8_t block[16] = {0x00};
             for (i = 0; i < sectorsCnt; ++i) {
                 uint8_t blockno = FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1;
@@ -1731,6 +1739,10 @@ out:
                     num_to_bytes(e_sector[i].Key[0], 6, block);
                 if (e_sector[i].foundKey[1])
                     num_to_bytes(e_sector[i].Key[1], 6, block + 10);
+                if (i == sectorsCnt - 1) {
+                    // Disable fast mode on last packet
+                    conn.block_after_ACK = false;
+                }
                 mfEmlSetMem(block, blockno, 1);
             }
             PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
@@ -2011,6 +2023,8 @@ out:
     printKeyTable(SectorsCnt, e_sector);
 
     if (transferToEml) {
+        // fast push mode
+        conn.block_after_ACK = true;
         uint8_t block[16] = {0x00};
         for (i = 0; i < SectorsCnt; ++i) {
             uint8_t blockno = FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1;
@@ -2019,6 +2033,10 @@ out:
                 num_to_bytes(e_sector[i].Key[0], 6, block);
             if (e_sector[i].foundKey[1])
                 num_to_bytes(e_sector[i].Key[1], 6, block + 10);
+            if (i == SectorsCnt - 1) {
+                // Disable fast mode on last packet
+                conn.block_after_ACK = false;
+            }
             mfEmlSetMem(block, blockno, 1);
         }
         PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
@@ -2599,8 +2617,14 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Copying to emulator memory");
 
+    // fast push mode
+    conn.block_after_ACK = true;
     blockNum = 0;
     while (datalen) {
+        if (datalen == blockWidth) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
 
         if (mfEmlSetMem_xt(data + counter, blockNum, 1, blockWidth)) {
             PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockNum);
@@ -3111,7 +3135,13 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
     if (fillEmulator) {
         PrintAndLogEx(INFO, "uploading to emulator memory");
+        // fast push mode
+        conn.block_after_ACK = true;
         for (i = 0; i < numblocks; i += 5) {
+            if (i == numblocks - 1) {
+                // Disable fast mode on last packet
+                conn.block_after_ACK = false;
+            }
             if (mfEmlSetMem(dump + (i * MFBLOCK_SIZE), i, 5)) {
                 PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
             }
