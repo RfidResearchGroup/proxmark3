@@ -283,7 +283,13 @@ static int CmdFdxClone(const char *Cmd) {
 
     PacketResponseNG resp;
 
+    // fast push mode
+    conn.block_after_ACK = true;
     for (int i = 4; i >= 0; --i) {
+        if (i == 0) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
         clearCommandBuffer();
         SendCommandMIX(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {

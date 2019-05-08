@@ -142,7 +142,6 @@ static int CmdGuardClone(const char *Cmd) {
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_clone();
 
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
-    uint8_t i;
     uint8_t bs[96];
     memset(bs, 0x00, sizeof(bs));
 
@@ -173,7 +172,13 @@ static int CmdGuardClone(const char *Cmd) {
 
     PacketResponseNG resp;
 
-    for (i = 0; i < 4; ++i) {
+    // fast push mode
+    conn.block_after_ACK = true;
+    for (uint8_t i = 0; i < 4; i++) {
+        if (i == 3) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
         clearCommandBuffer();
         SendCommandMIX(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {

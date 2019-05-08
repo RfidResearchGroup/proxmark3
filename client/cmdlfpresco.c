@@ -122,7 +122,13 @@ static int CmdPrescoClone(const char *Cmd) {
 
     PacketResponseNG resp;
 
+    // fast push mode
+    conn.block_after_ACK = true;
     for (uint8_t i = 0; i < 5; i++) {
+        if (i == 4) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
         clearCommandBuffer();
         SendCommandMIX(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
