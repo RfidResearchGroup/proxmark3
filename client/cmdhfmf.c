@@ -1053,7 +1053,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 }
 
 static int CmdHF14AMfNested(const char *Cmd) {
-    int i, res, iterations;
+    int i, iterations;
     sector_t *e_sector = NULL;
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
@@ -1176,8 +1176,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         }
 
         PrintAndLogEx(SUCCESS, "Testing known keys. Sector count=%d", SectorsCnt);
-        res = mfCheckKeys_fast(SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector, false);
-        // TODO check result!!
+        mfCheckKeys_fast(SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector, false);
 
         uint64_t t2 = msclock() - t1;
         PrintAndLogEx(SUCCESS, "Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2 / 1000.0);
@@ -1214,7 +1213,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                             e_sector[sectorNo].foundKey[trgKeyType] = 1;
                             e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
-                            res = mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
+                            mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
                             continue;
 
                         default :
