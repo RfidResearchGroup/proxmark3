@@ -400,6 +400,7 @@ static int CmdReset(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
+    PrintAndLogEx(INFO, "Proxmark3 has been reset.");
     return PM3_SUCCESS;
 }
 
