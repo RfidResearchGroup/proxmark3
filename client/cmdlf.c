@@ -432,7 +432,7 @@ int CmdLFSim(const char *Cmd) {
     }
     printf("\n");
 
-    // Disable fast mode and send a dummy command to make it effective
+    // Disable fast mode before last command
     conn.block_after_ACK = false;
 
     PrintAndLogEx(NORMAL, "Simulating");
