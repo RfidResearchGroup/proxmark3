@@ -529,13 +529,6 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
     return 0;
 }
 
-/*
-static int iclassEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
-    clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_EML_MEMSET, blockNum, blocksCount, 0, data, blocksCount * 16);
-    return 0;
-}
-*/
 static int CmdHFiClassELoad(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
@@ -596,17 +589,16 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
+        if (bytes_in_packet == bytes_remaining) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
         clearCommandBuffer();
         SendCommandOLD(CMD_ICLASS_EML_MEMSET, bytes_sent, bytes_in_packet, 0, dump + bytes_sent, bytes_in_packet);
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;
     }
     free(dump);
-
-    // Disable fast mode and send a dummy command to make it effective
-    conn.block_after_ACK = false;
-    SendCommandNG(CMD_PING, NULL, 0);
-    WaitForResponseTimeout(CMD_PING, NULL, 1000);
 
     PrintAndLogEx(SUCCESS, "sent %d bytes of data to device emulator memory", bytes_sent);
     return 0;
@@ -1966,9 +1958,11 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         uint32_t keys = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
 
         // last chunk?
-        if (keys == keycnt - i)
+        if (keys == keycnt - i) {
             lastChunk = true;
-
+            // Disable fast mode on last command
+            conn.block_after_ACK = false;
+        }
         uint32_t flags = lastChunk << 8;
         // bit 16
         //   - 1 indicates credit key
@@ -2034,11 +2028,6 @@ out:
     t1 = msclock() - t1;
 
     PrintAndLogEx(SUCCESS, "\nTime in iclass checkkeys: %.0f seconds\n", (float)t1 / 1000.0);
-
-    // Disable fast mode and send a dummy command to make it effective
-    conn.block_after_ACK = false;
-    SendCommandNG(CMD_PING, NULL, 0);
-    WaitForResponseTimeout(CMD_PING, NULL, 1000);
 
     DropField();
     free(pre);
