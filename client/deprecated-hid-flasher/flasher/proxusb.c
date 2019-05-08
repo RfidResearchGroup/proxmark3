@@ -21,14 +21,21 @@ static unsigned int claimed_iface = 0;
 unsigned char return_on_error = 0;
 unsigned char error_occured = 0;
 
-void SendCommand(PacketCommandOLD *c) {
+void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     int ret;
+    PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
+    c.cmd = cmd;
+    c.arg[0] = arg0;
+    c.arg[1] = arg1;
+    c.arg[2] = arg2;
+    if (len && data)
+        memcpy(&c.d, data, len);
 
 #if 0
     printf("Sending %d bytes\n", sizeof(PacketCommandOLD));
 #endif
 
-    ret = usb_bulk_write(devh, 0x01, (char *)c, sizeof(PacketCommandOLD), 1000);
+    ret = usb_bulk_write(devh, 0x01, (char *)&c, sizeof(PacketCommandOLD), 1000);
     if (ret < 0) {
         error_occured = 1;
         if (return_on_error)

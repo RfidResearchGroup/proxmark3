@@ -260,7 +260,7 @@ fail:
 
 // Get the state of the proxmark, backwards compatible
 static int get_proxmark_state(uint32_t *state) {
-    SendCommandOLD(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
+    SendCommandBL(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
     PacketResponseOLD resp;
     ReceiveCommand(&resp);
 
@@ -307,11 +307,11 @@ static int enter_bootloader(void) {
                 && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
-            SendCommandOLD(CMD_START_FLASH, 0, 0, 0, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, 0, 0, 0, NULL, 0);
             fprintf(stderr, "(Press and release the button only to abort)\n");
         } else {
             // Old style handover: Ask the user to press the button, then reset the board
-            SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
+            SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
             fprintf(stderr, "Press and hold down button NOW if your bootloader requires it.\n");
         }
         fprintf(stderr, "Waiting for Proxmark3 to reappear on USB...");
@@ -356,9 +356,9 @@ int flash_start_flashing(int enable_bl_writes) {
         // This command is stupid. Why the heck does it care which area we're
         // flashing, as long as it's not the bootloader area? The mind boggles.
         if (enable_bl_writes) {
-            SendCommandOLD(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
         } else {
-            SendCommandOLD(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
         }
         return wait_for_ack();
     } else {
@@ -376,12 +376,12 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     memcpy(block_buf, data, length);
 
     for (int i = 0; i < 240; i += 48) {
-        SendCommandOLD(CMD_SETUP_WRITE, i / 4, 0, 0, block_buf + i, 48);
+        SendCommandBL(CMD_SETUP_WRITE, i / 4, 0, 0, block_buf + i, 48);
         if (wait_for_ack() < 0)
             return -1;
     }
 
-    SendCommandOLD(CMD_FINISH_WRITE, address, 0, 0, block_buf + 240, 16);
+    SendCommandBL(CMD_FINISH_WRITE, address, 0, 0, block_buf + 240, 16);
     return wait_for_ack();
 }
 
@@ -440,7 +440,7 @@ void flash_free(flash_file_t *ctx) {
 
 // just reset the unit
 int flash_stop_flashing(void) {
-    SendCommandOLD(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
+    SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
     msleep(100);
     return 0;
 }

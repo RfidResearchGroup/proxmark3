@@ -26,9 +26,9 @@
 extern unsigned char return_on_error;
 extern unsigned char error_occured;
 
-void SendCommand(PacketCommand *c);
-bool ReceiveCommandPoll(PacketCommand *c);
-void ReceiveCommand(PacketCommand *c);
+void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+bool ReceiveCommandPoll(PacketResponseOLD *c);
+void ReceiveCommand(PacketResponseOLD *c);
 struct usb_dev_handle *FindProxmark(int verbose, unsigned int *iface);
 struct usb_dev_handle *OpenProxmark(int verbose);
 void CloseProxmark(void);
