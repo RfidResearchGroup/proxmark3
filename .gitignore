@@ -60,7 +60,6 @@ ppls patches/*
 *- Copy.*
 
 client/lualibs/mf_default_keys.lua
-client/lualibs/usb_cmd.lua
 client/lualibs/pm3_cmd.lua
 # recompiled
 fpga_version_info.c

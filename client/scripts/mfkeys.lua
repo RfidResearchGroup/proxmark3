@@ -29,7 +29,7 @@ Arguments:
     -p             : print keys
 ]]
 
-local PM3_SUCCESS = 0 -- needs to be refactored into own like usb_cmd
+local PM3_SUCCESS = 0 -- needs to be refactored into own like pm3_cmd
 
 local TIMEOUT = 10000 -- 10 seconds
 ---
