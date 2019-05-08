@@ -643,8 +643,15 @@ static int CmdSmartUpgrade(const char *Cmd) {
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining = firmware_size;
 
+    // fast push mode
+    conn.block_after_ACK = true;
+
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
+        if (bytes_in_packet == bytes_remaining) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
         clearCommandBuffer();
         SendCommandOLD(CMD_SMART_UPLOAD, index + bytes_sent, bytes_in_packet, 0, dump + bytes_sent, bytes_in_packet);
         if (!WaitForResponseTimeout(CMD_ACK, NULL, 2000)) {
