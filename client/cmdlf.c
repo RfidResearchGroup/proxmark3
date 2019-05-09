@@ -441,7 +441,7 @@ int CmdLFSim(const char *Cmd) {
     SendCommandMIX(CMD_SIMULATE_TAG_125K, GraphTraceLen, gap, 0, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_SIMULATE_TAG_125K, &resp);
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }
@@ -532,7 +532,7 @@ int CmdLFfskSim(const char *Cmd) {
     setClockGrid(clk, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }
@@ -621,7 +621,7 @@ int CmdLFaskSim(const char *Cmd) {
     SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, size, DemodBuffer, size);
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }
@@ -728,7 +728,7 @@ int CmdLFpskSim(const char *Cmd) {
     SendCommandOLD(CMD_PSK_SIM_TAG, clk << 8 | carrier, invert, size, DemodBuffer, size);
     PacketResponseNG resp;
     WaitForResponse(CMD_PSK_SIM_TAG, &resp);
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }

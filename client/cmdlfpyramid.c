@@ -280,7 +280,7 @@ static int CmdPyramidSim(const char *Cmd) {
     SendCommandOLD(CMD_FSK_SIM_TAG, high << 8 | low, invert << 8 | clk, sizeof(bs), bs, sizeof(bs));
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }

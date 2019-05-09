@@ -345,7 +345,7 @@ static int CmdAWIDSim(const char *Cmd) {
     SendCommandOLD(CMD_FSK_SIM_TAG, (high << 8) + low, (invert << 8) + clk, sizeof(bits), bits, sizeof(bits));
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }

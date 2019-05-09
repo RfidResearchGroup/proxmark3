@@ -119,7 +119,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             if (packet_length > sizeof(data)) {
                 packet_length = sizeof(data);
             }
-            if ((i == sizeof(apdu_lengths)-1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
+            if ((i == sizeof(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
                 // Disable fast mode on last packet
                 conn.block_after_ACK = false;
             }

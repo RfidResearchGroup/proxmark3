@@ -218,7 +218,7 @@ static int CmdGuardSim(const char *Cmd) {
     SendCommandOLD(CMD_ASK_SIM_TAG, (clock1 << 8) | encoding, (invert << 8) | separator, sizeof(bs), bs, sizeof(bs));
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }

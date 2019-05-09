@@ -200,7 +200,7 @@ static int CmdNoralsySim(const char *Cmd) {
     SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(bits), bits, sizeof(bits));
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
-    if (resp.status!=PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }
