@@ -509,6 +509,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // Set up the demodulator for the reader -> tag commands
     UartInit(receivedCmd, receivedCmdPar);
 
+    DbpString("Starting to sniff");
+
     // Setup and start DMA.
     if (!FpgaSetupSscDma((uint8_t *) dmaBuf, DMA_BUFFER_SIZE)) {
         if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
@@ -522,8 +524,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     bool triggered = !(param & 0x03);
 
     uint32_t rx_samples = 0;
-
-    DbpString("Starting to sniff");
 
     // loop and listen
     while (!BUTTON_PRESS()) {
