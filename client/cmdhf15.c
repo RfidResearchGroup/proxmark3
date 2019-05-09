@@ -224,9 +224,6 @@ static int getUID(uint8_t *buf) {
         }
     } // retry
 
-    if (retry >= 3)
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-
     return 0;
 }
 
