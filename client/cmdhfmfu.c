@@ -2020,9 +2020,11 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (fileNameLen < 1) {
 
         PrintAndLogEx(INFO, "Using UID as filename");
-
+        uint8_t uid[7] = {0};
+        memcpy(uid, (uint8_t *)&dump_file_data.data, 3);
+        memcpy(uid + 3, (uint8_t *)&dump_file_data.data + 4, 4);
         fptr += sprintf(fptr, "hf-mfu-");
-        FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+        FillFileNameByUID(fptr, uid, "-dump", sizeof(uid));
     }
     uint16_t datalen = pages * 4 + MFU_DUMP_PREFIX_LENGTH;
     saveFile(filename, ".bin", (uint8_t *)&dump_file_data, datalen);
