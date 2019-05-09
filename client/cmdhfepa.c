@@ -141,7 +141,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
     // now perform the replay
     clearCommandBuffer();
-    SendCommandNG(CMD_EPA_PACE_REPLAY, NULL, 0);
+    SendCommandMIX(CMD_EPA_PACE_REPLAY, 0, 0, 0, NULL, 0);
     WaitForResponse(CMD_ACK, &resp);
     if (resp.oldarg[0] != 0) {
         PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);

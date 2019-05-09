@@ -632,7 +632,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
     if (file_given)
         SendCommandOLD(CMD_TEST_HITAGS_TRACES, 1, 0, 0, data, datalen);
     else
-        SendCommandNG(CMD_TEST_HITAGS_TRACES, NULL, 0);
+        SendCommandMIX(CMD_TEST_HITAGS_TRACES, 0, 0, 0, NULL, 0);
 
     free(data);
     return 0;

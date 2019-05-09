@@ -35,7 +35,7 @@ static void topaz_switch_on_field(void) {
 }
 
 static void topaz_switch_off_field(void) {
-    SendCommandNG(CMD_READER_ISO_14443a, NULL, 0);
+    SendCommandMIX(CMD_READER_ISO_14443a, 0, 0, 0, NULL, 0);
 }
 
 // send a raw topaz command, returns the length of the response (0 in case of error)

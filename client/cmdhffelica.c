@@ -564,7 +564,7 @@ int readFelicaUid(bool verbose) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
-        //SendCommandNG(CMD_FELICA_COMMAND, NULL, 0);
+        //SendCommandMIX(CMD_FELICA_COMMAND, 0, 0, 0, NULL, 0);
         return 0;
     }
 
