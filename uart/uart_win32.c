@@ -171,7 +171,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         return PM3_EIO;
     }
 
-    printf("[!]res %d | rx errorcode == %d \n", res, errorcode);
+//    printf("[!]res %d | rx errorcode == %d \n", res, errorcode);
     return res;
 }
 
@@ -186,7 +186,7 @@ int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
         return PM3_EIO;
     }
 
-    printf("[!!]res %d | send errorcode == %d \n", res, errorcode);
+//    printf("[!!]res %d | send errorcode == %d \n", res, errorcode);
     return PM3_ENOTTY;
 }
 
