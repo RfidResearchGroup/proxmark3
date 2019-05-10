@@ -12,25 +12,33 @@ For further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.c
 
 *This method is useful for those looking to run bleeding-edge versions of RRG/iceman's client. Keep this in mind when attempting to update your HomeBrew tap formula as this procedure could easily cause a build to break if an update is unstable on macOS.* 
 
-Tested on macOS High Sierra 10.13.2
+Tested on macOS Mojave 10.14.4
 
 *Note: This assumes you have already installed RRG/iceman's fork from HomeBrew as mentioned above*
 
 Force HomeBrew to pull the latest source from github
-```
-brew upgrade --fetch-HEAD RfidResearchGroup/proxmark3
+
+```sh
+brew upgrade --fetch-HEAD proxmark3
 ```
 
 ## Flash the BOOTROM & FULLIMAGE
 
-With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. Continue to hold the button until after this step is complete and the `proxmark3-flasher` command outputs "Have a nice day!"*
+With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. Continue to hold the button until after this step is complete and the `proxmark3-flasher` command outputs "Have a nice day!"
 
-`$ sudo proxmark3-flasher /dev/tty.usbmodem881 -b /usr/local/Cellar/proxmark3/HEAD-6a710ef/share/firmware/bootrom.elf /usr/local/Cellar/proxmark3/HEAD-6a710ef/share/firmware/fullimage.elf`
+```sh
+sudo proxmark3-flasher /dev/tty.usbmodemiceman1 -b /usr/local/Cellar/proxmark3/HEAD-<Commit-ID>/share/firmware/bootrom.elf /usr/local/Cellar/proxmark3/HEAD-<Commit-ID>/share/firmware/fullimage.elf
+```
+
+> Replace \<Commit-ID\> with the HEAD-XXXX ID displayed by brew.  
+> Depending on the firmware version your Proxmark3 can also appear as `/dev/tty.usbmodem881`
+
+
 
 ## Run the client
 
 ```sh
-sudo proxmark3 /dev/tty.usbmodem881
+sudo proxmark3 /dev/tty.usbmodemiceman1
 ```
 
 ## Next steps
