@@ -118,11 +118,13 @@ On the client, for sending frames:
 (client->comms.c)
 *****************************************
 void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
+void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 *****************************************
 
 So cmds should make the transition from SendCommandOLD to SendCommandNG to benefit from smaller frames (and armsrc handlers adjusted accordingly of course).
+SendCommandBL is for Bootloader-related activities, see Bootrom section.
 SendCommandMIX is a transition fct: it uses the same API as SendCommandOLD but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to PM3_CMD_DATA_SIZE - 24 (defined as PM3_CMD_DATA_SIZE_MIX). Besides the size limitation, the receiver handler doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
 Warning : it makes sense to move from SendCommandOLD to SendCommandMIX only for *commands with small payloads*.
 * otherwise both have about the same size
@@ -153,12 +155,12 @@ int16_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, voi
 So replies should make the transition from reply_old to reply_ng to benefit from smaller frames (and client reception adjusted accordingly of course).
 reply_mix is a transition fct: it uses the same API as reply_old but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to PM3_CMD_DATA_SIZE - 24. Besides the size limitation, the client command doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
 
-Example with CMD_PING that supports both styles (from client CmdPing or CmdPingNG) and replies with the new frame format when it receives new command format:
+Example of a handler that supports both OLD/MIX and NG command styles and replies with the new frame format when it receives new command format:
     if (packet->ng) {
-        reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
+        reply_ng(CMD_FOOBAR, PM3_SUCCESS, packet->data.asBytes, packet->length);
     } else {
-        // reply_old(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
-        reply_mix(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
+        // reply_old(CMD_ACK, 0, 0, 0, packet->data.asBytes, packet->length);
+        reply_mix(CMD_ACK, 0, 0, 0, packet->data.asBytes, packet->length);
     }
 
 On the client, for receiving frames:
@@ -183,8 +185,8 @@ In short, to move from one format to the other, we need for each command:
 
 Meanwhile, a fast transition to MIX frames can be done with:
 
-* (client TX) SendCommandOLD -> SendCommandMIX (but check the limited data size)
-* (pm3 TX) reply_old -> reply_mix (but check the limited data size)
+* (client TX) SendCommandOLD -> SendCommandMIX (but check the limited data size PM3_CMD_DATA_SIZE -> PM3_CMD_DATA_SIZE_MIX)
+* (pm3 TX) reply_old -> reply_mix (but check the limited data size PM3_CMD_DATA_SIZE -> PM3_CMD_DATA_SIZE_MIX)
 
 Bootrom
 =======
@@ -192,6 +194,8 @@ Bootrom
 Bootrom code will still use the old frame format to remain compatible with other repos supporting the old format and because it would hardly gain anything from the new format:
 * almost all frames convey 512b of payload, so difference in overhead is neglictible
 * bringing flash over usart sounds risky and would be terribly slow anyway (115200 bauds vs. 7M bauds).
+
+SendCommandBL is the same as SendCommandOLD with a different name to be sure not to migrate it.
 
 On the Proxmark3, for receiving frames:
 ---------------------------------------
@@ -276,21 +280,30 @@ USART_BAUD_RATE defined there
     linux usb: #db#   USB Transfer Speed PM3 -> Client = 666624 Bytes/s (equiv. to ~7Mbaud)
 
 
-(uart/uart_posix.c)
-// Receiving from USART need more than 30ms as we used on USB
-// else we get errors about "Received packet frame ... too short"
-// Now we're using 100ms
-// FTDI   9600 hw status -> we need 20ms
-// FTDI 115200 hw status -> we need 50ms
-// FTDI 460800 hw status -> we need 30ms
-struct timeval timeout = {
-    .tv_sec  =      0, // 0 second
-    .tv_usec = 100000  // 100 000 micro seconds
-};
+(pm3_cmd.h)
+
+Receiving from USART need more than 30ms as we used on USB
+else we get errors about partial packet reception
+FTDI   9600 hw status        -> we need 20ms
+FTDI 115200 hw status        -> we need 50ms
+FTDI 460800 hw status        -> we need 30ms
+BT   115200 hf mf fchk 1 dic -> we need 140ms
+
+# define UART_FPC_CLIENT_RX_TIMEOUT_MS  170
+# define UART_USB_CLIENT_RX_TIMEOUT_MS  20
+# define UART_TCP_CLIENT_RX_TIMEOUT_MS  300
+
+This goes to uart_posix.c timeval struct
+and uart_win32.c serial_port_windows struct
+
+It starts at UART_FPC_CLIENT_RX_TIMEOUT_MS and once we detect we're working over USB
+it's reduced to UART_USB_CLIENT_RX_TIMEOUT_MS.
+
+
 
 Add automatically some communication delay in the WaitForResponseTimeout & dl_it timeouts
 Only when using FPC, timeout = 2* empirically measured delay (FTDI cable)
-Empirically measured delay (FTDI cable) with "hw pingng 512" :
+Empirically measured delay (FTDI cable) with "hw ping 512" :
    usb ->    6..  32ms
 460800 ->   40..  70ms
   9600 -> 1100..1150ms
@@ -311,8 +324,12 @@ Needed to tune pm3 RX usart maxtry
 uint32_t usart_read_ng(uint8_t *data, size_t len) {
 // Empirical max try observed: 3000000 / USART_BAUD_RATE
 // Let's take 10x
-uint32_t maxtry = 10 * ( 3000000 / USART_BAUD_RATE );
-
+uint32_t tryconstant = 0;
+#ifdef USART_SLOW_LINK
+    // Experienced up to 13200 tries on BT link even at 460800
+    tryconstant = 50000;
+#endif
+    uint32_t maxtry = 10 * (3000000 / USART_BAUD_RATE) + tryconstant;
 
 
 DbpStringEx using reply_old:
@@ -382,7 +399,7 @@ Or if it's too complex to determine when we're sending the last command:
     }
     // Disable fast mode and send a dummy command to make it effective
     conn.block_after_ACK = false;
-    SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
     WaitForResponseTimeout(CMD_ACK, NULL, 1000);
     return PM3_SUCCESS;
 
@@ -392,6 +409,10 @@ Reference frames
 
 For helping debug...
 
+OLD command and reply packets are 544 bytes.
+NG & MIX command packets are between 10 and 522 bytes.
+NG & MIX reply packets are between 12 and 524 bytes.
+
 On linux USB
 * sent packets can be 544
 * received packets are max 128, so 544 = 128+128+128+128+32
@@ -399,34 +420,26 @@ On linux UART (FTDI)
 * sent packets are max 256, so 544 = 256+256+32
 * received packets are max 512, so 544 = 512+32
 
-Initial connection:
+"hw ping" (old version, mix reply)
 TestProxmark: SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
 ->544=0901000000000000000000000000000000000000000000000000000000000000  -> OLD
 CMD_PING: reply_mix(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
 <-36=504d336218000000ff0000000000000000000000000000000000000000000000   <- MIX
-main_loop pm3_version: SendCommandOLD(CMD_VERSION, 0, 0, 0, NULL, 0);
-->544=0701000000000000000000000000000000000000000000000000000000000000  -> OLD
-SendVersion:  reply_old(CMD_ACK,...);
-<-128=ff000000000000004f0a0b270000000009710300000000000000000000000000  <- OLD
-<-128=6572696d656e74616c5f7661726c656e2f33646431663163372d64697274792d
-<-128=484620696d616765206275696c7420666f7220327333307671313030206f6e20
-<-128=0000000000000000000000000000000000000000000000000000000000000000
-<-32=0000000000000000000000000000000000000000000000000000000000000000
 
-"hw ping"
+"hw ping" (intermediate version using MIX)
 CmdPing  SendCommandMIX(CMD_PING, 0, 0, 0, NULL, 0);
 ->34=504d336118000901000000000000000000000000000000000000000000000000   -> MIX
 CMD_PING reply_mix(CMD_ACK, reply_via_fpc, 0, 0, 0, 0);
 <-36=504d336218000000ff0000000000000000000000000000000000000000000000   <- MIX
 
-"hw pingng"
-CmdPingNG  SendCommandNG(CMD_PING, data, len);
+"hw ping" (current version)
+CmdPing  SendCommandNG(CMD_PING, data, len);
 ->10=504d3361008009016133                                               -> NG
 CMD_PING reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
 <-12=504d33620080000009016233                                           <- NG
 
-"hw pingng 512"
-CmdPingNG  SendCommandNG(CMD_PING, data, len);
+"hw ping 512"
+CmdPing  SendCommandNG(CMD_PING, data, len);
 ->522=504d336100820901000102030405060708090a0b0c0d0e0f1011121314151617  -> NG
 CMD_PING reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
 <-128=504d3362008200000901000102030405060708090a0b0c0d0e0f101112131415  <- NG

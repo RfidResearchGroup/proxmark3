@@ -473,7 +473,7 @@ extern capabilities_t pm3_capabilities;
 // all zero's configure: no timeout for read/write used.
 // took settings from libnfc/buses/uart.c
 
-// uart_windows.c
+// uart_windows.c & uart_posix.c
 # define UART_FPC_CLIENT_RX_TIMEOUT_MS  170
 # define UART_USB_CLIENT_RX_TIMEOUT_MS  20
 # define UART_TCP_CLIENT_RX_TIMEOUT_MS  300
