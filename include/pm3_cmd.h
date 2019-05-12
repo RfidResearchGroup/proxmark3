@@ -138,6 +138,7 @@ typedef struct {
 } t55xx_config;
 
 typedef struct {
+    uint8_t version;
     uint32_t baudrate;
     bool via_fpc                       : 1;
     // rdv4
@@ -164,7 +165,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-
+#define CAPABILITIES_VERSION 1
 extern capabilities_t pm3_capabilities;
 
 // For the bootloader

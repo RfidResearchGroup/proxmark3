@@ -428,6 +428,7 @@ void SendStatus(void) {
 
 void SendCapabilities(void) {
     capabilities_t capabilities;
+    capabilities.version = CAPABILITIES_VERSION;
     capabilities.via_fpc = reply_via_fpc;
     if (reply_via_fpc)
         capabilities.baudrate = USART_BAUD_RATE;

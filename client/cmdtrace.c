@@ -20,6 +20,8 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "Usage:  trace list <protocol> [f][c| <0|1>");
     PrintAndLogEx(NORMAL, "    f      - show frame delay times as well");
     PrintAndLogEx(NORMAL, "    c      - mark CRC bytes");
+    PrintAndLogEx(NORMAL, "    x      - show hexdump to convert to pcap(ng) or to import into Wireshark using encapsulation type \"ISO 14443\"");
+    PrintAndLogEx(NORMAL, "             syntax to use: `text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`");
     PrintAndLogEx(NORMAL, "    <0|1>  - use data from Tracebuffer, if not set, try reading data from tag.");
     PrintAndLogEx(NORMAL, "Supported <protocol> values:");
     PrintAndLogEx(NORMAL, "    raw    - just show raw data without annotations");
@@ -100,6 +102,90 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
     *duration = last_timestamp - timestamp;
 
     return true;
+}
+
+static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol) {
+    // sanity check
+    if (tracepos + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) > traceLen) return traceLen;
+
+    bool isResponse;
+    uint16_t data_len, parity_len;
+    uint32_t timestamp;
+
+    timestamp = *((uint32_t *)(trace + tracepos));
+    tracepos += 4;
+
+
+    // currently we don't use duration, so we skip it
+    tracepos += 2;
+
+    data_len = *((uint16_t *)(trace + tracepos));
+    tracepos += 2;
+
+    if (data_len & 0x8000) {
+        data_len &= 0x7fff;
+        isResponse = true;
+    } else {
+        isResponse = false;
+    }
+    parity_len = (data_len - 1) / 8 + 1;
+
+    if (tracepos + data_len + parity_len > traceLen) {
+        return traceLen;
+    }
+    uint8_t *frame = trace + tracepos;
+    tracepos += data_len;
+    //currently we don't use parity bytes, so we skip it
+    tracepos += parity_len;
+
+    if (data_len == 0) {
+        PrintAndLogEx(NORMAL, "<empty trace - possible error>");
+        return tracepos;
+    }
+
+    switch (protocol) {
+        case ISO_14443A:
+            {
+            /* https://www.kaiser.cx/pcap-iso14443.html defines a pseudo header:
+             * version (currently 0x00), event (Rdr: 0xfe, Tag: 0xff), length (2 bytes)
+             * to convert to pcap(ng) via text2pcap or to import into Wireshark
+             * we use format timestamp, newline, offset (0x000000), pseudo header, data
+             * `text2pcap -t "%S." -l 264 -n <input-text-file> <output-pcapng-file>`
+             */
+            char line[(data_len *3) + 1];
+            char *ptr = &line[0];
+
+            for (int j = 0; j < data_len ; j++) {
+                 ptr += sprintf (ptr, "%02x", frame[j]);
+                 ptr += sprintf (ptr, " ");
+            }
+
+            char data_len_str[5];
+            char temp_str1[3] = {0};
+            char temp_str2[3] = {0};
+
+            sprintf(data_len_str, "%04x", data_len);
+            strncat(temp_str1, data_len_str, 2);
+	    temp_str1[2] = '\0';
+            strncat(temp_str2, data_len_str + 2, 2);
+	    temp_str2[2] = '\0';
+
+            PrintAndLogEx(NORMAL, "0.%010u", timestamp);
+            PrintAndLogEx(NORMAL, "000000 00 %s %s %s %s",
+                         (isResponse ? "ff" : "fe"),
+                         temp_str1,
+                         temp_str2,
+                         line);
+            return tracepos;
+            }
+       default:
+            PrintAndLogEx(NORMAL, "Currently only 14a supported");
+            return traceLen;
+    }
+
+    if (is_last_record(tracepos, trace, traceLen)) return traceLen;
+
+    return tracepos;
 }
 
 static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes) {
@@ -592,6 +678,7 @@ int CmdTraceList(const char *Cmd) {
 
     bool showWaitCycles = false;
     bool markCRCBytes = false;
+    bool showHex = false;
     bool isOnline = true;
     bool errors = false;
     uint8_t protocol = 0;
@@ -616,6 +703,10 @@ int CmdTraceList(const char *Cmd) {
                     break;
                 case 'c':
                     markCRCBytes = true;
+                    cmdp++;
+                    break;
+                case 'x':
+                    showHex = true;
                     cmdp++;
                     break;
                 case '0':
@@ -695,6 +786,10 @@ int CmdTraceList(const char *Cmd) {
     PrintAndLogEx(INFO, "");
     if (protocol == FELICA) {
         printFelica(traceLen, trace);
+    } else if (showHex) {
+        while (tracepos < traceLen) {
+            tracepos = printHexLine(tracepos, traceLen, trace, protocol);
+        }
     } else {
         PrintAndLogEx(NORMAL, "Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
         if (protocol == ISO_14443A || protocol == PROTO_MIFARE)

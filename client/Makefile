@@ -72,6 +72,8 @@ else
     LUAPLATFORM = macosx
     OBJCSRCS = util_darwin.m
     LDFLAGS += -framework Foundation -framework AppKit
+    LDLIBS := -L/usr/local/opt/readline/lib $(LDLIBS)
+    LIBS := -I/usr/local/opt/readline/include $(LIBS)
 else
     LUALIB +=  -ldl
     LDLIBS +=  -ltermcap -lncurses
