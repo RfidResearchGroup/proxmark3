@@ -144,20 +144,19 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
     }
 
     switch (protocol) {
-        case ISO_14443A:
-            {
+        case ISO_14443A: {
             /* https://www.kaiser.cx/pcap-iso14443.html defines a pseudo header:
              * version (currently 0x00), event (Rdr: 0xfe, Tag: 0xff), length (2 bytes)
              * to convert to pcap(ng) via text2pcap or to import into Wireshark
              * we use format timestamp, newline, offset (0x000000), pseudo header, data
              * `text2pcap -t "%S." -l 264 -n <input-text-file> <output-pcapng-file>`
              */
-            char line[(data_len *3) + 1];
+            char line[(data_len * 3) + 1];
             char *ptr = &line[0];
 
             for (int j = 0; j < data_len ; j++) {
-                 ptr += sprintf (ptr, "%02x", frame[j]);
-                 ptr += sprintf (ptr, " ");
+                ptr += sprintf(ptr, "%02x", frame[j]);
+                ptr += sprintf(ptr, " ");
             }
 
             char data_len_str[5];
@@ -166,19 +165,19 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
 
             sprintf(data_len_str, "%04x", data_len);
             strncat(temp_str1, data_len_str, 2);
-	    temp_str1[2] = '\0';
+            temp_str1[2] = '\0';
             strncat(temp_str2, data_len_str + 2, 2);
-	    temp_str2[2] = '\0';
+            temp_str2[2] = '\0';
 
             PrintAndLogEx(NORMAL, "0.%010u", timestamp);
             PrintAndLogEx(NORMAL, "000000 00 %s %s %s %s",
-                         (isResponse ? "ff" : "fe"),
-                         temp_str1,
-                         temp_str2,
-                         line);
+                          (isResponse ? "ff" : "fe"),
+                          temp_str1,
+                          temp_str2,
+                          line);
             return tracepos;
-            }
-       default:
+        }
+        default:
             PrintAndLogEx(NORMAL, "Currently only 14a supported");
             return traceLen;
     }
