@@ -12,4 +12,5 @@ fpga/fpga.bit -crlf -diff
 *.lua text=auto eol=lf
 *.py text=auto eol=lf
 *.pl text=auto eol=lf
+*.dic text=auto eol=lf
 Makefile text=auto eol=lf
