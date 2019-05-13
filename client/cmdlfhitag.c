@@ -455,9 +455,10 @@ static void printHitagConfiguration(uint8_t config) {
 }
 
 static bool getHitagUid(uint32_t *uid) {
-
+    hitag_data htd;
+    memset(&htd, 0, sizeof(htd));
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_HITAG, RHT2F_UID_ONLY, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_READER_HITAG, RHT2F_UID_ONLY, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
