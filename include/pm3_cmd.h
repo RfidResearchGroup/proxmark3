@@ -65,7 +65,7 @@ typedef struct {
         uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } data;
     bool ng;             // does it store NG data or OLD data?
-} PACKED PacketCommandNG;
+} PacketCommandNG;
 
 // For reception and CRC check
 typedef struct {
@@ -111,7 +111,7 @@ typedef struct {
         uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } data;
     bool ng;             // does it store NG data or OLD data?
-} PACKED PacketResponseNG;
+} PacketResponseNG;
 
 // For reception and CRC check
 typedef struct {
