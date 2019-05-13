@@ -820,7 +820,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_T55XX_WRITE_BLOCK:
-            T55xxWriteBlock(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes[0]);
+            // uses NG format
+            T55xxWriteBlock(packet->data.asBytes);
             break;
         case CMD_T55XX_WAKEUP:
             T55xxWakeUp(packet->oldarg[0]);

@@ -1397,11 +1397,11 @@ void T55xxResetRead(void) {
 }
 
 // Write one card block in page 0, no lock
-void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
+void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags) {
     LED_A_ON();
-    bool PwdMode = arg & 0x1;
-    uint8_t Page = (arg & 0x2) >> 1;
-    bool testMode = arg & 0x4;
+    bool pwd_mode = (flags & 0x1);
+    uint8_t page = (flags & 0x2) >> 1;
+    bool test_mode = (flags & 0x4 >> 3);
     uint32_t i = 0;
 
     // Set up FPGA, 125kHz
@@ -1409,30 +1409,38 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 
     // make sure tag is fully powered up...
     WaitMS(4);
+    
     // Trigger T55x7 in mode.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitUS(t_config.start_gap);
 
-    if (testMode) Dbprintf("TestMODE");
-    // Std Opcode 10
-    T55xxWriteBit(testMode ? 0 : 1);
-    T55xxWriteBit(testMode ? 1 : Page); //Page 0
-
-    if (PwdMode) {
-        // Send Pwd
-        for (i = 0x80000000; i != 0; i >>= 1)
-            T55xxWriteBit(Pwd & i);
+    if (test_mode) {
+        Dbprintf("T55xx writing with ", _YELLOW_("test mode enabled"));
+        // undocmented testmode opcode 01
+        T55xxWriteBit(0);
+        T55xxWriteBit(1);
+    } else {
+        // std opcode 10 == page 0
+        // std opcode 11 == page 1
+        T55xxWriteBit(1);
+        T55xxWriteBit(page);        
     }
-    // Send Lock bit
+
+    if (pwd_mode) {
+        // Send pwd
+        for (i = 0x80000000; i != 0; i >>= 1)
+            T55xxWriteBit(pwd & i);
+    }
+    // Send lock bit
     T55xxWriteBit(0);
 
-    // Send Data
+    // Send data
     for (i = 0x80000000; i != 0; i >>= 1)
-        T55xxWriteBit(Data & i);
+        T55xxWriteBit(data & i);
 
-    // Send Block number
+    // Send block number
     for (i = 0x04; i != 0; i >>= 1)
-        T55xxWriteBit(Block & i);
+        T55xxWriteBit(blockno & i);
 
     // Perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
     // so wait a little more)
@@ -1441,7 +1449,7 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
     //  - programming takes ~5.6ms for t5577 ~18ms for E5550 or t5567
     //  so we should wait 1 clock + 5.6ms then read response?
     //  but we need to know we are dealing with t5577 vs t5567 vs e5550 (or q5) marshmellow...
-    if (testMode) {
+    if (test_mode) {
         //TESTMODE TIMING TESTS:
         // <566us does nothing
         // 566-568 switches between wiping to 0s and doing nothing
@@ -1469,9 +1477,11 @@ void T55xxWriteBlockExt(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg)
 }
 
 // Write one card block in page 0, no lock
-void T55xxWriteBlock(uint32_t Data, uint8_t Block, uint32_t Pwd, uint8_t arg) {
-    T55xxWriteBlockExt(Data, Block, Pwd, arg);
-    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+// uses NG format
+void T55xxWriteBlock(uint8_t *data) {
+    t55xx_write_block_t *c = (t55xx_write_block_t *)data;    
+    T55xxWriteBlockExt(c->data, c->blockno, c->pwd, c->flags);    
+    reply_ng(CMD_T55XX_WRITE_BLOCK, PM3_SUCCESS, NULL, 0);
 }
 
 // Read one card block in page [page]

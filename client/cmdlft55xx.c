@@ -1041,6 +1041,11 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
             case 'b':
                 errors |= param_getdec(Cmd, cmdp + 1, &block);
                 cmdp += 2;
+                
+                if (block > 7) {
+                    PrintAndLogEx(WARNING, "Block number must be between 0 and 7");
+                    errors = true;
+                }
                 break;
             case 'd':
                 data = param_get32ex(Cmd, cmdp + 1, 0, 16);
@@ -1068,31 +1073,37 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     }
     if (errors || !gotdata) return usage_t55xx_write();
 
-    if (block > 7) {
-        PrintAndLogEx(WARNING, "Block number must be between 0 and 7");
-        return 0;
-    }
-
     PacketResponseNG resp;
-    uint8_t flags[1] = {0};
-    flags[0] = (page1) ? 0x2 : 0;
-    flags[0] |= (testMode) ? 0x4 : 0;
+    uint8_t flags;
+    flags = (usepwd) ? 0x1 : 0;
+    flags |= (page1) ? 0x2 : 0;
+    flags |= (testMode) ? 0x4 : 0;
 
     char pwdStr[16] = {0};
     snprintf(pwdStr, sizeof(pwdStr), "pwd: 0x%08X", password);
 
     PrintAndLogEx(INFO, "Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data, (usepwd) ? pwdStr : "");
 
-    uint64_t arg_pwd = 0;
-    //Password mode
-    if (usepwd) {
-        arg_pwd = password;
-        flags[0] |= 0x1;
-    }
-
     clearCommandBuffer();
-    SendCommandOLD(CMD_T55XX_WRITE_BLOCK, data, block, arg_pwd, flags, sizeof(flags));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+    
+    /*
+        OLD style
+       arg0 = data, (4 bytes)
+       arg1 = block (1 byte)
+       arg2 = password (4 bytes)
+       flags = data[0] (1 byte)
+       
+       new style
+       uses struct in pm3_cmd.h
+    */
+    t55xx_write_block_t ng;
+    ng.data = data;
+    ng.pwd = password;
+    ng.blockno = block;
+    ng.flags = flags;
+    
+    SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
+    if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not ACK write operation. (May be due to old firmware)");
         return 0;
     }

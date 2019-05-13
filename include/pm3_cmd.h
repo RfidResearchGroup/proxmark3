@@ -168,6 +168,14 @@ typedef struct {
 #define CAPABILITIES_VERSION 1
 extern capabilities_t pm3_capabilities;
 
+// For CMD_T55XX_WRITE_BLOCK
+typedef struct {
+    uint32_t data;
+    uint32_t pwd;
+    uint8_t blockno;
+    uint8_t flags;
+} PACKED t55xx_write_block_t;
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 #define CMD_SETUP_WRITE                                                   0x0001
