@@ -38,7 +38,7 @@ static uint8_t dummy_answer = 0;
 // Select, Authenticate, Read a MIFARE tag.
 // read block
 //-----------------------------------------------------------------------------
-void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
+void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0;
     uint8_t keyType = arg1;
@@ -198,7 +198,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 // Select, Authenticate, Read a MIFARE tag.
 // read sector (data = 4 x 16 bytes = 64 bytes, or 16 x 16 bytes = 256 bytes)
 //-----------------------------------------------------------------------------
-void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
+void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     // params
     uint8_t sectorNo = arg0;
     uint8_t keyType = arg1;
@@ -363,7 +363,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 // Select, Authenticate, Write a MIFARE tag.
 // read block
 //-----------------------------------------------------------------------------
-void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
+void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0;
     uint8_t keyType = arg1;
@@ -1636,7 +1636,7 @@ void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
     emlSetMem_xt(datain, arg0, arg1, arg2); // data, block num, blocks count, block byte width
 }
 
-void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+void MifareEMemGet(uint32_t arg0, uint32_t arg1) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
     emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
@@ -1650,7 +1650,7 @@ void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain)
 // Load a card into the emulator memory
 //
 //-----------------------------------------------------------------------------
-void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+void MifareECardLoad(uint32_t arg0, uint32_t arg1) {
     uint64_t ui64Key;
     uint32_t cuid = 0;
     uint8_t numSectors = arg0;

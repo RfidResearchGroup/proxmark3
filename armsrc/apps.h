@@ -142,12 +142,12 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c);
 void EPA_PACE_Replay(PacketCommandNG *c);
 
 // mifarecmd.h
-void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
+void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes);
 void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain);
-void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
-void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
+void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t *datain);
+void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 //void MifareUWriteBlockCompat(uint8_t arg0,uint8_t *datain);
 void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
@@ -158,8 +158,8 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 void MifareSetDbgLvl(uint16_t arg0);
 void MifareEMemClr(void);
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void MifareEMemGet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
+void MifareEMemGet(uint32_t arg0, uint32_t arg1);
+void MifareECardLoad(uint32_t arg0, uint32_t arg1);
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);
 void MifareCIdent();  // is "magic chinese" card?

@@ -19,7 +19,7 @@
 # define CheckCrc14A(data, len)	check_crc(CRC_14443_A, (data), (len))
 #endif
 
-void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t arg2, uint8_t *datain);
+void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain);
 
 #define AC_DATA_READ             0
 #define AC_DATA_WRITE            1

@@ -993,7 +993,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             ReaderMifare(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
         case CMD_MIFARE_READBL:
-            MifareReadBlock(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         case CMD_MIFAREU_READBL:
             MifareUReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
@@ -1008,10 +1008,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareUSetPwd(packet->oldarg[0], packet->data.asBytes);
             break;
         case CMD_MIFARE_READSC:
-            MifareReadSector(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareReadSector(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         case CMD_MIFARE_WRITEBL:
-            MifareWriteBlock(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareWriteBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         //case CMD_MIFAREU_WRITEBL_COMPAT:
         //MifareUWriteBlockCompat(packet->oldarg[0], packet->data.asBytes);
@@ -1037,7 +1037,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SIMULATE_MIFARE_CARD:
-            Mifare1ksim(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            Mifare1ksim(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
 
         // emulator
@@ -1051,10 +1051,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareEMemSet(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         case CMD_MIFARE_EML_MEMGET:
-            MifareEMemGet(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareEMemGet(packet->oldarg[0], packet->oldarg[1]);
             break;
         case CMD_MIFARE_EML_CARDLOAD:
-            MifareECardLoad(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareECardLoad(packet->oldarg[0], packet->oldarg[1]);
             break;
 
         // Work with "magic Chinese" card
