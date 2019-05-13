@@ -1516,7 +1516,7 @@ OUT:
     }
 }
 
-void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain, bool ng) {
+void MifareChkKeys(uint8_t *datain) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
@@ -1538,18 +1538,11 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain, b
     uint8_t blockNo, keyType, keyCount;
     bool clearTrace, have_uid = false;
 
-    if (ng) {
-        keyType = datain[0];
-        blockNo = datain[1];
-        clearTrace = datain[2];
-        keyCount = datain[3];
-        datain += 4;
-    } else {
-        blockNo = arg0 & 0xFF;
-        keyType = (arg0 >> 8) & 0xFF;
-        clearTrace = arg1;
-        keyCount = arg2;
-    }
+    keyType = datain[0];
+    blockNo = datain[1];
+    clearTrace = datain[2];
+    keyCount = datain[3];
+    datain += 4;
 
     LEDsoff();
     LED_A_ON();
@@ -1607,12 +1600,7 @@ void MifareChkKeys(uint16_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain, b
 
     LED_B_ON();
 
-    if (ng) {
-        reply_ng(CMD_MIFARE_CHKKEYS, PM3_SUCCESS, (uint8_t *)&keyresult, sizeof(keyresult));
-    } else {
-        reply_mix(CMD_ACK, keyresult.found, 0, 0, (uint8_t *)&keyresult.key, sizeof(keyresult.key));
-    }
-//    reply_old(CMD_ACK, keyresult.found, 0, 0, (uint8_t*)&keyresult.key, sizeof(keyresult.key));
+    reply_ng(CMD_MIFARE_CHKKEYS, PM3_SUCCESS, (uint8_t *)&keyresult, sizeof(keyresult));
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 
