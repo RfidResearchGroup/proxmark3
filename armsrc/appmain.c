@@ -1045,7 +1045,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareSetDbgLvl(packet->oldarg[0]);
             break;
         case CMD_MIFARE_EML_MEMCLR:
-            MifareEMemClr(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareEMemClr();
             break;
         case CMD_MIFARE_EML_MEMSET:
             MifareEMemSet(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);

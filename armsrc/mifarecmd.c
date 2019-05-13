@@ -1625,7 +1625,7 @@ void MifareSetDbgLvl(uint16_t arg0) {
 // destroy the Emulator Memory.
 //-----------------------------------------------------------------------------
 
-void MifareEMemClr(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+void MifareEMemClr(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     emlClearMem();
 }
