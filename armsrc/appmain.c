@@ -1633,6 +1633,8 @@ void  __attribute__((noreturn)) AppMain(void) {
 
         // Check if there is a packet available
         PacketCommandNG rx;
+        memset(&rx.data, 0, sizeof(rx.data));
+            
         int ret = receive_ng(&rx);
         if (ret == PM3_SUCCESS) {
             PacketReceived(&rx);
