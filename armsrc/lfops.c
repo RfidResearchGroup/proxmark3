@@ -1401,7 +1401,7 @@ void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t fl
     LED_A_ON();
     bool pwd_mode = (flags & 0x1);
     uint8_t page = (flags & 0x2) >> 1;
-    bool test_mode = (flags & 0x4 >> 3);
+    bool test_mode = (flags & 0x4) >> 2;
     uint32_t i = 0;
 
     // Set up FPGA, 125kHz
@@ -1415,7 +1415,7 @@ void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t fl
     WaitUS(t_config.start_gap);
 
     if (test_mode) {
-        Dbprintf("T55xx writing with ", _YELLOW_("test mode enabled"));
+        Dbprintf("T55xx writing with %s", _YELLOW_("test mode enabled"));
         // undocmented testmode opcode 01
         T55xxWriteBit(0);
         T55xxWriteBit(1);

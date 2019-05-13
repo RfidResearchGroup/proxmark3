@@ -1103,7 +1103,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     ng.flags = flags;
     
     SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-    if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, 1500)) {
+    if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not ACK write operation. (May be due to old firmware)");
         return 0;
     }
