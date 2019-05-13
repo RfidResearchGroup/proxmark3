@@ -681,7 +681,7 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
 }
 
 // Hitag2 Sniffing
-void SniffHitag(uint32_t type) {
+void SniffHitag(void) {
 
     StopTicks();
 

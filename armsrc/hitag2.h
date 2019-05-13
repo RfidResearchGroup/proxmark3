@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include "hitag.h"
 
-void SniffHitag(uint32_t type);
+void SniffHitag(void);
 void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data);
 void ReaderHitag(hitag_function htf, hitag_data *htd);
 void WriterHitag(hitag_function htf, hitag_data *htd, int page);
