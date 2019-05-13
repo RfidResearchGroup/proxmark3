@@ -55,6 +55,7 @@ uint8_t ToSend[TOSEND_BUFFER_SIZE];
 int ToSendMax = -1;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
+int button_status = BUTTON_NO_CLICK;
 
 void ToSendReset(void) {
     ToSendMax = -1;
@@ -300,28 +301,17 @@ void MeasureAntennaTuning(void) {
     LEDsoff();
 }
 
-void MeasureAntennaTuningHf(void) {
+uint16_t MeasureAntennaTuningHfData(void) {
     uint16_t volt = 0; // in mV
-    // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-    SpinDelay(50);
     volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
     bool use_high = (volt > MAX_ADC_HF_VOLTAGE - 300);
 
-    while (!BUTTON_PRESS()) {
-        SpinDelay(20);
-        if (!use_high) {
-            volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-        } else {
-            volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
-        }
-        DbprintfEx(FLAG_INPLACE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
+    if (!use_high) {
+        volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+    } else {
+        volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
     }
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbprintfEx(FLAG_NEWLINE, "");
-    Dbprintf("[+] cancelled", 1);
-    reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EOPABORTED, NULL, 0);
+    return volt;
 }
 
 void ReadMem(int addr) {
@@ -1239,8 +1229,23 @@ static void PacketReceived(PacketCommandNG *packet) {
             MeasureAntennaTuning();
             break;
 
-        case CMD_MEASURE_ANTENNA_TUNING_HF:
-            MeasureAntennaTuningHf();
+        case CMD_MEASURE_ANTENNA_TUNING_HF_START:
+            // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+            reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF_START, PM3_SUCCESS, NULL, 0);
+            break;
+
+        case CMD_MEASURE_ANTENNA_TUNING_HF_SAMPLE:
+            if (button_status == BUTTON_SINGLE_CLICK)
+                reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF_SAMPLE, PM3_EOPABORTED, NULL, 0);
+            uint16_t volt = MeasureAntennaTuningHfData();
+            reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF_SAMPLE, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
+            break;
+
+        case CMD_MEASURE_ANTENNA_TUNING_HF_STOP:
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF_STOP, PM3_SUCCESS, NULL, 0);
             break;
 
         case CMD_LISTEN_READER_FIELD:
@@ -1646,8 +1651,8 @@ void  __attribute__((noreturn)) AppMain(void) {
         }
 
         // Press button for one second to enter a possible standalone mode
-        if (BUTTON_HELD(1000) > 0) {
-
+        button_status = BUTTON_HELD(1000);
+        if (button_status == BUTTON_HOLD) {
             /*
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
             * All standalone mod "main loop" should be the RunMod() function.

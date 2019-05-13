@@ -63,8 +63,6 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     char buffer2[MAX_PRINT_BUFFER + 20] = {0};
     char *token = NULL;
     char *tmp_ptr = NULL;
-    //   {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG}
-    static const char *prefixes[7] = { "", "[+] ", "[=] ", "[-] ", "[!] ", "[!!] ", "[#] "};
     FILE *stream = stdout;
 
     switch (level) {
@@ -88,7 +86,8 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             strncpy(prefix, _YELLOW_("[=]"), sizeof(prefix) - 1);
             break;
         case NORMAL:
-            strncpy(prefix, prefixes[level], sizeof(prefix) - 1);
+        case INPLACE:
+            // no prefixes for normal & inplace
             break;
     }
 
@@ -97,9 +96,14 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
 
-    // no prefixes for normal
+    // no prefixes for normal & inplace
     if (level == NORMAL) {
         fPrintAndLog(stream, "%s", buffer);
+        return;
+    }
+    if (level == INPLACE) {
+        printf("%s\r", buffer);
+        fflush(stdout);
         return;
     }
 
