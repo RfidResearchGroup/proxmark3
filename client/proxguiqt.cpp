@@ -586,7 +586,7 @@ void Plot::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void Plot::keyPressEvent(QKeyEvent *event) {
-    int offset;
+    uint32_t offset;
 
     if (event->modifiers() & Qt::ShiftModifier) {
         if (PlotGridX)
@@ -623,9 +623,15 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
         case Qt::Key_Left:
             if (GraphPixelsPerPoint < 20) {
-                GraphStart -= offset;
+                if (GraphStart >= offset) {
+                    GraphStart -= offset;
+                } else {
+                    GraphStart = 0;
+                }
             } else {
-                GraphStart--;
+                if (GraphStart > 0) {
+                    GraphStart--;
+                }
             }
             break;
 
