@@ -1024,7 +1024,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareAcquireEncryptedNonces(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         case CMD_MIFARE_ACQUIRE_NONCES:
-            MifareAcquireNonces(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareAcquireNonces(packet->oldarg[0], packet->oldarg[2]);
             break;
         case CMD_MIFARE_NESTED:
             MifareNested(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
