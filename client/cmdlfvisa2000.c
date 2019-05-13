@@ -176,7 +176,8 @@ static int CmdVisa2kClone(const char *Cmd) {
             conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandMIX(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, NULL, 0);
+        uint8_t data[] = {0};
+        SendCommandMIX(CMD_T55XX_WRITE_BLOCK, blocks[i], i, 0, data, sizeof(data));
         if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
             return -1;
