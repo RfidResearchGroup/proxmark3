@@ -40,6 +40,7 @@ Arguments:
 ]]
 
 local DEBUG = true -- the debug flag
+local TIMEOUT = 1500
 
 -- --BLOCK 0 = 00 08 80 40 PSK
              -- -----------
@@ -97,7 +98,9 @@ end
 local function test(modulation)
     local bitrate
     local clockrate
+    local password = '00000000'
     local block = '00'
+    local flags = '00'
     for bitrate = 0x0, 0x1d, 0x4 do
 
         for clockrate = 0,8,4 do
@@ -114,13 +117,10 @@ local function test(modulation)
                     local config = cmd:format(bitrate, modulation, clockrate)
                     dbg(('lf t55xx write b 0 d %s'):format(config))
 
-                    config = tonumber(config, 16)
-                    local wc = Command:newMIX{
-                                            cmd = cmds.CMD_T55XX_WRITE_BLOCK
-                                            , arg1 = config
-                                            , arg2 = block
-                                            }
-                    local response, err = wc:sendMIX(false)
+                    local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(config, 32), password, block, flags)
+
+                    local wc = Command:newNG{cmd = cmds.CMD_T55XX_WRITE_BLOCK, data = data}
+                    local response, err = wc:sendNG(false, TIMEOUT)
                     if not response then return oops(err) end
                 else
                     dbg(cmd)

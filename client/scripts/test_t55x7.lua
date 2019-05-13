@@ -39,7 +39,8 @@ Arguments:
     -h       this help
 ]]
 
-local DEBUG = false -- the debug flag
+local DEBUG = true -- the debug flag
+local TIMEOUT = 1500
 local total_tests = 0
 local total_pass = 0
 
@@ -237,7 +238,9 @@ local function test(modulation)
 
     local process_block0_cmds = {}
     local y
-    local block = '00'
+    local password = '00000000'
+    local block = '00'   -- configuration block 0
+    local flags = '00'   -- page 0, no pwd, no testmode
 
     local s = ('Start test of %s'):format(modulation)
     print(s)
@@ -251,16 +254,14 @@ local function test(modulation)
         local p_config_cmd = process_block0_cmds[_]
         local errors = 0
         core.clearCommandBuffer()
-
+        
         -- Write Config block
         dbg(('lf t55xx write b 0 d %s'):format(p_config_cmd))
-        local config = tonumber(p_config_cmd, 16)
-        local wc = Command:newMIX{
-                                cmd = cmds.CMD_T55XX_WRITE_BLOCK
-                                , arg1 = config
-                                , arg2 = block
-                                }
-        local response, err = wc:sendMIX(false)
+
+        local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(p_config_cmd, 32), password, block, flags)
+
+        local wc = Command:newNG{cmd = cmds.CMD_T55XX_WRITE_BLOCK, data = data}
+        local response, err = wc:sendNG(false, TIMEOUT)
         if not response then return oops(err) end
 
         -- Detect
@@ -309,7 +310,7 @@ local function main(args)
 
     -- Adjust this table to set which configurations should be tested
 --    local test_modes = { 'PSK1', 'PSK2', 'PSK3', 'FSK1', 'FSK2', 'FSK1A', 'FSK2A', 'ASK', 'BI' }
-    local test_modes = { 'ASK', 'PSK1' }
+    local test_modes = { 'ASK' }
 
     for _ = 1, #test_modes do
         res = WipeCard()

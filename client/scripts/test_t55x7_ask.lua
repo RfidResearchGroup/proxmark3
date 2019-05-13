@@ -48,6 +48,7 @@ Arguments:
 ]]
 
 local DEBUG = true -- the debug flag
+local TIMEOUT = 1500
 
 --BLOCK 0 = 00008040 ASK / MAN
 local config1 = '00'
@@ -101,7 +102,9 @@ end
 
 local function test()
     local y
+    local password = '00000000'
     local block = '00'
+    local flags = '00'
     for y = 0x0, 0x1d, 0x4 do
         for _ = 1, #procedurecmds do
             local pcmd = procedurecmds[_]
@@ -111,14 +114,11 @@ local function test()
             elseif _ == 1 then
 
                 local config = pcmd:format(config1, y, config2)
-                dbg(('lf t55xx write b 0  d %s'):format(config))
-                config = tonumber(config, 16)
-                local wc = Command:newMIX{
-                                        cmd = cmds.CMD_T55XX_WRITE_BLOCK
-                                        , arg1 = config
-                                        , arg2 = block
-                                        }
-                local response, err = wc:sendMIX(false)
+                dbg(('lf t55xx write b 0 d %s'):format(config))
+                local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(config, 32), password, block, flags)
+
+                local wc = Command:newNG{cmd = cmds.CMD_T55XX_WRITE_BLOCK, data = data}
+                local response, err = wc:sendNG(false, TIMEOUT)
                 if not response then return oops(err) end
 
             else
