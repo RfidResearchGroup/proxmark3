@@ -339,7 +339,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     if (tag_mem_supplied) {
         SendCommandOLD(cmd, 1, 0, 0, data, datalen);
     } else {
-        SendCommandNG(cmd, NULL, 0);
+        SendCommandMIX(cmd, 0, 0, 0, NULL, 0);
     }
 
     free(data);
