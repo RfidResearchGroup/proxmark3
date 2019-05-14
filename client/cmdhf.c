@@ -108,7 +108,7 @@ int CmdHFTune(const char *Cmd) {
     }
     mode[0] = 2;
     // loop forever (till button pressed) if iter = 0 (default)
-    for (uint8_t i=0; iter == 0 || i< iter; i++) {
+    for (uint8_t i = 0; iter == 0 || i < iter; i++) {
         if (ukbhit()) { // abort by keyboard press
             int gc = getchar();
             (void)gc;

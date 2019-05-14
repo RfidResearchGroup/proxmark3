@@ -92,7 +92,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             strncpy(prefix, spinner[PrintAndLogEx_spinidx], sizeof(prefix) - 1);
             PrintAndLogEx_spinidx++;
             if (PrintAndLogEx_spinidx == ARRAYLEN(spinner))
-               PrintAndLogEx_spinidx = 0;
+                PrintAndLogEx_spinidx = 0;
             break;
         case NORMAL:
             // no prefixes for normal
