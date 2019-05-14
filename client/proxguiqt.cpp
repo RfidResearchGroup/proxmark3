@@ -707,6 +707,8 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
         case Qt::Key_PageDown:
             GraphStart += PageWidth;
+            if (GraphStart > startMax)
+                GraphStart = startMax;
             break;
 
         default:
