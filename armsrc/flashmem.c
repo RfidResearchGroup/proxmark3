@@ -551,3 +551,38 @@ void Flashmem_print_status(void) {
 
     FlashStop();
 }
+
+void Flashmem_print_info(void) {
+    if (!FlashInit()) return;
+
+    DbpString(_BLUE_("Flash memory dictionary loaded"));
+
+    // load dictionary offsets.
+    uint8_t keysum[2];
+    uint16_t num;
+
+    uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET, keysum, 2);
+    if (isok == 2) {
+        num = ((keysum[1] << 8) | keysum[0]);
+        if (num != 0xFFFF && num != 0x0)
+            Dbprintf("  Mifare................%d keys", num);
+    }
+
+    isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET, keysum, 2);
+    if (isok == 2) {
+        num = ((keysum[1] << 8) | keysum[0]);
+        if (num != 0xFFFF && num != 0x0)
+            Dbprintf("  T55x7.................%d keys", num);
+    }
+
+    isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET, keysum, 2);
+    if (isok == 2) {
+        num = ((keysum[1] << 8) | keysum[0]);
+        if (num != 0xFFFF && num != 0x0)
+            Dbprintf("  iClass................%d keys", num);
+    }
+
+    FlashStop();
+}
+
+
