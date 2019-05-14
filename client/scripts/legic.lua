@@ -580,7 +580,7 @@ function writeToTag(tag)
 
     -- write data to file
     if (taglen > 0) then
-        WriteBytes = utils.input(acyellow.."enter number of bytes to write?"..acoff, taglen)
+        WriteBytes = input(acyellow.."enter number of bytes to write?"..acoff, taglen)
         -- load file into pm3-buffer
         if (type(filename) ~= "string") then
             filename = input(acyellow.."filename to load to pm3-buffer?"..acoff, "legic.temp")
@@ -619,7 +619,7 @@ local function readFile(filename)
     local bytes = {}
     local tag = {}
     if  file_check(filename) == false then
-        return oops("input file: "..filename.." not found")
+        return oops("input file: "..acyellow..filename..acoff.." not found")
     end
 
     bytes = getInputBytes(filename)
@@ -678,7 +678,7 @@ function writeFile(bytes, filename)
     end
 
     bytes = xorBytes(bytes, bytes[5])
-    
+
     for i = 1, #bytes do
         if (bcnt == 0) then
             line = bytes[i]
@@ -695,16 +695,16 @@ function writeFile(bytes, filename)
         bcnt = bcnt + 1
     end
     fho:close()
-    
+
     -- save binary
     local fn_bin, fn_bin_num = save_BIN(bytes, filename)
-    
+
     print("\nwrote "..acyellow..(#bytes * 3)..acoff.." bytes to " ..acyellow..filename..acoff)
-    
+
     if fn_bin and fn_bin_num then
         print("\nwrote "..acyellow..fn_bin_num..acoff.." bytes to BINARY file "..acyellow..fn_bin..acoff)
     end
-    
+
     return true
 end
 
@@ -728,16 +728,16 @@ end
 ---
 -- save mapping to file
 local function saveTagMap(map, filename)
-    if (string.len(filename)>0) then
-        if (file_check(filename)) then
-            local answer = confirm("\nthe output-file "..filename.." alredy exists!\nthis will delete the previous content!\ncontinue?")
+    if #filename > 0 then
+        if file_check(filename) then
+            local answer = confirm("\nthe output-file "..acyellow..filename..acoff.." alredy exists!\nthis will delete the previous content!\ncontinue?")
             if not answer then return print("user abort") end
         end
     end
 
     local line
     local fho,err = io.open(filename, "w")
-    if err then oops("OOps ... faild to open output-file ".. filename) end
+    if err then oops("OOps ... faild to open output-file "..acyellow..filename..acoff) end
 
     -- write line to new file
     for k, v in pairs(map) do
@@ -812,8 +812,8 @@ function loadTagMap(filename)
   local line, fields
   local temp={}
   local offset=0
-    if (file_check(filename)==false) then
-        return oops("input file: "..filename.." not found")
+    if not file_check(filename) then
+        return oops("input file: "..acyellow..filename..acoff.." not found")
     else
         local fhi,err = io.open(filename)
     while true do
@@ -821,11 +821,11 @@ function loadTagMap(filename)
         if line == nil then
         break
       else
-        fields=split(line)
+        fields = split(line)
       end
-        if (#fields==2) then
-        if (fields[1]=='offset') then
-          offset=tonumber(fields[2],10)
+        if (#fields == 2) then
+        if (fields[1] == 'offset') then
+          offset = tonumber(fields[2],10)
         end
         -- map-name
         map[fields[1]]=fields[2]
@@ -1102,10 +1102,10 @@ end
 ---
 -- check if byte is highlighted or not
 function check4Highlight(addr, tagMap)
-  local res=false
+  local res = false
   for _, v in pairs(tagMap.mappings) do
     if (addr >= v['start'] and addr <= v['end'] ) then
-      res= v['highlight']
+      res = v['highlight']
     end
   end
   return res
@@ -1116,7 +1116,7 @@ end
 function addMapping(tag, tagMap, x)
   if (type(x) ~= "number") then x = #tagMap.mappings + 1 end
   local bytes = tagToBytes(tag)
-  local myMapping={}
+  local myMapping = {}
   myMapping['name']  = input(accyan.."enter Maping-Name:"..acoff, string.format("mapping %d", #tagMap.mappings+1))
   myMapping['start'] = tonumber(input(accyan.."enter start-addr:"..acoff, '1'), 10)
   myMapping['end']   = tonumber(input(accyan.."enter end-addr:"..acoff, #bytes), 10)
@@ -1193,11 +1193,11 @@ end
 -- map all token data
 function mapTokenData(tagMap, mname, mstart, mend, mhigh)
   --if ( not mhigh ) then mhigh=false end
-  local myMapping={}
-  myMapping['name'] =mname
-  myMapping['start']=mstart
-  myMapping['end']  =mend
-  myMapping['highlight']=mhigh
+  local myMapping = {}
+  myMapping['name'] = mname
+  myMapping['start'] = mstart
+  myMapping['end'] = mend
+  myMapping['highlight'] = mhigh
   table.insert(tagMap.mappings, myMapping)
   return tagMap
 end
@@ -1290,7 +1290,7 @@ function dumpCDF(tag)
     end
 
     return res
-  else print("no valid Tag in dumpCDF") end
+  else print(acred.."no valid Tag in dumpCDF"..acoff) end
 end
 
 ---
@@ -1350,7 +1350,7 @@ function dumpSegment(tag, index)
     dp=0
     return res
   else
-    return print("Segment not found")
+    return print(acred.."Segment not found"..acoff)
   end
 end
 
@@ -2351,11 +2351,11 @@ function modifyMode()
     ---
     -- save values of mainTAG to a file (xored with MCC of mainTAG)
     ["sf"] = function(x)
-              if(istable(inTAG)) then
-                outfile=input("enter filename:", "legic.temp")
-                bytes=tagToBytes(inTAG)
+              if istable(inTAG) then
+                outfile = input("enter filename:", "legic.temp")
+                bytes = tagToBytes(inTAG)
                 --bytes=xorBytes(bytes, inTAG.MCC)
-                if (bytes) then
+                if bytes then
                   writeFile(bytes, outfile)
                 end
                end
@@ -2363,10 +2363,10 @@ function modifyMode()
     ---
     -- save values of mainTAG to a file (xored with 'specific' MCC)
     ["xf"] = function(x)
-              if(istable(inTAG)) then
-                outfile=input("enter filename:", "legic.temp")
-                crc=input("enter new crc: ('00' for a plain dump)", inTAG.MCC)
-                print("obfuscate witth: "..crc)
+              if istable(inTAG) then
+                outfile = input("enter filename:", "legic.temp")
+                crc = input("enter new crc: ('00' for a plain dump)", inTAG.MCC)
+                print("obfuscate with: "..crc)
                 bytes=tagToBytes(inTAG)
                 bytes[5]=crc
                 if (bytes) then
@@ -2436,7 +2436,7 @@ function modifyMode()
     ---
     -- load a tagMap
     ["lm"] = function(x)
-                tagMap=loadTagMap(input(accyan.."enter filename:"..acoff, "Legic.map"))
+                tagMap = loadTagMap(input(accyan.."enter filename:"..acoff, "Legic.map"))
               end,
     ---
     -- dump single segment
