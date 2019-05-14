@@ -412,7 +412,9 @@ void SendStatus(void) {
     DbpString(_BLUE_("Installed StandAlone Mode"));
     ModInfo();
 
+#ifdef WITH_FLASH
     Flashmem_print_info();
+#endif
 
     reply_old(CMD_ACK, 1, 0, 0, 0, 0);
 }
