@@ -653,14 +653,17 @@ local function save_BIN(data, filename)
     
     outfile = io.open(fn, 'wb')
 
+    local bytes = utils.ConvertHexToBytes(data)
+
     local i = 1
-    while data[i] do
-        outfile:write(data[i])
+    while bytes[i] do
+    
+        outfile:write(bytes[i])
         i = i + 1
     end
 
     outfile:close()
-    return fn
+    return fn, #bytes
 end
 ---
 -- write bytes to file
@@ -698,10 +701,10 @@ function writeFile(bytes, filename)
     fho:close()
     
     -- save binary
-    local fn_bin = save_BIN(bytes, filename)
+    local fn_bin, num_of_bytes = save_BIN(bytes, filename)
     
     print("\nwrote ".. #bytes * 3 .." bytes to " .. filename)
-    print("\nwrote ".. #bytes .." bytes to " .. fn_bin)
+    print("\nwrote ".. num_of_bytes .." bytes to " .. fn_bin)
     return true
 end
 
