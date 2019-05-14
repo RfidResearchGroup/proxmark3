@@ -1532,7 +1532,7 @@ int CmdTuneSamples(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
     PacketResponseNG resp;
-    while (!WaitForResponseTimeout(CMD_MEASURED_ANTENNA_TUNING, &resp, 2000)) {
+    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 2000)) {
         timeout++;
         printf(".");
         fflush(stdout);

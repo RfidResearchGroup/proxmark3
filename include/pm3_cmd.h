@@ -336,7 +336,6 @@ typedef struct {
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400
 #define CMD_MEASURE_ANTENNA_TUNING_HF                                     0x0401
-#define CMD_MEASURED_ANTENNA_TUNING                                       0x0410
 #define CMD_LISTEN_READER_FIELD                                           0x0420
 
 // For direct FPGA control

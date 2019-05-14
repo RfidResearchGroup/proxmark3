@@ -296,7 +296,7 @@ void MeasureAntennaTuning(void) {
     arg2 <<= 32;
     arg2 |= peakf;
 
-    reply_old(CMD_MEASURED_ANTENNA_TUNING, arg0, v_hf, arg2, LF_Results, 256);
+    reply_mix(CMD_MEASURE_ANTENNA_TUNING, arg0, v_hf, arg2, LF_Results, 256);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 }
