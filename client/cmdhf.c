@@ -40,7 +40,7 @@ static int usage_hf_sniff() {
 static int usage_hf_tune() {
     PrintAndLogEx(NORMAL, "Usage: hf tune [<iter>]");
     PrintAndLogEx(NORMAL, "Continuously measure HF antenna tuning.");
-    PrintAndLogEx(NORMAL, "Press button to interrupt.");
+    PrintAndLogEx(NORMAL, "Press button or keyboard to interrupt.");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       <iter>               - number of iterations (default: infinite)");
     PrintAndLogEx(NORMAL, "");
@@ -98,7 +98,7 @@ int CmdHFTune(const char *Cmd) {
     int iter =  param_get32ex(Cmd, 0, 0, 10);
 
     PacketResponseNG resp;
-    PrintAndLogEx(SUCCESS, "Measuring HF antenna, click button to exit");
+    PrintAndLogEx(SUCCESS, "Measuring HF antenna, click button or press a key to exit");
     clearCommandBuffer();
     uint8_t mode[] = {1};
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
@@ -109,6 +109,11 @@ int CmdHFTune(const char *Cmd) {
     mode[0] = 2;
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i=0; iter == 0 || i< iter; i++) {
+        if (ukbhit()) { // abort by keyboard press
+            int gc = getchar();
+            (void)gc;
+            break;
+        }
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
         if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
