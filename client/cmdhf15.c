@@ -1244,7 +1244,7 @@ static int CmdHF15Restore(const char *Cmd) {
         for (int j = 0; j < blocksize; j++)
             snprintf(hex + j * 2, 3, "%02X", buff[j]);
 
-        for (int j = 0; j < sizeof(uid) / sizeof(uid[0]); j++)
+        for (int j = 0; j < ARRAYLEN(uid); j++)
             snprintf(buff + j * 2, 3, "%02X", uid[j]);
 
         //TODO: Addressed mode currently not work

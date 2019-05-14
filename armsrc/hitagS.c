@@ -1930,7 +1930,7 @@ void check_challenges(bool file_given, uint8_t *data) {
             }
             txlen = 64;
 
-            if (u1 >= (sizeof(unlocker) / sizeof(unlocker[0])))
+            if (u1 >= ARRAYLEN(unlocker))
                 bStop = !false;
             for (i = 0; i < 8; i++)
                 tx[i] = unlocker[u1][i];
