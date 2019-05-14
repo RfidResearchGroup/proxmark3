@@ -292,13 +292,13 @@ end
 ---
 -- check availability of file
 function file_check(file_name)
-  local file_found=io.open(file_name, "r")
-  if file_found==nil then
-    return false
-  else
-    file_found:close()
-    return true
-  end
+    local file_found = io.open(file_name, "r")
+    if file_found == nil then
+        return false
+    else
+        file_found:close()
+        return true
+    end
 end
 
 ---
@@ -638,6 +638,30 @@ local function readFile(filename)
     return tag
 end
 
+local function save_BIN(data, filename)
+    local outfile
+    local counter = 1
+    local ext = filename:match("^.+(%..+)$")
+    local fn = filename
+    
+    -- Make sure we don't overwrite a file
+    while file_check(fn) do
+        fn = filename:gsub(ext,  tostring(counter)..ext)
+        print(filename, fn)
+        counter = counter + 1
+    end
+    
+    outfile = io.open(fn, 'wb')
+
+    local i = 1
+    while data[i] do
+        outfile:write(data[i])
+        i = i + 1
+    end
+
+    outfile:close()
+    return fn
+end
 ---
 -- write bytes to file
 function writeFile(bytes, filename)
@@ -653,7 +677,9 @@ function writeFile(bytes, filename)
     if err then
         return oops("OOps ... failed to open output-file ".. filename)
     end
+
     bytes = xorBytes(bytes, bytes[5])
+    
     for i = 1, #bytes do
         if (bcnt == 0) then
             line = bytes[i]
@@ -670,7 +696,12 @@ function writeFile(bytes, filename)
         bcnt = bcnt + 1
     end
     fho:close()
-    print("\nwrote ".. #bytes .." bytes to " .. filename)
+    
+    -- save binary
+    local fn_bin = save_BIN(bytes, filename)
+    
+    print("\nwrote ".. #bytes * 3 .." bytes to " .. filename)
+    print("\nwrote ".. #bytes .." bytes to " .. fn_bin)
     return true
 end
 
