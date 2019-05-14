@@ -219,6 +219,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added  `hf fido` `assert` and `make` commands from fido2 protocol (authenticatorMakeCredential and authenticatorGetAssertion) (@merlokk)
  - Added trailer block decoding to `hf mf rdbl` and `hf mf cgetbl` (@merlokk)
  - Added `hf mf mad` and `hf mfp mad` MAD decode, check and print commands (@merlokk)
+ - Add home, end, pageup, and pagedown keybinds to the plot GUI. Also fix paged movement in GUI. (@mcd1992)
  
 ### Fixed
 - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (piwi)
