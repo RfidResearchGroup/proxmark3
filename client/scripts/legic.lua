@@ -641,29 +641,25 @@ end
 local function save_BIN(data, filename)
     local outfile
     local counter = 1
-    local ext = filename:match("^.+(%..+)$")
+    local ext = filename:match("^.+(%..+)$") or ''
     local fn = filename
-    
+
     -- Make sure we don't overwrite a file
     while file_check(fn) do
-        fn = filename:gsub(ext,  tostring(counter)..ext)
-        print(filename, fn)
+        fn = filename:gsub(ext, tostring(counter)..ext)
         counter = counter + 1
     end
-    
+
     outfile = io.open(fn, 'wb')
 
-    local bytes = utils.ConvertHexToBytes(data)
-
     local i = 1
-    while bytes[i] do
-    
-        outfile:write(bytes[i])
+    while data[i] do
+        local byte = string.char(tonumber(data[i], 16))
+        outfile:write(byte)
         i = i + 1
     end
-
     outfile:close()
-    return fn, #bytes
+    return fn, #data
 end
 ---
 -- write bytes to file
@@ -701,10 +697,14 @@ function writeFile(bytes, filename)
     fho:close()
     
     -- save binary
-    local fn_bin, num_of_bytes = save_BIN(bytes, filename)
+    local fn_bin, fn_bin_num = save_BIN(bytes, filename)
     
-    print("\nwrote ".. #bytes * 3 .." bytes to " .. filename)
-    print("\nwrote ".. num_of_bytes .." bytes to " .. fn_bin)
+    print("\nwrote "..acyellow..(#bytes * 3)..acoff.." bytes to " ..acyellow..filename..acoff)
+    
+    if fn_bin and fn_bin_num then
+        print("\nwrote "..acyellow..fn_bin_num..acoff.." bytes to BINARY file "..acyellow..fn_bin..acoff)
+    end
+    
     return true
 end
 
