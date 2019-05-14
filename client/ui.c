@@ -52,6 +52,9 @@ void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     }
     PrintAndLogEx(NORMAL, "%s", buff);
 }
+
+uint8_t PrintAndLogEx_spinidx = 0;
+
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
     // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0'
@@ -64,7 +67,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     char *token = NULL;
     char *tmp_ptr = NULL;
     FILE *stream = stdout;
-
+    char *spinner[] = {_YELLOW_("[\\]"), _YELLOW_("[|]"), _YELLOW_("[/]"), _YELLOW_("[-]")};
     switch (level) {
         case ERR:
             strncpy(prefix, _RED_("[!!]"), sizeof(prefix) - 1);
@@ -85,9 +88,14 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         case INFO:
             strncpy(prefix, _YELLOW_("[=]"), sizeof(prefix) - 1);
             break;
-        case NORMAL:
         case INPLACE:
-            // no prefixes for normal & inplace
+            strncpy(prefix, spinner[PrintAndLogEx_spinidx], sizeof(prefix) - 1);
+            PrintAndLogEx_spinidx++;
+            if (PrintAndLogEx_spinidx == ARRAYLEN(spinner))
+               PrintAndLogEx_spinidx = 0;
+            break;
+        case NORMAL:
+            // no prefixes for normal
             break;
     }
 
@@ -99,11 +107,6 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     // no prefixes for normal & inplace
     if (level == NORMAL) {
         fPrintAndLog(stream, "%s", buffer);
-        return;
-    }
-    if (level == INPLACE) {
-        printf("\r[*] %s", buffer);
-        fflush(stdout);
         return;
     }
 
@@ -131,7 +134,12 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         fPrintAndLog(stream, "%s", buffer2);
     } else {
         snprintf(buffer2, sizeof(buffer2), "%s%s", prefix, buffer);
-        fPrintAndLog(stream, "%s", buffer2);
+        if (level == INPLACE) {
+            fprintf(stream, "\r%s", buffer2);
+            fflush(stream);
+        } else {
+            fPrintAndLog(stream, "%s", buffer2);
+        }
     }
 }
 
