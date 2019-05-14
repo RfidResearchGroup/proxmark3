@@ -1229,23 +1229,30 @@ static void PacketReceived(PacketCommandNG *packet) {
             MeasureAntennaTuning();
             break;
 
-        case CMD_MEASURE_ANTENNA_TUNING_HF_START:
-            // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
-            reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF_START, PM3_SUCCESS, NULL, 0);
-            break;
-
-        case CMD_MEASURE_ANTENNA_TUNING_HF_SAMPLE:
-            if (button_status == BUTTON_SINGLE_CLICK)
-                reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF_SAMPLE, PM3_EOPABORTED, NULL, 0);
-            uint16_t volt = MeasureAntennaTuningHfData();
-            reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF_SAMPLE, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
-            break;
-
-        case CMD_MEASURE_ANTENNA_TUNING_HF_STOP:
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-            reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF_STOP, PM3_SUCCESS, NULL, 0);
+        case CMD_MEASURE_ANTENNA_TUNING_HF:
+            if (packet->length != 1)
+                reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
+            switch (packet->data.asBytes[0]) {
+                case 1: // MEASURE_ANTENNA_TUNING_HF_START
+                    // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
+                    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
+                    reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, NULL, 0);
+                    break;
+                case 2:
+                    if (button_status == BUTTON_SINGLE_CLICK)
+                        reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EOPABORTED, NULL, 0);
+                    uint16_t volt = MeasureAntennaTuningHfData();
+                    reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
+                    break;
+                case 3:
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, NULL, 0);
+                    break;
+                default:
+                    reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
+                    break;
+            }
             break;
 
         case CMD_LISTEN_READER_FIELD:

@@ -100,27 +100,32 @@ int CmdHFTune(const char *Cmd) {
     PacketResponseNG resp;
     PrintAndLogEx(SUCCESS, "Measuring HF antenna, click button to exit");
     clearCommandBuffer();
-    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF_START, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF_START, &resp, 1000)) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
+    uint8_t mode[] = {1};
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
+    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF initialization, aborting");
         return PM3_ETIMEOUT;
     }
-    for (uint8_t i=0; iter == 0 || i< iter; i++) { // loop forever (till button pressed) if iter = 0 (default)
-        SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF_SAMPLE, NULL, 0);
-        if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF_SAMPLE, &resp, 1000)) {
+    mode[0] = 2;
+    // loop forever (till button pressed) if iter = 0 (default)
+    for (uint8_t i=0; iter == 0 || i< iter; i++) {
+        SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
+        if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
             return PM3_ETIMEOUT;
         }
-        if (resp.status == PM3_EOPABORTED)
+        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t)))
             break;
         uint16_t volt = resp.data.asDwords[0];
         PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
     }
-    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF_STOP, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF_STOP, &resp, 1000)) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
+    mode[0] = 3;
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
+    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Done.");
     return PM3_SUCCESS;
 }

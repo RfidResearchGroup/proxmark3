@@ -102,7 +102,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         return;
     }
     if (level == INPLACE) {
-        printf("%s\r", buffer);
+        printf("\r%s", buffer);
         fflush(stdout);
         return;
     }
