@@ -2332,7 +2332,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
 out:
     // send keyindex.
-    reply_old(CMD_ACK, isOK, i, 0, 0, 0);
+    reply_mix(CMD_ACK, isOK, i, 0, 0, 0);
 
     if (isOK >= 1 || lastChunk) {
         switch_off();
@@ -2360,7 +2360,7 @@ bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len) {
 void iClass_ReadBlk(uint8_t blockno) {
     uint8_t data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     bool isOK = iClass_ReadBlock(blockno, data, sizeof(data));
-    reply_old(CMD_ACK, isOK, 0, 0, data, sizeof(data));
+    reply_mix(CMD_ACK, isOK, 0, 0, data, sizeof(data));
     switch_off();
 }
 
@@ -2394,7 +2394,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
         memcpy(dataout + (blkCnt * 8), blockdata, 8);
     }
     //return pointer to dump memory in arg3
-    reply_old(CMD_ACK, isOK, blkCnt, BigBuf_max_traceLen(), 0, 0);
+    reply_mix(CMD_ACK, isOK, blkCnt, BigBuf_max_traceLen(), 0, 0);
     switch_off();
     BigBuf_free();
 }
