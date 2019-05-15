@@ -974,8 +974,10 @@ void detect_classic_magic(void) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_MIFARE_CIDENT, NULL, 0);
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500))
-        isGeneration = resp.oldarg[0] & 0xff;
+    if (WaitForResponseTimeout(CMD_MIFARE_CIDENT, &resp, 1500)) {
+        if ( resp.status == PM3_SUCCESS )
+            isGeneration = resp.data.asBytes[0];
+    }
 
     switch (isGeneration) {
         case 1:

@@ -1945,6 +1945,7 @@ void MifareCIdent() {
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
     uint32_t cuid = 0;
+    uint8_t data[1] = {0x00};
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -1982,7 +1983,9 @@ TEST2:
     };
 
 OUT:
-    reply_old(CMD_ACK, isGen, 0, 0, 0, 0);
+	
+    data[0] = isGen;
+    reply_ng(CMD_MIFARE_CIDENT, PM3_SUCCESS, data, sizeof(data));
     // turns off
     OnSuccessMagic();
     BigBuf_free();
