@@ -912,26 +912,8 @@ int detect_classic_nackbug(bool verbose) {
     if (verbose)
         PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
 
-    // for nice animation
-    bool term = !isatty(STDIN_FILENO);
-#if defined(__linux__) || (__APPLE__)
-    char star[] = {'-', '\\', '|', '/'};
-    uint8_t staridx = 0;
-#endif
-
     while (true) {
-
-        if (term) {
-            printf(".");
-        } else {
-            printf(
-#if defined(__linux__) || (__APPLE__)
-                _GREEN_("\e[s%c\e[u"), star[(staridx++ % 4) ]
-#else
-                "."
-#endif
-            );
-        }
+        printf(".");
         fflush(stdout);
         if (ukbhit()) {
             int gc = getchar();

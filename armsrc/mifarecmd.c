@@ -1999,11 +1999,13 @@ void OnErrorMagic(uint8_t reason) {
     OnSuccessMagic();
 }
 
-void MifareSetMod(uint8_t mod, uint8_t *key) {
-    uint64_t ui64Key = bytes_to_num(key, 6);
+void MifareSetMod(uint8_t *datain) {
+
+    uint8_t mod = datain[0];
+    uint64_t ui64Key = bytes_to_num(datain + 1, 6);
 
     // variables
-    uint8_t isOK = 0;
+    uint16_t isOK = PM3_EFATAL;
     uint8_t uid[10] = {0};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -2042,14 +2044,15 @@ void MifareSetMod(uint8_t mod, uint8_t *key) {
             break;
         }
 
-        isOK = 1;
+        isOK = PM3_SUCCESS;
         break;
     }
 
     crypto1_destroy(pcs);
 
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, 0, 0, 0, 0);
+    reply_ng(CMD_MIFARE_SETMOD, isOK, NULL, 0);
+
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

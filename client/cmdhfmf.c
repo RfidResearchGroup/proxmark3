@@ -3205,19 +3205,25 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
         return 1;
     }
 
+    uint8_t data[7];
+    data[0] = mod;
+    memcpy(data+1, key, 6);
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_SETMOD, mod, 0, 0, key, 6);
+    SendCommandNG(CMD_MIFARE_SETMOD, data, sizeof(data));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t ok = resp.oldarg[0] & 0xff;
-        PrintAndLogEx(SUCCESS, "isOk:%02x", ok);
-        if (!ok)
-            PrintAndLogEx(FAILED, "Failed.");
+    if (WaitForResponseTimeout(CMD_MIFARE_SETMOD, &resp, 1500)) {
+        
+        if (resp.status == PM3_SUCCESS) 
+            PrintAndLogEx(SUCCESS, "Success");
+        else
+            PrintAndLogEx(FAILED, "Failed");
+
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Mifare NACK bug detection

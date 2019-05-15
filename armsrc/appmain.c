@@ -1066,7 +1066,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 //            SniffMifare(packet->oldarg[0]);
 //            break;
         case CMD_MIFARE_SETMOD:
-            MifareSetMod(packet->oldarg[0], packet->data.asBytes);
+            MifareSetMod(packet->data.asBytes);
             break;
         //mifare desfire
         case CMD_MIFARE_DESFIRE_READBL:
