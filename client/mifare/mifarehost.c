@@ -869,7 +869,7 @@ int detect_classic_prng(void) {
     uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_ISO_14443a, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
+    SendCommandMIX(CMD_READER_ISO_14443a, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "PRNG UID: Reply timeout.");
