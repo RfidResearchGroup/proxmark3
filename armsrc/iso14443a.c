@@ -2425,7 +2425,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
         if (!(param & ISO14A_NO_SELECT)) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
             arg0 = iso14443a_select_card(NULL, card, NULL, true, 0, param & ISO14A_NO_RATS);
-            reply_old(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
+            reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
             if (arg0 == 0)
                 goto OUT;
         }
@@ -2786,7 +2786,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     memcpy(buf + 16, ks_list, 8);
     memcpy(buf + 24, mf_nr_ar, 8);
 
-    reply_old(CMD_ACK, isOK, 0, 0, buf, sizeof(buf));
+    reply_mix(CMD_ACK, isOK, 0, 0, buf, sizeof(buf));
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
@@ -3012,7 +3012,7 @@ void DetectNACKbug() {
 
     // num_nacks = number of nacks recieved. should be only 1. if not its a clone card which always sends NACK (parity == 0) ?
     // i  =  number of authentications sent.  Not always 256, since we are trying to sync but close to it.
-    reply_old(CMD_ACK, isOK, num_nacks, i, 0, 0);
+    reply_mix(CMD_ACK, isOK, num_nacks, i, 0, 0);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
