@@ -251,13 +251,16 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
     int ret = set_usart_config(baudrate, parity);
     if (ret != PM3_SUCCESS)
         return ret;
+
     char *string = "AT+VERSION";
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
-    PrintAndLogEx(NORMAL, "TX (%3u):%.*s at %u 8%c1", strlen(string), strlen(string), string, baudrate, parity);
+
+    PrintAndLogEx(SUCCESS, "TX (%3u):%.*s at %u 8%c1", strlen(string), strlen(string), string, baudrate, parity);
+
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000); // such large timeout needed
     if (ret == PM3_SUCCESS) {
-        PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+        PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
         if (strcmp((char *)data, "hc01.comV2.0") == 0) {
             PrintAndLogEx(SUCCESS, "Add-on " _GREEN_("found!"), len, len, data);
             return PM3_SUCCESS;
@@ -286,21 +289,24 @@ static int CmdUsartBtFactory(const char *Cmd) {
         usage_usart_bt_factory();
         return PM3_EINVARG;
     }
+
     PrintAndLogEx(WARNING, "This requires BT turned ON and NOT connected!");
     PrintAndLogEx(WARNING, "Is the blue light blinking? [y/n]");
     while(!ukbhit()) {
         msleep(200);
     }
-    int gc = getchar();
+
+    int gc = tolower(getchar());
     if (gc != 'y') {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(FAILED, "Aborting.");
         return PM3_EOPABORTED;
     }
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Trying to detect current settings... Please be patient.");
-    bool found = false;
-    found = usart_bt_testcomm(USART_BAUD_RATE, USART_PARITY) == PM3_SUCCESS;
+
+    bool found = usart_bt_testcomm(USART_BAUD_RATE, USART_PARITY) == PM3_SUCCESS;
     if (found) {
         baudrate = USART_BAUD_RATE;
         parity = USART_PARITY;
@@ -317,22 +323,24 @@ static int CmdUsartBtFactory(const char *Cmd) {
             }
         }
     }
+
     if (!found) {
         PrintAndLogEx(FAILED, "Sorry, add-on not found. Abort.");
         return PM3_EFATAL;
     }
+
     PrintAndLogEx(INFO, "Reconfiguring add-on to default settings.");
     char *string;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    size_t len;
-
+    size_t len = 0;
     memset(data, 0, sizeof(data));
-    len = 0;
+
     string = "AT+NAMEPM3_RDV4.0";
-    PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+    PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+
     int ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
-        PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+        PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
         if (strcmp((char *)data, "OKsetname") == 0) {
             PrintAndLogEx(SUCCESS, "Name set to " _GREEN_("PM3_RDV4.0"));
         } else {
@@ -346,10 +354,11 @@ static int CmdUsartBtFactory(const char *Cmd) {
     memset(data, 0, sizeof(data));
     len = 0;
     string = "AT+PIN1234";
-    PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+    PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
-        PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+        PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
         if (strcmp((char *)data, "OKsetPIN") == 0) {
             PrintAndLogEx(SUCCESS, "PIN set to " _GREEN_("1234"));
         } else {
@@ -365,10 +374,11 @@ static int CmdUsartBtFactory(const char *Cmd) {
         memset(data, 0, sizeof(data));
         len = 0;
         string = "AT+PN";
-        PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+        PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+
         ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
         if (ret == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+            PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
             if (strcmp((char *)data, "OK None") == 0) {
                 PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None"));
             } else {
@@ -384,10 +394,11 @@ static int CmdUsartBtFactory(const char *Cmd) {
         memset(data, 0, sizeof(data));
         len = 0;
         string = "AT+BAUD8";
-        PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+        PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+
         ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
         if (ret == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+            PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
             if (strcmp((char *)data, "OK115200") == 0) {
                 PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_("115200"));
             } else {
