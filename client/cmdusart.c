@@ -16,7 +16,7 @@ static int usage_usart_bt_pin(void) {
     PrintAndLogEx(NORMAL, "WARNING: this requires");
     PrintAndLogEx(NORMAL, "      1) BTpower to be turned ON");
     PrintAndLogEx(NORMAL, "      2) BT add-on to NOT be connected");
-    PrintAndLogEx(NORMAL, "      => the blue LED must blink");
+    PrintAndLogEx(NORMAL, "      => the add-on blue LED must blink");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart btpin [h] d NNNN");
     PrintAndLogEx(NORMAL, "Options:");
@@ -31,11 +31,11 @@ static int usage_usart_bt_pin(void) {
 
 static int usage_usart_bt_factory(void) {
     PrintAndLogEx(NORMAL, "Reset BT add-on to factory settings");
-    PrintAndLogEx(NORMAL, "WARNING: process only if strictly needed!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING: process only if strictly needed!"));
     PrintAndLogEx(NORMAL, "This requires");
     PrintAndLogEx(NORMAL, "      1) BTpower to be turned ON");
     PrintAndLogEx(NORMAL, "      2) BT add-on to NOT be connected");
-    PrintAndLogEx(NORMAL, "      => the blue LED must blink");
+    PrintAndLogEx(NORMAL, "      => the add-on blue LED must blink");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart btfactory [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -45,7 +45,7 @@ static int usage_usart_bt_factory(void) {
 
 static int usage_usart_tx(void) {
     PrintAndLogEx(NORMAL, "Send string over USART");
-    PrintAndLogEx(NORMAL, "WARNING: it will have side-effects if used in USART HOST mode!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart tx [h] \"string\"");
     PrintAndLogEx(NORMAL, "Options:");
@@ -61,7 +61,7 @@ static int usage_usart_tx(void) {
 
 static int usage_usart_txhex(void) {
     PrintAndLogEx(NORMAL, "Send bytes over USART");
-    PrintAndLogEx(NORMAL, "WARNING: it will have side-effects if used in USART HOST mode!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart txhex [h] d <bytes>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -76,7 +76,7 @@ static int usage_usart_txhex(void) {
 
 static int usage_usart_rx(void) {
     PrintAndLogEx(NORMAL, "Receive string over USART");
-    PrintAndLogEx(NORMAL, "WARNING: it will have side-effects if used in USART HOST mode!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart rx [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -88,7 +88,7 @@ static int usage_usart_rx(void) {
 
 static int usage_usart_rxhex(void) {
     PrintAndLogEx(NORMAL, "Receive bytes over USART");
-    PrintAndLogEx(NORMAL, "WARNING: it will have side-effects if used in USART HOST mode!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart rx [h]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -100,9 +100,9 @@ static int usage_usart_rxhex(void) {
 
 static int usage_usart_txrx(void) {
     PrintAndLogEx(NORMAL, "Send string over USART and wait for response");
-    PrintAndLogEx(NORMAL, "WARNING: if used in USART HOST mode, you can only send AT commands");
-    PrintAndLogEx(NORMAL, "to add-on when BT connection is not established (LED needs to be blinking)");
-    PrintAndLogEx(NORMAL, "Any other usage in USART HOST mode will have side-effects!");
+    PrintAndLogEx(NORMAL, _YELLOW_("WARNING: if used in USART HOST mode, you can only send AT commands"));
+    PrintAndLogEx(NORMAL, _YELLOW_("to add-on when BT connection is not established (LED needs to be blinking)"));
+    PrintAndLogEx(NORMAL, _RED_("Any other usage in USART HOST mode will have side-effects!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart txrx [h] [t <timeout>] \"string\"");
     PrintAndLogEx(NORMAL, "Options:");
@@ -121,7 +121,8 @@ static int usage_usart_txrx(void) {
 
 static int usage_usart_config(void) {
     PrintAndLogEx(NORMAL, "Configure USART");
-    PrintAndLogEx(NORMAL, "WARNING: it will have side-effects if used in USART HOST mode!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
+    PrintAndLogEx(NORMAL, "The changes are not permanent, restart Proxmark3 to get default settings back.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart config [h] [b <baudrate>] [p <N|O|E>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -290,8 +291,9 @@ static int CmdUsartBtFactory(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    PrintAndLogEx(WARNING, _RED_("WARNING: process only if strictly needed!"));
     PrintAndLogEx(WARNING, "This requires BT turned ON and NOT connected!");
-    PrintAndLogEx(WARNING, "Is the blue light blinking? [y/n]");
+    PrintAndLogEx(WARNING, "Is the add-on blue light blinking? (Say 'n' if you want to abort) [y/n]");
     while(!ukbhit()) {
         msleep(200);
     }
