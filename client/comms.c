@@ -466,6 +466,9 @@ __attribute__((force_align_arg_pointer))
         }
 
         pthread_mutex_unlock(&spMutex);
+        
+        // sleep needed to force scheduler to let main thread get its hand on spMutex if needed
+        msleep(10);
 
         // TODO if error, shall we resync ?
 
