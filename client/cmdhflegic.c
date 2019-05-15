@@ -947,14 +947,14 @@ static int CmdLegicDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Could not create file name %s", filename);
         if (data)
             free(data);
-        return 5;
+        return PM3_EFILE;
     }
     fwrite(data, 1, readlen, f);
     fflush(f);
     fclose(f);
     free(data);
     PrintAndLogEx(SUCCESS, "Wrote %d bytes to %s", readlen, filename);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLegicRestore(const char *Cmd) {
@@ -1017,7 +1017,7 @@ static int CmdLegicRestore(const char *Cmd) {
     if (!f) {
         PrintAndLogEx(WARNING, "File %s not found or locked", filename);
         free(data);
-        return 3;
+        return PM3_EFILE;
     }
 
     // verify size of dumpfile is the same as card.
@@ -1083,7 +1083,7 @@ static int CmdLegicRestore(const char *Cmd) {
 
     free(data);
     PrintAndLogEx(SUCCESS, "\nWrote %d bytes to card from file %s", numofbytes, filename);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLegicELoad(const char *Cmd) {
@@ -1133,7 +1133,7 @@ static int CmdLegicELoad(const char *Cmd) {
     if (!f) {
         PrintAndLogEx(WARNING, "File %s not found or locked", filename);
         free(data);
-        return 1;
+        return PM3_EFILE;
     }
 
     // load file
@@ -1153,7 +1153,7 @@ static int CmdLegicELoad(const char *Cmd) {
 
     free(data);
     PrintAndLogEx(SUCCESS, "\nLoaded %d bytes from file: %s  to emulator memory", numofbytes, filename);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLegicESave(const char *Cmd) {

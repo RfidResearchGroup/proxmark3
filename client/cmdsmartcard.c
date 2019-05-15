@@ -559,7 +559,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     f = fopen(filename, "rb");
     if (!f) {
         PrintAndLogEx(FAILED, "Firmware file " _YELLOW_("%s") " not found or locked.", filename);
-        return 1;
+        return PM3_EFILE;
     }
 
     // get filesize in order to malloc memory
@@ -588,7 +588,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     if (!f) {
         PrintAndLogEx(FAILED, "SHA-512 file not found or locked.");
         free(dump);
-        return 1;
+        return PM3_EFILE;
     }
 
     // get filesize in order to malloc memory
@@ -683,7 +683,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     } else {
         PrintAndLogEx(FAILED, "Sim module firmware upgrade " _RED_("failed"));
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdSmartInfo(const char *Cmd) {

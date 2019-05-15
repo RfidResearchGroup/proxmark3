@@ -1622,7 +1622,7 @@ static int CmdLoad(const char *Cmd) {
     FILE *f = fopen(filename, "r");
     if (!f) {
         PrintAndLogEx(WARNING, "couldn't open '%s'", filename);
-        return 0;
+        return PM3_EFILE;
     }
 
     GraphTraceLen = 0;
@@ -1649,7 +1649,7 @@ static int CmdLoad(const char *Cmd) {
     setClockGrid(0, 0);
     DemodBufferLen = 0;
     RepaintGraphWindow();
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // trim graph from the end
@@ -1742,7 +1742,7 @@ static int CmdSave(const char *Cmd) {
     FILE *f = fopen(filename, "w");
     if (!f) {
         PrintAndLogEx(WARNING, "couldn't open '%s'", filename);
-        return 0;
+        return PM3_EFILE;
     }
 
     for (uint32_t i = 0; i < GraphTraceLen; i++)
@@ -1752,7 +1752,7 @@ static int CmdSave(const char *Cmd) {
         fclose(f);
 
     PrintAndLogEx(SUCCESS, "saved to '%s'", Cmd);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdScale(const char *Cmd) {

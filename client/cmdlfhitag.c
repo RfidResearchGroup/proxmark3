@@ -177,7 +177,7 @@ static int CmdLFHitagList(const char *Cmd) {
         f = fopen(filename, "wb");
         if (!f) {
             PrintAndLogEx(WARNING, "Error: Could not open file [%s]", filename);
-            return 1;
+            return PM3_EFILE;
         }
     }
 

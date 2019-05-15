@@ -102,14 +102,14 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     if (!f) {
         PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
         free(fileName);
-        return 1;
+        return PM3_EFILE;
     }
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
     PrintAndLogDevice(SUCCESS, "saved %u bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize) {
@@ -118,7 +118,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     char *fileName = newfilenamemcopy(preferredName, ".eml");
     if (fileName == NULL) return 1;
 
-    int retval = 0;
+    int retval = PM3_SUCCESS;
     int blocks = datalen / blocksize;
     uint16_t currblock = 1;
 
@@ -128,7 +128,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     FILE *f = fopen(fileName, "w+");
     if (!f) {
         PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
-        retval =  1;
+        retval = PM3_EFILE;
         goto out;
     }
 
@@ -163,7 +163,7 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
     char *fileName = newfilenamemcopy(preferredName, ".json");
     if (fileName == NULL) return 1;
 
-    int retval = 0;
+    int retval = PM3_SUCCESS;
 
     json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
@@ -292,13 +292,13 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     char *fileName = filenamemcopy(preferredName, suffix);
     if (fileName == NULL) return 1;
 
-    int retval = 0;
+    int retval = PM3_SUCCESS;
 
     FILE *f = fopen(fileName, "rb");
     if (!f) {
         PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
         free(fileName);
-        return 1;
+        return PM3_EFILE;
     }
 
     // get filesize in order to malloc memory
@@ -354,12 +354,12 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
     if (fileName == NULL) return 1;
 
     size_t counter = 0;
-    int retval = 0, hexlen = 0;
+    int retval = PM3_SUCCESS, hexlen = 0;
 
     FILE *f = fopen(fileName, "r");
     if (!f) {
         PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
-        retval = 1;
+        retval = PM3_EFILE;
         goto out;
     }
 
@@ -411,7 +411,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
     json_t *root;
     json_error_t error;
 
-    int retval = 0;
+    int retval = PM3_SUCCESS;
 
     root = json_load_file(fileName, 0, &error);
     if (!root) {
@@ -528,12 +528,12 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     char line[255];
 
     size_t counter = 0;
-    int retval = 0;
+    int retval = PM3_SUCCESS;
 
     FILE *f = fopen(fileName, "r");
     if (!f) {
         PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
-        retval = 1;
+        retval = PM3_EFILE;
         goto out;
     }
 
@@ -602,7 +602,7 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     free(*dump);
     *dump = (uint8_t *) mfu_dump;
     PrintAndLogDevice(SUCCESS, "old mfu dump format, was converted on load to " _GREEN_("%d") " pages", mfu_dump->pages + 1);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 
