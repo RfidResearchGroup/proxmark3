@@ -423,10 +423,12 @@ void SendCapabilities(void) {
     capabilities_t capabilities;
     capabilities.version = CAPABILITIES_VERSION;
     capabilities.via_fpc = reply_via_fpc;
+    
+    capabilities.baudrate = 0; // no real baudrate for USB-CDC
+#ifdef WITH_FPC_USART
     if (reply_via_fpc)
         capabilities.baudrate = usart_baudrate;
-    else
-        capabilities.baudrate = 0; // no real baudrate for USB-CDC
+#endif
 
 #ifdef WITH_FLASH
     capabilities.compiled_with_flash = true;

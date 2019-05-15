@@ -12,8 +12,6 @@ extern uint32_t usart_baudrate;
 extern uint8_t usart_parity;
 
 void usart_init(uint32_t baudrate, uint8_t parity);
-//void usart_close(void);
-
 int usart_writebuffer_sync(uint8_t *data, size_t len);
 uint32_t usart_read_ng(uint8_t *data, size_t len);
 uint16_t usart_rxdata_available(void);
