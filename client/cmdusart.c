@@ -29,6 +29,20 @@ static int usage_usart_bt_pin(void) {
     return PM3_SUCCESS;
 }
 
+static int usage_usart_bt_factory(void) {
+    PrintAndLogEx(NORMAL, "Reset BT add-on to factory settings");
+    PrintAndLogEx(NORMAL, "WARNING: process only if strictly needed!");
+    PrintAndLogEx(NORMAL, "This requires");
+    PrintAndLogEx(NORMAL, "      1) BTpower to be turned ON");
+    PrintAndLogEx(NORMAL, "      2) BT add-on to NOT be connected");
+    PrintAndLogEx(NORMAL, "      => the blue LED must blink");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  usart btfactory [h]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h          This help");
+    return PM3_SUCCESS;
+}
+
 static int usage_usart_tx(void) {
     PrintAndLogEx(NORMAL, "Send string over USART");
     PrintAndLogEx(NORMAL, "WARNING: it will have side-effects if used in USART HOST mode!");
@@ -105,6 +119,23 @@ static int usage_usart_txrx(void) {
     return PM3_SUCCESS;
 }
 
+static int usage_usart_config(void) {
+    PrintAndLogEx(NORMAL, "Configure USART");
+    PrintAndLogEx(NORMAL, "WARNING: it will have side-effects if used in USART HOST mode!");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  usart config [h] [b <baudrate>] [p <N|O|E>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h             This help");
+    PrintAndLogEx(NORMAL, "           b <baudrate>  Baudrate");
+    PrintAndLogEx(NORMAL, "           p <N|O|E>     Parity (None/Odd/Even)");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      usart config b 9600");
+    PrintAndLogEx(NORMAL, "      usart config b 9600 p N");
+    PrintAndLogEx(NORMAL, "      usart config p E");
+    return PM3_SUCCESS;
+}
+
 static int usart_tx(uint8_t *data, size_t len) {
     clearCommandBuffer();
     SendCommandNG(CMD_USART_TX, data, len);
@@ -149,6 +180,243 @@ static int usart_txrx(uint8_t *srcdata, size_t srclen, uint8_t *dstdata, size_t 
         memcpy(dstdata, resp.data.asBytes, resp.length);
     }
     return resp.status;
+}
+
+static int set_usart_config(uint32_t baudrate, uint8_t parity) {
+    clearCommandBuffer();
+    struct {
+        uint32_t baudrate;
+        uint8_t parity;
+    } PACKED payload;
+    payload.baudrate = baudrate;
+    payload.parity = parity;
+    SendCommandNG(CMD_USART_CONFIG, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_USART_CONFIG, &resp, 1000)) {
+        return PM3_ETIMEOUT;
+    }
+    return resp.status;
+}
+
+static int CmdUsartConfig(const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = false;
+    uint32_t baudrate = 0;
+    uint8_t parity = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_usart_config();
+            case 'p':
+                switch (tolower(param_getchar(Cmd, cmdp + 1))) {
+                    case 'n':
+                        parity = 'N';
+                        break;
+                    case 'o':
+                        parity = 'O';
+                        break;
+                    case 'e':
+                        parity = 'E';
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp + 1));
+                        errors = true;
+                        break;
+                }
+                cmdp += 2;
+                break;
+            case 'b':
+                baudrate = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                if (baudrate == 0) {
+                    PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp + 1));
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    //Validations
+    if (errors || ((baudrate == 0) && (parity == 0))) {
+        usage_usart_config();
+        return PM3_EINVARG;
+    }
+    return set_usart_config(baudrate, parity);
+}
+
+static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
+    int ret = set_usart_config(baudrate, parity);
+    if (ret != PM3_SUCCESS)
+        return ret;
+    char *string = "AT+VERSION";
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+    size_t len = 0;
+    PrintAndLogEx(NORMAL, "TX (%3u):%.*s at %u 8%c1", strlen(string), strlen(string), string, baudrate, parity);
+    ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000); // such large timeout needed
+    if (ret == PM3_SUCCESS) {
+        PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+        if (strcmp((char *)data, "hc01.comV2.0") == 0) {
+            PrintAndLogEx(SUCCESS, "Add-on " _GREEN_("found!"), len, len, data);
+            return PM3_SUCCESS;
+        }
+    }
+    return PM3_ENODATA;
+}
+
+static int CmdUsartBtFactory(const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = false;
+    uint32_t baudrate = 0;
+    uint8_t parity = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_usart_bt_factory();
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    //Validations
+    if (errors) {
+        usage_usart_bt_factory();
+        return PM3_EINVARG;
+    }
+    PrintAndLogEx(WARNING, "This requires BT turned ON and NOT connected!");
+    PrintAndLogEx(WARNING, "Is the blue light blinking? [y/n]");
+    while(!ukbhit()) {
+        msleep(200);
+    }
+    int gc = getchar();
+    if (gc != 'y') {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(FAILED, "Aborting.");
+        return PM3_EOPABORTED;
+    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Trying to detect current settings... Please be patient.");
+    bool found = false;
+    found = usart_bt_testcomm(USART_BAUD_RATE, USART_PARITY) == PM3_SUCCESS;
+    if (found) {
+        baudrate = USART_BAUD_RATE;
+        parity = USART_PARITY;
+    } else {
+        uint32_t brs[] = {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600, 1382400};
+        uint8_t ps[] = { 'N', 'O', 'E' };
+        for (uint8_t ip = 0; (ip < ARRAYLEN(ps)) && (!found); ip++) {
+            for (uint8_t ibr = 0; (ibr < ARRAYLEN(brs)) && (!found); ibr++) {
+                found = usart_bt_testcomm(brs[ibr], ps[ip]) == PM3_SUCCESS;
+                if (found) {
+                    baudrate = brs[ibr];
+                    parity = ps[ip];
+                }
+            }
+        }
+    }
+    if (!found) {
+        PrintAndLogEx(FAILED, "Sorry, add-on not found. Abort.");
+        return PM3_EFATAL;
+    }
+    PrintAndLogEx(INFO, "Reconfiguring add-on to default settings.");
+    char *string;
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    size_t len;
+
+    memset(data, 0, sizeof(data));
+    len = 0;
+    string = "AT+NAMEPM3_RDV4.0";
+    PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+    int ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
+    if (ret == PM3_SUCCESS) {
+        PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+        if (strcmp((char *)data, "OKsetname") == 0) {
+            PrintAndLogEx(SUCCESS, "Name set to " _GREEN_("PM3_RDV4.0"));
+        } else {
+            PrintAndLogEx(WARNING, "Unexpected response to AT+NAME: " _YELLOW_("%.*s"), len, data);
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
+        return PM3_EFATAL;
+    }
+
+    memset(data, 0, sizeof(data));
+    len = 0;
+    string = "AT+PIN1234";
+    PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+    ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
+    if (ret == PM3_SUCCESS) {
+        PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+        if (strcmp((char *)data, "OKsetPIN") == 0) {
+            PrintAndLogEx(SUCCESS, "PIN set to " _GREEN_("1234"));
+        } else {
+            PrintAndLogEx(WARNING, "Unexpected response to AT+PIN: " _YELLOW_("%.*s"), len, data);
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
+        return PM3_EFATAL;
+    }
+
+    // parity must be changed before baudrate
+    if (parity != USART_PARITY) {
+        memset(data, 0, sizeof(data));
+        len = 0;
+        string = "AT+PN";
+        PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+        ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
+        if (ret == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+            if (strcmp((char *)data, "OK None") == 0) {
+                PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None"));
+            } else {
+                PrintAndLogEx(WARNING, "Unexpected response to AT+P: " _YELLOW_("%.*s"), len, data);
+            }
+        } else {
+            PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
+            return PM3_EFATAL;
+        }
+    }
+
+    if (baudrate != USART_BAUD_RATE) {
+        memset(data, 0, sizeof(data));
+        len = 0;
+        string = "AT+BAUD8";
+        PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+        ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
+        if (ret == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+            if (strcmp((char *)data, "OK115200") == 0) {
+                PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_("115200"));
+            } else {
+                PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), len, data);
+            }
+        } else {
+            PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
+            return PM3_EFATAL;
+        }
+    }
+
+    if ((baudrate != USART_BAUD_RATE) || (parity != USART_PARITY)) {
+        PrintAndLogEx(WARNING, "Add-on uart settings changed, please turn BT add-on OFF and ON again, then press any key.");
+        while(!ukbhit()) {
+            msleep(200);
+        }
+        int gc = getchar();
+        (void)gc;
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Trying to connect add-on with the new settings.");
+        found = usart_bt_testcomm(USART_BAUD_RATE, USART_PARITY) == PM3_SUCCESS;
+        if (!found) {
+            PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
+            return PM3_EFATAL;
+        }
+    }
+
+    PrintAndLogEx(SUCCESS, "Add-on successfully " _GREEN_("reset"));
+    return PM3_SUCCESS;
 }
 
 static int CmdUsartBtPin(const char *Cmd) {
@@ -430,11 +698,13 @@ static int CmdUsartRXhex(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",         CmdHelp,            AlwaysAvailable,          "This help"},
     {"btpin",        CmdUsartBtPin,      IfPm3FpcUsartHostFromUsb, "Change BT add-on PIN"},
+    {"btfactory",    CmdUsartBtFactory,  IfPm3FpcUsartHostFromUsb, "Reset BT add-on to factory settings"},
     {"tx",           CmdUsartTX,         IfPm3FpcUsartDevFromUsb,  "Send string over USART"},
     {"rx",           CmdUsartRX,         IfPm3FpcUsartDevFromUsb,  "Receive string over USART"},
     {"txrx",         CmdUsartTXRX,       IfPm3FpcUsartDevFromUsb,  "Send string over USART and wait for response"},
     {"txhex",        CmdUsartTXhex,      IfPm3FpcUsartDevFromUsb,  "Send bytes over USART"},
     {"rxhex",        CmdUsartRXhex,      IfPm3FpcUsartDevFromUsb,  "Receive bytes over USART"},
+    {"config",       CmdUsartConfig,     IfPm3FpcUsartDevFromUsb,  "Configure USART"},
 //    {"bridge",       CmdUsartBridge,     IfPm3FpcUsartDevFromUsb,  "Bridge USB-CDC & USART"},
     {NULL, NULL, NULL, NULL}
 };

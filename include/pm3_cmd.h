@@ -221,6 +221,7 @@ typedef struct {
 #define CMD_USART_RX                                                      0x0160
 #define CMD_USART_TX                                                      0x0161
 #define CMD_USART_TXRX                                                    0x0162
+#define CMD_USART_CONFIG                                                  0x0163
 
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202

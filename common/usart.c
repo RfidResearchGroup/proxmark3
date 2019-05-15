@@ -16,6 +16,8 @@ volatile AT91PS_USART pUS1 = AT91C_BASE_US1;
 volatile AT91PS_PIO pPIO   = AT91C_BASE_PIOA;
 volatile AT91PS_PDC pPDC   = AT91C_BASE_PDC_US1;
 
+uint32_t usart_baudrate = 0;
+uint8_t usart_parity = 0;
 /*
 void usart_close(void) {
     // Reset the USART mode
@@ -170,7 +172,12 @@ inline int usart_writebuffer_sync(uint8_t *data, size_t len) {
     return PM3_SUCCESS;
 }
 
-void usart_init(void) {
+void usart_init(uint32_t baudrate, uint8_t parity) {
+
+    if (baudrate != 0)
+        usart_baudrate = baudrate;
+    if ((parity == 'N') || (parity == 'O') || (parity == 'E'))
+        usart_parity = parity;
 
     // For a nice detailed sample, interrupt driven but still relevant.
     // See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
@@ -192,18 +199,33 @@ void usart_init(void) {
     pPIO->PIO_PPUER |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
 
     // set mode
-    pUS1->US_MR = AT91C_US_USMODE_NORMAL |      // normal mode
-                  AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
-                  AT91C_US_OVER |                  // oversampling
-                  AT91C_US_CHRL_8_BITS |           // 8 bits
-                  AT91C_US_PAR_NONE |              // parity: none
-                  AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
-                  AT91C_US_CHMODE_NORMAL;          // channel mode: normal
+    uint32_t mode = AT91C_US_USMODE_NORMAL |      // normal mode
+                    AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
+                    AT91C_US_OVER |                  // oversampling
+                    AT91C_US_CHRL_8_BITS |           // 8 bits
+                    AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
+                    AT91C_US_CHMODE_NORMAL;          // channel mode: normal
+
+    switch(usart_parity) {
+        case 'N':
+            mode |= AT91C_US_PAR_NONE;               // parity: none
+            break;
+        case 'O':
+            mode |= AT91C_US_PAR_ODD;                // parity: odd
+            break;
+        case 'E':
+            mode |= AT91C_US_PAR_EVEN;               // parity: even
+            break;
+    }
+    pUS1->US_MR = mode;
 
     // all interrupts disabled
     pUS1->US_IDR = 0xFFFF;
 
-    pUS1->US_BRGR =  48054841 / (USART_BAUD_RATE << 3);
+    // note that for very large baudrates, error is not neglectible:
+    // b921600  => 8.6%
+    // b1382400 => 8.6%
+    pUS1->US_BRGR =  48054841 / (usart_baudrate << 3);
 
     // Write the Timeguard Register
     pUS1->US_TTGR = 0;
@@ -219,8 +241,13 @@ void usart_init(void) {
     pUS1->US_RPR = (uint32_t)us_inbuf1;
     pUS1->US_RCR = USART_BUFFLEN;
     usart_cur_inbuf = us_inbuf1;
+    usart_cur_inbuf_off = 0;
     pUS1->US_RNPR = (uint32_t)us_inbuf2;
     pUS1->US_RNCR = USART_BUFFLEN;
+
+    // Initialize our fifo
+    us_rxfifo_low = 0;
+    us_rxfifo_high = 0;
 
     // re-enable receiver / transmitter
     pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);

@@ -424,7 +424,7 @@ void SendCapabilities(void) {
     capabilities.version = CAPABILITIES_VERSION;
     capabilities.via_fpc = reply_via_fpc;
     if (reply_via_fpc)
-        capabilities.baudrate = USART_BAUD_RATE;
+        capabilities.baudrate = usart_baudrate;
     else
         capabilities.baudrate = 0; // no real baudrate for USB-CDC
 
@@ -1173,7 +1173,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #endif
 
-#ifdef WITH_FPC_USART_DEV
+#ifdef WITH_FPC_USART
         case CMD_USART_TX: {
             LED_B_ON();
             usart_writebuffer_sync(packet->data.asBytes, packet->length);
@@ -1219,6 +1219,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
             BigBuf_free();
             LED_B_OFF();
+            break;
+        }
+        case CMD_USART_CONFIG: {
+            struct p {
+                uint32_t baudrate;
+                uint8_t parity;
+            } PACKED;
+            struct p *payload = (struct p *) &packet->data.asBytes;
+            usart_init(payload->baudrate, payload->parity);
+            reply_ng(CMD_USART_CONFIG, PM3_SUCCESS, NULL, 0);
             break;
         }
 #endif
@@ -1631,7 +1641,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 #endif
 
 #ifdef WITH_FPC_USART
-    usart_init();
+    usart_init(USART_BAUD_RATE, USART_PARITY);
 #endif
 
     // This is made as late as possible to ensure enumeration without timeout
