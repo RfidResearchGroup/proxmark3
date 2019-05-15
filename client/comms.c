@@ -629,7 +629,10 @@ int TestProxmark(void) {
             // reconfigure.
             if (conn.send_via_fpc_usart == false) {
 #if defined(_WIN32)
-                pthread_mutex_lock(&spMutex);
+                //pthread_mutex_lock(&spMutex);
+                if (pthread_mutex_trylock(&spMutex) != 0)
+                    PrintAndLogEx(ERR, "mutex can't locked!");
+                    
 #endif
                 int res = uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
 #if defined(_WIN32)
