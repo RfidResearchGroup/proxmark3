@@ -921,10 +921,16 @@ int detect_classic_nackbug(bool verbose) {
             return PM3_EOPABORTED;
         }
 
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
-            int32_t ok = resp.oldarg[0];
-            uint32_t nacks = resp.oldarg[1];
-            uint32_t auths = resp.oldarg[2];
+        if (WaitForResponseTimeout(CMD_MIFARE_NACK_DETECT, &resp, 500)) {
+
+            if ( resp.status == PM3_EOPABORTED ) {
+                PrintAndLogEx(WARNING, "button pressed. Aborted.");
+                return PM3_EOPABORTED;
+            }
+
+            uint8_t ok = resp.data.asBytes[0];
+            uint8_t nacks = resp.data.asBytes[1];
+            uint16_t auths = bytes_to_num(resp.data.asBytes + 2, 2);
             PrintAndLogEx(NORMAL, "");
 
             if (verbose) {
@@ -932,9 +938,6 @@ int detect_classic_nackbug(bool verbose) {
                 PrintAndLogEx(SUCCESS, "num of received NACK  : %u", nacks);
             }
             switch (ok) {
-                case 99 :
-                    PrintAndLogEx(WARNING, "button pressed. Aborted.");
-                    return PM3_EOPABORTED;
                 case 96 :
                 case 98 : {
                     if (verbose)

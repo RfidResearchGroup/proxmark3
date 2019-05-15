@@ -1998,7 +1998,7 @@ void OnSuccessMagic() {
 }
 void OnErrorMagic(uint8_t reason) {
     //          ACK, ISOK, reason,0,0,0
-    reply_old(CMD_ACK, 0, reason, 0, 0, 0);
+    reply_mix(CMD_ACK, 0, reason, 0, 0, 0);
     OnSuccessMagic();
 }
 
