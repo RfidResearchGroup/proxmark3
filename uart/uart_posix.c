@@ -73,8 +73,12 @@ struct timeval timeout = {
     .tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000
 };
 
-int uart_reconfigure_timeouts(serial_port sp, uint32_t value) {
-    timeout.tv_usec = value * 1000;
+uint32_t newtimeout_value = 0;
+bool newtimeout_nopending = true;
+
+int uart_reconfigure_timeouts(uint32_t value) {
+    newtimeout_value = value;
+    __atomic_clear(&newtimeout_nopending, __ATOMIC_SEQ_CST);
     return PM3_SUCCESS;
 }
 
@@ -83,7 +87,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     if (sp == 0) return INVALID_SERIAL_PORT;
 
     // init timeouts
-    uart_reconfigure_timeouts(sp, UART_FPC_CLIENT_RX_TIMEOUT_MS);
+    timeout.tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000;
 
     if (memcmp(pcPortName, "tcp:", 4) == 0) {
         struct addrinfo *addr, *rp;
@@ -241,7 +245,6 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 
     // Reset the output count
     *pszRxLen = 0;
-
     do {
         // Reset file descriptor
         FD_ZERO(&rfds);
@@ -299,6 +302,8 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     uint32_t pos = 0;
     fd_set rfds;
     struct timeval tv;
+    if (__atomic_test_and_set(&newtimeout_nopending, __ATOMIC_SEQ_CST) == 0)
+        timeout.tv_usec = newtimeout_value * 1000;
 
     while (pos < len) {
         // Reset file descriptor

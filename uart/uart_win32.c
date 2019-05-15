@@ -48,7 +48,19 @@ typedef struct {
     COMMTIMEOUTS ct;  // Serial port time-out configuration
 } serial_port_windows;
 
-int uart_reconfigure_timeouts(serial_port sp, uint32_t value) {
+uint32_t newtimeout_value = 0;
+bool newtimeout_nopending = true;
+
+int uart_reconfigure_timeouts(uint32_t value) {
+    newtimeout_value = value;
+    __atomic_clear(&newtimeout_nopending, __ATOMIC_SEQ_CST);
+    return PM3_SUCCESS;
+}
+
+static int uart_reconfigure_timeouts_polling(serial_port sp) {
+    if (__atomic_test_and_set(&newtimeout_nopending, __ATOMIC_SEQ_CST) != 0)
+        return PM3_SUCCESS;
+
     serial_port_windows *spw;
     spw = (serial_port_windows *)sp;
     spw->ct.ReadIntervalTimeout         = value;
@@ -103,7 +115,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         return INVALID_SERIAL_PORT;
     }
 
-    uart_reconfigure_timeouts(sp, UART_FPC_CLIENT_RX_TIMEOUT_MS);
+    uart_reconfigure_timeouts(UART_FPC_CLIENT_RX_TIMEOUT_MS);
+    uart_reconfigure_timeouts_polling(sp);
 
     if (!uart_set_speed(sp, speed)) {
         // try fallback automatically
@@ -176,6 +189,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 }
 
 int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
+    uart_reconfigure_timeouts_polling(sp);
     DWORD txlen = 0;
     int res = WriteFile(((serial_port_windows *)sp)->hPort, p_tx, len, &txlen, NULL);
     if (res)

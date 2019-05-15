@@ -48,8 +48,6 @@ static int cmd_tail = 0;
 
 // to lock rxBuffer operations from different threads
 static pthread_mutex_t rxBufferMutex = PTHREAD_MUTEX_INITIALIZER;
-// serial port access from different threads
-static pthread_mutex_t spMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Global start time for WaitForResponseTimeout & dl_it, so we can reset timeout when we get packets
 // as sending lot of these packets can slow down things wuite a lot on slow links (e.g. hw status or lf read at 9600)
@@ -344,8 +342,6 @@ __attribute__((force_align_arg_pointer))
             break;
         }
 
-        pthread_mutex_lock(&spMutex);
-
         res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
         if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
             rx.magic = rx_raw.pre.magic;
@@ -465,8 +461,6 @@ __attribute__((force_align_arg_pointer))
             }
         }
 
-        pthread_mutex_unlock(&spMutex);
-
         // TODO if error, shall we resync ?
 
         pthread_mutex_lock(&txBufferMutex);
@@ -486,7 +480,6 @@ __attribute__((force_align_arg_pointer))
 
         if (txBuffer_pending) {
 
-            pthread_mutex_lock(&spMutex);
             if (txBufferNGLen) { // NG packet
                 res = uart_send(sp, (uint8_t *) &txBufferNG, txBufferNGLen);
                 if (res == PM3_EIO) {
@@ -501,7 +494,6 @@ __attribute__((force_align_arg_pointer))
                 }
                 conn.last_command = txBuffer.cmd;
             }
-            pthread_mutex_unlock(&spMutex);
 
             txBuffer_pending = false;
 
@@ -628,13 +620,7 @@ int TestProxmark(void) {
 
             // reconfigure.
             if (conn.send_via_fpc_usart == false) {
-#if defined(_WIN32)
-                pthread_mutex_lock(&spMutex);
-#endif
-                int res = uart_reconfigure_timeouts(sp, UART_USB_CLIENT_RX_TIMEOUT_MS);
-#if defined(_WIN32)
-                pthread_mutex_unlock(&spMutex);
-#endif
+                int res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
                 if (res != PM3_SUCCESS) {
                     return res;
                 }
