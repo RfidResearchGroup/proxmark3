@@ -595,43 +595,43 @@ int TestProxmark(void) {
     // that initiates the BT connection
 #endif
 
-    if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false)) {
-
-        bool error = false;
-        if (len)
-            error = memcmp(data, resp.data.asBytes, len) != 0;
-        if (error)
-            return PM3_EIO;
-
-        SendCommandNG(CMD_CAPABILITIES, NULL, 0);
-        if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false)) {
-            if ((resp.length != sizeof(pm3_capabilities)) || (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
-                PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the same as the one used by the client!"));
-                PrintAndLogEx(ERR, _RED_("Please flash the Proxmark with the same version as the client."));
-                return PM3_EDEVNOTSUPP;
-            }
-            memcpy(&pm3_capabilities, resp.data.asBytes, MIN(sizeof(capabilities_t), resp.length));
-            conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
-            conn.uart_speed = pm3_capabilities.baudrate;
-            PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
-            if (conn.send_via_fpc_usart) {
-                PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
-            }
-
-            // reconfigure.
-            if (conn.send_via_fpc_usart == false) {
-                int res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
-                if (res != PM3_SUCCESS) {
-                    return res;
-                }
-            }
-            return PM3_SUCCESS;
-        } else {
-            return PM3_ETIMEOUT;
-        }
-    } else {
+    if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false) == 0) {
         return PM3_ETIMEOUT;
     }
+
+    bool error = false;
+    if (len)
+        error = memcmp(data, resp.data.asBytes, len) != 0;
+    
+    if (error)
+        return PM3_EIO;
+
+    SendCommandNG(CMD_CAPABILITIES, NULL, 0);
+    if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false) == 0) {
+        return PM3_ETIMEOUT;
+    }
+        
+    if ((resp.length != sizeof(pm3_capabilities)) || (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
+        PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the same as the one used by the client!"));
+        PrintAndLogEx(ERR, _RED_("Please flash the Proxmark with the same version as the client."));
+        return PM3_EDEVNOTSUPP;
+    }
+
+    memcpy(&pm3_capabilities, resp.data.asBytes, MIN(sizeof(capabilities_t), resp.length));
+    conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
+    conn.uart_speed = pm3_capabilities.baudrate;
+        
+    PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
+        
+    if (conn.send_via_fpc_usart) {
+        PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
+    } else {
+        int res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+    return PM3_SUCCESS;
 }
 
 void CloseProxmark(void) {
