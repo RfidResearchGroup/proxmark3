@@ -181,13 +181,13 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 
     int errorcode = GetLastError();
 
-    // disconnected device
     if (res == 0 && errorcode == 2) {
         return PM3_EIO;
     }
 
 //    printf("[!]res %d | rx errorcode == %d \n", res, errorcode);
-    return res;
+    // disconnected device
+    return PM3_ENOTTY;
 }
 
 int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
@@ -202,6 +202,7 @@ int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
     }
 
 //    printf("[!!]res %d | send errorcode == %d \n", res, errorcode);
+    // disconnected device
     return PM3_ENOTTY;
 }
 
