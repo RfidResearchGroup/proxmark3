@@ -225,7 +225,7 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
     // note that for very large baudrates, error is not neglectible:
     // b921600  => 8.6%
     // b1382400 => 8.6%
-    pUS1->US_BRGR =  48054841 / (usart_baudrate << 3);
+    pUS1->US_BRGR =  48000000 / (usart_baudrate << 3);
 
     // Write the Timeguard Register
     pUS1->US_TTGR = 0;

@@ -135,7 +135,9 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     } else {
         snprintf(buffer2, sizeof(buffer2), "%s%s", prefix, buffer);
         if (level == INPLACE) {
-            fprintf(stream, "\r%s", buffer2);
+            char buffer3[MAX_PRINT_BUFFER + 20] = {0};
+            memcpy_filter_ansi(buffer3, buffer2, sizeof(buffer2), !session.supports_colors);
+            fprintf(stream, "\r%s", buffer3);
             fflush(stream);
         } else {
             fPrintAndLog(stream, "%s", buffer2);
