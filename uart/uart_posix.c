@@ -74,11 +74,11 @@ struct timeval timeout = {
 };
 
 uint32_t newtimeout_value = 0;
-bool newtimeout_nopending = true;
+bool newtimeout_pending = false;
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
-    __atomic_clear(&newtimeout_nopending, __ATOMIC_SEQ_CST);
+    __atomic_test_and_set(&newtimeout_pending, __ATOMIC_SEQ_CST);
     return PM3_SUCCESS;
 }
 
@@ -302,7 +302,9 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     uint32_t pos = 0;
     fd_set rfds;
     struct timeval tv;
-    if (__atomic_test_and_set(&newtimeout_nopending, __ATOMIC_SEQ_CST) == 0)
+    
+    bool shall_update = __atomic_load_n(&newtimeout_pending, __ATOMIC_SEQ_CST);
+    if ( shall_update )
         timeout.tv_usec = newtimeout_value * 1000;
 
     while (pos < len) {

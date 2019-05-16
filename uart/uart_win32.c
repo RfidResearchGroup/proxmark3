@@ -49,16 +49,17 @@ typedef struct {
 } serial_port_windows;
 
 uint32_t newtimeout_value = 0;
-bool newtimeout_nopending = true;
+bool newtimeout_pending = true;
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
-    __atomic_clear(&newtimeout_nopending, __ATOMIC_SEQ_CST);
+    __atomic_test_and_set(&newtimeout_pending, __ATOMIC_SEQ_CST);    
     return PM3_SUCCESS;
 }
 
 static int uart_reconfigure_timeouts_polling(serial_port sp) {
-    if (__atomic_test_and_set(&newtimeout_nopending, __ATOMIC_SEQ_CST) != 0)
+    bool shall_update = __atomic_load_n(&newtimeout_pending, __ATOMIC_SEQ_CST);
+    if ( shall_update == false )
         return PM3_SUCCESS;
 
     serial_port_windows *spw;
