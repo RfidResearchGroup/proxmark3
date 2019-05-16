@@ -623,13 +623,16 @@ int TestProxmark(void) {
         
     PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
         
+    int res;
     if (conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
+        res = uart_reconfigure_timeouts(UART_FPC_CLIENT_RX_TIMEOUT_MS);
     } else {
-        int res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
-        if (res != PM3_SUCCESS) {
-            return res;
-        }
+        res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
+    }
+
+    if (res != PM3_SUCCESS) {
+        return res;
     }
     return PM3_SUCCESS;
 }
