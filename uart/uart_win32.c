@@ -63,10 +63,10 @@ static int uart_reconfigure_timeouts_polling(serial_port sp) {
 
     serial_port_windows *spw;
     spw = (serial_port_windows *)sp;
-    spw->ct.ReadIntervalTimeout         = value;
+    spw->ct.ReadIntervalTimeout         = newtimeout_value;
     spw->ct.ReadTotalTimeoutMultiplier  = 0;
-    spw->ct.ReadTotalTimeoutConstant    = value;
-    spw->ct.WriteTotalTimeoutMultiplier = value;
+    spw->ct.ReadTotalTimeoutConstant    = newtimeout_value;
+    spw->ct.WriteTotalTimeoutMultiplier = newtimeout_value;
     spw->ct.WriteTotalTimeoutConstant   = 0;
 
     if (!SetCommTimeouts(spw->hPort, &spw->ct)) {
