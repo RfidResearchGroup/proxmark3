@@ -78,7 +78,7 @@ bool newtimeout_pending = false;
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
-    __atomic_test_and_set(&newtimeout_pending, __ATOMIC_SEQ_CST);
+    newtimeout_pending = true;
     return PM3_SUCCESS;
 }
 
@@ -243,6 +243,10 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     fd_set rfds;
     struct timeval tv;
 
+    if ( newtimeout_pending ) {
+        timeout.tv_usec = newtimeout_value * 1000;
+        newtimeout_pending = false;
+    }
     // Reset the output count
     *pszRxLen = 0;
     do {
@@ -303,10 +307,6 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     fd_set rfds;
     struct timeval tv;
     
-    bool shall_update = __atomic_load_n(&newtimeout_pending, __ATOMIC_SEQ_CST);
-    if ( shall_update )
-        timeout.tv_usec = newtimeout_value * 1000;
-
     while (pos < len) {
         // Reset file descriptor
         FD_ZERO(&rfds);
