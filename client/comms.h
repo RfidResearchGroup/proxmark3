@@ -6,7 +6,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Code for communicating with the proxmark3 hardware.
+// Code for communicating with the Proxmark3 hardware.
 //-----------------------------------------------------------------------------
 
 #ifndef COMMS_H_

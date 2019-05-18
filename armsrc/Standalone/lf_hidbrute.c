@@ -10,7 +10,7 @@
 //
 // PROXMARK3 - HID CORPORATE 1000 BRUTEFORCER (STAND-ALONE MODE)
 //
-// This version of Proxmark3 firmware adds one extra stand-alone mode to proxmark3 firmware.
+// This version of Proxmark3 firmware adds one extra stand-alone mode.
 // The new stand-alone mode allows to execute a bruteforce on HID Corporate 1000 readers, by
 // reading a specific badge and bruteforcing the Card Number (incrementing and decrementing it),
 // mainteining the same Facility Code of the original badge.

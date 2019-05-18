@@ -19,7 +19,7 @@ desc = [[
 
 *SUPPORTED TAGS: pyramid, awid, fdx, jablotron, noralsy, presco, visa2000, 14a, hid
 
-This script uses the proxmark3 implementations of simulation to bruteforce given ranges of id.
+This script uses the Proxmark3 implementations of simulation to bruteforce given ranges of id.
 It uses both LF and HF simulations.
 
     -- Author note

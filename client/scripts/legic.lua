@@ -2687,7 +2687,7 @@ function modifyMode()
               end,
   }
   repeat
-    -- defualt message / prompt
+    -- default message / prompt
     ic=input("Legic command? ('h' for help - 'q' for quit)", "h")
     -- command actions decisions (first match, longer commands before shorter)
     if (type(actions[string.lower(string.sub(ic,0,3))])=='function') then

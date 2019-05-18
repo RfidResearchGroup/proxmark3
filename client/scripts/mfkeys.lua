@@ -1,5 +1,5 @@
 --[[
-    This is an example of Lua-scripting within proxmark3. This is a lua-side
+    This is an example of Lua-scripting within Proxmark3. This is a lua-side
     implementation of hf mf chk
 
     This code is licensed to you under the terms of the GNU GPL, version 2 or,
