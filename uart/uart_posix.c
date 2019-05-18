@@ -412,6 +412,12 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
             stPortSpeed = B921600;
             break;
 #  endif
+#  ifdef B1382400
+        case 1382400:
+            stPortSpeed = B1382400;
+            break;
+#  endif
+
         default:
             return false;
     };

@@ -150,6 +150,8 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
         case 115200:
         case 230400:
         case 460800:
+        case 921600:
+        case 1382400:
             break;
         default:
             return false;
