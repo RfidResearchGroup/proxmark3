@@ -27,8 +27,8 @@ static int usage_hw_detectreader(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hw detectreader [h] <L|H>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <type>     L = 125/134 kHz, H = 13.56 MHz");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       <type>     L = 125/134 kHz, H = 13.56 MHz");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hw detectreader L");
@@ -40,8 +40,8 @@ static int usage_hw_setmux(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hw setmux [h] <lopkd | loraw | hipkd | hiraw>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <type>     Low peak, Low raw, Hi peak, Hi raw");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       <type>     Low peak, Low raw, Hi peak, Hi raw");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hw setmux lopkd");
@@ -50,14 +50,17 @@ static int usage_hw_setmux(void) {
 
 static int usage_hw_connect(void) {
     PrintAndLogEx(NORMAL, "Connects to a Proxmark3 device via specified serial port");
+    PrintAndLogEx(NORMAL, "Baudrate here is only for physical UART or UART-BT, " _YELLOW_("not")"for USB-CDC or blue shark add-on");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] [<port>]");
+    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] p <port> b <baudrate>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           <port>     Serial port to connect to, else retry the last used one");
+    PrintAndLogEx(NORMAL, "       h              This help");
+    PrintAndLogEx(NORMAL, "       p <port>       Serial port to connect to, else retry the last used one");
+    PrintAndLogEx(NORMAL, "       b <baudrate>   Baudrate");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hw connect "SERIAL_PORT_EXAMPLE_H);
+    PrintAndLogEx(NORMAL, "      hw connect p "SERIAL_PORT_EXAMPLE_H);
+    PrintAndLogEx(NORMAL, "      hw connect p "SERIAL_PORT_EXAMPLE_H" b 115200");
     return PM3_SUCCESS;
 }
 
@@ -495,35 +498,62 @@ static int CmdPing(const char *Cmd) {
 
 static int CmdConnect(const char *Cmd) {
 
-    if (tolower(Cmd[0] == 'h'))
-        return usage_hw_connect();
-
-    char *port = NULL;
-
+    char *port= NULL;
+    uint32_t baudrate = USART_BAUD_RATE;
+    uint8_t cmdp = 0;
+    int sl;
+    
+    while (param_getchar(Cmd, cmdp) != 0x00) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hw_connect();
+            case 'p':
+                sl = param_getlength(Cmd, cmdp + 1);
+                sl += 1;
+                port = (char *)calloc(sl, sizeof(uint8_t));
+                if ( port == NULL ) {
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
+                    return 1;
+                }
+                param_getstr(Cmd, cmdp + 1, port, sl);
+                cmdp += 2;
+                break;
+            case 'b':
+                baudrate = param_get32ex(Cmd, cmdp + 1, USART_BAUD_RATE, 10);
+                cmdp += 2;
+                break;
+            default:
+                cmdp++;
+                break;
+        }
+    }
+    
     // default back to previous used serial port
-    if (strlen(Cmd) == 0) {
+    if (port == NULL || strlen(port) == 0) {
         int len = strlen((char *)conn.serial_port_name);
         if (len == 0) {
             return usage_hw_connect();
         }
         port = (char *)conn.serial_port_name;
-    } else {
-        port = (char *)Cmd;
     }
 
     if (port == NULL)
         return usage_hw_connect();
 
+    printf("Port:: %s  Baud:: %u\n", port, baudrate);
+
     if (session.pm3_present) {
         CloseProxmark();
     }
 
-    OpenProxmark(port, false, 20, false, USART_BAUD_RATE);
+    // 10 second timeout
+    OpenProxmark(port, false, 10, false, baudrate);
 
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
+        PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark3\n");
         CloseProxmark();
     }
+    free(port);
     return PM3_SUCCESS;
 }
 
