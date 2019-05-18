@@ -76,7 +76,7 @@ void AddLogLine(const char *fn, const char *data, const char *c) {
 
     f = fopen(filename, "a");
     if (!f) {
-        printf("Could not append log file %s", filename);
+        PrintAndLogEx(ERR, "Could not append log file" _YELLOW_("%s"), filename);
         return;
     }
 
@@ -117,13 +117,10 @@ void AddLogCurrentDT(const char *fn) {
 // param uidlen - length of uid array.
 void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext, const int uidlen) {
     if (filenamePrefix == NULL || uid == NULL || ext == NULL) {
-        printf("[!] error parameter is NULL\n");
         return;
     }
 
-    int len = 0;
-    len = strlen(filenamePrefix);
-    //memset(fn, 0x00, FILE_PATH_SIZE);
+    int len = strlen(filenamePrefix);
 
     for (int j = 0; j < uidlen; j++)
         sprintf(filenamePrefix + len + j * 2, "%02X", uid[j]);
@@ -623,7 +620,7 @@ int param_getstr(const char *line, int paramnum, char *str, size_t buffersize) {
 
     // Prevent out of bounds errors
     if (en - bg + 1 >= buffersize) {
-        printf("out of bounds error: want %d bytes have %zu bytes\n", en - bg + 1 + 1, buffersize);
+        PrintAndLogEx(ERR, "out of bounds error: want %d bytes have %zu bytes\n", en - bg + 1 + 1, buffersize);
         return 0;
     }
 
