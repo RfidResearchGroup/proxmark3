@@ -577,22 +577,23 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 
 // check if we can communicate with Pm3
 int TestProxmark(void) {
-    clearCommandBuffer();
+
     PacketResponseNG resp;
     uint16_t len = 32;
     uint8_t data[len];
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
 
+    clearCommandBuffer();
     SendCommandNG(CMD_PING, data, len);
 
     uint32_t timeout = 1000;
 
 #ifdef USART_SLOW_LINK
-    timeout = 10000;
     // 10s timeout for slow FPC, e.g. over BT
     // as this is the very first command sent to the pm3
     // that initiates the BT connection
+    timeout = 10000;
 #endif
 
     if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false) == 0) {
@@ -624,7 +625,7 @@ int TestProxmark(void) {
     PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
         
     if (conn.send_via_fpc_usart) {
-        PrintAndLogEx(INFO, "UART Serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
+        PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
     } else {
         int res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
         if (res != PM3_SUCCESS) {
@@ -710,7 +711,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
 
         if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
-//            PrintAndLogEx(INFO, "Waiting for a response from the proxmark3...");
+//            PrintAndLogEx(INFO, "Waiting for a response from the Proxmark3...");
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
