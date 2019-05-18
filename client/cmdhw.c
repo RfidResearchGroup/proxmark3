@@ -52,7 +52,7 @@ static int usage_hw_connect(void) {
     PrintAndLogEx(NORMAL, "Connects to a Proxmark3 device via specified serial port");
     PrintAndLogEx(NORMAL, "Baudrate here is only for physical UART or UART-BT, " _YELLOW_("not")"for USB-CDC or blue shark add-on");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] p <port> b <baudrate>");
+    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] [p <port>] [b <baudrate>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              This help");
     PrintAndLogEx(NORMAL, "       p <port>       Serial port to connect to, else retry the last used one");
@@ -501,23 +501,18 @@ static int CmdConnect(const char *Cmd) {
     char *port= NULL;
     uint32_t baudrate = USART_BAUD_RATE;
     uint8_t cmdp = 0;
-    int sl;
     
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_hw_connect();
-            case 'p':
-                sl = param_getlength(Cmd, cmdp + 1);
-                sl += 1;
-                port = (char *)calloc(sl, sizeof(uint8_t));
-                if ( port == NULL ) {
-                    PrintAndLogEx(WARNING, "Failed to allocate memory");
-                    return 1;
-                }
-                param_getstr(Cmd, cmdp + 1, port, sl);
+            case 'p': {
+                int bg, en;
+                if (param_getptr(Cmd, &bg, &en, cmdp + 1)) break;
+                port = (char *)Cmd + bg;
                 cmdp += 2;
                 break;
+            }
             case 'b':
                 baudrate = param_get32ex(Cmd, cmdp + 1, USART_BAUD_RATE, 10);
                 cmdp += 2;
@@ -553,7 +548,6 @@ static int CmdConnect(const char *Cmd) {
         PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark3\n");
         CloseProxmark();
     }
-    free(port);
     return PM3_SUCCESS;
 }
 
