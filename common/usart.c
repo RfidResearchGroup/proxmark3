@@ -236,7 +236,13 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
     //       OVER = 1,  -yes we are oversampling
     //          baudrate == selected clock/8/CD    --> this is ours
     // 
-    pUS1->US_BRGR =  48000000 / (usart_baudrate << 3);
+    uint32_t fractional = 0;
+    if ( baudrate == 921600 )
+        fractional = 4;
+    else if ( baudrate == 1382400 )
+        fractional = 2;
+    uint32_t brgr = 48000000 / (usart_baudrate << 3);
+    pUS1->US_BRGR =  (fractional << 16) | brgr;
 
     // Write the Timeguard Register
     pUS1->US_TTGR = 0;
