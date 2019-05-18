@@ -355,6 +355,24 @@ static int CmdUsartBtFactory(const char *Cmd) {
 
     memset(data, 0, sizeof(data));
     len = 0;
+    string = "AT+ROLE=S";
+    PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+
+    ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
+    if (ret == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
+        if (strcmp((char *)data, "OK+ROLE:S") == 0) {
+            PrintAndLogEx(SUCCESS, "Role set to " _GREEN_("Slave"));
+        } else {
+            PrintAndLogEx(WARNING, "Unexpected response to AT+ROLE=S: " _YELLOW_("%.*s"), len, data);
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
+        return PM3_EFATAL;
+    }
+
+    memset(data, 0, sizeof(data));
+    len = 0;
     string = "AT+PIN1234";
     PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
 
