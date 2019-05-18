@@ -55,7 +55,7 @@ static void showBanner(void) {
 int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
-        rl_set_prompt("[offline] "PROXPROMPT);
+        rl_set_prompt(PROXPROMPT_OFFLINE);
         rl_forced_update_display();
         CloseProxmark();
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use \"hw connect\" to reconnect\n");
@@ -159,10 +159,14 @@ main_loop(char *script_cmds_file, char *script_cmd) {
 
                 } else {
                     rl_event_hook = check_comm;
-                    if (session.pm3_present)
-                        cmd = readline(PROXPROMPT);
+                    if (session.pm3_present) {
+                        if ( conn.send_via_fpc_usart == false )
+                            cmd = readline(PROXPROMPT_USB);
+                        else 
+                            cmd = readline(PROXPROMPT_FPC);
+                    }
                     else
-                        cmd = readline("[offline] "PROXPROMPT);
+                        cmd = readline(PROXPROMPT_OFFLINE);
 
                     fflush(NULL);
                 }
@@ -270,9 +274,9 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS");
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
-        PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one proxmark3 command (or several separated by ';').");
+        PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one Proxmark3 command (or several separated by ';').");
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
-        PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one proxmark3 command per line");
+        PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
         PrintAndLogEx(NORMAL, "\nsamples:");
         PrintAndLogEx(NORMAL, "      %s -h\n", exec_name);
         PrintAndLogEx(NORMAL, "      %s -m\n", exec_name);

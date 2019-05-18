@@ -16,6 +16,9 @@
 #include "cmdscript.h"  // CmdScriptRun
 
 #define PROXPROMPT "pm3 --> "
+#define PROXPROMPT_USB "[usb] pm3 --> "
+#define PROXPROMPT_FPC "[fpc] pm3 --> "
+#define PROXPROMPT_OFFLINE "[offline] pm3 --> "
 
 #ifdef __cplusplus
 extern "C" {
