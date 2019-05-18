@@ -518,8 +518,8 @@ static int CmdConnect(const char *Cmd) {
                 cmdp += 2;
                 break;
             default:
-                cmdp++;
-                break;
+                usage_hw_connect();
+                return PM3_EINVARG;
         }
     }
     
