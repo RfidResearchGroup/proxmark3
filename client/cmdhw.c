@@ -498,23 +498,23 @@ static int CmdPing(const char *Cmd) {
 
 static int CmdConnect(const char *Cmd) {
 
-    char *port= NULL;
     uint32_t baudrate = USART_BAUD_RATE;
     uint8_t cmdp = 0;
+    char port[FILE_PATH_SIZE] = {0};
     
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_hw_connect();
             case 'p': {
-                int bg, en;
-                if (param_getptr(Cmd, &bg, &en, cmdp + 1)) break;
-                port = (char *)Cmd + bg;
+                param_getstr(Cmd, cmdp + 1, port, sizeof(port));
                 cmdp += 2;
                 break;
             }
             case 'b':
                 baudrate = param_get32ex(Cmd, cmdp + 1, USART_BAUD_RATE, 10);
+                if (baudrate == 0)
+                    return usage_hw_connect();
                 cmdp += 2;
                 break;
             default:
@@ -524,16 +524,12 @@ static int CmdConnect(const char *Cmd) {
     }
     
     // default back to previous used serial port
-    if (port == NULL || strlen(port) == 0) {
-        int len = strlen((char *)conn.serial_port_name);
-        if (len == 0) {
+    if (strlen(port) == 0) {
+        if (strlen((char *)conn.serial_port_name) == 0) {
             return usage_hw_connect();
         }
-        port = (char *)conn.serial_port_name;
+        memcpy(port, conn.serial_port_name, sizeof(port));
     }
-
-    if (port == NULL)
-        return usage_hw_connect();
 
     printf("Port:: %s  Baud:: %u\n", port, baudrate);
 
