@@ -10,18 +10,18 @@ local Emulator = {
 }
 
 function Emulator:set_mem (data, clear_first)
-   if clear_first then
-      -- Clear out the emulator memory first
-      local emuMemclearCmd = Command:new{cmd = cmds.CMD_MIFARE_EML_MEMCLR, arg1 = 0, arg2 = 0, arg3 = 0}
+    if clear_first then
+        -- Clear out the emulator memory first
+        local memclrCmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMCLR}
 
-      local _, err = reader.sendToDevice(emuMemclearCmd)
-      if err then
-         print('Failed to clear emulator memory:', err)
-         return false
-      else
-         print('Cleared emulator memory')
-      end
-   end
+        local _, err = memclrCmd.sendMIX()
+        if err then
+            print('Failed to clear emulator memory:', err)
+            return false
+        else
+            print('Cleared emulator memory')
+        end
+    end
 
    -- Can fit 32 16 byte blocks per command (512 total bytes max)
    for i = 0, (data:len() / self.BLOCK_SZ) do
@@ -30,13 +30,13 @@ function Emulator:set_mem (data, clear_first)
 
       -- arg1: start block number
       -- arg2: block count
-      local emuMemsetCmd = Command:new{cmd = cmds.CMD_MIFARE_EML_MEMSET,
+      local memsetCmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMSET,
                                        data = utils.hexlify(cur_out_block),
                                        arg1 = i * self.BLOCK_COUNT,
                                        arg2 = self.BLOCK_COUNT}
 
       -- Send command and wait for response
-      local _, err = reader.sendToDevice(emuMemsetCmd)
+      local _, err = memsetCmd.sendMIX()
       if err then
          print('Failed setting memory', err)
          return false
@@ -57,12 +57,12 @@ function Emulator:get_mem (size)
    for i = 0, (size / (MAX_BLOCKS * 16)) do
       -- arg1: start block number
       -- arg2: block count (max 4)
-      local emuMemGetCmd = Command:new{cmd = cmds.CMD_MIFARE_EML_MEMGET,
+      local getmemCmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMGET,
                                        arg1 = i * MAX_BLOCKS,
                                        arg2 = MAX_BLOCKS,
                                        arg3 = 0}
 
-      local response, err = reader.sendToDevice(emuMemGetCmd)
+      local response, err = getmemCmd.sendMIX()
       if err then
          print('Failed getting memory:', err)
          return false
