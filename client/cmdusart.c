@@ -271,6 +271,9 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
 }
 
 static int CmdUsartBtFactory(const char *Cmd) {
+// take care to define compatible settings:
+# define BTADDON_BAUD_AT  "AT+BAUD8"
+# define BTADDON_BAUD_NUM "115200"
     uint8_t cmdp = 0;
     bool errors = false;
     uint32_t baudrate = 0;
@@ -289,6 +292,12 @@ static int CmdUsartBtFactory(const char *Cmd) {
     if (errors) {
         usage_usart_bt_factory();
         return PM3_EINVARG;
+    }
+
+    if (USART_BAUD_RATE != atoi(BTADDON_BAUD_NUM)) {
+        PrintAndLogEx(WARNING, _RED_("WARNING:") "current Proxmark3 firmware has default USART baudrate = %i", USART_BAUD_RATE);
+        PrintAndLogEx(WARNING, "Current btfactory implementation is hardcoded to " BTADDON_BAUD_NUM " bauds");
+        return PM3_ENOTIMPL;
     }
 
     PrintAndLogEx(WARNING, _RED_("WARNING: process only if strictly needed!"));
@@ -413,14 +422,14 @@ static int CmdUsartBtFactory(const char *Cmd) {
     if (baudrate != USART_BAUD_RATE) {
         memset(data, 0, sizeof(data));
         len = 0;
-        string = "AT+BAUD8";
+        string = BTADDON_BAUD_AT;
         PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
 
         ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
         if (ret == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
-            if (strcmp((char *)data, "OK115200") == 0) {
-                PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_("115200"));
+            if (strcmp((char *)data, "OK" BTADDON_BAUD_NUM) == 0) {
+                PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_(BTADDON_BAUD_NUM));
             } else {
                 PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), len, data);
             }
