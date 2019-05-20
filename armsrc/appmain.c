@@ -755,9 +755,17 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_old(CMD_ACK, bits, 0, 0, 0, 0);
             break;
         }
-        case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K:
-            ModThenAcquireRawAdcSamples125k(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+        case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K: {
+            struct p {
+               uint32_t delay;
+               uint16_t ones;
+               uint16_t zeros;
+            } PACKED;
+            struct p *payload;
+            payload = (struct p*)packet->data.asBytes;
+            ModThenAcquireRawAdcSamples125k(payload->delay, payload->zeros, payload->ones, packet->data.asBytes+8);
             break;
+            }
         case CMD_LF_SNIFF_RAW_ADC_SAMPLES: {
             uint32_t bits = SniffLF();
             reply_old(CMD_ACK, bits, 0, 0, 0, 0);

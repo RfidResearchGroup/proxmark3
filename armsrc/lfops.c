@@ -242,7 +242,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     // tell client we are done
-    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_ng(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, NULL, 0);
 }
 
 /* blank r/w tag data stream
@@ -1409,7 +1409,7 @@ void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t fl
 
     // make sure tag is fully powered up...
     WaitMS(4);
-    
+
     // Trigger T55x7 in mode.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitUS(t_config.start_gap);
@@ -1423,7 +1423,7 @@ void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t fl
         // std opcode 10 == page 0
         // std opcode 11 == page 1
         T55xxWriteBit(1);
-        T55xxWriteBit(page);        
+        T55xxWriteBit(page);
     }
 
     if (pwd_mode) {
@@ -1479,8 +1479,8 @@ void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t fl
 // Write one card block in page 0, no lock
 // uses NG format
 void T55xxWriteBlock(uint8_t *data) {
-    t55xx_write_block_t *c = (t55xx_write_block_t *)data;    
-    T55xxWriteBlockExt(c->data, c->blockno, c->pwd, c->flags);    
+    t55xx_write_block_t *c = (t55xx_write_block_t *)data;
+    T55xxWriteBlockExt(c->data, c->blockno, c->pwd, c->flags);
     reply_ng(CMD_T55XX_WRITE_BLOCK, PM3_SUCCESS, NULL, 0);
 }
 

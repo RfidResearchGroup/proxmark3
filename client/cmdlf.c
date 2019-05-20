@@ -145,32 +145,37 @@ static int usage_lf_find(void) {
 int CmdLFCommandRead(const char *Cmd) {
 
     bool errors = false;
-
-    uint32_t arg0 = 0;
-    uint32_t arg1 = 0;
-    uint32_t arg2 = 0;
-    uint8_t data[PM3_CMD_DATA_SIZE];
     uint16_t datalen = 0;
+
+    struct p {
+        uint32_t delay;
+        uint16_t ones;
+        uint16_t zeros;
+        uint8_t data[PM3_CMD_DATA_SIZE - 8];
+    } PACKED;
+
+    struct p payload;
+
 
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_lf_cmdread();
-            case 'c':
-                datalen = param_getstr(Cmd, cmdp + 1, (char *)&data, sizeof(data));
+            case 'c':  // cmd bytes 1010
+                datalen = param_getstr(Cmd, cmdp + 1, (char *)&payload.data, sizeof(payload.data));
                 cmdp += 2;
                 break;
-            case 'd':
-                arg0 = param_get32ex(Cmd, cmdp + 1, 0, 10);
+            case 'd':  // delay
+                payload.delay = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
-            case 'z':
-                arg1 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+            case 'z':  // zero
+                payload.zeros = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
                 break;
-            case 'o':
-                arg2 = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
+            case 'o':  // ones
+                payload.ones = param_get32ex(Cmd, cmdp + 1, 0, 10) & 0xFFFF;
                 cmdp += 2;
                 break;
             default:
@@ -183,12 +188,26 @@ int CmdLFCommandRead(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0)  return usage_lf_cmdread();
 
+    PrintAndLogEx(SUCCESS, "Sending");
     clearCommandBuffer();
-    SendCommandOLD(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, arg0, arg1, arg2, data, datalen);
+    SendCommandNG(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, (uint8_t*)&payload, 8 + datalen );
 
-    WaitForResponse(CMD_ACK, NULL);
-    getSamples(0, true);
-    return 0;
+    printf("\n");
+    uint8_t i = 10;
+    while ( !WaitForResponseTimeout(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, NULL, 2000 ) && i != 0) {
+        printf(".");
+        fflush(stdout);
+        i--;
+    }
+    printf("\n");
+
+    if ( i ) {
+        PrintAndLogEx(SUCCESS, "Downloading response signal data");
+        getSamples(0, true);
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+    return PM3_EOPABORTED;
 }
 
 int CmdFlexdemod(const char *Cmd) {

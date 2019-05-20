@@ -199,7 +199,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     }
 
     if (!silent) {
-        Dbprintf("Done, saved %d out of %d seen samples at %d bits/sample", sample_total_saved, sample_total_numbers, bits_per_sample);
+        Dbprintf("Done, saved " _YELLOW_("%d")"out of " _YELLOW_("%d")"seen samples at " _YELLOW_("%d")"bits/sample", sample_total_saved, sample_total_numbers, bits_per_sample);
         Dbprintf("buffer samples: %02x %02x %02x %02x %02x %02x %02x %02x ...",
                  dest[0], dest[1], dest[2], dest[3], dest[4], dest[5], dest[6], dest[7]);
     }
