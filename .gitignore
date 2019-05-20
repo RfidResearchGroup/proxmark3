@@ -22,6 +22,9 @@
 version.c
 *.json
 
+# new build file for add-ons.
+Makefile.platform
+
 !client/hardnested/*.bin
 !client/hardnested/tables/*.z
 client/ui/ui_overlays.h
