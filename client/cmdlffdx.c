@@ -297,7 +297,7 @@ static int CmdFdxClone(const char *Cmd) {
         ng.pwd = 0;
         ng.blockno = i;
         ng.flags = 0;
-        
+
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
