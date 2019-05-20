@@ -347,7 +347,7 @@ int CmdLFSetConfig(const char *Cmd) {
     sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SET_LF_SAMPLING_CONFIG, 0, 0, 0, &config, sizeof(sample_config));
+    SendCommandNG(CMD_SET_LF_SAMPLING_CONFIG, (uint8_t *)&config, sizeof(sample_config));
     return 0;
 }
 
