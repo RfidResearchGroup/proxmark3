@@ -751,8 +751,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             setSamplingConfig((sample_config *) packet->data.asBytes);
             break;
         case CMD_ACQUIRE_RAW_ADC_SAMPLES_125K: {
-            uint32_t bits = SampleLF(packet->oldarg[0], packet->oldarg[1]);
-            reply_old(CMD_ACK, bits, 0, 0, 0, 0);
+            struct p {
+                uint8_t silent;
+                uint32_t samples;
+            } PACKED;
+            struct p *payload;
+            payload = (struct p*)packet->data.asBytes;
+            uint32_t bits = SampleLF(payload->silent, payload->samples);
+            reply_ng(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
         case CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K: {

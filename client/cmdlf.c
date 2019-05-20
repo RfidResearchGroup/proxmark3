@@ -207,7 +207,7 @@ int CmdLFCommandRead(const char *Cmd) {
         return PM3_SUCCESS;
     }
     PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-    return PM3_EOPABORTED;
+    return PM3_ETIMEOUT;
 }
 
 int CmdFlexdemod(const char *Cmd) {
@@ -353,22 +353,34 @@ int CmdLFSetConfig(const char *Cmd) {
 
 bool lf_read(bool silent, uint32_t samples) {
     if (!session.pm3_present) return false;
+
+    struct p {
+        uint8_t silent;
+        uint32_t samples;
+    } PACKED;
+
+    struct p payload;
+    payload.silent = silent;
+    payload.samples = samples;
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, silent, samples, 0, NULL, 0);
+    SendCommandNG(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
     if (g_lf_threshold_set) {
-        WaitForResponse(CMD_ACK, &resp);
+        WaitForResponse(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, &resp);
     } else {
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+        if (!WaitForResponseTimeout(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, &resp, 2500)) {
             PrintAndLogEx(WARNING, "command execution time out");
-            return false;
+            return PM3_ETIMEOUT;
         }
     }
-    // resp.oldarg[0] is bits read not bytes read.
-    getSamples(resp.oldarg[0] / 8, silent);
 
-    return true;
+    // resp.oldarg[0] is bits read not bytes read.
+    uint32_t bits = (resp.data.asDwords[0] / 8 );
+    getSamples(bits, silent);
+
+    return PM3_SUCCESS;
 }
 
 int CmdLFRead(const char *Cmd) {
