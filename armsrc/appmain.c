@@ -325,8 +325,8 @@ extern struct version_information version_information;
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern char *_bootphase1_version_pointer, _flash_start, _flash_end, _bootrom_start, _bootrom_end, __data_src_start__;
 void SendVersion(void) {
-    char temp[PM3_CMD_DATA_SIZE]; /* Limited data payload in USB packets */
-    char VersionString[PM3_CMD_DATA_SIZE] = { '\0' };
+    char temp[PM3_CMD_DATA_SIZE - 12]; /* Limited data payload in USB packets */
+    char VersionString[PM3_CMD_DATA_SIZE - 12] = { '\0' };
 
     /* Try to find the bootrom version information. Expect to find a pointer at
      * symbol _bootphase1_version_pointer, perform slight sanity checks on the
@@ -357,7 +357,21 @@ void SendVersion(void) {
     // Send Chip ID and used flash memory
     uint32_t text_and_rodata_section_size = (uint32_t)&__data_src_start__ - (uint32_t)&_flash_start;
     uint32_t compressed_data_section_size = common_area.arg1;
-    reply_old(CMD_ACK, *(AT91C_DBGU_CIDR), text_and_rodata_section_size + compressed_data_section_size, 0, VersionString, strlen(VersionString));
+
+    struct p {
+        uint32_t id;
+        uint32_t section_size;
+        uint32_t versionstr_len;
+        char versionstr[PM3_CMD_DATA_SIZE - 12];
+    } PACKED;
+
+    struct p payload;
+    payload.id = *(AT91C_DBGU_CIDR);
+    payload.section_size = text_and_rodata_section_size + compressed_data_section_size;
+    payload.versionstr_len = strlen(VersionString);
+    memcpy(payload.versionstr, VersionString, strlen(VersionString)); 
+
+    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t*)&payload, 12 + strlen(VersionString));
 }
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
@@ -551,7 +565,7 @@ at the same place! :-)
 */
 #define LIGHT_LEVELS 20
 
-void ListenReaderField(int limit) {
+void ListenReaderField(uint8_t limit) {
 #define LF_ONLY 1
 #define HF_ONLY 2
 #define REPORT_CHANGE 10    // report new values only if they have changed at least by REPORT_CHANGE
@@ -1271,7 +1285,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
 
         case CMD_LISTEN_READER_FIELD:
-            ListenReaderField(packet->oldarg[0]);
+            if (packet->length != sizeof(uint8_t) )
+                break;
+            ListenReaderField(packet->data.asBytes[0]);
             break;
 
         case CMD_FPGA_MAJOR_MODE_OFF: // ## FPGA Control
@@ -1346,7 +1362,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_READ_MEM:
-            ReadMem(packet->oldarg[0]);
+            if (packet->length != sizeof(uint32_t))
+                break;
+            ReadMem(packet->data.asDwords[0]);
             break;
 #ifdef WITH_FLASH
         case CMD_FLASHMEM_SET_SPIBAUDRATE:
@@ -1517,11 +1535,11 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
         case CMD_SET_LF_DIVISOR:
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            FpgaSendCommand(FPGA_CMD_SET_DIVISOR, packet->oldarg[0]);
+            FpgaSendCommand(FPGA_CMD_SET_DIVISOR, packet->data.asBytes[0]);
             break;
 
         case CMD_SET_ADC_MUX:
-            switch (packet->oldarg[0]) {
+            switch (packet->data.asBytes[0]) {
                 case 0:
                     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
                     break;

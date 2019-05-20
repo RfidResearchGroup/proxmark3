@@ -62,7 +62,7 @@ void print_result(char *name, uint8_t *buf, size_t len);
 //void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
-void ListenReaderField(int limit);
+void ListenReaderField(uint8_t limit);
 extern int ToSendMax;
 extern uint8_t ToSend[];
 

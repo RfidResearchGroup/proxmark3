@@ -24,6 +24,7 @@ static int CmdHelp(const char *Cmd);
 
 static int usage_hw_detectreader(void) {
     PrintAndLogEx(NORMAL, "Start to detect presences of reader field");
+    PrintAndLogEx(NORMAL, "press pm3 button to change modes and finally exit");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hw detectreader [h] <L|H>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -349,7 +350,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
 }
 
 static int CmdDetectReader(const char *Cmd) {
-    uint16_t arg = 0;
+    uint8_t arg = 0;
     char c = toupper(Cmd[0]);
     switch (c) {
         case 'L':
@@ -365,7 +366,7 @@ static int CmdDetectReader(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LISTEN_READER_FIELD, arg, 0, 0, NULL, 0);
+    SendCommandNG(CMD_LISTEN_READER_FIELD, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;
 }
 
@@ -388,14 +389,16 @@ static int CmdLCD(const char *Cmd) {
 }
 
 static int CmdLCDReset(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far    
     clearCommandBuffer();
-    SendCommandMIX(CMD_LCD_RESET, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+    SendCommandNG(CMD_LCD_RESET, NULL, 0);
     return PM3_SUCCESS;
 }
 
 static int CmdReadmem(const char *Cmd) {
+    uint32_t address = strtol(Cmd, NULL, 0);
     clearCommandBuffer();
-    SendCommandMIX(CMD_READ_MEM, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+    SendCommandNG(CMD_READ_MEM, (uint8_t *)&address, sizeof(address));
     return PM3_SUCCESS;
 }
 
@@ -412,15 +415,15 @@ static int CmdReset(const char *Cmd) {
  * 600kHz.
  */
 static int CmdSetDivisor(const char *Cmd) {
-    uint16_t arg = strtol(Cmd, NULL, 0);
+    uint8_t arg = param_get8ex(Cmd, 0, 95, 10);
 
-    if (arg < 19 || arg > 255) {
+    if (arg < 19) {
         PrintAndLogEx(ERR, "divisor must be between 19 and 255");
         return PM3_EINVARG;
     }
     // 12 000 000 (12Mhz)
     clearCommandBuffer();
-    SendCommandMIX(CMD_SET_LF_DIVISOR, arg, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SET_LF_DIVISOR, (uint8_t *)&arg, sizeof(arg));
     PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f kHz", ((double)12000 / (arg + 1)));
     return PM3_SUCCESS;
 }
@@ -444,7 +447,7 @@ static int CmdSetMux(const char *Cmd) {
         return PM3_EINVARG;
     }
     clearCommandBuffer();
-    SendCommandMIX(CMD_SET_ADC_MUX, arg, 0, 0, NULL, 0);
+    SendCommandNG(CMD_SET_ADC_MUX, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;
 }
 
@@ -585,7 +588,7 @@ void pm3_version(bool verbose) {
 
     SendCommandNG(CMD_VERSION, NULL, 0);
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
@@ -599,8 +602,19 @@ void pm3_version(bool verbose) {
             PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
 
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(NORMAL, (char *)resp.data.asBytes);
-        lookupChipID(resp.oldarg[0], resp.oldarg[1]);
+
+        struct p {
+            uint32_t id;
+            uint32_t section_size;
+            uint32_t versionstr_len;
+            char versionstr[PM3_CMD_DATA_SIZE - 12];
+        } PACKED;
+
+        struct p *payload = (struct p *)&resp.data.asBytes;
+
+        PrintAndLogEx(NORMAL,  payload->versionstr);
+
+        lookupChipID(payload->id, payload->section_size);
     }
     PrintAndLogEx(NORMAL, "\n");
 }
