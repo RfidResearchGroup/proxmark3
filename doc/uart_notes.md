@@ -114,9 +114,7 @@ The USB-UART speed is selected when a program opens the port. E.g.
 
 When the BT add-on is turned off, the HC-06 dongle will not be connected and will fall back into its AT configuration mode (its LED is blinking).
 
-`tools/btaddon/hc06_factory_master.py` changes several times the USB-UART baudrate and parity till it matches the HC-06 dongle settings, then changes the baudrate and parity of the dongle to a default value. (`hc06_factory.py` does more but we're only interested in baudrate in this discussion)
-
-TODO tools/btaddon/hc06_factory_master.py
+`tools/btaddon/hc06_factory.py` changes several times the USB-UART baudrate and parity till it matches the HC-06 dongle settings, then changes the baudrate and parity of the dongle to a default value. (`hc06_factory.py` does more but we're only interested in baudrate in this discussion)
 
 ## Proxmark3 FPC USART + FTDI
 
@@ -147,6 +145,5 @@ Add-on gets powered externally via the "battery" pin.
 
 Turn BTpower switch ON, leave Battery switch OFF
 
-Use e.g. `tools/btaddon/hc06_factory_slave.py`
+Use e.g. `tools/btaddon/hc06_factory.py` with `role = b'S'`
 
-TODO tools/btaddon/hc06_factory_slave.py
