@@ -381,13 +381,8 @@ int getNedapBits(uint32_t cn, uint8_t *nedapBits) {
     num_to_bytebits((0 >> 0) & 0xFF, 8, pre + 110);
     num_to_bytebits((0 >> 8) & 0xFF, 8, pre + 119);
 
-
-    // add paritybits (bitsource, dest, sourcelen, paritylen, parityType (odd, even,)
-    addParity(pre, pre + 64, 64, 8, 1);
-    addParity(pre + 64, pre + 64, 64, 8, 1);
-
-    pre[63] = GetParity(DemodBuffer, EVEN, 63);
-    pre[127] = GetParity(DemodBuffer + 64, EVEN, 63);
+    pre[63] = GetParity(pre, EVEN, 63);
+    pre[127] = GetParity(pre + 64, EVEN, 63);
 
     memcpy(nedapBits, pre, 128);
 
