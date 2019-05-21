@@ -149,31 +149,34 @@ Use e.g. `tools/btaddon/hc06_factory.py` with `role = b'S'`
 
 ## HC-06 AT Commands
 
-The HC-06 supports a subset of the AT commands and they are listed below. The commands are limited and varies in how to give parameters. A pure informatative command like AT+VERSION just returns a string with current firmware the HC-06 has installed.
-The BAUD/PIN/NAME/P/LED commands takes its parameter direct after the command. 
- 
- AT+BAUD8
- CCCCCCCP
+The HC-06 supports a subset of the AT commands and they are listed below. The commands are limited and vary in how to give parameters. A pure informative command like AT+VERSION just returns a string with current firmware the HC-06 has installed.
 
- where AT+BAUD is the command part and 8 is the parameter.  The 8 indicates a baudrate of 11520.
+The BAUD/PIN/NAME/P/LED commands take their parameter directly after the command. E.g.:
  
- AT+ROLE=S
- CCCCCCCPP
- 
-where AT+ROLE uses a equal sign to denote the parameter. 
+    AT+BAUD8
+           ^   parameter
+       ^^^^    command
 
-```
-AT+VERSION    -- prints firmware version
-AT+BAUD8      -- set baudrate 115200
-AT+PIN1234    -- set PINCODE to 1234. (must be numbers)
-AT+NAMEpm3    -- set devicename to `pm3`
-AT+ROLE=S     -- set device role to `slave`
-AT+ROLE=M     -- set device role to `master`
-AT+LED0       -- turn LED off
-AT+LED1       -- turn LED on
-AT+PN         -- set NO partiy
-AT+PE         -- set EVEN parity
-AT+PO         -- set ODD parity
-```
+The "8" indicates a baudrate of 115200.
 
-We recommend you use the scripts when trying to set these parameters.
+The ROLE command takes its parameter after an equal sign:
+
+    AT+ROLE=S
+            ^  parameter
+       ^^^^    command
+
+|Command            |Description                                           |Reply         |
+|-------------------|------------------------------------------------------|--------------|
+|`AT+VERSION`       |print firmware version                                |`hc01.comV2.0`|
+|`AT+BAUD8`         |set baudrate to 115200                                |`OK115200`    |
+|`AT+PIN1234`       |set PINCODE to 1234. (must be numbers)                |`OKsetPIN`    |
+|`AT+NAMEPM3_RDV4.0`|set device name (as shown to BT hosts) to `PM3_RDV4.0`|`OKsetname`   |
+|`AT+ROLE=S`        |set device role to *slave*                            |`OK+ROLE:S`   |
+|`AT+ROLE=M`        |set device role to *master*                           |`OK+ROLE:M`   |
+|`AT+LED0`          |turn LED off                                          |`LED OFF`     |
+|`AT+LED1`          |turn LED on                                           |`LED ON`      |
+|`AT+PN`            |set NO parity                                         |`OK None`     |
+|`AT+PE`            |set EVEN parity                                       |`OK Even`     |
+|`AT+PO`            |set ODD parity                                        |`OK Odd`      |
+
+We recommend you to use the scripts when trying to set these parameters.
