@@ -147,3 +147,33 @@ Turn BTpower switch ON, leave Battery switch OFF
 
 Use e.g. `tools/btaddon/hc06_factory.py` with `role = b'S'`
 
+## HC-06 AT Commands
+
+The HC-06 supports a subset of the AT commands and they are listed below. The commands are limited and varies in how to give parameters. A pure informatative command like AT+VERSION just returns a string with current firmware the HC-06 has installed.
+The BAUD/PIN/NAME/P/LED commands takes its parameter direct after the command. 
+ 
+ AT+BAUD8
+ CCCCCCCP
+
+ where AT+BAUD is the command part and 8 is the parameter.  The 8 indicates a baudrate of 11520.
+ 
+ AT+ROLE=S
+ CCCCCCCPP
+ 
+where AT+ROLE uses a equal sign to denote the parameter. 
+
+```
+AT+VERSION    -- prints firmware version
+AT+BAUD8      -- set baudrate 115200
+AT+PIN1234    -- set PINCODE to 1234. (must be numbers)
+AT+NAMEpm3    -- set devicename to `pm3`
+AT+ROLE=S     -- set device role to `slave`
+AT+ROLE=M     -- set device role to `master`
+AT+LED0       -- turn LED off
+AT+LED1       -- turn LED on
+AT+PN         -- set NO partiy
+AT+PE         -- set EVEN parity
+AT+PO         -- set ODD parity
+```
+
+We recommend you use the scripts when trying to set these parameters.
