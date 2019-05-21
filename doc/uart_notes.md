@@ -37,7 +37,7 @@ This USART can be reached from the host client (if connected via USB-CDC) throug
 So, `usart config` changes the Proxmark3 USART baudrate and parity, while e.g. `usart txrx d AT+Px` and `usart txrx d AT+BAUDx` changes the BT add-on parity and baudrate.
 And for things to work fine, both sets have to match!
 
-Internally, the desired baudrate is converted to UART settings: a BRGR and a FP. The resulting baudrate will be close to but not always equal to the desired baudrate. Serial ports typically have some error tolerance in the actual baudrates. Theoretically < 2.5% on each side (so 5% in total), < 2% to be on the safe side. In the current firmware configuration, the Proxmark3 can provide any baudrate up to 2Mbauds with an error of max 2%, and selected baudrates up to 6Mbauds. TODO to be tested.
+Internally, the desired baudrate is converted to UART settings: a BRGR and a FP. The resulting baudrate will be close to but not always equal to the desired baudrate. Serial ports typically have some error tolerance in the actual baudrates. Theoretically < 2.5% on each side (so 5% in total), < 2% to be on the safe side. In the current firmware configuration, the Proxmark3 can provide any baudrate up to 2Mbauds with an error of max 2%, and selected baudrates up to 6Mbauds (tested with a FTDI C232HM DDHSL-0 cable).
 
 ## Proxmark3 FPC USART + BT add-on (blue shark)
 
