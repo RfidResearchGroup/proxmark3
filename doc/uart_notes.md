@@ -180,3 +180,5 @@ The ROLE command takes its parameter after an equal sign:
 |`AT+PO`            |set ODD parity                                        |`OK Odd`      |
 
 We recommend you to use the scripts when trying to set these parameters.
+
+We've noticed that the HC-06 in Master mode doesn't always reply properly to the commands, especially to AT+VERSION. If you have such a problem, temporarily switch it to Slave mode, power cycle it and send again AT+VERSION.
