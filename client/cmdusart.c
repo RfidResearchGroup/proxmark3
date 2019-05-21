@@ -173,7 +173,7 @@ static int usart_txrx(uint8_t *srcdata, size_t srclen, uint8_t *dstdata, size_t 
     memcpy(payload.data, srcdata, srclen);
     SendCommandNG(CMD_USART_TXRX, (uint8_t *)&payload, srclen + sizeof(payload.waittime));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_USART_TXRX, &resp, 1000)) {
+    if (!WaitForResponseTimeout(CMD_USART_TXRX, &resp, waittime + 500)) {
         return PM3_ETIMEOUT;
     }
     if (resp.status == PM3_SUCCESS) {
