@@ -2008,7 +2008,7 @@ void MifareSetMod(uint8_t *datain) {
     uint64_t ui64Key = bytes_to_num(datain + 1, 6);
 
     // variables
-    uint16_t isOK = PM3_EFATAL;
+    uint16_t isOK = PM3_EUNDEF;
     uint8_t uid[10] = {0};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
