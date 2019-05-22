@@ -25,7 +25,7 @@ static int usage_lf_io_read(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        lf io read");
     PrintAndLogEx(NORMAL, "        lf io read 1");
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 static int usage_lf_io_sim(void) {
@@ -41,7 +41,7 @@ static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf io sim 26 101 1337");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_io_clone(void) {
@@ -58,7 +58,7 @@ static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf io clone 26 101 1337");
-    return 0;
+    return PM3_SUCCESS;
 }
 /*
 // this read loops on device side.
@@ -68,7 +68,7 @@ static int CmdIOProxRead_device(const char *Cmd) {
     int findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
     SendCommandMIX(CMD_IO_DEMOD_FSK, findone, 0, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 //by marshmellow
@@ -76,13 +76,12 @@ static int CmdIOProxRead_device(const char *Cmd) {
 //print ioprox ID and some format details
 static int CmdIOProxDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    int retval = 0;
-    int idx = 0;
+    int idx = 0, retval = PM3_SUCCESS;
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
     if (size < 65) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox not enough samples in GraphBuffer");
-        return 0;
+        return PM3_ESOFT;
     }
     //get binary from fsk wave
     int waveIdx = 0;
@@ -105,7 +104,7 @@ static int CmdIOProxDemod(const char *Cmd) {
                 PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox error demoding fsk %d", idx);
             }
         }
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(bits, size, idx);
     setClockGrid(64, waveIdx + (idx * 64));
@@ -115,7 +114,7 @@ static int CmdIOProxDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox data not found - FSK Bits: %d", size);
             if (size > 92) PrintAndLogEx(DEBUG, "%s", sprint_bin_break(bits, 92, 16));
         }
-        return retval;
+        return PM3_ESOFT;
     }
 
     //Index map
@@ -154,12 +153,12 @@ static int CmdIOProxDemod(const char *Cmd) {
 
     if (crc == calccrc) {
         snprintf(crcStr, 3, "ok");
-        retval = 1;
+
     } else {
         PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
 
         snprintf(crcStr, sizeof(crcStr), "failed 0x%02X != 0x%02X", crc, calccrc);
-        retval = 0;
+        retval = PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
@@ -202,9 +201,9 @@ static int CmdIOProxSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating IOProx version: %u FC: %u; CN: %u\n", version, fc, cn);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
-    if (!getIOProxBits(version, fc, cn, bits)) {
+    if (getIOProxBits(version, fc, cn, bits) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
     // IOProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
     // arg1 --- fcHigh<<8 + fcLow
@@ -241,9 +240,9 @@ static int CmdIOProxClone(const char *Cmd) {
         PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
     }
 
-    if (!getIOProxBits(version, fc, cn, bits)) {
+    if (getIOProxBits(version, fc, cn, bits) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
@@ -257,7 +256,7 @@ static int CmdIOProxClone(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_IO_CLONE_TAG, blocks[1], blocks[2], 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -272,7 +271,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFIO(const char *Cmd) {
@@ -348,6 +347,6 @@ int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
     memcpy(bits, pre, sizeof(pre));
 
     PrintAndLogEx(SUCCESS, "IO raw bits:\n %s \n", sprint_bin(bits, 64));
-    return 1;
+    return PM3_SUCCESS;
 }
 
