@@ -22,7 +22,7 @@ static int usage_lf_nedap_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf nedap clone 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 
@@ -37,7 +37,7 @@ static int usage_lf_nedap_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf nedap sim 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
@@ -45,9 +45,9 @@ static int usage_lf_nedap_sim(void) {
 static int CmdLFNedapDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //raw ask demod no start bit finding just get binary from wave
-    if (!ASKbiphaseDemod("0 64 1 0", false)) {
+    if (ASKbiphaseDemod("0 64 1 0", false) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap ASKbiphaseDemod failed");
-        return 0;
+        return PM3_ESOFT;
     }
     size_t size = DemodBufferLen;
     int idx = detectNedap(DemodBuffer, &size);
@@ -66,7 +66,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
             else
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap idx: %d", idx);
         }
-        return 0;
+        return PM3_ESOFT;
     }
 
     /* Index map                                                      E                                                                              E
@@ -102,13 +102,13 @@ static int CmdLFNedapDemod(const char *Cmd) {
     uint8_t firstParity = GetParity(DemodBuffer, EVEN, 63);
     if (firstParity != DemodBuffer[63]) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap 1st 64bit parity check failed:  %d|%d ", DemodBuffer[63], firstParity);
-        return 0;
+        return PM3_ESOFT;
     }
 
     uint8_t secondParity = GetParity(DemodBuffer + 64, EVEN, 63);
     if (secondParity != DemodBuffer[127]) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Nedap 2st 64bit parity check failed:  %d|%d ", DemodBuffer[127], secondParity);
-        return 0;
+        return PM3_ESOFT;
     }
 
     // ok valid card found!
@@ -136,7 +136,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
         PrintAndLogEx(DEBUG, "BIN:\n%s", sprint_bin_break(DemodBuffer, 128, 64));
     }
 
-    return 1;
+    return PM3_SUCCESS;
 }
 /*
 configuration
@@ -181,9 +181,9 @@ static int CmdLFNedapClone(const char *Cmd) {
 
     cardnumber = (cn & 0x00FFFFFF);
 
-    if ( !getNedapBits(cardnumber, bits)) {
+    if ( getNedapBits(cardnumber, bits) == PM3_SUCCESS ) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     ((ASK/DIphase   data rawdemod ab 0 64 1 0
@@ -221,10 +221,10 @@ static int CmdLFNedapClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 
@@ -245,9 +245,9 @@ static int CmdLFNedapSim(const char *Cmd) {
     // NEDAP,  Biphase = 2, clock 64, inverted,  (DIPhase == inverted BIphase
     uint8_t  clk = 64, encoding = 2, separator = 0, invert = 1;
 
-    if (!getNedapBits(cardnumber, bs)) {
+    if (getNedapBits(cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "bin  %s", sprint_bin_break(bs, 128, 32));
@@ -306,7 +306,7 @@ static int CmdLFNedapChk(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Nedap checksum: 0x%X", ((ch << 8) | cl));
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -322,7 +322,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFNedap(const char *Cmd) {
@@ -387,7 +387,7 @@ int getNedapBits(uint32_t cn, uint8_t *nedapBits) {
     memcpy(nedapBits, pre, 128);
 
     // 1111111110001011010000010110100011001001000010110101001101011001000110011010010000000000100001110001001000000001000101011100111
-    return 1;
+    return PM3_SUCCESS;
 }
 /*
  - UID: 001630
