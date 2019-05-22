@@ -87,7 +87,7 @@ static int CmdTIDemod(const char *Cmd) {
     int i, j, TagType;
     int lowSum = 0, highSum = 0;;
     int lowTot = 0, highTot = 0;
-    int retval = 0;
+    int retval = PM3_ESOFT;
 
     for (i = 0; i < GraphTraceLen - convLen; i++) {
         lowSum = 0;
@@ -216,7 +216,7 @@ static int CmdTIDemod(const char *Cmd) {
         goto out;
     } else if (TagType == 0x7E) {
         PrintAndLogEx(INFO, "Readonly TI tag detected.");
-        retval = 1;
+        retval = PM3_SUCCESS;
         goto out;
     } else if (TagType == 0xFE) {
         PrintAndLogEx(INFO, "Rewriteable TI tag detected.");
@@ -259,14 +259,14 @@ static int CmdTIDemod(const char *Cmd) {
         if (crc != (shift2 & 0xFFFF))
             PrintAndLogEx(WARNING, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
 
-        retval = 1;
+        retval = PM3_SUCCESS;
         goto out;
     } else {
         PrintAndLogEx(WARNING, "Unknown tag type.");
     }
 
 out:
-    if (retval == 0)
+    if (retval != PM3_SUCCESS)
         save_restoreGB(GRAPH_RESTORE);
 
     return retval;
@@ -277,7 +277,7 @@ static int CmdTIRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     SendCommandNG(CMD_READ_TI_TYPE, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // write new data to a r/w TI tag
@@ -291,11 +291,11 @@ static int CmdTIWrite(const char *Cmd) {
 
     if (res < 2) {
         PrintAndLogEx(WARNING, "Please specify the data as two hex strings, optionally the CRC as a third");
-        return 1;
+        return PM3_EINVARG;
     }
     clearCommandBuffer();
     SendCommandMIX(CMD_WRITE_TI_TYPE, arg0, arg1, arg2, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -309,7 +309,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFTI(const char *Cmd) {
