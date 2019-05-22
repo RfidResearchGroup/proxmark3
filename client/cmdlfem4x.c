@@ -422,7 +422,7 @@ static int CmdEM410xRead_device(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     uint8_t findone = (cmdp == '1') ? 1 : 0;
     SendCommandMIX(CMD_EM410X_DEMOD, findone, 0, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 //by marshmellow
@@ -461,7 +461,7 @@ static int CmdEM410xSim(const char *Cmd) {
 
     if (param_gethex(Cmd, 0, uid, 10)) {
         PrintAndLogEx(FAILED, "UID must include 10 HEX symbols");
-        return 0;
+        return PM3_EINVARG;
     }
 
     param_getdec(Cmd, 1, &clk);
@@ -472,7 +472,7 @@ static int CmdEM410xSim(const char *Cmd) {
     ConstructEM410xEmulGraph(Cmd, clk);
 
     CmdLFSim("0"); //240 start_gap.
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdEM410xBrute(const char *Cmd) {
@@ -722,15 +722,15 @@ static bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t co
 //c012345678| 0
 //            |- must be zero
 
-static bool EMwordparitytest(uint8_t *bits) {
+static int EMwordparitytest(uint8_t *bits) {
 
     // last row/col parity must be 0
-    if (bits[44] != 0) return false;
+    if (bits[44] != 0) return PM3_ESOFT;
 
     // col parity check
     uint8_t c1 = bytebits_to_byte(bits, 8) ^ bytebits_to_byte(bits + 9, 8) ^ bytebits_to_byte(bits + 18, 8) ^ bytebits_to_byte(bits + 27, 8);
     uint8_t c2 = bytebits_to_byte(bits + 36, 8);
-    if (c1 != c2) return false;
+    if (c1 != c2) return PM3_ESOFT;
 
     // row parity check
     uint8_t rowP = 0;
@@ -740,13 +740,13 @@ static bool EMwordparitytest(uint8_t *bits) {
         if (i > 0 && (i % 9) == 0) {
 
             if (rowP != EVEN)
-                return false;
+                return PM3_ESOFT;
 
             rowP = 0;
         }
     }
     // all checks ok.
-    return true;
+    return PM3_SUCCESS;
 }
 
 //////////////// 4050 / 4450 commands
@@ -860,7 +860,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
         }
         if (!clk) {
             if (verbose || g_debugMode) PrintAndLogEx(WARNING, "Error: EM4x50 - didn't find a clock");
-            return 0;
+            return PM3_ESOFT;
         }
     } else tol = clk / 8;
 
@@ -905,9 +905,9 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             PrintAndLogEx(NORMAL, "No data found!, clock tried:%d", clk);
             PrintAndLogEx(NORMAL, "Try again with more samples.");
             PrintAndLogEx(NORMAL, "  or after a 'data askedge' command to clean up the read");
-            return 0;
+            return PM3_ESOFT;
         }
-    } else if (start < 0) return 0;
+    } else if (start < 0) return PM3_ESOFT;
 
     start = skip;
     snprintf(tmp2, sizeof(tmp2), "%d %d 1000 %d", clk, invert, clk * 47);
@@ -941,9 +941,9 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 
         i += 2;
 
-        if (ASKDemod(tmp2, false, false, 1) < 1) {
+        if (ASKDemod(tmp2, false, false, 1) != PM3_SUCCESS) {
             save_restoreGB(GRAPH_RESTORE);
-            return 0;
+            return PM3_ESOFT;
         }
         //set DemodBufferLen to just one block
         DemodBufferLen = skip / clk;
@@ -975,14 +975,14 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 
         PrintAndLogEx(NORMAL, "Parities checks | %s", (AllPTest) ? _GREEN_("Passed") : _RED_("Fail"));
 
-        if (AllPTest == 0) {
+        if (AllPTest == false) {
             PrintAndLogEx(NORMAL, "Try cleaning the read samples with " _YELLOW_("'data askedge'"));
         }
     }
 
     //restore GraphBuffer
     save_restoreGB(GRAPH_RESTORE);
-    return (int)AllPTest;
+    return AllPTest ? PM3_SUCCESS : PM3_ESOFT;
 }
 
 static int CmdEM4x50Read(const char *Cmd) {
@@ -1110,30 +1110,30 @@ static bool detectASK_BI() {
 }
 
 // param: idx - start index in demoded data.
-static bool setDemodBufferEM(uint32_t *word, size_t idx) {
+static int setDemodBufferEM(uint32_t *word, size_t idx) {
 
     //test for even parity bits.
     uint8_t parity[45] = {0};
     memcpy(parity, DemodBuffer, 45);
-    if (!EMwordparitytest(parity)) {
+    if (EMwordparitytest(parity) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM Parity tests failed");
-        return false;
+        return PM3_ESOFT;
     }
 
     // test for even parity bits and remove them. (leave out the end row of parities so 36 bits)
     if (!removeParity(DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 36)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM, failed removing parity");
-        return false;
+        return PM3_ESOFT;
     }
     setDemodBuff(DemodBuffer, 32, 0);
     *word = bytebits_to_byteLSBF(DemodBuffer, 32);
-    return true;
+    return PM3_SUCCESS;
 }
 
 // FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
-static bool demodEM4x05resp(uint32_t *word) {
+static int demodEM4x05resp(uint32_t *word) {
     size_t idx = 0;
     *word = 0;
     if (detectASK_MAN() && doPreambleSearch(&idx))
@@ -1153,7 +1153,7 @@ static bool demodEM4x05resp(uint32_t *word) {
         if (doPreambleSearch(&idx))
             return setDemodBufferEM(word, idx);
     }
-    return false;
+    return PM3_ESOFT;
 }
 
 //////////////// 4205 / 4305 commands
@@ -1249,7 +1249,7 @@ static int CmdEM4x05Write(const char *Cmd) {
 
     if (addr > 15) {
         PrintAndLogEx(NORMAL, "Address must be between 0 and 15");
-        return 1;
+        return PM3_EINVARG;
     }
     if (pwd == 1)
         PrintAndLogEx(NORMAL, "Writing address %d data %08X", addr, data);
@@ -1265,11 +1265,11 @@ static int CmdEM4x05Write(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-        return -1;
+        return PM3_ETIMEOUT;
     }
 
     if (!downloadSamplesEM())
-        return -1;
+        return PM3_ENODATA;
 
     //need 0 bits demoded (after preamble) to verify write cmd
     uint32_t dummy = 0;
@@ -1443,8 +1443,7 @@ static void printEM4x05ProtectionBits(uint32_t word) {
 
 //quick test for EM4x05/EM4x69 tag
 bool EM4x05IsBlock0(uint32_t *word) {
-    int res = EM4x05ReadWord_ext(0, 0, false, word);
-    return (res > 0) ? true : false;
+    return (EM4x05ReadWord_ext(0, 0, false, word) == PM3_SUCCESS);
 }
 
 static int CmdEM4x05Info(const char *Cmd) {
@@ -1466,8 +1465,8 @@ static int CmdEM4x05Info(const char *Cmd) {
 
     // read word 0 (chip info)
     // block 0 can be read even without a password.
-    if (!EM4x05IsBlock0(&block0))
-        return -1;
+    if (EM4x05IsBlock0(&block0) == false)
+        return PM3_ESOFT;
 
     // read word 1 (serial #) doesn't need pwd
     // continue if failed, .. non blocking fail.
@@ -1476,24 +1475,28 @@ static int CmdEM4x05Info(const char *Cmd) {
 
     // read word 4 (config block)
     // needs password if one is set
-    if (EM4x05ReadWord_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != 1)
-        return 0;
+    if (EM4x05ReadWord_ext(EM_CONFIG_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+        return PM3_ESOFT;
 
     printEM4x05config(word);
 
     // read word 14 and 15 to see which is being used for the protection bits
-    if (EM4x05ReadWord_ext(EM_PROT1_BLOCK, pwd, usePwd, &word) != 1) {
-        return 0;
+    if (EM4x05ReadWord_ext(EM_PROT1_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS) {
+        return PM3_ESOFT;
     }
     // if status bit says this is not the used protection word
     if (!(word & 0x8000)) {
-        if (EM4x05ReadWord_ext(EM_PROT2_BLOCK, pwd, usePwd, &word) != 1)
-            return 0;
+        if (EM4x05ReadWord_ext(EM_PROT2_BLOCK, pwd, usePwd, &word) != PM3_SUCCESS)
+            return PM3_ESOFT;
     }
+
     //something went wrong
-    if (!(word & 0x8000)) return 0;
+    if (!(word & 0x8000)) 
+        return PM3_ESOFT;
+
     printEM4x05ProtectionBits(word);
-    return 1;
+
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -1519,7 +1522,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFEM4X(const char *Cmd) {
