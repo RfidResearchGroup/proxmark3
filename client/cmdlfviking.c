@@ -20,7 +20,7 @@ static int usage_lf_viking_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf viking clone 1A337 Q5");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_viking_sim(void) {
@@ -34,7 +34,7 @@ static int usage_lf_viking_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf viking sim 1A337");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //by marshmellow
@@ -42,14 +42,14 @@ static int usage_lf_viking_sim(void) {
 static int CmdVikingDemod(const char *Cmd) {
     if (!ASKDemod(Cmd, false, false, 1)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
-        return 0;
+        return PM3_ESOFT;
     }
     size_t size = DemodBufferLen;
 
     int ans = detectViking(DemodBuffer, &size);
     if (ans < 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5) ? "[chksum error]" : "");
-        return 0;
+        return PM3_ESOFT;
     }
     //got a good demod
     uint32_t raw1 = bytebits_to_byte(DemodBuffer + ans, 32);
@@ -60,7 +60,7 @@ static int CmdVikingDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Raw: %08X%08X", raw1, raw2);
     setDemodBuff(DemodBuffer, 64, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
-    return 1;
+    return PM3_SUCCESS;
 }
 
 //by marshmellow
@@ -93,9 +93,9 @@ static int CmdVikingClone(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-        return -1;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdVikingSim(const char *Cmd) {
@@ -136,7 +136,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFViking(const char *Cmd) {
