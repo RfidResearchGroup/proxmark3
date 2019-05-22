@@ -541,7 +541,7 @@ static int CmdT55xxDetect(const char *Cmd) {
     if (errors) return usage_t55xx_detect();
 
     // sanity check.
-    if (!SanityOfflineCheck(useGB)) return PM3_ENODATA;
+    if (SanityOfflineCheck(useGB) != PM3_SUCCESS) return PM3_ENODATA;
 
     if (!useGB) {
         if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password))
@@ -1116,7 +1116,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
 
     if (strlen(Cmd) == 0) {
         // sanity check.
-        if (!SanityOfflineCheck(false)) return PM3_ENODATA;
+        if (SanityOfflineCheck(false) != PM3_SUCCESS) return PM3_ENODATA;
 
         bool pwdmode = false;
         uint32_t password = 0;
@@ -1397,7 +1397,7 @@ static int CmdT55xxInfo(const char *Cmd) {
 
     if (!frombuff && !gotdata) {
         // sanity check.
-        if (!SanityOfflineCheck(false)) return PM3_ENODATA;
+        if (SanityOfflineCheck(false) != PM3_SUCCESS) return PM3_ENODATA;
 
         bool pwdmode = false;
         uint32_t password = 0;
@@ -1521,14 +1521,26 @@ static int CmdT55xxDump(const char *Cmd) {
 
 bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     // arg0 bitmodes:
-    //  bit0 = pwdmode
-    //  bit1 = page to read from
+    //  b0 = pwdmode
+    //  b1 = page to read from
+    //  b2 = brute_mem (armside function)
     // arg1: which block to read
     // arg2: password
-    uint8_t arg0 = (page << 1 | (pwdmode));
+    struct p {
+        uint32_t password;
+        uint8_t blockno;
+        uint8_t page;
+        bool pwdmode;
+    } PACKED;
+    struct p payload;
+    payload.password = password;
+    payload.blockno = block;
+    payload.page = page & 0x1;
+    payload.pwdmode = pwdmode;
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_T55XX_READ_BLOCK, arg0, block, password, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
+    SendCommandNG(CMD_T55XX_READ_BLOCK, (uint8_t*)&payload, sizeof(payload));
+    if (!WaitForResponseTimeout(CMD_T55XX_READ_BLOCK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }

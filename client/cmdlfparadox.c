@@ -34,7 +34,7 @@ static int usage_lf_paradox_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf paradox sim 123 11223");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //by marshmellow
@@ -47,7 +47,7 @@ static int CmdParadoxDemod(const char *Cmd) {
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
-        return 0;
+        return PM3_ESOFT;
     }
 
     uint32_t hi2 = 0, hi = 0, lo = 0;
@@ -69,7 +69,7 @@ static int CmdParadoxDemod(const char *Cmd) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
 
-        return 0;
+        return PM3_ESOFT;
     }
 
     setDemodBuff(bits, size, idx);
@@ -77,7 +77,7 @@ static int CmdParadoxDemod(const char *Cmd) {
 
     if (hi2 == 0 && hi == 0 && lo == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox no value found");
-        return 0;
+        return PM3_ESOFT;
     }
 
     uint32_t fc = ((hi & 0x3) << 6) | (lo >> 26);
@@ -100,7 +100,7 @@ static int CmdParadoxDemod(const char *Cmd) {
     if (g_debugMode)
         printDemodBuff();
 
-    return 1;
+    return PM3_SUCCESS;
 }
 //by marshmellow
 //see ASKDemod for what args are accepted
@@ -127,7 +127,7 @@ static int CmdParadoxSim(const char *Cmd) {
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
 
-    // if ( !GetParadoxBits(facilitycode, cardnumber, bs)) {
+    // if ( GetParadoxBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
     // PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
     // return 1;
     // }
@@ -157,7 +157,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFParadox(const char *Cmd) {

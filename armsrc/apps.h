@@ -102,7 +102,7 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
 void T55xxResetRead(void);
 void T55xxWriteBlock(uint8_t *data);
 void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags);
-void T55xxReadBlock(uint16_t arg0, uint8_t Block, uint32_t Pwd);
+void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, uint32_t pwd);
 void T55xxWakeUp(uint32_t Pwd);
 void T55xx_ChkPwds(void);
 

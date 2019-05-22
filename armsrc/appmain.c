@@ -826,8 +826,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint16_t len;
                 uint16_t gap;
             } PACKED;
-            struct p *payload;
-            payload = (struct p*)packet->data.asBytes;
+            struct p *payload = (struct p*)packet->data.asBytes;
             // length, start gap, led control
             SimulateTagLowFrequency(payload->len, payload->gap, 1);
             reply_ng(CMD_SIMULATE_TAG_125K, PM3_EOPABORTED, NULL, 0);
@@ -846,7 +845,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             );
             break;
         case CMD_T55XX_READ_BLOCK: {
-            T55xxReadBlock(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            struct p {
+                uint32_t password;
+                uint8_t blockno;
+                uint8_t page;
+                bool pwdmode;
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            T55xxReadBlock(payload->page, payload->pwdmode, false, payload->blockno, payload->password);
             break;
         }
         case CMD_T55XX_WRITE_BLOCK:
