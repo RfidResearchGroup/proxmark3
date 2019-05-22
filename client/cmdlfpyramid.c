@@ -25,7 +25,7 @@ static int usage_lf_pyramid_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf pyramid clone 123 11223");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_pyramid_sim(void) {
@@ -42,7 +42,7 @@ static int usage_lf_pyramid_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf pyramid sim 123 11223");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //by marshmellow
@@ -55,7 +55,7 @@ static int CmdPyramidDemod(const char *Cmd) {
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid not enough samples");
-        return 0;
+        return PM3_ESOFT;
     }
     //get binary from fsk wave
     int waveIdx = 0;
@@ -73,7 +73,7 @@ static int CmdPyramidDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %d", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: error demoding fsk idx: %d", idx);
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
@@ -121,7 +121,7 @@ static int CmdPyramidDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %08X", size, idx, rawHi3);
-        return 0;
+        return PM3_ESOFT;
     }
 
     // ok valid card found!
@@ -189,7 +189,7 @@ static int CmdPyramidDemod(const char *Cmd) {
     if (g_debugMode)
         printDemodBuff();
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdPyramidRead(const char *Cmd) {
@@ -214,7 +214,7 @@ static int CmdPyramidClone(const char *Cmd) {
 
     if (!getPyramidBits(facilitycode, cardnumber, bs)) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     //Pyramid - compat mode, FSK2a, data rate 50, 4 data blocks
@@ -251,10 +251,10 @@ static int CmdPyramidClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdPyramidSim(const char *Cmd) {
@@ -277,7 +277,7 @@ static int CmdPyramidSim(const char *Cmd) {
 
     if (!getPyramidBits(facilitycode, cardnumber, bs)) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
@@ -308,7 +308,7 @@ int CmdLFPyramid(const char *Cmd) {
 int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Works for 26bits.
@@ -339,7 +339,7 @@ int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
     uint32_t crc = CRC8Maxim(csBuff, 13);
     num_to_bytebits(crc, 8, pyramidBits + 120);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 int demodPyramid(void) {
