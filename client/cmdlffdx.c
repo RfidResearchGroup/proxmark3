@@ -46,7 +46,7 @@ static int usage_lf_fdx_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf fdx clone 999 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_fdx_sim(void) {
@@ -61,7 +61,7 @@ static int usage_lf_fdx_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf fdx sim 999 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // clearing the topbit needed for the preambl detection.
@@ -105,23 +105,23 @@ static int CmdFDXBdemodBI(const char *Cmd) {
     errCnt = askdemod(bs, &size, &clk, &invert, maxErr, 0, 0);
     if (errCnt < 0 || errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB no data or error found %d, clock: %d", errCnt, clk);
-        return 0;
+        return PM3_ESOFT;
     }
 
     errCnt = BiphaseRawDecode(bs, &size, &offset, 1);
     if (errCnt < 0 || errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB BiphaseRawDecode: %d", errCnt);
-        return 0;
+        return PM3_ESOFT;
     }
 
     int preambleIndex = detectFDXB(bs, &size);
     if (preambleIndex < 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB preamble not found :: %d", preambleIndex);
-        return 0;
+        return PM3_ESOFT;
     }
     if (size != 128) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB incorrect data length found");
-        return 0;
+        return PM3_ESOFT;
     }
 
     setDemodBuff(bs, 128, preambleIndex);
@@ -130,7 +130,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
     size = removeParity(bs, preambleIndex + 11, 9, 2, 117);
     if (size != 104) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDXB error removeParity:: %d", size);
-        return 0;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:");
 
@@ -164,7 +164,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
         char *bin = sprint_bin_break(bs, size, 16);
         PrintAndLogEx(DEBUG, "DEBUG BinStream:\n%s", bin);
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 */
 
@@ -175,9 +175,9 @@ static int CmdFdxDemod(const char *Cmd) {
 
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
-    if (!ASKbiphaseDemod("0 32 1 100", false)) {
+    if (ASKbiphaseDemod("0 32 1 100", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ASKbiphaseDemod failed");
-        return 0;
+        return PM3_ESOFT;
     }
     size_t size = DemodBufferLen;
     int preambleIndex = detectFDXB(DemodBuffer, &size);
@@ -191,7 +191,7 @@ static int CmdFdxDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B Size not correct: %d", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ans: %d", preambleIndex);
-        return 0;
+        return PM3_ESOFT;
     }
 
     // set and leave DemodBuffer intact
@@ -201,7 +201,7 @@ static int CmdFdxDemod(const char *Cmd) {
     size = removeParity(DemodBuffer, 11, 9, 2, 117);
     if (size != 104) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B error removeParity: %d", size);
-        return 0;
+        return PM3_ESOFT;
     }
 
     //got a good demod
@@ -237,7 +237,7 @@ static int CmdFdxDemod(const char *Cmd) {
     // set block 0 for later
     //g_DemodConfig = T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT;
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdFdxRead(const char *Cmd) {
@@ -263,9 +263,9 @@ static int CmdFdxClone(const char *Cmd) {
     verify_values(countryid, animalid);
 
     // getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
-    if (!getFDXBits(animalid, countryid, 1, 0, 0, bs)) {
+    if (getFDXBits(animalid, countryid, 1, 0, 0, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     //Q5
@@ -301,10 +301,10 @@ static int CmdFdxClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdFdxSim(const char *Cmd) {
@@ -348,7 +348,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFFdx(const char *Cmd) {
@@ -421,6 +421,6 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
     num_to_bytebitsLSBF(extended >> 0, 8, bits + 101);
     num_to_bytebitsLSBF(extended >> 8, 8, bits + 110);
     num_to_bytebitsLSBF(extended >> 16, 8, bits + 119);
-    return 1;
+    return PM3_SUCCESS;
 }
 

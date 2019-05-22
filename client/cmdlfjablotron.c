@@ -22,7 +22,7 @@ static int usage_lf_jablotron_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf jablotron clone 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_jablotron_sim(void) {
@@ -36,7 +36,7 @@ static int usage_lf_jablotron_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf jablotron sim 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static uint8_t jablontron_chksum(uint8_t *bits) {
@@ -65,9 +65,9 @@ static int CmdJablotronDemod(const char *Cmd) {
 
     //Differential Biphase / di-phase (inverted biphase)
     //get binary from ask wave
-    if (!ASKbiphaseDemod("0 64 1 0", false)) {
+    if (ASKbiphaseDemod("0 64 1 0", false) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron ASKbiphaseDemod failed");
-        return 0;
+        return PM3_ESOFT;
     }
     size_t size = DemodBufferLen;
     int ans = detectJablotron(DemodBuffer, &size);
@@ -84,7 +84,7 @@ static int CmdJablotronDemod(const char *Cmd) {
             else
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron ans: %d", ans);
         }
-        return 0;
+        return PM3_ESOFT;
     }
 
     setDemodBuff(DemodBuffer, 64, ans);
@@ -113,7 +113,7 @@ static int CmdJablotronDemod(const char *Cmd) {
                   (uint16_t)(id >> 16) & 0xFFFF,
                   (uint16_t)id & 0xFFFF
                  );
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdJablotronRead(const char *Cmd) {
@@ -144,9 +144,9 @@ static int CmdJablotronClone(const char *Cmd) {
         PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
     }
 
-    if (!getJablotronBits(fullcode, bits)) {
+    if (getJablotronBits(fullcode, bits) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     blocks[1] = bytebits_to_byte(bits, 32);
@@ -175,10 +175,10 @@ static int CmdJablotronClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdJablotronSim(const char *Cmd) {
@@ -221,7 +221,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFJablotron(const char *Cmd) {
@@ -239,7 +239,7 @@ int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
     //chksum byte
     uint8_t chksum = jablontron_chksum(bits);
     num_to_bytebits(chksum, 8, bits + 56);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // ASK/Diphase fc/64 (inverted Biphase)

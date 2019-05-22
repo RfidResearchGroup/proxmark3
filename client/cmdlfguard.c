@@ -24,7 +24,7 @@ static int usage_lf_guard_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf gprox clone 26 123 11223");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_guard_sim(void) {
@@ -41,7 +41,7 @@ static int usage_lf_guard_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf gprox sim 26 123 11223");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //by marshmellow
@@ -54,9 +54,9 @@ static int CmdGuardDemod(const char *Cmd) {
 
     //Differential Biphase
     //get binary from ask wave
-    if (!ASKbiphaseDemod("0 64 0 0", false)) {
+    if (ASKbiphaseDemod("0 64 0 0", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ASKbiphaseDemod failed");
-        return 0;
+        return PM3_ESOFT;
     }
 
     size_t size = DemodBufferLen;
@@ -74,7 +74,7 @@ static int CmdGuardDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII ans: %d", preambleIndex);
-        return 0;
+        return PM3_ESOFT;
     }
 
     //got a good demod of 96 bits
@@ -89,7 +89,7 @@ static int CmdGuardDemod(const char *Cmd) {
     size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
     if (len != 72) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
-        return 0;
+        return PM3_ESOFT;
     }
     // get key and then get all 8 bytes of payload decoded
     xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
@@ -128,7 +128,7 @@ static int CmdGuardDemod(const char *Cmd) {
     else
         PrintAndLogEx(SUCCESS, "Unknown G-Prox-II Fmt Found: Format Len: %u, Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdGuardRead(const char *Cmd) {
@@ -154,9 +154,9 @@ static int CmdGuardClone(const char *Cmd) {
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
 
-    if (!getGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
+    if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     // Q5
@@ -190,10 +190,10 @@ static int CmdGuardClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdGuardSim(const char *Cmd) {
@@ -214,9 +214,9 @@ static int CmdGuardSim(const char *Cmd) {
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
 
-    if (!getGuardBits(fmtlen, facilitycode, cardnumber, bs)) {
+    if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
@@ -242,7 +242,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFGuard(const char *Cmd) {
@@ -374,6 +374,6 @@ int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
     guardBits[5] = 0;
 
     PrintAndLogEx(DEBUG, " FIN | %s\n", sprint_bin(guardBits, 96));
-    return 1;
+    return PM3_SUCCESS;
 }
 
