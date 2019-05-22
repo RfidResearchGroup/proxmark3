@@ -337,7 +337,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
 
     if (!found) {
         PrintAndLogEx(FAILED, "Sorry, add-on not found. Abort.");
-        return PM3_EFATAL;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "Reconfiguring add-on to default settings.");
@@ -359,7 +359,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         }
     } else {
         PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
-        return PM3_EFATAL;
+        return PM3_ESOFT;
     }
 
     memset(data, 0, sizeof(data));
@@ -377,7 +377,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         }
     } else {
         PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
-        return PM3_EFATAL;
+        return PM3_ESOFT;
     }
 
     memset(data, 0, sizeof(data));
@@ -395,7 +395,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         }
     } else {
         PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
-        return PM3_EFATAL;
+        return PM3_ESOFT;
     }
 
     // parity must be changed before baudrate
@@ -415,7 +415,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
             }
         } else {
             PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
-            return PM3_EFATAL;
+            return PM3_ESOFT;
         }
     }
 
@@ -435,7 +435,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
             }
         } else {
             PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
-            return PM3_EFATAL;
+            return PM3_ESOFT;
         }
     }
 
@@ -451,7 +451,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         found = usart_bt_testcomm(USART_BAUD_RATE, USART_PARITY) == PM3_SUCCESS;
         if (!found) {
             PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
-            return PM3_EFATAL;
+            return PM3_ESOFT;
         }
     }
 
