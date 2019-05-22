@@ -38,8 +38,18 @@ while 1 :
     else:
         ser.write(inp)
         out = b''
-        time.sleep(1)
-        while ser.inWaiting() > 0:
-            out += ser.read(1)
+        wait = 1
+        ti = time.perf_counter()
+        while True:
+            time.sleep(0.05)
+            if (ser.in_waiting > 0):
+                # When receiving data, reset timer and shorten timeout
+                ti = time.perf_counter()
+                wait = 0.05
+                out += ser.read(1)
+                continue
+            # We stop either after 1s if no data or 50ms after last data received
+            if time.perf_counter() - ti > wait:
+                break
         if out != b'':
             print("<< " + out.decode('utf8'))

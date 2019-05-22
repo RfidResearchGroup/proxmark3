@@ -6,7 +6,7 @@ import serial
 name = b'PM3_RDV4.0'
 pin  = b'1234'
 role = b'M'
-#role = b'S'
+role = b'S'
 
 ser = None
 
@@ -28,13 +28,23 @@ p2c={
     serial.PARITY_EVEN:b'E'
 }
 
-def send(cmd):
+def send(cmd, timeout=1):
     print("<<" + cmd.decode('utf8'))
     ser.write(cmd)
     out = b''
-    time.sleep(1)
-    while ser.inWaiting() > 0:
-        out += ser.read(1)
+    wait = timeout
+    ti = time.perf_counter()
+    while True:
+        time.sleep(0.05)
+        if (ser.in_waiting > 0):
+            # When receiving data, reset timer and shorten timeout
+            ti = time.perf_counter()
+            wait = 0.05
+            out += ser.read(1)
+            continue
+        # We stop either after 1s if no data or 50ms after last data received
+        if time.perf_counter() - ti > wait:
+            break
     if out != b'':
         print(">>" + out.decode('utf8'))
     return out
@@ -58,7 +68,7 @@ def usart_bt_testcomm(baudrate, parity):
 if __name__ == '__main__':
     print("WARNING: process only if strictly needed!")
     print("This requires HC-06 dongle turned ON and NOT connected!")
-    if input("Is the HC-06 dingle LED blinking? (Say 'n' if you want to abort) [y/n] ") != 'y':
+    if input("Is the HC-06 dongle LED blinking? (Say 'n' if you want to abort) [y/n] ") != 'y':
         print("Aborting.")
         exit(1)
 
@@ -101,7 +111,7 @@ if __name__ == '__main__':
         bytesize=serial.EIGHTBITS
     )
     ser.isOpen()
-    if (send(b'AT') == b'OK'):
+    if (send(b'AT', timeout=2) == b'OK'):
         print("HC-06 dongle successfully reset")
     else:
         print("Lost contact with add-on, please try again")
