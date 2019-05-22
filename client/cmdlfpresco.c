@@ -212,7 +212,7 @@ int getWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return -1;
+                return PM3_EINVARG;
             case 'c':
                 hex = true;
                 //get hex
@@ -222,7 +222,7 @@ int getWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
             case 'd':
                 //param get string int param_getstr(const char *line, int paramnum, char * str)
                 stringlen = param_getstr(Cmd, cmdp + 1, id, sizeof(id));
-                if (stringlen < 2) return -1;
+                if (stringlen < 2) return PM3_EINVARG;
                 cmdp += 2;
                 break;
             case 'q':
@@ -236,7 +236,7 @@ int getWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
         }
     }
     //Validations
-    if (errors || cmdp == 0) return -1;
+    if (errors || cmdp == 0) return PM3_EINVARG;
 
     if (!hex) {
         for (int index = 0; index < strlen(id); ++index) {
@@ -259,7 +259,7 @@ int getWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
 
     *usercode = *fullcode & 0x0000FFFF; //% 65566
     *sitecode = (*fullcode >> 24) & 0x000000FF;  // /= 16777216;
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // calc not certain - intended to get bitstream for programming / sim
@@ -268,7 +268,7 @@ int getPrescoBits(uint32_t fullcode, uint8_t *prescoBits) {
     num_to_bytebits(0x00000000, 32, prescoBits + 32);
     num_to_bytebits(0x00000000, 32, prescoBits + 64);
     num_to_bytebits(fullcode, 32, prescoBits + 96);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 int demodPresco(void) {
