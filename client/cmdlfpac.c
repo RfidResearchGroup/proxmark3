@@ -15,9 +15,9 @@ static int CmdHelp(const char *Cmd);
 static int CmdPacDemod(const char *Cmd) {
 
     //NRZ
-    if (!NRZrawDemod(Cmd, false)) {
+    if (NRZrawDemod(Cmd, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: NRZ Demod failed");
-        return 0;
+        return PM3_ESOFT;
     }
     size_t size = DemodBufferLen;
     int ans = detectPac(DemodBuffer, &size);
@@ -31,7 +31,7 @@ static int CmdPacDemod(const char *Cmd) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - PAC: ans: %d", ans);
 
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(DemodBuffer, 128, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
@@ -48,7 +48,7 @@ static int CmdPacDemod(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "PAC/Stanley Tag Found -- Raw: %08X%08X%08X%08X", raw1, raw2, raw3, raw4);
     PrintAndLogEx(NORMAL, "\nHow the Raw ID is translated by the reader is unknown");
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdPacRead(const char *Cmd) {
@@ -66,7 +66,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFPac(const char *Cmd) {

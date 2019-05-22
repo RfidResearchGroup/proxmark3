@@ -86,7 +86,7 @@ static int CmdVisa2kDemod(const char *Cmd) {
 
     save_restoreGB(GRAPH_SAVE);
 
-    //sCmdAskEdgeDetect("");
+    //CmdAskEdgeDetect("");
 
     //ASK / Manchester
     bool st = true;
