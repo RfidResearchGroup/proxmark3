@@ -1080,7 +1080,18 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     int len = 0;
 
     // To control where we are in the protocol
-    int order = 0;
+#define ORDER_NONE           0
+#define ORDER_REQA           1
+#define ORDER_SELECT_ALL_CL1 2
+#define ORDER_SELECT_CL1     3
+#define ORDER_HALTED         5
+#define ORDER_WUPA           6
+#define ORDER_AUTH           7
+#define ORDER_SELECT_ALL_CL2 20
+#define ORDER_SELECT_CL2     30
+#define ORDER_EV1_COMP_WRITE 40
+#define ORDER_RATS           70
+    int order = ORDER_NONE;
     int lastorder;
 
     // Just to allow some checks
@@ -1088,6 +1099,9 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
     int happened2 = 0;
     int cmdsRecvd = 0;
     tag_response_info_t *p_response;
+
+    // compatible write block number
+    uint8_t wrblock = 0;
 
     clear_trace();
     set_tracing(true);
@@ -1104,169 +1118,29 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
 
         // Okay, look at the command now.
         lastorder = order;
-        if (receivedCmd[0] == ISO14443A_CMD_REQA) { // Received a REQUEST
-            p_response = &responses[ATQA];
-            order = 1;
-        } else if (receivedCmd[0] == ISO14443A_CMD_WUPA) { // Received a WAKEUP
-            p_response = &responses[ATQA];
-            order = 6;
-        } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {    // Received request for UID (cascade 1)
-            p_response = &responses[UIDC1];
-            order = 2;
-        } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {  // Received request for UID (cascade 2)
-            p_response = &responses[UIDC2];
-            order = 20;
-        } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {    // Received a SELECT (cascade 1)
-            p_response = &responses[SAKC1];
-            order = 3;
-        } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {  // Received a SELECT (cascade 2)
-            p_response = &responses[SAKC2];
-            order = 30;
-        } else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK) {    // Received a (plain) READ
-            uint8_t block = receivedCmd[1];
-            // if Ultralight or NTAG (4 byte blocks)
-            if (tagType == 7 || tagType == 2) {
-                if (block > pages) {
-                    // send NACK 0x0 == invalid argument
-                    EmSend4bit(CARD_NACK_IV);
-                } else {
-                    // first blocks of emu are header
-                    uint16_t start = block * 4 + MFU_DUMP_PREFIX_LENGTH;
-                    uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
-                    emlGetMemBt(emdata, start, 16);
-                    AddCrc14A(emdata, 16);
-                    EmSendCmd(emdata, sizeof(emdata));
-                }
-                // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
-                p_response = NULL;
-            } else if (tagType == 9 && block == 1) {
-                // FM11005SH.   16blocks,  4bytes / block.
-                //   block0 = 2byte Customer ID (CID), 2byte Manufacture ID (MID)
-                //   block1 = 4byte UID.
-                p_response = &responses[UIDC1];
-            } else { // all other tags (16 byte block tags)
-                uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
-                emlGetMemBt(emdata, block, 16);
-                AddCrc14A(emdata, 16);
-                EmSendCmd(emdata, sizeof(emdata));
-                // EmSendCmd(data+(4*receivedCmd[1]),16);
-                // Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
-                // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
-                p_response = NULL;
-            }
-        } else if (receivedCmd[0] == MIFARE_ULEV1_FASTREAD) {    // Received a FAST READ (ranged read)
-            uint8_t block1 = receivedCmd[1];
-            uint8_t block2 = receivedCmd[2];
-            if (block1 > pages) {
-                // send NACK 0x0 == invalid argument
-                EmSend4bit(CARD_NACK_IV);
-            } else {
-                uint8_t emdata[MAX_FRAME_SIZE];
+
+        //
+        // we need to check "ordered" states before, because received data may be same to any command - is wrong!!!
+        //
+
+        if (order == ORDER_EV1_COMP_WRITE && len == 18) {
+            // MIFARE_ULC_COMP_WRITE part 2
+            // 16 bytes data + 2 bytes crc, only least significant 4 bytes are written
+            bool isCrcCorrect = CheckCrc14A(receivedCmd, len);
+            if (isCrcCorrect) {
                 // first blocks of emu are header
-                int start = block1 * 4 + MFU_DUMP_PREFIX_LENGTH;
-                len   = (block2 - block1 + 1) * 4;
-                emlGetMemBt(emdata, start, len);
-                AddCrc14A(emdata, len);
-                EmSendCmd(emdata, len + 2);
-            }
-            p_response = NULL;
-        } else if ((receivedCmd[0] == MIFARE_ULC_WRITE || receivedCmd[0] == MIFARE_ULC_COMP_WRITE) && (tagType == 2 || tagType == 7)) {        // Received a WRITE
-            // cmd + block + 4/16 bytes data + 2 bytes crc
-            if (len == 8 || len == 20) {
-                bool isCrcCorrect = CheckCrc14A(receivedCmd, len);
-                if (isCrcCorrect) {
-                    uint8_t block = receivedCmd[1];
-                    if (block > pages) {
-                        // send NACK 0x0 == invalid argument
-                        EmSend4bit(CARD_NACK_IV);
-                    } else {
-                        // first blocks of emu are header
-                        emlSetMem_xt(&receivedCmd[2], block + MFU_DUMP_PREFIX_LENGTH / 4, 1, 4);
-                        // send ACK
-                        EmSend4bit(CARD_ACK);
-                    }
-                } else {
-                    // send NACK 0x1 == crc/parity error
-                    EmSend4bit(CARD_NACK_PA);
-                }
+                emlSetMem_xt(receivedCmd, wrblock + MFU_DUMP_PREFIX_LENGTH / 4, 1, 4);
+                // send ACK
+                EmSend4bit(CARD_ACK);
             } else {
-                // send NACK 0x0 == invalid argument
-                EmSend4bit(CARD_NACK_IV);
+                // send NACK 0x1 == crc/parity error
+                EmSend4bit(CARD_NACK_PA);
             }
+            order = ORDER_NONE; // back to work state
             p_response = NULL;
-        } else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && tagType == 7) {    // Received a READ SIGNATURE --
-            p_response = &responses[SIGNATURE];
-        } else if (receivedCmd[0] == MIFARE_ULEV1_READ_CNT && tagType == 7) {    // Received a READ COUNTER --
-            uint8_t index = receivedCmd[1];
-            if (index > 2) {
-                // send NACK 0x0 == invalid argument
-                EmSend4bit(0x00);
-            } else {
-                uint8_t cmd[] =  {0x00, 0x00, 0x00, 0x14, 0xa5};
-                htole24(counters[index], cmd);
-                AddCrc14A(cmd, sizeof(cmd) - 2);
-                EmSendCmd(cmd, sizeof(cmd));
-            }
-            p_response = NULL;
-        } else if (receivedCmd[0] == MIFARE_ULEV1_INCR_CNT && tagType == 7) {    // Received a INC COUNTER --
-            uint8_t index = receivedCmd[1];
-            if (index > 2) {
-                // send NACK 0x0 == invalid argument
-                EmSend4bit(0x00);
-            } else {
-                uint32_t val = le24toh(receivedCmd + 2) + counters[index];
-                // if new value + old value is bigger 24bits,  fail
-                if (val > 0xFFFFFF) {
-                    // send NACK 0x4 == counter overflow
-                    EmSend4bit(CARD_NACK_NA);
-                } else {
-                    counters[index] = val;
-                    // send ACK
-                    EmSend4bit(CARD_ACK);
-                }
-            }
-            p_response = NULL;
-        } else if (receivedCmd[0] == MIFARE_ULEV1_CHECKTEAR && tagType == 7) {    // Received a CHECK_TEARING_EVENT --
-            // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
-            uint8_t index = receivedCmd[1];
-            if (index > 2) {
-                // send NACK 0x0 == invalid argument
-                EmSend4bit(0x00);
-            } else {
-                uint8_t cmd[3];
-                cmd[0] = tearings[index];
-                AddCrc14A(cmd, sizeof(cmd) - 2);
-                EmSendCmd(cmd, sizeof(cmd));
-            }
-            p_response = NULL;
-        } else if (receivedCmd[0] == ISO14443A_CMD_HALT) {    // Received a HALT
-            LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
-            p_response = NULL;
-        } else if (receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) {    // Received an authentication request
-            if (tagType == 7) {     // IF NTAG /EV1  0x60 == GET_VERSION, not a authentication request.
-                p_response = &responses[VERSION];
-            } else {
-                cardAUTHKEY = receivedCmd[0] - 0x60;
-                cardAUTHSC = receivedCmd[1] / 4; // received block num
 
-                // incease nonce at AUTH requests. this is time consuming.
-                nonce = prng_successor(GetTickCount(), 32);
-                num_to_bytes(nonce, 4, dynamic_response_info.response);
-                dynamic_response_info.response_n = 4;
-
-                prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
-                p_response = &dynamic_response_info;
-                order = 7;
-            }
-        } else if (receivedCmd[0] == ISO14443A_CMD_RATS) {    // Received a RATS request
-            if (tagType == 1 || tagType == 2) {    // RATS not supported
-                EmSend4bit(CARD_NACK_NA);
-                p_response = NULL;
-            } else {
-                p_response = &responses[RATS];
-                order = 70;
-            }
-        } else if (order == 7 && len == 8) { // Received {nr] and {ar} (part of authentication)
+        } else if (order == ORDER_AUTH && len == 8) {
+            // Received {nr] and {ar} (part of authentication)
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             uint32_t nr = bytes_to_num(receivedCmd, 4);
             uint32_t ar = bytes_to_num(receivedCmd + 4, 4);
@@ -1328,25 +1202,211 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                         break;
                 }
             }
+            order = ORDER_NONE; // back to work state
             p_response = NULL;
 
-        } else if (receivedCmd[0] == MIFARE_ULC_AUTH_1) {  // ULC authentication, or Desfire Authentication
-        } else if (receivedCmd[0] == MIFARE_ULEV1_AUTH) { // NTAG / EV-1 authentication
-            if (tagType == 7) {
-                // PWD stored in dump now
-                uint8_t pwd[4];
-                emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
-                if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
-                    p_response = &responses[PACK]; // precompiled PACK
+            //
+            // now check commands in received buffer
+            //
+
+        } else if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST
+            p_response = &responses[ATQA];
+            order = ORDER_REQA;
+        } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
+            p_response = &responses[ATQA];
+            order = ORDER_WUPA;
+        } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
+            p_response = &responses[UIDC1];
+            order = ORDER_SELECT_ALL_CL1;
+        } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 2) {  // Received request for UID (cascade 2)
+            p_response = &responses[UIDC2];
+            order = ORDER_SELECT_ALL_CL2;
+        } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {    // Received a SELECT (cascade 1)
+            p_response = &responses[SAKC1];
+            order = ORDER_SELECT_CL1;
+        } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
+            p_response = &responses[SAKC2];
+            order = ORDER_SELECT_CL2;
+        } else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK && len == 4) {    // Received a (plain) READ
+            uint8_t block = receivedCmd[1];
+            // if Ultralight or NTAG (4 byte blocks)
+            if (tagType == 7 || tagType == 2) {
+                if (block > pages) {
+                    // send NACK 0x0 == invalid argument
+                    EmSend4bit(CARD_NACK_IV);
                 } else {
+                    // first blocks of emu are header
+                    uint16_t start = block * 4 + MFU_DUMP_PREFIX_LENGTH;
+                    uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
+                    emlGetMemBt(emdata, start, 16);
+                    AddCrc14A(emdata, 16);
+                    EmSendCmd(emdata, sizeof(emdata));
+                }
+                // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
+                p_response = NULL;
+            } else if (tagType == 9 && block == 1) {
+                // FM11005SH.   16blocks,  4bytes / block.
+                //   block0 = 2byte Customer ID (CID), 2byte Manufacture ID (MID)
+                //   block1 = 4byte UID.
+                p_response = &responses[UIDC1];
+            } else { // all other tags (16 byte block tags)
+                uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
+                emlGetMemBt(emdata, block, 16);
+                AddCrc14A(emdata, 16);
+                EmSendCmd(emdata, sizeof(emdata));
+                // EmSendCmd(data+(4*receivedCmd[1]),16);
+                // Dbprintf("Read request from reader: %x %x",receivedCmd[0],receivedCmd[1]);
+                // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
+                p_response = NULL;
+            }
+        } else if (receivedCmd[0] == MIFARE_ULEV1_FASTREAD && len == 5) {    // Received a FAST READ (ranged read)
+            uint8_t block1 = receivedCmd[1];
+            uint8_t block2 = receivedCmd[2];
+            if (block1 > pages) {
+                // send NACK 0x0 == invalid argument
+                EmSend4bit(CARD_NACK_IV);
+            } else {
+                uint8_t emdata[MAX_FRAME_SIZE];
+                // first blocks of emu are header
+                int start = block1 * 4 + MFU_DUMP_PREFIX_LENGTH;
+                len   = (block2 - block1 + 1) * 4;
+                emlGetMemBt(emdata, start, len);
+                AddCrc14A(emdata, len);
+                EmSendCmd(emdata, len + 2);
+            }
+            p_response = NULL;
+        } else if (receivedCmd[0] == MIFARE_ULC_WRITE && len == 8 && (tagType == 2 || tagType == 7)) {        // Received a WRITE
+            // cmd + block + 4 bytes data + 2 bytes crc
+            bool isCrcCorrect = CheckCrc14A(receivedCmd, len);
+            if (isCrcCorrect) {
+                uint8_t block = receivedCmd[1];
+                if (block > pages) {
+                    // send NACK 0x0 == invalid argument
+                    EmSend4bit(CARD_NACK_IV);
+                } else {
+                    // first blocks of emu are header
+                    emlSetMem_xt(&receivedCmd[2], block + MFU_DUMP_PREFIX_LENGTH / 4, 1, 4);
+                    // send ACK
+                    EmSend4bit(CARD_ACK);
+                }
+            } else {
+                // send NACK 0x1 == crc/parity error
+                EmSend4bit(CARD_NACK_PA);
+            }
+            p_response = NULL;
+        } else if (receivedCmd[0] == MIFARE_ULC_COMP_WRITE && len == 4 && (tagType == 2 || tagType == 7)) {
+            // cmd + block + 2 bytes crc
+            bool isCrcCorrect = CheckCrc14A(receivedCmd, len);
+            if (isCrcCorrect) {
+                wrblock = receivedCmd[1];
+                if (wrblock > pages) {
+                    // send NACK 0x0 == invalid argument
+                    EmSend4bit(CARD_NACK_IV);
+                } else {
+                    // send ACK
+                    EmSend4bit(CARD_ACK);
+                    // go to part 2
+                    order = ORDER_EV1_COMP_WRITE;
+                }
+            } else {
+                // send NACK 0x1 == crc/parity error
+                EmSend4bit(CARD_NACK_PA);
+            }
+            p_response = NULL;
+        } else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && len == 4 && tagType == 7) {    // Received a READ SIGNATURE --
+            p_response = &responses[SIGNATURE];
+        } else if (receivedCmd[0] == MIFARE_ULEV1_READ_CNT && len == 4 && tagType == 7) {    // Received a READ COUNTER --
+            uint8_t index = receivedCmd[1];
+            if (index > 2) {
+                // send NACK 0x0 == invalid argument
+                EmSend4bit(CARD_NACK_IV);
+            } else {
+                uint8_t cmd[] =  {0x00, 0x00, 0x00, 0x14, 0xa5};
+                htole24(counters[index], cmd);
+                AddCrc14A(cmd, sizeof(cmd) - 2);
+                EmSendCmd(cmd, sizeof(cmd));
+            }
+            p_response = NULL;
+        } else if (receivedCmd[0] == MIFARE_ULEV1_INCR_CNT && len == 8 && tagType == 7) {    // Received a INC COUNTER --
+            uint8_t index = receivedCmd[1];
+            if (index > 2) {
+                // send NACK 0x0 == invalid argument
+                EmSend4bit(CARD_NACK_IV);
+            } else {
+                uint32_t val = le24toh(receivedCmd + 2) + counters[index];
+                // if new value + old value is bigger 24bits,  fail
+                if (val > 0xFFFFFF) {
+                    // send NACK 0x4 == counter overflow
                     EmSend4bit(CARD_NACK_NA);
-                    uint32_t pwd = bytes_to_num(receivedCmd + 1, 4);
-                    if (MF_DBGLEVEL >= MF_DBG_DEBUG) Dbprintf("Auth attempt: %08x", pwd);
-                    p_response = NULL;
+                } else {
+                    counters[index] = val;
+                    // send ACK
+                    EmSend4bit(CARD_ACK);
                 }
             }
-        } else if (receivedCmd[0] == MIFARE_ULEV1_VCSL) {
-            EmSend4bit(CARD_NACK_NA);
+            p_response = NULL;
+        } else if (receivedCmd[0] == MIFARE_ULEV1_CHECKTEAR && len == 4 && tagType == 7) {    // Received a CHECK_TEARING_EVENT --
+            // first 12 blocks of emu are [getversion answer - check tearing - pack - 0x00 - signature]
+            uint8_t index = receivedCmd[1];
+            if (index > 2) {
+                // send NACK 0x0 == invalid argument
+                EmSend4bit(CARD_NACK_IV);
+            } else {
+                uint8_t cmd[3];
+                cmd[0] = tearings[index];
+                AddCrc14A(cmd, sizeof(cmd) - 2);
+                EmSendCmd(cmd, sizeof(cmd));
+            }
+            p_response = NULL;
+        } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {    // Received a HALT
+            LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+            p_response = NULL;
+            order = ORDER_HALTED;
+        } else if (receivedCmd[0] == MIFARE_ULEV1_VERSION && len == 3 && (tagType == 2 || tagType == 7)) {
+            p_response = &responses[VERSION];
+        } else if ((receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) && len == 4 && tagType != 2 && tagType != 7) {    // Received an authentication request
+            cardAUTHKEY = receivedCmd[0] - 0x60;
+            cardAUTHSC = receivedCmd[1] / 4; // received block num
+
+            // incease nonce at AUTH requests. this is time consuming.
+            nonce = prng_successor(GetTickCount(), 32);
+            num_to_bytes(nonce, 4, dynamic_response_info.response);
+            dynamic_response_info.response_n = 4;
+
+            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            p_response = &dynamic_response_info;
+            order = ORDER_AUTH;
+        } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {    // Received a RATS request
+            if (tagType == 1 || tagType == 2) {    // RATS not supported
+                EmSend4bit(CARD_NACK_NA);
+                p_response = NULL;
+            } else {
+                p_response = &responses[RATS];
+                order = ORDER_RATS;
+            }
+        } else if (receivedCmd[0] == MIFARE_ULC_AUTH_1) {  // ULC authentication, or Desfire Authentication
+            LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+            p_response = NULL;
+        } else if (receivedCmd[0] == MIFARE_ULEV1_AUTH && len == 7 && tagType == 7) { // NTAG / EV-1 authentication
+            // PWD stored in dump now
+            uint8_t pwd[4];
+            emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
+            if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
+                uint8_t cmd[4];
+                emlGetMemBt(cmd, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
+                AddCrc14A(cmd, sizeof(cmd) - 2);
+                EmSendCmd(cmd, sizeof(cmd));
+            } else {
+                EmSend4bit(CARD_NACK_NA);
+                uint32_t pwd = bytes_to_num(receivedCmd + 1, 4);
+                if (MF_DBGLEVEL >= MF_DBG_DEBUG) Dbprintf("Auth attempt: %08x", pwd);
+            }
+            p_response = NULL;
+        } else if (receivedCmd[0] == MIFARE_ULEV1_VCSL && len == 23 && tagType == 7) {
+            uint8_t cmd[3];
+            emlGetMemBt(cmd, (pages - 2) * 4 + 1 + MFU_DUMP_PREFIX_LENGTH, 1);
+            AddCrc14A(cmd, sizeof(cmd) - 2);
+            EmSendCmd(cmd, sizeof(cmd));
             p_response = NULL;
         } else {
             // Check for ISO 14443A-4 compliant commands, look at left nibble
@@ -1407,6 +1467,7 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
                     }
                     // Do not respond
                     dynamic_response_info.response_n = 0;
+                    order = ORDER_NONE; // back to work state
                 }
                 break;
             }
@@ -1429,10 +1490,10 @@ void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
         }
 
         // Count number of wakeups received after a halt
-        if (order == 6 && lastorder == 5) { happened++; }
+        if (order == ORDER_WUPA && lastorder == ORDER_HALTED) { happened++; }
 
         // Count number of other messages after a halt
-        if (order != 6 && lastorder == 5) { happened2++; }
+        if (order != ORDER_WUPA && lastorder == ORDER_HALTED) { happened2++; }
 
         cmdsRecvd++;
 
