@@ -1466,15 +1466,15 @@ static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, in
         } else { //transition
             if ((bits[i] >= high && !waveHigh) || (bits[i] <= low && waveHigh)) {
 
-                // 8  ::   8-2-1 =  5   8+2+1 = 11
-                // 16 ::  16-4-1 = 11  16+4+1 = 21
-                // 32 ::  32-8-1 = 23  32+8+1 = 41
-
+                // 8  ::    8-2-1 =  5   8+2+1 = 11
+                // 16 ::   16-4-1 = 11  16+4+1 = 21
+                // 32 ::   32-8-1 = 23  32+8+1 = 41
+                // 64 ::  64-16-1 = 47 64+16+1 = 81
                 if (smplCnt > clk - cl_4 - 1) { //full clock
 
                     if (smplCnt > clk + cl_4 + 1) { //too many samples
                         errCnt++;
-                        if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod ASK Modulation Error FULL at: %u  [%u]", i, smplCnt);
+                        if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod ASK Modulation Error FULL at: %u  [%u > %u]", i, smplCnt, clk + cl_4 + 1);
                         bits[bitCnt++] = 7;
                     } else if (waveHigh) {
                         bits[bitCnt++] = invert;
