@@ -40,7 +40,7 @@ static int usage_t55xx_config() {
     PrintAndLogEx(NORMAL, "      lf t55xx config d FSK i 1      - FSK demodulation, inverse data");
     PrintAndLogEx(NORMAL, "      lf t55xx config d FSK i 1 o 3  - FSK demodulation, inverse data, offset=3,start from position 3 to decode data");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx read [b <block>] [p <password>] <override_safety> <page1>");
@@ -58,7 +58,7 @@ static int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "      lf t55xx read b 0 p feedbeef      - read data from block 0 password feedbeef");
     PrintAndLogEx(NORMAL, "      lf t55xx read b 0 p feedbeef o    - read data from block 0 password feedbeef safety check");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_write() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx write [b <block>] [d <data>] [p <password>] [1] [t]");
@@ -73,7 +73,7 @@ static int usage_t55xx_write() {
     PrintAndLogEx(NORMAL, "      lf t55xx write b 3 d 11223344            - write 11223344 to block 3");
     PrintAndLogEx(NORMAL, "      lf t55xx write b 3 d 11223344 p feedbeef - write 11223344 to block 3 password feedbeef");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_trace() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx trace [1]");
@@ -84,7 +84,7 @@ static int usage_t55xx_trace() {
     PrintAndLogEx(NORMAL, "      lf t55xx trace");
     PrintAndLogEx(NORMAL, "      lf t55xx trace 1");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_info() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx info [1] [d <data> [q]]");
@@ -101,7 +101,7 @@ static int usage_t55xx_info() {
     PrintAndLogEx(NORMAL, "      lf t55xx info d 00083040");
     PrintAndLogEx(NORMAL, "      lf t55xx info d 6001805A q");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_dump() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx dump <password> [o]");
@@ -113,7 +113,7 @@ static int usage_t55xx_dump() {
     PrintAndLogEx(NORMAL, "      lf t55xx dump");
     PrintAndLogEx(NORMAL, "      lf t55xx dump feedbeef o");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_detect() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx detect [1] [p <password>]");
@@ -126,7 +126,7 @@ static int usage_t55xx_detect() {
     PrintAndLogEx(NORMAL, "      lf t55xx detect 1");
     PrintAndLogEx(NORMAL, "      lf t55xx detect p 11223344");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_detectP1() {
     PrintAndLogEx(NORMAL, "Command: Detect Page 1 of a t55xx chip");
@@ -140,7 +140,7 @@ static int usage_t55xx_detectP1() {
     PrintAndLogEx(NORMAL, "      lf t55xx p1detect 1");
     PrintAndLogEx(NORMAL, "      lf t55xx p1detect p 11223344");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_wakup() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx wakeup [h] p <password>");
@@ -151,7 +151,7 @@ static int usage_t55xx_wakup() {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx wakeup p 11223344  - send wakeup password");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
@@ -168,7 +168,7 @@ static int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "       lf t55xx chk m");
     PrintAndLogEx(NORMAL, "       lf t55xx chk i default_pwd.dic");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "This command uses bruteforce to scan a number range");
@@ -185,7 +185,7 @@ static int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf t55xx bruteforce aaaaaa77 aaaaaa99");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "This command uses a few tricks to try to recover mangled password");
@@ -203,7 +203,7 @@ static int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "       lf t55xx recoverpw");
     PrintAndLogEx(NORMAL, "       lf t55xx recoverpw 51243648");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_t55xx_wipe() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx wipe [h] [Q5]");
@@ -215,7 +215,7 @@ static int usage_t55xx_wipe() {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx wipe    -  wipes a t55x7 tag,    config block 0x000880E0");
     PrintAndLogEx(NORMAL, "      lf t55xx wipe Q5 -  wipes a t5555 Q5 tag, config block 0x6001F004");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_deviceconfig() {
     PrintAndLogEx(NORMAL, "Sets t55x7 timings for direkt commands. The timings are set here in Field Clocks (FC), \nwhich is converted to (US) on device");
@@ -233,7 +233,7 @@ static int usage_lf_deviceconfig() {
     PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15   - default T55XX");
     PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 55 b 14 c 21 d 30        - default EM4305");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHelp(const char *Cmd);
@@ -365,7 +365,7 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32
         // try reading the config block and verify that PWD bit is set before doing this!
         if (!override) {
 
-            if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0)) return 0;
+            if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0)) return PM3_ESOFT;
 
             if (!tryDetectModulation()) {
                 PrintAndLogEx(NORMAL, "Safety Check: Could not detect if PWD bit is set in config block. Exits.");
@@ -380,11 +380,11 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, bool override, uint32
         }
     }
 
-    if (!AquireData(page1, block, usepwd, password)) return 0;
-    if (!DecodeT55xxBlock()) return 0;
+    if (!AquireData(page1, block, usepwd, password)) return PM3_ESOFT;
+    if (!DecodeT55xxBlock()) return PM3_ESOFT;
 
     printT55xxBlock(block);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdT55xxReadBlock(const char *Cmd) {
@@ -426,7 +426,7 @@ static int CmdT55xxReadBlock(const char *Cmd) {
 
     if (block > 7 && block != REGULAR_READ_MODE_BLOCK) {
         PrintAndLogEx(NORMAL, "Block must be between 0 and 7");
-        return 0;
+        return PM3_ESOFT;
     }
 
     printT5xxHeader(page1);
@@ -507,9 +507,9 @@ static bool DecodeT5555TraceBlock(void) {
 static int SanityOfflineCheck(bool useGraphBuffer) {
     if (!useGraphBuffer && !session.pm3_present) {
         PrintAndLogEx(WARNING, "Your proxmark3 device is offline. Specify [1] to use graphbuffer data instead");
-        return 0;
+        return PM3_ENODATA;
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdT55xxDetect(const char *Cmd) {
@@ -541,17 +541,17 @@ static int CmdT55xxDetect(const char *Cmd) {
     if (errors) return usage_t55xx_detect();
 
     // sanity check.
-    if (!SanityOfflineCheck(useGB)) return 1;
+    if (!SanityOfflineCheck(useGB)) return PM3_ENODATA;
 
     if (!useGB) {
         if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password))
-            return 1;
+            return PM3_ENODATA;
     }
 
     if (!tryDetectModulation())
         PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with " _YELLOW_("\'lf t55xx config\'"));
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // detect configuration?
@@ -564,7 +564,7 @@ bool tryDetectModulation(void) {
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
 
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
-        if (FSKrawDemod("0 0", false) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+        if ( (FSKrawDemod("0 0", false) == PM3_SUCCESS) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
             tests[hits].modulation = DEMOD_FSK;
             if (fc1 == 8 && fc2 == 5)
                 tests[hits].modulation = DEMOD_FSK1a;
@@ -576,7 +576,7 @@ bool tryDetectModulation(void) {
             tests[hits].ST = false;
             ++hits;
         }
-        if (FSKrawDemod("0 1", false) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+        if ( (FSKrawDemod("0 1", false) == PM3_SUCCESS) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
             tests[hits].modulation = DEMOD_FSK;
             if (fc1 == 8 && fc2 == 5)
                 tests[hits].modulation = DEMOD_FSK1;
@@ -617,7 +617,7 @@ bool tryDetectModulation(void) {
                 tests[hits].block0 = PackBits(tests[hits].offset, 32, DemodBuffer);
                 ++hits;
             }
-            if (ASKbiphaseDemod("0 0 0 2", false) && test(DEMOD_BI, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ((ASKbiphaseDemod("0 0 0 2", false) == PM3_SUCCESS) && test(DEMOD_BI, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_BI;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
@@ -625,7 +625,7 @@ bool tryDetectModulation(void) {
                 tests[hits].ST = false;
                 ++hits;
             }
-            if (ASKbiphaseDemod("0 0 1 2", false) && test(DEMOD_BIa, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ((ASKbiphaseDemod("0 0 1 2", false) == PM3_SUCCESS) && test(DEMOD_BIa, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_BIa;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
@@ -636,7 +636,7 @@ bool tryDetectModulation(void) {
         }
         clk = GetNrzClock("", false);
         if (clk > 8) { //clock of rf/8 is likely a false positive, so don't use it.
-            if (NRZrawDemod("0 0 1", false)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ((NRZrawDemod("0 0 1", false) == PM3_SUCCESS) && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_NRZ;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
@@ -645,7 +645,7 @@ bool tryDetectModulation(void) {
                 ++hits;
             }
 
-            if (NRZrawDemod("0 1 1", false)  && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ((NRZrawDemod("0 1 1", false) == PM3_SUCCESS) && test(DEMOD_NRZ, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_NRZ;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
@@ -982,7 +982,7 @@ int special(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "%02d | 0x%08X | %s", j, blockData, sprint_bin(bits, 32));
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int printConfiguration(t55xx_conf_block_t b) {
@@ -994,7 +994,7 @@ int printConfiguration(t55xx_conf_block_t b) {
     PrintAndLogEx(NORMAL, "Seq. Term. : %s", (b.ST) ? _GREEN_("Yes") : "No");
     PrintAndLogEx(NORMAL, "Block0     : 0x%08X", b.block0);
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdT55xxWakeUp(const char *Cmd) {
@@ -1021,7 +1021,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_T55XX_WAKEUP, password, 0, 0, NULL, 0);
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdT55xxWriteBlock(const char *Cmd) {
@@ -1105,9 +1105,9 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
     if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not ACK write operation. (May be due to old firmware)");
-        return 0;
+        return PM3_ETIMEOUT;
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdT55xxReadTrace(const char *Cmd) {
@@ -1116,21 +1116,21 @@ static int CmdT55xxReadTrace(const char *Cmd) {
 
     if (strlen(Cmd) == 0) {
         // sanity check.
-        if (!SanityOfflineCheck(false)) return 1;
+        if (!SanityOfflineCheck(false)) return PM3_ENODATA;
 
         bool pwdmode = false;
         uint32_t password = 0;
         if (!AquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, pwdmode, password))
-            return 1;
+            return PM3_ENODATA;
     }
 
     if (config.Q5) {
-        if (!DecodeT5555TraceBlock()) return 1;
+        if (!DecodeT5555TraceBlock()) return PM3_ESOFT;
     } else {
-        if (!DecodeT55xxBlock()) return 1;
+        if (!DecodeT55xxBlock()) return PM3_ESOFT;
     }
 
-    if (!DemodBufferLen) return 1;
+    if (!DemodBufferLen) return PM3_ESOFT;
 
     RepaintGraphWindow();
     uint8_t repeat = (config.offset > 5) ? 32 : 0;
@@ -1145,7 +1145,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
 
         if (hdr != 0x1FF) {
             PrintAndLogEx(FAILED, "Invalid Q5 Trace data header (expected 0x1FF, found %X)", hdr);
-            return 1;
+            return PM3_ESOFT;
         }
 
         t5555_tracedata_t data = {.bl1 = bl1, .bl2 = bl2, .icr = 0, .lotidc = '?', .lotid = 0, .wafer = 0, .dw = 0};
@@ -1197,7 +1197,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         si += 8;
         if (data.acl != 0xE0) {
             PrintAndLogEx(FAILED, "The modulation is most likely wrong since the ACL is not 0xE0. ");
-            return 1;
+            return PM3_ESOFT;
         }
 
         data.mfc     = PackBits(si, 8,  DemodBuffer);
@@ -1231,7 +1231,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
 
         printT55x7Trace(data, repeat);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
@@ -1397,18 +1397,18 @@ static int CmdT55xxInfo(const char *Cmd) {
 
     if (!frombuff && !gotdata) {
         // sanity check.
-        if (!SanityOfflineCheck(false)) return 1;
+        if (!SanityOfflineCheck(false)) return PM3_ENODATA;
 
         bool pwdmode = false;
         uint32_t password = 0;
         if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, pwdmode, password))
-            return 1;
+            return PM3_ENODATA;
     }
     if (!gotdata) {
-        if (!DecodeT55xxBlock()) return 1;
+        if (!DecodeT55xxBlock()) return PM3_ESOFT;
 
         // too little space to start with
-        if (DemodBufferLen < 32 + config.offset) return 1;
+        if (DemodBufferLen < 32 + config.offset) return PM3_ESOFT;
 
         //PrintAndLogEx(NORMAL, "Offset+32 ==%d\n DemodLen == %d", config.offset + 32, DemodBufferLen);
         block0   = PackBits(config.offset, 32, DemodBuffer);
@@ -1491,7 +1491,7 @@ static int CmdT55xxInfo(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdT55xxDump(const char *Cmd) {
@@ -1516,7 +1516,7 @@ static int CmdT55xxDump(const char *Cmd) {
     for (uint8_t i = 0; i < 4; i++)
         T55xxReadBlock(i, 1, usepwd, override, password);
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
@@ -1789,16 +1789,16 @@ static int CmdResetRead(const char *Cmd) {
     SendCommandNG(CMD_T55XX_RESET_READ, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
-        return 0;
+        return PM3_ETIMEOUT;
     }
 
     uint8_t got[BIGBUF_SIZE - 1];
     if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
-        return 0;
+        return PM3_ETIMEOUT;
     }
     setGraphBuf(got, sizeof(got));
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdT55xxWipe(const char *Cmd) {
@@ -1828,7 +1828,7 @@ static int CmdT55xxWipe(const char *Cmd) {
 
         memset(writeData, 0x00, sizeof(writeData));
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static bool IsCancelled(void) {
@@ -1858,7 +1858,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
         // now try to validate it..
         PrintAndLogEx(WARNING, "\n Block 7 was readable");
-        return 1;
+        return PM3_SUCCESS;
     }
     */
 
@@ -1875,7 +1875,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             fflush(stdout);
             if (timeout > 180) {
                 PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
-                return 2;
+                return PM3_ENODATA;
             }
         }
 
@@ -1911,14 +1911,14 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         keyBlock = calloc(4 * 200, sizeof(uint8_t));
         if (keyBlock == NULL) {
             PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
-            return 1;
+            return PM3_ESOFT;
         }
 
         int res = loadFileDICTIONARY(filename, keyBlock, &datalen, 4, &keycount);
         if (res || keycount == 0) {
             PrintAndLogEx(WARNING, "No keys found in file");
             free(keyBlock);
-            return 1;
+            return PM3_ESOFT;
         }
 
         // loop
@@ -1928,12 +1928,12 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             if (!session.pm3_present) {
                 PrintAndLogEx(WARNING, "Device offline\n");
                 free(keyBlock);
-                return 2;
+                return PM3_ENODATA;
             }
 
             if (IsCancelled()) {
                 free(keyBlock);
-                return 0;
+                return PM3_EOPABORTED;
             }
 
             curr_password = bytes_to_num(keyBlock + 4 * c, 4);
@@ -1959,7 +1959,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 out:
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "\nTime in check pwd: %.0f seconds\n", (float)t1 / 1000.0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Bruteforce - incremental password range search
@@ -1992,7 +1992,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         fflush(stdout);
 
         if (IsCancelled()) {
-            return 0;
+            return PM3_EOPABORTED;
         }
 
         found = tryOnePassword(curr);
@@ -2012,7 +2012,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
 
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "\nTime in bruteforce: %.0f seconds\n", (float)t1 / 1000.0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int tryOnePassword(uint32_t password) {
@@ -2051,7 +2051,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
         bit++;
 
         if (IsCancelled())
-            return 0;
+            return PM3_EOPABORTED;
     }
 
     // now try to use partial original password, since block 7 should have been completely
@@ -2077,7 +2077,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
         prev_password = curr_password;
 
         if (IsCancelled())
-            return 0;
+            return PM3_EOPABORTED;
     }
 
     // from high bit to low
@@ -2099,7 +2099,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
         prev_password = curr_password;
 
         if (IsCancelled())
-            return 0;
+            return PM3_EOPABORTED;
     }
 
 out:
@@ -2111,7 +2111,7 @@ out:
     else
         PrintAndLogEx(WARNING, "Recover pwd failed");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // note length of data returned is different for different chips.
@@ -2132,12 +2132,12 @@ bool tryDetectP1(bool getData) {
     // try fsk clock detect. if successful it cannot be any other type of modulation...  (in theory...)
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
-        if (FSKrawDemod("0 0", false) &&
+        if ((FSKrawDemod("0 0", false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
-        if (FSKrawDemod("0 1", false) &&
+        if ((FSKrawDemod("0 1", false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
@@ -2159,12 +2159,12 @@ bool tryDetectP1(bool getData) {
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
-        if (ASKbiphaseDemod("0 0 0 2", false) &&
+        if ((ASKbiphaseDemod("0 0 0 2", false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
-        if (ASKbiphaseDemod("0 0 1 2", false) &&
+        if ((ASKbiphaseDemod("0 0 1 2", false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
@@ -2174,12 +2174,12 @@ bool tryDetectP1(bool getData) {
     // try NRZ clock detect.  it could be another type even if successful.
     clk = GetNrzClock("", false); //has the most false positives :(
     if (clk > 0) {
-        if (NRZrawDemod("0 0 1", false)  &&
+        if ((NRZrawDemod("0 0 1", false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
-        if (NRZrawDemod("0 1 1", false)  &&
+        if ((NRZrawDemod("0 1 1", false) == PM3_SUCCESS)  &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
@@ -2255,11 +2255,13 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
 
     if (!useGB) {
         if (!AquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, usepwd, password))
-            return false;
+            return PM3_ENODATA;
     }
-    bool success = tryDetectP1(false);
-    if (success) PrintAndLogEx(SUCCESS, "T55xx chip found!");
-    return success;
+
+    if (tryDetectP1(false))
+        PrintAndLogEx(SUCCESS, "T55xx chip found!");
+
+    return PM3_SUCCESS;
 }
 
 static int CmdT55xxSetDeviceConfig(const char *Cmd) {
@@ -2309,7 +2311,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandOLD(CMD_SET_LF_T55XX_CONFIG, shall_persist, 0, 0, &conf, sizeof(t55xx_config));
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -2336,7 +2338,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFT55XX(const char *Cmd) {
