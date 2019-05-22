@@ -27,7 +27,7 @@ static int usage_lf_awid_read(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf awid read");
     PrintAndLogEx(NORMAL, "       lf awid read 1");
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 static int usage_lf_awid_sim(void) {
@@ -44,7 +44,7 @@ static int usage_lf_awid_sim(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf awid sim 26 224 1337");
     PrintAndLogEx(NORMAL, "       lf awid sim 50 2001 deadc0de");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_awid_clone(void) {
@@ -62,7 +62,7 @@ static int usage_lf_awid_clone(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf awid clone 26 224 1337");
     PrintAndLogEx(NORMAL, "       lf awid clone 50 2001 13371337");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_awid_brute(void) {
@@ -83,28 +83,28 @@ static int usage_lf_awid_brute(void) {
     PrintAndLogEx(NORMAL, "       lf awid brute a 26 f 224");
     PrintAndLogEx(NORMAL, "       lf awid brute a 50 f 2001 d 2000");
     PrintAndLogEx(NORMAL, "       lf awid brute v a 50 f 2001 c 200 d 2000");
-    return 0;
+    return PM3_SUCCESS;
 }
 
-static bool sendPing(void) {
+static int sendPing(void) {
     SendCommandNG(CMD_PING, NULL, 0);
     SendCommandNG(CMD_PING, NULL, 0);
     SendCommandNG(CMD_PING, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_PING, &resp, 1000))
-        return false;
-    return true;
+        return PM3_ETIMEOUT;
+    return PM3_SUCCESS;
 }
 
-static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, size_t bs_len, bool verbose) {
+static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, size_t bs_len, bool verbose) {
 
     if (verbose)
         PrintAndLogEx(INFO, "Trying FC: %u; CN: %u", fc, cn);
 
-    if (!getAWIDBits(fmtlen, fc, cn, bits)) {
+    if (getAWIDBits(fmtlen, fc, cn, bits) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return false;
+        return PM3_ESOFT;
     }
 
     uint8_t clk = 50, high = 10, low = 8, invert = 1;
@@ -113,8 +113,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
     SendCommandOLD(CMD_FSK_SIM_TAG, (high << 8) + low, (invert << 8) + clk, bs_len, bits, bs_len);
 
     msleep(delay);
-    sendPing();
-    return true;
+    return sendPing();
 }
 
 static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn) {
@@ -168,7 +167,7 @@ static int CmdAWIDRead_device(const char *Cmd) {
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
     SendCommandMIX(CMD_AWID_DEMOD_FSK, findone, 0, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 //by marshmellow
@@ -180,7 +179,7 @@ static int CmdAWIDDemod(const char *Cmd) {
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - AWID not enough samples");
-        return 0;
+        return PM3_ESOFT;
     }
     //get binary from fsk wave
     int waveIdx = 0;
@@ -200,7 +199,7 @@ static int CmdAWIDDemod(const char *Cmd) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - AWID error demoding fsk %d", idx);
 
-        return 0;
+        return PM3_ESOFT;
     }
 
     setDemodBuff(bits, size, idx);
@@ -228,7 +227,7 @@ static int CmdAWIDDemod(const char *Cmd) {
     size = removeParity(bits, idx + 8, 4, 1, 88);
     if (size != 66) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - AWID at parity check-tag size does not match AWID format");
-        return 0;
+        return PM3_ESOFT;
     }
     // ok valid card found!
 
@@ -302,7 +301,7 @@ static int CmdAWIDDemod(const char *Cmd) {
     if (g_debugMode)
         printDemodBuff();
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
@@ -330,9 +329,9 @@ static int CmdAWIDSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
-    if (!getAWIDBits(fmtlen, fc, cn, bits)) {
+    if ( getAWIDBits(fmtlen, fc, cn, bits) != PM3_SUCCESS ) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     uint8_t clk = 50, high = 10, low = 8, invert = 1;
@@ -373,9 +372,9 @@ static int CmdAWIDClone(const char *Cmd) {
 
     verify_values(&fmtlen, &fc, &cn);
 
-    if (!getAWIDBits(fmtlen, fc, cn, bs)) {
+    if ( getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS ) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     blocks[1] = bytebits_to_byte(bs, 32);
@@ -406,10 +405,10 @@ static int CmdAWIDClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdAWIDBrute(const char *Cmd) {
@@ -487,7 +486,7 @@ static int CmdAWIDBrute(const char *Cmd) {
 
         if (!session.pm3_present) {
             PrintAndLogEx(WARNING, "Device offline\n");
-            return  2;
+            return PM3_ENODATA;
         }
         if (ukbhit()) {
             int gc = getchar();
@@ -498,14 +497,14 @@ static int CmdAWIDBrute(const char *Cmd) {
 
         // Do one up
         if (up < 0xFFFF)
-            if (!sendTry(fmtlen, fc, up++, delay, bits, size, verbose)) return 1;
+            if ( sendTry(fmtlen, fc, up++, delay, bits, size, verbose) != PM3_SUCCESS) return PM3_ESOFT;
 
         // Do one down  (if cardnumber is given)
         if (cn > 1)
             if (down > 1)
-                if (!sendTry(fmtlen, fc, --down, delay, bits, size, verbose)) return 1;
+                if ( sendTry(fmtlen, fc, --down, delay, bits, size, verbose) != PM3_SUCCESS) return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -521,7 +520,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFAWID(const char *Cmd) {
@@ -576,11 +575,12 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
     // add AWID 4bit parity
     size_t bitLen = addParity(pre, bits + 8, 66, 4, 1);
 
-    if (bitLen != 88) return 0;
+    if (bitLen != 88) 
+        return PM3_ESOFT;
 
     PrintAndLogEx(SUCCESS, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 int demodAWID(void) {
