@@ -382,23 +382,22 @@ void printConnSpeed(void) {
 
 #define CONN_SPEED_TEST_MIN_TIME 500 // in milliseconds
     uint8_t *test_data = BigBuf_get_addr();
-    uint32_t end_time;
-
-    uint32_t start_time = end_time = GetTickCount();
+    uint32_t start_time = GetTickCount();
+    uint32_t delta_time = 0;
     uint32_t bytes_transferred = 0;
 
     LED_B_ON();
 
-    while (end_time < start_time + CONN_SPEED_TEST_MIN_TIME) {
+    while (delta_time < CONN_SPEED_TEST_MIN_TIME) {
         reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
-        end_time = GetTickCount();
         bytes_transferred += PM3_CMD_DATA_SIZE;
+        delta_time = GetTickCountDelta(start_time);
     }
     LED_B_OFF();
 
-    Dbprintf("  Time elapsed............%dms", end_time - start_time);
+    Dbprintf("  Time elapsed............%dms", delta_time);
     Dbprintf("  Bytes transferred.......%d", bytes_transferred);
-    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / (end_time - start_time));
+    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / delta_time);
 }
 
 /**

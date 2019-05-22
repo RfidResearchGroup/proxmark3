@@ -105,8 +105,8 @@ void ReadLastTagFromFlash() {
     }
     Flash_CheckBusy(BUSY_TIMEOUT);
 
-    uint32_t end_time;
-    uint32_t start_time = end_time = GetTickCount();
+    uint32_t start_time = GetTickCount();
+    uint32_t delta_time = 0;
 
     for (size_t i = 0; i < len; i += size) {
         len = MIN((len - i), size);
@@ -121,7 +121,7 @@ void ReadLastTagFromFlash() {
             return;
         }
     }
-    end_time = GetTickCount();
+    delta_time = GetTickCountDelta(start_time);
     DbprintfEx(FLAG_NEWLINE, "[OK] Last tag recovered from FLASHMEM set to emulator");
     cjSetCursLeft();
     DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_READ", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);
@@ -155,8 +155,8 @@ void WriteTagToFlash(uint8_t index, size_t size) {
     Flash_WriteEnable();
     Flash_Erase4k(0, 0);
 
-    uint32_t end_time;
-    uint32_t start_time = end_time = GetTickCount();
+    uint32_t start_time = GetTickCount();
+    uint32_t delta_time = 0;
 
     while (bytes_remaining > 0) {
         Flash_CheckBusy(BUSY_TIMEOUT);
@@ -184,7 +184,7 @@ void WriteTagToFlash(uint8_t index, size_t size) {
         LED_C_INV();
         LED_D_INV();
     }
-    end_time = GetTickCount();
+    delta_time = GetTickCountDelta(start_time);
 
     DbprintfEx(FLAG_NEWLINE, "[OK] TAG WRITTEN TO FLASH ! [0-to offset %u]", bytes_sent);
     cjSetCursLeft();
@@ -393,8 +393,8 @@ failtag:
     cjSetCursRight();
     DbprintfEx(FLAG_NEWLINE, "--------+--------------------+-------");
 
-    uint32_t end_time;
-    uint32_t start_time = end_time = GetTickCount();
+    uint32_t start_time = GetTickCount();
+    uint32_t delta_time = 0;
 
     //---------------------------------------------------------------------------
     // WE SHOULD FIND A WAY TO GET UID TO AVOID THIS "TESTRUN"
@@ -736,7 +736,7 @@ failtag:
         }
     }
 
-    end_time = GetTickCount();
+    delta_time = GetTickCountDelta(start_time);
     cjSetCursLeft();
 
     DbprintfEx(FLAG_NEWLINE, "%s>>%s Time for VIGIK break :%s%dms%s", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);

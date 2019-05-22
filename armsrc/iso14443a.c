@@ -1623,7 +1623,7 @@ void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uint8_t *p
 int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     *len = 0;
 
-    uint32_t timer = 0, vtime;
+    uint32_t timer = 0;
     int analogCnt = 0;
     int analogAVG = 0;
 
@@ -1662,11 +1662,17 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
             if (analogCnt >= 32) {
                 if ((MAX_ADC_HF_VOLTAGE_RDV40 * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
-                    vtime = GetTickCount();
-                    if (!timer) timer = vtime;
-                    // 50ms no field --> card to idle state
-                    if (vtime - timer > 50) return 2;
-                } else if (timer) timer = 0;
+                    if (timer == 0) {
+                        timer = GetTickCount();
+                    } else {
+                        // 50ms no field --> card to idle state
+                        if (GetTickCountDelta(timer) > 50) {
+                            return 2;
+                        }
+                    }
+                } else {
+                    timer = 0;
+                }
                 analogCnt = 0;
                 analogAVG = 0;
             }
@@ -2041,7 +2047,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par) {
         ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
         // Receive the ATQA
         len = ReaderReceive(resp, resp_par);
-    } while (len == 0 && GetTickCount() <= start_time + WUPA_RETRY_TIMEOUT);
+    } while (len == 0 && GetTickCountDelta(start_time) <= WUPA_RETRY_TIMEOUT);
 
     iso14a_set_timeout(save_iso14a_timeout);
     return len;
