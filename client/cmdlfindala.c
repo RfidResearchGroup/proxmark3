@@ -33,7 +33,7 @@ static int usage_lf_indala_demod(void) {
     PrintAndLogEx(NORMAL, "        lf indala demod 32       = demod a Indala tag from GraphBuffer using a clock of RF/32");
     PrintAndLogEx(NORMAL, "        lf indala demod 32 1     = demod a Indala tag from GraphBuffer using a clock of RF/32 and inverting data");
     PrintAndLogEx(NORMAL, "        lf indala demod 64 1 0   = demod a Indala tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_indala_sim(void) {
@@ -47,7 +47,7 @@ static int usage_lf_indala_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf indala sim deadc0de");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Indala 26 bit decode
@@ -64,9 +64,9 @@ static int CmdIndalaDemod(const char *Cmd) {
     else
         ans = PSKDemod("32", true);
 
-    if (!ans) {
+    if (ans != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d", ans);
-        return 0;
+        return PM3_ESOFT;
     }
 
     uint8_t invert = 0;
@@ -83,7 +83,7 @@ static int CmdIndalaDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: size not correct: %d", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: error demoding psk idx: %d", idx);
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
@@ -160,7 +160,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         PrintAndLogEx(DEBUG, "DEBUG: Indala - printing demodbuffer");
         printDemodBuff();
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // older alternative indala demodulate (has some positives and negatives)
@@ -223,7 +223,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
         PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen / 32);
         PrintAndLogEx(INFO, "worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
     } else {
-        return 0;
+        return PM3_ESOFT;
     }
 
     // Finding the start of a UID
@@ -252,7 +252,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
     if (start == rawbit - uidlen + 1) {
         PrintAndLogEx(FAILED, "nothing to wait for");
-        return 0;
+        return PM3_ESOFT;
     }
 
     // Inverting signal if needed
@@ -278,7 +278,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
         }
         showbits[bit + 1] = '\0';
         PrintAndLogEx(SUCCESS, "Partial UID | %s", showbits);
-        return 0;
+        return PM3_SUCCESS;
     } else {
         for (bit = 0; bit < uidlen; bit++) {
             bits[bit] = rawbits[i++];
@@ -358,7 +358,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     }
 
     RepaintGraphWindow();
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
@@ -457,7 +457,7 @@ static int CmdIndalaClone(const char *Cmd) {
         SendCommandOLD(CMD_INDALA_CLONE_TAG, 0, 0, 0, datawords, sizeof(datawords));
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -473,7 +473,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFINDALA(const char *Cmd) {

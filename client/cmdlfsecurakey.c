@@ -17,11 +17,13 @@ static int CmdSecurakeyDemod(const char *Cmd) {
 
     //ASK / Manchester
     bool st = false;
-    if (!ASKDemod_ext("40 0 0", false, false, 1, &st)) {
+    if (ASKDemod_ext("40 0 0", false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ASK/Manchester Demod failed");
-        return 0;
+        return PM3_ESOFT;
     }
-    if (st) return 0;
+    if (st) 
+        return PM3_ESOFT;
+
     size_t size = DemodBufferLen;
     int ans = detectSecurakey(DemodBuffer, &size);
     if (ans < 0) {
@@ -33,7 +35,7 @@ static int CmdSecurakeyDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: Size not correct: %d", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ans: %d", ans);
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
@@ -69,7 +71,7 @@ static int CmdSecurakeyDemod(const char *Cmd) {
     uint32_t fc = 0, lWiegand = 0, rWiegand = 0;
     if (bitLen > 40) { //securakey's max bitlen is 40 bits...
         PrintAndLogEx(DEBUG, "DEBUG: Error bitLen too long: %u", bitLen);
-        return 0;
+        return PM3_ESOFT;
     }
     // get left 1/2 wiegand & right 1/2 wiegand (for parity test and wiegand print)
     lWiegand = bytebits_to_byte(bits_no_spacer + 48 - bitLen, bitLen / 2);
@@ -91,7 +93,7 @@ static int CmdSecurakeyDemod(const char *Cmd) {
     PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
     PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
     PrintAndLogEx(INFO, "Help the community identify this format further\n by sharing your tag on the pm3 forum or with forum members");
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdSecurakeyRead(const char *Cmd) {
@@ -111,7 +113,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFSecurakey(const char *Cmd) {

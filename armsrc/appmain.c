@@ -822,7 +822,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         case CMD_SIMULATE_TAG_125K:
             LED_A_ON();
-            SimulateTagLowFrequency(packet->oldarg[0], packet->oldarg[1], 1);
+            struct p {
+                uint16_t len;
+                uint16_t gap;
+            } PACKED;
+            struct p *payload;
+            payload = (struct p*)packet->data.asBytes;
+            // length, start gap, led control
+            SimulateTagLowFrequency(payload->len, payload->gap, 1);
             reply_ng(CMD_SIMULATE_TAG_125K, PM3_EOPABORTED, NULL, 0);
             LED_A_OFF();
             break;
@@ -1339,17 +1346,32 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_UPLOAD_SIM_SAMPLES_125K: {
             // iceman; since changing fpga_bitstreams clears bigbuff, Its better to call it before.
             // to be able to use this one for uploading data to device
-            // arg1 = 0 upload for LF usage
+            // flag = 
+            //    b0  0 upload for LF usage 
             //        1 upload for HF usage
-#define FPGA_LF 1
-            if (packet->oldarg[1] == FPGA_LF)
-                FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            else
+            //    b1  0 skip
+            //        1 clear bigbuff
+            struct p {
+                uint8_t flag;
+                uint16_t offset;
+                uint8_t *data;
+            };
+            struct p* payload = (struct p*)packet->data.asBytes;
+
+
+            if ((payload->flag & 0x1) == 0x1)
                 FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            else
+                FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            
+            if ((payload->flag & 0x2) == 0x2) {
+                BigBuf_Clear_ext(false);
+                BigBuf_free();
+            }
 
             uint8_t *mem = BigBuf_get_addr();
-            memcpy(mem + packet->oldarg[0], packet->data.asBytes, PM3_CMD_DATA_SIZE);
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            memcpy(mem + payload->offset, &payload->data, PM3_CMD_DATA_SIZE - 3);    
+            reply_ng(CMD_UPLOAD_SIM_SAMPLES_125K, PM3_SUCCESS, NULL, 0);
             break;
         }
 #endif

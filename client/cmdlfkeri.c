@@ -21,7 +21,7 @@ static int usage_lf_keri_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf keri clone 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_keri_sim(void) {
@@ -35,15 +35,15 @@ static int usage_lf_keri_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf keri sim 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdKeriDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
-    if (!PSKDemod("", false)) {
+    if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: PSK1 Demod failed");
-        return 0;
+        return PM3_ESOFT;
     }
     bool invert = false;
     size_t size = DemodBufferLen;
@@ -58,7 +58,7 @@ static int CmdKeriDemod(const char *Cmd) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: ans: %d", idx);
 
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(DemodBuffer, size, idx);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
@@ -95,7 +95,7 @@ static int CmdKeriDemod(const char *Cmd) {
 
         CmdPrintDemodBuff("x");
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdKeriRead(const char *Cmd) {
@@ -165,11 +165,11 @@ static int CmdKeriClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdKeriSim(const char *Cmd) {
@@ -214,7 +214,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFKeri(const char *Cmd) {

@@ -25,7 +25,7 @@ static int usage_lf_visa2k_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf visa2000 clone 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_visa2k_sim(void) {
@@ -39,7 +39,7 @@ static int usage_lf_visa2k_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        lf visa2000 sim 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static uint8_t visa_chksum(uint32_t id) {
@@ -90,10 +90,10 @@ static int CmdVisa2kDemod(const char *Cmd) {
 
     //ASK / Manchester
     bool st = true;
-    if (!ASKDemod_ext("64 0 0", false, false, 1, &st)) {
+    if (ASKDemod_ext("64 0 0", false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
         save_restoreGB(GRAPH_RESTORE);
-        return 0;
+        return PM3_ESOFT;
     }
     size_t size = DemodBufferLen;
     int ans = detectVisa2k(DemodBuffer, &size);
@@ -108,7 +108,7 @@ static int CmdVisa2kDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
 
         save_restoreGB(GRAPH_RESTORE);
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
@@ -126,7 +126,7 @@ static int CmdVisa2kDemod(const char *Cmd) {
     if (chk != calc) {
         PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum failed %x - %x\n", chk, calc);
         save_restoreGB(GRAPH_RESTORE);
-        return 0;
+        return PM3_ESOFT;
     }
     // parity
     uint8_t calc_par = visa_parity(raw2);
@@ -134,10 +134,10 @@ static int CmdVisa2kDemod(const char *Cmd) {
     if (calc_par != chk_par) {
         PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity failed %x - %x\n", chk_par, calc_par);
         save_restoreGB(GRAPH_RESTORE);
-        return 0;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, "Visa2000 Tag Found: Card ID %u,  Raw: %08X%08X%08X", raw2,  raw1, raw2, raw3);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
@@ -152,7 +152,8 @@ static int CmdVisa2kClone(const char *Cmd) {
     uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_64 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, BL0CK1, 0};
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_visa2k_clone();
+    if (strlen(Cmd) == 0 || cmdp == 'h')
+        return usage_lf_visa2k_clone();
 
     id = param_get32ex(Cmd, 0, 0, 10);
 
@@ -186,17 +187,18 @@ static int CmdVisa2kClone(const char *Cmd) {
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
 
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdVisa2kSim(const char *Cmd) {
 
     uint32_t id = 0;
     char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_visa2k_sim();
+    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H')
+        return usage_lf_visa2k_sim();
 
     id = param_get32ex(Cmd, 0, 0, 10);
 
@@ -231,7 +233,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFVisa2k(const char *Cmd) {

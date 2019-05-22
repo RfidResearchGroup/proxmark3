@@ -48,7 +48,7 @@ static int usage_lf_sniff(void) {
 
     PrintAndLogEx(NORMAL, "Usage: lf sniff [h]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h         This help");
+    PrintAndLogEx(NORMAL, "       h         This help");
     return 0;
 }
 static int usage_lf_config(void) {
@@ -427,11 +427,12 @@ int CmdLFSniff(const char *Cmd) {
     return 0;
 }
 
-static void ChkBitstream(const char *str) {
+static void ChkBitstream() {
     // convert to bitstream if necessary
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
             CmdGetBitStream("");
+	    PrintAndLogEx(INFO, " called cmdgetbitstream");
             break;
         }
     }
@@ -442,36 +443,68 @@ int CmdLFSim(const char *Cmd) {
 #define FPGA_LF 1
 #define FPGA_HF 2
 
-    int gap = 0;
-    sscanf(Cmd, "%i", &gap);
+    uint16_t gap = param_get32ex(Cmd, 0, 0, 10) & 0xFFFF;
 
     // convert to bitstream if necessary
-    ChkBitstream(Cmd);
+    ChkBitstream();
 
-    PrintAndLogEx(DEBUG, "DEBUG: Sending [%d bytes]\n", GraphTraceLen);
+    PrintAndLogEx(DEBUG, "DEBUG: Uploading %d bytes", GraphTraceLen);
+
+    struct pupload {
+        uint8_t flag;
+        uint16_t offset;
+        uint8_t data[PM3_CMD_DATA_SIZE - 3];
+    } PACKED;
+    struct pupload payload_up;
+
+    // flag = 
+    //    b0  0 upload for LF usage 
+    //        1 upload for HF usage
+    //    b1  0 skip
+    //        1 clear bigbuff
+    payload_up.flag |= 0x2;
 
     // fast push mode
     conn.block_after_ACK = true;
 
     //can send only 512 bits at a time (1 byte sent per bit...)
-    for (uint16_t i = 0; i < GraphTraceLen; i += PM3_CMD_DATA_SIZE) {
+    for (uint16_t i = 0; i < GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
+
+        size_t len = MIN((GraphTraceLen - i), PM3_CMD_DATA_SIZE - 3);
         clearCommandBuffer();
-        SendCommandOLD(CMD_UPLOAD_SIM_SAMPLES_125K, i, FPGA_LF, 0, &GraphBuffer[i], PM3_CMD_DATA_SIZE);
-        WaitForResponse(CMD_ACK, NULL);
+        payload_up.offset = i;
+
+        for(uint16_t j = 0; j < len; j++)
+            payload_up.data[j] = GraphBuffer[i+j];
+
+        SendCommandNG(CMD_UPLOAD_SIM_SAMPLES_125K, (uint8_t *)&payload_up, sizeof(struct pupload));
+        WaitForResponse(CMD_UPLOAD_SIM_SAMPLES_125K, NULL);
         printf(".");
         fflush(stdout);
+
+        payload_up.flag = 0;
     }
-    printf("\n");
 
     // Disable fast mode before last command
     conn.block_after_ACK = false;
 
-    PrintAndLogEx(NORMAL, "Simulating");
+    PrintAndLogEx(INFO, "\nSimulating");
+
+    struct p {
+        uint16_t len;
+        uint16_t gap;
+    } PACKED;
+    struct p payload;
+    payload.len = GraphTraceLen;
+    payload.gap = gap;	
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_SIMULATE_TAG_125K, GraphTraceLen, gap, 0, NULL, 0);
+    SendCommandNG(CMD_SIMULATE_TAG_125K, (uint8_t *)&payload, sizeof(payload));
+
     PacketResponseNG resp;
     WaitForResponse(CMD_SIMULATE_TAG_125K, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
@@ -966,20 +999,20 @@ int CmdLFfind(const char *Cmd) {
 
         //fsk
         if (GetFskClock("", false)) {
-            if (FSKrawDemod("", true)) {
+            if (FSKrawDemod("", true) == PM3_SUCCESS) {
                 PrintAndLogEx(NORMAL, "\nUnknown FSK Modulated Tag found!");
                 goto out;
             }
         }
 
         bool st = true;
-        if (ASKDemod_ext("0 0 0", true, false, 1, &st)) {
+        if (ASKDemod_ext("0 0 0", true, false, 1, &st) == PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "\nUnknown ASK Modulated and Manchester encoded Tag found!");
             PrintAndLogEx(NORMAL, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod ab'"));
             goto out;
         }
 
-        if (CmdPSK1rawDemod("")) {
+        if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "Possible unknown PSK1 Modulated Tag found above!");
             PrintAndLogEx(NORMAL, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod p2'"));
             PrintAndLogEx(NORMAL, "    Could also be PSK3 - [currently not supported]");
@@ -992,7 +1025,7 @@ int CmdLFfind(const char *Cmd) {
 out:
     // identify chipset
     CheckChipType(isOnline);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -1044,5 +1077,5 @@ int CmdLF(const char *Cmd) {
 int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }

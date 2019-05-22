@@ -493,14 +493,14 @@ bool DecodeT55xxBlock(void) {
         default:
             return false;
     }
-    return (bool) ans;
+    return (ans == PM3_SUCCESS);
 }
 
 static bool DecodeT5555TraceBlock(void) {
     DemodBufferLen = 0x00;
 
     // According to datasheet. Always: RF/64, not inverted, Manchester
-    return (bool) ASKDemod("64 0 1", false, false, 1);
+    return (ASKDemod("64 0 1", false, false, 1) == PM3_SUCCESS);
 }
 
 // sanity check. Don't use proxmark if it is offline and you didn't specify useGraphbuf
@@ -597,7 +597,7 @@ bool tryDetectModulation(void) {
             // false = no emSearch
             // 1 = Ask/Man
             // st = true
-            if (ASKDemod_ext("0 0 1", false, false, 1, &tests[hits].ST) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ((ASKDemod_ext("0 0 1", false, false, 1, &tests[hits].ST) == PM3_SUCCESS) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
@@ -610,7 +610,7 @@ bool tryDetectModulation(void) {
             // false = no emSearch
             // 1 = Ask/Man
             // st = true
-            if (ASKDemod_ext("0 1 1", false, false, 1, &tests[hits].ST)  && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ((ASKDemod_ext("0 1 1", false, false, 1, &tests[hits].ST) == PM3_SUCCESS) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
@@ -661,7 +661,7 @@ bool tryDetectModulation(void) {
             save_restoreGB(GRAPH_SAVE);
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
             CmdLtrim("160");
-            if (PSKDemod("0 0 6", false) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ( (PSKDemod("0 0 6", false) == PM3_SUCCESS) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
@@ -669,7 +669,7 @@ bool tryDetectModulation(void) {
                 tests[hits].ST = false;
                 ++hits;
             }
-            if (PSKDemod("0 1 6", false) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ((PSKDemod("0 1 6", false) == PM3_SUCCESS) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
@@ -679,7 +679,7 @@ bool tryDetectModulation(void) {
             }
             //ICEMAN: are these PSKDemod calls needed?
             // PSK2 - needs a call to psk1TOpsk2.
-            if (PSKDemod("0 0 6", false)) {
+            if (PSKDemod("0 0 6", false) == PM3_SUCCESS) {
                 psk1TOpsk2(DemodBuffer, DemodBufferLen);
                 if (test(DEMOD_PSK2, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                     tests[hits].modulation = DEMOD_PSK2;
@@ -691,7 +691,7 @@ bool tryDetectModulation(void) {
                 }
             } // inverse waves does not affect this demod
             // PSK3 - needs a call to psk1TOpsk2.
-            if (PSKDemod("0 0 6", false)) {
+            if (PSKDemod("0 0 6", false) == PM3_SUCCESS) {
                 psk1TOpsk2(DemodBuffer, DemodBufferLen);
                 if (test(DEMOD_PSK3, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                     tests[hits].modulation = DEMOD_PSK3;
@@ -1041,7 +1041,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
             case 'b':
                 errors |= param_getdec(Cmd, cmdp + 1, &block);
                 cmdp += 2;
-                
+
                 if (block > 7) {
                     PrintAndLogEx(WARNING, "Block number must be between 0 and 7");
                     errors = true;
@@ -1085,14 +1085,14 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     PrintAndLogEx(INFO, "Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data, (usepwd) ? pwdStr : "");
 
     clearCommandBuffer();
-    
+
     /*
         OLD style
        arg0 = data, (4 bytes)
        arg1 = block (1 byte)
        arg2 = password (4 bytes)
        flags = data[0] (1 byte)
-       
+
        new style
        uses struct in pm3_cmd.h
     */
@@ -1101,7 +1101,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     ng.pwd = password;
     ng.blockno = block;
     ng.flags = flags;
-    
+
     SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
     if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not ACK write operation. (May be due to old firmware)");
@@ -2148,13 +2148,13 @@ bool tryDetectP1(bool getData) {
     // try ask clock detect.  it could be another type even if successful.
     clk = GetAskClock("", false);
     if (clk > 0) {
-        if (ASKDemod_ext("0 0 1", false, false, 1, &st) &&
+        if ((ASKDemod_ext("0 0 1", false, false, 1, &st) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
         st = true;
-        if (ASKDemod_ext("0 1 1", false, false, 1, &st)  &&
+        if ((ASKDemod_ext("0 1 1", false, false, 1, &st) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
@@ -2194,20 +2194,20 @@ bool tryDetectP1(bool getData) {
         // save_restoreGB(GRAPH_SAVE);
         // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
         //CmdLtrim("160");
-        if (PSKDemod("0 0 6", false) &&
+        if ((PSKDemod("0 0 6", false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             //save_restoreGB(GRAPH_RESTORE);
             return true;
         }
-        if (PSKDemod("0 1 6", false) &&
+        if ((PSKDemod("0 1 6", false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             //save_restoreGB(GRAPH_RESTORE);
             return true;
         }
         // PSK2 - needs a call to psk1TOpsk2.
-        if (PSKDemod("0 0 6", false)) {
+        if (PSKDemod("0 0 6", false) == PM3_SUCCESS) {
             psk1TOpsk2(DemodBuffer, DemodBufferLen);
             if (preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                     (DemodBufferLen == 32 || DemodBufferLen == 64)) {

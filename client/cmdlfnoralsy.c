@@ -22,7 +22,7 @@ static int usage_lf_noralsy_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf noralsy clone 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_noralsy_sim(void) {
@@ -37,7 +37,7 @@ static int usage_lf_noralsy_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf noralsy sim 112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static uint8_t noralsy_chksum(uint8_t *bits, uint8_t len) {
@@ -53,13 +53,13 @@ static int CmdNoralsyDemod(const char *Cmd) {
 
     //ASK / Manchester
     bool st = true;
-    if (!ASKDemod_ext("32 0 0", false, false, 1, &st)) {
+    if (ASKDemod_ext("32 0 0", false, false, 1, &st) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ASK/Manchester Demod failed");
-        return 0;
+        return PM3_ESOFT;
     }
     if (!st) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: sequence terminator not found");
-        return 0;
+        return PM3_ESOFT;
     }
 
     size_t size = DemodBufferLen;
@@ -75,7 +75,7 @@ static int CmdNoralsyDemod(const char *Cmd) {
             else
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ans: %d", ans);
         }
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(DemodBuffer, 96, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
@@ -103,11 +103,11 @@ static int CmdNoralsyDemod(const char *Cmd) {
     // test checksums
     if (chk1 != calc1) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: checksum 1 failed %x - %x\n", chk1, calc1);
-        return 0;
+        return PM3_ESOFT;
     }
     if (chk2 != calc2) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: checksum 2 failed %x - %x\n", chk2, calc2);
-        return 0;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "Noralsy Tag Found: Card ID %u, Year: %u Raw: %08X%08X%08X", cardid, year, raw1, raw2, raw3);
@@ -115,7 +115,7 @@ static int CmdNoralsyDemod(const char *Cmd) {
         PrintAndLogEx(WARNING, "Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
         PrintAndLogEx(WARNING, "Please post this output in forum to further research on this format");
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdNoralsyRead(const char *Cmd) {
@@ -141,9 +141,9 @@ static int CmdNoralsyClone(const char *Cmd) {
     if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
         blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
-    if (!getnoralsyBits(id, year, bits)) {
+    if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     //
@@ -173,10 +173,10 @@ static int CmdNoralsyClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdNoralsySim(const char *Cmd) {
@@ -188,16 +188,17 @@ static int CmdNoralsySim(const char *Cmd) {
     uint32_t id = 0;
 
     char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_noralsy_sim();
+    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H')
+        return usage_lf_noralsy_sim();
 
     id = param_get32ex(Cmd, 0, 0, 10);
     year = param_get32ex(Cmd, 1, 2000, 10);
 
     uint8_t clk = 32, encoding = 1, separator = 1, invert = 0;
 
-    if (!getnoralsyBits(id, year, bits)) {
+    if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Noralsy - CardId: %u", id);
@@ -223,7 +224,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFNoralsy(const char *Cmd) {
@@ -256,7 +257,7 @@ int getnoralsyBits(uint32_t id, uint16_t year, uint8_t *bits) {
     num_to_bytebits(chksum, 4, bits + 72);
     chksum = noralsy_chksum(bits, 76);
     num_to_bytebits(chksum, 4, bits + 76);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // by iceman

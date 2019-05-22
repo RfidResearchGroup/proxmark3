@@ -21,7 +21,7 @@ static int usage_lf_presco_clone(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf presco clone d 123456789");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_lf_presco_sim(void) {
@@ -37,16 +37,16 @@ static int usage_lf_presco_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf presco sim d 123456789");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //see ASKDemod for what args are accepted
 static int CmdPrescoDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     bool st = true;
-    if (!ASKDemod_ext("32 0 0 0 0 a", false, false, 1, &st)) {
+    if (ASKDemod_ext("32 0 0 0 0 a", false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error Presco ASKDemod failed");
-        return 0;
+        return PM3_ESOFT;
     }
     size_t size = DemodBufferLen;
     int ans = detectPresco(DemodBuffer, &size);
@@ -59,7 +59,7 @@ static int CmdPrescoDemod(const char *Cmd) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: Size not correct: %d", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: ans: %d", ans);
-        return 0;
+        return PM3_ESOFT;
     }
     setDemodBuff(DemodBuffer, 128, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
@@ -78,7 +78,7 @@ static int CmdPrescoDemod(const char *Cmd) {
     sprintf(cmd, "H %08X", cardid);
     getWiegandFromPresco(cmd, &sitecode, &usercode, &fullcode, &Q5);
     PrintAndLogEx(SUCCESS, "SiteCode %u, UserCode %u, FullCode, %08X", sitecode, usercode, fullcode);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 //see ASKDemod for what args are accepted
@@ -139,10 +139,10 @@ static int CmdPrescoClone(const char *Cmd) {
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // takes base 12 ID converts to hex
@@ -151,7 +151,8 @@ static int CmdPrescoSim(const char *Cmd) {
     uint32_t sitecode = 0, usercode = 0, fullcode = 0;
     bool Q5 = false;
     // get wiegand from printed number.
-    if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) return usage_lf_presco_sim();
+    if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) 
+        return usage_lf_presco_sim();
 
     uint8_t clk = 32, encoding = 1, separator = 1, invert = 0;
 
@@ -178,7 +179,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFPresco(const char *Cmd) {

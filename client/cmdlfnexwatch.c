@@ -15,9 +15,9 @@ static int CmdHelp(const char *Cmd);
 static int CmdNexWatchDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
-    if (!PSKDemod("", false)) {
+    if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
-        return 0;
+        return PM3_ESOFT;
     }
     bool invert = false;
     size_t size = DemodBufferLen;
@@ -36,7 +36,7 @@ static int CmdNexWatchDemod(const char *Cmd) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch error %d", idx);
 
-        return 0;
+        return PM3_ESOFT;
     }
 
     setDemodBuff(DemodBuffer, size, idx + 4);
@@ -64,7 +64,7 @@ static int CmdNexWatchDemod(const char *Cmd) {
     }
 
     CmdPrintDemodBuff("x");
-    return 1;
+    return PM3_SUCCESS;
 }
 
 //by marshmellow
@@ -84,7 +84,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFNEXWATCH(const char *Cmd) {
