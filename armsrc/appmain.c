@@ -1226,9 +1226,29 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_USART_RX: {
             LED_B_ON();
+            struct p {
+                uint32_t waittime;
+            } PACKED;
+            struct p *payload = (struct p *) &packet->data.asBytes;
+            uint16_t available;
+            uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
-            uint16_t available = usart_rxdata_available();
-
+            uint32_t wait = payload->waittime;
+            uint32_t ti = GetTickCount();
+            while (true) {
+                WaitMS(50);
+                available = usart_rxdata_available();
+                if (available > pre_available) {
+                    // When receiving data, reset timer and shorten timeout
+                    ti = GetTickCount();
+                    wait = 50;
+                    pre_available = available;
+                    continue;
+                }
+                // We stop either after waittime if no data or 50ms after last data received
+                if (GetTickCountDelta(ti) > wait)
+                    break;
+            }
             if (available > 0) {
                 uint16_t len = usart_read_ng(dest, available);
                 reply_ng(CMD_USART_RX, PM3_SUCCESS, dest, len);
@@ -1248,12 +1268,24 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p *payload = (struct p *) &packet->data.asBytes;
             usart_writebuffer_sync(payload->data, packet->length - sizeof(payload->waittime));
             uint16_t available;
-            WaitMS(payload->waittime);
-
+            uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
-
-            available = usart_rxdata_available();
-            // Dbprintf("avail (%u)",  available);
+            uint32_t wait = payload->waittime;
+            uint32_t ti = GetTickCount();
+            while (true) {
+                WaitMS(50);
+                available = usart_rxdata_available();
+                if (available > pre_available) {
+                    // When receiving data, reset timer and shorten timeout
+                    ti = GetTickCount();
+                    wait = 50;
+                    pre_available = available;
+                    continue;
+                }
+                // We stop either after waittime if no data or 50ms after last data received
+                if (GetTickCountDelta(ti) > wait)
+                    break;
+            }
             if (available > 0) {
                 uint16_t len = usart_read_ng(dest, available);
                 reply_ng(CMD_USART_TXRX, PM3_SUCCESS, dest, len);

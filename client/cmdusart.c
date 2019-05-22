@@ -75,12 +75,13 @@ static int usage_usart_txhex(void) {
 }
 
 static int usage_usart_rx(void) {
-    PrintAndLogEx(NORMAL, "Receive string over USART");
+    PrintAndLogEx(NORMAL, "Receive string over USART [t <timeout>]");
     PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  usart rx [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h          This help");
+    PrintAndLogEx(NORMAL, "           t <timeout> timeout in ms, default is 0ms");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "expected output: Received string");
     return PM3_SUCCESS;
@@ -90,9 +91,10 @@ static int usage_usart_rxhex(void) {
     PrintAndLogEx(NORMAL, "Receive bytes over USART");
     PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  usart rx [h]");
+    PrintAndLogEx(NORMAL, "Usage:  usart rxhex [h] [t <timeout>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h          This help");
+    PrintAndLogEx(NORMAL, "           t <timeout> timeout in ms, default is 0ms");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "expected output: Received bytes");
     return PM3_SUCCESS;
@@ -147,11 +149,15 @@ static int usart_tx(uint8_t *data, size_t len) {
     return resp.status;
 }
 
-static int usart_rx(uint8_t *data, size_t *len) {
+static int usart_rx(uint8_t *data, size_t *len, uint32_t waittime) {
     clearCommandBuffer();
-    SendCommandNG(CMD_USART_RX, NULL, 0);
+    struct {
+        uint32_t waittime;
+    } PACKED payload;
+    payload.waittime = waittime;
+    SendCommandNG(CMD_USART_RX, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_USART_RX, &resp, 1000)) {
+    if (!WaitForResponseTimeout(CMD_USART_RX, &resp, waittime + 500)) {
         return PM3_ETIMEOUT;
     }
     if (resp.status == PM3_SUCCESS) {
@@ -580,10 +586,15 @@ static int CmdUsartTX(const char *Cmd) {
 static int CmdUsartRX(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
+    uint32_t waittime = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_usart_rx();
+            case 't':
+                waittime = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -597,7 +608,7 @@ static int CmdUsartRX(const char *Cmd) {
     }
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
-    int ret = usart_rx(data, &len);
+    int ret = usart_rx(data, &len, waittime);
     if (ret != PM3_SUCCESS)
         return ret;
     PrintAndLogEx(NORMAL, "RX:%.*s", len, data);
@@ -709,10 +720,15 @@ static int CmdUsartTXhex(const char *Cmd) {
 static int CmdUsartRXhex(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
+    uint32_t waittime = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_usart_rxhex();
+            case 't':
+                waittime = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -727,7 +743,7 @@ static int CmdUsartRXhex(const char *Cmd) {
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
-    int ret = usart_rx(data, &len);
+    int ret = usart_rx(data, &len, waittime);
     if (ret != PM3_SUCCESS)
         return ret;
 

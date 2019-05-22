@@ -27,6 +27,7 @@ void SpinDelayUs(int us);
 
 void StartTickCount(void);
 uint32_t RAMFUNC GetTickCount(void);
+uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks);
 
 void StartCountUS(void);
 uint32_t RAMFUNC GetCountUS(void);
