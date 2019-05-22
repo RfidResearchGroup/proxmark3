@@ -18,7 +18,7 @@
 #include "lfdemod.h"
 #include "cmddata.h" //for g_debugmode
 
-void AppendGraph(bool redraw, int clock, int bit);
+void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);
 size_t getFromGraphBuf(uint8_t *buff);
 int GetAskClock(const char *str, bool printAns);

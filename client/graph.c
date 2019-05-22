@@ -16,13 +16,15 @@ int s_Buff[MAX_GRAPH_TRACE_LEN];
 /* write a manchester bit to the graph
 TODO,  verfy that this doesn't overflow buffer  (iceman)
 */
-void AppendGraph(bool redraw, int clock, int bit) {
-    int i;
+void AppendGraph(bool redraw, uint16_t clock, int bit) {
+    uint8_t half = clock / 2;
+    uint8_t i;
     //set first half the clock bit (all 1's or 0's for a 0 or 1 bit)
-    for (i = 0; i < (int)(clock / 2); ++i)
-        GraphBuffer[GraphTraceLen++] = bit ;
+    for (i = 0; i < half; ++i)
+        GraphBuffer[GraphTraceLen++] = bit;
+
     //set second half of the clock bit (all 0's or 1's for a 0 or 1 bit)
-    for (i = (int)(clock / 2); i < clock; ++i)
+    for (; i < clock; ++i)
         GraphBuffer[GraphTraceLen++] = bit ^ 1;
 
     if (redraw)
