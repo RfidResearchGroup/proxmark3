@@ -277,7 +277,7 @@ static int CmdPyramidSim(const char *Cmd) {
 
     if (!getPyramidBits(facilitycode, cardnumber, bs)) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
-        return ESOFT;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
