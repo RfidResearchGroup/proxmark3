@@ -124,7 +124,7 @@ void ReadLastTagFromFlash() {
     delta_time = GetTickCountDelta(start_time);
     DbprintfEx(FLAG_NEWLINE, "[OK] Last tag recovered from FLASHMEM set to emulator");
     cjSetCursLeft();
-    DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_READ", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_READ", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time, _XWHITE_);
     cjSetCursLeft();
     FlashStop();
     SpinOff(0);
@@ -188,7 +188,7 @@ void WriteTagToFlash(uint8_t index, size_t size) {
 
     DbprintfEx(FLAG_NEWLINE, "[OK] TAG WRITTEN TO FLASH ! [0-to offset %u]", bytes_sent);
     cjSetCursLeft();
-    DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_WRITE", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_WRITE", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time, _XWHITE_);
     cjSetCursLeft();
     FlashStop();
     SpinOff(0);
@@ -329,8 +329,8 @@ void RunMod() {
     // banner:
     vtsend_reset(NULL);
     DbprintfEx(FLAG_NEWLINE, "\r\n%s", clearTerm);
-    DbprintfEx(FLAG_NEWLINE, "%s%s%s", _CYAN_, sub_banner, _WHITE_);
-    DbprintfEx(FLAG_NEWLINE, "%s>>%s C.J.B's MifareFastPwn Started\r\n", _RED_, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s%s%s", _XCYAN_, sub_banner, _XWHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s>>%s C.J.B's MifareFastPwn Started\r\n", _XRED_, _XWHITE_);
 
     currline = 20;
     curlline = 20;
@@ -370,16 +370,16 @@ failtag:
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     vtsend_cursor_position_restore(NULL);
-    DbprintfEx(FLAG_NEWLINE, "\t\t\t%s[   GOT a Tag !   ]%s", _GREEN_, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "\t\t\t%s[   GOT a Tag !   ]%s", _XGREEN_, _XWHITE_);
     cjSetCursLeft();
     DbprintfEx(FLAG_NEWLINE, "\t\t\t       `---> Breaking keys ---->");
     cjSetCursRight();
 
-    DbprintfEx(FLAG_NEWLINE, "\t%sGOT TAG :%s %08x%s", _RED_, _CYAN_, cjcuid, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "\t%sGOT TAG :%s %08x%s", _XRED_, _XCYAN_, cjcuid, _XWHITE_);
 
     if (cjcuid == 0) {
         cjSetCursLeft();
-        DbprintfEx(FLAG_NEWLINE, "%s>>%s BUG: 0000_CJCUID! Retrying...", _RED_, _WHITE_);
+        DbprintfEx(FLAG_NEWLINE, "%s>>%s BUG: 0000_CJCUID! Retrying...", _XRED_, _XWHITE_);
         SpinErr(0, 100, 8);
         goto failtag;
     }
@@ -452,19 +452,19 @@ failtag:
                     // COMMON SCHEME 1  : INFINITRON/HEXACT
                     case 0x484558414354:
                         cjSetCursLeft();
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _RED_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _XRED_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _GREEN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _XGREEN_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%sDetected: %s INFI_HEXACT_VIGIK_TAG%s", _ORANGE_, _CYAN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%sDetected: %s INFI_HEXACT_VIGIK_TAG%s", _XORANGE_, _XCYAN_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _YELLOW_, _GREEN_, _YELLOW_, _GREEN_);
+                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _XYELLOW_, _XGREEN_, _XYELLOW_, _XGREEN_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _GREEN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _XGREEN_, _XWHITE_);
                         ;
                         // Type 0 / A first
                         uint16_t t = 0;
@@ -597,19 +597,19 @@ failtag:
                     case 0x8829da9daf76:
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _RED_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _XRED_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _GREEN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _XGREEN_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%sDetected :%sURMET_CAPTIVE_VIGIK_TAG%s", _ORANGE_, _CYAN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%sDetected :%sURMET_CAPTIVE_VIGIK_TAG%s", _XORANGE_, _XCYAN_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _YELLOW_, _GREEN_, _YELLOW_, _GREEN_);
+                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _XYELLOW_, _XGREEN_, _XYELLOW_, _XGREEN_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _GREEN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _XGREEN_, _XWHITE_);
                         cjSetCursLeft();
 
                         // emlClearMem();
@@ -639,19 +639,19 @@ failtag:
                     case 0x424c41524f4e:
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _RED_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _XRED_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _GREEN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _XGREEN_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%s  Detected :%sNORALSY_VIGIK_TAG %s", _ORANGE_, _CYAN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%s  Detected :%sNORALSY_VIGIK_TAG %s", _XORANGE_, _XCYAN_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _YELLOW_, _GREEN_, _YELLOW_, _GREEN_);
+                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _XYELLOW_, _XGREEN_, _XYELLOW_, _XGREEN_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _GREEN_, _WHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _XGREEN_, _XWHITE_);
 
                         t = 0;
                         for (uint16_t s = 0; s < sectorsCnt; s++) {
@@ -692,7 +692,7 @@ failtag:
     if (!allKeysFound) {
         cjSetCursLeft();
         cjTabulize();
-        DbprintfEx(FLAG_NEWLINE, "%s[ FAIL ]%s\r\n->did not found all the keys :'(", _RED_, _WHITE_);
+        DbprintfEx(FLAG_NEWLINE, "%s[ FAIL ]%s\r\n->did not found all the keys :'(", _XRED_, _XWHITE_);
         cjSetCursLeft();
         SpinErr(1, 100, 8);
         SpinOff(100);
@@ -711,18 +711,18 @@ failtag:
     }
     cjSetCursLeft();
 
-    DbprintfEx(FLAG_NEWLINE, "%s>>%s Setting Keys->Emulator MEM...[%sOK%s]", _YELLOW_, _WHITE_, _GREEN_, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s>>%s Setting Keys->Emulator MEM...[%sOK%s]", _XYELLOW_, _XWHITE_, _XGREEN_, _XWHITE_);
 
     /* filling TAG to emulator */
     uint8_t filled = 0;
     cjSetCursLeft();
 
-    DbprintfEx(FLAG_NEWLINE, "%s>>%s Filling Emulator <- from A keys...", _YELLOW_, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s>>%s Filling Emulator <- from A keys...", _XYELLOW_, _XWHITE_);
     e_MifareECardLoad(sectorsCnt, 0, 0, &filled);
     if (filled != 1) {
         cjSetCursLeft();
 
-        DbprintfEx(FLAG_NEWLINE, "%s>>%s W_FAILURE ! %sTrying fallback B keys....", _RED_, _ORANGE_, _WHITE_);
+        DbprintfEx(FLAG_NEWLINE, "%s>>%s W_FAILURE ! %sTrying fallback B keys....", _XRED_, _XORANGE_, _XWHITE_);
 
         /* no trace, no dbg  */
         e_MifareECardLoad(sectorsCnt, 1, 0, &filled);
@@ -739,7 +739,7 @@ failtag:
     delta_time = GetTickCountDelta(start_time);
     cjSetCursLeft();
 
-    DbprintfEx(FLAG_NEWLINE, "%s>>%s Time for VIGIK break :%s%dms%s", _GREEN_, _WHITE_, _YELLOW_, end_time - start_time, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s>>%s Time for VIGIK break :%s%dms%s", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time, _XWHITE_);
 
     vtsend_cursor_position_save(NULL);
     vtsend_set_attribute(NULL, 1);
@@ -758,11 +758,11 @@ readysim:
     DbprintfEx(FLAG_NEWLINE, "-> We launch Emulation ->");
     cjSetCursLeft();
 
-    DbprintfEx(FLAG_NEWLINE, "%s!> HOLD ON : %s When you'll click, simm will stop", _RED_, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s!> HOLD ON : %s When you'll click, simm will stop", _XRED_, _XWHITE_);
     cjSetCursLeft();
 
-    DbprintfEx(FLAG_NEWLINE, "Then %s immediately %s we'll try to %s dump our emulator state%s \r\nin a %s chinese tag%s", _RED_, _WHITE_, _YELLOW_, _WHITE_,
-               _CYAN_, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "Then %s immediately %s we'll try to %s dump our emulator state%s \r\nin a %s chinese tag%s", _XRED_, _XWHITE_, _XYELLOW_, _XWHITE_,
+               _XCYAN_, _XWHITE_);
     cjSetCursLeft();
     cjSetCursLeft();
 
@@ -777,7 +777,7 @@ readysim:
     LED_C_OFF();
     SpinOff(50);
     vtsend_cursor_position_restore(NULL);
-    DbprintfEx(FLAG_NEWLINE, "[   SIMUL ENDED   ]%s", _GREEN_, _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "[   SIMUL ENDED   ]%s", _XGREEN_, _XWHITE_);
     cjSetCursLeft();
 
     DbprintfEx(FLAG_NEWLINE, "<- We're out of Emulation");
@@ -789,7 +789,7 @@ readysim:
     saMifareMakeTag();
     cjSetCursLeft();
     vtsend_cursor_position_restore(NULL);
-    DbprintfEx(FLAG_NEWLINE, "%s[ CLONED? ]", _CYAN_);
+    DbprintfEx(FLAG_NEWLINE, "%s[ CLONED? ]", _XCYAN_);
 
     DbprintfEx(FLAG_NEWLINE, "-> End Cloning.");
     WDT_HIT();
@@ -799,7 +799,7 @@ readysim:
     cjTabulize();
     vtsend_set_attribute(NULL, 0);
     vtsend_set_attribute(NULL, 7);
-    DbprintfEx(FLAG_NEWLINE, "- [ LA FIN ] -\r\n%s`-> You can take shell back :) ...", _WHITE_);
+    DbprintfEx(FLAG_NEWLINE, "- [ LA FIN ] -\r\n%s`-> You can take shell back :) ...", _XWHITE_);
     cjSetCursLeft();
     vtsend_set_attribute(NULL, 0);
     SpinErr(3, 100, 16);
@@ -909,7 +909,7 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
         // if (!iso14443a_fast_select_card(cjuid, 0)) {
         if (!iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true)) {
             cjSetCursLeft();
-            DbprintfEx(FLAG_NEWLINE, "%sFATAL%s : E_MF_LOSTTAG", _RED_, _WHITE_);
+            DbprintfEx(FLAG_NEWLINE, "%sFATAL%s : E_MF_LOSTTAG", _XRED_, _XWHITE_);
             return -1;
         }
 
@@ -968,7 +968,7 @@ void saMifareMakeTag(void) {
             if (currfline > 53) {
                 currfline = 54;
             }
-            DbprintfEx(FLAG_NEWLINE, "Block :%02x %sOK%s", blockNum, _GREEN_, _WHITE_);
+            DbprintfEx(FLAG_NEWLINE, "Block :%02x %sOK%s", blockNum, _XGREEN_, _XWHITE_);
             //                                                      DbprintfEx(FLAG_RAWPRINT,"FATAL:E_MF_CHINESECOOK_NORICE");
             //                                                      cfail=1;
             // return;
@@ -977,15 +977,15 @@ void saMifareMakeTag(void) {
             cjSetCursLeft();
             cjSetCursLeft();
 
-            DbprintfEx(FLAG_NEWLINE, "`--> %sFAIL%s : CHN_FAIL_BLK_%02x_NOK", _RED_, _WHITE_, blockNum);
+            DbprintfEx(FLAG_NEWLINE, "`--> %sFAIL%s : CHN_FAIL_BLK_%02x_NOK", _XRED_, _XWHITE_, blockNum);
             cjSetCursFRight();
-            DbprintfEx(FLAG_NEWLINE, "%s>>>>%s STOP AT %02x", _RED_, _WHITE_, blockNum);
+            DbprintfEx(FLAG_NEWLINE, "%s>>>>%s STOP AT %02x", _XRED_, _XWHITE_, blockNum);
             cfail++;
             break;
         }
         cjSetCursFRight();
 
-        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>> END <<<<<<<<%s", _YELLOW_, _WHITE_);
+        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>> END <<<<<<<<%s", _XYELLOW_, _XWHITE_);
         // break;
         /*if (cfail == 1) {
                 DbprintfEx(FLAG_RAWPRINT,"FATAL: E_MF_HARA_KIRI_\r\n");
