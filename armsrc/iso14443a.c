@@ -832,8 +832,6 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
     static uint8_t rSAKc2[3]  = { 0x00 };
     // dummy ATS (pseudo-ATR), answer to RATS
     static uint8_t rRATS[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 };
-    // PACK response to PWD AUTH for EV1/NTAG
-    static uint8_t rPACK[4] = { 0x00 };
     // GET_VERSION response for EV1/NTAG
     static uint8_t rVERSION[10] = { 0x00 };
     // READ_SIG response for EV1/NTAG
@@ -850,7 +848,7 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
             sak = 0x00;
             // some first pages of UL/NTAG dump is special data
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
-            *pages = mfu_header->pages;
+            *pages = MAX(mfu_header->pages, 15);
         }
         break;
         case 3: { // MIFARE DESFire
@@ -880,7 +878,7 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
             sak = 0x00;
             // some first pages of UL/NTAG dump is special data
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
-            *pages = mfu_header->pages;
+            *pages = MAX(mfu_header->pages, 19);
             // counters and tearing flags
             for (int i = 0; i < 3; i++) {
                 counters[i] = le24toh(mfu_header->counter_tearing[i]);
@@ -892,9 +890,6 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
             // READ_SIG
             memcpy(rSIGN, mfu_header->signature, 32);
             AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
-            // PACK, from last page of dump
-            emlGetMemBt(rPACK, MFU_DUMP_PREFIX_LENGTH + mfu_header->pages * 4, 2);
-            AddCrc14A(rPACK, sizeof(rPACK) - 2);
         }
         break;
         case 8: { // MIFARE Classic 4k
@@ -973,7 +968,7 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
     // TC(1) = 0x02: CID supported, NAD not supported
     AddCrc14A(rRATS, sizeof(rRATS) - 2);
 
-#define TAG_RESPONSE_COUNT 9
+#define TAG_RESPONSE_COUNT 8
     static tag_response_info_t responses_init[TAG_RESPONSE_COUNT] = {
         { .response = rATQA,      .response_n = sizeof(rATQA)      },  // Answer to request - respond with card type
         { .response = rUIDc1,     .response_n = sizeof(rUIDc1)     },  // Anticollision cascade1 - respond with uid
@@ -981,15 +976,14 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
         { .response = rSAKc1,     .response_n = sizeof(rSAKc1)     },  // Acknowledge select - cascade 1
         { .response = rSAKc2,     .response_n = sizeof(rSAKc2)     },  // Acknowledge select - cascade 2
         { .response = rRATS,      .response_n = sizeof(rRATS)      },  // dummy ATS (pseudo-ATR), answer to RATS
-        { .response = rPACK,      .response_n = sizeof(rPACK)      },  // EV1/NTAG PACK response
         { .response = rVERSION,   .response_n = sizeof(rVERSION)   },  // EV1/NTAG GET_VERSION response
         { .response = rSIGN,      .response_n = sizeof(rSIGN)      }   // EV1/NTAG READ_SIG response
     };
 
-    // "precompile" responses. There are 9 predefined responses with a total of 72 bytes data to transmit.
+    // "precompile" responses. There are 8 predefined responses with a total of 68 bytes data to transmit.
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-    // 72 * 8 data bits, 72 * 1 parity bits, 9 start bits, 9 stop bits, 9 correction bits -- 675 bytes buffer
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 675
+    // 68 * 8 data bits, 68 * 1 parity bits, 8 start bits, 8 stop bits, 8 correction bits -- 636 bytes buffer
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 636
 
     uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
     // modulation buffer pointer and current buffer free space size
@@ -1015,9 +1009,8 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
 #define SAKC1     3
 #define SAKC2     4
 #define RATS      5
-#define PACK      6
-#define VERSION   7
-#define SIGNATURE 8
+#define VERSION   6
+#define SIGNATURE 7
 
     return true;
 }
