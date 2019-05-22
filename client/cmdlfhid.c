@@ -29,7 +29,7 @@ static int usage_lf_hid_read(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf hid read");
     PrintAndLogEx(NORMAL, "       lf hid read 1");
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 static int usage_lf_hid_wiegand(void) {
@@ -43,7 +43,7 @@ static int usage_lf_hid_wiegand(void) {
     PrintAndLogEx(NORMAL, "       CN            - card number");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf hid wiegand 0 101 2001");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_hid_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of HID card with card number.");
@@ -55,7 +55,7 @@ static int usage_lf_hid_sim(void) {
     PrintAndLogEx(NORMAL, "       ID  - HID id");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf hid sim 2006ec0c86");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "Clone HID to T55x7.  Tag must be on antenna. ");
@@ -68,7 +68,7 @@ static int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86");
     PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86 L");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, "Enables bruteforce of HID readers with specified facility code.");
@@ -88,21 +88,21 @@ static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, "       lf hid brute a 26 f 224");
     PrintAndLogEx(NORMAL, "       lf hid brute a 26 f 21 d 2000");
     PrintAndLogEx(NORMAL, "       lf hid brute v a 26 f 21 c 200 d 2000");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // sending three times.  Didn't seem to break the previous sim?
-static bool sendPing(void) {
+static int sendPing(void) {
     SendCommandNG(CMD_PING, NULL, 0);
     SendCommandNG(CMD_PING, NULL, 0);
     SendCommandNG(CMD_PING, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_PING, &resp, 1000))
-        return false;
-    return true;
+        return PM3_ETIMEOUT;
+    return PM3_SUCCESS;
 }
-static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, bool verbose) {
+static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uint8_t *bits, bool verbose) {
 
     // this should be optional.
     if (verbose)
@@ -114,8 +114,7 @@ static bool sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, ui
     SendCommandMIX(CMD_HID_SIM_TAG, bytebits_to_byte(bits, 32), bytebits_to_byte(bits + 32, 32), 0, NULL, 0);
 
     msleep(delay);
-    sendPing();
-    return true;
+    return sendPing();
 }
 
 //by marshmellow (based on existing demod + holiman's refactor)
@@ -130,7 +129,7 @@ static int CmdHIDDemod(const char *Cmd) {
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
-        return 0;
+        return PM3_ESOFT;
     }
     //get binary from fsk wave
     int waveIdx = 0;
@@ -150,7 +149,7 @@ static int CmdHIDDemod(const char *Cmd) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - HID error demoding fsk %d", idx);
 
-        return 0;
+        return PM3_ESOFT;
     }
 
     setDemodBuff(bits, size, idx);
@@ -158,7 +157,7 @@ static int CmdHIDDemod(const char *Cmd) {
 
     if (hi2 == 0 && hi == 0 && lo == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - HID no values found");
-        return 0;
+        return PM3_ESOFT;
     }
 
     if (hi2 != 0) { //extra large HID tags
@@ -223,7 +222,7 @@ static int CmdHIDDemod(const char *Cmd) {
     if (g_debugMode)
         printDemodBuff();
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
@@ -240,7 +239,7 @@ static int CmdHIDRead_device(const char *Cmd) {
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
     SendCommandMIX(CMD_HID_DEMOD_FSK, findone, 0, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 static int CmdHIDSim(const char *Cmd) {
@@ -296,7 +295,7 @@ static int CmdHIDClone(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HID_CLONE_TAG, hi2, hi, lo, longid, sizeof(longid));
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /*
@@ -505,7 +504,7 @@ static int CmdHIDWiegand(const char *Cmd) {
                      );
     }
     PrintAndLogEx(NORMAL, "----+-----+-----+-------+-----------+--------------------");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHIDBrute(const char *Cmd) {
@@ -575,7 +574,7 @@ static int CmdHIDBrute(const char *Cmd) {
 
         if (!session.pm3_present) {
             PrintAndLogEx(WARNING, "Device offline\n");
-            return  2;
+            return PM3_ENODATA;
         }
 
         if (ukbhit()) {
@@ -587,14 +586,14 @@ static int CmdHIDBrute(const char *Cmd) {
 
         // Do one up
         if (up < 0xFFFF)
-            if (!sendTry(fmtlen, fc, up++, delay, bits, verbose)) return 1;
+            if ( sendTry(fmtlen, fc, up++, delay, bits, verbose) != PM3_SUCCESS) return PM3_ESOFT;
 
         // Do one down  (if cardnumber is given)
         if (cn > 1)
             if (down > 1)
-                if (!sendTry(fmtlen, fc, --down, delay, bits, verbose)) return 1;
+                if (sendTry(fmtlen, fc, --down, delay, bits, verbose) != PM3_SUCCESS) return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -611,7 +610,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFHID(const char *Cmd) {
