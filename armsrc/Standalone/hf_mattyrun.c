@@ -37,6 +37,7 @@ on a blank card.
 
 uint8_t uid[10];
 uint32_t cuid;
+iso14a_card_select_t p_card;
 
 //-----------------------------------------------------------------------------
 // Matt's StandAlone mod.
@@ -74,7 +75,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
     while (true) {
         // get UID from chip
         if (workFlags & 0x01) {
-            if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+            if (!iso14443a_select_card(uid, &p_card, &cuid, true, 0, true)) {
                 DbprintfEx(FLAG_NEWLINE, "Can't select card");
                 break;
             };
@@ -167,7 +168,7 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
 
         /* no need for anticollision. just verify tag is still here */
         // if (!iso14443a_fast_select_card(cjuid, 0)) {
-        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+        if (!iso14443a_select_card(uid, &p_card, &cuid, true, 0, true)) {
             DbprintfEx(FLAG_NEWLINE, "FATAL : E_MF_LOSTTAG");
             return -1;
         }
@@ -388,7 +389,19 @@ void RunMod() {
 
                 LED_B_ON(); // green
                 // assuming arg0==0,  use hardcoded uid 0xdeadbeaf
-                Mifare1ksim(FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, uid);
+                uint16_t flags;
+                switch (p_card.uidlen){
+                    case 10: 
+                        flags = FLAG_10B_UID_IN_DATA;
+                        break;
+                    case 7:
+                        flags = FLAG_7B_UID_IN_DATA;
+                        break;
+                    default:
+                        flags = FLAG_4B_UID_IN_DATA;
+                        break;
+                }
+                Mifare1ksim(flags | FLAG_MF_1K, 0, uid);
                 LED_B_OFF();
 
                 /*
