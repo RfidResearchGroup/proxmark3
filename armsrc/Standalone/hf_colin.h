@@ -40,7 +40,7 @@
 #define _XORANGE_ _XYELLOW_
 
 int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key);
-void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
+int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype);
 void saMifareMakeTag(void);
 int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void WriteTagToFlash(uint8_t index, size_t size);
