@@ -518,7 +518,7 @@ void Flash_EraseChip(void) {
 
 void Flashmem_print_status(void) {
     DbpString(_BLUE_("Flash memory"));
-    Dbprintf("  Baudrate................%dMHz", FLASHMEM_SPIBAUDRATE / 1000000);
+    Dbprintf("  Baudrate................" _GREEN_("%d MHz"), FLASHMEM_SPIBAUDRATE / 1000000);
 
     if (!FlashInit()) {
         DbpString("  Init...................." _RED_("FAILED"));
@@ -529,13 +529,13 @@ void Flashmem_print_status(void) {
     uint8_t dev_id = Flash_ReadID();
     switch (dev_id) {
         case 0x11 :
-            DbpString("  Memory size............." _YELLOW_("2 mbits / 256kb"));
+            DbpString("  Memory size............." _YELLOW_("2 mbits / 256 kb"));
             break;
         case 0x10 :
-            DbpString("  Memory size..... ......." _YELLOW_("1 mbits / 128kb"));
+            DbpString("  Memory size..... ......." _YELLOW_("1 mbits / 128 kb"));
             break;
         case 0x05 :
-            DbpString("  Memory size............." _YELLOW_("512 kbits / 64kb"));
+            DbpString("  Memory size............." _YELLOW_("512 kbits / 64 kb"));
             break;
         default :
             DbpString("  Device ID..............." _YELLOW_(" -->  Unknown  <--"));
@@ -544,7 +544,7 @@ void Flashmem_print_status(void) {
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);
-    Dbprintf("  Unique ID...............0x%02x%02x%02x%02x%02x%02x%02x%02x",
+    Dbprintf("  Unique ID...............0x%02X%02X%02X%02X%02X%02X%02X%02X",
              uid[7], uid[6], uid[5], uid[4],
              uid[3], uid[2], uid[1], uid[0]
             );
@@ -565,21 +565,21 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  Mifare................%d keys", num);
+            Dbprintf("  Mifare................"_YELLOW_("%d")"keys", num);
     }
 
     isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET, keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  T55x7.................%d keys", num);
+            Dbprintf("  T55x7................."_YELLOW_("%d")"keys", num);
     }
 
     isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET, keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  iClass................%d keys", num);
+            Dbprintf("  iClass................"_YELLOW_("%d")"keys", num);
     }
 
     FlashStop();

@@ -397,7 +397,7 @@ void printConnSpeed(void) {
 
     Dbprintf("  Time elapsed............%dms", delta_time);
     Dbprintf("  Bytes transferred.......%d", bytes_transferred);
-    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / delta_time);
+    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") "bytes/s", 1000 * bytes_transferred / delta_time);
 }
 
 /**
