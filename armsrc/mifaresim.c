@@ -417,7 +417,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
 */
 void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
     tag_response_info_t *responses;
-    uint8_t	cardSTATE = MFEMUL_NOFIELD;
+    uint8_t cardSTATE = MFEMUL_NOFIELD;
     uint8_t uid_len = 0; // 4,7, 10
     uint32_t cuid = 0;
 
