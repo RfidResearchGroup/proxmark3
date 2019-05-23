@@ -714,19 +714,19 @@ failtag:
     DbprintfEx(FLAG_NEWLINE, "%s>>%s Setting Keys->Emulator MEM...[%sOK%s]", _XYELLOW_, _XWHITE_, _XGREEN_, _XWHITE_);
 
     /* filling TAG to emulator */
-    uint8_t filled = 0;
+    int filled;
     cjSetCursLeft();
 
     DbprintfEx(FLAG_NEWLINE, "%s>>%s Filling Emulator <- from A keys...", _XYELLOW_, _XWHITE_);
-    e_MifareECardLoad(sectorsCnt, 0, 0, &filled);
-    if (filled != 1) {
+    filled = e_MifareECardLoad(sectorsCnt, 0);
+    if (filled != PM3_SUCCESS) {
         cjSetCursLeft();
 
         DbprintfEx(FLAG_NEWLINE, "%s>>%s W_FAILURE ! %sTrying fallback B keys....", _XRED_, _XORANGE_, _XWHITE_);
 
         /* no trace, no dbg  */
-        e_MifareECardLoad(sectorsCnt, 1, 0, &filled);
-        if (filled != 1) {
+        filled = e_MifareECardLoad(sectorsCnt, 1);
+        if (filled != PM3_SUCCESS) {
             cjSetCursLeft();
 
             DbprintfEx(FLAG_NEWLINE, "FATAL:EML_FALLBACKFILL_B");
@@ -773,7 +773,7 @@ readysim:
 
     SpinOff(100);
     LED_C_ON();
-    Mifare1ksim(FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, 0, cjuid);
+    Mifare1ksim(FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, cjuid);
     LED_C_OFF();
     SpinOff(50);
     vtsend_cursor_position_restore(NULL);
@@ -812,11 +812,11 @@ readysim:
  * - *datain used as error return
  * - tracing is falsed
  */
-void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
     MF_DBGLEVEL = MF_DBG_NONE;
 
-    uint8_t numSectors = arg0;
-    uint8_t keyType = arg1;
+    uint8_t numSectors = numofsectors;
+    uint8_t keyType = keytype;
 
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -864,7 +864,6 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
                 break;
             };
             if (isOK) {
-                *datain = 1;
                 if (blockNo < NumBlocksPerSector(s) - 1) {
                     emlSetMem(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1);
                 } else {
@@ -873,8 +872,6 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
                     memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
                     emlSetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
                 }
-            } else {
-                *datain = 0;
             }
         }
     }
@@ -888,8 +885,7 @@ void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *dat
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
-    if (MF_DBGLEVEL >= 2)
-        DbpString("EMUL FILL SECTORS FINISHED\n");
+    return (isOK) ? PM3_SUCCESS : PM3_EUNDEF;
 }
 
 /* the chk function is a piwi’ed(tm) check that will try all keys for
