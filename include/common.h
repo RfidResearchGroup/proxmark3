@@ -90,17 +90,22 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 # define T55XX_CONFIG_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x2000)
 #endif
 
+// Reserved space for T55XX PWD = 4 kb
 #ifndef DEFAULT_T55XX_KEYS_OFFSET
 # define DEFAULT_T55XX_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x3000)
 #endif
 
-#ifndef DEFAULT_MF_KEYS_OFFSET
-# define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
+// Reserved space for iClass keys = 4 kb
+#ifndef DEFAULT_ICLASS_KEYS_OFFSET
+# define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
 #endif
 
-#ifndef DEFAULT_ICLASS_KEYS_OFFSET
-# define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x5000)
+// Reserved space for MIFARE Keys = 8 kb
+#ifndef DEFAULT_MF_KEYS_OFFSET
+# define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x6000)
 #endif
+
+
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
 typedef struct {
