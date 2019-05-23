@@ -744,7 +744,7 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
 // stop when button is pressed
 // or return TRUE when command is captured
 //-----------------------------------------------------------------------------
-static int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
+static bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
@@ -758,7 +758,15 @@ static int GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *l
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
-    while (!BUTTON_PRESS()) {
+    uint16_t check = 0;
+
+    for (;;) {
+        if ( check == 1000 ) {
+            if ( BUTTON_PRESS() || usb_poll_validate_length() )
+                return false;
+            check = 0;
+        }
+        ++check;
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -1704,10 +1712,17 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
+    uint16_t check = 0;
+
     for (;;) {
         WDT_HIT();
 
-        if (BUTTON_PRESS()) return 1;
+        if ( check == 1000 ) {
+          if (BUTTON_PRESS() || usb_poll_validate_length())
+              return 1;
+          check = 0;
+        }
+        ++check;
 
         // test if the field exists
         if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
