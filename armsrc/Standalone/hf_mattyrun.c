@@ -235,7 +235,7 @@ void RunMod() {
     uint64_t key64;                 // Defines current key
     uint8_t *keyBlock;              // Where the keys will be held in memory.
     uint8_t stKeyBlock = 20;        // Set the quantity of keys in the block.
-    uint8_t filled = 0;             // Used to check if the memory was filled with success.
+    int filled;                     // Used to check if the memory was filled with success.
     bool keyFound = false;
 
     /*
@@ -369,26 +369,26 @@ void RunMod() {
         if (ecfill) {
 
             Dbprintf("\tFilling in with key A.");
-            MifareECardLoad(sectorsCnt, 0, 0, &filled);
-            if (filled != 1) {
+            filled = MifareECardLoad(sectorsCnt, 0);
+            if (filled != PM3_SUCCESS) {
                 Dbprintf("\t✕ Failed filling with A.");
             }
 
             Dbprintf("\tFilling in with key B.");
-            MifareECardLoad(sectorsCnt, 1, 0, &filled);
-            if (filled != 1) {
+            filled = MifareECardLoad(sectorsCnt, 1);
+            if (filled != PM3_SUCCESS) {
                 Dbprintf("\t✕ Failed filling with B.");
             }
 
-            if ((filled == 1) && simulation) {
-                Dbprintf("\t✓ Filled, simulation started.");
+            if ((filled == PM3_SUCCESS) && simulation) {
+                Dbprintf("\t✓ Emulator memory filled, simulation started.");
 
                 // This will tell the fpga to emulate using previous keys and current target tag content.
                 Dbprintf("\t Press button to abort simulation at anytime.");
 
                 LED_B_ON(); // green
                 // assuming arg0==0,  use hardcoded uid 0xdeadbeaf
-                Mifare1ksim(FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, 0, uid);
+                Mifare1ksim(FLAG_4B_UID_IN_DATA | FLAG_UID_IN_EMUL, 0, uid);
                 LED_B_OFF();
 
                 /*
@@ -428,8 +428,8 @@ void RunMod() {
                     }
 
                 }
-            } else if (filled != 1) {
-                Dbprintf("\t✕ Memory could not be filled due to errors.");
+            } else if (filled != PM3_SUCCESS) {
+                Dbprintf("\t✕ Emulator memory could not be filled due to errors.");
                 LED_C_ON();
             }
         }

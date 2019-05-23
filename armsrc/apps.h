@@ -159,7 +159,7 @@ void MifareSetDbgLvl(uint16_t arg0);
 void MifareEMemClr(void);
 void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareEMemGet(uint32_t arg0, uint32_t arg1);
-void MifareECardLoad(uint32_t arg0, uint32_t arg1);
+int MifareECardLoad(uint32_t arg0, uint32_t arg1);
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);
 void MifareCIdent();  // is "magic chinese" card?

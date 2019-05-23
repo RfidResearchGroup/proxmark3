@@ -1650,7 +1650,7 @@ void MifareEMemGet(uint32_t arg0, uint32_t arg1) {
 // Load a card into the emulator memory
 //
 //-----------------------------------------------------------------------------
-void MifareECardLoad(uint32_t arg0, uint32_t arg1) {
+int MifareECardLoad(uint32_t arg0, uint32_t arg1) {
     uint64_t ui64Key;
     uint32_t cuid = 0;
     uint8_t numSectors = arg0;
@@ -1726,6 +1726,7 @@ void MifareECardLoad(uint32_t arg0, uint32_t arg1) {
     if (MF_DBGLEVEL >= 2) DbpString("EMUL FILL SECTORS FINISHED");
 
     set_tracing(false);
+    return (isOK) ? PM3_SUCCESS : PM3_EUNDEF;
 }
 
 
