@@ -754,8 +754,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t silent;
                 uint32_t samples;
             } PACKED;
-            struct p *payload;
-            payload = (struct p*)packet->data.asBytes;
+            struct p *payload = (struct p*)packet->data.asBytes;
             uint32_t bits = SampleLF(payload->silent, payload->samples);
             reply_ng(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
@@ -766,8 +765,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                uint16_t ones;
                uint16_t zeros;
             } PACKED;
-            struct p *payload;
-            payload = (struct p*)packet->data.asBytes;
+            struct p *payload = (struct p*)packet->data.asBytes;
             ModThenAcquireRawAdcSamples125k(payload->delay, payload->zeros, payload->ones, packet->data.asBytes+8);
             break;
             }
@@ -784,9 +782,19 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HID_SIM_TAG:
             CmdHIDsimTAG(packet->oldarg[0], packet->oldarg[1], 1);
             break;
-        case CMD_FSK_SIM_TAG:
-            CmdFSKsimTAG(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes, 1);
+        case CMD_FSK_SIM_TAG: {
+	    struct p {
+		uint8_t fchigh;
+		uint8_t fclow;
+		uint8_t separator;
+		uint8_t clock;
+		uint16_t datalen;
+	    } PACKED;
+            struct p *payload = (struct p*)packet->data.asBytes;
+
+            CmdFSKsimTAG(payload->fchigh, payload->fclow, payload->separator, payload->clock, payload->datalen, packet->data.asBytes + 6, 1);
             break;
+            }
         case CMD_ASK_SIM_TAG:
             CmdASKsimTag(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes, 1);
             break;

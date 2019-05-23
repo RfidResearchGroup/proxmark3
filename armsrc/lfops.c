@@ -828,7 +828,8 @@ void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol) {
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
-void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
+void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clock, uint16_t bitslen, uint8_t *bits, int ledcontrol) {
+//void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // free eventually allocated BigBuf memory
@@ -838,27 +839,23 @@ void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int 
     set_tracing(false);
 
     int n = 0, i = 0;
-    uint8_t fcHigh = arg1 >> 8;
-    uint8_t fcLow = arg1 & 0xFF;
     uint16_t modCnt = 0;
-    uint8_t clk = arg2 & 0xFF;
-    uint8_t stt = (arg2 >> 8) & 1;
 
-    if (stt) {
-        //int fsktype = ( fcHigh == 8 && fcLow == 5) ? 1 : 2;
+    if (separator) {
+        //int fsktype = ( fchigh == 8 && fclow == 5) ? 1 : 2;
         //fcSTT(&n);
     }
 
-    for (i = 0; i < size; i++) {
+    for (i = 0; i < bitslen; i++) {
         if (bits[i])
-            fcAll(fcLow, &n, clk, &modCnt);
+            fcAll(fclow, &n, clock, &modCnt);
         else
-            fcAll(fcHigh, &n, clk, &modCnt);
+            fcAll(fchigh, &n, clock, &modCnt);
     }
 
     WDT_HIT();
 
-    Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, STT: %d, n: %d", fcHigh, fcLow, clk, stt, n);
+    Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, STT: %d, n: %d", fchigh, fclow, clock, separator, n);
 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);

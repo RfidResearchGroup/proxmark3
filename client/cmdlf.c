@@ -42,12 +42,12 @@ static int usage_lf_read(void) {
     return PM3_SUCCESS;
 }
 static int usage_lf_sim(void) {
-    PrintAndLogEx(NORMAL, "Simulate low frequence signal.");
+    PrintAndLogEx(NORMAL, "Simulate low frequence tag from graphbuffer.");
     PrintAndLogEx(NORMAL, "Use " _YELLOW_("'lf config'")" to set parameters.");
-    PrintAndLogEx(NORMAL, "Usage: lf sim [h] <startgap>");
+    PrintAndLogEx(NORMAL, "Usage: lf sim [h] <gap>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       <startgap>   This help");
+    PrintAndLogEx(NORMAL, "       h         This help");
+    PrintAndLogEx(NORMAL, "       <gap>     Start gap (in microseconds)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf sim 240     - start simulating with 240ms gap");
     PrintAndLogEx(NORMAL, "         lf sim");
@@ -156,6 +156,8 @@ static int usage_lf_find(void) {
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
 
+    if (!session.pm3_present) return PM3_ENOTTY;
+
     bool errors = false;
     uint16_t datalen = 0;
 
@@ -164,10 +166,7 @@ int CmdLFCommandRead(const char *Cmd) {
         uint16_t ones;
         uint16_t zeros;
         uint8_t data[PM3_CMD_DATA_SIZE - 8];
-    } PACKED;
-
-    struct p payload;
-
+    } PACKED payload;
 
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -251,7 +250,7 @@ int CmdFlexdemod(const char *Cmd) {
 
     if (start == size - LONG_WAIT) {
         PrintAndLogEx(WARNING, "nothing to wait for");
-        return 0;
+        return PM3_ENODATA;
     }
 
     data[start] = 4;
@@ -294,10 +293,13 @@ int CmdFlexdemod(const char *Cmd) {
         }
     }
     RepaintGraphWindow();
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFSetConfig(const char *Cmd) {
+
+    if (!session.pm3_present) return PM3_ENOTTY;
+
     uint8_t divisor =  0;//Frequency divisor
     uint8_t bps = 0; // Bits per sample
     uint8_t decimation = 0; //How many to keep
@@ -360,11 +362,11 @@ int CmdLFSetConfig(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_SET_LF_SAMPLING_CONFIG, (uint8_t *)&config, sizeof(sample_config));
-    return 0;
+    return PM3_SUCCESS;
 }
 
-bool lf_read(bool silent, uint32_t samples) {
-    if (!session.pm3_present) return false;
+int lf_read(bool silent, uint32_t samples) {
+    if (!session.pm3_present) return PM3_ENOTTY;
 
     struct p {
         uint8_t silent;
@@ -397,7 +399,7 @@ bool lf_read(bool silent, uint32_t samples) {
 
 int CmdLFRead(const char *Cmd) {
 
-    if (!session.pm3_present) return 0;
+    if (!session.pm3_present) return PM3_ENOTTY;
 
     bool errors = false;
     bool silent = false;
@@ -429,6 +431,9 @@ int CmdLFRead(const char *Cmd) {
 }
 
 int CmdLFSniff(const char *Cmd) {
+
+    if (!session.pm3_present) return PM3_ENOTTY;
+
     uint8_t cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_lf_sniff();
 
@@ -436,7 +441,7 @@ int CmdLFSniff(const char *Cmd) {
     SendCommandNG(CMD_LF_SNIFF_RAW_ADC_SAMPLES, NULL, 0);
     WaitForResponse(CMD_ACK, NULL);
     getSamples(0, false);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void ChkBitstream() {
@@ -444,7 +449,7 @@ static void ChkBitstream() {
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
             CmdGetBitStream("");
-	    PrintAndLogEx(INFO, " called cmdgetbitstream");
+	    PrintAndLogEx(INFO, "Converted to bitstream");
             break;
         }
     }
@@ -453,14 +458,16 @@ static void ChkBitstream() {
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
 int CmdLFSim(const char *Cmd) {
 
-    uint8_t cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_lf_sim();
+    if (!session.pm3_present) return PM3_ENOTTY;
 
     // sanity check
     if ( GraphTraceLen < 20 ) {
         PrintAndLogEx(ERR, "No data in Graphbuffer");
         return PM3_ENODATA;
     }
+
+    uint8_t cmdp = tolower(param_getchar(Cmd, 0));
+    if (cmdp == 'h') return usage_lf_sim();
 
     uint16_t gap = param_get32ex(Cmd, 0, 0, 10) & 0xFFFF;
 
@@ -601,17 +608,39 @@ int CmdLFfskSim(const char *Cmd) {
     if (fcHigh == 0) fcHigh = 10;
     if (fcLow == 0) fcLow = 8;
 
+    struct {
+        uint8_t fchigh;
+        uint8_t fclow;
+        uint8_t separator;
+        uint8_t clock;
+        uint16_t datalen;
+        uint8_t data[PM3_CMD_DATA_SIZE - 6];
+    } PACKED payload;
+
+    payload.fchigh = fcHigh;
+    payload.fclow =  fcLow;
+    payload.separator = separator;
+    payload.clock = clk;
+
     size_t size = DemodBufferLen;
-    if (size > PM3_CMD_DATA_SIZE) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE);
-        size = PM3_CMD_DATA_SIZE;
+    if (size > sizeof(payload.data)) {
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, sizeof(payload.data));
+        size = sizeof(payload.data);
     }
+
+    payload.datalen = (uint16_t)size;
+    memcpy(payload.data, DemodBuffer, size);
+
+    PrintAndLogEx(INFO, "Simulating");
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_FSK_SIM_TAG, fcHigh << 8 | fcLow, (separator << 8) | clk, size, DemodBuffer, size);
+    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)&payload, 6 + payload.datalen);
 
     setClockGrid(clk, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
@@ -819,7 +848,7 @@ int CmdLFSimBidir(const char *Cmd) {
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
     SendCommandMIX(CMD_LF_SIMULATE_BIDIR, 47, 384, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // ICEMAN,  todo,   swap from Graphbuffer.
@@ -892,7 +921,7 @@ int CmdVchDemod(const char *Cmd) {
         }
         RepaintGraphWindow();
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //by marshmellow
