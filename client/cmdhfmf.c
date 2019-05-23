@@ -127,9 +127,9 @@ static int usage_hf14_nested(void) {
     PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF ");
-    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF t ");
-    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF d ");
+    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF     -- nested attack against 1k,block 0, Key A using key FFFFFFFFFFFF");
+    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF t   -- and transfer keys into emulator memory");
+    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF d   -- or write keys to binary file ");
     PrintAndLogEx(NORMAL, "      hf mf nested o 0 A FFFFFFFFFFFF 4 A");
     return 0;
 }
@@ -179,9 +179,10 @@ static int usage_hf14_chk(void) {
     PrintAndLogEx(NORMAL, "      t    write keys to emulator memory\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf chk 0 A 1234567890ab keys.dic     -- target block 0, Key A");
-    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? t                        -- target all blocks, all keys, 1K, write to emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                        -- target all blocks, all keys, 1K, write to file");
+    PrintAndLogEx(NORMAL, "      hf mf chk 0 A 1234567890ab       -- target block 0, Key A using key 1234567890ab");
+    PrintAndLogEx(NORMAL, "      hf mf chk 0 A default_keys.dic   -- target block 0, Key A using default dictionary file");
+    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? t                 -- target all blocks, all keys, 1K, write to emulator memory");
+    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                 -- target all blocks, all keys, 1K, write to file");
     return 0;
 }
 static int usage_hf14_chk_fast(void) {
@@ -199,11 +200,12 @@ static int usage_hf14_chk_fast(void) {
     PrintAndLogEx(NORMAL, "      m    use dictionary from flashmemory\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 1234567890ab keys.dic    -- target 1K using key 1234567890ab, using dictionary file");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 t                        -- target 1K, write to emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 d                        -- target 1K, write to file");
+    PrintAndLogEx(NORMAL, "      hf mf fchk 1 1234567890ab       -- target 1K using key 1234567890ab");
+    PrintAndLogEx(NORMAL, "      hf mf fchk 1 default_keys.dic   -- target 1K using default dictionary file");
+    PrintAndLogEx(NORMAL, "      hf mf fchk 1 t                  -- target 1K, write to emulator memory");
+    PrintAndLogEx(NORMAL, "      hf mf fchk 1 d                  -- target 1K, write to file");
     if (IfPm3Flash())
-        PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                        -- target 1K, use dictionary from flashmemory");
+        PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                  -- target 1K, use dictionary from flashmemory");
     return 0;
 }
 static int usage_hf14_keybrute(void) {
