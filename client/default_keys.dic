@@ -101,6 +101,8 @@ fc00018778f7,--VästtrafikenKeyA, RKFÖstgötaTrafikenKeyA
 564c505f4d41,--VIGIK1KeyB
 ba5b895da162,--VIGIK1KeyB
 4143414F5250,
+a9b43414F585,--Tehran Railway
+1FB235AC1388,--Tehran Railway
 #
 # Data from: http://irq5.io/2013/04/13/decoding-bcard-conference-badges/
 f4a9ef2afc6d,--BCARD KeyB
@@ -758,4 +760,10 @@ A2B2C9D187FB,
 17505586EF02,
 022FE48B3072,
 013940233313,
-
+#
+# mostlikely diverised individual keys.
+# data from: https://github.com/korsehindi/proxmark3/commit/24fdbfa9a1d5c996aaa5c192bc07e4ab28db4c5c
+491CDC863104,
+A2F63A485632,
+98631ED2B229,
+19F1FFE02563,
