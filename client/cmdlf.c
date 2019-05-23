@@ -626,6 +626,8 @@ int CmdLFfskSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
 
+    free(payload);
+
     setClockGrid(clk, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
