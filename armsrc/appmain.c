@@ -1270,10 +1270,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_ON();
             struct p {
                 uint32_t waittime;
-                uint8_t data[PM3_CMD_DATA_SIZE - sizeof(uint32_t)];
+                uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) &packet->data.asBytes;
-            usart_writebuffer_sync(payload->data, packet->length - sizeof(payload->waittime));
+            usart_writebuffer_sync(payload->data, packet->length - sizeof(payload));
             uint16_t available;
             uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
