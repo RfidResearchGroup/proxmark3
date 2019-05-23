@@ -26,7 +26,7 @@ static int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "       ************* Use lf config to configure options.");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf cmdread d 80 z 100 o 200 c 11000");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples]");
@@ -39,7 +39,19 @@ static int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf read s d 12000     - collects 12000samples silent");
     PrintAndLogEx(NORMAL, "         lf read s");
-    return 0;
+    return PM3_SUCCESS;
+}
+static int usage_lf_sim(void) {
+    PrintAndLogEx(NORMAL, "Simulate low frequence signal.");
+    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'lf config'")" to set parameters.");
+    PrintAndLogEx(NORMAL, "Usage: lf sim [h] <startgap>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h            This help");
+    PrintAndLogEx(NORMAL, "       <startgap>   This help");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "         lf sim 240     - start simulating with 240ms gap");
+    PrintAndLogEx(NORMAL, "         lf sim");
+    return PM3_SUCCESS;
 }
 static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff low frequence signal.");
@@ -49,7 +61,7 @@ static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "Usage: lf sniff [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         This help");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "Usage: lf config [h] [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
@@ -72,7 +84,7 @@ static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "                    Performs a read (active field)");
     PrintAndLogEx(NORMAL, "      lf sniff");
     PrintAndLogEx(NORMAL, "                    Performs a sniff (no active field)");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_simfsk(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simfsk [h] [c <clock>] [H <fcHigh>] [L <fcLow>] [d <hexdata>]");
@@ -97,7 +109,7 @@ static int usage_lf_simfsk(void) {
     PrintAndLogEx(NORMAL, "       lf simfsk c 64 H 10 L 8 d 010203     -  FSK2  rf/64  data 010203");
     PrintAndLogEx(NORMAL, "       lf simfsk c 64 H 8 L 10 d 010203     -  FSK2a rf/64  data 010203");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_simask(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simask [c <clock>] [i] [b|m|r] [s] [d <raw hex to sim>]");
@@ -110,7 +122,7 @@ static int usage_lf_simask(void) {
     PrintAndLogEx(NORMAL, "       r              sim ask/raw");
     PrintAndLogEx(NORMAL, "       s              add t55xx Sequence Terminator gap - default: no gaps (only manchester)");
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_simpsk(void) {
     PrintAndLogEx(NORMAL, "Usage: lf simpsk [1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>]");
@@ -123,7 +135,7 @@ static int usage_lf_simpsk(void) {
     PrintAndLogEx(NORMAL, "       3              set PSK3");
     PrintAndLogEx(NORMAL, "       r <carrier>    2|4|8 are valid carriers: default = 2");
     PrintAndLogEx(NORMAL, "       d <hexdata>    Data to sim as hex - omit to sim from DemodBuffer");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_lf_find(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf search [h] <0|1> [u]");
@@ -137,7 +149,7 @@ static int usage_lf_find(void) {
     PrintAndLogEx(NORMAL, "      lf search 1   = use data from GraphBuffer & search for known tags");
     PrintAndLogEx(NORMAL, "      lf search u   = try reading data from tag & search for known and unknown tags");
     PrintAndLogEx(NORMAL, "      lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 
@@ -440,8 +452,15 @@ static void ChkBitstream() {
 //Attempt to simulate any wave in buffer (one bit per output sample)
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
 int CmdLFSim(const char *Cmd) {
-#define FPGA_LF 1
-#define FPGA_HF 2
+
+    uint8_t cmdp = tolower(param_getchar(Cmd, 0));
+    if (cmdp == 'h') return usage_lf_sim();
+
+    // sanity check
+    if ( GraphTraceLen < 20 ) {
+        PrintAndLogEx(ERR, "No data in Graphbuffer");
+        return PM3_ENODATA;
+    }
 
     uint16_t gap = param_get32ex(Cmd, 0, 0, 10) & 0xFFFF;
 
@@ -457,11 +476,9 @@ int CmdLFSim(const char *Cmd) {
     } PACKED payload_up;
 
     // flag = 
-    //    b0  0 upload for LF usage 
-    //        1 upload for HF usage
-    //    b1  0 skip
+    //    b0  0 
     //        1 clear bigbuff
-    payload_up.flag = 0x2;
+    payload_up.flag = 0x1;
 
     // fast push mode
     conn.block_after_ACK = true;
@@ -493,8 +510,7 @@ int CmdLFSim(const char *Cmd) {
     struct p {
         uint16_t len;
         uint16_t gap;
-    } PACKED;
-    struct p payload;
+    } PACKED payload;
     payload.len = GraphTraceLen;
     payload.gap = gap;	
 

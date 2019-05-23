@@ -1384,9 +1384,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // iceman; since changing fpga_bitstreams clears bigbuff, Its better to call it before.
             // to be able to use this one for uploading data to device
             // flag = 
-            //    b0  0 upload for LF usage 
-            //        1 upload for HF usage
-            //    b1  0 skip
+            //    b0  0 skip
             //        1 clear bigbuff
             struct p {
                 uint8_t flag;
@@ -1395,13 +1393,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p* payload = (struct p*)packet->data.asBytes;
 
-
-            if ((payload->flag & 0x1) == 0x1)
-                FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-            else
-                FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
             
-            if ((payload->flag & 0x2) == 0x2) {
+            if ((payload->flag & 0x1) == 0x1) {
                 BigBuf_Clear_ext(false);
                 BigBuf_free();
             }
