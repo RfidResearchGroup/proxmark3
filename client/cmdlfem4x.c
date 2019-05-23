@@ -196,7 +196,7 @@ static void ConstructEM410xEmulGraph(const char *uid, const  uint8_t clock) {
     ClearGraph(true);
 
    /* write 16 zero bit sledge */
-    for (i = 0; i < 10; i++)
+    for (i = 0; i < 20; i++)
         AppendGraph(false, clock, 0);
 
     /* write 9 start bits */
@@ -382,33 +382,13 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
 
     return PM3_SUCCESS;
 }
-static bool isBitstream(void) {
-    // convert to bitstream if necessary
-    for (int i = 0; i < GraphTraceLen; i++) {
-        if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
-            return false;
-        }
-    }
-    return true;
-}
+
 int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
     bool st = true;
 
     // em410x simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
-    if ( isBitstream() ) {
-        for (int i = 0; i < GraphTraceLen; i++) {
-            if (GraphBuffer[i] == 1)
-                GraphBuffer[i] = 127;
-            else
-                GraphBuffer[i] = -127;
-        }
-        uint8_t bits[GraphTraceLen];
-        memset(bits, 0, sizeof(bits));
-        size_t size = getFromGraphBuf(bits);
-
-        // set signal properties low/high/mean/amplitude and is_noise detection
-        computeSignalProperties(bits, size);
-        RepaintGraphWindow();
+    if ( isGraphBitstream() ) {
+        convertGraphFromBitstream();
     }
 
     if (ASKDemod_ext(Cmd, false, false, 1, &st) != PM3_SUCCESS) 

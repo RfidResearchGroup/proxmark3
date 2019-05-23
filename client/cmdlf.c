@@ -454,15 +454,14 @@ int CmdLFSim(const char *Cmd) {
         uint8_t flag;
         uint16_t offset;
         uint8_t data[PM3_CMD_DATA_SIZE - 3];
-    } PACKED;
-    struct pupload payload_up;
+    } PACKED payload_up;
 
     // flag = 
     //    b0  0 upload for LF usage 
     //        1 upload for HF usage
     //    b1  0 skip
     //        1 clear bigbuff
-    payload_up.flag |= 0x2;
+    payload_up.flag = 0x2;
 
     // fast push mode
     conn.block_after_ACK = true;
@@ -477,18 +476,19 @@ int CmdLFSim(const char *Cmd) {
         for(uint16_t j = 0; j < len; j++)
             payload_up.data[j] = GraphBuffer[i+j];
 
+      
         SendCommandNG(CMD_UPLOAD_SIM_SAMPLES_125K, (uint8_t *)&payload_up, sizeof(struct pupload));
         WaitForResponse(CMD_UPLOAD_SIM_SAMPLES_125K, NULL);
         printf(".");
         fflush(stdout);
-
         payload_up.flag = 0;
     }
 
     // Disable fast mode before last command
     conn.block_after_ACK = false;
+    printf("\n");
 
-    PrintAndLogEx(INFO, "\nSimulating");
+    PrintAndLogEx(INFO, "Simulating");
 
     struct p {
         uint16_t len;

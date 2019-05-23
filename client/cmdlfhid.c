@@ -122,10 +122,16 @@ static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uin
 //print full HID Prox ID and some bit format details if found
 static int CmdHIDDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
+
+    // HID simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
+    if ( isGraphBitstream() ) {
+        convertGraphFromBitstream();
+    }
+
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint32_t hi2 = 0, hi = 0, lo = 0;
 
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+    uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
@@ -261,6 +267,7 @@ static int CmdHIDSim(const char *Cmd) {
     SendCommandMIX(CMD_HID_SIM_TAG, hi, lo, 0, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_HID_SIM_TAG, &resp);
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

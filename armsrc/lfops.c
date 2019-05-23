@@ -587,7 +587,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
 
-    uint8_t check = 1;
+    uint16_t check = 1;
 
     for (;;) {
 
@@ -606,12 +606,15 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
         // used as a simple detection of a reader field?
         while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
             WDT_HIT();
-            if (!check) {
+            if ( check == 1000) {
                 if (usb_poll_validate_length() || BUTTON_PRESS())
                     goto OUT;
+                check = 0;
             }
             ++check;
         }
+
+        if (ledcontrol) LED_D_OFF();
 
         if (buf[i])
             OPEN_COIL();
@@ -621,9 +624,10 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
         //wait until SSC_CLK goes LOW
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
-            if (!check) {
+            if (check == 1000) {
                 if (usb_poll_validate_length() || BUTTON_PRESS())
                     goto OUT;
+                check = 0;
             }
             ++check;
         }
@@ -636,8 +640,6 @@ void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycle
                 WaitUS(gap);
             }
         }
-
-        if (ledcontrol) LED_D_OFF();
     }
 OUT:
     StopTicks();
@@ -818,7 +820,6 @@ void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
 
 void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol) {
     CmdHIDsimTAGEx(hi, lo, ledcontrol, -1);
-    DbpString("[!] simulation finished");
     reply_ng(CMD_HID_SIM_TAG, PM3_EOPABORTED, NULL, 0);
 }
 

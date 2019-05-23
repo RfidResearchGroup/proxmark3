@@ -20,17 +20,20 @@
 
 void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);
+bool HasGraphData(void);
+void setGraphBuf(uint8_t *buff, size_t size);
+void save_restoreGB(uint8_t saveOpt);
 size_t getFromGraphBuf(uint8_t *buff);
+void convertGraphFromBitstream(void);
+void convertGraphFromBitstreamEx(int hi, int low);
+bool isGraphBitstream(void);
+
 int GetAskClock(const char *str, bool printAns);
 int GetPskClock(const char *str, bool printAns);
 uint8_t GetPskCarrier(const char *str, bool printAns);
 int GetNrzClock(const char *str, bool printAns);
 int GetFskClock(const char *str, bool printAns);
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
-void setGraphBuf(uint8_t *buff, size_t size);
-void save_restoreGB(uint8_t saveOpt);
-
-bool HasGraphData(void);
 
 // Max graph trace len: 40000 (bigbuf) * 8 (at 1 bit per sample)
 #ifndef MAX_GRAPH_TRACE_LEN

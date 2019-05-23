@@ -1392,7 +1392,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t flag;
                 uint16_t offset;
                 uint8_t *data;
-            };
+            } PACKED;
             struct p* payload = (struct p*)packet->data.asBytes;
 
 

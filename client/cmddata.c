@@ -446,6 +446,16 @@ int CmdGetBitStream(const char *Cmd) {
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
+int CmdConvertBitStream(const char *Cmd) {
+
+    if ( isGraphBitstream() ) {
+        convertGraphFromBitstream();
+    } else {
+        // get high, low
+        convertGraphFromBitstreamEx(-126, -127);
+    }
+    return PM3_SUCCESS;
+}
 
 //by marshmellow
 //Cmd Args: Clock, invert, maxErr, maxLen as integers and amplify as char == 'a'
@@ -844,7 +854,9 @@ static int CmdAutoCorr(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_data_autocorr();
 
-    return AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, window, updateGrph, true);
+    AutoCorrelate(GraphBuffer, GraphBuffer, GraphTraceLen, window, updateGrph, true);
+
+    return PM3_SUCCESS;
 }
 
 static int CmdBitsamples(const char *Cmd) {
@@ -1481,7 +1493,7 @@ int getSamples(uint32_t n, bool silent) {
         int j = 0;
         for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
-            GraphBuffer[j] = ((int) sample) - 128;
+            GraphBuffer[j] = ((int) sample) - 127;
         }
         GraphTraceLen = j;
 
@@ -1489,7 +1501,7 @@ int getSamples(uint32_t n, bool silent) {
 
     } else {
         for (int j = 0; j < n; j++) {
-            GraphBuffer[j] = ((int)got[j]) - 128;
+            GraphBuffer[j] = ((int)got[j]) - 127;
         }
         GraphTraceLen = n;
     }
@@ -2103,6 +2115,7 @@ static command_t CommandTable[] = {
     {"bin2hex",         Cmdbin2hex,              AlwaysAvailable, "<digits> -- Converts binary to hexadecimal"},
     {"bitsamples",      CmdBitsamples,           IfPm3Present,    "Get raw samples as bitstring"},
     {"buffclear",       CmdBuffClear,            AlwaysAvailable, "Clears bigbuff on deviceside and graph window"},
+    {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable, "Convert GraphBuffer's 0/1 values to 127 / -127"},
     {"dec",             CmdDec,                  AlwaysAvailable, "Decimate samples"},
     {"detectclock",     CmdDetectClockRate,      AlwaysAvailable, "[<a|f|n|p>] Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
     {"fsktonrz",        CmdFSKToNRZ,             AlwaysAvailable, "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},

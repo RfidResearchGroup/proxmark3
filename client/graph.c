@@ -58,7 +58,6 @@ void save_restoreGB(uint8_t saveOpt) {
         GridOffset = SavedGridOffsetAdj;
         RepaintGraphWindow();
     }
-    return;
 }
 
 void setGraphBuf(uint8_t *buff, size_t size) {
@@ -74,7 +73,6 @@ void setGraphBuf(uint8_t *buff, size_t size) {
 
     GraphTraceLen = size;
     RepaintGraphWindow();
-    return;
 }
 
 size_t getFromGraphBuf(uint8_t *buff) {
@@ -90,12 +88,41 @@ size_t getFromGraphBuf(uint8_t *buff) {
 }
 
 // A simple test to see if there is any data inside Graphbuffer.
-bool HasGraphData() {
+bool HasGraphData(void) {
     if (GraphTraceLen == 0) {
         PrintAndLogEx(NORMAL, "No data available, try reading something first");
         return false;
     }
     return true;
+}
+bool isGraphBitstream(void) {
+    // convert to bitstream if necessary
+    for (int i = 0; i < GraphTraceLen; i++) {
+        if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+void convertGraphFromBitstream() {
+    convertGraphFromBitstreamEx(1, 0); 
+}
+void convertGraphFromBitstreamEx(int hi, int low) {
+    for (int i = 0; i < GraphTraceLen; i++) {
+        if (GraphBuffer[i] == hi)
+            GraphBuffer[i] = 127;
+        else if ( GraphBuffer[i] == low ) 
+            GraphBuffer[i] = -127;
+        else
+            GraphBuffer[i] = 0;
+    }
+    uint8_t bits[GraphTraceLen];
+    memset(bits, 0, sizeof(bits));
+    size_t size = getFromGraphBuf(bits);
+
+    // set signal properties low/high/mean/amplitude and is_noise detection
+    computeSignalProperties(bits, size);
+    RepaintGraphWindow();
 }
 
 // Get or auto-detect ask clock rate
