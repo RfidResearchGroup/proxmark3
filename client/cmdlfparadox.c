@@ -134,10 +134,19 @@ static int CmdParadoxSim(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
+    lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    payload->fchigh = high;
+    payload->fclow =  low;
+    payload->separator = invert;
+    payload->clock = clk;
+    memcpy(payload->data, bs, sizeof(bs));
     clearCommandBuffer();
-    SendCommandOLD(CMD_FSK_SIM_TAG, high << 8 | low, invert << 8 | clk, sizeof(bs), bs, sizeof(bs));
+    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

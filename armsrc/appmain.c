@@ -783,16 +783,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             CmdHIDsimTAG(packet->oldarg[0], packet->oldarg[1], 1);
             break;
         case CMD_FSK_SIM_TAG: {
-	    struct p {
-		uint8_t fchigh;
-		uint8_t fclow;
-		uint8_t separator;
-		uint8_t clock;
-		uint16_t datalen;
-	    } PACKED;
-            struct p *payload = (struct p*)packet->data.asBytes;
-
-            CmdFSKsimTAG(payload->fchigh, payload->fclow, payload->separator, payload->clock, payload->datalen, packet->data.asBytes + 6, 1);
+            lf_fsksim_t *payload = (lf_fsksim_t *)packet->data.asBytes;
+            CmdFSKsimTAG(payload->fchigh, payload->fclow, payload->separator, payload->clock, packet->length - sizeof(lf_fsksim_t), payload->data, 1);
             break;
             }
         case CMD_ASK_SIM_TAG:

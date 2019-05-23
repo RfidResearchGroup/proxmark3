@@ -212,7 +212,7 @@ static int CmdPyramidClone(const char *Cmd) {
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
 
-    if (!getPyramidBits(facilitycode, cardnumber, bs)) {
+    if (getPyramidBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
@@ -275,17 +275,27 @@ static int CmdPyramidSim(const char *Cmd) {
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
 
-    if (!getPyramidBits(facilitycode, cardnumber, bs)) {
+    if (getPyramidBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
+    lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    payload->fchigh = high;
+    payload->fclow =  low;
+    payload->separator = invert;
+    payload->clock = clk;
+    memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_FSK_SIM_TAG, high << 8 | low, invert << 8 | clk, sizeof(bs), bs, sizeof(bs));
+    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
@@ -323,8 +333,7 @@ int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
     // Get 26 wiegand from FacilityCode, CardNumber
     uint8_t wiegand[24];
     memset(wiegand, 0x00, sizeof(wiegand));
-    num_to_bytebits(fc, 8, wiegand);
-    num_to_bytebits(cn, 16, wiegand + 8);
+    num_to_bytebits(fc, 8, wiegand);    num_to_bytebits(cn, 16, wiegand + 8);
 
     // add wiegand parity bits (dest, source, len)
     wiegand_add_parity(pre + 80, wiegand, 24);

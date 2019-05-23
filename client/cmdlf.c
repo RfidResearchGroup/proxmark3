@@ -608,33 +608,23 @@ int CmdLFfskSim(const char *Cmd) {
     if (fcHigh == 0) fcHigh = 10;
     if (fcLow == 0) fcLow = 8;
 
-    struct {
-        uint8_t fchigh;
-        uint8_t fclow;
-        uint8_t separator;
-        uint8_t clock;
-        uint16_t datalen;
-        uint8_t data[PM3_CMD_DATA_SIZE - 6];
-    } PACKED payload;
-
-    payload.fchigh = fcHigh;
-    payload.fclow =  fcLow;
-    payload.separator = separator;
-    payload.clock = clk;
-
     size_t size = DemodBufferLen;
-    if (size > sizeof(payload.data)) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, sizeof(payload.data));
-        size = sizeof(payload.data);
+    if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t))) {
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
+        size = PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t);
     }
 
-    payload.datalen = (uint16_t)size;
-    memcpy(payload.data, DemodBuffer, size);
+    lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + size);
+    payload->fchigh = fcHigh;
+    payload->fclow =  fcLow;
+    payload->separator = separator;
+    payload->clock = clk;
+    memcpy(payload->data, DemodBuffer, size);
 
     PrintAndLogEx(INFO, "Simulating");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)&payload, 6 + payload.datalen);
+    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
 
     setClockGrid(clk, 0);
     PacketResponseNG resp;
