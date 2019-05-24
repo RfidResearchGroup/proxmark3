@@ -88,7 +88,7 @@ local function main(args)
 
         if o == 'm' then keylength =6; usedkey = true; offset = 0x3F000-0x4000; end
         if o == 't' then keylength =4; usedkey = true; offset = 0x3F000-0x3000; end
-        if o == 'i' then keylength =8; usedkey = true; offset = 0x3F000-0x5000; end
+        if o == 'i' then keylength =4; usedkey = true; offset = 0x3F000-0x5000; end
     end
 
     if length < 0 or length > 256 then
