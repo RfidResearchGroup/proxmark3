@@ -97,7 +97,7 @@ static int CmdPrescoClone(const char *Cmd) {
     uint32_t blocks[5] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT | T55x7_ST_TERMINATOR, 0, 0, 0, 0};
 
     // get wiegand from printed number.
-    if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) return usage_lf_presco_clone();
+    if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == PM3_EINVARG) return usage_lf_presco_clone();
 
     if (Q5)
         blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT | T5555_ST_TERMINATOR;
@@ -151,7 +151,7 @@ static int CmdPrescoSim(const char *Cmd) {
     uint32_t sitecode = 0, usercode = 0, fullcode = 0;
     bool Q5 = false;
     // get wiegand from printed number.
-    if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) 
+    if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == PM3_EINVARG) 
         return usage_lf_presco_sim();
 
     PrintAndLogEx(SUCCESS, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X", sitecode, usercode, fullcode);
