@@ -195,9 +195,6 @@ static int CmdIOProxSim(const char *Cmd) {
         PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
     }
 
-    // clock 64, FSK2a fcHIGH 10 | fcLOW 8
-    uint8_t clk = 64, invert = 1, high = 10, low = 8;
-
     PrintAndLogEx(SUCCESS, "Simulating IOProx version: %u FC: %u; CN: %u\n", version, fc, cn);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
@@ -210,13 +207,15 @@ static int CmdIOProxSim(const char *Cmd) {
     // arg2 --- Invert and clk setting
     // size --- 64 bits == 8 bytes
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
-    payload->fchigh = high;
-    payload->fclow =  low;
-    payload->separator = invert;
-    payload->clock = clk;
+    payload->fchigh = 10;
+    payload->fclow = 8;
+    payload->separator = 1;
+    payload->clock = 64;
     memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
     SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    free(payload);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);

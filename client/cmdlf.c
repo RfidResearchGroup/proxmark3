@@ -625,7 +625,6 @@ int CmdLFfskSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
-
     free(payload);
 
     setClockGrid(clk, 0);
@@ -716,7 +715,6 @@ int CmdLFaskSim(const char *Cmd) {
         PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
         size = PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t);
     }
-
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + size);
     payload->encoding =  encoding;
@@ -838,10 +836,13 @@ int CmdLFpskSim(const char *Cmd) {
         size = PM3_CMD_DATA_SIZE;
     }
     PrintAndLogEx(DEBUG, "DEBUG: Sending DemodBuffer Length: %d", size);
+
     clearCommandBuffer();
     SendCommandOLD(CMD_PSK_SIM_TAG, clk << 8 | carrier, invert, size, DemodBuffer, size);
     PacketResponseNG resp;
     WaitForResponse(CMD_PSK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

@@ -140,8 +140,10 @@ static int CmdParadoxSim(const char *Cmd) {
     payload->separator = invert;
     payload->clock = clk;
     memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
     SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    free(payload);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
@@ -150,8 +152,6 @@ static int CmdParadoxSim(const char *Cmd) {
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
-
-//    PrintAndLogEx(NORMAL, "UNFINISHED");
 }
 
 static command_t CommandTable[] = {

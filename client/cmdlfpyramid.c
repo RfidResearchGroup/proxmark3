@@ -199,8 +199,8 @@ static int CmdPyramidRead(const char *Cmd) {
 
 static int CmdPyramidClone(const char *Cmd) {
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_clone();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pyramid_clone();
 
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
     uint32_t blocks[5];
@@ -259,17 +259,14 @@ static int CmdPyramidClone(const char *Cmd) {
 
 static int CmdPyramidSim(const char *Cmd) {
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_pyramid_sim();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pyramid_sim();
 
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
 
     uint8_t bs[128];
     memset(bs, 0x00, sizeof(bs));
-
-    // Pyramid uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 0
-    uint8_t clk = 50, invert = 0, high = 10, low = 8;
-
+    
     if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_sim();
 
     facilitycode = (fc & 0x000000FF);
@@ -282,15 +279,17 @@ static int CmdPyramidSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Farpointe/Pyramid - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
+    // Pyramid uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 0
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
-    payload->fchigh = high;
-    payload->fclow =  low;
-    payload->separator = invert;
-    payload->clock = clk;
+    payload->fchigh = 10;
+    payload->fclow =  8;
+    payload->separator = 0;
+    payload->clock = 50;
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
     SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    free(payload);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
