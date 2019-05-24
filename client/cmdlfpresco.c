@@ -154,15 +154,26 @@ static int CmdPrescoSim(const char *Cmd) {
     if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == -1) 
         return usage_lf_presco_sim();
 
-    uint8_t clk = 32, encoding = 1, separator = 1, invert = 0;
-
     PrintAndLogEx(SUCCESS, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X", sitecode, usercode, fullcode);
 
-    uint8_t data[128];
-    getPrescoBits(fullcode, data);
-    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
+    uint8_t bs[128];
+    getPrescoBits(fullcode, bs);
+
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding = 1;
+    payload->invert = 0;
+    payload->separator = 1;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

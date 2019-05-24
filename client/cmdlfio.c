@@ -178,8 +178,8 @@ static int CmdIOProxRead(const char *Cmd) {
 static int CmdIOProxSim(const char *Cmd) {
     uint16_t cn = 0;
     uint8_t version = 0, fc = 0;
-    uint8_t bits[64];
-    memset(bits, 0x00, sizeof(bits));
+    uint8_t bs[64];
+    memset(bs, 0x00, sizeof(bs));
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_sim();
@@ -195,13 +195,10 @@ static int CmdIOProxSim(const char *Cmd) {
         PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (IOProx): %u", cn);
     }
 
-    // clock 64, FSK2a fcHIGH 10 | fcLOW 8
-    uint8_t clk = 64, invert = 1, high = 10, low = 8;
-
     PrintAndLogEx(SUCCESS, "Simulating IOProx version: %u FC: %u; CN: %u\n", version, fc, cn);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
-    if (getIOProxBits(version, fc, cn, bits) != PM3_SUCCESS) {
+    if (getIOProxBits(version, fc, cn, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
@@ -209,10 +206,21 @@ static int CmdIOProxSim(const char *Cmd) {
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Invert and clk setting
     // size --- 64 bits == 8 bytes
+    lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    payload->fchigh = 10;
+    payload->fclow = 8;
+    payload->separator = 1;
+    payload->clock = 64;
+    memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_FSK_SIM_TAG, high << 8 | low, invert << 8 | clk, sizeof(bits), bits, sizeof(bits));
+    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

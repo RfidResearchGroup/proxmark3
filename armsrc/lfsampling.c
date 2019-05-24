@@ -20,7 +20,7 @@ sample_config config = { 1, 8, 1, 95, 0 } ;
 
 void printConfig() {
     DbpString(_BLUE_("LF Sampling config"));
-    Dbprintf("  [q] divisor.............%d (%d kHz)", config.divisor, 12000 / (config.divisor + 1));
+    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d kHz")")", config.divisor, 12000 / (config.divisor + 1));
     Dbprintf("  [b] bps.................%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");

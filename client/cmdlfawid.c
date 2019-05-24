@@ -107,10 +107,16 @@ static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uin
         return PM3_ESOFT;
     }
 
-    uint8_t clk = 50, high = 10, low = 8, invert = 1;
+    lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + bs_len);
+    payload->fchigh = 10;
+    payload->fclow = 8;
+    payload->separator = 1;
+    payload->clock = 50;
+    memcpy(payload->data, bits, bs_len);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FSK_SIM_TAG, (high << 8) + low, (invert << 8) + clk, bs_len, bits, bs_len);
+    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + bs_len);
+    free(payload);
 
     msleep(delay);
     return sendPing();
@@ -179,7 +185,7 @@ static int CmdAWIDDemod(const char *Cmd) {
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - AWID not enough samples");
-        return PM3_ESOFT;
+        return PM3_ENODATA;
     }
     //get binary from fsk wave
     int waveIdx = 0;
@@ -313,11 +319,11 @@ static int CmdAWIDRead(const char *Cmd) {
 static int CmdAWIDSim(const char *Cmd) {
     uint32_t fc = 0, cn = 0;
     uint8_t fmtlen = 0;
-    uint8_t bits[96];
-    memset(bits, 0x00, sizeof(bits));
+    uint8_t bs[96];
+    memset(bs, 0x00, sizeof(bs));
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_awid_sim();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_awid_sim();
 
     fmtlen = param_get8(Cmd, 0);
     fc = param_get32ex(Cmd, 1, 0, 10);
@@ -326,24 +332,33 @@ static int CmdAWIDSim(const char *Cmd) {
 
     verify_values(&fmtlen, &fc, &cn);
 
-    PrintAndLogEx(SUCCESS, "Simulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
-
-    if ( getAWIDBits(fmtlen, fc, cn, bits) != PM3_SUCCESS ) {
+    if ( getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS ) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
-    uint8_t clk = 50, high = 10, low = 8, invert = 1;
+    PrintAndLogEx(SUCCESS, "Simulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
+    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
     // AWID uses: FSK2a fcHigh: 10, fcLow: 8, clk: 50, invert: 1
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Inversion and clk setting
     // 96   --- Bitstream length: 96-bits == 12 bytes
+    lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    payload->fchigh = 10;
+    payload->fclow =  8;
+    payload->separator = 1;
+    payload->clock = 50;
+    memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_FSK_SIM_TAG, (high << 8) + low, (invert << 8) + clk, sizeof(bits), bits, sizeof(bits));
+    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

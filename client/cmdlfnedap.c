@@ -242,9 +242,6 @@ static int CmdLFNedapSim(const char *Cmd) {
     uint8_t bs[128];
     memset(bs, 0x00, sizeof(bs));
 
-    // NEDAP,  Biphase = 2, clock 64, inverted,  (DIPhase == inverted BIphase
-    uint8_t  clk = 64, encoding = 2, separator = 0, invert = 1;
-
     if (getNedapBits(cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
@@ -253,10 +250,22 @@ static int CmdLFNedapSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "bin  %s", sprint_bin_break(bs, 128, 32));
     PrintAndLogEx(SUCCESS, "Simulating Nedap - CardNumber: %u", cardnumber);
 
+    // NEDAP,  Biphase = 2, clock 64, inverted,  (DIPhase == inverted BIphase)
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding = 2;
+    payload->invert = 1;
+    payload->separator = 0;
+    payload->clock = 64;
+    memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(bs), bs, sizeof(bs));
+    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

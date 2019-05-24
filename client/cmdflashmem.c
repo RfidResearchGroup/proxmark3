@@ -14,7 +14,6 @@
 #include "mbedtls/base64.h"
 
 #define MCK 48000000
-//#define FLASH_BAUD 24000000
 #define FLASH_MINFAST 24000000 //33000000
 #define FLASH_BAUD MCK/2
 #define FLASH_FASTBAUD MCK
@@ -308,7 +307,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
     conn.block_after_ACK = false;
     free(data);
-    PrintAndLogEx(SUCCESS, "Wrote %u bytes to offset %u", datalen, start_index);
+    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u")"bytes to offset "_GREEN_("%u"), datalen, start_index);
     return PM3_SUCCESS;
 }
 static int CmdFlashMemSave(const char *Cmd) {
@@ -358,9 +357,9 @@ static int CmdFlashMemSave(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(NORMAL, "downloading %u bytes from flashmem", len);
+    PrintAndLogEx(NORMAL, "downloading"_YELLOW_("%u")"bytes from flashmem", len);
     if (!GetFromDevice(FLASH_MEM, dump, len, start_index, NULL, -1, true)) {
-        PrintAndLogEx(FAILED, "ERROR; downloading flashmem");
+        PrintAndLogEx(FAILED, "ERROR; downloading from flashmemory");
         free(dump);
         return PM3_EFLASH;
     }

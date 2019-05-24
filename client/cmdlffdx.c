@@ -319,18 +319,28 @@ static int CmdFdxSim(const char *Cmd) {
 
     verify_values(countryid, animalid);
 
-    // 32, no STT, BIPHASE INVERTED == diphase
-    uint8_t clk = 32, encoding = 2, separator = 0, invert = 1;
-
     PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: %04u-%"PRIu64, countryid, animalid);
 
-    uint8_t data[128];
+    uint8_t bs[128];
     //getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
-    getFDXBits(animalid, countryid, 1, 0, 0, data);
+    getFDXBits(animalid, countryid, 1, 0, 0, bs);
+
+    // 32, no STT, BIPHASE INVERTED == diphase
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding = 2;
+    payload->invert = 1;
+    payload->separator = 0;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
+    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+ 
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

@@ -138,8 +138,8 @@ static int CmdGuardRead(const char *Cmd) {
 
 static int CmdGuardClone(const char *Cmd) {
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_clone();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_guard_clone();
 
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
     uint8_t bs[96];
@@ -198,12 +198,10 @@ static int CmdGuardClone(const char *Cmd) {
 
 static int CmdGuardSim(const char *Cmd) {
 
-    // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
-    uint8_t clock1 = 64, encoding = 2, separator = 0, invert = 0;
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_guard_sim();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_guard_sim();
 
     if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_sim();
 
@@ -221,10 +219,22 @@ static int CmdGuardSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Guardall - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
 
+    // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding =  2;
+    payload->invert = 0;
+    payload->separator = 0;
+    payload->clock = 64;
+    memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_ASK_SIM_TAG, (clock1 << 8) | encoding, (invert << 8) | separator, sizeof(bs), bs, sizeof(bs));
+    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

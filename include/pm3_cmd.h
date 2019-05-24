@@ -176,6 +176,33 @@ typedef struct {
     uint8_t flags;
 } PACKED t55xx_write_block_t;
 
+// For CMD_FSK_SIM_TAG (FSK)
+typedef struct {
+    uint8_t fchigh;
+    uint8_t fclow;
+    uint8_t separator;
+    uint8_t clock;
+    uint8_t data[];
+} PACKED lf_fsksim_t;
+
+// For CMD_ASK_SIM_TAG (ASK)
+typedef struct {
+    uint8_t encoding;
+    uint8_t invert;
+    uint8_t separator;
+    uint8_t clock;
+    uint8_t data[];
+} PACKED lf_asksim_t;
+
+// For CMD_PSK_SIM_TAG (PSK)
+typedef struct {
+    uint8_t carrier;
+    uint8_t invert;
+    uint8_t clock;
+    uint8_t data[];
+} PACKED lf_psksim_t;
+
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 #define CMD_SETUP_WRITE                                                   0x0001
