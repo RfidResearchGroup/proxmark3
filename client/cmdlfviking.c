@@ -40,7 +40,7 @@ static int usage_lf_viking_sim(void) {
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdVikingDemod(const char *Cmd) {
-    if (!ASKDemod(Cmd, false, false, 1)) {
+    if (ASKDemod(Cmd, false, false, 1) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Viking ASKDemod failed");
         return PM3_ESOFT;
     }
