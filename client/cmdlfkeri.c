@@ -175,28 +175,39 @@ static int CmdKeriClone(const char *Cmd) {
 static int CmdKeriSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_sim();
+    if (strlen(Cmd) == 0 || cmdp == 'h') 
+        return usage_lf_keri_sim();
 
     uint64_t internalid = param_get32ex(Cmd, 0, 0, 10);
     internalid |= 0x80000000;
     internalid <<= 3;
     internalid += 7;
 
-    uint8_t bits[64] = {0x00};
+    uint8_t bs[64] = {0x00};
     // loop to bits
     uint8_t j = 0;
     for (int8_t i = 63; i >= 0; --i) {
-        bits[j++] = ((internalid >> i) & 1);
+        bs[j++] = ((internalid >> i) & 1);
     }
-
-    uint8_t clk = 32, carrier = 2, invert = 0;
 
     PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id: %u", internalid);
 
+    lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    payload->carrier =  2;
+    payload->invert = 0;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    PrintAndLogEx(INFO, "Simulating");
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_PSK_SIM_TAG, clk << 8 | carrier, invert, sizeof(bits), bits, sizeof(bits));
+    SendCommandNG(CMD_PSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_PSK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

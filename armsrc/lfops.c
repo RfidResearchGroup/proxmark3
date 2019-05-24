@@ -561,7 +561,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc) {
 
 // note:   a call to FpgaDownloadAndGo(FPGA_BITSTREAM_LF) must be done before, but
 //  this may destroy the bigbuf so be sure this is called before calling SimulateTagLowFrequencyEx
-void SimulateTagLowFrequencyEx(int period, int gap, int ledcontrol, int numcycles) {
+void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycles) {
 
     // start us timer
     StartTicks();
@@ -649,7 +649,7 @@ OUT:
     LED_D_OFF();
 }
 
-void SimulateTagLowFrequency(int period, int gap, int ledcontrol) {
+void SimulateTagLowFrequency(int period, int gap, bool ledcontrol) {
     SimulateTagLowFrequencyEx(period, gap, ledcontrol, -1);
 }
 
@@ -757,7 +757,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
 
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
-void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
+void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, bool ledcontrol, int numcycles) {
 
     if (hi > 0xFFF) {
         DbpString("[!] tags can only have 44 bits. - USE lf simfsk for larger tags");
@@ -820,7 +820,7 @@ void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, int ledcontrol, int numcycles) {
     if (ledcontrol) LED_A_OFF();
 }
 
-void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol) {
+void CmdHIDsimTAG(uint32_t hi, uint32_t lo, bool ledcontrol) {
     CmdHIDsimTAGEx(hi, lo, ledcontrol, -1);
     reply_ng(CMD_HID_SIM_TAG, PM3_EOPABORTED, NULL, 0);
 }
@@ -828,8 +828,8 @@ void CmdHIDsimTAG(uint32_t hi, uint32_t lo, int ledcontrol) {
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
-void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clock, uint16_t bitslen, uint8_t *bits, int ledcontrol) {
-//void CmdFSKsimTAG(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
+void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol) {
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // free eventually allocated BigBuf memory
@@ -848,14 +848,14 @@ void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t cloc
 
     for (i = 0; i < bitslen; i++) {
         if (bits[i])
-            fcAll(fclow, &n, clock, &modCnt);
+            fcAll(fclow, &n, clk, &modCnt);
         else
-            fcAll(fchigh, &n, clock, &modCnt);
+            fcAll(fchigh, &n, clk, &modCnt);
     }
 
     WDT_HIT();
 
-    Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, STT: %d, n: %d", fchigh, fclow, clock, separator, n);
+    Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, STT: %d, n: %d", fchigh, fclow, clk, separator, n);
 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
@@ -903,7 +903,7 @@ static void stAskSimBit(int *n, uint8_t clock) {
 }
 
 // args clock, ask/man or askraw, invert, transmission separator
-void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t clk, size_t size, uint8_t *bits, int ledcontrol) {
+void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
@@ -967,14 +967,11 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 }
 
 // args clock, carrier, invert,
-void CmdPSKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
+void CmdPSKsimTag(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
     int n = 0, i = 0;
-    uint8_t clk = arg1 >> 8;
-    uint8_t carrier = arg1 & 0xFF;
-    uint8_t invert = arg2 & 0xFF;
     uint8_t curPhase = 0;
     for (i = 0; i < size; i++) {
         if (bits[i] == curPhase) {

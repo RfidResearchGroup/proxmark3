@@ -784,17 +784,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         case CMD_FSK_SIM_TAG: {
             lf_fsksim_t *payload = (lf_fsksim_t *)packet->data.asBytes;
-            CmdFSKsimTAG(payload->fchigh, payload->fclow, payload->separator, payload->clock, packet->length - sizeof(lf_fsksim_t), payload->data, 1);
+            CmdFSKsimTAG(payload->fchigh, payload->fclow, payload->separator, payload->clock, packet->length - sizeof(lf_fsksim_t), payload->data, true);
             break;
             }
         case CMD_ASK_SIM_TAG: {
             lf_asksim_t *payload = (lf_asksim_t *)packet->data.asBytes;
-            CmdASKsimTAG(payload->encoding, payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_asksim_t), payload->data, 1);
+            CmdASKsimTAG(payload->encoding, payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_asksim_t), payload->data, true);
             break;
             }
-        case CMD_PSK_SIM_TAG:
-            CmdPSKsimTag(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes, 1);
+        case CMD_PSK_SIM_TAG: {
+            lf_psksim_t *payload = (lf_psksim_t *)packet->data.asBytes;
+            CmdPSKsimTag(payload->carrier, payload->invert, payload->clock, packet->length - sizeof(lf_psksim_t), payload->data, true);
             break;
+            }
         case CMD_HID_CLONE_TAG:
             CopyHIDtoT55x7(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes[0]);
             break;

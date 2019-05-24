@@ -372,8 +372,8 @@ static int CmdIndalaSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_indala_sim();
 
-    uint8_t bits[224];
-    memset(bits, 0x00, sizeof(bits));
+    uint8_t bs[224];
+    memset(bs, 0x00, sizeof(bs));
 
     // uid
     uint8_t hexuid[100];
@@ -386,24 +386,35 @@ static int CmdIndalaSim(const char *Cmd) {
     uint8_t counter = 223;
     for (uint8_t i = 0; i < len; i++) {
         for (uint8_t j = 0; j < 8; j++) {
-            bits[counter--] = hexuid[i] & 1;
+            bs[counter--] = hexuid[i] & 1;
             hexuid[i] >>= 1;
         }
     }
 
     // indala PSK
-    uint8_t clk = 32, carrier = 2, invert = 0;
-
     // It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
     // lf simpsk 1 c 32 r 2 d 0102030405060708
 
     PrintAndLogEx(SUCCESS, "Simulating Indala UID: %s",  sprint_hex(hexuid, len));
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
+    // indala PSK,  clock 32, carrier 0
+    lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    payload->carrier =  2;
+    payload->invert = 0;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    PrintAndLogEx(INFO, "Simulating");
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_PSK_SIM_TAG, clk << 8 | carrier, invert, sizeof(bits), bits, sizeof(bits));
+    SendCommandNG(CMD_PSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_PSK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

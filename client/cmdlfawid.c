@@ -332,13 +332,14 @@ static int CmdAWIDSim(const char *Cmd) {
 
     verify_values(&fmtlen, &fc, &cn);
 
-    PrintAndLogEx(SUCCESS, "Simulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
-
     if ( getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS ) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
+
+    PrintAndLogEx(SUCCESS, "Simulating AWID %u -- FC: %u; CN: %u\n", fmtlen, fc, cn);
+    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+
     // AWID uses: FSK2a fcHigh: 10, fcLow: 8, clk: 50, invert: 1
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Inversion and clk setting
