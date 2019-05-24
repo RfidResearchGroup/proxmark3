@@ -195,15 +195,26 @@ static int CmdJablotronSim(const char *Cmd) {
         PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
     }
 
-    uint8_t clk = 64, encoding = 2, separator = 0, invert = 1;
     PrintAndLogEx(SUCCESS, "Simulating Jablotron - FullCode: %"PRIx64, fullcode);
 
-    uint8_t data[64];
-    getJablotronBits(fullcode, data);
+    uint8_t bs[64];
+    getJablotronBits(fullcode, bs);
+
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding =  2;
+    payload->invert = 1;
+    payload->separator = 0;
+    payload->clock = 64;
+    memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
+    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

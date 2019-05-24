@@ -903,15 +903,11 @@ static void stAskSimBit(int *n, uint8_t clock) {
 }
 
 // args clock, ask/man or askraw, invert, transmission separator
-void CmdASKsimTag(uint16_t arg1, uint16_t arg2, size_t size, uint8_t *bits, int ledcontrol) {
+void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t clk, size_t size, uint8_t *bits, int ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
     int n = 0, i = 0;
-    uint8_t clk = (arg1 >> 8) & 0xFF;
-    uint8_t encoding = arg1 & 0xFF;
-    uint8_t separator = arg2 & 1;
-    uint8_t invert = (arg2 >> 8) & 1;
 
     if (encoding == 2) { //biphase
         uint8_t phase = 0;

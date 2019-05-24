@@ -196,26 +196,35 @@ static int CmdVisa2kClone(const char *Cmd) {
 static int CmdVisa2kSim(const char *Cmd) {
 
     uint32_t id = 0;
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H')
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h')
         return usage_lf_visa2k_sim();
 
     id = param_get32ex(Cmd, 0, 0, 10);
-
-    uint8_t clk = 64, encoding = 1, separator = 1, invert = 0;
 
     PrintAndLogEx(SUCCESS, "Simulating Visa2000 - CardId: %u", id);
 
     uint32_t blocks[3] = { BL0CK1, id, (visa_parity(id) << 4) | visa_chksum(id) };
 
-    uint8_t data[96];
+    uint8_t bs[96];
     for (int i = 0; i < 3; ++i)
-        num_to_bytebits(blocks[i], 32, data + i * 32);
+        num_to_bytebits(blocks[i], 32, bs + i * 32);
+
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding =  1;
+    payload->invert = 0;
+    payload->separator = 1;
+    payload->clock = 64;
+    memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(data), data, sizeof(data));
+    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

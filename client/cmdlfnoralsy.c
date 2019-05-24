@@ -181,8 +181,8 @@ static int CmdNoralsyClone(const char *Cmd) {
 
 static int CmdNoralsySim(const char *Cmd) {
 
-    uint8_t bits[96];
-    memset(bits, 0, sizeof(bits));
+    uint8_t bs[96];
+    memset(bs, 0, sizeof(bs));
 
     uint16_t year = 0;
     uint32_t id = 0;
@@ -194,19 +194,28 @@ static int CmdNoralsySim(const char *Cmd) {
     id = param_get32ex(Cmd, 0, 0, 10);
     year = param_get32ex(Cmd, 1, 2000, 10);
 
-    uint8_t clk = 32, encoding = 1, separator = 1, invert = 0;
-
-    if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
+    if (getnoralsyBits(id, year, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Noralsy - CardId: %u", id);
 
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    payload->encoding = 1;
+    payload->invert = 0;
+    payload->separator = 1;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, sizeof(bits), bits, sizeof(bits));
+    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

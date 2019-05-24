@@ -712,16 +712,29 @@ int CmdLFaskSim(const char *Cmd) {
     if (encoding == 0) clk /= 2; //askraw needs to double the clock speed
 
     size_t size = DemodBufferLen;
-    if (size > PM3_CMD_DATA_SIZE) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE);
-        size = PM3_CMD_DATA_SIZE;
+    if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t))) {
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
+        size = PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t);
     }
 
-    PrintAndLogEx(NORMAL, "preparing to sim ask data: %d bits", size);
+
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + size);
+    payload->encoding =  encoding;
+    payload->invert = invert;
+    payload->separator = separator;
+    payload->clock = clk;
+    memcpy(payload->data, DemodBuffer, size);
+
+    PrintAndLogEx(INFO, "Simulating");
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_ASK_SIM_TAG, clk << 8 | encoding, invert << 8 | separator, size, DemodBuffer, size);
+    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + size);
+    free(payload);
+
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+
+    PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;

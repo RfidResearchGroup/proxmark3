@@ -185,6 +185,15 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_fsksim_t;
 
+// For CMD_ASK_SIM_TAG
+typedef struct {
+    uint8_t encoding;
+    uint8_t invert;
+    uint8_t separator;
+    uint8_t clock;
+    uint8_t data[];
+} PACKED lf_asksim_t;
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 #define CMD_SETUP_WRITE                                                   0x0001

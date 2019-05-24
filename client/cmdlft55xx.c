@@ -1866,7 +1866,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
     /*
     // block 7,  page1 = false, usepwd = false, override = false, pwd = 00000000
-    if ( T55xxReadBlock(7, false, false, false, 0x00000000) ) {
+    if ( T55xxReadBlock(7, false, false, false, 0x00000000) == PM3_SUCCESS) {
 
         // now try to validate it..
         PrintAndLogEx(WARNING, "\n Block 7 was readable");

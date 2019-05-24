@@ -787,9 +787,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             CmdFSKsimTAG(payload->fchigh, payload->fclow, payload->separator, payload->clock, packet->length - sizeof(lf_fsksim_t), payload->data, 1);
             break;
             }
-        case CMD_ASK_SIM_TAG:
-            CmdASKsimTag(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes, 1);
+        case CMD_ASK_SIM_TAG: {
+            lf_asksim_t *payload = (lf_asksim_t *)packet->data.asBytes;
+            CmdASKsimTAG(payload->encoding, payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_asksim_t), payload->data, 1);
             break;
+            }
         case CMD_PSK_SIM_TAG:
             CmdPSKsimTag(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes, 1);
             break;
