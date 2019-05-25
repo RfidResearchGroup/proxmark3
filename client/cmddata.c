@@ -584,7 +584,8 @@ static int Cmdmandecoderaw(const char *Cmd) {
     size_t size = 0;
     int high = 0, low = 0;
     size_t i = 0;
-    int errCnt = 0, invert = 0, maxErr = 20;
+    uint16_t errCnt = 0;
+    int invert = 0, maxErr = 20;
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 5 || cmdp == 'h') return usage_data_manrawdecode();
 
@@ -610,7 +611,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     uint8_t alignPos = 0;
     errCnt = manrawdecode(bits, &size, invert, &alignPos);
     if (errCnt >= maxErr) {
-        PrintAndLogEx(WARNING, "Too many errors: %d", errCnt);
+        PrintAndLogEx(WARNING, "Too many errors: %u", errCnt);
         return PM3_ESOFT;
     }
 

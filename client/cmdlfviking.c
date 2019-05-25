@@ -45,10 +45,9 @@ static int CmdVikingDemod(const char *Cmd) {
         return PM3_ESOFT;
     }
     size_t size = DemodBufferLen;
-
     int ans = detectViking(DemodBuffer, &size);
     if (ans < 0) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5) ? "[chksum error]" : "");
+        PrintAndLogEx(DEBUG, "DEBUG: Error - Viking Demod %d %s", ans, (ans == -5) ? _RED_("[chksum error]") : "");
         return PM3_ESOFT;
     }
     //got a good demod
@@ -56,8 +55,8 @@ static int CmdVikingDemod(const char *Cmd) {
     uint32_t raw2 = bytebits_to_byte(DemodBuffer + ans + 32, 32);
     uint32_t cardid = bytebits_to_byte(DemodBuffer + ans + 24, 32);
     uint8_t  checksum = bytebits_to_byte(DemodBuffer + ans + 32 + 24, 8);
-    PrintAndLogEx(SUCCESS, "Viking Tag Found: Card ID %08X, Checksum: %02X", cardid, checksum);
-    PrintAndLogEx(SUCCESS, "Raw: %08X%08X", raw1, raw2);
+    PrintAndLogEx(SUCCESS, "Viking Tag Found: Card ID " _YELLOW_("%08X")" checksum "_YELLOW_("%02X"), cardid, checksum);
+    PrintAndLogEx(SUCCESS, "Raw hex: %08X%08X", raw1, raw2);
     setDemodBuff(DemodBuffer, 64, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
     return PM3_SUCCESS;
@@ -86,7 +85,7 @@ static int CmdVikingClone(const char *Cmd) {
 
     rawID = getVikingBits(id);
 
-    PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID: %08X, Raw: %08X%08X", id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
+    PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID " _YELLOW_("%08X")" raw " _YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
     clearCommandBuffer();
     SendCommandMIX(CMD_VIKING_CLONE_TAG, rawID >> 32, rawID & 0xFFFFFFFF, Q5, NULL, 0);
@@ -109,7 +108,7 @@ static int CmdVikingSim(const char *Cmd) {
 
     rawID = getVikingBits(id);
 
-    PrintAndLogEx(SUCCESS, "Simulating Viking - ID: %08X, Raw: %08X%08X", id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
+    PrintAndLogEx(SUCCESS, "Simulating Viking - ID " _YELLOW_("%08X")" raw "_YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
     uint8_t bs[64];
     num_to_bytebits(rawID, sizeof(bs), bs);
@@ -164,22 +163,23 @@ uint64_t getVikingBits(uint32_t id) {
 }
 // by marshmellow
 // find viking preamble 0xF200 in already demoded data
-int detectViking(uint8_t *dest, size_t *size) {
+int detectViking(uint8_t *src, size_t *size) {
     //make sure buffer has data
-    if (*size < 64 * 2) return -2;
+    if (*size < 64) return -2;
     size_t startIdx = 0;
     uint8_t preamble[] = {1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
+    if (!preambleSearch(src, preamble, sizeof(preamble), size, &startIdx))
         return -4; //preamble not found
 
-    uint32_t checkCalc = bytebits_to_byte(dest + startIdx, 8) ^
-                         bytebits_to_byte(dest + startIdx + 8, 8) ^
-                         bytebits_to_byte(dest + startIdx + 16, 8) ^
-                         bytebits_to_byte(dest + startIdx + 24, 8) ^
-                         bytebits_to_byte(dest + startIdx + 32, 8) ^
-                         bytebits_to_byte(dest + startIdx + 40, 8) ^
-                         bytebits_to_byte(dest + startIdx + 48, 8) ^
-                         bytebits_to_byte(dest + startIdx + 56, 8);
+    uint32_t checkCalc = bytebits_to_byte(src + startIdx, 8) ^
+                         bytebits_to_byte(src + startIdx + 8, 8) ^
+                         bytebits_to_byte(src + startIdx + 16, 8) ^
+                         bytebits_to_byte(src + startIdx + 24, 8) ^
+                         bytebits_to_byte(src + startIdx + 32, 8) ^
+                         bytebits_to_byte(src + startIdx + 40, 8) ^
+                         bytebits_to_byte(src + startIdx + 48, 8) ^
+                         bytebits_to_byte(src + startIdx + 56, 8);
+
     if (checkCalc != 0xA8) return -5;
     if (*size != 64) return -6;
     //return start position

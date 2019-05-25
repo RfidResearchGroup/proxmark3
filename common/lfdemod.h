@@ -66,7 +66,7 @@ size_t   fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uin
 void     getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo);
 uint32_t manchesterEncode2Bytes(uint16_t datain);
 int      ManchesterEncode(uint8_t *bits, size_t size);
-int      manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos);
+uint16_t manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos);
 int      nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startIdx);
 bool     parityTest(uint32_t bits, uint8_t bitLen, uint8_t pType);
 bool     preambleSearch(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *size, size_t *startIdx);
