@@ -142,33 +142,18 @@ function Command:sendMIX( ignore_response, timeout )
     end
 
     -- lets digest
-    local data
-    local count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
+    data = nil
+    cmd = nil
+    arg1 = nil
+    arg2 = nil
+    arg3 = nil
+    local count, length, magic, status, crc, ng
+
+--         S    S       I      s       S    L     L     L
+    count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
 
---[[  uncomment if you want to debug
-    self.resp_cmd = cmd
-    self.resp_length = length
-    self.resp_magic = magic
-    self.resp_status = status
-    self.resp_crc = crc
-    self.resp_arg1 = arg1
-    self.resp_arg2 = arg2
-    self.resp_arg3 = arg3
-    self.resp_data = data
-    self.resp_ng = ng
-    self:__responsetostring()
---]]
-
     local packed = bin.pack("LLLLH", cmd, arg1, arg2, arg3, data)
-    --[[
-    return { Cmd = cmd,
-            Arg1 = arg1,
-            Arg2 = arg2,
-            Arg3 = arg3,
-            Data = data,
-    }
-    --]]
     return packed, nil;
 end
 function Command:sendNG( ignore_response, timeout )
@@ -185,8 +170,12 @@ function Command:sendNG( ignore_response, timeout )
     if response == nil then
         return nil, 'Error, waiting for response timed out :: '..msg
     end
-    local data
-    local count, cmd, length, magic, status, crc, arg0, arg1, arg2 = bin.unpack('SSIsSLLL', response)
+
+    data = nil
+    cmd = nil
+    local count, length, magic, status, crc, arg0, arg1, arg2 
+
+    count, cmd, length, magic, status, crc, arg0, arg1, arg2 = bin.unpack('SSIsSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
 
 --[[  uncomment if you want to debug

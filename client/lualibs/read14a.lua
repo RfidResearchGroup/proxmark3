@@ -63,7 +63,7 @@ local function parse14443a(data)
     } __attribute__((__packed__)) iso14a_card_select_t;
     --]]
 
-    local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CC',data)
+    local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CC', data)
     uid = uid:sub(1, 2 * uidlen)
     local man_byte = tonumber(uid:sub(1,2), 16)
 
@@ -98,8 +98,8 @@ local function read14443a(dont_disconnect, no_rats)
 
     local result, err = command:sendMIX()
     if result then
-        local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
-        if arg0 == 0 then
+        local count, cmd, arg1, arg2, arg3 = bin.unpack('LLLL',result)
+        if arg1 == 0 then
             return nil, 'iso14443a card select failed'
         end
         data = string.sub(result, count)
