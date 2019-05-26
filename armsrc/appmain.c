@@ -1012,7 +1012,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_ISO14443a
         case CMD_SNIFF_ISO_14443a:
-            SniffIso14443a(packet->oldarg[0]);
+            SniffIso14443a(packet->data.asBytes[0]);
             break;
         case CMD_READER_ISO_14443a:
             ReaderIso14443a(packet);

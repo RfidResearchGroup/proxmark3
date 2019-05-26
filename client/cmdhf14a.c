@@ -414,7 +414,6 @@ int CmdHF14ASim(const char *Cmd) {
     bool setEmulatorMem = false;
     bool verbose = false;
     bool errors = false;
-    nonces_t data[1];
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -491,29 +490,32 @@ int CmdHF14ASim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 
     while (!ukbhit()) {
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
-        if (!(flags & FLAG_NR_AR_ATTACK)) break;
-        if ((resp.oldarg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD) break;
-
-        memcpy(data, resp.data.asBytes, sizeof(data));
+        if (WaitForResponseTimeout(CMD_SIMULATE_MIFARE_CARD, &resp, 1500) == 0) continue;
+        if (resp.status != PM3_SUCCESS) break;
+        
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) break;
+        
+        nonces_t *data = (nonces_t*)resp.data.asBytes;
         readerAttack(data[0], setEmulatorMem, verbose);
     }
-    showSectorTable();
-    return 0;
+    if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) )
+        showSectorTable();
+
+    PrintAndLogEx(INFO, "Done");
+    return PM3_SUCCESS;
 }
 
 int CmdHF14ASniff(const char *Cmd) {
-    int param = 0;
-    uint8_t ctmp;
-    for (int i = 0; i < 2; i++) {
+    uint8_t param = 0, ctmp;
+    for (uint8_t i = 0; i < 2; i++) {
         ctmp = tolower(param_getchar(Cmd, i));
         if (ctmp == 'h') return usage_hf_14a_sniff();
         if (ctmp == 'c') param |= 0x01;
         if (ctmp == 'r') param |= 0x02;
     }
     clearCommandBuffer();
-    SendCommandMIX(CMD_SNIFF_ISO_14443a, param, 0, 0, NULL, 0);
-    return 0;
+    SendCommandNG(CMD_SNIFF_ISO_14443a, (uint8_t *)&param, sizeof(uint8_t));
+    return PM3_SUCCESS;
 }
 
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
