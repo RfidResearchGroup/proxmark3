@@ -129,7 +129,6 @@ void ClearFpgaShiftingRegisters(void);
 
 // iso14443a.h
 void RAMFUNC SniffIso14443a(uint8_t param);
-void SimulateIso14443aTag(int tagType, int flags, uint8_t *data);
 void ReaderIso14443a(PacketCommandNG *c);
 
 // Also used in iclass.c

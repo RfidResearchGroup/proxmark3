@@ -2200,16 +2200,17 @@ static int CmdHF14AMfSim(const char *Cmd) {
                 break;
             case 'u':
                 param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
+                uidlen >>= 1;
                 switch (uidlen) {
-                    case 20:
+                    case 10:
                         flags |= FLAG_10B_UID_IN_DATA;
                         sprintf(uidsize, "10 byte");
                         break;
-                    case 14:
+                    case 7:
                         flags |= FLAG_7B_UID_IN_DATA;
                         sprintf(uidsize, "7 byte");
                         break;
-                    case  8:
+                    case 4:
                         flags |= FLAG_4B_UID_IN_DATA;
                         sprintf(uidsize, "4 byte");
                         break;
@@ -2243,7 +2244,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
     PrintAndLogEx(INFO, _YELLOW_("Mifare %s") " | %s UID  " _YELLOW_("%s") ""
                   , csize
                   , uidsize
-                  , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen >> 1)
+                  , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen)
                  );
 
     PrintAndLogEx(INFO, "Options [ numreads: %d, flags: %d (0x%02x) ]"
@@ -2251,8 +2252,18 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   , flags
                   , flags);
 
+    struct {
+       uint16_t flags;
+       uint8_t exitAfter;
+       uint8_t uid[10];
+    } PACKED payload;
+    
+    payload.flags = flags;
+    payload.exitAfter = exitAfterNReads;
+    memcpy(payload.uid, uid, uidlen);
+    
     clearCommandBuffer();
-    SendCommandOLD(CMD_SIMULATE_MIFARE_CARD, flags, exitAfterNReads, 0, uid, sizeof(uid));
+    SendCommandNG(CMD_SIMULATE_MIFARE_CARD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
     if (flags & FLAG_INTERACTIVE) {
@@ -2439,7 +2450,7 @@ int CmdHF14AMfDbg(const char *Cmd) {
     uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
     if (dbgMode > 4) return usage_hf14_dbg();
 
-    SendCommandMIX(CMD_MIFARE_SET_DBGMODE, dbgMode, 0, 0, NULL, 0);
+    SendCommandNG(CMD_MIFARE_SET_DBGMODE, &dbgMode, 1);
     return 0;
 }
 

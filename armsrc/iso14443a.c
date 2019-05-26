@@ -1028,7 +1028,7 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
 // response to send, and send it.
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(int tagType, int flags, uint8_t *data) {
+void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 
 #define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
 

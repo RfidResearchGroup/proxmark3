@@ -1017,9 +1017,16 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_READER_ISO_14443a:
             ReaderIso14443a(packet);
             break;
-        case CMD_SIMULATE_TAG_ISO_14443a:
-            SimulateIso14443aTag(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);  // ## Simulate iso14443a tag - pass tag type & UID
+        case CMD_SIMULATE_TAG_ISO_14443a: {
+            struct p {
+               uint8_t tagtype;
+               uint8_t flags;
+               uint8_t uid[10];
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;            
+            SimulateIso14443aTag(payload->tagtype, payload->flags, payload->uid);  // ## Simulate iso14443a tag - pass tag type & UID
             break;
+            }
         case CMD_ANTIFUZZ_ISO_14443a:
             iso14443a_antifuzz(packet->oldarg[0]);
             break;
@@ -1076,13 +1083,20 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareChkKeys_fast(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
-        case CMD_SIMULATE_MIFARE_CARD:
-            Mifare1ksim(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+        case CMD_SIMULATE_MIFARE_CARD: {
+            struct p {
+               uint16_t flags;
+               uint8_t exitAfter;
+               uint8_t uid[10];
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;   
+            Mifare1ksim(payload->flags, payload->exitAfter, payload->uid);
+            }
             break;
 
         // emulator
         case CMD_MIFARE_SET_DBGMODE:
-            MifareSetDbgLvl(packet->oldarg[0]);
+            MifareSetDbgLvl(packet->data.asBytes[0]);
             break;
         case CMD_MIFARE_EML_MEMCLR:
             MifareEMemClr();
@@ -1362,6 +1376,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t *mem = BigBuf_get_addr();
             uint32_t startidx = packet->oldarg[0];
             uint32_t numofbytes = packet->oldarg[1];
+
             // arg0 = startindex
             // arg1 = length bytes to transfer
             // arg2 = BigBuf tracelen
