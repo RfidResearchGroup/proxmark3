@@ -1,3 +1,7 @@
+# MANUAL 
+## Bluetooth / Battery add-on 'Blue Shark'
+_rev. v1.0 (draft)_
+
 ### 1.	FEATURES
 
 *	Built-in Bluetooth 2.0 with EDR Bluetooth module, default baud rate 115200.
