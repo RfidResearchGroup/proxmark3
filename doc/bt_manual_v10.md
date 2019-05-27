@@ -40,6 +40,8 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 ### 4.	CONNECT WITH BLUETOOTH
 
+#### Windows
+
 #### (1)	Connecting your RDV4.0 with Bluetooth on mobile phone or computer
 *	Open Bluetooth and search for a device named PM3_RDV4.0.
 *	Enter the paired password 1234 and establish the connection.
@@ -52,6 +54,53 @@ http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp
 *	The adapter button can be used to delete memory so that other add-on can be searched and connected.
 *	After the connection is established, the blue state LED on add-on will turn on solid.
 
+#### Linux
+
+#### (1) Connecting rdv4.0 with Bluetooth on Linux computer
+
+1. Find the MAC address of the Bluetooth add-on, named PM3_RDV4.0.
+	
+```sh
+sudo hcitool scan
+Scanning ...
+  aa:bb:cc:dd:ee:ff PM3_RDV4.0
+```
+	Instead of aa:bb:cc:dd:ee:ff, you'll see your MAC address.
+
+2. Bind your BT add-on MAC address to a serial port
+```sh
+sudo rfcomm bind rfcomm0 aa:bb:cc:dd:ee:ff
+```
+3. The blue state LED on the add-on will keep blinking after the
+connection is established. Only when the Proxmark3 client opens the
+/dev/rfcomm0 port, the blue LED turns on solid, indicating that the
+connection is successful.
+
+4. Use Proxmark client on BT-serial port
+```sh
+./proxmark /dev/rfcomm0
+```
+The first time, your OS will ask you for pairing. The default PIN is
+1234. If PIN is not typed in quickly, the client might timeout. Simply
+restart it again after pairing.
+
+#### (2) Fast connection using dedicated USB Bluetooth adapter under Linux
+
+  1. Insert the adapter into the USB port. The adapter will search
+automatically and establish the connection. The adapter will remember
+the device that was first connected and after that the same device will
+be connected.
+
+  2. The adapter button can be used to delete memory so that other add-on
+can be searched and connected.
+
+  3. After the connection is established, the blue state LED on add-on will
+turn on solid.
+
+  4. a serial port /dev/ttyUSB0 will be created, use Proxmark3 client on it
+```sh
+./proxmark /dev/ttyUSB0
+```
 
 ### 5. Compiling / Flashing 
 Please download the latest source code from Rfid Research Group's Github repo:
