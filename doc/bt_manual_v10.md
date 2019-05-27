@@ -1,5 +1,5 @@
 # MANUAL 
-## Bluetooth / Battery add-on 'Blue Shark'
+### Bluetooth / Battery add-on 'Blue Shark'
 _rev. v1.0 (draft)_
 
 ### 1.	FEATURES
@@ -57,24 +57,20 @@ https://github.com/RfidResearchGroup/proxmark3
 
 ### 6.	OTHER NOTES
 
-(1)	UART and LED behavior
-
+#### (1)	UART and LED behavior
 Bluetooth is connected to PM3 RDV4.0 via UART. The USB and UART interfaces of RDV4.0 can coexist without conflict, and no special switching is required. 
 
 The following link has helpful notes on UART usage and baud rates:
 https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/uart_notes.md
 
-(2)	Disassembly
-
+#### (2)	Disassembly
 There is a heat conductive double-sided tape inside the Add-on, which has strong adhesive force. Therefore, if add-on needs to be removed, it needs to be pulled out from the heat sink end with greater efforts. Each disassembly will reduce the viscidity of double-sided tape. When double-sided tape is well protected, it will not affect the second use. Thermal conductivity will be slightly worse and will therefore have a direct impact on the thermal performance of the heat sink.
 
-(3)	Battery charging
-
+#### (3)	Battery charging
 The battery charging circuit is turned on by default. Any time a USB cable is inserted, the battery will be automatically charged. The red LED will remain bright when charging. 
 The red LED will be extinguished when charging is completed.
 
-(4)	Get better signals
-
+#### (4)	Get better signals
 For the better heat dissipation, we have used a cast metal enclosure for the add-on. As a result Bluetooth wireless signals are sacrificed. For example, if the back of ADDON is facing the Bluetooth host, the signal is very bad and the distance will be reduced. The best signal strength can be obtained when the front glass faces the Bluetooth host.
 	If the PM3 is not responding, it may be due to a poor Bluetooth connection. To improve performance, try repositioning the PM3 so the glass face is directed toward the host.
 
