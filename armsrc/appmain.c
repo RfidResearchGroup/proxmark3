@@ -771,7 +771,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
         case CMD_LF_SNIFF_RAW_ADC_SAMPLES: {
             uint32_t bits = SniffLF();
-            reply_old(CMD_ACK, bits, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, bits, 0, 0, 0, 0);
             break;
         }
         case CMD_HID_DEMOD_FSK: {
@@ -1091,22 +1091,37 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p* payload = (struct p*) packet->data.asBytes;   
             Mifare1ksim(payload->flags, payload->exitAfter, payload->uid);
-            }
             break;
-
+        }
         // emulator
         case CMD_MIFARE_SET_DBGMODE:
             MifareSetDbgLvl(packet->data.asBytes[0]);
+            reply_ng(CMD_MIFARE_SET_DBGMODE, PM3_SUCCESS, NULL, 0);   
             break;
         case CMD_MIFARE_EML_MEMCLR:
             MifareEMemClr();
+            reply_ng(CMD_MIFARE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);               
             break;
-        case CMD_MIFARE_EML_MEMSET:
-            MifareEMemSet(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+        case CMD_MIFARE_EML_MEMSET: {
+            struct p {
+                uint8_t blockno;
+                uint8_t blockcnt;
+                uint8_t blockwidth;
+                uint8_t data[];
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            MifareEMemSet(payload->blockno, payload->blockcnt, payload->blockwidth, payload->data);
             break;
-        case CMD_MIFARE_EML_MEMGET:
-            MifareEMemGet(packet->oldarg[0], packet->oldarg[1]);
+        }
+        case CMD_MIFARE_EML_MEMGET: {
+            struct p {
+                uint8_t blockno;
+                uint8_t blockcnt;
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            MifareEMemGet(payload->blockno, payload->blockcnt);
             break;
+        }
         case CMD_MIFARE_EML_CARDLOAD:
             MifareECardLoad(packet->oldarg[0], packet->oldarg[1]);
             break;

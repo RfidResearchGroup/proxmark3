@@ -1627,23 +1627,36 @@ void MifareSetDbgLvl(uint16_t arg0) {
 
 void MifareEMemClr(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    emlClearMem();
+    emlClearMem(); 
 }
 
-void MifareEMemSet(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+void MifareEMemSet(uint8_t blockno, uint8_t blockcnt, uint8_t blockwidth, uint8_t *datain) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    if (arg2 == 0) arg2 = 16; // backwards compat... default bytewidth
-    emlSetMem_xt(datain, arg0, arg1, arg2); // data, block num, blocks count, block byte width
+
+    if (blockwidth == 0)
+        blockwidth = 16; // backwards compat... default bytewidth
+        
+    emlSetMem_xt(datain, blockno, blockcnt, blockwidth); // data, block num, blocks count, block byte width
 }
 
-void MifareEMemGet(uint32_t arg0, uint32_t arg1) {
+void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
-    emlGetMem(buf, arg0, arg1); // data, block num, blocks count (max 4)
+    
+    // 
+    size_t size = blockcnt * 16;
+    if ( size > PM3_CMD_DATA_SIZE) {
+        reply_ng(CMD_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+        return;
+    }
+    
+    uint8_t *buf = BigBuf_malloc(size);
+    
+    emlGetMem(buf, blockno, blockcnt); // data, block num, blocks count (max 4)
 
     LED_B_ON();
-    reply_old(CMD_ACK, arg0, arg1, 0, buf, PM3_CMD_DATA_SIZE);
+    reply_ng(CMD_MIFARE_EML_MEMGET, PM3_SUCCESS, buf, size);
     LED_B_OFF();
+    BigBuf_free_keep_EM();
 }
 
 //-----------------------------------------------------------------------------

@@ -445,12 +445,33 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
 
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
+
+    size_t size = blocksCount * 16;
+    if (size > PM3_CMD_DATA_SIZE) {
+        return PM3_ESOFT;
+    }
+
+    struct {
+        uint8_t blockno;
+        uint8_t blockcnt;
+    } PACKED payload;
+      
+    payload.blockno = blockNum;
+    payload.blockcnt = blocksCount;
+    
     clearCommandBuffer();
-    SendCommandMIX(CMD_MIFARE_EML_MEMGET, blockNum, blocksCount, 0, NULL, 0);
+    SendCommandNG(CMD_MIFARE_EML_MEMGET, (uint8_t*)&payload, sizeof(payload));
+    
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return PM3_ETIMEOUT;
-    memcpy(data, resp.data.asBytes, blocksCount * 16);
-    return PM3_SUCCESS;
+    if (WaitForResponseTimeout(CMD_MIFARE_EML_MEMGET, &resp, 1500) == 0) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS)
+        memcpy(data, resp.data.asBytes, size);
+
+    return resp.status;
 }
 
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
@@ -458,8 +479,27 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
+    
+    struct p {
+        uint8_t blockno;
+        uint8_t blockcnt;
+        uint8_t blockwidth;
+        uint8_t data[];
+    } PACKED;
+    
+    size_t size = blocksCount * blockBtWidth;
+    if (size > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
+        return PM3_ESOFT;
+    }
+
+    struct p *payload = calloc(1, sizeof(struct p) + size);
+    payload->blockno = blockNum;
+    payload->blockcnt = blocksCount;
+    payload->blockwidth = blockBtWidth;
+    memcpy(payload->data, data, size);
+   
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_EML_MEMSET, blockNum, blocksCount, blockBtWidth, data, blocksCount * blockBtWidth);
+    SendCommandNG(CMD_MIFARE_EML_MEMSET, (uint8_t*)payload, sizeof(payload) + size );
     return PM3_SUCCESS;
 }
 

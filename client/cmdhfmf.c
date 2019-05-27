@@ -2514,21 +2514,17 @@ void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
 
 // EMULATOR COMMANDS
 static int CmdHF14AMfEGet(const char *Cmd) {
-    uint8_t blockNo = 0;
-    uint8_t data[16] = {0x00};
     char c = tolower(param_getchar(Cmd, 0));
-
     if (strlen(Cmd) < 1 || c == 'h') return usage_hf14_eget();
 
-    blockNo = param_get8(Cmd, 0);
+    uint8_t data[16] = {0x00};
+    uint8_t blockNo = param_get8(Cmd, 0);
 
     PrintAndLogEx(NORMAL, "");
-    if (!mfEmlGetMem(data, blockNo, 1)) {
+    if (mfEmlGetMem(data, blockNo, 1) == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "data[%3d]:%s", blockNo, sprint_hex(data, sizeof(data)));
-    } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfEClear(const char *Cmd) {
@@ -2537,23 +2533,22 @@ static int CmdHF14AMfEClear(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_MIFARE_EML_MEMCLR, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfESet(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
-    uint8_t memBlock[16];
-    uint8_t blockNo = 0;
-    memset(memBlock, 0x00, sizeof(memBlock));
-
     if (strlen(Cmd) < 3 || c == 'h')
         return usage_hf14_eset();
+        
+    uint8_t memBlock[16];
+    memset(memBlock, 0x00, sizeof(memBlock));
 
-    blockNo = param_get8(Cmd, 0);
+    uint8_t blockNo = param_get8(Cmd, 0);
 
     if (param_gethex(Cmd, 1, memBlock, 32)) {
         PrintAndLogEx(WARNING, "block data must include 32 HEX symbols");
-        return 1;
+        return PM3_ESOFT;
     }
 
     //  1 - blocks count
