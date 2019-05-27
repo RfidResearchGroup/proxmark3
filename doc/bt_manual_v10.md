@@ -37,6 +37,9 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 *	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.
 *	Assembly finished!
 
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/addon_open_1.jpg" alt="Image of blue shark add-on open fit" width="300"><img src="http://www.icedev.se/proxmark3/blueshark/addon_fitted_1.jpg" alt="Image of blue shark add-on fitted" width="300">
+</p>
 
 ### 4.	CONNECT WITH BLUETOOTH
 
@@ -102,6 +105,8 @@ turn on solid.
 ```sh
 ./proxmark /dev/ttyUSB0
 ```
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
 
 ### 5. Compiling / Flashing 
 Please download the latest source code from Rfid Research Group's Github repo:
