@@ -53,6 +53,7 @@ http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp
 *	Insert the adapter into the USB port. The adapter will search automatically and establish the connection. The adapter will remember the device that was first connected and after that the same device will be connected.
 *	The adapter button can be used to delete memory so that other add-on can be searched and connected.
 *	After the connection is established, the blue state LED on add-on will turn on solid.
+*	look for _CP2104 USB tp UART bridge controller_ under devices in order to get the assigned serial port
 
 #### Linux
 
