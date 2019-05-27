@@ -1,11 +1,11 @@
-1.	FEATURES
+### 1.	FEATURES
 
-•	Built-in Bluetooth 2.0 with EDR Bluetooth module, default baud rate 115200.
-•	Built-in 400 mAh polymer lithium-ion battery, typical standby time up to 3.5 hours.
-•	Additional heat dissipating fins can significantly reduce the temperature when the HF antenna is in operation for a long time.
-•	Complete lithium charging management system, seamless switching power supply. Full overcharge and overdischarge protection.
-•	Bluetooth has an independent power switch that can be turned on or off.
-•	It's compact and easy to carry. The clamp structure is easy to install and replace.
+*	Built-in Bluetooth 2.0 with EDR Bluetooth module, default baud rate 115200.
+*	Built-in 400 mAh polymer lithium-ion battery, typical standby time up to 3.5 hours.
+*	Additional heat dissipating fins can significantly reduce the temperature when the HF antenna is in operation for a long time.
+*	Complete lithium charging management system, seamless switching power supply. Full overcharge and overdischarge protection.
+*	Bluetooth has an independent power switch that can be turned on or off.
+*	It's compact and easy to carry. The clamp structure is easy to install and replace.
 
 
 It can easily connect to Bluetooth mobile phone, portable computer, etc. Without USB cable, complicated permissions or driver settings.
@@ -14,52 +14,44 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 
 
-2.	PARAMETER
+### 2.	PARAMETER
 
-•	Battery capacity:	400 mAh
-•	Standby time:	3.5h@StandBy; 2.9h@LF-On; 50min@HF-On;
-•	Charging Current:	200mA (Plug in USB Default Charging)
-•	Charging time:	2.5h
-•	Bluetooth power:	4dBm, -85 dBm@2Mbps
-•	Bluetooth distance:	6m (depending on the environment and device orientation)
-•	Size and weight:	54.4mm*29.4mm*13.5mm 24g
-
-
-3.	ASSEMBLY STEPS
-
-①	Remove the plastic upper case of PM3 RDV40 by opener.
-②	The antenna is temporarily removed with a screwdriver to expose the FPC interface.
-③	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.
-④	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.
-⑤	Assembly finished!
+*	Battery capacity:	400 mAh
+*	Standby time:		3.5h@StandBy; 2.9h@LF-On; 50min@HF-On;
+*	Charging Current:	200mA (Plug in USB Default Charging)
+*	Charging time:	2.5h
+*	Bluetooth power:	4dBm, -85 dBm@2Mbps
+*	Bluetooth distance:	6m (depending on the environment and device orientation)
+*	Size and weight:	54.4mm*29.4mm*13.5mm 24g
 
 
-  
+### 3.	ASSEMBLY STEPS
 
+*	Remove the plastic upper case of PM3 RDV40 by opener.
+*	The antenna is temporarily removed with a screwdriver to expose the FPC interface.
+*	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.
+*	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.
+*	Assembly finished!
 
-4.	CONNECT WITH BLUETOOTH
+### 4.	CONNECT WITH BLUETOOTH
 
-(1)	Connecting rdv4.0 with Bluetooth on mobile phone or computer
-①	Open Bluetooth and search for a device named PM3_RDV4.0.
-②	Enter the paired password 1234 and establish the connection.
-③	The blue state LED on the ADD-ON will keep blinking after the connection is established. Only when the mobile phone or computer opens the correct COM port, the blue LED turns on solid, indicating that the connection is successful.
+#### (1)	Connecting rdv4.0 with Bluetooth on mobile phone or computer
+*	Open Bluetooth and search for a device named PM3_RDV4.0.
+*	Enter the paired password 1234 and establish the connection.
+*	The blue state LED on the ADD-ON will keep blinking after the connection is established. Only when the mobile phone or computer opens the correct COM port, the blue LED turns on solid, indicating that the connection is successful.
 
-(2)	Fast connection using dedicated USB Bluetooth adapter
-①	Install driver:
+#### (2)	Fast connection using dedicated USB Bluetooth adapter
+*	Install driver:
 http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers  
-②	Insert the adapter into the USB port. The adapter will search automatically and establish the connection. The adapter will remember the device that was first connected and after that the same device will be connected.
-③	The adapter button can be used to delete memory so that other add-on can be searched and connected.
-④	After the connection is established, the blue state LED on ADD-ON will turn on solid.
+*	Insert the adapter into the USB port. The adapter will search automatically and establish the connection. The adapter will remember the device that was first connected and after that the same device will be connected.
+*	The adapter button can be used to delete memory so that other add-on can be searched and connected.
+*	After the connection is established, the blue state LED on ADD-ON will turn on solid.
                                
-
-
-Compiling / Flashing 
+### 5. Compiling / Flashing 
 Please download the latest source code from RRG's Github repo:
 https://github.com/RfidResearchGroup/proxmark3
 
-
-
-5.	OTHER NOTES
+### 6.	OTHER NOTES
 
 (1)	UART and LED behavior
 
