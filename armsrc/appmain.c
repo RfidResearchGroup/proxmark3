@@ -1054,9 +1054,11 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_READER_MIFARE:
             ReaderMifare(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
-        case CMD_MIFARE_READBL:
-            MifareReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+        case CMD_MIFARE_READBL: {
+            mf_readblock_t *payload = (mf_readblock_t *)packet->data.asBytes;
+            MifareReadBlock(payload->blockno, payload->keytype, payload->key);
             break;
+            }
         case CMD_MIFAREU_READBL:
             MifareUReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;

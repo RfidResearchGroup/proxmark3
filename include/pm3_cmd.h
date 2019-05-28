@@ -202,6 +202,12 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_psksim_t;
 
+typedef struct {
+   uint8_t blockno;
+   uint8_t keytype;
+   uint8_t key[6];
+} PACKED mf_readblock_t;
+
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000

@@ -146,7 +146,8 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c);
 void EPA_PACE_Replay(PacketCommandNG *c);
 
 // mifarecmd.h
-void MifareReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
+void MifareReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *datain);
+
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes);
 void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain);
