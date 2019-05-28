@@ -1006,9 +1006,9 @@ int CmdLFfind(const char *Cmd) {
         if (getSignalProperties()->isnoise) {
 
             if (IfPm3Hitag()) {
-                if (readHitagUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!"); return PM3_SUCCESS;}
+                if (readHitagUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!"); return PM3_SUCCESS;}
             }
-            if (readCOTAGUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!"); return PM3_SUCCESS;}
+            if (readCOTAGUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") "found!"); return PM3_SUCCESS;}
 
             PrintAndLogEx(FAILED, "\n" _YELLOW_("No data found!") " - Signal looks like noise. Maybe not an LF tag?");
             return PM3_ESOFT;
