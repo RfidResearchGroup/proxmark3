@@ -702,6 +702,7 @@ static bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t co
 //c012345678| 0
 //            |- must be zero
 
+/*
 static int EMwordparitytest(uint8_t *bits) {
 
     // last row/col parity must be 0
@@ -728,6 +729,7 @@ static int EMwordparitytest(uint8_t *bits) {
     // all checks ok.
     return PM3_SUCCESS;
 }
+*/
 
 //////////////// 4050 / 4450 commands
 
@@ -1095,8 +1097,8 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
     //test for even parity bits.
     uint8_t parity[45] = {0};
     memcpy(parity, DemodBuffer, 45);
-    if (EMwordparitytest(parity) != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - EM Parity tests failed");
+    if (!EM_EndParityTest(DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - End Parity check failed");    
         return PM3_ESOFT;
     }
 
@@ -1138,10 +1140,21 @@ static int demodEM4x05resp(uint32_t *word) {
 
 //////////////// 4205 / 4305 commands
 static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
+
+   struct {
+        uint32_t password;
+        uint8_t address;
+        uint8_t usepwd;
+    } PACKED payload;
+    
+    payload.password = pwd;
+    payload.address = addr;
+    payload.usepwd = usePwd;
+    
     clearCommandBuffer();
-    SendCommandMIX(CMD_EM4X_READ_WORD, addr, pwd, usePwd, NULL, 0);
+    SendCommandNG(CMD_EM4X_READ_WORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_EM4X_READ_WORD, &resp, 2500)) {
         PrintAndLogEx(DEBUG, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -1165,7 +1178,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     if (pwd != 1)
         usePwd = true;
 
-    int success = 1;
+    int success = PM3_SUCCESS;
     uint32_t word = 0;
     PrintAndLogEx(NORMAL, "Addr | data   | ascii");
     PrintAndLogEx(NORMAL, "-----+--------+------");
@@ -1193,13 +1206,13 @@ static int CmdEM4x05Read(const char *Cmd) {
     if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_read();
 
     addr = param_get8ex(Cmd, 0, 50, 10);
-    pwd =  param_get32ex(Cmd, 1, 1, 16);
+    pwd =  param_get32ex(Cmd, 1, 0xFFFFFFFF, 16);
 
     if (addr > 15) {
         PrintAndLogEx(NORMAL, "Address must be between 0 and 15");
-        return 1;
+        return PM3_ESOFT;
     }
-    if (pwd == 1) {
+    if (pwd == 0xFFFFFFFF) {
         PrintAndLogEx(NORMAL, "Reading address %02u", addr);
     } else {
         usePwd = true;
@@ -1207,12 +1220,12 @@ static int CmdEM4x05Read(const char *Cmd) {
     }
 
     uint32_t word = 0;
-    int isOk = EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
-    if (isOk)
+    int status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+    if (status == PM3_SUCCESS)
         PrintAndLogEx(NORMAL, "Address %02d | %08X - %s", addr, word, (addr > 13) ? "Lock" : "");
     else
         PrintAndLogEx(NORMAL, "Read Address %02d | " _RED_("Fail"), addr);
-    return isOk;
+    return status;
 }
 
 static int CmdEM4x05Write(const char *Cmd) {
@@ -1225,25 +1238,35 @@ static int CmdEM4x05Write(const char *Cmd) {
 
     addr = param_get8ex(Cmd, 0, 50, 10);
     data = param_get32ex(Cmd, 1, 0, 16);
-    pwd =  param_get32ex(Cmd, 2, 1, 16);
+    pwd =  param_get32ex(Cmd, 2, 0xFFFFFFFF, 16);
 
     if (addr > 15) {
         PrintAndLogEx(NORMAL, "Address must be between 0 and 15");
         return PM3_EINVARG;
     }
-    if (pwd == 1)
+    if (pwd == 0xFFFFFFFF)
         PrintAndLogEx(NORMAL, "Writing address %d data %08X", addr, data);
     else {
         usePwd = true;
         PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
-    uint16_t flag = (addr << 8) | (usePwd);
-
+   struct {
+        uint32_t password;
+        uint32_t data;
+        uint8_t address;
+        uint8_t usepwd;
+    } PACKED payload;
+    
+    payload.password = pwd;
+    payload.data = data;
+    payload.address = addr;
+    payload.usepwd = usePwd;
+    
     clearCommandBuffer();
-    SendCommandMIX(CMD_EM4X_WRITE_WORD, flag, data, pwd, NULL, 0);
+    SendCommandNG(CMD_EM4X_WRITE_WORD, (uint8_t*)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (!WaitForResponseTimeout(CMD_EM4X_WRITE_WORD, &resp, 2000)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }
@@ -1253,12 +1276,12 @@ static int CmdEM4x05Write(const char *Cmd) {
 
     //need 0 bits demoded (after preamble) to verify write cmd
     uint32_t dummy = 0;
-    int isOk = demodEM4x05resp(&dummy);
-    if (isOk)
+    int status = demodEM4x05resp(&dummy);
+    if (status == PM3_SUCCESS)
         PrintAndLogEx(NORMAL, "Write " _GREEN_("Verified"));
     else
         PrintAndLogEx(NORMAL, "Write could " _RED_("not") "be verified");
-    return isOk;
+    return status;
 }
 
 static void printEM4x05config(uint32_t wordData) {
@@ -1438,9 +1461,9 @@ static int CmdEM4x05Info(const char *Cmd) {
     if (ctmp == 'h') return usage_lf_em4x05_info();
 
     // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
-    pwd = param_get32ex(Cmd, 0, 1, 16);
+    pwd = param_get32ex(Cmd, 0, 0xFFFFFFFF, 16);
 
-    if (pwd != 1)
+    if (pwd != 0xFFFFFFFF)
         usePwd = true;
 
     // read word 0 (chip info)

@@ -110,8 +110,10 @@ void T55xxWakeUp(uint32_t Pwd);
 void T55xx_ChkPwds(void);
 
 void TurnReadLFOn(uint32_t delay);
+
 void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd);
-void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd);
+void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd);
+
 void Cotag(uint32_t arg0);
 void setT55xxConfig(uint8_t arg0, t55xx_config *c);
 t55xx_config *getT55xxConfig(void);

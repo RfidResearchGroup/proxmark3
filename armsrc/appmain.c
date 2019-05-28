@@ -884,12 +884,27 @@ static void PacketReceived(PacketCommandNG *packet) {
                 packet->oldarg[2]
             );
             break;
-        case CMD_EM4X_READ_WORD:
-            EM4xReadWord(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+        case CMD_EM4X_READ_WORD: {
+           struct p {
+                uint32_t password;
+                uint8_t address;
+                uint8_t usepwd;
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            EM4xReadWord(payload->address, payload->password, payload->usepwd);
             break;
-        case CMD_EM4X_WRITE_WORD:
-            EM4xWriteWord(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            }
+        case CMD_EM4X_WRITE_WORD: {
+           struct p {
+                uint32_t password;
+                uint32_t data;
+                uint8_t address;
+                uint8_t usepwd;
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            EM4xWriteWord(payload->address, payload->data, payload->password, payload->usepwd);
             break;
+            }
         case CMD_AWID_DEMOD_FSK:  {
             uint32_t high, low;
             // Set realtime AWID demodulation

@@ -901,6 +901,12 @@ static void stAskSimBit(int *n, uint8_t clock) {
     memset(dest + (*n) + clock * 3, 1, clock);
     *n += clock * 4;
 }
+static void leadingZeroAskSimBits(int *n, uint8_t clock) {
+    uint8_t *dest = BigBuf_get_addr();
+    memset(dest + (*n), 0, clock * 8);
+    *n += clock * 8;
+}
+
 
 // args clock, ask/man or askraw, invert, transmission separator
 void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
@@ -909,23 +915,25 @@ void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t c
 
     int n = 0, i = 0;
 
+    leadingZeroAskSimBits(&n, clk);
+
     if (encoding == 2) { //biphase
         uint8_t phase = 0;
         for (i = 0; i < size; i++) {
-            biphaseSimBit(bits[i]^invert, &n, clk, &phase);
+            biphaseSimBit(bits[i] ^ invert, &n, clk, &phase);
         }
         if (phase == 1) { //run a second set inverted to keep phase in check
             for (i = 0; i < size; i++) {
-                biphaseSimBit(bits[i]^invert, &n, clk, &phase);
+                biphaseSimBit(bits[i] ^ invert, &n, clk, &phase);
             }
         }
     } else {  // ask/manchester || ask/raw
         for (i = 0; i < size; i++) {
-            askSimBit(bits[i]^invert, &n, clk, encoding);
+            askSimBit(bits[i] ^ invert, &n, clk, encoding);
         }
         if (encoding == 0 && bits[0] == bits[size - 1]) { //run a second set inverted (for ask/raw || biphase phase)
             for (i = 0; i < size; i++) {
-                askSimBit(bits[i]^invert ^ 1, &n, clk, encoding);
+                askSimBit(bits[i] ^ invert ^ 1, &n, clk, encoding);
             }
         }
     }
@@ -1202,7 +1210,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
         errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
         WDT_HIT();
 
-        if (errCnt < 0) continue;
+        if (errCnt > 50) continue;
 
         errCnt = Em410xDecode(dest, &size, &idx, &hi, &lo);
         if (errCnt == 1) {
@@ -2030,16 +2038,13 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
     DoPartialAcquisition(20, true, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_ng(CMD_EM4X_READ_WORD, PM3_SUCCESS, NULL, 0);
     LED_A_OFF();
 }
 
-void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
+void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
 
     LED_A_ON();
-
-    bool usePwd = (flag & 0xF);
-    uint8_t addr = (flag >> 8) & 0xFF;
     uint8_t len;
 
     //clear buffer now so it does not interfere with timing later
@@ -2051,7 +2056,7 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
     * 0000 1010 ok.
     * 0000 0001 fail
     **/
-    if (usePwd) EM4xLogin(pwd);
+    if (usepwd) EM4xLogin(pwd);
 
     forward_ptr = forwardLink_data;
     len = Prepare_Cmd(FWD_CMD_WRITE);
@@ -2066,7 +2071,7 @@ void EM4xWriteWord(uint32_t flag, uint32_t data, uint32_t pwd) {
     DoPartialAcquisition(20, true, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_ng(CMD_EM4X_WRITE_WORD, PM3_SUCCESS, NULL, 0);
     LED_A_OFF();
 }
 

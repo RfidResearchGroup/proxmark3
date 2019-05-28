@@ -21,7 +21,7 @@
 #include "parity.h"  // for parity test
 
 //might not be high enough for noisy environments
-#define NOISE_AMPLITUDE_THRESHOLD 15
+#define NOISE_AMPLITUDE_THRESHOLD 8
 //ignore buffer with less than x samples
 #define SIGNAL_MIN_SAMPLES 100
 //ignore first x samples of the buffer

@@ -41,7 +41,7 @@
 #include <stdint.h>  // for uint_32+
 #include <stdbool.h> // for bool
 #include "parity.h"  // for parity test
-
+#include "commonutil.h" // colors
 //**********************************************************************************************
 //---------------------------------Utilities Section--------------------------------------------
 //**********************************************************************************************
@@ -82,7 +82,7 @@ static void printSignal(void) {
     prnt("  low...........%d", signalprop.low);
     prnt("  mean..........%d", signalprop.mean);
     prnt("  amplitude.....%d", signalprop.amplitude);
-    prnt("  is Noise......%s", (signalprop.isnoise) ? "Yes" : "No");
+    prnt("  is Noise......%s", (signalprop.isnoise) ? _RED_("Yes") : _GREEN_("No"));
     prnt("  THRESHOLD noise amplitude......%d", NOISE_AMPLITUDE_THRESHOLD);
 }
 
@@ -567,7 +567,7 @@ int DetectStrongAskClock(uint8_t *src, size_t size, int high, int low, int *cloc
 int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 
     //don't need to loop through entire array. (cotag has clock of 384)
-    uint16_t loopCnt = 1500;
+    uint16_t loopCnt = 2000;
 
     // not enough samples
     if (size <= loopCnt + 60) {
@@ -1459,6 +1459,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
     bool waveHigh = true;
 
     getNextHigh(bits, *size, high, &pos);
+//    getNextLow(bits, *size, low, &pos);
 
     // sample counts,   like clock = 32.. it tries to find  32/4 = 8,  32/2 = 16
     for (size_t i = pos; i < *size; i++) {
@@ -1488,8 +1489,10 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                         bits[bitCnt++] = invert ^ 1;
                         bits[bitCnt++] = invert ^ 1;
                     }
-                    if (*startIdx == 0)
+                    if (*startIdx == 0) {
                         *startIdx = i - clk;
+                         prnt("DEBUG ASK: cleanAskRawDemod minus clock [%d]", *startIdx);
+                    }
                     waveHigh = !waveHigh;
                     smplCnt = 0;
 
@@ -1507,8 +1510,10 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                     } else if (!waveHigh) {
                         bits[bitCnt++] = invert ^ 1;
                     }
-                    if (*startIdx == 0)
+                    if (*startIdx == 0) {
                         *startIdx = i - cl_2;
+                         prnt("DEBUG ASK: cleanAskRawDemod minus half clock [%d]", *startIdx);
+                    }
                     waveHigh = !waveHigh;
                     smplCnt = 0;
                 } else {
@@ -1523,10 +1528,12 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
 
     *size = bitCnt;
 
+/*
     if (*startIdx < 0)
         *startIdx = 0;
+*/
 
-    if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod Startidx %u ", *startIdx);
+    if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod Startidx %d", *startIdx);
 
     return errCnt;
 }
@@ -1553,30 +1560,26 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
 
     if (g_debugMode == 2) prnt("DEBUG (askdemod_ext) clk %d, beststart %d, amp %d", *clk, start, amp);
 
-    //start pos from detect ask clock is 1/2 clock offset
-    // NOTE: can be negative (demod assumes rest of wave was there)
-    *startIdx = start - (*clk / 2);
-    uint16_t initLoopMax = 1024;
-    if (initLoopMax > *size) initLoopMax = *size;
-
     // Detect high and lows
     //25% clip in case highs and lows aren't clipped [marshmellow]
     int high, low;
-    //getHiLo(bits, initLoopMax, &high, &low, 75, 75);
     getHiLo(&high, &low, 75, 75);
 
     size_t errCnt = 0;
     // if clean clipped waves detected run alternate demod
     if (DetectCleanAskWave(bits, *size, high, low)) {
 
-        if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Clean wave detected");
+        //start pos from detect ask clock is 1/2 clock offset
+        // NOTE: can be negative (demod assumes rest of wave was there)
+        *startIdx = start - (*clk / 2);
+        if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Clean wave detected  --- startindex %d", *startIdx);
 
         errCnt = cleanAskRawDemod(bits, size, *clk, *invert, high, low, startIdx);
 
         if (askType) { //ask/manchester
             uint8_t alignPos = 0;
             errCnt = manrawdecode(bits, size, 0, &alignPos);
-            *startIdx += *clk / 2 * alignPos;
+            *startIdx += ((*clk / 2) * alignPos);
 
             if (g_debugMode)
                 prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u , bestError %u", *startIdx, alignPos, errCnt);
