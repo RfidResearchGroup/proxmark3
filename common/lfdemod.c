@@ -103,8 +103,7 @@ void computeSignalProperties(uint8_t *samples, uint32_t size) {
     // we can detect noise
     signalprop.isnoise =  signalprop.amplitude < NOISE_AMPLITUDE_THRESHOLD;
 
-    if (g_debugMode)
-        printSignal();
+    printSignal();
 }
 
 void removeSignalOffset(uint8_t *samples, uint32_t size) {
@@ -146,8 +145,7 @@ void getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
         *low =  signalprop.low;
     }
 
-    if (g_debugMode)
-        prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
+    prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
 }
 
 // by marshmellow
@@ -271,12 +269,13 @@ bool preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *siz
             //first index found
             foundCnt++;
             if (foundCnt == 1) {
-                if (g_debugMode) prnt("DEBUG: (preambleSearchEx) preamble found at %i", idx);
+                prnt("DEBUG: (preambleSearchEx) preamble found at %i", idx);
                 *startIdx = idx;
-                if (findone) return true;
+                if (findone) 
+                    return true;
             }
             if (foundCnt == 2) {
-                if (g_debugMode) prnt("DEBUG: (preambleSearchEx) preamble 2 found at %i", idx);
+                prnt("DEBUG: (preambleSearchEx) preamble 2 found at %i", idx);
                 *size = idx - *startIdx;
                 return true;
             }
@@ -1581,13 +1580,12 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
             errCnt = manrawdecode(bits, size, 0, &alignPos);
             *startIdx += ((*clk / 2) * alignPos);
 
-            if (g_debugMode)
-                prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u , bestError %u", *startIdx, alignPos, errCnt);
+            prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u , bestError %u", *startIdx, alignPos, errCnt);
         }
         return errCnt;
     }
 
-    if (g_debugMode) prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
+    prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
 
     int lastBit;  //set first clock check - can go negative
     size_t i, bitnum = 0;     //output counter
