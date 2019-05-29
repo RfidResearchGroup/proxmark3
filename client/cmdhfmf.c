@@ -854,7 +854,6 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     clearCommandBuffer();                    
                     SendCommandNG(CMD_MIFARE_READBL, (uint8_t*)&payload, sizeof(mf_readblock_t));
                     received = WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500);
-                    printf("A\n");                    
                 } else {                                           // data block. Check if it can be read with key A or key B
                     uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
                     if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) { // only key B would work
@@ -866,7 +865,6 @@ static int CmdHF14AMfDump(const char *Cmd) {
                         clearCommandBuffer();
                         SendCommandNG(CMD_MIFARE_READBL, (uint8_t*)&payload, sizeof(mf_readblock_t));
                         received = WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500);
-                        printf("B\n");
                     } else if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
                         PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
                         // where do you want to go??  Next sector or block?
@@ -880,7 +878,6 @@ static int CmdHF14AMfDump(const char *Cmd) {
                         clearCommandBuffer();
                         SendCommandNG(CMD_MIFARE_READBL, (uint8_t*)&payload, sizeof(mf_readblock_t));
                         received = WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500);
-                        printf("C\n");
                     }
                 }
                 if (received) {
