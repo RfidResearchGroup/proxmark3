@@ -35,6 +35,8 @@ Arguments:
     -p             : Use the precalc to find all keys
     -o             : filename for the saved dumps
 ]]
+
+local PM3_SUCCESS = 0
 local RANDOM = '20436F707972696768742028432920323031302041637469766973696F6E2E20416C6C205269676874732052657365727665642E20'
 local DEBUG = false -- the debug flag
 local numBlocks = 64
@@ -91,13 +93,10 @@ local function getblockdata(response)
     if not response then
         return nil, 'No response from device'
     end
-
-    local count, cmd, arg0 = bin.unpack('LL', response)
-    if arg0 == 1 then
-        local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
-        return data:sub(1, 32)
+    if response.Status == PM3_SUCCESS then
+        return response.Data
     else
-        return nil, "Couldn't read block.. ["..arg0.."]"
+        return nil, "Couldn't read block.. ["..response.Status.."]"
     end
 end
 
@@ -167,16 +166,21 @@ local function main(args)
     local block0, block1
     -- Read block 0
     dbg('Reading block 0')
-    cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = 0, data = keyA}
-    block0, err = getblockdata(cmd:sendMIX(false))
+    local blockno = '00'
+    local keytype = '00'
+    local data = ('%s%s%s'):format(blockno, keytype, keyA)
+    cmd = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+    block0, err = getblockdata(cmd:sendNG(false))
     if not block0 then return oops(err) end
 
     core.clearCommandBuffer()
 
     -- Read block 1
     dbg('Reading block 1')
-    cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = 1, data = keyA}
-    block1, err = getblockdata(cmd:sendMIX(false))
+    local blockno = '01'
+    data = ('%s%s%s'):format(blockno, keytype, keyA)
+    cmd = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+    block1, err = getblockdata(cmd:sendNG(false))
     if not block1 then return oops(err) end
 
     core.clearCommandBuffer()
@@ -203,8 +207,9 @@ local function main(args)
 
         pos = (math.floor( blockNo / 4 ) * 12)+1
         key = akeys:sub(pos, pos + 11 )
-        cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = blockNo, data = key}
-        local blockdata, err = getblockdata(cmd:sendMIX(false))
+        data = ('%02x%s%s'):format(blockNo, keytype, key)
+        cmd = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+        local blockdata, err = getblockdata(cmd:sendNG(false))
         if not blockdata then return oops(err) end
 
         if  blockNo%4 ~= 3 then

@@ -202,6 +202,12 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_psksim_t;
 
+typedef struct {
+   uint8_t blockno;
+   uint8_t keytype;
+   uint8_t key[6];
+} PACKED mf_readblock_t;
+
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
@@ -494,6 +500,8 @@ typedef struct {
 #define PM3_EFILE             -13
 // Generic TTY error
 #define PM3_ENOTTY            -14
+// Initialization error                 pm3:        error related to trying to initalize the pm3 / fpga for different operations
+#define PM3_EINIT             -15
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

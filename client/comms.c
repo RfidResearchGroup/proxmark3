@@ -669,7 +669,7 @@ void CloseProxmark(void) {
 static size_t communication_delay(void) {
     if (conn.send_via_fpc_usart)  // needed also for Windows USB USART??
         return 2 * (12000000 / conn.uart_speed);
-    return 100;
+    return 0;
 }
 
 /**
@@ -690,7 +690,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
         response = &resp;
 
     // Add delay depending on the communication channel & speed
-    if (ms_timeout != (size_t) -1)
+    if (ms_timeout != (size_t) - 1)
         ms_timeout += communication_delay();
 
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);

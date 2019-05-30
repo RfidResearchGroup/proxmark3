@@ -22,7 +22,7 @@ static int usage_lf_cotag_read(void) {
     PrintAndLogEx(NORMAL, "Example:");
     PrintAndLogEx(NORMAL, "        lf cotag read 0");
     PrintAndLogEx(NORMAL, "        lf cotag read 1");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // COTAG demod should be able to use GraphBuffer,
@@ -35,10 +35,10 @@ static int CmdCOTAGDemod(const char *Cmd) {
     memcpy(bits, DemodBuffer, COTAG_BITS);
 
     uint8_t alignPos = 0;
-    int err = manrawdecode(bits, &bitlen, 1, &alignPos);
-    if (err) {
-        if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - COTAG too many errors: %d", err);
-        return -1;
+    uint16_t err = manrawdecode(bits, &bitlen, 1, &alignPos);
+    if (err > 50 ) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - COTAG too many errors: %d", err);
+        return PM3_ESOFT;
     }
 
     setDemodBuff(bits, bitlen, 0);
@@ -60,7 +60,7 @@ static int CmdCOTAGDemod(const char *Cmd) {
         1001 1100 1100 0001                     10000101
     */
     PrintAndLogEx(SUCCESS, "COTAG Found: FC %u, CN: %u Raw: %08X%08X%08X%08X", fc, cn, raw1, raw2, raw3, raw4);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // When reading a COTAG.
@@ -78,7 +78,7 @@ static int CmdCOTAGRead(const char *Cmd) {
     SendCommandMIX(CMD_COTAG, rawsignal, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 7000)) {
         PrintAndLogEx(WARNING, "command execution time out");
-        return -1;
+        return PM3_ETIMEOUT;
     }
 
     switch (rawsignal) {
@@ -93,13 +93,13 @@ static int CmdCOTAGRead(const char *Cmd) {
 
             if (!GetFromDevice(BIG_BUF, DemodBuffer, COTAG_BITS, 0, NULL, 1000, false)) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-                return -1;
+                return PM3_ETIMEOUT;
             }
             DemodBufferLen = COTAG_BITS;
             return CmdCOTAGDemod("");
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -112,7 +112,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFCOTAG(const char *Cmd) {
@@ -125,5 +125,5 @@ int demodCOTAG(void) {
 }
 
 int readCOTAGUid(void) {
-    return CmdCOTAGRead("") > 0;
+    return (CmdCOTAGRead("") == PM3_SUCCESS);
 }

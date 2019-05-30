@@ -771,7 +771,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
         case CMD_LF_SNIFF_RAW_ADC_SAMPLES: {
             uint32_t bits = SniffLF();
-            reply_old(CMD_ACK, bits, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, bits, 0, 0, 0, 0);
             break;
         }
         case CMD_HID_DEMOD_FSK: {
@@ -884,12 +884,27 @@ static void PacketReceived(PacketCommandNG *packet) {
                 packet->oldarg[2]
             );
             break;
-        case CMD_EM4X_READ_WORD:
-            EM4xReadWord(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+        case CMD_EM4X_READ_WORD: {
+           struct p {
+                uint32_t password;
+                uint8_t address;
+                uint8_t usepwd;
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            EM4xReadWord(payload->address, payload->password, payload->usepwd);
             break;
-        case CMD_EM4X_WRITE_WORD:
-            EM4xWriteWord(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            }
+        case CMD_EM4X_WRITE_WORD: {
+           struct p {
+                uint32_t password;
+                uint32_t data;
+                uint8_t address;
+                uint8_t usepwd;
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            EM4xWriteWord(payload->address, payload->data, payload->password, payload->usepwd);
             break;
+            }
         case CMD_AWID_DEMOD_FSK:  {
             uint32_t high, low;
             // Set realtime AWID demodulation
@@ -1012,14 +1027,21 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_ISO14443a
         case CMD_SNIFF_ISO_14443a:
-            SniffIso14443a(packet->oldarg[0]);
+            SniffIso14443a(packet->data.asBytes[0]);
             break;
         case CMD_READER_ISO_14443a:
             ReaderIso14443a(packet);
             break;
-        case CMD_SIMULATE_TAG_ISO_14443a:
-            SimulateIso14443aTag(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);  // ## Simulate iso14443a tag - pass tag type & UID
+        case CMD_SIMULATE_TAG_ISO_14443a: {
+            struct p {
+               uint8_t tagtype;
+               uint8_t flags;
+               uint8_t uid[10];
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;            
+            SimulateIso14443aTag(payload->tagtype, payload->flags, payload->uid);  // ## Simulate iso14443a tag - pass tag type & UID
             break;
+            }
         case CMD_ANTIFUZZ_ISO_14443a:
             iso14443a_antifuzz(packet->oldarg[0]);
             break;
@@ -1032,9 +1054,11 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_READER_MIFARE:
             ReaderMifare(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
-        case CMD_MIFARE_READBL:
-            MifareReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+        case CMD_MIFARE_READBL: {
+            mf_readblock_t *payload = (mf_readblock_t *)packet->data.asBytes;
+            MifareReadBlock(payload->blockno, payload->keytype, payload->key);
             break;
+            }
         case CMD_MIFAREU_READBL:
             MifareUReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
@@ -1076,23 +1100,45 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareChkKeys_fast(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
-        case CMD_SIMULATE_MIFARE_CARD:
-            Mifare1ksim(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+        case CMD_SIMULATE_MIFARE_CARD: {
+            struct p {
+               uint16_t flags;
+               uint8_t exitAfter;
+               uint8_t uid[10];
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;   
+            Mifare1ksim(payload->flags, payload->exitAfter, payload->uid);
             break;
-
+        }
         // emulator
         case CMD_MIFARE_SET_DBGMODE:
-            MifareSetDbgLvl(packet->oldarg[0]);
+            MifareSetDbgLvl(packet->data.asBytes[0]);
+            reply_ng(CMD_MIFARE_SET_DBGMODE, PM3_SUCCESS, NULL, 0);   
             break;
         case CMD_MIFARE_EML_MEMCLR:
             MifareEMemClr();
+            reply_ng(CMD_MIFARE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);               
             break;
-        case CMD_MIFARE_EML_MEMSET:
-            MifareEMemSet(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+        case CMD_MIFARE_EML_MEMSET: {
+            struct p {
+                uint8_t blockno;
+                uint8_t blockcnt;
+                uint8_t blockwidth;
+                uint8_t data[];
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            MifareEMemSet(payload->blockno, payload->blockcnt, payload->blockwidth, payload->data);
             break;
-        case CMD_MIFARE_EML_MEMGET:
-            MifareEMemGet(packet->oldarg[0], packet->oldarg[1]);
+        }
+        case CMD_MIFARE_EML_MEMGET: {
+            struct p {
+                uint8_t blockno;
+                uint8_t blockcnt;
+            } PACKED;
+            struct p* payload = (struct p*) packet->data.asBytes;
+            MifareEMemGet(payload->blockno, payload->blockcnt);
             break;
+        }
         case CMD_MIFARE_EML_CARDLOAD:
             MifareECardLoad(packet->oldarg[0], packet->oldarg[1]);
             break;
@@ -1362,6 +1408,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t *mem = BigBuf_get_addr();
             uint32_t startidx = packet->oldarg[0];
             uint32_t numofbytes = packet->oldarg[1];
+
             // arg0 = startindex
             // arg1 = length bytes to transfer
             // arg2 = BigBuf tracelen

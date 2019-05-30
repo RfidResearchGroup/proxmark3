@@ -128,6 +128,7 @@ struct common_area {
     struct {
         unsigned int bootrom_present: 1; /* Set when a bootrom that is capable of parsing the common area is present */
         unsigned int osimage_present: 1; /* Set when a osimage that is capable of parsing the common area is present */
+        unsigned int button_pressed: 1;
     } __attribute__((packed)) flags;
     int arg1, arg2;
 } __attribute__((packed));

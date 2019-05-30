@@ -549,14 +549,14 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Usage:  hf mf rdbl    <block number> <key A/B> <key (12 hex symbols)>");
         PrintAndLogEx(NORMAL, "Examples:");
         PrintAndLogEx(NORMAL, "        hf mf rdbl 0 A FFFFFFFFFFFF ");
-        return 0;
+        return PM3_SUCCESS;
     }
 
     blockNo = param_get8(Cmd, 0);
     cmdp = tolower(param_getchar(Cmd, 1));
     if (cmdp == 0x00) {
         PrintAndLogEx(NORMAL, "Key type must be A or B");
-        return 1;
+        return PM3_ESOFT;
     }
 
     if (cmdp != 'a')
@@ -564,23 +564,27 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
 
     if (param_gethex(Cmd, 2, key, 12)) {
         PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
-        return 1;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(NORMAL, "--block no:%d, key type:%c, key:%s ", blockNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
+    mf_readblock_t payload;
+    payload.blockno = blockNo;
+    payload.keytype = keyType;
+    memcpy(payload.key, key, sizeof(payload.key));
+    
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_READBL, blockNo, keyType, 0, key, 6);
+    SendCommandNG(CMD_MIFARE_READBL, (uint8_t*)&payload, sizeof(mf_readblock_t));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
+    if (WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500)) {
         uint8_t *data = resp.data.asBytes;
 
-        if (isOK) {
-            PrintAndLogEx(NORMAL, "isOk:%02x data:%s", isOK, sprint_hex(data, 16));
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "data: %s", sprint_hex(data, 16));
         } else {
-            PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
-            return 1;
+            PrintAndLogEx(FAILED, "failed reading block");
+            return PM3_ESOFT;
         }
 
         if (mfIsSectorTrailer(blockNo) && (data[6] || data[7] || data[8])) {
@@ -595,7 +599,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
         }
     } else {
         PrintAndLogEx(WARNING, "Command execute timeout");
-        return 2;
+        return PM3_ETIMEOUT;
     }
 
     return 0;
@@ -612,19 +616,19 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Usage:  hf mf rdsc    <sector number> <key A/B> <key (12 hex symbols)>");
         PrintAndLogEx(NORMAL, "Examples:");
         PrintAndLogEx(NORMAL, "        hf mf rdsc 0 A FFFFFFFFFFFF ");
-        return 0;
+        return PM3_SUCCESS;
     }
 
     sectorNo = param_get8(Cmd, 0);
     if (sectorNo > MIFARE_4K_MAXSECTOR) {
         PrintAndLogEx(NORMAL, "Sector number must be less than 40");
-        return 1;
+        return PM3_ESOFT;
     }
 
     cmdp = tolower(param_getchar(Cmd, 1));
     if (cmdp != 'a' && cmdp != 'b') {
         PrintAndLogEx(NORMAL, "Key type must be A or B");
-        return 1;
+        return PM3_ESOFT;
     }
 
     if (cmdp != 'a')
@@ -632,7 +636,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
     if (param_gethex(Cmd, 2, key, 12)) {
         PrintAndLogEx(NORMAL, "Key must include 12 HEX symbols");
-        return 1;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(NORMAL, "--sector no:%d key type:%c key:%s ", sectorNo, keyType ? 'B' : 'A', sprint_hex(key, 6));
 
@@ -665,7 +669,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         PrintAndLogEx(WARNING, "Command execute timeout");
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static uint16_t NumOfBlocks(char card) {
@@ -761,14 +765,14 @@ static int CmdHF14AMfDump(const char *Cmd) {
     if (keyFilename[0] == 0x00) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
         if (fptr == NULL)
-            return 1;
+            return PM3_ESOFT;
 
         strcpy(keyFilename, fptr);
     }
 
     if ((f = fopen(keyFilename, "rb")) == NULL) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyFilename);
-        return 1;
+        return PM3_EFILE;
     }
 
     // Read keys A from file
@@ -778,7 +782,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         if (bytes_read != 6) {
             PrintAndLogEx(WARNING, "File reading error.");
             fclose(f);
-            return 2;
+            return PM3_EFILE;
         }
     }
 
@@ -788,7 +792,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         if (bytes_read != 6) {
             PrintAndLogEx(WARNING, "File reading error.");
             fclose(f);
-            return 2;
+            return PM3_EFILE;
         }
     }
 
@@ -799,14 +803,21 @@ static int CmdHF14AMfDump(const char *Cmd) {
     uint8_t tries;
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
+            printf("."); 
+            fflush(NULL);
+            
+            mf_readblock_t payload;
+            payload.blockno = FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1;
+            payload.keytype = 0;
+            memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
 
             clearCommandBuffer();
-            SendCommandOLD(CMD_MIFARE_READBL, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 0, 0, keyA[sectorNo], 6);
+            SendCommandNG(CMD_MIFARE_READBL, (uint8_t*)&payload, sizeof(mf_readblock_t));
 
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                uint8_t isOK = resp.oldarg[0] & 0xff;
+            if (WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500)) {
+
                 uint8_t *data = resp.data.asBytes;
-                if (isOK) {
+                if (resp.status == PM3_SUCCESS) {
                     rights[sectorNo][0] = ((data[7] & 0x10) >> 2) | ((data[8] & 0x1) << 1) | ((data[8] & 0x10) >> 4); // C1C2C3 for data area 0
                     rights[sectorNo][1] = ((data[7] & 0x20) >> 3) | ((data[8] & 0x2) << 0) | ((data[8] & 0x20) >> 5); // C1C2C3 for data area 1
                     rights[sectorNo][2] = ((data[7] & 0x40) >> 4) | ((data[8] & 0x4) >> 1) | ((data[8] & 0x40) >> 6); // C1C2C3 for data area 2
@@ -824,43 +835,60 @@ static int CmdHF14AMfDump(const char *Cmd) {
             }
         }
     }
-
+    printf("\n");
     PrintAndLogEx(SUCCESS, "Finished reading sector access bits");
     PrintAndLogEx(INFO, "Dumping all blocks from card...");
 
-    bool isOK = true;
-    for (sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
-        for (blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
+    mf_readblock_t payload;
+    for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+        for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
             bool received = false;
 
             for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
                 if (blockNo == NumBlocksPerSector(sectorNo) - 1) { // sector trailer. At least the Access Conditions can always be read with key A.
-                    clearCommandBuffer();
-                    SendCommandOLD(CMD_MIFARE_READBL, FirstBlockOfSector(sectorNo) + blockNo, 0, 0, keyA[sectorNo], 6);
-                    received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
+                
+                    payload.blockno = FirstBlockOfSector(sectorNo) + blockNo;
+                    payload.keytype = 0;
+                    memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
+
+                    clearCommandBuffer();                    
+                    SendCommandNG(CMD_MIFARE_READBL, (uint8_t*)&payload, sizeof(mf_readblock_t));
+                    received = WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500);
                 } else {                                           // data block. Check if it can be read with key A or key B
                     uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
                     if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) { // only key B would work
-                        SendCommandOLD(CMD_MIFARE_READBL, FirstBlockOfSector(sectorNo) + blockNo, 1, 0, keyB[sectorNo], 6);
-                        received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
-                    } else if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
-                        isOK = false;
-                        PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
-                        tries = MIFARE_SECTOR_RETRY;
-                    } else {                                                                              // key A would work
+
+                        payload.blockno = FirstBlockOfSector(sectorNo) + blockNo;
+                        payload.keytype = 1;
+                        memcpy(payload.key, keyB[sectorNo], sizeof(payload.key));
+                        
                         clearCommandBuffer();
-                        SendCommandOLD(CMD_MIFARE_READBL, FirstBlockOfSector(sectorNo) + blockNo, 0, 0, keyA[sectorNo], 6);
-                        received = WaitForResponseTimeout(CMD_ACK, &resp, 1500);
+                        SendCommandNG(CMD_MIFARE_READBL, (uint8_t*)&payload, sizeof(mf_readblock_t));
+                        received = WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500);
+                    } else if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
+                        PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
+                        // where do you want to go??  Next sector or block?
+                        break;
+                    } else {                                                                              // key A would work
+
+                        payload.blockno = FirstBlockOfSector(sectorNo) + blockNo;
+                        payload.keytype = 0;
+                        memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
+                        
+                        clearCommandBuffer();
+                        SendCommandNG(CMD_MIFARE_READBL, (uint8_t*)&payload, sizeof(mf_readblock_t));
+                        received = WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500);
                     }
                 }
                 if (received) {
-                    isOK  = resp.oldarg[0] & 0xff;
-                    if (isOK) break;
+                    if (resp.status == PM3_SUCCESS) {
+                        // break the re-try loop
+                        break;
+                    }
                 }
             }
 
             if (received) {
-                isOK  = resp.oldarg[0] & 0xff;
                 uint8_t *data  = resp.data.asBytes;
                 if (blockNo == NumBlocksPerSector(sectorNo) - 1) { // sector trailer. Fill in the keys.
                     data[0]  = (keyA[sectorNo][0]);
@@ -876,7 +904,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     data[14] = (keyB[sectorNo][4]);
                     data[15] = (keyB[sectorNo][5]);
                 }
-                if (isOK) {
+                if (resp.status == PM3_SUCCESS) {
                     memcpy(carddata[FirstBlockOfSector(sectorNo) + blockNo], data, 16);
                     PrintAndLogEx(SUCCESS, "successfully read block %2d of sector %2d.", blockNo, sectorNo);
                 } else {
@@ -884,19 +912,13 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     break;
                 }
             } else {
-                isOK = false;
                 PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
                 break;
             }
         }
     }
 
-    if (isOK == 0) {
-        PrintAndLogEx(FAILED, "Something went wrong");
-        return 0;
-    }
-
-    PrintAndLogEx(SUCCESS, "\nSuccedded in dumping all blocks");
+    PrintAndLogEx(SUCCESS, "\nSucceded in dumping all blocks");
 
     if (strlen(dataFilename) < 1) {
         fptr = dataFilename;
@@ -909,7 +931,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     saveFile(dataFilename, ".bin", (uint8_t *)carddata, bytes);
     saveFileEML(dataFilename, (uint8_t *)carddata, bytes, MFBLOCK_SIZE);
     saveFileJSON(dataFilename, jsfCardMemory, (uint8_t *)carddata, bytes);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfRestore(const char *Cmd) {
@@ -1051,7 +1073,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     }
     fclose(fdump);
     PrintAndLogEx(INFO, "Finish restore");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfNested(const char *Cmd) {
@@ -1081,7 +1103,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
     if (ctmp != 'a' && ctmp != 'b') {
         PrintAndLogEx(WARNING, "key type must be A or B");
-        return 1;
+        return PM3_EINVARG;
     }
 
     if (ctmp != 'a')
@@ -1089,7 +1111,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
     if (param_gethex(Cmd, 3, key, 12)) {
         PrintAndLogEx(WARNING, "key must include 12 HEX symbols");
-        return 1;
+        return PM3_EINVARG;
     }
 
     if (cmdp == 'o') {
@@ -1097,7 +1119,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         ctmp = tolower(param_getchar(Cmd, 5));
         if (ctmp != 'a' && ctmp != 'b') {
             PrintAndLogEx(WARNING, "target key type must be A or B");
-            return 1;
+            return PM3_EINVARG;
         }
         if (ctmp != 'a') {
             trgKeyType = 1;
@@ -1158,16 +1180,16 @@ static int CmdHF14AMfNested(const char *Cmd) {
                     mfEmlSetMem(keyBlock, sectortrailer, 1);
                     PrintAndLogEx(SUCCESS, "Key transferred to emulator memory.");
                 }
-                return 0;
+                return PM3_SUCCESS;
             default :
                 PrintAndLogEx(WARNING, "Unknown Error.\n");
         }
-        return 2;
+        return PM3_SUCCESS;
     } else { // ------------------------------------  multiple sectors working
         uint64_t t1 = msclock();
 
         e_sector = calloc(SectorsCnt, sizeof(sector_t));
-        if (e_sector == NULL) return 1;
+        if (e_sector == NULL) return PM3_EMALLOC;
 
         //test current key and additional standard keys first
         // add parameter key
@@ -1222,7 +1244,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                             PrintAndLogEx(WARNING, "unknown Error.\n");
                     }
                     free(e_sector);
-                    return 2;
+                    return PM3_ESOFT;
                 }
             }
         }
@@ -1241,16 +1263,19 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
                 PrintAndLogEx(SUCCESS, "reading block %d", sectrail);
 
-                uint8_t txdata[6];
-                num_to_bytes(e_sector[i].Key[0], 6, txdata); // KEY A
+                mf_readblock_t payload;
+                payload.blockno = sectrail;
+                payload.keytype = 0;
+
+                num_to_bytes(e_sector[i].Key[0], 6, payload.key); // KEY A
+                
                 clearCommandBuffer();
-                SendCommandOLD(CMD_MIFARE_READBL, sectrail, 0, 0, txdata, sizeof(txdata));
+                SendCommandNG(CMD_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t) );
 
                 PacketResponseNG resp;
-                if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
+                if (!WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500)) continue;
 
-                uint8_t isOK  = resp.oldarg[0] & 0xff;
-                if (!isOK) continue;
+                if (resp.status != PM3_SUCCESS) continue;
 
                 uint8_t *data = resp.data.asBytes;
                 key64 = bytes_to_num(data + 10, 6);
@@ -1272,10 +1297,13 @@ static int CmdHF14AMfNested(const char *Cmd) {
             conn.block_after_ACK = true;
             for (i = 0; i < SectorsCnt; i++) {
                 mfEmlGetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
+                
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, keyBlock);
+                    
                 if (e_sector[i].foundKey[1])
                     num_to_bytes(e_sector[i].Key[1], 6, &keyBlock[10]);
+                    
                 if (i == SectorsCnt - 1) {
                     // Disable fast mode on last packet
                     conn.block_after_ACK = false;
@@ -1290,13 +1318,13 @@ static int CmdHF14AMfNested(const char *Cmd) {
             fptr = GenerateFilename("hf-mf-", "-key.bin");
             if (fptr == NULL) {
                 free(e_sector);
-                return 1;
+                return PM3_ESOFT;
             }
 
             if ((fkeys = fopen(fptr, "wb")) == NULL) {
                 PrintAndLogEx(WARNING, "could not create file " _YELLOW_("%s"), fptr);
                 free(e_sector);
-                return 1;
+                return PM3_EFILE;
             }
 
             PrintAndLogEx(SUCCESS, "saving keys to binary file " _YELLOW_("%s"), fptr);
@@ -1321,7 +1349,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         }
         free(e_sector);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfNestedHard(const char *Cmd) {
@@ -1781,7 +1809,7 @@ out:
     free(keyBlock);
     free(e_sector);
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfChk(const char *Cmd) {
@@ -1808,7 +1836,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     int i, keycnt = 0;
 
     keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
-    if (keyBlock == NULL) return 1;
+    if (keyBlock == NULL) return PM3_EMALLOC;
 
     for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++)
         num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
@@ -1837,7 +1865,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
             default:
                 PrintAndLogEx(FAILED, "Key type must be A , B or ?");
                 free(keyBlock);
-                return 1;
+                return PM3_ESOFT;
         };
     }
 
@@ -1858,7 +1886,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 if (!p) {
                     PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
                     free(keyBlock);
-                    return 2;
+                    return PM3_EMALLOC;
                 }
                 keyBlock = p;
             }
@@ -1903,7 +1931,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
                         PrintAndLogEx(FAILED, "Cannot allocate memory for defKeys");
                         free(keyBlock);
                         fclose(f);
-                        return 2;
+                        return PM3_EMALLOC;
                     }
                     keyBlock = p;
                 }
@@ -1930,7 +1958,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     e_sector = calloc(SectorsCnt, sizeof(sector_t));
     if (e_sector == NULL) {
         free(keyBlock);
-        return 1;
+        return PM3_EMALLOC;
     }
 
     // empty e_sector
@@ -1997,16 +2025,19 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 PrintAndLogEx(NORMAL, "Reading block %d", sectrail);
 
-                uint8_t txdata[6];
-                num_to_bytes(e_sector[i].Key[0], 6, txdata); // KEY A
+                mf_readblock_t payload;
+                payload.blockno = sectrail;
+                payload.keytype = 0;
+
+                num_to_bytes(e_sector[i].Key[0], 6, payload.key); // KEY A
+                
                 clearCommandBuffer();
-                SendCommandOLD(CMD_MIFARE_READBL, sectrail, 0, 0, txdata, sizeof(txdata));
+                SendCommandNG(CMD_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t) );
 
                 PacketResponseNG resp;
-                if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
+                if (!WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500)) continue;
 
-                uint8_t isOK  = resp.oldarg[0] & 0xff;
-                if (!isOK) continue;
+                if (resp.status != PM3_SUCCESS) continue;
 
                 uint8_t *data = resp.data.asBytes;
                 key64 = bytes_to_num(data + 10, 6);
@@ -2048,13 +2079,12 @@ out:
     SendCommandNG(CMD_PING, NULL, 0);
     WaitForResponseTimeout(CMD_PING, NULL, 1000);
 
-
     if (createDumpFile) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
         if (fptr == NULL) {
             free(keyBlock);
             free(e_sector);
-            return 1;
+            return PM3_EFILE;
         }
 
         FILE *fkeys = fopen(fptr, "wb");
@@ -2062,7 +2092,7 @@ out:
             PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
             free(keyBlock);
             free(e_sector);
-            return 1;
+            return PM3_EFILE;
         }
         PrintAndLogEx(INFO, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
 
@@ -2081,7 +2111,7 @@ out:
     free(keyBlock);
     free(e_sector);
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 sector_t *k_sector = NULL;
@@ -2200,16 +2230,17 @@ static int CmdHF14AMfSim(const char *Cmd) {
                 break;
             case 'u':
                 param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
+                uidlen >>= 1;
                 switch (uidlen) {
-                    case 20:
+                    case 10:
                         flags |= FLAG_10B_UID_IN_DATA;
                         sprintf(uidsize, "10 byte");
                         break;
-                    case 14:
+                    case 7:
                         flags |= FLAG_7B_UID_IN_DATA;
                         sprintf(uidsize, "7 byte");
                         break;
-                    case  8:
+                    case 4:
                         flags |= FLAG_4B_UID_IN_DATA;
                         sprintf(uidsize, "4 byte");
                         break;
@@ -2243,7 +2274,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
     PrintAndLogEx(INFO, _YELLOW_("Mifare %s") " | %s UID  " _YELLOW_("%s") ""
                   , csize
                   , uidsize
-                  , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen >> 1)
+                  , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen)
                  );
 
     PrintAndLogEx(INFO, "Options [ numreads: %d, flags: %d (0x%02x) ]"
@@ -2251,8 +2282,18 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   , flags
                   , flags);
 
+    struct {
+       uint16_t flags;
+       uint8_t exitAfter;
+       uint8_t uid[10];
+    } PACKED payload;
+    
+    payload.flags = flags;
+    payload.exitAfter = exitAfterNReads;
+    memcpy(payload.uid, uid, uidlen);
+    
     clearCommandBuffer();
-    SendCommandOLD(CMD_SIMULATE_MIFARE_CARD, flags, exitAfterNReads, 0, uid, sizeof(uid));
+    SendCommandNG(CMD_SIMULATE_MIFARE_CARD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
     if (flags & FLAG_INTERACTIVE) {
@@ -2268,7 +2309,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
         showSectorTable();
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 /*
 static int CmdHF14AMfSniff(const char *Cmd) {
@@ -2428,7 +2469,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     } // while (true)
 
     free(buf);
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 int CmdHF14AMfDbg(const char *Cmd) {
@@ -2439,8 +2480,8 @@ int CmdHF14AMfDbg(const char *Cmd) {
     uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
     if (dbgMode > 4) return usage_hf14_dbg();
 
-    SendCommandMIX(CMD_MIFARE_SET_DBGMODE, dbgMode, 0, 0, NULL, 0);
-    return 0;
+    SendCommandNG(CMD_MIFARE_SET_DBGMODE, &dbgMode, 1);
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfKeyBrute(const char *Cmd) {
@@ -2471,7 +2512,7 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
 
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "\ntime in keybrute: %.0f seconds\n", (float)t1 / 1000.0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
@@ -2503,21 +2544,17 @@ void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
 
 // EMULATOR COMMANDS
 static int CmdHF14AMfEGet(const char *Cmd) {
-    uint8_t blockNo = 0;
-    uint8_t data[16] = {0x00};
     char c = tolower(param_getchar(Cmd, 0));
-
     if (strlen(Cmd) < 1 || c == 'h') return usage_hf14_eget();
 
-    blockNo = param_get8(Cmd, 0);
+    uint8_t data[16] = {0x00};
+    uint8_t blockNo = param_get8(Cmd, 0);
 
     PrintAndLogEx(NORMAL, "");
-    if (!mfEmlGetMem(data, blockNo, 1)) {
+    if (mfEmlGetMem(data, blockNo, 1) == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "data[%3d]:%s", blockNo, sprint_hex(data, sizeof(data)));
-    } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfEClear(const char *Cmd) {
@@ -2526,23 +2563,22 @@ static int CmdHF14AMfEClear(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_MIFARE_EML_MEMCLR, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfESet(const char *Cmd) {
     char c = tolower(param_getchar(Cmd, 0));
-    uint8_t memBlock[16];
-    uint8_t blockNo = 0;
-    memset(memBlock, 0x00, sizeof(memBlock));
-
     if (strlen(Cmd) < 3 || c == 'h')
         return usage_hf14_eset();
+        
+    uint8_t memBlock[16];
+    memset(memBlock, 0x00, sizeof(memBlock));
 
-    blockNo = param_get8(Cmd, 0);
+    uint8_t blockNo = param_get8(Cmd, 0);
 
     if (param_gethex(Cmd, 1, memBlock, 32)) {
         PrintAndLogEx(WARNING, "block data must include 32 HEX symbols");
-        return 1;
+        return PM3_ESOFT;
     }
 
     //  1 - blocks count
@@ -2596,14 +2632,14 @@ int CmdHF14AMfELoad(const char *Cmd) {
     int res = loadFileEML(filename, data, &datalen);
     if (res) {
         free(data);
-        return 1;
+        return PM3_EFILE;
     }
 
     // 64 or 256 blocks.
     if ((datalen % blockWidth) != 0) {
         PrintAndLogEx(FAILED, "File content error. Size doesn't match blockwidth ");
         free(data);
-        return 2;
+        return PM3_ESOFT;
     }
 
     // convert old mfu format to new
@@ -2630,7 +2666,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         if (mfEmlSetMem_xt(data + counter, blockNum, 1, blockWidth)) {
             PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockNum);
             free(data);
-            return 3;
+            return PM3_ESOFT;
         }
         printf(".");
         fflush(stdout);
@@ -2646,18 +2682,18 @@ int CmdHF14AMfELoad(const char *Cmd) {
         if ((blockNum != numBlocks)) {
             PrintAndLogEx(FAILED, "Warning, Ultralight/Ntag file content, Loaded %d blocks into emulator memory", blockNum);
             free(data);
-            return 0;
+            return PM3_SUCCESS;
         }
     } else {
         if ((blockNum != numBlocks)) {
             PrintAndLogEx(FAILED, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", blockNum, numBlocks);
             free(data);
-            return 4;
+            return PM3_SUCCESS;
         }
     }
     PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: " _YELLOW_("%s"), blockNum, filename);
     free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfESave(const char *Cmd) {
@@ -2684,7 +2720,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
     dump = calloc(bytes, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return 1;
+        return PM3_EMALLOC;
     }
     memset(dump, 0, bytes);
 
@@ -2692,7 +2728,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
     if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
-        return 2;
+        return PM3_ETIMEOUT;
     }
 
     len = param_getstr(Cmd, nameParamNo, filename, sizeof(filename));
@@ -2708,7 +2744,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
     saveFileJSON(filename, jsfCardMemory, dump, bytes);
     free(dump);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfECFill(const char *Cmd) {
@@ -2721,7 +2757,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
 
     if (c != 'a' &&  c != 'b') {
         PrintAndLogEx(WARNING, "Key type must be A or B");
-        return 1;
+        return PM3_ESOFT;
     }
     if (c != 'a')
         keyType = 1;
@@ -2737,7 +2773,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType == 0) ? 'A' : 'B');
     clearCommandBuffer();
     SendCommandMIX(CMD_MIFARE_EML_CARDLOAD, numSectors, keyType, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfEKeyPrn(const char *Cmd) {
@@ -2761,7 +2797,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     PrintAndLogEx(NORMAL, "|sec|key A           |key B           |");
     PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
     for (i = 0; i < numSectors; i++) {
-        if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1)) {
+        if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
             break;
         }
@@ -2770,7 +2806,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
         PrintAndLogEx(NORMAL, "|%03d|  %012" PRIx64 "  |  %012" PRIx64 "  |", i, keyA, keyB);
     }
     PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // CHINESE MAGIC COMMANDS
@@ -2802,12 +2838,12 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
         if (param_getchar(Cmd, argi)) {
             if (param_gethex(Cmd, argi, atqa, 4)) {
                 PrintAndLogEx(WARNING, "ATQA must include 4 HEX symbols");
-                return 1;
+                return PM3_ESOFT;
             }
             argi++;
             if (!param_getchar(Cmd, argi) || param_gethex(Cmd, argi, sak, 2)) {
                 PrintAndLogEx(WARNING, "SAK must include 2 HEX symbols");
-                return 1;
+                return PM3_ESOFT;
             }
             argi++;
         } else
@@ -2826,12 +2862,12 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
     res = mfCSetUID(uid, (atqaPresent) ? atqa : NULL, (atqaPresent) ? sak : NULL, oldUid, wipeCard);
     if (res) {
         PrintAndLogEx(WARNING, "Can't set UID. error=%d", res);
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "old UID:%s", sprint_hex(oldUid, 4));
     PrintAndLogEx(SUCCESS, "new UID:%s", sprint_hex(uid, 4));
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfCSetBlk(const char *Cmd) {
@@ -2856,9 +2892,9 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
     res = mfCSetBlock(blockNo, block, NULL, params);
     if (res) {
         PrintAndLogEx(WARNING, "Can't write block. error=%d", res);
-        return 1;
+        return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfCLoad(const char *Cmd) {
@@ -2894,17 +2930,22 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
             if (mfCSetBlock(blockNum, buf8, NULL, flags)) {
                 PrintAndLogEx(WARNING, "Cant set magic card block: %d", blockNum);
-                return 3;
+                return PM3_ESOFT;
             }
             printf(".");
             fflush(stdout);
         }
         PrintAndLogEx(NORMAL, "\n");
-        return 0;
+        return PM3_SUCCESS;
     }
 
     size_t maxdatalen = 4096;
     uint8_t *data = calloc(maxdatalen, sizeof(uint8_t));
+    if (!data) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+    
     size_t datalen = 0;
     int res = 0;
     if (fillFromBin) {
@@ -2920,17 +2961,14 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     if (res) {
         if (data)
             free(data);
-        return 1;
+        return PM3_EFILE;
     }
-
-//  PrintAndLogEx(INFO, "DATA | %s", sprint_hex(data+1000, 24) );
-
 
     // 64 or 256blocks.
     if (datalen != 1024 && datalen != 4096) {
         PrintAndLogEx(WARNING, "File content error. ");
         free(data);
-        return 2;
+        return PM3_EFILE;
     }
 
     PrintAndLogEx(INFO, "Copying to magic card");
@@ -2950,7 +2988,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         if (mfCSetBlock(blockNum, data + (16 * blockNum), NULL, flags)) {
             PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockNum);
             free(data);
-            return 3;
+            return PM3_ESOFT;
         }
 
         datalen -= 16;
@@ -2968,19 +3006,18 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     if (blockNum != 16 * 4 && blockNum != 32 * 4 + 8 * 16) {
         PrintAndLogEx(WARNING, "File content error. There must be 64 blocks");
         free(data);
-        return 4;
+        return PM3_EFILE;
     }
 
     PrintAndLogEx(SUCCESS, "Card loaded %d blocks from file", blockNum);
     free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfCGetBlk(const char *Cmd) {
     uint8_t data[16] = {0};
     uint8_t blockNo = 0;
     int res;
-    memset(data, 0x00, sizeof(data));
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_cgetblk();
@@ -2992,7 +3029,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
     res = mfCGetBlock(blockNo, data, MAGIC_SINGLE);
     if (res) {
         PrintAndLogEx(WARNING, "Can't read block. error=%d", res);
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "data: %s", sprint_hex(data, sizeof(data)));
@@ -3010,7 +3047,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
         PrintAndLogEx(NORMAL, "UserData: %s", sprint_hex_inrow(&data[9], 1));
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfCGetSc(const char *Cmd) {
@@ -3024,7 +3061,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     sector = param_get8(Cmd, 0);
     if (sector > 39) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "\n  # | data    |  Sector | %02d/ 0x%02X ", sector, sector);
@@ -3045,11 +3082,11 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
         res = mfCGetBlock(start + i, data, flags);
         if (res) {
             PrintAndLogEx(WARNING, "Can't read block. %d error=%d", start + i, res);
-            return 1;
+            return PM3_ESOFT;
         }
         PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data, 16));
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfCSave(const char *Cmd) {
@@ -3113,9 +3150,8 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     dump = calloc(bytes, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return 1;
+        return PM3_EMALLOC;
     }
-    memset(dump, 0, bytes);
 
     flags = MAGIC_INIT + MAGIC_WUPC;
     for (i = 0; i < numblocks; i++) {
@@ -3125,7 +3161,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         if (mfCGetBlock(i, dump + (i * MFBLOCK_SIZE), flags)) {
             PrintAndLogEx(WARNING, "Cant get block: %d", i);
             free(dump);
-            return 2;
+            return PM3_ESOFT;
         }
     }
 
@@ -3157,7 +3193,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
     saveFileJSON(filename, jsfCardMemory, dump, bytes);
     free(dump);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //needs nt, ar, at, Data to decrypt
@@ -3173,7 +3209,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     int len = param_getlength(Cmd, 3);
     if (len & 1) {
         PrintAndLogEx(WARNING, "Uneven hex string length. LEN=%d", len);
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "nt\t%08X", nt);
@@ -3181,11 +3217,16 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     PrintAndLogEx(NORMAL, "at enc\t%08X", at_enc);
 
     uint8_t *data = calloc(len, sizeof(uint8_t));
+    if (!data) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+    
     param_gethex_ex(Cmd, 3, data, &len);
     len >>= 1;
     tryDecryptWord(nt, ar_enc, at_enc, data, len);
     free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHf14AMfSetMod(const char *Cmd) {
@@ -3204,7 +3245,7 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Usage: hf mf setmod <0|1> <block 0 key A>");
         PrintAndLogEx(NORMAL, "       0 = normal modulation");
         PrintAndLogEx(NORMAL, "       1 = strong modulation (default)");
-        return 1;
+        return PM3_ESOFT;
     }
 
     uint8_t data[7];
@@ -3231,16 +3272,15 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
 // Mifare NACK bug detection
 static int CmdHf14AMfNack(const char *Cmd) {
 
-    bool verbose = false;
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hf14_nack();
-    if (ctmp == 'v') verbose = true;
+    bool verbose = (ctmp == 'v');
 
     if (verbose)
         PrintAndLogEx(INFO, "Started testing card for NACK bug. Press key to abort");
 
     detect_classic_nackbug(verbose);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfice(const char *Cmd) {
@@ -3278,7 +3318,7 @@ static int CmdHF14AMfice(const char *Cmd) {
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
                 usage_hf14_ice();
-                return 1;
+                return PM3_ESOFT;
         }
         cmdp++;
     }
@@ -3286,15 +3326,15 @@ static int CmdHF14AMfice(const char *Cmd) {
     if (filename[0] == '\0') {
         fptr = GenerateFilename("hf-mf-", "-nonces.bin");
         if (fptr == NULL)
-            return 1;
+            return PM3_EFILE;
         strcpy(filename, fptr);
     }
 
-    PrintAndLogEx(NORMAL, "Collecting %u nonces \n", limit);
+    PrintAndLogEx(NORMAL, "Collecting "_YELLOW_("%u")"nonces \n", limit);
 
     if ((fnonces = fopen(filename, "wb")) == NULL) {
         PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), filename);
-        return 3;
+        return PM3_EFILE;
     }
 
     clearCommandBuffer();
@@ -3346,7 +3386,7 @@ out:
 
     clearCommandBuffer();
     SendCommandMIX(CMD_MIFARE_ACQUIRE_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfAuth4(const char *Cmd) {
@@ -3374,12 +3414,12 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
 
     if (keynlen != 2) {
         PrintAndLogEx(ERR, "<Key Num> must be 2 bytes long instead of: %d", keynlen);
-        return 1;
+        return PM3_ESOFT;
     }
 
     if (keylen != 16) {
         PrintAndLogEx(ERR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
-        return 1;
+        return PM3_ESOFT;
     }
 
     return MifareAuth4(NULL, keyn, key, true, false, true);
@@ -3421,7 +3461,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     uint8_t sector10[16 * 4] = {0};
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
-        return 2;
+        return PM3_ESOFT;
     }
 
     if (verbose) {
@@ -3435,7 +3475,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     if (haveMAD2) {
         if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10)) {
             PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
-            return 2;
+            return PM3_ESOFT;
         }
 
         MAD2DecodeAndPrint(sector10, verbose);
@@ -3449,7 +3489,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         size_t madlen = 0;
         if (MADDecode(sector0, sector10, mad, &madlen)) {
             PrintAndLogEx(ERR, "can't decode mad.");
-            return 10;
+            return PM3_ESOFT;
         }
 
         uint8_t akey[6] = {0};
@@ -3464,7 +3504,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
                 if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(ERR, "read sector %d error.", i + 1);
-                    return 2;
+                    return PM3_ESOFT;
                 }
 
                 for (int j = 0; j < (verbose ? 4 : 3); j ++)
@@ -3473,7 +3513,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         }
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFMFNDEF(const char *Cmd) {
@@ -3524,7 +3564,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "read sector 0 error. card don't have MAD or don't have MAD on default keys.");
-        return 2;
+        return PM3_ESOFT;
     }
 
     bool haveMAD2 = false;
@@ -3537,7 +3577,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
     if (haveMAD2) {
         if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10)) {
             PrintAndLogEx(ERR, "read sector 0x10 error. card don't have MAD or don't have MAD on default keys.");
-            return 2;
+            return PM3_ESOFT;
         }
     }
 
@@ -3545,7 +3585,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
     size_t madlen = 0;
     if (MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen)) {
         PrintAndLogEx(ERR, "can't decode mad.");
-        return 10;
+        return PM3_ESOFT;
     }
 
     printf("data reading:");
@@ -3554,7 +3594,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
             uint8_t vsector[16 * 4] = {0};
             if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
                 PrintAndLogEx(ERR, "read sector %d error.", i + 1);
-                return 2;
+                return PM3_ESOFT;
             }
 
             memcpy(&data[datalen], vsector, 16 * 3);
@@ -3567,7 +3607,7 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
     if (!datalen) {
         PrintAndLogEx(ERR, "no NDEF data.");
-        return 11;
+        return PM3_SUCCESS;
     }
 
     if (verbose2) {
@@ -3577,13 +3617,12 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
     NDEFDecodeAndPrint(data, datalen, verbose);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    CmdTraceList("mf");
-    return 0;
+    return CmdTraceList("mf");
 }
 
 static command_t CommandTable[] = {
@@ -3634,7 +3673,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHFMF(const char *Cmd) {

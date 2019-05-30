@@ -1,4 +1,3 @@
-//-----------------------------------------------------------------------------
 // Merlok, May 2011, 2012
 // Many authors, whom made it possible
 //
@@ -530,9 +529,9 @@ void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {
     memcpy(data, emCARD + blockNum * 16, blocksCount * 16);
 }
 
-void emlGetMemBt(uint8_t *data, int bytePtr, int byteCount) {
+void emlGetMemBt(uint8_t *data, int offset, int byteCount) {
     uint8_t *emCARD = BigBuf_get_EM_addr();
-    memcpy(data, emCARD + bytePtr, byteCount);
+    memcpy(data, emCARD + offset, byteCount);
 }
 
 int emlCheckValBl(int blockNum) {

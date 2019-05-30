@@ -234,8 +234,8 @@ static int CmdIOProxClone(const char *Cmd) {
     uint8_t bits[64];
     memset(bits, 0, sizeof(bits));
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_io_clone();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_clone();
 
     version = param_get8(Cmd, 0);
     fc = param_get8(Cmd, 1);

@@ -220,11 +220,14 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         reply_old(CMD_ACK, arg0, 0, 0, 0, 0);
 }
 
-static void flash_mode(int externally_entered) {
+static void flash_mode(void) {
     start_addr = 0;
     end_addr = 0;
     bootrom_unlocked = 0;
     uint8_t rx[sizeof(PacketCommandOLD)];
+    common_area.command = COMMON_AREA_COMMAND_NONE;
+    if (!common_area.flags.button_pressed && BUTTON_PRESS())
+        common_area.flags.button_pressed = 1;
 
     usb_enable();
 
@@ -241,16 +244,16 @@ static void flash_mode(int externally_entered) {
             }
         }
 
-        if (!externally_entered && !BUTTON_PRESS()) {
+        if (common_area.flags.button_pressed && !BUTTON_PRESS()) {
+            common_area.flags.button_pressed = 0;
+        }
+        if (!common_area.flags.button_pressed && BUTTON_PRESS()) {
             /* Perform a reset to leave flash mode */
+            common_area.flags.button_pressed = 1;
             usb_disable();
             LED_B_ON();
             AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
             for (;;) {};
-        }
-        if (externally_entered && BUTTON_PRESS()) {
-            /* Let the user's button press override the automatic leave */
-            externally_entered = 0;
         }
     }
 }
@@ -342,14 +345,13 @@ void BootROM(void) {
     }
     common_area.flags.bootrom_present = 1;
 
-    if (common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) {
-        common_area.command = COMMON_AREA_COMMAND_NONE;
-        flash_mode(1);
-    } else if (BUTTON_PRESS()) {
-        flash_mode(0);
-    } else if (_osimage_entry == 0xffffffffU) {
-        flash_mode(1);
+    if ((common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) ||
+        (!common_area.flags.button_pressed && BUTTON_PRESS()) ||
+        (_osimage_entry == 0xffffffffU)) {
+        flash_mode();
     } else {
+        // clear button status, even if button still pressed
+        common_area.flags.button_pressed = 0;
         // jump to Flash address of the osimage entry point (LSBit set for thumb mode)
         __asm("bx %0\n" : : "r"(((int)&_osimage_entry) | 0x1));
     }

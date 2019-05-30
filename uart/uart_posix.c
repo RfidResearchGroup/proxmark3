@@ -90,7 +90,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     timeout.tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000;
 
     if (memcmp(pcPortName, "tcp:", 4) == 0) {
-        struct addrinfo *addr, *rp;
+        struct addrinfo *addr = NULL, *rp;
         char *addrstr = strdup(pcPortName + 4);
 
         if (addrstr == NULL) {
@@ -110,7 +110,13 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             portstr = "7901";
         }
 
-        int s = getaddrinfo(addrstr, portstr, NULL, &addr);
+        struct addrinfo info;
+
+        memset (&info, 0, sizeof(info));
+
+        info.ai_socktype = SOCK_STREAM;
+
+        int s = getaddrinfo(addrstr, portstr, &info, &addr);
         if (s != 0) {
             printf("Error: getaddrinfo: %s\n", gai_strerror(s));
             freeaddrinfo(addr);

@@ -86,9 +86,9 @@ local function main(args)
         -- keylength
         if o == 'k' then keylength = tonumber(a); usedkey = true end
 
-        if o == 'm' then keylength =6; usedkey = true; offset = 0x3F000-0x4000; end
+        if o == 'm' then keylength =6; usedkey = true; offset = 0x3F000-0x6000; end
         if o == 't' then keylength =4; usedkey = true; offset = 0x3F000-0x3000; end
-        if o == 'i' then keylength =8; usedkey = true; offset = 0x3F000-0x5000; end
+        if o == 'i' then keylength =8; usedkey = true; offset = 0x3F000-0x4000; end
     end
 
     if length < 0 or length > 256 then

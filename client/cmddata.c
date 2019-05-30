@@ -532,7 +532,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
         return PM3_ESOFT;
     }
 
-    if (verbose) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d", clk, invert, BitLen);
+    if (verbose) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d, start index %d", clk, invert, BitLen, startIdx);
 
     //output
     setDemodBuff(bits, BitLen, 0);
@@ -584,7 +584,8 @@ static int Cmdmandecoderaw(const char *Cmd) {
     size_t size = 0;
     int high = 0, low = 0;
     size_t i = 0;
-    int errCnt = 0, invert = 0, maxErr = 20;
+    uint16_t errCnt = 0;
+    int invert = 0, maxErr = 20;
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) > 5 || cmdp == 'h') return usage_data_manrawdecode();
 
@@ -610,7 +611,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     uint8_t alignPos = 0;
     errCnt = manrawdecode(bits, &size, invert, &alignPos);
     if (errCnt >= maxErr) {
-        PrintAndLogEx(WARNING, "Too many errors: %d", errCnt);
+        PrintAndLogEx(WARNING, "Too many errors: %u", errCnt);
         return PM3_ESOFT;
     }
 
@@ -683,7 +684,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 // - ASK Demod then Biphase decode GraphBuffer samples
 int ASKbiphaseDemod(const char *Cmd, bool verbose) {
     //ask raw demod GraphBuffer first
-    int offset = 0, clk = 0, invert = 0, maxErr = 100;
+    int offset = 0, clk = 0, invert = 0, maxErr = 50;
     sscanf(Cmd, "%i %i %i %i", &offset, &clk, &invert, &maxErr);
 
     uint8_t BitStream[MAX_DEMOD_BUF_LEN];
@@ -710,11 +711,12 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode too many errors: %d", errCnt);
         return PM3_ESOFT;
     }
+
     //success set DemodBuffer and return
     setDemodBuff(BitStream, size, 0);
     setClockGrid(clk, startIdx + clk * offset / 2);
     if (g_debugMode || verbose) {
-        PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - clock: %d - # errors:%d - data:", offset, clk, errCnt);
+        PrintAndLogEx(NORMAL, "Biphase Decoded using offset %d | clock %d | #errors %d | start index %d\ndata\n", offset, clk, errCnt, (startIdx + clk * offset / 2) );
         printDemodBuff();
     }
     return PM3_SUCCESS;

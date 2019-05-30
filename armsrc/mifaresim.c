@@ -960,7 +960,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
 
                 // Collect AR/NR per keytype & sector
                 if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-                    if (MF_DBGLEVEL >= 0)	Dbprintf("FLAG_NR_AR_ATTACK");
+
                     for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
                         if (ar_nr_collected[i + mM] == 0 || ((cardAUTHSC == ar_nr_resp[i + mM].sector) && (cardAUTHKEY == ar_nr_resp[i + mM].keytype) && (ar_nr_collected[i + mM] > 0))) {
                             // if first auth for sector, or matches sector and keytype of previous auth
@@ -989,6 +989,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                                         ar_nr_resp[i + mM].nonce2 = nonce;
                                         ar_nr_resp[i + mM].nr2 = nr;
                                         ar_nr_resp[i + mM].ar2 = ar;
+                                        
                                         if (!gettingMoebius) {
                                             nonce2_count++;
                                             // check if this was the last second nonce we need for std attack
@@ -1005,7 +1006,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                                         } else {
                                             moebius_n_count++;
                                             // if we've collected all the nonces we need - finish.
-                                            if (nonce1_count == moebius_n_count) finished = true;
+                                            if (nonce1_count == moebius_n_count) 
+                                                finished = true;
                                         }
                                     }
                                     ar_nr_collected[i + mM]++;
@@ -1149,7 +1151,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
 
 
     // NR AR ATTACK
-    if (((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) && (MF_DBGLEVEL >= 1)) {
+    if (((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) && (MF_DBGLEVEL >= MF_DBG_INFO)) {
         for (uint8_t	i = 0; i < ATTACK_KEY_COUNT; i++) {
             if (ar_nr_collected[i] == 2) {
                 Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i < ATTACK_KEY_COUNT / 2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
@@ -1180,7 +1182,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
         }
     }
 
-    if (MF_DBGLEVEL >= 1)	{
+    if (MF_DBGLEVEL >= MF_DBG_ERROR)	{
         Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", get_tracing(), BigBuf_get_traceLen());
     }
 

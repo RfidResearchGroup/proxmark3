@@ -40,6 +40,9 @@ Arguments:
     023c - Special
     0020 - Swapforce
 ]]
+
+local PM3_SUCCESS = 0
+
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
@@ -63,20 +66,19 @@ local function getblockdata(response)
     if not response then
         return nil, 'No response from device'
     end
-
-    local count, cmd, arg0 = bin.unpack('LL', response)
-    if arg0 == 1 then
-        local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
-        return data:sub(1, 32)
+    if response.Status == PM3_SUCCESS then
+        return response.Data
     else
-        return nil, "Couldn't read block.. ["..arg0.."]"
+        return nil, "Couldn't read block.. ["..response.Status.."]"
     end
 end
 
 local function readblock( blocknum, keyA )
     -- Read block N
-    local c = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = blocknum, data = keyA}
-    local b, err = getblockdata(c:sendMIX())
+    local keytype = '00'
+    local data = ('%02x%s%s'):format(blocknum, keytype, keyA)
+    local c = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+    local b, err = getblockdata(c:sendNG(false))
     if not b then return oops(err) end
     return b
 end

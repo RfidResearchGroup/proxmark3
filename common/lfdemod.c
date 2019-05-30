@@ -41,7 +41,7 @@
 #include <stdint.h>  // for uint_32+
 #include <stdbool.h> // for bool
 #include "parity.h"  // for parity test
-
+#include "commonutil.h" // colors
 //**********************************************************************************************
 //---------------------------------Utilities Section--------------------------------------------
 //**********************************************************************************************
@@ -82,7 +82,7 @@ static void printSignal(void) {
     prnt("  low...........%d", signalprop.low);
     prnt("  mean..........%d", signalprop.mean);
     prnt("  amplitude.....%d", signalprop.amplitude);
-    prnt("  is Noise......%s", (signalprop.isnoise) ? "Yes" : "No");
+    prnt("  is Noise......%s", (signalprop.isnoise) ? _RED_("Yes") : _GREEN_("No"));
     prnt("  THRESHOLD noise amplitude......%d", NOISE_AMPLITUDE_THRESHOLD);
 }
 
@@ -103,8 +103,7 @@ void computeSignalProperties(uint8_t *samples, uint32_t size) {
     // we can detect noise
     signalprop.isnoise =  signalprop.amplitude < NOISE_AMPLITUDE_THRESHOLD;
 
-    if (g_debugMode)
-        printSignal();
+    printSignal();
 }
 
 void removeSignalOffset(uint8_t *samples, uint32_t size) {
@@ -146,8 +145,7 @@ void getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
         *low =  signalprop.low;
     }
 
-    if (g_debugMode)
-        prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
+    prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
 }
 
 // by marshmellow
@@ -271,12 +269,13 @@ bool preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *siz
             //first index found
             foundCnt++;
             if (foundCnt == 1) {
-                if (g_debugMode) prnt("DEBUG: (preambleSearchEx) preamble found at %i", idx);
+                prnt("DEBUG: (preambleSearchEx) preamble found at %i", idx);
                 *startIdx = idx;
-                if (findone) return true;
+                if (findone) 
+                    return true;
             }
             if (foundCnt == 2) {
-                if (g_debugMode) prnt("DEBUG: (preambleSearchEx) preamble 2 found at %i", idx);
+                prnt("DEBUG: (preambleSearchEx) preamble 2 found at %i", idx);
                 *size = idx - *startIdx;
                 return true;
             }
@@ -315,10 +314,10 @@ static int getClosestClock(int testclk) {
     uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
     uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
 
-    for (uint8_t i = 0; i < 10; i++)
+    for (uint8_t i = 0; i < 10; i++) {
         if (testclk >= clocks[i] - limit[i] && testclk <= clocks[i] + limit[i])
             return clocks[i];
-
+    }
     return 0;
 }
 
@@ -480,17 +479,19 @@ bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
 // by marshmellow
 // to help detect clocks on heavily clipped samples
 // based on count of low to low
-int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock) {
+int DetectStrongAskClock(uint8_t *src, size_t size, int high, int low, int *clock) {
     size_t i = 100;
     size_t minClk = 512;
     uint16_t shortestWaveIdx = 0;
 
     // get to first full low to prime loop and skip incomplete first pulse
-    getNextHigh(dest, size, high, &i);
-    getNextLow(dest, size, low, &i);
+    getNextHigh(src, size, high, &i);
+    getNextLow(src, size, low, &i);
 
     if (i == size)
         return -1;
+    if (size < 512)
+        return -2;
 
     // clock, numoftimes, first idx
     uint16_t tmpclk[10][3] = {
@@ -507,12 +508,12 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
     };
 
     // loop through all samples (well, we don't want to go out-of-bounds)
-    while (i < size - 512) {
+    while (i < (size - 512)) {
         // measure from low to low
         size_t startwave = i;
 
-        getNextHigh(dest, size, high, &i);
-        getNextLow(dest, size, low, &i);
+        getNextHigh(src, size, high, &i);
+        getNextLow(src, size, low, &i);
 
         //get minimum measured distance
         if (i - startwave < minClk && i < size) {
@@ -565,7 +566,7 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 
     //don't need to loop through entire array. (cotag has clock of 384)
-    uint16_t loopCnt = 1500;
+    uint16_t loopCnt = 2000;
 
     // not enough samples
     if (size <= loopCnt + 60) {
@@ -1401,17 +1402,18 @@ int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
 //take 10 and 01 and manchester decode
 //run through 2 times and take least errCnt
 // "," indicates 00 or 11 wrong bit
-int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos) {
+uint16_t manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos) {
 
     // sanity check
-    if (*size < 16) return -1;
+    if (*size < 16) return 0xFFFF;
 
     int errCnt = 0, bestErr = 1000;
     uint16_t bitnum = 0, maxBits = 512, bestRun = 0;
     size_t i, k;
 
     //find correct start position [alignment]
-    for (k = 0; k < 2; ++k) {
+    for (k = 0; k < 2; k++) {
+
         for (i = k; i < *size - 1; i += 2) {
 
             if (bits[i] == bits[i + 1])
@@ -1431,7 +1433,7 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
 
     *alignPos = bestRun;
     //decode
-    for (i = bestRun; i < *size - 1; i += 2) {
+    for (i = bestRun; i < *size; i += 2) {
         if (bits[i] == 1 && (bits[i + 1] == 0)) {
             bits[bitnum++] = invert;
         } else if ((bits[i] == 0) && bits[i + 1] == 1) {
@@ -1448,7 +1450,7 @@ int manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alignPos)
 //by marshmellow
 //demodulates strong heavily clipped samples
 //RETURN: num of errors.  if 0, is ok.
-static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high, int low, int *startIdx) {
+static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, int high, int low, int *startIdx) {
     *startIdx = 0;
     size_t bitCnt = 0, smplCnt = 1, errCnt = 0, pos = 0;
     uint8_t cl_4 = clk / 4;
@@ -1456,6 +1458,7 @@ static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, in
     bool waveHigh = true;
 
     getNextHigh(bits, *size, high, &pos);
+//    getNextLow(bits, *size, low, &pos);
 
     // sample counts,   like clock = 32.. it tries to find  32/4 = 8,  32/2 = 16
     for (size_t i = pos; i < *size; i++) {
@@ -1463,7 +1466,8 @@ static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, in
             smplCnt++;
         } else if (bits[i] <= low && !waveHigh) {
             smplCnt++;
-        } else { //transition
+        } else {
+         //transition
             if ((bits[i] >= high && !waveHigh) || (bits[i] <= low && waveHigh)) {
 
                 // 8  ::    8-2-1 =  5   8+2+1 = 11
@@ -1472,7 +1476,8 @@ static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, in
                 // 64 ::  64-16-1 = 47 64+16+1 = 81
                 if (smplCnt > clk - cl_4 - 1) { //full clock
 
-                    if (smplCnt > clk + cl_4 + 1) { //too many samples
+                    if (smplCnt > clk + cl_4 + 1) { 
+                        //too many samples
                         errCnt++;
                         if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod ASK Modulation Error FULL at: %u  [%u > %u]", i, smplCnt, clk + cl_4 + 1);
                         bits[bitCnt++] = 7;
@@ -1483,8 +1488,10 @@ static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, in
                         bits[bitCnt++] = invert ^ 1;
                         bits[bitCnt++] = invert ^ 1;
                     }
-                    if (*startIdx == 0)
+                    if (*startIdx == 0) {
                         *startIdx = i - clk;
+                         prnt("DEBUG ASK: cleanAskRawDemod minus clock [%d]", *startIdx);
+                    }
                     waveHigh = !waveHigh;
                     smplCnt = 0;
 
@@ -1502,8 +1509,10 @@ static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, in
                     } else if (!waveHigh) {
                         bits[bitCnt++] = invert ^ 1;
                     }
-                    if (*startIdx == 0)
+                    if (*startIdx == 0) {
                         *startIdx = i - cl_2;
+                         prnt("DEBUG ASK: cleanAskRawDemod minus half clock [%d]", *startIdx);
+                    }
                     waveHigh = !waveHigh;
                     smplCnt = 0;
                 } else {
@@ -1515,12 +1524,15 @@ static int cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int invert, in
             }
         }
     }
+
     *size = bitCnt;
 
+/*
     if (*startIdx < 0)
         *startIdx = 0;
+*/
 
-    if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod Startidx %u ", *startIdx);
+    if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod Startidx %d", *startIdx);
 
     return errCnt;
 }
@@ -1547,38 +1559,33 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
 
     if (g_debugMode == 2) prnt("DEBUG (askdemod_ext) clk %d, beststart %d, amp %d", *clk, start, amp);
 
-    //start pos from detect ask clock is 1/2 clock offset
-    // NOTE: can be negative (demod assumes rest of wave was there)
-    *startIdx = start - (*clk / 2);
-    uint16_t initLoopMax = 1024;
-    if (initLoopMax > *size) initLoopMax = *size;
-
     // Detect high and lows
     //25% clip in case highs and lows aren't clipped [marshmellow]
     int high, low;
-    //getHiLo(bits, initLoopMax, &high, &low, 75, 75);
     getHiLo(&high, &low, 75, 75);
 
     size_t errCnt = 0;
     // if clean clipped waves detected run alternate demod
     if (DetectCleanAskWave(bits, *size, high, low)) {
 
-        if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Clean wave detected");
+        //start pos from detect ask clock is 1/2 clock offset
+        // NOTE: can be negative (demod assumes rest of wave was there)
+        *startIdx = start - (*clk / 2);
+        if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Clean wave detected  --- startindex %d", *startIdx);
 
         errCnt = cleanAskRawDemod(bits, size, *clk, *invert, high, low, startIdx);
 
         if (askType) { //ask/manchester
             uint8_t alignPos = 0;
             errCnt = manrawdecode(bits, size, 0, &alignPos);
-            *startIdx += *clk / 2 * alignPos;
+            *startIdx += ((*clk / 2) * alignPos);
 
-            if (g_debugMode)
-                prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u , bestError %u", *startIdx, alignPos, errCnt);
+            prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u , bestError %u", *startIdx, alignPos, errCnt);
         }
         return errCnt;
     }
 
-    if (g_debugMode) prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
+    prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
 
     int lastBit;  //set first clock check - can go negative
     size_t i, bitnum = 0;     //output counter
@@ -1823,6 +1830,7 @@ static size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t in
         }
         memset(dest + numBits, dest[i - 1] ^ invert, n);
         numBits += n;
+        if (g_debugMode == 2) prnt("DEBUG (aggregate_bits) extra bits in the end");
     }
     return numBits;
 }
@@ -1833,7 +1841,9 @@ size_t fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8
     if (signalprop.isnoise) return 0;
     // FSK demodulator
     size = fsk_wave_demod(dest, size, fchigh, fclow, start_idx);
+    if (g_debugMode == 2) prnt("DEBUG (fskdemod) got %zu bits", size);
     size = aggregate_bits(dest, size, rfLen, invert, fchigh, fclow, start_idx);
+    if (g_debugMode == 2) prnt("DEBUG (fskdemod) got %zu bits", size);
     return size;
 }
 

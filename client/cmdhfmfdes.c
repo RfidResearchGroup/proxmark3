@@ -90,14 +90,15 @@ static int CmdHF14ADesRb(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "--block no:%02x key type:%02x key:%s ", blockNo, keyType, sprint_hex(key, 6));
 
-    SendCommandOLD(CMD_MIFARE_READBL, blockNo, keyType, 0, key, 6);
+
+    mf_readblock_t payload = { blockNo, keyType, key };
+    SendCommandNG(CMD_MIFARE_READBL, (uint8_t *)payload, sizeof(mf_readblock_t) );
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
-    uint8_t                isOK  = resp.oldarg[0] & 0xff;
+    if (WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500)) {
     uint8_t              * data  = resp.data.asBytes;
 
-    if (isOK)
+    if (resp.status == PM3_SUCCESS)
     PrintAndLogEx(NORMAL, "isOk:%02x data:%s", isOK, sprint_hex(data, 16));
     else
     PrintAndLogEx(NORMAL, "isOk:%02x", isOK);

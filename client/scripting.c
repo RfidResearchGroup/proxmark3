@@ -303,11 +303,45 @@ static int l_WaitForResponseTimeout(lua_State *L) {
         ms_timeout = luaL_checkunsigned(L, 2);
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == 0)
+    if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false)
         return returnToLuaWithError(L, "No response from the device");
 
+    char foo[sizeof(PacketResponseNG)];
+    n = 0;
+
+    memcpy(foo + n, &resp.cmd, sizeof(resp.cmd));
+    n += sizeof(resp.cmd);
+
+    memcpy(foo + n, &resp.length, sizeof(resp.length));
+    n += sizeof(resp.length);
+
+    memcpy(foo + n, &resp.magic, sizeof(resp.magic));
+    n += sizeof(resp.magic);
+
+    memcpy(foo + n, &resp.status, sizeof(resp.status));
+    n += sizeof(resp.status);
+
+    memcpy(foo + n, &resp.crc, sizeof(resp.crc));
+    n += sizeof(resp.crc);
+
+    memcpy(foo + n, &resp.oldarg[0], sizeof(resp.oldarg[0]));
+    n += sizeof(resp.oldarg[0]);
+
+    memcpy(foo + n, &resp.oldarg[1], sizeof(resp.oldarg[1]));
+    n += sizeof(resp.oldarg[1]);
+
+    memcpy(foo + n, &resp.oldarg[2], sizeof(resp.oldarg[2]));
+    n += sizeof(resp.oldarg[2]);
+
+    memcpy(foo + n, resp.data.asBytes, sizeof(resp.data));
+    n += sizeof(resp.data);
+
+    memcpy(foo + n, &resp.ng, sizeof(resp.ng));
+    n += sizeof(resp.ng);
+
     //Push it as a string
-    lua_pushlstring(L, (const char *)&resp, sizeof(PacketResponseNG));
+    lua_pushlstring(L, (const char *)&foo, sizeof(foo));
+
     return 1;
 }
 

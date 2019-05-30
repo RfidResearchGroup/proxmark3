@@ -406,24 +406,20 @@ static int CmdHF14ACUIDs(const char *Cmd) {
 }
 // ## simulate iso14443a tag
 int CmdHF14ASim(const char *Cmd) {
-    bool errors = false;
-    uint8_t flags = 0;
-    uint8_t tagtype = 1;
-    uint8_t cmdp = 0;
-    uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
     int uidlen = 0;
+    uint8_t flags = 0, tagtype = 1, cmdp = 0;
+    uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     bool useUIDfromEML = true;
     bool setEmulatorMem = false;
     bool verbose = false;
-    nonces_t data[1];
+    bool errors = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-            case 'H':
                 return usage_hf_14a_sim();
             case 't':
-            case 'T':
                 // Retrieve the tag type
                 tagtype = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 if (tagtype == 0)
@@ -431,15 +427,15 @@ int CmdHF14ASim(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'u':
-            case 'U':
                 // Retrieve the full 4,7,10 byte long uid
                 param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
+                uidlen >>= 1;
                 switch (uidlen) {
-                    //case 20: flags |= FLAG_10B_UID_IN_DATA; break;
-                    case 14:
+                    //case 10: flags |= FLAG_10B_UID_IN_DATA; break;
+                    case 7:
                         flags |= FLAG_7B_UID_IN_DATA;
                         break;
-                    case  8:
+                    case 4:
                         flags |= FLAG_4B_UID_IN_DATA;
                         break;
                     default:
@@ -447,23 +443,20 @@ int CmdHF14ASim(const char *Cmd) {
                         break;
                 }
                 if (!errors) {
-                    PrintAndLogEx(SUCCESS, "Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen >> 1, sprint_hex(uid, uidlen >> 1));
+                    PrintAndLogEx(SUCCESS, "Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen, sprint_hex(uid, uidlen));
                     useUIDfromEML = false;
                 }
                 cmdp += 2;
                 break;
             case 'v':
-            case 'V':
                 verbose = true;
                 cmdp++;
                 break;
             case 'x':
-            case 'X':
                 flags |= FLAG_NR_AR_ATTACK;
                 cmdp++;
                 break;
             case 'e':
-            case 'E':
                 setEmulatorMem = true;
                 cmdp++;
                 break;
@@ -480,36 +473,49 @@ int CmdHF14ASim(const char *Cmd) {
     if (useUIDfromEML)
         flags |= FLAG_UID_IN_EMUL;
 
+    struct {
+       uint8_t tagtype;
+       uint8_t flags;
+       uint8_t uid[10];
+    } PACKED payload;
+    
+    payload.tagtype = tagtype;
+    payload.flags = flags;
+    memcpy(payload.uid, uid, uidlen);
+    
     clearCommandBuffer();
-    SendCommandOLD(CMD_SIMULATE_TAG_ISO_14443a,  tagtype, flags, 0, uid, uidlen >> 1);
+    SendCommandNG(CMD_SIMULATE_TAG_ISO_14443a, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 
     while (!ukbhit()) {
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
-        if (!(flags & FLAG_NR_AR_ATTACK)) break;
-        if ((resp.oldarg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD) break;
-
-        memcpy(data, resp.data.asBytes, sizeof(data));
+        if (WaitForResponseTimeout(CMD_SIMULATE_MIFARE_CARD, &resp, 1500) == 0) continue;
+        if (resp.status != PM3_SUCCESS) break;
+        
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) break;
+        
+        nonces_t *data = (nonces_t*)resp.data.asBytes;
         readerAttack(data[0], setEmulatorMem, verbose);
     }
-    showSectorTable();
-    return 0;
+    if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) )
+        showSectorTable();
+
+    PrintAndLogEx(INFO, "Done");
+    return PM3_SUCCESS;
 }
 
 int CmdHF14ASniff(const char *Cmd) {
-    int param = 0;
-    uint8_t ctmp;
-    for (int i = 0; i < 2; i++) {
+    uint8_t param = 0, ctmp;
+    for (uint8_t i = 0; i < 2; i++) {
         ctmp = tolower(param_getchar(Cmd, i));
         if (ctmp == 'h') return usage_hf_14a_sniff();
         if (ctmp == 'c') param |= 0x01;
         if (ctmp == 'r') param |= 0x02;
     }
     clearCommandBuffer();
-    SendCommandMIX(CMD_SNIFF_ISO_14443a, param, 0, 0, NULL, 0);
-    return 0;
+    SendCommandNG(CMD_SNIFF_ISO_14443a, (uint8_t *)&param, sizeof(uint8_t));
+    return PM3_SUCCESS;
 }
 
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {

@@ -1585,28 +1585,28 @@ char *GetBitRateStr(uint32_t id, bool xmode) {
     } else {
         switch (id) {
             case 0:
-                snprintf(retStr, sizeof(buf), "%u - RF/8", id);
+                snprintf(retStr, sizeof(buf), "%u - "_GREEN_("RF/8"), id);
                 break;
             case 1:
-                snprintf(retStr, sizeof(buf), "%u - RF/16", id);
+                snprintf(retStr, sizeof(buf), "%u - "_GREEN_("RF/16"), id);
                 break;
             case 2:
-                snprintf(retStr, sizeof(buf), "%u - RF/32", id);
+                snprintf(retStr, sizeof(buf), "%u - "_GREEN_("RF/32"), id);
                 break;
             case 3:
-                snprintf(retStr, sizeof(buf), "%u - RF/40", id);
+                snprintf(retStr, sizeof(buf), "%u - "_GREEN_("RF/40"), id);
                 break;
             case 4:
-                snprintf(retStr, sizeof(buf), "%u - RF/50", id);
+                snprintf(retStr, sizeof(buf), "%u - "_GREEN_("RF/50"), id);
                 break;
             case 5:
-                snprintf(retStr, sizeof(buf), "%u - RF/64", id);
+                snprintf(retStr, sizeof(buf), "%u - "_GREEN_("RF/64"), id);
                 break;
             case 6:
-                snprintf(retStr, sizeof(buf), "%u - RF/100", id);
+                snprintf(retStr, sizeof(buf), "%u - "_GREEN_("RF/100"), id);
                 break;
             case 7:
-                snprintf(retStr, sizeof(buf), "%u - RF/128", id);
+                snprintf(retStr, sizeof(buf), "%u - "_GREEN_("RF/128"), id);
                 break;
             default:
                 snprintf(retStr, sizeof(buf), "%u - " _RED_("(Unknown)"), id);

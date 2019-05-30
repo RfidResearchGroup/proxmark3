@@ -49,6 +49,7 @@ local lsh = bit32.lshift
 local rsh = bit32.rshift
 
 -- Some globals
+local PM3_SUCCESS = 0
 local FOO = 'AF62D2EC0491968CC52A1A7165F865FE'
 local BAR = '286329204469736E65792032303133'
 local MIS = '0A14FD0507FF4BCD026BA83F0A3B89A9'
@@ -463,20 +464,19 @@ local function getblockdata(response)
     if not response then
         return nil, 'No response from device'
     end
-
-    local count, cmd, arg0 = bin.unpack('LL', response)
-    if arg0 == 1 then
-        local count, arg1, arg2, data = bin.unpack('LLH511', response, count)
-        return data:sub(1, 32)
+    if response.Status == PM3_SUCCESS then
+        return response.Data
     else
-        return nil, "Couldn't read block.. ["..arg0.."]"
+        return nil, "Couldn't read block.. ["..response.Status.."]"
     end
 end
 
-local function readblock( blocknum, key )
+local function readblock( blockno, key )
     -- Read block N
-    local c = Command:newMIX{cmd = cmds.CMD_MIFARE_READBL, arg1 = blocknum, data = key}
-    local b, err = getblockdata(c:sendMIX())
+    local keytype = '00'
+    local data = ('%02x%s%s'):format(blockno, keytype, key)
+    local c = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+    local b, err = getblockdata(c:sendNG(false))
     if not b then return oops(err) end
     return b
 end
