@@ -6,7 +6,6 @@ _rev. v1.0 (draft)_
 
 *	Built-in Bluetooth 2.0 with EDR Bluetooth module, default baud rate 115200.
 *	Built-in 400 mAh polymer lithium-ion battery, typical standby time up to 3.5 hours.
-*       400 charges (standard LIPO)
 *	Additional heat dissipating fins can significantly reduce the temperature when the HF antenna is in operation for a long time.
 *	Complete lithium charging management system, seamless switching power supply. Full overcharge and overdischarge protection.
 *	Bluetooth has an independent power switch that can be turned on or off.
@@ -24,6 +23,7 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 *	Standby time:		3.5h @ StandBy; 2.9h @ LF-On; 50min @ HF-On;
 *	Charging Current:	200mA (Plug in USB Default Charging)
 *	Charging time:		2.5h
+*	Num of charges:         400 -> 70% capacity (standard LIPO)
 *	Bluetooth power:	4dBm, -85 dBm @ 2Mbps
 *	Bluetooth distance:	6m (depending on the environment and device orientation)
 *	Size and weight:	54.4mm * 29.4mm * 13.5mm 24g
