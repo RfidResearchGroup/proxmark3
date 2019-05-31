@@ -62,7 +62,7 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #endif
 
 #ifndef FLASH_MEM_MAX_SIZE
-# define FLASH_MEM_MAX_SIZE     0x3FFFF  // (262143)
+# define FLASH_MEM_MAX_SIZE     0x40000  // (262143)
 #endif
 
 #ifndef FLASH_MEM_MAX_4K_SECTOR
@@ -79,7 +79,8 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #endif
 
 #ifndef FLASH_MEM_SIGNATURE_OFFSET
-# define FLASH_MEM_SIGNATURE_OFFSET (FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN)
+// -1 for historical compatibility with already released Proxmark3 RDV4.0 devices
+# define FLASH_MEM_SIGNATURE_OFFSET (FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN - 1)
 #endif
 
 #ifndef T55XX_CONFIG_LEN
