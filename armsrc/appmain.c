@@ -1537,12 +1537,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             Flash_CheckBusy(BUSY_TIMEOUT);
             Flash_WriteEnable();
 
-            if (startidx == DEFAULT_T55XX_KEYS_OFFSET)
+            if (startidx == DEFAULT_T55XX_KEYS_OFFSET) {
                 Flash_Erase4k(3, 0xC);
-            else if (startidx ==  DEFAULT_MF_KEYS_OFFSET)
+            } else if (startidx ==  DEFAULT_MF_KEYS_OFFSET) {
+                Flash_Erase4k(3, 0x9);
+            } else if (startidx == DEFAULT_ICLASS_KEYS_OFFSET) {
                 Flash_Erase4k(3, 0xB);
-            else if (startidx == DEFAULT_ICLASS_KEYS_OFFSET)
-                Flash_Erase4k(3, 0xA);
+            }
 
             Flash_CheckBusy(BUSY_TIMEOUT);
             Flash_WriteEnable();
