@@ -23,6 +23,7 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 *	Standby time:		3.5h @ StandBy; 2.9h @ LF-On; 50min @ HF-On;
 *	Charging Current:	200mA (Plug in USB Default Charging)
 *	Charging time:		2.5h
+*	Num of charges:         400 -> 70% capacity (standard LIPO)
 *	Bluetooth power:	4dBm, -85 dBm @ 2Mbps
 *	Bluetooth distance:	6m (depending on the environment and device orientation)
 *	Size and weight:	54.4mm * 29.4mm * 13.5mm 24g

@@ -63,7 +63,7 @@ local function parse14443a(data)
     } __attribute__((__packed__)) iso14a_card_select_t;
     --]]
 
-    local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CC', data)
+    local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CCH', data)
     uid = uid:sub(1, 2 * uidlen)
     local man_byte = tonumber(uid:sub(1,2), 16)
 
@@ -73,7 +73,8 @@ local function parse14443a(data)
         sak = sak,
         name = tostring_14443a(sak),
         data = data,
-        manufacturer = taglib.lookupManufacturer(man_byte)
+        manufacturer = taglib.lookupManufacturer(man_byte),
+        ats = ats
     }
 end
 
@@ -103,7 +104,7 @@ local function read14443a(dont_disconnect, no_rats)
             return nil, 'iso14443a card select failed'
         end
         data = string.sub(result, count)
-        info, err = parse14443a(data)
+        info = parse14443a(data)
     else
         err = 'No response from card'
     end
@@ -112,7 +113,7 @@ local function read14443a(dont_disconnect, no_rats)
         print(err)
         return nil, err
     end
-    return info
+    return info, nil
 end
 
 ---

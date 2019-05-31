@@ -686,6 +686,10 @@ static int ndef_print_CC(uint8_t *data) {
     if (data[0] != 0xE1)
         return -1;
 
+//NFC Forum Type 1,2,3,4
+//
+// 4 has 1.1 (11)
+
 // b7, b6 major version
 // b5, b4 minor version
 // b3, b2 read
@@ -736,7 +740,7 @@ static int ndef_print_CC(uint8_t *data) {
     PrintAndLogEx(NORMAL, "       : %s / %s", rStr, wStr);
 
     PrintAndLogEx(NORMAL, "  %02X : Physical Memory Size: %d bytes", data[2], data[2] * 8);
-    if (data[2] == 0x96)
+    if (data[2] == 0x06)
         PrintAndLogEx(NORMAL, "  %02X : NDEF Memory Size: %d bytes", data[2], 48);
     else if (data[2] == 0x12)
         PrintAndLogEx(NORMAL, "  %02X : NDEF Memory Size: %d bytes", data[2], 144);
