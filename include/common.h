@@ -62,7 +62,7 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #endif
 
 #ifndef FLASH_MEM_MAX_SIZE
-# define FLASH_MEM_MAX_SIZE     0x40000  // (262143)
+# define FLASH_MEM_MAX_SIZE     0x40000  // (262144)
 #endif
 
 #ifndef FLASH_MEM_MAX_4K_SECTOR
