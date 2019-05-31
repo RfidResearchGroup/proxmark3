@@ -33,7 +33,7 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 *	Unplug your Proxmark3 RDV4.0 device from any usb cable.
 *	Remove the plastic upper case of Proxmark3 RDV4.0 with opener.
-*	The antenna is temporarily removed with a screwdriver to expose the FPC interface.
+*	Remove temporarily the antenna with a screwdriver to expose the FPC interface.
 *	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.
 *	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.
 *	Assembly finished!
@@ -70,12 +70,16 @@ sudo hcitool scan
 Scanning ...
   aa:bb:cc:dd:ee:ff PM3_RDV4.0
 ```
-	Instead of aa:bb:cc:dd:ee:ff, you'll see your MAC address.
+
+Instead of aa:bb:cc:dd:ee:ff, you'll see your MAC address.
 
 2. Bind your BT add-on MAC address to a serial port
 ```sh
 sudo rfcomm bind rfcomm0 aa:bb:cc:dd:ee:ff
 ```
+
+Replace `aa:bb:cc:dd:ee:ff` by yourMAC address.
+
 3. The blue state LED on the add-on will keep blinking after the
 connection is established. Only when the Proxmark3 client opens the
 /dev/rfcomm0 port, the blue LED turns on solid, indicating that the
