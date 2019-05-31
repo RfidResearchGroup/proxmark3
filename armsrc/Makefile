@@ -11,6 +11,7 @@ APP_INCLUDES = apps.h
 # This Makefile might have been called directly, not via the root Makefile, so:
 ifeq ($(PLTNAME),)
     -include ../Makefile.platform
+    -include ../.Makefile.options.cache
     ifeq ($(PLATFORM),)
         PLATFORM=PM3RDV4
     else
@@ -30,6 +31,11 @@ ifeq ($(PLTNAME),)
     $(info Included options:  $(PLATFORM_DEFS_INFO))
     $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
     $(info ===================================================================)
+
+# detect if there were changes in the platform definitions, requiring a clean
+ifeq ($(PLATFORM_CHANGED), true)
+    $(error platform definitions have been changed, please "make clean" at the root of the project)
+endif
 endif
 
 #remove one of the following defines and comment out the relevant line

@@ -25,6 +25,7 @@ endif
 
 ifeq ($(PLATFORM),)
     -include Makefile.platform
+    -include .Makefile.options.cache
     ifeq ($(PLATFORM),)
         PLATFORM=PM3RDV4
     else
@@ -54,17 +55,17 @@ mfkey/%: FORCE
 	$(MAKE) -C tools/mfkey $(patsubst mfkey/%,%,$@)
 nonce2key/%: FORCE
 	$(MAKE) -C tools/nonce2key $(patsubst nonce2key/%,%,$@)
-bootrom/%: FORCE
+bootrom/%: FORCE cleanifplatformchanged
 	$(MAKE) -C bootrom $(patsubst bootrom/%,%,$@)
-armsrc/%: FORCE
+armsrc/%: FORCE cleanifplatformchanged
 	$(MAKE) -C armsrc $(patsubst armsrc/%,%,$@)
 client/%: FORCE
 	$(MAKE) -C client $(patsubst client/%,%,$@)
-recovery/%: FORCE bootrom/% armsrc/%
+recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
 	$(MAKE) -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style checks FORCE udev accessrights
+.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style checks FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -116,6 +117,18 @@ newtarbin:
 
 tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
 	$(GZIP) proxmark3-$(platform)-bin.tar
+
+# detect if there were changes in the platform definitions, requiring a clean
+cleanifplatformchanged:
+ifeq ($(PLATFORM_CHANGED), true)
+	echo "Platform definitions changed, cleaning bootrom/armsrc/recovery first..."
+	$(MAKE) -C bootrom clean
+	$(MAKE) -C armsrc clean
+	$(MAKE) -C recovery clean
+	@echo CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
+	@echo CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
+	@echo CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
+endif
 
 # configure system to ignore PM3 device as a modem (ModemManager blacklist, effective *only* if ModemManager is not using _strict_ policy)
 # Read doc/md/ModemManager-Must-Be-Discarded.md for more info

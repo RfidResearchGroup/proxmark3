@@ -24,6 +24,8 @@ version.c
 
 # new build file for add-ons.
 Makefile.platform
+# Cache for detecting platform def changes
+.Makefile.options.cache
 
 !client/hardnested/*.bin
 !client/hardnested/tables/*.z
