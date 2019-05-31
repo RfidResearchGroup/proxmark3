@@ -50,7 +50,9 @@ static int usage_flashmem_read(void) {
 }
 static int usage_flashmem_load(void) {
     PrintAndLogEx(NORMAL, "Loads binary file into flash memory on device");
-    PrintAndLogEx(NORMAL, "Usage:  mem load o <offset> f <file name> m t i");
+    PrintAndLogEx(NORMAL, "Usage:  mem load [o <offset>] f <file name> [m|t|i]");
+    PrintAndLogEx(NORMAL, "Warning: mem area to be written must have been wiped first");
+    PrintAndLogEx(NORMAL, "(this is already taken care when loading dictionaries)");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
     PrintAndLogEx(NORMAL, "  f <filename>  :      file name");
     PrintAndLogEx(NORMAL, "  m             :      upload 6 bytes keys (mifare key dictionary)");
@@ -67,7 +69,7 @@ static int usage_flashmem_load(void) {
 }
 static int usage_flashmem_save(void) {
     PrintAndLogEx(NORMAL, "Saves flash memory on device into the file");
-    PrintAndLogEx(NORMAL, " Usage:  mem save o <offset> l <length> f <file name>");
+    PrintAndLogEx(NORMAL, " Usage:  mem save [o <offset>] [l <length>] f <file name>");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
     PrintAndLogEx(NORMAL, "  l <length>    :      length");
     PrintAndLogEx(NORMAL, "  f <filename>  :      file name");
@@ -88,19 +90,18 @@ static int usage_flashmem_wipe(void) {
 //  PrintAndLogEx(NORMAL, "  i           :      inital total wipe");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        mem wipe ");     // wipe page 0,1,2
     PrintAndLogEx(NORMAL, "        mem wipe p 0");  // wipes first page.
     return PM3_SUCCESS;
 }
 static int usage_flashmem_info(void) {
     PrintAndLogEx(NORMAL, "Collect signature and verify it from flash memory\n");
-    PrintAndLogEx(NORMAL, " Usage:  mem info [h|s|w]");
-    PrintAndLogEx(NORMAL, "  s    :      create a signature");
-    PrintAndLogEx(NORMAL, "  w    :      write signature to flash memory");
+    PrintAndLogEx(NORMAL, " Usage:  mem info");
+//    PrintAndLogEx(NORMAL, "  s    :      create a signature");
+//    PrintAndLogEx(NORMAL, "  w    :      write signature to flash memory");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        mem info");
-    PrintAndLogEx(NORMAL, "        mem info s");
+//    PrintAndLogEx(NORMAL, "        mem info s");
     return PM3_SUCCESS;
 }
 
@@ -357,7 +358,7 @@ static int CmdFlashMemSave(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(NORMAL, "downloading"_YELLOW_("%u")"bytes from flashmem", len);
+    PrintAndLogEx(INFO, "downloading "_YELLOW_("%u")"bytes from flashmem", len);
     if (!GetFromDevice(FLASH_MEM, dump, len, start_index, NULL, -1, true)) {
         PrintAndLogEx(FAILED, "ERROR; downloading from flashmemory");
         free(dump);
