@@ -71,18 +71,18 @@ Scanning ...
   aa:bb:cc:dd:ee:ff PM3_RDV4.0
 ```
 
-Instead of aa:bb:cc:dd:ee:ff, you'll see your MAC address.
+Instead of `aa:bb:cc:dd:ee:ff`, you'll see your MAC address.
 
 2. Bind your BT add-on MAC address to a serial port
 ```sh
 sudo rfcomm bind rfcomm0 aa:bb:cc:dd:ee:ff
 ```
 
-Replace `aa:bb:cc:dd:ee:ff` by yourMAC address.
+Replace `aa:bb:cc:dd:ee:ff` by your MAC address.
 
 3. The blue state LED on the add-on will keep blinking after the
 connection is established. Only when the Proxmark3 client opens the
-/dev/rfcomm0 port, the blue LED turns on solid, indicating that the
+`/dev/rfcomm0` port, the blue LED turns on solid, indicating that the
 connection is successful.
 
 4. Use Proxmark client on BT-serial port
@@ -106,7 +106,7 @@ can be searched and connected.
   3. After the connection is established, the blue state LED on add-on will
 turn on solid.
 
-  4. a serial port /dev/ttyUSB0 will be created, use Proxmark3 client on it
+  4. a serial port `/dev/ttyUSB0` will be created, use Proxmark3 client on it
 ```sh
 ./proxmark /dev/ttyUSB0
 ```
