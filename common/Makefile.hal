@@ -1,4 +1,6 @@
-define KNOWN_PLATFORMS
+define KNOWN_DEFINITIONS
+
+Known definitions:
 
 +==========================================================+
 | PLATFORM        | DESCRIPTION                            |
@@ -22,18 +24,40 @@ define KNOWN_PLATFORMS
 | BTADDON         | Proxmark3 rdv4 BT add-on               |
 +----------------------------------------------------------+
 
-Options to define platform:
-(1) Run make with PLATFORM specified as follows:
-make PLATFORM=PM3EASY
++==========================================================+
+| STANDALONE      | DESCRIPTION                            |
++==========================================================+
+| (none: def)     | By default no standalone mode          |
++----------------------------------------------------------+
+| LF_SAMYRUN      |                                        |
++----------------------------------------------------------+
+| LF_ICERUN       |                                        |
++----------------------------------------------------------+
+| LF_PROXBRUTE    |                                        |
++----------------------------------------------------------+
+| LF_HIDBRUTE     |                                        |
++----------------------------------------------------------+
+| HF_YOUNG        |                                        |
++----------------------------------------------------------+
+| HF_MATTYRUN     |                                        |
++----------------------------------------------------------+
+| HF_COLIN        |                                        |
++----------------------------------------------------------+
+| HF_BOG          |                                        |
++----------------------------------------------------------+
+
+
+Options to define platform, platform extras and/or standalone mode:
+(1) Run make with PLATFORM, PLATFORM_EXTRAS and/or STANDALONE as follows:
+make PLATFORM=PM3EASY STANDALONE=LF_SAMYRUN
 
 (2) Save a file called Makefile.platform with contents:
 PLATFORM=PM3EASY
+STANDALONE=LF_SAMYRUN
 
 or if you have a Proxmark 3 RDV4 with the BT add-on:
 PLATFORM=PM3RDV4
 PLATFORM_EXTRAS=BTADDON
-
-Option to choose standalone mode, e.g. LF_SAMYRUN
 STANDALONE=LF_SAMYRUN
 
 !! Make sure to "make clean" when you change platform settings !!
@@ -62,7 +86,7 @@ else ifeq ($(PLATFORM),PM3OLD512)
     MCU = AT91SAM7S512
     PLTNAME = Proxmark3 V1 with AT91SAM7S512
 else
-    $(error Invalid or empty PLATFORM: $(PLATFORM). Known platforms: $(KNOWN_PLATFORMS))
+    $(error Invalid or empty PLATFORM: $(PLATFORM). $(KNOWN_DEFINITIONS))
 endif
 
 # parsing additional PLATFORM_EXTRAS tokens
@@ -95,23 +119,12 @@ PLATFORM_DEFS += \
     -DWITH_HFSNIFF
 
 # Standalone mode
-# !! Choose only one !!
-ifneq (,$(findstring LF_ICERUN,$(STANDALONE)))
-    PLATFORM_DEFS += -DWITH_STANDALONE_LF_ICERUN
-else ifneq (,$(findstring LF_PROXBRUTE,$(STANDALONE)))
-    PLATFORM_DEFS += -DWITH_STANDALONE_LF_PROXBRUTE
-else ifneq (,$(findstring LF_HIDBRUTE,$(STANDALONE)))
-    PLATFORM_DEFS += -DWITH_STANDALONE_LF_HIDBRUTE
-else ifneq (,$(findstring HF_YOUNG,$(STANDALONE)))
-    PLATFORM_DEFS += -DWITH_STANDALONE_HF_YOUNG
-else ifneq (,$(findstring HF_MATTYRUN,$(STANDALONE)))
-    PLATFORM_DEFS += -DWITH_STANDALONE_HF_MATTYRUN
-else ifneq (,$(findstring HF_COLIN,$(STANDALONE)))
-    PLATFORM_DEFS += -DWITH_STANDALONE_HF_COLIN
-else ifneq (,$(findstring HF_BOG,$(STANDALONE)))
-    PLATFORM_DEFS += -DWITH_STANDALONE_HF_BOG
-else
-    PLATFORM_DEFS += -DWITH_STANDALONE_LF_SAMYRUN
+STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE
+STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG
+ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
+    PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
+else ifneq ($(STANDALONE),)
+    $(error Invalid STANDALONE: $(STANDALONE). $(KNOWN_DEFINITIONS))
 endif
 
 $(info $(findstring WITH_STANDALONE_*,$(PLATFORM_DEFS)))

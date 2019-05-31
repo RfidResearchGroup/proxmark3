@@ -15,6 +15,9 @@ ifeq ($(PLTNAME),)
   ifneq ($(PLATFORM_EXTRAS),)
     ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
   endif
+  ifneq ($(STANDALONE),)
+    ${info using saved STANDALONE:      '$(STANDALONE)'}
+  endif
   include ../common/Makefile.hal
   $(info ===================================================================)
   $(info Platform name:     $(PLTNAME))
