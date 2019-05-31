@@ -176,7 +176,7 @@ local function main(args)
 
             -- check if PRNG is WEAK
             if perform_prng_test() == 1 then
-                print('Card found, commencing crack on UID', uid)
+                print('Card found, commencing crack on UID',uid)
 
                 if #key == 12 then
                     print('Using key: '..key);
