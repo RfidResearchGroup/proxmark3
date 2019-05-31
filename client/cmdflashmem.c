@@ -485,21 +485,18 @@ static int CmdFlashMemInfo(const char *Cmd) {
     print_hex_break(mem.signature, sizeof(mem.signature), 32);
 
 //-------------------------------------------------------------------------------
-// Example RSA-1024 keypair, for test purposes  (from common/polarssl/rsa.c)
+// RRG Public RSA Key
 //
 
-// public key modulus N
-#define RSA_N   "9292758453063D803DD603D5E777D788" \
-    "8ED1D5BF35786190FA2F23EBC0848AEA" \
-    "DDA92CA6C3D80B32C4D109BE0F36D6AE" \
-    "7130B9CED7ACDF54CFC7555AC14EEBAB" \
-    "93A89813FBF3C4F8066D2D800F7C38A8" \
-    "1AE31942917403FF4946B0A83D3D3E05" \
-    "EE57C6F5F5606FB5D4BC6CD34EE0801A" \
-    "5E94BB77B07507233A0BC7BAC8F90F79"
-
 // public key Exponent E
-#define RSA_E   "10001"
+#define RSA_E "010001" 
+
+// public key modulus N
+#define RSA_N "E28D809BF323171D11D1ACA4C32A5B7E0A8974FD171E75AD120D60E9B76968FF4B0A6364AE50583F9555B8EE1A725F279E949246DF0EFCE4C02B9F3ACDCC623F9337F21C0C066FFB703D8BFCB5067F309E056772096642C2B1A8F50305D5EC33DB7FB5A3C8AC42EB635AE3C148C910750ABAA280CE82DC2F180F49F30A1393B5" 
+
+//-------------------------------------------------------------------------------
+// Example RSA-1024 keypair, for test purposes  (from common/polarssl/rsa.c)
+//
 
 // private key  Exponent D
 #define RSA_D   "24BF6185468786FDD303083D25E64EFC" \
