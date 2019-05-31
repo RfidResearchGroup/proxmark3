@@ -1541,6 +1541,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Flash_Erase4k(3, 0xC);
             } else if (startidx ==  DEFAULT_MF_KEYS_OFFSET) {
                 Flash_Erase4k(3, 0x9);
+                Flash_Erase4k(3, 0xA);
             } else if (startidx == DEFAULT_ICLASS_KEYS_OFFSET) {
                 Flash_Erase4k(3, 0xB);
             }
