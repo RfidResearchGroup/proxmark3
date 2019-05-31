@@ -4,30 +4,6 @@
 # the license.
 #-----------------------------------------------------------------------------
 
-# This Makefile might have been called directly, not via the root Makefile, so:
-ifeq ($(PLTNAME),)
-  -include ../Makefile.platform
-  ifeq ($(PLATFORM),)
-    PLATFORM=PM3RDV4
-  else
-    ${info using saved PLATFORM:        '$(PLATFORM)'}
-  endif
-  ifneq ($(PLATFORM_EXTRAS),)
-    ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
-  endif
-  ifneq ($(STANDALONE),)
-    ${info using saved STANDALONE:      '$(STANDALONE)'}
-  endif
-  include ../common/Makefile.hal
-  $(info ===================================================================)
-  $(info Platform name:     $(PLTNAME))
-  $(info PLATFORM:          $(PLATFORM))
-  $(info PLATFORM_EXTRAS:   $(PLATFORM_EXTRAS))
-  $(info Included options:  $(PLATFORM_DEFS_INFO))
-  $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
-  $(info ===================================================================)
-endif
-
 # reveng will compile without macros, but these may be useful:
 # Add -DBMPMACRO to use bitmap size constant macros (edit config.h)
 # Add -DNOFORCE  to disable the -F switch
