@@ -59,7 +59,7 @@ The new universal GUI will work. [Proxmark3 Universal GUI](https://github.com/bu
 
 Please see the [Proxmark Forum](http://www.proxmark.org/forum/index.php) and see if your issue is listed in the first instance Google is your friend :) Questions will be answered via the forum by Iceman and the team. 
 
-It's need to have good USB cable to connect proxmark to USB. If you have stability problems (pm3 resets, firmware hangs, especially firmware hangs just after start and etc) - check your cable with USB tester (or try to change it). It needs to have resistance like 0.3 Om or less.
+It's needed to have a good USB cable to connect Proxmark3 to USB. If you have stability problems (Proxmark3 resets, firmware hangs, especially firmware hangs just after start, etc.) - check your cable with a USB tester (or try to change it). It needs to have a resistance smaller or equal to 0.3 Ohm.
 
 ## The end
 
