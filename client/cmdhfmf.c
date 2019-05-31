@@ -720,6 +720,8 @@ static uint8_t NumBlocksPerSector(uint8_t sectorNo) {
 
 static int CmdHF14AMfDump(const char *Cmd) {
 
+    uint64_t t1 = msclock();
+
     uint8_t sectorNo, blockNo;
     uint8_t keyA[40][6];
     uint8_t keyB[40][6];
@@ -801,12 +803,12 @@ static int CmdHF14AMfDump(const char *Cmd) {
     PrintAndLogEx(INFO, "Reading sector access bits...");
 
     uint8_t tries;
+    mf_readblock_t payload;
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
             printf("."); 
             fflush(NULL);
             
-            mf_readblock_t payload;
             payload.blockno = FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1;
             payload.keytype = 0;
             memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
@@ -839,7 +841,6 @@ static int CmdHF14AMfDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Finished reading sector access bits");
     PrintAndLogEx(INFO, "Dumping all blocks from card...");
 
-    mf_readblock_t payload;
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
             bool received = false;
@@ -917,7 +918,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
             }
         }
     }
-
+    
+    PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+    
     PrintAndLogEx(SUCCESS, "\nSucceded in dumping all blocks");
 
     if (strlen(dataFilename) < 1) {
@@ -2663,7 +2666,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
             conn.block_after_ACK = false;
         }
 
-        if (mfEmlSetMem_xt(data + counter, blockNum, 1, blockWidth)) {
+        if (mfEmlSetMem_xt(data + counter, blockNum, 1, blockWidth) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockNum);
             free(data);
             return PM3_ESOFT;
@@ -3179,7 +3182,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
                 // Disable fast mode on last packet
                 conn.block_after_ACK = false;
             }
-            if (mfEmlSetMem(dump + (i * MFBLOCK_SIZE), i, 5)) {
+            if (mfEmlSetMem(dump + (i * MFBLOCK_SIZE), i, 5) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Cant set emul block: %d", i);
             }
             printf(".");
