@@ -51,7 +51,11 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 *	Enter the paired password 1234 and establish the connection.
 *	The blue state LED on the add-on will keep blinking after the connection is established. Only when the mobile phone or computer opens the correct COM port, the blue LED turns on solid, indicating that the connection is successful.
 
-#### (2)	Fast connection using dedicated USB Bluetooth adapter
+#### (2)	Fast connection using dedicated USB Bluetooth adapter under Windows
+
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
+
 *	Install driver:
 http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers  
 *	Insert the adapter into the USB port. The adapter will search automatically and establish the connection. The adapter will remember the device that was first connected and after that the same device will be connected.
@@ -95,6 +99,9 @@ restart it again after pairing.
 
 #### (2) Fast connection using dedicated USB Bluetooth adapter under Linux
 
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
+
   1. Insert the adapter into the USB port. The adapter will search
 automatically and establish the connection. The adapter will remember
 the device that was first connected and after that the same device will
@@ -110,8 +117,6 @@ turn on solid.
 ```sh
 ./proxmark /dev/ttyUSB0
 ```
-<p align='center'>
-<img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
 
 ### 5. Compiling / Flashing 
 Please download the latest source code from Rfid Research Group's Github repo:
