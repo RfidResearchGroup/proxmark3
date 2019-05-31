@@ -121,8 +121,6 @@ else
     QTGUIOBJS = $(OBJDIR)/guidummy.o
 endif
 
-CFLAGS += $(PLATFORM_DEFS)
-
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
 # make temporary to final dependeny files after successful compilation
