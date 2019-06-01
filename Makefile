@@ -1,3 +1,7 @@
+# Hide full compilation line:
+Q?=@
+# To see full command lines, use make Q=
+
 GZIP=gzip
 # Windows' echo echos its input verbatim, on Posix there is some
 #  amount of shell command line parsing going on. echo "" on
@@ -30,17 +34,23 @@ include common/Makefile.hal
 all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/%
 
 mfkey/%: FORCE
-	$(MAKE) -C tools/mfkey $(patsubst mfkey/%,%,$@)
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/mfkey $(patsubst mfkey/%,%,$@)
 nonce2key/%: FORCE
-	$(MAKE) -C tools/nonce2key $(patsubst nonce2key/%,%,$@)
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/nonce2key $(patsubst nonce2key/%,%,$@)
 bootrom/%: FORCE cleanifplatformchanged
-	$(MAKE) -C bootrom $(patsubst bootrom/%,%,$@)
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C bootrom $(patsubst bootrom/%,%,$@)
 armsrc/%: FORCE cleanifplatformchanged
-	$(MAKE) -C armsrc $(patsubst armsrc/%,%,$@)
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C armsrc $(patsubst armsrc/%,%,$@)
 client/%: FORCE
-	$(MAKE) -C client $(patsubst client/%,%,$@)
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C client $(patsubst client/%,%,$@)
 recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
-	$(MAKE) -C recovery $(patsubst recovery/%,%,$@)
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
 .PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style checks FORCE udev accessrights cleanifplatformchanged
@@ -67,6 +77,7 @@ help:
 	@echo "+ checks        - Detect various encoding issues in source code"
 	@echo
 	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
+	@echo "To see full command lines, use make Q="
 
 client: client/all
 
@@ -94,18 +105,19 @@ newtarbin:
 	@touch proxmark3-$(platform)-bin.tar
 
 tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
-	$(GZIP) proxmark3-$(platform)-bin.tar
+	$(info GEN proxmark3-$(platform)-bin.tar)
+	$(Q)$(GZIP) proxmark3-$(platform)-bin.tar
 
 # detect if there were changes in the platform definitions, requiring a clean
 cleanifplatformchanged:
 ifeq ($(PLATFORM_CHANGED), true)
-	echo "Platform definitions changed, cleaning bootrom/armsrc/recovery first..."
-	$(MAKE) -C bootrom clean
-	$(MAKE) -C armsrc clean
-	$(MAKE) -C recovery clean
-	@echo CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
-	@echo CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
-	@echo CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
+	$(info [!] Platform definitions changed, cleaning bootrom/armsrc/recovery first...)
+	$(Q)$(MAKE) --no-print-directory -C bootrom clean
+	$(Q)$(MAKE) --no-print-directory -C armsrc clean
+	$(Q)$(MAKE) --no-print-directory -C recovery clean
+	$(Q)echo CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
+	$(Q)echo CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
+	$(Q)echo CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
 endif
 
 # configure system to ignore PM3 device as a modem (ModemManager blacklist, effective *only* if ModemManager is not using _strict_ policy)

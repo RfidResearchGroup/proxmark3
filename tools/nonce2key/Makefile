@@ -1,3 +1,7 @@
+# Hide full compilation line:
+Q?=@
+# To see full command lines, use make Q=
+
 CC = gcc
 CFLAGS = -std=c99 -Wall -O3 -I.
 LDFLAGS = -std=c99 -Wall
@@ -9,15 +13,20 @@ PROG := nonce2key
 all: $(PROG)
 
 $(PROG): $(OBJ)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	$(info [=] LD $@)
+	$(Q)$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 clean:
-	@$(RM) $(DEP) $(OBJ) $(PROG)
+	$(Q)$(RM) $(DEP) $(OBJ) $(PROG)
 
 ifneq ($(filter clean,$(MAKECMDGOALS)),clean)
 -include $(DEP)
 endif
 
 %.d: %.c
-	$(info GEN $@)
-	@$(CC) -MM $(CFLAGS) $< | sed 's/\($*\)\.o[ :]*/\1.o $@ : /g' > $@
+	$(info [-] GEN $@)
+	$(Q)$(CC) -MM $(CFLAGS) $< | sed 's/\($*\)\.o[ :]*/\1.o $@ : /g' > $@
+
+%.o: %.c
+	$(info [-] CC $<)
+	$(Q)$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<

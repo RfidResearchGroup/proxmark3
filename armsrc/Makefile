@@ -1,4 +1,3 @@
-
 # This code is licensed to you under the terms of the GNU GPL, version 2 or,
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
@@ -173,53 +172,66 @@ all: $(OBJS)
 
 # version.c should be remade on every time fullimage.stage1.elf should be remade
 version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
-	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@
+	$(info [-] GEN $@)
+	$(Q)perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
-	$(FPGA_COMPRESSOR) -v $(filter %.bit,$^) $@
+	$(info [-] GEN $@)
+	$(Q)$(FPGA_COMPRESSOR) -v $(filter %.bit,$^) $@
 
 $(OBJDIR)/fpga_all.o: $(OBJDIR)/fpga_all.bit.z
-	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit $^ $@
+	$(info [-] GEN $@)
+	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit $^ $@
 
 $(OBJDIR)/fpga_all.bit.z: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
-	$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@
+	$(info [-] GEN $@)
+	$(Q)$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@
 
 $(FPGA_COMPRESSOR):
-		$(MAKE) -C ../client $(notdir $(FPGA_COMPRESSOR))
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C ../client $(notdir $(FPGA_COMPRESSOR))
 
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
-	$(CC) $(LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+	$(info [=] LD $@)
+	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fullimage.nodata.bin: $(OBJDIR)/fullimage.stage1.elf
-	$(OBJCOPY) -O binary -I elf32-littlearm --remove-section .data $^ $@
+	$(info [-] GEN $@)
+	$(Q)$(OBJCOPY) -O binary -I elf32-littlearm --remove-section .data $^ $@
 
 $(OBJDIR)/fullimage.nodata.o: $(OBJDIR)/fullimage.nodata.bin
-	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=stage1_image $^ $@
+	$(info [-] GEN $@)
+	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=stage1_image $^ $@
 
 $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
-	$(OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
+	$(info [-] GEN $@)
+	$(Q)$(OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
 
 $(OBJDIR)/fullimage.data.bin.z: $(OBJDIR)/fullimage.data.bin $(FPGA_COMPRESSOR)
-	$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
+	$(info [-] GEN $@)
+	$(Q)$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
 
 $(OBJDIR)/fullimage.data.o: $(OBJDIR)/fullimage.data.bin.z
-	$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=compressed_data $^ $@
+	$(info [-] GEN $@)
+	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=compressed_data $^ $@
 
 $(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.nodata.o $(OBJDIR)/fullimage.data.o
-	$(CC) $(LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
+	$(info [=] LD $@)
+	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript,-e,_osimage_entry,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^
 
 tarbin: $(OBJS)
-	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=armsrc/%) $(OBJS:%.s19=armsrc/%.elf)
+	$(info TAR $@)
+	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=armsrc/%) $(OBJS:%.s19=armsrc/%.elf)
 
 clean:
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.o
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.elf
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.map
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.d
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.z
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.bin
-	$(DELETE) version.c
+	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.o
+	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.elf
+	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
+	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.map
+	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.d
+	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.z
+	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.bin
+	$(Q)$(DELETE) version.c
 
 .PHONY: all clean help
 help:
