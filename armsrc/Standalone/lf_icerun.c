@@ -35,7 +35,6 @@ void RunMod() {
             break;
     }
 
-out:
     DbpString("[=] exiting");
     LEDsoff();
 }
