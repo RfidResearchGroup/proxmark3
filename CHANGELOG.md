@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add STANDALONE option to Makefile.hal (@Fl0-0)
  - Add support new frame format in all Lua scripts (@iceman)
  - Add CMD_CAPABILITIES for pm3 to inform dynamically the client (@doegox)
  - Change baudrate handling, make it clear it's only indicative for USB-CDC & BT (@doegox)
