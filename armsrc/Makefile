@@ -12,30 +12,11 @@ APP_INCLUDES = apps.h
 ifeq ($(PLTNAME),)
     -include ../Makefile.platform
     -include ../.Makefile.options.cache
-    ifeq ($(PLATFORM),)
-        PLATFORM=PM3RDV4
-    else
-        ${info using saved PLATFORM:        '$(PLATFORM)'}
-    endif
-    ifneq ($(PLATFORM_EXTRAS),)
-        ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
-    endif
-    ifneq ($(STANDALONE),)
-        ${info using saved STANDALONE:      '$(STANDALONE)'}
-    endif
     include ../common/Makefile.hal
-    $(info ===================================================================)
-    $(info Platform name:     $(PLTNAME))
-    $(info PLATFORM:          $(PLATFORM))
-    $(info PLATFORM_EXTRAS:   $(PLATFORM_EXTRAS))
-    $(info Included options:  $(PLATFORM_DEFS_INFO))
-    $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
-    $(info ===================================================================)
-
 # detect if there were changes in the platform definitions, requiring a clean
-ifeq ($(PLATFORM_CHANGED), true)
-    $(error platform definitions have been changed, please "make clean" at the root of the project)
-endif
+    ifeq ($(PLATFORM_CHANGED), true)
+        $(error platform definitions have been changed, please "make clean" at the root of the project)
+    endif
 endif
 
 #remove one of the following defines and comment out the relevant line

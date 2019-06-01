@@ -1,3 +1,6 @@
+# Default platform if no platform specified
+PLATFORM?=PM3RDV4
+
 define KNOWN_DEFINITIONS
 
 Known definitions:
@@ -172,3 +175,11 @@ else ifneq ($(PLATFORM_EXTRAS), $(CACHED_PLATFORM_EXTRAS))
 else ifneq ($(PLATFORM_DEFS), $(CACHED_PLATFORM_DEFS))
     PLATFORM_CHANGED=true
 endif
+
+$(info ===================================================================)
+$(info Platform name:     $(PLTNAME))
+$(info PLATFORM:          $(PLATFORM))
+$(info PLATFORM_EXTRAS:   $(PLATFORM_EXTRAS))
+$(info Included options:  $(PLATFORM_DEFS_INFO))
+$(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
+$(info ===================================================================)
