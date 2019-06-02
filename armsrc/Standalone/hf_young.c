@@ -47,7 +47,7 @@ void RunMod() {
             iGotoRecord = 0;
             LEDsoff();
             LED(selected + 1, 0);
-            LED(LED_RED2, 0);
+            LED(LED_D, 0);
 
             // record
             Dbprintf("Enabling iso14443a reader mode for [Bank: %d]...", selected);
@@ -99,10 +99,10 @@ void RunMod() {
             Dbprintf("ATQA = %02X%02X", uids[selected].atqa[0], uids[selected].atqa[1]);
             Dbprintf("SAK = %02X", uids[selected].sak);
             LEDsoff();
-            LED(LED_GREEN,  200);
-            LED(LED_ORANGE, 200);
-            LED(LED_GREEN,  200);
-            LED(LED_ORANGE, 200);
+            LED(LED_B,  200);
+            LED(LED_A, 200);
+            LED(LED_B,  200);
+            LED(LED_A, 200);
 
             LEDsoff();
             LED(selected + 1, 0);
@@ -118,7 +118,7 @@ void RunMod() {
             iGotoClone = 0;
             LEDsoff();
             LED(selected + 1, 0);
-            LED(LED_ORANGE, 250);
+            LED(LED_A, 250);
 
             // magiccards holds 4bytes uid.  *usually*
             uint32_t tmpuid = bytes_to_num(uids[selected].uid, 4);
@@ -200,7 +200,7 @@ void RunMod() {
             LED(selected + 1, 0);
 
             // Begin transmitting
-            LED(LED_GREEN, 0);
+            LED(LED_B, 0);
             DbpString("Playing");
             for (; ;) {
                 // exit from Standalone Mode,   send a usbcommand.

@@ -58,7 +58,7 @@ void RunMod() {
         if (button_pressed > 0 && cardRead == 0) {
             LEDsoff();
             LED(selected + 1, 0);
-            LED(LED_RED2, 0);
+            LED(LED_D, 0);
 
             // record
             DbpString("[=] starting recording");
@@ -83,7 +83,7 @@ void RunMod() {
         } else if (button_pressed > 0 && cardRead == 1) {
             LEDsoff();
             LED(selected + 1, 0);
-            LED(LED_ORANGE, 0);
+            LED(LED_A, 0);
 
             // record
             Dbprintf("[=] cloning %x %x %08x", selected, high[selected], low[selected]);
@@ -122,7 +122,7 @@ void RunMod() {
             // Begin transmitting
             if (playing && selected != 2) {
 
-                LED(LED_GREEN, 0);
+                LED(LED_B, 0);
                 DbpString("[=] playing");
 
                 // wait for button to be released
@@ -155,7 +155,7 @@ void RunMod() {
                     continue;
                 }
 
-                LED(LED_GREEN, 0);
+                LED(LED_B, 0);
                 DbpString("[=] entering bruteforce mode");
                 // wait for button to be released
                 while (BUTTON_PRESS())
