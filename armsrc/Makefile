@@ -185,7 +185,11 @@ $(OBJDIR)/fpga_all.o: $(OBJDIR)/fpga_all.bit.z
 
 $(OBJDIR)/fpga_all.bit.z: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
-	$(Q)$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@
+ifeq ($(Q),@)
+	@$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@ >/dev/null
+else
+	$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@
+endif
 
 $(FPGA_COMPRESSOR):
 	$(info [*] MAKE $@)
@@ -209,7 +213,11 @@ $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
 
 $(OBJDIR)/fullimage.data.bin.z: $(OBJDIR)/fullimage.data.bin $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
-	$(Q)$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
+ifeq ($(Q),@)
+	@$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@ >/dev/null
+else
+	$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
+endif
 
 $(OBJDIR)/fullimage.data.o: $(OBJDIR)/fullimage.data.bin.z
 	$(info [-] GEN $@)
