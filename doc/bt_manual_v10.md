@@ -17,7 +17,7 @@ It can easily connect to Bluetooth mobile phone, portable computer, etc. Without
 Built-in battery can support standalone mode, off-line sniffing, off-line reading & simulation, etc. The temperature of the device is stable.
 
 
-### 2.	PARAMETER
+### 2.	PARAMETERS
 
 *	Battery capacity:	400 mAh
 *	Standby time:		3.5h @ StandBy; 2.9h @ LF-On; 50min @ HF-On;
@@ -42,7 +42,32 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 <img src="http://www.icedev.se/proxmark3/blueshark/addon_open_1.jpg" alt="Image of blue shark add-on open fit" width="300"><img src="http://www.icedev.se/proxmark3/blueshark/addon_fitted_1.jpg" alt="Image of blue shark add-on fitted" width="300">
 </p>
 
-### 4.	CONNECT WITH BLUETOOTH
+### 4.	COMPILATION / FLASHING
+
+Please download the latest source code from Rfid Research Group's Github repo:
+https://github.com/RfidResearchGroup/proxmark3
+
+To compile the client and firmware with FPC support, the easiest way is to 
+
+1. Copy the sample file:  `Makefile.platform.sample`  ⇒   `Makefile.platform`
+2. Edit `Makefile.platform`,  uncomment the line `#PLATFORM_EXTRAS=BTADDON` by removing the `#`
+3. Recompile the project:
+   * `make clean; make -j8`
+4. Flash the firmware
+
+You are now ready to run the client with the serial port you got from your BT device on your laptop etc.  
+See instructions below.
+
+### 5.	CONNECT WITH BLUETOOTH
+
+You can have both USB cable connect and BT active at the same time and connect to either serial port.  
+You can also switch serial port from inside the proxmark3 client using the new command `hw connect`.
+
+### Default settings
+
+1. Serial: `115200 8N1`
+2. Name:  `PM3_RDV4.0`
+3. Pin: `1234`
 
 #### Windows
 
@@ -117,11 +142,6 @@ turn on solid.
 ```sh
 ./proxmark /dev/ttyUSB0
 ```
-
-### 5. Compiling / Flashing 
-Please download the latest source code from Rfid Research Group's Github repo:
-https://github.com/RfidResearchGroup/proxmark3
-
 
 ### 6.	OTHER NOTES
 
