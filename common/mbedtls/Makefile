@@ -1,3 +1,6 @@
+# Hide full compilation line:
+Q?=@
+# To see full command lines, use make Q=
 
 LIB_A = libmbedtls.a
 mbedtls_SOURCES = \
@@ -73,17 +76,19 @@ MYLIBS=
 MYOBJS=
 
 $(LIB_A): $(CMDOBJS)
-	$(AR) $(LIB_A) $(CMDOBJS)
-	$(RANLIB) $(LIB_A)
+	$(info [=] AR $@)
+	$(Q)$(AR) $(LIB_A) $(CMDOBJS)
+	$(Q)$(RANLIB) $(LIB_A)
 
 all: $(LIB_A)
 
 clean:
-	$(RM) $(CLEAN)
-	$(RM) $(LIB_A)
+	$(Q)$(RM) $(CLEAN)
+	$(Q)$(RM) $(LIB_A)
 
 %.o: %.c
-	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(CFLAGS) -c -o $@ $< $(LIBS)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(CFLAGS) -c -o $@ $< $(LIBS)
 
 .PHONY: all clean
 

@@ -43,7 +43,7 @@ void RunMod() {
         if (button_pressed > 0 && cardRead == 0) {
             LEDsoff();
             LED(selected + 1, 0);
-            LED(LED_RED2, 0);
+            LED(LED_D, 0);
 
             // record
             DbpString("[=] starting recording");
@@ -68,7 +68,7 @@ void RunMod() {
         } else if (button_pressed > 0 && cardRead == 1) {
             LEDsoff();
             LED(selected + 1, 0);
-            LED(LED_ORANGE, 0);
+            LED(LED_A, 0);
 
             // record
             Dbprintf("[=] cloning %x %x %08x", selected, high[selected], low[selected]);
@@ -105,7 +105,7 @@ void RunMod() {
 
             // Begin transmitting
             if (playing) {
-                LED(LED_GREEN, 0);
+                LED(LED_B, 0);
                 DbpString("[=] playing");
                 // wait for button to be released
                 while (BUTTON_PRESS())
@@ -125,8 +125,8 @@ void RunMod() {
                 if (selected == 1) {
                     DbpString("[=] entering ProxBrute Mode");
                     Dbprintf("[=] current Tag: Selected = %x Facility = %08x ID = %08x", selected, high[selected], low[selected]);
-                    LED(LED_ORANGE, 0);
-                    LED(LED_RED, 0);
+                    LED(LED_A, 0);
+                    LED(LED_C, 0);
                     for (uint16_t i = low[selected] - 1; i > 0; i--) {
                         if (BUTTON_PRESS()) {
                             DbpString("[-] told to stop");

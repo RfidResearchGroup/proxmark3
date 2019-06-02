@@ -82,15 +82,14 @@ void LEDsoff() {
     LED_D_OFF();
 }
 
-// LEDs: R(C) O(A) G(B) -- R(D) [1, 2, 4 and 8]
 void LED(int led, int ms) {
-    if (led & LED_RED)
-        LED_C_ON();
-    if (led & LED_ORANGE)
+    if (led & LED_A) // Proxmark3 historical mapping: LED_ORANGE
         LED_A_ON();
-    if (led & LED_GREEN)
+    if (led & LED_B) // Proxmark3 historical mapping: LED_GREEN
         LED_B_ON();
-    if (led & LED_RED2)
+    if (led & LED_C) // Proxmark3 historical mapping: LED_RED
+        LED_C_ON();
+    if (led & LED_D) // Proxmark3 historical mapping: LED_RED2
         LED_D_ON();
 
     if (!ms)
@@ -98,13 +97,13 @@ void LED(int led, int ms) {
 
     SpinDelay(ms);
 
-    if (led & LED_RED)
-        LED_C_OFF();
-    if (led & LED_ORANGE)
+    if (led & LED_A)
         LED_A_OFF();
-    if (led & LED_GREEN)
+    if (led & LED_B)
         LED_B_OFF();
-    if (led & LED_RED2)
+    if (led & LED_C)
+        LED_C_OFF();
+    if (led & LED_D)
         LED_D_OFF();
 }
 

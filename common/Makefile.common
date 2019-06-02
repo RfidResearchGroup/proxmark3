@@ -13,6 +13,10 @@
 # variables
 #
 
+# Hide full compilation line:
+Q?=@
+# To see full command lines, use make Q=
+
 # Make sure that all is the default target
 # (The including Makefile still needs to define what 'all' is)
 
@@ -74,16 +78,20 @@ ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(notdir $(ASMSRC)))
 VERSIONOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(VERSIONSRC)))
 
 $(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
-	$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
 
 $(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
-	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $< 
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) -mthumb-interwork -o $@ $< 
 
 $(ASMOBJ): $(OBJDIR)/%.o: %.s
-	$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
 
 $(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
-	$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
 
 # This objcopy call translates physical flash addresses to logical addresses
 # without touching start address or RAM addresses (.bss and .data sections)
@@ -93,7 +101,8 @@ OBJCOPY_TRANSLATIONS = --no-change-warnings \
     --change-section-address .bss+0 --change-section-address .data-0x100000 \
     --change-section-address .commonarea+0
 $(OBJDIR)/%.s19: $(OBJDIR)/%.elf
-	$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
+	$(info [=] GEN $@)
+	$(Q)$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*) 

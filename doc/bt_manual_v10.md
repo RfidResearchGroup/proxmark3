@@ -33,7 +33,7 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 *	Unplug your Proxmark3 RDV4.0 device from any usb cable.
 *	Remove the plastic upper case of Proxmark3 RDV4.0 with opener.
-*	The antenna is temporarily removed with a screwdriver to expose the FPC interface.
+*	Remove temporarily the antenna with a screwdriver to expose the FPC interface.
 *	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.
 *	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.
 *	Assembly finished!
@@ -51,7 +51,11 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 *	Enter the paired password 1234 and establish the connection.
 *	The blue state LED on the add-on will keep blinking after the connection is established. Only when the mobile phone or computer opens the correct COM port, the blue LED turns on solid, indicating that the connection is successful.
 
-#### (2)	Fast connection using dedicated USB Bluetooth adapter
+#### (2)	Fast connection using dedicated USB Bluetooth adapter under Windows
+
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
+
 *	Install driver:
 http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers  
 *	Insert the adapter into the USB port. The adapter will search automatically and establish the connection. The adapter will remember the device that was first connected and after that the same device will be connected.
@@ -70,15 +74,19 @@ sudo hcitool scan
 Scanning ...
   aa:bb:cc:dd:ee:ff PM3_RDV4.0
 ```
-	Instead of aa:bb:cc:dd:ee:ff, you'll see your MAC address.
+
+Instead of `aa:bb:cc:dd:ee:ff`, you'll see your MAC address.
 
 2. Bind your BT add-on MAC address to a serial port
 ```sh
 sudo rfcomm bind rfcomm0 aa:bb:cc:dd:ee:ff
 ```
+
+Replace `aa:bb:cc:dd:ee:ff` by your MAC address.
+
 3. The blue state LED on the add-on will keep blinking after the
 connection is established. Only when the Proxmark3 client opens the
-/dev/rfcomm0 port, the blue LED turns on solid, indicating that the
+`/dev/rfcomm0` port, the blue LED turns on solid, indicating that the
 connection is successful.
 
 4. Use Proxmark client on BT-serial port
@@ -91,6 +99,9 @@ restart it again after pairing.
 
 #### (2) Fast connection using dedicated USB Bluetooth adapter under Linux
 
+<p align='center'>
+<img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
+
   1. Insert the adapter into the USB port. The adapter will search
 automatically and establish the connection. The adapter will remember
 the device that was first connected and after that the same device will
@@ -102,12 +113,10 @@ can be searched and connected.
   3. After the connection is established, the blue state LED on add-on will
 turn on solid.
 
-  4. a serial port /dev/ttyUSB0 will be created, use Proxmark3 client on it
+  4. a serial port `/dev/ttyUSB0` will be created, use Proxmark3 client on it
 ```sh
 ./proxmark /dev/ttyUSB0
 ```
-<p align='center'>
-<img src="http://www.icedev.se/proxmark3/blueshark/addon_hc06_dongle_1.jpg" alt="Image of blue shark add-on HC-06 white dongle" width="300"></p>
 
 ### 5. Compiling / Flashing 
 Please download the latest source code from Rfid Research Group's Github repo:

@@ -4,31 +4,14 @@
 # the license.
 #-----------------------------------------------------------------------------
 
-# This Makefile might have been called directly, not via the root Makefile, so:
-ifeq ($(PLTNAME),)
-  -include ../Makefile.platform
-  ifeq ($(PLATFORM),)
-    PLATFORM=PM3RDV4
-  else
-    ${info using saved PLATFORM:        '$(PLATFORM)'}
-  endif
-  ifneq ($(PLATFORM_EXTRAS),)
-    ${info using saved PLATFORM_EXTRAS: '$(PLATFORM_EXTRAS)'}
-  endif
-  include ../common/Makefile.hal
-  $(info ===================================================================)
-  $(info Platform name:     $(PLTNAME))
-  $(info PLATFORM:          $(PLATFORM))
-  $(info PLATFORM_EXTRAS:   $(PLATFORM_EXTRAS))
-  $(info Included options:  $(PLATFORM_DEFS_INFO))
-  $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
-  $(info ===================================================================)
-endif
-
 # reveng will compile without macros, but these may be useful:
 # Add -DBMPMACRO to use bitmap size constant macros (edit config.h)
 # Add -DNOFORCE  to disable the -F switch
 # Add -DPRESETS  to compile with preset models (edit config.h)
+
+# Hide full compilation line:
+Q?=@
+# To see full command lines, use make Q=
 
 CC = gcc
 CXX = g++
@@ -117,8 +100,6 @@ ifneq ($(QTLDLIBS),)
 else
     QTGUIOBJS = $(OBJDIR)/guidummy.o
 endif
-
-CFLAGS += $(PLATFORM_DEFS)
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
@@ -305,53 +286,61 @@ all-static: proxmark3 flasher fpga_compress
 
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
-	$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
+	$(info [=] LD $@)
+	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
 
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
-	$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	$(info [=] LD $@)
+	$(Q)$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 fpga_compress: $(OBJDIR)/fpga_compress.o $(ZLIBOBJS)
-	$(LD) $(LDFLAGS) $(ZLIBFLAGS) $^ $(LDLIBS) -o $@
+	$(info [=] LD $@)
+	$(Q)$(LD) $(LDFLAGS) $(ZLIBFLAGS) $^ $(LDLIBS) -o $@
 
 proxgui.cpp: ui/ui_overlays.h
 
 proxguiqt.moc.cpp: proxguiqt.h
-	$(MOC) -o$@ $^
+	$(info [-] MOC $@)
+	$(Q)$(MOC) -o$@ $^
 
 ui/ui_overlays.h: ui/overlays.ui
-	$(UIC) $^ > $@
+	$(info [-] UIC $@)
+	$(Q)$(UIC) $^ > $@
 
 lualibs/pm3_cmd.lua: ../include/pm3_cmd.h
-	awk -f pm3_cmd_h2lua.awk $^ > $@
+	$(info [=] GEN $@)
+	$(Q)awk -f pm3_cmd_h2lua.awk $^ > $@
 
 lualibs/mf_default_keys.lua : default_keys.dic
-	awk -f default_keys_dic2lua.awk $^ > $@
+	$(info [=] GEN $@)
+	$(Q)awk -f default_keys_dic2lua.awk $^ > $@
 
 clean:
-	$(RM) $(CLEAN)
-	cd ../liblua && $(MAKE) clean
-	cd $(JANSSONLIBPATH) && $(MAKE) clean
-	cd $(MBEDTLSLIBPATH) && $(MAKE) clean
-	cd $(CBORLIBPATH) && $(MAKE) clean
+	$(Q)$(RM) $(CLEAN)
+	$(Q)$(MAKE) --no-print-directory -C ../liblua clean
+	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
 
 tarbin: $(BINS)
-	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
+	$(info [=] TAR ../proxmark3-$(platform)-bin.tar)
+	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
 
 lua_build:
-	@echo Compiling liblua, using platform $(LUAPLATFORM)
-	cd ../liblua && $(MAKE) $(LUAPLATFORM)
+	$(info [*] MAKE liblua for $(LUAPLATFORM))
+	$(Q)$(MAKE) --no-print-directory -C ../liblua $(LUAPLATFORM)
 
 jansson_build:
-	@echo Compiling jansson
-	cd $(JANSSONLIBPATH) && $(MAKE) all
+	$(info [*] MAKE jansson)
+	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
 
 mbedtls_build:
-	@echo Compiling mbedtls
-	cd $(MBEDTLSLIBPATH) && $(MAKE) all
+	$(info [*] MAKE mbedtls)
+	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) all
 
 cbor_build:
-	@echo Compiling tinycbor
-	cd $(CBORLIBPATH) && $(MAKE) all
+	$(info [*] MAKE tinycbor)
+	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) all
 
 .PHONY: all clean
 
@@ -359,43 +348,52 @@ cbor_build:
 print-%: ; @echo $* = $($*)
 
 $(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%_NOSIMD.d
-	$(CC) $(DEPFLAGS:%.Td=%_NOSIMD.Td) $(CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
-	$(MV) -f $(OBJDIR)/$*_NOSIMD.Td $(OBJDIR)/$*_NOSIMD.d
+	$(info [-] CC(NOSIMD) $<)
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_NOSIMD.Td) $(CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
+	$(Q)$(MV) -f $(OBJDIR)/$*_NOSIMD.Td $(OBJDIR)/$*_NOSIMD.d
 
 $(OBJDIR)/%_MMX.o : %.c $(OBJDIR)/%_MMX.d
-	$(CC) $(DEPFLAGS:%.Td=%_MMX.Td) $(CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
-	$(MV) -f $(OBJDIR)/$*_MMX.Td $(OBJDIR)/$*_MMX.d
+	$(info [-] CC(MMX) $<)
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_MMX.Td) $(CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
+	$(Q)$(MV) -f $(OBJDIR)/$*_MMX.Td $(OBJDIR)/$*_MMX.d
 
 $(OBJDIR)/%_SSE2.o : %.c $(OBJDIR)/%_SSE2.d
-	$(CC) $(DEPFLAGS:%.Td=%_SSE2.Td) $(CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
-	$(MV) -f $(OBJDIR)/$*_SSE2.Td $(OBJDIR)/$*_SSE2.d
+	$(info [-] CC(SSE2) $<)
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_SSE2.Td) $(CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
+	$(Q)$(MV) -f $(OBJDIR)/$*_SSE2.Td $(OBJDIR)/$*_SSE2.d
 
 $(OBJDIR)/%_AVX.o : %.c $(OBJDIR)/%_AVX.d
-	$(CC) $(DEPFLAGS:%.Td=%_AVX.Td) $(CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
-	$(MV) -f $(OBJDIR)/$*_AVX.Td $(OBJDIR)/$*_AVX.d
+	$(info [-] CC(AVX) $<)
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX.Td) $(CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
+	$(Q)$(MV) -f $(OBJDIR)/$*_AVX.Td $(OBJDIR)/$*_AVX.d
 
 $(OBJDIR)/%_AVX2.o : %.c $(OBJDIR)/%_AVX2.d
-	$(CC) $(DEPFLAGS:%.Td=%_AVX2.Td) $(CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
-	$(MV) -f $(OBJDIR)/$*_AVX2.Td $(OBJDIR)/$*_AVX2.d
+	$(info [-] CC(AVX2) $<)
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX2.Td) $(CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
+	$(Q)$(MV) -f $(OBJDIR)/$*_AVX2.Td $(OBJDIR)/$*_AVX2.d
 
 $(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%_AVX512.d
-	$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
-	$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d
+	$(info [-] CC(AVX512) $<)
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
+	$(Q)$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(ZLIBFLAGS) -c -o $@ $<
-	$(POSTCOMPILE)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(DEPFLAGS) $(CFLAGS) $(ZLIBFLAGS) -c -o $@ $<
+	$(Q)$(POSTCOMPILE)
 
 %.o: %.cpp
 $(OBJDIR)/%.o : %.cpp $(OBJDIR)/%.d
-	$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(QTINCLUDES) -c -o $@ $<
-	$(POSTCOMPILE)
+	$(info [-] CXX $<)
+	$(Q)$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(QTINCLUDES) -c -o $@ $<
+	$(Q)$(POSTCOMPILE)
 
 %.o: %.m
 $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
-	$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
-	$(POSTCOMPILE)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
+	$(Q)$(POSTCOMPILE)
 
 #$(CMDOBJS) $(COREOBJS): $(notdir $(%.c)) %.d
 #	$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
