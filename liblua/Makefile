@@ -4,8 +4,10 @@
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
 # Hide full compilation line:
-Q?=@
-# To see full command lines, use make Q=
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
 
 # Your platform. See PLATS for possible values.
 PLAT= none

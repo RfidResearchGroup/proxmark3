@@ -10,8 +10,10 @@
 # Add -DPRESETS  to compile with preset models (edit config.h)
 
 # Hide full compilation line:
-Q?=@
-# To see full command lines, use make Q=
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
 
 CC = gcc
 CXX = g++

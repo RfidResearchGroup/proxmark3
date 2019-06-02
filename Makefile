@@ -1,6 +1,8 @@
 # Hide full compilation line:
-Q?=@
-# To see full command lines, use make Q=
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
 
 GZIP=gzip
 # Windows' echo echos its input verbatim, on Posix there is some
@@ -63,9 +65,9 @@ help:
 	@echo "+ clean         - Clean in all targets"
 	@echo
 	@echo "+ bootrom       - Make bootrom"
-	@echo "+ os            - Make armsrc \(includes fpga\)"
+	@echo "+ os            - Make armsrc (includes fpga)"
 	@echo "+ flash-bootrom - Make bootrom and flash it"
-	@echo "+ flash-os      - Make armsrc and flash os image \(includes fpga\)"
+	@echo "+ flash-os      - Make armsrc and flash os image (includes fpga)"
 	@echo "+ flash-all     - Make bootrom and armsrc and flash bootrom and os image"
 	@echo "+ recovery      - Make bootrom and armsrc images for JTAG flashing"
 	@echo
@@ -77,7 +79,7 @@ help:
 	@echo "+ checks        - Detect various encoding issues in source code"
 	@echo
 	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
-	@echo "To see full command lines, use make Q="
+	@echo "To activate verbose mode, use make V=1"
 
 client: client/all
 
