@@ -13,9 +13,10 @@
 # variables
 #
 
-# Hide full compilation line:
-Q?=@
-# To see full command lines, use make Q=
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
 
 # Make sure that all is the default target
 # (The including Makefile still needs to define what 'all' is)

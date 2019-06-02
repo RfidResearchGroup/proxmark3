@@ -1,6 +1,8 @@
 # Hide full compilation line:
-Q?=@
-# To see full command lines, use make Q=
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
 
 GZIP=gzip
 # Windows' echo echos its input verbatim, on Posix there is some
@@ -77,7 +79,7 @@ help:
 	@echo "+ checks        - Detect various encoding issues in source code"
 	@echo
 	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
-	@echo "To see full command lines, use make Q="
+	@echo "To activate verbose mode, use make V=1"
 
 client: client/all
 
