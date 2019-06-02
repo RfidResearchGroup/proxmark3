@@ -137,7 +137,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     uint32_t sample_total_saved = 0;
     uint32_t cancel_counter = 0;
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -283,7 +283,7 @@ void doT55x7Acquisition(size_t sample_size) {
     bool highFound = false;
     bool lowFound = false;
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length() && skipCnt < 1000 && (i < bufsize)) {
+    while (!BUTTON_PRESS() && !data_available() && skipCnt < 1000 && (i < bufsize)) {
         WDT_HIT();
 
 
@@ -348,7 +348,7 @@ void doCotagAcquisition(size_t sample_size) {
     uint16_t i = 0;
     uint16_t noise_counter = 0;
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length() && (i < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
+    while (!BUTTON_PRESS() && !data_available() && (i < bufsize) && (noise_counter < (COTAG_T1 << 1))) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -398,7 +398,7 @@ uint32_t doCotagAcquisitionManchester() {
     uint8_t curr = 0, prev = 0;
     uint16_t noise_counter = 0;
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length() && (sample_counter < bufsize)  && (noise_counter < (COTAG_T1 << 1))) {
+    while (!BUTTON_PRESS() && !data_available() && (sample_counter < bufsize)  && (noise_counter < (COTAG_T1 << 1))) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {

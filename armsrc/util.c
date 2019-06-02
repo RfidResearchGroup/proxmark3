@@ -300,3 +300,11 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
     strncat(dst, v->buildtime, len - strlen(dst) - 1);
     strncat(dst, "\n", len - strlen(dst) - 1);
 }
+
+bool data_available(void) {
+#ifdef WITH_FPC_USART_HOST
+    return usb_poll_validate_length() || (usart_rxdata_available() > 0);
+#else
+    return usb_poll_validate_length();
+#endif
+}

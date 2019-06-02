@@ -607,7 +607,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
         while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
             WDT_HIT();
             if ( check == 1000) {
-                if (usb_poll_validate_length() || BUTTON_PRESS())
+                if (data_available() || BUTTON_PRESS())
                     goto OUT;
                 check = 0;
             }
@@ -627,7 +627,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
         while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
             WDT_HIT();
             if (check == 1000) {
-                if (usb_poll_validate_length() || BUTTON_PRESS())
+                if (data_available() || BUTTON_PRESS())
                     goto OUT;
                 check = 0;
             }
@@ -1011,7 +1011,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
     //clear read buffer
     BigBuf_Clear_keep_EM();
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
 
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
@@ -1105,7 +1105,7 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
 
     LFSetupFPGAForADC(95, true);
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
 
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
@@ -1197,7 +1197,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 
     LFSetupFPGAForADC(95, true);
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
 
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
@@ -1263,7 +1263,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
     // Configure to go in 125Khz listen mode
     LFSetupFPGAForADC(95, true);
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
@@ -1603,7 +1603,7 @@ void T55xx_ChkPwds() {
     uint32_t pwd = 0, curr = 0, prev = 0;
     for (uint16_t i = 0; i < pwdCount; ++i) {
 
-        if (BUTTON_PRESS() && !usb_poll_validate_length()) {
+        if (BUTTON_PRESS() && !data_available()) {
             goto OUT;
         }
 

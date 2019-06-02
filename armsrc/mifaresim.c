@@ -502,7 +502,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
     bool finished = false;
     bool button_pushed = BUTTON_PRESS();
 
-    while (!button_pushed && !finished && !usb_poll_validate_length()) {
+    while (!button_pushed && !finished && !data_available()) {
         WDT_HIT();
 
         // find reader field

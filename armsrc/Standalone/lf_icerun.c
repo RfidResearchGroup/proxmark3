@@ -24,7 +24,7 @@ void RunMod() {
         WDT_HIT();
 
         // exit from IceRun,   send a usbcommand.
-        if (usb_poll_validate_length()) break;
+        if (data_available()) break;
 
         // Was our button held down or pressed?
         int button_pressed = BUTTON_HELD(1000);

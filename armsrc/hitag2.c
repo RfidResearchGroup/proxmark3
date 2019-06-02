@@ -751,7 +751,7 @@ void SniffHitag(void) {
     bSkip = true;
     tag_sof = 4;
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
         // Watchdog hit
         WDT_HIT();
 
@@ -978,7 +978,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
     // synchronized startup procedure
     while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC0 returned to zero
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
         // Watchdog hit
         WDT_HIT();
 
@@ -1203,7 +1203,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     }
     uint8_t attempt_count = 0;
 
-    while (!bStop && !BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!bStop && !BUTTON_PRESS() && !data_available()) {
 
         WDT_HIT();
 
@@ -1464,7 +1464,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         return;
     }
 
-    while (!bStop && !BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!bStop && !BUTTON_PRESS() && !data_available()) {
 
         WDT_HIT();
 

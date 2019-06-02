@@ -92,5 +92,6 @@ void SpinUp(uint32_t speed);
 int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_information);
+bool data_available(void);
 
 #endif

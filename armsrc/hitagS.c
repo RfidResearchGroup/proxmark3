@@ -1022,7 +1022,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     // synchronized startup procedure
     while (AT91C_BASE_TC0->TC_CV > 0); // wait until TC0 returned to zero
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
 
         WDT_HIT();
 
@@ -1228,7 +1228,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
     // Reset the received frame, frame count and timing info
     t_wait = 200;
 
-    while (!bStop && !BUTTON_PRESS() && !usb_poll_validate_length())  {
+    while (!bStop && !BUTTON_PRESS() && !data_available())  {
 
         WDT_HIT();
 
@@ -1558,7 +1558,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
     reset_sof = 1;
     t_wait = 200;
 
-    while (!bStop && !BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!bStop && !BUTTON_PRESS() && !data_available()) {
 
         WDT_HIT();
 

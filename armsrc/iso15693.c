@@ -891,7 +891,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
     uint8_t cmd[CMD_INV_RESP] = {0};
     BuildInventoryResponse(cmd, uid);
 
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
 
         // Listen to reader

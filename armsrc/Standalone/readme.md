@@ -34,7 +34,7 @@ void RunMod(void) {
         WDT_HIT();
 
         // exit from standalone mode, just send a usbcommand
-        if (usb_poll_validate_length()) break;
+        if (data_available()) break;
 
         // do your standalone stuff..
     }

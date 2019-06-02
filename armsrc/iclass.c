@@ -1993,7 +1993,7 @@ void ReaderIClass(uint8_t arg0) {
 
     setupIclassReader();
 
-    bool userCancelled = BUTTON_PRESS() || usb_poll_validate_length();
+    bool userCancelled = BUTTON_PRESS() || data_available();
     while (!userCancelled) {
 
         WDT_HIT();
@@ -2092,7 +2092,7 @@ void ReaderIClass(uint8_t arg0) {
             }
         }
         LED_B_OFF();
-        userCancelled = BUTTON_PRESS() || usb_poll_validate_length();
+        userCancelled = BUTTON_PRESS() || data_available();
     }
 
     if (userCancelled) {
@@ -2290,7 +2290,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t startup_limit = 10;
     while (read_status != 2) {
 
-        if (BUTTON_PRESS() && !usb_poll_validate_length()) goto out;
+        if (BUTTON_PRESS() && !data_available()) goto out;
 
         read_status = handshakeIclassTag_ext(card_data, use_credit_key);
         if (startup_limit-- == 0) {
@@ -2305,7 +2305,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     for (i = 0; i < keyCount; i++) {
 
         // Allow button press / usb cmd to interrupt device
-        if (BUTTON_PRESS() && !usb_poll_validate_length()) break;
+        if (BUTTON_PRESS() && !data_available()) break;
 
         WDT_HIT();
         LED_B_ON();

@@ -1328,7 +1328,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
                 //if ( i % 100 == 0) Dbprintf("ChkKeys_fast: sector %d | checking %d | %d found | s_point %d", s, i, foundkeys, s_point);
 
                 // Allow button press / usb cmd to interrupt device
-                if (BUTTON_PRESS() && !usb_poll_validate_length()) {
+                if (BUTTON_PRESS() && !data_available()) {
                     goto OUT;
                 }
 
@@ -1420,7 +1420,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         for (uint16_t i = 0; i < keyCount; i++) {
 
             // Allow button press / usb cmd to interrupt device
-            if (BUTTON_PRESS() && !usb_poll_validate_length()) break;
+            if (BUTTON_PRESS() && !data_available()) break;
 
             // found all keys?
             if (foundkeys == allkeys)

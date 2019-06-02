@@ -46,7 +46,7 @@ void HfSniff(int samplesToSkip, int triggersToSkip) {
     SpinDelay(100);
 
     uint16_t r = 0;
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {

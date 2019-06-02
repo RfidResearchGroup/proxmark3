@@ -619,7 +619,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
     memcpy(encodedOK, ToSend, ToSendMax);
 
     // Simulation loop
-    while (!BUTTON_PRESS() && !usb_poll_validate_length()) {
+    while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
 
         // find reader field

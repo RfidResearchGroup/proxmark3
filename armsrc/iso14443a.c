@@ -762,7 +762,7 @@ static bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *
 
     for (;;) {
         if ( check == 1000 ) {
-            if ( BUTTON_PRESS() || usb_poll_validate_length() )
+            if ( BUTTON_PRESS() || data_available() )
                 return false;
             check = 0;
         }
@@ -1722,7 +1722,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
         WDT_HIT();
 
         if ( check == 1000 ) {
-          if (BUTTON_PRESS() || usb_poll_validate_length())
+          if (BUTTON_PRESS() || data_available())
               return 1;
           check = 0;
         }
@@ -2923,7 +2923,7 @@ void DetectNACKbug() {
         WDT_HIT();
 
         // Test if the action was cancelled
-        if (BUTTON_PRESS() || usb_poll_validate_length()) {
+        if (BUTTON_PRESS() || data_available()) {
             status = PM3_EOPABORTED;
             break;
         }
