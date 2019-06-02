@@ -1,5 +1,8 @@
 # Default platform if no platform specified
 PLATFORM?=PM3RDV4
+# Default standalone if no standalone specified
+# (you can set explicitly STANDALONE= to disable standalone modes)
+STANDALONE?=LF_SAMYRUN
 
 define KNOWN_DEFINITIONS
 
@@ -30,13 +33,13 @@ Known definitions:
 +==========================================================+
 | STANDALONE      | DESCRIPTION                            |
 +==========================================================+
-| (def)           | By default, no standalone mode         |
+|                 | No standalone mode                     |
++----------------------------------------------------------+
+| LF_SAMYRUN (def)| HID26 read/clone/sim                   |
+|                 | - Samy Kamkar                          |
 +----------------------------------------------------------+
 | LF_ICERUN       | standalone mode skeleton               |
 |                 | - iceman                               |
-+----------------------------------------------------------+
-| LF_SAMYRUN      | HID26 read/clone/sim                   |
-|                 | - Samy Kamkar                          |
 +----------------------------------------------------------+
 | LF_PROXBRUTE    | HID ProxII bruteforce                  |
 |                 | - Brad Antoniewicz                     |
@@ -59,19 +62,18 @@ Known definitions:
 
 Options to define platform, platform extras and/or standalone mode:
 (1) Run make with PLATFORM, PLATFORM_EXTRAS and/or STANDALONE as follows:
-make PLATFORM=PM3EASY STANDALONE=LF_SAMYRUN
+make PLATFORM=PM3EASY STANDALONE=HF_COLIN
 
 (2) Save a file called Makefile.platform with contents:
 PLATFORM=PM3EASY
-STANDALONE=LF_SAMYRUN
 
 or if you have a Proxmark 3 RDV4 with the BT add-on:
 PLATFORM=PM3RDV4
 PLATFORM_EXTRAS=BTADDON
-STANDALONE=LF_SAMYRUN
 
-!! Make sure to "make clean" when you change platform settings !!
-
+Default standalone mode is LF_SAMYRUN.
+To disable standalone modes, set explicitly an empty STANDALONE:
+STANDALONE=
 endef
 
 PLTNAME = Unknown Platform
@@ -158,6 +160,10 @@ ifneq (,$(word 2, $(PLATFORM_DEFS_INFO_STANDALONE)))
     $(error You must choose only one Standalone mode!: $(PLATFORM_DEFS_INFO_STANDALONE))
 endif
 
+# info when no standalone mode
+ifeq (,$(PLATFORM_DEFS_INFO_STANDALONE))
+    PLATFORM_DEFS_INFO_STANDALONE = No standalone mode selected
+endif
 
 export PLATFORM
 export PLATFORM_EXTRAS
