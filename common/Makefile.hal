@@ -160,6 +160,12 @@ ifneq (,$(word 2, $(PLATFORM_DEFS_INFO_STANDALONE)))
     $(error You must choose only one Standalone mode!: $(PLATFORM_DEFS_INFO_STANDALONE))
 endif
 
+PLATFORM_EXTRAS_INFO = $(PLATFORM_EXTRAS)
+# info when no extra
+ifeq (,$(PLATFORM_EXTRAS_INFO))
+    PLATFORM_EXTRAS_INFO = No extra selected
+endif
+
 # info when no standalone mode
 ifeq (,$(PLATFORM_DEFS_INFO_STANDALONE))
     PLATFORM_DEFS_INFO_STANDALONE = No standalone mode selected
@@ -167,6 +173,7 @@ endif
 
 export PLATFORM
 export PLATFORM_EXTRAS
+export PLATFORM_EXTRAS_INFO
 export PLTNAME
 export MCU
 export PLATFORM_DEFS
@@ -185,7 +192,7 @@ endif
 $(info ===================================================================)
 $(info Platform name:     $(PLTNAME))
 $(info PLATFORM:          $(PLATFORM))
-$(info PLATFORM_EXTRAS:   $(PLATFORM_EXTRAS))
+$(info Platform extras:   $(PLATFORM_EXTRAS_INFO))
 $(info Included options:  $(PLATFORM_DEFS_INFO))
 $(info Standalone mode:   $(PLATFORM_DEFS_INFO_STANDALONE))
 $(info ===================================================================)
