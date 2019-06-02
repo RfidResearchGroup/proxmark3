@@ -1,0 +1,137 @@
+pm3 --> help          
+help             This help. Use '<command> help' for details of a particular command.          
+analyse          { Analyse utils... }          
+data             { Plot window / data buffer manipulation... }          
+emv              { EMV iso14443 and iso7816... }          
+hf               { High Frequency commands... }          
+hw               { Hardware commands... }          
+lf               { Low Frequency commands... }          
+rem              { Add text to row in log file }          
+reveng           { Crc calculations from the RevEng software... }          
+script           { Scripting commands }          
+trace            { Trace manipulation... }          
+quit                       
+exit             Exit program          
+
+pm3 --> analyse -h          
+help             This help          
+lcr              Generate final byte for XOR LRC          
+crc              Stub method for CRC evaluations          
+chksum           Checksum with adding, masking and one's complement          
+dates            Look for datestamps in a given array of bytes          
+tea              Crypto TEA test          
+lfsr             LFSR tests          
+a                num bits test          
+nuid             create NUID from 7byte UID          
+
+pm3 --> data -h          
+help             This help          
+askedgedetect    [threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)          
+autocorr         [window length] [g] -- Autocorrelation over window - g to save back to GraphBuffer (overwrite)          
+biphaserawdecode [offset] [invert<0|1>] [maxErr] -- Biphase decode bin stream in DemodBuffer (offset = 0|1 bits to shift the decode start)          
+bin2hex          <digits> -- Converts binary to hexadecimal          
+buffclear        Clears bigbuff on deviceside and graph window          
+convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127          
+dec              Decimate samples          
+detectclock      [<a|f|n|p>] Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer          
+fsktonrz         Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)          
+getbitstream     Convert GraphBuffer's >=1 values to 1 and <1 to 0          
+grid             <x> <y> -- overlay grid on graph window, use zero value to turn off either          
+hex2bin          <hexadecimal> -- Converts hexadecimal to binary          
+hide             Hide graph window          
+hpf              Remove DC offset from trace          
+load             <filename> -- Load trace (to graph window          
+ltrim            <samples> -- Trim samples from left of trace          
+rtrim            <location to end trace> -- Trim samples from right of trace          
+mtrim            <start> <stop> -- Trim out samples from the specified start to the specified stop          
+manrawdecode     [invert] [maxErr] -- Manchester decode binary stream in DemodBuffer          
+norm             Normalize max/min to +/-128          
+plot             Show graph window (hit 'h' in window for keystroke help)          
+printdemodbuffer [x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output          
+rawdemod         [modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary          
+save             <filename> -- Save trace (from graph window)          
+setgraphmarkers  [orange_marker] [blue_marker] (in graph window)          
+scale            <int> -- Set cursor display scale          
+setdebugmode     <0|1|2> -- Turn on or off Debugging Level for lf demods          
+shiftgraphzero   <shift> -- Shift 0 for Graphed wave + or - shift value          
+dirthreshold     <thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.          
+undec            Un-decimate samples by 2          
+zerocrossings    Count time between zero-crossings          
+
+pm3 --> emv -h          
+help             This help          
+test             Crypto logic test.          
+list             List ISO7816 history          
+
+pm3 --> hf -h          
+help             This help          
+14a              { ISO14443A RFIDs...               }          
+14b              { ISO14443B RFIDs...               }          
+15               { ISO15693 RFIDs...                }          
+epa              { German Identification Card...    }          
+felica           { ISO18092 / Felica RFIDs...       }          
+legic            { LEGIC RFIDs...                   }          
+iclass           { ICLASS RFIDs...                  }          
+mf               { MIFARE RFIDs...                  }          
+mfp              { MIFARE Plus RFIDs...             }          
+mfu              { MIFARE Ultralight RFIDs...       }          
+mfdes            { MIFARE Desfire RFIDs...          }          
+topaz            { TOPAZ (NFC Type 1) RFIDs...      }          
+fido             { FIDO and FIDO2 authenticators... }          
+list             List protocol data in trace buffer          
+search           Search for known HF tags [preliminary]          
+
+pm3 --> hw -h          
+help             This help          
+connect          connect Proxmark3 to serial port          
+
+pm3 --> lf -h          
+help             This help          
+awid             { AWID RFIDs...              }          
+cotag            { COTAG CHIPs...             }          
+em               { EM4X CHIPs & RFIDs...      }          
+fdx              { FDX-B RFIDs...             }          
+gproxii          { Guardall Prox II RFIDs...  }          
+hid              { HID RFIDs...               }          
+hitag            { Hitag CHIPs...             }          
+indala           { Indala RFIDs...            }          
+io               { ioProx RFIDs...            }          
+jablotron        { Jablotron RFIDs...         }          
+keri             { KERI RFIDs...              }          
+nedap            { Nedap RFIDs...             }          
+nexwatch         { NexWatch RFIDs...          }          
+noralsy          { Noralsy RFIDs...           }          
+pac              { PAC/Stanley RFIDs...       }          
+paradox          { Paradox RFIDs...           }          
+pcf7931          { PCF7931 CHIPs...           }          
+presco           { Presco RFIDs...            }          
+pyramid          { Farpointe/Pyramid RFIDs... }          
+securakey        { Securakey RFIDs...         }          
+ti               { TI CHIPs...                }          
+t55xx            { T55xx CHIPs...             }          
+viking           { Viking RFIDs...            }          
+visa2000         { Visa2000 RFIDs...          }          
+flexdemod        Demodulate samples for FlexPass          
+search           [offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) 
+		-- 'u' to search for unknown tags          
+vchdemod         ['clone'] -- Demodulate samples for VeriChip          
+
+pm3 --> rem -h          
+2019-06-02T15:52:28Z remark: -h          
+
+pm3 --> reveng -h          
+
+pm3 --> script -h          
+help             This help          
+list             List available scripts          
+run              <name> -- Execute a script          
+
+pm3 --> trace -h          
+help             This help          
+list             List protocol data in trace buffer          
+load             Load trace from file          
+save             Save trace buffer to file          
+
+pm3 --> quit -h          
+
+pm3 --> exit -h          
