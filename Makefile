@@ -63,9 +63,9 @@ help:
 	@echo "+ clean         - Clean in all targets"
 	@echo
 	@echo "+ bootrom       - Make bootrom"
-	@echo "+ os            - Make armsrc \(includes fpga\)"
+	@echo "+ os            - Make armsrc (includes fpga)"
 	@echo "+ flash-bootrom - Make bootrom and flash it"
-	@echo "+ flash-os      - Make armsrc and flash os image \(includes fpga\)"
+	@echo "+ flash-os      - Make armsrc and flash os image (includes fpga)"
 	@echo "+ flash-all     - Make bootrom and armsrc and flash bootrom and os image"
 	@echo "+ recovery      - Make bootrom and armsrc images for JTAG flashing"
 	@echo
