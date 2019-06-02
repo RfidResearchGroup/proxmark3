@@ -47,8 +47,37 @@ int receive_ng(PacketCommandNG *rx);
 // Flags to tell where to add CRC on sent replies
 extern bool reply_with_crc_on_usb;
 extern bool reply_with_crc_on_fpc;
-// "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
+// "Session" flag, to tell via which interface next msgs should be sent: USB and/or FPC USART
 extern bool reply_via_fpc;
+extern bool reply_via_usb;
+
+extern void Dbprintf(const char *fmt, ...);
+#define Dbprintf_usb(...) {\
+        bool tmpfpc = reply_via_fpc;\
+        bool tmpusb = reply_via_usb;\
+        reply_via_fpc = false;\
+        reply_via_usb = true;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = tmpfpc;\
+        reply_via_usb = tmpusb;}
+
+#define Dbprintf_fpc(...) {\
+        bool tmpfpc = reply_via_fpc;\
+        bool tmpusb = reply_via_usb;\
+        reply_via_fpc = true;\
+        reply_via_usb = false;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = tmpfpc;\
+        reply_via_usb = tmpusb;}
+
+#define Dbprintf_all(...) {\
+        bool tmpfpc = reply_via_fpc;\
+        bool tmpusb = reply_via_usb;\
+        reply_via_fpc = true;\
+        reply_via_usb = true;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = tmpfpc;\
+        reply_via_usb = tmpusb;}
 
 #endif // _PROXMARK_CMD_H_
 

@@ -141,6 +141,7 @@ typedef struct {
     uint8_t version;
     uint32_t baudrate;
     bool via_fpc                       : 1;
+    bool via_usb                       : 1;
     // rdv4
     bool compiled_with_flash           : 1;
     bool compiled_with_smartcard       : 1;
@@ -165,7 +166,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 1
+#define CAPABILITIES_VERSION 2
 extern capabilities_t pm3_capabilities;
 
 // For CMD_T55XX_WRITE_BLOCK
@@ -232,6 +233,7 @@ typedef struct {
 #define CMD_DOWNLOAD_EML_BIGBUF                                           0x0110
 #define CMD_DOWNLOADED_EML_BIGBUF                                         0x0111
 #define CMD_CAPABILITIES                                                  0x0112
+#define CMD_QUIT_SESSION                                                  0x0113
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_READ                                                 0x0120

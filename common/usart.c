@@ -8,6 +8,7 @@
 //-----------------------------------------------------------------------------
 // The main USART code, for serial communications over FPC connector
 //-----------------------------------------------------------------------------
+#include "cmd.h"
 #include "usart.h"
 #include "string.h"
 #include "../armsrc/ticks.h"  // startcountus
@@ -108,14 +109,6 @@ uint16_t usart_rxdata_available(void) {
     else
         return sizeof(us_rxfifo) - us_rxfifo_low + us_rxfifo_high;
 }
-
-extern bool reply_via_fpc;
-extern void Dbprintf(const char *fmt, ...);
-#define Dbprintf_usb(...) {\
-        bool tmp = reply_via_fpc;\
-        reply_via_fpc = false;\
-        Dbprintf(__VA_ARGS__);\
-        reply_via_fpc = tmp;}
 
 uint32_t usart_read_ng(uint8_t *data, size_t len) {
     if (len == 0) return 0;
