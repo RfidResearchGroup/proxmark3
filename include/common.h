@@ -52,11 +52,12 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 // RDV40 Section
 // 256kb divided into 4k sectors.
 //
-// last 4k sector = signature
-// second last 4k sector = settings
-// third last 4k sector = default MF keys dictionary
-// forth last 4k sector = default LF keys dictionary
-
+// 0x3F000 - 1 4kb sector = signature
+// 0x3E000 - 1 4kb sector = settings
+// 0x3D000 - 1 4kb sector = default T55XX keys dictionary
+// 0x3B000 - 1 4kb sector = default ICLASS keys dictionary
+// 0x39000 - 2 4kb sectors = default MFC keys dictionary
+// 
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
 #endif
