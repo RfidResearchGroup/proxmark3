@@ -1115,10 +1115,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         // emulator
-        case CMD_MIFARE_SET_DBGMODE:
+        case CMD_SET_DBGMODE:
             DBGLEVEL = packet->data.asBytes[0];
             Dbprintf("Debug level: %d", DBGLEVEL);
-            reply_ng(CMD_MIFARE_SET_DBGMODE, PM3_SUCCESS, NULL, 0);   
+            reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
             break;
         case CMD_MIFARE_EML_MEMCLR:
             MifareEMemClr();

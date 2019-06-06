@@ -22,6 +22,22 @@
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_dbg(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hw dbg [h] <debug level>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h    this help");
+    PrintAndLogEx(NORMAL, "       <debug level>  (Optional) see list for valid levels");
+    PrintAndLogEx(NORMAL, "           0 - no debug messages");
+    PrintAndLogEx(NORMAL, "           1 - error messages");
+    PrintAndLogEx(NORMAL, "           2 - plus information messages");
+    PrintAndLogEx(NORMAL, "           3 - plus debug messages");
+    PrintAndLogEx(NORMAL, "           4 - print even debug messages in timing critical functions");
+    PrintAndLogEx(NORMAL, "               Note: this option therefore may cause malfunction itself");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "           hw dbg 3");
+    return 0;
+}
+
 static int usage_hw_detectreader(void) {
     PrintAndLogEx(NORMAL, "Start to detect presences of reader field");
     PrintAndLogEx(NORMAL, "press pm3 button to change modes and finally exit");
@@ -349,6 +365,18 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Type: %s", asBuff);
 }
 
+int CmdDbg(const char *Cmd) {
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_dbg();
+
+    uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
+    if (dbgMode > 4) return usage_dbg();
+
+    SendCommandNG(CMD_SET_DBGMODE, &dbgMode, 1);
+    return PM3_SUCCESS;
+}
+
 static int CmdDetectReader(const char *Cmd) {
     uint8_t arg = 0;
     char c = toupper(Cmd[0]);
@@ -552,6 +580,7 @@ static int CmdConnect(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",          CmdHelp,        AlwaysAvailable, "This help"},
+    {"dbg",           CmdDbg,         IfPm3Present,    "Set Proxmark3 debug level"},
     {"connect",       CmdConnect,     AlwaysAvailable, "connect Proxmark3 to serial port"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
     {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},

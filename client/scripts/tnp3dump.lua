@@ -128,7 +128,7 @@ local function main(args)
     end
 
     -- Turn off Debug
-    local cmdSetDbgOff = "hf mf dbg 0"
+    local cmdSetDbgOff = "hw dbg 0"
     core.console( cmdSetDbgOff)
     utils.Sleep(0.5)
 

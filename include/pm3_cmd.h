@@ -234,6 +234,7 @@ typedef struct {
 #define CMD_DOWNLOADED_EML_BIGBUF                                         0x0111
 #define CMD_CAPABILITIES                                                  0x0112
 #define CMD_QUIT_SESSION                                                  0x0113
+#define CMD_SET_DBGMODE                                                   0x0114
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_READ                                                 0x0120
@@ -378,7 +379,6 @@ typedef struct {
 #define CMD_FPGA_MAJOR_MODE_OFF                                           0x0500
 
 // For mifare commands
-#define CMD_MIFARE_SET_DBGMODE                                            0x0600
 #define CMD_MIFARE_EML_MEMCLR                                             0x0601
 #define CMD_MIFARE_EML_MEMSET                                             0x0602
 #define CMD_MIFARE_EML_MEMGET                                             0x0603

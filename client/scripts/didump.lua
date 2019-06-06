@@ -551,7 +551,7 @@ local function selftest()
     print ('VALID KEY      :: 29564af75805')
 end
 local function setdevicedebug( status )
-    local c = 'hf mf dbg '
+    local c = 'hw dbg '
     if status then
         c = c..'1'
     else

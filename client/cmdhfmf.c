@@ -85,21 +85,6 @@ static int usage_hf14_mfsim(void) {
     PrintAndLogEx(NORMAL, "           hf mf sim u 11223344 i x");
     return 0;
 }
-static int usage_hf14_dbg(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf dbg [h] <debug level>");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h    this help");
-    PrintAndLogEx(NORMAL, "       <debug level>  (Optional) see list for valid levels");
-    PrintAndLogEx(NORMAL, "           0 - no debug messages");
-    PrintAndLogEx(NORMAL, "           1 - error messages");
-    PrintAndLogEx(NORMAL, "           2 - plus information messages");
-    PrintAndLogEx(NORMAL, "           3 - plus debug messages");
-    PrintAndLogEx(NORMAL, "           4 - print even debug messages in timing critical functions");
-    PrintAndLogEx(NORMAL, "               Note: this option therefore may cause malfunction itself");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf mf dbg 3");
-    return 0;
-}
 /*
  * static int usage_hf14_sniff(void) {
     PrintAndLogEx(NORMAL, "It continuously gets data from the field and saves it to: log, emulator, emulator file.");
@@ -2475,18 +2460,6 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 */
-int CmdHF14AMfDbg(const char *Cmd) {
-
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_dbg();
-
-    uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
-    if (dbgMode > 4) return usage_hf14_dbg();
-
-    SendCommandNG(CMD_MIFARE_SET_DBGMODE, &dbgMode, 1);
-    return PM3_SUCCESS;
-}
-
 static int CmdHF14AMfKeyBrute(const char *Cmd) {
 
     uint8_t blockNo = 0, keytype = 0;
@@ -3640,7 +3613,6 @@ static command_t CommandTable[] = {
     {"fchk",        CmdHF14AMfChk_fast,     IfPm3Iso14443a,  "Check keys fast, targets all keys on card"},
     {"decrypt",     CmdHf14AMfDecryptBytes, AlwaysAvailable, "[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  ""},
-    {"dbg",         CmdHF14AMfDbg,          IfPm3Iso14443a,  "Set default debug mode"},
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE classic block"},
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE classic sector"},
     {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE classic tag to binary file"},

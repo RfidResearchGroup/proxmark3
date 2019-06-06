@@ -185,7 +185,7 @@ end
 local function write_tag(uid, t)
 
     print('Writing to tag')
-    core.console('hf mf dbg 0')
+    core.console('hw dbg 0')
     utils.Sleep(0.5)
 
     local cmd = ''
@@ -203,7 +203,7 @@ local function write_tag(uid, t)
     --dynamic
     core.console(('hf mfu wrbl b 40 d %s k %08X'):format(t[40], pwd))
 
-    core.console('hf mf dbg 1')
+    core.console('hw dbg 1')
     utils.Sleep(0.5)
     print('Done')
 end

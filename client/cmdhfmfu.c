@@ -2706,7 +2706,6 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 //------------------------------------
 static command_t CommandTable[] = {
     {"help",    CmdHelp,                   AlwaysAvailable, "This help"},
-    {"dbg",     CmdHF14AMfDbg,             IfPm3Iso14443a,  "Set default debug mode"},
     {"info",    CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
     {"dump",    CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump Ultralight / Ultralight-C / NTAG tag to binary file"},
     {"restore", CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
