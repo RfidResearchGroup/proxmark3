@@ -398,7 +398,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
     z_stream compressed_fpga_stream;
     uint8_t output_buffer[OUTPUT_BUFFER_LEN] = {0x00};
 
-    bool verbose = (MF_DBGLEVEL > 3);
+    bool verbose = (DBGLEVEL > 3);
 
     // make sure that we have enough memory to decompress
     BigBuf_free();
@@ -496,7 +496,7 @@ int FpgaGetCurrent(void) {
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
 void switch_off(void) {
-    if (MF_DBGLEVEL > 3) Dbprintf("switch_off");
+    if (DBGLEVEL > 3) Dbprintf("switch_off");
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     if (downloaded_bitstream == FPGA_BITSTREAM_HF)
         FpgaDisableSscDma();

@@ -330,7 +330,7 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
         // Even things out by the length of the target waveform.
         corr0 *= 4;
         corr1 *= 4;
-        // if (MF_DBGLEVEL >= MF_DBG_EXTENDED)
+        // if (DBGLEVEL >= DBG_EXTENDED)
         // Dbprintf("Corr1 %d, Corr0 %d, CorrEOF %d", corr1, corr0, corrEOF);
 
         if (corrEOF > corr1 && corrEOF > corr0)
@@ -356,12 +356,12 @@ static int DemodAnswer(uint8_t *received, uint8_t *dest, uint16_t samplecount) {
         }
     }
 
-    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("ice: demod bytes %u", k);
+    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("ice: demod bytes %u", k);
 
     if (mask != 0x01) { // this happens, when we miss the EOF
 
         // TODO: for some reason this happens quite often
-        if (MF_DBGLEVEL >= MF_DBG_ERROR && k != 0) Dbprintf("[!] error, uneven octet! (extra bits!) mask %02x", mask);
+        if (DBGLEVEL >= DBG_ERROR && k != 0) Dbprintf("[!] error, uneven octet! (extra bits!) mask %02x", mask);
         //if (mask < 0x08) k--; // discard the last uneven octet;
         // 0x08 is an assumption - but works quite often
     }
@@ -785,7 +785,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
         else
             strncat(status, "[!] crc fail", DBD15STATLEN - strlen(status));
 
-        if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("%s", status);
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("%s", status);
     }
 }
 
@@ -838,7 +838,7 @@ void ReaderIso15693(uint32_t parameter) {
         uid[6] = answer1[3];
         uid[7] = answer1[2];
 
-        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+        if (DBGLEVEL >= DBG_EXTENDED) {
             Dbprintf("[+] UID = %02X%02X%02X%02X%02X%02X%02X%02X",
                      uid[0], uid[1], uid[2], uid[3],
                      uid[4], uid[5], uid[5], uid[6]
@@ -852,7 +852,7 @@ void ReaderIso15693(uint32_t parameter) {
         reply_old(CMD_ACK, 1, sizeof(uid), 0, uid, sizeof(uid));
     }
 
-    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+    if (DBGLEVEL >= DBG_EXTENDED) {
         Dbprintf("[+] %d octets read from IDENTIFY request:", answerLen1);
         DbdecodeIso15693Answer(answerLen1, answer1);
         Dbhexdump(answerLen1, answer1, true);
@@ -904,7 +904,7 @@ void SimTagIso15693(uint32_t parameter, uint8_t *uid) {
             TransmitTo15693Reader(ToSend, ToSendMax, &tsamples, &wait);
             LogTrace(cmd, CMD_INV_RESP, time_start << 4, (GetCountSspClk() - time_start) << 4, NULL, true);
 
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+            if (DBGLEVEL >= DBG_EXTENDED) {
                 Dbprintf("[+] %d octets read from reader command: %x %x %x %x %x %x %x %x", ans,
                          buf[0], buf[1], buf[2], buf[3],
                          buf[4], buf[5], buf[6], buf[7]
@@ -978,7 +978,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
     uint8_t buf[ISO15_MAX_FRAME];
     memset(buf, 0x00, sizeof(buf));
 
-    if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+    if (DBGLEVEL >= DBG_EXTENDED) {
         DbpString("[+] SEND");
         Dbhexdump(datalen, data, true);
     }
@@ -992,7 +992,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         reply_old(CMD_ACK, buflen, 0, 0, buf, buflen);
         LED_B_OFF();
 
-        if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+        if (DBGLEVEL >= DBG_EXTENDED) {
             DbpString("[+] RECV");
             DbdecodeIso15693Answer(buflen, buf);
             Dbhexdump(buflen, buf, true);

@@ -99,7 +99,7 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
     Flash_Erase4k(3, 0xD);
     res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 
-    if (res == T55XX_CONFIG_LEN && MF_DBGLEVEL > 1) {
+    if (res == T55XX_CONFIG_LEN && DBGLEVEL > 1) {
         DbpString("T55XX Config save success");
     }
 
@@ -137,7 +137,7 @@ void loadT55xxConfig(void) {
     memcpy((uint8_t *)&t_config, buf, T55XX_CONFIG_LEN);
 
     if (isok == T55XX_CONFIG_LEN) {
-        if (MF_DBGLEVEL > 1) DbpString("T55XX Config load success");
+        if (DBGLEVEL > 1) DbpString("T55XX Config load success");
     }
 #endif
 }

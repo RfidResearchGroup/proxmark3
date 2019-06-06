@@ -827,7 +827,7 @@ readysim:
  * - tracing is falsed
  */
 int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
-    MF_DBGLEVEL = MF_DBG_NONE;
+    DBGLEVEL = DBG_NONE;
 
     uint8_t numSectors = numofsectors;
     uint8_t keyType = keytype;
@@ -848,7 +848,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
     if (!iso14443a_select_card(cjuid, &p_card, &cjcuid, true, 0, true)) {
         isOK = false;
-        if (MF_DBGLEVEL >= 1)
+        if (DBGLEVEL >= 1)
             DbprintfEx(FLAG_RAWPRINT, "Can't select card");
     }
 
@@ -857,14 +857,14 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
         if (s == 0) {
             if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_FIRST)) {
 
-                if (MF_DBGLEVEL >= 1)
+                if (DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NEWLINE, "Sector[%2d]. Auth error", s);
                 break;
             }
         } else {
             if (isOK && mifare_classic_auth(pcs, cjcuid, FirstBlockOfSector(s), keyType, ui64Key, AUTH_NESTED)) {
                 isOK = false;
-                if (MF_DBGLEVEL >= 1)
+                if (DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NEWLINE, "Sector[%2d]. Auth nested error", s);
                 break;
             }
@@ -873,7 +873,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
         for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(s); blockNo++) {
             if (isOK && mifare_classic_readblock(pcs, cjcuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
                 isOK = false;
-                if (MF_DBGLEVEL >= 1)
+                if (DBGLEVEL >= 1)
                     DbprintfEx(FLAG_NEWLINE, "Error reading sector %2d block %2d", s, blockNo);
                 break;
             };
@@ -891,7 +891,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
     }
 
     if (mifare_classic_halt(pcs, cjcuid)) {
-        if (MF_DBGLEVEL >= 1)
+        if (DBGLEVEL >= 1)
             DbprintfEx(FLAG_NEWLINE, "Halt error");
     };
 
@@ -905,7 +905,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 /* the chk function is a piwi’ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
 int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key) {
-    MF_DBGLEVEL = MF_DBG_NONE;
+    DBGLEVEL = DBG_NONE;
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
 

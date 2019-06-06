@@ -52,7 +52,7 @@ void EraseMemory() {
     Flash_WriteEnable();
     Flash_Erase4k(0, 0);
 
-    if (MF_DBGLEVEL > 1) Dbprintf("[!] Erased flash!");
+    if (DBGLEVEL > 1) Dbprintf("[!] Erased flash!");
     FlashStop();
     SpinDelay(100);
 }
@@ -97,7 +97,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
     // Setup and start DMA.
     if (!FpgaSetupSscDma((uint8_t *) dmaBuf, DMA_BUFFER_SIZE)) {
-        if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return;
     }
 
@@ -163,7 +163,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
                     if (triggered) {
                         if ((receivedCmd) && ((receivedCmd[0] == MIFARE_ULEV1_AUTH) || (receivedCmd[0] == MIFARE_ULC_AUTH_1))) {
-                            if (MF_DBGLEVEL > 1) Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2], receivedCmd[3], receivedCmd[4]);
+                            if (DBGLEVEL > 1) Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2], receivedCmd[3], receivedCmd[4]);
 
                             // temporarily save the captured pwd in our array
                             memcpy(&capturedPwds[4 * auth_attempts], receivedCmd + 1, 4);
@@ -230,26 +230,26 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
     // Write stuff to flash
     if (auth_attempts > 0) {
-        if (MF_DBGLEVEL > 1) Dbprintf("[!] Authentication attempts = %u", auth_attempts);
+        if (DBGLEVEL > 1) Dbprintf("[!] Authentication attempts = %u", auth_attempts);
 
         // Setting the SPI Baudrate to 48MHz to avoid the bit-flip issue (https://github.com/RfidResearchGroup/proxmark3/issues/34)
         FlashmemSetSpiBaudrate(48000000);
 
         // Find the offset in flash mem to continue writing the auth attempts
         uint8_t memoffset = FindOffsetInFlash();
-        if (MF_DBGLEVEL > 1) Dbprintf("[!] Memory offset = %u", memoffset);
+        if (DBGLEVEL > 1) Dbprintf("[!] Memory offset = %u", memoffset);
 
         if ((memoffset + 4 * auth_attempts) > 0xFF) {
             // We opt to keep the new data only
             memoffset = 0;
-            if (MF_DBGLEVEL > 1) Dbprintf("[!] Size of total data > 256 bytes. Discarding the old data.");
+            if (DBGLEVEL > 1) Dbprintf("[!] Size of total data > 256 bytes. Discarding the old data.");
         }
 
         // Get previous data from flash mem
         uint8_t *previousdata = BigBuf_malloc(memoffset);
         if (memoffset > 0) {
             uint16_t readlen = Flash_ReadData(0, previousdata, memoffset);
-            if (MF_DBGLEVEL > 1) Dbprintf("[!] Read %u bytes from flash mem", readlen);
+            if (DBGLEVEL > 1) Dbprintf("[!] Read %u bytes from flash mem", readlen);
         }
 
         // create new bigbuf to hold all data
@@ -267,7 +267,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
         // Write total data to flash mem
         uint16_t writelen = Flash_WriteData(0, total_data, memoffset + 4 * auth_attempts);
-        if (MF_DBGLEVEL > 1) Dbprintf("[!] Wrote %u bytes into flash mem", writelen);
+        if (DBGLEVEL > 1) Dbprintf("[!] Wrote %u bytes into flash mem", writelen);
 
         // If pwd saved successfully, blink led A three times
         if (writelen > 0) {

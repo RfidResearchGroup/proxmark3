@@ -798,7 +798,7 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
 // Both sides of communication!
 //=============================================================================
 static void iclass_setup_sniff(void) {
-    if (MF_DBGLEVEL > 3) Dbprintf("iclass_setup_sniff Enter");
+    if (DBGLEVEL > 3) Dbprintf("iclass_setup_sniff Enter");
 
     LEDsoff();
 
@@ -823,7 +823,7 @@ static void iclass_setup_sniff(void) {
     uart_init(BigBuf_malloc(ICLASS_BUFFER_SIZE));
     //UartInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
 
-    if (MF_DBGLEVEL > 1) {
+    if (DBGLEVEL > 1) {
         // Print debug information about the buffer sizes
         Dbprintf("[+] Sniffing buffers initialized:");
         Dbprintf("  Trace: %i bytes", BigBuf_max_traceLen());
@@ -841,7 +841,7 @@ static void iclass_setup_sniff(void) {
     StartCountSspClk();
 
     LED_A_ON();
-    if (MF_DBGLEVEL > 3) Dbprintf("[+] iclass_setup_sniff Exit");
+    if (DBGLEVEL > 3) Dbprintf("[+] iclass_setup_sniff Exit");
 }
 
 //-----------------------------------------------------------------------------
@@ -869,7 +869,7 @@ void RAMFUNC SniffIClass(void) {
 
     // Setup and start DMA.
     if (!FpgaSetupSscDma(dmaBuf, ICLASS_DMA_BUFFER_SIZE)) {
-        if (MF_DBGLEVEL > 1) DbpString("[-] FpgaSetupSscDma failed. Exiting");
+        if (DBGLEVEL > 1) DbpString("[-] FpgaSetupSscDma failed. Exiting");
         return;
     }
 
@@ -964,7 +964,7 @@ void RAMFUNC SniffIClass(void) {
         }
     } // end main loop
 
-    if (MF_DBGLEVEL >= 1) {
+    if (DBGLEVEL >= 1) {
         DbpString("[+] Sniff statistics:");
         Dbhexdump(ICLASS_DMA_BUFFER_SIZE, data, false);
     }
@@ -1149,7 +1149,7 @@ static void CodeIClassTagSOF() {
 // turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
 
-    if (MF_DBGLEVEL > 3) Dbprintf("[+] iClass_simulate Enter");
+    if (DBGLEVEL > 3) Dbprintf("[+] iClass_simulate Enter");
 
     LEDsoff();
 
@@ -1519,7 +1519,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
 
                 if (simulationMode == MODE_EXIT_AFTER_MAC) {
 
-                    if (MF_DBGLEVEL ==  MF_DBG_EXTENDED) {
+                    if (DBGLEVEL ==  DBG_EXTENDED) {
                         Dbprintf("[+] CSN: %02x %02x %02x %02x %02x %02x %02x %02x", csn[0], csn[1], csn[2], csn[3], csn[4], csn[5], csn[6], csn[7]);
                         Dbprintf("[+] RDR:  (len=%02d): %02x %02x %02x %02x %02x %02x %02x %02x %02x", len,
                                  receivedCmd[0], receivedCmd[1], receivedCmd[2],
@@ -1584,7 +1584,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
         } else {
             //#db# Unknown command received from reader (len=5): 26 1 0 f6 a 44 44 44 44
             // Never seen this command before
-            if (MF_DBGLEVEL ==  MF_DBG_EXTENDED)
+            if (DBGLEVEL ==  DBG_EXTENDED)
                 print_result("[-] Unhandled command received ", receivedCmd, len);
 
             // Do not respond
@@ -2000,7 +2000,7 @@ void ReaderIClass(uint8_t arg0) {
 
         // if only looking for one card try 2 times if we missed it the first time
         if (try_once && tryCnt > 2) {
-            if (MF_DBGLEVEL > 1) DbpString("Failed to find a tag");
+            if (DBGLEVEL > 1) DbpString("Failed to find a tag");
             break;
         }
 
@@ -2024,7 +2024,7 @@ void ReaderIClass(uint8_t arg0) {
                 result_status |= FLAG_ICLASS_READER_CONF;
                 memcpy(card_data + 8, resp, 8);
             } else {
-                if (MF_DBGLEVEL > 1) DbpString("Failed to dump config block");
+                if (DBGLEVEL > 1) DbpString("Failed to dump config block");
             }
         }
 
@@ -2034,7 +2034,7 @@ void ReaderIClass(uint8_t arg0) {
                 result_status |= FLAG_ICLASS_READER_AIA;
                 memcpy(card_data + (8 * 5), resp, 8);
             } else {
-                if (MF_DBGLEVEL > 1) DbpString("Failed to dump AA block");
+                if (DBGLEVEL > 1) DbpString("Failed to dump AA block");
             }
         }
 
@@ -2053,7 +2053,7 @@ void ReaderIClass(uint8_t arg0) {
         //  only useful if looping in arm (not try_once && not abort_after_read)
         if (memcmp(last_csn, card_data, 8) != 0) {
             // If caller requires that we get Conf, CC, AA, continue until we got it
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) {
+            if (DBGLEVEL >= DBG_EXTENDED) {
                 Dbprintf("STATUS %02X | CSN %c | CONF %c | CC %c | AIA %c | ONCE %c | 1TRY %c",
                          result_status,
                          (result_status & FLAG_ICLASS_READER_CSN) ? 'Y' : 'N',
@@ -2079,7 +2079,7 @@ void ReaderIClass(uint8_t arg0) {
             if (flagReadConfig)
                 send |= (result_status & FLAG_ICLASS_READER_CONF);
 
-            if (MF_DBGLEVEL >= MF_DBG_EXTENDED) Dbprintf("SEND %c",  send ? 'y' : 'n');
+            if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("SEND %c",  send ? 'y' : 'n');
 
             if (send) {
                 reply_old(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));

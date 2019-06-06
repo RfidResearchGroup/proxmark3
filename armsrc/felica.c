@@ -176,7 +176,7 @@ static void Process18092Byte(uint8_t bt) {
                 FelicaFrame.crc_ok = check_crc(CRC_FELICA, FelicaFrame.framebytes + 2, FelicaFrame.len - 2);
                 FelicaFrame.state = STATE_FULL;
                 FelicaFrame.rem_len = 0;
-                if (MF_DBGLEVEL > 3) Dbprintf("[+] got 2 crc bytes [%s]", (FelicaFrame.crc_ok) ? "OK" : "No");
+                if (DBGLEVEL > 3) Dbprintf("[+] got 2 crc bytes [%s]", (FelicaFrame.crc_ok) ? "OK" : "No");
             }
             break;
         }
@@ -477,7 +477,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
 // d.asBytes command bytes to send
 void felica_sendraw(PacketCommandNG *c) {
 
-    if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Enter");
+    if (DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Enter");
 
     felica_command_t param = c->oldarg[0];
     size_t len = c->oldarg[1] & 0xffff;
@@ -537,7 +537,7 @@ OUT:
     //Resetting Frame mode (First set in fpgaloader.c)
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
-    if (MF_DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Exit");
+    if (DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Exit");
 }
 
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {

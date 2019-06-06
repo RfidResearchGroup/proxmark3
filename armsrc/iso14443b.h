@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 #include "proxmark3.h"
-#include "common.h"  // access to global variable: MF_DBGLEVEL
+#include "common.h"  // access to global variable: DBGLEVEL
 #include "apps.h"
 #include "util.h"
 #include "string.h"

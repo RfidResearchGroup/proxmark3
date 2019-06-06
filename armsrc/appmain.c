@@ -418,7 +418,7 @@ void SendStatus(void) {
 #endif
     printConnSpeed();
     DbpString(_BLUE_("Various"));
-    Dbprintf("  MF_DBGLEVEL.............%d", MF_DBGLEVEL);
+    Dbprintf("  DBGLEVEL................%d", DBGLEVEL);
     Dbprintf("  ToSendMax...............%d", ToSendMax);
     Dbprintf("  ToSendBit...............%d", ToSendBit);
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
@@ -1116,7 +1116,8 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         // emulator
         case CMD_MIFARE_SET_DBGMODE:
-            MifareSetDbgLvl(packet->data.asBytes[0]);
+            DBGLEVEL = packet->data.asBytes[0];
+            Dbprintf("Debug level: %d", DBGLEVEL);
             reply_ng(CMD_MIFARE_SET_DBGMODE, PM3_SUCCESS, NULL, 0);   
             break;
         case CMD_MIFARE_EML_MEMCLR:

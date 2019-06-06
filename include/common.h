@@ -23,12 +23,12 @@ extern "C" {
 typedef unsigned char byte_t;
 
 // debug
-#define MF_DBG_NONE          0 // no messages
-#define MF_DBG_ERROR         1 // errors only
-#define MF_DBG_INFO          2 // errors + info messages
-#define MF_DBG_DEBUG         3 // errors + info + debug messages
-#define MF_DBG_EXTENDED      4 // errors + info + debug + breaking debug messages
-extern int MF_DBGLEVEL;
+#define DBG_NONE          0 // no messages
+#define DBG_ERROR         1 // errors only
+#define DBG_INFO          2 // errors + info messages
+#define DBG_DEBUG         3 // errors + info + debug messages
+#define DBG_EXTENDED      4 // errors + info + debug + breaking debug messages
+extern int DBGLEVEL;
 
 // Flashmem spi baudrate
 extern uint32_t FLASHMEM_SPIBAUDRATE;

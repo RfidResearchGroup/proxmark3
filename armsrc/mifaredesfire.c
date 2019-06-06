@@ -24,7 +24,7 @@ bool InitDesfireCard() {
     set_tracing(true);
 
     if (!iso14443a_select_card(NULL, &card, NULL, true, 0, false)) {
-        if (MF_DBGLEVEL >= MF_DBG_ERROR) DbpString("Can't select card");
+        if (DBGLEVEL >= DBG_ERROR) DbpString("Can't select card");
         OnError(1);
         return false;
     }
@@ -52,7 +52,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t resp[RECEIVE_SIZE];
     memset(resp, 0, sizeof(resp));
 
-    if (MF_DBGLEVEL >= 4) {
+    if (DBGLEVEL >= 4) {
         Dbprintf(" flags : %02X", flags);
         Dbprintf(" len   : %02X", datalen);
         print_result(" RX    : ", datain, datalen);
@@ -67,7 +67,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     }
 
     int len = DesfireAPDU(datain, datalen, resp);
-    if (MF_DBGLEVEL >= 4)
+    if (DBGLEVEL >= 4)
         print_result("ERR <--: ", resp, len);
 
     if (!len) {
@@ -106,13 +106,13 @@ void MifareDesfireGetInformation() {
 
     // card select - information
     if (!iso14443a_select_card(NULL, &card, NULL, true, 0, false)) {
-        if (MF_DBGLEVEL >= MF_DBG_ERROR) DbpString("Can't select card");
+        if (DBGLEVEL >= DBG_ERROR) DbpString("Can't select card");
         OnError(1);
         return;
     }
 
     if (card.uidlen != 7) {
-        if (MF_DBGLEVEL >= MF_DBG_ERROR) Dbprintf("Wrong UID size. Expected 7byte got %d", card.uidlen);
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Wrong UID size. Expected 7byte got %d", card.uidlen);
         OnError(2);
         return;
     }
@@ -236,7 +236,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             cmd[1] = arg2;  //keynumber
             len = DesfireAPDU(cmd, 2, resp);
             if (!len) {
-                if (MF_DBGLEVEL >= MF_DBG_ERROR) {
+                if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
                 }
                 OnError(3);
@@ -288,7 +288,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
 
             len = DesfireAPDU(cmd, 17, resp);
             if (!len) {
-                if (MF_DBGLEVEL >= MF_DBG_ERROR) {
+                if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
                 }
                 OnError(3);
@@ -438,7 +438,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
 
             AesCtx ctx;
             if (AesCtxIni(&ctx, IV, key->data, KEY128, CBC) < 0) {
-                if (MF_DBGLEVEL >= 4) {
+                if (DBGLEVEL >= 4) {
                     DbpString("AES context failed to init");
                 }
                 OnError(7);
@@ -449,7 +449,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             cmd[1] = 0x00;  //keynumber
             len = DesfireAPDU(cmd, 2, resp);
             if (!len) {
-                if (MF_DBGLEVEL >= MF_DBG_ERROR) {
+                if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
                 }
                 OnError(3);
@@ -470,7 +470,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
 
             len = DesfireAPDU(cmd, 33, resp);  // 1 + 32 == 33
             if (!len) {
-                if (MF_DBGLEVEL >= MF_DBG_ERROR) {
+                if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
                 }
                 OnError(3);
@@ -511,14 +511,14 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
 
     wrappedLen = CreateAPDU(cmd, cmd_len, wCmd);
 
-    if (MF_DBGLEVEL >= 4)
+    if (DBGLEVEL >= 4)
         print_result("WCMD <--: ", wCmd, wrappedLen);
 
     ReaderTransmit(wCmd, wrappedLen, NULL);
 
     len = ReaderReceive(resp, par);
     if (!len) {
-        if (MF_DBGLEVEL >= 4) Dbprintf("fukked");
+        if (DBGLEVEL >= 4) Dbprintf("fukked");
         return false; //DATA LINK ERROR
     }
     // if we received an I- or R(ACK)-Block with a block number equal to the

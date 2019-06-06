@@ -159,14 +159,14 @@ static void iso14b_set_timeout(uint32_t timeout) {
         timeout = MAX_TIMEOUT;
 
     iso14b_timeout = timeout;
-    if (MF_DBGLEVEL >= 3) Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
+    if (DBGLEVEL >= 3) Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
 }
 static void iso14b_set_maxframesize(uint16_t size) {
     if (size > 256)
         size = MAX_FRAME_SIZE;
 
     Uart.byteCntMax = size;
-    if (MF_DBGLEVEL >= 3) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
+    if (DBGLEVEL >= 3) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
 }
 
 //-----------------------------------------------------------------------------
@@ -714,7 +714,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 
         ++cmdsReceived;
     }
-    if (MF_DBGLEVEL >= 2)
+    if (DBGLEVEL >= 2)
         Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
     switch_off(); //simulate
 }
@@ -960,7 +960,7 @@ static void GetTagSamplesFor14443bDemod() {
 
     // Setup and start DMA.
     if (!FpgaSetupSscDma((uint8_t *) dmaBuf, ISO14443B_DMA_BUFFER_SIZE)) {
-        if (MF_DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return;
     }
 
@@ -1161,7 +1161,7 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
 
     // VALIDATE CRC
     if (!check_crc(CRC_14443_B, Demod.output, Demod.len)) {
-        if (MF_DBGLEVEL > 3) Dbprintf("crc fail ICE");
+        if (DBGLEVEL > 3) Dbprintf("crc fail ICE");
         return 0;
     }
     // copy response contents
@@ -1419,7 +1419,7 @@ static void iso1444b_setup_sniff(void) {
     DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
     UartInit(BigBuf_malloc(MAX_FRAME_SIZE));
 
-    if (MF_DBGLEVEL > 1) {
+    if (DBGLEVEL > 1) {
         // Print debug information about the buffer sizes
         Dbprintf("[+] Sniff buffers initialized:");
         Dbprintf("[+]   trace: %i bytes", BigBuf_max_traceLen());
@@ -1478,7 +1478,7 @@ void RAMFUNC SniffIso14443b(void) {
 
     // Setup and start DMA.
     if (!FpgaSetupSscDma((uint8_t *) dmaBuf, ISO14443B_DMA_BUFFER_SIZE)) {
-        if (MF_DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting");
+        if (DBGLEVEL > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting");
         BigBuf_free();
         return;
     }
@@ -1542,7 +1542,7 @@ void RAMFUNC SniffIso14443b(void) {
         }
     }
 
-    if (MF_DBGLEVEL >= 2) {
+    if (DBGLEVEL >= 2) {
         DbpString("[+] Sniff statistics:");
         Dbprintf("[+]  uart State: %x  ByteCount: %i  ByteCountMax: %i", Uart.state,  Uart.byteCnt,  Uart.byteCntMax);
         Dbprintf("[+]  trace length: %i", BigBuf_get_traceLen());
@@ -1575,7 +1575,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     uint32_t sendlen = sizeof(iso14b_card_select_t);
     uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
 
-    if (MF_DBGLEVEL > 3) Dbprintf("14b raw: param, %04x", param);
+    if (DBGLEVEL > 3) Dbprintf("14b raw: param, %04x", param);
 
     // turn on trigger (LED_A)
     if ((param & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
