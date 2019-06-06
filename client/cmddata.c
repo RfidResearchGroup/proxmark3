@@ -2141,7 +2141,7 @@ static command_t CommandTable[] = {
     {"save",            CmdSave,                 AlwaysAvailable, "<filename> -- Save trace (from graph window)"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable, "[orange_marker] [blue_marker] (in graph window)"},
     {"scale",           CmdScale,                AlwaysAvailable, "<int> -- Set cursor display scale"},
-    {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable, "<0|1|2> -- Turn on or off Debugging Level for lf demods"},
+    {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable, "<0|1|2> -- Set Debugging Level on client side"},
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
     {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
     {"tune",            CmdTuneSamples,          IfPm3Present,    "Get hw tune samples for graph window"},
