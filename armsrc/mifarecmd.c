@@ -861,11 +861,10 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
     ui64Key = bytes_to_num(datain, 6);
 
     // variables
-    uint16_t rtr, i, j, len;
-    uint16_t davg = 0;
+    uint16_t i, j, len;
     static uint16_t dmin, dmax;
     uint8_t uid[10] = {0x00};
-    uint32_t cuid = 0, nt1, nt2, nttmp, nttest, ks1;
+    uint32_t cuid = 0, nt1, nt2, nttest, ks1;
     uint8_t par[1] = {0x00};
     uint32_t target_nt[2] = {0x00}, target_ks[2] = {0x00};
 
@@ -893,15 +892,16 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
     // statistics on nonce distance
     int16_t isOK = 0;
 #define NESTED_MAX_TRIES 12
-    uint16_t unsuccessfull_tries = 0;
     if (arg2) { // calibrate: for first call only. Otherwise reuse previous calibration
         LED_B_ON();
         WDT_HIT();
 
-        davg = dmax = 0;
+        uint16_t unsuccessfull_tries = 0;
+        uint16_t davg = 0;
+        dmax = 0;
         dmin = 2000;
         delta_time = 0;
-
+        uint16_t rtr;
         for (rtr = 0; rtr < 17; rtr++) {
 
             // Test if the action was cancelled
@@ -937,7 +937,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
                 continue;
             };
 
-            nttmp = prng_successor(nt1, 100); //NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
+            uint32_t nttmp = prng_successor(nt1, 100); //NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
             for (i = 101; i < 1200; i++) {
                 nttmp = prng_successor(nttmp, 1);
                 if (nttmp == nt2) break;
@@ -1653,7 +1653,6 @@ void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
 //
 //-----------------------------------------------------------------------------
 int MifareECardLoad(uint32_t arg0, uint32_t arg1) {
-    uint64_t ui64Key;
     uint32_t cuid = 0;
     uint8_t numSectors = arg0;
     uint8_t keyType = arg1;
@@ -1682,7 +1681,7 @@ int MifareECardLoad(uint32_t arg0, uint32_t arg1) {
     }
 
     for (uint8_t sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
-        ui64Key = emlGetKey(sectorNo, keyType);
+        uint64_t ui64Key = emlGetKey(sectorNo, keyType);
         if (sectorNo == 0) {
             if (isOK && mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
                 if (DBGLEVEL >= 1) Dbprintf("Sector[%2d]. Auth error", sectorNo);
@@ -2016,7 +2015,6 @@ void MifareSetMod(uint8_t *datain) {
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs = &mpcs;
-    int respLen;
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0};
 
@@ -2040,6 +2038,7 @@ void MifareSetMod(uint8_t *datain) {
             break;
         }
 
+        int respLen;
         if (((respLen = mifare_sendcmd_short(pcs, 1, 0x43, mod, receivedAnswer, receivedAnswerPar, NULL)) != 1) || (receivedAnswer[0] != 0x0a)) {
             if (DBGLEVEL >= 1) Dbprintf("SetMod error; response[0]: %hhX, len: %d", receivedAnswer[0], respLen);
             break;

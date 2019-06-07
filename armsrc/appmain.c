@@ -1465,7 +1465,6 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_DOWNLOAD_EML_BIGBUF: {
             LED_B_ON();
             uint8_t *mem = BigBuf_get_EM_addr();
-            size_t len = 0;
             uint32_t startidx = packet->oldarg[0];
             uint32_t numofbytes = packet->oldarg[1];
 
@@ -1474,7 +1473,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // arg2 = RFU
 
             for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
-                len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
+                size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
                 int result = reply_old(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
                 if (result != PM3_SUCCESS)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);

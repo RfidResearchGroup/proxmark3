@@ -213,7 +213,6 @@ int detectPresco(uint8_t *dest, size_t *size) {
 // convert base 12 ID to sitecode & usercode & 8 bit other unknown code
 int getWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5) {
 
-    uint8_t val = 0;
     bool hex = false, errors = false;
     uint8_t cmdp = 0;
     char id[11];
@@ -250,8 +249,8 @@ int getWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode
     if (errors || cmdp == 0) return PM3_EINVARG;
 
     if (!hex) {
+        uint8_t val = 0;
         for (int index = 0; index < strlen(id); ++index) {
-
             // Get value from number string.
             if (id[index] == '*')
                 val = 10;

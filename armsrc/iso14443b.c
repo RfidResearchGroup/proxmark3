@@ -237,9 +237,6 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
     *
     */
 
-    int i, j;
-    uint8_t b;
-
     ToSendReset();
 
     // Transmit a burst of ones, as the initial thing that lets the
@@ -252,23 +249,23 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 
     // Send SOF.
     // 10-11 ETU * 4times samples ZEROS
-    for (i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
+    for (int i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
     //for(i = 0; i < 10; i++) { ToSendStuffBit(0); }
 
     // 2-3 ETU * 4times samples ONES
-    for (i = 0; i < 3; i++)  { SEND4STUFFBIT(1); }
+    for (int i = 0; i < 3; i++)  { SEND4STUFFBIT(1); }
     //for(i = 0; i < 3; i++)  { ToSendStuffBit(1); }
 
     // data
-    for (i = 0; i < len; ++i) {
+    for (int i = 0; i < len; ++i) {
 
         // Start bit
         SEND4STUFFBIT(0);
         //ToSendStuffBit(0);
 
         // Data bits
-        b = cmd[i];
-        for (j = 0; j < 8; ++j) {
+        uint8_t b = cmd[i];
+        for (int j = 0; j < 8; ++j) {
             // if(b & 1) {
             // SEND4STUFFBIT(1);
             // //ToSendStuffBit(1);
@@ -292,11 +289,11 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 
     // Send EOF.
     // 10-11 ETU * 4 sample rate = ZEROS
-    for (i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
+    for (int i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
     //for(i = 0; i < 10; i++) { ToSendStuffBit(0); }
 
     // why this?
-    for (i = 0; i < 40; i++) { SEND4STUFFBIT(1); }
+    for (int i = 0; i < 40; i++) { SEND4STUFFBIT(1); }
     //for(i = 0; i < 40; i++) { ToSendStuffBit(1); }
 
     // Convert from last byte pos to length
@@ -945,7 +942,7 @@ static RAMFUNC int Handle14443bTagSamplesDemod(int ci, int cq) {
  *  quiet: set to 'TRUE' to disable debug output
  */
 static void GetTagSamplesFor14443bDemod() {
-    bool gotFrame, finished = false;
+    bool finished = false;
 //    int lastRxCounter = ISO14443B_DMA_BUFFER_SIZE;
     uint32_t time_0 = 0, time_stop = 0;
 
@@ -991,7 +988,7 @@ static void GetTagSamplesFor14443bDemod() {
         }
 
         // https://github.com/Proxmark/proxmark3/issues/103
-        gotFrame =  Handle14443bTagSamplesDemod(ci, cq);
+        bool gotFrame =  Handle14443bTagSamplesDemod(ci, cq);
         time_stop = GetCountSspClk() - time_0;
 
         finished = (time_stop > iso14b_timeout || gotFrame);
@@ -1058,14 +1055,12 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
     *   QUESTION:  how long is a 1 or 0 in pulses in the xcorr_848 mode?
     *              1 "stuffbit" = 1ETU (9us)
     */
-    int i;
-    uint8_t b;
 
     ToSendReset();
 
     // Send SOF
     // 10-11 ETUs of ZERO
-    for (i = 0; i < 10; ++i) ToSendStuffBit(0);
+    for (int i = 0; i < 10; ++i) ToSendStuffBit(0);
 
     // 2-3 ETUs of ONE
     ToSendStuffBit(1);
@@ -1074,11 +1069,11 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 
     // Sending cmd, LSB
     // from here we add BITS
-    for (i = 0; i < len; ++i) {
+    for (int i = 0; i < len; ++i) {
         // Start bit
         ToSendStuffBit(0);
         // Data bits
-        b = cmd[i];
+        uint8_t b = cmd[i];
         // if (  b & 1 )    ToSendStuffBit(1); else ToSendStuffBit(0);
         // if ( (b>>1) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
         // if ( (b>>2) & 1) ToSendStuffBit(1); else ToSendStuffBit(0);
@@ -1108,13 +1103,13 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len) {
 
     // Send EOF
     // 10-11 ETUs of ZERO
-    for (i = 0; i < 10; ++i) ToSendStuffBit(0);
+    for (int i = 0; i < 10; ++i) ToSendStuffBit(0);
 
     // Transition time. TR0 - guard time
     // 8ETUS minum?
     // Per specification, Subcarrier must be stopped no later than 2 ETUs after EOF.
     // I'm guessing this is for the FPGA to be able to send all bits before we switch to listening mode
-    for (i = 0; i < 24 ; ++i) ToSendStuffBit(1);
+    for (int i = 0; i < 24 ; ++i) ToSendStuffBit(1);
 
     // TR1 - Synchronization time
     // Convert from last character reference to length
@@ -1462,7 +1457,6 @@ static void iso1444b_setup_sniff(void) {
 void RAMFUNC SniffIso14443b(void) {
 
     uint32_t time_0 = 0, time_start = 0, time_stop;
-    int ci, cq;
 
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
@@ -1490,8 +1484,8 @@ void RAMFUNC SniffIso14443b(void) {
     while (!BUTTON_PRESS()) {
         WDT_HIT();
 
-        ci = data[0];
-        cq = data[1];
+        int ci = data[0];
+        int cq = data[1];
         data += 2;
 
         if (data >= dmaBuf + ISO14443B_DMA_BUFFER_SIZE) {

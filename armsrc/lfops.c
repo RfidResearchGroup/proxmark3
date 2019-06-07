@@ -1151,24 +1151,20 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
         // w = wiegand parity
         // (26 bit format shown)
 
-        uint32_t fac = 0;
-        uint32_t cardnum = 0;
-        uint32_t code1 = 0;
-        uint32_t code2 = 0;
         uint8_t fmtLen = bytebits_to_byte(dest, 8);
         if (fmtLen == 26) {
-            fac = bytebits_to_byte(dest + 9, 8);
-            cardnum = bytebits_to_byte(dest + 17, 16);
-            code1 = bytebits_to_byte(dest + 8, fmtLen);
+            uint32_t fac = bytebits_to_byte(dest + 9, 8);
+            uint32_t cardnum = bytebits_to_byte(dest + 17, 16);
+            uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen);
             Dbprintf("AWID Found - BitLength: %d, FC: %d, Card: %d - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, fac, cardnum, code1, rawHi2, rawHi, rawLo);
         } else {
-            cardnum = bytebits_to_byte(dest + 8 + (fmtLen - 17), 16);
+            uint32_t cardnum = bytebits_to_byte(dest + 8 + (fmtLen - 17), 16);
             if (fmtLen > 32) {
-                code1 = bytebits_to_byte(dest + 8, fmtLen - 32);
-                code2 = bytebits_to_byte(dest + 8 + (fmtLen - 32), 32);
+                uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen - 32);
+                uint32_t code2 = bytebits_to_byte(dest + 8 + (fmtLen - 32), 32);
                 Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x%08x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
             } else {
-                code1 = bytebits_to_byte(dest + 8, fmtLen);
+                uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen);
                 Dbprintf("AWID Found - BitLength: %d -unknown BitLength- (%d) - Wiegand: %x, Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
             }
         }
@@ -1189,7 +1185,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
     uint8_t *dest = BigBuf_get_addr();
 
     size_t size, idx = 0;
-    int clk = 0, invert = 0, errCnt, maxErr = 20;
+    int clk = 0, invert = 0, maxErr = 20;
     uint32_t hi = 0;
     uint64_t lo = 0;
 
@@ -1207,7 +1203,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
         size  = BigBuf_max_traceLen();
         //askdemod and manchester decode
         if (size > 16385) size = 16385; //big enough to catch 2 sequences of largest format
-        errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
+        int errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
         WDT_HIT();
 
         if (errCnt > 50) continue;

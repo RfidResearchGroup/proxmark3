@@ -506,9 +506,9 @@ int CmdHF14ASim(const char *Cmd) {
 }
 
 int CmdHF14ASniff(const char *Cmd) {
-    uint8_t param = 0, ctmp;
+    uint8_t param = 0;
     for (uint8_t i = 0; i < 2; i++) {
-        ctmp = tolower(param_getchar(Cmd, i));
+        uint8_t ctmp = tolower(param_getchar(Cmd, i));
         if (ctmp == 'h') return usage_hf_14a_sniff();
         if (ctmp == 'c') param |= 0x01;
         if (ctmp == 'r') param |= 0x02;
@@ -701,11 +701,10 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     else
         SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, 0, 0, NULL, 0);
 
-    uint8_t *recv;
     PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        recv = resp.data.asBytes;
+        uint8_t *recv = resp.data.asBytes;
         int iLen = resp.oldarg[0];
         uint8_t res = resp.oldarg[1];
 

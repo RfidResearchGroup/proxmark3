@@ -1160,9 +1160,8 @@ static int CmdHF15Restore(const char *Cmd) {
     char newCmdPrefix[FILE_PATH_SIZE + 1] = {0x00}, tmpCmd[FILE_PATH_SIZE + 262] = {0x00};
     char param[FILE_PATH_SIZE] = "";
     char hex[255] = "";
-    uint8_t retries = 3, tried = 0, i = 0;
+    uint8_t retries = 3, i = 0;
     int retval = 0;
-    size_t bytes_read;
 
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1226,11 +1225,11 @@ static int CmdHF15Restore(const char *Cmd) {
     PrintAndLogEx(INFO, "Restoring data blocks.");
 
     while (1) {
-        tried = 0;
+        uint8_t tried = 0;
         hex[0] = 0x00;
         tmpCmd[0] = 0x00;
 
-        bytes_read = fread(buff, 1, blocksize, f);
+        size_t bytes_read = fread(buff, 1, blocksize, f);
         if (bytes_read == 0) {
             PrintAndLogEx(SUCCESS, "File reading done `%s`", filename);
             fclose(f);

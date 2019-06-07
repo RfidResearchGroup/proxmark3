@@ -1093,7 +1093,6 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 #define ORDER_EV1_COMP_WRITE 40
 #define ORDER_RATS           70
     int order = ORDER_NONE;
-    int lastorder;
 
     int retval = PM3_SUCCESS;
     
@@ -1101,7 +1100,6 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
     int happened = 0;
     int happened2 = 0;
     int cmdsRecvd = 0;
-    tag_response_info_t *p_response;
 
     // compatible write block number
     uint8_t wrblock = 0;
@@ -1118,10 +1116,10 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
             retval = PM3_EOPABORTED;
             break;
         }
-        p_response = NULL;
+        tag_response_info_t *p_response = NULL;
 
         // Okay, look at the command now.
-        lastorder = order;
+        int lastorder = order;
 
         //
         // we need to check "ordered" states before, because received data may be same to any command - is wrong!!!
@@ -1527,17 +1525,16 @@ void PrepareDelayedTransfer(uint16_t delay) {
     delay &= 0x07;
     if (!delay) return;
 
-    uint8_t bitmask = 0, bits_to_shift;
+    uint8_t bitmask = 0;
     uint8_t bits_shifted = 0;
-    uint16_t i = 0;
 
-    for (i = 0; i < delay; i++)
+    for (uint16_t i = 0; i < delay; i++)
         bitmask |= (0x01 << i);
 
     ToSend[ToSendMax++] = 0x00;
 
-    for (i = 0; i < ToSendMax; i++) {
-        bits_to_shift = ToSend[i] & bitmask;
+    for (uint16_t i = 0; i < ToSendMax; i++) {
+        uint8_t bits_to_shift = ToSend[i] & bitmask;
         ToSend[i] = ToSend[i] >> delay;
         ToSend[i] = ToSend[i] | (bits_shifted << (8 - delay));
         bits_shifted = bits_to_shift;
@@ -1600,9 +1597,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 // Prepare reader command (in bits, support short frames) to send to FPGA
 //-----------------------------------------------------------------------------
 void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8_t *par) {
-    int i, j;
     int last = 0;
-    uint8_t b;
 
     ToSendReset();
 
@@ -1612,11 +1607,11 @@ void CodeIso14443aBitsAsReaderPar(const uint8_t *cmd, uint16_t bits, const uint8
 
     size_t bytecount = nbytes(bits);
     // Generate send structure for the data bits
-    for (i = 0; i < bytecount; i++) {
+    for (int i = 0; i < bytecount; i++) {
         // Get the current byte to send
-        b = cmd[i];
+        uint8_t b = cmd[i];
         size_t bitsleft = MIN((bits - (i * 8)), 8);
-
+        int j;
         for (j = 0; j < bitsleft; j++) {
             if (b & 1) {
                 // Sequence X
@@ -2078,25 +2073,22 @@ void iso14443a_antifuzz(uint32_t flags) {
 
 static void iso14a_set_ATS_times(uint8_t *ats) {
 
-    uint8_t tb1;
-    uint8_t fwi, sfgi;
-    uint32_t fwt, sfgt;
-
     if (ats[0] > 1) {                           // there is a format byte T0
         if ((ats[1] & 0x20) == 0x20) {          // there is an interface byte TB(1)
+            uint8_t tb1;
             if ((ats[1] & 0x10) == 0x10) {      // there is an interface byte TA(1) preceding TB(1)
                 tb1 = ats[3];
             } else {
                 tb1 = ats[2];
             }
-            fwi = (tb1 & 0xf0) >> 4;            // frame waiting time integer (FWI)
+            uint8_t fwi = (tb1 & 0xf0) >> 4;            // frame waiting time integer (FWI)
             if (fwi != 15) {
-                fwt = 256 * 16 * (1 << fwi);    // frame waiting time (FWT) in 1/fc
+                uint32_t fwt = 256 * 16 * (1 << fwi);    // frame waiting time (FWT) in 1/fc
                 iso14a_set_timeout(fwt / (8 * 16));
             }
-            sfgi = tb1 & 0x0f;                  // startup frame guard time integer (SFGI)
+            uint8_t sfgi = tb1 & 0x0f;                  // startup frame guard time integer (SFGI)
             if (sfgi != 0 && sfgi != 15) {
-                sfgt = 256 * 16 * (1 << sfgi);  // startup frame guard time (SFGT) in 1/fc
+                uint32_t sfgt = 256 * 16 * (1 << sfgi);  // startup frame guard time (SFGT) in 1/fc
                 NextTransferTime = MAX(NextTransferTime, Demod.endTime + (sfgt - DELAY_AIR2ARM_AS_READER - DELAY_ARM2AIR_AS_READER) / 16);
             }
         }
@@ -2144,7 +2136,6 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 
     uint8_t sak = 0x04; // cascade uid
     int cascade_level = 0;
-    int len;
 
     if (p_card) {
         p_card->uidlen = 0;
@@ -2271,7 +2262,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 
         AddCrc14A(rats, 2);
         ReaderTransmit(rats, sizeof(rats), NULL);
-        len = ReaderReceive(resp, resp_par);
+        int len = ReaderReceive(resp, resp_par);
 
         if (!len) return 0;
 
@@ -2639,7 +2630,6 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     uint16_t sync_tries = 0;
 
     bool have_uid = false;
-    bool received_nack;
     uint8_t cascade_levels = 0;
 
     // static variables here, is re-used in the next call
@@ -2667,7 +2657,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     uint16_t i;
     for (i = 0; true; ++i) {
 
-        received_nack = false;
+        bool received_nack = false;
 
         WDT_HIT();
 
@@ -2893,7 +2883,6 @@ void DetectNACKbug() {
     uint16_t sync_tries = 0;
     uint32_t sync_time = 0;
     bool have_uid = false;
-    bool received_nack;
 
     int32_t status = PM3_SUCCESS;
 
@@ -2912,7 +2901,7 @@ void DetectNACKbug() {
     uint16_t i;
     for (i = 1; true; ++i) {
 
-        received_nack = false;
+        bool received_nack = false;
 
         // Cards always leaks a NACK, no matter the parity
         if ((i == 10) && (num_nacks == i - 1)) {

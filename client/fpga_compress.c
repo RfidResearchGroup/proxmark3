@@ -397,10 +397,6 @@ static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int 
 }
 
 int main(int argc, char **argv) {
-    FILE **infiles;
-    char **infile_names;
-    FILE *outfile;
-
     if (argc == 1 || argc == 2) {
         usage();
         return (EXIT_FAILURE);
@@ -408,7 +404,7 @@ int main(int argc, char **argv) {
 
     if (!strcmp(argv[1], "-d")) { // Decompress
 
-        infiles = calloc(1, sizeof(FILE *));
+        FILE **infiles = calloc(1, sizeof(FILE *));
         if (argc != 4) {
             usage();
             free(infiles);
@@ -420,7 +416,7 @@ int main(int argc, char **argv) {
             free(infiles);
             return (EXIT_FAILURE);
         }
-        outfile = fopen(argv[3], "wb");
+        FILE *outfile = fopen(argv[3], "wb");
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[3]);
             free(infiles);
@@ -450,8 +446,8 @@ int main(int argc, char **argv) {
             num_input_files = argc - 2;
         }
 
-        infiles = calloc(num_input_files, sizeof(FILE *));
-        infile_names = calloc(num_input_files, sizeof(char *));
+        FILE **infiles = calloc(num_input_files, sizeof(FILE *));
+        char **infile_names = calloc(num_input_files, sizeof(char *));
         for (uint16_t i = 0; i < num_input_files; i++) {
             infile_names[i] = argv[i + ((hardnested_mode || generate_version_file) ? 2 : 1)];
             infiles[i] = fopen(infile_names[i], "rb");
@@ -462,7 +458,7 @@ int main(int argc, char **argv) {
                 return (EXIT_FAILURE);
             }
         }
-        outfile = fopen(argv[argc - 1], "wb");
+        FILE *outfile = fopen(argv[argc - 1], "wb");
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[argc - 1]);
             free(infile_names);

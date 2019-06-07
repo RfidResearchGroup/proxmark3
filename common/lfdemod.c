@@ -333,7 +333,7 @@ void getNextHigh(uint8_t *samples, size_t size, int high, size_t *i) {
 
 // load wave counters
 bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int highToLowWaveLen[], int *waveCnt, int *skip, int *minClk, int *high, int *low) {
-    size_t i = 0, firstLow, firstHigh;
+    size_t i = 0;
     //size_t testsize = (size < 512) ? size : 512;
 
     // just noise - no super good detection. good enough
@@ -352,10 +352,10 @@ bool loadWaveCounters(uint8_t *samples, size_t size, int lowToLowWaveLen[], int 
     // populate tmpbuff buffer with pulse lengths
     while (i < size) {
         // measure from low to low
-        firstLow = i;
+        size_t firstLow = i;
         //find first high point for this wave
         getNextHigh(samples, size, *high, &i);
-        firstHigh = i;
+        size_t firstHigh = i;
 
         getNextLow(samples, size, *low, &i);
 

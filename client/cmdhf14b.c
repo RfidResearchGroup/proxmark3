@@ -121,7 +121,6 @@ static int switch_off_field_14b(void) {
 
 static bool waitCmd14b(bool verbose) {
 
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
@@ -130,6 +129,7 @@ static bool waitCmd14b(bool verbose) {
 
         uint16_t len = (resp.oldarg[1] & 0xFFFF);
 
+        uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
         memcpy(data, resp.data.asBytes, len);
 
         if (verbose) {

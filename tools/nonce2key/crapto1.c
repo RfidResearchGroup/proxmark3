@@ -428,12 +428,12 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb) {
  */
 static uint16_t *dist = 0;
 int nonce_distance(uint32_t from, uint32_t to) {
-    uint16_t x, i;
     if (!dist) {
         dist = calloc(2 << 16,  sizeof(uint8_t));
         if (!dist)
             return -1;
-        for (x = i = 1; i; ++i) {
+        uint16_t x = 1;
+        for (uint16_t i = 1; i; ++i) {
             dist[(x & 0xff) << 8 | x >> 8] = i;
             x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
         }

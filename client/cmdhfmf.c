@@ -591,10 +591,8 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
 }
 
 static int CmdHF14AMfRdSc(const char *Cmd) {
-    int i;
-    uint8_t isOK, sectorNo = 0, keyType = 0;
+    uint8_t sectorNo = 0, keyType = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t *data  = NULL;
     char cmdp = 0x00;
 
     if (strlen(Cmd) < 3) {
@@ -631,12 +629,12 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        isOK  = resp.oldarg[0] & 0xff;
-        data  = resp.data.asBytes;
+        uint8_t isOK  = resp.oldarg[0] & 0xff;
+        uint8_t *data  = resp.data.asBytes;
 
         PrintAndLogEx(NORMAL, "isOk:%02x", isOK);
         if (isOK) {
-            for (i = 0; i < (sectorNo < 32 ? 3 : 15); i++) {
+            for (int i = 0; i < (sectorNo < 32 ? 3 : 15); i++) {
                 PrintAndLogEx(NORMAL, "data   : %s", sprint_hex(data + i * 16, 16));
             }
             PrintAndLogEx(NORMAL, "trailer: %s", sprint_hex(data + (sectorNo < 32 ? 3 : 15) * 16, 16));
@@ -644,7 +642,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
             PrintAndLogEx(NORMAL, "Trailer decoded:");
             int bln = mfFirstBlockOfSector(sectorNo);
             int blinc = (mfNumBlocksPerSector(sectorNo) > 4) ? 5 : 1;
-            for (i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++) {
                 PrintAndLogEx(NORMAL, "Access block %d%s: %s", bln, ((blinc > 1) && (i < 3) ? "+" : ""), mfGetAccessConditionsDesc(i, &(data + (sectorNo < 32 ? 3 : 15) * 16)[6]));
                 bln += blinc;
             }
@@ -1065,9 +1063,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 }
 
 static int CmdHF14AMfNested(const char *Cmd) {
-    int i, iterations;
     sector_t *e_sector = NULL;
-    uint8_t blockNo = 0;
     uint8_t keyType = 0;
     uint8_t trgBlockNo = 0;
     uint8_t trgKeyType = 0;
@@ -1077,16 +1073,12 @@ static int CmdHF14AMfNested(const char *Cmd) {
     uint64_t key64 = 0;
     bool transferToEml = false;
     bool createDumpFile = false;
-    FILE *fkeys;
-    uint8_t standart[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    char *fptr;
 
     if (strlen(Cmd) < 3) return usage_hf14_nested();
 
     char cmdp, ctmp;
     cmdp = tolower(param_getchar(Cmd, 0));
-    blockNo = param_get8(Cmd, 1);
+    uint8_t blockNo = param_get8(Cmd, 1);
     ctmp = tolower(param_getchar(Cmd, 2));
 
     if (ctmp != 'a' && ctmp != 'b') {
@@ -1195,10 +1187,10 @@ static int CmdHF14AMfNested(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "enter nested attack");
 
         // nested sectors
-        iterations = 0;
+//        int iterations = 0;
         bool calibrate = true;
 
-        for (i = 0; i < MIFARE_SECTOR_RETRY; i++) {
+        for (int i = 0; i < MIFARE_SECTOR_RETRY; i++) {
             for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
                 for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
 
@@ -1217,11 +1209,11 @@ static int CmdHF14AMfNested(const char *Cmd) {
                             break;
                         case -4 : //key not found
                             calibrate = false;
-                            iterations++;
+//                            iterations++;
                             continue;
                         case -5 :
                             calibrate = false;
-                            iterations++;
+//                            iterations++;
                             e_sector[sectorNo].foundKey[trgKeyType] = 1;
                             e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
@@ -1243,7 +1235,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
         // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
         PrintAndLogEx(INFO, "trying to read key B...");
-        for (i = 0; i < SectorsCnt; i++) {
+        for (int i = 0; i < SectorsCnt; i++) {
             // KEY A  but not KEY B
             if (e_sector[i].foundKey[0] && !e_sector[i].foundKey[1]) {
 
@@ -1283,7 +1275,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         if (transferToEml) {
             // fast push mode
             conn.block_after_ACK = true;
-            for (i = 0; i < SectorsCnt; i++) {
+            for (int i = 0; i < SectorsCnt; i++) {
                 mfEmlGetMem(keyBlock, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1);
                 
                 if (e_sector[i].foundKey[0])
@@ -1303,12 +1295,12 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
         // Create dump file
         if (createDumpFile) {
-            fptr = GenerateFilename("hf-mf-", "-key.bin");
+            char *fptr = GenerateFilename("hf-mf-", "-key.bin");
             if (fptr == NULL) {
                 free(e_sector);
                 return PM3_ESOFT;
             }
-
+            FILE *fkeys;
             if ((fkeys = fopen(fptr, "wb")) == NULL) {
                 PrintAndLogEx(WARNING, "could not create file " _YELLOW_("%s"), fptr);
                 free(e_sector);
@@ -1316,7 +1308,9 @@ static int CmdHF14AMfNested(const char *Cmd) {
             }
 
             PrintAndLogEx(SUCCESS, "saving keys to binary file " _YELLOW_("%s"), fptr);
-            for (i = 0; i < SectorsCnt; i++) {
+            uint8_t standart[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+            uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+            for (int i = 0; i < SectorsCnt; i++) {
                 if (e_sector[i].foundKey[0]) {
                     num_to_bytes(e_sector[i].Key[0], 6, tempkey);
                     fwrite(tempkey, 1, 6, fkeys);
@@ -1324,7 +1318,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                     fwrite(&standart, 1, 6, fkeys);
                 }
             }
-            for (i = 0; i < SectorsCnt; i++) {
+            for (int i = 0; i < SectorsCnt; i++) {
                 if (e_sector[i].foundKey[1]) {
                     num_to_bytes(e_sector[i].Key[1], 6, tempkey);
                     fwrite(tempkey, 1, 6, fkeys);
@@ -2756,7 +2750,6 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     int i;
     uint8_t numSectors;
     uint8_t data[16];
-    uint64_t keyA, keyB;
 
     char c = tolower(param_getchar(Cmd, 0));
     if (c == 'h')
@@ -2777,8 +2770,8 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
             PrintAndLogEx(WARNING, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
             break;
         }
-        keyA = bytes_to_num(data, 6);
-        keyB = bytes_to_num(data + 10, 6);
+        uint64_t keyA = bytes_to_num(data, 6);
+        uint64_t keyB = bytes_to_num(data + 10, 6);
         PrintAndLogEx(NORMAL, "|%03d|  %012" PRIx64 "  |  %012" PRIx64 "  |", i, keyA, keyB);
     }
     PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
@@ -2875,9 +2868,7 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
 
 static int CmdHF14AMfCLoad(const char *Cmd) {
 
-    uint8_t buf8[16] = {0x00};
     uint8_t fillFromEmulator = 0;
-    int blockNum, flags = 0;
     bool fillFromJson = false;
     bool fillFromBin = false;
     char fileName[50] = {0};
@@ -2895,7 +2886,9 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
 
     if (fillFromEmulator) {
-        for (blockNum = 0; blockNum < 16 * 4; blockNum += 1) {
+        for (int blockNum = 0; blockNum < 16 * 4; blockNum += 1) {
+            int flags = 0;
+            uint8_t buf8[16] = {0x00};
             if (mfEmlGetMem(buf8, blockNum, 1)) {
                 PrintAndLogEx(WARNING, "Cant get block: %d", blockNum);
                 return 2;
@@ -2949,7 +2942,8 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Copying to magic card");
 
-    blockNum = 0;
+    int blockNum = 0;
+    int flags = 0;
     while (datalen) {
 
         // switch on field and send magic sequence
@@ -2992,17 +2986,15 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
 static int CmdHF14AMfCGetBlk(const char *Cmd) {
     uint8_t data[16] = {0};
-    uint8_t blockNo = 0;
-    int res;
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_cgetblk();
 
-    blockNo = param_get8(Cmd, 0);
+    uint8_t blockNo = param_get8(Cmd, 0);
 
     PrintAndLogEx(NORMAL, "--block number:%2d ", blockNo);
 
-    res = mfCGetBlock(blockNo, data, MAGIC_SINGLE);
+    int res = mfCGetBlock(blockNo, data, MAGIC_SINGLE);
     if (res) {
         PrintAndLogEx(WARNING, "Can't read block. error=%d", res);
         return PM3_ESOFT;
@@ -3028,13 +3020,11 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
 
 static int CmdHF14AMfCGetSc(const char *Cmd) {
     uint8_t data[16] = {0};
-    uint8_t sector = 0;
-    int i, res, flags;
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_cgetsc();
 
-    sector = param_get8(Cmd, 0);
+    uint8_t sector = param_get8(Cmd, 0);
     if (sector > 39) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
         return PM3_ESOFT;
@@ -3049,13 +3039,13 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
         start = 128 + (sector - 32) * 16;
     }
 
-    flags = MAGIC_INIT + MAGIC_WUPC;
+    int flags = MAGIC_INIT + MAGIC_WUPC;
 
-    for (i = 0; i < blocks; i++) {
+    for (int i = 0; i < blocks; i++) {
         if (i == 1) flags = 0;
         if (i == blocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
 
-        res = mfCGetBlock(start + i, data, flags);
+        int res = mfCGetBlock(start + i, data, flags);
         if (res) {
             PrintAndLogEx(WARNING, "Can't read block. %d error=%d", start + i, res);
             return PM3_ESOFT;
@@ -3075,10 +3065,9 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     int i, len, flags;
     uint8_t numblocks = 0, cmdp = 0;
     uint16_t bytes = 0;
-    char ctmp;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        ctmp = tolower(param_getchar(Cmd, cmdp));
+        char ctmp = tolower(param_getchar(Cmd, cmdp));
         switch (ctmp) {
             case 'e':
                 useuid = true;

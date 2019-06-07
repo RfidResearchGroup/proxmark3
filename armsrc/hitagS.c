@@ -295,8 +295,6 @@ static int check_select(uint8_t *rx, uint32_t uid) {
 static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                                          uint8_t *tx, size_t *txlen) {
     uint8_t rx_air[HITAG_FRAME_LEN];
-    uint8_t page;
-    int i;
     uint64_t state;
     unsigned char crc;
 
@@ -330,7 +328,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             }
             //send uid as a response
             *txlen = 32;
-            for (i = 0; i < 4; i++)
+            for (int i = 0; i < 4; i++)
                 tx[i] = (tag.uid >> (24 - (i * 8))) & 0xff;
         }
         break;
@@ -357,13 +355,13 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 }
 
                 //send configuration
-                for (i = 0; i < 4; i++)
+                for (int i = 0; i < 4; i++)
                     tx[i] = (tag.pages[0][1] >> (i * 8)) & 0xff;
                 tx[3] = 0xff;
                 if (tag.mode != HT_STANDARD) {
                     *txlen = 40;
                     crc = CRC_PRESET;
-                    for (i = 0; i < 4; i++)
+                    for (int i = 0; i < 4; i++)
                         calc_crc(&crc, tx[i], 8);
                     tx[4] = crc;
                 }
@@ -399,7 +397,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     break;
             }
 
-            for (i = 0; i < 4; i++)
+            for (int i = 0; i < 4; i++)
                 _hitag2_byte(&state);
 
             //send con2, pwdh0, pwdl0, pwdl1 encrypted as a response
@@ -490,7 +488,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             //write page, write block, read page or read block command received
             if ((rx[0] & 0xf0) == 0xc0) { //read page
                 //send page data
-                page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
+                uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
                 *txlen = 32;
                 tx[0] = (tag.pages[page / 4][page % 4]) & 0xff;
                 tx[1] = (tag.pages[page / 4][page % 4] >> 8) & 0xff;
@@ -520,7 +518,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     //add crc8
                     *txlen = 40;
                     crc = CRC_PRESET;
-                    for (i = 0; i < 4; i++)
+                    for (int i = 0; i < 4; i++)
                         calc_crc(&crc, tx[i], 8);
                     tx[4] = crc;
                 }
@@ -531,10 +529,10 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     *txlen = 0;
                 }
             } else if ((rx[0] & 0xf0) == 0xd0) { //read block
-                page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
+                uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
                 *txlen = 32 * 4;
                 //send page,...,page+3 data
-                for (i = 0; i < 4; i++) {
+                for (int i = 0; i < 4; i++) {
                     tx[0 + i * 4] = (tag.pages[page / 4][page % 4]) & 0xff;
                     tx[1 + i * 4] = (tag.pages[page / 4][page % 4] >> 8) & 0xff;
                     tx[2 + i * 4] = (tag.pages[page / 4][page % 4] >> 16) & 0xff;
@@ -563,7 +561,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     //add crc8
                     *txlen = 32 * 4 + 8;
                     crc = CRC_PRESET;
-                    for (i = 0; i < 16; i++)
+                    for (int i = 0; i < 16; i++)
                         calc_crc(&crc, tx[i], 8);
                     tx[16] = crc;
                 }
@@ -573,7 +571,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     *txlen = 0;
                 }
             } else if ((rx[0] & 0xf0) == 0x80) { //write page
-                page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
+                uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
 
                 switch (tag.mode) {
                     case HT_STANDARD:
@@ -604,7 +602,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 }
 
             } else if ((rx[0] & 0xf0) == 0x90) { //write block
-                page = ((rx[0] & 0x0f) * 6) + ((rx[1] & 0xf0) / 16);
+                uint8_t page = ((rx[0] & 0x0f) * 6) + ((rx[1] & 0xf0) / 16);
                 switch (tag.mode) {
                     case HT_STANDARD:
                         sof_bits = 1;
@@ -647,10 +645,8 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
 static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrAr, uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     uint8_t rx_air[HITAG_FRAME_LEN];
     int response_bit[200];
-    int i, j, z;
     unsigned char mask = 1;
     unsigned char uid[32];
-    uint8_t uid1, uid2, uid3, uid4;
     unsigned char crc;
     uint64_t state;
     uint8_t auth_ks[4];
@@ -664,9 +660,9 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
             Dbprintf("authentication failed!");
             return -1;
         }
-        z = 0;
-        for (i = 0; i < 10; i++) {
-            for (j = 0; j < 8; j++) {
+        int z = 0;
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 8; j++) {
                 response_bit[z] = 0;
                 if ((rx[i] & ((mask << 7) >> j)) != 0)
                     response_bit[z] = 1;
@@ -674,13 +670,13 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
             }
         }
         uint16_t k = 0;
-        for (i = 5; i < z; i += 2) {
+        for (int i = 5; i < z; i += 2) {
             uid[k] = response_bit[i];
             k++;
             if (k > 31)
                 break;
         }
-        uid1 = (uid[0] << 7)
+        uint8_t uid1 = (uid[0] << 7)
                | (uid[1] << 6)
                | (uid[2] << 5)
                | (uid[3] << 4)
@@ -689,7 +685,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                | (uid[6] << 1)
                | uid[7];
 
-        uid2 = (uid[8] << 7)
+        uint8_t uid2 = (uid[8] << 7)
                | (uid[9] << 6)
                | (uid[10] << 5)
                | (uid[11] << 4)
@@ -698,7 +694,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                | (uid[14] << 1)
                | uid[15];
 
-        uid3 = (uid[16] << 7)
+        uint8_t uid3 = (uid[16] << 7)
                | (uid[17] << 6)
                | (uid[18] << 5)
                | (uid[19] << 4)
@@ -707,7 +703,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                | (uid[22] << 1)
                | uid[23];
 
-        uid4 = (uid[24] << 7)
+        uint8_t uid4 = (uid[24] << 7)
                | (uid[25] << 6)
                | (uid[26] << 5)
                | (uid[27] << 4)
@@ -730,19 +726,19 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
         calc_crc(&crc, uid3, 8);
         calc_crc(&crc, uid4, 8);
 
-        for (i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             response_bit[i] = 0;
         }
 
-        for (i = 0; i < 5; i++) {
+        for (int i = 0; i < 5; i++) {
             response_bit[i] = 0;
         }
-
-        for (i = 5; i < 37; i++) {
+        int i = 5;
+        for (; i < 37; i++) {
             response_bit[i] = uid[i - 5];
         }
 
-        for (j = 0; j < 8; j++) {
+        for (int j = 0; j < 8; j++) {
             response_bit[i] = 0;
             if ((crc & ((mask << 7) >> j)) != 0)
                 response_bit[i] = 1;
@@ -750,7 +746,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
         }
 
         k = 0;
-        for (i = 0; i < 6; i++) {
+        for (int i = 0; i < 6; i++) {
             tx[i] = (response_bit[k] << 7)
                     | (response_bit[k + 1] << 6)
                     | (response_bit[k + 2] << 5)
@@ -766,9 +762,9 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
         tag.pstate = HT_INIT;
     } else if (tag.pstate == HT_INIT && rxlen == 44) {
         // received configuration after select command
-        z = 0;
-        for (i = 0; i < 6; i++) {
-            for (j = 0; j < 8; j++) {
+        int z = 0;
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < 8; j++) {
                 response_bit[z] = 0;
                 if ((rx[i] & ((mask << 7) >> j)) != 0)
                     response_bit[z] = 1;
@@ -819,7 +815,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                 if (htf == 02 || htf == 04) { //RHTS_KEY //WHTS_KEY
                     state = _hitag2_init(REV64(key), REV32(tag.uid), REV32(rnd));
 
-                    for (i = 0; i < 4; i++) {
+                    for (int i = 0; i < 4; i++) {
                         auth_ks[i] = _hitag2_byte(&state) ^ 0xff;
                     }
                     *txlen = 64;
@@ -836,7 +832,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                         Dbprintf("%02X %02X %02X %02X %02X %02X %02X %02X", tx[0],
                                  tx[1], tx[2], tx[3], tx[4], tx[5], tx[6], tx[7]);
                 } else if (htf == 01 || htf == 03) { //RHTS_CHALLENGE //WHTS_CHALLENGE
-                    for (i = 0; i < 8; i++)
+                    for (int i = 0; i < 8; i++)
                         tx[i] = ((NrAr >> (56 - (i * 8))) & 0xff);
                 }
                 end = true;
@@ -869,7 +865,7 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
         if (htf == 02 || htf == 04) { //RHTS_KEY //WHTS_KEY
             {
                 state = _hitag2_init(REV64(key), REV32(tag.uid), REV32(rnd));
-                for (i = 0; i < 5; i++)
+                for (int i = 0; i < 5; i++)
                     _hitag2_byte(&state);
 
                 pwdh0 = ((rx[1] & 0x0f) * 16 + ((rx[2] & 0xf0) / 16)) ^ _hitag2_byte(&state);
@@ -1133,9 +1129,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
     uint8_t *tx = txbuf;
     size_t txlen = 0;
     int lastbit = 1;
-    bool bSkip;
     int reset_sof = 1;
-    int tag_sof;
     int t_wait = HITAG_T_WAIT_MAX;
     bool bStop = false;
     int sendNum = 0;
@@ -1369,8 +1363,8 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
         memset(rx, 0x00, sizeof(rx));
         rxlen = 0;
         lastbit = 1;
-        bSkip = true;
-        tag_sof = reset_sof;
+        bool bSkip = true;
+        int tag_sof = reset_sof;
         response = 0;
 
         // Receive frame, watch for at most T0*EOF periods
@@ -1462,9 +1456,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
     uint8_t *tx = txbuf;
     size_t txlen = 0;
     int lastbit;
-    bool bSkip;
     int reset_sof;
-    int tag_sof;
     int t_wait = HITAG_T_WAIT_MAX;
     bool bStop;
     unsigned char crc;
@@ -1659,8 +1651,8 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
         memset(rx, 0x00, sizeof(rx));
         rxlen = 0;
         lastbit = 1;
-        bSkip = true;
-        tag_sof = reset_sof;
+        bool bSkip = true;
+        int tag_sof = reset_sof;
         response = 0;
         uint32_t errorCount = 0;
 
@@ -1754,12 +1746,11 @@ void check_challenges(bool file_given, uint8_t *data) {
     uint8_t rx[HITAG_FRAME_LEN];
     uint8_t unlocker[60][8];
     int u1 = 0;
-    size_t rxlen = 0, txlen = 0;
+    size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
-    uint8_t *tx;
     int t_wait = HITAG_T_WAIT_MAX;
-    int lastbit, reset_sof, tag_sof, STATE = 0;;
-    bool bSkip, bStop;
+    int lastbit, reset_sof, STATE = 0;;
+    bool bStop;
     int response_bit[200];
     unsigned char mask = 1;
     unsigned char uid[32];
@@ -1837,8 +1828,8 @@ void check_challenges(bool file_given, uint8_t *data) {
             LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
         }
 
-        tx = txbuf;
-        txlen = 0;
+        uint8_t *tx = txbuf;
+        size_t txlen = 0;
         if (rxlen == 0) {
             if (STATE == 2)
                 // challenge failed
@@ -1968,8 +1959,8 @@ void check_challenges(bool file_given, uint8_t *data) {
         memset(rx, 0x00, sizeof(rx));
         rxlen = 0;
         lastbit = 1;
-        bSkip = true;
-        tag_sof = reset_sof;
+        bool bSkip = true;
+        int tag_sof = reset_sof;
         response = 0;
 
         // Receive frame, watch for at most T0*EOF periods

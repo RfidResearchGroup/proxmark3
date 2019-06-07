@@ -288,7 +288,6 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
 
 void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes, int communication_settings) {
     void *res = data;
-    size_t edl;
     void *edata = NULL;
     uint8_t first_cmac_byte = 0x00;
 
@@ -322,7 +321,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                             break;
                         }
 
-                        edl = enciphered_data_length(tag, *nbytes - 1, communication_settings);
+                        size_t edl = enciphered_data_length(tag, *nbytes - 1, communication_settings);
                         edata = malloc(edl);
 
                         memcpy(edata, data, *nbytes - 1);

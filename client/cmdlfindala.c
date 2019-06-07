@@ -89,9 +89,8 @@ static int CmdIndalaDemod(const char *Cmd) {
     setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
 
     //convert UID to HEX
-    uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
-    uid1 = bytebits_to_byte(DemodBuffer, 32);
-    uid2 = bytebits_to_byte(DemodBuffer + 32, 32);
+    uint32_t uid1 = bytebits_to_byte(DemodBuffer, 32);
+    uint32_t uid2 = bytebits_to_byte(DemodBuffer + 32, 32);
     uint64_t foo = (((uint64_t)uid1 << 32) & 0x1FFFFFFF) | (uid2 & 0x7FFFFFFF);
 
     if (DemodBufferLen == 64) {
@@ -137,11 +136,11 @@ static int CmdIndalaDemod(const char *Cmd) {
 
 
     } else {
-        uid3 = bytebits_to_byte(DemodBuffer + 64, 32);
-        uid4 = bytebits_to_byte(DemodBuffer + 96, 32);
-        uid5 = bytebits_to_byte(DemodBuffer + 128, 32);
-        uid6 = bytebits_to_byte(DemodBuffer + 160, 32);
-        uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
+        uint32_t uid3 = bytebits_to_byte(DemodBuffer + 64, 32);
+        uint32_t uid4 = bytebits_to_byte(DemodBuffer + 96, 32);
+        uint32_t uid5 = bytebits_to_byte(DemodBuffer + 128, 32);
+        uint32_t uid6 = bytebits_to_byte(DemodBuffer + 160, 32);
+        uint32_t uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
         PrintAndLogEx(
             SUCCESS
             , "Indala Found - bitlength %d, Raw 0x%x%08x%08x%08x%08x%08x%08x"
@@ -288,9 +287,9 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     }
 
     //convert UID to HEX
-    uint32_t uid1, uid2, uid3, uid4, uid5, uid6, uid7;
     int idx;
-    uid1 = uid2 = 0;
+    uint32_t uid1 = 0;
+    uint32_t uid2 = 0;
 
     if (uidlen == 64) {
         for (idx = 0; idx < 64; idx++) {
@@ -304,7 +303,11 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
         }
         PrintAndLogEx(SUCCESS, "UID | %s (%x%08x)", showbits, uid1, uid2);
     } else {
-        uid3 = uid4 = uid5 = uid6 = uid7 = 0;
+        uint32_t uid3 = 0;
+        uint32_t uid4 = 0;
+        uint32_t uid5 = 0;
+        uint32_t uid6 = 0;
+        uint32_t uid7 = 0;
 
         for (idx = 0; idx < 224; idx++) {
             uid1 = (uid1 << 1) | (uid2 >> 31);

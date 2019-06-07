@@ -694,7 +694,6 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
         ms_timeout += communication_delay();
 
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
-    uint64_t tmp_clk;
 
     // Wait until the command is received
     while (true) {
@@ -705,7 +704,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             }
         }
 
-        tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
+        uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
         if ((ms_timeout != (size_t) -1) && (msclock() - tmp_clk > ms_timeout))
             break;
 
@@ -778,7 +777,6 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
 
     uint32_t bytes_completed = 0;
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
-    uint64_t tmp_clk;
 
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) -1)
@@ -815,7 +813,7 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
             }
         }
 
-        tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
+        uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
         if (msclock() - tmp_clk > ms_timeout) {
             PrintAndLogEx(FAILED, "Timed out while trying to download data from device");
             break;

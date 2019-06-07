@@ -338,6 +338,7 @@ static int l_WaitForResponseTimeout(lua_State *L) {
 
     memcpy(foo + n, &resp.ng, sizeof(resp.ng));
     n += sizeof(resp.ng);
+    (void) n;
 
     //Push it as a string
     lua_pushlstring(L, (const char *)&foo, sizeof(foo));
@@ -995,7 +996,7 @@ static int l_T55xx_detect(lua_State *L) {
 //
 static int l_ndefparse(lua_State *L) {
 
-    size_t len = 0, size;
+    size_t size;
 
     //Check number of arguments
     int n = lua_gettop(L);
@@ -1021,7 +1022,6 @@ static int l_ndefparse(lua_State *L) {
         for (int i = 0; i < size; i += 2) {
             sscanf(&p_data[i], "%02x", &tmp);
             data[i >> 1] = tmp & 0xFF;
-            len++;
         }
     }
 

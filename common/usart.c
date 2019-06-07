@@ -112,7 +112,7 @@ uint16_t usart_rxdata_available(void) {
 
 uint32_t usart_read_ng(uint8_t *data, size_t len) {
     if (len == 0) return 0;
-    uint32_t packetSize, nbBytesRcv = 0;
+    uint32_t nbBytesRcv = 0;
     uint32_t try = 0;
 //    uint32_t highest_observed_try = 0;
     // Empirical max try observed: 3000000 / USART_BAUD_RATE
@@ -129,7 +129,7 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
     while (len) {
         uint32_t available = usart_rxdata_available();
 
-        packetSize = MIN(available, len);
+        uint32_t packetSize = MIN(available, len);
         if (available > 0) {
 //            Dbprintf_usb("Dbg USART ask %d bytes, available %d bytes, packetsize %d bytes", len, available, packetSize);
 //            highest_observed_try = MAX(highest_observed_try, try);

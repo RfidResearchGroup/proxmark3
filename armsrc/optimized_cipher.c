@@ -111,9 +111,8 @@ void opt_successor(const uint8_t *k, State *s, bool y, State *successor) {
 
 void opt_suc(const uint8_t *k, State *s, uint8_t *in, uint8_t length, bool add32Zeroes) {
     State x2;
-    int i;
-    uint8_t head;
-    for (i = 0; i < length; i++) {
+    for (int i = 0; i < length; i++) {
+        uint8_t head;
         head = 1 & (in[i] >> 7);
         opt_successor(k, s, head, &x2);
 
@@ -141,7 +140,7 @@ void opt_suc(const uint8_t *k, State *s, uint8_t *in, uint8_t length, bool add32
 
     //For tag MAC, an additional 32 zeroes
     if (add32Zeroes) {
-        for (i = 0; i < 16; i++) {
+        for (int i = 0; i < 16; i++) {
             opt_successor(k, s, 0, &x2);
             opt_successor(k, &x2, 0, s);
         }
@@ -149,10 +148,9 @@ void opt_suc(const uint8_t *k, State *s, uint8_t *in, uint8_t length, bool add32
 }
 
 void opt_output(const uint8_t *k, State *s,  uint8_t *buffer) {
-    uint8_t bout, times = 0;
     State temp = {0, 0, 0, 0};
-    for (; times < 4; times++) {
-        bout = 0;
+    for (uint8_t times = 0; times < 4; times++) {
+        uint8_t bout = 0;
         bout |= (s->r & 0x4) << 5;
         opt_successor(k, s, 0, &temp);
         bout |= (temp.r & 0x4) << 4;

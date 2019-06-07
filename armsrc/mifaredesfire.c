@@ -174,22 +174,18 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
     int len = 0;
     //uint8_t PICC_MASTER_KEY8[8] = { 0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47};
     uint8_t PICC_MASTER_KEY16[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
-    uint8_t null_key_data8[8] = {0x00};
     //uint8_t null_key_data16[16] = {0x00};
     //uint8_t new_key_data8[8]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
     //uint8_t new_key_data16[16]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
 
     uint8_t resp[256] = {0x00};
-    uint8_t IV[16] = {0x00};
 
     size_t datalen = datain[0];
 
     uint8_t cmd[40] = {0x00};
     uint8_t encRndB[16] = {0x00};
     uint8_t decRndB[16] = {0x00};
-    uint8_t nonce[16] = {0x00};
     uint8_t both[32] = {0x00};
-    uint8_t encBoth[32] = {0x00};
 
     InitDesfireCard();
 
@@ -217,6 +213,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             } else {
                 if (arg1 == 1) {
                     if (datain[1] == 0xff) {
+                        uint8_t null_key_data8[8] = {0x00};
                         memcpy(keybytes, null_key_data8, 8);
                     } else {
                         memcpy(keybytes, datain + 1, datalen);
@@ -437,6 +434,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             Desfire_aes_key_new(keybytes, key);
 
             AesCtx ctx;
+            uint8_t IV[16] = {0x00};
             if (AesCtxIni(&ctx, IV, key->data, KEY128, CBC) < 0) {
                 if (DBGLEVEL >= 4) {
                     DbpString("AES context failed to init");
@@ -461,8 +459,10 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             // dekryptera tagnonce.
             AesDecrypt(&ctx, encRndB, decRndB, 16);
             rol(decRndB, 16);
+            uint8_t nonce[16] = {0x00};
             memcpy(both, nonce, 16);
             memcpy(both + 16, decRndB, 16);
+            uint8_t encBoth[32] = {0x00};
             AesEncrypt(&ctx, both, encBoth, 32);
 
             cmd[0] = ADDITIONAL_FRAME;

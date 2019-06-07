@@ -284,20 +284,19 @@ static int CmdLFNedapChk(const char *Cmd) {
     //uint8_t last = GetParity(data, EVEN, 62);
     //PrintAndLogEx(NORMAL, "TEST PARITY::  %d | %d ", DemodBuffer[62], last);
 
-    uint8_t cl = 0x1D, ch = 0x1D, carry = 0;
-    uint8_t al, bl, temp;
+    uint8_t cl = 0x1D, ch = 0x1D;
 
     for (int i = len; i >= 0; --i) {
-        al = data[i];
+        uint8_t al = data[i];
         for (int j = 8; j > 0; --j) {
 
-            bl = al ^ ch;
+            uint8_t bl = al ^ ch;
             //PrintAndLogEx(NORMAL, "BL %02x | CH %02x \n", al, ch);
 
-            carry = (cl & 0x80) ? 1 : 0;
+            uint8_t carry = (cl & 0x80) ? 1 : 0;
             cl <<= 1;
 
-            temp = (ch & 0x80) ? 1 : 0;
+            uint8_t temp = (ch & 0x80) ? 1 : 0;
             ch = (ch << 1) | carry;
             carry = temp;
 
@@ -305,7 +304,7 @@ static int CmdLFNedapChk(const char *Cmd) {
             al <<= 1;
 
             carry = (bl & 0x80) ? 1 : 0;
-            bl <<= 1;
+//            bl <<= 1;
 
             if (carry) {
                 cl ^= 0x21;

@@ -1366,9 +1366,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     uint8_t *tx = txbuf;
     size_t txlen = 0;
     int lastbit;
-    bool bSkip;
     int reset_sof;
-    int tag_sof;
     int t_wait = HITAG_T_WAIT_MAX;
     bool bStop;
 
@@ -1515,8 +1513,8 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         memset(rx, 0x00, sizeof(rx));
         rxlen = 0;
         lastbit = 1;
-        bSkip = true;
-        tag_sof = reset_sof;
+        bool bSkip = true;
+        int tag_sof = reset_sof;
         response = 0;
         uint32_t errorCount = 0;
 

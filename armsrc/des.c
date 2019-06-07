@@ -208,9 +208,9 @@ void permute(const uint8_t *ptable, const uint8_t *in, uint8_t *out) {
     ob = ptable[1];
     ptable = &(ptable[2]);
     for (byte = 0; byte < ob; ++byte) {
-        uint8_t x, t = 0;
+        uint8_t t = 0;
         for (bit = 0; bit < 8; ++bit) {
-            x = *ptable++ - 1;
+            uint8_t x = *ptable++ - 1;
             t <<= 1;
             if ((in[x / 8]) & (0x80 >> (x % 8))) {
                 t |= 0x01;

@@ -51,16 +51,14 @@ void init_table(CrcType_t crctype) {
 
 void generate_table(uint16_t polynomial, bool refin) {
 
-    uint16_t i, j, crc, c;
-
-    for (i = 0; i < 256; i++) {
-        crc = 0;
+    for (uint16_t i = 0; i < 256; i++) {
+        uint16_t c, crc = 0;
         if (refin)
             c = reflect8(i) << 8;
         else
             c = i << 8;
 
-        for (j = 0; j < 8; j++) {
+        for (uint16_t j = 0; j < 8; j++) {
 
             if ((crc ^ c) & 0x8000)
                 crc = (crc << 1) ^ polynomial;
@@ -109,11 +107,10 @@ uint16_t crc16_fast(uint8_t const *d, size_t n, uint16_t initval, bool refin, bo
 
 // bit looped solution  TODO REMOVED
 uint16_t update_crc16_ex(uint16_t crc, uint8_t c, uint16_t polynomial) {
-    uint16_t i, v, tmp = 0;
+    uint16_t tmp = 0;
+    uint16_t v = (crc ^ c) & 0xff;
 
-    v = (crc ^ c) & 0xff;
-
-    for (i = 0; i < 8; i++) {
+    for (uint16_t i = 0; i < 8; i++) {
 
         if ((tmp ^ v) & 1)
             tmp = (tmp >> 1) ^ polynomial;
@@ -133,9 +130,8 @@ uint16_t Crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t pol
     if (length == 0)
         return (~remainder);
 
-    uint8_t c;
     for (uint32_t i = 0; i < length; ++i) {
-        c = d[i];
+        uint8_t c = d[i];
         if (refin) c = reflect8(c);
 
         // xor in at msb

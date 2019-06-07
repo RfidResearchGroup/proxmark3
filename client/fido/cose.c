@@ -220,9 +220,9 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
     }
 
     // d - private key
-    uint8_t private_key[128] = {0};
     res = CborMapGetKeyById(&parser, &map, data, datalen, -4);
     if (!res) {
+        uint8_t private_key[128] = {0};
         res = CborGetBinStringValue(&map, private_key, sizeof(private_key), &len);
         cbor_check(res);
         if (verbose)

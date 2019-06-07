@@ -766,11 +766,10 @@ int usb_write(const uint8_t *data, const size_t len) {
 //* \brief Send Data through the control endpoint
 //*----------------------------------------------------------------------------
 void AT91F_USB_SendData(AT91PS_UDP pUdp, const char *pData, uint32_t length) {
-    uint32_t cpt = 0;
     AT91_REG csr;
 
     do {
-        cpt = MIN(length, AT91C_EP_CONTROL_SIZE);
+        uint32_t cpt = MIN(length, AT91C_EP_CONTROL_SIZE);
         length -= cpt;
 
         while (cpt--)

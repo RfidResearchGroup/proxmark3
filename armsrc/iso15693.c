@@ -736,9 +736,9 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outda
 // Decodes a message from a tag and displays its metadata and content
 #define DBD15STATLEN 48
 void DbdecodeIso15693Answer(int len, uint8_t *d) {
-    char status[DBD15STATLEN + 1] = {0};
 
     if (len > 3) {
+        char status[DBD15STATLEN + 1] = {0};
         if (d[0] & (1 << 3))
             strncat(status, "ProtExt ", DBD15STATLEN - strlen(status));
         if (d[0] & 1) {
@@ -802,9 +802,6 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
 void ReaderIso15693(uint32_t parameter) {
     int answerLen1 = 0;
     int tsamples = 0, wait = 0, elapsed = 0;
-
-    uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-
     // set up device/fpga
     Iso15693InitReader();
 
@@ -829,6 +826,7 @@ void ReaderIso15693(uint32_t parameter) {
 
     // we should do a better check than this
     if (answerLen1 >= 12) {
+        uint8_t uid[8];
         uid[0] = answer1[9]; // always E0
         uid[1] = answer1[8]; // IC Manufacturer code
         uid[2] = answer1[7];

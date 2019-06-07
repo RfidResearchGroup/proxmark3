@@ -308,8 +308,6 @@ static int CmdHFiClassSim(const char *Cmd) {
         return usage_hf_iclass_sim();
     }
 
-    uint8_t numberOfCSNs = 0;
-
     /*
             // pre-defined 8 CSN by Holiman
             uint8_t csns[8*NUM_CSNS] = {
@@ -478,9 +476,8 @@ static int CmdHFiClassSim(const char *Cmd) {
 
             //KEYROLL 2
             memset(dump, 0, datalen);
-            uint8_t resp_index = 0;
             for (uint8_t i = 0; i < NUM_CSNS; i++) {
-                resp_index = (i + NUM_CSNS) * 16;
+                uint8_t resp_index = (i + NUM_CSNS) * 16;
                 // Copy CSN
                 memcpy(dump + i * MAC_ITEM_SIZE, csns + i * 8, 8);
                 // copy EPURSE
@@ -496,6 +493,7 @@ static int CmdHFiClassSim(const char *Cmd) {
         case 1:
         case 3:
         default: {
+            uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
             SendCommandOLD(CMD_SIMULATE_TAG_ICLASS, simType, numberOfCSNs, 0, CSN, 8);
             break;
@@ -1303,7 +1301,6 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
         return 0;
     }
 
-    uint8_t *ptr;
     uint8_t data[(endblock - startblock) * 12];
     // calculate all mac for every the block we will write
     for (i = startblock; i <= endblock; i++) {
@@ -1312,7 +1309,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
         // memcpy(pointer,tag_data[i - 6],8) 8 bytes
         // memcpy(pointer + 8,mac,sizoof(mac) 4 bytes;
         // next one
-        ptr = data + (i - startblock) * 12;
+        uint8_t *ptr = data + (i - startblock) * 12;
         memcpy(ptr, &(tag_data[i - startblock].d[0]), 8);
         memcpy(ptr + 8, MAC, 4);
     }
@@ -1335,11 +1332,10 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
 }
 
 static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool verbose, bool auth) {
-    uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
     // block 0,1 should always be able to read,  and block 5 on some cards.
     if (auth || blockno >= 2) {
+        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
+        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         if (!select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose))
             return 0;
     } else {
@@ -1445,8 +1441,8 @@ static int CmdHFiClass_loclass(const char *Cmd) {
     if (strlen(Cmd) < 1 || opt == 'h')
         usage_hf_iclass_loclass();
 
-    char fileName[FILE_PATH_SIZE] = {0};
     if (opt == 'f') {
+        char fileName[FILE_PATH_SIZE] = {0};
         if (param_getstr(Cmd, 1, fileName, sizeof(fileName)) > 0) {
             return bruteforceFileNoKeys(fileName);
         } else {
@@ -1551,9 +1547,9 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
 }
 
 void HFiClassCalcDivKey(uint8_t *CSN, uint8_t *KEY, uint8_t *div_key, bool elite) {
-    uint8_t keytable[128] = {0};
-    uint8_t key_index[8] = {0};
     if (elite) {
+        uint8_t keytable[128] = {0};
+        uint8_t key_index[8] = {0};
         uint8_t key_sel[8] = { 0 };
         uint8_t key_sel_p[8] = { 0 };
         hash2(KEY, keytable);
@@ -1595,7 +1591,6 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     uint8_t NEWKEY[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t xor_div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t keyNbr = 0;
     uint8_t dataLen = 0;
     char tempStr[50] = {0};
@@ -1665,9 +1660,11 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     }
     if (errors || cmdp < 4) return usage_hf_iclass_calc_newkey();
 
-    if (!givenCSN)
+    if (!givenCSN) {
+        uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         if (!select_only(CSN, CCNR, false, true))
             return 0;
+    }
 
     HFiClassCalcNewKey(CSN, OLDKEY, NEWKEY, xor_div_key, elite, oldElite, true);
     return PM3_SUCCESS;
@@ -2318,11 +2315,10 @@ static void permute(uint8_t *data, uint8_t len, uint8_t *output) {
         PrintAndLogEx(NORMAL, "[!] wrong key size\n");
         return;
     }
-    uint8_t i, j, p, mask;
-    for (i = 0; i < KEY_SIZE; ++i) {
-        p = 0;
-        mask = 0x80 >> i;
-        for (j = 0; j < KEY_SIZE; ++j) {
+    for (uint8_t i = 0; i < KEY_SIZE; ++i) {
+        uint8_t p = 0;
+        uint8_t mask = 0x80 >> i;
+        for (uint8_t j = 0; j < KEY_SIZE; ++j) {
             p >>= 1;
             if (data[j] & mask)
                 p |= 0x80;
@@ -2377,8 +2373,6 @@ static void generate(uint8_t *data, uint8_t len) {
 static int CmdHFiClassPermuteKey(const char *Cmd) {
 
     uint8_t key[8] = {0};
-    uint8_t key_std_format[8] = {0};
-    uint8_t key_iclass_format[8] = {0};
     uint8_t data[16] = {0};
     bool isReverse = false;
     int len = 0;
@@ -2396,10 +2390,12 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 
     if (isReverse) {
         generate_rev(data, len);
+        uint8_t key_std_format[8] = {0};
         permutekey_rev(key, key_std_format);
         PrintAndLogEx(SUCCESS, "holiman iclass key | %s \n", sprint_hex(key_std_format, 8));
     } else {
         generate(data, len);
+        uint8_t key_iclass_format[8] = {0};
         permutekey(key, key_iclass_format);
         PrintAndLogEx(SUCCESS, "holiman std key | %s \n", sprint_hex(key_iclass_format, 8));
     }

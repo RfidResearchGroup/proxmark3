@@ -898,7 +898,6 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     // get rid of leading crap
     snprintf(tmp, sizeof(tmp), "%i", skip);
     CmdLtrim(tmp);
-    bool pTest;
     bool AllPTest = true;
     // now work through remaining buffer printing out data blocks
     block = 0;
@@ -930,7 +929,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
         //set DemodBufferLen to just one block
         DemodBufferLen = skip / clk;
         //test parities
-        pTest = EM_ByteParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
+        bool pTest = EM_ByteParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
         pTest &= EM_EndParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
         AllPTest &= pTest;
         //get output

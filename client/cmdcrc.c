@@ -13,8 +13,6 @@
 
 static int split(char *str, char *arr[MAX_ARGS]) {
     int beginIndex = 0;
-    int endIndex;
-    int maxWords = MAX_ARGS;
     int wordCnt = 0;
 
     while (1) {
@@ -24,7 +22,7 @@ static int split(char *str, char *arr[MAX_ARGS]) {
         if (str[beginIndex] == '\0') {
             break;
         }
-        endIndex = beginIndex;
+        int endIndex = beginIndex;
         while (str[endIndex] && !isspace(str[endIndex])) {
             ++endIndex;
         }
@@ -33,7 +31,7 @@ static int split(char *str, char *arr[MAX_ARGS]) {
         memcpy(tmp, &str[beginIndex], len);
         arr[wordCnt++] = tmp;
         beginIndex = endIndex;
-        if (wordCnt == maxWords)
+        if (wordCnt == MAX_ARGS)
             break;
     }
     return wordCnt;
@@ -45,10 +43,8 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
     /* default values */
     static model_t model = MZERO;
 
-    int ibperhx = 8;//, obperhx = 8;
-    int rflags = 0, uflags = 0; /* search and UI flags */
     poly_t apoly, crc, qpoly = PZERO, *apolys = NULL, *pptr = NULL, *qptr = NULL;
-    model_t pset = model, *candmods, *mptr;
+    model_t pset = model;
 
     /* stdin must be binary */
 #ifdef _WIN32
@@ -81,6 +77,8 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
         mfree(&model);
     } else { //reveng -s
 
+        int ibperhx = 8;//, obperhx = 8;
+        int rflags = 0, uflags = 0; /* search and UI flags */
         if (~model.flags & P_MULXN) {
             PrintAndLogEx(WARNING, "cannot search for non-Williams compliant models");
             return 0;
@@ -108,9 +106,9 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
         /* scan against preset models */
         if (~uflags & C_NOPCK) {
             pass = 0;
-            int Cnt = 0, psets;
+            int Cnt = 0;
             do {
-                psets = mcount();
+                int psets = mcount();
 
                 while (psets) {
                     mbynum(&pset, --psets);
@@ -192,7 +190,8 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
         pass = 0;
         int args = 0;
         do {
-            mptr = candmods = reveng(&model, qpoly, rflags, args, apolys);
+            model_t *candmods = reveng(&model, qpoly, rflags, args, apolys);
+            model_t *mptr = candmods;
             if (mptr && plen(mptr->spoly)) {
                 uflags |= C_RESULT;
             }
@@ -396,7 +395,6 @@ static int CmdrevengSearch(const char *Cmd) {
     uint8_t width[NMODELS] = {0};
     int count = 0;
 
-    uint8_t crcChars;
     char result[30];
     char revResult[30];
     int ans = GetModels(Models, &count, width);
@@ -410,7 +408,7 @@ static int CmdrevengSearch(const char *Cmd) {
             continue;
         }*/
         // round up to # of characters in this model's crc
-        crcChars = ((width[i] + 7) / 8) * 2;
+        uint8_t crcChars = ((width[i] + 7) / 8) * 2;
         // can't test a model that has more crc digits than our data
         if (crcChars >= dataLen)
             continue;

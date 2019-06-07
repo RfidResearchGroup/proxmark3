@@ -496,19 +496,17 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
 // Returns 0 on success or a non-zero error code on failure
 //-----------------------------------------------------------------------------
 int EPA_Setup() {
-    int return_code = 0;
     uint8_t uid[10];
-    uint8_t pps_response[3];
-    uint8_t pps_response_par[1];
     iso14a_card_select_t card_a_info;
-    iso14b_card_select_t card_b_info;
 
     // first, look for type A cards
     // power up the field
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
     // select the card
-    return_code = iso14443a_select_card(uid, &card_a_info, NULL, true, 0, false);
+    int return_code = iso14443a_select_card(uid, &card_a_info, NULL, true, 0, false);
     if (return_code == 1) {
+        uint8_t pps_response[3];
+        uint8_t pps_response_par[1];
         // send the PPS request
         ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
         return_code = ReaderReceive(pps_response, pps_response_par);
@@ -523,6 +521,7 @@ int EPA_Setup() {
     // if we're here, there is no type A card, so we look for type B
     // power up the field
     iso14443b_setup();
+    iso14b_card_select_t card_b_info;
     // select the card
     return_code = iso14443b_select_card(&card_b_info);
     if (return_code == 0) {

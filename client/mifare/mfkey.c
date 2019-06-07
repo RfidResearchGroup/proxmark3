@@ -45,7 +45,7 @@ uint32_t intersection(uint64_t *listA, uint64_t *listB) {
 uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t par_info, uint64_t ks_info, uint64_t **keys) {
     struct Crypto1State *states;
     uint32_t i, pos;
-    uint8_t bt, ks3x[8], par[8][8];
+    uint8_t ks3x[8], par[8][8];
     uint64_t key_recovered;
     uint64_t *keylist;
 
@@ -54,7 +54,7 @@ uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t
 
     for (pos = 0; pos < 8; pos++) {
         ks3x[7 - pos] = (ks_info >> (pos * 8)) & 0x0F;
-        bt = (par_info >> (pos * 8)) & 0xFF;
+        uint8_t bt = (par_info >> (pos * 8)) & 0xFF;
 
         par[7 - pos][0] = (bt >> 0) & 1;
         par[7 - pos][1] = (bt >> 1) & 1;

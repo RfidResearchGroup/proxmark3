@@ -167,12 +167,11 @@ static int l_unpack(lua_State *L) {       /** unpack(f,s, [init]) */
                 case OP_HEX: {
                     luaL_Buffer buf;
                     char hdigit = '0';
-                    int val = 0;
                     luaL_buffinit(L, &buf);
                     N++;
                     if (i + N > len) {done = 1; break;}
                     for (unsigned int ii = i; ii < i + N; ii++) {
-                        val = s[ii] & 0xF0;
+                        int val = s[ii] & 0xF0;
                         val = val >> 4;
                         hdigit = HEXDIGITS(val);
                         luaL_addlstring(&buf, &hdigit, 1);

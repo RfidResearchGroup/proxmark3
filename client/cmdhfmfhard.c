@@ -1038,12 +1038,7 @@ static void estimate_sum_a8(void) {
 static int read_nonce_file(char *filename) {
     FILE *fnonces = NULL;
     char progress_text[80] = "";
-    size_t bytes_read;
-    uint8_t trgBlockNo;
-    uint8_t trgKeyType;
     uint8_t read_buf[9];
-    uint32_t nt_enc1, nt_enc2;
-    uint8_t par_enc;
 
     num_acquired_nonces = 0;
     if ((fnonces = fopen(filename, "rb")) == NULL) {
@@ -1052,21 +1047,21 @@ static int read_nonce_file(char *filename) {
     }
     snprintf(progress_text, 80, "Reading nonces from file %s...", filename);
     hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
-    bytes_read = fread(read_buf, 1, 6, fnonces);
+    size_t bytes_read = fread(read_buf, 1, 6, fnonces);
     if (bytes_read != 6) {
         PrintAndLogEx(WARNING, "File reading error.");
         fclose(fnonces);
         return 1;
     }
     cuid = bytes_to_num(read_buf, 4);
-    trgBlockNo = bytes_to_num(read_buf + 4, 1);
-    trgKeyType = bytes_to_num(read_buf + 5, 1);
+    uint8_t trgBlockNo = bytes_to_num(read_buf + 4, 1);
+    uint8_t trgKeyType = bytes_to_num(read_buf + 5, 1);
 
     bytes_read = fread(read_buf, 1, 9, fnonces);
     while (bytes_read == 9) {
-        nt_enc1 = bytes_to_num(read_buf, 4);
-        nt_enc2 = bytes_to_num(read_buf + 4, 4);
-        par_enc = bytes_to_num(read_buf + 8, 1);
+        uint32_t nt_enc1 = bytes_to_num(read_buf, 4);
+        uint32_t nt_enc2 = bytes_to_num(read_buf + 4, 4);
+        uint8_t par_enc = bytes_to_num(read_buf + 8, 1);
         add_nonce(nt_enc1, par_enc >> 4);
         add_nonce(nt_enc2, par_enc & 0x0f);
         num_acquired_nonces += 2;
@@ -1416,14 +1411,12 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         }
 
         if (!initialize) {
-            uint32_t nt_enc1, nt_enc2;
-            uint8_t par_enc;
             uint16_t num_sampled_nonces = resp.oldarg[2];
             uint8_t *bufp = resp.data.asBytes;
             for (uint16_t i = 0; i < num_sampled_nonces; i += 2) {
-                nt_enc1 = bytes_to_num(bufp, 4);
-                nt_enc2 = bytes_to_num(bufp + 4, 4);
-                par_enc = bytes_to_num(bufp + 8, 1);
+                uint32_t nt_enc1 = bytes_to_num(bufp, 4);
+                uint32_t nt_enc2 = bytes_to_num(bufp + 4, 4);
+                uint8_t par_enc = bytes_to_num(bufp + 8, 1);
 
                 //PrintAndLogEx(NORMAL, "Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc1, par_enc >> 4);
                 num_acquired_nonces += add_nonce(nt_enc1, par_enc >> 4);

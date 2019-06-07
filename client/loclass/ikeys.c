@@ -257,17 +257,15 @@ void hash0(uint64_t c, uint8_t k[8]) {
     // z0-z7 6 bits each : 48 bits
     uint8_t x = (c & 0xFF00000000000000) >> 56;
     uint8_t y = (c & 0x00FF000000000000) >> 48;
-    int n;
-    uint8_t zn, zn4, _zn, _zn4;
     uint64_t zP = 0;
 
-    for (n = 0;  n < 4 ; n++) {
-        zn = getSixBitByte(c, n);
+    for (int n = 0;  n < 4 ; n++) {
+        uint8_t zn = getSixBitByte(c, n);
 
-        zn4 = getSixBitByte(c, n + 4);
+        uint8_t zn4 = getSixBitByte(c, n + 4);
 
-        _zn = (zn % (63 - n)) + n;
-        _zn4 = (zn4 % (64 - n)) + n;
+        uint8_t _zn = (zn % (63 - n)) + n;
+        uint8_t _zn4 = (zn4 % (64 - n)) + n;
 
         pushbackSixBitByte(&zP, _zn, n);
         pushbackSixBitByte(&zP, _zn4, n + 4);
@@ -300,9 +298,8 @@ void hash0(uint64_t c, uint8_t k[8]) {
 
     printState("0|0|z~", zTilde);
 
-    int i;
-    int zerocounter = 0 ;
-    for (i = 0; i < 8; i++) {
+//    int zerocounter = 0 ;
+    for (int i = 0; i < 8; i++) {
         // the key on index i is first a bit from y
         // then six bits from z,
         // then a bit from p
@@ -340,9 +337,9 @@ void hash0(uint64_t c, uint8_t k[8]) {
             k[i] |= zTilde_i & 0x7E;
             k[i] |= (~p_i) & 1;
         }
-        if ((k[i] & 1) == 0) {
-            zerocounter++;
-        }
+//        if ((k[i] & 1) == 0) {
+//            zerocounter++;
+//        }
     }
 }
 /**

@@ -309,13 +309,13 @@ bool RAMFUNC MfSniffLogic(const uint8_t *data, uint16_t len, uint8_t *parity, ui
 */
 
 void RAMFUNC MfSniffSend() {
-    uint16_t chunksize, tracelen = BigBuf_get_traceLen();
+    uint16_t tracelen = BigBuf_get_traceLen();
     int packlen = tracelen; // total number of bytes to send
     uint8_t *data = BigBuf_get_addr();
 
     while (packlen > 0) {
         LED_B_ON();
-        chunksize = MIN(PM3_CMD_DATA_SIZE, packlen); // chunk size 512
+        uint16_t chunksize = MIN(PM3_CMD_DATA_SIZE, packlen); // chunk size 512
         reply_old(CMD_ACK, 1, tracelen, chunksize, data + tracelen - packlen, chunksize);
         packlen -= chunksize;
         LED_B_OFF();
