@@ -479,14 +479,14 @@ bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
 // by marshmellow
 // to help detect clocks on heavily clipped samples
 // based on count of low to low
-int DetectStrongAskClock(uint8_t *src, size_t size, int high, int low, int *clock) {
+int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock) {
     size_t i = 100;
     size_t minClk = 512;
     uint16_t shortestWaveIdx = 0;
 
     // get to first full low to prime loop and skip incomplete first pulse
-    getNextHigh(src, size, high, &i);
-    getNextLow(src, size, low, &i);
+    getNextHigh(dest, size, high, &i);
+    getNextLow(dest, size, low, &i);
 
     if (i == size)
         return -1;
@@ -512,8 +512,8 @@ int DetectStrongAskClock(uint8_t *src, size_t size, int high, int low, int *cloc
         // measure from low to low
         size_t startwave = i;
 
-        getNextHigh(src, size, high, &i);
-        getNextLow(src, size, low, &i);
+        getNextHigh(dest, size, high, &i);
+        getNextLow(dest, size, low, &i);
 
         //get minimum measured distance
         if (i - startwave < minClk && i < size) {

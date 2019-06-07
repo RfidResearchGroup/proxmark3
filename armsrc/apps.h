@@ -45,9 +45,9 @@ void ReadMem(int addr);
 void __attribute__((noreturn)) AppMain(void);
 //void DbpIntegers(int a, int b, int c);
 void DbpString(char *str);
-void DbpStringEx(uint32_t cmd, char *str);
+void DbpStringEx(uint32_t flags, char *str);
 void Dbprintf(const char *fmt, ...);
-void DbprintfEx(uint32_t cmd, const char *fmt, ...);
+void DbprintfEx(uint32_t flags, const char *fmt, ...);
 void Dbhexdump(int len, uint8_t *d, bool bAsci);
 
 // ADC Vref = 3300mV, and an (10M+1M):1M voltage divider on the HF input can measure voltages up to 36300 mV

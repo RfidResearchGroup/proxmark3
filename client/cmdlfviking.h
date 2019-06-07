@@ -24,7 +24,7 @@
 int CmdLFViking(const char *Cmd);
 
 int demodViking(void);
-int detectViking(uint8_t *dest, size_t *size);
+int detectViking(uint8_t *src, size_t *size);
 uint64_t getVikingBits(uint32_t id);
 
 #endif
