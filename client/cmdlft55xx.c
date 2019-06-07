@@ -564,7 +564,7 @@ bool tryDetectModulation(void) {
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
 
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
-        if ( (FSKrawDemod("0 0", false) == PM3_SUCCESS) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+        if ((FSKrawDemod("0 0", false) == PM3_SUCCESS) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
             tests[hits].modulation = DEMOD_FSK;
             if (fc1 == 8 && fc2 == 5)
                 tests[hits].modulation = DEMOD_FSK1a;
@@ -576,7 +576,7 @@ bool tryDetectModulation(void) {
             tests[hits].ST = false;
             ++hits;
         }
-        if ( (FSKrawDemod("0 1", false) == PM3_SUCCESS) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+        if ((FSKrawDemod("0 1", false) == PM3_SUCCESS) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
             tests[hits].modulation = DEMOD_FSK;
             if (fc1 == 8 && fc2 == 5)
                 tests[hits].modulation = DEMOD_FSK1;
@@ -661,7 +661,7 @@ bool tryDetectModulation(void) {
             save_restoreGB(GRAPH_SAVE);
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
             CmdLtrim("160");
-            if ( (PSKDemod("0 0 6", false) == PM3_SUCCESS) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            if ((PSKDemod("0 0 6", false) == PM3_SUCCESS) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
@@ -1538,7 +1538,7 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password) {
     payload.pwdmode = pwdmode;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_T55XX_READ_BLOCK, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_T55XX_READ_BLOCK, (uint8_t *)&payload, sizeof(payload));
     if (!WaitForResponseTimeout(CMD_T55XX_READ_BLOCK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;

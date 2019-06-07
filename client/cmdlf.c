@@ -201,18 +201,18 @@ int CmdLFCommandRead(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Sending");
     clearCommandBuffer();
-    SendCommandNG(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, (uint8_t*)&payload, 8 + datalen );
+    SendCommandNG(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, (uint8_t *)&payload, 8 + datalen);
 
     printf("\n");
     uint8_t i = 10;
-    while ( !WaitForResponseTimeout(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, NULL, 2000 ) && i != 0) {
+    while (!WaitForResponseTimeout(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, NULL, 2000) && i != 0) {
         printf(".");
         fflush(stdout);
         i--;
     }
     printf("\n");
 
-    if ( i ) {
+    if (i) {
         PrintAndLogEx(SUCCESS, "Downloading response signal data");
         getSamples(0, true);
         return PM3_SUCCESS;
@@ -391,7 +391,7 @@ int lf_read(bool silent, uint32_t samples) {
     }
 
     // resp.oldarg[0] is bits read not bytes read.
-    uint32_t bits = (resp.data.asDwords[0] / 8 );
+    uint32_t bits = (resp.data.asDwords[0] / 8);
     getSamples(bits, silent);
 
     return PM3_SUCCESS;
@@ -449,7 +449,7 @@ static void ChkBitstream() {
     for (int i = 0; i < (int)(GraphTraceLen / 2); i++) {
         if (GraphBuffer[i] > 1 || GraphBuffer[i] < 0) {
             CmdGetBitStream("");
-	    PrintAndLogEx(INFO, "Converted to bitstream");
+            PrintAndLogEx(INFO, "Converted to bitstream");
             break;
         }
     }
@@ -461,7 +461,7 @@ int CmdLFSim(const char *Cmd) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     // sanity check
-    if ( GraphTraceLen < 20 ) {
+    if (GraphTraceLen < 20) {
         PrintAndLogEx(ERR, "No data in Graphbuffer");
         return PM3_ENODATA;
     }
@@ -482,8 +482,8 @@ int CmdLFSim(const char *Cmd) {
         uint8_t data[PM3_CMD_DATA_SIZE - 3];
     } PACKED payload_up;
 
-    // flag = 
-    //    b0  0 
+    // flag =
+    //    b0  0
     //        1 clear bigbuff
     payload_up.flag = 0x1;
 
@@ -497,10 +497,10 @@ int CmdLFSim(const char *Cmd) {
         clearCommandBuffer();
         payload_up.offset = i;
 
-        for(uint16_t j = 0; j < len; j++)
-            payload_up.data[j] = GraphBuffer[i+j];
+        for (uint16_t j = 0; j < len; j++)
+            payload_up.data[j] = GraphBuffer[i + j];
 
-      
+
         SendCommandNG(CMD_UPLOAD_SIM_SAMPLES_125K, (uint8_t *)&payload_up, sizeof(struct pupload));
         WaitForResponse(CMD_UPLOAD_SIM_SAMPLES_125K, NULL);
         printf(".");
@@ -519,7 +519,7 @@ int CmdLFSim(const char *Cmd) {
         uint16_t gap;
     } PACKED payload;
     payload.len = GraphTraceLen;
-    payload.gap = gap;	
+    payload.gap = gap;
 
     clearCommandBuffer();
     SendCommandNG(CMD_SIMULATE_TAG_125K, (uint8_t *)&payload, sizeof(payload));

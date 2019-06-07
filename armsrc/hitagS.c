@@ -677,40 +677,40 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
                 break;
         }
         uint8_t uid1 = (uid[0] << 7)
-               | (uid[1] << 6)
-               | (uid[2] << 5)
-               | (uid[3] << 4)
-               | (uid[4] << 3)
-               | (uid[5] << 2)
-               | (uid[6] << 1)
-               | uid[7];
+                       | (uid[1] << 6)
+                       | (uid[2] << 5)
+                       | (uid[3] << 4)
+                       | (uid[4] << 3)
+                       | (uid[5] << 2)
+                       | (uid[6] << 1)
+                       | uid[7];
 
         uint8_t uid2 = (uid[8] << 7)
-               | (uid[9] << 6)
-               | (uid[10] << 5)
-               | (uid[11] << 4)
-               | (uid[12] << 3)
-               | (uid[13] << 2)
-               | (uid[14] << 1)
-               | uid[15];
+                       | (uid[9] << 6)
+                       | (uid[10] << 5)
+                       | (uid[11] << 4)
+                       | (uid[12] << 3)
+                       | (uid[13] << 2)
+                       | (uid[14] << 1)
+                       | uid[15];
 
         uint8_t uid3 = (uid[16] << 7)
-               | (uid[17] << 6)
-               | (uid[18] << 5)
-               | (uid[19] << 4)
-               | (uid[20] << 3)
-               | (uid[21] << 2)
-               | (uid[22] << 1)
-               | uid[23];
+                       | (uid[17] << 6)
+                       | (uid[18] << 5)
+                       | (uid[19] << 4)
+                       | (uid[20] << 3)
+                       | (uid[21] << 2)
+                       | (uid[22] << 1)
+                       | uid[23];
 
         uint8_t uid4 = (uid[24] << 7)
-               | (uid[25] << 6)
-               | (uid[26] << 5)
-               | (uid[27] << 4)
-               | (uid[28] << 3)
-               | (uid[29] << 2)
-               | (uid[30] << 1)
-               | uid[31];
+                       | (uid[25] << 6)
+                       | (uid[26] << 5)
+                       | (uid[27] << 4)
+                       | (uid[28] << 3)
+                       | (uid[29] << 2)
+                       | (uid[30] << 1)
+                       | uid[31];
 
         if (DEBUG)
             Dbprintf("UID: %02X %02X %02X %02X", uid1, uid2, uid3, uid4);

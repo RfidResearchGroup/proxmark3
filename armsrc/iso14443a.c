@@ -761,8 +761,8 @@ static bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *
     uint16_t check = 0;
 
     for (;;) {
-        if ( check == 1000 ) {
-            if ( BUTTON_PRESS() || data_available() )
+        if (check == 1000) {
+            if (BUTTON_PRESS() || data_available())
                 return false;
             check = 0;
         }
@@ -1095,7 +1095,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
     int order = ORDER_NONE;
 
     int retval = PM3_SUCCESS;
-    
+
     // Just to allow some checks
     int happened = 0;
     int happened2 = 0;
@@ -1191,7 +1191,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
                         ar_nr_nonces[index].state = SECOND;
 
                         // send to client  (one struct nonces_t)
-                        reply_ng(CMD_SIMULATE_MIFARE_CARD, PM3_SUCCESS, (uint8_t*)&ar_nr_nonces[index], sizeof(nonces_t) );
+                        reply_ng(CMD_SIMULATE_MIFARE_CARD, PM3_SUCCESS, (uint8_t *)&ar_nr_nonces[index], sizeof(nonces_t));
 
                         ar_nr_nonces[index].state = EMPTY;
                         ar_nr_nonces[index].sector = 0;
@@ -1515,7 +1515,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
         Dbprintf("-[ Num of received cmd  [%d]", cmdsRecvd);
         Dbprintf("-[ Num of moebius tries [%d]", moebius_count);
     }
-    
+
     reply_ng(CMD_SIMULATE_MIFARE_CARD, retval, NULL, 0);
 }
 
@@ -1716,10 +1716,10 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     for (;;) {
         WDT_HIT();
 
-        if ( check == 1000 ) {
-          if (BUTTON_PRESS() || data_available())
-              return 1;
-          check = 0;
+        if (check == 1000) {
+            if (BUTTON_PRESS() || data_available())
+                return 1;
+            check = 0;
         }
         ++check;
 

@@ -175,7 +175,7 @@ static int CmdKeriClone(const char *Cmd) {
 static int CmdKeriSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) == 0 || cmdp == 'h') 
+    if (strlen(Cmd) == 0 || cmdp == 'h')
         return usage_lf_keri_sim();
 
     uint64_t internalid = param_get32ex(Cmd, 0, 0, 10);

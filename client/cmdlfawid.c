@@ -332,7 +332,7 @@ static int CmdAWIDSim(const char *Cmd) {
 
     verify_values(&fmtlen, &fc, &cn);
 
-    if ( getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS ) {
+    if (getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
@@ -387,7 +387,7 @@ static int CmdAWIDClone(const char *Cmd) {
 
     verify_values(&fmtlen, &fc, &cn);
 
-    if ( getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS ) {
+    if (getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
@@ -512,12 +512,12 @@ static int CmdAWIDBrute(const char *Cmd) {
 
         // Do one up
         if (up < 0xFFFF)
-            if ( sendTry(fmtlen, fc, up++, delay, bits, size, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+            if (sendTry(fmtlen, fc, up++, delay, bits, size, verbose) != PM3_SUCCESS) return PM3_ESOFT;
 
         // Do one down  (if cardnumber is given)
         if (cn > 1)
             if (down > 1)
-                if ( sendTry(fmtlen, fc, --down, delay, bits, size, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+                if (sendTry(fmtlen, fc, --down, delay, bits, size, verbose) != PM3_SUCCESS) return PM3_ESOFT;
     }
     return PM3_SUCCESS;
 }
@@ -590,7 +590,7 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
     // add AWID 4bit parity
     size_t bitLen = addParity(pre, bits + 8, 66, 4, 1);
 
-    if (bitLen != 88) 
+    if (bitLen != 88)
         return PM3_ESOFT;
 
     PrintAndLogEx(SUCCESS, "awid raw bits:\n %s \n", sprint_bin(bits, bitLen));

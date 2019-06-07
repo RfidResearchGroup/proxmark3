@@ -47,7 +47,7 @@ void MifareReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *datain) {
     uint8_t dataoutbuf[16] = {0x00};
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0, status = PM3_EOPABORTED;
-    
+
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -1616,7 +1616,7 @@ void MifareChkKeys(uint8_t *datain) {
 
 void MifareEMemClr(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    emlClearMem(); 
+    emlClearMem();
 }
 
 void MifareEMemSet(uint8_t blockno, uint8_t blockcnt, uint8_t blockwidth, uint8_t *datain) {
@@ -1624,22 +1624,22 @@ void MifareEMemSet(uint8_t blockno, uint8_t blockcnt, uint8_t blockwidth, uint8_
 
     if (blockwidth == 0)
         blockwidth = 16; // backwards compat... default bytewidth
-        
+
     emlSetMem_xt(datain, blockno, blockcnt, blockwidth); // data, block num, blocks count, block byte width
 }
 
 void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    
-    // 
+
+    //
     size_t size = blockcnt * 16;
-    if ( size > PM3_CMD_DATA_SIZE) {
+    if (size > PM3_CMD_DATA_SIZE) {
         reply_ng(CMD_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
         return;
     }
-    
+
     uint8_t *buf = BigBuf_malloc(size);
-    
+
     emlGetMem(buf, blockno, blockcnt); // data, block num, blocks count (max 4)
 
     LED_B_ON();
@@ -1985,7 +1985,7 @@ TEST2:
     };
 
 OUT:
-	
+
     data[0] = isGen;
     reply_ng(CMD_MIFARE_CIDENT, PM3_SUCCESS, data, sizeof(data));
     // turns off

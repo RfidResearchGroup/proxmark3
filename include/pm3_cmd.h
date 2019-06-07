@@ -204,9 +204,9 @@ typedef struct {
 } PACKED lf_psksim_t;
 
 typedef struct {
-   uint8_t blockno;
-   uint8_t keytype;
-   uint8_t key[6];
+    uint8_t blockno;
+    uint8_t keytype;
+    uint8_t key[6];
 } PACKED mf_readblock_t;
 
 

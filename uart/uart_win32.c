@@ -58,7 +58,7 @@ int uart_reconfigure_timeouts(uint32_t value) {
 }
 
 static int uart_reconfigure_timeouts_polling(serial_port sp) {
-    if ( newtimeout_pending == false )
+    if (newtimeout_pending == false)
         return PM3_SUCCESS;
     newtimeout_pending = false;
 

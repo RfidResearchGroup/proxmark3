@@ -606,7 +606,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
         // used as a simple detection of a reader field?
         while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
             WDT_HIT();
-            if ( check == 1000) {
+            if (check == 1000) {
                 if (data_available() || BUTTON_PRESS())
                     goto OUT;
                 check = 0;

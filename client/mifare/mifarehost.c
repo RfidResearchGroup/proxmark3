@@ -455,13 +455,13 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
         uint8_t blockno;
         uint8_t blockcnt;
     } PACKED payload;
-      
+
     payload.blockno = blockNum;
     payload.blockcnt = blocksCount;
-    
+
     clearCommandBuffer();
-    SendCommandNG(CMD_MIFARE_EML_MEMGET, (uint8_t*)&payload, sizeof(payload));
-    
+    SendCommandNG(CMD_MIFARE_EML_MEMGET, (uint8_t *)&payload, sizeof(payload));
+
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_MIFARE_EML_MEMGET, &resp, 1500) == 0) {
         PrintAndLogEx(WARNING, "Command execute timeout");
@@ -479,14 +479,14 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
-    
+
     struct p {
         uint8_t blockno;
         uint8_t blockcnt;
         uint8_t blockwidth;
         uint8_t data[];
     } PACKED;
-    
+
     size_t size = blocksCount * blockBtWidth;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
         return PM3_ESOFT;
@@ -497,9 +497,9 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
     payload->blockcnt = blocksCount;
     payload->blockwidth = blockBtWidth;
     memcpy(payload->data, data, size);
-   
+
     clearCommandBuffer();
-    SendCommandNG(CMD_MIFARE_EML_MEMSET, (uint8_t*)payload, sizeof(payload) + size );
+    SendCommandNG(CMD_MIFARE_EML_MEMSET, (uint8_t *)payload, sizeof(payload) + size);
     return PM3_SUCCESS;
 }
 
@@ -963,7 +963,7 @@ int detect_classic_nackbug(bool verbose) {
 
         if (WaitForResponseTimeout(CMD_MIFARE_NACK_DETECT, &resp, 500)) {
 
-            if ( resp.status == PM3_EOPABORTED ) {
+            if (resp.status == PM3_EOPABORTED) {
                 PrintAndLogEx(WARNING, "button pressed. Aborted.");
                 return PM3_EOPABORTED;
             }
@@ -1018,7 +1018,7 @@ void detect_classic_magic(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_MIFARE_CIDENT, NULL, 0);
     if (WaitForResponseTimeout(CMD_MIFARE_CIDENT, &resp, 1500)) {
-        if ( resp.status == PM3_SUCCESS )
+        if (resp.status == PM3_SUCCESS)
             isGeneration = resp.data.asBytes[0];
     }
 

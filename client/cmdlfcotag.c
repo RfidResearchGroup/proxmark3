@@ -36,7 +36,7 @@ static int CmdCOTAGDemod(const char *Cmd) {
 
     uint8_t alignPos = 0;
     uint16_t err = manrawdecode(bits, &bitlen, 1, &alignPos);
-    if (err > 50 ) {
+    if (err > 50) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - COTAG too many errors: %d", err);
         return PM3_ESOFT;
     }

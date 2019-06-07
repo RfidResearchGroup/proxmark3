@@ -417,7 +417,7 @@ static int CmdLCD(const char *Cmd) {
 }
 
 static int CmdLCDReset(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far    
+    (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     SendCommandNG(CMD_LCD_RESET, NULL, 0);
     return PM3_SUCCESS;
@@ -532,7 +532,7 @@ static int CmdConnect(const char *Cmd) {
     uint32_t baudrate = USART_BAUD_RATE;
     uint8_t cmdp = 0;
     char port[FILE_PATH_SIZE] = {0};
-    
+
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -553,7 +553,7 @@ static int CmdConnect(const char *Cmd) {
                 return PM3_EINVARG;
         }
     }
-    
+
     // default back to previous used serial port
     if (strlen(port) == 0) {
         if (strlen((char *)conn.serial_port_name) == 0) {

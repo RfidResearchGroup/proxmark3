@@ -254,7 +254,7 @@ local function test(modulation)
         local p_config_cmd = process_block0_cmds[_]
         local errors = 0
         core.clearCommandBuffer()
-        
+
         -- Write Config block
         dbg(('lf t55xx write b 0 d %s'):format(p_config_cmd))
 

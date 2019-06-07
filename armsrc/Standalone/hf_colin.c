@@ -776,8 +776,8 @@ readysim:
     LED_C_ON();
 
     uint16_t flags;
-    switch (p_card.uidlen){
-        case 10: 
+    switch (p_card.uidlen) {
+        case 10:
             flags = FLAG_10B_UID_IN_DATA;
             break;
         case 7:

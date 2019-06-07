@@ -173,7 +173,7 @@ function Command:sendNG( ignore_response, timeout )
 
     data = nil
     cmd = nil
-    local count, length, magic, status, crc, arg0, arg1, arg2 
+    local count, length, magic, status, crc, arg0, arg1, arg2
 
     count, cmd, length, magic, status, crc, arg0, arg1, arg2 = bin.unpack('SSIsSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)

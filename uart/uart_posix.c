@@ -112,7 +112,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         struct addrinfo info;
 
-        memset (&info, 0, sizeof(info));
+        memset(&info, 0, sizeof(info));
 
         info.ai_socktype = SOCK_STREAM;
 
@@ -249,7 +249,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     fd_set rfds;
     struct timeval tv;
 
-    if ( newtimeout_pending ) {
+    if (newtimeout_pending) {
         timeout.tv_usec = newtimeout_value * 1000;
         newtimeout_pending = false;
     }
@@ -312,7 +312,7 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     uint32_t pos = 0;
     fd_set rfds;
     struct timeval tv;
-    
+
     while (pos < len) {
         // Reset file descriptor
         FD_ZERO(&rfds);

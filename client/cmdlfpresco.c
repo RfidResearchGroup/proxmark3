@@ -151,7 +151,7 @@ static int CmdPrescoSim(const char *Cmd) {
     uint32_t sitecode = 0, usercode = 0, fullcode = 0;
     bool Q5 = false;
     // get wiegand from printed number.
-    if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == PM3_EINVARG) 
+    if (getWiegandFromPresco(Cmd, &sitecode, &usercode, &fullcode, &Q5) == PM3_EINVARG)
         return usage_lf_presco_sim();
 
     PrintAndLogEx(SUCCESS, "Simulating Presco - SiteCode: %u, UserCode: %u, FullCode: %08X", sitecode, usercode, fullcode);

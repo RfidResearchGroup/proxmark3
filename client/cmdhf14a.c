@@ -474,15 +474,15 @@ int CmdHF14ASim(const char *Cmd) {
         flags |= FLAG_UID_IN_EMUL;
 
     struct {
-       uint8_t tagtype;
-       uint8_t flags;
-       uint8_t uid[10];
+        uint8_t tagtype;
+        uint8_t flags;
+        uint8_t uid[10];
     } PACKED payload;
-    
+
     payload.tagtype = tagtype;
     payload.flags = flags;
     memcpy(payload.uid, uid, uidlen);
-    
+
     clearCommandBuffer();
     SendCommandNG(CMD_SIMULATE_TAG_ISO_14443a, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
@@ -492,13 +492,13 @@ int CmdHF14ASim(const char *Cmd) {
     while (!ukbhit()) {
         if (WaitForResponseTimeout(CMD_SIMULATE_MIFARE_CARD, &resp, 1500) == 0) continue;
         if (resp.status != PM3_SUCCESS) break;
-        
+
         if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) break;
-        
-        nonces_t *data = (nonces_t*)resp.data.asBytes;
+
+        nonces_t *data = (nonces_t *)resp.data.asBytes;
         readerAttack(data[0], setEmulatorMem, verbose);
     }
-    if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) )
+    if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK))
         showSectorTable();
 
     PrintAndLogEx(INFO, "Done");

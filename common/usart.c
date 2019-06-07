@@ -199,7 +199,7 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
                     AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
                     AT91C_US_CHMODE_NORMAL;          // channel mode: normal
 
-    switch(usart_parity) {
+    switch (usart_parity) {
         case 'N':
             mode |= AT91C_US_PAR_NONE;               // parity: none
             break;
@@ -228,12 +228,12 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
     //          baudrate == selected clock/16/CD
     //       OVER = 1,  -yes we are oversampling
     //          baudrate == selected clock/8/CD    --> this is ours
-    // 
+    //
     uint32_t brgr = 48000000 / (usart_baudrate << 3);
     // doing fp = round((mck / (usart_baudrate << 3) - brgr) * 8) with integers:
-    uint32_t fp = ((16 * 48000000 / (usart_baudrate << 3) - 16 * brgr)+1)/2;
+    uint32_t fp = ((16 * 48000000 / (usart_baudrate << 3) - 16 * brgr) + 1) / 2;
 
-    pUS1->US_BRGR =  (fp << 16) | brgr;
+    pUS1->US_BRGR = (fp << 16) | brgr;
 
     // Write the Timeguard Register
     pUS1->US_TTGR = 0;

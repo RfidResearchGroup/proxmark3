@@ -195,7 +195,7 @@ static void ConstructEM410xEmulGraph(const char *uid, const  uint8_t clock) {
     /* clear our graph */
     ClearGraph(true);
 
-   /* write 16 zero bit sledge */
+    /* write 16 zero bit sledge */
     for (i = 0; i < 20; i++)
         AppendGraph(false, clock, 0);
 
@@ -387,12 +387,12 @@ int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
     bool st = true;
 
     // em410x simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
-    if ( isGraphBitstream() ) {
+    if (isGraphBitstream()) {
         convertGraphFromBitstream();
     }
 
-    if (ASKDemod_ext(Cmd, false, false, 1, &st) != PM3_SUCCESS) 
-	return PM3_ESOFT;
+    if (ASKDemod_ext(Cmd, false, false, 1, &st) != PM3_SUCCESS)
+        return PM3_ESOFT;
     return AskEm410xDecode(verbose, hi, lo);
 }
 /*
@@ -416,8 +416,8 @@ static int CmdEM410xDemod(const char *Cmd) {
     uint32_t hi = 0;
     uint64_t lo = 0;
 
-    if (AskEm410xDemod(Cmd, &hi, &lo, true) != PM3_SUCCESS) 
-	return PM3_ESOFT;
+    if (AskEm410xDemod(Cmd, &hi, &lo, true) != PM3_SUCCESS)
+        return PM3_ESOFT;
 
     g_em410xid = lo;
     return PM3_SUCCESS;
@@ -1097,7 +1097,7 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
     uint8_t parity[45] = {0};
     memcpy(parity, DemodBuffer, 45);
     if (!EM_EndParityTest(DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - End Parity check failed");    
+        PrintAndLogEx(DEBUG, "DEBUG: Error - End Parity check failed");
         return PM3_ESOFT;
     }
 
@@ -1140,16 +1140,16 @@ static int demodEM4x05resp(uint32_t *word) {
 //////////////// 4205 / 4305 commands
 static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t *word) {
 
-   struct {
+    struct {
         uint32_t password;
         uint8_t address;
         uint8_t usepwd;
     } PACKED payload;
-    
+
     payload.password = pwd;
     payload.address = addr;
     payload.usepwd = usePwd;
-    
+
     clearCommandBuffer();
     SendCommandNG(CMD_EM4X_READ_WORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
@@ -1250,20 +1250,20 @@ static int CmdEM4x05Write(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Writing address %d data %08X using password %08X", addr, data, pwd);
     }
 
-   struct {
+    struct {
         uint32_t password;
         uint32_t data;
         uint8_t address;
         uint8_t usepwd;
     } PACKED payload;
-    
+
     payload.password = pwd;
     payload.data = data;
     payload.address = addr;
     payload.usepwd = usePwd;
-    
+
     clearCommandBuffer();
-    SendCommandNG(CMD_EM4X_WRITE_WORD, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_EM4X_WRITE_WORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_EM4X_WRITE_WORD, &resp, 2000)) {
         PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
@@ -1493,7 +1493,7 @@ static int CmdEM4x05Info(const char *Cmd) {
     }
 
     //something went wrong
-    if (!(word & 0x8000)) 
+    if (!(word & 0x8000))
         return PM3_ESOFT;
 
     printEM4x05ProtectionBits(word);

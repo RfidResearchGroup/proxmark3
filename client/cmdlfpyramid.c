@@ -265,7 +265,7 @@ static int CmdPyramidSim(const char *Cmd) {
 
     uint8_t bs[128];
     memset(bs, 0x00, sizeof(bs));
-    
+
     if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_sim();
 
     facilitycode = (fc & 0x000000FF);
@@ -331,7 +331,8 @@ int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
     // Get 26 wiegand from FacilityCode, CardNumber
     uint8_t wiegand[24];
     memset(wiegand, 0x00, sizeof(wiegand));
-    num_to_bytebits(fc, 8, wiegand);    num_to_bytebits(cn, 16, wiegand + 8);
+    num_to_bytebits(fc, 8, wiegand);
+    num_to_bytebits(cn, 16, wiegand + 8);
 
     // add wiegand parity bits (dest, source, len)
     wiegand_add_parity(pre + 80, wiegand, 24);

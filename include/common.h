@@ -57,7 +57,7 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 // 0x3D000 - 1 4kb sector = default T55XX keys dictionary
 // 0x3B000 - 1 4kb sector = default ICLASS keys dictionary
 // 0x39000 - 2 4kb sectors = default MFC keys dictionary
-// 
+//
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
 #endif

@@ -989,7 +989,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                                         ar_nr_resp[i + mM].nonce2 = nonce;
                                         ar_nr_resp[i + mM].nr2 = nr;
                                         ar_nr_resp[i + mM].ar2 = ar;
-                                        
+
                                         if (!gettingMoebius) {
                                             nonce2_count++;
                                             // check if this was the last second nonce we need for std attack
@@ -1006,7 +1006,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                                         } else {
                                             moebius_n_count++;
                                             // if we've collected all the nonces we need - finish.
-                                            if (nonce1_count == moebius_n_count) 
+                                            if (nonce1_count == moebius_n_count)
                                                 finished = true;
                                         }
                                     }

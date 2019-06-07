@@ -160,12 +160,11 @@ main_loop(char *script_cmds_file, char *script_cmd) {
                 } else {
                     rl_event_hook = check_comm;
                     if (session.pm3_present) {
-                        if ( conn.send_via_fpc_usart == false )
+                        if (conn.send_via_fpc_usart == false)
                             cmd = readline(PROXPROMPT_USB);
-                        else 
+                        else
                             cmd = readline(PROXPROMPT_FPC);
-                    }
-                    else
+                    } else
                         cmd = readline(PROXPROMPT_OFFLINE);
 
                     fflush(NULL);

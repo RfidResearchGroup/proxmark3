@@ -105,13 +105,13 @@ bool isGraphBitstream(void) {
     return true;
 }
 void convertGraphFromBitstream() {
-    convertGraphFromBitstreamEx(1, 0); 
+    convertGraphFromBitstreamEx(1, 0);
 }
 void convertGraphFromBitstreamEx(int hi, int low) {
     for (int i = 0; i < GraphTraceLen; i++) {
         if (GraphBuffer[i] == hi)
             GraphBuffer[i] = 127;
-        else if ( GraphBuffer[i] == low ) 
+        else if (GraphBuffer[i] == low)
             GraphBuffer[i] = -127;
         else
             GraphBuffer[i] = 0;

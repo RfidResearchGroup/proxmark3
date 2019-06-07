@@ -271,7 +271,7 @@ bool preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *siz
             if (foundCnt == 1) {
                 prnt("DEBUG: (preambleSearchEx) preamble found at %i", idx);
                 *startIdx = idx;
-                if (findone) 
+                if (findone)
                     return true;
             }
             if (foundCnt == 2) {
@@ -1467,7 +1467,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
         } else if (bits[i] <= low && !waveHigh) {
             smplCnt++;
         } else {
-         //transition
+            //transition
             if ((bits[i] >= high && !waveHigh) || (bits[i] <= low && waveHigh)) {
 
                 // 8  ::    8-2-1 =  5   8+2+1 = 11
@@ -1476,7 +1476,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                 // 64 ::  64-16-1 = 47 64+16+1 = 81
                 if (smplCnt > clk - cl_4 - 1) { //full clock
 
-                    if (smplCnt > clk + cl_4 + 1) { 
+                    if (smplCnt > clk + cl_4 + 1) {
                         //too many samples
                         errCnt++;
                         if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod ASK Modulation Error FULL at: %u  [%u > %u]", i, smplCnt, clk + cl_4 + 1);
@@ -1490,7 +1490,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                     }
                     if (*startIdx == 0) {
                         *startIdx = i - clk;
-                         prnt("DEBUG ASK: cleanAskRawDemod minus clock [%d]", *startIdx);
+                        prnt("DEBUG ASK: cleanAskRawDemod minus clock [%d]", *startIdx);
                     }
                     waveHigh = !waveHigh;
                     smplCnt = 0;
@@ -1511,7 +1511,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                     }
                     if (*startIdx == 0) {
                         *startIdx = i - cl_2;
-                         prnt("DEBUG ASK: cleanAskRawDemod minus half clock [%d]", *startIdx);
+                        prnt("DEBUG ASK: cleanAskRawDemod minus half clock [%d]", *startIdx);
                     }
                     waveHigh = !waveHigh;
                     smplCnt = 0;
@@ -1527,10 +1527,10 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
 
     *size = bitCnt;
 
-/*
-    if (*startIdx < 0)
-        *startIdx = 0;
-*/
+    /*
+        if (*startIdx < 0)
+            *startIdx = 0;
+    */
 
     if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod Startidx %d", *startIdx);
 

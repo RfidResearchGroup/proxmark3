@@ -124,7 +124,7 @@ static int CmdHIDDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
     // HID simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
-    if ( isGraphBitstream() ) {
+    if (isGraphBitstream()) {
         convertGraphFromBitstream();
     }
 
@@ -593,7 +593,7 @@ static int CmdHIDBrute(const char *Cmd) {
 
         // Do one up
         if (up < 0xFFFF)
-            if ( sendTry(fmtlen, fc, up++, delay, bits, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+            if (sendTry(fmtlen, fc, up++, delay, bits, verbose) != PM3_SUCCESS) return PM3_ESOFT;
 
         // Do one down  (if cardnumber is given)
         if (cn > 1)

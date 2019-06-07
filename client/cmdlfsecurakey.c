@@ -21,7 +21,7 @@ static int CmdSecurakeyDemod(const char *Cmd) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ASK/Manchester Demod failed");
         return PM3_ESOFT;
     }
-    if (st) 
+    if (st)
         return PM3_ESOFT;
 
     size_t size = DemodBufferLen;

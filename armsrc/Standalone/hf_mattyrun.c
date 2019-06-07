@@ -388,8 +388,8 @@ void RunMod() {
                 LED_B_ON(); // green
                 // assuming arg0==0,  use hardcoded uid 0xdeadbeaf
                 uint16_t flags;
-                switch (p_card.uidlen){
-                    case 10: 
+                switch (p_card.uidlen) {
+                    case 10:
                         flags = FLAG_10B_UID_IN_DATA;
                         break;
                     case 7:

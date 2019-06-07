@@ -345,8 +345,8 @@ void BootROM(void) {
     common_area.flags.bootrom_present = 1;
 
     if ((common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) ||
-        (!common_area.flags.button_pressed && BUTTON_PRESS()) ||
-        (_osimage_entry == 0xffffffffU)) {
+            (!common_area.flags.button_pressed && BUTTON_PRESS()) ||
+            (_osimage_entry == 0xffffffffU)) {
         flash_mode();
     } else {
         // clear button status, even if button still pressed

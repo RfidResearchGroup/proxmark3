@@ -448,7 +448,7 @@ int CmdGetBitStream(const char *Cmd) {
 }
 int CmdConvertBitStream(const char *Cmd) {
 
-    if ( isGraphBitstream() ) {
+    if (isGraphBitstream()) {
         convertGraphFromBitstream();
     } else {
         // get high, low
@@ -716,7 +716,7 @@ int ASKbiphaseDemod(const char *Cmd, bool verbose) {
     setDemodBuff(BitStream, size, 0);
     setClockGrid(clk, startIdx + clk * offset / 2);
     if (g_debugMode || verbose) {
-        PrintAndLogEx(NORMAL, "Biphase Decoded using offset %d | clock %d | #errors %d | start index %d\ndata\n", offset, clk, errCnt, (startIdx + clk * offset / 2) );
+        PrintAndLogEx(NORMAL, "Biphase Decoded using offset %d | clock %d | #errors %d | start index %d\ndata\n", offset, clk, errCnt, (startIdx + clk * offset / 2));
         printDemodBuff();
     }
     return PM3_SUCCESS;

@@ -336,7 +336,7 @@ static int CmdFdxSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
- 
+
     PacketResponseNG resp;
     WaitForResponse(CMD_ASK_SIM_TAG, &resp);
 

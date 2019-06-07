@@ -603,7 +603,7 @@ int TestProxmark(void) {
     bool error = false;
     if (len)
         error = memcmp(data, resp.data.asBytes, len) != 0;
-    
+
     if (error)
         return PM3_EIO;
 
@@ -611,7 +611,7 @@ int TestProxmark(void) {
     if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false) == 0) {
         return PM3_ETIMEOUT;
     }
-        
+
     if ((resp.length != sizeof(pm3_capabilities)) || (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
         PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the same as the one used by the client!"));
         PrintAndLogEx(ERR, _RED_("Please flash the Proxmark with the same version as the client."));
@@ -621,9 +621,9 @@ int TestProxmark(void) {
     memcpy(&pm3_capabilities, resp.data.asBytes, MIN(sizeof(capabilities_t), resp.length));
     conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
     conn.uart_speed = pm3_capabilities.baudrate;
-        
+
     PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
-        
+
     if (conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
     } else {

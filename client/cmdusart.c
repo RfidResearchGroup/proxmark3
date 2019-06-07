@@ -312,7 +312,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     PrintAndLogEx(WARNING, _RED_("WARNING: process only if strictly needed!"));
     PrintAndLogEx(WARNING, "This requires BT turned ON and NOT connected!");
     PrintAndLogEx(WARNING, "Is the add-on blue light blinking? (Say 'n' if you want to abort) [y/n]");
-    while(!ukbhit()) {
+    while (!ukbhit()) {
         msleep(200);
     }
 
@@ -450,7 +450,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
 
     if ((baudrate != USART_BAUD_RATE) || (parity != USART_PARITY)) {
         PrintAndLogEx(WARNING, "Add-on uart settings changed, please turn BT add-on OFF and ON again, then press any key.");
-        while(!ukbhit()) {
+        while (!ukbhit()) {
             msleep(200);
         }
         int gc = getchar();
