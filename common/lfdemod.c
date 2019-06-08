@@ -103,7 +103,8 @@ void computeSignalProperties(uint8_t *samples, uint32_t size) {
     // we can detect noise
     signalprop.isnoise =  signalprop.amplitude < NOISE_AMPLITUDE_THRESHOLD;
 
-    printSignal();
+    if (g_debugMode) 
+        printSignal();
 }
 
 void removeSignalOffset(uint8_t *samples, uint32_t size) {
@@ -1364,6 +1365,8 @@ static int millerRawDecode(uint8_t *bits, size_t *size, int invert) {
 int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
     //sanity check
     if (*size < 51) return -1;
+ 
+    if ( *offset < 0 ) *offset = 0;
 
     uint16_t bitnum = 0;
     uint16_t errCnt = 0;
@@ -1378,7 +1381,8 @@ int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
     }
     if (!offsetA && offsetB) ++*offset;
 
-    for (i = *offset; i < *size - 3; i += 2) {
+    // main loop
+    for (i = *offset; i < *size - 1; i += 2) {
         //check for phase error
         if (bits[i + 1] == bits[i + 2]) {
             bits[bitnum++] = 7;
@@ -1526,11 +1530,6 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
     }
 
     *size = bitCnt;
-
-    /*
-        if (*startIdx < 0)
-            *startIdx = 0;
-    */
 
     if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod Startidx %d", *startIdx);
 
