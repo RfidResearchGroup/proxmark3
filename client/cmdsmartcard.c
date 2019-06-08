@@ -1130,7 +1130,7 @@ static command_t CommandTable[] = {
     {"info",     CmdSmartInfo,          IfPm3Smartcard,  "Tag information"},
     {"reader",   CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
     {"raw",      CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},
-    {"upgrade",  CmdSmartUpgrade,       IfPm3Smartcard,  "Upgrade sim module firmware"},
+    {"upgrade",  CmdSmartUpgrade,       AlwaysAvailable,  "Upgrade sim module firmware"},
     {"setclock", CmdSmartSetClock,      IfPm3Smartcard,  "Set clock speed"},
     {"brute",    CmdSmartBruteforceSFI, IfPm3Smartcard,  "Bruteforce SFI"},
     {NULL, NULL, NULL, NULL}
