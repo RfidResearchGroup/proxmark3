@@ -20,6 +20,8 @@ alt="Yuotube" width="100%" height="auto" border="10" /></a>
 |[Why didn't you base it on official PM3 Master?](#why-didnt-you-base-it-on-official-pm3-master)| [Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 |[PM3 GUI](#pm3-gui)|[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) ||
+|[Notes on UART](/doc/uart_notes.md)|||
+|[Notes on Frame format](/doc/new_frame_format.md)|||
 |[Donations](#Donations)|||
 
 ## What has changed?
