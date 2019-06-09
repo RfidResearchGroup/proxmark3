@@ -136,8 +136,19 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     uint32_t sample_total_numbers = 0;
     uint32_t sample_total_saved = 0;
     uint32_t cancel_counter = 0;
-
-    while (!BUTTON_PRESS() && !data_available()) {
+    
+    uint16_t checker=0;
+  
+    while (true) {
+        if ( checker == 1000 ) {
+            if (BUTTON_PRESS() || data_available())
+                break;
+            else
+                checker = 0;
+        } else {
+            ++checker;
+        }
+    
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
