@@ -89,6 +89,8 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
 }
 
 size_t key_block_size(const desfirekey_t key) {
+    if (key == NULL)
+        return 0;
     size_t block_size = 8;
     switch (key->type) {
         case T_DES:

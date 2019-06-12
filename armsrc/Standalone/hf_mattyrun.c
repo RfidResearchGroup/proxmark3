@@ -387,19 +387,19 @@ void RunMod() {
 
                 LED_B_ON(); // green
                 // assuming arg0==0,  use hardcoded uid 0xdeadbeaf
-                uint16_t flags;
+                uint16_t simflags;
                 switch (p_card.uidlen) {
                     case 10:
-                        flags = FLAG_10B_UID_IN_DATA;
+                        simflags = FLAG_10B_UID_IN_DATA;
                         break;
                     case 7:
-                        flags = FLAG_7B_UID_IN_DATA;
+                        simflags = FLAG_7B_UID_IN_DATA;
                         break;
                     default:
-                        flags = FLAG_4B_UID_IN_DATA;
+                        simflags = FLAG_4B_UID_IN_DATA;
                         break;
                 }
-                Mifare1ksim(flags | FLAG_MF_1K, 0, uid);
+                Mifare1ksim(simflags | FLAG_MF_1K, 0, uid);
                 LED_B_OFF();
 
                 /*

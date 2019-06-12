@@ -685,7 +685,7 @@ void SniffHitag(void) {
 
     StopTicks();
 
-    int frame_count;
+//    int frame_count;
     int response;
     int overflow;
     bool rising_edge;
@@ -743,7 +743,7 @@ void SniffHitag(void) {
 
     // Reset the received frame, frame count and timing info
     memset(rx, 0x00, sizeof(rx));
-    frame_count = 0;
+//    frame_count = 0;
     response = 0;
     overflow = 0;
     reader_frame = false;
@@ -850,7 +850,7 @@ void SniffHitag(void) {
 
         // Check if frame was captured
         if (rxlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(rx, nbytes(rxlen), response, 0, NULL, reader_frame);
 
             // Check if we recognize a valid authentication attempt
@@ -901,7 +901,8 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
 
     StopTicks();
 
-    int frame_count = 0, response = 0, overflow = 0;
+//    int frame_count = 0;
+    int response = 0, overflow = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
@@ -915,7 +916,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
 
     auth_table_len = 0;
     auth_table_pos = 0;
-    uint8_t *auth_table = BigBuf_malloc(AUTH_TABLE_LENGTH);
+    auth_table = BigBuf_malloc(AUTH_TABLE_LENGTH);
     memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
 
     // Reset the received frame, frame count and timing info
@@ -1018,7 +1019,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
 
         // Check if frame was captured
         if (rxlen > 4) {
-            frame_count++;
+//            frame_count++;
             LogTrace(rx, nbytes(rxlen), response, response, NULL, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
@@ -1074,7 +1075,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
     StopTicks();
 
-    int frame_count = 0;
+//    int frame_count = 0;
     int response = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
@@ -1209,7 +1210,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Check if frame was captured and store it
         if (rxlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
         }
 
@@ -1265,7 +1266,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Add transmitted frame to total count
         if (txlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
         }
 
@@ -1359,7 +1360,8 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     StopTicks();
 
-    int frame_count = 0, response = 0;
+//    int frame_count = 0;
+    int response = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
@@ -1468,7 +1470,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
         // Check if frame was captured and store it
         if (rxlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
         }
 
@@ -1505,7 +1507,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
         // Add transmitted frame to total count
         if (txlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
         }
 

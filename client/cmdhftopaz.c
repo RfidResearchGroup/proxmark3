@@ -271,7 +271,7 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
                           bytes_locked_per_bit);
             lock_TLV_present = true;
             dynamic_lock_area_t *old = topaz_tag.dynamic_lock_areas;
-            dynamic_lock_area_t *new = topaz_tag.dynamic_lock_areas;
+            dynamic_lock_area_t *new;
             if (old == NULL) {
                 new = topaz_tag.dynamic_lock_areas = (dynamic_lock_area_t *) calloc(sizeof(dynamic_lock_area_t), sizeof(uint8_t));
             } else {

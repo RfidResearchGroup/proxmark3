@@ -935,12 +935,12 @@ static int CmdUndec(const char *Cmd) {
 //by marshmellow
 //shift graph zero up or down based on input + or -
 static int CmdGraphShiftZero(const char *Cmd) {
-    int shift = 0, shiftedVal;
+    int shift = 0;
     //set options from parameters entered with the command
     sscanf(Cmd, "%i", &shift);
 
     for (size_t i = 0; i < GraphTraceLen; i++) {
-        shiftedVal = GraphBuffer[i] + shift;
+        int shiftedVal = GraphBuffer[i] + shift;
 
         if (shiftedVal > 127)
             shiftedVal = 127;

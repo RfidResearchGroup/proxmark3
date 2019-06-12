@@ -825,12 +825,11 @@ static int compare_sum_a8_guess(const void *b1, const void *b2) {
 
 
 static float check_smallest_bitflip_bitarrays(void) {
-    uint32_t num_odd, num_even;
     uint64_t smallest = 1LL << 48;
     // initialize best_first_bytes, do a rough estimation on remaining states
     for (uint16_t i = 0; i < 256; i++) {
-        num_odd = nonces[i].num_states_bitarray[ODD_STATE];
-        num_even = nonces[i].num_states_bitarray[EVEN_STATE]; // * (float)nonces[i^0x80].num_states_bitarray[EVEN_STATE] / num_all_bitflips_bitarray[EVEN_STATE];
+        uint32_t num_odd = nonces[i].num_states_bitarray[ODD_STATE];
+        uint32_t num_even = nonces[i].num_states_bitarray[EVEN_STATE]; // * (float)nonces[i^0x80].num_states_bitarray[EVEN_STATE] / num_all_bitflips_bitarray[EVEN_STATE];
         if ((uint64_t)num_odd * num_even < smallest) {
             smallest = (uint64_t)num_odd * num_even;
             best_first_byte_smallest_bitarray = i;
@@ -838,8 +837,8 @@ static float check_smallest_bitflip_bitarrays(void) {
     }
 
 #if defined (DEBUG_REDUCTION)
-    num_odd = nonces[best_first_byte_smallest_bitarray].num_states_bitarray[ODD_STATE];
-    num_even = nonces[best_first_byte_smallest_bitarray].num_states_bitarray[EVEN_STATE]; // * (float)nonces[best_first_byte_smallest_bitarray^0x80].num_states_bitarray[EVEN_STATE] / num_all_bitflips_bitarray[EVEN_STATE];
+    uint32_t num_odd = nonces[best_first_byte_smallest_bitarray].num_states_bitarray[ODD_STATE];
+    uint32_t num_even = nonces[best_first_byte_smallest_bitarray].num_states_bitarray[EVEN_STATE]; // * (float)nonces[best_first_byte_smallest_bitarray^0x80].num_states_bitarray[EVEN_STATE] / num_all_bitflips_bitarray[EVEN_STATE];
     PrintAndLogEx(NORMAL, "0x%02x: %8d * %8d = %12" PRIu64 " (2^%1.1f)\n", best_first_byte_smallest_bitarray, num_odd, num_even, (uint64_t)num_odd * num_even, log((uint64_t)num_odd * num_even) / log(2.0));
 #endif
     return (float)smallest / 2.0;

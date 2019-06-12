@@ -696,13 +696,13 @@ static int ndef_print_CC(uint8_t *data) {
 // 00 always, 01 rfu, 10 proprietary, 11 rfu
 // b1, b0 write
 // 00 always, 01 rfo, 10 proprietary, 11 never
-    uint8_t write = data[1] & 0x03;
-    uint8_t read  = (data[1] & 0x0C) >> 2;
-    uint8_t minor = (data[1] & 0x30) >> 4;
-    uint8_t major = (data[1] & 0xC0) >> 6;
+    uint8_t cc_write = data[1] & 0x03;
+    uint8_t cc_read  = (data[1] & 0x0C) >> 2;
+    uint8_t cc_minor = (data[1] & 0x30) >> 4;
+    uint8_t cc_major = (data[1] & 0xC0) >> 6;
 
     char wStr[50];
-    switch (write) {
+    switch (cc_write) {
         case 0:
             sprintf(wStr, "Write access granted without any security");
             break;
@@ -717,7 +717,7 @@ static int ndef_print_CC(uint8_t *data) {
             break;
     }
     char rStr[46];
-    switch (read) {
+    switch (cc_read) {
         case 0:
             sprintf(rStr, "Read access granted without any security");
             break;
@@ -736,7 +736,7 @@ static int ndef_print_CC(uint8_t *data) {
     PrintAndLogEx(NORMAL, "  %02X : NDEF Magic Number", data[0]);
 
 //    PrintAndLogEx(NORMAL, "  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0F);
-    PrintAndLogEx(NORMAL, "  %02X : version %d.%d supported by tag", data[1], major, minor);
+    PrintAndLogEx(NORMAL, "  %02X : version %d.%d supported by tag", data[1], cc_major, cc_minor);
     PrintAndLogEx(NORMAL, "       : %s / %s", rStr, wStr);
 
     PrintAndLogEx(NORMAL, "  %02X : Physical Memory Size: %d bytes", data[2], data[2] * 8);

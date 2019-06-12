@@ -222,7 +222,6 @@ static uint16_t calcBSDchecksum4(uint8_t *bytes, uint8_t len, uint32_t mask) {
 // measuring LFSR maximum length
 static int CmdAnalyseLfsr(const char *Cmd) {
 
-    uint16_t lfsr;  /* Any nonzero start state will work. */
     uint8_t iv = param_get8ex(Cmd, 0, 0, 16);
     uint8_t find = param_get8ex(Cmd, 1, 0, 16);
 
@@ -232,7 +231,7 @@ static int CmdAnalyseLfsr(const char *Cmd) {
     for (uint8_t i = 0x01; i < 0x30; i += 1) {
         legic_prng_init(iv);
         legic_prng_forward(i);
-        lfsr = legic_prng_get_bits(12);
+        uint16_t lfsr = legic_prng_get_bits(12);  /* Any nonzero start state will work. */
         PrintAndLogEx(NORMAL, " %02X | %03X | %03X | %03X \n", i, lfsr, 0x40 ^ lfsr, find ^ lfsr);
     }
     return 0;

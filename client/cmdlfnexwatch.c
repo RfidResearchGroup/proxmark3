@@ -95,7 +95,6 @@ int CmdLFNEXWATCH(const char *Cmd) {
 int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 
     uint8_t preamble[28]   = {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t preamble_i[28] = {1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     // sanity check.
     if (*size < sizeof(preamble) + 100) return -1;
 
@@ -103,6 +102,7 @@ int detectNexWatch(uint8_t *dest, size_t *size, bool *invert) {
 
     if (!preambleSearch(DemodBuffer, preamble, sizeof(preamble), size, &startIdx)) {
         // if didn't find preamble try again inverting
+        uint8_t preamble_i[28] = {1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
         if (!preambleSearch(DemodBuffer, preamble_i, sizeof(preamble_i), size, &startIdx)) return -4;
         *invert ^= 1;
     }

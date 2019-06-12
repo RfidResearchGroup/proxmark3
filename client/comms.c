@@ -119,6 +119,10 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much, abort", len);
         return;
     }
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "SendCommandNG_internal NULL pointer, abort");
+        return;
+    }
 
     PacketCommandNGPostamble *tx_post = (PacketCommandNGPostamble *)((uint8_t *)&txBufferNG + sizeof(PacketCommandNGPreamble) + len);
 
@@ -601,8 +605,7 @@ int TestProxmark(void) {
     }
 
     bool error = false;
-    if (len)
-        error = memcmp(data, resp.data.asBytes, len) != 0;
+    error = memcmp(data, resp.data.asBytes, len) != 0;
 
     if (error)
         return PM3_EIO;

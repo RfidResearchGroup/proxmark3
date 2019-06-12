@@ -316,8 +316,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         msleep(200);
     }
 
-    int gc = tolower(getchar());
-    if (gc != 'y') {
+    if (tolower(getchar()) != 'y') {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(FAILED, "Aborting.");
         return PM3_EOPABORTED;
@@ -453,8 +452,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         while (!ukbhit()) {
             msleep(200);
         }
-        int gc = getchar();
-        (void)gc;
+        getchar();
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "Trying to connect add-on with the new settings.");
         found = usart_bt_testcomm(USART_BAUD_RATE, USART_PARITY) == PM3_SUCCESS;
@@ -558,12 +556,12 @@ static int CmdUsartTX(const char *Cmd) {
     size_t i2 = 0;
     size_t n = strlen(string);
     for (size_t i = 0; i < n; i++) {
-        if ((string[i] == '\\') && (i < n - 1) && (string[i + 1] == '\\')) {
+        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == '\\')) {
             i++;
             string2[i2++] = '\\';
             continue;
         }
-        if ((string[i] == '\\') && (i < n - 1) && (string[i + 1] == '"')) {
+        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == '"')) {
             i++;
             string2[i2++] = '"';
             continue;
@@ -571,12 +569,12 @@ static int CmdUsartTX(const char *Cmd) {
         if (string[i] == '"') {
             continue;
         }
-        if ((string[i] == '\\') && (i < n - 1) && (string[i + 1] == 'r')) {
+        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == 'r')) {
             i++;
             string2[i2++] = '\r';
             continue;
         }
-        if ((string[i] == '\\') && (i < n - 1) && (string[i + 1] == 'n')) {
+        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == 'n')) {
             i++;
             string2[i2++] = '\n';
             continue;
@@ -654,12 +652,12 @@ static int CmdUsartTXRX(const char *Cmd) {
     size_t i2 = 0;
     size_t n = strlen(string);
     for (size_t i = 0; i < n; i++) {
-        if ((string[i] == '\\') && (i < n - 1) && (string[i + 1] == '\\')) {
+        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == '\\')) {
             i++;
             string2[i2++] = '\\';
             continue;
         }
-        if ((string[i] == '\\') && (i < n - 1) && (string[i + 1] == '"')) {
+        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == '"')) {
             i++;
             string2[i2++] = '"';
             continue;
@@ -667,12 +665,12 @@ static int CmdUsartTXRX(const char *Cmd) {
         if (string[i] == '"') {
             continue;
         }
-        if ((string[i] == '\\') && (i < n - 1) && (string[i + 1] == 'r')) {
+        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == 'r')) {
             i++;
             string2[i2++] = '\r';
             continue;
         }
-        if ((string[i] == '\\') && (i < n - 1) && (string[i + 1] == 'n')) {
+        if ((i < n - 1) && (string[i] == '\\') && (string[i + 1] == 'n')) {
             i++;
             string2[i2++] = '\n';
             continue;

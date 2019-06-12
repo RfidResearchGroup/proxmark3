@@ -153,7 +153,6 @@ static void uart_init(uint8_t *data) {
 static void uart_bit(uint8_t bit) {
     static uint8_t buf = 0xff;
     static uint8_t n_buf;
-    static uint8_t msg_byte;
     static int nmsg_byte;
     buf <<= 1;
     buf |= bit ? 1 : 0;
@@ -166,6 +165,7 @@ static void uart_bit(uint8_t bit) {
             nmsg_byte = 0;
         }
     } else {
+        static uint8_t msg_byte;
         n_buf++;
         if (n_buf == 8) {
             msg_byte >>= 2;

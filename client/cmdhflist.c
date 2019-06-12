@@ -1067,7 +1067,6 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen) {
     static struct Crypto1State *traceCrypto1;
-    static uint64_t mfLastKey;
 
     *mfDataLen = 0;
 
@@ -1085,6 +1084,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
         return false;
 
     if (MifareAuthState == masFirstData) {
+        static uint64_t mfLastKey;
         if (AuthData.first_auth) {
             AuthData.ks2 = AuthData.ar_enc ^ prng_successor(AuthData.nt, 64);
             AuthData.ks3 = AuthData.at_enc ^ prng_successor(AuthData.nt, 96);

@@ -35,9 +35,9 @@ static int temp2 = 0;
 static int sof_bits;               // number of start-of-frame bits
 static uint8_t pwdh0, pwdl0, pwdl1; // password bytes
 static uint32_t rnd = 0x74124485;  // randomnumber
-static int test = 0;
 size_t blocknr;
 bool end = false;
+//#define SENDBIT_TEST
 
 #define ht2bs_4a(a,b,c,d)   (~(((a|b)&c)^(a|d)^b))
 #define ht2bs_4b(a,b,c,d)   (~(((d|c)&(a^b))^(d|a|b)))
@@ -220,33 +220,33 @@ static void hitag_reader_send_bit(int bit) {
 
     HIGH(GPIO_SSC_DOUT);
 
-    if (test == 1) {
-        // Wait for 4-10 times the carrier period
-        while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
+#ifdef SENDBIT_TEST
+    // Wait for 4-10 times the carrier period
+    while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
 
-        LOW(GPIO_SSC_DOUT);
+    LOW(GPIO_SSC_DOUT);
 
-        if (bit == 0) {
-            // Zero bit: |_-|
-            while (AT91C_BASE_TC0->TC_CV < T0 * 11) {};
-        } else {
-            // One bit: |_--|
-            while (AT91C_BASE_TC0->TC_CV < T0 * 14) {};
-        }
+    if (bit == 0) {
+        // Zero bit: |_-|
+        while (AT91C_BASE_TC0->TC_CV < T0 * 11) {};
     } else {
-        // Wait for 4-10 times the carrier period
-        while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
-
-        LOW(GPIO_SSC_DOUT);
-
-        if (bit == 0) {
-            // Zero bit: |_-|
-            while (AT91C_BASE_TC0->TC_CV < T0 * 22) {};
-        } else {
-            // One bit: |_--|
-            while (AT91C_BASE_TC0->TC_CV < T0 * 28) {};
-        }
+        // One bit: |_--|
+        while (AT91C_BASE_TC0->TC_CV < T0 * 14) {};
     }
+#else
+    // Wait for 4-10 times the carrier period
+    while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
+
+    LOW(GPIO_SSC_DOUT);
+
+    if (bit == 0) {
+        // Zero bit: |_-|
+        while (AT91C_BASE_TC0->TC_CV < T0 * 22) {};
+    } else {
+        // One bit: |_--|
+        while (AT91C_BASE_TC0->TC_CV < T0 * 28) {};
+    }
+#endif
 
     LED_A_OFF();
 }
@@ -275,11 +275,10 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
  */
 static int check_select(uint8_t *rx, uint32_t uid) {
     unsigned char resp[48];
-    int i;
     uint32_t ans = 0x0;
-    for (i = 0; i < 48; i++)
+    for (int i = 0; i < 48; i++)
         resp[i] = (rx[i / 8] >> (7 - (i % 8))) & 0x1;
-    for (i = 0; i < 32; i++)
+    for (int i = 0; i < 32; i++)
         ans += resp[5 + i] << (31 - i);
 
     temp_uid = ans;
@@ -733,18 +732,19 @@ static int hitagS_handle_tag_auth(hitag_function htf, uint64_t key, uint64_t NrA
         for (int i = 0; i < 5; i++) {
             response_bit[i] = 0;
         }
-        int i = 5;
-        for (; i < 37; i++) {
-            response_bit[i] = uid[i - 5];
-        }
+        {
+            int i = 5;
+            for (; i < 37; i++) {
+                response_bit[i] = uid[i - 5];
+            }
 
-        for (int j = 0; j < 8; j++) {
-            response_bit[i] = 0;
-            if ((crc & ((mask << 7) >> j)) != 0)
-                response_bit[i] = 1;
-            i++;
+            for (int j = 0; j < 8; j++) {
+                response_bit[i] = 0;
+                if ((crc & ((mask << 7) >> j)) != 0)
+                    response_bit[i] = 1;
+                i++;
+            }
         }
-
         k = 0;
         for (int i = 0; i < 6; i++) {
             tx[i] = (response_bit[k] << 7)
@@ -892,7 +892,8 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
 
     StopTicks();
 
-    int frame_count = 0, response = 0, overflow = 0;
+//    int frame_count = 0;
+    int response = 0, overflow = 0;
     int i, j;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
@@ -1058,7 +1059,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
 
         // Check if frame was captured
         if (rxlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(rx, nbytes(rxlen), response, 0, NULL, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
@@ -1121,7 +1122,8 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
     StopTicks();
 
     int i, j, z, k;
-    int frame_count = 0, response = 0;
+//    int frame_count = 0;
+    int response = 0;
     int response_bit[200];
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
@@ -1228,7 +1230,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
 
         // Check if frame was captured and store it
         if (rxlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
         }
 
@@ -1355,7 +1357,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
 
         // Add transmitted frame to total count
         if (txlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, 0, NULL, true);
         }
 
@@ -1449,7 +1451,8 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
 
     StopTicks();
 
-    int frame_count = 0, response = 0;
+//    int frame_count = 0;
+    int response = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
@@ -1556,7 +1559,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
 
         // Check if frame was captured and store it
         if (rxlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
         }
 
@@ -1643,7 +1646,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
 
         // Add transmitted frame to total count
         if (txlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, 0, NULL, true);
         }
 
@@ -1741,7 +1744,8 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
  */
 void check_challenges(bool file_given, uint8_t *data) {
     int i, j, z, k;
-    int frame_count = 0, response = 0;
+//    int frame_count = 0;
+    int response = 0;
     uint8_t uid_byte[4];
     uint8_t rx[HITAG_FRAME_LEN];
     uint8_t unlocker[60][8];
@@ -1824,7 +1828,7 @@ void check_challenges(bool file_given, uint8_t *data) {
 
         // Check if frame was captured and store it
         if (rxlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
         }
 
@@ -1951,7 +1955,7 @@ void check_challenges(bool file_given, uint8_t *data) {
 
         // Add transmitted frame to total count
         if (txlen > 0) {
-            frame_count++;
+//            frame_count++;
             LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, 0, NULL, true);
         }
 

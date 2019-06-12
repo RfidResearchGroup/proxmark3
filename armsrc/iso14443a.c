@@ -1400,8 +1400,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
                 EmSendCmd(cmd, sizeof(cmd));
             } else {
                 EmSend4bit(CARD_NACK_NA);
-                uint32_t pwd = bytes_to_num(receivedCmd + 1, 4);
-                if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Auth attempt: %08x", pwd);
+                if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Auth attempt: %08x", bytes_to_num(receivedCmd + 1, 4));
             }
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULEV1_VCSL && len == 23 && tagType == 7) {
@@ -2126,13 +2125,8 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par) {
 // requests ATS unless no_rats is true
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
 
-    uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x20 };
-    uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t rats[]       = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
     uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
     uint8_t resp_par[MAX_PARITY_SIZE] = {0};
-    uint8_t uid_resp[4] = {0};
-    size_t uid_resp_len = 0;
 
     uint8_t sak = 0x04; // cascade uid
     int cascade_level = 0;
@@ -2166,6 +2160,9 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
     // While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
     for (; sak & 0x04; cascade_level++) {
         // SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
+        uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x20 };
+        uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        uint8_t uid_resp[4] = {0};
         sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
 
         if (anticollision) {
@@ -2213,7 +2210,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
                 memcpy(uid_resp, uid_ptr + cascade_level * 3, 4);
             }
         }
-        uid_resp_len = 4;
+        size_t uid_resp_len = 4;
 
         // calculate crypto UID. Always use last 4 Bytes.
         if (cuid_ptr)
@@ -2259,7 +2256,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 
     // RATS, Request for answer to select
     if (!no_rats) {
-
+        uint8_t rats[]       = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
         AddCrc14A(rats, 2);
         ReaderTransmit(rats, sizeof(rats), NULL);
         int len = ReaderReceive(resp, resp_par);
@@ -2281,8 +2278,6 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 }
 
 int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
-    uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x20 };
-    uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t resp[5] = {0}; // theoretically. A usual RATS will be much smaller
     uint8_t resp_par[1] = {0};
     uint8_t uid_resp[4] = {0};
@@ -2298,6 +2293,8 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
     // which case we need to make a cascade 2 request and select - this is a long UID
     // While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
     for (; sak & 0x04; cascade_level++) {
+        uint8_t sel_all[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x20 };
+        uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         // SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
         sel_uid[0] = sel_all[0] = 0x93 + cascade_level * 2;
 

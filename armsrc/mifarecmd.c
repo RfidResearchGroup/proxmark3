@@ -1956,10 +1956,10 @@ void MifareCIdent() {
     if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
         goto TEST2;
     };
-    isGen = GEN_1B;
 
     ReaderTransmit(wupC2, sizeof(wupC2), NULL);
     if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
+        isGen = GEN_1B;
         goto OUT;
     };
     isGen = GEN_1A;
