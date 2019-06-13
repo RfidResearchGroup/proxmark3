@@ -1389,7 +1389,7 @@ void T55xxResetRead(void) {
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
     LED_A_OFF();
 }
 
@@ -1635,7 +1635,7 @@ void T55xx_ChkPwds() {
 
 OUT:
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_old(CMD_ACK, ret, candidate, 0, 0, 0);
+    reply_mix(CMD_ACK, ret, candidate, 0, 0, 0);
     LEDsoff();
 }
 
@@ -1763,7 +1763,7 @@ void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {
     // Program the data blocks for supplied ID and the block 0 config
     WriteT55xx(data, 0, 3);
     LED_D_OFF();
-    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
 // Define 9bit header for EM410x tags
@@ -2121,7 +2121,7 @@ void Cotag(uint32_t arg0) {
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-    reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
     LEDsoff();
 }
 
