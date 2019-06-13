@@ -811,7 +811,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         length -= size;
         pos += size;
     }
-    reply_old(CMD_ACK, isOK, pos, 0, 0, 0);
+    reply_mix(CMD_ACK, isOK, pos, 0, 0, 0);
     LED_C_OFF();
     BigBuf_free();
 }
@@ -828,7 +828,7 @@ void SmartCardSetClock(uint64_t arg0) {
     // start [C0 05 xx] stop
     I2C_WriteByte(arg0, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
 
-    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
     set_tracing(false);
     LEDsoff();
 }

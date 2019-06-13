@@ -402,7 +402,7 @@ void LegicRfInfo(void) {
     // establish shared secret and detect card type
     uint8_t card_type = setup_phase(0x01);
     if (init_card(card_type, &card) != 0) {
-        reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+        reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;
     }
 
@@ -410,7 +410,7 @@ void LegicRfInfo(void) {
     for (uint8_t i = 0; i < sizeof(card.uid); ++i) {
         int16_t byte = read_byte(i, card.cmdsize);
         if (byte == -1) {
-            reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
             goto OUT;
         }
         card.uid[i] = byte & 0xFF;
@@ -420,7 +420,7 @@ void LegicRfInfo(void) {
     int16_t mcc = read_byte(4, card.cmdsize);
     int16_t calc_mcc = CRC8Legic(card.uid, 4);;
     if (mcc != calc_mcc) {
-        reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+        reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;
     }
 
@@ -439,7 +439,7 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
     // establish shared secret and detect card type
     uint8_t card_type = setup_phase(iv);
     if (init_card(card_type, &card) != 0) {
-        reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+        reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;
     }
 
@@ -451,7 +451,7 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
     for (uint16_t i = 0; i < len; ++i) {
         int16_t byte = read_byte(offset + i, card.cmdsize);
         if (byte == -1) {
-            reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
             goto OUT;
         }
         legic_mem[i] = byte;
@@ -471,14 +471,14 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
 
     // uid is not writeable
     if (offset <= WRITE_LOWERLIMIT) {
-        reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+        reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;
     }
 
     // establish shared secret and detect card type
     uint8_t card_type = setup_phase(iv);
     if (init_card(card_type, &card) != 0) {
-        reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+        reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
         goto OUT;
     }
 
@@ -491,7 +491,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
     while (len-- > 0 && !BUTTON_PRESS()) {
         if (!write_byte(len + offset, data[len], card.addrsize)) {
             Dbprintf("operation failed | %02X | %02X | %02X", len + offset, len, data[len]);
-            reply_old(CMD_ACK, 0, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
             goto OUT;
         }
     }
