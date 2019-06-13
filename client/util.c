@@ -170,6 +170,8 @@ bool CheckStringIsHEXValue(const char *value) {
 void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
                    const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 
+    if (buf == NULL ) return;
+    
     char *tmp = (char *)buf;
     size_t i;
     memset(tmp, 0x00, hex_max_len);
@@ -195,12 +197,16 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
 
 // printing and converting functions
 void print_hex(const uint8_t *data, const size_t len) {
+    if (data == NULL || len == 0 ) return;
+    
     for (size_t i = 0; i < len; i++)
         printf("%02x ", data[i]);
     printf("\n");
 }
 
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
+    if (data == NULL || len == 0 ) return;
+    
     int rownum = 0;
     printf("[%02d] | ", rownum);
     for (size_t i = 0; i < len; ++i) {

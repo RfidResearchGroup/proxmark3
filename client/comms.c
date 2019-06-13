@@ -119,10 +119,6 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much, abort", len);
         return;
     }
-    if (data == NULL) {
-        PrintAndLogEx(WARNING, "SendCommandNG_internal NULL pointer, abort");
-        return;
-    }
 
     PacketCommandNGPostamble *tx_post = (PacketCommandNGPostamble *)((uint8_t *)&txBufferNG + sizeof(PacketCommandNGPreamble) + len);
 
@@ -140,7 +136,8 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     txBufferNG.pre.ng = ng;
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
-    memcpy(&txBufferNG.data, data, len);
+    if ( len > 0 && data ) 
+        memcpy(&txBufferNG.data, data, len);
 
     if ((conn.send_via_fpc_usart && conn.send_with_crc_on_fpc) || ((!conn.send_via_fpc_usart) && conn.send_with_crc_on_usb)) {
         uint8_t first, second;
