@@ -5,10 +5,6 @@ This repo is based on iceman fork for proxmark3. It is dedicated to bringing the
 [![Build status](https://ci.appveyor.com/api/projects/status/ct5blik2wa96bv0x/branch/master?svg=true)](https://ci.appveyor.com/project/iceman1001/proxmark3-ji4wj/branch/master)
 [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest)
 
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=uyJ-y0kSWfc
-" target="_blank"><img src="https://github.com/5w0rdfish/proxmark3/blob/master/prox.png" 
-alt="Yuotube" width="100%" height="auto" border="10" /></a>
-
 ---
 
 # PROXMARK INSTALLATION AND OVERVIEW
@@ -22,6 +18,7 @@ alt="Yuotube" width="100%" height="auto" border="10" /></a>
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) ||
 |[Notes on UART](/doc/uart_notes.md)|||
 |[Notes on Frame format](/doc/new_frame_format.md)|||
+|[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
 
 ## What has changed?
