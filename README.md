@@ -42,11 +42,12 @@ This fork now compiles just fine on
 
 If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
 
-Internal notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
-Internal notes on UART
-Internal notes on Frame format
-Internal notes on standalone mode
----
+- Internal notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
+- Internal notes on UART
+- Internal notes on Frame format
+- Internal notes on standalone mode
+
+
 
 ## Why didn't you base it on official Proxmark3 Master?
 
