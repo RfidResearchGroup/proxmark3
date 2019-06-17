@@ -1,4 +1,4 @@
-# StandAlone Modes
+# Standalone Modes
 
 This contains functionality for different StandAlone modes. The fullimage will be built given the correct compiler flags used. Build targets for these files are contained in `armsrc/Makefile` and `common/Makefile.hal`
 
@@ -100,10 +100,39 @@ void ModInfo(void) {
 ````
 
 ## Compiling your standalone mode
-Once all this is done, you and others can now easily compile different standalone modes by just selecting one of the standalone modes in `common/Makefile.hal`, e.g.:
+Once all this is done, you and others can now easily compile different standalone modes by just selecting one of the standalone modes (list in `common/Makefile.hal` or ) , e.g.:
 
+- rename  Makefile.platform.sample -> Makefile.platform
+- edit the "STANDALONE" row inside Makefile.platform.  You need to uncomment it and add your standalone mode name
+
+Makefile.platform.sample
 ```
-PLATFORM_DEFS += -DWITH_STANDALONE_LF_FOO
+# If you want to use it, copy this file as Makefile.platform and adjust it to your needs
+PLATFORM=PM3RDV4
+#PLATFORM_EXTRAS=BTADDON
+#STANDALONE=LF_SAMYRUN
+```
+ becomes
+ 
+ Makefile.platform
+ ```
+# If you want to use it, copy this file as Makefile.platform and adjust it to your needs
+PLATFORM=PM3RDV4
+#PLATFORM_EXTRAS=BTADDON
+STANDALONE=LF_FOO
 ```
 
 Remember only one can be selected at a time for now.
+
+The final steps is to 
+- force recompilation of all code.  ```make clean```
+- compile ```make -j8```
+- flash your device
+- connect to your device
+- press button long time to trigger ledshow and enter your new standalone mode
+- if connected with usb / fpc ,  you can also see debug statements from your device in standalone mode. Useful for debugging :)
+
+When compiling you will see a header showing what configurations your project compiled with.
+Make sure it says your standalone mode name.  
+
+Happy hacking!
