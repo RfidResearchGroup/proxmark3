@@ -143,6 +143,24 @@ turn on solid.
 ./proxmark /dev/ttyUSB0
 ```
 
+#### MacOS
+
+#### (1) Connecting rdv4.0 with Bluetooth on MacOS
+
+With MacOS Mojave 10.14.5 you could experience some continuosly disconnecting and difficult to recconnect the device at the system wakeup, to avoid this problem do a PRAM reset before to add your Proxmark3 RDV4 Blue Shark:
+
+  1. Open a Terminal and execute this command: sudo rm -R /Library/Preferences/com.apple.Bluetooth.plist.
+  2. Shut down your Mac.
+  3. Then turn it on and immediately press and hold these four keys together: Option, Command, P, and R.
+  4. You can release the keys after about 20 seconds, during which your Mac might appear to restart.
+
+After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
+
+  5. Make sure the Blue Shark BT switch is turned ON
+  6. On your Mac, choose Apple menu -> System Preferences, then click Bluetooth.
+  7. Select the device in the list, then click Connect and add the 1234 pwd.
+
+
 ### 6.	OTHER NOTES
 
 #### (1)	UART and LED behavior
