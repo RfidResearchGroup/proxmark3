@@ -44,6 +44,8 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 ### 4.	COMPILATION / FLASHING
 
+#### From Source
+
 Please download the latest source code from Rfid Research Group's Github repo:
 https://github.com/RfidResearchGroup/proxmark3
 
@@ -57,6 +59,12 @@ To compile the client and firmware with FPC support, the easiest way is to
 
 You are now ready to run the client with the serial port you got from your BT device on your laptop etc.  
 See instructions below.
+
+#### Homebrew (macOS)
+From the [homebrew-proxmark3 readme](https://github.com/RfidResearchGroup/homebrew-proxmark3)
+
+1. `brew tap rfidresearchgroup/proxmark3`
+2. `brew install --with-blueshark proxmark3`
 
 ### 5.	CONNECT WITH BLUETOOTH
 
