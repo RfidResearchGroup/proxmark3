@@ -147,7 +147,7 @@ local function disconnect15693()
     local c = Command:newMIX{cmd = cmds.CMD_ISO_15693_COMMAND}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
-    return c.sendMIX(true)
+    return c:sendMIX(true)
 end
 
 local library = {
