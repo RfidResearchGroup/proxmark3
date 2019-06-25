@@ -31,7 +31,7 @@ platform = $(shell uname)
 VPATH = ../common ../zlib ../uart
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
+LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm -Wl,--as-needed -latomic -Wl,--no-as-needed
 LUALIB = ../liblua/liblua.a
 JANSSONLIBPATH = ./jansson
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a

@@ -13,7 +13,7 @@ You might want to follow one of these external resources to get an overview, but
 
 # Install the required dependencies
 
-## On Debian / Ubuntu / Kali / ParrotOS
+## On Debian / Ubuntu / Kali / ParrotOS / Raspbian
 
 First what we want to do is get an update for the system. If you need to upgrade do this **before** the install. An upgrade was carried out prior to following these instructions. 
 
