@@ -25,8 +25,6 @@
 #include "util_posix.h"
 
 
-extern int CmdHFEPA(const char *Cmd);
-extern int CmdHFEPACollectPACENonces(const char *Cmd);
-extern int CmdHFEPAPACEReplay(const char *Cmd);
+int CmdHFEPA(const char *Cmd);
 
 #endif // CMDHFEPA_H__

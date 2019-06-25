@@ -28,9 +28,8 @@
 #include "ui.h"
 #include "util.h"
 
-extern int CmdCrc(const char *Cmd);
+int CmdCrc(const char *Cmd);
 
-extern int CmdrevengSearch(const char *Cmd);
-extern int GetModels(char *Models[], int *count, uint8_t *width);
-extern int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result);
+int GetModels(char *Models[], int *count, uint8_t *width);
+int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *result);
 #endif

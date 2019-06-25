@@ -1,20 +1,34 @@
+# Hide full compilation line:
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
+
 CC = gcc
-LD = gcc
-CFLAGS = -std=c99 -Wall -O3 -c
-LDFLAGS =
+CFLAGS = -std=c99 -Wall -O3 -I.
+LDFLAGS = -std=c99 -Wall
+SRC := $(wildcard *.c)
+OBJ := $(SRC:.c=.o)
+DEP := $(SRC:.c=.d)
+PROG := nonce2key
 
-OBJS = crypto1.o crapto1.o
-HEADERS = crapto1.h
-EXES = nonce2key
-WINEXES = $(patsubst %, %.exe, $(EXES))
+all: $(PROG)
 
-all: $(OBJS) $(EXES)
+$(PROG): $(OBJ)
+	$(info [=] LD $@)
+	$(Q)$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-%.o : %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+clean:
+	$(Q)$(RM) $(DEP) $(OBJ) $(PROG)
 
-% : %.c
-	$(LD) $(LDFLAGS) -o $@ $(OBJS) $<
+ifneq ($(filter clean,$(MAKECMDGOALS)),clean)
+-include $(DEP)
+endif
 
-clean: 
-	rm -f $(OBJS) $(EXES) $(WINEXES)
+%.d: %.c
+	$(info [-] GEN $@)
+	$(Q)$(CC) -MM $(CFLAGS) $< | sed 's/\($*\)\.o[ :]*/\1.o $@ : /g' > $@
+
+%.o: %.c
+	$(info [-] CC $<)
+	$(Q)$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<

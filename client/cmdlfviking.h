@@ -21,16 +21,11 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 
-extern int CmdLFViking(const char *Cmd);
+int CmdLFViking(const char *Cmd);
 
-extern int CmdVikingDemod(const char *Cmd);
-extern int CmdVikingRead(const char *Cmd);
-extern int CmdVikingClone(const char *Cmd);
-extern int CmdVikingSim(const char *Cmd);
+int demodViking(void);
+int detectViking(uint8_t *src, size_t *size);
+uint64_t getVikingBits(uint32_t id);
 
-extern int detectViking(uint8_t *dest, size_t *size);
-
-extern int usage_lf_viking_clone(void);
-extern int usage_lf_viking_sim(void);
 #endif
 

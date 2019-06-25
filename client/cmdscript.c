@@ -24,6 +24,7 @@
 #include "graph.h"
 #include "cmdparser.h"
 #include "cmdmain.h"
+#include "comms.h"
 #include "cmdscript.h"
 #include "cmdhfmf.h"
 #include "pm3_binlib.h"
@@ -38,60 +39,61 @@
 
 static int CmdHelp(const char *Cmd);
 
-int str_ends_with(const char * str, const char * suffix) {
+static int str_ends_with(const char *str, const char *suffix) {
 
-  if( str == NULL || suffix == NULL )
-    return 0;
+    if (str == NULL || suffix == NULL)
+        return 0;
 
-  size_t str_len = strlen(str);
-  size_t suffix_len = strlen(suffix);
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
 
-  if(suffix_len > str_len)
-    return 0;
+    if (suffix_len > str_len)
+        return 0;
 
-  return 0 == strncmp( str + str_len - suffix_len, suffix, suffix_len );
+    return 0 == strncmp(str + str_len - suffix_len, suffix, suffix_len);
 }
 
 /**
  * Utility to check the ending of a string (used to check file suffix)
  */
-bool endsWith(char* base, char* str) {
+static bool endsWith(const char *base, const char *str) {
     int blen = strlen(base);
     int slen = strlen(str);
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
 }
 
 /**
-* Generate a sorted list of available commands, what it does is 
+* Generate a sorted list of available commands, what it does is
 * generate a file listing of the script-directory for files
 * ending with .lua
 */
-int CmdScriptList(const char *Cmd) {
+static int CmdScriptList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
 
-	char const * exedir = get_my_executable_directory();
-	if (exedir == NULL)
-	    return 0;
-	char script_directory_path[strlen(exedir) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
-	strcpy(script_directory_path, exedir);
-	strcpy(script_directory_path, get_my_executable_directory());
-	strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
+    char const *exedir = get_my_executable_directory();
+    if (exedir == NULL)
+        return 0;
+    char script_directory_path[strlen(exedir) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+    strcpy(script_directory_path, exedir);
+    strcpy(script_directory_path, get_my_executable_directory());
+    strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
 
-	struct dirent **namelist;
-	int n;
+    struct dirent **namelist;
+    int n;
 
-	n = scandir(script_directory_path, &namelist, NULL, alphasort);
-	if (n == -1) {
-		PrintAndLogEx(FAILED, "Couldn't open the scripts-directory");
-		return 1;
-	}
+    n = scandir(script_directory_path, &namelist, NULL, alphasort);
+    if (n == -1) {
+        PrintAndLogEx(FAILED, "Couldn't open the scripts-directory");
+        return 1;
+    }
 
-	for (uint16_t i = 0; i < n; i++) {
-		if (str_ends_with(namelist[i]->d_name, ".lua"))
-			PrintAndLogEx(NORMAL, "%-21s", namelist[i]->d_name);
-		free(namelist[i]);
-	}
-	free(namelist);
-	return 0;
+    for (uint16_t i = 0; i < n; i++) {
+        if (str_ends_with(namelist[i]->d_name, ".lua"))
+            PrintAndLogEx(NORMAL, "%-21s", namelist[i]->d_name);
+        free(namelist[i]);
+    }
+    free(namelist);
+    return 0;
 }
 
 /**
@@ -100,7 +102,7 @@ int CmdScriptList(const char *Cmd) {
  * @param argv
  * @return
  */
-int CmdScriptRun(const char *Cmd) {
+static int CmdScriptRun(const char *Cmd) {
     // create new Lua state
     lua_State *lua_state;
     lua_state = luaL_newstate();
@@ -114,8 +116,8 @@ int CmdScriptRun(const char *Cmd) {
     //Add the 'bin' library
     set_bin_library(lua_state);
 
-	//Add the 'bit' library
-	set_bit_library(lua_state);
+    //Add the 'bit' library
+    set_bit_library(lua_state);
 
     char script_name[128] = {0};
     char arguments[256] = {0};
@@ -124,16 +126,16 @@ int CmdScriptRun(const char *Cmd) {
     int arg_len = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", script_name, &name_len, arguments, &arg_len);
 
-    char *suffix = "";
+    const char *suffix = "";
     if (!endsWith(script_name, ".lua")) {
         suffix = ".lua";
-	}
-	
-	char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
-	strcpy(script_path, get_my_executable_directory());
-	strcat(script_path, LUA_SCRIPTS_DIRECTORY);
-	strcat(script_path, script_name);
-	strcat(script_path, suffix);
+    }
+
+    char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
+    strcpy(script_path, get_my_executable_directory());
+    strcat(script_path, LUA_SCRIPTS_DIRECTORY);
+    strcat(script_path, script_name);
+    strcat(script_path, suffix);
 
     PrintAndLogEx(SUCCESS, "Executing: %s%s, args '%s'\n", script_name, suffix, arguments);
 
@@ -144,16 +146,15 @@ int CmdScriptRun(const char *Cmd) {
         lua_setglobal(lua_state, "args");
 
         //Call it with 0 arguments
-         error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
+        error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
     }
-    if (error) // if non-0, then an error
-    {
+    if (error) { // if non-0, then an error
         // the top of the stack should be the error string
         if (!lua_isstring(lua_state, lua_gettop(lua_state)))
             PrintAndLogEx(FAILED, "Error - but no error (?!)");
 
         // get the top of the stack as the error and pop it off
-        const char * str = lua_tostring(lua_state, lua_gettop(lua_state));
+        const char *str = lua_tostring(lua_state, lua_gettop(lua_state));
         lua_pop(lua_state, 1);
         puts(str);
     }
@@ -166,11 +167,23 @@ int CmdScriptRun(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-	{"help",  CmdHelp,			1, "This help"},
-	{"list",  CmdScriptList,	1, "List available scripts"},
-	{"run",   CmdScriptRun,		1, "<name> -- Execute a script"},
-	{NULL, NULL, 0, NULL}
+    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
+    {"list",  CmdScriptList,    AlwaysAvailable, "List available scripts"},
+    {"run",   CmdScriptRun,     AlwaysAvailable, "<name> -- Execute a script"},
+    {NULL, NULL, NULL, NULL}
 };
+
+/**
+ * Shows some basic help
+ * @brief CmdHelp
+ * @param Cmd
+ * @return
+ */
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
+    return 0;
+}
 
 /**
  * Finds a matching script-file
@@ -179,18 +192,7 @@ static command_t CommandTable[] = {
  * @return
  */
 int CmdScript(const char *Cmd) {
-	clearCommandBuffer();
-	CmdsParse(CommandTable, Cmd);
-	return 0;
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
 }
 
-/**
- * Shows some basic help
- * @brief CmdHelp
- * @param Cmd
- * @return
- */
-int CmdHelp(const char * Cmd) {
-    PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
-    return 0;
-}

@@ -4,21 +4,22 @@
 #include <stddef.h>
 #include "proxmark3.h"
 #include "apps.h"
-#include "util.h"
 #include "BigBuf.h"
 #include "mifare.h"
 
-#define I2C_DEVICE_ADDRESS_BOOT		0xB0
-#define I2C_DEVICE_ADDRESS_MAIN		0xC0
+#define I2C_DEVICE_ADDRESS_BOOT     0xB0
+#define I2C_DEVICE_ADDRESS_MAIN     0xC0
 
-#define I2C_DEVICE_CMD_GENERATE_ATR	0x01
-#define I2C_DEVICE_CMD_SEND			0x02
-#define I2C_DEVICE_CMD_READ			0x03
-#define I2C_DEVICE_CMD_SETBAUD		0x04
-#define I2C_DEVICE_CMD_SIM_CLC		0x05
-#define I2C_DEVICE_CMD_GETVERSION	0x06
+#define I2C_DEVICE_CMD_GENERATE_ATR 0x01
+#define I2C_DEVICE_CMD_SEND         0x02
+#define I2C_DEVICE_CMD_READ         0x03
+#define I2C_DEVICE_CMD_SETBAUD      0x04
+#define I2C_DEVICE_CMD_SIM_CLC      0x05
+#define I2C_DEVICE_CMD_GETVERSION   0x06
+#define I2C_DEVICE_CMD_SEND_T0      0x07
 
 
+void I2C_recovery(void);
 void I2C_init(void);
 void I2C_Reset(void);
 void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
@@ -46,4 +47,5 @@ void SmartCardUpgrade(uint64_t arg0);
 void SmartCardSetBaud(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);
 void I2C_print_status(void);
+int I2C_get_version(uint8_t *maj, uint8_t *min);
 #endif

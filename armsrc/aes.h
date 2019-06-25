@@ -8,11 +8,11 @@
 
 // AES context structure
 typedef struct {
- unsigned int Ek[60];
- unsigned int Dk[60];
- unsigned int Iv[4];
- unsigned char Nr;
- unsigned char Mode;
+    unsigned int Ek[60];
+    unsigned int Dk[60];
+    unsigned int Iv[4];
+    unsigned char Nr;
+    unsigned char Mode;
 } AesCtx;
 
 // key length in bytes

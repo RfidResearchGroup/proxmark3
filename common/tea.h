@@ -10,7 +10,7 @@
 #ifndef __TEA_H
 #define __TEA_H
 
-#include "util.h"
+#include "commonutil.h"
 #include <stdint.h>
 #include <stddef.h>
 void tea_encrypt(uint8_t *v, uint8_t *key);

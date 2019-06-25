@@ -11,14 +11,8 @@
 #ifndef CMDLFHITAG_H__
 #define CMDLFHITAG_H__
 
-extern int CmdLFHitag(const char *Cmd);
+int CmdLFHitag(const char *Cmd);
 
-extern int CmdLFHitagList(const char *Cmd);
-extern int CmdLFHitagReader(const char *Cmd);
-extern int CmdLFHitagSim(const char *Cmd);
-extern int CmdLFHitagSimS(const char *Cmd);
-extern int CmdLFHitagSnoop(const char *Cmd);
-extern int CmdLFHitagWP(const char *Cmd);
-extern int CmdLFHitagCheckChallenges(const char *Cmd);
+int readHitagUid(void);
 
 #endif

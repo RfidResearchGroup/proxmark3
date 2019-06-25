@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
 void crc32_ex(const uint8_t *data, const size_t len, uint8_t *crc);
-void crc32_append (uint8_t *data, const size_t len);
+void crc32_append(uint8_t *data, const size_t len);
 
 #ifdef __cplusplus
 }

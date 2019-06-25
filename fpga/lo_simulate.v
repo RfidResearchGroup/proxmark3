@@ -64,7 +64,7 @@ reg output_state;
 always @(posedge pck0)
 begin
 	if((pck_divider == 8'd7) && !clk_state) begin
-		is_high = (adc_d >= 8'd200);
+		is_high = (adc_d >= 8'd191);
 		is_low = (adc_d <= 8'd64);
 	end
 end

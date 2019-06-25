@@ -16,7 +16,7 @@
 #include "standalone.h" // standalone definitions
 #include "iso14443a.h"
 #include "protocols.h"
- 
+
 #define OPTS 2
 
 #endif /* __HF_YOUNG_H */

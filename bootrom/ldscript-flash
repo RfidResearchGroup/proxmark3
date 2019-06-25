@@ -12,52 +12,52 @@ INCLUDE ../common/ldscript.common
 
 PHDRS
 {
-	phase1 PT_LOAD;
-	phase2 PT_LOAD;
-	bss PT_LOAD;
+    phase1 PT_LOAD;
+    phase2 PT_LOAD;
+    bss PT_LOAD;
 }
 
 ENTRY(flashstart)
 SECTIONS
 {
-	.bootphase1 : {
-		*(.startup)
+    .bootphase1 : {
+        *(.startup)
 
-		. = ALIGN(4);
-		_version_information_start = .;
-		KEEP(*(.version_information));
+        . = ALIGN(4);
+        _version_information_start = .;
+        KEEP(*(.version_information));
 
-		. = LENGTH(bootphase1) - 0x4;
-		LONG(_version_information_start);
-	} >bootphase1 :phase1
+        . = LENGTH(bootphase1) - 0x4;
+        LONG(_version_information_start);
+    } >bootphase1 :phase1
 
-	.bootphase2 : {
-		*(.startphase2)
-		*(.text)
-		*(.text.*)
-		*(.eh_frame)
-		*(.glue_7)
-		*(.glue_7t)
-		*(.rodata)
-		*(.rodata.*)
-		*(.data)
-		*(.data.*)
-		. = ALIGN(4);
-	} >ram AT>bootphase2 :phase2
+    .bootphase2 : {
+        *(.startphase2)
+        *(.text)
+        *(.text.*)
+        *(.eh_frame)
+        *(.glue_7)
+        *(.glue_7t)
+        *(.rodata)
+        *(.rodata.*)
+        *(.data)
+        *(.data.*)
+        . = ALIGN(4);
+    } >ram AT>bootphase2 :phase2
 
-	__bootphase2_src_start__ = LOADADDR(.bootphase2);
-	__bootphase2_start__ = ADDR(.bootphase2);
-	__bootphase2_end__ = __bootphase2_start__ + SIZEOF(.bootphase2);
+    __bootphase2_src_start__ = LOADADDR(.bootphase2);
+    __bootphase2_start__ = ADDR(.bootphase2);
+    __bootphase2_end__ = __bootphase2_start__ + SIZEOF(.bootphase2);
 
-	.bss : {
-		__bss_start__ = .;
-		*(.bss)
-		*(.bss.*)
-		. = ALIGN(4);
-		__bss_end__ = .;
-	} >ram AT>ram :bss
+    .bss : {
+        __bss_start__ = .;
+        *(.bss)
+        *(.bss.*)
+        . = ALIGN(4);
+        __bss_end__ = .;
+    } >ram AT>ram :bss
 
-	.commonarea (NOLOAD) : {
-		*(.commonarea)
-	} >commonarea
+    .commonarea (NOLOAD) : {
+        *(.commonarea)
+    } >commonarea
 }

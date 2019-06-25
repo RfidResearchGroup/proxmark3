@@ -10,167 +10,101 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <pthread.h>
+#include <unistd.h>
 #include "util_posix.h"
 #include "proxmark3.h"
+#include "util.h"
 #include "flash.h"
-#include "uart.h"
-#include "usb_cmd.h"
+#include "comms.h"
+#include "pm3_cmd.h"
+#include "ui.h"
 
 #define MAX_FILES 4
 
-#ifdef _WIN32
-# define unlink(x)
-#else
-# include <unistd.h>
-#endif
-
-#if defined (_WIN32)
-#define SERIAL_PORT_H	"com3"
-#elif defined(__APPLE__)
-#define SERIAL_PORT_H   "/dev/cu.usbmodem888"
-#else
-#define SERIAL_PORT_H	"/dev/ttyACM0"
-#endif
-
-static serial_port sp;
-static char* serial_port_name;
-
-void cmd_debug(UsbCommand* c) {
-	//  Debug
-	printf("UsbCommand length[len=%zd]\n", sizeof(UsbCommand));
-	printf("  cmd[len=%zd]: %016" PRIx64"\n", sizeof(c->cmd), c->cmd);
-	printf(" arg0[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[0]), c->arg[0]);
-	printf(" arg1[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[1]), c->arg[1]);
-	printf(" arg2[len=%zd]: %016" PRIx64"\n", sizeof(c->arg[2]), c->arg[2]);
-	printf(" data[len=%zd]: ", sizeof(c->d.asBytes));
-
-	for (size_t i=0; i<16; i++)
-		printf("%02x", c->d.asBytes[i]);
-
-	printf("...\n");
-}
-
-void SendCommand(UsbCommand* txcmd) {
-	//  printf("send: ");
-	//  cmd_debug(txcmd);
-	if (!uart_send(sp, (byte_t*)txcmd, sizeof(UsbCommand))) {
-		printf("Sending bytes to proxmark failed\n");
-		exit(1);
-	}
-}
-
-void ReceiveCommand(UsbCommand* rxcmd) {
-	byte_t* prxcmd = (byte_t*)rxcmd;
-	byte_t* prx = prxcmd;
-	size_t rxlen;
-	while (true) {
-		if (uart_receive(sp, prx, sizeof(UsbCommand) - (prx-prxcmd), &rxlen)) {
-			prx += rxlen;
-			if ((prx-prxcmd) >= sizeof(UsbCommand)) {
-				return;
-			}
-		}
-	}
-}
-
-void CloseProxmark() {
-	// Clean up the port
-	uart_close(sp);
-	// Fix for linux, it seems that it is extremely slow to release the serial port file descriptor /dev/*
-	unlink(serial_port_name);
-}
-
-int OpenProxmark() {
-	sp = uart_open(serial_port_name);
-
-	//poll once a second
-	if (sp == INVALID_SERIAL_PORT) {
-		return 0;
-	} else if (sp == CLAIMED_SERIAL_PORT) {
-		fprintf(stderr, "ERROR: serial port is claimed by another process\n");
-		return 0;
-	} 	
-	return 1;
-}
-
 static void usage(char *argv0) {
-	fprintf(stdout, "Usage:   %s <port> [-b] image.elf [image.elf...]\n\n", argv0);
-	fprintf(stdout, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n\n");
-	fprintf(stdout, "\nExample:\n\n\t %s "SERIAL_PORT_H" armsrc/obj/fullimage.elf\n", argv0);
-#ifdef __linux__	
-	fprintf(stdout, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark to reappear on <DEVICE>',\n");
-	fprintf(stdout, "              you need to blacklist proxmark for modem-manager - see wiki for more details:\n\n");
-	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/Gentoo Linux\n\n");
-	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/Ubuntu Linux\n\n");
-	fprintf(stdout, "              https://github.com/Proxmark/proxmark3/wiki/OSX\n\n");
-#endif	
+    PrintAndLogEx(NORMAL, "Usage:   %s <port> [-b] image.elf [image.elf...]\n", argv0);
+    PrintAndLogEx(NORMAL, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n");
+    PrintAndLogEx(NORMAL, "\nExample:\n\n\t %s "SERIAL_PORT_EXAMPLE_H" armsrc/obj/fullimage.elf", argv0);
+#ifdef __linux__
+    PrintAndLogEx(NORMAL, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark3 to reappear on <DEVICE>',");
+    PrintAndLogEx(NORMAL, "              you need to blacklist Proxmark3 for modem-manager - see wiki for more details:\n");
+    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/Gentoo Linux\n");
+    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/Ubuntu Linux\n");
+    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/OSX\n");
+#endif
 }
 
 int main(int argc, char **argv) {
-	int can_write_bl = 0;
-	int num_files = 0;
-	int res;
-	flash_file_t files[MAX_FILES];
+    int can_write_bl = 0;
+    int num_files = 0;
+    int res;
+    flash_file_t files[MAX_FILES];
 
-	memset(files, 0, sizeof(files));
+    memset(files, 0, sizeof(files));
 
-	if (argc < 3) {
-		usage(argv[0]);
-		return -1;
-	}
+    session.supports_colors = false;
+    session.stdinOnTTY = isatty(STDIN_FILENO);
+    session.stdoutOnTTY = isatty(STDOUT_FILENO);
+#if defined(__linux__) || (__APPLE__)
+    if (session.stdinOnTTY && session.stdoutOnTTY)
+        session.supports_colors = true;
+#endif
+    session.help_dump_mode = false;
 
-	for (int i = 2; i < argc; i++) {
-		if (argv[i][0] == '-') {
-			if (!strcmp(argv[i], "-b")) {
-				can_write_bl = 1;
-			} else {
-				usage(argv[0]);
-				return -1;
-			}
-		} else {
-			res = flash_load(&files[num_files], argv[i], can_write_bl);
-			if (res < 0) {
-				fprintf(stderr, "Error while loading %s\n", argv[i]);
-				return -1;
-			}
-			fprintf(stderr, "\n");
-			num_files++;
-		}
-	}
+    if (argc < 3) {
+        usage(argv[0]);
+        return -1;
+    }
 
-	serial_port_name = argv[1];
-  
-	fprintf(stdout, "Waiting for Proxmark to appear on %s", serial_port_name);
-	do {
-		msleep(500);
-		fprintf(stderr, "."); fflush(stdout);
-	} while (!OpenProxmark());
+    for (int i = 2; i < argc; i++) {
+        if (argv[i][0] == '-') {
+            if (!strcmp(argv[i], "-b")) {
+                can_write_bl = 1;
+            } else {
+                usage(argv[0]);
+                return -1;
+            }
+        } else {
+            res = flash_load(&files[num_files], argv[i], can_write_bl);
+            if (res < 0)
+                return -1;
 
-	fprintf(stdout, " Found.\n");
+            PrintAndLogEx(NORMAL, "");
+            num_files++;
+        }
+    }
 
-	res = flash_start_flashing(can_write_bl, serial_port_name);
-	if (res < 0)
-		return -1;
+    char *serial_port_name = argv[1];
 
-	fprintf(stdout, "\nFlashing...\n");
+    if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+        PrintAndLogEx(NORMAL, _GREEN_("Found"));
+    } else {
+        PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
+        return -1;
+    }
 
-	for (int i = 0; i < num_files; i++) {
-		res = flash_write(&files[i]);
-		if (res < 0)
-			return -1;
-		flash_free(&files[i]);
-		fprintf(stdout, "\n");
-	}
+    res = flash_start_flashing(can_write_bl, serial_port_name);
+    if (res < 0)
+        return -1;
 
-	fprintf(stdout, "Resetting hardware...\n");
+    PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
 
-	res = flash_stop_flashing();
-	if (res < 0)
-		return -1;
+    for (int i = 0; i < num_files; i++) {
+        res = flash_write(&files[i]);
+        if (res < 0)
+            return -1;
+        flash_free(&files[i]);
+        PrintAndLogEx(NORMAL, "\n");
+    }
 
-	CloseProxmark();
+    res = flash_stop_flashing();
+    if (res < 0)
+        return -1;
 
-	fprintf(stdout, "All done.\n\n");
-	fprintf(stdout, "Have a nice day!\n");
-	return 0;
+    CloseProxmark();
+
+    PrintAndLogEx(SUCCESS, _BLUE_("All done."));
+    PrintAndLogEx(SUCCESS, "\nHave a nice day!");
+    return 0;
 }

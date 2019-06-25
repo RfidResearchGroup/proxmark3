@@ -25,14 +25,8 @@
 #include "cmdmain.h"
 #include "emvcore.h"
 #include "apduinfo.h"
+#include "emv_roca.h"
 
-int CmdHFEMV(const char *Cmd);
-
-extern int CmdHFEMVSelect(const char *cmd);
-extern int CmdHFEMVSearch(const char *cmd);
-extern int CmdHFEMVPPSE(const char *cmd);
-extern int CmdHFEMVExec(const char *cmd);
-extern int CmdHfEMVGetrng(const char *Cmd);
-extern int CmdHfEMVList(const char *Cmd);
+int CmdEMV(const char *Cmd);
 
 #endif

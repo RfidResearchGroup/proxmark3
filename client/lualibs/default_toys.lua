@@ -185,25 +185,25 @@ local _names = {
 
 {"404", "9401", "0030", "earth", "legendary","Bash"},
 {"416", "a001", "0030", "magic", "legendary", "Spyro"},
-	--{"", "", "0030", "magic", "legendary", "Deja Vu"},
+    --{"", "", "0030", "magic", "legendary", "Deja Vu"},
 {"419", "a301", "0030", "tech", "legendary", "Trigger Happy"},
-	--{"", "", "0030", "tech", "legendary", "bouncer"},
-	--{"", "", "0030", "tech", "legendary", "jawbreaker"},
+    --{"", "", "0030", "tech", "legendary", "bouncer"},
+    --{"", "", "0030", "tech", "legendary", "jawbreaker"},
 {"430", "ae01", "0030", "undead", "legendary", "Chop Chop"},
-	--{"", "", "0030", "undead", "legendary", "grim creeper"},
-	--{"", "", "0030", "undead", "legendary", "night shift"},
-	
-	--{"", "", "0030", "air", "legendary", "blades"},
-	--{"", "", "0030", "air", "legendary", "jet vac"},	
-	--{"", "", "0030", "air", "legendary", "Free Ranger"},
-	--{"", "", "0030", "life", "legendary", "stealth elf"},
-	--{"", "", "0030", "life", "legendary", "Bushwhack"},
-	--{"", "", "0030", "fire", "legendary", "ignitor"},
-	--{"", "", "0030", "water", "legendary", "slam bam"},
-	--{"", "", "0030", "water", "legendary", "chill"},
+    --{"", "", "0030", "undead", "legendary", "grim creeper"},
+    --{"", "", "0030", "undead", "legendary", "night shift"},
 
-	--{"", "", "0030", "", "legendary", "zoo lou"},	
-	
+    --{"", "", "0030", "air", "legendary", "blades"},
+    --{"", "", "0030", "air", "legendary", "jet vac"},
+    --{"", "", "0030", "air", "legendary", "Free Ranger"},
+    --{"", "", "0030", "life", "legendary", "stealth elf"},
+    --{"", "", "0030", "life", "legendary", "Bushwhack"},
+    --{"", "", "0030", "fire", "legendary", "ignitor"},
+    --{"", "", "0030", "water", "legendary", "slam bam"},
+    --{"", "", "0030", "water", "legendary", "chill"},
+
+    --{"", "", "0030", "", "legendary", "zoo lou"},
+
 {"450", "c201", "0030", "air", "trapmaster", "Gusto"},
 --{"450", "c201", "0234", "air", "trapmaster", "Special Gusto"},
 {"451", "c301", "0030", "air", "trapmaster", "Thunderbolt"},
@@ -453,23 +453,23 @@ local _names = {
 
 local function find( main, sub)
     main = main:lower()
-	sub = sub:lower()
+    sub = sub:lower()
     for k, v in pairs(_names) do
-		if ( v[2]:lower() == main and v[3]:lower() == sub) then
-			return v
-		end
-	end
-	return nil
+        if ( v[2]:lower() == main and v[3]:lower() == sub) then
+            return v
+        end
+    end
+    return nil
 end
 local function list()
-	print ("Type\tSub\tElement\tGame            Name")
-	print (string.rep('=', 54))
+    print ("Type\tSub\tElement\tGame            Name")
+    print (string.rep('=', 54))
     for k, v in pairs(_names) do
-		print(("%s\t%s\t%s\t%-9s\t%s"):format(v[2],v[3],v[4], v[5], v[6] ))
-	end 
+        print(("%s\t%s\t%s\t%-9s\t%s"):format(v[2],v[3],v[4], v[5], v[6] ))
+    end
 end
 
 return {
-	Find = find,
-	List = list,
+    Find = find,
+    List = list,
 }

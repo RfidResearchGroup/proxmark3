@@ -104,15 +104,17 @@ lo_edge_detect le(
 //   000 --  LF reader (generic)
 //   001 --  LF edge detect (generic)
 //   010 --  LF passthrough
-
-mux8 mux_ssp_clk		(major_mode, ssp_clk,   lr_ssp_clk,   le_ssp_clk,         1'b0,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_ssp_din		(major_mode, ssp_din,   lr_ssp_din,         1'b0,   lp_ssp_din,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_ssp_frame		(major_mode, ssp_frame, lr_ssp_frame, le_ssp_frame,       1'b0,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0); 
+//   110 --  FPGA_MAJOR_MODE_OFF_LF	(rdv40 specific)
+//   111 --  FPGA_MAJOR_MODE_OFF
+//                                              000           001           010           011   100   101   110   111
+mux8 mux_ssp_clk		(major_mode, ssp_clk,   lr_ssp_clk,   le_ssp_clk,   1'b0,         1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_ssp_din		(major_mode, ssp_din,   lr_ssp_din,   1'b0,         lp_ssp_din,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_ssp_frame		(major_mode, ssp_frame, lr_ssp_frame, le_ssp_frame, 1'b0,         1'b0, 1'b0, 1'b0, 1'b0, 1'b0); 
 mux8 mux_pwr_oe1		(major_mode, pwr_oe1,   lr_pwr_oe1,   le_pwr_oe1,   lp_pwr_oe1,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 mux8 mux_pwr_oe2		(major_mode, pwr_oe2,   lr_pwr_oe2,   le_pwr_oe2,   lp_pwr_oe2,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0); 
 mux8 mux_pwr_oe3		(major_mode, pwr_oe3,   lr_pwr_oe3,   le_pwr_oe3,   lp_pwr_oe3,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 mux8 mux_pwr_oe4		(major_mode, pwr_oe4,   lr_pwr_oe4,   le_pwr_oe4,   lp_pwr_oe4,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0); 
-mux8 mux_pwr_lo			(major_mode, pwr_lo,    lr_pwr_lo,    le_pwr_lo,    lp_pwr_lo,    1'b0, 1'b0, 1'b0, 1'b0, 1'b0); 
+mux8 mux_pwr_lo			(major_mode, pwr_lo,    lr_pwr_lo,    le_pwr_lo,    lp_pwr_lo,    1'b0, 1'b0, 1'b0, 1'b1, 1'b0); 
 mux8 mux_pwr_hi			(major_mode, pwr_hi,    lr_pwr_hi,    le_pwr_hi,    lp_pwr_hi,    1'b0, 1'b0, 1'b0, 1'b0, 1'b0); 
 mux8 mux_adc_clk		(major_mode, adc_clk,   lr_adc_clk,   le_adc_clk,   lp_adc_clk,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0); 
 mux8 mux_dbg			(major_mode, dbg,       lr_dbg,       le_dbg,       lp_dbg,       1'b0, 1'b0, 1'b0, 1'b0, 1'b0); 

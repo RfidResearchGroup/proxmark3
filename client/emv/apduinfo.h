@@ -16,19 +16,19 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#define APDUCODE_TYPE_NONE		0
-#define APDUCODE_TYPE_INFO		1
-#define APDUCODE_TYPE_WARNING	2
-#define APDUCODE_TYPE_ERROR		3
-#define APDUCODE_TYPE_SECURITY	4
+#define APDUCODE_TYPE_NONE     0
+#define APDUCODE_TYPE_INFO     1
+#define APDUCODE_TYPE_WARNING  2
+#define APDUCODE_TYPE_ERROR    3
+#define APDUCODE_TYPE_SECURITY 4
 
 typedef struct {
-	const char *ID;
-	const uint8_t Type;
-	const char *Description;
+    const char *ID;
+    const uint8_t Type;
+    const char *Description;
 } APDUCode;
-	
-extern const APDUCode* const GetAPDUCode(uint8_t sw1, uint8_t sw2);
-extern const char* GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
+
+const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2);
+const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
 
 #endif

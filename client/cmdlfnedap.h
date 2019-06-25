@@ -22,17 +22,11 @@
 #include "lfdemod.h"    // parityTest
 #include "crc.h"
 
-extern int CmdLFNedap(const char *Cmd);
-extern int CmdLFNedapDemod(const char *Cmd);
-extern int CmdLFNedapRead(const char *Cmd);
-//extern int CmdLFNedapClone(const char *Cmd);
-extern int CmdLFNedapSim(const char *Cmd);
-extern int CmdLFNedapChk(const char *Cmd);
+int CmdLFNedap(const char *Cmd);
 
-extern int detectNedap(uint8_t *dest, size_t *size);
+int demodNedap(void);
+int detectNedap(uint8_t *dest, size_t *size);
+int getNedapBits(uint32_t cn, uint8_t *nedapBits);
 
-extern int usage_lf_nedap_read(void);
-//extern int usage_lf_nedap_clone(void);
-extern int usage_lf_nedap_sim(void);
 #endif
 

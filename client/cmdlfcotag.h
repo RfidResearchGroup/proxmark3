@@ -13,19 +13,17 @@
 
 #include "proxmark3.h"  // Definitions, USB controls, COTAG_BITS
 #include "util.h"       // FALSE / TRUE
-#include "cmddata.h"	// getSamples
+#include "cmddata.h"    // getSamples
 #include "cmdparser.h"  // CmdsParse, CmdsHelp
-#include "cmdmain.h"
-#include "ui.h"			// PrintAndLog
-#include "cmdlf.h"		// Setconfig 
+#include "comms.h"
+#include "ui.h"         // PrintAndLog
+#include "cmdlf.h"      // Setconfig
 
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
 #endif
 
-extern int CmdLFCOTAG(const char *Cmd);
-extern int CmdCOTAGRead(const char *Cmd);
-extern int CmdCOTAGDemod(const char *Cmd);
-
-extern int usage_lf_cotag_read(void);
+int CmdLFCOTAG(const char *Cmd);
+int demodCOTAG(void);
+int readCOTAGUid(void);
 #endif

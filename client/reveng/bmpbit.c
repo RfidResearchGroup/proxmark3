@@ -1,10 +1,10 @@
 /* bmpbit.c
- * Greg Cook, 26/Jul/2018
+ * Greg Cook, 23/Feb/2019
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
- * Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+ * 2019  Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -42,46 +42,47 @@ int bmpsub;
 
 void
 setbmp(void) {
-	/* Initialise BMP_BIT and BMP_SUB for the local architecture. */
-	bmp_t bmpmax = ~(bmp_t) 0;
+    /* Initialise BMP_BIT and BMP_SUB for the local architecture. */
+    bmp_t bmpmax = ~(bmp_t) 0;
 
-	bmpbit = 0; bmpsub = 1;
+    bmpbit = 0;
+    bmpsub = 1;
 
-	while(bmpmax) {
-		bmpmax <<= 1;
-		++bmpbit;
-	}
+    while (bmpmax) {
+        bmpmax <<= 1;
+        ++bmpbit;
+    }
 
-	while((bmpsub | (bmpsub - 1)) < bmpbit - 1)
-		bmpsub <<= 1;
+    while ((bmpsub | (bmpsub - 1)) < bmpbit - 1)
+        bmpsub <<= 1;
 }
 #endif
 
 #ifdef BMPTST
 int
 main(int argc, char *argv[]) {
-	/* check the compile-time bitmap width is correct, otherwise
-	 * searches run forever. */
+    /* check the compile-time bitmap width is correct, otherwise
+     * searches run forever. */
 #  if BMP_BIT > 0
-	setbmp();
-	if(BMP_BIT != bmpbit || BMP_SUB != bmpsub) {
-		fprintf(stderr,"reveng: configuration fault.  Update "
-			"config.h with these definitions and "
-			"recompile:\n"
-			"\t#define BMP_BIT   %d\n"
-			"\t#define BMP_SUB   %d\n",
-			bmpbit, bmpsub);
-		exit(EXIT_FAILURE);
-	}
+    setbmp();
+    if (BMP_BIT != bmpbit || BMP_SUB != bmpsub) {
+        fprintf(stderr, "reveng: configuration fault.  Update "
+                "config.h with these definitions and "
+                "recompile:\n"
+                "\t#define BMP_BIT   %d\n"
+                "\t#define BMP_SUB   %d\n",
+                bmpbit, bmpsub);
+        exit(EXIT_FAILURE);
+    }
 #  endif /* BMP_BIT > 0 */
-	/* check the bitmap constant macro */
-	if(~(bmp_t) 0 != ~BMP_C(0)) {
-		fprintf(stderr, "reveng: configuration fault.  Edit "
-			"the definition of BMP_C() in config.h to "
-			"match BMP_T and recompile.\n");
-		exit(EXIT_FAILURE);
-	}
-	exit(EXIT_SUCCESS);
+    /* check the bitmap constant macro */
+    if (~(bmp_t) 0 != ~BMP_C(0)) {
+        fprintf(stderr, "reveng: configuration fault.  Edit "
+                "the definition of BMP_C() in config.h to "
+                "match BMP_T and recompile.\n");
+        exit(EXIT_FAILURE);
+    }
+    exit(EXIT_SUCCESS);
 }
 
 #endif /* BMPTST */

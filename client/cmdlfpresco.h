@@ -21,16 +21,12 @@
 #include "protocols.h"  // for T55xx config register definitions
 #include "lfdemod.h"    // parityTest
 
-extern int CmdLFPresco(const char *Cmd);
-extern int CmdPrescoRead(const char *Cmd);
-extern int CmdPrescoDemod(const char *Cmd);
-extern int CmdPrescoClone(const char *Cmd);
-extern int CmdPrescoSim(const char *Cmd);
+int CmdLFPresco(const char *Cmd);
 
-extern int detectPresco(uint8_t *dest, size_t *size);
-int GetWiegandFromPresco(const char *id, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5);
+int demodPresco(void);
+int detectPresco(uint8_t *dest, size_t *size);
+int getPrescoBits(uint32_t fullcode, uint8_t *prescoBits);
+int getWiegandFromPresco(const char *Cmd, uint32_t *sitecode, uint32_t *usercode, uint32_t *fullcode, bool *Q5);
 
-extern int usage_lf_presco_clone(void);
-extern int usage_lf_presco_sim(void);
 #endif
 

@@ -8,4 +8,12 @@ get_crapto1:
 
 get_nonce_bf:
 #	git clone https://github.com/J-Run/mf_key_brute.git mf_key_brute
-	git clone https://github.com/iceman1001/mf_nonce_brute mf_nonce_brute	
+	git clone https://github.com/iceman1001/mf_nonce_brute mf_nonce_brute
+
+get_xorsearch:
+	mkdir xorsearch
+	wget -N https://didierstevens.com/files/software/XORSearch_V1_11_2.zip
+#  Mingw
+#	unzzip-big XORSearch_V1_11_2.zip
+#  linux
+#	gunzip  XORSearch_V1_11_2.zip

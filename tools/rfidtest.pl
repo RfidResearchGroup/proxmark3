@@ -16,20 +16,20 @@ if ($search =~ /^[01]+$/) { }
 # decimal
 elsif ($search =~ /^\d+$/)
 {
-	$search = unpack("B*", pack("N", $search));
-	$search =~ s/^0*//;
+    $search = unpack("B*", pack("N", $search));
+    $search =~ s/^0*//;
 }
 # hex
 elsif ($search =~ /^[\da-fA-F]+$/)
 {
-	$search = unpack("B*", pack("H*", $search));
-	$search =~ s/^0*//;
+    $search = unpack("B*", pack("H*", $search));
+    $search =~ s/^0*//;
 }
 # ascii
 else
 {
-	$search = unpack("B*", $search);
-	$search =~ s/^0*//;
+    $search = unpack("B*", $search);
+    $search =~ s/^0*//;
 }
 
 
@@ -44,12 +44,12 @@ $data =~ s/\s//g;
 if ($data =~ /^[01]+$/) { }
 elsif ($data =~ /^[\da-fA-F]+$/)
 {
-	$data = unpack("B*", pack("H*", $data));
-	$search =~ s/^0*//;
+    $data = unpack("B*", pack("H*", $data));
+    $search =~ s/^0*//;
 }
 else
 {
-	die "Seriously. What sort of data is this file? Binary or hex only please.\n";
+    die "Seriously. What sort of data is this file? Binary or hex only please.\n";
 }
 
 
@@ -66,12 +66,12 @@ my $man;
 my $last = 0;
 for (my $i = 1; $i < @bits; $i++)
 {
-	# if we changed, flip our bit
-	if ($bits[$i-1] == 1)
-	{
-		$last ^= 1;
-	}
-	$man .= $last;
+    # if we changed, flip our bit
+    if ($bits[$i-1] == 1)
+    {
+        $last ^= 1;
+    }
+    $man .= $last;
 }
 
 print "Testing with manchester demodulation...\n";
@@ -83,37 +83,37 @@ test_all($man, $search, 1);
 
 sub test_all
 {
-	my ($data, $search, $flip) = @_;
-	
-	if ($flip)
-	{
-		$data =~ s/(.)/$1 ^ 1/eg;
-	}
-	
-	# first just see if our data is in the stream
-	if ($data =~ /$search/)
-	{
-		print "Found $search in our stream ($data)\n";
-	}
+    my ($data, $search, $flip) = @_;
 
-	# try removing parity every 4 and 8 bits
-	foreach my $parity (4, 8)
-	{
-		# try removing a parity bit every $parity bits
-		# test by cutting off a bit at a time in case we're in the wrong bit position
-		my $tmp = $data;
-		foreach (1 .. $parity)
-		{
-			my $test = $tmp;
-			$test =~ s/(.{$parity})./$1/g;
-		
-			if ($test =~ /$search/)
-			{
-				print "Found $search with parity every " . ($parity + 1) . "th bit, round $_ out of $parity ($test)\n";
-			}
-		
-			# chop of a bit to change our bit position next round
-			$tmp =~ s/^.//;
-		}
-	}
+    if ($flip)
+    {
+        $data =~ s/(.)/$1 ^ 1/eg;
+    }
+
+    # first just see if our data is in the stream
+    if ($data =~ /$search/)
+    {
+        print "Found $search in our stream ($data)\n";
+    }
+
+    # try removing parity every 4 and 8 bits
+    foreach my $parity (4, 8)
+    {
+        # try removing a parity bit every $parity bits
+        # test by cutting off a bit at a time in case we're in the wrong bit position
+        my $tmp = $data;
+        foreach (1 .. $parity)
+        {
+            my $test = $tmp;
+            $test =~ s/(.{$parity})./$1/g;
+
+            if ($test =~ /$search/)
+            {
+                print "Found $search with parity every " . ($parity + 1) . "th bit, round $_ out of $parity ($test)\n";
+            }
+
+            # chop of a bit to change our bit position next round
+            $tmp =~ s/^.//;
+        }
+    }
 }

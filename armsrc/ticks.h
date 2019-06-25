@@ -27,6 +27,7 @@ void SpinDelayUs(int us);
 
 void StartTickCount(void);
 uint32_t RAMFUNC GetTickCount(void);
+uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks);
 
 void StartCountUS(void);
 uint32_t RAMFUNC GetCountUS(void);
@@ -37,11 +38,11 @@ void StartCountSspClk();
 void ResetSspClk(void);
 uint32_t RAMFUNC GetCountSspClk();
 
-extern void StartTicks(void);
-extern uint32_t GetTicks(void);
-extern void WaitTicks(uint32_t ticks);
-extern void WaitUS(uint16_t us);
-extern void WaitMS(uint16_t ms);
+void StartTicks(void);
+uint32_t GetTicks(void);
+void WaitTicks(uint32_t ticks);
+void WaitUS(uint16_t us);
+void WaitMS(uint16_t ms);
 
-extern void StopTicks(void);
+void StopTicks(void);
 #endif

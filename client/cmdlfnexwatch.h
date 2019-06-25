@@ -20,11 +20,10 @@
 #include "cmdparser.h"
 #include "cmddata.h" // preamblesearch
 #include "cmdlf.h"
-#include "lfdemod.h"  
+#include "lfdemod.h"
 
-extern int CmdLFNEXWATCH(const char *Cmd);
-extern int CmdNexWatchDemod(const char *Cmd);
-extern int CmdNexWatchRead(const char *Cmd);
+int CmdLFNEXWATCH(const char *Cmd);
 
-extern int detectNexWatch(uint8_t *dest, size_t *size, bool *invert);
+int demodNexWatch(void);
+int detectNexWatch(uint8_t *dest, size_t *size, bool *invert);
 #endif

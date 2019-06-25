@@ -9,6 +9,6 @@
 #ifndef __CRC64_H
 #define __CRC64_H
 
-void crc64 (const uint8_t *data, const size_t len, uint64_t *crc) ;
+void crc64(const uint8_t *data, const size_t len, uint64_t *crc) ;
 
 #endif

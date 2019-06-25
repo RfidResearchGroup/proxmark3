@@ -10,31 +10,33 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "util.h"
+#include <stdbool.h>
+#include <string.h>
+#include "commonutil.h"
 
 #define CRC16_POLY_CCITT  0x1021
 #define CRC16_POLY_LEGIC  0xc6c6 //0x6363
-#define CRC16_POLY_DNP	  0x3d65
+#define CRC16_POLY_DNP    0x3d65
 
-#define X25_CRC_CHECK		((uint16_t)(~0xF0B8 & 0xFFFF)) 	// use this for checking of a correct crc
+#define X25_CRC_CHECK     ((uint16_t)(~0xF0B8 & 0xFFFF)) // use this for checking of a correct crc
 
 typedef enum {
-	CRC_NONE,
-	CRC_14443_A,
-	CRC_14443_B,
-	CRC_15693,
-	CRC_ICLASS,
-	CRC_FELICA,
-	CRC_LEGIC,
-	CRC_CCITT,
-	CRC_KERMIT,
+    CRC_NONE,
+    CRC_14443_A,
+    CRC_14443_B,
+    CRC_15693,
+    CRC_ICLASS,
+    CRC_FELICA,
+    CRC_LEGIC,
+    CRC_CCITT,
+    CRC_KERMIT,
 } CrcType_t;
 
-uint16_t update_crc16_ex( uint16_t crc, uint8_t c, uint16_t polynomial );
+uint16_t update_crc16_ex(uint16_t crc, uint8_t c, uint16_t polynomial);
 uint16_t update_crc16(uint16_t crc, uint8_t c);
-uint16_t crc16(uint8_t const *message, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout);
+uint16_t Crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout);
 
-uint16_t crc(CrcType_t ct, const uint8_t *d, size_t n);
+uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n);
 void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8_t *second);
 bool check_crc(CrcType_t ct, const uint8_t *d, size_t n);
 
@@ -47,7 +49,7 @@ uint16_t crc16_kermit(uint8_t const *d, size_t n);
 // Calculate CRC-16/XMODEM (FeliCa)
 uint16_t crc16_xmodem(uint8_t const *d, size_t n);
 
-// Calculate CRC-16/X25 (ISO15693, ISO14443 CRC-B,ISO/IEC 13239) 
+// Calculate CRC-16/X25 (ISO15693, ISO14443 CRC-B,ISO/IEC 13239)
 uint16_t crc16_x25(uint8_t const *d, size_t n);
 
 // Calculate CRC-16/CRC-A (ISO14443 CRC-A)

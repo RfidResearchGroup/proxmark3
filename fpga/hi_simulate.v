@@ -51,37 +51,28 @@ begin
 end
 
 
-// Divide 13.56 MHz by 32 to produce the SSP_CLK
-// The register is bigger to allow higher division factors of up to /128
+// Divide 13.56 MHz to produce various frequencies for SSP_CLK
+// and modulation. 11 bits allow for factors of up to /128.
 reg [10:0] ssp_clk_divider;
 
 always @(posedge adc_clk)
     ssp_clk_divider <= (ssp_clk_divider + 1);
 
 reg ssp_clk;
-reg ssp_frame;
+
 always @(negedge adc_clk)
 begin
-    //If we're in 101, we only need a new bit every 8th carrier bit (53Hz). Otherwise, get next bit at 424Khz
     if(mod_type == 3'b101)
-    begin
-	if(ssp_clk_divider[7:0] == 8'b00000000)
-	    ssp_clk <= 1'b0;
-	if(ssp_clk_divider[7:0] == 8'b10000000)
-	    ssp_clk <= 1'b1;
-
-    end
+      // Get bit every at 53kHz (every 8th carrier bit of 424kHz)
+      ssp_clk <= ssp_clk_divider[7];
+    else if(mod_type == 3'b010)
+      // Get next bit at 212kHz
+      ssp_clk <= ssp_clk_divider[5];
     else
-    begin
-	if(ssp_clk_divider[4:0] == 5'd0)//[4:0] == 5'b00000)
-	    ssp_clk <= 1'b1;
-	if(ssp_clk_divider[4:0] == 5'd16) //[4:0] == 5'b10000)
-	    ssp_clk <= 1'b0;
-    end
+      // Get next bit at 424Khz
+      ssp_clk <= ssp_clk_divider[4];
 end
 
-
-//assign ssp_clk = ssp_clk_divider[4];
 
 // Divide SSP_CLK by 8 to produce the byte framing signal; the phase of
 // this is arbitrary, because it's just a bitstream.
@@ -96,19 +87,19 @@ always @(negedge ssp_clk)
     ssp_frame_divider_from_arm <= (ssp_frame_divider_from_arm + 1);
 
 
-
+reg ssp_frame;
 always @(ssp_frame_divider_to_arm or ssp_frame_divider_from_arm or mod_type)
     if(mod_type == 3'b000) // not modulating, so listening, to ARM
         ssp_frame = (ssp_frame_divider_to_arm == 3'b000);
     else
-	ssp_frame = (ssp_frame_divider_from_arm == 3'b000);
+        ssp_frame = (ssp_frame_divider_from_arm == 3'b000);
 
 // Synchronize up the after-hysteresis signal, to produce DIN.
 reg ssp_din;
 always @(posedge ssp_clk)
     ssp_din = after_hysteresis;
 
-// Modulating carrier frequency is fc/16, reuse ssp_clk divider for that
+// Modulating carrier frequency is fc/64 (212kHz) to fc/16 (848kHz). Reuse ssp_clk divider for that.
 reg modulating_carrier;
 always @(mod_type or ssp_clk or ssp_dout)
     if(mod_type == 3'b000)
@@ -116,9 +107,9 @@ always @(mod_type or ssp_clk or ssp_dout)
     else if(mod_type == 3'b001)
         modulating_carrier <= ssp_dout ^ ssp_clk_divider[3]; // XOR means BPSK
     else if(mod_type == 3'b010)
-	modulating_carrier <= ssp_dout & ssp_clk_divider[5]; // switch 212kHz subcarrier on/off
+        modulating_carrier <= ssp_dout & ssp_clk_divider[5]; // switch 212kHz subcarrier on/off
     else if(mod_type == 3'b100 || mod_type == 3'b101)
-	modulating_carrier <= ssp_dout & ssp_clk_divider[4]; // switch 424kHz modulation on/off
+        modulating_carrier <= ssp_dout & ssp_clk_divider[4]; // switch 424kHz modulation on/off
     else
         modulating_carrier <= 1'b0;                           // yet unused
 
@@ -133,9 +124,6 @@ assign pwr_oe4 = modulating_carrier;
 // This one is always on, so that we can watch the carrier.
 assign pwr_oe3 = 1'b0;
 
-assign dbg = modulating_carrier;
-//reg dbg;
-//always @(ssp_dout)
-//    dbg <= ssp_dout;
+assign dbg = ssp_din;
 
 endmodule

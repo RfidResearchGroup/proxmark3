@@ -2,6 +2,8 @@
 # ref. http://www.proxmark.org/forum/viewtopic.php?id=2022
 51243648,
 000D8787,
+19920427,
+65857569,  //chinese "handheld RFID writer" blue cloner from circa 2013 (also sold by xfpga.com)
 # ref. http://kazus.ru/forums/showpost.php?p=1045937&postcount=77
 05D73B9F,
 # ref. http://www.proxmark.org/forum/viewtopic.php?=
@@ -10,10 +12,18 @@
 314159E0,
 # ref. http://www.proxmark.org/forum/viewtopic.php?pid=28115#p28115
 AA55BBBB,
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=33376#p33376
+A5B4C3D2,
 # ref.  http://www.proxmark.org/forum/viewtopic.php?pid=30379#p30379
 1C0B5848,
+# http://www.proxmark.org/forum/viewtopic.php?pid=35075#p35075
+00434343,
+44B44CAE,
+88661858,  
 # paxton bullit?
 575F4F4B,
+#
+50520901,
 # Default pwd, simple:
 00000000,
 11111111,
@@ -92,6 +102,7 @@ FABADA11, //china?
 69696969,
 12121212,
 12344321,
+1234ABCD,
 11112222,
 13131313,
 10041004,
@@ -100,8 +111,8 @@ FABADA11, //china?
 abcd1234,
 20002000,
 19721972,
-aa55aa55, //amiboo
-55aa55aa, //rev amiboo
+aa55aa55, // amiboo
+55aa55aa, // rev amiboo
 4f271149, // seeds ul-ev1
 07d7bb0b, // seeds ul-ev1
 9636ef8f, // seeds ul-ev1
@@ -109,4 +120,4 @@ b5f44686, // seeds ul-ev1
 9E3779B9, // TEA
 C6EF3720, // TEA
 7854794A, // xbox tea constant :)
-F1EA5EED, //burtle
+F1EA5EED, // burtle
