@@ -18,6 +18,7 @@ This repo is based on iceman fork for Proxmark3. It is dedicated to bringing the
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) ||
 |[Notes on UART](/doc/uart_notes.md)|||
 |[Notes on Frame format](/doc/new_frame_format.md)|||
+|[Notes on Termux / Android](/doc/termux_notes.md)|||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
 
