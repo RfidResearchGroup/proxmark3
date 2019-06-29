@@ -95,7 +95,8 @@ You can also switch serial port from inside the proxmark3 client using the new c
 *	Install driver:
 http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers  
 *	Insert the adapter into the USB port. The adapter will search automatically and establish the connection. The adapter will remember the device that was first connected and after that the same device will be connected.
-*	The adapter button can be used to delete memory so that other add-on can be searched and connected.
+*	The adapter button can be used to delete memory so that other add-on can be searched and connected.<p align='center'>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/Button.png" alt="Image of blue shark add-on HC-06 white dongle button" width="200">
 *	After the connection is established, the blue state LED on add-on will turn on solid.
 *	look for _CP2104 USB tp UART bridge controller_ under devices in order to get the assigned serial port
 
@@ -144,7 +145,9 @@ the device that was first connected and after that the same device will
 be connected.
 
   2. The adapter button can be used to delete memory so that other add-on
-can be searched and connected.
+can be searched and connected.<p align='center'>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/Button.png" alt="Image of blue shark add-on HC-06 white dongle button" width="200">
+	</p>
 
   3. After the connection is established, the blue state LED on add-on will
 turn on solid.
