@@ -33,9 +33,12 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 *	Unplug your Proxmark3 RDV4.0 device from any usb cable.
 *	Remove the plastic upper case of Proxmark3 RDV4.0 with opener.
-*	Remove temporarily the antenna with a screwdriver to expose the FPC interface.
-*	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.
-*	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.
+*	Remove temporarily the antenna with a screwdriver to expose the FPC interface.<p>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/FPC-Interface.png" alt="Image of blue shark add-on fpc interface" width="300"></p>
+*	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.<p>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/FPC-Connected.png" alt="Image of blue shark add-on fpc wire" width="300"></p>
+*	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.<p>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/Blue-Film.png" alt="Image of blue shark add-on blue film location" width="300"></p>
 *	Assembly finished!
 
 <p align='center'>
