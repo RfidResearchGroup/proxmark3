@@ -33,7 +33,7 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 *	Unplug your Proxmark3 RDV4.0 device from any usb cable.
 *	Remove the plastic upper case of Proxmark3 RDV4.0 with opener.
-*	Remove temporarily the antenna with a screwdriver to expose the FPC interface.<p>
+*	Remove temporarily the antenna with a H5 screwdriver to expose the FPC interface.<p>
 	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/FPC-Interface.png" alt="Image of blue shark add-on fpc interface" width="300"></p>
 *	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.<p>
 	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/FPC-Connected.png" alt="Image of blue shark add-on fpc wire" width="300"></p>
@@ -133,6 +133,17 @@ connection is successful.
 The first time, your OS will ask you for pairing. The default PIN is
 1234. If PIN is not typed in quickly, the client might timeout. Simply
 restart it again after pairing.
+
+If your OS doesn't prompt you for pairing, you can do it in command line, e.g. (again, replace with your addon MAC address):
+
+```sh
+bluetoothctl
+[bluetooth]# pairable on
+[bluetooth]# trust aa:bb:cc:dd:ee:ff
+[bluetooth]# pair 20:19:04:20:04:08
+[agent] Enter PIN code: 1234
+[bluetooth]# quit
+```
 
 #### (2) Fast connection using dedicated USB Bluetooth adapter under Linux
 
