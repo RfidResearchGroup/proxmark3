@@ -368,10 +368,10 @@ void SendVersion(void) {
     struct p payload;
     payload.id = *(AT91C_DBGU_CIDR);
     payload.section_size = text_and_rodata_section_size + compressed_data_section_size;
-    payload.versionstr_len = strlen(VersionString);
-    memcpy(payload.versionstr, VersionString, strlen(VersionString));
+    payload.versionstr_len = strlen(VersionString) + 1;
+    memcpy(payload.versionstr, VersionString, payload.versionstr_len);
 
-    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + strlen(VersionString));
+    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + payload.versionstr_len);
 }
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
