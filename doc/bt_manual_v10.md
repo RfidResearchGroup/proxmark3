@@ -140,7 +140,7 @@ If your OS doesn't prompt you for pairing, you can do it in command line, e.g. (
 bluetoothctl
 [bluetooth]# pairable on
 [bluetooth]# trust aa:bb:cc:dd:ee:ff
-[bluetooth]# pair 20:19:04:20:04:08
+[bluetooth]# pair aa:bb:cc:dd:ee:ff
 [agent] Enter PIN code: 1234
 [bluetooth]# quit
 ```
