@@ -28,6 +28,19 @@ function wait4proxmark_macOS {
     echo $PM3
 }
 
+function wait4proxmark_Windows {
+    echo >&2 "Waiting for Proxmark to appear..."
+    while true; do
+        device=$(wmic path Win32_SerialPort get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
+        if [[ $device =~ VID_9AC4\&PID_4B8F ]]; then
+            PM3=${device/ */}
+            break
+        fi
+        sleep .1
+    done
+    echo $PM3
+}
+
 SCRIPT=$(basename -- "$0")
 
 if [ "$SCRIPT" = "proxmark3.sh" ]; then
@@ -51,6 +64,8 @@ if [ "$HOSTOS" = "LINUX" ]; then
     PORT=$(wait4proxmark_Linux)
 elif [ "$HOSTOS" = "DARWIN" ]; then
     PORT=$(wait4proxmark_macOS)
+elif [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
+    PORT=$(wait4proxmark_Windows)
 else
     echo "Host OS not recognized, abort: $HOSTOS"
     exit 1
