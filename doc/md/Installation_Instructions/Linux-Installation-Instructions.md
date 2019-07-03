@@ -25,7 +25,7 @@ Install the requirements
 
 ```sh
 sudo apt-get install p7zip git ca-certificates build-essential libreadline5 libreadline-dev \
-libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib
+libusb-0.1-4 libusb-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib libqt4-dev
 ```
 
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.
