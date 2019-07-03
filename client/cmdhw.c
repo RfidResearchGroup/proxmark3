@@ -621,6 +621,11 @@ void pm3_version(bool verbose) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
+#if defined(__clang__)
+        PrintAndLogEx(NORMAL, "  compiled with Clang/LLVM "__VERSION__);
+#elif defined(__GNUC__) || defined(__GNUG__)
+        PrintAndLogEx(NORMAL, "  compiled with GCC "__VERSION__);
+#endif
         PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 ]");
         PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
         PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
