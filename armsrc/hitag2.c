@@ -739,7 +739,7 @@ void SniffHitag(void) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // synchronized startup procedure
-    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC0 returned to zero
+    while (AT91C_BASE_TC1->TC_CV > 0) {}; // wait until TC1 returned to zero
 
     // Reset the received frame, frame count and timing info
     memset(rx, 0x00, sizeof(rx));
@@ -887,7 +887,6 @@ void SniffHitag(void) {
     set_tracing(false);
 
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
 
     // release allocated memory from BigBuff.
     BigBuf_free();
