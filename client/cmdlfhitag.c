@@ -551,6 +551,7 @@ static int CmdLFHitagReader(const char *Cmd) {
         case WHTSF_CHALLENGE:
         case WHTSF_KEY:
         case WHT2F_CRYPTO:
+        default:
             return usage_hitag_reader();
     }
 
@@ -665,6 +666,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
         case RHT2F_CRYPTO:
         case RHT2F_TEST_AUTH_ATTEMPTS:
         case RHT2F_UID_ONLY:
+        default:
             return usage_hitag_writer();
     }
 
