@@ -139,6 +139,10 @@ If your OS doesn't prompt you for pairing, you can do it in command line, e.g. (
 ```sh
 bluetoothctl
 [bluetooth]# pairable on
+[bluetooth]# scan on
+Discovery started
+...
+[CHG] Device aa:bb:cc:dd:ee:ff Name: PM3_RDV4.0
 [bluetooth]# trust aa:bb:cc:dd:ee:ff
 [bluetooth]# pair aa:bb:cc:dd:ee:ff
 [agent] Enter PIN code: 1234
