@@ -346,6 +346,12 @@ void SendVersion(void) {
     FormatVersionInformation(temp, sizeof(temp), "      os: ", &version_information);
     strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
+#if defined(__clang__)
+        strncat(VersionString, "      compiled with Clang/LLVM "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
+#elif defined(__GNUC__) || defined(__GNUG__)
+        strncat(VersionString, "      compiled with GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
+#endif
+
     strncat(VersionString, "\n [ FPGA ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
 
     for (int i = 0; i < fpga_bitstream_num; i++) {
