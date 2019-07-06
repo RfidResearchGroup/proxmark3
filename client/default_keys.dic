@@ -97,9 +97,15 @@ f1d83f964314,--RKFRejskortDanmarkKeyB
 fc00018778f7,--VästtrafikenKeyA, RKFÖstgötaTrafikenKeyA
 44ab09010845,-- hotel system
 85fed980ea5a,-- hotel system
-314B49474956,--VIGIK1KeyA
-564c505f4d41,--VIGIK1KeyB
-ba5b895da162,--VIGIK1KeyB
+314B49474956 --VIGIK1 A
+564c505f4d41 --VIGIK1 B
+ba5b895da162 --VIGIK1 B
+# Vigik mystery Keys Mifare 1k EV1 (S50)
+5c8ff9990da2, 16 A
+75ccb59c9bed, 17 A
+d01afeeb890a, 16 B
+4b791bea7bcc, 17 B
+#
 4143414F5250,
 a9b43414F585,--Tehran Railway
 1FB235AC1388,--Tehran Railway
@@ -109,8 +115,6 @@ f4a9ef2afc6d,--BCARD KeyB
 #
 #
 a9f953def0a3,--
-75ccb59c9bed,-- mystery KeyA Mifare 1k EV1 (S50) Sector 17!
-4b791bea7bcc,-- mystery KeyB Mifare 1k EV1 (S50) Sector 17!
 #
 # Here be BIP keys...
 3A42F33AF429,
