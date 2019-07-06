@@ -31,8 +31,8 @@ function wait4proxmark_macOS {
 function wait4proxmark_Windows {
     echo >&2 "Waiting for Proxmark to appear..."
     while true; do
-        device=$(wmic path Win32_SerialPort get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
-        if [[ $device =~ VID_9AC4\&PID_4B8F ]]; then
+        device=$(wmic path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
+        if [[ $device != "" ]]; then
             PM3=${device/ */}
             break
         fi
