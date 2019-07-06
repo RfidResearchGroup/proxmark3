@@ -3,6 +3,11 @@
 
 .history
 .bash_history
+.bash_profile
+.bash_logout
+.bashrc
+.inputrc
+.profile
 *.log
 *.eml
 *.o
