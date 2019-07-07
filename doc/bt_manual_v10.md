@@ -188,6 +188,11 @@ After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
   5. Make sure the Blue Shark BT switch is turned ON
   6. On your Mac, choose Apple menu -> System Preferences, then click Bluetooth.
   7. Select the device in the list, then click Connect and add the 1234 pwd.
+  8. A serial port like `/dev/tty.PM3_RDV40-DevB` will be created, use Proxmark3 client on it
+
+```sh
+./proxmark /dev/tty.PM3_RDV40-DevB
+```
 
 
 ### 6.	OTHER NOTES
