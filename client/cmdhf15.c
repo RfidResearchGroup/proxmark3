@@ -1289,10 +1289,10 @@ static int CmdHF15CSetUID(const char *Cmd) {
     uint8_t oldUid[8], newUid[8] = {0x00};
     PacketResponseNG resp;
     int reply = 1, fast = 0;
-    uint8_t data[4][9] = {0x00};
+    uint8_t data[4][9] = {{0x00}};
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_15_csetuid();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_csetuid();
 
     if (param_gethex(Cmd, 0, uid, 16)) {
         PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
@@ -1300,7 +1300,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     }
 
     if (uid[0] != 0xe0) {
-        PrintAndLogEx(WARNING, "UID must begin with the byte 'E0'");
+        PrintAndLogEx(WARNING, "UID must begin with the byte " _YELLOW_("E0"));
         return 1;
     }
 
@@ -1309,7 +1309,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     if (!getUID(oldUid)) {
         PrintAndLogEx(FAILED, "Can't get old UID.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     // Command 1 : 02213E00000000
@@ -1367,14 +1367,14 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     if (!getUID(newUid)) {
         PrintAndLogEx(FAILED, "Can't get new UID.");
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "old UID : %02X %02X %02X %02X %02X %02X %02X %02X", oldUid[7], oldUid[6], oldUid[5], oldUid[4], oldUid[3], oldUid[2], oldUid[1], oldUid[0]);
     PrintAndLogEx(SUCCESS, "new UID : %02X %02X %02X %02X %02X %02X %02X %02X", newUid[7], newUid[6], newUid[5], newUid[4], newUid[3], newUid[2], newUid[1], newUid[0]);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
