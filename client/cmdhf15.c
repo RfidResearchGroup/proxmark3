@@ -1299,7 +1299,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return 1;
     }
 
-    if (strcmp(sprint_hex_inrow_ex(uid, 1, 2), "E0") != 0) {
+    if (uid[0] != 0xe0) {
         PrintAndLogEx(WARNING, "UID must begin with the byte 'E0'");
         return 1;
     }
