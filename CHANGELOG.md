@@ -3,7 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add check if bootloader segment is within bounds (@slurdge)
  - Add `hf 15 csetuid` - set UID on ISO-15693 Magic tags (@t0m4-null)
+ - Change: Print help if unknown arg for hitag reader/writer (@ViRb3)
+ - Fix clock deadlock in hitag sniff (@ViRb3)
+ - Add compiler info in client & ARM sections (@slurdge)
  - Add support for automatic COM detection on Windows (@slurdge)
  - Add support for compilation on RaspberryPiZero (armv6) (@doegox)
  - Change: updates to README (@iceman)
