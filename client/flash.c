@@ -173,6 +173,10 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
             PrintAndLogEx(ERR, "Attempted to write bootloader but bootloader writes are not enabled");
             return -1;
         }
+        if (can_write_bl && seg->start < BOOTLOADER_END && (seg->start + seg->length > BOOTLOADER_END)) {
+            PrintAndLogEx(ERR, "Error: Segment is outside of bootloader bounds");
+            return -1;
+        }
     }
     return 0;
 }
