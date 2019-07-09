@@ -197,7 +197,7 @@ void WriteTagToFlash(uint8_t index, size_t size) {
 }
 
 void ModInfo(void) {
-    DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
+    DbpString("  HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
 }
 
 void RunMod() {

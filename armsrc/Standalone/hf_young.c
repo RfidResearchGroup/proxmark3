@@ -19,7 +19,7 @@ typedef struct {
 
 
 void ModInfo(void) {
-    DbpString("   HF Mifare sniff/simulation - (Craig Young)");
+    DbpString("  HF Mifare sniff/simulation - (Craig Young)");
 }
 
 void RunMod() {

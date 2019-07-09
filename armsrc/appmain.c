@@ -339,25 +339,25 @@ void SendVersion(void) {
     if (bootrom_version < &_flash_start || bootrom_version >= &_flash_end) {
         strcat(VersionString, "bootrom version information appears invalid\n");
     } else {
-        FormatVersionInformation(temp, sizeof(temp), " bootrom: ", bootrom_version);
+        FormatVersionInformation(temp, sizeof(temp), "  bootrom: ", bootrom_version);
         strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
     }
 
-    FormatVersionInformation(temp, sizeof(temp), "      os: ", &version_information);
+    FormatVersionInformation(temp, sizeof(temp), "       os: ", &version_information);
     strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
 #if defined(__clang__)
-        strncat(VersionString, "      compiled with Clang/LLVM "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
+        strncat(VersionString, "  compiled with Clang/LLVM "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 #elif defined(__GNUC__) || defined(__GNUG__)
-        strncat(VersionString, "      compiled with GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
+        strncat(VersionString, "  compiled with GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 #endif
 
-    strncat(VersionString, "\n [ FPGA ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, "\n [ FPGA ]\n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
     for (int i = 0; i < fpga_bitstream_num; i++) {
         strncat(VersionString, fpga_version_information[i], sizeof(VersionString) - strlen(VersionString) - 1);
         if (i < fpga_bitstream_num - 1) {
-            strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);
+            strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
     // Send Chip ID and used flash memory

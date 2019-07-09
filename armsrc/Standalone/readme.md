@@ -19,7 +19,7 @@ The RunMod function, which is your "main" function when running.  You need to ch
 
 ````
 void ModInfo(void) {
-    DbpString("   LF good description of your mode - aka FooRun (your name)");
+    DbpString("  LF good description of your mode - aka FooRun (your name)");
 }
 
 void RunMod(void) {
@@ -80,7 +80,7 @@ Add your source code files like the following sample in the `armsrc/Makefile`
 ```
 # WITH_STANDALONE_LF_ICERUN
 ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
-	SRC_STANDALONE = lf_icerun.c
+    SRC_STANDALONE = lf_icerun.c
 endif
 
 # WITH_STANDALONE_LF_FOO
@@ -95,7 +95,7 @@ This will enable an easy way to detect on client side which standalone mode has 
 
 ````
 void ModInfo(void) {
-    DbpString("   LF good description of your mode - aka FooRun (your name)");
+    DbpString("  LF good description of your mode - aka FooRun (your name)");
 }
 ````
 
