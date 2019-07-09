@@ -12,13 +12,20 @@ endif
 # Your platform. See PLATS for possible values.
 PLAT= none
 
+platform= $(shell uname)
+
 CC= gcc
 CFLAGS= -O3 -Wall -DLUA_COMPAT_ALL $(SYSCFLAGS) $(MYCFLAGS)
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= -lm $(SYSLIBS) $(MYLIBS)
 
+ifeq ($(platform),Darwin)
+AR= /usr/bin/ar rc
+RANLIB= /usr/bin/ranlib
+else
 AR= ar rc
 RANLIB= ranlib
+endif
 RM= rm -f
 
 SYSCFLAGS=

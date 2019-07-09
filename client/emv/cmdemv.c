@@ -287,8 +287,8 @@ static int CmdEMVGPO(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't create PDOL data.");
         tlvdb_free(tmp_ext);
         tlvdb_free(tlvRoot);
-        if (pdol_data_tlv != &data_tlv);
-        free(pdol_data_tlv);
+        if (pdol_data_tlv != &data_tlv)
+          free(pdol_data_tlv);
         return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
