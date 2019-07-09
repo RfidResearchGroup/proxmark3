@@ -331,64 +331,6 @@ size_t blocknr;
 // Hitag2 operations
 //-----------------------------------------------------------------------------
 
-static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
-    // Reset the transmission frame length
-    *txlen = 0;
-
-    // Try to find out which command was send by selecting on length (in bits)
-    switch (rxlen) {
-        // No answer, try to resurrect
-        case 0: {
-            // Stop if there is no answer (after sending password)
-            if (bPwd) {
-                DbpString("Password failed!");
-                return false;
-            }
-            *txlen = 5;
-            memcpy(tx, "\xC0", nbytes(*txlen));
-        }
-        break;
-
-        // Received UID, tag password
-        case 32: {
-            if (!bPwd) {
-                *txlen = 32;
-                memcpy(tx, password, 4);
-                bPwd = true;
-                memcpy(tag.sectors[blocknr], rx, 4);
-                blocknr++;
-            } else {
-
-                if (blocknr == 1) {
-                    //store password in block1, the TAG answers with Block3, but we need the password in memory
-                    memcpy(tag.sectors[blocknr], tx, 4);
-                } else {
-                    memcpy(tag.sectors[blocknr], rx, 4);
-                }
-
-                blocknr++;
-                if (blocknr > 7) {
-                    DbpString("Read succesful!");
-                    bSuccessful = true;
-                    return false;
-                }
-                *txlen = 10;
-                tx[0] = 0xC0 | (blocknr << 3) | ((blocknr ^ 7) >> 2);
-                tx[1] = ((blocknr ^ 7) << 6);
-            }
-        }
-        break;
-
-        // Unexpected response
-        default: {
-            Dbprintf("Uknown frame length: %d", rxlen);
-            return false;
-        }
-        break;
-    }
-    return true;
-}
-
 static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     switch (writestate) {
         case WRITE_STATE_START:
@@ -428,6 +370,71 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
             return false;
     }
 
+    return true;
+}
+
+static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool write) {
+    // Reset the transmission frame length
+    *txlen = 0;
+
+    if (bPwd && write) {
+        if (!hitag2_write_page(rx, rxlen, tx, txlen)) {
+            return false;
+        }
+    } else {
+        // Try to find out which command was send by selecting on length (in bits)
+        switch (rxlen) {
+            // No answer, try to resurrect
+            case 0: {
+                // Stop if there is no answer (after sending password)
+                if (bPwd) {
+                    DbpString("Password failed!");
+                    return false;
+                }
+                *txlen = 5;
+                memcpy(tx, "\xC0", nbytes(*txlen));
+            }
+            break;
+
+            // Received UID, tag password
+            case 32: {
+                if (!bPwd) {
+                    *txlen = 32;
+                    memcpy(tx, password, 4);
+                    bPwd = true;
+                    memcpy(tag.sectors[blocknr], rx, 4);
+                    blocknr++;
+                } else {
+
+                    if (blocknr == 1) {
+                        //store password in block1, the TAG answers with Block3, but we need the password in memory
+                        memcpy(tag.sectors[blocknr], tx, 4);
+                    } else {
+                        memcpy(tag.sectors[blocknr], rx, 4);
+                    }
+
+                    blocknr++;
+                    if (blocknr > 7) {
+                        DbpString("Read succesful!");
+                        bSuccessful = true;
+                        return false;
+                    }
+                    *txlen = 10;
+                    tx[0] = 0xC0 | (blocknr << 3) | ((blocknr ^ 7) >> 2);
+                    tx[1] = ((blocknr ^ 7) << 6);
+                }
+            }
+            break;
+
+            // Unexpected response
+            default: {
+                Dbprintf("Uknown frame length: %d", rxlen);
+                return false;
+            }
+            break;
+        }
+    }
+    
     return true;
 }
 
@@ -1217,7 +1224,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         tx = txbuf;
         switch (htf) {
             case RHT2F_PASSWORD: {
-                bStop = !hitag2_password(rx, rxlen, tx, &txlen);
+                bStop = !hitag2_password(rx, rxlen, tx, &txlen, false);
                 break;
             }
             case RHT2F_AUTHENTICATE: {
@@ -1391,6 +1398,16 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             writestate = WRITE_STATE_START;
         }
         break;
+        case WHT2F_PASSWORD: {
+            DbpString("Authenticating using password:");
+            memcpy(password, htd->pwd.password, 4);
+            memcpy(writedata, htd->crypto.data, 4);
+            Dbhexdump(4, password, false);
+            blocknr = page;
+            bPwd = false;
+            writestate = WRITE_STATE_START;
+        }
+        break;
         default: {
             Dbprintf("Error, unknown function: %d", htf);
             StartTicks();
@@ -1478,6 +1495,10 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         switch (htf) {
             case WHT2F_CRYPTO: {
                 bStop = !hitag2_crypto(rx, rxlen, tx, &txlen, true);
+            }
+            break;
+            case WHT2F_PASSWORD: {
+                bStop = !hitag2_password(rx, rxlen, tx, &txlen, true);
             }
             break;
             default: {
