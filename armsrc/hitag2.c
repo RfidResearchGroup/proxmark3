@@ -27,8 +27,11 @@
 #include "string.h"
 #include "BigBuf.h"
 
+// Successful crypto auth
 static bool bCrypto;
+// Is in auth stage
 static bool bAuthenticating;
+// Successful password auth
 static bool bPwd;
 static bool bSuccessful;
 
