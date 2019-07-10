@@ -31,7 +31,12 @@ platform = $(shell uname)
 VPATH = ../common ../zlib ../uart
 OBJDIR = obj
 
-LDLIBS = -L/opt/local/lib -L/usr/local/lib -lreadline -lpthread -lm
+LDLIBS =
+ifneq ($(platform),Darwin)
+    LDLIBS += -L/opt/local/lib
+endif
+LDLIBS += -L/usr/local/lib -lreadline -lpthread -lm
+
 # RPi Zero gcc requires -latomic
 # but MacOSX /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
 # doesn't recognize option --as-needed

@@ -43,15 +43,13 @@ TARFLAGS = -C .. -rvf
 #  amount of shell command line parsing going on. echo "" on 
 #  Windows yields literal "", on Linux yields an empty line
 ifeq ($(shell echo ""),)
-
-# This is probably a proper system, so we can use uname
-UNAME := $(shell uname)
 DELETE=rm -rf
 MOVE=mv
 COPY=cp
 PATHSEP=/
 FLASH_TOOL=client/flasher
-DETECTED_OS=$(UNAME)
+# This is probably a proper system, so we can use uname
+DETECTED_OS=$(platform)
 else
 
 # Assume that we are running on Windows.
