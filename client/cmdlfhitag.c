@@ -106,6 +106,7 @@ static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
     PrintAndLogEx(NORMAL, "      24  <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag2 tag");
+    PrintAndLogEx(NORMAL, "      27  <password> <page> <byte0...byte3> write page on a Hitag2 tag");
     return 0;
 }
 static int usage_hitag_checkchallenges(void) {
@@ -655,6 +656,12 @@ static int CmdLFHitagWriter(const char *Cmd) {
         case WHTSF_KEY:
         case WHT2F_CRYPTO: {
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd.crypto.key);
+            arg2 = param_get32ex(Cmd, 2, 0, 10);
+            num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.crypto.data);
+            break;
+        }
+        case WHT2F_PASSWORD: {
+            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 4, htd.pwd.password);
             arg2 = param_get32ex(Cmd, 2, 0, 10);
             num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.crypto.data);
             break;
