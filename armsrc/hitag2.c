@@ -272,8 +272,8 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
         break;
     }
 
-// LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
-// LogTrace(tx, nbytes(txlen), 0, 0, NULL, true);
+    // LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
+    // LogTrace(tx, nbytes(txlen), 0, 0, NULL, true);
 
     if (tag.crypto_active) {
         hitag2_cipher_transcrypt(&(tag.cs), tx, *txlen / 8, *txlen % 8);
