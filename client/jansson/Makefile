@@ -40,9 +40,6 @@ platform = $(shell uname)
 
 CC= gcc
 CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function
-ifneq ($(platform),Darwin)
-CFLAGS += -Wno-format-truncation
-endif
 
 LDFLAGS= $(SYSLDFLAGS) $(libjansson_la_LDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
