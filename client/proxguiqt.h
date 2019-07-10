@@ -97,8 +97,8 @@ class WorkerThread : public QThread {
     ~WorkerThread();
     void run();
   private:
-    char *script_cmds_file = NULL;
-    char *script_cmd = NULL;
+    char *script_cmds_file;
+    char *script_cmd;
 };
 
 class ProxGuiQT : public QObject {

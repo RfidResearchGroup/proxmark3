@@ -388,7 +388,7 @@ int main(int argc, char *argv[]) {
                 show_help(false, exec_name);
                 return 1;
             }
-            uint32_t tmpspeed = strtoul(argv[i + 1], NULL, 10);
+            uint64_t tmpspeed = strtoul(argv[i + 1], NULL, 10);
             if ((tmpspeed == ULONG_MAX) || (tmpspeed == 0)) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") "invalid baudrate: -b " _YELLOW_("%s") "\n", argv[i + 1]);
                 return 1;
