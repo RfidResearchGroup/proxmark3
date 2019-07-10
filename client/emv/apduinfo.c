@@ -10,6 +10,8 @@
 
 #include "apduinfo.h"
 
+#include "util.h"
+
 const APDUCode APDUCodeTable[] = {
     //  ID             Type                  Description
     {"XXXX",     APDUCODE_TYPE_NONE,         ""}, // blank string
@@ -315,9 +317,9 @@ const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2) {
         return APDUCodeTable[0].Description; //empty string
 }
 
-int apdu_decode(uint8_t *data, size_t len, APDU_STRUCT *apdu) 
+int APDUDecode(uint8_t *data, size_t len, APDUStruct *apdu) 
 {
-    EXT_APDU_HEADER *hapdu = (EXT_APDU_HEADER *)data;
+    ExtAPDUHeader *hapdu = (ExtAPDUHeader *)data;
     
     apdu->cla = hapdu->cla;
     apdu->ins = hapdu->ins;
@@ -425,4 +427,14 @@ int apdu_decode(uint8_t *data, size_t len, APDU_STRUCT *apdu)
     }   
     
     return 0;
+}
+
+int APDUEncode(APDUStruct apdu, uint8_t *data, size_t len) {
+    
+    return 0;
+}
+
+void APDUPrint(APDUStruct apdu) {
+    PrintAndLogEx(INFO, "apdu: %scase=%02x cla=%02x ins=%02x p1=%02x p2=%02x lc=%d le=%d\n", 
+        apdu.extended_apdu ? "[e]":"", apdu.case_type, apdu.cla, apdu.ins, apdu.p1, apdu.p2, apdu.lc, apdu.le);
 }
