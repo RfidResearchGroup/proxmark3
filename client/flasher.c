@@ -125,10 +125,16 @@ int main(int argc, char **argv) {
     if (res < 0)
         return -1;
 
-    PrintAndLogEx(NORMAL, "Available memory on this board: 0x%08x\n", chipid_to_mem_avail(chipid));
-
+    int mem_avail = chipid_to_mem_avail(chipid);
+    if (mem_avail != 0) {
+        PrintAndLogEx(NORMAL, "Available memory on this board: %uK bytes\n", mem_avail);
+    } else {
+        PrintAndLogEx(NORMAL, "Available memory on this board: "_RED_("UNKNOWN")"\n");
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CHIP_INFO command"));
+        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
+    }
     PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
-
+// TODO check if enough space on Pm3 mem to write the given files
     for (int i = 0; i < num_files; i++) {
         res = flash_write(&files[i]);
         if (res < 0)

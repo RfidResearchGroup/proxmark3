@@ -542,7 +542,7 @@ typedef struct {
 /* Set if this device understands the extend start flash command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH     (1<<4)
 
-/* Set if this device understands the extend start flash command */
+/* Set if this device understands the chip info command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO       (1<<5)
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
