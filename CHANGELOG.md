@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change: replace ukbhit by kbd_enter_pressed, not requiring tcgetattr (@xianglin1998/@doegox)
+ - Add config for RaspberryPi in JTAG tools (@doegox)
+ - Add config for FTDI C232HM-DDHSL-0 in JTAG tools (@doegox)
+ - Fix compilation under MacOSX with binutils (@matrix)
+ - Add dynamic report of the chipID for flashing purposes (@slurdge)
+ - Fix Clang warnings (@matrix)
+ - Fix EMVGPO bug (@matrix)
+ - Add hitag2 write password auth (@ViRb3)
  - Add check if bootloader segment is within bounds (@slurdge)
  - Add `hf 15 csetuid` - set UID on ISO-15693 Magic tags (@t0m4-null)
  - Change: Print help if unknown arg for hitag reader/writer (@ViRb3)
