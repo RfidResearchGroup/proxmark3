@@ -1843,9 +1843,7 @@ static int CmdT55xxWipe(const char *Cmd) {
 }
 
 static bool IsCancelled(void) {
-    if (ukbhit()) {
-        int gc = getchar();
-        (void)gc;
+    if (kbd_enter_pressed()) {
         PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
         return true;
     }

@@ -375,9 +375,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
     // repeat n times
     for (int i = 0; i < n; i++) {
 
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             break;
         }
@@ -489,7 +487,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 
-    while (!ukbhit()) {
+    while (!kbd_enter_pressed()) {
         if (WaitForResponseTimeout(CMD_SIMULATE_MIFARE_CARD, &resp, 1500) == 0) continue;
         if (resp.status != PM3_SUCCESS) break;
 

@@ -914,9 +914,7 @@ static int smart_brute_sfi(bool decodeTLV) {
 
         for (uint16_t rec = 1; rec <= 255; rec++) {
 
-            if (ukbhit()) {
-                int gc = getchar();
-                (void)gc;
+            if (kbd_enter_pressed()) {
                 PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                 free(buf);
                 return 1;

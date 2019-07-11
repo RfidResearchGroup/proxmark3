@@ -544,9 +544,7 @@ static int CmdEM410xBrute(const char *Cmd) {
         char testuid[11];
         testuid[10] = 0;
 
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
             free(uidBlock);
             return PM3_EOPABORTED;
@@ -580,9 +578,7 @@ static int CmdEM410xBrute(const char *Cmd) {
 static int CmdEM410xWatch(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     do {
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             break;
         }

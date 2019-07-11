@@ -28,9 +28,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         SendCommandMIX(CMD_READER_MIFARE, arg0, blockno, key_type, NULL, 0);
 
         //flush queue
-        while (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        while (kbd_enter_pressed()) {
             return PM3_EOPABORTED;
         }
 
@@ -38,9 +36,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         while (true) {
             printf(".");
             fflush(stdout);
-            if (ukbhit()) {
-                int gc = getchar();
-                (void)gc;
+            if (kbd_enter_pressed()) {
                 return PM3_EOPABORTED;
             }
 
@@ -955,9 +951,7 @@ int detect_classic_nackbug(bool verbose) {
     while (true) {
         printf(".");
         fflush(stdout);
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             return PM3_EOPABORTED;
         }
 

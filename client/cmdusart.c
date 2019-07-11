@@ -312,11 +312,9 @@ static int CmdUsartBtFactory(const char *Cmd) {
     PrintAndLogEx(WARNING, _RED_("WARNING: process only if strictly needed!"));
     PrintAndLogEx(WARNING, "This requires BT turned ON and NOT connected!");
     PrintAndLogEx(WARNING, "Is the add-on blue light blinking? (Say 'n' if you want to abort) [y/n]");
-    while (!ukbhit()) {
-        msleep(200);
-    }
 
-    if (tolower(getchar()) != 'y') {
+    char input[3];
+    if ((fgets(input,sizeof(input),stdin) == NULL) || (strncmp(input, "y\n", sizeof(input)) != 0)) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(FAILED, "Aborting.");
         return PM3_EOPABORTED;
@@ -448,11 +446,10 @@ static int CmdUsartBtFactory(const char *Cmd) {
     }
 
     if ((baudrate != USART_BAUD_RATE) || (parity != USART_PARITY)) {
-        PrintAndLogEx(WARNING, "Add-on uart settings changed, please turn BT add-on OFF and ON again, then press any key.");
-        while (!ukbhit()) {
+        PrintAndLogEx(WARNING, "Add-on uart settings changed, please turn BT add-on OFF and ON again, then press Enter.");
+        while (!kbd_enter_pressed()) {
             msleep(200);
         }
-        getchar();
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "Trying to connect add-on with the new settings.");
         found = usart_bt_testcomm(USART_BAUD_RATE, USART_PARITY) == PM3_SUCCESS;

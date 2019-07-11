@@ -129,7 +129,7 @@
 
 uint8_t g_debugMode;
 
-int ukbhit(void);
+int kbd_enter_pressed(void);
 void AddLogLine(const char *fn, const char *data, const char *c);
 void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const size_t len);
 void AddLogUint64(const char *fn, const char *data, const uint64_t value);

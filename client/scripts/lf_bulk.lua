@@ -186,7 +186,7 @@ local function main(args)
     for cardnum = baseid, endid do
         local card = cardHex(cardnum, facility)
         print('Press enter to program card '..cardnum..':'..facility..' (hex: '..card..')')
-        --This would be better with 'press any key', but we'll take what we can get.
+        --This would be better with 'press Enter', but we'll take what we can get.
         io.read()
         core.console( ('lf hid clone %s'):format(card) )
     end

@@ -1692,9 +1692,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
             // main keychunk loop
             for (i = 0; i < keycnt; i += chunksize) {
 
-                if (ukbhit()) {
-                    int gc = getchar();
-                    (void)gc;
+                if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                     goto out;
                 }
@@ -1974,9 +1972,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 printf(".");
                 fflush(stdout);
-                if (ukbhit()) {
-                    int gc = getchar();
-                    (void)gc;
+                if (kbd_enter_pressed()) {
                     PrintAndLogEx(INFO, "\naborted via keyboard!\n");
                     goto out;
                 }
@@ -2281,7 +2277,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
     if (flags & FLAG_INTERACTIVE) {
         PrintAndLogEx(INFO, "Press pm3-button or send another cmd to abort simulation");
 
-        while (!ukbhit()) {
+        while (!kbd_enter_pressed()) {
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
             if (!(flags & FLAG_NR_AR_ATTACK)) break;
             if ((resp.oldarg[0] & 0xffff) != CMD_SIMULATE_MIFARE_CARD) break;
@@ -2328,8 +2324,8 @@ static int CmdHF14AMfSniff(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "Executing mifare sniffing command. \n");
-    PrintAndLogEx(NORMAL, "Press the key on the Proxmark3 device to abort both Proxmark3 and client.\n");
-    PrintAndLogEx(NORMAL, "Press the key on pc keyboard to abort the client.\n");
+    PrintAndLogEx(NORMAL, "Press the button on the Proxmark3 device to abort both Proxmark3 and client.\n");
+    PrintAndLogEx(NORMAL, "Press Enter to abort the client.\n");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------------------\n");
 
     clearCommandBuffer();
@@ -2341,9 +2337,7 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     while (true) {
         printf(".");
         fflush(stdout);
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(INFO, "\naborted via keyboard!\n");
             break;
         }
@@ -3242,7 +3236,7 @@ static int CmdHf14AMfNack(const char *Cmd) {
     bool verbose = (ctmp == 'v');
 
     if (verbose)
-        PrintAndLogEx(INFO, "Started testing card for NACK bug. Press key to abort");
+        PrintAndLogEx(INFO, "Started testing card for NACK bug. Press Enter to abort");
 
     detect_classic_nackbug(verbose);
     return PM3_SUCCESS;
@@ -3307,9 +3301,7 @@ static int CmdHF14AMfice(const char *Cmd) {
     uint64_t t1 = msclock();
 
     do {
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(INFO, "\naborted via keyboard!\n");
             break;
         }

@@ -491,7 +491,7 @@ static int CmdAWIDBrute(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Bruteforceing AWID %d Reader", fmtlen);
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or press key");
+    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or press Enter");
 
     uint16_t up = cn;
     uint16_t down = cn;
@@ -503,9 +503,7 @@ static int CmdAWIDBrute(const char *Cmd) {
             PrintAndLogEx(WARNING, "Device offline\n");
             return PM3_ENODATA;
         }
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(INFO, "aborted via keyboard!");
             return sendPing();
         }
