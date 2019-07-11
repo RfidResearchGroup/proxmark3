@@ -55,7 +55,7 @@ typedef struct
 } __attribute__((packed)) APDUStruct;
 
 extern int APDUDecode(uint8_t *data, size_t len, APDUStruct *apdu);
-extern int APDUEncode(APDUStruct apdu, uint8_t *data, size_t len);
+extern int APDUEncode(APDUStruct *apdu, uint8_t *data, size_t *len);
 extern void APDUPrint(APDUStruct apdu);
 
 #endif
