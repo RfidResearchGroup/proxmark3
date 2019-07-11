@@ -63,7 +63,7 @@ reg ssp_clk;
 always @(negedge adc_clk)
 begin
     if(mod_type == 3'b101)
-      // Get bit every at 53KHz (every 8th carrier bit of 424kHz)
+      // Get bit every at 53kHz (every 8th carrier bit of 424kHz)
       ssp_clk <= ssp_clk_divider[7];
     else if(mod_type == 3'b010)
       // Get next bit at 212kHz

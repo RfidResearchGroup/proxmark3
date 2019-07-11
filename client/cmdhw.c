@@ -6,6 +6,7 @@
 // the license.
 //-----------------------------------------------------------------------------
 // Hardware commands
+// low-level hardware control
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
@@ -19,318 +20,635 @@
 #include "cmdmain.h"
 #include "cmddata.h"
 
-/* low-level hardware control */
-
 static int CmdHelp(const char *Cmd);
 
-static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
-	char asBuff[120];
-	memset(asBuff, 0, sizeof(asBuff));
-	uint32_t mem_avail = 0;	
-	PrintAndLogEx(NORMAL, "\n [ Hardware ] ");
-	
-	switch(iChipID) {
-		case 0x270B0A40: sprintf(asBuff,"AT91SAM7S512 Rev A"); break;
-		case 0x270B0A4F: sprintf(asBuff,"AT91SAM7S512 Rev B"); break;
-		case 0x270D0940: sprintf(asBuff,"AT91SAM7S256 Rev A"); break;
-		case 0x270B0941: sprintf(asBuff,"AT91SAM7S256 Rev B"); break;
-		case 0x270B0942: sprintf(asBuff,"AT91SAM7S256 Rev C"); break;
-		case 0x270B0943: sprintf(asBuff,"AT91SAM7S256 Rev D"); break;
-		case 0x270C0740: sprintf(asBuff,"AT91SAM7S128 Rev A"); break;
-		case 0x270A0741: sprintf(asBuff,"AT91SAM7S128 Rev B"); break;
-		case 0x270A0742: sprintf(asBuff,"AT91SAM7S128 Rev C"); break;
-		case 0x270A0743: sprintf(asBuff,"AT91SAM7S128 Rev D"); break;
-		case 0x27090540: sprintf(asBuff,"AT91SAM7S64 Rev A"); break;
-		case 0x27090543: sprintf(asBuff,"AT91SAM7S64 Rev B"); break;
-		case 0x27090544: sprintf(asBuff,"AT91SAM7S64 Rev C"); break;
-		case 0x27080342: sprintf(asBuff,"AT91SAM7S321 Rev A"); break;
-		case 0x27080340: sprintf(asBuff,"AT91SAM7S32 Rev A"); break;
-		case 0x27080341: sprintf(asBuff,"AT91SAM7S32 Rev B"); break;
-		case 0x27050241: sprintf(asBuff,"AT9SAM7S161 Rev A"); break;
-		case 0x27050240: sprintf(asBuff,"AT91SAM7S16 Rev A"); break;
-	}
-	PrintAndLogEx(NORMAL, "  --= uC: %s",asBuff);
-	switch( (iChipID & 0xE0) >> 5) {
-		case 1: sprintf(asBuff,"ARM946ES");	break;
-		case 2:	sprintf(asBuff,"ARM7TDMI");	break;
-		case 4:	sprintf(asBuff,"ARM920T"); break;
-		case 5:	sprintf(asBuff,"ARM926EJS"); break;
-	}
-	PrintAndLogEx(NORMAL, "  --= Embedded Processor: %s",asBuff);
-	switch( (iChipID & 0xF00) >> 8) {
-		case 0:  mem_avail = 0; break;
-		case 1:	 mem_avail = 8; break;
-		case 2:  mem_avail = 16; break;
-		case 3:  mem_avail = 32; break;
-		case 5:	 mem_avail = 64; break;
-		case 7:	 mem_avail = 128; break;
-		case 9:  mem_avail = 256; break;
-		case 10: mem_avail = 512; break;
-		case 12: mem_avail = 1024; break;
-		case 14: mem_avail = 2048; break;
-	}
-	
-	uint32_t mem_left = 0;
-	if ( mem_avail > 0 ) 
-		mem_left = (mem_avail * 1024) - mem_used;
-	
-	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f%%) Free: %u bytes (%2.0f%%)", 
-				mem_avail, 
-				mem_used, 
-				mem_avail == 0 ? 0.0f : (float)mem_used/(mem_avail*1024)*100,
-				mem_left,
-				mem_avail == 0 ? 0.0f : (float)mem_left/(mem_avail*1024)*100
-			);
-				
-	switch( (iChipID & 0xF000) >> 12 ) {
-		case 0:	 sprintf(asBuff,"None"); break;
-		case 1:	 sprintf(asBuff,"8K bytes"); break;
-		case 2:	 sprintf(asBuff,"16K bytes"); break;
-		case 3:	 sprintf(asBuff,"32K bytes"); break;
-		case 5:  sprintf(asBuff,"64K bytes"); break;
-		case 7:  sprintf(asBuff,"128K bytes"); break;
-		case 9:  sprintf(asBuff,"256K bytes"); break;
-		case 10: sprintf(asBuff,"512K bytes"); break;
-		case 12: sprintf(asBuff,"1024K bytes");	break;
-		case 14: sprintf(asBuff,"2048K bytes"); break;
-	}
-	PrintAndLogEx(NORMAL, "  --= Second Nonvolatile Program Memory Size: %s",asBuff);
-	switch( (iChipID & 0xF0000) >> 16) {
-		case 1:  sprintf(asBuff,"1K bytes"); break;
-		case 2:  sprintf(asBuff,"2K bytes"); break;
-		case 3:	 sprintf(asBuff,"6K bytes"); break;
-		case 4:	 sprintf(asBuff,"112K bytes"); break;
-		case 5:	 sprintf(asBuff,"4K bytes"); break;
-		case 6:	 sprintf(asBuff,"80K bytes"); break;
-		case 7:  sprintf(asBuff,"160K bytes"); break;
-		case 8:	 sprintf(asBuff,"8K bytes"); break;
-		case 9:  sprintf(asBuff,"16K bytes"); break;
-		case 10: sprintf(asBuff,"32K bytes"); break;
-		case 11: sprintf(asBuff,"64K bytes"); break;
-		case 12: sprintf(asBuff,"128K bytes"); break;
-		case 13: sprintf(asBuff,"256K bytes"); break;
-		case 14: sprintf(asBuff,"96K bytes"); break;
-		case 15: sprintf(asBuff,"512K bytes");break;
-	}
-	PrintAndLogEx(NORMAL, "  --= Internal SRAM Size: %s",asBuff);
-	switch( (iChipID & 0xFF00000) >> 20) {
-		case 0x19: sprintf(asBuff,"AT91SAM9xx Series"); break;
-		case 0x29: sprintf(asBuff,"AT91SAM9XExx Series"); break;
-		case 0x34: sprintf(asBuff,"AT91x34 Series"); break;
-		case 0x37: sprintf(asBuff,"CAP7 Series"); break;
-		case 0x39: sprintf(asBuff,"CAP9 Series"); break;
-		case 0x3B: sprintf(asBuff,"CAP11 Series"); break;
-		case 0x40: sprintf(asBuff,"AT91x40 Series"); break;
-		case 0x42: sprintf(asBuff,"AT91x42 Series"); break;
-		case 0x55: sprintf(asBuff,"AT91x55 Series"); break;
-		case 0x60: sprintf(asBuff,"AT91SAM7Axx Series"); break;
-		case 0x61: sprintf(asBuff,"AT91SAM7AQxx Series"); break;
-		case 0x63: sprintf(asBuff,"AT91x63 Series"); break;
-		case 0x70: sprintf(asBuff,"AT91SAM7Sxx Series"); break;
-		case 0x71: sprintf(asBuff,"AT91SAM7XCxx Series"); break;
-		case 0x72: sprintf(asBuff,"AT91SAM7SExx Series"); break;
-		case 0x73: sprintf(asBuff,"AT91SAM7Lxx Series"); break;
-		case 0x75: sprintf(asBuff,"AT91SAM7Xxx Series"); break;
-		case 0x92: sprintf(asBuff,"AT91x92 Series"); break;
-		case 0xF0: sprintf(asBuff,"AT75Cxx Series"); break;
-	}
-	PrintAndLogEx(NORMAL, "  --= Architecture Identifier: %s",asBuff);
-	switch( (iChipID & 0x70000000) >> 28 ) {
-		case 0: sprintf(asBuff,"ROM"); break;
-		case 1: sprintf(asBuff,"ROMless or on-chip Flash");	break;
-		case 2:	sprintf(asBuff,"Embedded Flash Memory"); break;
-		case 3:	sprintf(asBuff,"ROM and Embedded Flash Memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");	break;
-		case 4:	sprintf(asBuff,"SRAM emulating ROM"); break;		
-	}
-	PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Type: %s",asBuff);
+static int usage_dbg(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hw dbg [h] <debug level>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h    this help");
+    PrintAndLogEx(NORMAL, "       <debug level>  (Optional) see list for valid levels");
+    PrintAndLogEx(NORMAL, "           0 - no debug messages");
+    PrintAndLogEx(NORMAL, "           1 - error messages");
+    PrintAndLogEx(NORMAL, "           2 - plus information messages");
+    PrintAndLogEx(NORMAL, "           3 - plus debug messages");
+    PrintAndLogEx(NORMAL, "           4 - print even debug messages in timing critical functions");
+    PrintAndLogEx(NORMAL, "               Note: this option therefore may cause malfunction itself");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "           hw dbg 3");
+    return 0;
 }
 
-int CmdDetectReader(const char *Cmd) {
-	UsbCommand c = {CMD_LISTEN_READER_FIELD};
-	// 'l' means LF - 125/134 kHz
-	if(*Cmd == 'l') {
-		c.arg[0] = 1;
-	} else if (*Cmd == 'h') {
-		c.arg[0] = 2;
-	} else if (*Cmd != '\0') {
-		PrintAndLogEx(NORMAL, "use 'detectreader' or 'detectreader l' or 'detectreader h'");
-		return 0;
-	}
-	clearCommandBuffer();	
-	SendCommand(&c);
-	return 0;
+static int usage_hw_detectreader(void) {
+    PrintAndLogEx(NORMAL, "Start to detect presences of reader field");
+    PrintAndLogEx(NORMAL, "press pm3 button to change modes and finally exit");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  hw detectreader [h] <L|H>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       <type>     L = 125/134 kHz, H = 13.56 MHz");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      hw detectreader L");
+    return PM3_SUCCESS;
+}
+
+static int usage_hw_setmux(void) {
+    PrintAndLogEx(NORMAL, "Set the ADC mux to a specific value");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  hw setmux [h] <lopkd | loraw | hipkd | hiraw>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       <type>     Low peak, Low raw, Hi peak, Hi raw");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      hw setmux lopkd");
+    return PM3_SUCCESS;
+}
+
+static int usage_hw_connect(void) {
+    PrintAndLogEx(NORMAL, "Connects to a Proxmark3 device via specified serial port");
+    PrintAndLogEx(NORMAL, "Baudrate here is only for physical UART or UART-BT, " _YELLOW_("not")"for USB-CDC or blue shark add-on");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  hw connect [h] [p <port>] [b <baudrate>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h              This help");
+    PrintAndLogEx(NORMAL, "       p <port>       Serial port to connect to, else retry the last used one");
+    PrintAndLogEx(NORMAL, "       b <baudrate>   Baudrate");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      hw connect p "SERIAL_PORT_EXAMPLE_H);
+    PrintAndLogEx(NORMAL, "      hw connect p "SERIAL_PORT_EXAMPLE_H" b 115200");
+    return PM3_SUCCESS;
+}
+
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
+    char asBuff[120];
+    memset(asBuff, 0, sizeof(asBuff));
+    uint32_t mem_avail = 0;
+    PrintAndLogEx(NORMAL, "\n [ Hardware ] ");
+
+    switch (iChipID) {
+        case 0x270B0A40:
+            sprintf(asBuff, "AT91SAM7S512 Rev A");
+            break;
+        case 0x270B0A4F:
+            sprintf(asBuff, "AT91SAM7S512 Rev B");
+            break;
+        case 0x270D0940:
+            sprintf(asBuff, "AT91SAM7S256 Rev A");
+            break;
+        case 0x270B0941:
+            sprintf(asBuff, "AT91SAM7S256 Rev B");
+            break;
+        case 0x270B0942:
+            sprintf(asBuff, "AT91SAM7S256 Rev C");
+            break;
+        case 0x270B0943:
+            sprintf(asBuff, "AT91SAM7S256 Rev D");
+            break;
+        case 0x270C0740:
+            sprintf(asBuff, "AT91SAM7S128 Rev A");
+            break;
+        case 0x270A0741:
+            sprintf(asBuff, "AT91SAM7S128 Rev B");
+            break;
+        case 0x270A0742:
+            sprintf(asBuff, "AT91SAM7S128 Rev C");
+            break;
+        case 0x270A0743:
+            sprintf(asBuff, "AT91SAM7S128 Rev D");
+            break;
+        case 0x27090540:
+            sprintf(asBuff, "AT91SAM7S64 Rev A");
+            break;
+        case 0x27090543:
+            sprintf(asBuff, "AT91SAM7S64 Rev B");
+            break;
+        case 0x27090544:
+            sprintf(asBuff, "AT91SAM7S64 Rev C");
+            break;
+        case 0x27080342:
+            sprintf(asBuff, "AT91SAM7S321 Rev A");
+            break;
+        case 0x27080340:
+            sprintf(asBuff, "AT91SAM7S32 Rev A");
+            break;
+        case 0x27080341:
+            sprintf(asBuff, "AT91SAM7S32 Rev B");
+            break;
+        case 0x27050241:
+            sprintf(asBuff, "AT9SAM7S161 Rev A");
+            break;
+        case 0x27050240:
+            sprintf(asBuff, "AT91SAM7S16 Rev A");
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= uC: %s", asBuff);
+    switch ((iChipID & 0xE0) >> 5) {
+        case 1:
+            sprintf(asBuff, "ARM946ES");
+            break;
+        case 2:
+            sprintf(asBuff, "ARM7TDMI");
+            break;
+        case 4:
+            sprintf(asBuff, "ARM920T");
+            break;
+        case 5:
+            sprintf(asBuff, "ARM926EJS");
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Embedded Processor: %s", asBuff);
+    switch ((iChipID & 0xF00) >> 8) {
+        case 0:
+            mem_avail = 0;
+            break;
+        case 1:
+            mem_avail = 8;
+            break;
+        case 2:
+            mem_avail = 16;
+            break;
+        case 3:
+            mem_avail = 32;
+            break;
+        case 5:
+            mem_avail = 64;
+            break;
+        case 7:
+            mem_avail = 128;
+            break;
+        case 9:
+            mem_avail = 256;
+            break;
+        case 10:
+            mem_avail = 512;
+            break;
+        case 12:
+            mem_avail = 1024;
+            break;
+        case 14:
+            mem_avail = 2048;
+            break;
+    }
+
+    uint32_t mem_left = 0;
+    if (mem_avail > 0)
+        mem_left = (mem_avail * 1024) - mem_used;
+
+    PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %uK bytes, Used: %u bytes (%2.0f%%) Free: %u bytes (%2.0f%%)",
+                  mem_avail,
+                  mem_used,
+                  mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100,
+                  mem_left,
+                  mem_avail == 0 ? 0.0f : (float)mem_left / (mem_avail * 1024) * 100
+                 );
+
+    switch ((iChipID & 0xF000) >> 12) {
+        case 0:
+            sprintf(asBuff, "None");
+            break;
+        case 1:
+            sprintf(asBuff, "8K bytes");
+            break;
+        case 2:
+            sprintf(asBuff, "16K bytes");
+            break;
+        case 3:
+            sprintf(asBuff, "32K bytes");
+            break;
+        case 5:
+            sprintf(asBuff, "64K bytes");
+            break;
+        case 7:
+            sprintf(asBuff, "128K bytes");
+            break;
+        case 9:
+            sprintf(asBuff, "256K bytes");
+            break;
+        case 10:
+            sprintf(asBuff, "512K bytes");
+            break;
+        case 12:
+            sprintf(asBuff, "1024K bytes");
+            break;
+        case 14:
+            sprintf(asBuff, "2048K bytes");
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Second Nonvolatile Program Memory Size: %s", asBuff);
+    switch ((iChipID & 0xF0000) >> 16) {
+        case 1:
+            sprintf(asBuff, "1K bytes");
+            break;
+        case 2:
+            sprintf(asBuff, "2K bytes");
+            break;
+        case 3:
+            sprintf(asBuff, "6K bytes");
+            break;
+        case 4:
+            sprintf(asBuff, "112K bytes");
+            break;
+        case 5:
+            sprintf(asBuff, "4K bytes");
+            break;
+        case 6:
+            sprintf(asBuff, "80K bytes");
+            break;
+        case 7:
+            sprintf(asBuff, "160K bytes");
+            break;
+        case 8:
+            sprintf(asBuff, "8K bytes");
+            break;
+        case 9:
+            sprintf(asBuff, "16K bytes");
+            break;
+        case 10:
+            sprintf(asBuff, "32K bytes");
+            break;
+        case 11:
+            sprintf(asBuff, "64K bytes");
+            break;
+        case 12:
+            sprintf(asBuff, "128K bytes");
+            break;
+        case 13:
+            sprintf(asBuff, "256K bytes");
+            break;
+        case 14:
+            sprintf(asBuff, "96K bytes");
+            break;
+        case 15:
+            sprintf(asBuff, "512K bytes");
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Internal SRAM Size: %s", asBuff);
+    switch ((iChipID & 0xFF00000) >> 20) {
+        case 0x19:
+            sprintf(asBuff, "AT91SAM9xx Series");
+            break;
+        case 0x29:
+            sprintf(asBuff, "AT91SAM9XExx Series");
+            break;
+        case 0x34:
+            sprintf(asBuff, "AT91x34 Series");
+            break;
+        case 0x37:
+            sprintf(asBuff, "CAP7 Series");
+            break;
+        case 0x39:
+            sprintf(asBuff, "CAP9 Series");
+            break;
+        case 0x3B:
+            sprintf(asBuff, "CAP11 Series");
+            break;
+        case 0x40:
+            sprintf(asBuff, "AT91x40 Series");
+            break;
+        case 0x42:
+            sprintf(asBuff, "AT91x42 Series");
+            break;
+        case 0x55:
+            sprintf(asBuff, "AT91x55 Series");
+            break;
+        case 0x60:
+            sprintf(asBuff, "AT91SAM7Axx Series");
+            break;
+        case 0x61:
+            sprintf(asBuff, "AT91SAM7AQxx Series");
+            break;
+        case 0x63:
+            sprintf(asBuff, "AT91x63 Series");
+            break;
+        case 0x70:
+            sprintf(asBuff, "AT91SAM7Sxx Series");
+            break;
+        case 0x71:
+            sprintf(asBuff, "AT91SAM7XCxx Series");
+            break;
+        case 0x72:
+            sprintf(asBuff, "AT91SAM7SExx Series");
+            break;
+        case 0x73:
+            sprintf(asBuff, "AT91SAM7Lxx Series");
+            break;
+        case 0x75:
+            sprintf(asBuff, "AT91SAM7Xxx Series");
+            break;
+        case 0x92:
+            sprintf(asBuff, "AT91x92 Series");
+            break;
+        case 0xF0:
+            sprintf(asBuff, "AT75Cxx Series");
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Architecture Identifier: %s", asBuff);
+    switch ((iChipID & 0x70000000) >> 28) {
+        case 0:
+            sprintf(asBuff, "ROM");
+            break;
+        case 1:
+            sprintf(asBuff, "ROMless or on-chip Flash");
+            break;
+        case 2:
+            sprintf(asBuff, "Embedded Flash Memory");
+            break;
+        case 3:
+            sprintf(asBuff, "ROM and Embedded Flash Memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");
+            break;
+        case 4:
+            sprintf(asBuff, "SRAM emulating ROM");
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Type: %s", asBuff);
+}
+
+int CmdDbg(const char *Cmd) {
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_dbg();
+
+    uint8_t dbgMode = param_get8ex(Cmd, 0, 0, 10);
+    if (dbgMode > 4) return usage_dbg();
+
+    SendCommandNG(CMD_SET_DBGMODE, &dbgMode, 1);
+    return PM3_SUCCESS;
+}
+
+static int CmdDetectReader(const char *Cmd) {
+    uint8_t arg = 0;
+    char c = toupper(Cmd[0]);
+    switch (c) {
+        case 'L':
+            arg = 1;
+            break;
+        case 'H':
+            arg = 2;
+            break;
+        default: {
+            usage_hw_detectreader();
+            return PM3_EINVARG;
+        }
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LISTEN_READER_FIELD, (uint8_t *)&arg, sizeof(arg));
+    return PM3_SUCCESS;
 }
 
 // ## FPGA Control
-int CmdFPGAOff(const char *Cmd) {
-	UsbCommand c = {CMD_FPGA_MAJOR_MODE_OFF};
-	clearCommandBuffer();
-	SendCommand(&c);
-	return 0;
+static int CmdFPGAOff(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+    return PM3_SUCCESS;
 }
 
-#ifdef WITH_LCD
-int CmdLCD(const char *Cmd) {
-	int i, j;
-
-	UsbCommand c = {CMD_LCD};
-	sscanf(Cmd, "%x %d", &i, &j);
-	while (j--) {
-		c.arg[0] = i & 0x1ff;
-		clearCommandBuffer();
-		SendCommand(&c);
-	}
-	return 0;
+static int CmdLCD(const char *Cmd) {
+    int i, j;
+    sscanf(Cmd, "%x %d", &i, &j);
+    while (j--) {
+        clearCommandBuffer();
+        SendCommandMIX(CMD_LCD, i & 0x1ff, 0, 0, NULL, 0);
+    }
+    return PM3_SUCCESS;
 }
 
-int CmdLCDReset(const char *Cmd) {
-	UsbCommand c = {CMD_LCD_RESET, {strtol(Cmd, NULL, 0), 0, 0}};
-	clearCommandBuffer();
-	SendCommand(&c);
-	return 0;
-}
-#endif
-
-int CmdReadmem(const char *Cmd) {
-	UsbCommand c = {CMD_READ_MEM, {strtol(Cmd, NULL, 0), 0, 0}};
-	clearCommandBuffer();
-	SendCommand(&c);
-	return 0;
+static int CmdLCDReset(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_LCD_RESET, NULL, 0);
+    return PM3_SUCCESS;
 }
 
-int CmdReset(const char *Cmd) {
-	UsbCommand c = {CMD_HARDWARE_RESET};
-	clearCommandBuffer();
-	SendCommand(&c);
-	return 0;
+static int CmdReadmem(const char *Cmd) {
+    uint32_t address = strtol(Cmd, NULL, 0);
+    clearCommandBuffer();
+    SendCommandNG(CMD_READ_MEM, (uint8_t *)&address, sizeof(address));
+    return PM3_SUCCESS;
+}
+
+static int CmdReset(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
+    PrintAndLogEx(INFO, "Proxmark3 has been reset.");
+    return PM3_SUCCESS;
 }
 
 /*
  * Sets the divisor for LF frequency clock: lets the user choose any LF frequency below
  * 600kHz.
  */
-int CmdSetDivisor(const char *Cmd) {
-	UsbCommand c = {CMD_SET_LF_DIVISOR, {strtol(Cmd, NULL, 0), 0, 0}};
-	
-	if (c.arg[0] < 19 || c.arg[0] > 255) {
-		PrintAndLogEx(NORMAL, "divisor must be between 19 and 255");
-		return 1;
-	} 
-	// 12 000 000 (12Mhz)
-	clearCommandBuffer();
-	SendCommand(&c);
-	PrintAndLogEx(NORMAL, "Divisor set, expected %.1f KHz", ((double)12000 / (c.arg[0]+1)) );
-	return 0;
+static int CmdSetDivisor(const char *Cmd) {
+    uint8_t arg = param_get8ex(Cmd, 0, 95, 10);
+
+    if (arg < 19) {
+        PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+        return PM3_EINVARG;
+    }
+    // 12 000 000 (12Mhz)
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_LF_DIVISOR, (uint8_t *)&arg, sizeof(arg));
+    PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f kHz", ((double)12000 / (arg + 1)));
+    return PM3_SUCCESS;
 }
 
-int CmdSetMux(const char *Cmd) {
-	
-	if (strlen(Cmd) < 5) {
-		PrintAndLogEx(NORMAL, "expected:  lopkd | loraw | hipkd | hiraw");
-		return 1;
-	}
-	
-	UsbCommand c = {CMD_SET_ADC_MUX};
+static int CmdSetMux(const char *Cmd) {
 
-	if (strcmp(Cmd, "lopkd") == 0) 		c.arg[0] = 0;
-	else if (strcmp(Cmd, "loraw") == 0)	c.arg[0] = 1;
-	else if (strcmp(Cmd, "hipkd") == 0)	c.arg[0] = 2;
-	else if (strcmp(Cmd, "hiraw") == 0)	c.arg[0] = 3;
-	clearCommandBuffer();
-	SendCommand(&c);
-	return 0;
+    if (strlen(Cmd) < 5) {
+        usage_hw_setmux();
+        return PM3_EINVARG;
+    }
+
+    str_lower((char *)Cmd);
+
+    uint8_t arg = 0;
+    if (strcmp(Cmd, "lopkd") == 0)      arg = 0;
+    else if (strcmp(Cmd, "loraw") == 0) arg = 1;
+    else if (strcmp(Cmd, "hipkd") == 0) arg = 2;
+    else if (strcmp(Cmd, "hiraw") == 0) arg = 3;
+    else {
+        usage_hw_setmux();
+        return PM3_EINVARG;
+    }
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_ADC_MUX, (uint8_t *)&arg, sizeof(arg));
+    return PM3_SUCCESS;
 }
 
-int CmdTune(const char *Cmd) {
+static int CmdTune(const char *Cmd) {
     return CmdTuneSamples(Cmd);
 }
 
-int CmdVersion(const char *Cmd) {
-	
-	bool silent = (Cmd[0] == 's' || Cmd[0] ==  'S');
-	if ( silent ) 
-		return 0;
-
-	UsbCommand c = {CMD_VERSION, {0, 0, 0}};
-	UsbCommand resp;
-	clearCommandBuffer();
-	SendCommand(&c);
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-#ifdef __WIN32
-		PrintAndLogEx(NORMAL, "\n [ Proxmark3 RFID instrument ]\n");
-#else
-		PrintAndLogEx(NORMAL, "\n\e[34m [ Proxmark3 RFID instrument ]\e[0m\n");	
-#endif	
-		char s[50] = {0};
-#if defined(WITH_FLASH) || defined(WITH_SMARTCARD) || defined(WITH_FPC)
-		strncat(s, "build for RDV40 with ", sizeof(s) - strlen(s) - 1);
-#endif
-#ifdef WITH_FLASH
-		strncat(s, "flashmem; ", sizeof(s) - strlen(s) - 1);
-#endif	
-#ifdef WITH_SMARTCARD
-		strncat(s, "smartcard; ", sizeof(s) - strlen(s) - 1);
-#endif
-#ifdef WITH_FPC
-		strncat(s, "fpc; ", sizeof(s) - strlen(s) - 1);
-#endif
-		PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
-		PrintAndLogEx(NORMAL, "  client: iceman %s \n", s);
-		
-		PrintAndLogEx(NORMAL, (char*)resp.d.asBytes);
-		lookupChipID(resp.arg[0], resp.arg[1]);			
-	} 
-	PrintAndLogEx(NORMAL, "\n");
-	return 0;
+static int CmdVersion(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    pm3_version(true);
+    return PM3_SUCCESS;
 }
 
-int CmdStatus(const char *Cmd) {
-	clearCommandBuffer();
-	UsbCommand c = {CMD_STATUS};
-	SendCommand(&c);
-	if (!WaitForResponseTimeout(CMD_ACK, &c, 1900))
-		PrintAndLogEx(NORMAL, "Status command failed. USB Speed Test timed out");
-	return 0;
+static int CmdStatus(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_STATUS, NULL, 0);
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
+        PrintAndLogEx(WARNING, "Status command failed. Communication speed test timed out");
+    return PM3_SUCCESS;
 }
 
-int CmdPing(const char *Cmd) {
-	clearCommandBuffer();
-	UsbCommand resp;
-	UsbCommand c = {CMD_PING};
-	SendCommand(&c);
-	if (WaitForResponseTimeout(CMD_ACK, &resp, 1000))
-		PrintAndLogEx(NORMAL, "Ping successful");
-	else
-		PrintAndLogEx(NORMAL, "Ping failed");	
-	return 0;
+static int CmdPing(const char *Cmd) {
+    uint32_t len = strtol(Cmd, NULL, 0);
+    if (len > PM3_CMD_DATA_SIZE)
+        len = PM3_CMD_DATA_SIZE;
+    if (len) {
+        PrintAndLogEx(INFO, "Ping sent with payload len=%d", len);
+    } else {
+        PrintAndLogEx(INFO, "Ping sent");
+    }
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+    for (uint16_t i = 0; i < len; i++)
+        data[i] = i & 0xFF;
+    SendCommandNG(CMD_PING, data, len);
+    if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
+        bool error = false;
+        if (len) {
+            error = memcmp(data, resp.data.asBytes, len) != 0;
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
+        } else {
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received"));
+        }
+    } else
+        PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
+    return PM3_SUCCESS;
+}
+
+static int CmdConnect(const char *Cmd) {
+
+    uint32_t baudrate = USART_BAUD_RATE;
+    uint8_t cmdp = 0;
+    char port[FILE_PATH_SIZE] = {0};
+
+    while (param_getchar(Cmd, cmdp) != 0x00) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hw_connect();
+            case 'p': {
+                param_getstr(Cmd, cmdp + 1, port, sizeof(port));
+                cmdp += 2;
+                break;
+            }
+            case 'b':
+                baudrate = param_get32ex(Cmd, cmdp + 1, USART_BAUD_RATE, 10);
+                if (baudrate == 0)
+                    return usage_hw_connect();
+                cmdp += 2;
+                break;
+            default:
+                usage_hw_connect();
+                return PM3_EINVARG;
+        }
+    }
+
+    // default back to previous used serial port
+    if (strlen(port) == 0) {
+        if (strlen((char *)conn.serial_port_name) == 0) {
+            return usage_hw_connect();
+        }
+        memcpy(port, conn.serial_port_name, sizeof(port));
+    }
+
+    printf("Port:: %s  Baud:: %u\n", port, baudrate);
+
+    if (session.pm3_present) {
+        CloseProxmark();
+    }
+
+    // 10 second timeout
+    OpenProxmark(port, false, 10, false, baudrate);
+
+    if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark3\n");
+        CloseProxmark();
+    }
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
-	{"help",          CmdHelp,        1, "This help"},
-	{"detectreader",  CmdDetectReader,0, "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
-	{"fpgaoff",       CmdFPGAOff,     0, "Set FPGA off"},
-#ifdef WITH_LCD
-	{"lcd",           CmdLCD,         0, "<HEX command> <count> -- Send command/data to LCD"},
-	{"lcdreset",      CmdLCDReset,    0, "Hardware reset LCD"},
-#endif	
-	{"readmem",       CmdReadmem,     0, "[address] -- Read memory at decimal address from flash"},
-	{"reset",         CmdReset,       0, "Reset the Proxmark3"},
-	{"setlfdivisor",  CmdSetDivisor,  0, "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
-	{"setmux",        CmdSetMux,      0, "<loraw|hiraw|lopkd|hipkd> -- Set the ADC mux to a specific value"},
-	{"tune",          CmdTune,        0, "Measure antenna tuning"},
-	{"version",       CmdVersion,     0, "Show version information about the connected Proxmark"},
-	{"status",        CmdStatus,      0, "Show runtime status information about the connected Proxmark"},
-	{"ping",          CmdPing,        0, "Test if the pm3 is responsive"},
-	{NULL, NULL, 0, NULL}
+    {"help",          CmdHelp,        AlwaysAvailable, "This help"},
+    {"dbg",           CmdDbg,         IfPm3Present,    "Set Proxmark3 debug level"},
+    {"connect",       CmdConnect,     AlwaysAvailable, "connect Proxmark3 to serial port"},
+    {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
+    {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
+    {"lcd",           CmdLCD,         IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
+    {"lcdreset",      CmdLCDReset,    IfPm3Lcd,        "Hardware reset LCD"},
+    {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responsive"},
+    {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
+    {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
+    {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
+    {"setmux",        CmdSetMux,      IfPm3Present,    "Set the ADC mux to a specific value"},
+    {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
+    {"tune",          CmdTune,        IfPm3Present,    "Measure antenna tuning"},
+    {"version",       CmdVersion,     IfPm3Present,    "Show version information about the connected Proxmark3"},
+    {NULL, NULL, NULL, NULL}
 };
 
-int CmdHW(const char *Cmd) {
-	clearCommandBuffer();
-	CmdsParse(CommandTable, Cmd);
-	return 0;
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
 }
 
-int CmdHelp(const char *Cmd) {
-	CmdsHelp(CommandTable);
-	return 0;
+int CmdHW(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
+}
+
+void pm3_version(bool verbose) {
+    if (!verbose)
+        return;
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+
+    SendCommandNG(CMD_VERSION, NULL, 0);
+
+    if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+        PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
+        PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
+        PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
+#if defined(__clang__)
+        PrintAndLogEx(NORMAL, "  compiled with Clang/LLVM "__VERSION__);
+#elif defined(__GNUC__) || defined(__GNUG__)
+        PrintAndLogEx(NORMAL, "  compiled with GCC "__VERSION__);
+#endif
+        PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 ]");
+        PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+        PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+        PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 Extras ]");
+        PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+
+        if (IfPm3FpcUsartDevFromUsb())
+            PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
+
+        PrintAndLogEx(NORMAL, "");
+
+        struct p {
+            uint32_t id;
+            uint32_t section_size;
+            uint32_t versionstr_len;
+            char versionstr[PM3_CMD_DATA_SIZE - 12];
+        } PACKED;
+
+        struct p *payload = (struct p *)&resp.data.asBytes;
+
+        PrintAndLogEx(NORMAL,  payload->versionstr);
+
+        lookupChipID(payload->id, payload->section_size);
+    }
+    PrintAndLogEx(NORMAL, "\n");
 }

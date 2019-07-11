@@ -17,12 +17,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
- * \file	des.h
- * \author	Daniel Otte 
- * \date	2007-06-16
- * \brief 	des and tdes declarations
- * \license	GPLv3 or later
- * 
+ * \file    des.h
+ * \author  Daniel Otte
+ * \date    2007-06-16
+ * \brief   des and tdes declarations
+ * \license GPLv3 or later
+ *
  */
 #ifndef __DES_H_
 #define __DES_H_
@@ -46,65 +46,65 @@
 
 /** \fn void des_enc(void* out, const void* in, const void* key)
  * \brief encrypt a block with DES
- * 
+ *
  * This function encrypts a block of 64 bits (8 bytes) with the DES algorithm.
  * Key expansion is done automatically. The key is 64 bits long, but note that
  * only 56 bits are used (the LSB of each byte is dropped). The input and output
  * blocks may overlap.
- * 
+ *
  * \param out pointer to the block (64 bit = 8 byte) where the ciphertext is written to
  * \param in  pointer to the block (64 bit = 8 byte) where the plaintext is read from
  * \param key pointer to the key (64 bit = 8 byte)
  */
-void des_enc(void* out, const void* in, const void* key);
+void des_enc(void *out, const void *in, const void *key);
 
 /** \fn void des_dec(void* out, const void* in, const void* key)
  * \brief decrypt a block with DES
- * 
+ *
  * This function decrypts a block of 64 bits (8 bytes) with the DES algorithm.
  * Key expansion is done automatically. The key is 64 bits long, but note that
  * only 56 bits are used (the LSB of each byte is dropped). The input and output
  * blocks may overlap.
- * 
+ *
  * \param out pointer to the block (64 bit = 8 byte) where the plaintext is written to
  * \param in  pointer to the block (64 bit = 8 byte) where the ciphertext is read from
  * \param key pointer to the key (64 bit = 8 byte)
  */
 //void des_dec(void* out, const void* in, const void* key);
-void des_dec(void* out, const void* in, const uint8_t* key);
+void des_dec(void *out, const void *in, const uint8_t *key);
 
 /** \fn void tdes_enc(void* out, const void* in, const void* key)
  * \brief encrypt a block with Tripple-DES
- * 
+ *
  * This function encrypts a block of 64 bits (8 bytes) with the Tripple-DES (EDE)
  * algorithm. Key expansion is done automatically. The key is 192 bits long, but
  * note that only 178 bits are used (the LSB of each byte is dropped). The input
  * and output blocks may overlap.
- * 
+ *
  * \param out pointer to the block (64 bit = 8 byte) where the ciphertext is written to
  * \param in  pointer to the block (64 bit = 8 byte) where the plaintext is read from
  * \param key pointer to the key (192 bit = 24 byte)
  */
 //void tdes_enc(void* out, const void* in, const void* key);
-void tdes_enc(void* out, void* in, const void* key);
+void tdes_enc(void *out, void *in, const void *key);
 
 /** \fn void tdes_dec(void* out, const void* in, const void* key)
  * \brief decrypt a block with Tripple-DES
- * 
+ *
  * This function decrypts a block of 64 bits (8 bytes) with the Tripple-DES (EDE)
  * algorithm. Key expansion is done automatically. The key is 192 bits long, but
  * note that only 178 bits are used (the LSB of each byte is dropped). The input
  * and output blocks may overlap.
- * 
+ *
  * \param out pointer to the block (64 bit = 8 byte) where the plaintext is written to
  * \param in  pointer to the block (64 bit = 8 byte) where the ciphertext is read from
  * \param key pointer to the key (192 bit = 24 byte)
  */
- //void tdes_dec(void* out, const void* in, const void* key);
- void tdes_dec(void* out, void* in, const uint8_t* key);
- 
- void tdes_2key_enc(void* out, const void* in, size_t length, const void* key, unsigned char iv[8]);
- void tdes_2key_dec(void* out, const void* in, size_t length, const void* key, unsigned char iv[8]);
+//void tdes_dec(void* out, const void* in, const void* key);
+void tdes_dec(void *out, void *in, const uint8_t *key);
+
+void tdes_2key_enc(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]);
+void tdes_2key_dec(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]);
 
 // Copied from des.h in desfire imp.
 typedef unsigned long DES_KS[16][2];   /* Single-key DES key schedule */

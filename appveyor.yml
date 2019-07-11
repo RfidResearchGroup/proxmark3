@@ -160,6 +160,24 @@ build_script:
     Copy-Item C:\ProxSpace\pm3\client\hardnested\*.bin C:\ProxSpace\Release\hardnested
 
     Copy-Item C:\ProxSpace\pm3\client\hardnested\tables\*.bin.z C:\ProxSpace\Release\hardnested\tables
+    
+    # dll files
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libgcc_s_dw2-1.dll C:\ProxSpace\Release
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libstdc++-6.dll C:\ProxSpace\Release
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libwinpthread-1.dll C:\ProxSpace\Release
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Core.dll C:\ProxSpace\Release
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Gui.dll C:\ProxSpace\Release
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Widgets.dll C:\ProxSpace\Release
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libreadline*.dll C:\ProxSpace\Release
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libtermcap-0.dll C:\ProxSpace\Release
 
     Write-Host "[ OK ]" -ForegroundColor Green
 
@@ -256,8 +274,8 @@ test_script:
     #--- end Job
 
       [bool]$res=$false
-      # Wait 120 sec timeout for Job
-      if(Wait-Job $Job -Timeout 150){
+      # Wait 180 sec timeout for Job
+      if(Wait-Job $Job -Timeout 180){
         $Results = $Job | Receive-Job
         if($Results -like "true"){
           $res=$true
@@ -292,19 +310,21 @@ test_script:
 
     #proxmark logic tests
 
-    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q Execute && echo Passed || echo Failed'}
+    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q wait && echo Passed || echo Failed'}
 
-    ExecTest "proxmark help hardnested" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q hardnested && echo Passed || echo Failed'}
+    ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q ISO7816 && echo Passed || echo Failed'}
+
+    ExecTest "proxmark help text hardnested" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q hardnested && echo Passed || echo Failed'}
 
 
-    ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 comx -c 'hf mf'"} "at_enc"
+    ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf'"} "at_enc"
 
-    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;./proxmark3 comx -c 'hf mf hardnested t 1 000000000000'"} "found:"
+    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf hardnested t 1 000000000000'"} "found:"
 
 
     #proxmark crypto tests
 
-    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 comx -c 'emv test'"} "Tests ?OK"
+    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test'"} "Test?s? ? OK"
 
 
     if ($global:TestsPassed) {

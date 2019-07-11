@@ -1,30 +1,32 @@
 //-----------------------------------------------------------------------------
 // Iceman, July 2018
 // edits by - Anticat, August 2018
-// 
+//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
 // The main USART code, for serial communications over FPC connector
 //-----------------------------------------------------------------------------
+#include "cmd.h"
 #include "usart.h"
 #include "string.h"
+#include "../armsrc/ticks.h"  // startcountus
 
-#define AT91_BAUD_RATE				115200
+volatile AT91PS_USART pUS1 = AT91C_BASE_US1;
+volatile AT91PS_PIO pPIO   = AT91C_BASE_PIOA;
+volatile AT91PS_PDC pPDC   = AT91C_BASE_PDC_US1;
 
-volatile AT91PS_USART pUS1	= AT91C_BASE_US1;
-volatile AT91PS_PIO pPIO	= AT91C_BASE_PIOA;
-volatile AT91PS_PDC pPDC 	= AT91C_BASE_PDC_US1;
-
+uint32_t usart_baudrate = 0;
+uint8_t usart_parity = 0;
 /*
 void usart_close(void) {
     // Reset the USART mode
-	pUS1->US_MR = 0;
+    pUS1->US_MR = 0;
 
     // Reset the baud rate divisor register
-	pUS1->US_BRGR = 0;
-	
+    pUS1->US_BRGR = 0;
+
     // Reset the Timeguard Register
     pUS1->US_TTGR = 0;
 
@@ -32,112 +34,232 @@ void usart_close(void) {
     pUS1->US_IDR = 0xFFFFFFFF;
 
     // Abort the Peripheral Data Transfers
-	pUS1->US_PTCR = AT91C_PDC_RXTDIS | AT91C_PDC_TXTDIS;
+    pUS1->US_PTCR = AT91C_PDC_RXTDIS | AT91C_PDC_TXTDIS;
 
     // Disable receiver and transmitter and stop any activity immediately
     pUS1->US_CR = AT91C_US_TXDIS | AT91C_US_RXDIS | AT91C_US_RSTTX | AT91C_US_RSTRX;
 }
 */
 
-static uint8_t us_outbuf[sizeof(UsbCommand)];
+static uint8_t us_inbuf1[USART_BUFFLEN];
+static uint8_t us_inbuf2[USART_BUFFLEN];
+uint8_t *usart_cur_inbuf = NULL;
+uint16_t usart_cur_inbuf_off = 0;
+static uint8_t us_rxfifo[USART_FIFOLEN];
+static size_t us_rxfifo_low = 0;
+static size_t us_rxfifo_high = 0;
 
-/// Reads data from an USART peripheral
-/// \param data  Pointer to the buffer where the received data will be stored.
-/// \param len  Size of the data buffer (in bytes).
-inline int16_t usart_readbuffer(uint8_t *data, size_t len) {
 
-	// Check if the first PDC bank is free
-    if (!(pUS1->US_RCR)) {
-        pUS1->US_RPR = (uint32_t)data;
-        pUS1->US_RCR = len;
-
-		pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTDIS;
-        return 2;
+static void usart_fill_rxfifo(void) {
+    uint16_t rxfifo_free = 0;
+    if (pUS1->US_RNCR == 0) { // One buffer got filled, backup buffer being used
+        if (us_rxfifo_low > us_rxfifo_high)
+            rxfifo_free = us_rxfifo_low - us_rxfifo_high;
+        else
+            rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
+        uint16_t available = USART_BUFFLEN - usart_cur_inbuf_off;
+        if (available <= rxfifo_free) {
+            for (uint16_t i = 0; i < available; i++) {
+                us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
+                if (us_rxfifo_high == sizeof(us_rxfifo))
+                    us_rxfifo_high = 0;
+            }
+            // Give next buffer
+            pUS1->US_RNPR = (uint32_t)usart_cur_inbuf;
+            pUS1->US_RNCR = USART_BUFFLEN;
+            // Swap current buff
+            if (usart_cur_inbuf == us_inbuf1)
+                usart_cur_inbuf = us_inbuf2;
+            else
+                usart_cur_inbuf = us_inbuf1;
+            usart_cur_inbuf_off = 0;
+        } else {
+            // Take only what we have room for
+            available = rxfifo_free;
+            for (uint16_t i = 0; i < available; i++) {
+                us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
+                if (us_rxfifo_high == sizeof(us_rxfifo))
+                    us_rxfifo_high = 0;
+            }
+            usart_cur_inbuf_off += available;
+            return;
+        }
     }
-    // Check if the second PDC bank is free
-    else if (!(pUS1->US_RNCR)) {
-        pUS1->US_RNPR = (uint32_t)data;
-        pUS1->US_RNCR = len;
-
-		pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTDIS;
-        return 1;
-    } else {
-        return 0;
+    if (pUS1->US_RCR < USART_BUFFLEN - usart_cur_inbuf_off) { // Current buffer partially filled
+        if (us_rxfifo_low > us_rxfifo_high)
+            rxfifo_free = us_rxfifo_low - us_rxfifo_high;
+        else
+            rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
+        uint16_t available = USART_BUFFLEN - pUS1->US_RCR - usart_cur_inbuf_off;
+        if (available > rxfifo_free)
+            available = rxfifo_free;
+        for (uint16_t i = 0; i < available; i++) {
+            us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
+            if (us_rxfifo_high == sizeof(us_rxfifo))
+                us_rxfifo_high = 0;
+        }
+        usart_cur_inbuf_off += available;
     }
 }
 
+uint16_t usart_rxdata_available(void) {
+    usart_fill_rxfifo();
+    if (us_rxfifo_low <= us_rxfifo_high)
+        return us_rxfifo_high - us_rxfifo_low;
+    else
+        return sizeof(us_rxfifo) - us_rxfifo_low + us_rxfifo_high;
+}
+
+uint32_t usart_read_ng(uint8_t *data, size_t len) {
+    if (len == 0) return 0;
+    uint32_t nbBytesRcv = 0;
+    uint32_t try = 0;
+//    uint32_t highest_observed_try = 0;
+    // Empirical max try observed: 3000000 / USART_BAUD_RATE
+    // Let's take 10x
+
+    uint32_t tryconstant = 0;
+#ifdef USART_SLOW_LINK
+    // Experienced up to 13200 tries on BT link even at 460800
+    tryconstant = 50000;
+#endif
+
+    uint32_t maxtry = 10 * (3000000 / USART_BAUD_RATE) + tryconstant;
+
+    while (len) {
+        uint32_t available = usart_rxdata_available();
+
+        uint32_t packetSize = MIN(available, len);
+        if (available > 0) {
+//            Dbprintf_usb("Dbg USART ask %d bytes, available %d bytes, packetsize %d bytes", len, available, packetSize);
+//            highest_observed_try = MAX(highest_observed_try, try);
+            try = 0;
+        }
+        len -= packetSize;
+        while (packetSize--) {
+            data[nbBytesRcv++] = us_rxfifo[us_rxfifo_low++];
+            if (us_rxfifo_low == sizeof(us_rxfifo))
+                us_rxfifo_low = 0;
+        }
+        if (try++ == maxtry) {
+//            Dbprintf_usb("Dbg USART TIMEOUT");
+                break;
+            }
+    }
+//    highest_observed_try = MAX(highest_observed_try, try);
+//    Dbprintf_usb("Dbg USART max observed try %i", highest_observed_try);
+    return nbBytesRcv;
+}
 
 // transfer from device to client
-inline int16_t usart_writebuffer(uint8_t *data, size_t len) {
+inline int usart_writebuffer_sync(uint8_t *data, size_t len) {
 
-    // Check if the first PDC bank is free
-    if (!(pUS1->US_TCR)) {
-		memcpy(us_outbuf, data, len);
-		pUS1->US_TPR = (uint32_t)us_outbuf;
-        pUS1->US_TCR = sizeof(us_outbuf);
-
-		pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTDIS;
-		return 2;
-    }
-    // Check if the second PDC bank is free
-    else if (!(pUS1->US_TNCR)) {
-		memcpy(us_outbuf, data, len);
-        pUS1->US_TNPR = (uint32_t)us_outbuf;
-        pUS1->US_TNCR = sizeof(us_outbuf);
-
-		pUS1->US_PTCR = AT91C_PDC_TXTEN | AT91C_PDC_RXTDIS;
-		return 1;
-    } else {
-        return 0;
-    }
+    // Wait for current PDC bank to be free
+    // (and check next bank too, in case there will be a usart_writebuffer_async)
+    while (pUS1->US_TNCR || pUS1->US_TCR) {};
+    pUS1->US_TPR = (uint32_t)data;
+    pUS1->US_TCR = len;
+    // Wait until finishing all transfers to make sure "data" buffer can be discarded
+    // (if we don't wait here, bulk send as e.g. "hw status" will fail)
+    while (pUS1->US_TNCR || pUS1->US_TCR) {};
+    return PM3_SUCCESS;
 }
 
-void usart_init(void) {
+void usart_init(uint32_t baudrate, uint8_t parity) {
 
-	// disable & reset receiver / transmitter for configuration
-	pUS1->US_CR = (AT91C_US_RSTRX | AT91C_US_RSTTX | AT91C_US_RXDIS | AT91C_US_TXDIS);
-	
-	//enable the USART1 Peripheral clock
-	AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_US1);
+    if (baudrate != 0)
+        usart_baudrate = baudrate;
+    if ((parity == 'N') || (parity == 'O') || (parity == 'E'))
+        usart_parity = parity;
 
-	// disable PIO control of receive / transmit pins
-	pPIO->PIO_PDR |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1); 
-	
-	// enable peripheral mode A on receive / transmit pins
-	pPIO->PIO_ASR |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
-	pPIO->PIO_BSR = 0;
+    // For a nice detailed sample, interrupt driven but still relevant.
+    // See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
 
-	// enable pull-up on receive / transmit pins (see 31.5.1 I/O Lines)
-	pPIO->PIO_PPUER |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
-	
+    // disable & reset receiver / transmitter for configuration
+    pUS1->US_CR = (AT91C_US_RSTRX | AT91C_US_RSTTX | AT91C_US_RXDIS | AT91C_US_TXDIS);
+
+    //enable the USART1 Peripheral clock
+    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_US1);
+
+    // disable PIO control of receive / transmit pins
+    pPIO->PIO_PDR |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
+
+    // enable peripheral mode A on receive / transmit pins
+    pPIO->PIO_ASR |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
+    pPIO->PIO_BSR = 0;
+
+    // enable pull-up on receive / transmit pins (see 31.5.1 I/O Lines)
+    pPIO->PIO_PPUER |= (AT91C_PA21_RXD1 | AT91C_PA22_TXD1);
+
     // set mode
-    pUS1->US_MR = AT91C_US_USMODE_NORMAL |      // normal mode
-               AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
-               AT91C_US_CHRL_8_BITS |           // 8 bits
-               AT91C_US_PAR_NONE |              // parity: none
-               AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
-               AT91C_US_CHMODE_NORMAL;          // channel mode: normal
+    uint32_t mode = AT91C_US_USMODE_NORMAL |         // normal mode
+                    AT91C_US_CLKS_CLOCK |            // MCK (48MHz)
+                    AT91C_US_OVER |                  // oversampling
+                    AT91C_US_CHRL_8_BITS |           // 8 bits
+                    AT91C_US_NBSTOP_1_BIT |          // 1 stop bit
+                    AT91C_US_CHMODE_NORMAL;          // channel mode: normal
 
-	// all interrupts disabled
-	pUS1->US_IDR = 0xFFFF;
+    switch (usart_parity) {
+        case 'N':
+            mode |= AT91C_US_PAR_NONE;               // parity: none
+            break;
+        case 'O':
+            mode |= AT91C_US_PAR_ODD;                // parity: odd
+            break;
+        case 'E':
+            mode |= AT91C_US_PAR_EVEN;               // parity: even
+            break;
+    }
+    pUS1->US_MR = mode;
 
-	// iceman,  setting 115200 doesn't work. Only speed I got to work is 9600.
-	// something fishy with the AT91SAM7S512 USART..  Or I missed something
-	// For a nice detailed sample, interrupt driven but still relevant.
-	// See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
+    // all interrupts disabled
+    pUS1->US_IDR = 0xFFFF;
 
-	// set baudrate to 115200 
-	// 115200 * 16 == 1843200
-	//
-	//pUS1->US_BRGR = (48UL*1000*1000) / (9600*16);
-	pUS1->US_BRGR =  48054841 / (9600 << 4);
-	
-	// Write the Timeguard Register
-	pUS1->US_TTGR = 0;
-	pUS1->US_RTOR = 0;
-	pUS1->US_FIDI = 0;
-	pUS1->US_IF = 0;
-	
-	// re-enable receiver / transmitter
-	pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);
+    // http://ww1.microchip.com/downloads/en/DeviceDoc/doc6175.pdf
+    // note that for very large baudrates, error is not neglectible:
+    // b921600  => 8.6%
+    // b1382400 => 8.6%
+    // FP, Fractional Part  (Datasheet p402, Supported in AT91SAM512 / 256) (31.6.1.3)
+    // FP = 0 disabled;
+    // FP = 1-7 Baudrate resolution,
+    // CD, Clock divider,
+    //    sync == 0 , (async?)
+    //       OVER = 0,  -no
+    //          baudrate == selected clock/16/CD
+    //       OVER = 1,  -yes we are oversampling
+    //          baudrate == selected clock/8/CD    --> this is ours
+    //
+    uint32_t brgr = 48000000 / (usart_baudrate << 3);
+    // doing fp = round((mck / (usart_baudrate << 3) - brgr) * 8) with integers:
+    uint32_t fp = ((16 * 48000000 / (usart_baudrate << 3) - 16 * brgr) + 1) / 2;
+
+    pUS1->US_BRGR = (fp << 16) | brgr;
+
+    // Write the Timeguard Register
+    pUS1->US_TTGR = 0;
+    pUS1->US_RTOR = 0;
+    pUS1->US_FIDI = 0;
+    pUS1->US_IF = 0;
+
+    // Initialize DMA buffers
+    pUS1->US_TPR = (uint32_t)0;
+    pUS1->US_TCR = 0;
+    pUS1->US_TNPR = (uint32_t)0;
+    pUS1->US_TNCR = 0;
+    pUS1->US_RPR = (uint32_t)us_inbuf1;
+    pUS1->US_RCR = USART_BUFFLEN;
+    usart_cur_inbuf = us_inbuf1;
+    usart_cur_inbuf_off = 0;
+    pUS1->US_RNPR = (uint32_t)us_inbuf2;
+    pUS1->US_RNCR = USART_BUFFLEN;
+
+    // Initialize our fifo
+    us_rxfifo_low = 0;
+    us_rxfifo_high = 0;
+
+    // re-enable receiver / transmitter
+    pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);
+
+    // ready to receive and transmit
+    pUS1->US_PTCR = AT91C_PDC_RXTEN | AT91C_PDC_TXTEN;
 }

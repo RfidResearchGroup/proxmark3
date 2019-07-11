@@ -25,44 +25,14 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 
-extern int CmdLFEM4X(const char *Cmd);
+int CmdLFEM4X(const char *Cmd);
 
-
-extern int CmdEM410xDemod(const char *Cmd);
-extern int CmdEM410xRead(const char *Cmd);
-extern int CmdEM410xSim(const char *Cmd);
-extern int CmdEM410xBrute(const char *Cmd);
-extern int CmdEM410xWatch(const char *Cmd);
-extern int CmdEM410xWatchnSpoof(const char *Cmd);
-extern int CmdEM410xWrite(const char *Cmd);
-extern int CmdEM4x05Dump(const char *Cmd);
-extern int CmdEM4x05Info(const char *Cmd);
-extern int CmdEM4x05Read(const char *Cmd);
-extern int CmdEM4x05Write(const char *Cmd);
-extern int CmdEM4x50Read(const char *Cmd);
-extern int CmdEM4x50Write(const char *Cmd);
-extern int CmdEM4x50Dump(const char *Cmd);
-
-extern int EM4x50Read(const char *Cmd, bool verbose);
+int demodEM410x(void);
+int EM4x50Read(const char *Cmd, bool verbose);
 bool EM4x05IsBlock0(uint32_t *word);
 
-extern void printEM410x(uint32_t hi, uint64_t id);
-extern int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo );
-extern int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose);
-
-extern int usage_lf_em410x_sim(void);  
-extern int usage_lf_em410x_ws(void);
-extern int usage_lf_em410x_clone(void);
-extern int usage_lf_em410x_sim(void);
-extern int usage_lf_em410x_brute(void);
-
-extern int usage_lf_em4x50_dump(void);
-extern int usage_lf_em4x50_read(void);
-extern int usage_lf_em4x50_write(void);
-
-extern int usage_lf_em4x05_dump(void);
-extern int usage_lf_em4x05_read(void);
-extern int usage_lf_em4x05_write(void);
-extern int usage_lf_em4x05_info(void);
+void printEM410x(uint32_t hi, uint64_t id);
+int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo);
+int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose);
 
 #endif

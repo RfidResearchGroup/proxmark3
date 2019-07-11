@@ -1,0 +1,7 @@
+CONFIG_GEN=general.cfg
+CONFIG_CHIP=chip-at91sam7s.cfg
+IMAGE=../../recovery/proxmark3_recovery.bin
+DUMP="dump_$(date +'%Y%m%d-%H%M%S').bin"
+
+# Example using Segger Jlink:
+CONFIG_IF=interface-jlink.cfg

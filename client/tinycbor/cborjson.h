@@ -32,8 +32,7 @@ extern "C" {
 #endif
 
 /* Conversion to JSON */
-enum CborToJsonFlags
-{
+enum CborToJsonFlags {
     CborConvertAddMetadata = 1,
     CborConvertTagsToObjects = 2,
     CborConvertIgnoreTags = 0,
@@ -48,8 +47,7 @@ enum CborToJsonFlags
 };
 
 CBOR_API CborError cbor_value_to_json_advance(FILE *out, CborValue *value, int flags);
-CBOR_INLINE_API CborError cbor_value_to_json(FILE *out, const CborValue *value, int flags)
-{
+CBOR_INLINE_API CborError cbor_value_to_json(FILE *out, const CborValue *value, int flags) {
     CborValue copy = *value;
     return cbor_value_to_json_advance(out, &copy, flags);
 }

@@ -2,6 +2,12 @@
 # don't push these files to the repository
 
 .history
+.bash_history
+.bash_profile
+.bash_logout
+.bashrc
+.inputrc
+.profile
 *.log
 *.eml
 *.o
@@ -19,6 +25,12 @@
 *.exe
 *.dsym
 version.c
+*.json
+
+# new build file for add-ons.
+Makefile.platform
+# Cache for detecting platform def changes
+.Makefile.options.cache
 
 !client/hardnested/*.bin
 !client/hardnested/tables/*.z
@@ -58,6 +70,6 @@ ppls patches/*
 *- Copy.*
 
 client/lualibs/mf_default_keys.lua
-client/lualibs/usb_cmd.lua
+client/lualibs/pm3_cmd.lua
 # recompiled
 fpga_version_info.c

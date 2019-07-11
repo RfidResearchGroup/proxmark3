@@ -11,9 +11,9 @@
 #ifndef UTIL_DARWIN_H__
 #define UTIL_DARWIN_H__
 
-void disableAppNap(const char* reason);
-void enableAppNap();
-void makeUnfocusable();
-void makeFocusable();
+void disableAppNap(const char *reason);
+void enableAppNap(void);
+void makeUnfocusable(void);
+void makeFocusable(void);
 
 #endif

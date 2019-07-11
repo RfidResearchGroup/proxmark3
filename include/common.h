@@ -23,12 +23,12 @@ extern "C" {
 typedef unsigned char byte_t;
 
 // debug
-// 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
-#define MF_DBG_NONE          0		
-#define MF_DBG_ERROR         1
-#define MF_DBG_ALL           2
-#define MF_DBG_EXTENDED      4
-extern int MF_DBGLEVEL;
+#define DBG_NONE          0 // no messages
+#define DBG_ERROR         1 // errors only
+#define DBG_INFO          2 // errors + info messages
+#define DBG_DEBUG         3 // errors + info + debug messages
+#define DBG_EXTENDED      4 // errors + info + debug + breaking debug messages
+extern int DBGLEVEL;
 
 // Flashmem spi baudrate
 extern uint32_t FLASHMEM_SPIBAUDRATE;
@@ -51,18 +51,19 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 
 // RDV40 Section
 // 256kb divided into 4k sectors.
-// 
-// last 4k sector = signature
-// second last 4k sector = settings
-// third last 4k sector = default MF keys dictionary
-// forth last 4k sector = default LF keys dictionary
-
+//
+// 0x3F000 - 1 4kb sector = signature
+// 0x3E000 - 1 4kb sector = settings
+// 0x3D000 - 1 4kb sector = default T55XX keys dictionary
+// 0x3B000 - 1 4kb sector = default ICLASS keys dictionary
+// 0x39000 - 2 4kb sectors = default MFC keys dictionary
+//
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
 #endif
 
 #ifndef FLASH_MEM_MAX_SIZE
-# define FLASH_MEM_MAX_SIZE     0x3FFFF  // (262143)
+# define FLASH_MEM_MAX_SIZE     0x40000  // (262144)
 #endif
 
 #ifndef FLASH_MEM_MAX_4K_SECTOR
@@ -71,48 +72,52 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 
 
 #ifndef FLASH_MEM_ID_LEN
-# define FLASH_MEM_ID_LEN			8
+# define FLASH_MEM_ID_LEN 8
 #endif
 
 #ifndef FLASH_MEM_SIGNATURE_LEN
-# define FLASH_MEM_SIGNATURE_LEN	128
+# define FLASH_MEM_SIGNATURE_LEN 128
 #endif
 
 #ifndef FLASH_MEM_SIGNATURE_OFFSET
-# define FLASH_MEM_SIGNATURE_OFFSET	(FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN)
+// -1 for historical compatibility with already released Proxmark3 RDV4.0 devices
+# define FLASH_MEM_SIGNATURE_OFFSET (FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN - 1)
 #endif
 
-#if WITH_FLASH
-	#ifndef T55XX_CONFIG_LEN
-	# define T55XX_CONFIG_LEN	sizeof( t55xx_config )
-	#endif
-
-	#ifndef T55XX_CONFIG_OFFSET
-	# define T55XX_CONFIG_OFFSET	(FLASH_MEM_MAX_4K_SECTOR - 0x2000)
-	#endif
-
-	#ifndef DEFAULT_T55XX_KEYS_OFFSET
-	# define DEFAULT_T55XX_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x3000)
-	#endif
-	
-	#ifndef DEFAULT_MF_KEYS_OFFSET
-	# define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
-	#endif
-	
-	#ifndef DEFAULT_ICLASS_KEYS_OFFSET
-	# define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x5000)
-	#endif
+#ifndef T55XX_CONFIG_LEN
+# define T55XX_CONFIG_LEN sizeof( t55xx_config )
 #endif
+
+#ifndef T55XX_CONFIG_OFFSET
+# define T55XX_CONFIG_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x2000)
+#endif
+
+// Reserved space for T55XX PWD = 4 kb
+#ifndef DEFAULT_T55XX_KEYS_OFFSET
+# define DEFAULT_T55XX_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x3000)
+#endif
+
+// Reserved space for iClass keys = 4 kb
+#ifndef DEFAULT_ICLASS_KEYS_OFFSET
+# define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
+#endif
+
+// Reserved space for MIFARE Keys = 8 kb
+#ifndef DEFAULT_MF_KEYS_OFFSET
+# define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x6000)
+#endif
+
+
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
 typedef struct {
-	uint8_t magic[4];
-	uint8_t flashid[FLASH_MEM_ID_LEN];
-	uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
+    uint8_t magic[4];
+    uint8_t flashid[FLASH_MEM_ID_LEN];
+    uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
 } __attribute__((__packed__)) rdv40_validation_t;
 
 
 #ifdef __cplusplus
 }
-#endif				
+#endif
 #endif

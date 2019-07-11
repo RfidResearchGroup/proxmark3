@@ -20,7 +20,7 @@ int utf8_encode(int32_t codepoint, char *buffer, size_t *size);
 
 size_t utf8_check_first(char byte);
 size_t utf8_check_full(const char *buffer, size_t size, int32_t *codepoint);
-const char *utf8_iterate(const char *buffer, size_t size, int32_t *codepoint);
+const char *utf8_iterate(const char *buffer, size_t bufsize, int32_t *codepoint);
 
 int utf8_check_string(const char *string, size_t length);
 

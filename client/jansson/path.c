@@ -3,7 +3,7 @@
  *
  * Jansson is free software; you can redistribute it and/or modify
  * it under the terms of the MIT license. See LICENSE for details.
- * 
+ *
  * source here https://github.com/rogerz/jansson/blob/json_path/src/path.c
  */
 
@@ -13,8 +13,7 @@
 #include <jansson.h>
 #include "jansson_private.h"
 
-json_t *json_path_get(const json_t *json, const char *path)
-{
+json_t *json_path_get(const json_t *json, const char *path) {
     static const char root_chr = '$', array_open = '[';
     static const char *path_delims = ".[", *array_close = "]";
     const json_t *cursor;
@@ -31,8 +30,7 @@ json_t *json_path_get(const json_t *json, const char *path)
     token = NULL;
     expect = path_delims;
 
-    while (peek && *peek && cursor)
-    {
+    while (peek && *peek && cursor) {
         char *last_peek = peek;
         peek = strpbrk(peek, expect);
         if (peek) {
@@ -69,10 +67,9 @@ fail:
     return NULL;
 }
 
-int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error)
-{
+int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flags, json_error_t *error) {
     static const char root_chr = '$', array_open = '[', object_delim = '.';
-    static const char * const path_delims = ".[", *array_close = "]";
+    static const char *const path_delims = ".[", *array_close = "]";
 
     json_t *cursor, *parent = NULL;
     char *token, *buf = NULL, *peek, delim = '\0';
@@ -98,8 +95,7 @@ int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flag
     token = NULL;
     expect = path_delims;
 
-    while (peek && *peek && cursor)
-    {
+    while (peek && *peek && cursor) {
         char *last_peek = peek;
         peek = strpbrk(last_peek, expect);
 
@@ -114,7 +110,7 @@ int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flag
             if (expect == path_delims) {
                 break;
             } else {
-                jsonp_error_set(error, -1, -1, peek - buf, json_error_invalid_format, "missing ']'?");
+                jsonp_error_set(error, -1, -1, last_peek - buf, json_error_invalid_format, "missing ']'?");
                 goto fail;
             }
         }
@@ -186,7 +182,7 @@ int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flag
         json_array_set(parent, index_saved, value);
         cursor = json_array_get(parent, index_saved);
     } else {
-        jsonp_error_set(error, -1, -1, peek - buf, json_error_item_not_found, "invalid path");
+        jsonp_error_set(error, -1, -1, 0, json_error_item_not_found, "invalid path");
         goto fail;
     }
 

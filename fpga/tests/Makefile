@@ -64,7 +64,7 @@ tb_lf_edge_detect: tb_lf_edge_detect.vvp | test_dir
 test_dir:
 	@if [ ! -d $(TEST_OUTDIR) ] ; then mkdir $(TEST_OUTDIR) ; fi
 
-.PHONY: all clean 
+.PHONY: all clean
 
 # $(1) = basename
 # $(2) = extension to check

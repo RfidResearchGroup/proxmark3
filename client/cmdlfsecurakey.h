@@ -24,11 +24,10 @@
 #include "lfdemod.h"    // preamble test
 #include "parity.h"     // for wiegand parity test
 
-extern int CmdLFSecurakey(const char *Cmd);
-//extern int CmdSecurakeyClone(const char *Cmd);
-//extern int CmdSecurakeySim(const char *Cmd);
-extern int CmdSecurakeyRead(const char *Cmd);
-extern int CmdSecurakeyDemod(const char *Cmd);
+int CmdLFSecurakey(const char *Cmd);
+
+int demodSecurakey(void);
+int detectSecurakey(uint8_t *dest, size_t *size);
 
 #endif
 

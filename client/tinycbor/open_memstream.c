@@ -47,15 +47,13 @@ typedef size_t LenType;
 
 #include "compilersupport_p.h"
 
-struct Buffer
-{
+struct Buffer {
     char **ptr;
     size_t *len;
     size_t alloc;
 };
 
-static RetType write_to_buffer(void *cookie, const char *data, LenType len)
-{
+static RetType write_to_buffer(void *cookie, const char *data, LenType len) {
     struct Buffer *b = (struct Buffer *)cookie;
     char *ptr = *b->ptr;
     size_t newsize;
@@ -67,9 +65,15 @@ static RetType write_to_buffer(void *cookie, const char *data, LenType len)
     if (newsize >= b->alloc) { // NB! one extra byte is needed to avoid buffer overflow at close_buffer
         // make room
         size_t newalloc = newsize + newsize / 2 + 1;    // give 50% more room
-        ptr = realloc(ptr, newalloc);
-        if (ptr == NULL)
+
+        char *tmp = realloc(ptr, newalloc);
+        if (tmp == NULL) {
+            free(ptr);
             return -1;
+        } else {
+            ptr = tmp;
+        }
+
         b->alloc = newalloc;
         *b->ptr = ptr;
     }
@@ -79,8 +83,7 @@ static RetType write_to_buffer(void *cookie, const char *data, LenType len)
     return len;
 }
 
-static int close_buffer(void *cookie)
-{
+static int close_buffer(void *cookie) {
     struct Buffer *b = (struct Buffer *)cookie;
     if (*b->ptr)
         (*b->ptr)[*b->len] = '\0';
@@ -88,8 +91,7 @@ static int close_buffer(void *cookie)
     return 0;
 }
 
-FILE *open_memstream(char **bufptr, size_t *lenptr)
-{
+FILE *open_memstream(char **bufptr, size_t *lenptr) {
     struct Buffer *b = (struct Buffer *)calloc(sizeof(struct Buffer), sizeof(uint8_t));
     if (b == NULL)
         return NULL;

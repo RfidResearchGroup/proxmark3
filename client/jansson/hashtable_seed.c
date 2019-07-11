@@ -101,8 +101,7 @@ typedef BOOL (WINAPI *CRYPTACQUIRECONTEXTA)(HCRYPTPROV *phProv, LPCSTR pszContai
 typedef BOOL (WINAPI *CRYPTGENRANDOM)(HCRYPTPROV hProv, DWORD dwLen, BYTE *pbBuffer);
 typedef BOOL (WINAPI *CRYPTRELEASECONTEXT)(HCRYPTPROV hProv, DWORD dwFlags);
 
-static int seed_from_windows_cryptoapi(uint32_t *seed)
-{
+static int seed_from_windows_cryptoapi(uint32_t *seed) {
     HINSTANCE hAdvAPI32 = NULL;
     CRYPTACQUIRECONTEXTA pCryptAcquireContext = NULL;
     CRYPTGENRANDOM pCryptGenRandom = NULL;
@@ -112,7 +111,7 @@ static int seed_from_windows_cryptoapi(uint32_t *seed)
     int ok;
 
     hAdvAPI32 = GetModuleHandle(TEXT("advapi32.dll"));
-    if(hAdvAPI32 == NULL)
+    if (hAdvAPI32 == NULL)
         return 1;
 
     pCryptAcquireContext = (CRYPTACQUIRECONTEXTA)GetProcAddress(hAdvAPI32, "CryptAcquireContextA");
@@ -212,7 +211,7 @@ void json_object_seed(size_t seed) {
 #ifdef HAVE_SCHED_YIELD
                 sched_yield();
 #endif
-            } while(__atomic_load_n(&hashtable_seed, __ATOMIC_ACQUIRE) == 0);
+            } while (__atomic_load_n(&hashtable_seed, __ATOMIC_ACQUIRE) == 0);
         }
     }
 }
@@ -239,7 +238,7 @@ void json_object_seed(size_t seed) {
                 sched_yield();
 #endif
             }
-        } while(hashtable_seed == 0);
+        } while (hashtable_seed == 0);
     }
 }
 #elif defined(_WIN32)

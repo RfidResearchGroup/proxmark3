@@ -1,3 +1,8 @@
+# Hide full compilation line:
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
 
 LIB_A = libmbedtls.a
 mbedtls_SOURCES = \
@@ -49,11 +54,13 @@ mbedtls_LDFLAGS = \
 	-export-symbols-regex '^mbedtls_' \
 	-version-info 15:0:11
 
-	
+
 CFILES = $(filter %.c, $(mbedtls_SOURCES))
 CMDOBJS = $(CFILES:%.c=%.o)
 CLEAN = $(CMDOBJS)
-	
+
+platform = $(shell uname)
+
 CC= gcc
 CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function
 LDFLAGS= $(SYSLDFLAGS) $(mbedtls_LDFLAGS)
@@ -61,8 +68,13 @@ LIBS=  $(SYSLIBS) $(MYLIBS)
 DEFAULT_INCLUDES = -I. -I..
 DEFS = -DHAVE_STDINT_H
 
+ifeq ($(platform),Darwin)
+AR= /usr/bin/ar rcs
+RANLIB= /usr/bin/ranlib
+else
 AR= ar rcs
 RANLIB= ranlib
+endif
 RM= rm -f
 TST= echo
 
@@ -72,16 +84,20 @@ SYSLIBS=
 MYLIBS=
 MYOBJS=
 
-all: $(CMDOBJS)
-	$(AR) $(LIB_A) $(CMDOBJS)
-	$(RANLIB) $(LIB_A)
-	
+$(LIB_A): $(CMDOBJS)
+	$(info [=] AR $@)
+	$(Q)$(AR) $(LIB_A) $(CMDOBJS)
+	$(Q)$(RANLIB) $(LIB_A)
+
+all: $(LIB_A)
+
 clean:
-	$(RM) $(CLEAN)
-	$(RM) $(LIB_A)
-	
+	$(Q)$(RM) $(CLEAN)
+	$(Q)$(RM) $(LIB_A)
+
 %.o: %.c
-	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(CFLAGS) -c -o $@ $< $(LIBS)
-	
+	$(info [-] CC $<)
+	$(Q)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(CFLAGS) -c -o $@ $< $(LIBS)
+
 .PHONY: all clean
 

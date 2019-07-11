@@ -11,7 +11,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * https://github.com/lumag/emv-tools/blob/master/lib/include/openemv/tlv.h
  */
 
@@ -25,9 +25,9 @@
 typedef uint32_t tlv_tag_t;
 
 struct tlv {
-	tlv_tag_t tag;
-	size_t len;
-	const unsigned char *value;
+    tlv_tag_t tag;
+    size_t len;
+    const unsigned char *value;
 };
 
 struct tlvdb;

@@ -18,26 +18,24 @@
 #include "graph.h"
 #include "ui.h"
 #include "cmdparser.h"
-#include "cmdhf14a.h"		// ISO14443-A
-#include "cmdhf14b.h"		// ISO14443-B
-#include "cmdhf15.h"		// ISO15693
+#include "cmdhf14a.h"       // ISO14443-A
+#include "cmdhf14b.h"       // ISO14443-B
+#include "cmdhf15.h"        // ISO15693
 #include "cmdhfepa.h"
-#include "cmdhflegic.h"		// LEGIC
-#include "cmdhficlass.h"	// ICLASS
-#include "cmdhfmf.h"		// CLASSIC
-#include "cmdhfmfu.h"		// ULTRALIGHT/NTAG etc
-#include "cmdhfmfp.h"		// Mifare Plus
-#include "cmdhfmfdes.h"		// DESFIRE
-#include "cmdhftopaz.h"		// TOPAZ
-#include "cmdhffelica.h"	// ISO18092 / FeliCa
-#include "cmdhffido.h"		// FIDO authenticators
-#include "cmdtrace.h"		// trace list
+#include "cmdhflegic.h"     // LEGIC
+#include "cmdhficlass.h"    // ICLASS
+#include "cmdhfmf.h"        // CLASSIC
+#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
+#include "cmdhfmfp.h"       // Mifare Plus
+#include "cmdhfmfdes.h"     // DESFIRE
+#include "cmdhftopaz.h"     // TOPAZ
+#include "cmdhffelica.h"    // ISO18092 / FeliCa
+#include "cmdhffido.h"      // FIDO authenticators
+#include "cmdtrace.h"       // trace list
 
-extern int CmdHF(const char *Cmd);
-extern int CmdHFTune(const char *Cmd);
-extern int CmdHFSearch(const char *Cmd);
-extern int CmdHFSnoop(const char *Cmd);
+int CmdHF(const char *Cmd);
+int CmdHFTune(const char *Cmd);
+int CmdHFSearch(const char *Cmd);
+int CmdHFSniff(const char *Cmd);
 
-extern int usage_hf_search();
-extern int usage_hf_snoop();
 #endif

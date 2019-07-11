@@ -66,10 +66,10 @@
 #define MBEDTLS_OID_COUNTRY_US                  "\x86\x48"      /* {us(840)} */
 #define MBEDTLS_OID_ORG_RSA_DATA_SECURITY       "\x86\xf7\x0d"  /* {rsadsi(113549)} */
 #define MBEDTLS_OID_RSA_COMPANY                 MBEDTLS_OID_ISO_MEMBER_BODIES MBEDTLS_OID_COUNTRY_US \
-                                        MBEDTLS_OID_ORG_RSA_DATA_SECURITY /* {iso(1) member-body(2) us(840) rsadsi(113549)} */
+    MBEDTLS_OID_ORG_RSA_DATA_SECURITY /* {iso(1) member-body(2) us(840) rsadsi(113549)} */
 #define MBEDTLS_OID_ORG_ANSI_X9_62              "\xce\x3d" /* ansi-X9-62(10045) */
 #define MBEDTLS_OID_ANSI_X9_62                  MBEDTLS_OID_ISO_MEMBER_BODIES MBEDTLS_OID_COUNTRY_US \
-                                        MBEDTLS_OID_ORG_ANSI_X9_62
+    MBEDTLS_OID_ORG_ANSI_X9_62
 
 /*
  * ISO Identified organization OID parts
@@ -405,8 +405,7 @@ extern "C" {
 /**
  * \brief Base OID descriptor structure
  */
-typedef struct mbedtls_oid_descriptor_t
-{
+typedef struct mbedtls_oid_descriptor_t {
     const char *asn1;               /*!< OID ASN.1 representation       */
     size_t asn1_len;                /*!< length of asn1                 */
     const char *name;               /*!< official name (e.g. from RFC)  */
@@ -424,7 +423,7 @@ typedef struct mbedtls_oid_descriptor_t
  * \return          Length of the string written (excluding final NULL) or
  *                  MBEDTLS_ERR_OID_BUF_TOO_SMALL in case of error
  */
-int mbedtls_oid_get_numeric_string( char *buf, size_t size, const mbedtls_asn1_buf *oid );
+int mbedtls_oid_get_numeric_string(char *buf, size_t size, const mbedtls_asn1_buf *oid);
 
 #if defined(MBEDTLS_X509_USE_C) || defined(MBEDTLS_X509_CREATE_C)
 /**
@@ -435,7 +434,7 @@ int mbedtls_oid_get_numeric_string( char *buf, size_t size, const mbedtls_asn1_b
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_x509_ext_type( const mbedtls_asn1_buf *oid, int *ext_type );
+int mbedtls_oid_get_x509_ext_type(const mbedtls_asn1_buf *oid, int *ext_type);
 #endif
 
 /**
@@ -447,7 +446,7 @@ int mbedtls_oid_get_x509_ext_type( const mbedtls_asn1_buf *oid, int *ext_type );
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_attr_short_name( const mbedtls_asn1_buf *oid, const char **short_name );
+int mbedtls_oid_get_attr_short_name(const mbedtls_asn1_buf *oid, const char **short_name);
 
 /**
  * \brief          Translate PublicKeyAlgorithm OID into pk_type
@@ -457,7 +456,7 @@ int mbedtls_oid_get_attr_short_name( const mbedtls_asn1_buf *oid, const char **s
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_pk_alg( const mbedtls_asn1_buf *oid, mbedtls_pk_type_t *pk_alg );
+int mbedtls_oid_get_pk_alg(const mbedtls_asn1_buf *oid, mbedtls_pk_type_t *pk_alg);
 
 /**
  * \brief          Translate pk_type into PublicKeyAlgorithm OID
@@ -468,8 +467,8 @@ int mbedtls_oid_get_pk_alg( const mbedtls_asn1_buf *oid, mbedtls_pk_type_t *pk_a
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_oid_by_pk_alg( mbedtls_pk_type_t pk_alg,
-                           const char **oid, size_t *olen );
+int mbedtls_oid_get_oid_by_pk_alg(mbedtls_pk_type_t pk_alg,
+                                  const char **oid, size_t *olen);
 
 #if defined(MBEDTLS_ECP_C)
 /**
@@ -480,7 +479,7 @@ int mbedtls_oid_get_oid_by_pk_alg( mbedtls_pk_type_t pk_alg,
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_ec_grp( const mbedtls_asn1_buf *oid, mbedtls_ecp_group_id *grp_id );
+int mbedtls_oid_get_ec_grp(const mbedtls_asn1_buf *oid, mbedtls_ecp_group_id *grp_id);
 
 /**
  * \brief          Translate EC group identifier into NamedCurve OID
@@ -491,8 +490,8 @@ int mbedtls_oid_get_ec_grp( const mbedtls_asn1_buf *oid, mbedtls_ecp_group_id *g
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_oid_by_ec_grp( mbedtls_ecp_group_id grp_id,
-                           const char **oid, size_t *olen );
+int mbedtls_oid_get_oid_by_ec_grp(mbedtls_ecp_group_id grp_id,
+                                  const char **oid, size_t *olen);
 #endif /* MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_MD_C)
@@ -505,8 +504,8 @@ int mbedtls_oid_get_oid_by_ec_grp( mbedtls_ecp_group_id grp_id,
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_sig_alg( const mbedtls_asn1_buf *oid,
-                     mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg );
+int mbedtls_oid_get_sig_alg(const mbedtls_asn1_buf *oid,
+                            mbedtls_md_type_t *md_alg, mbedtls_pk_type_t *pk_alg);
 
 /**
  * \brief          Translate SignatureAlgorithm OID into description
@@ -516,7 +515,7 @@ int mbedtls_oid_get_sig_alg( const mbedtls_asn1_buf *oid,
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_sig_alg_desc( const mbedtls_asn1_buf *oid, const char **desc );
+int mbedtls_oid_get_sig_alg_desc(const mbedtls_asn1_buf *oid, const char **desc);
 
 /**
  * \brief          Translate md_type and pk_type into SignatureAlgorithm OID
@@ -528,8 +527,8 @@ int mbedtls_oid_get_sig_alg_desc( const mbedtls_asn1_buf *oid, const char **desc
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_oid_by_sig_alg( mbedtls_pk_type_t pk_alg, mbedtls_md_type_t md_alg,
-                            const char **oid, size_t *olen );
+int mbedtls_oid_get_oid_by_sig_alg(mbedtls_pk_type_t pk_alg, mbedtls_md_type_t md_alg,
+                                   const char **oid, size_t *olen);
 
 /**
  * \brief          Translate hash algorithm OID into md_type
@@ -539,7 +538,7 @@ int mbedtls_oid_get_oid_by_sig_alg( mbedtls_pk_type_t pk_alg, mbedtls_md_type_t 
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_md_alg( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_alg );
+int mbedtls_oid_get_md_alg(const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_alg);
 
 /**
  * \brief          Translate hmac algorithm OID into md_type
@@ -549,7 +548,7 @@ int mbedtls_oid_get_md_alg( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_a
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_md_hmac( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_hmac );
+int mbedtls_oid_get_md_hmac(const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_hmac);
 #endif /* MBEDTLS_MD_C */
 
 /**
@@ -560,7 +559,7 @@ int mbedtls_oid_get_md_hmac( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_extended_key_usage( const mbedtls_asn1_buf *oid, const char **desc );
+int mbedtls_oid_get_extended_key_usage(const mbedtls_asn1_buf *oid, const char **desc);
 
 /**
  * \brief          Translate md_type into hash algorithm OID
@@ -571,7 +570,7 @@ int mbedtls_oid_get_extended_key_usage( const mbedtls_asn1_buf *oid, const char 
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_oid_by_md( mbedtls_md_type_t md_alg, const char **oid, size_t *olen );
+int mbedtls_oid_get_oid_by_md(mbedtls_md_type_t md_alg, const char **oid, size_t *olen);
 
 #if defined(MBEDTLS_CIPHER_C)
 /**
@@ -582,7 +581,7 @@ int mbedtls_oid_get_oid_by_md( mbedtls_md_type_t md_alg, const char **oid, size_
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_cipher_alg( const mbedtls_asn1_buf *oid, mbedtls_cipher_type_t *cipher_alg );
+int mbedtls_oid_get_cipher_alg(const mbedtls_asn1_buf *oid, mbedtls_cipher_type_t *cipher_alg);
 #endif /* MBEDTLS_CIPHER_C */
 
 #if defined(MBEDTLS_PKCS12_C)
@@ -596,8 +595,8 @@ int mbedtls_oid_get_cipher_alg( const mbedtls_asn1_buf *oid, mbedtls_cipher_type
  *
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
-int mbedtls_oid_get_pkcs12_pbe_alg( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_alg,
-                            mbedtls_cipher_type_t *cipher_alg );
+int mbedtls_oid_get_pkcs12_pbe_alg(const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_alg,
+                                   mbedtls_cipher_type_t *cipher_alg);
 #endif /* MBEDTLS_PKCS12_C */
 
 #ifdef __cplusplus

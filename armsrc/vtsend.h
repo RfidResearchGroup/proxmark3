@@ -78,11 +78,11 @@ int vtsend_set_cursor(vtsend_t *p, const int visible);
 int vtsend_reset(vtsend_t *p);
 
 int vtsend_draw_box(
-        vtsend_t *p,
-        const int x1, const int y1, const int x2, const int y2);
+    vtsend_t *p,
+    const int x1, const int y1, const int x2, const int y2);
 int vtsend_fill_box(
-        vtsend_t *p,
-        const int x1, const int y1, const int x2, const int y2);
+    vtsend_t *p,
+    const int x1, const int y1, const int x2, const int y2);
 
 #ifdef __cplusplus
 }

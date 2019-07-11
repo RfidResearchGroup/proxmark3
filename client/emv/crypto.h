@@ -20,8 +20,8 @@
 #include <stddef.h>
 
 enum crypto_algo_hash {
-	HASH_INVALID,
-	HASH_SHA_1,
+    HASH_INVALID,
+    HASH_SHA_1,
 };
 
 struct crypto_hash *crypto_hash_open(enum crypto_algo_hash hash);
@@ -31,8 +31,8 @@ unsigned char *crypto_hash_read(struct crypto_hash *ch);
 size_t crypto_hash_get_size(const struct crypto_hash *ch);
 
 enum crypto_algo_pk {
-	PK_INVALID,
-	PK_RSA,
+    PK_INVALID,
+    PK_RSA,
 };
 
 struct crypto_pk *crypto_pk_open(enum crypto_algo_pk pk, ...);

@@ -17,11 +17,11 @@
 // LEGIC
 //-----------------------------------------------------------------------------
 typedef struct {
-	uint8_t uid[4];
-	uint32_t tagtype;
-	uint8_t cmdsize;
-	uint8_t addrsize;
-	uint16_t cardsize;	
+    uint8_t uid[4];
+    uint32_t tagtype;
+    uint8_t cmdsize;
+    uint8_t addrsize;
+    uint16_t cardsize;
 } legic_card_select_t;
 
 #endif // _LEGIC_H_

@@ -8,6 +8,9 @@
 // Crypto algorithms testing
 //-----------------------------------------------------------------------------
 
+#ifndef __CRYPTOTEST_H
+#define __CRYPTOTEST_H
 #include <stdbool.h>
 
-extern int ExecuteCryptoTests(bool verbose);
+int ExecuteCryptoTests(bool verbose);
+#endif

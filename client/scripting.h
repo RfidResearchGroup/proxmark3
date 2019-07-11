@@ -15,11 +15,11 @@
 #include <lualib.h>
 #include <lauxlib.h>
 #include "proxmark3.h"
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "cmdmain.h"
 #include "comms.h"
 #include "util.h"
-#include "mifarehost.h"
+#include "mifare/mifarehost.h"
 #include "crc.h"
 #include "crc16.h"
 #include "crc64.h"
@@ -29,10 +29,12 @@
 #include "cmdhfmfhard.h"
 #include "cmdhfmfu.h"
 #include "protocols.h"
+#include "cmdlft55xx.h"   // read t55xx etc
+#include "mifare/ndef.h"  // ndef parsing
 
-#define LUA_LIBRARIES_DIRECTORY 	"lualibs/"
-#define LUA_SCRIPTS_DIRECTORY 		"scripts/"
-#define LUA_LIBRARIES_WILDCARD 		"?.lua"
+#define LUA_LIBRARIES_DIRECTORY "lualibs/"
+#define LUA_SCRIPTS_DIRECTORY   "scripts/"
+#define LUA_LIBRARIES_WILDCARD  "?.lua"
 
 /**
  * @brief set_libraries loads the core components of pm3 into the 'pm3'

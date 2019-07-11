@@ -672,20 +672,19 @@ static const unsigned int rcon[] = {
                     ((unsigned int)(pt)[3]))
 
 #define PUTU32(ct, st) { (ct)[0] = (unsigned char)((st) >> 24); \
-                         (ct)[1] = (unsigned char)((st) >> 16); \
-                         (ct)[2] = (unsigned char)((st) >>  8); \
-                         (ct)[3] = (unsigned char)(st); }
+        (ct)[1] = (unsigned char)((st) >> 16); \
+        (ct)[2] = (unsigned char)((st) >>  8); \
+        (ct)[3] = (unsigned char)(st); }
 
 /*
 * Expand the cipher key into the encryption key schedule and return the
 * number of rounds for the given cipher key size.
 */
-int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBytes)
-{
+int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBytes) {
     int i = 0;
     unsigned int temp;
 
-    rk[0] = GETU32(cipherKey     );
+    rk[0] = GETU32(cipherKey);
     rk[1] = GETU32(cipherKey +  4);
     rk[2] = GETU32(cipherKey +  8);
     rk[3] = GETU32(cipherKey + 12);
@@ -693,11 +692,11 @@ int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBy
         for (;;) {
             temp  = rk[3];
             rk[4] = rk[0] ^
-                (Te4[(temp >> 16) & 0xff] & 0xff000000) ^
-                (Te4[(temp >>  8) & 0xff] & 0x00ff0000) ^
-                (Te4[(temp      ) & 0xff] & 0x0000ff00) ^
-                (Te4[(temp >> 24)       ] & 0x000000ff) ^
-                rcon[i];
+                    (Te4[(temp >> 16) & 0xff] & 0xff000000) ^
+                    (Te4[(temp >>  8) & 0xff] & 0x00ff0000) ^
+                    (Te4[(temp) & 0xff] & 0x0000ff00) ^
+                    (Te4[(temp >> 24)       ] & 0x000000ff) ^
+                    rcon[i];
             rk[5] = rk[1] ^ rk[4];
             rk[6] = rk[2] ^ rk[5];
             rk[7] = rk[3] ^ rk[6];
@@ -713,11 +712,11 @@ int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBy
         for (;;) {
             temp = rk[ 5];
             rk[ 6] = rk[ 0] ^
-                (Te4[(temp >> 16) & 0xff] & 0xff000000) ^
-                (Te4[(temp >>  8) & 0xff] & 0x00ff0000) ^
-                (Te4[(temp      ) & 0xff] & 0x0000ff00) ^
-                (Te4[(temp >> 24)       ] & 0x000000ff) ^
-                rcon[i];
+                     (Te4[(temp >> 16) & 0xff] & 0xff000000) ^
+                     (Te4[(temp >>  8) & 0xff] & 0x00ff0000) ^
+                     (Te4[(temp) & 0xff] & 0x0000ff00) ^
+                     (Te4[(temp >> 24)       ] & 0x000000ff) ^
+                     rcon[i];
             rk[ 7] = rk[ 1] ^ rk[ 6];
             rk[ 8] = rk[ 2] ^ rk[ 7];
             rk[ 9] = rk[ 3] ^ rk[ 8];
@@ -735,11 +734,11 @@ int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBy
         for (;;) {
             temp = rk[ 7];
             rk[ 8] = rk[ 0] ^
-                (Te4[(temp >> 16) & 0xff] & 0xff000000) ^
-                (Te4[(temp >>  8) & 0xff] & 0x00ff0000) ^
-                (Te4[(temp      ) & 0xff] & 0x0000ff00) ^
-                (Te4[(temp >> 24)       ] & 0x000000ff) ^
-                rcon[i];
+                     (Te4[(temp >> 16) & 0xff] & 0xff000000) ^
+                     (Te4[(temp >>  8) & 0xff] & 0x00ff0000) ^
+                     (Te4[(temp) & 0xff] & 0x0000ff00) ^
+                     (Te4[(temp >> 24)       ] & 0x000000ff) ^
+                     rcon[i];
             rk[ 9] = rk[ 1] ^ rk[ 8];
             rk[10] = rk[ 2] ^ rk[ 9];
             rk[11] = rk[ 3] ^ rk[10];
@@ -748,10 +747,10 @@ int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBy
             }
             temp = rk[11];
             rk[12] = rk[ 4] ^
-                (Te4[(temp >> 24)       ] & 0xff000000) ^
-                (Te4[(temp >> 16) & 0xff] & 0x00ff0000) ^
-                (Te4[(temp >>  8) & 0xff] & 0x0000ff00) ^
-                (Te4[(temp      ) & 0xff] & 0x000000ff);
+                     (Te4[(temp >> 24)       ] & 0xff000000) ^
+                     (Te4[(temp >> 16) & 0xff] & 0x00ff0000) ^
+                     (Te4[(temp >>  8) & 0xff] & 0x0000ff00) ^
+                     (Te4[(temp) & 0xff] & 0x000000ff);
             rk[13] = rk[ 5] ^ rk[12];
             rk[14] = rk[ 6] ^ rk[13];
             rk[15] = rk[ 7] ^ rk[14];
@@ -766,8 +765,7 @@ int aes_setkey_enc(unsigned int rk[], const unsigned char cipherKey[], int keyBy
 * Expand the cipher key into encryption and decryption key schedule and
 * return the number of rounds for the given cipher key size.
 */
-int AesGenKeySched(unsigned int rk[], unsigned int rrk[], const unsigned char cipherKey[], int keyBytes)
-{
+int AesGenKeySched(unsigned int rk[], unsigned int rrk[], const unsigned char cipherKey[], int keyBytes) {
     int Nr, i;
 
     // expand the cipher key
@@ -779,10 +777,10 @@ int AesGenKeySched(unsigned int rk[], unsigned int rrk[], const unsigned char ci
     rrk[2] = rk[2];
     rrk[3] = rk[3];
 
-   /*
-    * apply the inverse MixColumn transform to all round keys but the first
-    * and the last
-    */
+    /*
+     * apply the inverse MixColumn transform to all round keys but the first
+     * and the last
+     */
     for (i = 1; i < Nr; i++) {
         rrk -= 4;
         rk += 4;
@@ -790,22 +788,22 @@ int AesGenKeySched(unsigned int rk[], unsigned int rrk[], const unsigned char ci
             Td0[Te4[(rk[0] >> 24)       ] & 0xff] ^
             Td1[Te4[(rk[0] >> 16) & 0xff] & 0xff] ^
             Td2[Te4[(rk[0] >>  8) & 0xff] & 0xff] ^
-            Td3[Te4[(rk[0]      ) & 0xff] & 0xff];
+            Td3[Te4[(rk[0]) & 0xff] & 0xff];
         rrk[1] =
             Td0[Te4[(rk[1] >> 24)       ] & 0xff] ^
             Td1[Te4[(rk[1] >> 16) & 0xff] & 0xff] ^
             Td2[Te4[(rk[1] >>  8) & 0xff] & 0xff] ^
-            Td3[Te4[(rk[1]      ) & 0xff] & 0xff];
+            Td3[Te4[(rk[1]) & 0xff] & 0xff];
         rrk[2] =
             Td0[Te4[(rk[2] >> 24)       ] & 0xff] ^
             Td1[Te4[(rk[2] >> 16) & 0xff] & 0xff] ^
             Td2[Te4[(rk[2] >>  8) & 0xff] & 0xff] ^
-            Td3[Te4[(rk[2]      ) & 0xff] & 0xff];
+            Td3[Te4[(rk[2]) & 0xff] & 0xff];
         rrk[3] =
             Td0[Te4[(rk[3] >> 24)       ] & 0xff] ^
             Td1[Te4[(rk[3] >> 16) & 0xff] & 0xff] ^
             Td2[Te4[(rk[3] >>  8) & 0xff] & 0xff] ^
-            Td3[Te4[(rk[3]      ) & 0xff] & 0xff];
+            Td3[Te4[(rk[3]) & 0xff] & 0xff];
     }
     // invert the order of the last round keys
     rrk -= 4;
@@ -821,8 +819,7 @@ int AesGenKeySched(unsigned int rk[], unsigned int rrk[], const unsigned char ci
 /*
 * Encrypt the plain text into cipher
 */
-void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[])
-{
+void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[]) {
     unsigned int s0, s1, s2, s3, t0, t1, t2, t3, *iv;
     const unsigned int *rk;
     int r;
@@ -833,7 +830,7 @@ void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[])
      * map byte array block to cipher state
      * and add initial round key:
      */
-    s0 = GETU32(pt     ) ^ rk[0];
+    s0 = GETU32(pt) ^ rk[0];
     s1 = GETU32(pt +  4) ^ rk[1];
     s2 = GETU32(pt +  8) ^ rk[2];
     s3 = GETU32(pt + 12) ^ rk[3];
@@ -852,25 +849,25 @@ void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[])
             Te0[(s0 >> 24)       ] ^
             Te1[(s1 >> 16) & 0xff] ^
             Te2[(s2 >>  8) & 0xff] ^
-            Te3[(s3      ) & 0xff] ^
+            Te3[(s3) & 0xff] ^
             rk[4];
         t1 =
             Te0[(s1 >> 24)       ] ^
             Te1[(s2 >> 16) & 0xff] ^
             Te2[(s3 >>  8) & 0xff] ^
-            Te3[(s0      ) & 0xff] ^
+            Te3[(s0) & 0xff] ^
             rk[5];
         t2 =
             Te0[(s2 >> 24)       ] ^
             Te1[(s3 >> 16) & 0xff] ^
             Te2[(s0 >>  8) & 0xff] ^
-            Te3[(s1      ) & 0xff] ^
+            Te3[(s1) & 0xff] ^
             rk[6];
         t3 =
             Te0[(s3 >> 24)       ] ^
             Te1[(s0 >> 16) & 0xff] ^
             Te2[(s1 >>  8) & 0xff] ^
-            Te3[(s2      ) & 0xff] ^
+            Te3[(s2) & 0xff] ^
             rk[7];
 
         rk += 8;
@@ -882,25 +879,25 @@ void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[])
             Te0[(t0 >> 24)       ] ^
             Te1[(t1 >> 16) & 0xff] ^
             Te2[(t2 >>  8) & 0xff] ^
-            Te3[(t3      ) & 0xff] ^
+            Te3[(t3) & 0xff] ^
             rk[0];
         s1 =
             Te0[(t1 >> 24)       ] ^
             Te1[(t2 >> 16) & 0xff] ^
             Te2[(t3 >>  8) & 0xff] ^
-            Te3[(t0      ) & 0xff] ^
+            Te3[(t0) & 0xff] ^
             rk[1];
         s2 =
             Te0[(t2 >> 24)       ] ^
             Te1[(t3 >> 16) & 0xff] ^
             Te2[(t0 >>  8) & 0xff] ^
-            Te3[(t1      ) & 0xff] ^
+            Te3[(t1) & 0xff] ^
             rk[2];
         s3 =
             Te0[(t3 >> 24)       ] ^
             Te1[(t0 >> 16) & 0xff] ^
             Te2[(t1 >>  8) & 0xff] ^
-            Te3[(t2      ) & 0xff] ^
+            Te3[(t2) & 0xff] ^
             rk[3];
     }
     /*
@@ -911,28 +908,28 @@ void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[])
         (Te4[(t0 >> 24)       ] & 0xff000000) ^
         (Te4[(t1 >> 16) & 0xff] & 0x00ff0000) ^
         (Te4[(t2 >>  8) & 0xff] & 0x0000ff00) ^
-        (Te4[(t3      ) & 0xff] & 0x000000ff) ^
+        (Te4[(t3) & 0xff] & 0x000000ff) ^
         rk[0];
-    PUTU32(ct     , s0);
+    PUTU32(ct, s0);
     s1 =
         (Te4[(t1 >> 24)       ] & 0xff000000) ^
         (Te4[(t2 >> 16) & 0xff] & 0x00ff0000) ^
         (Te4[(t3 >>  8) & 0xff] & 0x0000ff00) ^
-        (Te4[(t0      ) & 0xff] & 0x000000ff) ^
+        (Te4[(t0) & 0xff] & 0x000000ff) ^
         rk[1];
     PUTU32(ct +  4, s1);
     s2 =
         (Te4[(t2 >> 24)       ] & 0xff000000) ^
         (Te4[(t3 >> 16) & 0xff] & 0x00ff0000) ^
         (Te4[(t0 >>  8) & 0xff] & 0x0000ff00) ^
-        (Te4[(t1      ) & 0xff] & 0x000000ff) ^
+        (Te4[(t1) & 0xff] & 0x000000ff) ^
         rk[2];
     PUTU32(ct +  8, s2);
     s3 =
         (Te4[(t3 >> 24)       ] & 0xff000000) ^
         (Te4[(t0 >> 16) & 0xff] & 0x00ff0000) ^
         (Te4[(t1 >>  8) & 0xff] & 0x0000ff00) ^
-        (Te4[(t2      ) & 0xff] & 0x000000ff) ^
+        (Te4[(t2) & 0xff] & 0x000000ff) ^
         rk[3];
     PUTU32(ct + 12, s3);
 
@@ -947,8 +944,7 @@ void AesEncBlk(AesCtx *pCtx, const unsigned char pt[], unsigned char ct[])
 /*
 * Decrypt the cipher into plain text
 */
-void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[])
-{
+void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[]) {
     unsigned int s0, s1, s2, s3, t0, t1, t2, t3, v0, v1, v2, v3, *iv;
     const unsigned int *rk;
     int r;
@@ -959,10 +955,14 @@ void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[])
      * map byte array block to cipher state
      * and add initial round key:
      */
-    v0 = GETU32(ct     );    s0 = v0 ^ rk[0];
-    v1 = GETU32(ct +  4);    s1 = v1 ^ rk[1];
-    v2 = GETU32(ct +  8);    s2 = v2 ^ rk[2];
-    v3 = GETU32(ct + 12);    s3 = v3 ^ rk[3];
+    v0 = GETU32(ct);
+    s0 = v0 ^ rk[0];
+    v1 = GETU32(ct +  4);
+    s1 = v1 ^ rk[1];
+    v2 = GETU32(ct +  8);
+    s2 = v2 ^ rk[2];
+    v3 = GETU32(ct + 12);
+    s3 = v3 ^ rk[3];
     /*
      * Nr - 1 full rounds:
      */
@@ -972,25 +972,25 @@ void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[])
             Td0[(s0 >> 24)       ] ^
             Td1[(s3 >> 16) & 0xff] ^
             Td2[(s2 >>  8) & 0xff] ^
-            Td3[(s1      ) & 0xff] ^
+            Td3[(s1) & 0xff] ^
             rk[4];
         t1 =
             Td0[(s1 >> 24)       ] ^
             Td1[(s0 >> 16) & 0xff] ^
             Td2[(s3 >>  8) & 0xff] ^
-            Td3[(s2      ) & 0xff] ^
+            Td3[(s2) & 0xff] ^
             rk[5];
         t2 =
             Td0[(s2 >> 24)       ] ^
             Td1[(s1 >> 16) & 0xff] ^
             Td2[(s0 >>  8) & 0xff] ^
-            Td3[(s3      ) & 0xff] ^
+            Td3[(s3) & 0xff] ^
             rk[6];
         t3 =
             Td0[(s3 >> 24)       ] ^
             Td1[(s2 >> 16) & 0xff] ^
             Td2[(s1 >>  8) & 0xff] ^
-            Td3[(s0      ) & 0xff] ^
+            Td3[(s0) & 0xff] ^
             rk[7];
 
         rk += 8;
@@ -1002,25 +1002,25 @@ void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[])
             Td0[(t0 >> 24)       ] ^
             Td1[(t3 >> 16) & 0xff] ^
             Td2[(t2 >>  8) & 0xff] ^
-            Td3[(t1      ) & 0xff] ^
+            Td3[(t1) & 0xff] ^
             rk[0];
         s1 =
             Td0[(t1 >> 24)       ] ^
             Td1[(t0 >> 16) & 0xff] ^
             Td2[(t3 >>  8) & 0xff] ^
-            Td3[(t2      ) & 0xff] ^
+            Td3[(t2) & 0xff] ^
             rk[1];
         s2 =
             Td0[(t2 >> 24)       ] ^
             Td1[(t1 >> 16) & 0xff] ^
             Td2[(t0 >>  8) & 0xff] ^
-            Td3[(t3      ) & 0xff] ^
+            Td3[(t3) & 0xff] ^
             rk[2];
         s3 =
             Td0[(t3 >> 24)       ] ^
             Td1[(t2 >> 16) & 0xff] ^
             Td2[(t1 >>  8) & 0xff] ^
-            Td3[(t0      ) & 0xff] ^
+            Td3[(t0) & 0xff] ^
             rk[3];
     }
     /*
@@ -1031,35 +1031,39 @@ void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[])
         (Td4[(t0 >> 24)       ] & 0xff000000) ^
         (Td4[(t3 >> 16) & 0xff] & 0x00ff0000) ^
         (Td4[(t2 >>  8) & 0xff] & 0x0000ff00) ^
-        (Td4[(t1      ) & 0xff] & 0x000000ff) ^
+        (Td4[(t1) & 0xff] & 0x000000ff) ^
         rk[0];
     s1 =
         (Td4[(t1 >> 24)       ] & 0xff000000) ^
         (Td4[(t0 >> 16) & 0xff] & 0x00ff0000) ^
         (Td4[(t3 >>  8) & 0xff] & 0x0000ff00) ^
-        (Td4[(t2      ) & 0xff] & 0x000000ff) ^
+        (Td4[(t2) & 0xff] & 0x000000ff) ^
         rk[1];
     s2 =
         (Td4[(t2 >> 24)       ] & 0xff000000) ^
         (Td4[(t1 >> 16) & 0xff] & 0x00ff0000) ^
         (Td4[(t0 >>  8) & 0xff] & 0x0000ff00) ^
-        (Td4[(t3      ) & 0xff] & 0x000000ff) ^
+        (Td4[(t3) & 0xff] & 0x000000ff) ^
         rk[2];
     s3 =
         (Td4[(t3 >> 24)       ] & 0xff000000) ^
         (Td4[(t2 >> 16) & 0xff] & 0x00ff0000) ^
         (Td4[(t1 >>  8) & 0xff] & 0x0000ff00) ^
-        (Td4[(t0      ) & 0xff] & 0x000000ff) ^
+        (Td4[(t0) & 0xff] & 0x000000ff) ^
         rk[3];
 
     if (pCtx->Mode) {
-        s0 = s0 ^ iv[0];    iv[0] = v0;
-        s1 = s1 ^ iv[1];    iv[1] = v1;
-        s2 = s2 ^ iv[2];    iv[2] = v2;
-        s3 = s3 ^ iv[3];    iv[3] = v3;
+        s0 = s0 ^ iv[0];
+        iv[0] = v0;
+        s1 = s1 ^ iv[1];
+        iv[1] = v1;
+        s2 = s2 ^ iv[2];
+        iv[2] = v2;
+        s3 = s3 ^ iv[3];
+        iv[3] = v3;
     }
 
-    PUTU32(pt     , s0);
+    PUTU32(pt, s0);
     PUTU32(pt +  4, s1);
     PUTU32(pt +  8, s2);
     PUTU32(pt + 12, s3);
@@ -1072,8 +1076,7 @@ void AesDecBlk(AesCtx *pCtx, const unsigned char ct[], unsigned char pt[])
 /*
 * initialize AES context
 */
-int AesCtxIni(AesCtx *pCtx, unsigned char *pIV, unsigned char *pKey, unsigned int KeyLen, unsigned char Mode)
-{
+int AesCtxIni(AesCtx *pCtx, unsigned char *pIV, unsigned char *pKey, unsigned int KeyLen, unsigned char Mode) {
     if (pKey == 0 || pCtx == 0 || (KeyLen != KEY128 && KeyLen != KEY192 && KeyLen != KEY256))
         return -1;
 
@@ -1082,9 +1085,9 @@ int AesCtxIni(AesCtx *pCtx, unsigned char *pIV, unsigned char *pKey, unsigned in
 
     // initialize IV
     if (pIV != 0) {
-        pCtx->Iv[0] = GETU32(pIV     );
-        pCtx->Iv[1] = GETU32(pIV + 4 );
-        pCtx->Iv[2] = GETU32(pIV + 8 );
+        pCtx->Iv[0] = GETU32(pIV);
+        pCtx->Iv[1] = GETU32(pIV + 4);
+        pCtx->Iv[2] = GETU32(pIV + 8);
         pCtx->Iv[3] = GETU32(pIV + 12);
     }
 
@@ -1097,8 +1100,7 @@ int AesCtxIni(AesCtx *pCtx, unsigned char *pIV, unsigned char *pKey, unsigned in
 /*
 * Encrypt plain text
 */
-int AesEncrypt(AesCtx *pCtx, unsigned char *pData, unsigned char *pCipher, unsigned int DataLen)
-{
+int AesEncrypt(AesCtx *pCtx, unsigned char *pData, unsigned char *pCipher, unsigned int DataLen) {
     int i;
 
     if (pData == 0 || pCipher == 0 || pCtx == 0 || (DataLen & 0xf) != 0)
@@ -1116,8 +1118,7 @@ int AesEncrypt(AesCtx *pCtx, unsigned char *pData, unsigned char *pCipher, unsig
 /*
 * Decrypt cipher
 */
-int AesDecrypt(AesCtx *pCtx, unsigned char *pCipher, unsigned char *pData, unsigned int CipherLen)
-{
+int AesDecrypt(AesCtx *pCtx, unsigned char *pCipher, unsigned char *pData, unsigned int CipherLen) {
     int i;
 
     if (pData == 0 || pCipher == 0 || pCtx == 0 || (CipherLen & 0xf) != 0)
@@ -1140,8 +1141,7 @@ int AesDecrypt(AesCtx *pCtx, unsigned char *pCipher, unsigned char *pData, unsig
 
 #include <stdio.h>
 
-int main()
-{
+int main() {
     AesCtx ctx;
     unsigned char iv[] = "INI VECTINI VECT";
     unsigned char key[] = "This is a sample AESKey";
@@ -1149,18 +1149,18 @@ int main()
 
     // initialize context and encrypt data at one end
 
-    if( AesCtxIni(&ctx, iv, key, KEY128, CBC) < 0)
+    if (AesCtxIni(&ctx, iv, key, KEY128, CBC) < 0)
         printf("init error\n");
 
-    if (AesEncrypt(&ctx, databuf, databuf, sizeof(databuf) ) < 0)
+    if (AesEncrypt(&ctx, databuf, databuf, sizeof(databuf)) < 0)
         printf("error in encryption\n");
 
     // initialize context and decrypt cipher at other end
 
-    if( AesCtxIni(&ctx, iv, key, KEY128, CBC) < 0)
+    if (AesCtxIni(&ctx, iv, key, KEY128, CBC) < 0)
         printf("init error\n");
 
-    if (AesDecrypt(&ctx, databuf, databuf, sizeof(databuf) ) < 0)
+    if (AesDecrypt(&ctx, databuf, databuf, sizeof(databuf)) < 0)
         printf("error in decryption\n");
 
     printf("%s\n", databuf);

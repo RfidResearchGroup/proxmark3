@@ -6,10 +6,6 @@
 // StandAlone Mod
 //-----------------------------------------------------------------------------
 
-#ifndef FALSE
-#define FALSE 0
-#endif
-
 #ifndef __HF_BOG_H
 #define __HF_BOG_H
 
@@ -24,8 +20,7 @@
 #include <string.h>
 #include "apps.h"
 #include "printf.h"
-
 #include "parity.h"
-#include "random.h"
+
 
 #endif /* __HF_BOG_H */

@@ -22,15 +22,10 @@
 #include "protocols.h"  // for T55xx config register definitions
 #include "lfdemod.h"    // preamble test
 
-extern int CmdLFKeri(const char *Cmd);
-extern int CmdKeriRead(const char *Cmd);
-extern int CmdKeriDemod(const char *Cmd);
-extern int CmdKeriClone(const char *Cmd);
-extern int CmdKeriSim(const char *Cmd);
+int CmdLFKeri(const char *Cmd);
 
-extern int detectKeri(uint8_t *dest, size_t *size, bool *invert);
+int demodKeri(void);
+int detectKeri(uint8_t *dest, size_t *size, bool *invert);
 
-extern int usage_lf_keri_clone(void);
-extern int usage_lf_keri_sim(void);
 #endif
 

@@ -22,12 +22,8 @@
 #include "lfdemod.h"    // parityTest
 #include "crc.h"
 
-extern int CmdLFGuard(const char *Cmd);
-extern int CmdGuardDemod(const char *Cmd);
-extern int CmdGuardRead(const char *Cmd);
-extern int CmdGuardClone(const char *Cmd);
-extern int CmdGuardSim(const char *Cmd);
-
-extern int usage_lf_guard_clone(void);
-extern int usage_lf_quard_sim(void);
+int CmdLFGuard(const char *Cmd);
+int detectGProxII(uint8_t *bits, size_t *size);
+int demodGuard(void);
+int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits);
 #endif

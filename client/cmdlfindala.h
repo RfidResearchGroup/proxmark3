@@ -21,21 +21,14 @@
 #include "protocols.h"  // for T55xx config register definitions
 #include "cmdmain.h"
 #include "cmddata.h"
-#include "cmdlf.h"		// lf_read
+#include "cmdlf.h"      // lf_read
 
-extern int CmdLFINDALA(const char *Cmd);
+int CmdLFINDALA(const char *Cmd);
 
-extern int CmdIndalaDemod(const char *Cmd);
-extern int CmdIndalaDemodAlt(const char *Cmd);
-extern int CmdIndalaRead(const char *Cmd);
-extern int CmdIndalaClone(const char *Cmd);
-extern int CmdIndalaSim(const char *Cmd);
+int detectIndala(uint8_t *dest, size_t *size, uint8_t *invert);
+int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
+int detectIndala64(uint8_t *bitStream, size_t *size, uint8_t *invert);
+int detectIndala224(uint8_t *bitStream, size_t *size, uint8_t *invert);
+int demodIndala(void);
 
-extern int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
-extern int indala64decode(uint8_t *bitStream, size_t *size, uint8_t *invert);
-extern int indala224decode(uint8_t *bitStream, size_t *size, uint8_t *invert);
-
-extern int usage_lf_indala_demod(void);
-extern int usage_lf_indala_clone(void);
-extern int usage_lf_indala_sim(void);
 #endif

@@ -18,7 +18,7 @@ int strlen(const char *str);
 void *memcpy(void *dest, const void *src, int len);
 void *memset(void *dest, int c, int len);
 int memcmp(const void *av, const void *bv, int len);
-void memxor(uint8_t * dest, uint8_t * src, size_t len);
+void memxor(uint8_t *dest, uint8_t *src, size_t len);
 char *strncat(char *dest, const char *src, unsigned int n);
 char *strcat(char *dest, const char *src);
 void strreverse(char s[]);

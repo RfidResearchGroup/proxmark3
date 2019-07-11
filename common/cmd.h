@@ -34,12 +34,50 @@
 #define _PROXMARK_CMD_H_
 
 #include "common.h"
-#include "usb_cmd.h"
+#include "pm3_cmd.h"
 #include "usb_cdc.h"
 #include "usart.h"
 #include "proxmark3.h"
 
-uint8_t cmd_send(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void* data, size_t len);
+int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+int reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len);
+int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+int receive_ng(PacketCommandNG *rx);
+
+// Flags to tell where to add CRC on sent replies
+extern bool reply_with_crc_on_usb;
+extern bool reply_with_crc_on_fpc;
+// "Session" flag, to tell via which interface next msgs should be sent: USB and/or FPC USART
+extern bool reply_via_fpc;
+extern bool reply_via_usb;
+
+extern void Dbprintf(const char *fmt, ...);
+#define Dbprintf_usb(...) {\
+        bool tmpfpc = reply_via_fpc;\
+        bool tmpusb = reply_via_usb;\
+        reply_via_fpc = false;\
+        reply_via_usb = true;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = tmpfpc;\
+        reply_via_usb = tmpusb;}
+
+#define Dbprintf_fpc(...) {\
+        bool tmpfpc = reply_via_fpc;\
+        bool tmpusb = reply_via_usb;\
+        reply_via_fpc = true;\
+        reply_via_usb = false;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = tmpfpc;\
+        reply_via_usb = tmpusb;}
+
+#define Dbprintf_all(...) {\
+        bool tmpfpc = reply_via_fpc;\
+        bool tmpusb = reply_via_usb;\
+        reply_via_fpc = true;\
+        reply_via_usb = true;\
+        Dbprintf(__VA_ARGS__);\
+        reply_via_fpc = tmpfpc;\
+        reply_via_usb = tmpusb;}
 
 #endif // _PROXMARK_CMD_H_
 

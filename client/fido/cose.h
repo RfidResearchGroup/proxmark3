@@ -16,12 +16,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <cbor.h>
+#include "util.h"
 
-extern const char *GetCOSEAlgName(int id);
-extern const char *GetCOSEAlgDescription(int id);
-extern const char *GetCOSEktyDescription(int id);
-extern const char *GetCOSECurveDescription(int id);
+const char *GetCOSEAlgName(int id);
+const char *GetCOSEAlgDescription(int id);
+const char *GetCOSEktyDescription(int id);
+const char *GetCOSECurveDescription(int id);
 
-extern int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public_key);
+int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public_key);
 
 #endif /* __COSE_H__ */

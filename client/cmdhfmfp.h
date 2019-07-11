@@ -10,9 +10,9 @@
 #ifndef CMDHFMFP_H__
 #define CMDHFMFP_H__
 
-#include "mifaredefault.h"
+#include "mifare/mifaredefault.h"
 
-extern int CmdHFMFP(const char *Cmd);
+int CmdHFMFP(const char *Cmd);
 
 
 #endif
