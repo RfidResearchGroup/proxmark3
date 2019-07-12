@@ -32,8 +32,7 @@ typedef struct {
 const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2);
 const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
 
-typedef struct
-{
+typedef struct {
     uint8_t cla;
     uint8_t ins;
     uint8_t p1;
@@ -41,8 +40,7 @@ typedef struct
     uint8_t lc[3];
 } __attribute__((packed)) ExtAPDUHeader;
 
-typedef struct
-{
+typedef struct {
     uint8_t cla;
     uint8_t ins;
     uint8_t p1;
