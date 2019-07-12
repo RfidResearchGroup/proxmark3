@@ -44,6 +44,12 @@ git clone https://github.com/RfidResearchGroup/proxmark3.git
 cd proxmark3
 ```
 
+If you're a contributing developer, you probably want to be able to use `make style`. If so, you've to install astyle:
+
+```sh
+pacman -S mingw-w64-x86_64-astyle
+```
+
 ## Compile and use the project
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
@@ -89,7 +95,7 @@ Step by step guides are online such as [RiscCorps](https://store.ryscc.com/blogs
 
 ## X Server Installation
 
-If you want to run the graphical components of the Proxmark3 client, you need to install a X Server such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](https://sourceforge.net/projects/xming/).
+If you want to run the graphical components of the Proxmark3 client, you need to install a X Server such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](https://sourceforge.net/projects/xming/) and launch it, e.g. by executing XLaunch.
 
 ## Dependencies
 
