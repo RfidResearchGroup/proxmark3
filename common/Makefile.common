@@ -63,7 +63,7 @@ DETECTED_OS=Windows
 endif
 
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
-VPATH = . ../common ../common/crapto1 ../common/polarssl ../fpga ../zlib ../armsrc/Standalone ../uart
+VPATH = . ../common ../common/crapto1 ../common/mbedtls ../fpga ../zlib ../armsrc/Standalone ../uart
 
 INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h $(APP_INCLUDES)
 
