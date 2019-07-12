@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add documentation for usage of Proxmark3 under WSL (@doegox)
  - Change: replace ukbhit by kbd_enter_pressed, not requiring tcgetattr (@xianglin1998/@doegox)
  - Add config for RaspberryPi in JTAG tools (@doegox)
  - Add config for FTDI C232HM-DDHSL-0 in JTAG tools (@doegox)
