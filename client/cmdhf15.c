@@ -1348,7 +1348,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     data[3][5] = uid[1];
     data[3][6] = uid[0];
 
-    for (int i=0; i<4; i++) {
+    for (int i = 0; i < 4; i++) {
         AddCrc15(data[i], 7);
 
         clearCommandBuffer();

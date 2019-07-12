@@ -606,8 +606,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                 if (receivedCmd_len == 9 && receivedCmd[1] == 0x70) {
                     if (memcmp(&receivedCmd[2], responses[uid_index].response, 4) == 0) {
                         bool cl_finished = (uid_len == 4  && uid_index == UIDBCC1) ||
-                                        (uid_len == 7  && uid_index == UIDBCC2) ||
-                                        (uid_len == 10 && uid_index == UIDBCC3);
+                                           (uid_len == 7  && uid_index == UIDBCC2) ||
+                                           (uid_len == 10 && uid_index == UIDBCC3);
                         EmSendPrecompiledCmd(&responses[cl_finished ? SAK : SAKuid]);
                         if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("SELECT CLx %02x%02x%02x%02x received", receivedCmd[2], receivedCmd[3], receivedCmd[4], receivedCmd[5]);
                         if (cl_finished) {

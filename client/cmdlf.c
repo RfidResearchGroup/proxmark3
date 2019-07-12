@@ -957,7 +957,7 @@ static bool CheckChipType(bool getDeviceData) {
         retval = true;
         goto out;
     }
-        
+
     //check for t55xx chip...
     if (tryDetectP1(true)) {
         PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("T55xx") "found");
@@ -1084,8 +1084,8 @@ int CmdLFfind(const char *Cmd) {
     }
 out:
     // identify chipset
-    if ( CheckChipType(isOnline) == false ) {
-        PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed") );
+    if (CheckChipType(isOnline) == false) {
+        PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
     }
     return PM3_SUCCESS;
 }

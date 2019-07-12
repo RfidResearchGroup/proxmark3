@@ -347,9 +347,9 @@ void SendVersion(void) {
     strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
 #if defined(__clang__)
-        strncat(VersionString, "  compiled with Clang/LLVM "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, "  compiled with Clang/LLVM "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 #elif defined(__GNUC__) || defined(__GNUG__)
-        strncat(VersionString, "  compiled with GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
+    strncat(VersionString, "  compiled with GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 #endif
 
     strncat(VersionString, "\n [ FPGA ]\n ", sizeof(VersionString) - strlen(VersionString) - 1);

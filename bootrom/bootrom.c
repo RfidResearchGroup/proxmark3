@@ -122,7 +122,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
     switch (c->cmd) {
         case CMD_DEVICE_INFO: {
             dont_ack = 1;
-            arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | 
+            arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT |
                    DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
                    DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH |
                    DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO;

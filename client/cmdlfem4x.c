@@ -1373,10 +1373,10 @@ static void printEM4x05config(uint32_t wordData) {
     PrintAndLogEx(NORMAL, "    PSK CF:   %u | %s", PSKcf, cf);
     PrintAndLogEx(NORMAL, "     Delay:   %u | %s", delay, cdelay);
     PrintAndLogEx(NORMAL, " LastWordR:  %02u | Address of last word for default read - meaning %u blocks are output", LWR, numblks);
-    PrintAndLogEx(NORMAL, " ReadLogin:   %u | Read login is %s", readLogin, readLogin ? _YELLOW_("required") :  _GREEN_("not required") );
-    PrintAndLogEx(NORMAL, "   ReadHKL:   %u | Read housekeeping words login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required") );
-    PrintAndLogEx(NORMAL, "WriteLogin:   %u | Write login is %s", writeLogin, writeLogin ? _YELLOW_("required") :  _GREEN_("not required") );
-    PrintAndLogEx(NORMAL, "  WriteHKL:   %u | Write housekeeping words login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required") );
+    PrintAndLogEx(NORMAL, " ReadLogin:   %u | Read login is %s", readLogin, readLogin ? _YELLOW_("required") :  _GREEN_("not required"));
+    PrintAndLogEx(NORMAL, "   ReadHKL:   %u | Read housekeeping words login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required"));
+    PrintAndLogEx(NORMAL, "WriteLogin:   %u | Write login is %s", writeLogin, writeLogin ? _YELLOW_("required") :  _GREEN_("not required"));
+    PrintAndLogEx(NORMAL, "  WriteHKL:   %u | Write housekeeping words login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required"));
     PrintAndLogEx(NORMAL, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
     PrintAndLogEx(NORMAL, "   Disable:   %u | Disable command is %s", disable, disable ? "accepted" : "not accepted");
     PrintAndLogEx(NORMAL, "    R.T.F.:   %u | Reader talk first is %s", rtf, rtf ? _YELLOW_("enabled") : "disabled");
@@ -1396,7 +1396,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4305");
             break;
         case 8:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");        
+            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");
             break;
         case 4:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "Unknown");

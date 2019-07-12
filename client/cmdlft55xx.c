@@ -2153,7 +2153,7 @@ bool tryDetectP1(bool getData) {
         }
         return false;
     }
-    
+
     // try ask clock detect.  it could be another type even if successful.
     clk = GetAskClock("", false);
     if (clk > 0) {
@@ -2162,14 +2162,14 @@ bool tryDetectP1(bool getData) {
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
-       
+
         st = true;
         if ((ASKDemod_ext("0 1 1", false, false, 1, &st) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
             return true;
         }
-        
+
         if ((ASKbiphaseDemod("0 0 0 2", false) == PM3_SUCCESS) &&
                 preambleSearchEx(DemodBuffer, preamble, sizeof(preamble), &DemodBufferLen, &startIdx, false) &&
                 (DemodBufferLen == 32 || DemodBufferLen == 64)) {
@@ -2182,7 +2182,7 @@ bool tryDetectP1(bool getData) {
             return true;
         }
     }
-    
+
     // try NRZ clock detect.  it could be another type even if successful.
     clk = GetNrzClock("", false); //has the most false positives :(
     if (clk > 0) {

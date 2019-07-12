@@ -347,7 +347,7 @@ static int wait_for_ack(PacketResponseNG *ack) {
 }
 
 // Go into flashing mode
-int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t * chipinfo) {
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t *chipinfo) {
     uint32_t state;
 
     if (enter_bootloader(serial_port_name) < 0)
