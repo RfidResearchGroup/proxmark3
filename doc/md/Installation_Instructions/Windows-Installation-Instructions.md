@@ -116,13 +116,18 @@ Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmar
 
 To use the compiled client and flasher, the only difference is that the Proxmark3 port is translated from your `comX` port where "X" is the com port number assigned to proxmark3 under Windows, to a `/dev/ttySX`.
 
-You will need to give permission to the current user to access `/dev/ttySX`: (change X to your port number)
+Depending on the Windows version, you might need to give permission to the current user to access `/dev/ttySX`: (change X to your port number)
+
+```sh
+ls -al /dev/ttySX
+groups|grep dialout
+```
+
+If group ownership is `dialout` and your user is member of `dialout` group, all is fine. Else you'll have to provide access to `/dev/ttySX`: (Unfortunately the access rights of the port won't survive and will have to be fixed again next time.)
 
 ```sh
 sudo chmod 666 /dev/ttySX
 ```
-
-Unfortunately the access rights of the port won't survive and will have to be fixed again next time.
 
 If you installed a X Server and compiled the Proxmark3 with QT4 support, you've to export the `DISPLAY` environment variable:
 
@@ -136,14 +141,27 @@ and add it to your Bash profile for the next times:
 echo "export DISPLAY=:0" >> ~/.bashrc
 ```
 
-To flash, you've to call the flasher manually and specify the correct port:
+To flash: In principle, the helper script `flash-all.sh` should auto-detect your COMX==/dev/ttySX port, so you can just try:
+
+```sh
+./flash-all.sh
+```
+
+If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
 client/flasher /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
-Similarly, to run the client:
+Similarly, to run the client, you may try:
+
+```sh
+./proxmark3.sh
+```
+
+Or, by specifying the COM port manually:
 
 ```sh
 client/proxmark3 /dev/ttySX
 ```
+

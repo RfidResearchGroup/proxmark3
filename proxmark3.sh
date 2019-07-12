@@ -11,7 +11,6 @@ function wait4proxmark_Linux {
         sleep .1
     done
     local PM3=`ls -1 /dev/pm3-? /dev/ttyACM? 2>/dev/null | head -1`
-    echo >&2 -e "Found proxmark on ${PM3}\n"
     echo $PM3
 }
 
@@ -41,6 +40,20 @@ function wait4proxmark_Windows {
     echo $PM3
 }
 
+function wait4proxmark_WSL {
+    echo >&2 "Waiting for Proxmark to appear..."
+    while true; do
+        device=$(wmic.exe path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
+        if [[ $device != "" ]]; then
+            PM3=${device/ */}
+            PM3="/dev/ttyS${PM3#COM}"
+            break
+        fi
+        sleep .1
+    done
+    echo $PM3
+}
+
 SCRIPT=$(basename -- "$0")
 
 if [ "$SCRIPT" = "proxmark3.sh" ]; then
@@ -61,7 +74,11 @@ else
 fi
 HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
-    PORT=$(wait4proxmark_Linux)
+    if uname -a|grep -q Microsoft; then
+        PORT=$(wait4proxmark_WSL)
+    else
+        PORT=$(wait4proxmark_Linux)
+    fi
 elif [ "$HOSTOS" = "DARWIN" ]; then
     PORT=$(wait4proxmark_macOS)
 elif [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
