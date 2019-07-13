@@ -24,7 +24,7 @@
 #include "emv_pk.h"
 #include "crypto.h"
 #include "proxmark3.h"
-
+#include "util.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
@@ -398,7 +398,7 @@ static struct emv_pk *emv_pk_get_ca_pk_from_file(const char *fname,
 
     FILE *f = fopen(fname, "r");
     if (!f) {
-        perror("fopen");
+        PrintAndLogEx(ERR, "Error: can't open file %s.", fname);
         return NULL;
     }
 

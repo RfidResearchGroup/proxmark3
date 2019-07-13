@@ -192,7 +192,6 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
     fd = fopen(name, "rb");
     if (!fd) {
         PrintAndLogEx(ERR, _RED_("Could not open file") "%s  >>> ", name);
-        perror(NULL);
         goto fail;
     }
 
