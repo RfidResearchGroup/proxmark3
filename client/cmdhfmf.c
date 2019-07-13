@@ -1959,6 +1959,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
     // fast push mode
     conn.block_after_ACK = true;
 
+    // clear trace log by first check keys call only
+    bool clearLog = true;
     // check keys.
     for (trgKeyType = (keyType == 2) ? 0 : keyType; trgKeyType < 2; (keyType == 2) ? (++trgKeyType) : (trgKeyType = 2)) {
 
@@ -1979,11 +1981,13 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 uint16_t size = keycnt - c > max_keys ? max_keys : keycnt - c;
 
-                if (mfCheckKeys(b, trgKeyType, true, size, &keyBlock[6 * c], &key64) == PM3_SUCCESS) {
+                if (mfCheckKeys(b, trgKeyType, clearLog, size, &keyBlock[6 * c], &key64) == PM3_SUCCESS) {
                     e_sector[i].Key[trgKeyType] = key64;
                     e_sector[i].foundKey[trgKeyType] = true;
+                    clearLog = false;
                     break;
                 }
+                clearLog = false;
             }
             b < 127 ? (b += 4) : (b += 16);
         }
