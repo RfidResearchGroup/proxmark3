@@ -914,7 +914,7 @@ int detect_classic_prng(void) {
 
     // if select tag failed.
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(WARNING, "error:  selecting tag failed,  can't detect prng\n");
+        PrintAndLogEx(ERR, "error:  selecting tag failed,  can't detect prng\n");
         return PM3_ERFTRANS;
     }
     if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
@@ -924,7 +924,7 @@ int detect_classic_prng(void) {
 
     // check respA
     if (respA.oldarg[0] != 4) {
-        PrintAndLogEx(WARNING, "PRNG data error: Wrong length: %d", respA.oldarg[0]);
+        PrintAndLogEx(ERR, "PRNG data error: Wrong length: %d", respA.oldarg[0]);
         return PM3_ESOFT;
     }
 
@@ -996,7 +996,7 @@ int detect_classic_nackbug(bool verbose) {
                     PrintAndLogEx(SUCCESS, "No NACK bug detected");
                     return PM3_SUCCESS;
                 default :
-                    PrintAndLogEx(WARNING, "errorcode from device [%i]", ok);
+                    PrintAndLogEx(ERR, "errorcode from device [%i]", ok);
                     return PM3_EUNDEF;
             }
             break;

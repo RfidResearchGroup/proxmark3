@@ -351,7 +351,7 @@ static int CmdHFFidoRegister(const char *cmd) {
             if (res == -0x4e00) {
                 PrintAndLogEx(WARNING, "Signature is NOT VALID.");
             } else {
-                PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
+                PrintAndLogEx(ERR, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }
         } else {
             PrintAndLogEx(SUCCESS, "Signature is OK.");
@@ -577,7 +577,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
                 if (res == -0x4e00) {
                     PrintAndLogEx(WARNING, "Signature is NOT VALID.");
                 } else {
-                    PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
+                    PrintAndLogEx(ERR, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
                 }
             } else {
                 PrintAndLogEx(SUCCESS, "Signature is OK.");

@@ -142,7 +142,7 @@ static int CmdNoralsyClone(const char *Cmd) {
         blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
     if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
@@ -172,7 +172,7 @@ static int CmdNoralsyClone(const char *Cmd) {
 
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
     }
@@ -195,7 +195,7 @@ static int CmdNoralsySim(const char *Cmd) {
     year = param_get32ex(Cmd, 1, 2000, 10);
 
     if (getnoralsyBits(id, year, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 

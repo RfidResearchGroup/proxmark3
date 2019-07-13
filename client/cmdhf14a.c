@@ -798,7 +798,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
             vActivateField = false;
             if (*dataoutlen) {
                 if (clen != datainlen)
-                    PrintAndLogEx(WARNING, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
+                    PrintAndLogEx(ERR, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
                 break;
             }
         } while (clen < datainlen);

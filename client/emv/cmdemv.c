@@ -931,7 +931,7 @@ static int CmdEMVExec(const char *Cmd) {
 
     while (AFL && AFL->len) {
         if (AFL->len % 4) {
-            PrintAndLogEx(WARNING, "Error: Wrong AFL length: %d", AFL->len);
+            PrintAndLogEx(ERR, "Error: Wrong AFL length: %d", AFL->len);
             break;
         }
 
@@ -952,7 +952,7 @@ static int CmdEMVExec(const char *Cmd) {
 
                 res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
                 if (res) {
-                    PrintAndLogEx(WARNING, "Error SFI[%02x]. APDU error %4x", SFI, sw);
+                    PrintAndLogEx(ERR, "Error SFI[%02x]. APDU error %4x", SFI, sw);
                     continue;
                 }
 
@@ -972,7 +972,7 @@ static int CmdEMVExec(const char *Cmd) {
                             memcpy(&ODAiList[ODAiListLen], &buf[len - elmlen], elmlen);
                             ODAiListLen += elmlen;
                         } else {
-                            PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error.", SFI);
+                            PrintAndLogEx(ERR, "Error SFI[%02x]. Creating input list for Offline Data Authentication error.", SFI);
                         }
                     } else {
                         memcpy(&ODAiList[ODAiListLen], buf, len);
@@ -1051,7 +1051,7 @@ static int CmdEMVExec(const char *Cmd) {
                 }
 
             } else {
-                PrintAndLogEx(WARNING, "Error AC: Application Transaction Counter (ATC) not found.");
+                PrintAndLogEx(ERR, "Error AC: Application Transaction Counter (ATC) not found.");
             }
         }
     }
@@ -1131,14 +1131,14 @@ static int CmdEMVExec(const char *Cmd) {
                             PrintAndLogEx(NORMAL, "Transaction approved ONLINE.");
                             break;
                         default:
-                            PrintAndLogEx(WARNING, "Error: CID transaction code error %2x", CID->value[0] & EMVAC_AC_MASK);
+                            PrintAndLogEx(ERR, "Error: CID transaction code error %2x", CID->value[0] & EMVAC_AC_MASK);
                             break;
                     }
                 } else {
-                    PrintAndLogEx(WARNING, "Error: Wrong CID length %d", CID->len);
+                    PrintAndLogEx(ERR, "Error: Wrong CID length %d", CID->len);
                 }
             } else {
-                PrintAndLogEx(WARNING, "Error: CID(9F27) not found.");
+                PrintAndLogEx(ERR, "Error: CID(9F27) not found.");
             }
 
         }

@@ -482,12 +482,12 @@ static int CmdEM410xBrute(const char *Cmd) {
 
     int filelen = param_getstr(Cmd, 0, filename, FILE_PATH_SIZE);
     if (filelen == 0) {
-        PrintAndLogEx(WARNING, "Error: Please specify a filename");
+        PrintAndLogEx(ERR, "Error: Please specify a filename");
         return PM3_EINVARG;
     }
 
     if ((f = fopen(filename, "r")) == NULL) {
-        PrintAndLogEx(WARNING, "Error: Could not open UIDs file ["_YELLOW_("%s")"]", filename);
+        PrintAndLogEx(ERR, "Error: Could not open UIDs file ["_YELLOW_("%s")"]", filename);
         return PM3_EFILE;
     }
 
@@ -613,21 +613,21 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     // Check ID
     if (id == 0xFFFFFFFFFFFFFFFF) {
-        PrintAndLogEx(WARNING, "Error! ID is required.\n");
+        PrintAndLogEx(ERR, "Error! ID is required.\n");
         return PM3_EINVARG;
     }
     if (id >= 0x10000000000) {
-        PrintAndLogEx(WARNING, "Error! Given EM410x ID is longer than 40 bits.\n");
+        PrintAndLogEx(ERR, "Error! Given EM410x ID is longer than 40 bits.\n");
         return PM3_EINVARG;
     }
 
     // Check Card
     if (card == 0xFF) {
-        PrintAndLogEx(WARNING, "Error! Card type required.\n");
+        PrintAndLogEx(ERR, "Error! Card type required.\n");
         return PM3_EINVARG;
     }
     if (card < 0) {
-        PrintAndLogEx(WARNING, "Error! Bad card type selected.\n");
+        PrintAndLogEx(ERR, "Error! Bad card type selected.\n");
         return PM3_EINVARG;
     }
 
@@ -637,7 +637,7 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     // Allowed clock rates: 16, 32, 40 and 64
     if ((clock1 != 16) && (clock1 != 32) && (clock1 != 64) && (clock1 != 40)) {
-        PrintAndLogEx(WARNING, "Error! Clock rate" _YELLOW_("%d")" not valid. Supported clock rates are 16, 32, 40 and 64.\n", clock1);
+        PrintAndLogEx(ERR, "Error! Clock rate" _YELLOW_("%d")" not valid. Supported clock rates are 16, 32, 40 and 64.\n", clock1);
         return PM3_EINVARG;
     }
 
@@ -837,7 +837,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             }
         }
         if (!clk) {
-            if (verbose || g_debugMode) PrintAndLogEx(WARNING, "Error: EM4x50 - didn't find a clock");
+            if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - didn't find a clock");
             return PM3_ESOFT;
         }
     } else tol = clk / 8;
@@ -1262,7 +1262,7 @@ static int CmdEM4x05Write(const char *Cmd) {
     SendCommandNG(CMD_EM4X_WRITE_WORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_EM4X_WRITE_WORD, &resp, 2000)) {
-        PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
+        PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }
 

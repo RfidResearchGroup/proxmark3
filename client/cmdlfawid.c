@@ -103,7 +103,7 @@ static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uin
         PrintAndLogEx(INFO, "Trying FC: %u; CN: %u", fc, cn);
 
     if (getAWIDBits(fmtlen, fc, cn, bits) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
@@ -333,7 +333,7 @@ static int CmdAWIDSim(const char *Cmd) {
     verify_values(&fmtlen, &fc, &cn);
 
     if (getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
@@ -388,7 +388,7 @@ static int CmdAWIDClone(const char *Cmd) {
     verify_values(&fmtlen, &fc, &cn);
 
     if (getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
@@ -419,7 +419,7 @@ static int CmdAWIDClone(const char *Cmd) {
 
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
     }

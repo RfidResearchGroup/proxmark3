@@ -1037,7 +1037,7 @@ static int CmdLegicRestore(const char *Cmd) {
     fclose(f);
 
     if (bytes_read == 0) {
-        PrintAndLogEx(WARNING, "File reading error");
+        PrintAndLogEx(ERR, "File reading error");
         free(data);
         return 2;
     }
@@ -1139,7 +1139,7 @@ static int CmdLegicELoad(const char *Cmd) {
     // load file
     size_t bytes_read = fread(data, 1, numofbytes, f);
     if (bytes_read == 0) {
-        PrintAndLogEx(WARNING, "File reading error");
+        PrintAndLogEx(ERR, "File reading error");
         free(data);
         fclose(f);
         f = NULL;

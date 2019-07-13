@@ -136,7 +136,7 @@ static int CmdFlashMemRead(const char *Cmd) {
         return PM3_EINVARG;
     }
     if (start_index + len > FLASH_MEM_MAX_SIZE) {
-        PrintAndLogDevice(WARNING, "error, start_index + length is larger than available memory");
+        PrintAndLogDevice(ERR, "error, start_index + length is larger than available memory");
         return PM3_EOVFLOW;
     }
 
@@ -258,7 +258,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             }
 
             if (datalen > FLASH_MEM_MAX_SIZE) {
-                PrintAndLogDevice(WARNING, "error, filesize is larger than available memory");
+                PrintAndLogDevice(ERR, "error, filesize is larger than available memory");
                 free(data);
                 return PM3_EOVFLOW;
             }
@@ -354,7 +354,7 @@ static int CmdFlashMemSave(const char *Cmd) {
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
+        PrintAndLogDevice(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
 

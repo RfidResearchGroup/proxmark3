@@ -602,7 +602,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     }
 
     if (high > 7 || low < 0) {
-        PrintAndLogEx(WARNING, "Error: please raw demod the wave first then manchester raw decode");
+        PrintAndLogEx(ERR, "Error: please raw demod the wave first then manchester raw decode");
         return PM3_ESOFT;
     }
 
@@ -611,7 +611,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     uint8_t alignPos = 0;
     errCnt = manrawdecode(bits, &size, invert, &alignPos);
     if (errCnt >= maxErr) {
-        PrintAndLogEx(WARNING, "Too many errors: %u", errCnt);
+        PrintAndLogEx(ERR, "Too many errors: %u", errCnt);
         return PM3_ESOFT;
     }
 
@@ -658,16 +658,16 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 
     errCnt = BiphaseRawDecode(bits, &size, &offset, invert);
     if (errCnt < 0) {
-        PrintAndLogEx(WARNING, "Error during decode:%d", errCnt);
+        PrintAndLogEx(ERR, "Error during decode:%d", errCnt);
         return PM3_ESOFT;
     }
     if (errCnt > maxErr) {
-        PrintAndLogEx(WARNING, "Too many errors attempting to decode: %d", errCnt);
+        PrintAndLogEx(ERR, "Too many errors attempting to decode: %d", errCnt);
         return PM3_ESOFT;
     }
 
     if (errCnt > 0)
-        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as " _YELLOW_("7")" in bit stream): %d", errCnt);
+        PrintAndLogEx(ERR, "# Errors found during Demod (shown as " _YELLOW_("7")" in bit stream): %d", errCnt);
 
     PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - # invert:%d - data:", offset, invert);
     PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 32));
@@ -1290,7 +1290,7 @@ int CmdPSK1rawDemod(const char *Cmd) {
     int ans = PSKDemod(Cmd, true);
     //output
     if (ans != PM3_SUCCESS) {
-        if (g_debugMode) PrintAndLogEx(WARNING, "Error demoding: %d", ans);
+        if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
         return PM3_ESOFT;
     }
     PrintAndLogEx(NORMAL, "PSK1 demoded bitstream:");
@@ -1307,7 +1307,7 @@ static int CmdPSK2rawDemod(const char *Cmd) {
 
     int ans = PSKDemod(Cmd, true);
     if (ans != PM3_SUCCESS) {
-        if (g_debugMode) PrintAndLogEx(WARNING, "Error demoding: %d", ans);
+        if (g_debugMode) PrintAndLogEx(ERR, "Error demoding: %d", ans);
         return PM3_ESOFT;
     }
     psk1TOpsk2(DemodBuffer, DemodBufferLen);

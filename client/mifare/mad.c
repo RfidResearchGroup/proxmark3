@@ -225,7 +225,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
             PrintAndLogEx(NORMAL, "Card publisher sector not present.");
     }
     if (InfoByte == 0x10 || InfoByte >= 0x28)
-        PrintAndLogEx(WARNING, "Info byte error");
+        PrintAndLogEx(ERR, "Info byte error");
 
     PrintAndLogEx(NORMAL, "00 MAD1");
     for (int i = 1; i < 16; i++) {

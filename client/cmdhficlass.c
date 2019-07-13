@@ -550,14 +550,14 @@ static int CmdHFiClassELoad(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogDevice(WARNING, "error, when getting filesize");
+        PrintAndLogDevice(ERR, "error, when getting filesize");
         fclose(f);
         return 1;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
+        PrintAndLogDevice(ERR, "error, cannot allocate memory ");
         fclose(f);
         return 1;
     }
@@ -569,7 +569,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     //Validate
 
     if (bytes_read < fsize) {
-        PrintAndLogDevice(WARNING, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
+        PrintAndLogDevice(ERR, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
         free(dump);
         return 1;
     }
@@ -650,7 +650,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "error, when getting filesize");
+        PrintAndLogEx(ERR, "error, when getting filesize");
         fclose(f);
         return 2;
     }
@@ -665,7 +665,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     size_t bytes_read = fread(decrypted, 1, fsize, f);
     fclose(f);
     if (bytes_read == 0) {
-        PrintAndLogEx(WARNING, "file reading error");
+        PrintAndLogEx(ERR, "file reading error");
         free(decrypted);
         return 3;
     }
@@ -1281,7 +1281,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     fseek(f, startblock * 8, SEEK_SET);
     size_t bytes_read = fread(tag_data, sizeof(iclass_block_t), endblock - startblock + 1, f);
     if (bytes_read == 0) {
-        PrintAndLogEx(WARNING, "file reading error.");
+        PrintAndLogEx(ERR, "file reading error.");
         fclose(f);
         return 2;
     }
@@ -1448,7 +1448,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         errors += testMAC();
         errors += doKeyTests(0);
         errors += testElite();
-        if (errors) PrintAndLogDevice(WARNING, "There were errors!!!");
+        if (errors) PrintAndLogDevice(ERR, "There were errors!!!");
         return errors;
     }
     return PM3_SUCCESS;
@@ -1518,7 +1518,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "Error, when getting filesize");
+        PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
         return 1;
     }
@@ -1676,7 +1676,7 @@ static int loadKeys(char *filename) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "Error, when getting filesize");
+        PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
         return 1;
     }

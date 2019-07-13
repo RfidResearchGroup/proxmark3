@@ -564,7 +564,7 @@ static int CmdHF15Demod(const char *Cmd) {
     }
 
     if (mask != 0x01) {
-        PrintAndLogEx(WARNING, "Error, uneven octet! (discard extra bits!)");
+        PrintAndLogEx(ERR, "Error, uneven octet! (discard extra bits!)");
         PrintAndLogEx(NORMAL, "   mask = %02x", mask);
     }
     PrintAndLogEx(NORMAL, "%d octets", k);
@@ -634,7 +634,7 @@ static int CmdHF15Info(const char *Cmd) {
     recv = resp.data.asBytes;
 
     if (recv[0] & ISO15_RES_ERROR) {
-        PrintAndLogEx(WARNING, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
         return 3;
     }
 
@@ -1069,7 +1069,7 @@ static int CmdHF15Read(const char *Cmd) {
     }
 
     if (recv[0] & ISO15_RES_ERROR) {
-        PrintAndLogEx(WARNING, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
         return 3;
     }
 
@@ -1246,7 +1246,7 @@ static int CmdHF15Restore(const char *Cmd) {
             fclose(f);
             return 0;
         } else if (bytes_read != blocksize) {
-            PrintAndLogEx(WARNING, "File reading error (%s), %u bytes read instead of %u bytes.", filename, bytes_read, blocksize);
+            PrintAndLogEx(ERR, "File reading error (%s), %u bytes read instead of %u bytes.", filename, bytes_read, blocksize);
             fclose(f);
             return 2;
         }

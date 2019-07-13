@@ -765,7 +765,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         bytes_read = fread(keyA[sectorNo], 1, 6, f);
         if (bytes_read != 6) {
-            PrintAndLogEx(WARNING, "File reading error.");
+            PrintAndLogEx(ERR, "File reading error.");
             fclose(f);
             return PM3_EFILE;
         }
@@ -775,7 +775,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         bytes_read = fread(keyB[sectorNo], 1, 6, f);
         if (bytes_read != 6) {
-            PrintAndLogEx(WARNING, "File reading error.");
+            PrintAndLogEx(ERR, "File reading error.");
             fclose(f);
             return PM3_EFILE;
         }
@@ -984,7 +984,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         bytes_read = fread(keyA[sectorNo], 1, 6, fkeys);
         if (bytes_read != 6) {
-            PrintAndLogEx(WARNING, "File reading error  " _YELLOW_("%s"), keyFilename);
+            PrintAndLogEx(ERR, "File reading error  " _YELLOW_("%s"), keyFilename);
             fclose(fkeys);
             return 2;
         }
@@ -993,7 +993,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         bytes_read = fread(keyB[sectorNo], 1, 6, fkeys);
         if (bytes_read != 6) {
-            PrintAndLogEx(WARNING, "File reading error " _YELLOW_("%s"), keyFilename);
+            PrintAndLogEx(ERR, "File reading error " _YELLOW_("%s"), keyFilename);
             fclose(fkeys);
             return 2;
         }
@@ -1021,7 +1021,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             memcpy(data, key, 6);
             bytes_read = fread(bldata, 1, 16, fdump);
             if (bytes_read != 16) {
-                PrintAndLogEx(WARNING, "File reading error " _YELLOW_("%s"), dataFilename);
+                PrintAndLogEx(ERR, "File reading error " _YELLOW_("%s"), dataFilename);
                 fclose(fdump);
                 fdump = NULL;
                 return 2;
@@ -1129,7 +1129,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
         switch (isOK) {
             case -1 :
-                PrintAndLogEx(WARNING, "Error: No response from Proxmark3.\n");
+                PrintAndLogEx(ERR, "Error: No response from Proxmark3.\n");
                 break;
             case -2 :
                 PrintAndLogEx(WARNING, "Button pressed. Aborted.\n");
@@ -1162,7 +1162,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                 }
                 return PM3_SUCCESS;
             default :
-                PrintAndLogEx(WARNING, "Unknown Error.\n");
+                PrintAndLogEx(ERR, "Unknown Error.\n");
         }
         return PM3_SUCCESS;
     } else { // ------------------------------------  multiple sectors working
@@ -1199,7 +1199,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                     int16_t isOK = mfnested(blockNo, keyType, key, FirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
                     switch (isOK) {
                         case -1 :
-                            PrintAndLogEx(WARNING, "error: No response from Proxmark3.\n");
+                            PrintAndLogEx(ERR, "error: No response from Proxmark3.\n");
                             break;
                         case -2 :
                             PrintAndLogEx(WARNING, "button pressed. Aborted.\n");
@@ -1221,7 +1221,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                             continue;
 
                         default :
-                            PrintAndLogEx(WARNING, "unknown Error.\n");
+                            PrintAndLogEx(ERR, "unknown Error.\n");
                     }
                     free(e_sector);
                     return PM3_ESOFT;
@@ -1502,7 +1502,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (isOK) {
         switch (isOK) {
             case 1 :
-                PrintAndLogEx(WARNING, "Error: No response from Proxmark3.\n");
+                PrintAndLogEx(ERR, "Error: No response from Proxmark3.\n");
                 break;
             case 2 :
                 PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n");
@@ -2765,7 +2765,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
     for (i = 0; i < numSectors; i++) {
         if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
+            PrintAndLogEx(ERR, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
             break;
         }
         uint64_t keyA = bytes_to_num(data, 6);
@@ -2828,7 +2828,7 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
 
     res = mfCSetUID(uid, (atqaPresent) ? atqa : NULL, (atqaPresent) ? sak : NULL, oldUid, wipeCard);
     if (res) {
-        PrintAndLogEx(WARNING, "Can't set UID. error=%d", res);
+        PrintAndLogEx(ERR, "Can't set UID. error=%d", res);
         return PM3_ESOFT;
     }
 
@@ -2858,7 +2858,7 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
 
     res = mfCSetBlock(blockNo, block, NULL, params);
     if (res) {
-        PrintAndLogEx(WARNING, "Can't write block. error=%d", res);
+        PrintAndLogEx(ERR, "Can't write block. error=%d", res);
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
@@ -2933,7 +2933,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
     // 64 or 256blocks.
     if (datalen != 1024 && datalen != 4096) {
-        PrintAndLogEx(WARNING, "File content error. ");
+        PrintAndLogEx(ERR, "File content error. ");
         free(data);
         return PM3_EFILE;
     }
@@ -2972,7 +2972,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
     // 64 or 256blocks.
     if (blockNum != 16 * 4 && blockNum != 32 * 4 + 8 * 16) {
-        PrintAndLogEx(WARNING, "File content error. There must be 64 blocks");
+        PrintAndLogEx(ERR, "File content error. There must be 64 blocks");
         free(data);
         return PM3_EFILE;
     }
@@ -2994,7 +2994,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
 
     int res = mfCGetBlock(blockNo, data, MAGIC_SINGLE);
     if (res) {
-        PrintAndLogEx(WARNING, "Can't read block. error=%d", res);
+        PrintAndLogEx(ERR, "Can't read block. error=%d", res);
         return PM3_ESOFT;
     }
 
@@ -3045,7 +3045,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
 
         int res = mfCGetBlock(start + i, data, flags);
         if (res) {
-            PrintAndLogEx(WARNING, "Can't read block. %d error=%d", start + i, res);
+            PrintAndLogEx(ERR, "Can't read block. %d error=%d", start + i, res);
             return PM3_ESOFT;
         }
         PrintAndLogEx(NORMAL, "%3d | %s", start + i, sprint_hex(data, 16));

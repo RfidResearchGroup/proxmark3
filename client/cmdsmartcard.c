@@ -284,7 +284,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
             vxor ^= atr[i];
 
         if (vxor)
-            PrintAndLogEx(WARNING, "Check sum error. Must be 0 got 0x%02X", vxor);
+            PrintAndLogEx(ERR, "Check sum error. Must be 0 got 0x%02X", vxor);
         else
             PrintAndLogEx(INFO, "Check sum OK.");
     }
@@ -568,14 +568,14 @@ static int CmdSmartUpgrade(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "error, when getting filesize");
+        PrintAndLogEx(ERR, "error, when getting filesize");
         fclose(f);
         return 1;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogEx(WARNING, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         fclose(f);
         return 1;
     }

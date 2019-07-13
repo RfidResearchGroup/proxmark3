@@ -199,7 +199,7 @@ static int CmdIOProxSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
     if (getIOProxBits(version, fc, cn, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
     // IOProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
@@ -249,7 +249,7 @@ static int CmdIOProxClone(const char *Cmd) {
     }
 
     if (getIOProxBits(version, fc, cn, bits) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 

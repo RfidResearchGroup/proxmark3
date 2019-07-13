@@ -248,7 +248,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
     //set model
     c = mbynam(&model, inModel);
     if (!c) {
-        PrintAndLogEx(WARNING, "error: preset model '%s' not found.  Use reveng -D to list presets. [%d]", inModel, c);
+        PrintAndLogEx(ERR, "error: preset model '%s' not found.  Use reveng -D to list presets. [%d]", inModel, c);
         return 0;
     }
     if (c < 0) {
