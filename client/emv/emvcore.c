@@ -763,7 +763,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
     if (tlvdb_get(tlv, 0x9f2d, NULL)) {
         struct emv_pk *icc_pe_pk = emv_pki_recover_icc_pe_cert(issuer_pk, tlv);
         if (!icc_pe_pk) {
-            PrintAndLogEx(ERR, "WARNING: ICC PE PK recover error. ");
+            PrintAndLogEx(WARNING, "WARNING: ICC PE PK recover error. ");
         } else {
             PrintAndLogEx(SUCCESS, "ICC PE PK recovered. RID %02hhx:%02hhx:%02hhx:%02hhx:%02hhx IDX %02hhx CSN %02hhx:%02hhx:%02hhx\n",
                           icc_pe_pk->rid[0],
@@ -807,7 +807,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
                 PrintAndLogEx(SUCCESS, "ATC check OK.");
                 PrintAndLogEx(SUCCESS, "fDDA (fast DDA) verified OK.");
             } else {
-                PrintAndLogEx(ERR, "Error: fDDA verified, but ATC in the certificate and ATC in the record not the same.");
+                PrintAndLogEx(WARNING, "Error: fDDA verified, but ATC in the certificate and ATC in the record not the same.");
             }
         } else {
             PrintAndLogEx(NORMAL, "\nERROR: fDDA (fast DDA) verify error");
@@ -862,7 +862,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         struct tlvdb *dda_db = NULL;
         if (buf[0] == 0x80) {
             if (len < 3) {
-                PrintAndLogEx(ERR, "Error: Internal Authenticate format1 parsing error. length=%d", len);
+                PrintAndLogEx(WARNING, "Warning: Internal Authenticate format1 parsing error. length=%d", len);
             } else {
                 // parse response 0x80
                 struct tlvdb *t80 = tlvdb_parse_multi(buf, len);

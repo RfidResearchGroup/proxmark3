@@ -284,7 +284,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
             vxor ^= atr[i];
 
         if (vxor)
-            PrintAndLogEx(ERR, "Check sum error. Must be 0 got 0x%02X", vxor);
+            PrintAndLogEx(WARNING, "Invalid check sum. Must be 0 got 0x%02X", vxor);
         else
             PrintAndLogEx(INFO, "Check sum OK.");
     }
@@ -295,7 +295,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     uint8_t calen = 2 + T1len + TD1len + TDilen + K;
 
     if (atrlen != calen && atrlen != calen + 1)  // may be CRC
-        PrintAndLogEx(ERR, "ATR length error. len: %d, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
+        PrintAndLogEx(WARNING, "Invalid ATR length. len: %d, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
 
     if (K > 0)
         PrintAndLogEx(INFO, "\nHistorical bytes | len 0x%02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);

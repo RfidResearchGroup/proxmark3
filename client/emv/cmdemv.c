@@ -931,7 +931,7 @@ static int CmdEMVExec(const char *Cmd) {
 
     while (AFL && AFL->len) {
         if (AFL->len % 4) {
-            PrintAndLogEx(ERR, "Error: Wrong AFL length: %d", AFL->len);
+            PrintAndLogEx(WARNING, "Warning: Wrong AFL length: %d", AFL->len);
             break;
         }
 
@@ -952,7 +952,7 @@ static int CmdEMVExec(const char *Cmd) {
 
                 res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
                 if (res) {
-                    PrintAndLogEx(ERR, "Error SFI[%02x]. APDU error %4x", SFI, sw);
+                    PrintAndLogEx(WARNING, "Error SFI[%02x]. APDU error %4x", SFI, sw);
                     continue;
                 }
 
@@ -972,7 +972,7 @@ static int CmdEMVExec(const char *Cmd) {
                             memcpy(&ODAiList[ODAiListLen], &buf[len - elmlen], elmlen);
                             ODAiListLen += elmlen;
                         } else {
-                            PrintAndLogEx(ERR, "Error SFI[%02x]. Creating input list for Offline Data Authentication error.", SFI);
+                            PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating input list for Offline Data Authentication error.", SFI);
                         }
                     } else {
                         memcpy(&ODAiList[ODAiListLen], buf, len);
@@ -1001,7 +1001,7 @@ static int CmdEMVExec(const char *Cmd) {
         AIP = AIPtlv->value[0] + AIPtlv->value[1] * 0x100;
         PrintAndLogEx(NORMAL, "* * AIP=%04x", AIP);
     } else {
-        PrintAndLogEx(ERR, "Can't found AIP.");
+        PrintAndLogEx(ERR, "Can't find AIP.");
     }
 
     // SDA
@@ -1047,11 +1047,11 @@ static int CmdEMVExec(const char *Cmd) {
                         TLVPrintFromTLVLev(cvr, 1);
                     }
                 } else {
-                    PrintAndLogEx(NORMAL, "WARNING: IAD not found.");
+                    PrintAndLogEx(WARNING, "WARNING: IAD not found.");
                 }
 
             } else {
-                PrintAndLogEx(ERR, "Error AC: Application Transaction Counter (ATC) not found.");
+                PrintAndLogEx(WARNING, "Warning AC: Application Transaction Counter (ATC) not found.");
             }
         }
     }
@@ -1131,14 +1131,14 @@ static int CmdEMVExec(const char *Cmd) {
                             PrintAndLogEx(NORMAL, "Transaction approved ONLINE.");
                             break;
                         default:
-                            PrintAndLogEx(ERR, "Error: CID transaction code error %2x", CID->value[0] & EMVAC_AC_MASK);
+                            PrintAndLogEx(WARNING, "Warning: CID transaction code error %2x", CID->value[0] & EMVAC_AC_MASK);
                             break;
                     }
                 } else {
-                    PrintAndLogEx(ERR, "Error: Wrong CID length %d", CID->len);
+                    PrintAndLogEx(WARNING, "Warning: Wrong CID length %d", CID->len);
                 }
             } else {
-                PrintAndLogEx(ERR, "Error: CID(9F27) not found.");
+                PrintAndLogEx(WARNING, "Warning: CID(9F27) not found.");
             }
 
         }

@@ -667,7 +667,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
     }
 
     if (errCnt > 0)
-        PrintAndLogEx(ERR, "# Errors found during Demod (shown as " _YELLOW_("7")" in bit stream): %d", errCnt);
+        PrintAndLogEx(WARNING, "# Errors found during Demod (shown as " _YELLOW_("7")" in bit stream): %d", errCnt);
 
     PrintAndLogEx(NORMAL, "Biphase Decoded using offset: %d - # invert:%d - data:", offset, invert);
     PrintAndLogEx(NORMAL, "%s", sprint_bin_break(bits, size, 32));

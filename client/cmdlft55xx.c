@@ -1829,13 +1829,13 @@ static int CmdT55xxWipe(const char *Cmd) {
     else
         snprintf(ptrData, sizeof(writeData), "b 0 d 000880E0 p 0");
 
-    if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS) PrintAndLogEx(ERR, "Error writing blk 0");
+    if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS) PrintAndLogEx(WARNING, "Warning: error writing blk 0");
 
     for (uint8_t blk = 1; blk < 8; blk++) {
 
         snprintf(ptrData, sizeof(writeData), "b %d d 0", blk);
 
-        if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS) PrintAndLogEx(ERR, "Error writing blk %d", blk);
+        if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS) PrintAndLogEx(WARNING, "Warning: error writing blk %d", blk);
 
         memset(writeData, 0x00, sizeof(writeData));
     }

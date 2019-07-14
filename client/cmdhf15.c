@@ -564,7 +564,7 @@ static int CmdHF15Demod(const char *Cmd) {
     }
 
     if (mask != 0x01) {
-        PrintAndLogEx(ERR, "Error, uneven octet! (discard extra bits!)");
+        PrintAndLogEx(WARNING, "Warning, uneven octet! (discard extra bits!)");
         PrintAndLogEx(NORMAL, "   mask = %02x", mask);
     }
     PrintAndLogEx(NORMAL, "%d octets", k);

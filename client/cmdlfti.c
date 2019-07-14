@@ -233,7 +233,7 @@ static int CmdTIDemod(const char *Cmd) {
 
         // only 15 bits compare, last bit of ident is not valid
         if ((shift3 ^ shift0) & 0x7FFF) {
-            PrintAndLogEx(ERR, "Error: Ident mismatch!");
+            PrintAndLogEx(WARNING, "Warning: Ident mismatch!");
         }
         // WARNING the order of the bytes in which we calc crc below needs checking
         // i'm 99% sure the crc algorithm is correct, but it may need to eat the
@@ -257,7 +257,7 @@ static int CmdTIDemod(const char *Cmd) {
         PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr);
 
         if (crc != (shift2 & 0xFFFF))
-            PrintAndLogEx(ERR, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
+            PrintAndLogEx(WARNING, "Warning: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
 
         retval = PM3_SUCCESS;
         goto out;

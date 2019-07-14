@@ -517,7 +517,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
         first16bytes[i] = keytable[i] & 0xFF;
 
         if (!(keytable[i] & CRACKED))
-            PrintAndLogDevice(ERR, "error, we are missing byte %d, custom key calculation will fail...", i);
+            PrintAndLogDevice(WARNING, "Warning: we are missing byte %d, custom key calculation will fail...", i);
     }
     errors += calculateMasterKey(first16bytes, NULL);
     return errors;
@@ -557,7 +557,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
     fclose(f);
 
     if (bytes_read < fsize) {
-        PrintAndLogDevice(ERR, "Error, could only read %d bytes (should be %d)", bytes_read, fsize);
+        PrintAndLogDevice(WARNING, "Warning: could only read %d bytes (should be %d)", bytes_read, fsize);
     }
 
     uint8_t res = bruteforceDump(dump, fsize, keytable);

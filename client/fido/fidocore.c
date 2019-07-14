@@ -386,7 +386,7 @@ static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, 
             if (res == -0x4e00) {
                 PrintAndLogEx(WARNING, "Signature is NOT VALID.");
             } else {
-                PrintAndLogEx(ERR, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
+                PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }
             return res;
         } else {

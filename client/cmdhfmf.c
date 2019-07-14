@@ -2765,7 +2765,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     PrintAndLogEx(NORMAL, "|---|----------------|----------------|");
     for (i = 0; i < numSectors; i++) {
         if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
+            PrintAndLogEx(WARNING, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
             break;
         }
         uint64_t keyA = bytes_to_num(data, 6);
