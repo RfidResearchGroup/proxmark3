@@ -62,7 +62,7 @@
 #define RESUME          0x7A
 
 // Flash busy timeout: 20ms is the strict minimum when writing 256kb
-#define BUSY_TIMEOUT    50000L
+#define BUSY_TIMEOUT    200000L
 
 #define WINBOND_MANID   0xEF
 #define WINBOND_DEVID   0x11
