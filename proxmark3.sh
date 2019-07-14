@@ -3,28 +3,31 @@
 FULLIMAGE="armsrc/obj/fullimage.elf"
 BOOTIMAGE="bootrom/obj/bootrom.elf"
 
-cd $(dirname "$0")
+PM3PATH=$(dirname "$0")
+cd "$PM3PATH" || exit 1
 
 function wait4proxmark_Linux {
     echo >&2 "Waiting for Proxmark to appear..."
-    while [ ! -c /dev/ttyACM? -a ! -c /dev/pm3-? ]; do
+    while true; do
+        PM3=$(find /dev/pm3-* /dev/ttyACM* 2>/dev/null | head -1)
+        if [[ $PM3 != "" ]]; then
+            break
+        fi
         sleep .1
     done
-    local PM3=`ls -1 /dev/pm3-? /dev/ttyACM? 2>/dev/null | head -1`
-    echo $PM3
+    echo "$PM3"
 }
 
 function wait4proxmark_macOS {
     echo >&2 "Waiting for Proxmark to appear..."
     while true; do
-        PM3=$(ls /dev/pm3-* /dev/cu.usbmodem* 2>/dev/null | head -1)
+        PM3=$(find /dev/pm3-* /dev/cu.usbmodem* 2>/dev/null | head -1)
         if [[ $PM3 != "" ]]; then
-            #echo >&2 -e "Found proxmark on $(ls /dev/pm3-* /dev/cu.usbmodem* 2>/dev/null | head -1)\n"
             break
         fi
         sleep .1
     done
-    echo $PM3
+    echo "$PM3"
 }
 
 function wait4proxmark_Windows {
@@ -37,7 +40,7 @@ function wait4proxmark_Windows {
         fi
         sleep .1
     done
-    echo $PM3
+    echo "$PM3"
 }
 
 function wait4proxmark_WSL {
@@ -51,23 +54,23 @@ function wait4proxmark_WSL {
         fi
         sleep .1
     done
-    echo $PM3
+    if [ -e "$PM3" ] && [ ! -w "$PM3" ]; then
+        echo "We need to give current user read/write access to $PM3"
+        sudo chmod 666 "$PM3"
+    fi
+    echo "$PM3"
 }
 
 SCRIPT=$(basename -- "$0")
 
 if [ "$SCRIPT" = "proxmark3.sh" ]; then
-  CMD=client/proxmark3
+  CMD() { client/proxmark3 "$@"; }
 elif [ "$SCRIPT" = "flash-all.sh" ]; then
-  CMD=client/flasher
-  ARG1="-b $BOOTIMAGE"
-  ARG2="$FULLIMAGE"
+  CMD() { client/flasher "$1" -b "$BOOTIMAGE" "$FULLIMAGE"; }
 elif [ "$SCRIPT" = "flash-fullimage.sh" ]; then
-  CMD=client/flasher
-  ARG2="$FULLIMAGE"
+  CMD() { client/flasher "$1" "$FULLIMAGE"; }
 elif [ "$SCRIPT" = "flash-bootrom.sh" ]; then
-  CMD=client/flasher
-  ARG1="-b $BOOTIMAGE"
+  CMD() { client/flasher "$1" -b "$BOOTIMAGE"; }
 else
   echo "Script ran under unknown name, abort: $SCRIPT"
   exit 1
@@ -92,6 +95,5 @@ if [ "$PORT" = "" ]; then
     exit 1
 fi
 
-#echo Running "$CMD" "$PORT" $ARG1 $ARG2 "$@"
-"$CMD" "$PORT" $ARG1 $ARG2 "$@"
+CMD "$PORT" "$@"
 exit $?

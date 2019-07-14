@@ -166,3 +166,4 @@ Or, by specifying the COM port manually:
 client/proxmark3 /dev/ttySX
 ```
 
+Note that it may take a quite long time for a freshly plugged Proxmark3 to be visible on a WSL /dev/ttySX port.
