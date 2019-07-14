@@ -67,7 +67,7 @@ if [ "$SCRIPT" = "proxmark3.sh" ]; then
   CMD() { client/proxmark3 "$@"; }
 elif [ "$SCRIPT" = "flash-all.sh" ]; then
   CMD() { client/flasher "$1" -b "$BOOTIMAGE" "$FULLIMAGE"; }
-elif [ "$SCRIPT" = "flash-fullimage.sh" ]; then  CMD=client/flasher
+elif [ "$SCRIPT" = "flash-fullimage.sh" ]; then
   CMD() { client/flasher "$1" "$FULLIMAGE"; }
 elif [ "$SCRIPT" = "flash-bootrom.sh" ]; then
   CMD() { client/flasher "$1" -b "$BOOTIMAGE"; }
