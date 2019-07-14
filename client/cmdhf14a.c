@@ -848,8 +848,8 @@ static int CmdHF14AAPDU(const char *Cmd) {
                   "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
                   "Sample:\n\thf 14a apdu -st 00A404000E325041592E5359532E444446303100\n"
                   "\thf 14a apdu -sd 00A404000E325041592E5359532E444446303100 - decode apdu\n"
-                  "\thf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 - encode extended apdu\n"
-                  "\thf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 - encode standard apdu\n");
+                  "\thf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 - encode standard apdu\n"
+                  "\thf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 - encode extended apdu\n");
 
     void *argtable[] = {
         arg_param_begin,
