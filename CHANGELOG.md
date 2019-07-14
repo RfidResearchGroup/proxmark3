@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change: 'read_pwd_mem.lua' now handles Mifare Classic dictionaries large than 4096 bytes (@iceman)
  - Change: Don't clear trace log during 'hf mf chk', to save whole process history (@McEloff)
  - Add support for WSL in proxmark.sh (@doegox)
  - Add documentation for usage of Proxmark3 under WSL (@doegox)
