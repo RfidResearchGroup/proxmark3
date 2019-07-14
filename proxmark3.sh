@@ -51,6 +51,10 @@ function wait4proxmark_WSL {
         fi
         sleep .1
     done
+    if [ -e "$PM3" ] && ! [ -w "$PM3" ]; then
+        echo "We need to give current user read/write access to $PM3"
+        sudo chmod 666 "$PM3"
+    fi
     echo $PM3
 }
 
