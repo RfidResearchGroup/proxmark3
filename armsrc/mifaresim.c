@@ -625,7 +625,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                 }
 
                 // Incoming anti-collision frame
-                if (receivedCmd_len >= 2 && receivedCmd_len <= 6 && receivedCmd[1] == 0x50) {
+                // receivedCmd[1] indicates number of byte and bit collision, supports only for bit collision is zero
+                if (receivedCmd_len >= 3 && receivedCmd_len <= 6 && (receivedCmd[1] & 0x0f) == 0) {
                     // we can process only full-byte frame anti-collision procedure
                     if (memcmp(&receivedCmd[2], responses[uid_index].response, receivedCmd_len - 2) == 0) {
                         // response missing part of UID via relative array index
@@ -1036,8 +1037,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                                 );
                     }
                     cardAUTHKEY = AUTHKEYNONE;	// not authenticated
-                    EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                     cardSTATE_TO_IDLE();
+                    // Really tags not respond NACK on invalid authentication
+                    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                     break;
                 }
 
