@@ -839,17 +839,28 @@ static int CmdHF14AAPDU(const char *Cmd) {
     bool activateField = false;
     bool leaveSignalON = false;
     bool decodeTLV = false;
+    bool decodeAPDU = false;
+    bool makeAPDU = false;
+    bool extendedAPDU = false;
+    int le = 0;
 
     CLIParserInit("hf 14a apdu",
-                  "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL)",
-                  "Sample:\n\thf 14a apdu -st 00A404000E325041592E5359532E444446303100\n");
+                  "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
+                  "Sample:\n\thf 14a apdu -st 00A404000E325041592E5359532E444446303100\n"
+                  "\thf 14a apdu -sd 00A404000E325041592E5359532E444446303100 - decode apdu\n"
+                  "\thf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 - encode extended apdu\n"
+                  "\thf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 - encode standard apdu\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("sS",  "select",  "activate field and select card"),
-        arg_lit0("kK",  "keep",    "leave the signal field ON after receive response"),
-        arg_lit0("tT",  "tlv",     "executes TLV decoder if it possible"),
-        arg_strx1(NULL, NULL,      "<APDU (hex)>", NULL),
+        arg_lit0("sS",  "select",   "activate field and select card"),
+        arg_lit0("kK",  "keep",     "leave the signal field ON after receive response"),
+        arg_lit0("tT",  "tlv",      "executes TLV decoder if it possible"),
+        arg_lit0("dD",  "decapdu",  "decode apdu request if it possible"),
+        arg_lit0("mM",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
+        arg_lit0("eE",  "extended", "make extended length apdu if `m` parameter included"),
+        arg_lit0("lL",  "le",       "Le apdu parameter if `m` parameter included"),
+        arg_strx1(NULL, NULL,       "<APDU (hex) | data (hex)>", "data if `m` parameter included"),
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
@@ -857,8 +868,26 @@ static int CmdHF14AAPDU(const char *Cmd) {
     activateField = arg_get_lit(1);
     leaveSignalON = arg_get_lit(2);
     decodeTLV = arg_get_lit(3);
-    // len = data + PCB(1b) + CRC(2b)
-    CLIGetHexBLessWithReturn(4, data, &datalen, 1 + 2);
+    decodeAPDU = arg_get_lit(4);
+    makeAPDU = arg_get_lit(5);
+    extendedAPDU = arg_get_lit(6);
+    le = arg_get_lit(7);
+    
+    if (makeAPDU) {
+        
+    } else {  
+        if (extendedAPDU) {
+            PrintAndLogEx(ERR, "make mode not set but here `e` option.");
+            return 1;           
+        }
+        if (le > 0) {
+            PrintAndLogEx(ERR, "make mode not set but here `l` option.");
+            return 1;           
+        }
+    
+        // len = data + PCB(1b) + CRC(2b)
+        CLIGetHexBLessWithReturn(4, data, &datalen, 1 + 2);
+    }
 
     CLIParserFree();
     PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel " : "", leaveSignalON ? "keep " : "", decodeTLV ? "TLV" : "", sprint_hex(data, datalen));
