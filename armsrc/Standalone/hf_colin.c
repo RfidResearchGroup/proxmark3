@@ -101,6 +101,8 @@ void ReadLastTagFromFlash() {
     size_t size = len;
     uint8_t *mem = BigBuf_malloc(size);
 
+    FlashmemSetSpiBaudrate(24000000);
+
     if (!FlashInit()) {
         return;
     }
@@ -147,6 +149,9 @@ void WriteTagToFlash(uint8_t index, size_t size) {
     uint8_t buff[PAGESIZE];
 
     emlGetMem(data, 0, (size * 64) / 1024);
+
+
+    FlashmemSetSpiBaudrate(48000000);
 
     if (!FlashInit()) {
         return;
@@ -424,7 +429,7 @@ failtag:
     //-----------------------------------------------------------------------------
     // also we could avoid first UID check for every block
 
-    // then let’s expose this “optimal case” of “well known vigik schemes” :
+    // then let's expose this “optimal case” of “well known vigik schemes” :
     for (uint8_t type = 0; type < 2 && !err && !trapped; type++) {
         for (int sec = 0; sec < sectorsCnt && !err && !trapped; ++sec) {
             key = cjat91_saMifareChkKeys(sec * 4, type, NULL, size, &keyBlock[0], &key64);
@@ -783,10 +788,18 @@ readysim:
         case 7:
             flags = FLAG_7B_UID_IN_DATA;
             break;
-        default:
+        case 4:
             flags = FLAG_4B_UID_IN_DATA;
             break;
+        default:
+	    flags = FLAG_UID_IN_EMUL;
+	    break;
     }
+
+    // Use UID, SAK, ATQA from EMUL, if uid not defined
+    //if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
+        flags |= FLAG_UID_IN_EMUL;
+    //}
     Mifare1ksim(flags | FLAG_MF_1K, 0, cjuid);
     LED_C_OFF();
     SpinOff(50);
@@ -902,7 +915,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
     return (isOK) ? PM3_SUCCESS : PM3_EUNDEF;
 }
 
-/* the chk function is a piwi’ed(tm) check that will try all keys for
+/* the chk function is a piwi'ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
 int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key) {
     DBGLEVEL = DBG_NONE;
