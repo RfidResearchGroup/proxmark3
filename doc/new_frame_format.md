@@ -373,9 +373,9 @@ It was needed to tune pm3 RX usart `maxtry` :
     time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "lf read"
     6.28s
 
-    time client/proxmark3 -p /dev/ttyACM0 -c "mem save f foo_usb"
+    time client/proxmark3 -p /dev/ttyACM0 -c "mem dump f foo_usb"
     1.48s
-    time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "mem save f foo_fpc"
+    time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "mem dump f foo_fpc"
     25.34s
 
 

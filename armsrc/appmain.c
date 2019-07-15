@@ -1592,38 +1592,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             FlashmemSetSpiBaudrate(packet->oldarg[0]);
             break;
         }
-        case CMD_FLASHMEM_READ: {
-            LED_B_ON();
-            uint32_t startidx = packet->oldarg[0];
-            uint16_t len = packet->oldarg[1];
-
-            Dbprintf("FlashMem read | %d - %d | ", startidx, len);
-
-            size_t size = MIN(PM3_CMD_DATA_SIZE, len);
-
-            if (!FlashInit()) {
-                break;
-            }
-
-            uint8_t *mem = BigBuf_malloc(size);
-
-            for (size_t i = 0; i < len; i += size) {
-                len = MIN((len - i), size);
-
-                Dbprintf("FlashMem reading  | %d | %d | %d |", startidx + i, i, len);
-                uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
-                if (isok == len) {
-                    print_result("Chunk: ", mem, len);
-                } else {
-                    Dbprintf("FlashMem reading failed | %d | %d", len, isok);
-                    break;
-                }
-            }
-            BigBuf_free();
-            FlashStop();
-            LED_B_OFF();
-            break;
-        }
         case CMD_FLASHMEM_WRITE: {
             LED_B_ON();
             uint8_t isok = 0;

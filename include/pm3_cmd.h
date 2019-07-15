@@ -238,7 +238,6 @@ typedef struct {
 #define CMD_SET_DBGMODE                                                   0x0114
 
 // RDV40, Flash memory operations
-#define CMD_FLASHMEM_READ                                                 0x0120
 #define CMD_FLASHMEM_WRITE                                                0x0121
 #define CMD_FLASHMEM_WIPE                                                 0x0122
 #define CMD_FLASHMEM_DOWNLOAD                                             0x0123

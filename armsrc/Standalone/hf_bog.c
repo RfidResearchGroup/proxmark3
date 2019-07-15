@@ -15,7 +15,7 @@ The retrieved sniffing session can be acquired by connecting the device
 to a client that supports the reconnect capability and issue 'hf 14a list'.
 
 In order to view the grabbed authentication attempts in the flash mem,
-you can simply run 'script run read_pwd_mem' or just 'mem read l 256'
+you can simply run 'script run read_pwd_mem' or just 'mem dump p l 256'
 from the client to view the stored quadlets.
 */
 
