@@ -55,5 +55,6 @@ typedef struct {
 extern int APDUDecode(uint8_t *data, int len, APDUStruct *apdu);
 extern int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len);
 extern void APDUPrint(APDUStruct apdu);
+extern void APDUPrintEx(APDUStruct apdu, size_t maxdatalen);
 
 #endif

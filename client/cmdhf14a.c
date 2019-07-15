@@ -876,15 +876,15 @@ static int CmdHF14AAPDU(const char *Cmd) {
     makeAPDU = headerlen > 0;
     if (makeAPDU && headerlen != 4) {
         PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
-        return 1;           
+        return 1;
     }
     extendedAPDU = arg_get_lit(6);
     le = arg_get_int_def(7, 0);
-    
+
     if (makeAPDU) {
         uint8_t apdudata[PM3_CMD_DATA_SIZE] = {0};
         int apdudatalen = 0;
-        
+
         CLIGetHexBLessWithReturn(8, apdudata, &apdudatalen, 1 + 2);
 
         APDUStruct apdu;
@@ -892,28 +892,28 @@ static int CmdHF14AAPDU(const char *Cmd) {
         apdu.ins = header[1];
         apdu.p1 = header[2];
         apdu.p2 = header[3];
-        
+
         apdu.lc = apdudatalen;
         apdu.data = apdudata;
-        
+
         apdu.extended_apdu = extendedAPDU;
         apdu.le = le;
-        
+
         if (APDUEncode(&apdu, data, &datalen)) {
             PrintAndLogEx(ERR, "can't make apdu with provided parameters.");
-            return 2;           
+            return 2;
         }
-        
-    } else {  
+
+    } else {
         if (extendedAPDU) {
             PrintAndLogEx(ERR, "make mode not set but here `e` option.");
-            return 3;           
+            return 3;
         }
         if (le > 0) {
             PrintAndLogEx(ERR, "make mode not set but here `l` option.");
-            return 3;           
+            return 3;
         }
-    
+
         // len = data + PCB(1b) + CRC(2b)
         CLIGetHexBLessWithReturn(8, data, &datalen, 1 + 2);
     }
@@ -922,12 +922,12 @@ static int CmdHF14AAPDU(const char *Cmd) {
     PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s", activateField ? "sel " : "", leaveSignalON ? "keep " : "", decodeTLV ? "TLV" : "", sprint_hex(data, datalen));
 
     if (decodeAPDU) {
-        APDUStruct apdu;        
-        
+        APDUStruct apdu;
+
         if (APDUDecode(data, datalen, &apdu) == 0)
             APDUPrint(apdu);
         else
-            PrintAndLogEx(WARNING, "can't decode APDU.");    
+            PrintAndLogEx(WARNING, "can't decode APDU.");
     }
 
     int res = ExchangeAPDU14a(data, datalen, activateField, leaveSignalON, data, PM3_CMD_DATA_SIZE, &datalen);
