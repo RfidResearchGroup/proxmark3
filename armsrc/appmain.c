@@ -1757,6 +1757,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             SendStatus();
             break;
         }
+        case CMD_STANDALONE: {
+            RunMod();
+            break;
+        }
         case CMD_CAPABILITIES: {
             SendCapabilities();
             break;

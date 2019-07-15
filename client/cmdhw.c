@@ -479,6 +479,13 @@ static int CmdSetMux(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdStandalone(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_STANDALONE, NULL, 0);
+    return PM3_SUCCESS;
+}
+
 static int CmdTune(const char *Cmd) {
     return CmdTuneSamples(Cmd);
 }
@@ -591,6 +598,7 @@ static command_t CommandTable[] = {
     {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
     {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
     {"setmux",        CmdSetMux,      IfPm3Present,    "Set the ADC mux to a specific value"},
+    {"standalone",    CmdStandalone,  IfPm3Present,    "Jump to the standalone mode"},
     {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
     {"tune",          CmdTune,        IfPm3Present,    "Measure antenna tuning"},
     {"version",       CmdVersion,     IfPm3Present,    "Show version information about the connected Proxmark3"},
