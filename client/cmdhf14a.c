@@ -859,9 +859,9 @@ static int CmdHF14AAPDU(const char *Cmd) {
         arg_lit0("kK",  "keep",     "leave the signal field ON after receive response"),
         arg_lit0("tT",  "tlv",      "executes TLV decoder if it possible"),
         arg_lit0("dD",  "decapdu",  "decode apdu request if it possible"),
-        arg_lit0("mM",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
+        arg_str0("mM",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
         arg_lit0("eE",  "extended", "make extended length apdu if `m` parameter included"),
-        arg_lit0("lL",  "le",       "Le apdu parameter if `m` parameter included"),
+        arg_int0("lL",  "le",       "<Le (int)>", "Le apdu parameter if `m` parameter included"),
         arg_strx1(NULL, NULL,       "<APDU (hex) | data (hex)>", "data if `m` parameter included"),
         arg_param_end
     };
@@ -871,9 +871,15 @@ static int CmdHF14AAPDU(const char *Cmd) {
     leaveSignalON = arg_get_lit(2);
     decodeTLV = arg_get_lit(3);
     decodeAPDU = arg_get_lit(4);
-    makeAPDU = arg_get_lit(5);
+
+    CLIGetHexWithReturn(5, header, &headerlen);
+    makeAPDU = headerlen > 0;
+    if (makeAPDU && headerlen != 4) {
+        PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
+        return 1;           
+    }
     extendedAPDU = arg_get_lit(6);
-    le = arg_get_lit(7);
+    le = arg_get_int_def(7, 0);
     
     if (makeAPDU) {
         uint8_t apdudata[PM3_CMD_DATA_SIZE] = {0};
@@ -895,17 +901,17 @@ static int CmdHF14AAPDU(const char *Cmd) {
         
         if (APDUEncode(&apdu, data, &datalen)) {
             PrintAndLogEx(ERR, "can't make apdu with provided parameters.");
-            return 1;           
+            return 2;           
         }
         
     } else {  
         if (extendedAPDU) {
             PrintAndLogEx(ERR, "make mode not set but here `e` option.");
-            return 2;           
+            return 3;           
         }
         if (le > 0) {
             PrintAndLogEx(ERR, "make mode not set but here `l` option.");
-            return 2;           
+            return 3;           
         }
     
         // len = data + PCB(1b) + CRC(2b)

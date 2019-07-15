@@ -317,7 +317,7 @@ const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2) {
         return APDUCodeTable[0].Description; //empty string
 }
 
-int APDUDecode(uint8_t *data, size_t len, APDUStruct *apdu) {
+int APDUDecode(uint8_t *data, int len, APDUStruct *apdu) {
     ExtAPDUHeader *hapdu = (ExtAPDUHeader *)data;
 
     apdu->cla = hapdu->cla;
@@ -417,11 +417,11 @@ int APDUDecode(uint8_t *data, size_t len, APDUStruct *apdu) {
     return 0;
 }
 
-int APDUEncode(APDUStruct *apdu, uint8_t *data, size_t *len) {
+int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len) {
     if (len)
         *len = 0;
 
-    if (apdu->le > 0x10000 || apdu->lc != 0xffff)
+    if (apdu->le > 0x10000 || apdu->lc > 0xffff)
         return 1;
 
     size_t dptr = 0;

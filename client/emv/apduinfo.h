@@ -52,8 +52,8 @@ typedef struct {
     uint8_t case_type;
 } __attribute__((packed)) APDUStruct;
 
-extern int APDUDecode(uint8_t *data, size_t len, APDUStruct *apdu);
-extern int APDUEncode(APDUStruct *apdu, uint8_t *data, size_t *len);
+extern int APDUDecode(uint8_t *data, int len, APDUStruct *apdu);
+extern int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len);
 extern void APDUPrint(APDUStruct apdu);
 
 #endif
