@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added to `hf 14a apdu` print apdu and compose apdu (@merlokk)
  - Add check if bootloader segment is within bounds (@slurdge)
  - Add `hf 15 csetuid` - set UID on ISO-15693 Magic tags (@t0m4-null)
  - Change: Print help if unknown arg for hitag reader/writer (@ViRb3)
