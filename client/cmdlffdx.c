@@ -264,7 +264,7 @@ static int CmdFdxClone(const char *Cmd) {
 
     // getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
     if (getFDXBits(animalid, countryid, 1, 0, 0, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
@@ -300,7 +300,7 @@ static int CmdFdxClone(const char *Cmd) {
 
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
     }

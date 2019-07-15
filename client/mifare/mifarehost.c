@@ -28,9 +28,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         SendCommandMIX(CMD_READER_MIFARE, arg0, blockno, key_type, NULL, 0);
 
         //flush queue
-        while (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        while (kbd_enter_pressed()) {
             return PM3_EOPABORTED;
         }
 
@@ -38,9 +36,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         while (true) {
             printf(".");
             fflush(stdout);
-            if (ukbhit()) {
-                int gc = getchar();
-                (void)gc;
+            if (kbd_enter_pressed()) {
                 return PM3_EOPABORTED;
             }
 
@@ -918,7 +914,7 @@ int detect_classic_prng(void) {
 
     // if select tag failed.
     if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(WARNING, "error:  selecting tag failed,  can't detect prng\n");
+        PrintAndLogEx(ERR, "error:  selecting tag failed,  can't detect prng\n");
         return PM3_ERFTRANS;
     }
     if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
@@ -928,7 +924,7 @@ int detect_classic_prng(void) {
 
     // check respA
     if (respA.oldarg[0] != 4) {
-        PrintAndLogEx(WARNING, "PRNG data error: Wrong length: %d", respA.oldarg[0]);
+        PrintAndLogEx(ERR, "PRNG data error: Wrong length: %d", respA.oldarg[0]);
         return PM3_ESOFT;
     }
 
@@ -955,9 +951,7 @@ int detect_classic_nackbug(bool verbose) {
     while (true) {
         printf(".");
         fflush(stdout);
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             return PM3_EOPABORTED;
         }
 
@@ -1002,7 +996,7 @@ int detect_classic_nackbug(bool verbose) {
                     PrintAndLogEx(SUCCESS, "No NACK bug detected");
                     return PM3_SUCCESS;
                 default :
-                    PrintAndLogEx(WARNING, "errorcode from device [%i]", ok);
+                    PrintAndLogEx(ERR, "errorcode from device [%i]", ok);
                     return PM3_EUNDEF;
             }
             break;

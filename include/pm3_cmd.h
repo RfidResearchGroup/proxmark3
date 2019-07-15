@@ -216,6 +216,7 @@ typedef struct {
 #define CMD_FINISH_WRITE                                                  0x0003
 #define CMD_HARDWARE_RESET                                                0x0004
 #define CMD_START_FLASH                                                   0x0005
+#define CMD_CHIP_INFO                                                     0x0006
 #define CMD_NACK                                                          0x00fe
 #define CMD_ACK                                                           0x00ff
 
@@ -237,7 +238,6 @@ typedef struct {
 #define CMD_SET_DBGMODE                                                   0x0114
 
 // RDV40, Flash memory operations
-#define CMD_FLASHMEM_READ                                                 0x0120
 #define CMD_FLASHMEM_WRITE                                                0x0121
 #define CMD_FLASHMEM_WIPE                                                 0x0122
 #define CMD_FLASHMEM_DOWNLOAD                                             0x0123
@@ -540,6 +540,9 @@ typedef struct {
 
 /* Set if this device understands the extend start flash command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH     (1<<4)
+
+/* Set if this device understands the chip info command */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO       (1<<5)
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.

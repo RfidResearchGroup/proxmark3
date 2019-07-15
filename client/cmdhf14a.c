@@ -375,9 +375,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
     // repeat n times
     for (int i = 0; i < n; i++) {
 
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             break;
         }
@@ -489,7 +487,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 
-    while (!ukbhit()) {
+    while (!kbd_enter_pressed()) {
         if (WaitForResponseTimeout(CMD_SIMULATE_MIFARE_CARD, &resp, 1500) == 0) continue;
         if (resp.status != PM3_SUCCESS) break;
 
@@ -800,7 +798,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
             vActivateField = false;
             if (*dataoutlen) {
                 if (clen != datainlen)
-                    PrintAndLogEx(WARNING, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
+                    PrintAndLogEx(ERR, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
                 break;
             }
         } while (clen < datainlen);

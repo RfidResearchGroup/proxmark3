@@ -122,12 +122,21 @@ void UsbPacketReceived(uint8_t *packet, int len) {
     switch (c->cmd) {
         case CMD_DEVICE_INFO: {
             dont_ack = 1;
-            arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT | DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
-                   DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH;
+            arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT |
+                   DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
+                   DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH |
+                   DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO;
             if (common_area.flags.osimage_present)
                 arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
 
             reply_old(CMD_DEVICE_INFO, arg0, 1, 2, 0, 0);
+        }
+        break;
+
+        case CMD_CHIP_INFO: {
+            dont_ack = 1;
+            arg0 = *(AT91C_DBGU_CIDR);
+            reply_old(CMD_CHIP_INFO, arg0, 0, 0, 0, 0);
         }
         break;
 

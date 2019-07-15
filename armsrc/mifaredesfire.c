@@ -433,15 +433,9 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             desfirekey_t key = &defaultkey;
             Desfire_aes_key_new(keybytes, key);
 
-            AesCtx ctx;
+            mbedtls_aes_context ctx;
             uint8_t IV[16] = {0x00};
-            if (AesCtxIni(&ctx, IV, key->data, KEY128, CBC) < 0) {
-                if (DBGLEVEL >= 4) {
-                    DbpString("AES context failed to init");
-                }
-                OnError(7);
-                return;
-            }
+            mbedtls_aes_init(&ctx);
 
             cmd[0] = AUTHENTICATE_AES;
             cmd[1] = 0x00;  //keynumber
@@ -457,13 +451,27 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             memcpy(encRndB, resp + 3, 16);
 
             // dekryptera tagnonce.
-            AesDecrypt(&ctx, encRndB, decRndB, 16);
+            if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
+                if (DBGLEVEL >= 4) {
+                    DbpString("mbedtls_aes_setkey_dec failed");
+                }
+                OnError(7);
+                return;
+            }
+            mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndB, decRndB);
             rol(decRndB, 16);
             uint8_t nonce[16] = {0x00};
             memcpy(both, nonce, 16);
             memcpy(both + 16, decRndB, 16);
             uint8_t encBoth[32] = {0x00};
-            AesEncrypt(&ctx, both, encBoth, 32);
+            if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
+                if (DBGLEVEL >= 4) {
+                    DbpString("mbedtls_aes_setkey_enc failed");
+                }
+                OnError(7);
+                return;
+            }
+            mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, both, encBoth);
 
             cmd[0] = ADDITIONAL_FRAME;
             memcpy(cmd + 1, encBoth, 32);

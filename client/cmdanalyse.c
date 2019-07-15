@@ -623,8 +623,7 @@ static int CmdAnalyseA(const char *Cmd) {
         for (uint8_t k=0; k<4; k = (k+1) % 4 ) {
             PrintAndLogEx(NORMAL, "\e[s%c\e[u", star[k]);
             fflush(stdout);
-            if (ukbhit()) {
-                int gc = getchar(); (void)gc;
+            if (kbd_enter_pressed()) {
                 break;
             }
         }

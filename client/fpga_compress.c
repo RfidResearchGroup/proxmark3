@@ -375,7 +375,7 @@ static void print_version_info_preamble(FILE *outfile, int num_infiles) {
     fprintf(outfile, "\n");
     fprintf(outfile, "\n");
     fprintf(outfile, "const int fpga_bitstream_num = %d;\n", num_infiles);
-    fprintf(outfile, "const char* const fpga_version_information[%d] = {\n", num_infiles);
+    fprintf(outfile, "const char *const fpga_version_information[%d] = {\n", num_infiles);
 }
 
 static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int num_infiles, FILE *outfile) {
@@ -386,7 +386,7 @@ static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int 
 
     for (int i = 0; i < num_infiles; i++) {
         FpgaGatherVersion(infile[i], infile_names[i], version_string, sizeof(version_string));
-        fprintf(outfile, "\t\" %s\"", version_string);
+        fprintf(outfile, "    \" %s\"", version_string);
         if (i != num_infiles - 1) {
             fprintf(outfile, ",");
         }

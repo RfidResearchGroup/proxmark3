@@ -36,15 +36,23 @@ CFILES = $(filter %.c, $(libjansson_la_SOURCES))
 CMDOBJS = $(CFILES:%.c=%.o)
 CLEAN = $(CMDOBJS)
 
+platform = $(shell uname)
+
 CC= gcc
-CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function -Wno-format-truncation
+CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function
+
 LDFLAGS= $(SYSLDFLAGS) $(libjansson_la_LDFLAGS)
 LIBS= $(SYSLIBS) $(MYLIBS)
 DEFAULT_INCLUDES = -I.
 DEFS = -DHAVE_STDINT_H
 
+ifeq ($(platform),Darwin)
+AR= /usr/bin/ar rcs
+RANLIB= /usr/bin/ranlib
+else
 AR= ar rcs
 RANLIB= ranlib
+endif
 RM= rm -f
 TST= echo
 

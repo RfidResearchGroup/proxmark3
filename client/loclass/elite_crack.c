@@ -517,7 +517,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
         first16bytes[i] = keytable[i] & 0xFF;
 
         if (!(keytable[i] & CRACKED))
-            PrintAndLogDevice(WARNING, "error, we are missing byte %d, custom key calculation will fail...", i);
+            PrintAndLogDevice(WARNING, "Warning: we are missing byte %d, custom key calculation will fail...", i);
     }
     errors += calculateMasterKey(first16bytes, NULL);
     return errors;
@@ -541,7 +541,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogDevice(WARNING, "Error, when getting filesize");
+        PrintAndLogDevice(ERR, "Error, when getting filesize");
         fclose(f);
         return 1;
     }
@@ -557,7 +557,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
     fclose(f);
 
     if (bytes_read < fsize) {
-        PrintAndLogDevice(WARNING, "Error, could only read %d bytes (should be %d)", bytes_read, fsize);
+        PrintAndLogDevice(WARNING, "Warning: could only read %d bytes (should be %d)", bytes_read, fsize);
     }
 
     uint8_t res = bruteforceDump(dump, fsize, keytable);
@@ -612,7 +612,7 @@ static int _testBruteforce() {
         } else if (fileExists("client/loclass/iclass_dump.bin")) {
             errors |= bruteforceFile("client/loclass/iclass_dump.bin", keytable);
         } else {
-            PrintAndLogDevice(WARNING, "Error: The file iclass_dump.bin was not found!");
+            PrintAndLogDevice(ERR, "Error: The file iclass_dump.bin was not found!");
         }
     }
     return errors;
@@ -627,14 +627,14 @@ static int _test_iclass_key_permutation() {
     permutekey_rev(testcase_output, testcase_output_rev);
 
     if (memcmp(testcase_output, testcase_output_correct, 8) != 0) {
-        PrintAndLogDevice(WARNING, "Error with iclass key permute!");
+        PrintAndLogDevice(ERR, "Error with iclass key permute!");
         printarr("testcase_output", testcase_output, 8);
         printarr("testcase_output_correct", testcase_output_correct, 8);
         return 1;
 
     }
     if (memcmp(testcase, testcase_output_rev, 8) != 0) {
-        PrintAndLogDevice(WARNING, "Error with reverse iclass key permute");
+        PrintAndLogDevice(ERR, "Error with reverse iclass key permute");
         printarr("testcase", testcase, 8);
         printarr("testcase_output_rev", testcase_output_rev, 8);
         return 1;
@@ -651,7 +651,7 @@ static int _testHash1() {
     hash1(csn, k);
 
     if (memcmp(k, expected, 8) != 0) {
-        PrintAndLogDevice(WARNING, "Error with hash1!");
+        PrintAndLogDevice(ERR, "Error with hash1!");
         printarr("calculated", k, 8);
         printarr("expected", expected, 8);
         return 1;

@@ -359,7 +359,7 @@ __attribute__((force_align_arg_pointer))
 
                     res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
                     if ((res != PM3_SUCCESS) || (rxlen != length)) {
-                        PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, length);
+                        PrintAndLogEx(WARNING, "Received packet frame with variable part too short? %d/%d", rxlen, length);
                         error = true;
                     } else {
 
@@ -392,7 +392,7 @@ __attribute__((force_align_arg_pointer))
                 if (!error) {                        // Get the postamble
                     res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
                     if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
-                        PrintAndLogEx(WARNING, "Received packet frame error fetching postamble");
+                        PrintAndLogEx(WARNING, "Received packet frame without postamble");
                         error = true;
                     }
                 }
@@ -402,7 +402,7 @@ __attribute__((force_align_arg_pointer))
                         uint8_t first, second;
                         compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + length, &first, &second);
                         if ((first << 8) + second != rx.crc) {
-                            PrintAndLogEx(WARNING, "Received packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
+                            PrintAndLogEx(WARNING, "Received packet frame with invalid CRC %02X%02X <> %04X", first, second, rx.crc);
                             error = true;
                         }
                     }
@@ -424,7 +424,7 @@ __attribute__((force_align_arg_pointer))
 
                 res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
                 if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
-                    PrintAndLogEx(WARNING, "Received packet OLD frame payload error too short? %d/%d", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
+                    PrintAndLogEx(WARNING, "Received packet OLD frame with payload too short? %d/%d", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
                     error = true;
                 }
                 if (!error) {
