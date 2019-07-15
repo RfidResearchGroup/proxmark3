@@ -10,8 +10,6 @@
 
 #include "apduinfo.h"
 
-#include "util.h"
-
 const APDUCode APDUCodeTable[] = {
     //  ID             Type                  Description
     {"XXXX",     APDUCODE_TYPE_NONE,         ""}, // blank string

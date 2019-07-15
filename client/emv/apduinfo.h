@@ -17,6 +17,8 @@
 #include <stdbool.h>
 #include <inttypes.h>
 
+#include "util.h"
+
 #define APDUCODE_TYPE_NONE     0
 #define APDUCODE_TYPE_INFO     1
 #define APDUCODE_TYPE_WARNING  2
@@ -38,7 +40,7 @@ typedef struct {
     uint8_t p1;
     uint8_t p2;
     uint8_t lc[3];
-} __attribute__((packed)) ExtAPDUHeader;
+} PACKED ExtAPDUHeader;
 
 typedef struct {
     uint8_t cla;
@@ -50,7 +52,7 @@ typedef struct {
     uint32_t le;
     bool extended_apdu;
     uint8_t case_type;
-} __attribute__((packed)) APDUStruct;
+} PACKED APDUStruct;
 
 extern int APDUDecode(uint8_t *data, int len, APDUStruct *apdu);
 extern int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len);
