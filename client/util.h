@@ -21,6 +21,12 @@
 #include "ui.h"     // PrintAndLog
 #include "commonutil.h"
 
+#ifdef _MSC_VER
+#define PACKED
+#else
+#define PACKED __attribute__((packed))
+#endif
+
 #ifdef ANDROID
 #include <endian.h>
 #endif

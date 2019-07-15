@@ -314,3 +314,166 @@ const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2) {
     else
         return APDUCodeTable[0].Description; //empty string
 }
+
+int APDUDecode(uint8_t *data, int len, APDUStruct *apdu) {
+    ExtAPDUHeader *hapdu = (ExtAPDUHeader *)data;
+
+    apdu->cla = hapdu->cla;
+    apdu->ins = hapdu->ins;
+    apdu->p1 = hapdu->p1;
+    apdu->p2 = hapdu->p2;
+
+    apdu->lc = 0;
+    apdu->data = NULL;
+    apdu->le = 0;
+    apdu->extended_apdu = false;
+    apdu->case_type = 0x00;
+
+    uint8_t b0 = hapdu->lc[0];
+
+    // case 1
+    if (len == 4) {
+        apdu->case_type = 0x01;
+    }
+
+    // case 2S (Le)
+    if (len == 5) {
+        apdu->case_type = 0x02;
+        apdu->le = b0;
+        if (!apdu->le)
+            apdu->le = 0x100;
+    }
+
+    // case 3S (Lc + data)
+    if (len == 5U + b0 && b0 != 0) {
+        apdu->case_type = 0x03;
+        apdu->lc = b0;
+    }
+
+    // case 4S (Lc + data + Le)
+    if (len == 5U + b0 + 1U && b0 != 0) {
+        apdu->case_type = 0x04;
+        apdu->lc = b0;
+        apdu->le = data[len - 1];
+        if (!apdu->le)
+            apdu->le = 0x100;
+    }
+
+    // extended length apdu
+    if (len >= 7 && b0 == 0) {
+        uint16_t extlen = (hapdu->lc[1] << 8) + hapdu->lc[2];
+
+        // case 2E (Le) - extended
+        if (len == 7) {
+            apdu->case_type = 0x12;
+            apdu->extended_apdu = true;
+            apdu->le = extlen;
+            if (!apdu->le)
+                apdu->le = 0x10000;
+        }
+
+        // case 3E (Lc + data) - extended
+        if (len == 7U + extlen) {
+            apdu->case_type = 0x13;
+            apdu->extended_apdu = true;
+            apdu->lc = extlen;
+        }
+
+        // case 4E (Lc + data + Le) - extended 2-byte Le
+        if (len == 7U + extlen + 2U) {
+            apdu->case_type = 0x14;
+            apdu->extended_apdu = true;
+            apdu->lc = extlen;
+            apdu->le = (data[len - 2] << 8) + data[len - 1];
+            if (!apdu->le)
+                apdu->le = 0x10000;
+        }
+
+        // case 4E (Lc + data + Le) - extended 3-byte Le
+        if (len == 7U + extlen + 3U && data[len - 3] == 0) {
+            apdu->case_type = 0x24;
+            apdu->extended_apdu = true;
+            apdu->lc = extlen;
+            apdu->le = (data[len - 2] << 8) + data[len - 1];
+            if (!apdu->le)
+                apdu->le = 0x10000;
+        }
+    }
+
+    if (!apdu->case_type)
+        return 1;
+
+    if (apdu->lc) {
+        if (apdu->extended_apdu) {
+            apdu->data = data + 7;
+        } else {
+            apdu->data = data + 5;
+        }
+
+    }
+
+    return 0;
+}
+
+int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len) {
+    if (len)
+        *len = 0;
+
+    if (apdu->le > 0x10000 || apdu->lc > 0xffff)
+        return 1;
+
+    size_t dptr = 0;
+    data[dptr++] = apdu->cla;
+    data[dptr++] = apdu->ins;
+    data[dptr++] = apdu->p1;
+    data[dptr++] = apdu->p2;
+
+    if (apdu->lc) {
+        if (apdu->extended_apdu || apdu->lc > 0xff || apdu->le > 0x100) {
+            data[dptr++] = 0x00;
+            data[dptr++] = (apdu->lc >> 8) & 0xff;
+            data[dptr++] = (apdu->lc) & 0xff;
+            memmove(&data[dptr], apdu->data, apdu->lc);
+            dptr += apdu->lc;
+            apdu->extended_apdu = true;
+        } else {
+            data[dptr++] = apdu->lc;
+            memmove(&data[dptr], apdu->data, apdu->lc);
+            dptr += apdu->lc;
+        }
+    }
+
+    if (apdu->le) {
+        if (apdu->extended_apdu) {
+            if (apdu->le != 0x10000) {
+                data[dptr++] = 0x00;
+                data[dptr++] = (apdu->le >> 8) & 0xff;
+                data[dptr++] = (apdu->le) & 0xff;
+            } else {
+                data[dptr++] = 0x00;
+                data[dptr++] = 0x00;
+                data[dptr++] = 0x00;
+            }
+        } else {
+            if (apdu->le != 0x100)
+                data[dptr++] = apdu->le;
+            else
+                data[dptr++] = 0x00;
+        }
+    }
+
+    if (len)
+        *len = dptr;
+    return 0;
+}
+
+void APDUPrint(APDUStruct apdu) {
+    APDUPrintEx(apdu, 0);
+}
+
+void APDUPrintEx(APDUStruct apdu, size_t maxdatalen) {
+    PrintAndLogEx(INFO, "APDU: %scase=0x%02x cla=0x%02x ins=0x%02x p1=0x%02x p2=0x%02x Lc=0x%02x(%d) Le=0x%02x(%d)",
+                  apdu.extended_apdu ? "[e]" : "", apdu.case_type, apdu.cla, apdu.ins, apdu.p1, apdu.p2, apdu.lc, apdu.lc, apdu.le, apdu.le);
+    if (maxdatalen > 0)
+        PrintAndLogEx(INFO, "data: %s%s", sprint_hex(apdu.data, MIN(apdu.lc, maxdatalen)), apdu.lc > maxdatalen ? "..." : "");
+}

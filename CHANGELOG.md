@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added to `hf 14a apdu` print apdu and compose apdu (@merlokk)
  - Change: buggy 'mem read' removed, 'mem save' renamed 'mem dump', can now display too (@doegox)
  - Fix: timeout for mem wipe was too short, thanks @cjbrigato (@doegox)
  - Fix 'hf mf sim' - Mifare Classic simulation more flexible anti-collision check (@McEloff)
