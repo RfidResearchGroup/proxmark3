@@ -9,6 +9,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change: Don't clear trace log during 'hf mf chk', to save whole process history (@McEloff)
  - Add support for WSL in proxmark.sh (@doegox)
  - Add documentation for usage of Proxmark3 under WSL (@doegox)
+ - Change: replace aes.c with mbedtls version (@slurdge)
  - Change: replace ukbhit by kbd_enter_pressed, not requiring tcgetattr (@xianglin1998/@doegox)
  - Add config for RaspberryPi in JTAG tools (@doegox)
  - Add config for FTDI C232HM-DDHSL-0 in JTAG tools (@doegox)
