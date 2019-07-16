@@ -39,7 +39,7 @@ local function parse1443b(data)
         uint8_t atqb[7];
         uint8_t chipid;
         uint8_t cid;
-    } __attribute__((__packed__)) iso14b_card_select_t;
+    } PACKED iso14b_card_select_t;
 
     --]]
 
