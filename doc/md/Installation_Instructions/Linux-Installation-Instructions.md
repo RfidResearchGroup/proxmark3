@@ -41,8 +41,10 @@ Additional AUR packages:
 ```sh
 yaourt -S termcap
 ```
-
-Note that with only these requirements, you will not get the graphical components of the Proxmark3 client. (Untested: how to get it? `yaourt -S qt4` ?)
+If you want graphical output (such as in `hw tune`):
+```sh
+sudo pacman -Su qt5-base
+```
 
 # Clone the RRG/Iceman repository
 
