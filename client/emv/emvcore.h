@@ -45,15 +45,6 @@ enum TransactionType {
 };
 extern const char *TransactionTypeStr[];
 
-typedef struct {
-    uint8_t CLA;
-    uint8_t INS;
-    uint8_t P1;
-    uint8_t P2;
-    uint8_t Lc;
-    uint8_t *data;
-} sAPDU;
-
 enum CardPSVendor {
     CV_NA,
     CV_VISA,

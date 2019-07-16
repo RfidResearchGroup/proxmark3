@@ -35,6 +35,15 @@ const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2);
 const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
 
 typedef struct {
+    uint8_t CLA;
+    uint8_t INS;
+    uint8_t P1;
+    uint8_t P2;
+    uint8_t Lc;
+    uint8_t *data;
+} PACKED sAPDU;
+
+typedef struct {
     uint8_t cla;
     uint8_t ins;
     uint8_t p1;
