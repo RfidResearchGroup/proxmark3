@@ -278,7 +278,10 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
 
     // COMPUTE APDU
     int datalen = 0;
-    APDUEncodeS(&apdu, false, IncludeLe ? 0x100 : 0x00, data, &datalen);
+    if (APDUEncodeS(&apdu, false, IncludeLe ? 0x100 : 0x00, data, &datalen)) {
+        PrintAndLogEx(ERR, "APDU encoding error.");
+        return 201;
+    }
 
     if (APDULogging)
         PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, datalen));
