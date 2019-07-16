@@ -13,19 +13,10 @@
 #ifndef __PM3_CMD_H
 #define __PM3_CMD_H
 
+#include "common.h"
+
 // Use it e.g. when using slow links such as BT
 #define USART_SLOW_LINK
-
-#ifdef _MSC_VER
-typedef DWORD uint32_t;
-typedef BYTE uint8_t;
-#define PACKED
-// stuff
-#else
-#include <stdint.h>
-#include <stdbool.h>
-#define PACKED __attribute__((packed))
-#endif
 
 #define PM3_CMD_DATA_SIZE 512
 #define PM3_CMD_DATA_SIZE_MIX ( PM3_CMD_DATA_SIZE - 3 * sizeof(uint64_t) )

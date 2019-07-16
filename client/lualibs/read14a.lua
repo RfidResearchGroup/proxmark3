@@ -60,7 +60,7 @@ local function parse14443a(data)
         uint8_t sak;
         uint8_t ats_len;
         uint8_t ats[256];
-    } __attribute__((__packed__)) iso14a_card_select_t;
+    } PACKED iso14a_card_select_t;
     --]]
 
     local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CCH', data)

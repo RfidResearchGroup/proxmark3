@@ -14,11 +14,7 @@
 #ifndef HITAG_H__
 #define HITAG_H__
 
-#ifdef _MSC_VER
-#define PACKED
-#else
-#define PACKED __attribute__((packed))
-#endif
+#include "common.h"
 
 typedef enum {
     RHTSF_CHALLENGE           = 01,

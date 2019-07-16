@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include "usb_cdc.h"
 #include "proxmark3.h"
+#include "pmflash.h"
 #include "apps.h"
 #include "fpga.h"
 #include "util.h"

@@ -15,6 +15,7 @@
 #include "at91sam7s512.h"
 #include "config_gpio.h"
 #include "pm3_cmd.h"
+#include "common.h"
 
 #define WDT_HIT()                               AT91C_BASE_WDTC->WDTC_WDCR = 0xa5000001
 
@@ -71,8 +72,6 @@
 #define COTAG_BITS 264
 #endif
 
-//#define PACKED __attribute__((__packed__))
-
 #define LED_A_ON()        HIGH(GPIO_LED_A)
 #define LED_A_OFF()       LOW(GPIO_LED_A)
 #define LED_A_INV()       INVBIT(GPIO_LED_A)
@@ -116,7 +115,7 @@ struct version_information {
     char clean; /* 1: Tree was clean, no local changes. 0: Tree was unclean. 2: Couldn't be determined */
     char gitversion[50]; /* String with the git revision */
     char buildtime[30]; /* string with the build time */
-} __attribute__((packed));
+} PACKED;
 
 #define COMMON_AREA_MAGIC 0x43334d50 // "PM3C"
 #define COMMON_AREA_COMMAND_NONE 0
@@ -129,8 +128,8 @@ struct common_area {
         unsigned int bootrom_present: 1; /* Set when a bootrom that is capable of parsing the common area is present */
         unsigned int osimage_present: 1; /* Set when a osimage that is capable of parsing the common area is present */
         unsigned int button_pressed: 1;
-    } __attribute__((packed)) flags;
+    } PACKED flags;
     int arg1, arg2;
-} __attribute__((packed));
+} PACKED;
 
 #endif

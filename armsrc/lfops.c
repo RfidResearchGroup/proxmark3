@@ -19,6 +19,7 @@
 #include "protocols.h"
 #include "usb_cdc.h" // for usb_poll_validate_length
 #include "common.h"
+#include "pmflash.h"
 #include "flashmem.h" // persistence on mem
 
 //#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
