@@ -792,13 +792,13 @@ readysim:
             flags = FLAG_4B_UID_IN_DATA;
             break;
         default:
-	    flags = FLAG_UID_IN_EMUL;
-	    break;
+            flags = FLAG_UID_IN_EMUL;
+            break;
     }
 
     // Use UID, SAK, ATQA from EMUL, if uid not defined
     //if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-        flags |= FLAG_UID_IN_EMUL;
+    flags |= FLAG_UID_IN_EMUL;
     //}
     Mifare1ksim(flags | FLAG_MF_1K, 0, cjuid);
     LED_C_OFF();

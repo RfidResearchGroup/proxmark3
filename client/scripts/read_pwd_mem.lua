@@ -81,8 +81,8 @@ local function main(args)
         if o == 'o' then offset = tonumber(a) end
 
         -- num of bytes to read
-        if o == 'l' then 
-			length = tonumber(a) 
+        if o == 'l' then
+			length = tonumber(a)
 			if length < 0 or length > 256 then
 				return oops('Error: Length is not valid. Must be less than 256')
 			end
