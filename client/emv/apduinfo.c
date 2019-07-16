@@ -472,7 +472,7 @@ int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, int *le
         return 10;
 
     APDUStruct apdu;
-    
+
     apdu.cla = sapdu->CLA;
     apdu.ins = sapdu->INS;
     apdu.p1 = sapdu->P1;
@@ -484,10 +484,10 @@ int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, int *le
     else
         apdu.data = NULL;
     apdu.le = le;
-    
+
     apdu.extended_apdu = extended;
     apdu.case_type = 0x00;
-    
+
     return APDUEncode(&apdu, data, len);
 }
 

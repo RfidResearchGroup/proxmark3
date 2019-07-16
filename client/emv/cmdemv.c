@@ -829,7 +829,7 @@ static int CmdEMVExec(const char *Cmd) {
         PrintAndLogEx(NORMAL, "\n* PPSE.");
         SetAPDULogging(showAPDU);
         res = EMVSearchPSE(channel, activateField, true, psenum, decodeTLV, tlvSelect);
-        
+
         // check PPSE instead of PSE and vice versa
         if (res) {
             PrintAndLogEx(NORMAL, "Check PPSE instead of PSE and vice versa...");
