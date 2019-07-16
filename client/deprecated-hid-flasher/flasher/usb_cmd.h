@@ -13,7 +13,7 @@
 #ifndef __USB_CMD_H
 #define __USB_CMD_H
 
-#include "common.h"
+#include "proxmark3.h"
 
 typedef struct {
     uint32_t    cmd;

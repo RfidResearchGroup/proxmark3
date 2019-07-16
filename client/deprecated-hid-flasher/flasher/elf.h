@@ -9,7 +9,7 @@
 #ifndef __ELF_H__
 #define __ELF_H__
 
-#include "common.h"
+#include "proxmark3.h"
 
 typedef struct {
     uint32_t p_type;

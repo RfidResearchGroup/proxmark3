@@ -14,4 +14,16 @@
 
 #define PROXPROMPT "proxmark3> "
 
+#ifdef _MSC_VER
+typedef DWORD uint32_t;
+typedef BYTE uint8_t;
+#define PACKED
+// stuff
+#else
+#include <stdint.h>
+#include <stdbool.h>
+#define PACKED __attribute__((packed))
+#endif
+
+
 #endif
