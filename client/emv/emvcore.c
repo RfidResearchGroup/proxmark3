@@ -277,24 +277,25 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
     }
 
     // COMPUTE APDU
-    memcpy(data, &apdu, 5);
-    if (apdu.data)
-        memcpy(&data[5], apdu.data, apdu.Lc);
+    int datalen = 0;
+    if (APDUEncodeS(&apdu, false, IncludeLe ? 0x100 : 0x00, data, &datalen)) {
+        PrintAndLogEx(ERR, "APDU encoding error.");
+        return 201;
+    }
 
     if (APDULogging)
-        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, (IncludeLe ? 6 : 5) + apdu.Lc));
+        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, datalen));
 
     switch (channel) {
         case ECC_CONTACTLESS:
-            // 6 byes + data = INS + CLA + P1 + P2 + Lc + <data = Nc> + Le(?IncludeLe)
-            res = ExchangeAPDU14a(data, (IncludeLe ? 6 : 5) + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+            res = ExchangeAPDU14a(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
             if (res) {
                 return res;
             }
             break;
         case ECC_CONTACT:
             if (IfPm3Smartcard())
-                res = ExchangeAPDUSC(data, (IncludeLe ? 6 : 5) + apdu.Lc, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+                res = ExchangeAPDUSC(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
             else
                 res = 1;
             if (res) {
@@ -336,7 +337,7 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
 }
 
 int EMVExchange(EMVCommandChannel channel, bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-    return EMVExchangeEx(channel, false, LeaveFieldON, apdu, (channel == ECC_CONTACTLESS), Result, MaxResultLen, ResultLen, sw, tlv);
+    return EMVExchangeEx(channel, false, LeaveFieldON, apdu, false, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 int EMVSelect(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -609,9 +610,9 @@ int EMVGPO(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *PDOL, size_t P
 }
 
 int EMVReadRecord(EMVCommandChannel channel, bool LeaveFieldON, uint8_t SFI, uint8_t SFIrec, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-    int res = EMVExchange(channel, LeaveFieldON, (sAPDU) {0x00, 0xb2, SFIrec, (SFI << 3) | 0x04, 0, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
-    if (*sw == 0x6700) {
-        PrintAndLogEx(INFO, ">>> trying to reissue command withouth Le...");
+    int res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU) {0x00, 0xb2, SFIrec, (SFI << 3) | 0x04, 0, NULL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
+    if (*sw == 0x6700 || *sw == 0x6f00) {
+        PrintAndLogEx(INFO, ">>> trying to reissue command without Le...");
         res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU) {0x00, 0xb2, SFIrec, (SFI << 3) | 0x04, 0, NULL}, false, Result, MaxResultLen, ResultLen, sw, tlv);
     }
     return res;
@@ -622,9 +623,9 @@ int EMVAC(EMVCommandChannel channel, bool LeaveFieldON, uint8_t RefControl, uint
 }
 
 int EMVGenerateChallenge(EMVCommandChannel channel, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-    int res = EMVExchange(channel, LeaveFieldON, (sAPDU) {0x00, 0x84, 0x00, 0x00, 0x00, NULL}, Result, MaxResultLen, ResultLen, sw, tlv);
-    if (*sw == 0x6700) {
-        PrintAndLogEx(INFO, ">>> trying to reissue command withouth Le...");
+    int res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU) {0x00, 0x84, 0x00, 0x00, 0x00, NULL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
+    if (*sw == 0x6700 || *sw == 0x6f00) {
+        PrintAndLogEx(INFO, ">>> trying to reissue command without Le...");
         res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU) {0x00, 0x84, 0x00, 0x00, 0x00, NULL}, false, Result, MaxResultLen, ResultLen, sw, tlv);
     }
     return res;

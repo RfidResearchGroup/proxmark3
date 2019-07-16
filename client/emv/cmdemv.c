@@ -830,6 +830,12 @@ static int CmdEMVExec(const char *Cmd) {
         SetAPDULogging(showAPDU);
         res = EMVSearchPSE(channel, activateField, true, psenum, decodeTLV, tlvSelect);
 
+        // check PPSE instead of PSE and vice versa
+        if (res) {
+            PrintAndLogEx(NORMAL, "Check PPSE instead of PSE and vice versa...");
+            res = EMVSearchPSE(channel, false, true, psenum == 1 ? 2 : 1, decodeTLV, tlvSelect);
+        }
+
         // check PPSE and select application id
         if (!res) {
             TLVPrintAIDlistFromSelectTLV(tlvSelect);

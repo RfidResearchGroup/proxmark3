@@ -467,6 +467,30 @@ int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len) {
     return 0;
 }
 
+int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, int *len) {
+    if (extended && le > 0x100)
+        return 10;
+
+    APDUStruct apdu;
+
+    apdu.cla = sapdu->CLA;
+    apdu.ins = sapdu->INS;
+    apdu.p1 = sapdu->P1;
+    apdu.p2 = sapdu->P2;
+
+    apdu.lc = sapdu->Lc;
+    if (sapdu->Lc)
+        apdu.data = sapdu->data;
+    else
+        apdu.data = NULL;
+    apdu.le = le;
+
+    apdu.extended_apdu = extended;
+    apdu.case_type = 0x00;
+
+    return APDUEncode(&apdu, data, len);
+}
+
 void APDUPrint(APDUStruct apdu) {
     APDUPrintEx(apdu, 0);
 }

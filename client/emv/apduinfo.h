@@ -35,6 +35,15 @@ const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2);
 const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2);
 
 typedef struct {
+    uint8_t CLA;
+    uint8_t INS;
+    uint8_t P1;
+    uint8_t P2;
+    uint8_t Lc;
+    uint8_t *data;
+} PACKED sAPDU;
+
+typedef struct {
     uint8_t cla;
     uint8_t ins;
     uint8_t p1;
@@ -56,6 +65,7 @@ typedef struct {
 
 extern int APDUDecode(uint8_t *data, int len, APDUStruct *apdu);
 extern int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len);
+extern int APDUEncodeS(sAPDU *apdu, bool extended, uint16_t le, uint8_t *data, int *len);
 extern void APDUPrint(APDUStruct apdu);
 extern void APDUPrintEx(APDUStruct apdu, size_t maxdatalen);
 
