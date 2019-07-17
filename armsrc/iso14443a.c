@@ -1579,17 +1579,23 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
     volatile uint8_t b;
     uint16_t c = 0;
     uint32_t sendtimer = GetTickCount();
+    uint32_t cntr = 0;
     while (c < len) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c++];
+        } else {
+            if (cntr++ > 1000) {
+                cntr = 0;
+                if (GetTickCount() - sendtimer > 100)
+                    break;
+            }
         }
+        
         //iceman test
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
             (void)b;
         }
-        if (GetTickCount() - sendtimer > 100)
-            break;
     }
 
     NextTransferTime = MAX(NextTransferTime, LastTimeProxToAirStart + REQUEST_GUARD_TIME);
