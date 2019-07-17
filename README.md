@@ -19,6 +19,7 @@ Note that it also supports other Proxmark3 platforms as well!
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) |[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|
 |[Notes on UART](/doc/uart_notes.md)|||
 |[Notes on Frame format](/doc/new_frame_format.md)|||
+|[Notes on external flash](/doc/ext_flash_notes.md)|||
 |[Notes on Termux / Android](/doc/termux_notes.md)|||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
