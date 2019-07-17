@@ -1583,6 +1583,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
     while (c < len) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c++];
+            cntr = 0;
         } else {
             if (cntr++ > 1000) {
                 cntr = 0;
