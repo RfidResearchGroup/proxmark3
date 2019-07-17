@@ -1578,6 +1578,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
 
     volatile uint8_t b;
     uint16_t c = 0;
+    uint32_t sendtimer = GetTickCount();
     while (c < len) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = cmd[c++];
@@ -1587,6 +1588,8 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
             b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
             (void)b;
         }
+        if (GetTickCount() - sendtimer > 100)
+            break;
     }
 
     NextTransferTime = MAX(NextTransferTime, LastTimeProxToAirStart + REQUEST_GUARD_TIME);
@@ -1937,6 +1940,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
     (void)b;
 
     uint32_t timeout = iso14a_get_timeout();
+    uint32_t receive_timer = GetTickCount();
     for (;;) {
         WDT_HIT();
 
@@ -1949,7 +1953,12 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
                 return false;
             }
         }
+        
+        // timeout already in ms + 100ms guard time
+        if (GetTickCount() - receive_timer > timeout + 100)
+            break;
     }
+    return false;
 }
 
 void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing) {
