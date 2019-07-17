@@ -19,7 +19,7 @@ before_install:
 ## Note: all dependencies on MacOS should be resolved by the brew install command
   if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
     sudo apt-get update -qq;
-    sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libnewlib-dev binutils-arm-none-eabi;
+    sudo apt-get install -y gcc-arm-none-eabi libnewlib-dev;
   elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     brew update;
     brew tap RfidResearchGroup/proxmark3;
