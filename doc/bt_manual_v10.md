@@ -33,9 +33,12 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 
 *	Unplug your Proxmark3 RDV4.0 device from any usb cable.
 *	Remove the plastic upper case of Proxmark3 RDV4.0 with opener.
-*	Remove temporarily the antenna with a screwdriver to expose the FPC interface.
-*	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.
-*	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.
+*	Remove temporarily the antenna with a H5 (Hex/Allen) screwdriver to expose the FPC interface.<p>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/FPC-Interface.png" alt="Image of blue shark add-on fpc interface" width="300"></p>
+*	Turn off all power switches, insert the FPC wire into the FPC connector, and lock the FPC connector.<p>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/FPC-Connected.png" alt="Image of blue shark add-on fpc wire" width="300"></p>
+*	Tear off the blue film of heat conductive double-sided tape. Align the add-on to the hole positions and gently insert it into the case.<p>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/Blue-Film.png" alt="Image of blue shark add-on blue film location" width="300"></p>
 *	Assembly finished!
 
 <p align='center'>
@@ -43,6 +46,8 @@ Built-in battery can support standalone mode, off-line sniffing, off-line readin
 </p>
 
 ### 4.	COMPILATION / FLASHING
+
+#### From Source
 
 Please download the latest source code from Rfid Research Group's Github repo:
 https://github.com/RfidResearchGroup/proxmark3
@@ -57,6 +62,12 @@ To compile the client and firmware with FPC support, the easiest way is to
 
 You are now ready to run the client with the serial port you got from your BT device on your laptop etc.  
 See instructions below.
+
+#### Homebrew (macOS)
+From the [homebrew-proxmark3 readme](https://github.com/RfidResearchGroup/homebrew-proxmark3)
+
+1. `brew tap rfidresearchgroup/proxmark3`
+2. `brew install --with-blueshark proxmark3`
 
 ### 5.	CONNECT WITH BLUETOOTH
 
@@ -84,7 +95,8 @@ You can also switch serial port from inside the proxmark3 client using the new c
 *	Install driver:
 http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers  
 *	Insert the adapter into the USB port. The adapter will search automatically and establish the connection. The adapter will remember the device that was first connected and after that the same device will be connected.
-*	The adapter button can be used to delete memory so that other add-on can be searched and connected.
+*	The adapter button can be used to delete memory so that other add-on can be searched and connected.<p align='center'>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/Button.png" alt="Image of blue shark add-on HC-06 white dongle button" width="200">
 *	After the connection is established, the blue state LED on add-on will turn on solid.
 *	look for _CP2104 USB tp UART bridge controller_ under devices in order to get the assigned serial port
 
@@ -122,6 +134,21 @@ The first time, your OS will ask you for pairing. The default PIN is
 1234. If PIN is not typed in quickly, the client might timeout. Simply
 restart it again after pairing.
 
+If your OS doesn't prompt you for pairing, you can do it in command line, e.g. (again, replace with your addon MAC address):
+
+```sh
+bluetoothctl
+[bluetooth]# pairable on
+[bluetooth]# scan on
+Discovery started
+...
+[CHG] Device aa:bb:cc:dd:ee:ff Name: PM3_RDV4.0
+[bluetooth]# trust aa:bb:cc:dd:ee:ff
+[bluetooth]# pair aa:bb:cc:dd:ee:ff
+[agent] Enter PIN code: 1234
+[bluetooth]# quit
+```
+
 #### (2) Fast connection using dedicated USB Bluetooth adapter under Linux
 
 <p align='center'>
@@ -133,7 +160,9 @@ the device that was first connected and after that the same device will
 be connected.
 
   2. The adapter button can be used to delete memory so that other add-on
-can be searched and connected.
+can be searched and connected.<p align='center'>
+	<img src="https://sneaktechnology.com/wp-content/uploads/2019/06/Button.png" alt="Image of blue shark add-on HC-06 white dongle button" width="200">
+	</p>
 
   3. After the connection is established, the blue state LED on add-on will
 turn on solid.
@@ -142,6 +171,29 @@ turn on solid.
 ```sh
 ./proxmark /dev/ttyUSB0
 ```
+
+#### MacOS
+
+#### (1) Connecting rdv4.0 with Bluetooth on MacOS
+
+With MacOS Mojave 10.14.5 you could experience some continuosly disconnecting and difficult to recconnect the device at the system wakeup, to avoid this problem do a PRAM reset before to add your Proxmark3 RDV4 Blue Shark:
+
+  1. Open a Terminal and execute this command: sudo rm -R /Library/Preferences/com.apple.Bluetooth.plist.
+  2. Shut down your Mac.
+  3. Then turn it on and immediately press and hold these four keys together: Option, Command, P, and R.
+  4. You can release the keys after about 20 seconds, during which your Mac might appear to restart.
+
+After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
+
+  5. Make sure the Blue Shark BT switch is turned ON
+  6. On your Mac, choose Apple menu -> System Preferences, then click Bluetooth.
+  7. Select the device in the list, then click Connect and add the 1234 pwd.
+  8. A serial port like `/dev/tty.PM3_RDV40-DevB` will be created, use Proxmark3 client on it
+
+```sh
+./proxmark /dev/tty.PM3_RDV40-DevB
+```
+
 
 ### 6.	OTHER NOTES
 

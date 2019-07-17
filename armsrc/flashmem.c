@@ -1,4 +1,5 @@
 #include "flashmem.h"
+#include "pmflash.h"
 
 /* here: use NCPS2 @ PA10: */
 #define SPI_CSR_NUM      2

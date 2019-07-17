@@ -407,6 +407,17 @@ static int usage_15_readmulti(void) {
                   "\tcount#:       number of pages");
     return 0;
 }
+static int usage_15_csetuid(void) {
+    PrintAndLogEx(NORMAL, "Set UID for magic Chinese card (only works with such cards)\n"
+                  "\n"
+                  "Usage:  hf 15 csetuid <uid>\n"
+                  "Options:\n"
+                  "\tuid : <8B hex>  full UID eg E011223344556677\n"
+                  "\n"
+                  "Example:\n"
+                  "\thf 15 csetuid E011223344556677");
+    return 0;
+}
 
 /**
  * parses common HF 15 CMD parameters and prepares some data structures
@@ -553,7 +564,7 @@ static int CmdHF15Demod(const char *Cmd) {
     }
 
     if (mask != 0x01) {
-        PrintAndLogEx(WARNING, "Error, uneven octet! (discard extra bits!)");
+        PrintAndLogEx(WARNING, "Warning, uneven octet! (discard extra bits!)");
         PrintAndLogEx(NORMAL, "   mask = %02x", mask);
     }
     PrintAndLogEx(NORMAL, "%d octets", k);
@@ -623,7 +634,7 @@ static int CmdHF15Info(const char *Cmd) {
     recv = resp.data.asBytes;
 
     if (recv[0] & ISO15_RES_ERROR) {
-        PrintAndLogEx(WARNING, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
         return 3;
     }
 
@@ -1058,7 +1069,7 @@ static int CmdHF15Read(const char *Cmd) {
     }
 
     if (recv[0] & ISO15_RES_ERROR) {
-        PrintAndLogEx(WARNING, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
         return 3;
     }
 
@@ -1235,7 +1246,7 @@ static int CmdHF15Restore(const char *Cmd) {
             fclose(f);
             return 0;
         } else if (bytes_read != blocksize) {
-            PrintAndLogEx(WARNING, "File reading error (%s), %u bytes read instead of %u bytes.", filename, bytes_read, blocksize);
+            PrintAndLogEx(ERR, "File reading error (%s), %u bytes read instead of %u bytes.", filename, bytes_read, blocksize);
             fclose(f);
             return 2;
         }
@@ -1269,6 +1280,103 @@ static int CmdHF15Restore(const char *Cmd) {
     return 0;
 }
 
+/**
+ * Commandline handling: HF15 CMD CSETUID
+ * Set UID for magic Chinese card
+ */
+static int CmdHF15CSetUID(const char *Cmd) {
+    uint8_t uid[8] = {0x00};
+    uint8_t oldUid[8], newUid[8] = {0x00};
+    PacketResponseNG resp;
+    int reply = 1, fast = 0;
+    uint8_t data[4][9] = {{0x00}};
+
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_csetuid();
+
+    if (param_gethex(Cmd, 0, uid, 16)) {
+        PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
+        return 1;
+    }
+
+    if (uid[0] != 0xe0) {
+        PrintAndLogEx(WARNING, "UID must begin with the byte " _YELLOW_("E0"));
+        return 1;
+    }
+
+    PrintAndLogEx(SUCCESS, "new UID | %s", sprint_hex(uid, sizeof(uid)));
+    PrintAndLogEx(NORMAL, "Using backdoor Magic tag function");
+
+    if (!getUID(oldUid)) {
+        PrintAndLogEx(FAILED, "Can't get old UID.");
+        return PM3_ESOFT;
+    }
+
+    // Command 1 : 02213E00000000
+    data[0][0] = 0x02;
+    data[0][1] = 0x21;
+    data[0][2] = 0x3e;
+    data[0][3] = 0x00;
+    data[0][4] = 0x00;
+    data[0][5] = 0x00;
+    data[0][6] = 0x00;
+
+    // Command 2 : 02213F69960000
+    data[1][0] = 0x02;
+    data[1][1] = 0x21;
+    data[1][2] = 0x3f;
+    data[1][3] = 0x69;
+    data[1][4] = 0x96;
+    data[1][5] = 0x00;
+    data[1][6] = 0x00;
+
+    // Command 3 : 022138u8u7u6u5 (where uX = uid byte X)
+    data[2][0] = 0x02;
+    data[2][1] = 0x21;
+    data[2][2] = 0x38;
+    data[2][3] = uid[7];
+    data[2][4] = uid[6];
+    data[2][5] = uid[5];
+    data[2][6] = uid[4];
+
+    // Command 4 : 022139u4u3u2u1 (where uX = uid byte X)
+    data[3][0] = 0x02;
+    data[3][1] = 0x21;
+    data[3][2] = 0x39;
+    data[3][3] = uid[3];
+    data[3][4] = uid[2];
+    data[3][5] = uid[1];
+    data[3][6] = uid[0];
+
+    for (int i = 0; i < 4; i++) {
+        AddCrc15(data[i], 7);
+
+        clearCommandBuffer();
+        SendCommandOLD(CMD_ISO_15693_COMMAND, sizeof(data[i]), fast, reply, data[i], sizeof(data[i]));
+
+        if (reply) {
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+                uint8_t len = resp.oldarg[0];
+                PrintAndLogEx(NORMAL, "received %i octets", len);
+                PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
+            } else {
+                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            }
+        }
+    }
+
+    if (!getUID(newUid)) {
+        PrintAndLogEx(FAILED, "Can't get new UID.");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "old UID : %02X %02X %02X %02X %02X %02X %02X %02X", oldUid[7], oldUid[6], oldUid[5], oldUid[4], oldUid[3], oldUid[2], oldUid[1], oldUid[0]);
+    PrintAndLogEx(SUCCESS, "new UID : %02X %02X %02X %02X %02X %02X %02X %02X", newUid[7], newUid[6], newUid[5], newUid[4], newUid[3], newUid[2], newUid[1], newUid[0]);
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHF15Help,        AlwaysAvailable, "This help"},
     {"demod",       CmdHF15Demod,       AlwaysAvailable, "Demodulate ISO15693 from tag"},
@@ -1285,6 +1393,7 @@ static command_t CommandTable[] = {
     {"read",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
     {"write",       CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
     {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
+    {"csetuid",   CmdHF15CSetUID,   IfPm3Iso15693,   "Set UID for magic Chinese card"},
     {NULL, NULL, NULL, NULL}
 };
 

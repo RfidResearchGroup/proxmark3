@@ -103,7 +103,7 @@ void computeSignalProperties(uint8_t *samples, uint32_t size) {
     // we can detect noise
     signalprop.isnoise =  signalprop.amplitude < NOISE_AMPLITUDE_THRESHOLD;
 
-    if (g_debugMode) 
+    if (g_debugMode)
         printSignal();
 }
 
@@ -1365,8 +1365,8 @@ static int millerRawDecode(uint8_t *bits, size_t *size, int invert) {
 int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
     //sanity check
     if (*size < 51) return -1;
- 
-    if ( *offset < 0 ) *offset = 0;
+
+    if (*offset < 0) *offset = 0;
 
     uint16_t bitnum = 0;
     uint16_t errCnt = 0;

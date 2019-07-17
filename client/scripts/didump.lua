@@ -488,7 +488,7 @@ local function readtag(mfkey, aeskey )
 
     for blockNo = 0, numBlocks-1 do
 
-        if core.ukbhit() then
+        if core.kbd_enter_pressed() then
             print("[fail] aborted by user")
             return nil
         end

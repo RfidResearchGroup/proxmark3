@@ -80,7 +80,7 @@ local function sendRaw(rawdata, crc, power)
                                 data = rawdata
                                 }
     local ignore_response = false
-    local result, err = command.sendMIX(ignore_response)
+    local result, err = command:sendMIX(ignore_response)
     if result then
         --unpack the first 4 parts of the result as longs, and the last as an extremely long string to later be cut down based on arg1, the number of bytes returned
         local count,cmd,arg1,arg2,arg3,data = bin.unpack('LLLLH512',result)

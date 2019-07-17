@@ -91,7 +91,7 @@ static int CmdVikingClone(const char *Cmd) {
     SendCommandMIX(CMD_VIKING_CLONE_TAG, rawID >> 32, rawID & 0xFFFFFFFF, Q5, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
-        PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
+        PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;

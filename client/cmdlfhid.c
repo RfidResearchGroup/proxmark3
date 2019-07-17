@@ -580,9 +580,7 @@ static int CmdHIDBrute(const char *Cmd) {
             return PM3_ENODATA;
         }
 
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(INFO, "aborted via keyboard!");
             return sendPing();
         }

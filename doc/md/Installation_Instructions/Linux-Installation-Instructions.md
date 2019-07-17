@@ -13,7 +13,7 @@ You might want to follow one of these external resources to get an overview, but
 
 # Install the required dependencies
 
-## On Debian / Ubuntu / Kali / ParrotOS
+## On Debian / Ubuntu / Kali / ParrotOS / Raspbian
 
 First what we want to do is get an update for the system. If you need to upgrade do this **before** the install. An upgrade was carried out prior to following these instructions. 
 
@@ -25,7 +25,7 @@ Install the requirements
 
 ```sh
 sudo apt-get install p7zip git ca-certificates build-essential libreadline5 libreadline-dev \
-libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib
+libusb-0.1-4 libusb-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib libqt4-dev
 ```
 
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.
@@ -41,8 +41,10 @@ Additional AUR packages:
 ```sh
 yaourt -S termcap
 ```
-
-Note that with only these requirements, you will not get the graphical components of the Proxmark3 client. (Untested: how to get it? `yaourt -S qt4` ?)
+If you want graphical output (such as in `hw tune`):
+```sh
+sudo pacman -Su qt5-base
+```
 
 # Clone the RRG/Iceman repository
 

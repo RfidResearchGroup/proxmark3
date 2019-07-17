@@ -21,7 +21,7 @@ local function nfc_read_amiibo ()
                 arg2 = 135
                 }
 
-   local result, err = command.sendMIX()
+   local result, err = command:sendMIX()
    if result then
       -- Do Mifare Ultralight read
       local count, cmd, arg0, data_len, offset = bin.unpack('LLLL', result)
@@ -95,7 +95,7 @@ local function emulate_amiibo (amiibo_data)
                 arg2 = uid_first,
                 arg3 = uid_second
                 }
-   local _, err = simCmd.sendMIX()
+   local _, err = simCmd:sendMIX()
    if err then
       print('Failed to start simulator', err)
       return

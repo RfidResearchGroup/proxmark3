@@ -8,18 +8,20 @@
 //-----------------------------------------------------------------------------
 // main code for HF standalone mode Mifare /sniff/emulation by Craig Young
 //-----------------------------------------------------------------------------
+
 #include "hf_young.h"
+#include "common.h"
 
 typedef struct {
     uint8_t uid[10];
     uint8_t uidlen;
     uint8_t atqa[2];
     uint8_t sak;
-} __attribute__((__packed__)) card_clone_t;
+} PACKED card_clone_t;
 
 
 void ModInfo(void) {
-    DbpString("   HF Mifare sniff/simulation - (Craig Young)");
+    DbpString("  HF Mifare sniff/simulation - (Craig Young)");
 }
 
 void RunMod() {

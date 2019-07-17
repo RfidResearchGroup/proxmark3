@@ -238,7 +238,8 @@ void uart_close(const serial_port sp) {
     // Does the system allows us to place a lock on this file descriptor
     int err = fcntl(spu->fd, F_SETLK, &fl);
     if (err == -1) {
-        //perror("fcntl");
+        //silent error message as it can be called from uart_open failing modes, e.g. when waiting for port to appear
+        //printf("[!] UART error while closing port\n");
     }
     close(spu->fd);
     free(sp);

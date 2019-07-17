@@ -133,8 +133,8 @@ end
 -- @return if successfull: an table containing card info
 -- @return if unsuccessfull : nil, error
 local function waitFor15693()
-    print('Waiting for card... press any key to quit')
-    while not core.ukbhit() do
+    print('Waiting for card... press Enter to quit')
+    while not core.kbd_enter_pressed() do
         res, err = read15693()
         if res then return res end
         -- err means that there was no response from card
@@ -147,7 +147,7 @@ local function disconnect15693()
     local c = Command:newMIX{cmd = cmds.CMD_ISO_15693_COMMAND}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
-    return c.sendMIX(true)
+    return c:sendMIX(true)
 end
 
 local library = {

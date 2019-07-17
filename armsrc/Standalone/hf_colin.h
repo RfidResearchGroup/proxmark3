@@ -22,6 +22,7 @@
 #include "iso14443a.h"
 #include "protocols.h"
 #include "util.h"
+#include "pmflash.h"
 #include "standalone.h" // standalone definitions
 #include <stdbool.h>    // for bool
 #include <stdio.h>

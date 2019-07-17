@@ -60,7 +60,7 @@ local function parse14443a(data)
         uint8_t sak;
         uint8_t ats_len;
         uint8_t ats[256];
-    } __attribute__((__packed__)) iso14a_card_select_t;
+    } PACKED iso14a_card_select_t;
     --]]
 
     local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CCH', data)
@@ -121,8 +121,8 @@ end
 -- @return if successfull: an table containing card info
 -- @return if unsuccessfull : nil, error
 local function waitFor14443a()
-    print('Waiting for card... press any key to quit')
-    while not core.ukbhit() do
+    print('Waiting for card... press Enter to quit')
+    while not core.kbd_enter_pressed() do
         res, err = read14443a()
         if res then return res end
         -- err means that there was no response from card

@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include "usb_cdc.h"
 #include "proxmark3.h"
+#include "pmflash.h"
 #include "apps.h"
 #include "fpga.h"
 #include "util.h"
@@ -339,19 +340,25 @@ void SendVersion(void) {
     if (bootrom_version < &_flash_start || bootrom_version >= &_flash_end) {
         strcat(VersionString, "bootrom version information appears invalid\n");
     } else {
-        FormatVersionInformation(temp, sizeof(temp), " bootrom: ", bootrom_version);
+        FormatVersionInformation(temp, sizeof(temp), "  bootrom: ", bootrom_version);
         strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
     }
 
-    FormatVersionInformation(temp, sizeof(temp), "      os: ", &version_information);
+    FormatVersionInformation(temp, sizeof(temp), "       os: ", &version_information);
     strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 
-    strncat(VersionString, "\n [ FPGA ]\n", sizeof(VersionString) - strlen(VersionString) - 1);
+#if defined(__clang__)
+    strncat(VersionString, "  compiled with Clang/LLVM "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
+#elif defined(__GNUC__) || defined(__GNUG__)
+    strncat(VersionString, "  compiled with GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
+#endif
+
+    strncat(VersionString, "\n [ FPGA ]\n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
     for (int i = 0; i < fpga_bitstream_num; i++) {
         strncat(VersionString, fpga_version_information[i], sizeof(VersionString) - strlen(VersionString) - 1);
         if (i < fpga_bitstream_num - 1) {
-            strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);
+            strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
     // Send Chip ID and used flash memory
@@ -368,10 +375,10 @@ void SendVersion(void) {
     struct p payload;
     payload.id = *(AT91C_DBGU_CIDR);
     payload.section_size = text_and_rodata_section_size + compressed_data_section_size;
-    payload.versionstr_len = strlen(VersionString);
-    memcpy(payload.versionstr, VersionString, strlen(VersionString));
+    payload.versionstr_len = strlen(VersionString) + 1;
+    memcpy(payload.versionstr, VersionString, payload.versionstr_len);
 
-    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + strlen(VersionString));
+    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + payload.versionstr_len);
 }
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
@@ -1586,38 +1593,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             FlashmemSetSpiBaudrate(packet->oldarg[0]);
             break;
         }
-        case CMD_FLASHMEM_READ: {
-            LED_B_ON();
-            uint32_t startidx = packet->oldarg[0];
-            uint16_t len = packet->oldarg[1];
-
-            Dbprintf("FlashMem read | %d - %d | ", startidx, len);
-
-            size_t size = MIN(PM3_CMD_DATA_SIZE, len);
-
-            if (!FlashInit()) {
-                break;
-            }
-
-            uint8_t *mem = BigBuf_malloc(size);
-
-            for (size_t i = 0; i < len; i += size) {
-                len = MIN((len - i), size);
-
-                Dbprintf("FlashMem reading  | %d | %d | %d |", startidx + i, i, len);
-                uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
-                if (isok == len) {
-                    print_result("Chunk: ", mem, len);
-                } else {
-                    Dbprintf("FlashMem reading failed | %d | %d", len, isok);
-                    break;
-                }
-            }
-            BigBuf_free();
-            FlashStop();
-            LED_B_OFF();
-            break;
-        }
         case CMD_FLASHMEM_WRITE: {
             LED_B_ON();
             uint8_t isok = 0;
@@ -1781,6 +1756,10 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_STATUS: {
             SendStatus();
+            break;
+        }
+        case CMD_STANDALONE: {
+            RunMod();
             break;
         }
         case CMD_CAPABILITIES: {

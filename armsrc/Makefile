@@ -30,7 +30,7 @@ SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
 SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
-SRC_CRAPTO1 = crypto1.c des.c aes.c desfire_key.c desfire_crypto.c mifaredesfire.c
+SRC_CRAPTO1 = crypto1.c des.c desfire_key.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
@@ -68,41 +68,7 @@ else
 endif
 
 # Generic standalone Mode injection of source code
-
-
-SRC_STANDALONE = placeholder.c
-# WITH_STANDALONE_LF_ICERUN
-ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
-    SRC_STANDALONE = lf_icerun.c
-endif
-# WITH_STANDALONE_LF_SAMYRUN
-ifneq (,$(findstring WITH_STANDALONE_LF_SAMYRUN,$(APP_CFLAGS)))
-    SRC_STANDALONE = lf_samyrun.c
-endif
-# WITH_STANDALONE_LF_PROXBRUTE
-ifneq (,$(findstring WITH_STANDALONE_LF_PROXBRUTE,$(APP_CFLAGS)))
-    SRC_STANDALONE = lf_proxbrute.c
-endif
-# WITH_STANDALONE_LF_HIDBRUTE
-ifneq (,$(findstring WITH_STANDALONE_LF_HIDBRUTE,$(APP_CFLAGS)))
-    SRC_STANDALONE = lf_hidbrute.c
-endif
-# WITH_STANDALONE_HF_YOUNG
-ifneq (,$(findstring WITH_STANDALONE_HF_YOUNG,$(APP_CFLAGS)))
-    SRC_STANDALONE = hf_young.c
-endif
-# WITH_STANDALONE_HF_MATTYRUN
-ifneq (,$(findstring WITH_STANDALONE_HF_MATTYRUN,$(APP_CFLAGS)))
-    SRC_STANDALONE = hf_mattyrun.c
-endif
-# WITH_STANDALONE_HF_COLIN
-ifneq (,$(findstring WITH_STANDALONE_HF_COLIN,$(APP_CFLAGS)))
-    SRC_STANDALONE = vtsend.c hf_colin.c
-endif
-# WITH_STANDALONE_HF_BOG
-ifneq (,$(findstring WITH_STANDALONE_HF_BOG,$(APP_CFLAGS)))
-    SRC_STANDALONE = hf_bog.c
-endif
+include Standalone/Makefile.inc
 
 #the FPGA bitstream files. Note: order matters!
 FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit

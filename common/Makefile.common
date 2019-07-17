@@ -43,15 +43,13 @@ TARFLAGS = -C .. -rvf
 #  amount of shell command line parsing going on. echo "" on 
 #  Windows yields literal "", on Linux yields an empty line
 ifeq ($(shell echo ""),)
-
-# This is probably a proper system, so we can use uname
-UNAME := $(shell uname)
 DELETE=rm -rf
 MOVE=mv
 COPY=cp
 PATHSEP=/
 FLASH_TOOL=client/flasher
-DETECTED_OS=$(UNAME)
+# This is probably a proper system, so we can use uname
+DETECTED_OS=$(platform)
 else
 
 # Assume that we are running on Windows.
@@ -65,7 +63,7 @@ DETECTED_OS=Windows
 endif
 
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
-VPATH = . ../common ../common/crapto1 ../common/polarssl ../fpga ../zlib ../armsrc/Standalone ../uart
+VPATH = . ../common ../common/crapto1 ../common/mbedtls ../fpga ../zlib ../armsrc/Standalone ../uart
 
 INCLUDES = ../include/proxmark3.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h $(APP_INCLUDES)
 

@@ -128,7 +128,7 @@ static int CmdParadoxSim(const char *Cmd) {
     cardnumber = (cn & 0x0000FFFF);
 
     // if ( GetParadoxBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
-    // PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+    // PrintAndLogEx(ERR, "Error with tag bitstream generation.");
     // return 1;
     // }
 

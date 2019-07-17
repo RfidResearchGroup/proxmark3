@@ -13,19 +13,10 @@
 #ifndef __PM3_CMD_H
 #define __PM3_CMD_H
 
+#include "common.h"
+
 // Use it e.g. when using slow links such as BT
 #define USART_SLOW_LINK
-
-#ifdef _MSC_VER
-typedef DWORD uint32_t;
-typedef BYTE uint8_t;
-#define PACKED
-// stuff
-#else
-#include <stdint.h>
-#include <stdbool.h>
-#define PACKED __attribute__((packed))
-#endif
 
 #define PM3_CMD_DATA_SIZE 512
 #define PM3_CMD_DATA_SIZE_MIX ( PM3_CMD_DATA_SIZE - 3 * sizeof(uint64_t) )
@@ -216,6 +207,7 @@ typedef struct {
 #define CMD_FINISH_WRITE                                                  0x0003
 #define CMD_HARDWARE_RESET                                                0x0004
 #define CMD_START_FLASH                                                   0x0005
+#define CMD_CHIP_INFO                                                     0x0006
 #define CMD_NACK                                                          0x00fe
 #define CMD_ACK                                                           0x00ff
 
@@ -235,9 +227,9 @@ typedef struct {
 #define CMD_CAPABILITIES                                                  0x0112
 #define CMD_QUIT_SESSION                                                  0x0113
 #define CMD_SET_DBGMODE                                                   0x0114
+#define CMD_STANDALONE                                                    0x0115
 
 // RDV40, Flash memory operations
-#define CMD_FLASHMEM_READ                                                 0x0120
 #define CMD_FLASHMEM_WRITE                                                0x0121
 #define CMD_FLASHMEM_WIPE                                                 0x0122
 #define CMD_FLASHMEM_DOWNLOAD                                             0x0123
@@ -540,6 +532,9 @@ typedef struct {
 
 /* Set if this device understands the extend start flash command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH     (1<<4)
+
+/* Set if this device understands the chip info command */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO       (1<<5)
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.

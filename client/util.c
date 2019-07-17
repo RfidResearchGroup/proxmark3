@@ -26,38 +26,45 @@ uint8_t g_debugMode = 0;
 #define MAX_BIN_BREAK_LENGTH   (3072+384+1)
 
 #ifndef _WIN32
-#include <termios.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
-#include <stdarg.h>
+#include <fcntl.h>
 
-int ukbhit(void) {
-    int cnt = 0;
-    int error;
-    static struct termios Otty, Ntty;
-
-    if (tcgetattr(STDIN_FILENO, &Otty) == -1) return -1;
-
-    Ntty = Otty;
-
-    Ntty.c_iflag          = 0x0000;   // input mode
-    Ntty.c_oflag          = 0x0000;   // output mode
-    Ntty.c_lflag          &= ~ICANON; // control mode = raw
-    Ntty.c_cc[VMIN]       = 1;        // return if at least 1 character is in the queue
-    Ntty.c_cc[VTIME]      = 0;        // no timeout. Wait forever
-
-    if (0 == (error = tcsetattr(STDIN_FILENO, TCSANOW, &Ntty))) {  // set new attributes
-        error += ioctl(STDIN_FILENO, FIONREAD, &cnt);              // get number of characters available
-        error += tcsetattr(STDIN_FILENO, TCSANOW, &Otty);          // reset attributes
+int kbd_enter_pressed(void) {
+    int flags;
+    if ((flags = fcntl(STDIN_FILENO, F_GETFL, 0)) < 0) {
+        PrintAndLogEx(ERR, "fcntl failed in kbd_enter_pressed");
+        return -1;
     }
-    return (error == 0 ? cnt : -1);
+    //non-blocking
+    flags |= O_NONBLOCK;
+    if (fcntl(STDIN_FILENO, F_SETFL, flags) < 0) {
+        PrintAndLogEx(ERR, "fcntl failed in kbd_enter_pressed");
+        return -1;
+    }
+    int c;
+    int ret = 0;
+    do { //get all available chars
+        c = getchar();
+        ret |= c == '\n';
+    } while (c != EOF);
+    //blocking
+    flags &= ~O_NONBLOCK;
+    if (fcntl(STDIN_FILENO, F_SETFL, flags) < 0) {
+        PrintAndLogEx(ERR, "fcntl failed in kbd_enter_pressed");
+        return -1;
+    }
+    return ret;
 }
 
 #else
 
 #include <conio.h>
-int ukbhit(void) {
-    return kbhit();
+int kbd_enter_pressed(void) {
+    int ret = 0;
+    while (kbhit()) {
+        ret |= getch() == '\r';
+    }
+    return ret;
 }
 #endif
 
@@ -170,8 +177,8 @@ bool CheckStringIsHEXValue(const char *value) {
 void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
                    const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 
-    if (buf == NULL ) return;
-    
+    if (buf == NULL) return;
+
     char *tmp = (char *)buf;
     size_t i;
     memset(tmp, 0x00, hex_max_len);
@@ -197,16 +204,16 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
 
 // printing and converting functions
 void print_hex(const uint8_t *data, const size_t len) {
-    if (data == NULL || len == 0 ) return;
-    
+    if (data == NULL || len == 0) return;
+
     for (size_t i = 0; i < len; i++)
         printf("%02x ", data[i]);
     printf("\n");
 }
 
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
-    if (data == NULL || len == 0 ) return;
-    
+    if (data == NULL || len == 0) return;
+
     int rownum = 0;
     printf("[%02d] | ", rownum);
     for (size_t i = 0; i < len; ++i) {

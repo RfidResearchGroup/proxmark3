@@ -3,7 +3,7 @@
 
 #include <string.h>
 #include <stdarg.h>
-#include "aes.h"
+#include "mbedtls/aes.h"
 #include "mifare.h"
 
 #define MAX_CRYPTO_BLOCK_SIZE 16
@@ -71,10 +71,6 @@ enum DESFIRE_CRYPTOALGO {
 struct desfire_key {
     enum DESFIRE_CRYPTOALGO type;
     uint8_t data[24];
-    // DES_key_schedule ks1;
-    // DES_key_schedule ks2;
-    // DES_key_schedule ks3;
-    AesCtx aes_ks;
     uint8_t cmac_sk1[24];
     uint8_t cmac_sk2[24];
     uint8_t aes_version;

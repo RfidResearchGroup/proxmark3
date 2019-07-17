@@ -173,6 +173,10 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
             PrintAndLogEx(ERR, "Attempted to write bootloader but bootloader writes are not enabled");
             return -1;
         }
+        if (can_write_bl && seg->start < BOOTLOADER_END && (seg->start + seg->length > BOOTLOADER_END)) {
+            PrintAndLogEx(ERR, "Error: Segment is outside of bootloader bounds");
+            return -1;
+        }
     }
     return 0;
 }
@@ -188,7 +192,6 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
     fd = fopen(name, "rb");
     if (!fd) {
         PrintAndLogEx(ERR, _RED_("Could not open file") "%s  >>> ", name);
-        perror(NULL);
         goto fail;
     }
 
@@ -343,7 +346,7 @@ static int wait_for_ack(PacketResponseNG *ack) {
 }
 
 // Go into flashing mode
-int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t *chipinfo) {
     uint32_t state;
 
     if (enter_bootloader(serial_port_name) < 0)
@@ -351,6 +354,13 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
 
     if (get_proxmark_state(&state) < 0)
         return -1;
+
+    if (state & DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO) {
+        SendCommandBL(CMD_CHIP_INFO, 0, 0, 0, NULL, 0);
+        PacketResponseNG resp;
+        WaitForResponse(CMD_CHIP_INFO, &resp);
+        *chipinfo = resp.oldarg[0];
+    }
 
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
         // This command is stupid. Why the heck does it care which area we're

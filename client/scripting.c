@@ -411,8 +411,8 @@ static int l_foobar(lua_State *L) {
  * @param L
  * @return boolean, true if kbhit, false otherwise.
  */
-static int l_ukbhit(lua_State *L) {
-    lua_pushboolean(L, ukbhit() ? true : false);
+static int l_kbd_enter_pressed(lua_State *L) {
+    lua_pushboolean(L, kbd_enter_pressed() ? true : false);
     return 1;
 }
 
@@ -1064,7 +1064,7 @@ int set_pm3_libraries(lua_State *L) {
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
         {"mfDarkside",                  l_mfDarkside},
         {"foobar",                      l_foobar},
-        {"ukbhit",                      l_ukbhit},
+        {"kbd_enter_pressed",               l_kbd_enter_pressed},
         {"clearCommandBuffer",          l_clearCommandBuffer},
         {"console",                     l_CmdConsole},
         {"iso15693_crc",                l_iso15693_crc},

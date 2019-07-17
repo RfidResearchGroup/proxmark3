@@ -14,7 +14,7 @@ function Emulator:set_mem (data, clear_first)
         -- Clear out the emulator memory first
         local memclrCmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMCLR}
 
-        local _, err = memclrCmd.sendMIX()
+        local _, err = memclrCmd:sendMIX()
         if err then
             print('Failed to clear emulator memory:', err)
             return false
@@ -36,7 +36,7 @@ function Emulator:set_mem (data, clear_first)
                                        arg2 = self.BLOCK_COUNT}
 
       -- Send command and wait for response
-      local _, err = memsetCmd.sendMIX()
+      local _, err = memsetCmd:sendMIX()
       if err then
          print('Failed setting memory', err)
          return false
@@ -62,7 +62,7 @@ function Emulator:get_mem (size)
                                        arg2 = MAX_BLOCKS,
                                        arg3 = 0}
 
-      local response, err = getmemCmd.sendMIX()
+      local response, err = getmemCmd:sendMIX()
       if err then
          print('Failed getting memory:', err)
          return false

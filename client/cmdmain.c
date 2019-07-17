@@ -31,6 +31,32 @@ static int CmdRem(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int usage_msleep(void) {
+    PrintAndLogEx(NORMAL, "Sleep for given amount of milliseconds");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  msleep <ms>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       <ms>       time in milliseconds");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       msleep 100");
+    return PM3_SUCCESS;
+}
+
+static int CmdMsleep(const char *Cmd) {
+    uint32_t ms = 0;
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_msleep();
+    if (param_getchar(Cmd, 0) != 0x00) {
+        ms = param_get32ex(Cmd, 0, 0, 10);
+        if (ms == 0)
+            return usage_msleep();
+    }
+    msleep(ms);
+    return PM3_SUCCESS;
+}
+
 static int CmdQuit(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     return PM3_EFATAL;
@@ -50,8 +76,9 @@ static command_t CommandTable[] = {
     {"hw",      CmdHW,        AlwaysAvailable,         "{ Hardware commands... }"},
     {"lf",      CmdLF,        AlwaysAvailable,         "{ Low Frequency commands... }"},
     {"mem",     CmdFlashMem,  IfPm3Flash,              "{ Flash Memory manipulation... }"},
-    {"rem",     CmdRem,       AlwaysAvailable,         "{ Add text to row in log file }"},
-    {"reveng",  CmdRev,       AlwaysAvailable,         "{ Crc calculations from the RevEng software... }"},
+    {"msleep",  CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
+    {"rem",     CmdRem,       AlwaysAvailable,         "Add text to row in log file"},
+    {"reveng",  CmdRev,       AlwaysAvailable,         "{ Crc calculations from the RevEng software }"},
     {"sc",      CmdSmartcard, IfPm3Smartcard,          "{ Smart card ISO7816 commands... }"},
     {"script",  CmdScript,    AlwaysAvailable,         "{ Scripting commands }"},
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},

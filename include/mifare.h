@@ -46,7 +46,7 @@ typedef struct {
     uint8_t sak;
     uint8_t ats_len;
     uint8_t ats[256];
-} __attribute__((__packed__)) iso14a_card_select_t;
+} PACKED iso14a_card_select_t;
 
 typedef enum ISO14A_COMMAND {
     ISO14A_CONNECT = (1 << 0),
@@ -129,7 +129,7 @@ typedef struct {
 typedef struct {
     uint8_t atr_len;
     uint8_t atr[30];
-} __attribute__((__packed__)) smart_card_atr_t;
+} PACKED smart_card_atr_t;
 
 typedef enum SMARTCARD_COMMAND {
     SC_CONNECT = (1 << 0),
@@ -167,7 +167,7 @@ typedef struct {
     uint8_t iccode[2];
     uint8_t mrt[6];
     uint8_t servicecode[2];
-} __attribute__((__packed__)) felica_card_select_t;
+} PACKED felica_card_select_t;
 
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),

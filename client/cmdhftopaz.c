@@ -321,7 +321,7 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
 static int topaz_read_dynamic_data(void) {
     // first read the remaining block of segment 0
     if (topaz_read_block(topaz_tag.uid, 0x0f, &topaz_tag.dynamic_memory[0]) == -1) {
-        PrintAndLogEx(WARNING, "Error while reading dynamic memory block %02x. Aborting...", 0x0f);
+        PrintAndLogEx(ERR, "Error while reading dynamic memory block %02x. Aborting...", 0x0f);
         return -1;
     }
 
@@ -329,7 +329,7 @@ static int topaz_read_dynamic_data(void) {
     uint8_t max_segment = topaz_tag.size / 128 - 1;
     for (uint8_t segment = 1; segment <= max_segment; segment++) {
         if (topaz_read_segment(topaz_tag.uid, segment, &topaz_tag.dynamic_memory[(segment - 1) * 128 + 8]) == -1) {
-            PrintAndLogEx(WARNING, "Error while reading dynamic memory block %02x. Aborting...", 0x0f);
+            PrintAndLogEx(ERR, "Error while reading dynamic memory block %02x. Aborting...", 0x0f);
             return -1;
         }
     }
@@ -381,7 +381,7 @@ static int CmdHFTopazReader(const char *Cmd) {
     status = topaz_select(atqa, rid_response);
 
     if (status == -1) {
-        if (verbose) PrintAndLogEx(WARNING, "Error: couldn't receive ATQA");
+        if (verbose) PrintAndLogEx(ERR, "Error: couldn't receive ATQA");
         return -1;
     }
 
@@ -393,7 +393,7 @@ static int CmdHFTopazReader(const char *Cmd) {
     }
 
     if (status == -2) {
-        PrintAndLogEx(WARNING, "Error: tag didn't answer to RID");
+        PrintAndLogEx(ERR, "Error: tag didn't answer to RID");
         topaz_switch_off_field();
         return -1;
     }
@@ -411,7 +411,7 @@ static int CmdHFTopazReader(const char *Cmd) {
     status = topaz_rall(uid_echo, rall_response);
 
     if (status == -1) {
-        PrintAndLogEx(WARNING, "Error: tag didn't answer to RALL");
+        PrintAndLogEx(ERR, "Error: tag didn't answer to RALL");
         topaz_switch_off_field();
         return -1;
     }

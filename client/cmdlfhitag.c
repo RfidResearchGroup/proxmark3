@@ -106,6 +106,7 @@ static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
     PrintAndLogEx(NORMAL, "      24  <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag2 tag");
+    PrintAndLogEx(NORMAL, "      27  <password> <page> <byte0...byte3> write page on a Hitag2 tag");
     return 0;
 }
 static int usage_hitag_checkchallenges(void) {
@@ -176,7 +177,7 @@ static int CmdLFHitagList(const char *Cmd) {
     if (strlen(filename) > 0) {
         f = fopen(filename, "wb");
         if (!f) {
-            PrintAndLogEx(WARNING, "Error: Could not open file [%s]", filename);
+            PrintAndLogEx(ERR, "Error: Could not open file [%s]", filename);
             return PM3_EFILE;
         }
     }
@@ -551,6 +552,7 @@ static int CmdLFHitagReader(const char *Cmd) {
         case WHTSF_CHALLENGE:
         case WHTSF_KEY:
         case WHT2F_CRYPTO:
+        default:
             return usage_hitag_reader();
     }
 
@@ -658,6 +660,12 @@ static int CmdLFHitagWriter(const char *Cmd) {
             num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.crypto.data);
             break;
         }
+        case WHT2F_PASSWORD: {
+            num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 4, htd.pwd.password);
+            arg2 = param_get32ex(Cmd, 2, 0, 10);
+            num_to_bytes(param_get32ex(Cmd, 3, 0, 16), 4, htd.crypto.data);
+            break;
+        }
         case RHTSF_CHALLENGE:
         case RHTSF_KEY:
         case RHT2F_PASSWORD:
@@ -665,6 +673,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
         case RHT2F_CRYPTO:
         case RHT2F_TEST_AUTH_ATTEMPTS:
         case RHT2F_UID_ONLY:
+        default:
             return usage_hitag_writer();
     }
 
