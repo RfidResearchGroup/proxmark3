@@ -532,7 +532,7 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
     int retrycnt = 0;
     for (int i = 0; i < AIDlistLen; i ++) {
         param_gethex_to_eol(AIDlist[i].aid, 0, aidbuf, sizeof(aidbuf), &aidlen);
-        res = EMVSelect(channel, (i == 0) ? ActivateField : false, (i == AIDlistLen - 1) ? LeaveFieldON : true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
+        res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
         // retry if error and not returned sw error
         if (res && res != 5) {
             if (++retrycnt < 3) {
@@ -540,6 +540,9 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
             } else {
                 // (1) - card select error, proxmark error OR (200) - result length = 0
                 if (res == 1 || res == 200) {
+                    if (!LeaveFieldON)
+                        DropFieldEx(channel);
+
                     PrintAndLogEx(WARNING, "Exit...");
                     return 1;
                 }
@@ -562,6 +565,9 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
             TLVPrintFromBuffer(data, datalen);
         }
     }
+
+    if (!LeaveFieldON)
+        DropFieldEx(channel);
 
     return 0;
 }
