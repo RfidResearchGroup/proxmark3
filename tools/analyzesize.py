@@ -10,7 +10,10 @@ def print_increase(x, y, name):
     else:
         print("{} decrease by: {} (0x{:08X}) bytes ({}%)".format(name, y-x, y-x, (y-x)*100/x))
 dbname = "tools/data.json"
-db = json.load(open(dbname,"r"))
+try:
+    db = json.load(open(dbname,"r"))
+except FileNotFoundError:
+    db = dict()
 
 if len(sys.argv) < 3:
     print("Usage: analazysize.py <info|add|diff> <datasetname>")
