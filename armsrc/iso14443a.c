@@ -13,6 +13,7 @@
 
 #define MAX_ISO14A_TIMEOUT 524288
 static uint32_t iso14a_timeout;
+// if iso14443a not active - transmit/receive dont try to execute
 static bool iso14443a_active = false;
 
 uint8_t colpos = 0;
@@ -2367,7 +2368,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 
 void iso14443a_off() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LED_D_OFF();
+    LEDsoff();
     iso14443a_active = false;
 }
 
@@ -2575,7 +2576,6 @@ void ReaderIso14443a(PacketCommandNG *c) {
 OUT:
     iso14443a_off();
     set_tracing(false);
-    LEDsoff();
 }
 
 // Determine the distance between two nonces.
@@ -2870,7 +2870,6 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     reply_mix(CMD_ACK, isOK, 0, 0, buf, sizeof(buf));
 
     iso14443a_off();
-    LEDsoff();
     set_tracing(false);
 }
 
@@ -3110,6 +3109,5 @@ void DetectNACKbug() {
     //reply_mix(CMD_ACK, isOK, num_nacks, i, 0, 0);
     BigBuf_free();
     iso14443a_off();
-    LEDsoff();
     set_tracing(false);
 }
