@@ -5,7 +5,7 @@ Note that it also supports other Proxmark3 platforms as well!
 
 | Releases     | Linux & OSX CI       | Windows CI |
 | ------------------- |:-------------------:| -------------------:|
-| [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Build status](https://travis-ci.org/RfidResearchGroup/proxmark3.svg?branch=master)](https://travis-ci.org/RfidResearchGroup/proxmark3) | [![Build status](https://ci.appveyor.com/api/projects/status/uvk6cexs6xxwonn4/branch/master?svg=true)](https://ci.appveyor.com/project/iceman1001/proxmark3-isfoh/branch/master) |
+| [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Build status](https://travis-ci.org/RfidResearchGroup/proxmark3.svg?branch=master)](https://travis-ci.org/RfidResearchGroup/proxmark3) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) |
 
 ---
 
