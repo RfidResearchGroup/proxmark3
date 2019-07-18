@@ -153,28 +153,35 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         case CMD_FINISH_WRITE: {
             uint32_t *flash_mem = (uint32_t *)(&_flash_start);
             for (int j = 0; j < 2; j++) {
-                for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
-                    flash_mem[i] = c->d.asDwords[i];
-                }
-
                 uint32_t flash_address = arg0 + (0x100 * j);
-
+                AT91PS_EFC efc_bank = AT91C_BASE_EFC0;
+                int offset = 0;
+                uint32_t page_n = (flash_address - ((uint32_t)flash_mem)) / AT91C_IFLASH_PAGE_SIZE;
+                if (page_n >= 1024) {
+                    page_n -= 1024;
+                    efc_bank = AT91C_BASE_EFC1;
+                    // We need to offset the writes or it will not fill the correct bank write buffer.
+                    offset = 1024 * AT91C_IFLASH_PAGE_SIZE / 4;
+                }
+                for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
+                    flash_mem[offset+i] = c->d.asDwords[i];
+                }
+                
                 /* Check that the address that we are supposed to write to is within our allowed region */
                 if (((flash_address + AT91C_IFLASH_PAGE_SIZE - 1) >= end_addr) || (flash_address < start_addr)) {
                     /* Disallow write */
                     dont_ack = 1;
                     reply_old(CMD_NACK, 0, 0, 0, 0, 0);
                 } else {
-                    uint32_t page_n = (flash_address - ((uint32_t)flash_mem)) / AT91C_IFLASH_PAGE_SIZE;
-                    /* Translate address to flash page and do flash, update here for the 512k part */
-                    AT91C_BASE_EFC0->EFC_FCR = MC_FLASH_COMMAND_KEY |
-                                               MC_FLASH_COMMAND_PAGEN(page_n) |
-                                               AT91C_MC_FCMD_START_PROG;
+
+                    efc_bank->EFC_FCR = MC_FLASH_COMMAND_KEY |
+                                     MC_FLASH_COMMAND_PAGEN(page_n) |
+                                     AT91C_MC_FCMD_START_PROG;
                 }
 
                 // Wait until flashing of page finishes
                 uint32_t sr;
-                while (!((sr = AT91C_BASE_EFC0->EFC_FSR) & AT91C_MC_FRDY));
+                while (!((sr = efc_bank->EFC_FSR) & AT91C_MC_FRDY));
                 if (sr & (AT91C_MC_LOCKE | AT91C_MC_PROGE)) {
                     dont_ack = 1;
                     reply_old(CMD_NACK, sr, 0, 0, 0, 0);
