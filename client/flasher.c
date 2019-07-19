@@ -24,15 +24,20 @@
 #define ONE_KB 1024
 
 static void usage(char *argv0) {
-    PrintAndLogEx(NORMAL, "Usage:   %s <port> [-b] image.elf [image.elf...]\n", argv0);
-    PrintAndLogEx(NORMAL, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n");
-    PrintAndLogEx(NORMAL, "\nExample:\n\n\t %s "SERIAL_PORT_EXAMPLE_H" armsrc/obj/fullimage.elf", argv0);
+    PrintAndLogEx(NORMAL, "Usage:   %s <port> [-b] image.elf [image.elf...]", argv0);
+    PrintAndLogEx(NORMAL, "         %s <port> -i\n", argv0);
+    PrintAndLogEx(NORMAL, "\t-b\tEnable flashing of bootloader area (DANGEROUS)");
+    PrintAndLogEx(NORMAL, "\t-i\tProbe the connected Proxmark3 to retrieve its memory size");
+    PrintAndLogEx(NORMAL, "\nExamples:\n\t %s "SERIAL_PORT_EXAMPLE_H" -i", argv0);
+    PrintAndLogEx(NORMAL, "\t %s "SERIAL_PORT_EXAMPLE_H" armsrc/obj/fullimage.elf", argv0);
 #ifdef __linux__
-    PrintAndLogEx(NORMAL, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark3 to reappear on <DEVICE>',");
-    PrintAndLogEx(NORMAL, "              you need to blacklist Proxmark3 for modem-manager - see wiki for more details:\n");
-    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/Gentoo Linux\n");
-    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/Ubuntu Linux\n");
-    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/OSX\n");
+    PrintAndLogEx(NORMAL, "\nNote (Linux):\nif the flasher gets stuck in 'Waiting for Proxmark3 to reappear on <DEVICE>',");
+    PrintAndLogEx(NORMAL, "you need to blacklist Proxmark3 for modem-manager - see documentation for more details:");
+    PrintAndLogEx(NORMAL, "* https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md");
+    PrintAndLogEx(NORMAL, "\nMore info on flashing procedure from the official Proxmark3 wiki:");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/Gentoo%%20Linux");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/Ubuntu%%20Linux");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/OSX\n");
 #endif
 }
 
@@ -78,7 +83,7 @@ int main(int argc, char **argv) {
     int res;
     flash_file_t files[MAX_FILES];
     char * filenames[MAX_FILES];
-
+    bool info = false;
     memset(files, 0, sizeof(files));
 
     session.supports_colors = false;
@@ -99,6 +104,8 @@ int main(int argc, char **argv) {
         if (argv[i][0] == '-') {
             if (!strcmp(argv[i], "-b")) {
                 can_write_bl = 1;
+            } else if (!strcmp(argv[i], "-i")) {
+                info = true;
             } else {
                 usage(argv[0]);
                 return -1;
@@ -133,24 +140,25 @@ int main(int argc, char **argv) {
         mem_avail = 256; //we default to a low value
     }
 
-    for (int i = 0 ; i < num_files; ++i){
-        res = flash_load(&files[i], filenames[i], can_write_bl, mem_avail*ONE_KB);
-        if (res < 0)
-            return -1;
+    if (! info) {
+        for (int i = 0 ; i < num_files; ++i){
+            res = flash_load(&files[i], filenames[i], can_write_bl, mem_avail*ONE_KB);
+            if (res < 0)
+                return -1;
 
-        PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(NORMAL, "");
+        }
+
+        PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
+
+        for (int i = 0; i < num_files; i++) {
+            res = flash_write(&files[i]);
+            if (res < 0)
+                return -1;
+            flash_free(&files[i]);
+            PrintAndLogEx(NORMAL, "\n");
+        }
     }
-
-    PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
-
-    for (int i = 0; i < num_files; i++) {
-        res = flash_write(&files[i]);
-        if (res < 0)
-            return -1;
-        flash_free(&files[i]);
-        PrintAndLogEx(NORMAL, "\n");
-    }
-
     res = flash_stop_flashing();
     if (res < 0)
         return -1;
