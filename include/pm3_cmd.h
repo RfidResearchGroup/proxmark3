@@ -208,6 +208,7 @@ typedef struct {
 #define CMD_HARDWARE_RESET                                                0x0004
 #define CMD_START_FLASH                                                   0x0005
 #define CMD_CHIP_INFO                                                     0x0006
+#define CMD_BL_VERSION                                                    0x0007
 #define CMD_NACK                                                          0x00fe
 #define CMD_ACK                                                           0x00ff
 
@@ -535,6 +536,12 @@ typedef struct {
 
 /* Set if this device understands the chip info command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO       (1<<5)
+
+/* Set if this device understands the version command */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_VERSION         (1<<6)
+
+// Different versions here. Each version should increse the number
+#define VERSION_1_0_0 1
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.
