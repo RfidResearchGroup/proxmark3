@@ -541,7 +541,10 @@ typedef struct {
 #define DEVICE_INFO_FLAG_UNDERSTANDS_VERSION         (1<<6)
 
 // Different versions here. Each version should increse the number
-#define VERSION_1_0_0 1
+#define BL_VERSION_INVALID  0
+#define BL_VERSION_1_0_0    1
+#define BL_VERSION_FIRST    BL_VERSION_1_0_0
+#define BL_VERSION_LAST     BL_VERSION_1_0_0
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.

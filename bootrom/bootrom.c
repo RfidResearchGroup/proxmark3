@@ -143,7 +143,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
 
         case CMD_BL_VERSION: {
             dont_ack = 1;
-            arg0 = VERSION_1_0_0;
+            arg0 = BL_VERSION_1_0_0;
             reply_old(CMD_BL_VERSION, arg0, 0, 0, 0, 0);
         }
 
