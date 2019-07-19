@@ -1596,7 +1596,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
                     break;
             }
         }
-        
+
         //iceman test
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
@@ -1937,7 +1937,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //-----------------------------------------------------------------------------
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset) {
     uint32_t c = 0;
-    
+
     if (!iso14443a_active)
         return false;
 
@@ -1968,7 +1968,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
                 return false;
             }
         }
-        
+
         // timeout already in ms + 100ms guard time
         if (GetTickCount() - receive_timer > timeout + 100)
             break;
@@ -2378,7 +2378,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
     UartReset();
     NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
     iso14a_set_timeout(1060); // 106 * 10ms default
-    
+
     iso14443a_active = true;
 }
 

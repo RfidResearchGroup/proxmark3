@@ -164,9 +164,9 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                     offset = (AT91C_IFLASH_NB_OF_PAGES / 2) * AT91C_IFLASH_PAGE_SIZE / sizeof(uint32_t);
                 }
                 for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
-                    flash_mem[offset+i] = c->d.asDwords[i];
+                    flash_mem[offset + i] = c->d.asDwords[i];
                 }
-                
+
                 /* Check that the address that we are supposed to write to is within our allowed region */
                 if (((flash_address + AT91C_IFLASH_PAGE_SIZE - 1) >= end_addr) || (flash_address < start_addr)) {
                     /* Disallow write */
@@ -175,8 +175,8 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                 } else {
 
                     efc_bank->EFC_FCR = MC_FLASH_COMMAND_KEY |
-                                     MC_FLASH_COMMAND_PAGEN(page_n) |
-                                     AT91C_MC_FCMD_START_PROG;
+                                        MC_FLASH_COMMAND_PAGEN(page_n) |
+                                        AT91C_MC_FCMD_START_PROG;
                 }
 
                 // Wait until flashing of page finishes

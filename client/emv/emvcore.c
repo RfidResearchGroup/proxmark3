@@ -539,7 +539,7 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
                 i--;
             } else {
                 // (1) - card select error, (4) reply timeout, (200) - result length = 0
-                if (res == 1 || res == 4 ||res == 200) {
+                if (res == 1 || res == 4 || res == 200) {
                     if (!LeaveFieldON)
                         DropFieldEx(channel);
 

@@ -31,4 +31,3 @@ elif action.lower() == "diff":
     flash = text+data
     print_increase(flash, flash_ref, "Flash")
     print_increase(bss, bss_ref, "RAM")
-        

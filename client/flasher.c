@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
     int res;
     int ret = 0;
     flash_file_t files[MAX_FILES];
-    char * filenames[MAX_FILES];
+    char *filenames[MAX_FILES];
     bool info = false;
     memset(files, 0, sizeof(files));
 
@@ -146,8 +146,8 @@ int main(int argc, char **argv) {
     if (info)
         goto finish;
 
-    for (int i = 0 ; i < num_files; ++i){
-        res = flash_load(&files[i], filenames[i], can_write_bl, mem_avail*ONE_KB);
+    for (int i = 0 ; i < num_files; ++i) {
+        res = flash_load(&files[i], filenames[i], can_write_bl, mem_avail * ONE_KB);
         if (res < 0) {
             ret = -1;
             goto finish;
@@ -174,7 +174,7 @@ finish:
 
     CloseProxmark();
 
-    if (ret==0)
+    if (ret == 0)
         PrintAndLogEx(SUCCESS, _BLUE_("All done."));
     else
         PrintAndLogEx(ERR, "Aborted on error.");
