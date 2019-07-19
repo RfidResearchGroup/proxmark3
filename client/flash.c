@@ -361,7 +361,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES;
     }
 
-    PrintAndLogEx(INFO, "End of flahs: 0x%08x", flash_end);
+    PrintAndLogEx(INFO, "End of flash: 0x%08x", flash_end);
 
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
         // This command is stupid. Why the heck does it care which area we're
