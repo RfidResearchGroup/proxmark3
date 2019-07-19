@@ -41,42 +41,6 @@ static void usage(char *argv0) {
 #endif
 }
 
-int chipid_to_mem_avail(uint32_t iChipID) {
-    int mem_avail = 0;
-    switch ((iChipID & 0xF00) >> 8) {
-        case 0:
-            mem_avail = 0;
-            break;
-        case 1:
-            mem_avail = 8;
-            break;
-        case 2:
-            mem_avail = 16;
-            break;
-        case 3:
-            mem_avail = 32;
-            break;
-        case 5:
-            mem_avail = 64;
-            break;
-        case 7:
-            mem_avail = 128;
-            break;
-        case 9:
-            mem_avail = 256;
-            break;
-        case 10:
-            mem_avail = 512;
-            break;
-        case 12:
-            mem_avail = 1024;
-            break;
-        case 14:
-            mem_avail = 2048;
-    }
-    return mem_avail;
-}
-
 int main(int argc, char **argv) {
     int can_write_bl = 0;
     int num_files = 0;
@@ -126,28 +90,18 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    uint32_t chipid = 0;
-    res = flash_start_flashing(can_write_bl, serial_port_name, &chipid);
+    uint32_t max_allowed = 0;
+    res = flash_start_flashing(can_write_bl, serial_port_name, &max_allowed);
     if (res < 0) {
         ret = -1;
         goto finish;
-    }
-
-    int mem_avail = chipid_to_mem_avail(chipid);
-    if (mem_avail != 0) {
-        PrintAndLogEx(NORMAL, "Available memory on this board: %uK bytes\n", mem_avail);
-    } else {
-        PrintAndLogEx(NORMAL, "Available memory on this board: "_RED_("UNKNOWN")"\n");
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CHIP_INFO command"));
-        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
-        mem_avail = 256; //we default to a low value
     }
 
     if (info)
         goto finish;
 
     for (int i = 0 ; i < num_files; ++i) {
-        res = flash_load(&files[i], filenames[i], can_write_bl, mem_avail * ONE_KB);
+        res = flash_load(&files[i], filenames[i], can_write_bl, max_allowed * ONE_KB);
         if (res < 0) {
             ret = -1;
             goto finish;

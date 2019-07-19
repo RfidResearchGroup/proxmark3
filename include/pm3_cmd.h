@@ -540,11 +540,17 @@ typedef struct {
 /* Set if this device understands the version command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_VERSION         (1<<6)
 
-// Different versions here. Each version should increse the number
+#define BL_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
+#define BL_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)
+#define BL_VERSION_PATCH(version) ((uint32_t)(version) & 0xfff)
+#define BL_MAKE_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
+// Some boundaries to distinguish valid versions from corrupted info
+#define BL_VERSION_FIRST_MAJOR    1
+#define BL_VERSION_LAST_MAJOR     99
 #define BL_VERSION_INVALID  0
-#define BL_VERSION_1_0_0    1
-#define BL_VERSION_FIRST    BL_VERSION_1_0_0
-#define BL_VERSION_LAST     BL_VERSION_1_0_0
+// Different versions here. Each version should increase the numbers
+#define BL_VERSION_1_0_0    BL_MAKE_VERSION(1, 0, 0)
+
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.

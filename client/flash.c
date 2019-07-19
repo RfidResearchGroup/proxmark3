@@ -17,12 +17,50 @@
 
 #define BLOCK_SIZE             0x200
 
+#define FLASHER_VERSION        BL_VERSION_1_0_0
+
 static const uint8_t elf_ident[] = {
     0x7f, 'E', 'L', 'F',
     ELFCLASS32,
     ELFDATA2LSB,
     EV_CURRENT
 };
+
+static int chipid_to_mem_avail(uint32_t iChipID) {
+    int mem_avail = 0;
+    switch ((iChipID & 0xF00) >> 8) {
+        case 0:
+            mem_avail = 0;
+            break;
+        case 1:
+            mem_avail = 8;
+            break;
+        case 2:
+            mem_avail = 16;
+            break;
+        case 3:
+            mem_avail = 32;
+            break;
+        case 5:
+            mem_avail = 64;
+            break;
+        case 7:
+            mem_avail = 128;
+            break;
+        case 9:
+            mem_avail = 256;
+            break;
+        case 10:
+            mem_avail = 512;
+            break;
+        case 12:
+            mem_avail = 1024;
+            break;
+        case 14:
+            mem_avail = 2048;
+    }
+    return mem_avail;
+}
 
 // Turn PHDRs into flasher segments, checking for PHDR sanity and merging adjacent
 // unaligned segments if needed
@@ -339,9 +377,19 @@ static int wait_for_ack(PacketResponseNG *ack) {
     return 0;
 }
 
+static void flash_suggest_update_bootloader(void) {
+    PrintAndLogEx(ERR, _RED_("It is recommended that you first update your bootloader alone,"));
+    PrintAndLogEx(ERR, _RED_("reboot the Proxmark3 then only update the main firmware") "\n");
+}
+
+static void flash_suggest_update_flasher(void) {
+    PrintAndLogEx(ERR, _RED_("It is recommended that you first update your flasher"));
+}
+
 // Go into flashing mode
-int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t *chipinfo) {
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t *max_allowed) {
     uint32_t state;
+    uint32_t chipinfo = 0;
 
     if (enter_bootloader(serial_port_name) < 0)
         return -1;
@@ -353,7 +401,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         SendCommandBL(CMD_CHIP_INFO, 0, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_CHIP_INFO, &resp);
-        *chipinfo = resp.oldarg[0];
+        chipinfo = resp.oldarg[0];
     }
 
     int version = BL_VERSION_INVALID;
@@ -362,32 +410,51 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         PacketResponseNG resp;
         WaitForResponse(CMD_BL_VERSION, &resp);
         version = resp.oldarg[0];
-        if ((version < BL_VERSION_FIRST || version > BL_VERSION_LAST)) {
+        if ((BL_VERSION_MAJOR(version) < BL_VERSION_FIRST_MAJOR) || (BL_VERSION_MAJOR(version) > BL_VERSION_LAST_MAJOR)) {
+            // version info seems fishy
             version = BL_VERSION_INVALID;
+            PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported an invalid version number"));
+            flash_suggest_update_bootloader();
+            // 
+        } else if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(FLASHER_VERSION)) {
+            PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported a version older than this flasher"));
+            flash_suggest_update_bootloader();
+        } else if (BL_VERSION_MAJOR(version) > BL_VERSION_MAJOR(FLASHER_VERSION)) {
+            PrintAndLogEx(ERR, _RED_("Note: Your bootloader is more recent than this flasher"));
+            flash_suggest_update_flasher();
         }
     } else {
         PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CMD_BL_VERSION command"));
-        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
-    }
-
-    bool allow_512k_writes = false;
-    if (version == BL_VERSION_INVALID) {
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported an invalid version number"));
-        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
-    } else if (version >= BL_VERSION_1_0_0) {
-        allow_512k_writes = true;
+        flash_suggest_update_bootloader();
     }
 
     uint32_t flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES / 2;
-    if ((((*chipinfo & 0xF00) >> 8) > 9) && allow_512k_writes) {
-        flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES;
+    *max_allowed = 256;
+
+    int mem_avail = chipid_to_mem_avail(chipinfo);
+    if (mem_avail != 0) {
+        PrintAndLogEx(NORMAL, "Available memory on this board: %uK bytes\n", mem_avail);
+        if (mem_avail > 256) {
+            if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(BL_VERSION_1_0_0)) {
+                PrintAndLogEx(ERR, _RED_("Your bootloader does not support writing above 256k"));
+                flash_suggest_update_bootloader();
+            } else {
+                flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES;
+                *max_allowed = mem_avail;
+            }
+        }
+    } else {
+        PrintAndLogEx(NORMAL, "Available memory on this board: "_RED_("UNKNOWN")"\n");
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CHIP_INFO command"));
+        flash_suggest_update_bootloader();
     }
-
-    PrintAndLogEx(INFO, "End of flash: 0x%08x", flash_end);
-
+    
+    if (enable_bl_writes) {
+        PrintAndLogEx(INFO, "Permitted flash range: 0x%08x-0x%08x", FLASH_START, flash_end);
+    } else {
+        PrintAndLogEx(INFO, "Permitted flash range: 0x%08x-0x%08x", BOOTLOADER_END, flash_end);
+    }
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
-        // This command is stupid. Why the heck does it care which area we're
-        // flashing, as long as it's not the bootloader area? The mind boggles.
         PacketResponseNG resp;
 
         if (enable_bl_writes) {
@@ -398,7 +465,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         return wait_for_ack(&resp);
     } else {
         PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new START_FLASH command"));
-        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
+        flash_suggest_update_bootloader();
     }
     return 0;
 }
