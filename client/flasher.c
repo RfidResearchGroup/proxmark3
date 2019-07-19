@@ -81,6 +81,7 @@ int main(int argc, char **argv) {
     int can_write_bl = 0;
     int num_files = 0;
     int res;
+    int ret = 0;
     flash_file_t files[MAX_FILES];
     char * filenames[MAX_FILES];
     bool info = false;
@@ -127,8 +128,10 @@ int main(int argc, char **argv) {
 
     uint32_t chipid = 0;
     res = flash_start_flashing(can_write_bl, serial_port_name, &chipid);
-    if (res < 0)
-        return -1;
+    if (res < 0) {
+        ret = -1;
+        goto finish;
+    }
 
     int mem_avail = chipid_to_mem_avail(chipid);
     if (mem_avail != 0) {
@@ -140,32 +143,41 @@ int main(int argc, char **argv) {
         mem_avail = 256; //we default to a low value
     }
 
-    if (! info) {
-        for (int i = 0 ; i < num_files; ++i){
-            res = flash_load(&files[i], filenames[i], can_write_bl, mem_avail*ONE_KB);
-            if (res < 0)
-                return -1;
+    if (info)
+        goto finish;
 
-            PrintAndLogEx(NORMAL, "");
+    for (int i = 0 ; i < num_files; ++i){
+        res = flash_load(&files[i], filenames[i], can_write_bl, mem_avail*ONE_KB);
+        if (res < 0) {
+            ret = -1;
+            goto finish;
         }
-
-        PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
-
-        for (int i = 0; i < num_files; i++) {
-            res = flash_write(&files[i]);
-            if (res < 0)
-                return -1;
-            flash_free(&files[i]);
-            PrintAndLogEx(NORMAL, "\n");
-        }
+        PrintAndLogEx(NORMAL, "");
     }
+
+    PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
+
+    for (int i = 0; i < num_files; i++) {
+        res = flash_write(&files[i]);
+        if (res < 0) {
+            ret = -1;
+            goto finish;
+        }
+        flash_free(&files[i]);
+        PrintAndLogEx(NORMAL, "\n");
+    }
+
+finish:
     res = flash_stop_flashing();
     if (res < 0)
-        return -1;
+        ret = -1;
 
     CloseProxmark();
 
-    PrintAndLogEx(SUCCESS, _BLUE_("All done."));
-    PrintAndLogEx(SUCCESS, "\nHave a nice day!");
-    return 0;
+    if (ret==0)
+        PrintAndLogEx(SUCCESS, _BLUE_("All done."));
+    else
+        PrintAndLogEx(ERR, "Aborted on error.");
+    PrintAndLogEx(NORMAL, "\nHave a nice day!");
+    return ret;
 }
