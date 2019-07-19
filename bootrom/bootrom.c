@@ -157,11 +157,11 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                 AT91PS_EFC efc_bank = AT91C_BASE_EFC0;
                 int offset = 0;
                 uint32_t page_n = (flash_address - ((uint32_t)flash_mem)) / AT91C_IFLASH_PAGE_SIZE;
-                if (page_n >= 1024) {
-                    page_n -= 1024;
+                if (page_n >= AT91C_IFLASH_NB_OF_PAGES / 2) {
+                    page_n -= AT91C_IFLASH_NB_OF_PAGES / 2;
                     efc_bank = AT91C_BASE_EFC1;
                     // We need to offset the writes or it will not fill the correct bank write buffer.
-                    offset = 1024 * AT91C_IFLASH_PAGE_SIZE / 4;
+                    offset = (AT91C_IFLASH_NB_OF_PAGES / 2) * AT91C_IFLASH_PAGE_SIZE / sizeof(uint32_t);
                 }
                 for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
                     flash_mem[offset+i] = c->d.asDwords[i];
