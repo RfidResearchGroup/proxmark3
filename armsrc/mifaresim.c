@@ -56,7 +56,7 @@ static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t act
         }
         case AC_KEYB_WRITE: {
             if (DBGLEVEL >= DBG_EXTENDED)	Dbprintf("IsTrailerAccessAllowed: AC_KEYB_WRITE");
-            return ((keytype == AUTHKEYA && (AC == 0x00 || AC == 0x04))
+            return ((keytype == AUTHKEYA && (AC == 0x00 || AC == 0x01))
                     || (keytype == AUTHKEYB && (AC == 0x04 || AC == 0x03)));
         }
         case AC_AC_READ: {
@@ -457,8 +457,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
     uint8_t *rats = NULL;
     uint8_t rats_len = 0;
 
-    uint8_t rAUTH_AT[] = {0x00, 0x00, 0x00, 0x00};
-
     //Here, we collect UID,sector,keytype,NT,AR,NR,NT2,AR2,NR2
     // This will be used in the reader-only attack.
 
@@ -713,7 +711,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                         crypto1_word(pcs, cuid ^ nonce, 0);
                         // rAUTH_NT contains prepared nonce for authenticate
                         EmSendCmd(rAUTH_NT, sizeof(rAUTH_NT));
-                        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader authenticating for block %d (0x%02x) with key %c - nonce: %02X - ciud: %02X", receivedCmd_dec[1], receivedCmd_dec[1], (cardAUTHKEY == 0) ? 'A' : 'B', rAUTH_AT, cuid);
+                        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader authenticating for block %d (0x%02x) with key %c - nonce: %02X - ciud: %02X", receivedCmd_dec[1], receivedCmd_dec[1], (cardAUTHKEY == 0) ? 'A' : 'B', rAUTH_NT, cuid);
                     } else {
                         // nested authentication
                         /*
@@ -1044,9 +1042,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
                 }
 
                 ans = prng_successor(nonce, 96);
-                num_to_bytes(ans, 4, rAUTH_AT);
-                mf_crypto1_encrypt(pcs, rAUTH_AT, 4, response_par);
-                EmSendCmdPar(rAUTH_AT, 4, response_par);
+                num_to_bytes(ans, 4, response);
+                mf_crypto1_encrypt(pcs, response, 4, response_par);
+                EmSendCmdPar(response, 4, response_par);
 
                 if (DBGLEVEL >= DBG_EXTENDED) {
                     Dbprintf("[MFEMUL_AUTH1] AUTH COMPLETED for sector %d with key %c. time=%d",

@@ -741,7 +741,7 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
 
 //-----------------------------------------------------------------------------
 // Wait for commands from reader
-// stop when button is pressed
+// stop when button is pressed or client usb connection resets
 // or return TRUE when command is captured
 //-----------------------------------------------------------------------------
 static bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
@@ -1092,7 +1092,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 #define ORDER_SELECT_CL2     30
 #define ORDER_EV1_COMP_WRITE 40
 #define ORDER_RATS           70
-    int order = ORDER_NONE;
+    uint8_t order = ORDER_NONE;
 
     int retval = PM3_SUCCESS;
 
