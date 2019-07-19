@@ -126,6 +126,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                    DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
                    DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH |
                    DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO;
+                   //to add later: DEVICE_INFO_FLAG_UNDERSTANDS_VERSION
             if (common_area.flags.osimage_present)
                 arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
 
@@ -139,6 +140,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
             reply_old(CMD_CHIP_INFO, arg0, 0, 0, 0, 0);
         }
         break;
+
+        case CMD_BL_VERSION: {
+            dont_ack = 1;
+            arg0 = VERSION_1_0_0;
+            reply_old(CMD_BL_VERSION, arg0, 0, 0, 0, 0);
+        }
 
         case CMD_SETUP_WRITE: {
             /* The temporary write buffer of the embedded flash controller is mapped to the
