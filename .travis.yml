@@ -8,7 +8,7 @@ compiler: gcc
 matrix:
   include:
     - os: osx
-      osx_image: xcode9.1   # OS X 10.13.1
+      osx_image: xcode9.2   # OS X 10.13
     - os: linux
       dist: xenial
       sudo: required
