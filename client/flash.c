@@ -356,8 +356,30 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         *chipinfo = resp.oldarg[0];
     }
 
+    int version = BL_VERSION_INVALID;
+    if (state & DEVICE_INFO_FLAG_UNDERSTANDS_VERSION) {
+        SendCommandBL(CMD_BL_VERSION, 0, 0, 0, NULL, 0);
+        PacketResponseNG resp;
+        WaitForResponse(CMD_BL_VERSION, &resp);
+        version = resp.oldarg[0];
+        if ((version < BL_VERSION_FIRST || version > BL_VERSION_LAST)) {
+            version = BL_VERSION_INVALID;
+        }
+    } else {
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CMD_BL_VERSION command"));
+        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
+    }
+
+    bool allow_512k_writes = false;
+    if (version == BL_VERSION_INVALID) {
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported an invalid version number"));
+        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
+    } else if (version >= BL_VERSION_1_0_0) {
+        allow_512k_writes = true;
+    }
+
     uint32_t flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES / 2;
-    if (((*chipinfo & 0xF00) >> 8) > 9) {
+    if ((((*chipinfo & 0xF00) >> 8) > 9) && allow_512k_writes) {
         flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES;
     }
 
