@@ -4,6 +4,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Fix 'hf mf sim' - wrong access rights to write key B in trailer (@McEloff)
+ - Add option -i to flasher to query Pm3 for its memory size (@doegox)
+ - Add support for flashing 512K units (@slurdge)
+ - Add a simple python tool to check the elf sizes (@slurdge)
+ - Change: new keys for Vigik badges in default_keys.dict (@luminouw)
  - Add 'hw standalone' to jump to standalone mode from command line or script (@doegox)
  - Add to 'hf 14a apdu' print apdu and compose apdu (@merlokk)
  - Change: buggy 'mem read' removed, 'mem save' renamed 'mem dump', can now display too (@doegox)

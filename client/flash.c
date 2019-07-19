@@ -12,13 +12,6 @@
 
 #define FLASH_START            0x100000
 
-#ifdef HAS_512_FLASH
-# define FLASH_SIZE             (512*1024)
-#else
-# define FLASH_SIZE             (256*1024)
-#endif
-
-#define FLASH_END              (FLASH_START + FLASH_SIZE)
 #define BOOTLOADER_SIZE        0x2000
 #define BOOTLOADER_END         (FLASH_START + BOOTLOADER_SIZE)
 
@@ -33,7 +26,7 @@ static const uint8_t elf_ident[] = {
 
 // Turn PHDRs into flasher segments, checking for PHDR sanity and merging adjacent
 // unaligned segments if needed
-static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, uint16_t num_phdrs) {
+static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, uint16_t num_phdrs, uint32_t flash_end) {
     Elf32_Phdr *phdr = phdrs;
     flash_seg_t *seg;
     uint32_t last_end = 0;
@@ -77,11 +70,11 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
             PrintAndLogEx(ERR, "Error: PHDRs not sorted or overlap");
             return -1;
         }
-        if (paddr < FLASH_START || (paddr + filesz) > FLASH_END) {
+        if (paddr < FLASH_START || (paddr + filesz) > flash_end) {
             PrintAndLogEx(ERR, "Error: PHDR is not contained in Flash");
             return -1;
         }
-        if (vaddr >= FLASH_START && vaddr < FLASH_END && (flags & PF_W)) {
+        if (vaddr >= FLASH_START && vaddr < flash_end && (flags & PF_W)) {
             PrintAndLogEx(ERR, "Error: Flash VMA segment is writable");
             return -1;
         }
@@ -153,7 +146,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
 }
 
 // Sanity check segments and check for bootloader writes
-static int check_segs(flash_file_t *ctx, int can_write_bl) {
+static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_end) {
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
@@ -165,7 +158,7 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
             PrintAndLogEx(ERR, "Error: Segment is outside of flash bounds");
             return -1;
         }
-        if (seg->start + seg->length > FLASH_END) {
+        if (seg->start + seg->length > flash_end) {
             PrintAndLogEx(ERR, "Error: Segment is outside of flash bounds");
             return -1;
         }
@@ -182,11 +175,12 @@ static int check_segs(flash_file_t *ctx, int can_write_bl) {
 }
 
 // Load an ELF file and prepare it for flashing
-int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
+int flash_load(flash_file_t *ctx, const char *name, int can_write_bl, int flash_size) {
     FILE *fd;
     Elf32_Ehdr ehdr;
     Elf32_Phdr *phdrs = NULL;
     uint16_t num_phdrs;
+    uint32_t flash_end  = FLASH_START + flash_size;
     int res;
 
     fd = fopen(name, "rb");
@@ -239,10 +233,10 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
         goto fail;
     }
 
-    res = build_segs_from_phdrs(ctx, fd, phdrs, num_phdrs);
+    res = build_segs_from_phdrs(ctx, fd, phdrs, num_phdrs, flash_end);
     if (res < 0)
         goto fail;
-    res = check_segs(ctx, can_write_bl);
+    res = check_segs(ctx, can_write_bl, flash_end);
     if (res < 0)
         goto fail;
 
@@ -362,15 +356,22 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         *chipinfo = resp.oldarg[0];
     }
 
+    uint32_t flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES / 2;
+    if (((*chipinfo & 0xF00) >> 8) > 9) {
+        flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES;
+    }
+
+    PrintAndLogEx(INFO, "End of flash: 0x%08x", flash_end);
+
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
         // This command is stupid. Why the heck does it care which area we're
         // flashing, as long as it's not the bootloader area? The mind boggles.
         PacketResponseNG resp;
 
         if (enable_bl_writes) {
-            SendCommandBL(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, FLASH_START, flash_end, START_FLASH_MAGIC, NULL, 0);
         } else {
-            SendCommandBL(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, BOOTLOADER_END, flash_end, 0, NULL, 0);
         }
         return wait_for_ack(&resp);
     } else {
