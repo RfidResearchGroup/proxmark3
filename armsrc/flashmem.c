@@ -554,6 +554,7 @@ void Flashmem_print_status(void) {
 }
 
 void Flashmem_print_info(void) {
+
     if (!FlashInit()) return;
 
     DbpString(_BLUE_("Flash memory dictionary loaded"));

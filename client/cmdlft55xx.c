@@ -1804,7 +1804,7 @@ static int CmdResetRead(const char *Cmd) {
     }
 
     uint8_t got[BIGBUF_SIZE - 1];
-    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0,NULL,0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
