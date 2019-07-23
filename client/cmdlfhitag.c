@@ -137,7 +137,7 @@ static int CmdLFHitagList(const char *Cmd) {
 
     // Query for the actual size of the trace
     PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, got, PM3_CMD_DATA_SIZE, 0, &response, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, got, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(got);
         return 2;
@@ -152,7 +152,7 @@ static int CmdLFHitagList(const char *Cmd) {
             return 2;
         }
         got = p;
-        if (!GetFromDevice(BIG_BUF, got, traceLen, 0, NULL, 2500, false)) {
+        if (!GetFromDevice(BIG_BUF, got, traceLen, 0, NULL, 0, NULL, 2500, false)) {
             PrintAndLogEx(WARNING, "command execution time out");
             free(got);
             return 2;

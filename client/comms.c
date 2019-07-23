@@ -734,6 +734,8 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
 * @param dest Destination address for transfer
 * @param bytes number of bytes to be transferred
 * @param start_index offset into Proxmark3 BigBuf[]
+* @param data used by SPIFFS to provide filename
+* @param datalen used by SPIFFS to provide filename length
 * @param response struct to copy last command (CMD_ACK) into
 * @param ms_timeout timeout in milliseconds
 * @param show_warning display message after 2 seconds
