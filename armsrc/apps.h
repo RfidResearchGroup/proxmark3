@@ -102,12 +102,13 @@ void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5);
 void WriteEM410x(uint32_t card, uint32_t id_hi, uint32_t id_lo);
 void CopyIndala64toT55x7(uint32_t hi, uint32_t lo); // Clone Indala 64-bit tag by UID to T55x7
 void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t uid4, uint32_t uid5, uint32_t uid6, uint32_t uid7); // Clone Indala 224-bit tag by UID to T55x7
-void T55xxResetRead(void);
+void T55xxResetRead(uint8_t flags);
+//id T55xxWriteBlock(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags);
 void T55xxWriteBlock(uint8_t *data);
-void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags);
-void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, uint32_t pwd);
-void T55xxWakeUp(uint32_t Pwd);
-void T55xx_ChkPwds(void);
+// void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags);
+void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, uint32_t pwd,uint8_t downlink_mode);
+void T55xxWakeUp(uint32_t Pwd, uint8_t flags);
+void T55xx_ChkPwds(uint8_t flags);
 
 void TurnReadLFOn(uint32_t delay);
 

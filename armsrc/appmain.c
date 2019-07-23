@@ -874,12 +874,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_T55XX_READ_BLOCK: {
             struct p {
                 uint32_t password;
-                uint8_t blockno;
-                uint8_t page;
-                bool pwdmode;
+                uint8_t  blockno;
+                uint8_t  page;
+                bool     pwdmode;
+                uint8_t  downlink_mode;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            T55xxReadBlock(payload->page, payload->pwdmode, false, payload->blockno, payload->password);
+            T55xxReadBlock(payload->page, payload->pwdmode, false, payload->blockno, payload->password,payload->downlink_mode);
             break;
         }
         case CMD_T55XX_WRITE_BLOCK: {
@@ -888,15 +889,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_T55XX_WAKEUP: {
-            T55xxWakeUp(packet->oldarg[0]);
-            break;
+            T55xxWakeUp(packet->oldarg[0],packet->oldarg[1]);
+				break;
         }
         case CMD_T55XX_RESET_READ: {
-            T55xxResetRead();
+            T55xxResetRead(packet->data.asBytes[0]&0xff);
             break;
         }
         case CMD_T55XX_CHKPWDS: {
-            T55xx_ChkPwds();
+            T55xx_ChkPwds(packet->data.asBytes[0]&0xff);
             break;
         }
         case CMD_PCF7931_READ: {

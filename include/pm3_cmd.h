@@ -119,7 +119,7 @@ typedef struct {
     int divisor;
     int trigger_threshold;
 } sample_config;
-
+/*
 typedef struct {
     uint16_t start_gap;
     uint16_t write_gap;
@@ -127,7 +127,34 @@ typedef struct {
     uint16_t write_1;
     uint16_t read_gap;
 } t55xx_config;
+*/
 
+// Extended to support 1 of 4 timing 
+typedef struct  {
+   uint16_t start_gap ;
+   uint16_t write_gap ;
+   uint16_t write_0   ;
+   uint16_t write_1   ;
+ 	uint16_t write_2   ;
+	uint16_t write_3   ;
+	uint16_t read_gap  ;
+} t55xx_config_t;
+// This setup will allow for the 4 downlink modes "m" as well as other items if needed.
+// Given the one struct we can then read/write to flash/client in one go.
+typedef struct {
+	t55xx_config_t m[4]; // mode
+} t55xx_config;
+
+/*typedef struct  {
+   uint16_t start_gap [4];
+   uint16_t write_gap [4];
+   uint16_t write_0   [4];
+   uint16_t write_1   [4];
+ 	uint16_t write_2   [4];
+	uint16_t write_3   [4];
+	uint16_t read_gap  [4];
+} t55xx_config;
+*/
 typedef struct {
     uint8_t version;
     uint32_t baudrate;
