@@ -156,10 +156,13 @@ style:
 	    --style=google --pad-oper --unpad-paren --pad-header \
 	    --align-pointer=name {} \;
 
-# Detecting weird codepages.
+# Detecting weird codepages and tabs.
 checks:
 	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
 	      -exec sh -c "cat {} |recode utf8.. >/dev/null || echo {}" \;
+	find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" \) \
+	      -exec grep -lP '\t' {} \;
+# to remove tabs within lines, one can try with vi: :set tabstop=4   :set et|retab
 
 # Dummy target to test for GNU make availability
 _test:
