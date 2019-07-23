@@ -2606,7 +2606,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
 
 //	printf ("DLmode %d\n",downlink_mode);
     t55xx_config conf = {0};
-	 printf ("Size conf %lld\n",sizeof(conf));
+	 printf ("Size conf %zu\n",sizeof(conf));
  	 if (erase) {
 		memset (&conf,0xff, sizeof(conf));
 		printf ("Conf.m[0] %x\n",conf.m[0].start_gap);
