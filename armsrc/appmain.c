@@ -1607,7 +1607,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SPIFFS_PRINT_FSINFO: {
-            rdv40_spiffs_safe_print_fsinfos();
+            rdv40_spiffs_safe_print_fsinfo();
             break;
         }
         case CMD_SPIFFS_DOWNLOAD: {

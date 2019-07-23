@@ -49,7 +49,7 @@ void rdv40_spiffs_safe_print_tree(uint8_t banner);
 int rdv40_spiffs_unmount();
 int rdv40_spiffs_mount();
 int rdv40_spiffs_is_symlink(const char *s);
-void rdv40_spiffs_safe_print_fsinfos();
+void rdv40_spiffs_safe_print_fsinfo();
 int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyLevel level);
 void append_to_spiffs(const char *filename, uint8_t *src, uint32_t size);
 int rdv40_spiffs_copy(char *src, char *dst, RDV40SpiFFSSafetyLevel level);

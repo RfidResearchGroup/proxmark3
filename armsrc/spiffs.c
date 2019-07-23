@@ -523,10 +523,10 @@ int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, R
 
 ///////// MISC HIGH LEVEL FUNCTIONS ////////////////////////////////////////////
 
-void rdv40_spiffs_safe_print_fsinfos() {
+void rdv40_spiffs_safe_print_fsinfo() {
     rdv40_spiffs_fsinfo fsinfo;
     rdv40_spiffs_getfsinfo(&fsinfo, RDV40_SPIFFS_SAFETY_SAFE);
-    DbpString(_BLUE_("Flash Memory FileSystem Infos (SPIFFS)"));
+    DbpString(_BLUE_("Flash Memory FileSystem Info (SPIFFS)"));
     Dbprintf("-------------------------------------");
     Dbprintf("* Filesystem Logical Block Size.........%d bytes", fsinfo.blockSize);
     Dbprintf("* Filesystem Logical Page Size..........%d bytes", fsinfo.pageSize);
