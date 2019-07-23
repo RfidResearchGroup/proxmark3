@@ -205,8 +205,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     if (auth_attempts > 0) {
         if (DBGLEVEL > 1)
             Dbprintf("[!] Authentication attempts = %u", auth_attempts);
-
-        if
+ 
             size_t size = 4 * auth_attempts;
         uint8_t *data = BigBuf_malloc(size);
 
