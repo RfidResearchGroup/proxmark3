@@ -29,37 +29,6 @@ from the client to view the stored quadlets.
 
 #define HF_BOG_LOGFILE "hf_bog.log"
 
-uint8_t FindOffsetInFlash() {
-    uint8_t mem[4] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t eom[4] = {0xFF, 0xFF, 0xFF, 0xFF};
-    uint8_t memcnt = 0;
-
-    while (memcnt < 0xFF) {
-        Flash_ReadData(memcnt, mem, 4);
-        if (memcmp(mem, eom, 4) == 0) {
-            return memcnt;
-        }
-        memcnt += 4;
-    }
-
-    return 0; // wrap-around
-}
-
-void EraseMemory() {
-    if (!FlashInit()) {
-        return;
-    }
-
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase4k(0, 0);
-
-    if (DBGLEVEL > 1)
-        Dbprintf("[!] Erased flash!");
-    FlashStop();
-    SpinDelay(100);
-}
-
 // This is actually copied from SniffIso14443a
 void RAMFUNC SniffAndStore(uint8_t param) {
 
