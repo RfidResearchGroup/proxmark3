@@ -22,6 +22,8 @@
 #include "pmflash.h"
 #include "flashmem.h" // persistence on mem
 
+
+
 //#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
 //#define WRITE_GAP 8*8 // 17*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
 //#define WRITE_0   15*8 // 18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
