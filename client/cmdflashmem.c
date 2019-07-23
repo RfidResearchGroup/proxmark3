@@ -315,7 +315,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "downloading "_YELLOW_("%u")"bytes from flashmem", len);
-    if (!GetFromDevice(FLASH_MEM, dump, len, start_index, NULL, -1, true)) {
+    if (!GetFromDevice(FLASH_MEM, dump, len, start_index, NULL, 0, NULL, -1, true)) {
         PrintAndLogEx(FAILED, "ERROR; downloading from flashmemory");
         free(dump);
         return PM3_EFLASH;
@@ -574,6 +574,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
+    {"spiffs",  CmdFlashMemSpiFFS,  IfPm3Flash,      "High level SPI FileSystem Flash manipulation [rdv40]"},
     {"spibaud", CmdFlashmemSpiBaudrate, IfPm3Flash,  "Set Flash memory Spi baudrate [rdv40]"},
     {"info",    CmdFlashMemInfo,    IfPm3Flash,      "Flash memory information [rdv40]"},
     {"load",    CmdFlashMemLoad,    IfPm3Flash,      "Load data into flash memory [rdv40]"},

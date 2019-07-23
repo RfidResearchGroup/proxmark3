@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Colin Brigato, 2016, 2017
+// Colin Brigato, 2016, 2017, 2018, 2019
 // Christian Herrmann, 2017
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -13,6 +13,7 @@
 #define MF1KSZ 1024
 #define MF1KSZSIZE 64
 #define AUTHENTICATION_TIMEOUT 848
+#define HFCOLIN_LASTTAG_SYMLINK "hf_colin/lasttag.bin"
 
 uint8_t cjuid[10];
 uint32_t cjcuid;
@@ -92,49 +93,26 @@ void ReadLastTagFromFlash() {
     LED_B_ON();
     LED_C_ON();
     LED_D_ON();
-    uint32_t startidx = 0;
     uint16_t len = 1024;
+    size_t size = len;
 
     DbprintfEx(FLAG_NEWLINE, "Button HELD ! Using LAST Known TAG for Simulation...");
     cjSetCursLeft();
 
-    size_t size = len;
     uint8_t *mem = BigBuf_malloc(size);
 
-    FlashmemSetSpiBaudrate(24000000);
+    //this one will handle filetype (symlink or not) and resolving by itself
+    rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
 
-    if (!FlashInit()) {
-        return;
-    }
-    Flash_CheckBusy(BUSY_TIMEOUT);
+    emlSetMem(mem, 0, 64);
 
-    uint32_t start_time = GetTickCount();
-    uint32_t delta_time = 0;
-
-    for (size_t i = 0; i < len; i += size) {
-        len = MIN((len - i), size);
-        uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
-        if (isok == len) {
-            emlSetMem(mem, 0, 64);
-        } else {
-            DbprintfEx(FLAG_NEWLINE, "FlashMem reading failed | %d | %d", len, isok);
-            cjSetCursLeft();
-            FlashStop();
-            SpinOff(100);
-            return;
-        }
-    }
-    delta_time = GetTickCountDelta(start_time);
     DbprintfEx(FLAG_NEWLINE, "[OK] Last tag recovered from FLASHMEM set to emulator");
     cjSetCursLeft();
-    DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_READ", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time, _XWHITE_);
-    cjSetCursLeft();
-    FlashStop();
     SpinOff(0);
     return;
 }
 
-void WriteTagToFlash(uint8_t index, size_t size) {
+void WriteTagToFlash(uint32_t uid, size_t size) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -142,61 +120,23 @@ void WriteTagToFlash(uint8_t index, size_t size) {
     LED_D_ON();
 
     uint32_t len = size;
-    uint32_t bytes_sent = 0;
-    uint32_t bytes_remaining = len;
-
     uint8_t data[(size * (16 * 64)) / 1024];
-    uint8_t buff[PAGESIZE];
 
     emlGetMem(data, 0, (size * 64) / 1024);
 
+    char dest[SPIFFS_OBJ_NAME_LEN];
+    uint8_t buid[4];
+    num_to_bytes(uid, 4, buid);
+    sprintf(dest, "hf_colin/mf_%02x%02x%02x%02x.bin", buid[0], buid[1], buid[2], buid[3]);
 
-    FlashmemSetSpiBaudrate(48000000);
+    // TODO : by using safe function for multiple writes we are both breaking cache mecanisms and making useless and unoptimized mount operations
+    // we should manage at out level the mount status before and after the whole standalone mode
+    rdv40_spiffs_write((char *)dest, (uint8_t *)data, len, RDV40_SPIFFS_SAFETY_SAFE);
+    // lastag will only contain filename/path to last written tag file so we don't loose time or space.
+    rdv40_spiffs_make_symlink((char *)dest, (char *)HFCOLIN_LASTTAG_SYMLINK, RDV40_SPIFFS_SAFETY_SAFE);
 
-    if (!FlashInit()) {
-        return;
-    }
-
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase4k(0, 0);
-
-    uint32_t start_time = GetTickCount();
-    uint32_t delta_time = 0;
-
-    while (bytes_remaining > 0) {
-        Flash_CheckBusy(BUSY_TIMEOUT);
-        Flash_WriteEnable();
-
-        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
-
-        memcpy(buff, data + bytes_sent, bytes_in_packet);
-
-        bytes_remaining -= bytes_in_packet;
-        uint16_t res = Flash_WriteDataCont(bytes_sent + (index * size), buff, bytes_in_packet);
-        bytes_sent += bytes_in_packet;
-
-        uint8_t isok = (res == bytes_in_packet) ? 1 : 0;
-
-        if (!isok) {
-            DbprintfEx(FLAG_NEWLINE, "FlashMem write FAILEd [offset %u]", bytes_sent);
-            cjSetCursLeft();
-            SpinOff(100);
-            return;
-        }
-
-        LED_A_INV();
-        LED_B_INV();
-        LED_C_INV();
-        LED_D_INV();
-    }
-    delta_time = GetTickCountDelta(start_time);
-
-    DbprintfEx(FLAG_NEWLINE, "[OK] TAG WRITTEN TO FLASH ! [0-to offset %u]", bytes_sent);
+    DbprintfEx(FLAG_NEWLINE, "[OK] TAG WRITTEN TO FLASH !");
     cjSetCursLeft();
-    DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_WRITE", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time, _XWHITE_);
-    cjSetCursLeft();
-    FlashStop();
     SpinOff(0);
     return;
 }
@@ -429,7 +369,7 @@ failtag:
     //-----------------------------------------------------------------------------
     // also we could avoid first UID check for every block
 
-    // then let's expose this “optimal case” of “well known vigik schemes” :
+    // then let's expose this optimal case of well known vigik schemes :
     for (uint8_t type = 0; type < 2 && !err && !trapped; type++) {
         for (int sec = 0; sec < sectorsCnt && !err && !trapped; ++sec) {
             key = cjat91_saMifareChkKeys(sec * 4, type, NULL, size, &keyBlock[0], &key64);
@@ -437,7 +377,7 @@ failtag:
             if (key == -1) {
                 err = 1;
                 allKeysFound = false;
-                // used in “portable” imlementation on microcontroller: it reports back the fail and open the standalone lock
+                // used in portable imlementation on microcontroller: it reports back the fail and open the standalone lock
                 // reply_old(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
                 break;
             } else if (key == -2) {
@@ -755,10 +695,9 @@ failtag:
     cjSetCursLeft();
     cjSetCursLeft();
 
-    WriteTagToFlash(0, 1024);
+    WriteTagToFlash(cjcuid, 1024);
 
 readysim:
-    // SIM ?
     cjSetCursLeft();
 
     DbprintfEx(FLAG_NEWLINE, "-> We launch Emulation ->");
@@ -1022,6 +961,8 @@ void saMifareMakeTag(void) {
     }
 }
 
+
+//TODO : make this work either for a Gen1a or for a block 0 direct write all transparently
 //-----------------------------------------------------------------------------
 // Matt's StandAlone mod.
 // Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)

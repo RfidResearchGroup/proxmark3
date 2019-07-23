@@ -34,6 +34,7 @@ SRC_CRAPTO1 = crypto1.c des.c desfire_key.c desfire_crypto.c mifaredesfire.c aes
 SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
+SRC_SPIFFS = spiffs.c spiffs_cache.c spiffs_check.c spiffs_gc.c spiffs_nucleus.c spiffs_hydrogen.c
 #   SRC_BEE = bee.c
 
 # RDV40 related hardware support
@@ -97,6 +98,7 @@ THUMBSRC = start.c \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_HITAG) \
+    $(SRC_SPIFFS) \
     appmain.c \
     printf.c \
     commonutil.c \

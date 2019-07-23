@@ -8,8 +8,8 @@
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
 
-#ifndef CMDFLASHMEM_H__
-#define CMDFLASHMEM_H__
+#ifndef CMDFLASHMEMSPIFFS_H__
+#define CMDFLASHMEMSPIFFS_H__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,15 +24,7 @@
 #include "util_posix.h"         // msclock
 #include "loclass/fileutils.h"  //saveFile
 #include "comms.h"              //getfromdevice
-#include "cmdflashmemspiffs.h" // spiffs commands
 
-typedef enum {
-    DICTIONARY_NONE = 0,
-    DICTIONARY_MIFARE,
-    DICTIONARY_T55XX,
-    DICTIONARY_ICLASS
-} Dictionary_t;
-
-int CmdFlashMem(const char *Cmd);
+int CmdFlashMemSpiFFS(const char *Cmd);
 
 #endif
