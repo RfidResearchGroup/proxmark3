@@ -255,7 +255,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
         errors = true;
     }
 
-    if (destfilenamse[0] == '\0') {
+    if (destfilename[0] == '\0') {
         PrintAndLogEx(FAILED, "SPIFFS Filename missing or invalid");
         errors = true;
     }
