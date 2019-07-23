@@ -238,6 +238,40 @@ typedef struct {
 #define CMD_FLASHMEM_INFO                                                 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE                                      0x0126
 
+// RDV40, High level flashmem SPIFFS Manipulation 
+// ALL function will have a lazy or Safe version 
+// that will be handled as argument of safety level [0..2] respectiveley normal / lazy / safe
+// However as how design is, MOUNT and UNMOUNT only need/have lazy as safest level so a safe level will still execute a lazy version
+// see spiffs.c for more about the normal/lazy/safety information)
+#define CMD_SPIFFS_MOUNT                                                  0x0130
+#define CMD_SPIFFS_UNMOUNT                                                0x0131
+#define CMD_SPIFFS_WRITE                                                  0x0132
+// We take +0x1000 when having a variant of similar function (todo : make it an argument!)
+#define CMD_SPIFFS_APPEND                                                 0x1132
+
+#define CMD_SPIFFS_READ                                                   0x0133
+//We use no open/close instruvtion, as they are handled internally.
+#define CMD_SPIFFS_REMOVE                                                 0x0134
+#define CMD_SPIFFS_RM                                                     CMD_SPIFFS_REMOVE
+#define CMD_SPIFFS_RENAME                                                 0x0135
+#define CMD_SPIFFS_MV                                                     CMD_SPIFFS_RENAME
+#define CMD_SPIFFS_COPY                                                   0x0136
+#define CMD_SPIFFS_CP                                                     CMD_SPIFFS_COPY
+#define CMD_SPIFFS_STAT                                                   0x0137
+#define CMD_SPIFFS_FSTAT                                                  0x0138
+#define CMD_SPIFFS_INFO                                                   0x0139
+#define CMD_SPIFFS_FORMAT                                                 CMD_FLASHMEM_WIPE
+// This take a +0x2000 as they are high level helper and special functions
+// As the others, they may have safety level argument if it makkes sense
+#define CMD_SPIFFS_PRINT_TREE                                             0x2130
+#define CMD_SPIFFS_GET_TREE                                               0x2131
+#define CMD_SPIFFS_TEST                                                   0x2132
+#define CMD_SPIFFS_PRINT_FSINFO                                           0x2133
+#define CMD_SPIFFS_DOWNLOAD                                               0x2134
+#define CMD_SPIFFS_DOWNLOADED                                             0x2135
+// more ?
+
+
 // RDV40,  Smart card operations
 #define CMD_SMART_RAW                                                     0x0140
 #define CMD_SMART_UPGRADE                                                 0x0141

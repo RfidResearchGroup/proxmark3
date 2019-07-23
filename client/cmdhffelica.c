@@ -383,7 +383,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         return 1;
     }
 
-    if (!GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, trace, tracelen, 0,NULL,0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(trace);
         return 0;

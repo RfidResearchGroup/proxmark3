@@ -865,7 +865,7 @@ static int CmdBitsamples(const char *Cmd) {
     int cnt = 0;
     uint8_t got[12288];
 
-    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0,NULL,0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -1397,7 +1397,7 @@ static int CmdHexsamples(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (!GetFromDevice(BIG_BUF, got, requested, offset, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, got, requested, offset,NULL,0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ESOFT;
     }
@@ -1470,7 +1470,7 @@ int getSamples(uint32_t n, bool silent) {
     if (!silent) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
 
     PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, got, n, 0, &response, 10000, true)) {
+    if (!GetFromDevice(BIG_BUF, got, n, 0,NULL,0, &response, 10000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }

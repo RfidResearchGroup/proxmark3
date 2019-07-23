@@ -2693,7 +2693,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
     memset(dump, 0, bytes);
 
     PrintAndLogEx(INFO, "downloading from emulator memory");
-    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0,NULL,0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
