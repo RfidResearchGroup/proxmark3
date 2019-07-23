@@ -227,6 +227,7 @@ CMDSRCS =    crapto1/crapto1.c \
             cmdlfvisa2000.c \
             cmdtrace.c \
             cmdflashmem.c \
+            cmdflashmemspiffs.c \
             cmdsmartcard.c \
             cmdusart.c \
             cmdparser.c \

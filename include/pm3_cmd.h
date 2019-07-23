@@ -129,20 +129,20 @@ typedef struct {
 } t55xx_config;
 */
 
-// Extended to support 1 of 4 timing 
+// Extended to support 1 of 4 timing
 typedef struct  {
-   uint16_t start_gap ;
-   uint16_t write_gap ;
-   uint16_t write_0   ;
-   uint16_t write_1   ;
- 	uint16_t write_2   ;
-	uint16_t write_3   ;
-	uint16_t read_gap  ;
+    uint16_t start_gap ;
+    uint16_t write_gap ;
+    uint16_t write_0   ;
+    uint16_t write_1   ;
+    uint16_t write_2   ;
+    uint16_t write_3   ;
+    uint16_t read_gap  ;
 } t55xx_config_t;
 // This setup will allow for the 4 downlink modes "m" as well as other items if needed.
 // Given the one struct we can then read/write to flash/client in one go.
 typedef struct {
-	t55xx_config_t m[4]; // mode
+    t55xx_config_t m[4]; // mode
 } t55xx_config;
 
 /*typedef struct  {
@@ -235,6 +235,7 @@ typedef struct {
 #define CMD_HARDWARE_RESET                                                0x0004
 #define CMD_START_FLASH                                                   0x0005
 #define CMD_CHIP_INFO                                                     0x0006
+#define CMD_BL_VERSION                                                    0x0007
 #define CMD_NACK                                                          0x00fe
 #define CMD_ACK                                                           0x00ff
 
@@ -263,6 +264,40 @@ typedef struct {
 #define CMD_FLASHMEM_DOWNLOADED                                           0x0124
 #define CMD_FLASHMEM_INFO                                                 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE                                      0x0126
+
+// RDV40, High level flashmem SPIFFS Manipulation
+// ALL function will have a lazy or Safe version
+// that will be handled as argument of safety level [0..2] respectiveley normal / lazy / safe
+// However as how design is, MOUNT and UNMOUNT only need/have lazy as safest level so a safe level will still execute a lazy version
+// see spiffs.c for more about the normal/lazy/safety information)
+#define CMD_SPIFFS_MOUNT                                                  0x0130
+#define CMD_SPIFFS_UNMOUNT                                                0x0131
+#define CMD_SPIFFS_WRITE                                                  0x0132
+// We take +0x1000 when having a variant of similar function (todo : make it an argument!)
+#define CMD_SPIFFS_APPEND                                                 0x1132
+
+#define CMD_SPIFFS_READ                                                   0x0133
+//We use no open/close instruvtion, as they are handled internally.
+#define CMD_SPIFFS_REMOVE                                                 0x0134
+#define CMD_SPIFFS_RM                                                     CMD_SPIFFS_REMOVE
+#define CMD_SPIFFS_RENAME                                                 0x0135
+#define CMD_SPIFFS_MV                                                     CMD_SPIFFS_RENAME
+#define CMD_SPIFFS_COPY                                                   0x0136
+#define CMD_SPIFFS_CP                                                     CMD_SPIFFS_COPY
+#define CMD_SPIFFS_STAT                                                   0x0137
+#define CMD_SPIFFS_FSTAT                                                  0x0138
+#define CMD_SPIFFS_INFO                                                   0x0139
+#define CMD_SPIFFS_FORMAT                                                 CMD_FLASHMEM_WIPE
+// This take a +0x2000 as they are high level helper and special functions
+// As the others, they may have safety level argument if it makkes sense
+#define CMD_SPIFFS_PRINT_TREE                                             0x2130
+#define CMD_SPIFFS_GET_TREE                                               0x2131
+#define CMD_SPIFFS_TEST                                                   0x2132
+#define CMD_SPIFFS_PRINT_FSINFO                                           0x2133
+#define CMD_SPIFFS_DOWNLOAD                                               0x2134
+#define CMD_SPIFFS_DOWNLOADED                                             0x2135
+// more ?
+
 
 // RDV40,  Smart card operations
 #define CMD_SMART_RAW                                                     0x0140
@@ -562,6 +597,21 @@ typedef struct {
 
 /* Set if this device understands the chip info command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO       (1<<5)
+
+/* Set if this device understands the version command */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_VERSION         (1<<6)
+
+#define BL_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
+#define BL_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)
+#define BL_VERSION_PATCH(version) ((uint32_t)(version) & 0xfff)
+#define BL_MAKE_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
+// Some boundaries to distinguish valid versions from corrupted info
+#define BL_VERSION_FIRST_MAJOR    1
+#define BL_VERSION_LAST_MAJOR     99
+#define BL_VERSION_INVALID  0
+// Different versions here. Each version should increase the numbers
+#define BL_VERSION_1_0_0    BL_MAKE_VERSION(1, 0, 0)
+
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.

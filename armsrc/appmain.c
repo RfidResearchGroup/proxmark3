@@ -43,6 +43,7 @@
 
 #ifdef WITH_FLASH
 #include "flashmem.h"
+#include "spiffs.h"
 #endif
 
 //=============================================================================
@@ -879,7 +880,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t  downlink_mode;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            T55xxReadBlock(payload->page, payload->pwdmode, false, payload->blockno, payload->password,payload->downlink_mode);
+            T55xxReadBlock(payload->page, payload->pwdmode, false, payload->blockno, payload->password, payload->downlink_mode);
             break;
         }
         case CMD_T55XX_WRITE_BLOCK: {
@@ -888,15 +889,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_T55XX_WAKEUP: {
-            T55xxWakeUp(packet->oldarg[0],packet->oldarg[1]);
-				break;
+            T55xxWakeUp(packet->oldarg[0], packet->oldarg[1]);
+            break;
         }
         case CMD_T55XX_RESET_READ: {
-            T55xxResetRead(packet->data.asBytes[0]&0xff);
+            T55xxResetRead(packet->data.asBytes[0] & 0xff);
             break;
         }
         case CMD_T55XX_CHKPWDS: {
-            T55xx_ChkPwds(packet->data.asBytes[0]&0xff);
+            T55xx_ChkPwds(packet->data.asBytes[0] & 0xff);
             break;
         }
         case CMD_PCF7931_READ: {
@@ -1590,6 +1591,134 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
 #ifdef WITH_FLASH
+        case CMD_SPIFFS_TEST: {
+            test_spiffs();
+            break;
+        }
+        case CMD_SPIFFS_MOUNT: {
+            rdv40_spiffs_lazy_mount();
+            break;
+        }
+        case CMD_SPIFFS_UNMOUNT: {
+            rdv40_spiffs_lazy_unmount();
+            break;
+        }
+        case CMD_SPIFFS_PRINT_TREE: {
+            rdv40_spiffs_safe_print_tree(false);
+            break;
+        }
+        case CMD_SPIFFS_PRINT_FSINFO: {
+            rdv40_spiffs_safe_print_fsinfo();
+            break;
+        }
+        case CMD_SPIFFS_DOWNLOAD: {
+            LED_B_ON();
+            uint8_t filename[32];
+            uint8_t *pfilename = packet->data.asBytes;
+            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs dump : %s", filename);
+
+            //uint32_t size = 0;
+            //rdv40_spiffs_stat((char *)filename, (uint32_t *)size,RDV40_SPIFFS_SAFETY_SAFE);
+            uint32_t size = packet->oldarg[1];
+            //uint8_t buff[size];
+
+            uint8_t *buff = BigBuf_malloc(size);
+            rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
+
+            // arg0 = filename
+            // arg1 = size
+            // arg2 = RFU
+
+            for (size_t i = 0; i < size; i += PM3_CMD_DATA_SIZE) {
+                size_t len = MIN((size - i), PM3_CMD_DATA_SIZE);
+                int result = reply_old(CMD_SPIFFS_DOWNLOADED, i, len, 0, buff + i, len);
+                if (result != PM3_SUCCESS)
+                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
+            }
+            // Trigger a finish downloading signal with an ACK frame
+            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            LED_B_OFF();
+            break;
+        }
+        case CMD_SPIFFS_STAT: {
+            LED_B_ON();
+            uint8_t filename[32];
+            uint8_t *pfilename = packet->data.asBytes;
+            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs STAT : %s", filename);
+            int changed = rdv40_spiffs_lazy_mount();
+            uint32_t size = size_in_spiffs((char *)filename);
+            if (changed) rdv40_spiffs_lazy_unmount();
+            reply_old(CMD_ACK, size, 0, 0, 0, 0);
+            LED_B_OFF();
+            break;
+        }
+        case CMD_SPIFFS_REMOVE: {
+            LED_B_ON();
+            uint8_t filename[32];
+            uint8_t *pfilename = packet->data.asBytes;
+            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs REMOVE : %s", filename);
+            rdv40_spiffs_remove((char *) filename, RDV40_SPIFFS_SAFETY_SAFE);
+            LED_B_OFF();
+            break;
+        }
+        case CMD_SPIFFS_RENAME: {
+            LED_B_ON();
+            uint8_t srcfilename[32];
+            uint8_t destfilename[32];
+            uint8_t *pfilename = packet->data.asBytes;
+            char *token;
+            token = strtok((char *)pfilename, ",");
+            strcpy((char *)srcfilename, token);
+            token = strtok(NULL, ",");
+            strcpy((char *)destfilename, token);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs RENAME : %s", srcfilename);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs RENAME : %s", destfilename);
+            rdv40_spiffs_rename((char *) srcfilename, (char *)destfilename, RDV40_SPIFFS_SAFETY_SAFE);
+            LED_B_OFF();
+            break;
+        }
+        case CMD_SPIFFS_COPY: {
+            LED_B_ON();
+            uint8_t srcfilename[32];
+            uint8_t destfilename[32];
+            uint8_t *pfilename = packet->data.asBytes;
+            char *token;
+            token = strtok((char *)pfilename, ",");
+            strcpy((char *)srcfilename, token);
+            token = strtok(NULL, ",");
+            strcpy((char *)destfilename, token);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs COPY : %s", srcfilename);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs COPY : %s", destfilename);
+            rdv40_spiffs_copy((char *) srcfilename, (char *)destfilename, RDV40_SPIFFS_SAFETY_SAFE);
+            LED_B_OFF();
+            break;
+        }
+        case CMD_SPIFFS_WRITE: {
+            LED_B_ON();
+            uint8_t filename[32];
+            uint32_t append = packet->oldarg[0];
+            uint32_t size = packet->oldarg[1];
+            uint8_t *data = packet->data.asBytes;
+
+            //rdv40_spiffs_lazy_mount();
+
+            uint8_t *pfilename = packet->data.asBytes;
+            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            data += SPIFFS_OBJ_NAME_LEN;
+
+            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
+            if (!append) {
+                rdv40_spiffs_write((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
+            } else {
+                rdv40_spiffs_append((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
+            }
+            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            LED_B_OFF();
+            break;
+        }
         case CMD_FLASHMEM_SET_SPIBAUDRATE: {
             FlashmemSetSpiBaudrate(packet->oldarg[0]);
             break;

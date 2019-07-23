@@ -21,62 +21,34 @@
 #include "ui.h"
 
 #define MAX_FILES 4
+#define ONE_KB 1024
 
 static void usage(char *argv0) {
-    PrintAndLogEx(NORMAL, "Usage:   %s <port> [-b] image.elf [image.elf...]\n", argv0);
-    PrintAndLogEx(NORMAL, "\t-b\tEnable flashing of bootloader area (DANGEROUS)\n");
-    PrintAndLogEx(NORMAL, "\nExample:\n\n\t %s "SERIAL_PORT_EXAMPLE_H" armsrc/obj/fullimage.elf", argv0);
+    PrintAndLogEx(NORMAL, "Usage:   %s <port> [-b] image.elf [image.elf...]", argv0);
+    PrintAndLogEx(NORMAL, "         %s <port> -i\n", argv0);
+    PrintAndLogEx(NORMAL, "\t-b\tEnable flashing of bootloader area (DANGEROUS)");
+    PrintAndLogEx(NORMAL, "\t-i\tProbe the connected Proxmark3 to retrieve its memory size");
+    PrintAndLogEx(NORMAL, "\nExamples:\n\t %s "SERIAL_PORT_EXAMPLE_H" -i", argv0);
+    PrintAndLogEx(NORMAL, "\t %s "SERIAL_PORT_EXAMPLE_H" armsrc/obj/fullimage.elf", argv0);
 #ifdef __linux__
-    PrintAndLogEx(NORMAL, "\nNote (Linux): if the flasher gets stuck in 'Waiting for Proxmark3 to reappear on <DEVICE>',");
-    PrintAndLogEx(NORMAL, "              you need to blacklist Proxmark3 for modem-manager - see wiki for more details:\n");
-    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/Gentoo Linux\n");
-    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/Ubuntu Linux\n");
-    PrintAndLogEx(NORMAL, "              https://github.com/Proxmark/proxmark3/wiki/OSX\n");
+    PrintAndLogEx(NORMAL, "\nNote (Linux):\nif the flasher gets stuck in 'Waiting for Proxmark3 to reappear on <DEVICE>',");
+    PrintAndLogEx(NORMAL, "you need to blacklist Proxmark3 for modem-manager - see documentation for more details:");
+    PrintAndLogEx(NORMAL, "* https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md");
+    PrintAndLogEx(NORMAL, "\nMore info on flashing procedure from the official Proxmark3 wiki:");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/Gentoo%%20Linux");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/Ubuntu%%20Linux");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/OSX\n");
 #endif
-}
-
-int chipid_to_mem_avail(uint32_t iChipID) {
-    int mem_avail = 0;
-    switch ((iChipID & 0xF00) >> 8) {
-        case 0:
-            mem_avail = 0;
-            break;
-        case 1:
-            mem_avail = 8;
-            break;
-        case 2:
-            mem_avail = 16;
-            break;
-        case 3:
-            mem_avail = 32;
-            break;
-        case 5:
-            mem_avail = 64;
-            break;
-        case 7:
-            mem_avail = 128;
-            break;
-        case 9:
-            mem_avail = 256;
-            break;
-        case 10:
-            mem_avail = 512;
-            break;
-        case 12:
-            mem_avail = 1024;
-            break;
-        case 14:
-            mem_avail = 2048;
-    }
-    return mem_avail;
 }
 
 int main(int argc, char **argv) {
     int can_write_bl = 0;
     int num_files = 0;
     int res;
+    int ret = 0;
     flash_file_t files[MAX_FILES];
-
+    char *filenames[MAX_FILES];
+    bool info = false;
     memset(files, 0, sizeof(files));
 
     session.supports_colors = false;
@@ -97,16 +69,14 @@ int main(int argc, char **argv) {
         if (argv[i][0] == '-') {
             if (!strcmp(argv[i], "-b")) {
                 can_write_bl = 1;
+            } else if (!strcmp(argv[i], "-i")) {
+                info = true;
             } else {
                 usage(argv[0]);
                 return -1;
             }
         } else {
-            res = flash_load(&files[num_files], argv[i], can_write_bl);
-            if (res < 0)
-                return -1;
-
-            PrintAndLogEx(NORMAL, "");
+            filenames[num_files] = argv[i];
             num_files++;
         }
     }
@@ -120,36 +90,48 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    uint32_t chipid = 0;
-    res = flash_start_flashing(can_write_bl, serial_port_name, &chipid);
-    if (res < 0)
-        return -1;
-
-    int mem_avail = chipid_to_mem_avail(chipid);
-    if (mem_avail != 0) {
-        PrintAndLogEx(NORMAL, "Available memory on this board: %uK bytes\n", mem_avail);
-    } else {
-        PrintAndLogEx(NORMAL, "Available memory on this board: "_RED_("UNKNOWN")"\n");
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CHIP_INFO command"));
-        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
+    uint32_t max_allowed = 0;
+    res = flash_start_flashing(can_write_bl, serial_port_name, &max_allowed);
+    if (res < 0) {
+        ret = -1;
+        goto finish;
     }
+
+    if (info)
+        goto finish;
+
+    for (int i = 0 ; i < num_files; ++i) {
+        res = flash_load(&files[i], filenames[i], can_write_bl, max_allowed * ONE_KB);
+        if (res < 0) {
+            ret = -1;
+            goto finish;
+        }
+        PrintAndLogEx(NORMAL, "");
+    }
+
     PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
-// TODO check if enough space on Pm3 mem to write the given files
+
     for (int i = 0; i < num_files; i++) {
         res = flash_write(&files[i]);
-        if (res < 0)
-            return -1;
+        if (res < 0) {
+            ret = -1;
+            goto finish;
+        }
         flash_free(&files[i]);
         PrintAndLogEx(NORMAL, "\n");
     }
 
+finish:
     res = flash_stop_flashing();
     if (res < 0)
-        return -1;
+        ret = -1;
 
     CloseProxmark();
 
-    PrintAndLogEx(SUCCESS, _BLUE_("All done."));
-    PrintAndLogEx(SUCCESS, "\nHave a nice day!");
-    return 0;
+    if (ret == 0)
+        PrintAndLogEx(SUCCESS, _BLUE_("All done."));
+    else
+        PrintAndLogEx(ERR, "Aborted on error.");
+    PrintAndLogEx(NORMAL, "\nHave a nice day!");
+    return ret;
 }

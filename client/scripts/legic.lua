@@ -2654,7 +2654,7 @@ function modifyMode()
                 local stamp=getSegmentStamp(inTAG.SEG[x])
                 print("Stamp : "..stamp)
                 stamp=str2bytes(stamp)
-                print("lenght: "..#stamp)
+                print("length: "..#stamp)
               end,
     ---
     -- calculate crc16
