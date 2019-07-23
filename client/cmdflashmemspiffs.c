@@ -442,7 +442,7 @@ static command_t CommandTable[] = {
     {"mount", CmdFlashMemSpiFFSMount, IfPm3Flash, "Mount the SPIFFS Filesystem if not already mounted (spiffs)"},
     {"remove", CmdFlashMemSpiFFSRemove, IfPm3Flash, "Remove a file from SPIFFS FileSystem in FlashMEM (spiffs)"},
     {"rename", CmdFlashMemSpiFFSRename, IfPm3Flash, "Rename/move a file in SPIFFS FileSystem in FlashMEM (spiffs)"},
-    {"test", CmdFlashMemSpiFFSTest, IfPm3Flash, "Test SPIFFS Functionning (require wiping pages 0 and 1)"},
+    {"test", CmdFlashMemSpiFFSTest, IfPm3Flash, "Test SPIFFS Operations (require wiping pages 0 and 1)"},
     {"tree", CmdFlashMemSpiFFSTree, IfPm3Flash, "Print the Flash Memory FileSystem Tree (spiffs)"},
     {"unmount", CmdFlashMemSpiFFSUnmount, IfPm3Flash, "Un-mount the SPIFFS Filesystem if not already mounted (spiffs)"},
     {NULL, NULL, NULL, NULL}

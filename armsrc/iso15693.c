@@ -695,7 +695,7 @@ static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid) {
 //  speed ... 0 low speed, 1 hi speed
 //  **recv will return you a pointer to the received data
 //  If you do not need the answer use NULL for *recv[]
-//  return: lenght of received data
+//  return: length of received data
 // logging enabled
 int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata) {
 

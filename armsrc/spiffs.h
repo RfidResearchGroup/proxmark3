@@ -26,7 +26,7 @@ typedef struct rdv40_spiffs_fsinfo {
     uint32_t blockSize;
     uint32_t pageSize;
     uint32_t maxOpenFiles;
-    uint32_t maxPathLenght;
+    uint32_t maxPathLength;
     uint32_t totalBytes, usedBytes, freeBytes;
     uint32_t usedPercent, freePercent;
 } rdv40_spiffs_fsinfo;

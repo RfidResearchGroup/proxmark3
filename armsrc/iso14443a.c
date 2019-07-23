@@ -93,7 +93,7 @@ static uint32_t LastProxToAirDuration;
 // Sequence D: 11110000 modulation with subcarrier during first half
 // Sequence E: 00001111 modulation with subcarrier during second half
 // Sequence F: 00000000 no modulation with subcarrier
-// Sequence COLL: 11111111 load modulation over the full bitlenght.
+// Sequence COLL: 11111111 load modulation over the full bitlength.
 //                         Tricks the reader to think that multiple cards answer (at least one card with 1 and at least one card with 0).
 // READER TO CARD - miller
 // Sequence X: 00001100 drop after half a period

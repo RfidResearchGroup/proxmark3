@@ -208,7 +208,7 @@ rdv40_spiffs_fsinfo info_of_spiffs() {
     fsinfo.blockSize = SPIFFS_CFG_LOG_BLOCK_SZ;
     fsinfo.pageSize = LOG_PAGE_SIZE;
     fsinfo.maxOpenFiles = RDV40_SPIFFS_MAX_FD;
-    fsinfo.maxPathLenght = SPIFFS_OBJ_NAME_LEN;
+    fsinfo.maxPathLength = SPIFFS_OBJ_NAME_LEN;
     if (SPIFFS_info(&fs, &fsinfo.totalBytes, &fsinfo.usedBytes) < 0)
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
     fsinfo.freeBytes = fsinfo.totalBytes - fsinfo.usedBytes;
@@ -532,7 +532,7 @@ void rdv40_spiffs_safe_print_fsinfos() {
     Dbprintf("* Filesystem Logical Page Size..........%d bytes", fsinfo.pageSize);
     Dbprintf("--");
     Dbprintf("* Filesystem Max Open Files.............%d file descriptors", fsinfo.maxOpenFiles);
-    Dbprintf("* Filesystem Max Path Lenght............%d chars", fsinfo.maxPathLenght);
+    Dbprintf("* Filesystem Max Path Length............%d chars", fsinfo.maxPathLength);
     Dbprintf("--");
     Dbprintf("Filesystem\tSize\tUsed\tAvailable\tUse%\tMounted on");
     Dbprintf("spiffs\t%dB\t%dB\t%dB\t\t%d%\t/", fsinfo.totalBytes, fsinfo.usedBytes, fsinfo.freeBytes,
@@ -580,7 +580,7 @@ void rdv40_spiffs_safe_print_tree(uint8_t banner) {
 
 void test_spiffs() {
     Dbprintf("---------------------------");
-    Dbprintf("Testing SPIFFS functionning");
+    Dbprintf("Testing SPIFFS operations");
     Dbprintf("---------------------------");
     Dbprintf("(all test are made using lazy safetylevel)");
     Dbprintf("* Mounting filesystem (lazy).......");
