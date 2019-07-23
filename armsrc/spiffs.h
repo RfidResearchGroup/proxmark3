@@ -56,6 +56,7 @@ int rdv40_spiffs_copy(char *src, char *dst, RDV40SpiFFSSafetyLevel level);
 int rdv40_spiffs_append(char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level);
 int rdv40_spiffs_stat(char *filename, uint32_t *buf, RDV40SpiFFSSafetyLevel level);
 uint32_t size_in_spiffs(const char *filename);
+int exists_in_spiffs(const char *filename);
 
 #define SPIFFS_OK                       0
 #define SPIFFS_ERR_NOT_MOUNTED          -10000
