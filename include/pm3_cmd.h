@@ -131,13 +131,13 @@ typedef struct {
 
 // Extended to support 1 of 4 timing 
 typedef struct  {
-   uint8_t start_gap ;
-   uint8_t write_gap ;
-   uint8_t write_0   ;
-   uint8_t write_1   ;
- 	uint8_t write_2   ;
-	uint8_t write_3   ;
-	uint8_t read_gap  ;
+   uint16_t start_gap ;
+   uint16_t write_gap ;
+   uint16_t write_0   ;
+   uint16_t write_1   ;
+ 	uint16_t write_2   ;
+	uint16_t write_3   ;
+	uint16_t read_gap  ;
 } t55xx_config_t;
 // This setup will allow for the 4 downlink modes "m" as well as other items if needed.
 // Given the one struct we can then read/write to flash/client in one go.

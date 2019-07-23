@@ -110,19 +110,20 @@
  -------------------------------------------------------------------------------------------------------------
 */
 // Initial values if not in flash
+/*
 // Note: Moved * 8 to apply when used. Saving 28 bytes here (- the *8) and 28 bytes flash.
 //                              StartGap WriteGap Bit 0/00 Bit 1/01  Bit 10  Bit 11  ReadGap
 t55xx_config T55xx_Timing  = {{{ 29     , 17     , 15     , 50     , 0     , 0     , 15   },     // Default Fixed
                                { 31     , 20     , 18     , 50     , 0     , 0     , 15   },		// Long Leading Ref.
                                { 31     , 20     , 18     , 40     , 0     , 0     , 15   },		// Leading 0
                                { 29     , 17     , 15     , 31     , 47    , 63    , 15   } }};  // 1 of 4
-/*
+*/
 //                              StartGap WriteGap Bit 0/00 Bit 1/01  Bit 10  Bit 11  ReadGap
 t55xx_config T55xx_Timing  = {{{ 29 * 8 , 17 * 8 , 15 * 8 , 50 * 8 , 0     , 0     , 15 * 8 },     // Default Fixed
                                { 31 * 8 , 20 * 8 , 18 * 8 , 50 * 8 , 0     , 0     , 15 * 8 },		// Long Leading Ref.
                                { 31 * 8 , 20 * 8 , 18 * 8 , 40 * 8 , 0     , 0     , 15 * 8 },		// Leading 0
                                { 29 * 8 , 17 * 8 , 15 * 8 , 31 * 8 , 47 * 8, 63 * 8, 15 * 8 } }};  // 1 of 4
-*/
+
 
 // Some defines for readability
 #define T55xx_DLMode_Fixed         0 // Default Mode
@@ -142,36 +143,37 @@ void printT55xxConfig(void) {
 				case T55xx_DLMode_Leading0 : Dbprintf("r 2 leading zero");               break;
 				case T55xx_DLMode_1of4     : Dbprintf("r 3 1 of 4 coding reference");    break;
 		}
-		// Save 36 bytes by not showing dec. all data sheets and entry is the x * 8 value, so not sure what we get for the 36 bytes dec?
-		Dbprintf("  [a] startgap............%d*8", T55xx_Timing.m[DLMode].start_gap );//, T55xx_Timing.start_gap[DLMode]);
-		Dbprintf("  [b] writegap............%d*8", T55xx_Timing.m[DLMode].write_gap );//, T55xx_Timing.write_gap[DLMode]);
-		Dbprintf("  [c] write_0.............%d*8", T55xx_Timing.m[DLMode].write_0   );//, T55xx_Timing.write_0  [DLMode]);
-		Dbprintf("  [d] write_1.............%d*8", T55xx_Timing.m[DLMode].write_1   );//, T55xx_Timing.write_1  [DLMode]);
+		Dbprintf("  [a] startgap............%d*8 (%d)", T55xx_Timing.m[DLMode].start_gap / 8, T55xx_Timing.m[DLMode].start_gap);
+		Dbprintf("  [b] writegap............%d*8 (%d)", T55xx_Timing.m[DLMode].write_gap / 8, T55xx_Timing.m[DLMode].write_gap);
+		Dbprintf("  [c] write_0.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_0   / 8, T55xx_Timing.m[DLMode].write_0  );
+		Dbprintf("  [d] write_1.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_1   / 8, T55xx_Timing.m[DLMode].write_1  );
 		if (DLMode ==  T55xx_DLMode_1of4) {		
-			Dbprintf("  [e] write_2.............%d*8", T55xx_Timing.m[DLMode].write_2 );//, T55xx_Timing.write_2  [DLMode]);
-			Dbprintf("  [f] write_3.............%d*8", T55xx_Timing.m[DLMode].write_3 );//, T55xx_Timing.write_3  [DLMode]);
+			Dbprintf("  [e] write_2.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_2 / 8, T55xx_Timing.m[DLMode].write_2);
+			Dbprintf("  [f] write_3.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_3 / 8, T55xx_Timing.m[DLMode].write_3);
 		}
-		Dbprintf("  [g] readgap.............%d*8", T55xx_Timing.m[DLMode].read_gap  );//, T55xx_Timing.read_gap [DLMode]);
+		Dbprintf("  [g] readgap.............%d*8 (%d)", T55xx_Timing.m[DLMode].read_gap / 8, T55xx_Timing.m[DLMode].read_gap);
 	 }
 }
 
 void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 	uint8_t DLMode;
+//	uint8_t ClearT55Settings = c->m[0].start_gap & 0xffff; // all values will be ffff if clear requested
+	
 	
 	for (DLMode = 0; DLMode < 4; DLMode++) {
-		if (c->m[DLMode].start_gap != 0) T55xx_Timing.m[DLMode].start_gap = c->m[DLMode].start_gap;
-		if (c->m[DLMode].write_gap != 0) T55xx_Timing.m[DLMode].write_gap = c->m[DLMode].write_gap;
-		if (c->m[DLMode].write_0   != 0) T55xx_Timing.m[DLMode].write_0   = c->m[DLMode].write_0  ;
-		if (c->m[DLMode].write_1   != 0) T55xx_Timing.m[DLMode].write_1   = c->m[DLMode].write_1  ;
+		if (c->m[DLMode].start_gap != 0) T55xx_Timing.m[DLMode].start_gap = c->m[DLMode].start_gap;// * 8;
+		if (c->m[DLMode].write_gap != 0) T55xx_Timing.m[DLMode].write_gap = c->m[DLMode].write_gap;// * 8;
+		if (c->m[DLMode].write_0   != 0) T55xx_Timing.m[DLMode].write_0   = c->m[DLMode].write_0  ;// * 8;
+		if (c->m[DLMode].write_1   != 0) T55xx_Timing.m[DLMode].write_1   = c->m[DLMode].write_1  ;// * 8;
 		if (DLMode ==  T55xx_DLMode_1of4) {
-			if (c->m[DLMode].write_2   != 0) T55xx_Timing.m[DLMode].write_2   = c->m[DLMode].write_2  ;
-			if (c->m[DLMode].write_3   != 0) T55xx_Timing.m[DLMode].write_3   = c->m[DLMode].write_3  ;
+			if (c->m[DLMode].write_2   != 0) T55xx_Timing.m[DLMode].write_2   = c->m[DLMode].write_2;// * 8;
+			if (c->m[DLMode].write_3   != 0) T55xx_Timing.m[DLMode].write_3   = c->m[DLMode].write_3;// * 8 ;
 		}
 		else{
 			T55xx_Timing.m[DLMode].write_2   = 0x00;
 			T55xx_Timing.m[DLMode].write_3   = 0x00;
 		}
-		if (c->m[DLMode].read_gap  != 0) T55xx_Timing.m[DLMode].read_gap  = c->m[DLMode].read_gap ;
+		if (c->m[DLMode].read_gap  != 0) T55xx_Timing.m[DLMode].read_gap  = c->m[DLMode].read_gap;//* 8;
 	 }
 
     printT55xxConfig();
@@ -186,6 +188,7 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
         return;
     }
 
+	 
     uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
     Flash_CheckBusy(BUSY_TIMEOUT);
     uint16_t res = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
@@ -195,20 +198,21 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
         return;
     }
 
+	 // if ( ClearT55Settings) // dont copy over new timings
     memcpy(buf, &T55xx_Timing, T55XX_CONFIG_LEN);
-
-    Flash_CheckBusy(BUSY_TIMEOUT);
+	 
+	 Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
     Flash_Erase4k(3, 0xD);
 
 	 // if not a settings erase, write data
-	 if (buf[0] != 0xff) {
+	 // if ( ClearT55Settings) {
 		res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 
 		if (res == T55XX_CONFIG_LEN && DBGLEVEL > 1) {
         DbpString("T55XX Config save success");
 		}
-	}
+//	}
 
     BigBuf_free();
 #endif
@@ -242,7 +246,8 @@ void loadT55xxConfig(void) {
         return;
     }
 
-    memcpy((uint8_t *)&T55xx_Timing, buf, T55XX_CONFIG_LEN);
+	 if (buf[0] != 0xFF) // if not set for clear
+		memcpy((uint8_t *)&T55xx_Timing, buf, T55XX_CONFIG_LEN);
 
     if (isok == T55XX_CONFIG_LEN) {
         if (DBGLEVEL > 1) DbpString("T55XX Config load success");
@@ -1477,15 +1482,15 @@ void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
 	// Dbprintf ("%d",bit);
 	// If bit = 4 Send Long Leading Reference which is (138*8) + WRITE_0	
 	switch (bit){
-		case 0 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_0 * 8);             break; // Send bit  0/00
-		case 1 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_1 * 8);             break; // Send bit  1/01
-		case 2 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_2 * 8);             break; // Send bits   10 (1 of 4)
-		case 3 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_3 * 8);             break; // Send bits   11 (1 of 4)
-		case 4 : TurnReadLFOn((T55xx_Timing.m[downlink_idx].write_0 + 136) * 8); break; // Send Long Leading Reference
+		case 0 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_0 );             break; // Send bit  0/00
+		case 1 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_1 );             break; // Send bit  1/01
+		case 2 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_2 );             break; // Send bits   10 (1 of 4)
+		case 3 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_3 );             break; // Send bits   11 (1 of 4)
+		case 4 : TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_0 + (136 * 8));  break; // Send Long Leading Reference
 	}
 
 	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-	WaitUS(T55xx_Timing.m[downlink_idx].write_gap * 8);
+	WaitUS(T55xx_Timing.m[downlink_idx].write_gap );
 }
 
 // Function to abstract an Arbitrary length byte array to store bit pattern.
@@ -1632,7 +1637,7 @@ void T55xxResetRead(uint8_t flags) {
 
 	 T55xx_SendCMD (0, 0, arg); 
 
-    TurnReadLFOn(T55xx_Timing.m[downlink_mode].read_gap * 8);
+    TurnReadLFOn(T55xx_Timing.m[downlink_mode].read_gap);
     
     // Acquisition
     DoPartialAcquisition(0, true, BigBuf_max_traceLen(), 0);
