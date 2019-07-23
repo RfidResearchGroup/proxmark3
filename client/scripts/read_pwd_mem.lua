@@ -82,11 +82,11 @@ local function main(args)
 
         -- num of bytes to read
         if o == 'l' then
-			length = tonumber(a)
-			if length < 0 or length > 256 then
-				return oops('Error: Length is not valid. Must be less than 256')
-			end
-		end
+            length = tonumber(a)
+            if length < 0 or length > 256 then
+                return oops('Error: Length is not valid. Must be less than 256')
+            end
+        end
 
         -- keylength
         if o == 'k' then keylength = tonumber(a); usedkey = true end

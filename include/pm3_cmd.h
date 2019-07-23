@@ -146,13 +146,13 @@ typedef struct {
 } t55xx_config;
 
 /*typedef struct  {
-   uint16_t start_gap [4];
-   uint16_t write_gap [4];
-   uint16_t write_0   [4];
-   uint16_t write_1   [4];
- 	uint16_t write_2   [4];
-	uint16_t write_3   [4];
-	uint16_t read_gap  [4];
+    uint16_t start_gap [4];
+    uint16_t write_gap [4];
+    uint16_t write_0   [4];
+    uint16_t write_1   [4];
+    uint16_t write_2   [4];
+    uint16_t write_3   [4];
+    uint16_t read_gap  [4];
 } t55xx_config;
 */
 typedef struct {
