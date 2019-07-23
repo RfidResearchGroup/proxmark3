@@ -1591,13 +1591,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #ifdef WITH_FLASH
         case CMD_SPIFFS_TEST: {
-	    test_spiffs();
-	    break;
+            test_spiffs();
+            break;
         }
         case CMD_SPIFFS_MOUNT: {
-	    rdv40_spiffs_lazy_mount();
-	    break;
-	} 
+            rdv40_spiffs_lazy_mount();
+            break;
+        }
         case CMD_SPIFFS_UNMOUNT: {
             rdv40_spiffs_lazy_unmount();
             break;
@@ -1606,24 +1606,24 @@ static void PacketReceived(PacketCommandNG *packet) {
             rdv40_spiffs_safe_print_tree(false);
             break;
         }
-	case CMD_SPIFFS_PRINT_FSINFO: {
-	    rdv40_spiffs_safe_print_fsinfos();
-	    break;
-	}
+        case CMD_SPIFFS_PRINT_FSINFO: {
+            rdv40_spiffs_safe_print_fsinfos();
+            break;
+        }
         case CMD_SPIFFS_DOWNLOAD: {
             LED_B_ON();
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename,pfilename,SPIFFS_OBJ_NAME_LEN);
-	    if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs dump : %s", filename);
-            
-	    //uint32_t size = 0;
+            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs dump : %s", filename);
+
+            //uint32_t size = 0;
             //rdv40_spiffs_stat((char *)filename, (uint32_t *)size,RDV40_SPIFFS_SAFETY_SAFE);
             uint32_t size = packet->oldarg[1];
             //uint8_t buff[size];
 
             uint8_t *buff = BigBuf_malloc(size);
-            rdv40_spiffs_read_as_filetype((char *)filename,(uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
+            rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
 
             // arg0 = filename
             // arg1 = size
@@ -1640,59 +1640,59 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
-        case CMD_SPIFFS_STAT:{
+        case CMD_SPIFFS_STAT: {
             LED_B_ON();
             uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename,pfilename,SPIFFS_OBJ_NAME_LEN);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs STAT : %s", filename);            
+            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs STAT : %s", filename);
             int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs((char *)filename);
             if (changed) rdv40_spiffs_lazy_unmount();
-	    reply_old(CMD_ACK, size, 0, 0, 0, 0);
+            reply_old(CMD_ACK, size, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
-	case CMD_SPIFFS_REMOVE:{
-	    LED_B_ON();
-	    uint8_t filename[32];
-            uint8_t *pfilename = packet->data.asBytes;
-	    memcpy(filename,pfilename,SPIFFS_OBJ_NAME_LEN);
-	    if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs REMOVE : %s", filename);
-            rdv40_spiffs_remove((char *) filename,RDV40_SPIFFS_SAFETY_SAFE);
-	    LED_B_OFF();
-            break;
-	}
-        case CMD_SPIFFS_RENAME:{
+        case CMD_SPIFFS_REMOVE: {
             LED_B_ON();
-            uint8_t srcfilename[32];
-            uint8_t destfilename[32];
+            uint8_t filename[32];
             uint8_t *pfilename = packet->data.asBytes;
-	    char *token;            
-            token = strtok((char *)pfilename, ",");
-            strcpy((char*)srcfilename,token);
-            token = strtok(NULL,",");
-            strcpy((char *)destfilename,token);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs RENAME : %s", srcfilename);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs RENAME : %s", destfilename);
-            rdv40_spiffs_rename((char *) srcfilename,(char *)destfilename,RDV40_SPIFFS_SAFETY_SAFE);
-              LED_B_OFF();
+            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs REMOVE : %s", filename);
+            rdv40_spiffs_remove((char *) filename, RDV40_SPIFFS_SAFETY_SAFE);
+            LED_B_OFF();
             break;
         }
-        case CMD_SPIFFS_COPY:{
+        case CMD_SPIFFS_RENAME: {
             LED_B_ON();
             uint8_t srcfilename[32];
             uint8_t destfilename[32];
             uint8_t *pfilename = packet->data.asBytes;
             char *token;
             token = strtok((char *)pfilename, ",");
-            strcpy((char*)srcfilename,token);
-            token = strtok(NULL,",");
-            strcpy((char *)destfilename,token);
+            strcpy((char *)srcfilename, token);
+            token = strtok(NULL, ",");
+            strcpy((char *)destfilename, token);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs RENAME : %s", srcfilename);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs RENAME : %s", destfilename);
+            rdv40_spiffs_rename((char *) srcfilename, (char *)destfilename, RDV40_SPIFFS_SAFETY_SAFE);
+            LED_B_OFF();
+            break;
+        }
+        case CMD_SPIFFS_COPY: {
+            LED_B_ON();
+            uint8_t srcfilename[32];
+            uint8_t destfilename[32];
+            uint8_t *pfilename = packet->data.asBytes;
+            char *token;
+            token = strtok((char *)pfilename, ",");
+            strcpy((char *)srcfilename, token);
+            token = strtok(NULL, ",");
+            strcpy((char *)destfilename, token);
             if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs COPY : %s", srcfilename);
             if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs COPY : %s", destfilename);
-            rdv40_spiffs_copy((char *) srcfilename,(char *)destfilename,RDV40_SPIFFS_SAFETY_SAFE);
-              LED_B_OFF();
+            rdv40_spiffs_copy((char *) srcfilename, (char *)destfilename, RDV40_SPIFFS_SAFETY_SAFE);
+            LED_B_OFF();
             break;
         }
         case CMD_SPIFFS_WRITE: {
@@ -1702,18 +1702,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint32_t size = packet->oldarg[1];
             uint8_t *data = packet->data.asBytes;
 
-	    //rdv40_spiffs_lazy_mount();	
+            //rdv40_spiffs_lazy_mount();
 
             uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename,pfilename,SPIFFS_OBJ_NAME_LEN);
-	    data+=SPIFFS_OBJ_NAME_LEN;
+            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            data += SPIFFS_OBJ_NAME_LEN;
 
-	    if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
-	    if (!append) {
-		rdv40_spiffs_write((char *) filename,(uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
-	    } else {
-                rdv40_spiffs_append((char *) filename,(uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
-	    }
+            if (DBGLEVEL > 1) Dbprintf("> Filename received for spiffs WRITE : %s with APPEND SET TO : %d", filename, append);
+            if (!append) {
+                rdv40_spiffs_write((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
+            } else {
+                rdv40_spiffs_append((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
+            }
             reply_old(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;

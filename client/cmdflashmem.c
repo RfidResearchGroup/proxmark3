@@ -315,7 +315,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "downloading "_YELLOW_("%u")"bytes from flashmem", len);
-    if (!GetFromDevice(FLASH_MEM, dump, len, start_index,NULL,0, NULL, -1, true)) {
+    if (!GetFromDevice(FLASH_MEM, dump, len, start_index, NULL, 0, NULL, -1, true)) {
         PrintAndLogEx(FAILED, "ERROR; downloading from flashmemory");
         free(dump);
         return PM3_EFLASH;

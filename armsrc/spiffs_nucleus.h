@@ -144,15 +144,15 @@
 
 
 #if defined(__GNUC__) || defined(__clang__) || defined(__TI_COMPILER_VERSION__)
-    /* For GCC, clang and TI compilers */
+/* For GCC, clang and TI compilers */
 #define SPIFFS_PACKED __attribute__((packed))
 #elif defined(__ICCARM__) || defined(__CC_ARM)
-    /* For IAR ARM and Keil MDK-ARM compilers */
-#define SPIFFS_PACKED 
+/* For IAR ARM and Keil MDK-ARM compilers */
+#define SPIFFS_PACKED
 
 #else
-    /* Unknown compiler */
-#define SPIFFS_PACKED 
+/* Unknown compiler */
+#define SPIFFS_PACKED
 #endif
 
 
@@ -338,7 +338,7 @@
     if (((ph).flags & SPIFFS_PH_FLAG_INDEX) != 0) return SPIFFS_ERR_NOT_INDEX; \
     if (((objid) & SPIFFS_OBJ_ID_IX_FLAG) == 0) return SPIFFS_ERR_NOT_INDEX; \
     if ((ph).span_ix != (spix)) return SPIFFS_ERR_INDEX_SPAN_MISMATCH;
-    //if ((spix) == 0 && ((ph).flags & SPIFFS_PH_FLAG_IXDELE) == 0) return SPIFFS_ERR_DELETED;
+//if ((spix) == 0 && ((ph).flags & SPIFFS_PH_FLAG_IXDELE) == 0) return SPIFFS_ERR_DELETED;
 
 #define SPIFFS_VALIDATE_DATA(ph, objid, spix) \
     if (((ph).flags & SPIFFS_PH_FLAG_USED) != 0) return SPIFFS_ERR_IS_FREE; \
@@ -399,39 +399,39 @@
 
 // cache page struct
 typedef struct {
-  // cache flags
-  u8_t flags;
-  // cache page index
-  u8_t ix;
-  // last access of this cache page
-  u32_t last_access;
-  union {
-    // type read cache
-    struct spix {
-      // read cache page index
-      spiffs_page_ix pix;
-    } spix;
+    // cache flags
+    u8_t flags;
+    // cache page index
+    u8_t ix;
+    // last access of this cache page
+    u32_t last_access;
+    union {
+        // type read cache
+        struct spix {
+            // read cache page index
+            spiffs_page_ix pix;
+        } spix;
 #if SPIFFS_CACHE_WR
-    // type write cache
-    struct swrc {
-      // write cache
-      spiffs_obj_id obj_id;
-      // offset in cache page
-      u32_t offset;
-      // size of cache page
-      u16_t size;
-    } swrc;
+        // type write cache
+        struct swrc {
+            // write cache
+            spiffs_obj_id obj_id;
+            // offset in cache page
+            u32_t offset;
+            // size of cache page
+            u16_t size;
+        } swrc;
 #endif
-  } ucache;
+    } ucache;
 } spiffs_cache_page;
 
 // cache struct
 typedef struct {
-  u8_t cpage_count;
-  u32_t last_access;
-  u32_t cpage_use_map;
-  u32_t cpage_use_mask;
-  u8_t *cpages;
+    u8_t cpage_count;
+    u32_t last_access;
+    u32_t cpage_use_map;
+    u32_t cpage_use_mask;
+    u8_t *cpages;
 } spiffs_cache;
 
 #endif
@@ -439,38 +439,38 @@ typedef struct {
 
 // spiffs nucleus file descriptor
 typedef struct {
-  // the filesystem of this descriptor
-  spiffs *fs;
-  // number of file descriptor - if 0, the file descriptor is closed
-  spiffs_file file_nbr;
-  // object id - if SPIFFS_OBJ_ID_ERASED, the file was deleted
-  spiffs_obj_id obj_id;
-  // size of the file
-  u32_t size;
-  // cached object index header page index
-  spiffs_page_ix objix_hdr_pix;
-  // cached offset object index page index
-  spiffs_page_ix cursor_objix_pix;
-  // cached offset object index span index
-  spiffs_span_ix cursor_objix_spix;
-  // current absolute offset
-  u32_t offset;
-  // current file descriptor offset (cached)
-  u32_t fdoffset;
-  // fd flags
-  spiffs_flags flags;
+    // the filesystem of this descriptor
+    spiffs *fs;
+    // number of file descriptor - if 0, the file descriptor is closed
+    spiffs_file file_nbr;
+    // object id - if SPIFFS_OBJ_ID_ERASED, the file was deleted
+    spiffs_obj_id obj_id;
+    // size of the file
+    u32_t size;
+    // cached object index header page index
+    spiffs_page_ix objix_hdr_pix;
+    // cached offset object index page index
+    spiffs_page_ix cursor_objix_pix;
+    // cached offset object index span index
+    spiffs_span_ix cursor_objix_spix;
+    // current absolute offset
+    u32_t offset;
+    // current file descriptor offset (cached)
+    u32_t fdoffset;
+    // fd flags
+    spiffs_flags flags;
 #if SPIFFS_CACHE_WR
-  spiffs_cache_page *cache_page;
+    spiffs_cache_page *cache_page;
 #endif
 #if SPIFFS_TEMPORAL_FD_CACHE
-  // djb2 hash of filename
-  u32_t name_hash;
-  // hit score (score == 0 indicates never used fd)
-  u16_t score;
+    // djb2 hash of filename
+    u32_t name_hash;
+    // hit score (score == 0 indicates never used fd)
+    u16_t score;
 #endif
 #if SPIFFS_IX_MAP
-  // spiffs index map, if 0 it means unmapped
-  spiffs_ix_map *ix_map;
+    // spiffs index map, if 0 it means unmapped
+    spiffs_ix_map *ix_map;
 #endif
 } spiffs_fd;
 
@@ -481,45 +481,46 @@ typedef struct {
 // NB: this is always aligned when the data page is an object index,
 // as in this case struct spiffs_page_object_ix is used
 typedef struct SPIFFS_PACKED {
-  // object id
-  spiffs_obj_id obj_id;
-  // object span index
-  spiffs_span_ix span_ix;
-  // flags
-  u8_t flags;
+    // object id
+    spiffs_obj_id obj_id;
+    // object span index
+    spiffs_span_ix span_ix;
+    // flags
+    u8_t flags;
 } spiffs_page_header;
 
 // object index header page header
 typedef struct SPIFFS_PACKED
 #if SPIFFS_ALIGNED_OBJECT_INDEX_TABLES
-                __attribute(( aligned(sizeof(spiffs_page_ix)) ))
+__attribute((aligned(sizeof(spiffs_page_ix))))
 #endif
 {
-  // common page header
-  spiffs_page_header p_hdr;
-  // alignment
-  u8_t _align[4 - ((sizeof(spiffs_page_header)&3)==0 ? 4 : (sizeof(spiffs_page_header)&3))];
-  // size of object
-  u32_t size;
-  // type of object
-  spiffs_obj_type type;
-  // name of object
-  u8_t name[SPIFFS_OBJ_NAME_LEN];
+    // common page header
+    spiffs_page_header p_hdr;
+    // alignment
+    u8_t _align[4 - ((sizeof(spiffs_page_header) & 3) == 0 ? 4 : (sizeof(spiffs_page_header) & 3))];
+    // size of object
+    u32_t size;
+    // type of object
+    spiffs_obj_type type;
+    // name of object
+    u8_t name[SPIFFS_OBJ_NAME_LEN];
 #if SPIFFS_OBJ_META_LEN
-  // metadata. not interpreted by SPIFFS in any way.
-  u8_t meta[SPIFFS_OBJ_META_LEN];
+    // metadata. not interpreted by SPIFFS in any way.
+    u8_t meta[SPIFFS_OBJ_META_LEN];
 #endif
-} spiffs_page_object_ix_header;
+}
+spiffs_page_object_ix_header;
 
 // object index page header
 typedef struct SPIFFS_PACKED {
- spiffs_page_header p_hdr;
- u8_t _align[4 - ((sizeof(spiffs_page_header)&3)==0 ? 4 : (sizeof(spiffs_page_header)&3))];
+    spiffs_page_header p_hdr;
+    u8_t _align[4 - ((sizeof(spiffs_page_header) & 3) == 0 ? 4 : (sizeof(spiffs_page_header) & 3))];
 } spiffs_page_object_ix;
 
 // callback func for object lookup visitor
 typedef s32_t (*spiffs_visitor_f)(spiffs *fs, spiffs_obj_id id, spiffs_block_ix bix, int ix_entry,
-    const void *user_const_p, void *user_var_p);
+                                  const void *user_const_p, void *user_var_p);
 
 
 #if SPIFFS_CACHE

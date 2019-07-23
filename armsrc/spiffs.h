@@ -22,15 +22,14 @@ typedef enum spiffs_file_type {
     RDV40_SPIFFS_FILETYPE_UNKNOWN
 } RDV40SpiFFSFileType;
 
-typedef struct rdv40_spiffs_fsinfo
-    {
-        uint32_t blockSize;
-        uint32_t pageSize;
-        uint32_t maxOpenFiles;
-        uint32_t maxPathLenght;
-        uint32_t totalBytes, usedBytes, freeBytes;
-	uint32_t usedPercent, freePercent;
-    } rdv40_spiffs_fsinfo;
+typedef struct rdv40_spiffs_fsinfo {
+    uint32_t blockSize;
+    uint32_t pageSize;
+    uint32_t maxOpenFiles;
+    uint32_t maxPathLenght;
+    uint32_t totalBytes, usedBytes, freeBytes;
+    uint32_t usedPercent, freePercent;
+} rdv40_spiffs_fsinfo;
 
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
 
@@ -145,39 +144,39 @@ typedef s32_t (*spiffs_erase)(u32_t addr, u32_t size);
 
 /* file system check callback report operation */
 typedef enum {
-  SPIFFS_CHECK_LOOKUP = 0,
-  SPIFFS_CHECK_INDEX,
-  SPIFFS_CHECK_PAGE
+    SPIFFS_CHECK_LOOKUP = 0,
+    SPIFFS_CHECK_INDEX,
+    SPIFFS_CHECK_PAGE
 } spiffs_check_type;
 
 /* file system check callback report type */
 typedef enum {
-  SPIFFS_CHECK_PROGRESS = 0,
-  SPIFFS_CHECK_ERROR,
-  SPIFFS_CHECK_FIX_INDEX,
-  SPIFFS_CHECK_FIX_LOOKUP,
-  SPIFFS_CHECK_DELETE_ORPHANED_INDEX,
-  SPIFFS_CHECK_DELETE_PAGE,
-  SPIFFS_CHECK_DELETE_BAD_FILE
+    SPIFFS_CHECK_PROGRESS = 0,
+    SPIFFS_CHECK_ERROR,
+    SPIFFS_CHECK_FIX_INDEX,
+    SPIFFS_CHECK_FIX_LOOKUP,
+    SPIFFS_CHECK_DELETE_ORPHANED_INDEX,
+    SPIFFS_CHECK_DELETE_PAGE,
+    SPIFFS_CHECK_DELETE_BAD_FILE
 } spiffs_check_report;
 
 /* file system check callback function */
 #if SPIFFS_HAL_CALLBACK_EXTRA
 typedef void (*spiffs_check_callback)(struct spiffs_t *fs, spiffs_check_type type, spiffs_check_report report,
-    u32_t arg1, u32_t arg2);
+                                      u32_t arg1, u32_t arg2);
 #else // SPIFFS_HAL_CALLBACK_EXTRA
 typedef void (*spiffs_check_callback)(spiffs_check_type type, spiffs_check_report report,
-    u32_t arg1, u32_t arg2);
+                                      u32_t arg1, u32_t arg2);
 #endif // SPIFFS_HAL_CALLBACK_EXTRA
 
 /* file system listener callback operation */
 typedef enum {
-  /* the file has been created */
-  SPIFFS_CB_CREATED = 0,
-  /* the file has been updated or moved to another page */
-  SPIFFS_CB_UPDATED,
-  /* the file has been deleted */
-  SPIFFS_CB_DELETED
+    /* the file has been created */
+    SPIFFS_CB_CREATED = 0,
+    /* the file has been updated or moved to another page */
+    SPIFFS_CB_UPDATED,
+    /* the file has been deleted */
+    SPIFFS_CB_DELETED
 } spiffs_fileop_type;
 
 /* file system listener callback function */
@@ -243,141 +242,141 @@ typedef void (*spiffs_file_callback)(struct spiffs_t *fs, spiffs_fileop_type op,
 
 // spiffs spi configuration struct
 typedef struct {
-  // physical read function
-  spiffs_read hal_read_f;
-  // physical write function
-  spiffs_write hal_write_f;
-  // physical erase function
-  spiffs_erase hal_erase_f;
+    // physical read function
+    spiffs_read hal_read_f;
+    // physical write function
+    spiffs_write hal_write_f;
+    // physical erase function
+    spiffs_erase hal_erase_f;
 #if SPIFFS_SINGLETON == 0
-  // physical size of the spi flash
-  u32_t phys_size;
-  // physical offset in spi flash used for spiffs,
-  // must be on block boundary
-  u32_t phys_addr;
-  // physical size when erasing a block
-  u32_t phys_erase_block;
+    // physical size of the spi flash
+    u32_t phys_size;
+    // physical offset in spi flash used for spiffs,
+    // must be on block boundary
+    u32_t phys_addr;
+    // physical size when erasing a block
+    u32_t phys_erase_block;
 
-  // logical size of a block, must be on physical
-  // block size boundary and must never be less than
-  // a physical block
-  u32_t log_block_size;
-  // logical size of a page, must be at least
-  // log_block_size / 8
-  u32_t log_page_size;
+    // logical size of a block, must be on physical
+    // block size boundary and must never be less than
+    // a physical block
+    u32_t log_block_size;
+    // logical size of a page, must be at least
+    // log_block_size / 8
+    u32_t log_page_size;
 
 #endif
 #if SPIFFS_FILEHDL_OFFSET
-  // an integer offset added to each file handle
-  u16_t fh_ix_offset;
+    // an integer offset added to each file handle
+    u16_t fh_ix_offset;
 #endif
 } spiffs_config;
 
 typedef struct spiffs_t {
-  // file system configuration
-  spiffs_config cfg;
-  // number of logical blocks
-  u32_t block_count;
+    // file system configuration
+    spiffs_config cfg;
+    // number of logical blocks
+    u32_t block_count;
 
-  // cursor for free blocks, block index
-  spiffs_block_ix free_cursor_block_ix;
-  // cursor for free blocks, entry index
-  int free_cursor_obj_lu_entry;
-  // cursor when searching, block index
-  spiffs_block_ix cursor_block_ix;
-  // cursor when searching, entry index
-  int cursor_obj_lu_entry;
+    // cursor for free blocks, block index
+    spiffs_block_ix free_cursor_block_ix;
+    // cursor for free blocks, entry index
+    int free_cursor_obj_lu_entry;
+    // cursor when searching, block index
+    spiffs_block_ix cursor_block_ix;
+    // cursor when searching, entry index
+    int cursor_obj_lu_entry;
 
-  // primary work buffer, size of a logical page
-  u8_t *lu_work;
-  // secondary work buffer, size of a logical page
-  u8_t *work;
-  // file descriptor memory area
-  u8_t *fd_space;
-  // available file descriptors
-  u32_t fd_count;
+    // primary work buffer, size of a logical page
+    u8_t *lu_work;
+    // secondary work buffer, size of a logical page
+    u8_t *work;
+    // file descriptor memory area
+    u8_t *fd_space;
+    // available file descriptors
+    u32_t fd_count;
 
-  // last error
-  s32_t err_code;
+    // last error
+    s32_t err_code;
 
-  // current number of free blocks
-  u32_t free_blocks;
-  // current number of busy pages
-  u32_t stats_p_allocated;
-  // current number of deleted pages
-  u32_t stats_p_deleted;
-  // flag indicating that garbage collector is cleaning
-  u8_t cleaning;
-  // max erase count amongst all blocks
-  spiffs_obj_id max_erase_count;
+    // current number of free blocks
+    u32_t free_blocks;
+    // current number of busy pages
+    u32_t stats_p_allocated;
+    // current number of deleted pages
+    u32_t stats_p_deleted;
+    // flag indicating that garbage collector is cleaning
+    u8_t cleaning;
+    // max erase count amongst all blocks
+    spiffs_obj_id max_erase_count;
 
 #if SPIFFS_GC_STATS
-  u32_t stats_gc_runs;
+    u32_t stats_gc_runs;
 #endif
 
 #if SPIFFS_CACHE
-  // cache memory
-  void *cache;
-  // cache size
-  u32_t cache_size;
+    // cache memory
+    void *cache;
+    // cache size
+    u32_t cache_size;
 #if SPIFFS_CACHE_STATS
-  u32_t cache_hits;
-  u32_t cache_misses;
+    u32_t cache_hits;
+    u32_t cache_misses;
 #endif
 #endif
 
-  // check callback function
-  spiffs_check_callback check_cb_f;
-  // file callback function
-  spiffs_file_callback file_cb_f;
-  // mounted flag
-  u8_t mounted;
-  // user data
-  void *user_data;
-  // config magic
-  u32_t config_magic;
+    // check callback function
+    spiffs_check_callback check_cb_f;
+    // file callback function
+    spiffs_file_callback file_cb_f;
+    // mounted flag
+    u8_t mounted;
+    // user data
+    void *user_data;
+    // config magic
+    u32_t config_magic;
 } spiffs;
 
 /* spiffs file status struct */
 typedef struct {
-  spiffs_obj_id obj_id;
-  u32_t size;
-  spiffs_obj_type type;
-  spiffs_page_ix pix;
-  u8_t name[SPIFFS_OBJ_NAME_LEN];
+    spiffs_obj_id obj_id;
+    u32_t size;
+    spiffs_obj_type type;
+    spiffs_page_ix pix;
+    u8_t name[SPIFFS_OBJ_NAME_LEN];
 #if SPIFFS_OBJ_META_LEN
-  u8_t meta[SPIFFS_OBJ_META_LEN];
+    u8_t meta[SPIFFS_OBJ_META_LEN];
 #endif
 } spiffs_stat;
 
 struct spiffs_dirent {
-  spiffs_obj_id obj_id;
-  u8_t name[SPIFFS_OBJ_NAME_LEN];
-  spiffs_obj_type type;
-  u32_t size;
-  spiffs_page_ix pix;
+    spiffs_obj_id obj_id;
+    u8_t name[SPIFFS_OBJ_NAME_LEN];
+    spiffs_obj_type type;
+    u32_t size;
+    spiffs_page_ix pix;
 #if SPIFFS_OBJ_META_LEN
-  u8_t meta[SPIFFS_OBJ_META_LEN];
+    u8_t meta[SPIFFS_OBJ_META_LEN];
 #endif
 };
 
 typedef struct {
-  spiffs *fs;
-  spiffs_block_ix block;
-  int entry;
+    spiffs *fs;
+    spiffs_block_ix block;
+    int entry;
 } spiffs_DIR;
 
 #if SPIFFS_IX_MAP
 
 typedef struct {
-  // buffer with looked up data pixes
-  spiffs_page_ix *map_buf;
-  // precise file byte offset
-  u32_t offset;
-  // start data span index of lookup buffer
-  spiffs_span_ix start_spix;
-  // end data span index of lookup buffer
-  spiffs_span_ix end_spix;
+    // buffer with looked up data pixes
+    spiffs_page_ix *map_buf;
+    // precise file byte offset
+    u32_t offset;
+    // start data span index of lookup buffer
+    spiffs_span_ix start_spix;
+    // end data span index of lookup buffer
+    spiffs_span_ix end_spix;
 } spiffs_ix_map;
 
 #endif
@@ -434,9 +433,9 @@ s32_t SPIFFS_probe_fs(spiffs_config *config);
  * @param check_cb_f    callback function for reporting during consistency checks
  */
 s32_t SPIFFS_mount(spiffs *fs, spiffs_config *config, u8_t *work,
-    u8_t *fd_space, u32_t fd_space_size,
-    void *cache, u32_t cache_size,
-    spiffs_check_callback check_cb_f);
+                   u8_t *fd_space, u32_t fd_space_size,
+                   void *cache, u32_t cache_size,
+                   spiffs_check_callback check_cb_f);
 
 /**
  * Unmounts the file system. All file handles will be flushed of any
@@ -779,7 +778,7 @@ s32_t SPIFFS_set_file_callback_func(spiffs *fs, spiffs_file_callback cb_func);
  *                SPIFFS_bytes_to_ix_map_entries given the length
  */
 s32_t SPIFFS_ix_map(spiffs *fs, spiffs_file fh, spiffs_ix_map *map,
-    u32_t offset, u32_t len, spiffs_page_ix *map_buf);
+                    u32_t offset, u32_t len, spiffs_page_ix *map_buf);
 
 /**
  * Unmaps the index lookup from this filehandle. All future readings will

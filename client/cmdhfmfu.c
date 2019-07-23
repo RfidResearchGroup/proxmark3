@@ -1931,7 +1931,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         bufferSize = sizeof(data);
     }
 
-    if (!GetFromDevice(BIG_BUF, data, bufferSize, startindex,NULL,0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, data, bufferSize, startindex, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 1;
     }

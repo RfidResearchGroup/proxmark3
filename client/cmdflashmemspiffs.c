@@ -216,37 +216,37 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'h':
-            return usage_flashmemspiffs_dump();
-        /*case 'l':
-            len = param_get32ex(Cmd, cmdp + 1, FLASH_MEM_MAX_SIZE, 10);
-            cmdp += 2;
-            break;*/
-        case 'o':
-            param_getstr(Cmd, cmdp + 1, destfilename, 32);
-            cmdp += 2;
-            break;
-        case 'p':
-            print = true;
-            cmdp += 1;
-            break;
-        case 'e':
-            eml = true;
-            cmdp += 1;
-            break;
-        case 'f':
-            // File handling
-            if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                PrintAndLogEx(FAILED, "Filename too long");
+            case 'h':
+                return usage_flashmemspiffs_dump();
+            /*case 'l':
+                len = param_get32ex(Cmd, cmdp + 1, FLASH_MEM_MAX_SIZE, 10);
+                cmdp += 2;
+                break;*/
+            case 'o':
+                param_getstr(Cmd, cmdp + 1, destfilename, 32);
+                cmdp += 2;
+                break;
+            case 'p':
+                print = true;
+                cmdp += 1;
+                break;
+            case 'e':
+                eml = true;
+                cmdp += 1;
+                break;
+            case 'f':
+                // File handling
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                    errors = true;
+                    break;
+                }
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
-            }
-            cmdp += 2;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = true;
-            break;
         }
     }
 
@@ -314,24 +314,24 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-        case 'h':
-            return usage_flashmemspiffs_load();
-        case 'f':
-            if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-                PrintAndLogEx(FAILED, "Filename too long");
+            case 'h':
+                return usage_flashmemspiffs_load();
+            case 'f':
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                    errors = true;
+                    break;
+                }
+                cmdp += 2;
+                break;
+            case 'o':
+                param_getstr(Cmd, cmdp + 1, destfilename, 32);
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
-            }
-            cmdp += 2;
-            break;
-        case 'o':
-            param_getstr(Cmd, cmdp + 1, destfilename, 32);
-            cmdp += 2;
-            break;
-        default:
-            PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-            errors = true;
-            break;
         }
     }
 
@@ -432,8 +432,10 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
 static command_t CommandTable[] = {
 
     {"help", CmdHelp, AlwaysAvailable, "This help"},
-    {"copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
-     "Copy a file to another (destructively) in SPIFFS FileSystem in FlashMEM (spiffs)"},
+    {
+        "copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
+        "Copy a file to another (destructively) in SPIFFS FileSystem in FlashMEM (spiffs)"
+    },
     {"dump", CmdFlashMemSpiFFSDump, IfPm3Flash, "Dump a file from SPIFFS FileSystem in FlashMEM (spiffs)"},
     {"info", CmdFlashMemSpiFFSInfo, IfPm3Flash, "Print filesystem info and usage statistics (spiffs)"},
     {"load", CmdFlashMemSpiFFSLoad, IfPm3Flash, "Upload file into SPIFFS Filesystem (spiffs)"},
@@ -443,7 +445,8 @@ static command_t CommandTable[] = {
     {"test", CmdFlashMemSpiFFSTest, IfPm3Flash, "Test SPIFFS Functionning (require wiping pages 0 and 1)"},
     {"tree", CmdFlashMemSpiFFSTree, IfPm3Flash, "Print the Flash Memory FileSystem Tree (spiffs)"},
     {"unmount", CmdFlashMemSpiFFSUnmount, IfPm3Flash, "Un-mount the SPIFFS Filesystem if not already mounted (spiffs)"},
-    {NULL, NULL, NULL, NULL}};
+    {NULL, NULL, NULL, NULL}
+};
 
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far

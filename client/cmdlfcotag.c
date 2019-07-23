@@ -91,7 +91,7 @@ static int CmdCOTAGRead(const char *Cmd) {
         }
         case 1: {
 
-            if (!GetFromDevice(BIG_BUF, DemodBuffer, COTAG_BITS, 0,NULL,0, NULL, 1000, false)) {
+            if (!GetFromDevice(BIG_BUF, DemodBuffer, COTAG_BITS, 0, NULL, 0, NULL, 1000, false)) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
                 return PM3_ETIMEOUT;
             }

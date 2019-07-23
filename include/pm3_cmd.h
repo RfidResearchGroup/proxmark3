@@ -238,8 +238,8 @@ typedef struct {
 #define CMD_FLASHMEM_INFO                                                 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE                                      0x0126
 
-// RDV40, High level flashmem SPIFFS Manipulation 
-// ALL function will have a lazy or Safe version 
+// RDV40, High level flashmem SPIFFS Manipulation
+// ALL function will have a lazy or Safe version
 // that will be handled as argument of safety level [0..2] respectiveley normal / lazy / safe
 // However as how design is, MOUNT and UNMOUNT only need/have lazy as safest level so a safe level will still execute a lazy version
 // see spiffs.c for more about the normal/lazy/safety information)

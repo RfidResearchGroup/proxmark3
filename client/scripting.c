@@ -223,7 +223,7 @@ static int l_GetFromBigBuf(lua_State *L) {
         return returnToLuaWithError(L, "Allocating memory failed");
     }
 
-    if (!GetFromDevice(BIG_BUF, data, len, startindex,NULL,0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, data, len, startindex, NULL, 0, NULL, 2500, false)) {
         free(data);
         return returnToLuaWithError(L, "command execution time out");
     }
@@ -263,7 +263,7 @@ static int l_GetFromFlashMem(lua_State *L) {
         if (!data)
             return returnToLuaWithError(L, "Allocating memory failed");
 
-        if (!GetFromDevice(FLASH_MEM, data, len, startindex,NULL,0, NULL, -1, false)) {
+        if (!GetFromDevice(FLASH_MEM, data, len, startindex, NULL, 0, NULL, -1, false)) {
             free(data);
             return returnToLuaWithError(L, "command execution time out");
         }

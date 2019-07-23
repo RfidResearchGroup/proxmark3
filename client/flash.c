@@ -415,7 +415,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
             version = BL_VERSION_INVALID;
             PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported an invalid version number"));
             flash_suggest_update_bootloader();
-            // 
+            //
         } else if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(FLASHER_VERSION)) {
             PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported a version older than this flasher"));
             flash_suggest_update_bootloader();
@@ -448,7 +448,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CHIP_INFO command"));
         flash_suggest_update_bootloader();
     }
-    
+
     if (enable_bl_writes) {
         PrintAndLogEx(INFO, "Permitted flash range: 0x%08x-0x%08x", FLASH_START, flash_end);
     } else {

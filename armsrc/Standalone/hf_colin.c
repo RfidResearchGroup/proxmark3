@@ -102,7 +102,7 @@ void ReadLastTagFromFlash() {
     uint8_t *mem = BigBuf_malloc(size);
 
     //this one will handle filetype (symlink or not) and resolving by itself
-    rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK,(uint8_t *)mem,len, RDV40_SPIFFS_SAFETY_SAFE);
+    rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
 
     emlSetMem(mem, 0, 64);
 
@@ -126,14 +126,14 @@ void WriteTagToFlash(uint32_t uid, size_t size) {
 
     char dest[SPIFFS_OBJ_NAME_LEN];
     uint8_t buid[4];
-    num_to_bytes(uid,4,buid);
-    sprintf(dest,"hf_colin/mf_%02x%02x%02x%02x.bin",buid[0],buid[1],buid[2],buid[3]);
-    
+    num_to_bytes(uid, 4, buid);
+    sprintf(dest, "hf_colin/mf_%02x%02x%02x%02x.bin", buid[0], buid[1], buid[2], buid[3]);
+
     // TODO : by using safe function for multiple writes we are both breaking cache mecanisms and making useless and unoptimized mount operations
     // we should manage at out level the mount status before and after the whole standalone mode
-    rdv40_spiffs_write((char *)dest,(uint8_t *)data,len, RDV40_SPIFFS_SAFETY_SAFE);
+    rdv40_spiffs_write((char *)dest, (uint8_t *)data, len, RDV40_SPIFFS_SAFETY_SAFE);
     // lastag will only contain filename/path to last written tag file so we don't loose time or space.
-    rdv40_spiffs_make_symlink((char *)dest,(char *)HFCOLIN_LASTTAG_SYMLINK,RDV40_SPIFFS_SAFETY_SAFE);    
+    rdv40_spiffs_make_symlink((char *)dest, (char *)HFCOLIN_LASTTAG_SYMLINK, RDV40_SPIFFS_SAFETY_SAFE);
 
     DbprintfEx(FLAG_NEWLINE, "[OK] TAG WRITTEN TO FLASH !");
     cjSetCursLeft();

@@ -107,13 +107,13 @@ int rdv40_spiffs_mounted() {
     int ret = 0;
 
     switch (RDV40_SPIFFS_MOUNT_STATUS) {
-    case RDV40_SPIFFS_MOUNTED:
-        ret = 1;
-        break;
-    case RDV40_SPIFFS_UNMOUNTED:
-    case RDV40_SPIFFS_UNKNOWN:
-    default:
-        ret = 0;
+        case RDV40_SPIFFS_MOUNTED:
+            ret = 1;
+            break;
+        case RDV40_SPIFFS_UNMOUNTED:
+        case RDV40_SPIFFS_UNKNOWN:
+        default:
+            ret = 0;
     }
 
     return ret;
@@ -240,18 +240,18 @@ RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
     }
     if (DBGLEVEL > 1) {
         switch (filetype) {
-        case RDV40_SPIFFS_FILETYPE_REAL:
-            Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_REAL");
-            break;
-        case RDV40_SPIFFS_FILETYPE_SYMLINK:
-            Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_SYMLINK");
-            break;
-        case RDV40_SPIFFS_FILETYPE_BOTH:
-            Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_BOTH");
-            break;
-        case RDV40_SPIFFS_FILETYPE_UNKNOWN:
-            Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_UNKNOWN");
-            break;
+            case RDV40_SPIFFS_FILETYPE_REAL:
+                Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_REAL");
+                break;
+            case RDV40_SPIFFS_FILETYPE_SYMLINK:
+                Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_SYMLINK");
+                break;
+            case RDV40_SPIFFS_FILETYPE_BOTH:
+                Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_BOTH");
+                break;
+            case RDV40_SPIFFS_FILETYPE_UNKNOWN:
+                Dbprintf("Filetype is : RDV40_SPIFFS_FILETYPE_UNKNOWN");
+                break;
         }
     }
     return filetype;
@@ -426,13 +426,13 @@ int rdv40_spiffs_copy(char *src, char *dst, RDV40SpiFFSSafetyLevel level) {
 
 int rdv40_spiffs_stat(char *filename, uint32_t *buf, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(                      //
-            *buf = size_in_spiffs((char *)filename); //
+        *buf = size_in_spiffs((char *)filename); //
     )
 }
 
 int rdv40_spiffs_getfsinfo(rdv40_spiffs_fsinfo *fsinfo, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(         //
-            *fsinfo = info_of_spiffs(); //
+        *fsinfo = info_of_spiffs(); //
     )
 }
 
@@ -465,9 +465,9 @@ int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RD
         if (DBGLEVEL > 1) Dbprintf("Linkk real filename is  destination is : %s", linkfilename);
         read_from_spiffs((char *)linkfilename, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
         if (DBGLEVEL > 1) Dbprintf("Symlink destination is : %s", linkdest);
-        read_from_spiffs((char *)linkdest, (uint8_t *)dst, size); //
-    )
-}
+            read_from_spiffs((char *)linkdest, (uint8_t *)dst, size); //
+        )
+        }
 
 // BEWARE ! This function is DESTRUCTIVE as it will UPDATE an existing symlink
 // Since it creates a .lnk extension file it may be minor to mistake the order of arguments
@@ -498,17 +498,18 @@ int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyL
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(                                              //
         RDV40SpiFFSFileType filetype = filetype_in_spiffs((char *)filename); //
-        switch (filetype) {
-            case RDV40_SPIFFS_FILETYPE_REAL:
-                rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
-                break;
-            case RDV40_SPIFFS_FILETYPE_SYMLINK:
-                rdv40_spiffs_read_as_symlink((char *)filename, (uint8_t *)dst, size, level);
-                break;
-            case RDV40_SPIFFS_FILETYPE_BOTH:
-            case RDV40_SPIFFS_FILETYPE_UNKNOWN:
-            default:;
-        } //
+    switch (filetype) {
+    case RDV40_SPIFFS_FILETYPE_REAL:
+        rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
+            break;
+        case RDV40_SPIFFS_FILETYPE_SYMLINK:
+            rdv40_spiffs_read_as_symlink((char *)filename, (uint8_t *)dst, size, level);
+            break;
+        case RDV40_SPIFFS_FILETYPE_BOTH:
+        case RDV40_SPIFFS_FILETYPE_UNKNOWN:
+        default:
+            ;
+    } //
     )
 }
 
