@@ -9,10 +9,10 @@ define KNOWN_STANDALONE_DEFINITIONS
 +==========================================================+
 | STANDALONE      | DESCRIPTION                            |
 +==========================================================+
-|                 | No standalone mode                     |
+| (empty)         | No standalone mode                     |
 +----------------------------------------------------------+
-| LF_SAMYRUN (def)| HID26 read/clone/sim                   |
-|                 | - Samy Kamkar                          |
+| LF_SAMYRUN      | HID26 read/clone/sim                   |
+| (default)       | - Samy Kamkar                          |
 +----------------------------------------------------------+
 | LF_ICERUN       | standalone mode skeleton               |
 |                 | - iceman                               |
@@ -30,10 +30,10 @@ define KNOWN_STANDALONE_DEFINITIONS
 |                 | - Matías A. Ré Medina                  |
 +----------------------------------------------------------+
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone      |
-|                 | - Colin Brigato                        |
+| (RDV4 only)     | - Colin Brigato                        |
 +----------------------------------------------------------+
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
-|                 | storing in flashmem - Bogito           |
+| (RDV4 only)     | storing in flashmem - Bogito           |
 +----------------------------------------------------------+
 
 endef
