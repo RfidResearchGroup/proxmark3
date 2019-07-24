@@ -72,6 +72,13 @@ STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_FOO
 STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG
 ```
 
+If your mode is using one of the unique features of the RDV4, add it to the proper list:
+
+```
+STANDALONE_MODES_REQ_SMARTCARD :=
+STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG
+```
+
 ## Update MAKEFILE.INC
 Add your source code files like the following sample in the `Makefile.inc`
 

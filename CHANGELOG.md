@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add proper Makefile halting when using incompatible STANDALONE and PLATFORM vars (@doegox)
  - Add T55x7 Downlink mode support (@mwalker33)
  - Add SPIFFS Flash filesystem support (@cjbrigato)
  - Fix support for flashing 512K units with old bootrom (@slurdge/@doegox)
