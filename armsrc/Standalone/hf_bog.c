@@ -27,35 +27,7 @@ from the client to view the stored quadlets.
 // Maximum number of auth attempts per standalone session
 #define MAX_PWDS_PER_SESSION 64
 
-uint8_t FindOffsetInFlash() {
-    uint8_t mem[4] = { 0x00, 0x00, 0x00, 0x00 };
-    uint8_t eom[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    uint8_t memcnt = 0;
-
-    while (memcnt < 0xFF) {
-        Flash_ReadData(memcnt, mem, 4);
-        if (memcmp(mem, eom, 4) == 0) {
-            return memcnt;
-        }
-        memcnt += 4;
-    }
-
-    return 0; // wrap-around
-}
-
-void EraseMemory() {
-    if (!FlashInit()) {
-        return;
-    }
-
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase4k(0, 0);
-
-    if (DBGLEVEL > 1) Dbprintf("[!] Erased flash!");
-    FlashStop();
-    SpinDelay(100);
-}
+#define HF_BOG_LOGFILE "hf_bog.log"
 
 // This is actually copied from SniffIso14443a
 void RAMFUNC SniffAndStore(uint8_t param) {
@@ -96,8 +68,9 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     UartInit(receivedCmd, receivedCmdPar);
 
     // Setup and start DMA.
-    if (!FpgaSetupSscDma((uint8_t *) dmaBuf, DMA_BUFFER_SIZE)) {
-        if (DBGLEVEL > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
+    if (!FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE)) {
+        if (DBGLEVEL > 1)
+            Dbprintf("FpgaSetupSscDma failed. Exiting");
         return;
     }
 
@@ -134,17 +107,18 @@ void RAMFUNC SniffAndStore(uint8_t param) {
             Dbprintf("[!] blew circular buffer! | datalen %u", dataLen);
             break;
         }
-        if (dataLen < 1) continue;
+        if (dataLen < 1)
+            continue;
 
         // primary buffer was stopped( <-- we lost data!
         if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
-            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dmaBuf;
+            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t)dmaBuf;
             AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-            //Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
+            // Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
         }
         // secondary buffer sets as primary, secondary buffer was stopped
         if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)dmaBuf;
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }
 
@@ -159,23 +133,24 @@ void RAMFUNC SniffAndStore(uint8_t param) {
                     LED_C_ON();
 
                     // check - if there is a short 7bit request from reader
-                    if ((!triggered) && (param & 0x02) && (uart->len == 1) && (uart->bitCount == 7)) triggered = true;
+                    if ((!triggered) && (param & 0x02) && (uart->len == 1) && (uart->bitCount == 7))
+                        triggered = true;
 
                     if (triggered) {
-                        if ((receivedCmd) && ((receivedCmd[0] == MIFARE_ULEV1_AUTH) || (receivedCmd[0] == MIFARE_ULC_AUTH_1))) {
-                            if (DBGLEVEL > 1) Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2], receivedCmd[3], receivedCmd[4]);
+                        if ((receivedCmd) &&
+                                ((receivedCmd[0] == MIFARE_ULEV1_AUTH) || (receivedCmd[0] == MIFARE_ULC_AUTH_1))) {
+                            if (DBGLEVEL > 1)
+                                Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2],
+                                         receivedCmd[3], receivedCmd[4]);
 
                             // temporarily save the captured pwd in our array
                             memcpy(&capturedPwds[4 * auth_attempts], receivedCmd + 1, 4);
                             auth_attempts++;
                         }
 
-                        if (!LogTrace(receivedCmd,
-                                      uart->len,
-                                      uart->startTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
-                                      uart->endTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
-                                      uart->parity,
-                                      true)) break;
+                        if (!LogTrace(receivedCmd, uart->len, uart->startTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
+                                      uart->endTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER, uart->parity, true))
+                            break;
                     }
                     /* ready to receive another command. */
                     UartReset();
@@ -193,20 +168,18 @@ void RAMFUNC SniffAndStore(uint8_t param) {
                 if (ManchesterDecoding(tagdata, 0, (my_rsamples - 1) * 4)) {
                     LED_B_ON();
 
-                    if (!LogTrace(receivedResp,
-                                  demod->len,
-                                  demod->startTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
-                                  demod->endTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
-                                  demod->parity,
-                                  false)) break;
+                    if (!LogTrace(receivedResp, demod->len, demod->startTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
+                                  demod->endTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER, demod->parity, false))
+                        break;
 
-                    if ((!triggered) && (param & 0x01)) triggered = true;
+                    if ((!triggered) && (param & 0x01))
+                        triggered = true;
 
                     // ready to receive another response.
                     DemodReset();
                     // reset the Miller decoder including its (now outdated) input buffer
                     UartReset();
-                    //UartInit(receivedCmd, receivedCmdPar);
+                    // UartInit(receivedCmd, receivedCmdPar);
                     LED_C_OFF();
                 }
                 TagIsActive = (demod->state != DEMOD_UNSYNCD);
@@ -228,57 +201,25 @@ void RAMFUNC SniffAndStore(uint8_t param) {
 
     SpinDelay(200);
 
-    // Write stuff to flash
+    // Write stuff to spiffs logfile
     if (auth_attempts > 0) {
-        if (DBGLEVEL > 1) Dbprintf("[!] Authentication attempts = %u", auth_attempts);
+        if (DBGLEVEL > 1)
+            Dbprintf("[!] Authentication attempts = %u", auth_attempts);
+        size_t size = 4 * auth_attempts;
+        uint8_t *data = BigBuf_malloc(size);
 
-        // Setting the SPI Baudrate to 48MHz to avoid the bit-flip issue (https://github.com/RfidResearchGroup/proxmark3/issues/34)
-        FlashmemSetSpiBaudrate(48000000);
-
-        // Find the offset in flash mem to continue writing the auth attempts
-        uint8_t memoffset = FindOffsetInFlash();
-        if (DBGLEVEL > 1) Dbprintf("[!] Memory offset = %u", memoffset);
-
-        if ((memoffset + 4 * auth_attempts) > 0xFF) {
-            // We opt to keep the new data only
-            memoffset = 0;
-            if (DBGLEVEL > 1) Dbprintf("[!] Size of total data > 256 bytes. Discarding the old data.");
+        if (!exists_in_spiffs((char *)HF_BOG_LOGFILE)) {
+            rdv40_spiffs_write((char *)HF_BOG_LOGFILE, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
+        } else {
+            rdv40_spiffs_append((char *)HF_BOG_LOGFILE, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
         }
-
-        // Get previous data from flash mem
-        uint8_t *previousdata = BigBuf_malloc(memoffset);
-        if (memoffset > 0) {
-            uint16_t readlen = Flash_ReadData(0, previousdata, memoffset);
-            if (DBGLEVEL > 1) Dbprintf("[!] Read %u bytes from flash mem", readlen);
-        }
-
-        // create new bigbuf to hold all data
-        size_t total_size = memoffset + 4 * auth_attempts;
-        uint8_t *total_data = BigBuf_malloc(total_size);
-
-        // Add the previousdata array into total_data array
-        memcpy(total_data, previousdata, memoffset);
-
-        // Copy bytes of capturedPwds immediately following bytes of previousdata
-        memcpy(total_data + memoffset, capturedPwds, 4 * auth_attempts);
-
-        // Erase first page of flash mem
-        EraseMemory();
-
-        // Write total data to flash mem
-        uint16_t writelen = Flash_WriteData(0, total_data, memoffset + 4 * auth_attempts);
-        if (DBGLEVEL > 1) Dbprintf("[!] Wrote %u bytes into flash mem", writelen);
-
-        // If pwd saved successfully, blink led A three times
-        if (writelen > 0) {
-            SpinErr(0, 200, 5); // blink led A
-        }
-
-        SpinDelay(100);
-
-        // Reset the SPI Baudrate to the default value (24MHz)
-        FlashmemSetSpiBaudrate(24000000);
     }
+
+    if (DBGLEVEL > 1)
+        Dbprintf("[!] Wrote %u Authentification attempts into logfile", auth_attempts);
+
+    SpinErr(0, 200, 5); // blink led A
+    SpinDelay(100);
 }
 
 void ModInfo(void) {

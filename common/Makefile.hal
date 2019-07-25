@@ -114,6 +114,9 @@ PLATFORM_DEFS += \
     -DWITH_HFSNIFF
 
 # Standalone mode
+ifneq ($(strip $(filter $(PLATFORM_DEFS),$(STANDALONE_REQ_DEFS))),$(strip $(STANDALONE_REQ_DEFS)))
+    $(error Chosen Standalone mode $(STANDALONE) requires $(strip $(STANDALONE_REQ_DEFS)), unsupported by $(PLTNAME))
+endif
 PLATFORM_DEFS+=$(STANDALONE_PLATFORM_DEFS)
 
 $(info $(findstring WITH_STANDALONE_*,$(PLATFORM_DEFS)))

@@ -35,25 +35,25 @@
 New functionality from @zhovner,  
 -----------------------------------------------------------------------------------------------------
 ### Communication decryption
-RDR	26
-TAG	04 00
-RDR	93 20
-TAG	14 57 9f 69 b5
-RDR	93 70 14 57 9f 69 b5 2e 51
-TAG	08 b6 dd
-RDR	60 14 50 2d
-TAG	ce 84 42 61
-RDR	f8 04 9c cb 05 25 c8 4f
-TAG	94 31 cc 40
-RDR	70 93 df 99
-TAG	99 72 42 8c e2 e8 52 3f 45 6b 99 c8 31 e7 69 dc ed 09
-RDR	8c a6 82 7b
-TAG	ab 79 7f d3 69 e8 b9 3a 86 77 6b 40 da e3 ef 68 6e fd
-RDR	c3 c3 81 ba
-TAG	49 e2 c9 de f4 86 8d 17 77 67 0e 58 4c 27 23 02 86 f4
-RDR	fb dc d7 c1
-TAG	4a bd 96 4b 07 d3 56 3a a0 66 ed 0a 2e ac 7f 63 12 bf
-RDR	9f 91 49 ea
+RDR 26
+TAG 04 00
+RDR 93 20
+TAG 14 57 9f 69 b5
+RDR 93 70 14 57 9f 69 b5 2e 51
+TAG 08 b6 dd
+RDR 60 14 50 2d
+TAG ce 84 42 61
+RDR f8 04 9c cb 05 25 c8 4f
+TAG 94 31 cc 40
+RDR 70 93 df 99
+TAG 99 72 42 8c e2 e8 52 3f 45 6b 99 c8 31 e7 69 dc ed 09
+RDR 8c a6 82 7b
+TAG ab 79 7f d3 69 e8 b9 3a 86 77 6b 40 da e3 ef 68 6e fd
+RDR c3 c3 81 ba
+TAG 49 e2 c9 de f4 86 8d 17 77 67 0e 58 4c 27 23 02 86 f4
+RDR fb dc d7 c1
+TAG 4a bd 96 4b 07 d3 56 3a a0 66 ed 0a 2e ac 7f 63 12 bf
+RDR 9f 91 49 ea
 
 
 ./mfkey64 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea
