@@ -22,6 +22,8 @@
 #include "pmflash.h"
 #include "flashmem.h" // persistence on mem
 
+
+
 //#define START_GAP 31*8 // was 250 // SPEC:  1*8 to 50*8 - typ 15*8 (15fc)
 //#define WRITE_GAP 8*8 // 17*8 // was 160 // SPEC:  1*8 to 20*8 - typ 10*8 (10fc)
 //#define WRITE_0   15*8 // 18*8 // was 144 // SPEC: 16*8 to 32*8 - typ 24*8 (24fc)
@@ -114,19 +116,19 @@
 // Note: Moved * 8 to apply when used. Saving 28 bytes here (- the *8) and 28 bytes flash.
 //                              StartGap WriteGap Bit 0/00 Bit 1/01  Bit 10  Bit 11  ReadGap
 t55xx_config T55xx_Timing  = {{
-        { 29    , 17    , 15    , 50    , 0     , 0     , 15     }, // Default Fixed
+        { 29    , 17    , 15    , 47    , 0     , 0     , 15     }, // Default Fixed
         { 31    , 20    , 18    , 50    , 0     , 0     , 15     }, // Long Leading Ref.
         { 31    , 20    , 18    , 40    , 0     , 0     , 15     }, // Leading 0
         { 29    , 17    , 15    , 31    , 47    , 63    , 15     }  // 1 of 4
     }
 };
 */
-//                              StartGap WriteGap Bit 0/00 Bit 1/01  Bit 10  Bit 11  ReadGap
+//      StartGap WriteGap Bit 0/00 Bit 1/01  ReadGap Bit 10  Bit 11  
 t55xx_config T55xx_Timing  = {{
-        { 29 * 8, 17 * 8, 15 * 8, 50 * 8, 0, 0, 15 * 8 },           // Default Fixed
-        { 31 * 8, 20 * 8, 18 * 8, 50 * 8, 0, 0, 15 * 8 },           // Long Leading Ref.
-        { 31 * 8, 20 * 8, 18 * 8, 40 * 8, 0, 0, 15 * 8 },           // Leading 0
-        { 29 * 8, 17 * 8, 15 * 8, 31 * 8, 47 * 8, 63 * 8, 15 * 8 }  // 1 of 4
+        { 29 * 8, 17 * 8, 15 * 8, 47 * 8, 15 * 8, 0, 0 },           // Default Fixed
+        { 31 * 8, 20 * 8, 18 * 8, 50 * 8, 15 * 8, 0, 0 },           // Long Leading Ref.
+        { 31 * 8, 20 * 8, 18 * 8, 40 * 8, 15 * 8, 0, 0 },           // Leading 0
+        { 29 * 8, 17 * 8, 15 * 8, 31 * 8, 15 * 8, 47 * 8, 63 * 8 }  // 1 of 4
     }
 };
 
@@ -161,11 +163,11 @@ void printT55xxConfig(void) {
         Dbprintf("  [b] writegap............%d*8 (%d)", T55xx_Timing.m[DLMode].write_gap / 8, T55xx_Timing.m[DLMode].write_gap);
         Dbprintf("  [c] write_0.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_0   / 8, T55xx_Timing.m[DLMode].write_0);
         Dbprintf("  [d] write_1.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_1   / 8, T55xx_Timing.m[DLMode].write_1);
+        Dbprintf("  [e] readgap.............%d*8 (%d)", T55xx_Timing.m[DLMode].read_gap / 8, T55xx_Timing.m[DLMode].read_gap);
         if (DLMode ==  T55xx_DLMode_1of4) {
-            Dbprintf("  [e] write_2.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_2 / 8, T55xx_Timing.m[DLMode].write_2);
-            Dbprintf("  [f] write_3.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_3 / 8, T55xx_Timing.m[DLMode].write_3);
+            Dbprintf("  [f] write_2.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_2 / 8, T55xx_Timing.m[DLMode].write_2);
+            Dbprintf("  [g] write_3.............%d*8 (%d)", T55xx_Timing.m[DLMode].write_3 / 8, T55xx_Timing.m[DLMode].write_3);
         }
-        Dbprintf("  [g] readgap.............%d*8 (%d)", T55xx_Timing.m[DLMode].read_gap / 8, T55xx_Timing.m[DLMode].read_gap);
     }
 }
 
@@ -211,21 +213,17 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
         return;
     }
 
-    // if ( ClearT55Settings) // dont copy over new timings
     memcpy(buf, &T55xx_Timing, T55XX_CONFIG_LEN);
 
     Flash_CheckBusy(BUSY_TIMEOUT);
     Flash_WriteEnable();
     Flash_Erase4k(3, 0xD);
 
-    // if not a settings erase, write data
-    // if ( ClearT55Settings) {
     res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 
     if (res == T55XX_CONFIG_LEN && DBGLEVEL > 1) {
         DbpString("T55XX Config save success");
     }
-    // }
 
     BigBuf_free();
 #endif
@@ -1482,6 +1480,7 @@ void TurnReadLF_off(uint32_t delay) {
 // Macro for code readability
 #define BitStream_Byte(X) ((X) >> 3)
 #define BitStream_Bit(X)  ((X) &  7)
+#define t55_llr_ref  			(136 * 8)
 #define t55_send_PwdMode      (arg & 0x01)
 #define t55_send_Page        ((arg & 0x02) >> 1)
 #define t55_send_TestMode    ((arg & 0x04) >> 2)
@@ -1508,7 +1507,7 @@ void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
             TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_3);
             break; // Send bits   11 (1 of 4)
         case 4 :
-            TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_0 + (136 * 8));
+            TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_0 + t55_llr_ref);
             break; // Send Long Leading Reference
     }
 
