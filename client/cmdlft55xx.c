@@ -254,9 +254,9 @@ static int usage_lf_deviceconfig() {
     PrintAndLogEx(NORMAL, "     b <8..255>   - Set write gap");
     PrintAndLogEx(NORMAL, "     c <8..255>   - Set write ZERO gap");
     PrintAndLogEx(NORMAL, "     d <8..255>   - Set write ONE gap");
-    PrintAndLogEx(NORMAL, "     e <8..255>   - Set write TWO gap (1 of 4 only)");
-    PrintAndLogEx(NORMAL, "     f <8..255>   - Set write THREE gap (1 of 4 only)");
-    PrintAndLogEx(NORMAL, "     g <8..255>   - Set read gap");
+    PrintAndLogEx(NORMAL, "     e <8..255>   - Set read gap");
+    PrintAndLogEx(NORMAL, "     f <8..255>   - Set write TWO gap (1 of 4 only)");
+    PrintAndLogEx(NORMAL, "     g <8..255>   - Set write THREE gap (1 of 4 only)");
     PrintAndLogEx(NORMAL, "     p            - persist to flashmemory");
     PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
     PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
@@ -2572,15 +2572,15 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'e':
-                errors |= param_getdec(Cmd, cmdp + 1, &write2);
+                errors |= param_getdec(Cmd, cmdp + 1, &readgap);
                 cmdp += 2;
                 break;
             case 'f':
-                errors |= param_getdec(Cmd, cmdp + 1, &write3);
+                errors |= param_getdec(Cmd, cmdp + 1, &write2);
                 cmdp += 2;
                 break;
             case 'g':
-                errors |= param_getdec(Cmd, cmdp + 1, &readgap);
+                errors |= param_getdec(Cmd, cmdp + 1, &write3);
                 cmdp += 2;
                 break;
             case 'r':
@@ -2606,9 +2606,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_lf_deviceconfig();
 
-//    printf ("DLmode %d\n",downlink_mode);
     t55xx_config conf = {0};
-//	 printf ("Size conf %lld\n",sizeof(conf));
  	 if (erase) {
 		memset (&conf,0xff, sizeof(conf));
 		printf ("Conf.m[0] %x\n",conf.m[0].start_gap);
@@ -2619,9 +2617,9 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
 		conf.m[downlink_mode].write_gap  = writegap * 8;
 		conf.m[downlink_mode].write_0    = write0   * 8;
 		conf.m[downlink_mode].write_1    = write1   * 8;
+		conf.m[downlink_mode].read_gap   = readgap  * 8;
 		conf.m[downlink_mode].write_2    = write2   * 8;
 		conf.m[downlink_mode].write_3    = write3   * 8;
-		conf.m[downlink_mode].read_gap   = readgap  * 8;
 	 }
     clearCommandBuffer();
     SendCommandOLD(CMD_SET_LF_T55XX_CONFIG, shall_persist, 0, 0, &conf, sizeof(t55xx_config));
