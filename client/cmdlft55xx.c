@@ -14,6 +14,13 @@
 
 #include "cmdlft55xx.h"
 
+// Some defines for readability
+#define T55xx_DLMode_Fixed         0 // Default Mode
+#define T55xx_DLMode_LLR           1 // Long Leading Reference
+#define T55xx_DLMode_Leading0      2 // Leading Zero
+#define T55xx_DLMode_1of4          3 // 1 of 4
+#define T55xx_LongLeadingReference 4 // Value to tell Write Bit to send long reference
+
 // Default configuration
 t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = false, .offset = 0x00, .block0 = 0x00, .Q5 = false };
 
@@ -260,7 +267,7 @@ static int usage_lf_deviceconfig() {
     PrintAndLogEx(NORMAL, "     p            - persist to flashmemory");
     PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
     PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
-    PrintAndLogEx(NORMAL, "     z            - erase t55x7 timings (needs p and reboot to load defaults)");
+    PrintAndLogEx(NORMAL, "     z            - Set default t55x7 timings (use p to save if required)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx deviceconfig a 29 b 17 c 15 d 47 e 15   - default T55XX");
@@ -2549,7 +2556,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     bool    errors        = false, shall_persist = false;
     uint8_t cmdp          = 0;
     uint8_t downlink_mode = 0;
-    bool    erase         = false;
+    bool    set_defaults  = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -2593,7 +2600,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
                 cmdp++;
                 break;
             case 'z':
-                erase = true;
+                set_defaults = true;
                 cmdp++;
                 break;
             default:
@@ -2607,9 +2614,48 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     if (errors || cmdp == 0) return usage_lf_deviceconfig();
 
     t55xx_config conf = {0};
- 	 if (erase) {
+/* 	 if (erase) {
 		memset (&conf,0xff, sizeof(conf));
 		printf ("Conf.m[0] %x\n",conf.m[0].start_gap);
+		*/
+		//
+    if (set_defaults){
+		// fixed bit length
+		conf.m[T55xx_DLMode_Fixed].start_gap  = 29 * 8;
+		conf.m[T55xx_DLMode_Fixed].write_gap  = 17 * 8;
+		conf.m[T55xx_DLMode_Fixed].write_0    = 15 * 8;
+		conf.m[T55xx_DLMode_Fixed].write_1    = 47 * 8;
+		conf.m[T55xx_DLMode_Fixed].read_gap   = 15 * 8;
+		conf.m[T55xx_DLMode_Fixed].write_2    = 0;
+		conf.m[T55xx_DLMode_Fixed].write_3    = 0;
+	
+	   // long leading reference
+		conf.m[T55xx_DLMode_LLR].start_gap  = 31 * 8;
+		conf.m[T55xx_DLMode_LLR].write_gap  = 20 * 8;
+		conf.m[T55xx_DLMode_LLR].write_0    = 18 * 8;
+		conf.m[T55xx_DLMode_LLR].write_1    = 50 * 8;
+		conf.m[T55xx_DLMode_LLR].read_gap   = 15 * 8;
+		conf.m[T55xx_DLMode_LLR].write_2    = 0;
+		conf.m[T55xx_DLMode_LLR].write_3    = 0;
+   
+	   // leading zero
+		conf.m[T55xx_DLMode_Leading0].start_gap  = 31 * 8;
+		conf.m[T55xx_DLMode_Leading0].write_gap  = 20 * 8;
+		conf.m[T55xx_DLMode_Leading0].write_0    = 18 * 8;
+		conf.m[T55xx_DLMode_Leading0].write_1    = 40 * 8;
+		conf.m[T55xx_DLMode_Leading0].read_gap   = 15 * 8;
+		conf.m[T55xx_DLMode_Leading0].write_2    = 0;
+		conf.m[T55xx_DLMode_Leading0].write_3    = 0;
+
+		// 1 of 4 coding reference
+		conf.m[T55xx_DLMode_1of4].start_gap  = 29 * 8;
+		conf.m[T55xx_DLMode_1of4].write_gap  = 17 * 8;
+		conf.m[T55xx_DLMode_1of4].write_0    = 15 * 8;
+		conf.m[T55xx_DLMode_1of4].write_1    = 31 * 8;
+		conf.m[T55xx_DLMode_1of4].read_gap   = 15 * 8;
+		conf.m[T55xx_DLMode_1of4].write_2    = 47 * 8;
+		conf.m[T55xx_DLMode_1of4].write_3    = 63 * 8;
+
 	 }
 	 else {
 	 
@@ -2621,6 +2667,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
 		conf.m[downlink_mode].write_2    = write2   * 8;
 		conf.m[downlink_mode].write_3    = write3   * 8;
 	 }
+	 
     clearCommandBuffer();
     SendCommandOLD(CMD_SET_LF_T55XX_CONFIG, shall_persist, 0, 0, &conf, sizeof(t55xx_config));
     return PM3_SUCCESS;

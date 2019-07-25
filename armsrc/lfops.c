@@ -116,7 +116,7 @@
 // Note: Moved * 8 to apply when used. Saving 28 bytes here (- the *8) and 28 bytes flash.
 //                              StartGap WriteGap Bit 0/00 Bit 1/01  Bit 10  Bit 11  ReadGap
 t55xx_config T55xx_Timing  = {{
-        { 29    , 17    , 15    , 50    , 0     , 0     , 15     }, // Default Fixed
+        { 29    , 17    , 15    , 47    , 0     , 0     , 15     }, // Default Fixed
         { 31    , 20    , 18    , 50    , 0     , 0     , 15     }, // Long Leading Ref.
         { 31    , 20    , 18    , 40    , 0     , 0     , 15     }, // Leading 0
         { 29    , 17    , 15    , 31    , 47    , 63    , 15     }  // 1 of 4
@@ -125,7 +125,7 @@ t55xx_config T55xx_Timing  = {{
 */
 //      StartGap WriteGap Bit 0/00 Bit 1/01  ReadGap Bit 10  Bit 11  
 t55xx_config T55xx_Timing  = {{
-        { 29 * 8, 17 * 8, 15 * 8, 50 * 8, 15 * 8, 0, 0 },           // Default Fixed
+        { 29 * 8, 17 * 8, 15 * 8, 47 * 8, 15 * 8, 0, 0 },           // Default Fixed
         { 31 * 8, 20 * 8, 18 * 8, 50 * 8, 15 * 8, 0, 0 },           // Long Leading Ref.
         { 31 * 8, 20 * 8, 18 * 8, 40 * 8, 15 * 8, 0, 0 },           // Leading 0
         { 29 * 8, 17 * 8, 15 * 8, 31 * 8, 15 * 8, 47 * 8, 63 * 8 }  // 1 of 4
