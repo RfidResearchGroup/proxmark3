@@ -243,7 +243,7 @@ void printEM410x(uint32_t hi, uint64_t id) {
 
     if (!id && !hi) return;
 
-    PrintAndLogEx(SUCCESS, "EM410x%s pattern found", (hi) ? " XL	" : "");
+    PrintAndLogEx(SUCCESS, "EM410x%s pattern found", (hi) ? " XL" : "");
 
     uint64_t n = 1;
     uint64_t id2lo = 0;

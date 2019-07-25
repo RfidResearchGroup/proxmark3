@@ -21,6 +21,7 @@
 #include "apps.h"
 #include "printf.h"
 #include "parity.h"
+#include "spiffs.h"
 
 
 #endif /* __HF_BOG_H */
