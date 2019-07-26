@@ -239,9 +239,9 @@ local function main( args)
     for k,v in ipairs(blockData) do
 
 --        print(string.format('Block %02x: %02x %02x %02x %02x', k-1, string.byte(v, 1,4)))
-	print(string.format(' %02x | %s', k-1, v) )
+        print(string.format(' %02x | %s', k-1, v) )
     end
-   print('|---|-------------------|')
+    print('|---|-------------------|')
 
     local filename, err = utils.WriteDumpFile(info.uid, blockData)
     if err then return oops(err) end

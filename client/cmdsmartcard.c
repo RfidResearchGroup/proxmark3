@@ -284,7 +284,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
             vxor ^= atr[i];
 
         if (vxor)
-            PrintAndLogEx(WARNING, "Check sum error. Must be 0 got 0x%02X", vxor);
+            PrintAndLogEx(WARNING, "Invalid check sum. Must be 0 got 0x%02X", vxor);
         else
             PrintAndLogEx(INFO, "Check sum OK.");
     }
@@ -295,7 +295,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     uint8_t calen = 2 + T1len + TD1len + TDilen + K;
 
     if (atrlen != calen && atrlen != calen + 1)  // may be CRC
-        PrintAndLogEx(ERR, "ATR length error. len: %d, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
+        PrintAndLogEx(WARNING, "Invalid ATR length. len: %d, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
 
     if (K > 0)
         PrintAndLogEx(INFO, "\nHistorical bytes | len 0x%02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
@@ -568,14 +568,14 @@ static int CmdSmartUpgrade(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "error, when getting filesize");
+        PrintAndLogEx(ERR, "error, when getting filesize");
         fclose(f);
         return 1;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogEx(WARNING, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         fclose(f);
         return 1;
     }
@@ -914,9 +914,7 @@ static int smart_brute_sfi(bool decodeTLV) {
 
         for (uint16_t rec = 1; rec <= 255; rec++) {
 
-            if (ukbhit()) {
-                int gc = getchar();
-                (void)gc;
+            if (kbd_enter_pressed()) {
                 PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                 free(buf);
                 return 1;

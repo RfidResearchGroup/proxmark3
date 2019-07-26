@@ -434,7 +434,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
             break;
         }
     }
-    
+
     return true;
 }
 

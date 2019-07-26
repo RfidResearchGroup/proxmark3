@@ -118,7 +118,7 @@ local function main(args)
 
         core.clearCommandBuffer()
 
-        if core.ukbhit() then
+        if core.kbd_enter_pressed() then
             print('aborted by user')
             break
         end

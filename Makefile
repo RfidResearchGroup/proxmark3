@@ -145,21 +145,24 @@ style:
 	# Make sure astyle is installed
 	@which astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )
 	# Remove spaces & tabs at EOL, add LF at EOF if needed on *.c, *.h, *.cpp. *.lua, *.py, *.pl, Makefile
-	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
+	find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
 	    -exec perl -pi -e 's/[ \t]+$$//' {} \; \
 	    -exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
 	    -exec sh -c "echo >> {}" \;
 	# Apply astyle on *.c, *.h, *.cpp
-	find . \( -name "*.[ch]" -or -name "*.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
+	find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) \) -exec astyle --formatted --mode=c --suffix=none \
 	    --indent=spaces=4 --indent-switches \
 	    --keep-one-line-blocks --max-instatement-indent=60 \
 	    --style=google --pad-oper --unpad-paren --pad-header \
 	    --align-pointer=name {} \;
 
-# Detecting weird codepages.
+# Detecting weird codepages and tabs.
 checks:
 	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
 	      -exec sh -c "cat {} |recode utf8.. >/dev/null || echo {}" \;
+	find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" \) \
+	      -exec grep -lP '\t' {} \;
+# to remove tabs within lines, one can try with vi: :set tabstop=4   :set et|retab
 
 # Dummy target to test for GNU make availability
 _test:

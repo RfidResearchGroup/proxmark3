@@ -11,7 +11,7 @@
 #include "mifaresniff.h"
 
 #ifndef CheckCrc14A
-# define CheckCrc14A(data, len)	check_crc(CRC_14443_A, (data), (len))
+# define CheckCrc14A(data, len) check_crc(CRC_14443_A, (data), (len))
 #endif
 
 //static int sniffState = SNF_INIT;

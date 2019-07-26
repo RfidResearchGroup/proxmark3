@@ -206,7 +206,7 @@ local function main(args)
             if x then core.console(cmd) end
         end
 
-        if core.ukbhit() then
+        if core.kbd_enter_pressed() then
             print('aborted by user')
             break
         end

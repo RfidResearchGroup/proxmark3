@@ -136,7 +136,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     txBufferNG.pre.ng = ng;
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
-    if ( len > 0 && data ) 
+    if (len > 0 && data)
         memcpy(&txBufferNG.data, data, len);
 
     if ((conn.send_via_fpc_usart && conn.send_with_crc_on_fpc) || ((!conn.send_via_fpc_usart) && conn.send_with_crc_on_usb)) {
@@ -359,7 +359,7 @@ __attribute__((force_align_arg_pointer))
 
                     res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
                     if ((res != PM3_SUCCESS) || (rxlen != length)) {
-                        PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, length);
+                        PrintAndLogEx(WARNING, "Received packet frame with variable part too short? %d/%d", rxlen, length);
                         error = true;
                     } else {
 
@@ -392,7 +392,7 @@ __attribute__((force_align_arg_pointer))
                 if (!error) {                        // Get the postamble
                     res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
                     if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
-                        PrintAndLogEx(WARNING, "Received packet frame error fetching postamble");
+                        PrintAndLogEx(WARNING, "Received packet frame without postamble");
                         error = true;
                     }
                 }
@@ -402,7 +402,7 @@ __attribute__((force_align_arg_pointer))
                         uint8_t first, second;
                         compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + length, &first, &second);
                         if ((first << 8) + second != rx.crc) {
-                            PrintAndLogEx(WARNING, "Received packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
+                            PrintAndLogEx(WARNING, "Received packet frame with invalid CRC %02X%02X <> %04X", first, second, rx.crc);
                             error = true;
                         }
                     }
@@ -424,7 +424,7 @@ __attribute__((force_align_arg_pointer))
 
                 res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
                 if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
-                    PrintAndLogEx(WARNING, "Received packet OLD frame payload error too short? %d/%d", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
+                    PrintAndLogEx(WARNING, "Received packet OLD frame with payload too short? %d/%d", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
                     error = true;
                 }
                 if (!error) {
@@ -734,12 +734,14 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
 * @param dest Destination address for transfer
 * @param bytes number of bytes to be transferred
 * @param start_index offset into Proxmark3 BigBuf[]
+* @param data used by SPIFFS to provide filename
+* @param datalen used by SPIFFS to provide filename length
 * @param response struct to copy last command (CMD_ACK) into
 * @param ms_timeout timeout in milliseconds
 * @param show_warning display message after 2 seconds
 * @return true if command was returned, otherwise false
 */
-bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
     if (dest == NULL) return false;
     if (bytes == 0) return true;
@@ -759,6 +761,10 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
         case BIG_BUF_EML: {
             SendCommandMIX(CMD_DOWNLOAD_EML_BIGBUF, start_index, bytes, 0, NULL, 0);
             return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
+        }
+        case SPIFFS: {
+            SendCommandMIX(CMD_SPIFFS_DOWNLOAD, start_index, bytes, 0, data, datalen);
+            return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_SPIFFS_DOWNLOADED);
         }
         case FLASH_MEM: {
             SendCommandMIX(CMD_FLASHMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);

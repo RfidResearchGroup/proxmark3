@@ -1232,7 +1232,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     status = ul_read(0, data, sizeof(data));
     if (status == -1) {
         DropField();
-        PrintAndLogEx(WARNING, "Error: tag didn't answer to READ");
+        PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
         return status;
     } else if (status == 16) {
         ul_print_default(data);
@@ -1248,7 +1248,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         uint8_t ulc_conf[16] = {0x00};
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
         if (status == -1) {
-            PrintAndLogEx(WARNING, "Error: tag didn't answer to READ UL-C");
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ UL-C");
             DropField();
             return status;
         }
@@ -1263,7 +1263,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
             if (status == -1) {
                 DropField();
-                PrintAndLogEx(WARNING, "Error: tag didn't answer to READ magic");
+                PrintAndLogEx(ERR, "Error: tag didn't answer to READ magic");
                 return status;
             }
             if (status == 16) ulc_print_3deskey(ulc_deskey);
@@ -1306,7 +1306,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         uint8_t ulev1_signature[32] = {0x00};
         status = ulev1_readSignature(ulev1_signature, sizeof(ulev1_signature));
         if (status == -1) {
-            PrintAndLogEx(WARNING, "Error: tag didn't answer to READ SIGNATURE");
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ SIGNATURE");
             DropField();
             return status;
         }
@@ -1322,7 +1322,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         uint8_t version[10] = {0x00};
         status  = ulev1_getVersion(version, sizeof(version));
         if (status == -1) {
-            PrintAndLogEx(WARNING, "Error: tag didn't answer to GETVERSION");
+            PrintAndLogEx(ERR, "Error: tag didn't answer to GETVERSION");
             DropField();
             return status;
         } else if (status == 10) {
@@ -1346,7 +1346,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         if (startconfigblock) { // if we know where the config block is...
             status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
             if (status == -1) {
-                PrintAndLogEx(WARNING, "Error: tag didn't answer to READ EV1");
+                PrintAndLogEx(ERR, "Error: tag didn't answer to READ EV1");
                 DropField();
                 return status;
             } else if (status == 16) {
@@ -1931,7 +1931,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         bufferSize = sizeof(data);
     }
 
-    if (!GetFromDevice(BIG_BUF, data, bufferSize, startindex, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, data, bufferSize, startindex, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 1;
     }
@@ -2134,7 +2134,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "Error, when getting filesize");
+        PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
         return 1;
     }
@@ -2150,7 +2150,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
     if (bytes_read < MFU_DUMP_PREFIX_LENGTH) {
-        PrintAndLogEx(WARNING, "Error, dump file is too small");
+        PrintAndLogEx(ERR, "Error, dump file is too small");
         free(dump);
         return 1;
     }
@@ -2167,7 +2167,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     uint8_t pages = (bytes_read - MFU_DUMP_PREFIX_LENGTH) / 4;
 
     if (pages - 1 != mem->pages) {
-        PrintAndLogEx(WARNING, "Error, invalid dump, wrong page count");
+        PrintAndLogEx(ERR, "Error, invalid dump, wrong page count");
         free(dump);
         return 1;
     }

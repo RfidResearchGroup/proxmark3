@@ -176,7 +176,7 @@ static int usage_hf_iclass_managekeys(void) {
     return 0;
 }
 static int usage_hf_iclass_reader(void) {
-    PrintAndLogEx(NORMAL, "Act as a Iclass reader.  Look for iClass tags until a key or the pm3 button is pressed\n");
+    PrintAndLogEx(NORMAL, "Act as a Iclass reader.  Look for iClass tags until Enter or the pm3 button is pressed\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass reader [h] [1]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "    h   This help text");
@@ -376,16 +376,14 @@ static int CmdHFiClassSim(const char *Cmd) {
 
         case 2: {
             PrintAndLogEx(INFO, "Starting iCLASS sim 2 attack (elite mode)");
-            PrintAndLogEx(INFO, "press keyboard to cancel");
+            PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
             SendCommandOLD(CMD_SIMULATE_TAG_ICLASS, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
-                if (ukbhit()) {
-                    int gc = getchar();
-                    (void)gc;
+                if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard.");
                     return 0;
                 }
@@ -427,16 +425,14 @@ static int CmdHFiClassSim(const char *Cmd) {
         case 4: {
             // reader in key roll mode,  when it has two keys it alternates when trying to verify.
             PrintAndLogEx(INFO, "Starting iCLASS sim 4 attack (elite mode, reader in key roll mode)");
-            PrintAndLogEx(INFO, "press keyboard to cancel");
+            PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
             SendCommandOLD(CMD_SIMULATE_TAG_ICLASS, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
-                if (ukbhit()) {
-                    int gc = getchar();
-                    (void)gc;
+                if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard.");
                     return 0;
                 }
@@ -554,14 +550,14 @@ static int CmdHFiClassELoad(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogDevice(WARNING, "error, when getting filesize");
+        PrintAndLogDevice(ERR, "error, when getting filesize");
         fclose(f);
         return 1;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
+        PrintAndLogDevice(ERR, "error, cannot allocate memory ");
         fclose(f);
         return 1;
     }
@@ -573,7 +569,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     //Validate
 
     if (bytes_read < fsize) {
-        PrintAndLogDevice(WARNING, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
+        PrintAndLogDevice(ERR, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
         free(dump);
         return 1;
     }
@@ -654,7 +650,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "error, when getting filesize");
+        PrintAndLogEx(ERR, "error, when getting filesize");
         fclose(f);
         return 2;
     }
@@ -669,7 +665,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     size_t bytes_read = fread(decrypted, 1, fsize, f);
     fclose(f);
     if (bytes_read == 0) {
-        PrintAndLogEx(WARNING, "file reading error");
+        PrintAndLogEx(ERR, "file reading error");
         free(decrypted);
         return 3;
     }
@@ -969,9 +965,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     while (true) {
         printf(".");
         fflush(stdout);
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             DropField();
             return 0;
@@ -996,7 +990,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     }
 
     // response ok - now get bigbuf content of the dump
-    if (!GetFromDevice(BIG_BUF, tag_data + (blockno * 8), blocksRead * 8, startindex, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, tag_data + (blockno * 8), blocksRead * 8, startindex, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 0;
     }
@@ -1039,7 +1033,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
                 blocksRead = (sizeof(tag_data) - gotBytes) / 8;
             }
             // get dumped data from bigbuf
-            if (!GetFromDevice(BIG_BUF, tag_data + gotBytes, blocksRead * 8, startindex, NULL, 2500, false)) {
+            if (!GetFromDevice(BIG_BUF, tag_data + gotBytes, blocksRead * 8, startindex, NULL, 0, NULL, 2500, false)) {
                 PrintAndLogEx(WARNING, "command execution time out");
                 return 0;
             }
@@ -1287,7 +1281,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     fseek(f, startblock * 8, SEEK_SET);
     size_t bytes_read = fread(tag_data, sizeof(iclass_block_t), endblock - startblock + 1, f);
     if (bytes_read == 0) {
-        PrintAndLogEx(WARNING, "file reading error.");
+        PrintAndLogEx(ERR, "file reading error.");
         fclose(f);
         return 2;
     }
@@ -1454,7 +1448,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         errors += testMAC();
         errors += doKeyTests(0);
         errors += testElite();
-        if (errors) PrintAndLogDevice(WARNING, "There were errors!!!");
+        if (errors) PrintAndLogDevice(ERR, "There were errors!!!");
         return errors;
     }
     return PM3_SUCCESS;
@@ -1524,7 +1518,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "Error, when getting filesize");
+        PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
         return 1;
     }
@@ -1682,7 +1676,7 @@ static int loadKeys(char *filename) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "Error, when getting filesize");
+        PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
         return 1;
     }
@@ -1945,9 +1939,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         uint64_t t2 = msclock();
         uint8_t timeout = 0;
 
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] Aborted via keyboard!\n");
             goto out;
         }
@@ -2446,7 +2438,7 @@ int readIclass(bool loop, bool verbose) {
 
     // loop in client not device - else on windows have a communication error
     PacketResponseNG resp;
-    while (!ukbhit()) {
+    while (!kbd_enter_pressed()) {
 
         clearCommandBuffer();
         SendCommandMIX(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);

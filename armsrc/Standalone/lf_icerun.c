@@ -13,7 +13,6 @@ void ModInfo(void) {
     DbpString("  LF skeleton mode -  aka IceRun (iceman)");
 }
 
-// samy's sniff and repeat routine for LF
 void RunMod() {
     StandAloneMode();
     Dbprintf("[=] LF skeleton code a.k.a IceRun started");

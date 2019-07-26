@@ -81,18 +81,19 @@ local function main(args)
         if o == 'o' then offset = tonumber(a) end
 
         -- num of bytes to read
-        if o == 'l' then length = tonumber(a) end
+        if o == 'l' then
+            length = tonumber(a)
+            if length < 0 or length > 256 then
+                return oops('Error: Length is not valid. Must be less than 256')
+            end
+        end
 
         -- keylength
         if o == 'k' then keylength = tonumber(a); usedkey = true end
 
-        if o == 'm' then keylength =6; usedkey = true; offset = 0x3F000-0x6000; end
-        if o == 't' then keylength =4; usedkey = true; offset = 0x3F000-0x3000; end
-        if o == 'i' then keylength =8; usedkey = true; offset = 0x3F000-0x4000; end
-    end
-
-    if length < 0 or length > 256 then
-        return oops('Error: Length is not valid. Must be less than 256')
+        if o == 'm' then keylength = 6; usedkey = true; length = 8192; offset = 0x3F000-0x6000; end
+        if o == 't' then keylength = 4; usedkey = true; length = 4096; offset = 0x3F000-0x3000; end
+        if o == 'i' then keylength = 8; usedkey = true; length = 4096; offset = 0x3F000-0x4000; end
     end
 
     if (offset < 0) or (offset % 4 ~= 0) then
@@ -102,9 +103,7 @@ local function main(args)
     print('Memory offset', offset)
     print('Length       ', length)
     print('Key length   ', keylength)
-    print( string.rep('--',20) )
-
-    if usedkey then length = 4096 end
+    print( string.rep('--', 20) )
 
     data, err = core.GetFromFlashMem(offset, length)
     if err then return oops(err) end
@@ -116,7 +115,6 @@ local function main(args)
 
         local kl = keylength * 2
         for i = 1, keys do
-
             key  = string.sub(s, (i - 1) * kl + 1, i * kl )
             print(string.format('[%02d] %s',i, key))
         end

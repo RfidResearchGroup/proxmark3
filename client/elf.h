@@ -9,6 +9,8 @@
 #ifndef __ELF_H__
 #define __ELF_H__
 
+#include "common.h"
+
 typedef struct {
     uint32_t p_type;
     uint32_t p_offset;
@@ -18,7 +20,7 @@ typedef struct {
     uint32_t p_memsz;
     uint32_t p_flags;
     uint32_t p_align;
-} __attribute__((__packed__)) Elf32_Phdr;
+} PACKED Elf32_Phdr;
 
 #define EI_NIDENT 16
 
@@ -37,7 +39,7 @@ typedef struct {
     uint16_t e_shentsize;
     uint16_t e_shnum;
     uint16_t e_shtrndx;
-} __attribute__((__packed__)) Elf32_Ehdr;
+} PACKED Elf32_Ehdr;
 
 #define PT_NULL      0
 #define PT_LOAD      1

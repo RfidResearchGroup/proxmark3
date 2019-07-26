@@ -135,7 +135,7 @@ static int CmdHFFelicaSim(const char *Cmd) {
     if (verbose)
         PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation");
 
-    while (!ukbhit()) {
+    while (!kbd_enter_pressed()) {
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
     }
     return 0;
@@ -357,9 +357,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         timeout++;
         printf(".");
         fflush(stdout);
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             DropField();
             return 1;
@@ -385,7 +383,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         return 1;
     }
 
-    if (!GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(trace);
         return 0;

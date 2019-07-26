@@ -243,7 +243,7 @@ void printEM410x(uint32_t hi, uint64_t id) {
 
     if (!id && !hi) return;
 
-    PrintAndLogEx(SUCCESS, "EM410x%s pattern found", (hi) ? " XL	" : "");
+    PrintAndLogEx(SUCCESS, "EM410x%s pattern found", (hi) ? " XL" : "");
 
     uint64_t n = 1;
     uint64_t id2lo = 0;
@@ -482,12 +482,12 @@ static int CmdEM410xBrute(const char *Cmd) {
 
     int filelen = param_getstr(Cmd, 0, filename, FILE_PATH_SIZE);
     if (filelen == 0) {
-        PrintAndLogEx(WARNING, "Error: Please specify a filename");
+        PrintAndLogEx(ERR, "Error: Please specify a filename");
         return PM3_EINVARG;
     }
 
     if ((f = fopen(filename, "r")) == NULL) {
-        PrintAndLogEx(WARNING, "Error: Could not open UIDs file ["_YELLOW_("%s")"]", filename);
+        PrintAndLogEx(ERR, "Error: Could not open UIDs file ["_YELLOW_("%s")"]", filename);
         return PM3_EFILE;
     }
 
@@ -544,9 +544,7 @@ static int CmdEM410xBrute(const char *Cmd) {
         char testuid[11];
         testuid[10] = 0;
 
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
             free(uidBlock);
             return PM3_EOPABORTED;
@@ -580,9 +578,7 @@ static int CmdEM410xBrute(const char *Cmd) {
 static int CmdEM410xWatch(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     do {
-        if (ukbhit()) {
-            int gc = getchar();
-            (void)gc;
+        if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             break;
         }
@@ -617,21 +613,21 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     // Check ID
     if (id == 0xFFFFFFFFFFFFFFFF) {
-        PrintAndLogEx(WARNING, "Error! ID is required.\n");
+        PrintAndLogEx(ERR, "Error! ID is required.\n");
         return PM3_EINVARG;
     }
     if (id >= 0x10000000000) {
-        PrintAndLogEx(WARNING, "Error! Given EM410x ID is longer than 40 bits.\n");
+        PrintAndLogEx(ERR, "Error! Given EM410x ID is longer than 40 bits.\n");
         return PM3_EINVARG;
     }
 
     // Check Card
     if (card == 0xFF) {
-        PrintAndLogEx(WARNING, "Error! Card type required.\n");
+        PrintAndLogEx(ERR, "Error! Card type required.\n");
         return PM3_EINVARG;
     }
     if (card < 0) {
-        PrintAndLogEx(WARNING, "Error! Bad card type selected.\n");
+        PrintAndLogEx(ERR, "Error! Bad card type selected.\n");
         return PM3_EINVARG;
     }
 
@@ -641,7 +637,7 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     // Allowed clock rates: 16, 32, 40 and 64
     if ((clock1 != 16) && (clock1 != 32) && (clock1 != 64) && (clock1 != 40)) {
-        PrintAndLogEx(WARNING, "Error! Clock rate" _YELLOW_("%d")" not valid. Supported clock rates are 16, 32, 40 and 64.\n", clock1);
+        PrintAndLogEx(ERR, "Error! Clock rate" _YELLOW_("%d")" not valid. Supported clock rates are 16, 32, 40 and 64.\n", clock1);
         return PM3_EINVARG;
     }
 
@@ -841,7 +837,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             }
         }
         if (!clk) {
-            if (verbose || g_debugMode) PrintAndLogEx(WARNING, "Error: EM4x50 - didn't find a clock");
+            if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - didn't find a clock");
             return PM3_ESOFT;
         }
     } else tol = clk / 8;
@@ -990,7 +986,7 @@ static bool downloadSamplesEM() {
 
     // 8 bit preamble + 32 bit word response (max clock (128) * 40bits = 5120 samples)
     uint8_t got[6000];
-    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }
@@ -1266,7 +1262,7 @@ static int CmdEM4x05Write(const char *Cmd) {
     SendCommandNG(CMD_EM4X_WRITE_WORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_EM4X_WRITE_WORD, &resp, 2000)) {
-        PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
+        PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }
 
@@ -1377,10 +1373,10 @@ static void printEM4x05config(uint32_t wordData) {
     PrintAndLogEx(NORMAL, "    PSK CF:   %u | %s", PSKcf, cf);
     PrintAndLogEx(NORMAL, "     Delay:   %u | %s", delay, cdelay);
     PrintAndLogEx(NORMAL, " LastWordR:  %02u | Address of last word for default read - meaning %u blocks are output", LWR, numblks);
-    PrintAndLogEx(NORMAL, " ReadLogin:   %u | Read login is %s", readLogin, readLogin ? _YELLOW_("required") :  _GREEN_("not required") );
-    PrintAndLogEx(NORMAL, "   ReadHKL:   %u | Read housekeeping words login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required") );
-    PrintAndLogEx(NORMAL, "WriteLogin:   %u | Write login is %s", writeLogin, writeLogin ? _YELLOW_("required") :  _GREEN_("not required") );
-    PrintAndLogEx(NORMAL, "  WriteHKL:   %u | Write housekeeping words login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required") );
+    PrintAndLogEx(NORMAL, " ReadLogin:   %u | Read login is %s", readLogin, readLogin ? _YELLOW_("required") :  _GREEN_("not required"));
+    PrintAndLogEx(NORMAL, "   ReadHKL:   %u | Read housekeeping words login is %s", readHKL, readHKL ? _YELLOW_("required") : _GREEN_("not required"));
+    PrintAndLogEx(NORMAL, "WriteLogin:   %u | Write login is %s", writeLogin, writeLogin ? _YELLOW_("required") :  _GREEN_("not required"));
+    PrintAndLogEx(NORMAL, "  WriteHKL:   %u | Write housekeeping words login is %s", writeHKL, writeHKL ? _YELLOW_("required") :  _GREEN_("not Required"));
     PrintAndLogEx(NORMAL, "    R.A.W.:   %u | Read after write is %s", raw, raw ? "on" : "off");
     PrintAndLogEx(NORMAL, "   Disable:   %u | Disable command is %s", disable, disable ? "accepted" : "not accepted");
     PrintAndLogEx(NORMAL, "    R.T.F.:   %u | Reader talk first is %s", rtf, rtf ? _YELLOW_("enabled") : "disabled");
@@ -1400,7 +1396,7 @@ static void printEM4x05info(uint32_t block0, uint32_t serial) {
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4305");
             break;
         case 8:
-            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");        
+            snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "EM4205");
             break;
         case 4:
             snprintf(ctstr + strlen(ctstr), sizeof(ctstr) - strlen(ctstr), _YELLOW_("%s"), "Unknown");

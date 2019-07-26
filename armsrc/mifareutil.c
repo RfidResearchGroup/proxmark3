@@ -602,10 +602,12 @@ void emlClearMem(void) {
 
 uint8_t SectorTrailer(uint8_t blockNo) {
     if (blockNo <= MIFARE_2K_MAXBLOCK) {
-        if (DBGLEVEL >= DBG_EXTENDED)	Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x03));
+        if (DBGLEVEL >= DBG_EXTENDED)
+            Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x03));
         return (blockNo | 0x03);
     } else {
-        if (DBGLEVEL >= DBG_EXTENDED)	Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x0f));
+        if (DBGLEVEL >= DBG_EXTENDED)
+            Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x0f));
         return (blockNo | 0x0f);
     }
 }

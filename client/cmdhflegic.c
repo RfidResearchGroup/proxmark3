@@ -781,7 +781,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
         PrintAndLogEx(WARNING, "Fail, only managed to read %u bytes", *outlen);
 
     // copy data from device
-    if (!GetFromDevice(BIG_BUF_EML, out, *outlen, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF_EML, out, *outlen, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         return 4;
     }
@@ -930,7 +930,7 @@ static int CmdLegicDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Fail, only managed to read 0x%02X bytes of 0x%02X", readlen, dumplen);
 
     // copy data from device
-    if (!GetFromDevice(BIG_BUF_EML, data, readlen, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF_EML, data, readlen, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(data);
         return 4;
@@ -1037,7 +1037,7 @@ static int CmdLegicRestore(const char *Cmd) {
     fclose(f);
 
     if (bytes_read == 0) {
-        PrintAndLogEx(WARNING, "File reading error");
+        PrintAndLogEx(ERR, "File reading error");
         free(data);
         return 2;
     }
@@ -1139,7 +1139,7 @@ static int CmdLegicELoad(const char *Cmd) {
     // load file
     size_t bytes_read = fread(data, 1, numofbytes, f);
     if (bytes_read == 0) {
-        PrintAndLogEx(WARNING, "File reading error");
+        PrintAndLogEx(ERR, "File reading error");
         free(data);
         fclose(f);
         f = NULL;
@@ -1200,7 +1200,7 @@ static int CmdLegicESave(const char *Cmd) {
 
     // download emulator memory
     PrintAndLogEx(SUCCESS, "Reading emulator memory...");
-    if (!GetFromDevice(BIG_BUF_EML, data, numofbytes, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF_EML, data, numofbytes, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(data);
         return 4;

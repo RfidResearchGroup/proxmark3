@@ -1,5 +1,16 @@
 # Compilation instructions
 
+## Tuning compilation parameters
+
+The client and the Proxmark3 firmware should always be in sync.
+Nevertheless, the firmware can be tuned depending on the Proxmark3 platform and options.
+
+Indeed, the RRG/Iceman fork can be used on other Proxmark3 hardware platforms as well.
+
+Via some definitions, you can adjust the firmware for a given platform, but also to add features like the support of the Blue Shark add-on or to select which standalone mode to embed.
+
+To learn how to adjust the firmware, please read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md).
+
 ## Get the latest commits
 
 ```sh
@@ -15,48 +26,23 @@ make clean && make all
 
 ## Flash the BOOTROM & FULLIMAGE
 
+In most cases, you can run the script `flash-all.sh` which try to auto-detect the port to use, on several OS.
+
+For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
+
 ```sh
 client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
 ## Run the client
 
-```sh
-cd client
-./proxmark3 /dev/ttyACM0
-```
+In most cases, you can run the script `proxmark3.sh` which try to auto-detect the port to use, on several OS.
 
-## Compiling for other boards
+For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
 
-Available boards
-
-| BOARD           | PLATFORM                               |
-|:---------------:|:---------------------------------------|
-| `PM3RDV4` (def) | Proxmark3 rdv4      with AT91SAM7S512  |
-| `PM3EVO`        | Proxmark3 EVO       with AT91SAM7S512  |
-| `PM3EASY`       | Proxmark3 rdv3 Easy with AT91SAM7S256  |
-| `PM3RDV2`       | Proxmark3 rdv2      with AT91SAM7S512  |
-| `PM3OLD256`     | Proxmark3 V1        with AT91SAM7S256  |
-| `PM3OLD512`     | Proxmark3 V1        with AT91SAM7S512  |
-
-Create a file named `Makefile.platform` in the root directory of the repository:
+Here, for example, for a Proxmark3 connected via USB under Linux:
 
 ```sh
-# PLATFORM=${BOARD}
-# Following example is to compile sources for Proxmark3 rdv3 Easy
-PLATFORM=PM3EASY
-```
-
-From this point:
-
-```sh
-# Clean and compile
-make clean && make all
-
-# Flash the BOOTROM & FULLIMAGE
-client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
-
-# Run the client
 cd client
 ./proxmark3 /dev/ttyACM0
 ```

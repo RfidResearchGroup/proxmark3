@@ -571,15 +571,19 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
         case T_AES:
             switch (operation) {
                 case MCO_ENCYPHER: {
-                    AesCtx ctx;
-                    AesCtxIni(&ctx, ivect, key->data, KEY128, CBC);
-                    AesEncrypt(&ctx, data, edata, sizeof(edata));
+                    mbedtls_aes_context ctx;
+                    mbedtls_aes_init(&ctx);
+                    mbedtls_aes_setkey_enc(&ctx, key->data, 128);
+                    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, sizeof(edata), ivect, data, edata);
+                    mbedtls_aes_free(&ctx);
                     break;
                 }
                 case MCO_DECYPHER: {
-                    AesCtx ctx;
-                    AesCtxIni(&ctx, ivect, key->data, KEY128, CBC);
-                    AesDecrypt(&ctx, edata, data, sizeof(edata));
+                    mbedtls_aes_context ctx;
+                    mbedtls_aes_init(&ctx);
+                    mbedtls_aes_setkey_dec(&ctx, key->data, 128);
+                    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, sizeof(edata), ivect, edata, data);
+                    mbedtls_aes_free(&ctx);
                     break;
                 }
             }

@@ -258,7 +258,7 @@ static void init_bitflip_bitarrays(void) {
                 fseek(statesfile, 0, SEEK_END);
                 int fsize = ftell(statesfile);
                 if (fsize == -1) {
-                    PrintAndLogEx(WARNING, "File read error with %s. Aborting...\n", state_file_name);
+                    PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
                     fclose(statesfile);
                     exit(5);
                 }
@@ -267,7 +267,7 @@ static void init_bitflip_bitarrays(void) {
                 uint8_t input_buffer[filesize];
                 size_t bytesread = fread(input_buffer, 1, filesize, statesfile);
                 if (bytesread != filesize) {
-                    PrintAndLogEx(WARNING, "File read error with %s. Aborting...\n", state_file_name);
+                    PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
                     fclose(statesfile);
                     //inflateEnd(&compressed_stream);
                     exit(5);
@@ -279,7 +279,7 @@ static void init_bitflip_bitarrays(void) {
                 if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
                     uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
                     if (bitset == NULL) {
-                        PrintAndLogEx(WARNING, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
+                        PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
                         inflateEnd(&compressed_stream);
                         exit(4);
                     }
@@ -390,7 +390,7 @@ static void init_part_sum_bitarrays(void) {
         for (uint16_t part_sum_a0 = 0; part_sum_a0 < NUM_PART_SUMS; part_sum_a0++) {
             part_sum_a0_bitarrays[odd_even][part_sum_a0] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
             if (part_sum_a0_bitarrays[odd_even][part_sum_a0] == NULL) {
-                PrintAndLogEx(WARNING, "Out of memory error in init_part_suma0_statelists(). Aborting...\n");
+                PrintAndLogEx(ERR, "Out of memory error in init_part_suma0_statelists(). Aborting...\n");
                 exit(4);
             }
             clear_bitarray24(part_sum_a0_bitarrays[odd_even][part_sum_a0]);
@@ -410,7 +410,7 @@ static void init_part_sum_bitarrays(void) {
         for (uint16_t part_sum_a8 = 0; part_sum_a8 < NUM_PART_SUMS; part_sum_a8++) {
             part_sum_a8_bitarrays[odd_even][part_sum_a8] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
             if (part_sum_a8_bitarrays[odd_even][part_sum_a8] == NULL) {
-                PrintAndLogEx(WARNING, "Out of memory error in init_part_suma8_statelists(). Aborting...\n");
+                PrintAndLogEx(ERR, "Out of memory error in init_part_suma8_statelists(). Aborting...\n");
                 exit(4);
             }
             clear_bitarray24(part_sum_a8_bitarrays[odd_even][part_sum_a8]);
@@ -449,7 +449,7 @@ static void init_sum_bitarrays(void) {
         for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
             sum_a0_bitarrays[odd_even][sum_a0] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
             if (sum_a0_bitarrays[odd_even][sum_a0] == NULL) {
-                PrintAndLogEx(WARNING, "Out of memory error in init_sum_bitarrays(). Aborting...\n");
+                PrintAndLogEx(ERR, "Out of memory error in init_sum_bitarrays(). Aborting...\n");
                 exit(4);
             }
             clear_bitarray24(sum_a0_bitarrays[odd_even][sum_a0]);
@@ -564,14 +564,14 @@ static void init_nonce_memory(void) {
         }
         nonces[i].states_bitarray[EVEN_STATE] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
         if (nonces[i].states_bitarray[EVEN_STATE] == NULL) {
-            PrintAndLogEx(WARNING, "Out of memory error in init_nonce_memory(). Aborting...\n");
+            PrintAndLogEx(ERR, "Out of memory error in init_nonce_memory(). Aborting...\n");
             exit(4);
         }
         set_bitarray24(nonces[i].states_bitarray[EVEN_STATE]);
         nonces[i].num_states_bitarray[EVEN_STATE] = 1 << 24;
         nonces[i].states_bitarray[ODD_STATE] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
         if (nonces[i].states_bitarray[ODD_STATE] == NULL) {
-            PrintAndLogEx(WARNING, "Out of memory error in init_nonce_memory(). Aborting...\n");
+            PrintAndLogEx(ERR, "Out of memory error in init_nonce_memory(). Aborting...\n");
             exit(4);
         }
         set_bitarray24(nonces[i].states_bitarray[ODD_STATE]);
@@ -1048,7 +1048,7 @@ static int read_nonce_file(char *filename) {
     hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
     size_t bytes_read = fread(read_buf, 1, 6, fnonces);
     if (bytes_read != 6) {
-        PrintAndLogEx(WARNING, "File reading error.");
+        PrintAndLogEx(ERR, "File reading error.");
         fclose(fnonces);
         return 1;
     }
@@ -1711,12 +1711,12 @@ static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, ui
     const uint32_t worstcase_size = 1 << 20;
     candidates->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
     if (candidates->states[odd_even] == NULL) {
-        PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - statelist.\n");
+        PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - statelist.\n");
         exit(4);
     }
     uint32_t *candidates_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * worstcase_size);
     if (candidates_bitarray == NULL) {
-        PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - bitarray.\n");
+        PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - bitarray.\n");
         free(candidates->states[odd_even]);
         exit(4);
     }
@@ -1772,7 +1772,7 @@ static void add_bitflip_candidates(uint8_t byte) {
         uint32_t worstcase_size = nonces[byte].num_states_bitarray[odd_even] + 1;
         candidates1->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
         if (candidates1->states[odd_even] == NULL) {
-            PrintAndLogEx(WARNING, "Out of memory error in add_bitflip_candidates().\n");
+            PrintAndLogEx(ERR, "Out of memory error in add_bitflip_candidates().\n");
             exit(4);
         }
 

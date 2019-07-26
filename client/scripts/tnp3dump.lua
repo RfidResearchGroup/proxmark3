@@ -198,7 +198,7 @@ local function main(args)
 
         io.flush()
 
-        if core.ukbhit() then
+        if core.kbd_enter_pressed() then
             print("aborted by user")
             break
         end

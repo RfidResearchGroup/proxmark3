@@ -27,10 +27,10 @@ Proxmark3 RDV4 has a FPC connector outputting on 2 pins a USART from the ARM:
 USART support is in `common/usart.c`.
 
 There are mainly two ways to use this USART:
-* connect the host client to the Proxmark3 via this USART instead of USB-CDC, this is the `FPC_USART_HOST`. The most used way is through the BT add-on (blue shark) that we will cover later. Instead of BT add-on, we can also use e.g. a FTDI cable (mostly for internal development, it's much slower than USB-CDC anyway) or in the future other ways to connect the host such as a USART-to-Wi-Fi bridge.
+* connect the host client to the Proxmark3 via this USART instead of USB-CDC, this is the `FPC_USART_HOST` option you can add to `PLATFORM_EXTRAS` in `Makefile.platform`. The most used way is through the BT add-on (blue shark) that we will cover later. Instead of BT add-on, we can also use e.g. a FTDI cable (mostly for internal development, it's much slower than USB-CDC anyway) or in the future other ways to connect the host such as a USART-to-Wi-Fi bridge.
 * connect "slave" devices to the Proxmark3 to add functionnalities. In such case, the host client will use USB-CDC and the USART will be use to, e.g. connect the Proxmark3 to various daughterboards. These is no such example of daughterboard as of today, except when we're talking to the BT add-on in its AT configuration mode.
 
-This USART can be reached from the host client (if connected via USB-CDC) through the following commands, available in `FPC_USART_DEV` build:
+This USART can be reached from the host client (if connected via USB-CDC) through the following commands, available when you add `FPC_USART_DEV` to `PLATFORM_EXTRAS` in `Makefile.platform`:
 * `usart config`, to configure the baudrate and the parity of the Proxmark3 USART
 * `usart txrx/tx/rx/txhex/rxhex` to transmit and receive bytes
 
@@ -45,7 +45,7 @@ Internally, the desired baudrate is converted to UART settings: a BRGR and a FP.
 
 When the BT add-on is turned on but no actively connected to a host, it's in a configuration mode where it accepts "AT" commands and its blue LED is blinking at about 1Hz.
 
-Some specific commands are available in `BTADDON` build, only to configure specific features of the BT add-on:
+Some specific commands are available when you add `BTADDON` to `PLATFORM_EXTRAS` in `Makefile.platform` (it will automatically enable `FPC_USART_HOST` as well), to configure specific features of the BT add-on:
 * `usart btpin`, to change the BT add-on PIN
 * `usart btfactory`, to guess the current BT add-on UART settings and to reset its configuration.
 

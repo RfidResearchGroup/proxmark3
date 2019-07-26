@@ -1,10 +1,14 @@
 # Default platform if no platform specified
 PLATFORM?=PM3RDV4
-# Default standalone if no standalone specified
-# (you can set explicitly STANDALONE= to disable standalone modes)
-STANDALONE?=LF_SAMYRUN
 
-define KNOWN_DEFINITIONS
+# Standalone Mode info (path depends if make is called at top or from armsrc)
+-include armsrc/Standalone/Makefile.hal
+-include Standalone/Makefile.hal
+ifndef DEFAULT_STANDALONE
+$(error Could not find armsrc/Standalone/Makefile.hal)
+endif
+
+define KNOWN_PLATFORM_DEFINITIONS
 
 Known definitions:
 
@@ -30,39 +34,12 @@ Known definitions:
 | BTADDON         | Proxmark3 rdv4 BT add-on               |
 +----------------------------------------------------------+
 
-+==========================================================+
-| STANDALONE      | DESCRIPTION                            |
-+==========================================================+
-|                 | No standalone mode                     |
-+----------------------------------------------------------+
-| LF_SAMYRUN (def)| HID26 read/clone/sim                   |
-|                 | - Samy Kamkar                          |
-+----------------------------------------------------------+
-| LF_ICERUN       | standalone mode skeleton               |
-|                 | - iceman                               |
-+----------------------------------------------------------+
-| LF_PROXBRUTE    | HID ProxII bruteforce                  |
-|                 | - Brad Antoniewicz                     |
-+----------------------------------------------------------+
-| LF_HIDBRUTE     | HID corporate 1000 bruteforce          |
-|                 | - Federico dotta & Maurizio Agazzini   |
-+----------------------------------------------------------+
-| HF_YOUNG        | Mifare sniff/simulation                |
-|                 | - Craig Young                          |
-+----------------------------------------------------------+
-| HF_MATTYRUN     | Mifare sniff/clone                     |
-|                 | - Matías A. Ré Medina                  |
-+----------------------------------------------------------+
-| HF_COLIN        | Mifare ultra fast sniff/sim/clone      |
-|                 | - Colin Brigato                        |
-+----------------------------------------------------------+
-| HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
-|                 | storing in flashmem - Bogito           |
-+----------------------------------------------------------+
+endef
 
+define HELP_DEFINITIONS
 Options to define platform, platform extras and/or standalone mode:
 (1) Run make with PLATFORM, PLATFORM_EXTRAS and/or STANDALONE as follows:
-make PLATFORM=PM3EASY STANDALONE=HF_COLIN
+make PLATFORM=PM3EASY STANDALONE=$(HELP_EXAMPLE_STANDALONE)
 
 (2) Save a file called Makefile.platform with contents:
 PLATFORM=PM3EASY
@@ -71,9 +48,15 @@ or if you have a Proxmark 3 RDV4 with the BT add-on:
 PLATFORM=PM3RDV4
 PLATFORM_EXTRAS=BTADDON
 
-Default standalone mode is LF_SAMYRUN.
+Default standalone mode is $(DEFAULT_STANDALONE).
 To disable standalone modes, set explicitly an empty STANDALONE:
 STANDALONE=
+endef
+
+define KNOWN_DEFINITIONS
+$(KNOWN_PLATFORM_DEFINITIONS)
+$(KNOWN_STANDALONE_DEFINITIONS)
+$(HELP_DEFINITIONS)
 endef
 
 PLTNAME = Unknown Platform
@@ -131,13 +114,10 @@ PLATFORM_DEFS += \
     -DWITH_HFSNIFF
 
 # Standalone mode
-STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE
-STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG
-ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
-    PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
-else ifneq ($(STANDALONE),)
-    $(error Invalid STANDALONE: $(STANDALONE). $(KNOWN_DEFINITIONS))
+ifneq ($(strip $(filter $(PLATFORM_DEFS),$(STANDALONE_REQ_DEFS))),$(strip $(STANDALONE_REQ_DEFS)))
+    $(error Chosen Standalone mode $(STANDALONE) requires $(strip $(STANDALONE_REQ_DEFS)), unsupported by $(PLTNAME))
 endif
+PLATFORM_DEFS+=$(STANDALONE_PLATFORM_DEFS)
 
 $(info $(findstring WITH_STANDALONE_*,$(PLATFORM_DEFS)))
 
@@ -171,15 +151,6 @@ ifeq (,$(PLATFORM_DEFS_INFO_STANDALONE))
     PLATFORM_DEFS_INFO_STANDALONE = No standalone mode selected
 endif
 
-export PLATFORM
-export PLATFORM_EXTRAS
-export PLATFORM_EXTRAS_INFO
-export PLTNAME
-export MCU
-export PLATFORM_DEFS
-export PLATFORM_DEFS_INFO
-export PLATFORM_DEFS_INFO_STANDALONE
-
 PLATFORM_CHANGED=false
 ifneq ($(PLATFORM), $(CACHED_PLATFORM))
     PLATFORM_CHANGED=true
@@ -188,6 +159,16 @@ else ifneq ($(PLATFORM_EXTRAS), $(CACHED_PLATFORM_EXTRAS))
 else ifneq ($(PLATFORM_DEFS), $(CACHED_PLATFORM_DEFS))
     PLATFORM_CHANGED=true
 endif
+
+export PLATFORM
+export PLATFORM_EXTRAS
+export PLATFORM_EXTRAS_INFO
+export PLTNAME
+export MCU
+export PLATFORM_DEFS
+export PLATFORM_DEFS_INFO
+export PLATFORM_DEFS_INFO_STANDALONE
+export PLATFORM_CHANGED
 
 $(info ===================================================================)
 $(info Platform name:     $(PLTNAME))

@@ -70,7 +70,7 @@ end
 -- @return if successfull: an table containing card info
 -- @return if unsuccessfull : nil, error
 local function wait_for_mifare()
-    while not core.ukbhit() do
+    while not core.kbd_enter_pressed() do
         res, err = lib14a.read()
         if res then return res end
         -- err means that there was no response from card
@@ -161,7 +161,7 @@ local function main(args)
 
     while not _exit do
         if print_message then
-            print('Waiting for card or press any key to stop')
+            print('Waiting for card or press Enter to stop')
             print_message = false
         end
         res, err = wait_for_mifare()

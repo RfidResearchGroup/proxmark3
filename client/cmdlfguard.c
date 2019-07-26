@@ -155,7 +155,7 @@ static int CmdGuardClone(const char *Cmd) {
     cardnumber = (cn & 0x0000FFFF);
 
     if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
@@ -189,7 +189,7 @@ static int CmdGuardClone(const char *Cmd) {
 
         SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
         if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
     }
@@ -213,7 +213,7 @@ static int CmdGuardSim(const char *Cmd) {
     cardnumber = (cn & 0x0000FFFF);
 
     if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 

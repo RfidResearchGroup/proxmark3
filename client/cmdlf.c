@@ -573,7 +573,7 @@ int CmdLFfskSim(const char *Cmd) {
                     dataLen = hextobinarray((char *)data, hexData);
 
                 if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(WARNING, "Error getting hex data");
+                if (errors) PrintAndLogEx(ERR, "Error getting hex data");
                 cmdp += 2;
                 break;
             default:
@@ -685,7 +685,7 @@ int CmdLFaskSim(const char *Cmd) {
                     dataLen = hextobinarray((char *)data, hexData);
 
                 if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(WARNING, "Error getting hex data, datalen: %d", dataLen);
+                if (errors) PrintAndLogEx(ERR, "Error getting hex data, datalen: %d", dataLen);
                 cmdp += 2;
                 break;
             default:
@@ -788,7 +788,7 @@ int CmdLFpskSim(const char *Cmd) {
                     dataLen = hextobinarray((char *)data, hexData);
 
                 if (dataLen == 0) errors = true;
-                if (errors) PrintAndLogEx(WARNING, "Error getting hex data");
+                if (errors) PrintAndLogEx(ERR, "Error getting hex data");
                 cmdp += 2;
                 break;
             default:
@@ -957,7 +957,7 @@ static bool CheckChipType(bool getDeviceData) {
         retval = true;
         goto out;
     }
-        
+
     //check for t55xx chip...
     if (tryDetectP1(true)) {
         PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("T55xx") "found");
@@ -1084,8 +1084,8 @@ int CmdLFfind(const char *Cmd) {
     }
 out:
     // identify chipset
-    if ( CheckChipType(isOnline) == false ) {
-        PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed") );
+    if (CheckChipType(isOnline) == false) {
+        PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
     }
     return PM3_SUCCESS;
 }

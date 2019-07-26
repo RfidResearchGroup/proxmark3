@@ -20,92 +20,10 @@
 #include <time.h>
 #include "ui.h"     // PrintAndLog
 #include "commonutil.h"
+#include "common.h"
 
 #ifdef ANDROID
 #include <endian.h>
-#endif
-
-#ifndef ROTR
-# define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
-#endif
-#ifndef ROTL
-# define ROTL(x,n) (((uintmax_t)(x) << (n)) | ((uintmax_t)(x) >> ((sizeof(x) * 8) - (n))))
-#endif
-
-#ifndef MIN
-# define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-#ifndef MAX
-# define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-
-// endian change for 64bit
-#ifdef __GNUC__
-#ifndef BSWAP_64
-#define BSWAP_64(x) __builtin_bswap64(x)
-#endif
-#else
-#ifdef _MSC_VER
-#ifndef BSWAP_64
-#define BSWAP_64(x) _byteswap_uint64(x)
-#endif
-#else
-#ifndef BSWAP_64
-#define BSWAP_64(x) \
-    (((uint64_t)(x) << 56) | \
-     (((uint64_t)(x) << 40) & 0xff000000000000ULL) | \
-     (((uint64_t)(x) << 24) & 0xff0000000000ULL) | \
-     (((uint64_t)(x) << 8)  & 0xff00000000ULL) | \
-     (((uint64_t)(x) >> 8)  & 0xff000000ULL) | \
-     (((uint64_t)(x) >> 24) & 0xff0000ULL) | \
-     (((uint64_t)(x) >> 40) & 0xff00ULL) | \
-     ((uint64_t)(x)  >> 56))
-#endif
-#endif
-#endif
-
-// endian change for 32bit
-#ifdef __GNUC__
-#ifndef BSWAP_32
-#define BSWAP_32(x) __builtin_bswap32(x)
-#endif
-#else
-#ifdef _MSC_VER
-#ifndef BSWAP_32
-#define BSWAP_32(x) _byteswap_ulong(x)
-#endif
-#else
-#ifndef BSWAP_32
-# define BSWAP_32(x) \
-    ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
-     (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
-#endif
-#endif
-#endif
-
-#define EVEN                        0
-#define ODD                         1
-
-// Nibble logic
-#ifndef NIBBLE_HIGH
-# define NIBBLE_HIGH(b) ( (b & 0xF0) >> 4 )
-#endif
-#ifndef NIBBLE_LOW
-# define NIBBLE_LOW(b)  ( b & 0x0F )
-#endif
-#ifndef CRUMB
-# define CRUMB(b,p)    (((b & (0x3 << p) ) >> p ) & 0xF)
-#endif
-#ifndef SWAP_NIBBLE
-# define SWAP_NIBBLE(b)  ( (NIBBLE_LOW(b)<< 4) | NIBBLE_HIGH(b))
-#endif
-
-// Binary Encoded Digit
-#ifndef BCD2DEC
-# define BCD2DEC(bcd) HornerScheme(bcd, 0x10, 10)
-#endif
-#ifndef DEC2BCD
-# define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
 #endif
 
 // used for save/load files
@@ -129,7 +47,7 @@
 
 uint8_t g_debugMode;
 
-int ukbhit(void);
+int kbd_enter_pressed(void);
 void AddLogLine(const char *fn, const char *data, const char *c);
 void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const size_t len);
 void AddLogUint64(const char *fn, const char *data, const uint64_t value);

@@ -223,6 +223,7 @@ void RunMod() {
     */
     bool printKeys = false;         // Prints keys
     bool transferToEml = true;      // Transfer keys to emulator memory
+    bool ecfill = true;             // Fill emulator memory with cards content.
     bool simulation = true;         // Simulates an exact copy of the target tag
     bool fillFromEmulator = false;  // Dump emulator memory.
 
