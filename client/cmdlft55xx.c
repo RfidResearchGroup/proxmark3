@@ -15,11 +15,11 @@
 #include "cmdlft55xx.h"
 
 // Some defines for readability
-#define T55xx_DLMode_Fixed         0 // Default Mode
-#define T55xx_DLMode_LLR           1 // Long Leading Reference
-#define T55xx_DLMode_Leading0      2 // Leading Zero
-#define T55xx_DLMode_1of4          3 // 1 of 4
-#define T55xx_LongLeadingReference 4 // Value to tell Write Bit to send long reference
+#define T55XX_DLMODE_FIXED         0 // Default Mode
+#define T55XX_DLMODE_LLR           1 // Long Leading Reference
+#define T55XX_DLMODE_LEADING_ZERO  2 // Leading Zero
+#define T55XX_DLMODE_1OF4          3 // 1 of 4
+#define T55XX_LONGLEADINGREFERENCE 4 // Value to tell Write Bit to send long reference
 
 // Default configuration
 t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = false, .offset = 0x00, .block0 = 0x00, .Q5 = false };
@@ -55,9 +55,12 @@ static int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "     b <block>    - block number to read. Between 0-7");
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password (8 hex characters)");
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override safety check");
-    PrintAndLogEx(NORMAL, "     1            - OPTIONAL read Page 1 instead of Page 0");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    PrintAndLogEx(NORMAL, "     1            - OPTIONAL 0|1  read Page 1 instead of Page 0");
+    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3");
+    PrintAndLogEx(NORMAL, "                       0 - fixed bit length (default)");
+    PrintAndLogEx(NORMAL, "                       1 - long leading reference");
+    PrintAndLogEx(NORMAL, "                       2 - leading zero");
+    PrintAndLogEx(NORMAL, "                       3 - 1 of 4 coding reference");
     PrintAndLogEx(NORMAL, "     ****WARNING****");
     PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured for a pwd");
     PrintAndLogEx(NORMAL, "     can damage the tag");
@@ -564,28 +567,25 @@ static int SanityOfflineCheck(bool useGraphBuffer) {
 }
 
 void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
-    char Msg[80];
-    sprintf(Msg, "Downlink Mode used : ");
+    char msg[80];
+    sprintf(msg, "Downlink Mode used : ");
 
     switch (downlink_mode) {
-        case  0 :
-            strcat(Msg, "default/fixed bit length");
-            break;
         case  1 :
-            strcat(Msg, "long leading reference (r 1)");
+            strcat(msg, _YELLOW_("long leading reference"));
             break;
         case  2 :
-            strcat(Msg, "leading zero reference (r 2)");
+            strcat(msg, _YELLOW_("leading zero reference"));
             break;
         case  3 :
-            strcat(Msg, "1 of 4 coding reference (r 3)");
+            strcat(msg, _YELLOW_("1 of 4 coding reference"));
             break;
         default :
-            strcat(Msg, "default/fixed bit length");
+            strcat(msg, _YELLOW_("default/fixed bit length"));
             break;
     }
 
-    PrintAndLogEx(NORMAL, Msg);
+    PrintAndLogEx(NORMAL, msg);
 }
 //
 static int CmdT55xxDetect(const char *Cmd) {
@@ -2551,12 +2551,10 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
 }
 
 static int CmdT55xxSetDeviceConfig(const char *Cmd) {
-    uint8_t startgap      = 0, writegap = 0, readgap = 0;
-    uint8_t write0        = 0, write1   = 0, write2  = 0, write3 = 0;
-    bool    errors        = false, shall_persist = false;
-    uint8_t cmdp          = 0;
-    uint8_t downlink_mode = 0;
-    bool    set_defaults  = false;
+    uint8_t startgap = 0, writegap = 0, readgap = 0;
+    uint8_t write0 = 0, write1 = 0, write2 = 0, write3 = 0;
+    uint8_t cmdp = 0, downlink_mode = 0;
+    bool errors = false, shall_persist = false, set_defaults  = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -2613,51 +2611,46 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_lf_deviceconfig();
 
-    t55xx_config conf = {0};
-    /* 	 if (erase) {
-    		memset (&conf,0xff, sizeof(conf));
-    		printf ("Conf.m[0] %x\n",conf.m[0].start_gap);
-    		*/
-    //
+    t55xx_config conf = {{0}};
+
     if (set_defaults) {
         // fixed bit length
-        conf.m[T55xx_DLMode_Fixed].start_gap  = 29 * 8;
-        conf.m[T55xx_DLMode_Fixed].write_gap  = 17 * 8;
-        conf.m[T55xx_DLMode_Fixed].write_0    = 15 * 8;
-        conf.m[T55xx_DLMode_Fixed].write_1    = 47 * 8;
-        conf.m[T55xx_DLMode_Fixed].read_gap   = 15 * 8;
-        conf.m[T55xx_DLMode_Fixed].write_2    = 0;
-        conf.m[T55xx_DLMode_Fixed].write_3    = 0;
+        conf.m[T55XX_DLMODE_FIXED].start_gap  = 29 * 8;
+        conf.m[T55XX_DLMODE_FIXED].write_gap  = 17 * 8;
+        conf.m[T55XX_DLMODE_FIXED].write_0    = 15 * 8;
+        conf.m[T55XX_DLMODE_FIXED].write_1    = 47 * 8;
+        conf.m[T55XX_DLMODE_FIXED].read_gap   = 15 * 8;
+        conf.m[T55XX_DLMODE_FIXED].write_2    = 0;
+        conf.m[T55XX_DLMODE_FIXED].write_3    = 0;
 
         // long leading reference
-        conf.m[T55xx_DLMode_LLR].start_gap  = 31 * 8;
-        conf.m[T55xx_DLMode_LLR].write_gap  = 20 * 8;
-        conf.m[T55xx_DLMode_LLR].write_0    = 18 * 8;
-        conf.m[T55xx_DLMode_LLR].write_1    = 50 * 8;
-        conf.m[T55xx_DLMode_LLR].read_gap   = 15 * 8;
-        conf.m[T55xx_DLMode_LLR].write_2    = 0;
-        conf.m[T55xx_DLMode_LLR].write_3    = 0;
+        conf.m[T55XX_DLMODE_LLR].start_gap  = 31 * 8;
+        conf.m[T55XX_DLMODE_LLR].write_gap  = 20 * 8;
+        conf.m[T55XX_DLMODE_LLR].write_0    = 18 * 8;
+        conf.m[T55XX_DLMODE_LLR].write_1    = 50 * 8;
+        conf.m[T55XX_DLMODE_LLR].read_gap   = 15 * 8;
+        conf.m[T55XX_DLMODE_LLR].write_2    = 0;
+        conf.m[T55XX_DLMODE_LLR].write_3    = 0;
 
         // leading zero
-        conf.m[T55xx_DLMode_Leading0].start_gap  = 31 * 8;
-        conf.m[T55xx_DLMode_Leading0].write_gap  = 20 * 8;
-        conf.m[T55xx_DLMode_Leading0].write_0    = 18 * 8;
-        conf.m[T55xx_DLMode_Leading0].write_1    = 40 * 8;
-        conf.m[T55xx_DLMode_Leading0].read_gap   = 15 * 8;
-        conf.m[T55xx_DLMode_Leading0].write_2    = 0;
-        conf.m[T55xx_DLMode_Leading0].write_3    = 0;
+        conf.m[T55XX_DLMODE_LEADING_ZERO].start_gap  = 31 * 8;
+        conf.m[T55XX_DLMODE_LEADING_ZERO].write_gap  = 20 * 8;
+        conf.m[T55XX_DLMODE_LEADING_ZERO].write_0    = 18 * 8;
+        conf.m[T55XX_DLMODE_LEADING_ZERO].write_1    = 40 * 8;
+        conf.m[T55XX_DLMODE_LEADING_ZERO].read_gap   = 15 * 8;
+        conf.m[T55XX_DLMODE_LEADING_ZERO].write_2    = 0;
+        conf.m[T55XX_DLMODE_LEADING_ZERO].write_3    = 0;
 
         // 1 of 4 coding reference
-        conf.m[T55xx_DLMode_1of4].start_gap  = 29 * 8;
-        conf.m[T55xx_DLMode_1of4].write_gap  = 17 * 8;
-        conf.m[T55xx_DLMode_1of4].write_0    = 15 * 8;
-        conf.m[T55xx_DLMode_1of4].write_1    = 31 * 8;
-        conf.m[T55xx_DLMode_1of4].read_gap   = 15 * 8;
-        conf.m[T55xx_DLMode_1of4].write_2    = 47 * 8;
-        conf.m[T55xx_DLMode_1of4].write_3    = 63 * 8;
+        conf.m[T55XX_DLMODE_1OF4].start_gap  = 29 * 8;
+        conf.m[T55XX_DLMODE_1OF4].write_gap  = 17 * 8;
+        conf.m[T55XX_DLMODE_1OF4].write_0    = 15 * 8;
+        conf.m[T55XX_DLMODE_1OF4].write_1    = 31 * 8;
+        conf.m[T55XX_DLMODE_1OF4].read_gap   = 15 * 8;
+        conf.m[T55XX_DLMODE_1OF4].write_2    = 47 * 8;
+        conf.m[T55XX_DLMODE_1OF4].write_3    = 63 * 8;
 
     } else {
-
         conf.m[downlink_mode].start_gap  = startgap * 8;
         conf.m[downlink_mode].write_gap  = writegap * 8;
         conf.m[downlink_mode].write_0    = write0   * 8;
