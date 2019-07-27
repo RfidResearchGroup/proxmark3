@@ -63,10 +63,10 @@ Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per sec
 
     ATA5577 Downlink Protocol Timings.
     Note: All absolute times assume TC = 1 / fC = 8 μs (fC = 125 kHz)
-    
+
     Note: These timings are from the datasheet and doesn't map the best to the features of the RVD4 LF antenna.
           RDV4 LF antenna has high voltage and the drop of power when turning off the rf field takes about 1-2 TC longer.
-    
+
                                 -----------------------------------------------------------------------
  Fixed-bit-length Protocol     |           Normal Downlink         |           Fast Downlink           |
  ------------------------------+-----------------------------------+-----------------------------------+------
@@ -184,25 +184,25 @@ void printT55xxConfig(void) {
 
 void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
     for (uint8_t i = 0; i < 4; i++) {
-        if (c->m[i].start_gap != 0) 
+        if (c->m[i].start_gap != 0)
             T55xx_Timing.m[i].start_gap = c->m[i].start_gap;
-        
-        if (c->m[i].write_gap != 0) 
+
+        if (c->m[i].write_gap != 0)
             T55xx_Timing.m[i].write_gap = c->m[i].write_gap;
-        
-        if (c->m[i].write_0 != 0) 
+
+        if (c->m[i].write_0 != 0)
             T55xx_Timing.m[i].write_0 = c->m[i].write_0;
-        
-        if (c->m[i].write_1 != 0) 
+
+        if (c->m[i].write_1 != 0)
             T55xx_Timing.m[i].write_1 = c->m[i].write_1;
-        
+
         if (i == T55XX_DLMODE_1OF4) {
             if (c->m[i].write_2 != 0)
                 T55xx_Timing.m[i].write_2 = c->m[i].write_2;
-            
+
             if (c->m[i].write_3 != 0)
                 T55xx_Timing.m[i].write_3 = c->m[i].write_3;
-            
+
         } else {
             T55xx_Timing.m[i].write_2 = 0x00;
             T55xx_Timing.m[i].write_3 = 0x00;
@@ -243,7 +243,7 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
     res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
 
     if (res == T55XX_CONFIG_LEN && DBGLEVEL > 1) {
-        DbpString("T55XX Config save " _GREEN_("success") );
+        DbpString("T55XX Config save " _GREEN_("success"));
     }
 
     BigBuf_free();
@@ -1527,7 +1527,7 @@ void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
         case 4 :
             // send Long Leading Reference
             TurnReadLFOn(T55xx_Timing.m[downlink_idx].write_0 + T55_LLR_REF);
-            break; 
+            break;
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1550,7 +1550,7 @@ uint8_t T55xx_SetBits(uint8_t *bs, uint8_t start_offset, uint32_t data, uint8_t 
         // Loop through the data and store
         for (offset = (num_bits - 1); offset >= 0; offset--) {
 
-            if ((data >> offset) & 1) 
+            if ((data >> offset) & 1)
                 bs[BITSTREAM_BYTE(next_offset)] |= (1 << BITSTREAM_BIT(next_offset));  // Set 1
             else
                 bs[BITSTREAM_BYTE(next_offset)] &= (0xff ^ (1 << BITSTREAM_BIT(next_offset))); // Set 0
@@ -1573,8 +1573,8 @@ void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
     xxxx xxxxxxx1 0x001 password mode (Y/N)
     xxxx xxxxxx1x 0x002 page  (0|1)
     xxxx xxxxx1xx 0x004 test mode  (Y/N)
-    xxxx xxx11xxx 0x018 selected downlink mode  (0|1|2|3|) 
-    xxxx xx1xxxxx 0x020 !reg_readmode  (ICEMAN ?? Why use negative in the bool ??) 
+    xxxx xxx11xxx 0x018 selected downlink mode  (0|1|2|3|)
+    xxxx xx1xxxxx 0x020 !reg_readmode  (ICEMAN ?? Why use negative in the bool ??)
     xxxx x1xxxxxx 0x040 called for a read, so no data packet  (Y/N)
     xxxx 1xxxxxxx 0x080 reset (Y/N)
     xxx1 xxxxxxxx 0x100 brute force (Y/N)
@@ -1593,7 +1593,7 @@ void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
 
     // no startup delay when in bruteforce command
     uint8_t start_wait = (t55_brute_mem) ? 0 : 4;
-    
+
     // Max Downlink Command size ~74 bits, so 10 bytes (80 bits)
     uint8_t bs[10];
     memset(bs, 0x00, sizeof(bs));
@@ -1601,7 +1601,7 @@ void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
     uint8_t len = 0;
 
     // build bit stream to send.
-    
+
     // add Leading 0
     if (downlink_mode == T55XX_DLMODE_LEADING_ZERO)
         len = T55xx_SetBits(bs, len, 0, 1, sizeof(bs));
@@ -1612,20 +1612,20 @@ void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
         // add extra zero
         len = T55xx_SetBits(bs, len, 0, 1, sizeof(bs));
     }
-    
+
     // add Opcode
     if (t55_send_reset) {
         //  reset : r*) 00
         len = T55xx_SetBits(bs, len, 0, 2, sizeof(bs));
     } else {
-        
-        if (t55_send_testmode) 
+
+        if (t55_send_testmode)
             Dbprintf(_YELLOW_("Using Test Mode"));
-        
+
         len = T55xx_SetBits(bs, len, t55_send_testmode ? 0 : 1, 1, sizeof(bs));
-        
+
         len = T55xx_SetBits(bs, len, t55_send_testmode ? 1 : t55_send_page, 1, sizeof(bs));
-        
+
         if (t55_send_pwdmode) {
             // Leading 0 and 1 of 4 00 fixed bits if passsword used
             if ((downlink_mode == T55XX_DLMODE_LEADING_ZERO) || (downlink_mode == T55XX_DLMODE_1OF4)) {
@@ -1635,7 +1635,7 @@ void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
         }
 
         // Add Lock bit 0
-        if (t55_send_regreadmode == false) 
+        if (t55_send_regreadmode == false)
             len = T55xx_SetBits(bs, len, 0, 1, sizeof(bs));
 
         // Add Data if a write command
