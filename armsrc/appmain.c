@@ -756,7 +756,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
 #ifdef WITH_LF
         case CMD_SET_LF_T55XX_CONFIG: {
-            setT55xxConfig(packet->oldarg[0], (t55xx_config *) packet->data.asBytes);
+            setT55xxConfig(packet->oldarg[0], (t55xx_configurations_t*) packet->data.asBytes);
             break;
         }
         case CMD_SET_LF_SAMPLING_CONFIG: {

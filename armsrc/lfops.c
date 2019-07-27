@@ -136,7 +136,7 @@ Initial values if not in flash
         { 31    , 20    , 18    , 40    , 0     , 0     , 15     }, // Leading 0
         { 29    , 17    , 15    , 31    , 47    , 63    , 15     }  // 1 of 4
 */
-t55xx_config T55xx_Timing  = {
+t55xx_configurations_t T55xx_Timing  = {
     {
         { 29 * 8, 17 * 8, 15 * 8, 47 * 8, 15 * 8, 0, 0 },           // Default Fixed
         { 31 * 8, 20 * 8, 18 * 8, 50 * 8, 15 * 8, 0, 0 },           // Long Leading Ref.
@@ -210,7 +210,7 @@ void printT55xxConfig(void) {
     }
 }
 
-void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
+void setT55xxConfig(uint8_t arg0, t55xx_configurations_t *c) {
     for (uint8_t i = 0; i < 4; i++) {
         if (c->m[i].start_gap != 0)
             T55xx_Timing.m[i].start_gap = c->m[i].start_gap;
@@ -278,7 +278,7 @@ void setT55xxConfig(uint8_t arg0, t55xx_config *c) {
 #endif
 }
 
-t55xx_config *getT55xxConfig(void) {
+t55xx_configurations_t *getT55xxConfig(void) {
     return &T55xx_Timing;//_FixedBit;
 }
 

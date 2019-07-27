@@ -61,7 +61,7 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #endif
 
 #ifndef T55XX_CONFIG_LEN
-# define T55XX_CONFIG_LEN sizeof( t55xx_config )
+# define T55XX_CONFIG_LEN sizeof( t55xx_configurations_t )
 #endif
 
 #ifndef T55XX_CONFIG_OFFSET
