@@ -1570,36 +1570,35 @@ void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
 
     /*
     arg bits
-    xxxx xxxxxxx1 0x001 PwdMode
-    xxxx xxxxxx1x 0x002 Page
-    xxxx xxxxx1xx 0x004 testMode
-    xxxx xxx11xxx 0x018 downlink mode
-    xxxx xx1xxxxx 0x020 !reg_readmode
-    xxxx x1xxxxxx 0x040 called for a read, so no data packet
-    xxxx 1xxxxxxx 0x080 reset
-    xxx1 xxxxxxxx 0x100 brute force
-    111x xxxxxxxx 0xE00 Block
+    xxxx xxxxxxx1 0x001 password mode (Y/N)
+    xxxx xxxxxx1x 0x002 page  (0|1)
+    xxxx xxxxx1xx 0x004 test mode  (Y/N)
+    xxxx xxx11xxx 0x018 selected downlink mode  (0|1|2|3|) 
+    xxxx xx1xxxxx 0x020 !reg_readmode  (ICEMAN ?? Why use negative in the bool ??) 
+    xxxx x1xxxxxx 0x040 called for a read, so no data packet  (Y/N)
+    xxxx 1xxxxxxx 0x080 reset (Y/N)
+    xxx1 xxxxxxxx 0x100 brute force (Y/N)
+    111x xxxxxxxx 0xE00 block to write (0-7)
     */
-bool t55_send_pwdmode     = (arg & 0x1);
-bool t55_send_page        = ((arg >> 1) & 0x1);
-bool t55_send_testmode    = ((arg >> 2) & 0x1);
-bool t55_send_regreadmode = ((arg >> 5) & 0x1);
-bool t55_send_readcmd     = ((arg >> 6) & 0x1);
-bool t55_send_reset       = ((arg >> 7) & 0x1);
+    bool t55_send_pwdmode     = (arg & 0x1);
+    bool t55_send_page        = ((arg >> 1) & 0x1);
+    bool t55_send_testmode    = ((arg >> 2) & 0x1);
+    bool t55_send_regreadmode = ((arg >> 5) & 0x1);
+    bool t55_send_readcmd     = ((arg >> 6) & 0x1);
+    bool t55_send_reset       = ((arg >> 7) & 0x1);
+    bool t55_brute_mem        = ((arg >> 8) & 0x1);
 
-    // Max Downlink Command size ~74 bits, so 10 bytes (80 bits)
-    uint8_t bs[10];
-
-    uint8_t i = 0, len = 0;
-    uint8_t downlink_mode = (arg >> 3) & 0x03;
-    uint8_t block = (arg >> 9) & 0x07;
-
-    bool brute_mem = (arg & 0x100);
+    uint8_t downlink_mode     = (arg >> 3) & 0x03;
+    uint8_t block_no          = (arg >> 9) & 0x07;
 
     // no startup delay when in bruteforce command
-    uint8_t start_wait = (brute_mem) ? 0 : 4;
-
+    uint8_t start_wait = (t55_brute_mem) ? 0 : 4;
+    
+    // Max Downlink Command size ~74 bits, so 10 bytes (80 bits)
+    uint8_t bs[10];
     memset(bs, 0x00, sizeof(bs));
+
+    uint8_t len = 0;
 
     // build bit stream to send.
     
@@ -1645,7 +1644,7 @@ bool t55_send_reset       = ((arg >> 7) & 0x1);
 
         // Add Address
         if (t55_send_regreadmode == false)
-            len = T55xx_SetBits(bs, len, block, 3, sizeof(bs));
+            len = T55xx_SetBits(bs, len, block_no, 3, sizeof(bs));
     }
 
     // Send Bits to T55xx
@@ -1665,13 +1664,13 @@ bool t55_send_reset       = ((arg >> 7) & 0x1);
 
     uint8_t sendbits;
     if ((downlink_mode == T55XX_DLMODE_1OF4) && (len > 0)) { // 1 of 4 need to send 2 bits at a time
-        for (i = 0; i < len - 1; i += 2) {
+        for (uint8_t i = 0; i < len - 1; i += 2) {
             sendbits  = (bs[BITSTREAM_BYTE(i)] >> (BITSTREAM_BIT(i)) & 1) << 1;       // Bit i
             sendbits += (bs[BITSTREAM_BYTE(i + 1)] >> (BITSTREAM_BIT(i + 1)) & 1);    // Bit i+1;
             T55xxWriteBit(sendbits & 3, downlink_mode);
         }
     } else {
-        for (i = 0; i < len; i++) {
+        for (uint8_t i = 0; i < len; i++) {
             sendbits = (bs[BITSTREAM_BYTE(i)] >> BITSTREAM_BIT(i));
             T55xxWriteBit(sendbits & 1, downlink_mode);
         }
