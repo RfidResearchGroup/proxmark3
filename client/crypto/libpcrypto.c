@@ -128,7 +128,7 @@ static int ecdsa_init_str(mbedtls_ecdsa_context *ctx,  mbedtls_ecp_group_id curv
     int res;
 
     mbedtls_ecdsa_init(ctx);
-	res = mbedtls_ecp_group_load(&ctx->grp, curveid);
+    res = mbedtls_ecp_group_load(&ctx->grp, curveid);
     if (res)
         return res;
 
@@ -154,19 +154,19 @@ static int ecdsa_init(mbedtls_ecdsa_context *ctx, mbedtls_ecp_group_id curveid, 
     int res;
 
     mbedtls_ecdsa_init(ctx);
-	res = mbedtls_ecp_group_load(&ctx->grp, curveid);
+    res = mbedtls_ecp_group_load(&ctx->grp, curveid);
     if (res)
         return res;
 
-	size_t keylen = (ctx->grp.nbits + 7 ) / 8;
+    size_t keylen = (ctx->grp.nbits + 7) / 8;
     if (key_d) {
-		res = mbedtls_mpi_read_binary(&ctx->d, key_d, keylen);
+        res = mbedtls_mpi_read_binary(&ctx->d, key_d, keylen);
         if (res)
             return res;
     }
 
     if (key_xy) {
-		res = mbedtls_ecp_point_read_binary(&ctx->grp, &ctx->Q, key_xy, keylen * 2 + 1);
+        res = mbedtls_ecp_point_read_binary(&ctx->grp, &ctx->Q, key_xy, keylen * 2 + 1);
         if (res)
             return res;
     }
@@ -195,22 +195,22 @@ int ecdsa_key_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t *key_
     if (res)
         goto exit;
 
-	size_t keylen = (ctx.grp.nbits + 7) / 8;
-	res = mbedtls_mpi_write_binary(&ctx.d, key_d, keylen);
+    size_t keylen = (ctx.grp.nbits + 7) / 8;
+    res = mbedtls_mpi_write_binary(&ctx.d, key_d, keylen);
     if (res)
         goto exit;
 
-	size_t public_keylen = 0;
+    size_t public_keylen = 0;
     uint8_t public_key[200] = {0};
-	res = mbedtls_ecp_point_write_binary(&ctx.grp, &ctx.Q, MBEDTLS_ECP_PF_UNCOMPRESSED, &public_keylen, public_key, sizeof(public_key));
+    res = mbedtls_ecp_point_write_binary(&ctx.grp, &ctx.Q, MBEDTLS_ECP_PF_UNCOMPRESSED, &public_keylen, public_key, sizeof(public_key));
     if (res)
         goto exit;
 
-	if (public_keylen != 1 + 2 * keylen) { // 0x04 <key x><key y>
+    if (public_keylen != 1 + 2 * keylen) { // 0x04 <key x><key y>
         res = 1;
         goto exit;
     }
-	memcpy(key_xy, public_key, public_keylen);
+    memcpy(key_xy, public_key, public_keylen);
 
 exit:
     mbedtls_entropy_free(&entropy);
@@ -233,22 +233,22 @@ int ecdsa_public_key_from_pk(mbedtls_pk_context *pk,  mbedtls_ecp_group_id curve
     mbedtls_ecdsa_context ctx;
     mbedtls_ecdsa_init(&ctx);
 
-	res = mbedtls_ecp_group_load(&ctx.grp, curveid);
+    res = mbedtls_ecp_group_load(&ctx.grp, curveid);
     if (res)
         goto exit;
 
-	size_t private_keylen = (ctx.grp.nbits + 7) / 8;
-	if (keylen < 1 + 2 * private_keylen) {
-		res = 1;
-		goto exit;
-	}
+    size_t private_keylen = (ctx.grp.nbits + 7) / 8;
+    if (keylen < 1 + 2 * private_keylen) {
+        res = 1;
+        goto exit;
+    }
 
     res = mbedtls_ecdsa_from_keypair(&ctx, mbedtls_pk_ec(*pk));
     if (res)
         goto exit;
 
     res = mbedtls_ecp_point_write_binary(&ctx.grp, &ctx.Q, MBEDTLS_ECP_PF_UNCOMPRESSED, &realkeylen, key, keylen);
-	if (realkeylen != 1 + 2 * private_keylen)
+    if (realkeylen != 1 + 2 * private_keylen)
         res = 2;
 exit:
     mbedtls_ecdsa_free(&ctx);
@@ -277,16 +277,16 @@ int ecdsa_signature_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t
 
     mbedtls_ecdsa_context ctx;
     ecdsa_init(&ctx, curveid, key_d, key_xy);
-	res = mbedtls_ecdsa_write_signature(
-	           &ctx,
-			   MBEDTLS_MD_SHA256,
-			   hash ? shahash : input,
-			   hash ? sizeof(shahash) : length,
-			   signature,
-			   signaturelen,
-			   mbedtls_ctr_drbg_random,
-			   &ctr_drbg
-	);
+    res = mbedtls_ecdsa_write_signature(
+              &ctx,
+              MBEDTLS_MD_SHA256,
+              hash ? shahash : input,
+              hash ? sizeof(shahash) : length,
+              signature,
+              signaturelen,
+              mbedtls_ctr_drbg_random,
+              &ctr_drbg
+          );
 
 
 exit:
@@ -323,14 +323,14 @@ static int ecdsa_signature_verify_keystr(mbedtls_ecp_group_id curveid, const cha
         return res;
 
     mbedtls_ecdsa_context ctx;
-	ecdsa_init_str(&ctx, curveid, NULL, key_x, key_y);
-	res = mbedtls_ecdsa_read_signature(
-	             &ctx,
-				 hash ? shahash : input,
-				 hash ? sizeof(shahash) : length,
-				 signature,
-				 signaturelen
-		);
+    ecdsa_init_str(&ctx, curveid, NULL, key_x, key_y);
+    res = mbedtls_ecdsa_read_signature(
+              &ctx,
+              hash ? shahash : input,
+              hash ? sizeof(shahash) : length,
+              signature,
+              signaturelen
+          );
 
     mbedtls_ecdsa_free(&ctx);
     return res;
@@ -339,21 +339,21 @@ static int ecdsa_signature_verify_keystr(mbedtls_ecp_group_id curveid, const cha
 int ecdsa_signature_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t signaturelen, bool hash) {
     int res;
     uint8_t shahash[32] = {0};
-	if (hash) {
-    res = sha256hash(input, length, shahash);
-    if (res)
-        return res;
-	}
+    if (hash) {
+        res = sha256hash(input, length, shahash);
+        if (res)
+            return res;
+    }
 
     mbedtls_ecdsa_context ctx;
-	res = ecdsa_init(&ctx, curveid, NULL, key_xy);
-	res = mbedtls_ecdsa_read_signature(
-	              &ctx,
-				  hash ? shahash : input,
-				  hash ? sizeof(shahash) : length,
-				  signature,
-				  signaturelen
-		);
+    res = ecdsa_init(&ctx, curveid, NULL, key_xy);
+    res = mbedtls_ecdsa_read_signature(
+              &ctx,
+              hash ? shahash : input,
+              hash ? sizeof(shahash) : length,
+              signature,
+              signaturelen
+          );
 
     mbedtls_ecdsa_free(&ctx);
     return res;
@@ -362,27 +362,27 @@ int ecdsa_signature_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_
 
 int ecdsa_signature_r_s_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_t *input, int length, uint8_t *r_s, size_t r_s_len, bool hash) {
     int res;
-	uint8_t signature[MBEDTLS_ECDSA_MAX_LEN];
-	size_t signature_len;
+    uint8_t signature[MBEDTLS_ECDSA_MAX_LEN];
+    size_t signature_len;
 
-	// convert r & s to ASN.1 signature
+    // convert r & s to ASN.1 signature
     mbedtls_mpi r, s;
     mbedtls_mpi_init(&r);
     mbedtls_mpi_init(&s);
-	mbedtls_mpi_read_binary(&r, r_s, r_s_len/2);
-	mbedtls_mpi_read_binary(&s, r_s + r_s_len/2, r_s_len/2);
-	
-	res = ecdsa_signature_to_asn1(&r, &s, signature, &signature_len);
-	if (res < 0) {
-		return res;
-	}
-	
-	res = ecdsa_signature_verify(curveid, key_xy, input, length, signature, signature_len, hash);
+    mbedtls_mpi_read_binary(&r, r_s, r_s_len / 2);
+    mbedtls_mpi_read_binary(&s, r_s + r_s_len / 2, r_s_len / 2);
+
+    res = ecdsa_signature_to_asn1(&r, &s, signature, &signature_len);
+    if (res < 0) {
+        return res;
+    }
+
+    res = ecdsa_signature_verify(curveid, key_xy, input, length, signature, signature_len, hash);
 
     mbedtls_mpi_free(&r);
     mbedtls_mpi_free(&s);
 
-	return res;
+    return res;
 }
 
 
@@ -396,7 +396,7 @@ int ecdsa_signature_r_s_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, ui
 int ecdsa_nist_test(bool verbose) {
     int res;
     uint8_t input[] = "Example of ECDSA with P-256";
-	mbedtls_ecp_group_id curveid = MBEDTLS_ECP_DP_SECP256R1;
+    mbedtls_ecp_group_id curveid = MBEDTLS_ECP_DP_SECP256R1;
     int length = strlen((char *)input);
     uint8_t signature[300] = {0};
     size_t siglen = 0;
@@ -405,7 +405,7 @@ int ecdsa_nist_test(bool verbose) {
     if (verbose)
         printf("  ECDSA NIST test: ");
     // make signature
-	res = ecdsa_signature_create_test(curveid, T_PRIVATE_KEY, T_Q_X, T_Q_Y, T_K, input, length, signature, &siglen);
+    res = ecdsa_signature_create_test(curveid, T_PRIVATE_KEY, T_Q_X, T_Q_Y, T_K, input, length, signature, &siglen);
 // printf("res: %x signature[%x]: %s\n", (res<0)?-res:res, siglen, sprint_hex(signature, siglen));
     if (res)
         goto exit;
@@ -429,13 +429,13 @@ int ecdsa_nist_test(bool verbose) {
     }
 
     // verify signature
-	res = ecdsa_signature_verify_keystr(curveid, T_Q_X, T_Q_Y, input, length, signature, siglen, true);
+    res = ecdsa_signature_verify_keystr(curveid, T_Q_X, T_Q_Y, input, length, signature, siglen, true);
     if (res)
         goto exit;
 
     // verify wrong signature
     input[0] ^= 0xFF;
-	res = ecdsa_signature_verify_keystr(curveid, T_Q_X, T_Q_Y, input, length, signature, siglen, true);
+    res = ecdsa_signature_verify_keystr(curveid, T_Q_X, T_Q_Y, input, length, signature, siglen, true);
     if (!res) {
         res = 1;
         goto exit;
@@ -452,20 +452,20 @@ int ecdsa_nist_test(bool verbose) {
     memset(signature, 0x00, sizeof(signature));
     siglen = 0;
 
-	res = ecdsa_key_create(curveid, key_d, key_xy);
+    res = ecdsa_key_create(curveid, key_d, key_xy);
     if (res)
         goto exit;
 
-	res = ecdsa_signature_create(curveid, key_d, key_xy, input, length, signature, &siglen, true);
+    res = ecdsa_signature_create(curveid, key_d, key_xy, input, length, signature, &siglen, true);
     if (res)
         goto exit;
 
-	res = ecdsa_signature_verify(curveid, key_xy, input, length, signature, siglen, true);
+    res = ecdsa_signature_verify(curveid, key_xy, input, length, signature, siglen, true);
     if (res)
         goto exit;
 
     input[0] ^= 0xFF;
-	res = ecdsa_signature_verify(curveid, key_xy, input, length, signature, siglen, true);
+    res = ecdsa_signature_verify(curveid, key_xy, input, length, signature, siglen, true);
     if (!res)
         goto exit;
 

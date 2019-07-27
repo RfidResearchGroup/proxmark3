@@ -226,24 +226,26 @@ uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
 };
 
 #define PUBLIC_ECDA_KEYLEN 33
-  
+
 // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
 // ref: AN11350 NTAG 21x Originality Signature Validation
 // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
-uint8_t public_keys[2][PUBLIC_ECDA_KEYLEN] = {											 
-   // UL, NTAG21x and NDEF
-   { 0x04,0x49,0x4e,0x1a,0x38,0x6d,0x3d,0x3c,
-     0xfe,0x3d,0xc1,0x0e,0x5d,0xe6,0x8a,0x49,
-	 0x9b,0x1c,0x20,0x2d,0xb5,0xb1,0x32,0x39,
-	 0x3e,0x89,0xed,0x19,0xfe,0x5b,0xe8,0xbc,0x61
-   },
-   // UL EV1
-   { 0x04,0x90,0x93,0x3b,0xdc,0xd6,0xe9,0x9b,
-     0x4e,0x25,0x5e,0x3d,0xa5,0x53,0x89,0xa8,
-	 0x27,0x56,0x4e,0x11,0x71,0x8e,0x01,0x72,
-	 0x92,0xfa,0xf2,0x32,0x26,0xa9,0x66,0x14,0xb8
-   }
-};  
+uint8_t public_keys[2][PUBLIC_ECDA_KEYLEN] = {
+    // UL, NTAG21x and NDEF
+    {
+        0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
+        0xfe, 0x3d, 0xc1, 0x0e, 0x5d, 0xe6, 0x8a, 0x49,
+        0x9b, 0x1c, 0x20, 0x2d, 0xb5, 0xb1, 0x32, 0x39,
+        0x3e, 0x89, 0xed, 0x19, 0xfe, 0x5b, 0xe8, 0xbc, 0x61
+    },
+    // UL EV1
+    {
+        0x04, 0x90, 0x93, 0x3b, 0xdc, 0xd6, 0xe9, 0x9b,
+        0x4e, 0x25, 0x5e, 0x3d, 0xa5, 0x53, 0x89, 0xa8,
+        0x27, 0x56, 0x4e, 0x11, 0x71, 0x8e, 0x01, 0x72,
+        0x92, 0xfa, 0xf2, 0x32, 0x26, 0xa9, 0x66, 0x14, 0xb8
+    }
+};
 
 
 #define MAX_UL_TYPES 22
@@ -672,7 +674,7 @@ static int ul_print_default(uint8_t *data) {
     else
         PrintAndLogEx(NORMAL, "      BCC0 : %02X, crc should be %02X", data[3], crc0);
 
-	int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
+    int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
     if (data[8] == crc1)
         PrintAndLogEx(NORMAL, "      BCC1 : %02X, Ok", data[8]);
     else
@@ -992,20 +994,20 @@ static int ulev1_print_counters() {
     return len;
 }
 
-static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len){
-	uint8_t public_key = 0;
-	if (tagtype == UL_EV1_48 || tagtype == UL_EV1_128) {
-		public_key = 1;
-	}
-	int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, public_keys[public_key], uid, 7, signature, signature_len, false);
-	bool is_valid = (res == 0);
-	
+static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
+    uint8_t public_key = 0;
+    if (tagtype == UL_EV1_48 || tagtype == UL_EV1_128) {
+        public_key = 1;
+    }
+    int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, public_keys[public_key], uid, 7, signature, signature_len, false);
+    bool is_valid = (res == 0);
+
     PrintAndLogEx(NORMAL, "\n--- Tag Signature");
-    PrintAndLogEx(NORMAL, "IC signature public key name  : NXP NTAG21x (2013)");								 
+    PrintAndLogEx(NORMAL, "IC signature public key name  : NXP NTAG21x (2013)");
     PrintAndLogEx(NORMAL, "IC signature public key value : %s", sprint_hex(public_keys[public_key], PUBLIC_ECDA_KEYLEN));
     PrintAndLogEx(NORMAL, "    Elliptic curve parameters : NID_secp128r1");
     PrintAndLogEx(NORMAL, "             TAG IC Signature : %s", sprint_hex(signature, signature_len));
-    PrintAndLogEx(NORMAL, "Signature verified %s", (is_valid) ? _GREEN_("successful") : _RED_("failed") );
+    PrintAndLogEx(NORMAL, "Signature verified %s", (is_valid) ? _GREEN_("successful") : _RED_("failed"));
     return PM3_SUCCESS;
 }
 
@@ -1202,8 +1204,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     uint8_t *key = pwd;
     uint8_t pack[4] = {0, 0, 0, 0};
     int len;
-	uint8_t uid[7];
-	
+    uint8_t uid[7];
+
     char tempStr[50];
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -1254,8 +1256,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
         return PM3_ESOFT;
     } else if (status == 16) {
-		memcpy(uid, data, 3);
-		memcpy(uid + 3, data + 4, 4);
+        memcpy(uid, data, 3);
+        memcpy(uid + 3, data + 4, 4);
         ul_print_default(data);
         ndef_print_CC(data + 12);
     } else {
@@ -1332,8 +1334,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             return PM3_ESOFT;
         }
         if (status == 32) {
-			ulev1_print_signature(tagtype, uid, ulev1_signature, sizeof(ulev1_signature));
-	    } else {
+            ulev1_print_signature(tagtype, uid, ulev1_signature, sizeof(ulev1_signature));
+        } else {
             // re-select
             if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
         }

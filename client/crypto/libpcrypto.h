@@ -24,7 +24,7 @@ int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int lengt
 int sha256hash(uint8_t *input, int length, uint8_t *hash);
 int sha512hash(uint8_t *input, int length, uint8_t *hash);
 
-int ecdsa_key_create(mbedtls_ecp_group_id curveid, uint8_t * key_d, uint8_t *key_xy);
+int ecdsa_key_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t *key_xy);
 int ecdsa_public_key_from_pk(mbedtls_pk_context *pk, mbedtls_ecp_group_id curveid, uint8_t *key, size_t keylen);
 int ecdsa_signature_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen, bool hash);
 int ecdsa_signature_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t signaturelen, bool hash);
