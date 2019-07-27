@@ -262,7 +262,7 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
     }
 
     // get public key
-    res = ecdsa_public_key_from_pk(&cert.pk, publicKey, publicKeyMaxLen);
+	res = ecdsa_public_key_from_pk(&cert.pk, MBEDTLS_ECP_DP_SECP256R1, publicKey, publicKeyMaxLen);
     if (res) {
         PrintAndLogEx(ERR, "ERROR: getting public key from certificate 0x%x - %s", (res < 0) ? -res : res, ecdsa_get_error(res));
     } else {
@@ -381,10 +381,10 @@ static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, 
                          clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
                          NULL, 0);
         //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-        res = ecdsa_signature_verify(publickey, xbuf, xbuflen, sign, signLen);
+        res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, publickey, xbuf, xbuflen, sign, signLen, true);
         if (res) {
-            if (res == -0x4e00) {
-                PrintAndLogEx(WARNING, "Signature is NOT VALID.");
+            if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
+                PrintAndLogEx(WARNING, "Signature is " _RED_("NOT VALID") );
             } else {
                 PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }

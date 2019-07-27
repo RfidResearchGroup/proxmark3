@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add ECC support / check for NID_secp128r1 (@pwpiwi)
  - Add some more default keys (ollibolli)
  - Fix T55x7 Downlink timings backward compatible (@mwalker33)
  - Add proper Makefile halting when using incompatible STANDALONE and PLATFORM vars (@doegox)
@@ -153,7 +154,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change `lf indala demod` - refactoring (@iceman1001)
  - Change - handling fault bit markers (7) and partial nibbles in hex printing (@doegox)
  - Change - printing of fault bit markers (7) using a dot (@doegox)
- - Change `sc upgrade` - firmware file integrity check (@piwi)
+ - Change `sc upgrade` - firmware file integrity check (@pwpiwi)
  - Fix `data rawdemod am` - last bit was missing (@doegox)
  - Fix `hf 15 dump f` - also selects tag first (@iceman1001)
  - Fix `hf iclass clone` - missing fileclose (@iceman1001)
@@ -161,8 +162,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Change `lf hitag sim` - loads bin/eml/json (@iceman1001)
  - Change `lf hitag reader 21` - saves in bin/eml/json (@iceman1001)
  - Change `lf hitag` - refactoring (@iceman1001)
- - Change `lf hitag` - refactoring (@piwi)
- - Fix `lf hitag` - generic fix for missing clock init (@piwi)
+ - Change `lf hitag` - refactoring (@pwpiwi)
+ - Fix `lf hitag` - generic fix for missing clock init (@pwpiwi)
  - Fix fsk sim operations on deviceside - avoid division by zero (@doegox)
  - Fix `hf mf fchk` - condition always false (@doegox)
  - Fix `lf t55xx recoverpw` - shift as u32 (@doegox)

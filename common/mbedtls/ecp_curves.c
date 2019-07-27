@@ -85,6 +85,42 @@
  */
 
 /*
+ * Domain parameters for secp128r1
+ */
+#if defined(MBEDTLS_ECP_DP_SECP128R1_ENABLED)
+static const mbedtls_mpi_uint secp128r1_p[] = {
+	// 2^128 - 2^97 - 1 // TODO
+    BYTES_TO_T_UINT_8( 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF ),
+    BYTES_TO_T_UINT_8( 0xFF, 0xFF, 0xFF, 0xFF, 0xFD, 0xFF, 0xFF, 0xFF ),
+};
+static const mbedtls_mpi_uint secp128r1_a[] = {
+	// FFFFFFFDFFFFFFFF FFFFFFFFFFFFFFFC
+    BYTES_TO_T_UINT_8( 0xFC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF ),
+    BYTES_TO_T_UINT_8( 0xFF, 0xFF, 0xFF, 0xFF, 0xFD, 0xFF, 0xFF, 0xFF ),
+};
+static const mbedtls_mpi_uint secp128r1_b[] = {
+	// E87579C11079F43D D824993C2CEE5ED3
+    BYTES_TO_T_UINT_8( 0xD3, 0x5E, 0xEE, 0x2C, 0x3C, 0x99, 0x24, 0xD8 ),
+    BYTES_TO_T_UINT_8( 0x3D, 0xF4, 0x79, 0x10, 0xC1, 0x79, 0x75, 0xE8 ),
+};
+static const mbedtls_mpi_uint secp128r1_gx[] = {
+	// 161FF7528B899B2D 0C28607CA52C5B86
+    BYTES_TO_T_UINT_8( 0x86, 0x5B, 0x2C, 0xA5, 0x7C, 0x60, 0x28, 0x0C ),
+    BYTES_TO_T_UINT_8( 0x2D, 0x9B, 0x89, 0x8B, 0x52, 0xF7, 0x1F, 0x16 ),
+};
+static const mbedtls_mpi_uint secp128r1_gy[] = {
+	// CF5AC8395BAFEB13 C02DA292DDED7A83
+    BYTES_TO_T_UINT_8( 0x83, 0x7A, 0xED, 0xDD, 0x92, 0xA2, 0x2D, 0xC0 ),
+    BYTES_TO_T_UINT_8( 0x13, 0xEB, 0xAF, 0x5B, 0x39, 0xC8, 0x5A, 0xCF ),
+};
+static const mbedtls_mpi_uint secp128r1_n[] = {
+	// FFFFFFFE00000000 75A30D1B9038A115
+    BYTES_TO_T_UINT_8( 0x15, 0xA1, 0x38, 0x90, 0x1B, 0x0D, 0xA3, 0x75 ),
+    BYTES_TO_T_UINT_8( 0x00, 0x00, 0x00, 0x00, 0xFE, 0xFF, 0xFF, 0xFF ),
+};
+#endif /* MBEDTLS_ECP_DP_SECP128R1_ENABLED */
+
+/*
  * Domain parameters for secp192r1
  */
 #if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED)
@@ -747,6 +783,11 @@ int mbedtls_ecp_group_load(mbedtls_ecp_group *grp, mbedtls_ecp_group_id id) {
     grp->id = id;
 
     switch (id) {
+#if defined(MBEDTLS_ECP_DP_SECP128R1_ENABLED)
+        case MBEDTLS_ECP_DP_SECP128R1:
+            grp->modp = NULL;
+            return( LOAD_GROUP_A( secp128r1 ) );
+#endif /* MBEDTLS_ECP_DP_SECP128R1_ENABLED */
 #if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED)
         case MBEDTLS_ECP_DP_SECP192R1:
             NIST_MODP(p192);

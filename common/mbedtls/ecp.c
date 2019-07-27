@@ -84,7 +84,8 @@
 static unsigned long add_count, dbl_count, mul_count;
 #endif
 
-#if defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) ||   \
+#if defined(MBEDTLS_ECP_DP_SECP128R1_ENABLED) ||   \
+    defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) ||   \
     defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED) ||   \
     defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) ||   \
     defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED) ||   \
@@ -157,6 +158,9 @@ static const mbedtls_ecp_curve_info ecp_supported_curves[] = {
 #endif
 #if defined(MBEDTLS_ECP_DP_SECP192K1_ENABLED)
     { MBEDTLS_ECP_DP_SECP192K1,    18,     192,    "secp192k1"         },
+#endif
+#if defined(MBEDTLS_ECP_DP_SECP128R1_ENABLED)
+    { MBEDTLS_ECP_DP_SECP128R1, 0xFE00,     128,    "secp128r1"         },
 #endif
     { MBEDTLS_ECP_DP_NONE,          0,     0,      NULL                },
 };

@@ -209,7 +209,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     if (paramsPlain) {
         memset(cdata, 0x00, 32);
         CLIGetStrWithReturn(6, cdata, &chlen);
-        if (chlen > 16) {
+        if (chlen && chlen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
             return 1;
         }
@@ -227,7 +227,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     if (paramsPlain) {
         memset(adata, 0x00, 32);
         CLIGetStrWithReturn(7, adata, &applen);
-        if (applen > 16) {
+        if (applen && applen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
             return 1;
         }
@@ -346,15 +346,15 @@ static int CmdHFFidoRegister(const char *cmd) {
                          &buf[1], 65,             // user public key
                          NULL, 0);
         //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-        res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[hashp], len - hashp);
+        res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[hashp], len - hashp, true);
         if (res) {
-            if (res == -0x4e00) {
-                PrintAndLogEx(WARNING, "Signature is NOT VALID.");
+            if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
+                PrintAndLogEx(WARNING, "Signature is" _RED_("NOT VALID") );
             } else {
                 PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }
         } else {
-            PrintAndLogEx(SUCCESS, "Signature is OK.");
+            PrintAndLogEx(SUCCESS, "Signature is" _GREEN_("OK"));
         }
 
     } else {
@@ -473,7 +473,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
         CLIGetStrWithReturn(9, hdata, &hdatalen);
-        if (hdatalen > 16) {
+        if (hdatalen &&  hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
             return 1;
         }
@@ -490,7 +490,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     if (paramsPlain) {
         memset(hdata, 0x00, 32);
         CLIGetStrWithReturn(11, hdata, &hdatalen);
-        if (hdatalen > 16) {
+        if (hdatalen &&  hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
             return 1;
         }
@@ -572,15 +572,15 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
                              data, 32,      // challenge parameter
                              NULL, 0);
             //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-            res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[5], len - 5);
+            res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[5], len - 5, true);
             if (res) {
-                if (res == -0x4e00) {
-                    PrintAndLogEx(WARNING, "Signature is NOT VALID.");
+                if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
+                    PrintAndLogEx(WARNING, "Signature is" _RED_("NOT VALID.") );
                 } else {
                     PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
                 }
             } else {
-                PrintAndLogEx(SUCCESS, "Signature is OK.");
+                PrintAndLogEx(SUCCESS, "Signature is" _GREEN_("OK") );
             }
         } else {
             PrintAndLogEx(WARNING, "No public key provided. can't check signature.");
