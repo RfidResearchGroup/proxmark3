@@ -2614,60 +2614,59 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     if (errors || cmdp == 0) return usage_lf_deviceconfig();
 
     t55xx_config conf = {0};
-/* 	 if (erase) {
-		memset (&conf,0xff, sizeof(conf));
-		printf ("Conf.m[0] %x\n",conf.m[0].start_gap);
-		*/
-		//
-    if (set_defaults){
-		// fixed bit length
-		conf.m[T55xx_DLMode_Fixed].start_gap  = 29 * 8;
-		conf.m[T55xx_DLMode_Fixed].write_gap  = 17 * 8;
-		conf.m[T55xx_DLMode_Fixed].write_0    = 15 * 8;
-		conf.m[T55xx_DLMode_Fixed].write_1    = 47 * 8;
-		conf.m[T55xx_DLMode_Fixed].read_gap   = 15 * 8;
-		conf.m[T55xx_DLMode_Fixed].write_2    = 0;
-		conf.m[T55xx_DLMode_Fixed].write_3    = 0;
-	
-	   // long leading reference
-		conf.m[T55xx_DLMode_LLR].start_gap  = 31 * 8;
-		conf.m[T55xx_DLMode_LLR].write_gap  = 20 * 8;
-		conf.m[T55xx_DLMode_LLR].write_0    = 18 * 8;
-		conf.m[T55xx_DLMode_LLR].write_1    = 50 * 8;
-		conf.m[T55xx_DLMode_LLR].read_gap   = 15 * 8;
-		conf.m[T55xx_DLMode_LLR].write_2    = 0;
-		conf.m[T55xx_DLMode_LLR].write_3    = 0;
-   
-	   // leading zero
-		conf.m[T55xx_DLMode_Leading0].start_gap  = 31 * 8;
-		conf.m[T55xx_DLMode_Leading0].write_gap  = 20 * 8;
-		conf.m[T55xx_DLMode_Leading0].write_0    = 18 * 8;
-		conf.m[T55xx_DLMode_Leading0].write_1    = 40 * 8;
-		conf.m[T55xx_DLMode_Leading0].read_gap   = 15 * 8;
-		conf.m[T55xx_DLMode_Leading0].write_2    = 0;
-		conf.m[T55xx_DLMode_Leading0].write_3    = 0;
+    /* 	 if (erase) {
+    		memset (&conf,0xff, sizeof(conf));
+    		printf ("Conf.m[0] %x\n",conf.m[0].start_gap);
+    		*/
+    //
+    if (set_defaults) {
+        // fixed bit length
+        conf.m[T55xx_DLMode_Fixed].start_gap  = 29 * 8;
+        conf.m[T55xx_DLMode_Fixed].write_gap  = 17 * 8;
+        conf.m[T55xx_DLMode_Fixed].write_0    = 15 * 8;
+        conf.m[T55xx_DLMode_Fixed].write_1    = 47 * 8;
+        conf.m[T55xx_DLMode_Fixed].read_gap   = 15 * 8;
+        conf.m[T55xx_DLMode_Fixed].write_2    = 0;
+        conf.m[T55xx_DLMode_Fixed].write_3    = 0;
 
-		// 1 of 4 coding reference
-		conf.m[T55xx_DLMode_1of4].start_gap  = 29 * 8;
-		conf.m[T55xx_DLMode_1of4].write_gap  = 17 * 8;
-		conf.m[T55xx_DLMode_1of4].write_0    = 15 * 8;
-		conf.m[T55xx_DLMode_1of4].write_1    = 31 * 8;
-		conf.m[T55xx_DLMode_1of4].read_gap   = 15 * 8;
-		conf.m[T55xx_DLMode_1of4].write_2    = 47 * 8;
-		conf.m[T55xx_DLMode_1of4].write_3    = 63 * 8;
+        // long leading reference
+        conf.m[T55xx_DLMode_LLR].start_gap  = 31 * 8;
+        conf.m[T55xx_DLMode_LLR].write_gap  = 20 * 8;
+        conf.m[T55xx_DLMode_LLR].write_0    = 18 * 8;
+        conf.m[T55xx_DLMode_LLR].write_1    = 50 * 8;
+        conf.m[T55xx_DLMode_LLR].read_gap   = 15 * 8;
+        conf.m[T55xx_DLMode_LLR].write_2    = 0;
+        conf.m[T55xx_DLMode_LLR].write_3    = 0;
 
-	 }
-	 else {
-	 
-		conf.m[downlink_mode].start_gap  = startgap * 8;
-		conf.m[downlink_mode].write_gap  = writegap * 8;
-		conf.m[downlink_mode].write_0    = write0   * 8;
-		conf.m[downlink_mode].write_1    = write1   * 8;
-		conf.m[downlink_mode].read_gap   = readgap  * 8;
-		conf.m[downlink_mode].write_2    = write2   * 8;
-		conf.m[downlink_mode].write_3    = write3   * 8;
-	 }
-	 
+        // leading zero
+        conf.m[T55xx_DLMode_Leading0].start_gap  = 31 * 8;
+        conf.m[T55xx_DLMode_Leading0].write_gap  = 20 * 8;
+        conf.m[T55xx_DLMode_Leading0].write_0    = 18 * 8;
+        conf.m[T55xx_DLMode_Leading0].write_1    = 40 * 8;
+        conf.m[T55xx_DLMode_Leading0].read_gap   = 15 * 8;
+        conf.m[T55xx_DLMode_Leading0].write_2    = 0;
+        conf.m[T55xx_DLMode_Leading0].write_3    = 0;
+
+        // 1 of 4 coding reference
+        conf.m[T55xx_DLMode_1of4].start_gap  = 29 * 8;
+        conf.m[T55xx_DLMode_1of4].write_gap  = 17 * 8;
+        conf.m[T55xx_DLMode_1of4].write_0    = 15 * 8;
+        conf.m[T55xx_DLMode_1of4].write_1    = 31 * 8;
+        conf.m[T55xx_DLMode_1of4].read_gap   = 15 * 8;
+        conf.m[T55xx_DLMode_1of4].write_2    = 47 * 8;
+        conf.m[T55xx_DLMode_1of4].write_3    = 63 * 8;
+
+    } else {
+
+        conf.m[downlink_mode].start_gap  = startgap * 8;
+        conf.m[downlink_mode].write_gap  = writegap * 8;
+        conf.m[downlink_mode].write_0    = write0   * 8;
+        conf.m[downlink_mode].write_1    = write1   * 8;
+        conf.m[downlink_mode].read_gap   = readgap  * 8;
+        conf.m[downlink_mode].write_2    = write2   * 8;
+        conf.m[downlink_mode].write_3    = write3   * 8;
+    }
+
     clearCommandBuffer();
     SendCommandOLD(CMD_SET_LF_T55XX_CONFIG, shall_persist, 0, 0, &conf, sizeof(t55xx_config));
     return PM3_SUCCESS;
