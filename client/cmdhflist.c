@@ -279,14 +279,26 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         }
         case MIFARE_ULEV1_READSIG:
-            snprintf(exp, size, "READ_SIG");
+            snprintf(exp, size, "READ SIG");
             break;
         case MIFARE_ULEV1_CHECKTEAR:
-            snprintf(exp, size, "CHK_TEARING(%d)", cmd[1]);
+            snprintf(exp, size, "CHK TEARING(%d)", cmd[1]);
             break;
         case MIFARE_ULEV1_VCSL:
             snprintf(exp, size, "VCSL");
             break;
+        case MIFARE_ULNANO_WRITESIG:
+            snprintf(exp, size, "WRITE SIG");
+            break;
+        case MIFARE_ULNANO_LOCKSIF: {
+            if (cmd[1] == 0)
+                snprintf(exp, size, "UNLOCK SIG");
+            else if ( cmd[1] == 2 )
+                snprintf(exp, size, "LOCK SIG");
+            else
+                snprintf(exp, size, "?");
+            break;
+        }
         default:
             return 0;
     }
