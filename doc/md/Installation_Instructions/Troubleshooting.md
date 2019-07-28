@@ -21,7 +21,7 @@ Refer to the installation guide specific to your OS for details about ports.
 
 Note that with the Bluetooth adapter, you *have to* use directly the client, and flasher over Bluetooth is not possible.
 
-* [Bluetooth](/doc/md/bt_manual_v10.md)
+* [Bluetooth](/doc/bt_manual_v10.md)
 
 ## My Proxmark3 seems bricked
 
