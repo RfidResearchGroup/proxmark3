@@ -170,42 +170,42 @@ void printT55xxConfig(void) {
                 Dbprintf(_YELLOW_("1 of 4 coding reference"));
                 break;
         }
-        if ( T55xx_Timing.m[i].start_gap != 0xFFFF ) 
+        if (T55xx_Timing.m[i].start_gap != 0xFFFF)
             Dbprintf("  [a] startgap............%d*8 (%d)", T55xx_Timing.m[i].start_gap / 8, T55xx_Timing.m[i].start_gap);
         else
-            Dbprintf("  [a] startgap............" _RED_("unconfigured") );
-        
-        if ( T55xx_Timing.m[i].write_gap != 0xFFFF )
+            Dbprintf("  [a] startgap............" _RED_("unconfigured"));
+
+        if (T55xx_Timing.m[i].write_gap != 0xFFFF)
             Dbprintf("  [b] writegap............%d*8 (%d)", T55xx_Timing.m[i].write_gap / 8, T55xx_Timing.m[i].write_gap);
         else
-            Dbprintf("  [b] writegap............" _RED_("unconfigured") );
-        
-        if ( T55xx_Timing.m[i].write_0 != 0xFFFF )
+            Dbprintf("  [b] writegap............" _RED_("unconfigured"));
+
+        if (T55xx_Timing.m[i].write_0 != 0xFFFF)
             Dbprintf("  [c] write_0.............%d*8 (%d)", T55xx_Timing.m[i].write_0 / 8, T55xx_Timing.m[i].write_0);
         else
-            Dbprintf("  [c] write_0............." _RED_("unconfigured") );
-        
-        if ( T55xx_Timing.m[i].write_1 != 0xFFFF )
+            Dbprintf("  [c] write_0............." _RED_("unconfigured"));
+
+        if (T55xx_Timing.m[i].write_1 != 0xFFFF)
             Dbprintf("  [d] write_1.............%d*8 (%d)", T55xx_Timing.m[i].write_1 / 8, T55xx_Timing.m[i].write_1);
         else
-            Dbprintf("  [d] write_1............." _RED_("unconfigured") );
-        
-        if ( T55xx_Timing.m[i].read_gap != 0xFFFF )
+            Dbprintf("  [d] write_1............." _RED_("unconfigured"));
+
+        if (T55xx_Timing.m[i].read_gap != 0xFFFF)
             Dbprintf("  [e] readgap.............%d*8 (%d)", T55xx_Timing.m[i].read_gap / 8, T55xx_Timing.m[i].read_gap);
         else
-            Dbprintf("  [e] readgap............." _RED_("unconfigured") );
-        
+            Dbprintf("  [e] readgap............." _RED_("unconfigured"));
+
         if (i == T55XX_DLMODE_1OF4) {
-            
-            if ( T55xx_Timing.m[i].write_2 != 0xFFFF )
+
+            if (T55xx_Timing.m[i].write_2 != 0xFFFF)
                 Dbprintf("  [f] write_2.............%d*8 (%d)", T55xx_Timing.m[i].write_2 / 8, T55xx_Timing.m[i].write_2);
             else
-                Dbprintf("  [f] write_2............." _RED_("unconfigured") );
-            
-            if ( T55xx_Timing.m[i].write_3 != 0xFFFF )
+                Dbprintf("  [f] write_2............." _RED_("unconfigured"));
+
+            if (T55xx_Timing.m[i].write_3 != 0xFFFF)
                 Dbprintf("  [g] write_3.............%d*8 (%d)", T55xx_Timing.m[i].write_3 / 8, T55xx_Timing.m[i].write_3);
             else
-                Dbprintf("  [f] write_3............." _RED_("unconfigured") );
+                Dbprintf("  [f] write_3............." _RED_("unconfigured"));
         }
     }
 }
