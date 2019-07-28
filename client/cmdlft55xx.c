@@ -31,6 +31,14 @@ void Set_t55xx_Config(t55xx_conf_block_t conf) {
     config = conf;
 }
 
+static void print_usage_t55xx_downloadlink(void) {
+    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3");
+    PrintAndLogEx(NORMAL, "                       0 - fixed bit length (default)");
+    PrintAndLogEx(NORMAL, "                       1 - long leading reference");
+    PrintAndLogEx(NORMAL, "                       2 - leading zero");
+    PrintAndLogEx(NORMAL, "                       3 - 1 of 4 coding reference");
+}
+
 static int usage_t55xx_config() {
     PrintAndLogEx(NORMAL, "Usage: lf t55xx config [d <demodulation>] [i [0/1]] [o <offset>] [Q5 [0/1]] [ST [0/1]]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -56,11 +64,7 @@ static int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password (8 hex characters)");
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override safety check");
     PrintAndLogEx(NORMAL, "     1            - OPTIONAL 0|1  read Page 1 instead of Page 0");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3");
-    PrintAndLogEx(NORMAL, "                       0 - fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                       1 - long leading reference");
-    PrintAndLogEx(NORMAL, "                       2 - leading zero");
-    PrintAndLogEx(NORMAL, "                       3 - 1 of 4 coding reference");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     ****WARNING****");
     PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured for a pwd");
     PrintAndLogEx(NORMAL, "     can damage the tag");
@@ -80,8 +84,7 @@ static int usage_t55xx_write() {
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password 4bytes (8 hex characters)");
     PrintAndLogEx(NORMAL, "     1            - OPTIONAL write Page 1 instead of Page 0");
     PrintAndLogEx(NORMAL, "     t            - OPTIONAL test mode write - ****DANGER****");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx write b 3 d 11223344            - write 11223344 to block 3");
@@ -92,8 +95,7 @@ static int usage_t55xx_write() {
 static int usage_t55xx_trace() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx trace [r mode]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                               '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     // Command did not seem to support the 1 option (yet) so have removed the help lines
     // PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "");
@@ -111,8 +113,7 @@ static int usage_t55xx_info() {
     PrintAndLogEx(NORMAL, "     d <data>     - 4 bytes of data (8 hex characters)");
     PrintAndLogEx(NORMAL, "                    if set, use these data instead of reading tag.");
     PrintAndLogEx(NORMAL, "     q            - if set, provided data are interpreted as Q5 config.");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx info");
@@ -127,8 +128,7 @@ static int usage_t55xx_dump() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     <password>   - OPTIONAL password 4bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override, force pwd read despite danger to card");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx dump");
@@ -141,9 +141,7 @@ static int usage_t55xx_detect() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "     p <password  - OPTIONAL password (8 hex characters)");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                      '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                      '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx detect");
@@ -158,9 +156,7 @@ static int usage_t55xx_detectP1() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password (8 hex characters)");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                      '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                      '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx p1detect");
@@ -175,8 +171,7 @@ static int usage_t55xx_wakup() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
     PrintAndLogEx(NORMAL, "     p <password> - password 4bytes (8 hex symbols)");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx wakeup p 11223344  - send wakeup password");
@@ -191,9 +186,7 @@ static int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
     PrintAndLogEx(NORMAL, "     m            - use dictionary from flashmemory\n");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                      '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                      '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     i <*.dic>    - loads a default keys dictionary file <*.dic>");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -211,9 +204,7 @@ static int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                      '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                      '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     <start_pwd>  - 4 byte hex value to start pwd search at");
     PrintAndLogEx(NORMAL, "     <end_pwd>    - 4 byte hex value to end pwd search at");
     PrintAndLogEx(NORMAL, "");
@@ -232,9 +223,7 @@ static int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "       default password is 51243648, used by many cloners");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                       '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                       '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     [password]   - 4 byte hex value of password written by cloner");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -268,8 +257,7 @@ static int usage_lf_deviceconfig() {
     PrintAndLogEx(NORMAL, "     f <8..255>   - Set write TWO gap (1 of 4 only)");
     PrintAndLogEx(NORMAL, "     g <8..255>   - Set write THREE gap (1 of 4 only)");
     PrintAndLogEx(NORMAL, "     p            - persist to flashmemory");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     z            - Set default t55x7 timings (use p to save if required)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
