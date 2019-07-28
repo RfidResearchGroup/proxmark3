@@ -622,7 +622,9 @@ int TestProxmark(void) {
     conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
     conn.uart_speed = pm3_capabilities.baudrate;
 
-    PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
+    PrintAndLogEx(INFO, "Communicating with PM3 over %s%s",
+                  conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
+                  memcmp(conn.serial_port_name, "tcp:", 4) == 0 ? "over " _YELLOW_("TCP") : "");
 
     if (conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
