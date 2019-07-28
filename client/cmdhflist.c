@@ -293,7 +293,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case MIFARE_ULNANO_LOCKSIF: {
             if (cmd[1] == 0)
                 snprintf(exp, size, "UNLOCK SIG");
-            else if ( cmd[1] == 2 )
+            else if (cmd[1] == 2)
                 snprintf(exp, size, "LOCK SIG");
             else
                 snprintf(exp, size, "?");
