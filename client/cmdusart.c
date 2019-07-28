@@ -47,7 +47,7 @@ static int usage_usart_tx(void) {
     PrintAndLogEx(NORMAL, "Send string over USART");
     PrintAndLogEx(NORMAL, _RED_("WARNING: it will have side-effects if used in USART HOST mode!"));
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  usart tx [h] \"string\"");
+    PrintAndLogEx(NORMAL, "Usage:  usart tx [h] d \"string\"");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h          This help");
     PrintAndLogEx(NORMAL, "           d string   string to send");
@@ -106,7 +106,7 @@ static int usage_usart_txrx(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("to add-on when BT connection is not established (LED needs to be blinking)"));
     PrintAndLogEx(NORMAL, _RED_("Any other usage in USART HOST mode will have side-effects!"));
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  usart txrx [h] [t <timeout>] \"string\"");
+    PrintAndLogEx(NORMAL, "Usage:  usart txrx [h] [t <timeout>] d \"string\"");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h           This help");
     PrintAndLogEx(NORMAL, "           t <timeout> timeout in ms, default is 1000ms");

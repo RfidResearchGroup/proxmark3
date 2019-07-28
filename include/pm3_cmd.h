@@ -577,7 +577,7 @@ typedef struct {
 // uart_windows.c & uart_posix.c
 # define UART_FPC_CLIENT_RX_TIMEOUT_MS  200
 # define UART_USB_CLIENT_RX_TIMEOUT_MS  20
-# define UART_TCP_CLIENT_RX_TIMEOUT_MS  300
+# define UART_TCP_CLIENT_RX_TIMEOUT_MS  500
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
