@@ -19,6 +19,10 @@ ref : https://github.com/Proxmark/proxmark3/wiki/android
 - [OmniROM (Android 9)](https://www.omnirom.org/)
 - [OmniROM kernel](https://www.omnirom.org/)
 - [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
+- [Nexus 5X] (arm64, USB-C)
+- [LineageOS (Android 8.1)](https://download.lineageos.org/)
+- [LineageOS kernel](https://download.lineageos.org/)
+- [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
 
 ## Setup
 ### Getting ncurses with termcap
