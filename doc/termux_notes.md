@@ -14,15 +14,19 @@ From official Proxmark3 wiki:
  > In any case, you would need a USB-C to A or USB-OTG cable to connect Proxmark3 to your Android device. Some Android devices may not supply enough power (USB-OTG = 100mA), and need a USB Y-cable and external battery, otherwise they will get strange failures.
 ref : https://github.com/Proxmark/proxmark3/wiki/android
 
-## Tested setup
+## Tested setups
+
 - OnePlus 5 (arm64, USB-C)
-- [OmniROM (Android 9)](https://www.omnirom.org/)
-- [OmniROM kernel](https://www.omnirom.org/)
-- [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
-- [Nexus 5X] (arm64, USB-C)
-- [LineageOS (Android 8.1)](https://download.lineageos.org/)
-- [LineageOS kernel](https://download.lineageos.org/)
-- [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
+
+  - [OmniROM (Android 9)](https://www.omnirom.org/)
+  - [OmniROM kernel](https://www.omnirom.org/)
+  - [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
+
+- Nexus 5X (arm64, USB-C)
+
+  - [LineageOS (Android 8.1)](https://download.lineageos.org/)
+  - [LineageOS kernel](https://download.lineageos.org/)
+  - [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
 
 ## Setup
 ### Getting ncurses with termcap
