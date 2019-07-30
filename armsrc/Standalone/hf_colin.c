@@ -17,6 +17,49 @@
 #define HFCOLIN_LASTTAG_SYMLINK "hf_colin/lasttag.bin"
 #define HFCOLIN_URMETCAPTIVE_JSON "hf_colin/urmetcaptive.json"
 
+/* Example jsonconfig file urmetcaptive.json :
+{
+  "name": "UrmetCaptive",
+  "trigger": "0x8829da9daf76",
+  "keysA": [
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76"
+  ],
+  "keysB": [
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76"
+  ]
+}
+*/
+
 uint8_t cjuid[10];
 uint32_t cjcuid;
 iso14a_card_select_t p_card;
