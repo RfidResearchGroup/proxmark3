@@ -27,7 +27,7 @@ ifneq (,$(findstring WITH_STANDALONE_HF_MATTYRUN,$(APP_CFLAGS)))
 endif
 # WITH_STANDALONE_HF_COLIN
 ifneq (,$(findstring WITH_STANDALONE_HF_COLIN,$(APP_CFLAGS)))
-    SRC_STANDALONE = vtsend.c hf_colin.c
+    SRC_STANDALONE = vtsend.c hf_colin.c frozen.c nprintf.c
 endif
 # WITH_STANDALONE_HF_BOG
 ifneq (,$(findstring WITH_STANDALONE_HF_BOG,$(APP_CFLAGS)))

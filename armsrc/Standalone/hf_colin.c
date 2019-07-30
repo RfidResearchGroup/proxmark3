@@ -9,11 +9,13 @@
 // main code for HF Mifare aka ColinRun by Colin Brigato
 //-----------------------------------------------------------------------------
 #include "hf_colin.h"
+#include "frozen.h"
 
 #define MF1KSZ 1024
 #define MF1KSZSIZE 64
 #define AUTHENTICATION_TIMEOUT 848
 #define HFCOLIN_LASTTAG_SYMLINK "hf_colin/lasttag.bin"
+#define HFCOLIN_URMETCAPTIVE_JSON "hf_colin/urmetcaptive.json"
 
 uint8_t cjuid[10];
 uint32_t cjcuid;
@@ -27,6 +29,55 @@ int curlline;
 
 // Colin's VIGIKPWN sniff/simulate/clone repeat routine for HF Mifare
 
+static const uint8_t is_hex[] = {
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0,
+    0, 11, 12, 13, 14, 15, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 11, 12, 13, 14, 15, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0};
+
+static inline uint64_t hex2i(const char *s) {
+    uint64_t val = 0;
+    if (s == NULL || s[0] == 0)
+        return 0;
+    if (s[1] == 'x')
+        s += 2;
+    else if (*s == 'x')
+        s++;
+    while (is_hex[(uint8_t)*s])
+        val = (val << 4) | (is_hex[(uint8_t) * (s++)] - 1);
+    return val;
+}
+
+/*char *noralsy2test =
+    "{\"name\":\"noralsy2\",\"trigger\":\"0x414C41524F4E\",\"keysA\":[\"0x414C41524F4E\",\"0x414C41524F4E\","
+    "\"0x414C41524F4E\","
+    "\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\","
+    "\"0x414C41524F4E\",\"0x414C41524F4E\","
+    "\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\","
+    "\"0x414C41524F4E\"],\"keysB\":["
+    "\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\","
+    "\"0x424C41524F4E\",\"0x424C41524F4E\","
+    "\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\","
+    "\"0x424C41524F4E\",\"0x424C41524F4E\","
+    "\"0x424C41524F4E\",\"0x424C41524F4E\"]}";*/
+
+/*char *urmetcaptive2test =
+    "{\"name\":\"urmetcaptive2\",\"trigger\":\"0x8829da9daf76\",\"keysA\":[\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\"],\"keysB\":["
+    "\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\"]}";*/
+
 typedef struct MFC1KSchema {
     uint8_t name[32];
     uint64_t trigger;
@@ -36,50 +87,48 @@ typedef struct MFC1KSchema {
 
 #define MAX_SCHEMAS 4
 
+static void scan_keys(const char *str, int len, uint64_t *user_data) {
+    struct json_token t;
+    int i;
+    char ks[32];
+    for (i = 0; json_scanf_array_elem(str, len, "", i, &t) > 0; i++) {
+        sprintf(ks, "%.*s", t.len, t.ptr);
+        user_data[i] = hex2i(ks);
+    }
+}
+
 MFC1KSchema Schemas[MAX_SCHEMAS];
 
 MFC1KSchema Noralsy = {
     .name = "Noralsy",
     .trigger = 0x414c41524f4e,
-    .keysA = {
-        0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e,
-        0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e,
-        0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e
-    },
-    .keysB = {
-        0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e,
-        0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e,
-        0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e
-    }
-};
+    .keysA = {0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e,
+              0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e,
+              0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e},
+    .keysB = {0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e,
+              0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e,
+              0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e}};
 
 MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
                           .trigger = 0x484558414354,
                           .keysA = {0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354,
                                     0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354,
                                     0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354,
-                                    0x484558414354
-                                   },
+                                    0x484558414354},
                           .keysB = {0xa22ae129c013, 0x49fae4e3849f, 0x38fcf33072e0, 0x8ad5517b4b18, 0x509359f131b1,
                                     0x6c78928e1317, 0xaa0720018738, 0xa6cac2886412, 0x62d0c424ed8e, 0xe64a986a5d94,
-                                    0x8fa1d601d0a2, 0x89347350bd36, 0x66d2b7dc39ef, 0x6bc1e1ae547d, 0x22729a9bd40f
-                                   }
-                         };
+                                    0x8fa1d601d0a2, 0x89347350bd36, 0x66d2b7dc39ef, 0x6bc1e1ae547d, 0x22729a9bd40f}};
 
-MFC1KSchema UrmetCaptive = {
+/*MFC1KSchema UrmetCaptive = {
     .name = "Urmet Captive",
     .trigger = 0x8829da9daf76,
-    .keysA = {
-        0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
-        0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
-        0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76
-    },
-    .keysB = {
-        0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
-        0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
-        0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76
-    }
-};
+    .keysA = {0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
+              0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
+              0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76},
+    .keysB = {0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
+              0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
+              0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76}};
+*/
 
 int total_schemas = 0;
 
@@ -124,6 +173,31 @@ void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type
 foundKey[5]); cjSetCursRight(); DbprintfEx(FLAG_NEWLINE, "SEC: %02x | KEY : %s | TYP: %d", sectorNo, tosendkey, type);
 }
 */
+
+char *ReadSchemasFromSPIFFS() {
+    SpinOff(0);
+    LED_A_ON();
+    LED_B_ON();
+    LED_C_ON();
+    LED_D_ON();
+
+    DbprintfEx(FLAG_NEWLINE, "Reading Json Configuration Files...");
+    cjSetCursLeft();
+
+    int changed = rdv40_spiffs_lazy_mount();
+    uint32_t size = size_in_spiffs((char *)HFCOLIN_URMETCAPTIVE_JSON);
+    uint8_t *mem = BigBuf_malloc(size);
+    // this one will handle filetype (symlink or not) and resolving by itself
+    rdv40_spiffs_read_as_filetype((char *)HFCOLIN_URMETCAPTIVE_JSON, (uint8_t *)mem, size, RDV40_SPIFFS_SAFETY_SAFE);
+
+    if (changed) {
+        rdv40_spiffs_lazy_unmount();
+    }
+    DbprintfEx(FLAG_NEWLINE, "[OK] Returning One config file");
+    cjSetCursLeft();
+    SpinOff(0);
+    return (char *)mem;
+}
 
 void ReadLastTagFromFlash() {
     SpinOff(0);
@@ -185,9 +259,21 @@ void ModInfo(void) { DbpString("  HF Mifare ultra fast sniff/sim/clone - aka VIG
 void RunMod() {
     StandAloneMode();
 
+    char *tmpname;
+    char *tmptrigger;
+    MFC1KSchema tmpscheme;
+    char *urmetcaptive2test = ReadSchemasFromSPIFFS();
+    json_scanf(urmetcaptive2test, strlen(urmetcaptive2test), "{ name:%Q, trigger:%Q, keysA:%M, keysB:%M}", &tmpname,
+               &tmptrigger, scan_keys, &tmpscheme.keysA, scan_keys, &tmpscheme.keysB);
+
+    memcpy(tmpscheme.name, tmpname, 32);
+    tmpscheme.trigger = hex2i(tmptrigger);
+
+    add_schema(Schemas, tmpscheme, &total_schemas);
+
     add_schema(Schemas, Noralsy, &total_schemas);
     add_schema(Schemas, InfiHexact, &total_schemas);
-    add_schema(Schemas, UrmetCaptive, &total_schemas);
+    // add_schema(Schemas, UrmetCaptive, &total_schemas);
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -200,41 +286,41 @@ void RunMod() {
     uint64_t key64;    // Defines current key
     uint8_t *keyBlock; // Where the keys will be held in memory.
 
-    /* VIGIK EXPIRED DUMP FOR STUDY
-    Sector 0
-    121C7F730208040001FA33F5CB2D021D
-    44001049164916491649000000000000
-    00000000000000000000000000000000
-    A0A1A2A3A4A579678800010203040506
-    Sector 1
-    0F000000000000000000000000000000
-    AA0700002102080000740C110600AF13
-    000000000000000001740C1108220000
-    314B4947495679678800010203040506
-    Sector 2
-    24E572B923A3D243B402D60CAB576956
-    216D6501FC8618B6C426762511AC2DEE
-    25BF4CEC3618D0BAB3A6E9210D887746
-    314B4947495679678800010203040506
-    Sector 3
-    0FBC41A5D95398E76A1B2029E8EA9735
-    088BA2CE732653D0C1147596AFCF94D7
-    77B4D91F0442182273A29DEAF7A2D095
-    314B4947495679678800010203040506
-    Sector 4
-    4CEE715866E508CDBC95C640EC9D1E58
-    E800457CF8B079414E1B45DD3E6C9317
-    77B4D91F0442182273A29DEAF7A2D095
-    314B4947495679678800010203040506
-    010203040506  0
-    Sector 5-0F
-    00000000000000000000000000000000
-    00000000000000000000000000000000
-    00000000000000000000000000000000
-    FFFFFFFFFFFFFF078069FFFFFFFFFFFF
-    KEY A : 1KGIV ;
-    ACCBITS : 796788[00]+VALUE
-    */
+/* VIGIK EXPIRED DUMP FOR STUDY
+Sector 0
+121C7F730208040001FA33F5CB2D021D
+44001049164916491649000000000000
+00000000000000000000000000000000
+A0A1A2A3A4A579678800010203040506
+Sector 1
+0F000000000000000000000000000000
+AA0700002102080000740C110600AF13
+000000000000000001740C1108220000
+314B4947495679678800010203040506
+Sector 2
+24E572B923A3D243B402D60CAB576956
+216D6501FC8618B6C426762511AC2DEE
+25BF4CEC3618D0BAB3A6E9210D887746
+314B4947495679678800010203040506
+Sector 3
+0FBC41A5D95398E76A1B2029E8EA9735
+088BA2CE732653D0C1147596AFCF94D7
+77B4D91F0442182273A29DEAF7A2D095
+314B4947495679678800010203040506
+Sector 4
+4CEE715866E508CDBC95C640EC9D1E58
+E800457CF8B079414E1B45DD3E6C9317
+77B4D91F0442182273A29DEAF7A2D095
+314B4947495679678800010203040506
+010203040506  0
+Sector 5-0F
+00000000000000000000000000000000
+00000000000000000000000000000000
+00000000000000000000000000000000
+FFFFFFFFFFFFFF078069FFFFFFFFFFFF
+KEY A : 1KGIV ;
+ACCBITS : 796788[00]+VALUE
+*/
 
 //----------------------------
 //   Set of keys to be used.
@@ -569,18 +655,18 @@ readysim:
 
     uint16_t flags;
     switch (p_card.uidlen) {
-        case 10:
-            flags = FLAG_10B_UID_IN_DATA;
-            break;
-        case 7:
-            flags = FLAG_7B_UID_IN_DATA;
-            break;
-        case 4:
-            flags = FLAG_4B_UID_IN_DATA;
-            break;
-        default:
-            flags = FLAG_UID_IN_EMUL;
-            break;
+    case 10:
+        flags = FLAG_10B_UID_IN_DATA;
+        break;
+    case 7:
+        flags = FLAG_7B_UID_IN_DATA;
+        break;
+    case 4:
+        flags = FLAG_4B_UID_IN_DATA;
+        break;
+    default:
+        flags = FLAG_UID_IN_EMUL;
+        break;
     }
 
     // Use UID, SAK, ATQA from EMUL, if uid not defined
@@ -898,7 +984,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         }
 
         if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) ||
-                (receivedAnswer[0] != 0x0a)) {
+            (receivedAnswer[0] != 0x0a)) {
             DbprintfEx(FLAG_NEWLINE, "write block send command error");
             break;
         };

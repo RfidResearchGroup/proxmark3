@@ -27,5 +27,16 @@ char *strcpy(char *dst, const char *src);
 char *strncpy(char *destination, const char *source, size_t num);
 int strcmp(const char *s1, const char *s2);
 char *strtok(char *s, const char *delim);
+char *strchr(const char *s, int c);
+size_t strspn(const char *s1, const char *s2);
+char *strrchr(const char *s, int c);
+size_t strcspn(const char *s1, const char *s2);
+char *strpbrk(const char *s1, const char *s2);
+int strncmp(const char * s1, const char * s2, size_t n);
+char c_tolower(int c);
+char c_isprint (unsigned char c);
+
+
+
 
 #endif /* __STRING_H */
