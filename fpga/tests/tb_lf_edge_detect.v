@@ -20,16 +20,16 @@
 
 module lf_edge_detect_tb;
 
-	integer fin, fout_state, fout_toggle;
-	integer fout_high, fout_highz, fout_lowz, fout_low, fout_min, fout_max;
-	integer r;
+    integer fin, fout_state, fout_toggle;
+    integer fout_high, fout_highz, fout_lowz, fout_low, fout_min, fout_max;
+    integer r;
 
-	reg clk = 0;
-	reg [7:0] adc_d;
-	wire adc_clk;
-	wire data_rdy;
-	wire edge_state;
-	wire edge_toggle;
+    reg clk = 0;
+    reg [7:0] adc_d;
+    wire adc_clk;
+    wire data_rdy;
+    wire edge_state;
+    wire edge_toggle;
 
     wire [7:0] high_threshold;
     wire [7:0] highz_threshold;
@@ -38,74 +38,74 @@ module lf_edge_detect_tb;
     wire [7:0] max;
     wire [7:0] min;
 
-	initial
-	begin
-		clk = 0;
-		fin = $fopen(`FIN, "r");
-		if (!fin) begin
-			$display("ERROR: can't open the data file");
-			$finish;
-		end
-		fout_min = $fopen(`FOUT_MIN, "w+");		
-		fout_max = $fopen(`FOUT_MAX, "w+");		
-		fout_state = $fopen(`FOUT_STATE, "w+");		
-		fout_toggle = $fopen(`FOUT_TOGGLE, "w+");		
-		fout_high = $fopen(`FOUT_HIGH, "w+");		
-		fout_highz = $fopen(`FOUT_HIGHZ, "w+");		
-		fout_lowz = $fopen(`FOUT_LOWZ, "w+");		
-		fout_low = $fopen(`FOUT_LOW, "w+");		
-		if (!$feof(fin))
-			adc_d = $fgetc(fin); // read the first value
-	end
+    initial
+    begin
+        clk = 0;
+        fin = $fopen(`FIN, "r");
+        if (!fin) begin
+            $display("ERROR: can't open the data file");
+            $finish;
+        end
+        fout_min = $fopen(`FOUT_MIN, "w+");
+        fout_max = $fopen(`FOUT_MAX, "w+");
+        fout_state = $fopen(`FOUT_STATE, "w+");
+        fout_toggle = $fopen(`FOUT_TOGGLE, "w+");
+        fout_high = $fopen(`FOUT_HIGH, "w+");
+        fout_highz = $fopen(`FOUT_HIGHZ, "w+");
+        fout_lowz = $fopen(`FOUT_LOWZ, "w+");
+        fout_low = $fopen(`FOUT_LOW, "w+");
+        if (!$feof(fin))
+            adc_d = $fgetc(fin); // read the first value
+    end
 
-	always
-		# 1 clk = !clk;
+    always
+        # 1 clk = !clk;
 
-	// input
-	initial
-	begin
-		while (!$feof(fin)) begin
-			@(negedge clk) adc_d <= $fgetc(fin);
-		end
+    // input
+    initial
+    begin
+        while (!$feof(fin)) begin
+            @(negedge clk) adc_d <= $fgetc(fin);
+        end
 
-		if ($feof(fin))
-		begin
-			# 3 $fclose(fin);
-			$fclose(fout_state);
-			$fclose(fout_toggle);
-			$fclose(fout_high);
-			$fclose(fout_highz);
-			$fclose(fout_lowz);
-			$fclose(fout_low);
-			$fclose(fout_min);
-			$fclose(fout_max);
-			$finish;
-		end
-	end
+        if ($feof(fin))
+        begin
+            # 3 $fclose(fin);
+            $fclose(fout_state);
+            $fclose(fout_toggle);
+            $fclose(fout_high);
+            $fclose(fout_highz);
+            $fclose(fout_lowz);
+            $fclose(fout_low);
+            $fclose(fout_min);
+            $fclose(fout_max);
+            $finish;
+        end
+    end
 
-	initial
-	begin
-		// $monitor("%d\t S: %b, E: %b", $time, edge_state, edge_toggle);
-	end
+    initial
+    begin
+        // $monitor("%d\t S: %b, E: %b", $time, edge_state, edge_toggle);
+    end
 
-	// output
-	always @(negedge clk)
-	if ($time > 2) begin
-		r = $fputc(min, fout_min);
-		r = $fputc(max, fout_max);
-		r = $fputc(edge_state, fout_state);
-		r = $fputc(edge_toggle, fout_toggle);
-		r = $fputc(high_threshold, fout_high);
-		r = $fputc(highz_threshold, fout_highz);
-		r = $fputc(lowz_threshold, fout_lowz);
-		r = $fputc(low_threshold, fout_low);
-	end
+    // output
+    always @(negedge clk)
+    if ($time > 2) begin
+        r = $fputc(min, fout_min);
+        r = $fputc(max, fout_max);
+        r = $fputc(edge_state, fout_state);
+        r = $fputc(edge_toggle, fout_toggle);
+        r = $fputc(high_threshold, fout_high);
+        r = $fputc(highz_threshold, fout_highz);
+        r = $fputc(lowz_threshold, fout_lowz);
+        r = $fputc(low_threshold, fout_low);
+    end
 
-	// module to test
-	lf_edge_detect detect(clk, adc_d, 8'd127,
-		max, min,
-		high_threshold, highz_threshold,
-		lowz_threshold, low_threshold,
-		edge_state, edge_toggle);
+    // module to test
+    lf_edge_detect detect(clk, adc_d, 8'd127,
+        max, min,
+        high_threshold, highz_threshold,
+        lowz_threshold, low_threshold,
+        edge_state, edge_toggle);
 
 endmodule

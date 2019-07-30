@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Pretend to be an ISO 14443 tag. We will do this by alternately short-
 // circuiting and open-circuiting the antenna coil, with the tri-state
-// pins. 
+// pins.
 //
 // We communicate over the SSP, as a bitstream (i.e., might as well be
 // unframed, though we still generate the word sync signal). The output
