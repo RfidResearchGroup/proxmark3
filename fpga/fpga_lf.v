@@ -6,6 +6,7 @@
 `include "lo_read.v"
 `include "lo_passthru.v"
 `include "lo_edge_detect.v"
+`include "lo_adc.v"
 `include "util.v"
 `include "clk_divider.v"
 
@@ -100,24 +101,35 @@ lo_edge_detect le(
     lf_ed_toggle_mode, lf_ed_threshold
 );
 
+lo_adc la(
+	pck0,
+	la_pwr_lo, la_pwr_hi, la_pwr_oe1, la_pwr_oe2, la_pwr_oe3, la_pwr_oe4,
+	adc_d, la_adc_clk,
+	la_ssp_frame, la_ssp_din, ssp_dout, la_ssp_clk,
+	cross_hi, cross_lo,
+	la_dbg, divisor,
+	lo_is_125khz, lf_field
+);
+
 // Major modes:
 //   000 --  LF reader (generic)
 //   001 --  LF edge detect (generic)
 //   010 --  LF passthrough
+//   011 --  LF ADC (read/write)
 //   110 --  FPGA_MAJOR_MODE_OFF_LF (rdv40 specific)
 //   111 --  FPGA_MAJOR_MODE_OFF
-//                                              000           001           010           011   100   101   110   111
-mux8 mux_ssp_clk        (major_mode, ssp_clk,   lr_ssp_clk,   le_ssp_clk,   1'b0,         1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_ssp_din        (major_mode, ssp_din,   lr_ssp_din,   1'b0,         lp_ssp_din,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_ssp_frame      (major_mode, ssp_frame, lr_ssp_frame, le_ssp_frame, 1'b0,         1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_pwr_oe1        (major_mode, pwr_oe1,   lr_pwr_oe1,   le_pwr_oe1,   lp_pwr_oe1,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_pwr_oe2        (major_mode, pwr_oe2,   lr_pwr_oe2,   le_pwr_oe2,   lp_pwr_oe2,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_pwr_oe3        (major_mode, pwr_oe3,   lr_pwr_oe3,   le_pwr_oe3,   lp_pwr_oe3,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_pwr_oe4        (major_mode, pwr_oe4,   lr_pwr_oe4,   le_pwr_oe4,   lp_pwr_oe4,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_pwr_lo         (major_mode, pwr_lo,    lr_pwr_lo,    le_pwr_lo,    lp_pwr_lo,    1'b0, 1'b0, 1'b0, 1'b1, 1'b0);
-mux8 mux_pwr_hi         (major_mode, pwr_hi,    lr_pwr_hi,    le_pwr_hi,    lp_pwr_hi,    1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_adc_clk        (major_mode, adc_clk,   lr_adc_clk,   le_adc_clk,   lp_adc_clk,   1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-mux8 mux_dbg            (major_mode, dbg,       lr_dbg,       le_dbg,       lp_dbg,       1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+//                                              000           001           010           011           100   101   110   111
+mux8 mux_ssp_clk        (major_mode, ssp_clk,   lr_ssp_clk,   le_ssp_clk,   1'b0,         la_ssp_clk,   1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_ssp_din        (major_mode, ssp_din,   lr_ssp_din,   1'b0,         lp_ssp_din,   la_ssp_din,   1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_ssp_frame      (major_mode, ssp_frame, lr_ssp_frame, le_ssp_frame, 1'b0,         la_ssp_frame, 1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_pwr_oe1        (major_mode, pwr_oe1,   lr_pwr_oe1,   le_pwr_oe1,   lp_pwr_oe1,   la_pwr_oe1,   1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_pwr_oe2        (major_mode, pwr_oe2,   lr_pwr_oe2,   le_pwr_oe2,   lp_pwr_oe2,   la_pwr_oe2,   1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_pwr_oe3        (major_mode, pwr_oe3,   lr_pwr_oe3,   le_pwr_oe3,   lp_pwr_oe3,   la_pwr_oe3,   1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_pwr_oe4        (major_mode, pwr_oe4,   lr_pwr_oe4,   le_pwr_oe4,   lp_pwr_oe4,   la_pwr_oe4,   1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_pwr_lo         (major_mode, pwr_lo,    lr_pwr_lo,    le_pwr_lo,    lp_pwr_lo,    la_pwr_lo,    1'b0, 1'b0, 1'b1, 1'b0);
+mux8 mux_pwr_hi         (major_mode, pwr_hi,    lr_pwr_hi,    le_pwr_hi,    lp_pwr_hi,    la_pwr_hi,    1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_adc_clk        (major_mode, adc_clk,   lr_adc_clk,   le_adc_clk,   lp_adc_clk,   la_adc_clk,   1'b0, 1'b0, 1'b0, 1'b0);
+mux8 mux_dbg            (major_mode, dbg,       lr_dbg,       le_dbg,       lp_dbg,       la_dbg,       1'b0, 1'b0, 1'b0, 1'b0);
 
 // In all modes, let the ADC's outputs be enabled.
 assign adc_noe = 1'b0;
