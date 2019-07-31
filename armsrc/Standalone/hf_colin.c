@@ -15,10 +15,10 @@
 #define MF1KSZSIZE 64
 #define AUTHENTICATION_TIMEOUT 848
 #define HFCOLIN_LASTTAG_SYMLINK "hf_colin/lasttag.bin"
-#define HFCOLIN_URMETCAPTIVE_JSON "hf_colin/urmetcaptive.json"
+#define HFCOLIN_SCHEMAS_JSON "hf_colin/schemas.json"
 
-/* Example jsonconfig file urmetcaptive.json :
-{
+/* Example jsonconfig file schemas.json : (array !)
+[{
   "name": "UrmetCaptive",
   "trigger": "0x8829da9daf76",
   "keysA": [
@@ -57,7 +57,12 @@
     "0x8829da9daf76",
     "0x8829da9daf76"
   ]
-}
+},{
+  "name": "Noralsy",
+...
+
+]
+
 */
 
 uint8_t cjuid[10];
@@ -142,7 +147,7 @@ static void scan_keys(const char *str, int len, uint64_t *user_data) {
 
 MFC1KSchema Schemas[MAX_SCHEMAS];
 
-MFC1KSchema Noralsy = {
+/*MFC1KSchema Noralsy = {
     .name = "Noralsy",
     .trigger = 0x414c41524f4e,
     .keysA = {0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e,
@@ -161,6 +166,7 @@ MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
                           .keysB = {0xa22ae129c013, 0x49fae4e3849f, 0x38fcf33072e0, 0x8ad5517b4b18, 0x509359f131b1,
                                     0x6c78928e1317, 0xaa0720018738, 0xa6cac2886412, 0x62d0c424ed8e, 0xe64a986a5d94,
                                     0x8fa1d601d0a2, 0x89347350bd36, 0x66d2b7dc39ef, 0x6bc1e1ae547d, 0x22729a9bd40f}};
+*/
 
 /*MFC1KSchema UrmetCaptive = {
     .name = "Urmet Captive",
@@ -217,29 +223,39 @@ foundKey[5]); cjSetCursRight(); DbprintfEx(FLAG_NEWLINE, "SEC: %02x | KEY : %s |
 }
 */
 
-char *ReadSchemasFromSPIFFS() {
+char *ReadSchemasFromSPIFFS(char *filename) {
     SpinOff(0);
-    LED_A_ON();
-    LED_B_ON();
-    LED_C_ON();
-    LED_D_ON();
-
-    DbprintfEx(FLAG_NEWLINE, "Reading Json Configuration Files...");
-    cjSetCursLeft();
 
     int changed = rdv40_spiffs_lazy_mount();
-    uint32_t size = size_in_spiffs((char *)HFCOLIN_URMETCAPTIVE_JSON);
+    uint32_t size = size_in_spiffs((char *)filename);
     uint8_t *mem = BigBuf_malloc(size);
-    // this one will handle filetype (symlink or not) and resolving by itself
-    rdv40_spiffs_read_as_filetype((char *)HFCOLIN_URMETCAPTIVE_JSON, (uint8_t *)mem, size, RDV40_SPIFFS_SAFETY_SAFE);
+    rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
     if (changed) {
         rdv40_spiffs_lazy_unmount();
     }
-    DbprintfEx(FLAG_NEWLINE, "[OK] Returning One config file");
-    cjSetCursLeft();
     SpinOff(0);
     return (char *)mem;
+}
+
+void add_schemas_from_json_in_spiffs(char *filename) {
+
+    char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
+
+    int i, len = strlen(jsonfile);
+    struct json_token t;
+    for (i = 0; json_scanf_array_elem(jsonfile, len, "", i, &t) > 0; i++) {
+        char *tmpname;
+        char *tmptrigger;
+        MFC1KSchema tmpscheme;
+        json_scanf(t.ptr, t.len, "{ name:%Q, trigger:%Q, keysA:%M, keysB:%M}", &tmpname, &tmptrigger, scan_keys,
+                   &tmpscheme.keysA, scan_keys, &tmpscheme.keysB);
+        memcpy(tmpscheme.name, tmpname, 32);
+        tmpscheme.trigger = hex2i(tmptrigger);
+        add_schema(Schemas, tmpscheme, &total_schemas);
+        DbprintfEx(FLAG_NEWLINE, "Schema loaded : %s", tmpname);
+        cjSetCursLeft();
+    }
 }
 
 void ReadLastTagFromFlash() {
@@ -285,8 +301,8 @@ void WriteTagToFlash(uint32_t uid, size_t size) {
     sprintf(dest, "hf_colin/mf_%02x%02x%02x%02x.bin", buid[0], buid[1], buid[2], buid[3]);
 
     // TODO : by using safe function for multiple writes we are both breaking cache mecanisms and making useless and
-    // unoptimized mount operations we should manage at out level the mount status before and after the whole standalone
-    // mode
+    // unoptimized mount operations we should manage at out level the mount status before and after the whole
+    // standalone mode
     rdv40_spiffs_write((char *)dest, (uint8_t *)data, len, RDV40_SPIFFS_SAFETY_SAFE);
     // lastag will only contain filename/path to last written tag file so we don't loose time or space.
     rdv40_spiffs_make_symlink((char *)dest, (char *)HFCOLIN_LASTTAG_SYMLINK, RDV40_SPIFFS_SAFETY_SAFE);
@@ -302,22 +318,10 @@ void ModInfo(void) { DbpString("  HF Mifare ultra fast sniff/sim/clone - aka VIG
 void RunMod() {
     StandAloneMode();
 
-    char *tmpname;
-    char *tmptrigger;
-    MFC1KSchema tmpscheme;
-    char *urmetcaptive2test = ReadSchemasFromSPIFFS();
-    json_scanf(urmetcaptive2test, strlen(urmetcaptive2test), "{ name:%Q, trigger:%Q, keysA:%M, keysB:%M}", &tmpname,
-               &tmptrigger, scan_keys, &tmpscheme.keysA, scan_keys, &tmpscheme.keysB);
-
-    memcpy(tmpscheme.name, tmpname, 32);
-    tmpscheme.trigger = hex2i(tmptrigger);
-
-    add_schema(Schemas, tmpscheme, &total_schemas);
-
-    add_schema(Schemas, Noralsy, &total_schemas);
-    add_schema(Schemas, InfiHexact, &total_schemas);
+    // add_schema(Schemas, Noralsy, &total_schemas);
+    // add_schema(Schemas, InfiHexact, &total_schemas);
+    // add_schema_from_json_in_spiffs((char *)HFCOLIN_URMETCAPTIVE_JSON);
     // add_schema(Schemas, UrmetCaptive, &total_schemas);
-
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     currline = 20;
@@ -454,6 +458,8 @@ ACCBITS : 796788[00]+VALUE
     currfline = 24;
     cjSetCursLeft();
 
+    add_schemas_from_json_in_spiffs((char *)HFCOLIN_SCHEMAS_JSON);
+
 failtag:
 
     vtsend_cursor_position_save(NULL);
@@ -548,8 +554,8 @@ failtag:
             if (key == -1) {
                 err = 1;
                 allKeysFound = false;
-                // used in portable imlementation on microcontroller: it reports back the fail and open the standalone
-                // lock reply_old(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
+                // used in portable imlementation on microcontroller: it reports back the fail and open the
+                // standalone lock reply_old(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
                 break;
             } else if (key == -2) {
                 err = 1; // Can't select card.
