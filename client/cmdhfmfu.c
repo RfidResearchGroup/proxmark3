@@ -816,13 +816,13 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
     else if (tagtype & NTAG_216_F)
         PrintAndLogEx(NORMAL, "%sTYPE : NTAG 216F 888bytes (NT2H1611F0DTL)", spacer);
     else if (tagtype & NTAG_I2C_1K)
-        PrintAndLogEx(NORMAL, "%sTYPE : NTAG I%sC 888bytes (NT3H1101FHK)", spacer, "\xFD");
+        PrintAndLogEx(NORMAL, "%sTYPE : NTAG I2C 888bytes (NT3H1101FHK)", spacer);
     else if (tagtype & NTAG_I2C_2K)
-        PrintAndLogEx(NORMAL, "%sTYPE : NTAG I%sC 1904bytes (NT3H1201FHK)", spacer, "\xFD");
+        PrintAndLogEx(NORMAL, "%sTYPE : NTAG I2C 1904bytes (NT3H1201FHK)", spacer);
     else if (tagtype & NTAG_I2C_1K_PLUS)
-        PrintAndLogEx(NORMAL, "%sTYPE : NTAG I%sC plus 888bytes (NT3H2111FHK)", spacer, "\xFD");
+        PrintAndLogEx(NORMAL, "%sTYPE : NTAG I2C plus 888bytes (NT3H2111FHK)", spacer);
     else if (tagtype & NTAG_I2C_2K_PLUS)
-        PrintAndLogEx(NORMAL, "%sTYPE : NTAG I%sC plus 1912bytes (NT3H2211FHK)", spacer, "\xFD");
+        PrintAndLogEx(NORMAL, "%sTYPE : NTAG I2C plus 1912bytes (NT3H2211FHK)", spacer);
     else if (tagtype & MY_D)
         PrintAndLogEx(NORMAL, "%sTYPE : INFINEON my-d\x99 (SLE 66RxxS)", spacer);
     else if (tagtype & MY_D_NFC)
