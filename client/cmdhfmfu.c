@@ -2298,7 +2298,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
         // otp, uid, lock, cfg1, cfg0, dynlockbits
         uint8_t blocks[] = {3, 0, 1, 2, pages - 5, pages - 4, pages - 3};
-        for (uint8_t i = 0; i < sizeof(blocks); i++) {
+        for (uint8_t i = 0; i < ARRAYLEN(blocks); i++) {
             uint8_t b = blocks[i];
             memcpy(data, mem->data + (b * 4), 4);
             clearCommandBuffer();
@@ -2635,12 +2635,12 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
     PrintAndLogEx(NORMAL, "Message      :\t %s", sprint_hex(mix, sizeof(mix)));
     PrintAndLogEx(NORMAL, "Diversified key: %s", sprint_hex(divkey + 1, 6));
 
-    for (int i = 0; i < sizeof(mifarekeyA); ++i) {
+    for (int i = 0; i < ARRAYLEN(mifarekeyA); ++i) {
         dkeyA[i]  = (mifarekeyA[i] << 1) & 0xff;
         dkeyA[6] |= ((mifarekeyA[i] >> 7) & 1) << (i + 1);
     }
 
-    for (int i = 0; i < sizeof(mifarekeyB); ++i) {
+    for (int i = 0; i < ARRAYLEN(mifarekeyB); ++i) {
         dkeyB[1]  |= ((mifarekeyB[i] >> 7) & 1) << (i + 1);
         dkeyB[2 + i] = (mifarekeyB[i] << 1) & 0xff;
     }

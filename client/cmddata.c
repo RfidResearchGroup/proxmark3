@@ -870,7 +870,7 @@ static int CmdBitsamples(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    for (size_t j = 0; j < sizeof(got); j++) {
+    for (size_t j = 0; j < ARRAYLEN(got); j++) {
         for (uint8_t k = 0; k < 8; k++) {
             if (got[j] & (1 << (7 - k)))
                 GraphBuffer[cnt++] = 1;

@@ -878,7 +878,7 @@ static void smart_brute_prim() {
 
     PrintAndLogEx(INFO, "Reading primitives");
 
-    for (int i = 0; i < sizeof(get_card_data); i += 5) {
+    for (int i = 0; i < ARRAYLEN(get_card_data); i += 5) {
 
         clearCommandBuffer();
         SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, 5, 0, get_card_data + i, 5);

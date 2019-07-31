@@ -1570,7 +1570,7 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
     //get new div key
     HFiClassCalcDivKey(CSN, NEWKEY, new_div_key, elite);
 
-    for (uint8_t i = 0; i < sizeof(old_div_key); i++) {
+    for (uint8_t i = 0; i < ARRAYLEN(old_div_key); i++) {
         xor_div_key[i] = old_div_key[i] ^ new_div_key[i];
     }
     if (verbose) {

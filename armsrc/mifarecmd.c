@@ -1495,7 +1495,7 @@ OUT:
 
         uint16_t bar = 0;
         uint8_t j = 0;
-        for (uint8_t m = 64; m < sizeof(found); m++) {
+        for (uint8_t m = 64; m < ARRAYLEN(found); m++) {
             bar |= ((uint16_t)(found[m] & 1) << j++);
         }
 

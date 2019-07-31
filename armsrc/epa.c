@@ -470,14 +470,14 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
     uint8_t response_apdu[300] = {0};
 
     // now replay the data and measure the timings
-    for (int i = 0; i < sizeof(apdu_lengths_replay); i++) {
+    for (int i = 0; i < ARRAYLEN(apdu_lengths_replay); i++) {
         StartCountUS();
         func_return = EPA_APDU(apdus_replay[i].data,
                                apdu_lengths_replay[i],
                                response_apdu);
         timings[i] = GetCountUS();
         // every step but the last one should succeed
-        if (i < sizeof(apdu_lengths_replay) - 1
+        if (i < ARRAYLEN(apdu_lengths_replay) - 1
                 && (func_return < 6
                     || response_apdu[func_return - 4] != 0x90
                     || response_apdu[func_return - 3] != 0x00)) {

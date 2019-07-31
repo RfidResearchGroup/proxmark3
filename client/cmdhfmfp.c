@@ -227,7 +227,7 @@ static int CmdHFMFPInitPerso(const char *cmd) {
     }
 
     mfpSetVerboseMode(verbose);
-    for (int i = 0; i < sizeof(CardAddresses) / 2; i++) {
+    for (int i = 0; i < ARRAYLEN(CardAddresses); i++) {
         keyNum[0] = CardAddresses[i] >> 8;
         keyNum[1] = CardAddresses[i] & 0xff;
         res = MFPWritePerso(keyNum, key, false, true, data, sizeof(data), &datalen);

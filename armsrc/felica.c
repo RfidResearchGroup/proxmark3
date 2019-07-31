@@ -746,7 +746,7 @@ void felica_dump_lite_s() {
             // for (c=0; c < 8; c++)
             // ndef[c] = FelicaFrame.framebytes[c+4];
 
-            for (blknum = 0; blknum < sizeof(liteblks);) {
+            for (blknum = 0; blknum < ARRAYLEN(liteblks);) {
 
                 // block to read.
                 BuildFliteRdblk(ndef, 1, &liteblks[blknum]);

@@ -205,7 +205,7 @@ static int testBitStream() {
     } else {
         PrintAndLogDevice(FAILED, "    Bitstream test 1 failed");
         uint8_t i;
-        for (i = 0 ; i < sizeof(input) ; i++) {
+        for (i = 0 ; i < ARRAYLEN(input) ; i++) {
             PrintAndLogDevice(NORMAL, "    IN %02x, OUT %02x", input[i], output[i]);
         }
         return 1;
@@ -235,7 +235,7 @@ static int testReversedBitstream() {
     } else {
         PrintAndLogDevice(FAILED, "    Bitstream test 2 failed");
         uint8_t i;
-        for (i = 0 ; i < sizeof(input) ; i++) {
+        for (i = 0 ; i < ARRAYLEN(input) ; i++) {
             PrintAndLogDevice(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i], reverse[i], output[i]);
         }
         return 1;

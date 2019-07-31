@@ -692,7 +692,7 @@ int doKeyTests(uint8_t debuglevel) {
         //Test if it's the right key...
         uint8_t i;
         uint8_t j = 0;
-        for (i = 0; i < sizeof(key); i++)
+        for (i = 0; i < ARRAYLEN(key); i++)
             j += key[i];
 
         if (j != 185) {

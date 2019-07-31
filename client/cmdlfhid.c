@@ -485,7 +485,7 @@ static int CmdHIDWiegand(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "HID | OEM | FC   | CN      |  Wiegand  |  HID Formatted");
     PrintAndLogEx(NORMAL, "----+-----+------+---------+-----------+--------------------");
-    for (uint8_t i = 0; i < sizeof(fmtlen); i++) {
+    for (uint8_t i = 0; i < ARRAYLEN(fmtlen); i++) {
         memset(bits, 0x00, sizeof(bits));
         calcWiegand(fmtlen[i], fc, cardnum, bs, oem);
         PrintAndLogEx(NORMAL, "ice:: %s \n", sprint_bin(bs, fmtlen[i]));
@@ -545,7 +545,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp += 2;
                 bool is_ftm_ok = false;
                 uint8_t ftms[] = {26, 33, 34, 35, 37};
-                for (uint8_t i = 0; i < sizeof(ftms); i++) {
+                for (uint8_t i = 0; i < ARRAYLEN(ftms); i++) {
                     if (ftms[i] == fmtlen) {
                         is_ftm_ok = true;
                     }

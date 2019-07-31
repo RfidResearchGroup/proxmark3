@@ -75,7 +75,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
     int skip = 0, skip_add = 0, scan_return;
     // for each APDU
-    for (int i = 0; i < sizeof(apdu_lengths); i++) {
+    for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
         // scan to next space or end of string
         while (Cmd[skip] != ' ' && Cmd[skip] != '\0') {
             // convert
@@ -96,7 +96,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
         // break on EOF
         if (Cmd[skip] == '\0') {
-            if (i < sizeof(apdu_lengths) - 1) {
+            if (i < ARRAYLEN(apdu_lengths) - 1) {
 
                 PrintAndLogEx(NORMAL, (char *)usage_msg);
                 return 0;
@@ -111,7 +111,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE];
     // fast push mode
     conn.block_after_ACK = true;
-    for (int i = 0; i < sizeof(apdu_lengths); i++) {
+    for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
         // transfer the APDU in several parts if necessary
         for (int j = 0; j * sizeof(data) < apdu_lengths[i]; j++) {
             // amount of data in this packet
@@ -119,7 +119,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             if (packet_length > sizeof(data)) {
                 packet_length = sizeof(data);
             }
-            if ((i == sizeof(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
+            if ((i == ARRAYLEN(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
                 // Disable fast mode on last packet
                 conn.block_after_ACK = false;
             }
