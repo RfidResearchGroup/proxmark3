@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add FPGA LF adc path (@anon)
  - Add ECC support / check for NID_secp128r1 (@pwpiwi)
  - Add some more default keys (ollibolli)
  - Fix T55x7 Downlink timings backward compatible (@mwalker33)
