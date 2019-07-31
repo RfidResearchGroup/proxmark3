@@ -249,15 +249,14 @@ uint8_t public_keys[2][PUBLIC_ECDA_KEYLEN] = {
 };
 
 
-#define MAX_UL_TYPES 23
-uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {
+uint32_t UL_TYPES_ARRAY[] = {
     UNKNOWN,   UL,          UL_C,        UL_EV1_48,       UL_EV1_128,      NTAG,
     NTAG_203,  NTAG_210,    NTAG_212,    NTAG_213,        NTAG_215,        NTAG_216,
     MY_D,      MY_D_NFC,    MY_D_MOVE,   MY_D_MOVE_NFC,   MY_D_MOVE_LEAN,  FUDAN_UL,
     UL_EV1,    NTAG_213_F,  NTAG_216_F,  UL_NANO_40,      NTAG_I2C_1K
 };
 
-uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
+uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
     MAX_UL_BLOCKS,     MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS,  MAX_NTAG_203,
     MAX_NTAG_203,      MAX_NTAG_210,  MAX_NTAG_212,   MAX_NTAG_213,      MAX_NTAG_215,       MAX_NTAG_216,
     MAX_UL_BLOCKS,     MAX_MY_D_NFC,  MAX_MY_D_MOVE,  MAX_MY_D_MOVE,     MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS,
@@ -1361,7 +1360,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         uint8_t ulev1_conf[16] = {0x00};
 
         // config blocks always are last 4 pages
-        for (uint8_t i = 0; i < MAX_UL_TYPES; i++) {
+        for (uint8_t i = 0; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
             if (tagtype & UL_TYPES_ARRAY[i]) {
                 startconfigblock = UL_MEMORY_ARRAY[i] - 3;
                 break;
@@ -1529,7 +1528,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     if (tagtype == UL_ERROR) return -1;
 
     uint8_t maxblockno = 0;
-    for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++) {
+    for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
         if (tagtype & UL_TYPES_ARRAY[idx]) {
             maxblockno = UL_MEMORY_ARRAY[idx];
             break;
@@ -1643,7 +1642,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     if (tagtype == UL_ERROR) return -1;
 
     uint8_t maxblockno = 0;
-    for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++) {
+    for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
         if (tagtype & UL_TYPES_ARRAY[idx]) {
             maxblockno = UL_MEMORY_ARRAY[idx];
             break;
@@ -1917,7 +1916,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     //get number of pages to read
     if (!manualPages) {
-        for (uint8_t idx = 0; idx < MAX_UL_TYPES; idx++) {
+        for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
             if (tagtype & UL_TYPES_ARRAY[idx]) {
                 //add one as maxblks starts at 0
                 card_mem_size = pages = UL_MEMORY_ARRAY[idx] + 1;
