@@ -559,6 +559,8 @@ typedef struct {
 #define PM3_ENOTTY            -14
 // Initialization error                 pm3:        error related to trying to initalize the pm3 / fpga for different operations
 #define PM3_EINIT             -15
+// Expected a different answer error    client/pm3: error when expecting one answer and got another one
+#define PM3_EWRONGANSVER      -16
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
