@@ -210,8 +210,7 @@ static int usage_hf_mfu_pwdgen(void) {
 }
 
 
-#define KEYS_3DES_COUNT 7
-uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
+uint8_t default_3des_keys[][16] = {
     { 0x42, 0x52, 0x45, 0x41, 0x4b, 0x4d, 0x45, 0x49, 0x46, 0x59, 0x4f, 0x55, 0x43, 0x41, 0x4e, 0x21 }, // 3des std key
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // all zeroes
     { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f }, // 0x00-0x0F
@@ -221,8 +220,7 @@ uint8_t default_3des_keys[KEYS_3DES_COUNT][16] = {
     { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF } // 11 22 33
 };
 
-#define KEYS_PWD_COUNT 1
-uint8_t default_pwd_pack[KEYS_PWD_COUNT][4] = {
+uint8_t default_pwd_pack[][4] = {
     {0xFF, 0xFF, 0xFF, 0xFF}, // PACK 0x00,0x00 -- factory default
 };
 
@@ -1298,7 +1296,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
             // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
             PrintAndLogEx(INFO, "Trying some default 3des keys");
-            for (uint8_t i = 0; i < KEYS_3DES_COUNT; ++i) {
+            for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
                 key = default_3des_keys[i];
                 if (ulc_authentication(key, true)) {
                     PrintAndLogEx(SUCCESS, "Found default 3des key: ");
@@ -1431,7 +1429,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
             if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
 
-            for (uint8_t i = 0; i < KEYS_PWD_COUNT; ++i) {
+            for (uint8_t i = 0; i < ARRAYLEN(default_pwd_pack); ++i) {
                 key = default_pwd_pack[i];
                 len = ulev1_requestAuthentication(key, pack, sizeof(pack));
                 if (len > -1) {
@@ -2349,7 +2347,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     //Change key to user defined one
     if (cmdp == 'k') {
         keyNo = param_get8(Cmd, 1);
-        if (keyNo >= KEYS_3DES_COUNT)
+        if (keyNo >= ARRAYLEN(default_3des_keys))
             errors = true;
     }
 

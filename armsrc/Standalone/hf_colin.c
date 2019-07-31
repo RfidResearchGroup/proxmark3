@@ -242,9 +242,7 @@ void RunMod() {
 //  French VIGIK system @2017
 //----------------------------
 
-#define STKEYS 37
-
-    const uint64_t mfKeys[STKEYS] = {
+    const uint64_t mfKeys[] = {
         0xffffffffffff, // TRANSPORTS
         0x000000000000, // Blankkey
         0x484558414354, // INFINEONON A / 0F SEC B / INTRATONE / HEXACT...
@@ -285,8 +283,8 @@ void RunMod() {
     };
 
     // Can remember something like that in case of Bigbuf
-    keyBlock = BigBuf_malloc(STKEYS * 6);
-    int mfKeysCnt = sizeof(mfKeys) / sizeof(uint64_t);
+    keyBlock = BigBuf_malloc(ARRAYLEN(mfKeys) * 6);
+    int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
         num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));

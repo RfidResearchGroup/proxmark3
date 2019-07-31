@@ -139,14 +139,13 @@ static const manufactureName manufactureMapping[] = {
 const char *getTagInfo(uint8_t uid) {
 
     int i;
-    int len = sizeof(manufactureMapping) / sizeof(manufactureName);
 
-    for (i = 0; i < len; ++i)
+    for (i = 0; i < ARRAYLEN(manufactureMapping); ++i)
         if (uid == manufactureMapping[i].uid)
             return manufactureMapping[i].desc;
 
     //No match, return default
-    return manufactureMapping[len - 1].desc;
+    return manufactureMapping[ARRAYLEN(manufactureMapping) - 1].desc;
 }
 
 // iso14a apdu input frame length

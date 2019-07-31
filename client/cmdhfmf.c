@@ -1069,7 +1069,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
     uint8_t trgKeyType = 0;
     uint8_t SectorsCnt = 0;
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t keyBlock[(MIFARE_DEFAULTKEYS_SIZE + 1) * 6];
+    uint8_t keyBlock[(ARRAYLEN(g_mifare_default_keys) + 1) * 6];
     uint64_t key64 = 0;
     bool transferToEml = false;
     bool createDumpFile = false;
@@ -1173,17 +1173,17 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
         //test current key and additional standard keys first
         // add parameter key
-        memcpy(keyBlock + (MIFARE_DEFAULTKEYS_SIZE * 6), key, 6);
+        memcpy(keyBlock + (ARRAYLEN(g_mifare_default_keys) * 6), key, 6);
 
-        for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++) {
+        for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++) {
             num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
         }
 
         PrintAndLogEx(SUCCESS, "Testing known keys. Sector count=%d", SectorsCnt);
-        mfCheckKeys_fast(SectorsCnt, true, true, 1, MIFARE_DEFAULTKEYS_SIZE + 1, keyBlock, e_sector, false);
+        mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false);
 
         uint64_t t2 = msclock() - t1;
-        PrintAndLogEx(SUCCESS, "Time to check %d known keys: %.0f seconds\n", MIFARE_DEFAULTKEYS_SIZE, (float)t2 / 1000.0);
+        PrintAndLogEx(SUCCESS, "Time to check %d known keys: %.0f seconds\n", ARRAYLEN(g_mifare_default_keys), (float)t2 / 1000.0);
         PrintAndLogEx(SUCCESS, "enter nested attack");
 
         // nested sectors
@@ -1554,15 +1554,15 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     int i, keycnt = 0;
     int clen = 0;
     int transferToEml = 0, createDumpFile = 0;
-    uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
+    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
     bool use_flashmemory = false;
 
     sector_t *e_sector = NULL;
 
-    keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
+    keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
     if (keyBlock == NULL) return 1;
 
-    for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++)
+    for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
         num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
 
     // sectors
@@ -1661,7 +1661,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     if (keycnt == 0 && !use_flashmemory) {
         PrintAndLogEx(SUCCESS, "No key specified, trying default keys");
-        for (; keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
+        for (; keycnt < ARRAYLEN(g_mifare_default_keys); keycnt++)
             PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
                           (keyBlock + 6 * keycnt)[0], (keyBlock + 6 * keycnt)[1], (keyBlock + 6 * keycnt)[2],
                           (keyBlock + 6 * keycnt)[3], (keyBlock + 6 * keycnt)[4], (keyBlock + 6 * keycnt)[5]);
@@ -1806,7 +1806,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     uint8_t blockNo = 0;
     uint8_t SectorsCnt = 1;
     uint8_t keyType = 0;
-    uint32_t keyitems = MIFARE_DEFAULTKEYS_SIZE;
+    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
     uint64_t key64 = 0;
     uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     char *fptr;
@@ -1815,10 +1815,10 @@ static int CmdHF14AMfChk(const char *Cmd) {
     int createDumpFile = 0;
     int i, keycnt = 0;
 
-    keyBlock = calloc(MIFARE_DEFAULTKEYS_SIZE, 6);
+    keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
     if (keyBlock == NULL) return PM3_EMALLOC;
 
-    for (int cnt = 0; cnt < MIFARE_DEFAULTKEYS_SIZE; cnt++)
+    for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
         num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
 
     if (param_getchar(Cmd, 0) == '*') {
@@ -1928,7 +1928,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
     if (keycnt == 0) {
         PrintAndLogEx(INFO, "No key specified, trying default keys");
-        for (; keycnt < MIFARE_DEFAULTKEYS_SIZE; keycnt++)
+        for (; keycnt < ARRAYLEN(g_mifare_default_keys); keycnt++)
             PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
                           (keyBlock + 6 * keycnt)[0], (keyBlock + 6 * keycnt)[1], (keyBlock + 6 * keycnt)[2],
                           (keyBlock + 6 * keycnt)[3], (keyBlock + 6 * keycnt)[4], (keyBlock + 6 * keycnt)[5], 6);

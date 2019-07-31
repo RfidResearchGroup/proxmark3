@@ -17,6 +17,7 @@
 #include <config.h>
 #endif
 
+#include "commonutil.h"
 #include "tlv.h"
 #include "emv_tags.h"
 
@@ -437,7 +438,7 @@ static int emv_tlv_compare(const void *a, const void *b) {
 }
 
 static const struct emv_tag *emv_get_tag(const struct tlv *tlv) {
-    struct emv_tag *tag = bsearch(tlv, emv_tags, sizeof(emv_tags) / sizeof(emv_tags[0]),
+    struct emv_tag *tag = bsearch(tlv, emv_tags, ARRAYLEN(emv_tags),
                                   sizeof(emv_tags[0]), emv_tlv_compare);
 
     return tag ? tag : &emv_tags[0];

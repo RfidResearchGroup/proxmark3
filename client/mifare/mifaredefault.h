@@ -13,8 +13,6 @@
 
 #include <inttypes.h>
 
-#define MIFARE_DEFAULTKEYS_SIZE sizeof(g_mifare_default_keys) / sizeof(uint64_t)
-
 static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)
     0x000000000000, // Blank key

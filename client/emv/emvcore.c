@@ -18,7 +18,6 @@ static const char *PSElist [] = {
     "325041592E5359532E4444463031", // 2PAY.SYS.DDF01 - Visa Proximity Payment System Environment - PPSE
     "315041592E5359532E4444463031"  // 1PAY.SYS.DDF01 - Visa Payment System Environment - PSE
 };
-//static const size_t PSElistLen = sizeof(PSElist)/sizeof(char*);
 
 const char *TransactionTypeStr[] = {
     "MSD",
@@ -119,7 +118,6 @@ static const TAIDList AIDlist [] = {
     { CV_OTHER, "D5780000021010" },              // Bankaxept    Norway  Bankaxept   Norwegian domestic debit card
     { CV_OTHER, "F0000000030001" },              // BRADESCO - Brazilian Bank Banco Bradesco
 };
-static const size_t AIDlistLen = sizeof(AIDlist) / sizeof(TAIDList);
 
 static bool APDULogging = false;
 void SetAPDULogging(bool logging) {
@@ -133,7 +131,7 @@ enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen) {
 
     hex_to_buffer((uint8_t *)buf, AID, AIDlen, sizeof(buf) - 1, 0, 0, true);
 
-    for (int i = 0; i < AIDlistLen; i ++) {
+    for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
         if (strncmp(AIDlist[i].aid, buf, strlen(AIDlist[i].aid)) == 0) {
             return AIDlist[i].vendor;
         }
@@ -530,7 +528,7 @@ int EMVSearch(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldON, 
 
     int res = 0;
     int retrycnt = 0;
-    for (int i = 0; i < AIDlistLen; i ++) {
+    for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
         param_gethex_to_eol(AIDlist[i].aid, 0, aidbuf, sizeof(aidbuf), &aidlen);
         res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
         // retry if error and not returned sw error

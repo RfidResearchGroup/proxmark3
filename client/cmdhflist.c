@@ -1126,7 +1126,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 
             // check default keys
             if (!traceCrypto1) {
-                for (int i = 0; i < MIFARE_DEFAULTKEYS_SIZE; i++) {
+                for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
                     if (NestedCheckKey(g_mifare_default_keys[i], &AuthData, cmd, cmdsize, parity)) {
                         PrintAndLogEx(NORMAL, "            |            |  *  |%61s %012"PRIx64"|     |", "key", g_mifare_default_keys[i]);
 

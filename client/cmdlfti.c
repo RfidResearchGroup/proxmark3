@@ -80,8 +80,8 @@ static int CmdTIDemod(const char *Cmd) {
 
     save_restoreGB(GRAPH_SAVE);
 
-    int lowLen = sizeof(LowTone) / sizeof(int);
-    int highLen = sizeof(HighTone) / sizeof(int);
+    int lowLen = ARRAYLEN(LowTone);
+    int highLen = ARRAYLEN(HighTone);
     int convLen = (highLen > lowLen) ? highLen : lowLen;
     uint16_t crc;
     int i, j, TagType;

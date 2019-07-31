@@ -262,7 +262,7 @@ void RunMod() {
         keys in keyBlock's memory space .
     */
     keyBlock = BigBuf_malloc(stKeyBlock * 6);
-    int mfKeysCnt = sizeof(mfKeys) / sizeof(uint64_t);
+    int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
         num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));

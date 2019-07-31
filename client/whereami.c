@@ -69,11 +69,11 @@ static int WAI_PREFIX(getModulePath_)(HMODULE module, char *out, int capacity, i
         DWORD size;
         int length_, length__;
 
-        size = GetModuleFileNameW(module, buffer1, sizeof(buffer1) / sizeof(buffer1[0]));
+        size = GetModuleFileNameW(module, buffer1, ARRAYLEN(buffer1));
 
         if (size == 0)
             break;
-        else if (size == (DWORD)(sizeof(buffer1) / sizeof(buffer1[0]))) {
+        else if (size == (DWORD)(ARRAYLEN(buffer1))) {
             DWORD size_ = size;
             do {
                 wchar_t *path_;
@@ -521,7 +521,7 @@ int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) 
 #endif
         size_t size = sizeof(buffer1);
 
-        if (sysctl(mib, (u_int)(sizeof(mib) / sizeof(mib[0])), path, &size, NULL, 0) != 0)
+        if (sysctl(mib, (u_int)(ARRAYLEN(mib)), path, &size, NULL, 0) != 0)
             break;
 
         resolved = realpath(path, buffer2);
