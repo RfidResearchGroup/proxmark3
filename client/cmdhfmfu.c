@@ -19,6 +19,7 @@
 #define MAX_NTAG_213        0x2C
 #define MAX_NTAG_215        0x86
 #define MAX_NTAG_216        0xE6
+#define MAX_NTAG_I2C_1K     0xE9
 #define MAX_MY_D_NFC        0xFF
 #define MAX_MY_D_MOVE       0x25
 #define MAX_MY_D_MOVE_LEAN  0x0F
@@ -248,19 +249,19 @@ uint8_t public_keys[2][PUBLIC_ECDA_KEYLEN] = {
 };
 
 
-#define MAX_UL_TYPES 22
+#define MAX_UL_TYPES 23
 uint32_t UL_TYPES_ARRAY[MAX_UL_TYPES] = {
     UNKNOWN,   UL,          UL_C,        UL_EV1_48,       UL_EV1_128,      NTAG,
     NTAG_203,  NTAG_210,    NTAG_212,    NTAG_213,        NTAG_215,        NTAG_216,
     MY_D,      MY_D_NFC,    MY_D_MOVE,   MY_D_MOVE_NFC,   MY_D_MOVE_LEAN,  FUDAN_UL,
-    UL_EV1,    NTAG_213_F,  NTAG_216_F,  UL_NANO_40
+    UL_EV1,    NTAG_213_F,  NTAG_216_F,  UL_NANO_40,      NTAG_I2C_1K
 };
 
 uint8_t UL_MEMORY_ARRAY[MAX_UL_TYPES] = {
     MAX_UL_BLOCKS,     MAX_UL_BLOCKS, MAX_ULC_BLOCKS, MAX_ULEV1a_BLOCKS, MAX_ULEV1b_BLOCKS,  MAX_NTAG_203,
     MAX_NTAG_203,      MAX_NTAG_210,  MAX_NTAG_212,   MAX_NTAG_213,      MAX_NTAG_215,       MAX_NTAG_216,
     MAX_UL_BLOCKS,     MAX_MY_D_NFC,  MAX_MY_D_MOVE,  MAX_MY_D_MOVE,     MAX_MY_D_MOVE_LEAN, MAX_UL_BLOCKS,
-    MAX_ULEV1a_BLOCKS, MAX_NTAG_213,  MAX_NTAG_216,   MAX_UL_NANO_40
+    MAX_ULEV1a_BLOCKS, MAX_NTAG_213,  MAX_NTAG_216,   MAX_UL_NANO_40,    MAX_NTAG_I2C_1K
 };
 
 //------------------------------------
