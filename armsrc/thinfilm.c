@@ -14,11 +14,11 @@
   * ref
   *   https://www.thinfilmnfc.com/wp-content/uploads/2017/09/Thinfilm-Kovio-NFC-Barcode-Protocol-Tag-Functional-Specification-v3.4-2017-05-26.pdf
   *   https://developer.android.com/reference/android/nfc/tech/NfcBarcode
-  *  
+  *
   */
 
 void ReadThinFilm(void) {
-    
+
     clear_trace();
 
     set_tracing(true);

@@ -30,13 +30,19 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
     PrintAndLogEx(SUCCESS, "    Manufacturer : "_YELLOW_("%s") "[0x%02X]", (barcode[0] == 0xB7) ? "Thinfilm" : "unknown", barcode[0]);
 
     if (verbose) {
-        uint8_t b1, b2;
-        compute_crc(CRC_14443_A, barcode, barcode_len - 2, &b1, &b2);
-        bool isok = (barcode[barcode_len - 1] == b1 && barcode[barcode_len - 2] == b2);
-
         PrintAndLogEx(SUCCESS, "     Data format : "_YELLOW_("%02X"), barcode[1]);
-        PrintAndLogEx(SUCCESS, "        checksum : "_YELLOW_("%02X %02X")"- %s", b2, b1, (isok) ? _GREEN_("OK") : _RED_("fail"));
+        if (barcode_len > 2) {
+            uint8_t b1, b2;
+            compute_crc(CRC_14443_A, barcode, barcode_len - 2, &b1, &b2);
+            bool isok = (barcode[barcode_len - 1] == b1 && barcode[barcode_len - 2] == b2);
+
+            PrintAndLogEx(SUCCESS, "        checksum : "_YELLOW_("%02X %02X")"- %s", b2, b1, (isok) ? _GREEN_("OK") : _RED_("fail"));
+        } else {
+            PrintAndLogEx(SUCCESS, "        checksum : "_YELLOW_("too few data for checksum")"- " _RED_("fail"));
+        }
         PrintAndLogEx(SUCCESS, "        Raw data : "_YELLOW_("%s"), sprint_hex(barcode, barcode_len));
+        if (barcode_len < 4) // too few to go to next decoding stages
+            return PM3_ESOFT;
     }
 
     char s[45];
@@ -59,6 +65,10 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
             snprintf(s, sizeof(s), "https://");
             break;
         case 5:
+            if (barcode_len < 16) {
+                PrintAndLogEx(WARNING, "EPC: (partial data) %s", sprint_hex(barcode + 2, barcode_len - 2));
+                return PM3_ESOFT;
+            }
             PrintAndLogEx(SUCCESS, "EPC: %s", sprint_hex(barcode + 2, 12));
             return PM3_SUCCESS;
         default:
@@ -118,7 +128,7 @@ int infoThinFilm(bool verbose) {
     }
 
     if (resp.status == PM3_SUCCESS) {
-        if (resp.length == 16 || resp.length == 32) {
+        if (resp.length == 16 || resp.length == 32 || verbose)  {
             print_barcode(resp.data.asBytes, resp.length, verbose);
         } else {
             PrintAndLogEx(WARNING, "Response is wrong length. (%d)", resp.length);
