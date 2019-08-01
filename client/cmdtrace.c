@@ -256,13 +256,13 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
                 break;
             case THINFILM:
-                frame[data_len-1] ^= frame[data_len-2];
-                frame[data_len-2] ^= frame[data_len-1];
-                frame[data_len-1] ^= frame[data_len-2];
+                frame[data_len - 1] ^= frame[data_len - 2];
+                frame[data_len - 2] ^= frame[data_len - 1];
+                frame[data_len - 1] ^= frame[data_len - 2];
                 crcStatus = iso14443A_CRC_check(true, frame, data_len);
-                frame[data_len-1] ^= frame[data_len-2];
-                frame[data_len-2] ^= frame[data_len-1];
-                frame[data_len-1] ^= frame[data_len-2];
+                frame[data_len - 1] ^= frame[data_len - 2];
+                frame[data_len - 2] ^= frame[data_len - 1];
+                frame[data_len - 1] ^= frame[data_len - 2];
                 break;
             case ISO_15693:
                 crcStatus = iso15693_CRC_check(frame, data_len);
