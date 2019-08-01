@@ -195,3 +195,157 @@ char *strtok(char *s, const char *delim) {
 
     return (__strtok_r(s, delim, &last));
 }
+
+
+char *strchr(const char *s, int c)
+{
+    while (*s != (char)c)
+        if (!*s++)
+            return 0;
+    return (char *)s;
+}
+
+size_t strspn(const char *s1, const char *s2)
+{
+    size_t ret=0;
+    while(*s1 && strchr(s2,*s1++))
+        ret++;
+    return ret;    
+}
+
+char *strrchr(const char *s, int c)
+{
+    const char* ret=0;
+    do {
+        if( *s == (char)c )
+            ret=s;
+    } while(*s++);
+    return (char *)ret;
+}
+
+size_t strcspn(const char *s1, const char *s2)
+{
+    size_t ret=0;
+    while(*s1)
+        if(strchr(s2,*s1))
+            return ret;
+        else
+            s1++,ret++;
+    return ret;
+}
+
+char *strpbrk(const char *s1, const char *s2)
+{
+    while(*s1)
+        if(strchr(s2, *s1++))
+            return (char*)--s1;
+    return 0;
+}
+
+int strncmp(const char* s1, const char* s2, size_t n)
+{
+    while(n--)
+        if(*s1++!=*s2++)
+            return *(unsigned char*)(s1 - 1) - *(unsigned char*)(s2 - 1);
+    return 0;
+}
+
+
+
+
+#define isspace(a) __extension__ ({ unsigned char bb__isspace = (a) - 9; bb__isspace == (' ' - 9) || bb__isspace <= (13 - 9); })
+
+unsigned long strtoul(const char *p, char **out_p, int base)
+{
+	unsigned long v = 0;
+
+	while (isspace(*p))
+		p++;
+	if (((base == 16) || (base == 0)) &&
+	    ((*p == '0') && ((p[1] == 'x') || (p[1] == 'X'))))
+	{
+		p += 2;
+		base = 16;
+	}
+	if (base == 0)
+	{
+		if (*p == '0')
+			base = 8;
+		else
+			base = 10;
+	}
+	while (1)
+	{
+		char c = *p;
+		if ((c >= '0') && (c <= '9') && (c - '0' < base))
+			v = (v * base) + (c - '0');
+		else if ((c >= 'a') && (c <= 'z') && (c - 'a' + 10 < base))
+			v = (v * base) + (c - 'a' + 10);
+		else if ((c >= 'A') && (c <= 'Z') && (c - 'A' + 10 < base))
+			v = (v * base) + (c - 'A' + 10);
+		else
+			break;
+		p++;
+	}
+
+	if (out_p) *out_p = (char*)p;
+	return v;
+}
+
+long strtol(const char *p, char **out_p, int base)
+{
+	long v = 0;
+	int is_neg = 0;
+
+	while (isspace(*p))
+		p++;
+	if (*p == '-')
+		is_neg = 1, p++;
+	else if (*p == '+')
+		is_neg = 0;
+	if (((base == 16) || (base == 0)) &&
+	    ((*p == '0') && ((p[1] == 'x') || (p[1] == 'X'))))
+	{
+		p += 2;
+		base = 16;
+	}
+	if (base == 0)
+	{
+		if (*p == '0')
+			base = 8;
+		else
+			base = 10;
+	}
+	while (1)
+	{
+		char c = *p;
+		if ((c >= '0') && (c <= '9') && (c - '0' < base))
+			v = (v * base) + (c - '0');
+		else if ((c >= 'a') && (c <= 'z') && (c - 'a' + 10 < base))
+			v = (v * base) + (c - 'a' + 10);
+		else if ((c >= 'A') && (c <= 'Z') && (c - 'A' + 10 < base))
+			v = (v * base) + (c - 'A' + 10);
+		else
+			break;
+		p++;
+	}
+	if (is_neg)
+		v = -v;
+	if (out_p) *out_p = (char*)p;
+	return v;
+}
+
+char c_tolower(int c)
+{
+    // (int)a = 97, (int)A = 65
+    // (a)97 - (A)65 = 32
+    // therefore 32 + 65 = a
+    return c > 64 && c < 91 ? c + 32 : c;
+}
+
+char c_isprint (unsigned char c)
+{
+    if ( c >= 0x20 && c <= 0x7e )
+        return 1;
+    return 0;
+}
