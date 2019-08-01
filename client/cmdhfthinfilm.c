@@ -64,7 +64,7 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len) {
     for (uint8_t i = 0; i < strlen(s); i++) {
 
         // terminate string
-        if (s[i] == 0xFE) {
+        if ((uint8_t) s[i] == 0xFE) {
             s[i] = 0;
             break;
         }
