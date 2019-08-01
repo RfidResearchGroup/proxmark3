@@ -27,28 +27,28 @@ static int usage_thinfilm_info(void) {
 //    https://github.com/nfc-tools/libnfc/blob/master/utils/nfc-barcode.c
 static int print_barcode(uint8_t *barcode, const size_t barcode_len) {
 
-    PrintAndLogEx(SUCCESS, "    Manufacturer : "_YELLOW_("%s") "[0x%02X]",  (barcode[0] == 0xB7) ? "Thinfilm" : "unknown", barcode[0] );
+    PrintAndLogEx(SUCCESS, "    Manufacturer : "_YELLOW_("%s") "[0x%02X]", (barcode[0] == 0xB7) ? "Thinfilm" : "unknown", barcode[0]);
     PrintAndLogEx(SUCCESS, "     Data format : "_YELLOW_("%02X"), barcode[1]);
 
     uint8_t b1, b2;
     compute_crc(CRC_14443_A, barcode, barcode_len - 2, &b1, &b2);
     bool isok = (barcode[barcode_len - 1] == b1 && barcode[barcode_len - 2] == b2);
-    
+
     PrintAndLogEx(SUCCESS, "        checksum : "_YELLOW_("%02X %02X")"- %s", b2, b1, (isok) ? _GREEN_("OK") : _RED_("fail"));
     PrintAndLogEx(SUCCESS, "        Raw data : "_YELLOW_("%s"),
-             sprint_hex(barcode, barcode_len)
-             );
+                  sprint_hex(barcode, barcode_len)
+                 );
 
 
     char s[45];
     memset(s, 0x00, sizeof(s));
-    
+
     switch (barcode[1]) {
         case 0:
             printf("Data Format Field: Reserved for allocation by tag manufacturer\n");
             return PM3_SUCCESS;
         case 1:
-            snprintf(s, sizeof(s), "http://www." );
+            snprintf(s, sizeof(s), "http://www.");
             break;
         case 2:
             snprintf(s, sizeof(s), "https://www.");
@@ -60,15 +60,15 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len) {
             snprintf(s, sizeof(s), "https://");
             break;
         case 5:
-            PrintAndLogEx(SUCCESS, "EPC: %s", sprint_hex(barcode + 2, 12) );
+            PrintAndLogEx(SUCCESS, "EPC: %s", sprint_hex(barcode + 2, 12));
             return PM3_SUCCESS;
         default:
             PrintAndLogEx(SUCCESS, "Data Format Field: unknown (%02X)", barcode[1]);
-            PrintAndLogEx(SUCCESS, "Data:" _YELLOW_("%s"), sprint_hex(barcode + 2, barcode_len - 2) );
+            PrintAndLogEx(SUCCESS, "Data:" _YELLOW_("%s"), sprint_hex(barcode + 2, barcode_len - 2));
             return PM3_SUCCESS;
     }
-    
-    snprintf(s + strlen(s), barcode_len - 3, (const char*)&barcode[2] , barcode_len - 4);
+
+    snprintf(s + strlen(s), barcode_len - 3, (const char *)&barcode[2], barcode_len - 4);
 
     for (uint8_t i = 0; i < strlen(s); i++) {
 
@@ -108,8 +108,8 @@ static int CmdHfThinFilmInfo(const char *Cmd) {
 }
 
 int infoThinFilm(void) {
-    
-    clearCommandBuffer();    
+
+    clearCommandBuffer();
     SendCommandNG(CMD_THINFILM_READ, NULL, 0);
 
     PacketResponseNG resp;
@@ -117,9 +117,9 @@ int infoThinFilm(void) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
-    
-    if ( resp.status == PM3_SUCCESS ) {   
-        print_barcode( resp.data.asBytes, resp.length );
+
+    if (resp.status == PM3_SUCCESS) {
+        print_barcode(resp.data.asBytes, resp.length);
     }
 
     return resp.status;

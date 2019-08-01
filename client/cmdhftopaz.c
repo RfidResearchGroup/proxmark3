@@ -43,7 +43,7 @@ static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint
     SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, len, 0, cmd, len);
 
     PacketResponseNG resp;
-    
+
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
@@ -98,10 +98,10 @@ static int topaz_select(uint8_t *atqa, uint8_t *rid_response) {
 
 // read all of the static memory of a selected Topaz tag.
 static int topaz_rall(uint8_t *uid, uint8_t *response) {
-    uint16_t resp_len = 0;    
+    uint16_t resp_len = 0;
     uint8_t rall_cmd[] = {TOPAZ_RALL, 0, 0, 0, 0, 0, 0, 0, 0};
     memcpy(&rall_cmd[3], uid, 4);
-    
+
     if (topaz_send_cmd(rall_cmd, sizeof(rall_cmd), response, &resp_len) == PM3_ETIMEOUT) {
         topaz_switch_off_field();
         return PM3_ESOFT; // RALL failed
@@ -119,7 +119,7 @@ static int topaz_read_block(uint8_t *uid, uint8_t blockno, uint8_t *block_data) 
 
     read8_cmd[1] = blockno;
     memcpy(&read8_cmd[10], uid, 4);
-    
+
     if (topaz_send_cmd(read8_cmd, sizeof(read8_cmd), read8_response, &resp_len) == PM3_ETIMEOUT) {
         topaz_switch_off_field();
         return PM3_ESOFT; // READ8 failed
@@ -136,7 +136,7 @@ static int topaz_read_segment(uint8_t *uid, uint8_t segno, uint8_t *segment_data
 
     rseg_cmd[1] = segno << 4;
     memcpy(&rseg_cmd[10], uid, 4);
-    
+
     if (topaz_send_cmd(rseg_cmd, sizeof(rseg_cmd), rseg_response, &resp_len) == PM3_ETIMEOUT) {
         topaz_switch_off_field();
         return PM3_ESOFT; // RSEG failed
@@ -420,7 +420,7 @@ static int CmdHFTopazReader(const char *Cmd) {
                   (rid_response[0] & 0xF0) == 0x10 ? "" : "not ",
                   (rid_response[0] & 0xF0) == 0x10 ? "" : "not ",
                   (rid_response[0] & 0x0F) == 0x01 ? "static" : "dynamic");
-                  
+
     PrintAndLogEx(NORMAL, "HR1  : %02x", rid_response[1]);
 
     status = topaz_rall(uid_echo, rall_response);
@@ -475,7 +475,7 @@ static int CmdHFTopazReader(const char *Cmd) {
         sprintf(&line[3 * j], "%02x ", topaz_tag.data_blocks[0x0e][j]);
     }
     PrintAndLogEx(NORMAL, "-------+--------+-------------------------+------------");
-    PrintAndLogEx(NORMAL, "  0x%02x | 0x%02x   | %s|   %-3s", 0x0e, 0x0e * 8, line, "n/a");               
+    PrintAndLogEx(NORMAL, "  0x%02x | 0x%02x   | %s|   %-3s", 0x0e, 0x0e * 8, line, "n/a");
     PrintAndLogEx(NORMAL, "");
 
     status = topaz_print_CC(&topaz_tag.data_blocks[1][0]);

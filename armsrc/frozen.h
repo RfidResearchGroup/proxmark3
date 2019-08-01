@@ -36,18 +36,18 @@ enum { false = 0, true = 1 };
 
 /* JSON token type */
 enum json_token_type {
-  JSON_TYPE_INVALID = 0, /* memsetting to 0 should create INVALID value */
-  JSON_TYPE_STRING,
-  JSON_TYPE_NUMBER,
-  JSON_TYPE_TRUE,
-  JSON_TYPE_FALSE,
-  JSON_TYPE_NULL,
-  JSON_TYPE_OBJECT_START,
-  JSON_TYPE_OBJECT_END,
-  JSON_TYPE_ARRAY_START,
-  JSON_TYPE_ARRAY_END,
+    JSON_TYPE_INVALID = 0, /* memsetting to 0 should create INVALID value */
+    JSON_TYPE_STRING,
+    JSON_TYPE_NUMBER,
+    JSON_TYPE_TRUE,
+    JSON_TYPE_FALSE,
+    JSON_TYPE_NULL,
+    JSON_TYPE_OBJECT_START,
+    JSON_TYPE_OBJECT_END,
+    JSON_TYPE_ARRAY_START,
+    JSON_TYPE_ARRAY_END,
 
-  JSON_TYPES_CNT
+    JSON_TYPES_CNT
 };
 
 /*
@@ -55,9 +55,9 @@ enum json_token_type {
  * `json_scanf()` with the format specifier `%T`.
  */
 struct json_token {
-  const char *ptr;           /* Points to the beginning of the value */
-  int len;                   /* Value length */
-  enum json_token_type type; /* Type of the token, possible values are above */
+    const char *ptr;           /* Points to the beginning of the value */
+    int len;                   /* Value length */
+    enum json_token_type type; /* Type of the token, possible values are above */
 };
 
 #define JSON_INVALID_TOKEN \
@@ -110,16 +110,16 @@ int json_walk(const char *json_string, int json_string_length,
  * struct json_out abstracts output, allowing alternative printing plugins.
  */
 struct json_out {
-  int (*printer)(struct json_out *, const char *str, size_t len);
-  union {
-    struct {
-      char *buf;
-      size_t size;
-      size_t len;
-    } buf;
-    void *data;
-    FILE *fp;
-  } u;
+    int (*printer)(struct json_out *, const char *str, size_t len);
+    union {
+        struct {
+            char *buf;
+            size_t size;
+            size_t len;
+        } buf;
+        void *data;
+        FILE *fp;
+    } u;
 };
 
 extern int json_printer_buf(struct json_out *, const char *, size_t);

@@ -464,7 +464,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 }
 
 
-// Thinfilm, Kovio mangels ISO14443A in the way that they don't use start bit nor parity bits.  
+// Thinfilm, Kovio mangels ISO14443A in the way that they don't use start bit nor parity bits.
 RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
     Demod.twoBits = (Demod.twoBits << 8) | bit;
 
@@ -496,44 +496,44 @@ RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
         }
     } else {
 
-            if (IsManchesterModulationNibble1(Demod.twoBits >> Demod.syncBit)) {      // modulation in first half
-                if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {  // ... and in second half = collision
-                    if (!Demod.collisionPos) {
-                        Demod.collisionPos = (Demod.len << 3) + Demod.bitCount;
-                    }
-                }                                                           // modulation in first half only - Sequence D = 1
+        if (IsManchesterModulationNibble1(Demod.twoBits >> Demod.syncBit)) {      // modulation in first half
+            if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {  // ... and in second half = collision
+                if (!Demod.collisionPos) {
+                    Demod.collisionPos = (Demod.len << 3) + Demod.bitCount;
+                }
+            }                                                           // modulation in first half only - Sequence D = 1
+            Demod.bitCount++;
+            Demod.shiftReg = (Demod.shiftReg << 1) | 0x1;             // in both cases, add a 1 to the shiftreg
+            if (Demod.bitCount == 8) {                                  // if we decoded a full byte
+                Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+                Demod.bitCount = 0;
+                Demod.shiftReg = 0;
+            }
+            Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1) - 4;
+        } else {                                                        // no modulation in first half
+            if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {    // and modulation in second half = Sequence E = 0
                 Demod.bitCount++;
-                Demod.shiftReg = (Demod.shiftReg << 1) | 0x1;             // in both cases, add a 1 to the shiftreg
-                if (Demod.bitCount == 8) {                                  // if we decoded a full byte
+                Demod.shiftReg = (Demod.shiftReg << 1);                 // add a 0 to the shiftreg
+                if (Demod.bitCount >= 8) {                              // if we decoded a full byte
                     Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
                     Demod.bitCount = 0;
                     Demod.shiftReg = 0;
                 }
-                Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1) - 4;
-            } else {                                                        // no modulation in first half
-                if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {    // and modulation in second half = Sequence E = 0
-                    Demod.bitCount++;
-                    Demod.shiftReg = (Demod.shiftReg << 1);                 // add a 0 to the shiftreg
-                    if (Demod.bitCount >= 8) {                              // if we decoded a full byte
-                        Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
-                        Demod.bitCount = 0;
-                        Demod.shiftReg = 0;
-                    }
-                    Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1);
-                } else {                                                    // no modulation in both halves - End of communication
-                    if (Demod.bitCount > 0) {                               // there are some remaining data bits
-                        Demod.shiftReg <<= (8 - Demod.bitCount);            // left align the decoded bits
-                        Demod.output[Demod.len++] = Demod.shiftReg & 0xff;  // and add them to the output
-                        return true;
-                    }
-                    if (Demod.len) {
-                        return true;                                        // we are finished with decoding the raw data sequence
-                    } else {                                                // nothing received. Start over
-                        DemodReset();
-                    }
+                Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1);
+            } else {                                                    // no modulation in both halves - End of communication
+                if (Demod.bitCount > 0) {                               // there are some remaining data bits
+                    Demod.shiftReg <<= (8 - Demod.bitCount);            // left align the decoded bits
+                    Demod.output[Demod.len++] = Demod.shiftReg & 0xff;  // and add them to the output
+                    return true;
+                }
+                if (Demod.len) {
+                    return true;                                        // we are finished with decoding the raw data sequence
+                } else {                                                // nothing received. Start over
+                    DemodReset();
                 }
             }
         }
+    }
     return false;    // not finished yet, need more data
 }
 
@@ -655,7 +655,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
                                       Uart.len,
                                       Uart.startTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
                                       Uart.endTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
-                                     Uart.parity,
+                                      Uart.parity,
                                       true)) break;
                     }
                     /* ready to receive another command. */
@@ -2007,7 +2007,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 }
 
 //-----------------------------------------------------------------------------
-// Kovio - Thinfilm barcode.  TAG-TALK-FIRST - 
+// Kovio - Thinfilm barcode.  TAG-TALK-FIRST -
 // Wait a certain time for tag response
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
@@ -2041,7 +2041,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
                 // log
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
                 return true;
-            } 
+            }
         }
 
         // timeout already in ms + 10ms guard time
