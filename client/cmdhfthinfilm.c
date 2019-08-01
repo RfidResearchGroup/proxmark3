@@ -73,7 +73,8 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
             return PM3_SUCCESS;
         default:
             PrintAndLogEx(SUCCESS, "Data Format Field: unknown (%02X)", barcode[1]);
-            PrintAndLogEx(SUCCESS, "Data:" _YELLOW_("%s"), sprint_hex(barcode + 2, barcode_len - 2));
+            if (!verbose)
+                PrintAndLogEx(SUCCESS, "Raw data with CRC: "_YELLOW_("%s"), sprint_hex(barcode, barcode_len));
             return PM3_SUCCESS;
     }
 
