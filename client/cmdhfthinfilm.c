@@ -12,12 +12,12 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_thinfilm_info(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf thin info [h]");
+    PrintAndLogEx(NORMAL, "Usage:  hf thinfilm info [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "           h    this help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "           hf thin info");
+    PrintAndLogEx(NORMAL, "           hf thinfilm info");
     return PM3_SUCCESS;
 }
 
