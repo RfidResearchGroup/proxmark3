@@ -49,12 +49,17 @@ static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint
         return PM3_ETIMEOUT;
     }
 
-    *response_len = resp.oldarg[0];
-    PrintAndLogEx(INFO, "%s", sprint_hex(resp.data.asBytes, resp.oldarg[0]));
-    if (resp.oldarg[0] > 0) {
-        memcpy(response, resp.data.asBytes, resp.oldarg[0]);
-    }
+    if (resp.oldarg[0] == *response_len) {
+        *response_len = resp.oldarg[0];
 
+        PrintAndLogEx(INFO, "%s", sprint_hex(resp.data.asBytes, *response_len));
+        if (*response_len > 0) {
+            memcpy(response, resp.data.asBytes, *response_len);
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Wrong response length (%d != %d)", *response_len, resp.oldarg[0]);
+        return PM3_ESOFT;
+    }
     return PM3_SUCCESS;
 }
 
@@ -73,21 +78,25 @@ static int topaz_send_cmd(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t
 
 
 // select a topaz tag. Send WUPA and RID.
-static int topaz_select(uint8_t *atqa, uint8_t *rid_response) {
+static int topaz_select(uint8_t *atqa, uint8_t atqa_len, uint8_t *rid_response,  uint8_t rid_len) {
     // ToDo: implement anticollision
 
-    uint16_t resp_len = 0;
+    uint16_t resp_len;
     uint8_t wupa_cmd[] = {TOPAZ_WUPA};
     uint8_t rid_cmd[] = {TOPAZ_RID, 0, 0, 0, 0, 0, 0, 0, 0};
 
     topaz_switch_on_field();
 
-    if (topaz_send_cmd(wupa_cmd, sizeof(wupa_cmd), atqa, &resp_len) == PM3_ETIMEOUT) {
+    resp_len = atqa_len;
+    int status = topaz_send_cmd(wupa_cmd, sizeof(wupa_cmd), atqa, &resp_len);
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         topaz_switch_off_field();
         return PM3_ESOFT; // WUPA failed
     }
 
-    if (topaz_send_cmd(rid_cmd, sizeof(rid_cmd), rid_response, &resp_len) == PM3_ETIMEOUT) {
+    resp_len = rid_len;
+    status = topaz_send_cmd(rid_cmd, sizeof(rid_cmd), rid_response, &resp_len);
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         topaz_switch_off_field();
         return PM3_EWRONGANSVER; // RID failed
     }
@@ -391,7 +400,7 @@ static int CmdHFTopazReader(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 's') verbose = false;
 
-    status = topaz_select(atqa, rid_response);
+    status = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response));
 
     if (status == PM3_ESOFT) {
         if (verbose) PrintAndLogEx(ERR, "Error: couldn't receive ATQA");
