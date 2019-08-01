@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add 'hf thinfilm list' specific trace decoding (Thinfilm NFC barcode tags) (@doegox)
  - Fix 'hf topaz reader' - don't crash when trying to read a Thinfilm tag (@iceman1001)
  - Add 'hf thinfilm info' - read / decode Kovio Thinfilm NFC barcode tags (@iceman1001)
  - Add FPGA LF adc path (@anon)
