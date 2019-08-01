@@ -25,20 +25,19 @@ static int usage_thinfilm_info(void) {
 // Printing function based upon the code in libnfc
 // ref
 //    https://github.com/nfc-tools/libnfc/blob/master/utils/nfc-barcode.c
-static int print_barcode(uint8_t *barcode, const size_t barcode_len) {
+static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbose) {
 
     PrintAndLogEx(SUCCESS, "    Manufacturer : "_YELLOW_("%s") "[0x%02X]", (barcode[0] == 0xB7) ? "Thinfilm" : "unknown", barcode[0]);
-    PrintAndLogEx(SUCCESS, "     Data format : "_YELLOW_("%02X"), barcode[1]);
 
-    uint8_t b1, b2;
-    compute_crc(CRC_14443_A, barcode, barcode_len - 2, &b1, &b2);
-    bool isok = (barcode[barcode_len - 1] == b1 && barcode[barcode_len - 2] == b2);
+    if (verbose) {
+        uint8_t b1, b2;
+        compute_crc(CRC_14443_A, barcode, barcode_len - 2, &b1, &b2);
+        bool isok = (barcode[barcode_len - 1] == b1 && barcode[barcode_len - 2] == b2);
 
-    PrintAndLogEx(SUCCESS, "        checksum : "_YELLOW_("%02X %02X")"- %s", b2, b1, (isok) ? _GREEN_("OK") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "        Raw data : "_YELLOW_("%s"),
-                  sprint_hex(barcode, barcode_len)
-                 );
-
+        PrintAndLogEx(SUCCESS, "     Data format : "_YELLOW_("%02X"), barcode[1]);
+        PrintAndLogEx(SUCCESS, "        checksum : "_YELLOW_("%02X %02X")"- %s", b2, b1, (isok) ? _GREEN_("OK") : _RED_("fail"));
+        PrintAndLogEx(SUCCESS, "        Raw data : "_YELLOW_("%s"), sprint_hex(barcode, barcode_len));
+    }
 
     char s[45];
     memset(s, 0x00, sizeof(s));
@@ -104,10 +103,10 @@ static int CmdHfThinFilmInfo(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    return infoThinFilm();
+    return infoThinFilm(true);
 }
 
-int infoThinFilm(void) {
+int infoThinFilm(bool verbose) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_THINFILM_READ, NULL, 0);
@@ -119,7 +118,12 @@ int infoThinFilm(void) {
     }
 
     if (resp.status == PM3_SUCCESS) {
-        print_barcode(resp.data.asBytes, resp.length);
+        if (resp.length == 16 || resp.length == 32) {
+            print_barcode(resp.data.asBytes, resp.length, verbose);
+        } else {
+            PrintAndLogEx(WARNING, "Response is wrong length. (%d)", resp.length);
+            return PM3_ESOFT;
+        }
     }
 
     return resp.status;

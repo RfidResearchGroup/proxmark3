@@ -21,7 +21,7 @@
 #include "util.h"
 #include "cmdhf.h"  // list cmd
 
-int infoThinFilm(void);
+int infoThinFilm(bool verbose);
 
 int CmdHFThinfilm(const char *Cmd);
 

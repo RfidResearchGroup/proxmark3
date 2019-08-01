@@ -54,7 +54,7 @@ int CmdHFSearch(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Checking for known tags...\n");
 
-    if (infoThinFilm() == PM3_SUCCESS) {
+    if (infoThinFilm(false) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
         return 1;
     }
