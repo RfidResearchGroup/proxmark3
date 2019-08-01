@@ -52,7 +52,7 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
 
     switch (barcode[1]) {
         case 0:
-            printf("Data Format Field: Reserved for allocation by tag manufacturer\n");
+            PrintAndLogEx(SUCCESS, "     Data format : Reserved for allocation by tag manufacturer");
             return PM3_SUCCESS;
         case 1:
             snprintf(s, sizeof(s), "http://www.");
@@ -74,7 +74,7 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
             PrintAndLogEx(SUCCESS, "EPC: %s", sprint_hex(barcode + 2, 12));
             return PM3_SUCCESS;
         default:
-            PrintAndLogEx(SUCCESS, "Data Format Field: unknown (%02X)", barcode[1]);
+            PrintAndLogEx(SUCCESS, "     Data format : RFU Reserved for future use (%02X)", barcode[1]);
             if (!verbose)
                 PrintAndLogEx(SUCCESS, "Raw data with CRC: "_YELLOW_("%s"), sprint_hex(barcode, barcode_len));
             return PM3_SUCCESS;
