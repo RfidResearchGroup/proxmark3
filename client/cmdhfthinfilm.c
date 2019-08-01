@@ -149,7 +149,7 @@ static int CmdHfThinFilmSim(const char *Cmd) {
 
 static int CmdHfThinFilmList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    CmdTraceList("14a");
+    CmdTraceList("thinfilm");
     return PM3_SUCCESS;
 }
 
