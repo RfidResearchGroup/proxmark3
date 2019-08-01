@@ -489,7 +489,8 @@ RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
             if (Demod.syncBit != 0xFFFF) {
                 Demod.startTime = (GetCountSspClk() & 0xfffffff8);
                 Demod.startTime -= Demod.syncBit;
-                Demod.bitCount = 0;            // number of decoded data bits
+                Demod.bitCount = 1;            // number of decoded data bits
+                Demod.shiftReg = 1;
                 Demod.state = DEMOD_MANCHESTER_DATA;
             }
         }
@@ -502,7 +503,7 @@ RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
                     }
                 }                                                           // modulation in first half only - Sequence D = 1
                 Demod.bitCount++;
-                Demod.shiftReg = (Demod.shiftReg >> 1) | 0x100;             // in both cases, add a 1 to the shiftreg
+                Demod.shiftReg = (Demod.shiftReg << 1) | 0x1;             // in both cases, add a 1 to the shiftreg
                 if (Demod.bitCount == 8) {                                  // if we decoded a full byte
                     Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
                     Demod.bitCount = 0;
@@ -512,7 +513,7 @@ RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
             } else {                                                        // no modulation in first half
                 if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {    // and modulation in second half = Sequence E = 0
                     Demod.bitCount++;
-                    Demod.shiftReg = (Demod.shiftReg >> 1);                 // add a 0 to the shiftreg
+                    Demod.shiftReg = (Demod.shiftReg << 1);                 // add a 0 to the shiftreg
                     if (Demod.bitCount >= 8) {                              // if we decoded a full byte
                         Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
                         Demod.bitCount = 0;
@@ -521,7 +522,7 @@ RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
                     Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1);
                 } else {                                                    // no modulation in both halves - End of communication
                     if (Demod.bitCount > 0) {                               // there are some remaining data bits
-                        Demod.shiftReg >>= (8 - Demod.bitCount);            // right align the decoded bits
+                        Demod.shiftReg <<= (8 - Demod.bitCount);            // left align the decoded bits
                         Demod.output[Demod.len++] = Demod.shiftReg & 0xff;  // and add them to the output
                         return true;
                     }
