@@ -494,6 +494,9 @@ typedef struct {
 #define CMD_EMV_LOAD_VALUE                                                0x0707
 #define CMD_EMV_DUMP_CARD                                                 0x0708
 
+// For ThinFilm Kovio
+#define CMD_THINFILM_READ                                                 0x0810
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags

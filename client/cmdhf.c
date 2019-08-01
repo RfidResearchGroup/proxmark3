@@ -54,6 +54,11 @@ int CmdHFSearch(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Checking for known tags...\n");
 
+    if (infoThinFilm() == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
+        return 1;
+    }
+
     if (infoHF14A(false, false) > 0) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
         return 1;
@@ -160,6 +165,7 @@ static command_t CommandTable[] = {
     {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...          }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
+    {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
     {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},
     {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags [preliminary]"},

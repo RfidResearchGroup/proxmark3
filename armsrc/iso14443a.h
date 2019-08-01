@@ -132,6 +132,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
 int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
+void iso14443a_off(void);
 
 int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
 int EmSend4bit(uint8_t resp);
@@ -148,7 +149,9 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
                 uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
-void DetectNACKbug();
+void DetectNACKbug(void);
+
+bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint8_t *received_len);
 
 #ifdef __cplusplus
 }

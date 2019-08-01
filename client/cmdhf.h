@@ -31,6 +31,7 @@
 #include "cmdhftopaz.h"     // TOPAZ
 #include "cmdhffelica.h"    // ISO18092 / FeliCa
 #include "cmdhffido.h"      // FIDO authenticators
+#include "cmdhfthinfilm.h"  // Thinfilm
 #include "cmdtrace.h"       // trace list
 
 int CmdHF(const char *Cmd);

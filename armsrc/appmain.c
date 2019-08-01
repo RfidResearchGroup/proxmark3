@@ -26,6 +26,7 @@
 #include "mifareutil.h"
 #include "mifaresim.h"
 #include "hitag.h"
+#include "thinfilm.h"
 
 #define DEBUG 1
 
@@ -1276,6 +1277,10 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_MIFARE_NACK_DETECT: {
             DetectNACKbug();
+            break;
+        }
+        case CMD_THINFILM_READ: {
+            ReadThinFilm();
             break;
         }
 #endif
