@@ -73,7 +73,7 @@ static const manufactureName manufactureMapping[] = {
     { 0x34, "Mikron JSC Russia" },
     { 0x35, "Fraunhofer Institute for Photonic Microsystems Germany" },
     { 0x36, "IDS Microchip AG Switzerland" },
-    { 0x37, "Kovio USA" },
+    { 0x37, "Thinfilm - Kovio USA" },
     { 0x38, "HMT Microelectronic Ltd Switzerland" },
     { 0x39, "Silicon Craft Technology Thailand" },
     { 0x3A, "Advanced Film Device Inc. Japan" },

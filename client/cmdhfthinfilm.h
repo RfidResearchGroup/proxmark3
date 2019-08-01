@@ -20,6 +20,7 @@
 #include "cmdparser.h"
 #include "util.h"
 #include "cmdhf.h"  // list cmd
+#include "cmdhf14a.h" // manufacture
 
 int infoThinFilm(bool verbose);
 

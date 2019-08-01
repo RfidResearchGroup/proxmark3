@@ -27,7 +27,9 @@ static int usage_thinfilm_info(void) {
 //    https://github.com/nfc-tools/libnfc/blob/master/utils/nfc-barcode.c
 static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbose) {
 
-    PrintAndLogEx(SUCCESS, "    Manufacturer : "_YELLOW_("%s") "[0x%02X]", (barcode[0] == 0xB7) ? "Thinfilm" : "unknown", barcode[0]);
+    // remove start bit
+    uint8_t mb = barcode[0] & ~0x80;
+    PrintAndLogEx(SUCCESS, "    Manufacturer : "_YELLOW_("%s") "[0x%02X]",  getTagInfo(mb), mb);
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "     Data format : "_YELLOW_("%02X"), barcode[1]);
