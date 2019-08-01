@@ -64,7 +64,7 @@ uint32_t RAMFUNC GetTickCount(void) {
 
 uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks) {
     uint32_t stop_ticks = AT91C_BASE_RTTC->RTTC_RTVR;
-    if (stop_ticks > start_ticks)
+    if (stop_ticks >= start_ticks)
         return stop_ticks - start_ticks;
     return (UINT32_MAX - start_ticks) + stop_ticks;
 }
