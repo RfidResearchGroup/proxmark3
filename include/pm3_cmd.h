@@ -496,6 +496,7 @@ typedef struct {
 
 // For ThinFilm Kovio
 #define CMD_THINFILM_READ                                                 0x0810
+#define CMD_SIMULATE_TAG_THINFILM                                         0x0811
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

@@ -21,6 +21,17 @@ static int usage_thinfilm_info(void) {
     return PM3_SUCCESS;
 }
 
+static int usage_thinfilm_sim(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf thinfilm sim [h] [d <data>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h          this help");
+    PrintAndLogEx(NORMAL, "           d <bytes>  bytes to send, in hex");
+    PrintAndLogEx(NORMAL, "           r          raw, provided bytes should include CRC");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "           hf thinfilm sim d B70470726f786d61726b2e636f6d");
+    return PM3_SUCCESS;
+}
 
 // Printing function based upon the code in libnfc
 // ref
@@ -143,8 +154,55 @@ int infoThinFilm(bool verbose) {
 }
 
 static int CmdHfThinFilmSim(const char *Cmd) {
-    PrintAndLogEx(INFO, "To be implemented");
-    return PM3_ENOTIMPL;
+    uint8_t cmdp = 0;
+    uint8_t data[512];
+    int datalen = 0;
+
+    bool addcrc = true;
+    bool errors = false;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_thinfilm_sim();
+            case 'd':
+                // Retrieve the data
+                param_gethex_ex(Cmd, cmdp + 1, data, &datalen);
+                datalen >>= 1;
+                cmdp += 2;
+                break;
+            case 'r':
+                addcrc = false;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    //Validations
+    if (errors || cmdp == 0 || datalen == 0 || datalen > 512) return usage_thinfilm_sim();
+    if (addcrc && datalen <= 510) {
+        uint8_t b1, b2;
+        compute_crc(CRC_14443_A, data, datalen, &b1, &b2);
+        data[datalen++] = b2;
+        data[datalen++] = b1;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_SIMULATE_TAG_THINFILM, (uint8_t *)&data, datalen);
+    PacketResponseNG resp;
+    PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
+
+    while (!kbd_enter_pressed()) {
+        if (WaitForResponseTimeout(CMD_SIMULATE_TAG_THINFILM, &resp, 1500) == 0) continue;
+        if (resp.status != PM3_SUCCESS) break;
+    }
+
+    PrintAndLogEx(INFO, "Done");
+    return PM3_SUCCESS;
 }
 
 static int CmdHfThinFilmList(const char *Cmd) {

@@ -22,6 +22,7 @@ extern "C" {
 #include "iso14443a.h"
 
 void ReadThinFilm(void);
+void SimulateThinFilm(uint8_t *data, size_t len);
 
 #ifdef __cplusplus
 }

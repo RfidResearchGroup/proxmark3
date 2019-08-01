@@ -1283,6 +1283,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             ReadThinFilm();
             break;
         }
+        case CMD_SIMULATE_TAG_THINFILM: {
+            SimulateThinFilm(packet->data.asBytes, packet->length);
+            break;
+        }
 #endif
 
 #ifdef WITH_ICLASS
