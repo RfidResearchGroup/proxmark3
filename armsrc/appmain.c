@@ -1740,58 +1740,29 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t len = packet->oldarg[1];
             uint8_t *data = packet->data.asBytes;
 
-            uint32_t tmp = startidx + len;
-
             if (!FlashInit()) {
                 break;
             }
 
-            Flash_CheckBusy(BUSY_TIMEOUT);
-            Flash_WriteEnable();
-
             if (startidx == DEFAULT_T55XX_KEYS_OFFSET) {
+                Flash_CheckBusy(BUSY_TIMEOUT);
+                Flash_WriteEnable();
                 Flash_Erase4k(3, 0xC);
             } else if (startidx ==  DEFAULT_MF_KEYS_OFFSET) {
+                Flash_CheckBusy(BUSY_TIMEOUT);
+                Flash_WriteEnable();
                 Flash_Erase4k(3, 0x9);
+                Flash_CheckBusy(BUSY_TIMEOUT);
+                Flash_WriteEnable();
                 Flash_Erase4k(3, 0xA);
             } else if (startidx == DEFAULT_ICLASS_KEYS_OFFSET) {
+                Flash_CheckBusy(BUSY_TIMEOUT);
+                Flash_WriteEnable();
                 Flash_Erase4k(3, 0xB);
             }
 
-            Flash_CheckBusy(BUSY_TIMEOUT);
-            Flash_WriteEnable();
-
-            // inside 256b page?
-            if ((tmp & 0xFF) != 0) {
-
-                // is offset+len larger than a page
-                tmp = (startidx & 0xFF) + len;
-                if (tmp > 0xFF) {
-
-                    // data spread over two pages.
-
-                    // offset xxxx10,
-                    uint8_t first_len = (~startidx & 0xFF) + 1;
-
-                    // first mem page
-                    res = Flash_WriteDataCont(startidx, data, first_len);
-
-                    isok = (res == first_len) ? 1 : 0;
-
-                    // second mem page
-                    res = Flash_WriteDataCont(startidx + first_len, data + first_len, len - first_len);
-
-                    isok &= (res == (len - first_len)) ? 1 : 0;
-
-                } else {
-                    res = Flash_WriteDataCont(startidx, data, len);
-                    isok = (res == len) ? 1 : 0;
-                }
-            } else {
-                res = Flash_WriteDataCont(startidx, data, len);
-                isok = (res == len) ? 1 : 0;
-            }
-            FlashStop();
+            res = Flash_Write(startidx, data, len);
+            isok = (res == len) ? 1 : 0;
 
             reply_old(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
@@ -1831,7 +1802,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
                 size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
-
+                Flash_CheckBusy(BUSY_TIMEOUT);
                 bool isok = Flash_ReadDataCont(startidx + i, mem, len);
                 if (!isok)
                     Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
