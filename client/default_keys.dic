@@ -113,8 +113,13 @@ a9b43414F585,--Tehran Railway
 # Data from: http://irq5.io/2013/04/13/decoding-bcard-conference-badges/
 f4a9ef2afc6d,--BCARD KeyB
 #
+# Data from: ...
+89eac97f8c2a // S0 B
+43c7600dee6b // S4 A
+0120bf672a64 // S6 A
+fb0b20df1f34 // S6 B
 #
-a9f953def0a3,--
+a9f953def0a3,
 #
 # Here be BIP keys...
 3A42F33AF429,
