@@ -39,13 +39,13 @@ static void topaz_switch_off_field(void) {
 }
 
 // send a raw topaz command, returns the length of the response (0 in case of error)
-static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len) {
+static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len, bool verbose) {
     SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, len, 0, cmd, len);
 
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
@@ -57,7 +57,7 @@ static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint
             memcpy(response, resp.data.asBytes, *response_len);
         }
     } else {
-        PrintAndLogEx(WARNING, "Wrong response length (%d != %d)", *response_len, resp.oldarg[0]);
+        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %d)", *response_len, resp.oldarg[0]);
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
@@ -65,7 +65,7 @@ static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint
 
 
 // calculate CRC bytes and send topaz command, returns the length of the response (0 in case of error)
-static int topaz_send_cmd(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len) {
+static int topaz_send_cmd(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len, bool verbose) {
     if (len > 1) {
         uint8_t b1, b2;
         compute_crc(CRC_14443_B, cmd, len - 2, &b1, &b2);
@@ -73,12 +73,12 @@ static int topaz_send_cmd(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t
         cmd[len - 1] = b2;
     }
 
-    return topaz_send_cmd_raw(cmd, len, response, response_len);
+    return topaz_send_cmd_raw(cmd, len, response, response_len, verbose);
 }
 
 
 // select a topaz tag. Send WUPA and RID.
-static int topaz_select(uint8_t *atqa, uint8_t atqa_len, uint8_t *rid_response,  uint8_t rid_len) {
+static int topaz_select(uint8_t *atqa, uint8_t atqa_len, uint8_t *rid_response,  uint8_t rid_len, bool verbose) {
     // ToDo: implement anticollision
 
     uint16_t resp_len;
@@ -88,14 +88,14 @@ static int topaz_select(uint8_t *atqa, uint8_t atqa_len, uint8_t *rid_response, 
     topaz_switch_on_field();
 
     resp_len = atqa_len;
-    int status = topaz_send_cmd(wupa_cmd, sizeof(wupa_cmd), atqa, &resp_len);
+    int status = topaz_send_cmd(wupa_cmd, sizeof(wupa_cmd), atqa, &resp_len, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         topaz_switch_off_field();
         return PM3_ESOFT; // WUPA failed
     }
 
     resp_len = rid_len;
-    status = topaz_send_cmd(rid_cmd, sizeof(rid_cmd), rid_response, &resp_len);
+    status = topaz_send_cmd(rid_cmd, sizeof(rid_cmd), rid_response, &resp_len, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         topaz_switch_off_field();
         return PM3_EWRONGANSVER; // RID failed
@@ -111,7 +111,7 @@ static int topaz_rall(uint8_t *uid, uint8_t *response) {
     uint8_t rall_cmd[] = {TOPAZ_RALL, 0, 0, 0, 0, 0, 0, 0, 0};
     memcpy(&rall_cmd[3], uid, 4);
 
-    if (topaz_send_cmd(rall_cmd, sizeof(rall_cmd), response, &resp_len) == PM3_ETIMEOUT) {
+    if (topaz_send_cmd(rall_cmd, sizeof(rall_cmd), response, &resp_len, true) == PM3_ETIMEOUT) {
         topaz_switch_off_field();
         return PM3_ESOFT; // RALL failed
     }
@@ -129,7 +129,7 @@ static int topaz_read_block(uint8_t *uid, uint8_t blockno, uint8_t *block_data) 
     read8_cmd[1] = blockno;
     memcpy(&read8_cmd[10], uid, 4);
 
-    if (topaz_send_cmd(read8_cmd, sizeof(read8_cmd), read8_response, &resp_len) == PM3_ETIMEOUT) {
+    if (topaz_send_cmd(read8_cmd, sizeof(read8_cmd), read8_response, &resp_len, true) == PM3_ETIMEOUT) {
         topaz_switch_off_field();
         return PM3_ESOFT; // READ8 failed
     }
@@ -146,7 +146,7 @@ static int topaz_read_segment(uint8_t *uid, uint8_t segno, uint8_t *segment_data
     rseg_cmd[1] = segno << 4;
     memcpy(&rseg_cmd[10], uid, 4);
 
-    if (topaz_send_cmd(rseg_cmd, sizeof(rseg_cmd), rseg_response, &resp_len) == PM3_ETIMEOUT) {
+    if (topaz_send_cmd(rseg_cmd, sizeof(rseg_cmd), rseg_response, &resp_len, true) == PM3_ETIMEOUT) {
         topaz_switch_off_field();
         return PM3_ESOFT; // RSEG failed
     }
@@ -400,25 +400,26 @@ static int CmdHFTopazReader(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 's') verbose = false;
 
-    status = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response));
+    status = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), verbose);
 
     if (status == PM3_ESOFT) {
         if (verbose) PrintAndLogEx(ERR, "Error: couldn't receive ATQA");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "ATQA : %02x %02x", atqa[1], atqa[0]);
     if (atqa[1] != 0x0c && atqa[0] != 0x00) {
-        PrintAndLogEx(ERR, "Tag doesn't support the Topaz protocol.");
+        if (verbose) PrintAndLogEx(ERR, "Tag doesn't support the Topaz protocol.");
         topaz_switch_off_field();
         return PM3_ESOFT;
     }
 
     if (status == PM3_EWRONGANSVER) {
-        PrintAndLogEx(ERR, "Error: tag didn't answer to RID");
+        if (verbose) PrintAndLogEx(ERR, "Error: tag didn't answer to RID");
         topaz_switch_off_field();
         return PM3_ESOFT;
     }
+
+    PrintAndLogEx(NORMAL, "ATQA : %02x %02x", atqa[1], atqa[0]);
 
     topaz_tag.HR01[0] = rid_response[0];
     topaz_tag.HR01[1] = rid_response[1];
