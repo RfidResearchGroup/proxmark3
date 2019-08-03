@@ -1160,10 +1160,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareWriteBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
-        //case CMD_HF_MIFAREU_WRITEBL_COMPAT: {
-        //MifareUWriteBlockCompat(packet->oldarg[0], packet->data.asBytes);
-        //break;
-        //}
         case CMD_HF_MIFAREU_WRITEBL: {
             MifareUWriteBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
@@ -1281,9 +1277,6 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_DESFIRE_COMMAND: {
             MifareSendCommand(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
-            break;
-        }
-        case CMD_HF_MIFARE_COLLECT_NONCES: {
             break;
         }
         case CMD_HF_MIFARE_NACK_DETECT: {

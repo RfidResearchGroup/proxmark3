@@ -189,7 +189,6 @@ typedef struct {
 #define CMD_HF_MIFAREU_READCARD                                           0x0721
 #define CMD_HF_MIFARE_WRITEBL                                             0x0622
 #define CMD_HF_MIFAREU_WRITEBL                                            0x0722
-#define CMD_HF_MIFAREU_WRITEBL_COMPAT                                     0x0723
 
 #define CMD_HF_MIFARE_CHKKEYS                                             0x0623
 #define CMD_HF_MIFARE_SETMOD                                              0x0624
@@ -210,7 +209,6 @@ typedef struct {
 #define CMD_HF_DESFIRE_INFO                                               0x072d
 #define CMD_HF_DESFIRE_COMMAND                                            0x072e
 
-#define CMD_HF_MIFARE_COLLECT_NONCES                                      0x072f
 
 #define CMD_HF_SNIFF                                                      0x0800
 
