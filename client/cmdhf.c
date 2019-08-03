@@ -54,42 +54,59 @@ int CmdHFSearch(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Checking for known tags...\n");
 
-    if (infoThinFilm(false) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
-        return 1;
+    if (IfPm3NfcBarcode()) {
+        if (infoThinFilm(false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
+            return 1;
+        }
     }
-
-    if (infoHF14A(false, false) > 0) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
-        return 1;
+    if (IfPm3Iso14443a()) {
+        if (infoHF14A(false, false) > 0) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
+            return 1;
+        }
     }
-    if (readHF15Uid(false) == 1) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
-        return 1;
+    if (IfPm3Iso15693()) {
+        if (readHF15Uid(false) == 1) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
+            DropField();
+            return 1;
+        }
+        DropField();
     }
-    if (readLegicUid(false) == 0) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") " found\n");
-        return 1;
+    if (IfPm3Legicrf()) {
+        if (readLegicUid(false) == 0) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") " found\n");
+            return 1;
+        }
     }
-    if (readTopazUid() == 0) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
-        return 1;
+    if (IfPm3Iso14443a()) {
+        if (readTopazUid() == 0) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
+            return 1;
+        }
     }
     // 14b and iclass is the longest test (put last)
-    if (readHF14B(false) == 1) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
-        return 1;
+    if (IfPm3Iso14443a()) {
+        if (readHF14B(false) == 1) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
+            return 1;
+        }
     }
-    if (readIclass(false, false) == 1) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
-        return 1;
+    if (IfPm3Iclass()) {
+        if (readIclass(false, false) == 1) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
+            return 1;
+        }
     }
 
     /*
-    ans = CmdHFFelicaReader("s");
-    if (ans) {
-        PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
-        return ans;
+    if (IfPm3Felica()) {
+        ans = CmdHFFelicaReader("s");
+        if (ans) {
+            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+            return ans;
+        }
     }
     */
 

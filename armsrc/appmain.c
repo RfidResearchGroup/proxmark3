@@ -1090,6 +1090,12 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #endif
 
+// always available
+        case CMD_HF_DROPFIELD: {
+            hf_field_off();
+            break;
+        }
+
 #ifdef WITH_ISO14443a
         case CMD_HF_ISO14443A_SNIFF: {
             SniffIso14443a(packet->data.asBytes[0]);

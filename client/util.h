@@ -33,7 +33,7 @@
 
 #ifndef DropField
 #define DropField() { \
-        clearCommandBuffer(); SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0); \
+        clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
     }
 #endif
 

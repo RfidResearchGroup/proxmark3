@@ -32,7 +32,7 @@ void ReadThinFilm(void) {
     bool status = GetIso14443aAnswerFromTag_Thinfilm(buf, &len);
     reply_ng(CMD_HF_THINFILM_READ, status ? PM3_SUCCESS : PM3_ENODATA, buf, len);
 
-    iso14443a_off();
+    hf_field_off();
     set_tracing(false);
 }
 
