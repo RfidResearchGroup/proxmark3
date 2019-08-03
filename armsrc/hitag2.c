@@ -377,7 +377,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
     // Reset the transmission frame length
     *txlen = 0;
 
-    if (bPwd && write) {
+    if (bPwd && !bAuthenticating && write) {
         if (!hitag2_write_page(rx, rxlen, tx, txlen)) {
             return false;
         }
@@ -399,21 +399,26 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
             // Received UID, tag password
             case 32: {
                 if (!bPwd) {
-                    *txlen = 32;
-                    memcpy(tx, password, 4);
                     bPwd = true;
-                    memcpy(tag.sectors[blocknr], rx, 4);
-                    blocknr++;
-                } else {
-
-                    if (blocknr == 1) {
-                        //store password in block1, the TAG answers with Block3, but we need the password in memory
-                        memcpy(tag.sectors[blocknr], tx, 4);
-                    } else {
+                    bAuthenticating = true;
+                    memcpy(tx, password, 4);
+                    *txlen = 32;
+                }
+                else {
+                    if (bAuthenticating) {
+                        bAuthenticating = false;
+                        if (write) {
+                            if (!hitag2_write_page(rx, rxlen, tx, txlen)) {
+                                return false;
+                            }
+                            break;
+                        }
+                    }
+                    else {
                         memcpy(tag.sectors[blocknr], rx, 4);
+                        blocknr++;
                     }
 
-                    blocknr++;
                     if (blocknr > 7) {
                         DbpString("Read succesful!");
                         bSuccessful = true;
@@ -1104,6 +1109,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             memcpy(password, htd->pwd.password, 4);
             blocknr = 0;
             bPwd = false;
+            bAuthenticating = false;
             break;
         }
         case RHT2F_AUTHENTICATE: {
@@ -1405,6 +1411,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             Dbhexdump(4, password, false);
             blocknr = page;
             bPwd = false;
+            bAuthenticating = false;
             writestate = WRITE_STATE_START;
         }
         break;
