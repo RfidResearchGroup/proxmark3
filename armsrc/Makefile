@@ -94,6 +94,7 @@ THUMBSRC = start.c \
     protocols.c \
     $(SRC_LCD) \
     $(SRC_ISO15693) \
+    $(SRC_NFCBARCODE) \
     $(SRC_LF) \
     $(SRC_ZLIB) \
     $(SRC_LEGIC) \
@@ -115,7 +116,6 @@ THUMBSRC = start.c \
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
     $(SRC_ISO14443a) \
-    $(SRC_NFCBARCODE) \
     $(SRC_ISO14443b) \
     $(SRC_CRAPTO1) \
     $(SRC_ICLASS) \
