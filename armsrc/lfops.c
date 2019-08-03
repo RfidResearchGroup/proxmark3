@@ -14,6 +14,7 @@
 #include "hitag2.h"
 #include "crc16.h"
 #include "string.h"
+#include "printf.h"
 #include "lfdemod.h"
 #include "lfsampling.h"
 #include "protocols.h"
@@ -154,60 +155,75 @@ t55xx_configurations_t T55xx_Timing  = {
 #define T55XX_LONGLEADINGREFERENCE 4 // Value to tell Write Bit to send long reference
 
 void printT55xxConfig(void) {
+
+#define PRN_NA   sprintf(s  + strlen(s), _RED_("   N/A     |"));
+    
     DbpString(_BLUE_("LF T55XX config"));
+    Dbprintf("                                [a]          [b]          [c]          [d]          [e]          [f]          [g]");
+    Dbprintf("   Mode                    |  startgap  |  writegap  |  write 0   |  write 1   |  readgap   |  write_2   |  write_3");
+    Dbprintf("---------------------------+------------+------------+------------+------------+------------+------------+-------------");
+    
     for (uint8_t i = 0; i < 4; i++) {
+
+        char s[160];
+        memset(s, 0, sizeof(s));
+        
         switch (i) {
             case T55XX_DLMODE_FIXED :
-                Dbprintf(_YELLOW_("fixed bit length (default)"));
+                sprintf(s, _YELLOW_("fixed bit length (default) |"));
                 break;
             case T55XX_DLMODE_LLR :
-                Dbprintf(_YELLOW_("long leading reference"));
+                sprintf(s, _YELLOW_("    long leading reference |"));
                 break;
             case T55XX_DLMODE_LEADING_ZERO :
-                Dbprintf(_YELLOW_("leading zero"));
+                sprintf(s, _YELLOW_("              leading zero |"));
                 break;
             case T55XX_DLMODE_1OF4 :
-                Dbprintf(_YELLOW_("1 of 4 coding reference"));
+                sprintf(s, _YELLOW_("   1 of 4 coding reference |"));
+                break;
+            default:
                 break;
         }
+        
         if (T55xx_Timing.m[i].start_gap != 0xFFFF)
-            Dbprintf("  [a] startgap............%d*8 (%d)", T55xx_Timing.m[i].start_gap / 8, T55xx_Timing.m[i].start_gap);
+            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].start_gap / 8, T55xx_Timing.m[i].start_gap);
         else
-            Dbprintf("  [a] startgap............" _RED_("unconfigured"));
+            PRN_NA;
 
         if (T55xx_Timing.m[i].write_gap != 0xFFFF)
-            Dbprintf("  [b] writegap............%d*8 (%d)", T55xx_Timing.m[i].write_gap / 8, T55xx_Timing.m[i].write_gap);
+            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_gap / 8, T55xx_Timing.m[i].write_gap);
         else
-            Dbprintf("  [b] writegap............" _RED_("unconfigured"));
+             PRN_NA;
 
         if (T55xx_Timing.m[i].write_0 != 0xFFFF)
-            Dbprintf("  [c] write_0.............%d*8 (%d)", T55xx_Timing.m[i].write_0 / 8, T55xx_Timing.m[i].write_0);
+            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_0 / 8, T55xx_Timing.m[i].write_0);
         else
-            Dbprintf("  [c] write_0............." _RED_("unconfigured"));
+             PRN_NA;
 
         if (T55xx_Timing.m[i].write_1 != 0xFFFF)
-            Dbprintf("  [d] write_1.............%d*8 (%d)", T55xx_Timing.m[i].write_1 / 8, T55xx_Timing.m[i].write_1);
+            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_1 / 8, T55xx_Timing.m[i].write_1);
         else
-            Dbprintf("  [d] write_1............." _RED_("unconfigured"));
+             PRN_NA;
 
         if (T55xx_Timing.m[i].read_gap != 0xFFFF)
-            Dbprintf("  [e] readgap.............%d*8 (%d)", T55xx_Timing.m[i].read_gap / 8, T55xx_Timing.m[i].read_gap);
+            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].read_gap / 8, T55xx_Timing.m[i].read_gap);
         else
-            Dbprintf("  [e] readgap............." _RED_("unconfigured"));
+            PRN_NA;
 
-        if (i == T55XX_DLMODE_1OF4) {
-
-            if (T55xx_Timing.m[i].write_2 != 0xFFFF)
-                Dbprintf("  [f] write_2.............%d*8 (%d)", T55xx_Timing.m[i].write_2 / 8, T55xx_Timing.m[i].write_2);
+        if (T55xx_Timing.m[i].write_2 != 0xFFFF && i == T55XX_DLMODE_1OF4 )
+            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_2 / 8, T55xx_Timing.m[i].write_2);
             else
-                Dbprintf("  [f] write_2............." _RED_("unconfigured"));
+            PRN_NA
 
-            if (T55xx_Timing.m[i].write_3 != 0xFFFF)
-                Dbprintf("  [g] write_3.............%d*8 (%d)", T55xx_Timing.m[i].write_3 / 8, T55xx_Timing.m[i].write_3);
+        if (T55xx_Timing.m[i].write_3 != 0xFFFF && i == T55XX_DLMODE_1OF4)
+            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_3 / 8, T55xx_Timing.m[i].write_3);
             else
-                Dbprintf("  [f] write_3............." _RED_("unconfigured"));
-        }
+            PRN_NA;
+        
+        s[strlen(s)] = 0;
+        DbpString(s);
     }
+    DbpString("");
 }
 
 void setT55xxConfig(uint8_t arg0, t55xx_configurations_t *c) {
