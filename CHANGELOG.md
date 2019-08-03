@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add VSCode tasks (@ViRb3)
+ - Better warn user of hardcoded hitag info (@ViRb3)
+ - Format and docs hitag (@ViRb3)
+ - Fix hitag password write offset by 1 (@ViRb3)
  - Fix momentarily flash read/write of dicts (@doegox/@cjbrigato)
  - Add some more default keys (@anon)
  - Add 'hf thinfilm sim' simulating Thinfilm NFC barcode tags (@doegox)
