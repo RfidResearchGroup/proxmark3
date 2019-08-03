@@ -1149,7 +1149,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
 
     if (SimulateIso14443aInit(tagType, flags, data, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
-        reply_ng(CMD_SIMULATE_MIFARE_CARD, PM3_EINIT, NULL, 0);
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
     }
 
@@ -1269,7 +1269,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
                         ar_nr_nonces[index].state = SECOND;
 
                         // send to client  (one struct nonces_t)
-                        reply_ng(CMD_SIMULATE_MIFARE_CARD, PM3_SUCCESS, (uint8_t *)&ar_nr_nonces[index], sizeof(nonces_t));
+                        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_SUCCESS, (uint8_t *)&ar_nr_nonces[index], sizeof(nonces_t));
 
                         ar_nr_nonces[index].state = EMPTY;
                         ar_nr_nonces[index].sector = 0;
@@ -1593,7 +1593,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data) {
         Dbprintf("-[ Num of moebius tries [%d]", moebius_count);
     }
 
-    reply_ng(CMD_SIMULATE_MIFARE_CARD, retval, NULL, 0);
+    reply_ng(CMD_HF_MIFARE_SIMULATE, retval, NULL, 0);
 }
 
 // prepare a delayed transfer. This simply shifts ToSend[] by a number
@@ -3246,7 +3246,7 @@ void DetectNACKbug(void) {
     data[0] = isOK;
     data[1] = num_nacks;
     num_to_bytes(i, 2, data + 2);
-    reply_ng(CMD_MIFARE_NACK_DETECT, status, data, 4);
+    reply_ng(CMD_HF_MIFARE_NACK_DETECT, status, data, 4);
 
     //reply_mix(CMD_ACK, isOK, num_nacks, i, 0, 0);
     BigBuf_free();

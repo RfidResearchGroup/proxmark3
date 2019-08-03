@@ -246,7 +246,7 @@ local function LoadEmulator(uid, blocks)
         io.write( _..',')
         io.flush()
         core.clearCommandBuffer()
-        cmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 16, data = blockdata}
+        cmd = Command:newMIX{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 16, data = blockdata}
         local err, msg = cmd:sendMIX(true)
         if err == nil then return err, msg end
     end

@@ -169,7 +169,7 @@ local function main(args)
     local blockno = '00'
     local keytype = '00'
     local data = ('%s%s%s'):format(blockno, keytype, keyA)
-    cmd = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+    cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_READBL, data = data}
     block0, err = getblockdata(cmd:sendNG(false))
     if not block0 then return oops(err) end
 
@@ -179,7 +179,7 @@ local function main(args)
     dbg('Reading block 1')
     local blockno = '01'
     data = ('%s%s%s'):format(blockno, keytype, keyA)
-    cmd = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+    cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_READBL, data = data}
     block1, err = getblockdata(cmd:sendNG(false))
     if not block1 then return oops(err) end
 
@@ -208,7 +208,7 @@ local function main(args)
         pos = (math.floor( blockNo / 4 ) * 12)+1
         key = akeys:sub(pos, pos + 11 )
         data = ('%02x%s%s'):format(blockNo, keytype, key)
-        cmd = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+        cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_READBL, data = data}
         local blockdata, err = getblockdata(cmd:sendNG(false))
         if not blockdata then return oops(err) end
 

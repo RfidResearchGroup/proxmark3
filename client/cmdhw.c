@@ -451,7 +451,7 @@ static int CmdSetDivisor(const char *Cmd) {
     }
     // 12 000 000 (12Mhz)
     clearCommandBuffer();
-    SendCommandNG(CMD_SET_LF_DIVISOR, (uint8_t *)&arg, sizeof(arg));
+    SendCommandNG(CMD_LF_SET_DIVISOR, (uint8_t *)&arg, sizeof(arg));
     PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f kHz", ((double)12000 / (arg + 1)));
     return PM3_SUCCESS;
 }

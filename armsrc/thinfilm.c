@@ -30,7 +30,7 @@ void ReadThinFilm(void) {
 
     // power on and listen for answer.
     bool status = GetIso14443aAnswerFromTag_Thinfilm(buf, &len);
-    reply_ng(CMD_THINFILM_READ, status ? PM3_SUCCESS : PM3_ENODATA, buf, len);
+    reply_ng(CMD_HF_THINFILM_READ, status ? PM3_SUCCESS : PM3_ENODATA, buf, len);
 
     iso14443a_off();
     set_tracing(false);
@@ -148,5 +148,5 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
         }
     }
     LED_A_OFF();
-    reply_ng(CMD_SIMULATE_TAG_THINFILM, status, NULL, 0);
+    reply_ng(CMD_HF_THINFILM_SIMULATE, status, NULL, 0);
 }

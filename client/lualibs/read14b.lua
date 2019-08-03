@@ -70,7 +70,7 @@ local function read14443b(disconnect)
     end
 
     command = Command:newMIX{
-            cmd = cmds.CMD_ISO_14443B_COMMAND,
+            cmd = cmds.CMD_HF_ISO14443B_COMMAND,
             arg1 = flags
             }
 
@@ -111,13 +111,13 @@ end
 ---
 -- turns on the HF field.
 local function connect14443b()
-    local c = Command:newMIX{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_CONNECT}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_CONNECT}
     return c:sendMIX(true)
 end
 ---
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect14443b()
-    local c = Command:newMIX{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_DISCONNECT}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_DISCONNECT}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443b.c, ReaderIso14443b() for details
     return c:sendMIX(true)

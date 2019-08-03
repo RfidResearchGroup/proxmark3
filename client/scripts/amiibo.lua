@@ -16,7 +16,7 @@ local luamiibo = luamiibo_open()
 local function nfc_read_amiibo ()
 
    local command = Command:newMIX{
-                cmd = cmds.CMD_MIFAREU_READCARD,
+                cmd = cmds.CMD_HF_MIFAREU_READCARD,
                 arg1 = 0,
                 arg2 = 135
                 }
@@ -90,7 +90,7 @@ local function emulate_amiibo (amiibo_data)
 
    -- Begin simulating NTAG215
    local simCmd = Command:newMIX{
-                cmd = cmds.CMD_SIMULATE_TAG_ISO_14443a,
+                cmd = cmds.CMD_HF_ISO14443A_SIMULATE,
                 arg1 = 7,
                 arg2 = uid_first,
                 arg3 = uid_second

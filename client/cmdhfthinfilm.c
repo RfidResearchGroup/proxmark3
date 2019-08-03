@@ -133,10 +133,10 @@ static int CmdHfThinFilmInfo(const char *Cmd) {
 int infoThinFilm(bool verbose) {
 
     clearCommandBuffer();
-    SendCommandNG(CMD_THINFILM_READ, NULL, 0);
+    SendCommandNG(CMD_HF_THINFILM_READ, NULL, 0);
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_THINFILM_READ, &resp, 1500)) {
+    if (!WaitForResponseTimeout(CMD_HF_THINFILM_READ, &resp, 1500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -192,12 +192,12 @@ static int CmdHfThinFilmSim(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SIMULATE_TAG_THINFILM, (uint8_t *)&data, datalen);
+    SendCommandNG(CMD_HF_THINFILM_SIMULATE, (uint8_t *)&data, datalen);
     PacketResponseNG resp;
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 
     while (!kbd_enter_pressed()) {
-        if (WaitForResponseTimeout(CMD_SIMULATE_TAG_THINFILM, &resp, 1500) == 0) continue;
+        if (WaitForResponseTimeout(CMD_HF_THINFILM_SIMULATE, &resp, 1500) == 0) continue;
         if (resp.status != PM3_SUCCESS) break;
     }
 

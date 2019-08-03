@@ -66,94 +66,94 @@ typedef struct {
 #define CMD_FLASHMEM_INFO                                                 0x0125
 
 // For low-frequency tags
-#define CMD_READ_TI_TYPE                                                  0x0202
-#define CMD_WRITE_TI_TYPE                                                 0x0203
-#define CMD_ACQUIRE_RAW_ADC_SAMPLES_125K                                  0x0205
-#define CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K                         0x0206
+#define CMD_LF_TI_READ                                                    0x0202
+#define CMD_LF_TI_WRITE                                                   0x0203
+#define CMD_LF_ACQ_RAW_ADC                                                0x0205
+#define CMD_LF_MOD_THEN_ACQ_RAW_ADC                                       0x0206
 #define CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K                                 0x0207
 #define CMD_DOWNLOADED_RAW_ADC_SAMPLES_125K                               0x0208
-#define CMD_UPLOAD_SIM_SAMPLES_125K                                       0x0209
-#define CMD_SIMULATE_TAG_125K                                             0x020A
-#define CMD_HID_DEMOD_FSK                                                 0x020B
-#define CMD_HID_SIM_TAG                                                   0x020C
-#define CMD_SET_LF_DIVISOR                                                0x020D
+#define CMD_LF_UPLOAD_SIM_SAMPLES                                         0x0209
+#define CMD_LF_SIMULATE                                                   0x020A
+#define CMD_LF_HID_DEMOD                                                  0x020B
+#define CMD_LF_HID_SIMULATE                                               0x020C
+#define CMD_LF_SET_DIVISOR                                                0x020D
 #define CMD_LF_SIMULATE_BIDIR                                             0x020E
 #define CMD_SET_ADC_MUX                                                   0x020F
-#define CMD_HID_CLONE_TAG                                                 0x0210
-#define CMD_EM410X_WRITE_TAG                                              0x0211
-#define CMD_INDALA_CLONE_TAG                                              0x0212
+#define CMD_LF_HID_CLONE                                                  0x0210
+#define CMD_LF_EM410X_WRITE                                               0x0211
+#define CMD_LF_INDALA_CLONE                                               0x0212
 // for 224 bits UID
-#define CMD_INDALA_CLONE_TAG_L                                            0x0213
-#define CMD_T55XX_READ_BLOCK                                              0x0214
-#define CMD_T55XX_WRITE_BLOCK                                             0x0215
-#define CMD_T55XX_RESET_READ                                              0x0216
-#define CMD_T55XX_WAKEUP                                                  0x0224
+#define CMD_LF_INDALA224_CLONE                                            0x0213
+#define CMD_LF_T55XX_READBL                                               0x0214
+#define CMD_LF_T55XX_WRITEBL                                              0x0215
+#define CMD_LF_T55XX_RESET_READ                                           0x0216
+#define CMD_LF_T55XX_WAKEUP                                               0x0224
 
-#define CMD_PCF7931_READ                                                  0x0217
-#define CMD_PCF7931_WRITE                                                 0x0223
-#define CMD_EM4X_READ_WORD                                                0x0218
-#define CMD_EM4X_WRITE_WORD                                               0x0219
-#define CMD_IO_DEMOD_FSK                                                  0x021A
-#define CMD_IO_CLONE_TAG                                                  0x021B
-#define CMD_EM410X_DEMOD                                                  0x021c
+#define CMD_LF_PCF7931_READ                                               0x0217
+#define CMD_LF_PCF7931_WRITE                                              0x0223
+#define CMD_LF_EM4X_READWORD                                              0x0218
+#define CMD_LF_EM4X_WRITEWORD                                             0x0219
+#define CMD_LF_IO_DEMOD                                                   0x021A
+#define CMD_LF_IO_CLONE                                                   0x021B
+#define CMD_LF_EM410X_DEMOD                                               0x021c
 // Sampling configuration for LF reader/sniffer
-#define CMD_SET_LF_SAMPLING_CONFIG                                        0x021d
-#define CMD_FSK_SIM_TAG                                                   0x021E
-#define CMD_ASK_SIM_TAG                                                   0x021F
-#define CMD_PSK_SIM_TAG                                                   0x0220
-#define CMD_AWID_DEMOD_FSK                                                0x0221
-#define CMD_VIKING_CLONE_TAG                                              0x0222
-#define CMD_T55XX_WAKEUP                                                  0x0224
-#define CMD_COTAG                                                         0x0225
-#define CMD_SET_LF_T55XX_CONFIG                                           0x0226
+#define CMD_LF_SAMPLING_SET_CONFIG                                        0x021d
+#define CMD_LF_FSK_SIMULATE                                               0x021E
+#define CMD_LF_ASK_SIMULATE                                               0x021F
+#define CMD_LF_PSK_SIMULATE                                               0x0220
+#define CMD_LF_AWID_DEMOD                                                 0x0221
+#define CMD_LF_VIKING_CLONE                                               0x0222
+#define CMD_LF_T55XX_WAKEUP                                               0x0224
+#define CMD_LF_COTAG_READ                                                 0x0225
+#define CMD_LF_T55XX_SET_CONFIG                                           0x0226
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags
-#define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693                             0x0300
-#define CMD_READ_SRI_TAG                                                  0x0303
-#define CMD_ISO_14443B_COMMAND                                            0x0305
-#define CMD_READER_ISO_15693                                              0x0310
-#define CMD_SIMTAG_ISO_15693                                              0x0311
-#define CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693                              0x0312
-#define CMD_ISO_15693_COMMAND                                             0x0313
-#define CMD_ISO_15693_FIND_AFI                                            0x0315
-#define CMD_LF_SNIFF_RAW_ADC_SAMPLES                                      0x0317
+#define CMD_HF_ISO15693_ACQ_RAW_ADC                                       0x0300
+#define CMD_HF_SRI_READ                                                   0x0303
+#define CMD_HF_ISO14443B_COMMAND                                          0x0305
+#define CMD_HF_ISO15693_READER                                            0x0310
+#define CMD_HF_ISO15693_SIMULATE                                          0x0311
+#define CMD_HF_ISO15693_RAWADC                                            0x0312
+#define CMD_HF_ISO15693_COMMAND                                           0x0313
+#define CMD_HF_ISO15693_FINDAFI                                           0x0315
+#define CMD_LF_SNIFF_RAW_ADC                                              0x0317
 
 // For Hitag2 transponders
-#define CMD_SNIFF_HITAG                                                   0x0370
-#define CMD_SIMULATE_HITAG                                                0x0371
-#define CMD_READER_HITAG                                                  0x0372
+#define CMD_LF_HITAG_SNIFF                                                0x0370
+#define CMD_LF_HITAG_SIMULATE                                             0x0371
+#define CMD_LF_HITAG_READER                                               0x0372
 
 // For HitagS
-#define CMD_SIMULATE_HITAG_S                                              0x0368
-#define CMD_TEST_HITAGS_TRACES                                            0x0367
-#define CMD_READ_HITAG_S                                                  0x0373
-#define CMD_WR_HITAG_S                                                    0x0375
+#define CMD_LF_HITAGS_SIMULATE                                            0x0368
+#define CMD_LF_HITAGS_TEST_TRACES                                         0x0367
+#define CMD_LF_HITAGS_READ                                                0x0373
+#define CMD_LF_HITAGS_WRITE                                               0x0375
 
-#define CMD_ANTIFUZZ_ISO_14443a                                           0x0380
-#define CMD_SIMULATE_TAG_ISO_14443B                                       0x0381
-#define CMD_SNIFF_ISO_14443B                                              0x0382
-#define CMD_SNIFF_ISO_14443a                                              0x0383
-#define CMD_SIMULATE_TAG_ISO_14443a                                       0x0384
-#define CMD_READER_ISO_14443a                                             0x0385
+#define CMD_HF_ISO14443A_ANTIFUZZ                                         0x0380
+#define CMD_HF_ISO14443B_SIMULATE                                         0x0381
+#define CMD_HF_ISO14443B_SNIFF                                            0x0382
+#define CMD_HF_ISO14443A_SNIFF                                            0x0383
+#define CMD_HF_ISO14443A_SIMULATE                                         0x0384
+#define CMD_HF_ISO14443A_READER                                           0x0385
 
-#define CMD_SIMULATE_TAG_LEGIC_RF                                         0x0387
-#define CMD_READER_LEGIC_RF                                               0x0388
-#define CMD_WRITER_LEGIC_RF                                               0x0389
+#define CMD_HF_LEGIC_SIMULATE                                             0x0387
+#define CMD_HF_LEGIC_READER                                               0x0388
+#define CMD_HF_LEGIC_WRITER                                               0x0389
 
-#define CMD_EPA_PACE_COLLECT_NONCE                                        0x038A
-#define CMD_EPA_PACE_REPLAY                                               0x038B
+#define CMD_HF_EPA_COLLECT_NONCE                                          0x038A
+#define CMD_HF_EPA_REPLAY                                                 0x038B
 
-#define CMD_LEGIC_INFO                                                    0x03BC
-#define CMD_LEGIC_ESET                                                    0x03BD
+#define CMD_HF_LEGIC_INFO                                                 0x03BC
+#define CMD_HF_LEGIC_ESET                                                 0x03BD
 
-#define CMD_SNIFF_ICLASS                                                  0x0392
-#define CMD_SIMULATE_TAG_ICLASS                                           0x0393
-#define CMD_READER_ICLASS                                                 0x0394
-#define CMD_READER_ICLASS_REPLAY                                          0x0395
+#define CMD_HF_ICLASS_SNIFF                                               0x0392
+#define CMD_HF_ICLASS_SIMULATE                                            0x0393
+#define CMD_HF_ICLASS_READER                                              0x0394
+#define CMD_HF_ICLASS_REPLAY                                              0x0395
 #define CMD_ICLASS_ISO14443A_WRITE                                        0x0397
-#define CMD_ICLASS_EML_MEMSET                                             0x0398
+#define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400
@@ -166,53 +166,53 @@ typedef struct {
 
 // For mifare commands
 #define CMD_MIFARE_SET_DBGMODE                                            0x0600
-#define CMD_MIFARE_EML_MEMCLR                                             0x0601
-#define CMD_MIFARE_EML_MEMSET                                             0x0602
-#define CMD_MIFARE_EML_MEMGET                                             0x0603
-#define CMD_MIFARE_EML_CARDLOAD                                           0x0604
+#define CMD_HF_MIFARE_EML_MEMCLR                                          0x0601
+#define CMD_HF_MIFARE_EML_MEMSET                                          0x0602
+#define CMD_HF_MIFARE_EML_MEMGET                                          0x0603
+#define CMD_HF_MIFARE_EML_LOAD                                            0x0604
 
 // magic chinese card commands
-#define CMD_MIFARE_CSETBLOCK                                              0x0605
-#define CMD_MIFARE_CGETBLOCK                                              0x0606
-#define CMD_MIFARE_CIDENT                                                 0x0607
+#define CMD_HF_MIFARE_CSETBL                                              0x0605
+#define CMD_HF_MIFARE_CGETBL                                              0x0606
+#define CMD_HF_MIFARE_CIDENT                                              0x0607
 
-#define CMD_SIMULATE_MIFARE_CARD                                          0x0610
+#define CMD_HF_MIFARE_SIMULATE                                            0x0610
 
-#define CMD_READER_MIFARE                                                 0x0611
-#define CMD_MIFARE_NESTED                                                 0x0612
-#define    CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES                            0x0613
+#define CMD_HF_MIFARE_READER                                              0x0611
+#define CMD_HF_MIFARE_NESTED                                              0x0612
+#define    CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                             0x0613
 
 
-#define CMD_MIFARE_READBL                                                 0x0620
-#define CMD_MIFAREU_READBL                                                0x0720
-#define CMD_MIFARE_READSC                                                 0x0621
-#define CMD_MIFAREU_READCARD                                              0x0721
-#define CMD_MIFARE_WRITEBL                                                0x0622
-#define CMD_MIFAREU_WRITEBL                                               0x0722
-#define CMD_MIFAREU_WRITEBL_COMPAT                                        0x0723
+#define CMD_HF_MIFARE_READBL                                              0x0620
+#define CMD_HF_MIFAREU_READBL                                             0x0720
+#define CMD_HF_MIFARE_READSC                                              0x0621
+#define CMD_HF_MIFAREU_READCARD                                           0x0721
+#define CMD_HF_MIFARE_WRITEBL                                             0x0622
+#define CMD_HF_MIFAREU_WRITEBL                                            0x0722
+#define CMD_HF_MIFAREU_WRITEBL_COMPAT                                     0x0723
 
-#define CMD_MIFARE_CHKKEYS                                                0x0623
-#define CMD_MIFARE_SETMOD                                                 0x0624
+#define CMD_HF_MIFARE_CHKKEYS                                             0x0623
+#define CMD_HF_MIFARE_SETMOD                                              0x0624
 
-#define CMD_MIFARE_SNIFFER                                                0x0630
+#define CMD_HF_MIFARE_SNIFF                                               0x0630
 //ultralightC
-#define CMD_MIFAREUC_AUTH                                                 0x0724
+#define CMD_HF_MIFAREUC_AUTH                                              0x0724
 //0x0725 and 0x0726 no longer used
-#define CMD_MIFAREUC_SETPWD                                               0x0727
+#define CMD_HF_MIFAREUC_SETPWD                                            0x0727
 
 
 // mifare desfire
-#define CMD_MIFARE_DESFIRE_READBL                                         0x0728
-#define CMD_MIFARE_DESFIRE_WRITEBL                                        0x0729
-#define CMD_MIFARE_DESFIRE_AUTH1                                          0x072a
-#define CMD_MIFARE_DESFIRE_AUTH2                                          0x072b
-#define CMD_MIFARE_DES_READER                                             0x072c
-#define CMD_MIFARE_DESFIRE_INFO                                           0x072d
-#define CMD_MIFARE_DESFIRE                                                0x072e
+#define CMD_HF_DESFIRE_READBL                                             0x0728
+#define CMD_HF_DESFIRE_WRITEBL                                            0x0729
+#define CMD_HF_DESFIRE_AUTH1                                              0x072a
+#define CMD_HF_DESFIRE_AUTH2                                              0x072b
+#define CMD_HF_DESFIRE_READER                                             0x072c
+#define CMD_HF_DESFIRE_INFO                                               0x072d
+#define CMD_HF_DESFIRE_COMMAND                                            0x072e
 
-#define CMD_MIFARE_COLLECT_NONCES                                         0x072f
+#define CMD_HF_MIFARE_COLLECT_NONCES                                      0x072f
 
-#define CMD_HF_SNIFFER                                                    0x0800
+#define CMD_HF_SNIFF                                                      0x0800
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

@@ -32,7 +32,7 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
         clearCommandBuffer();
-        SendCommandMIX(CMD_EPA_PACE_COLLECT_NONCE, (int)m, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_EPA_COLLECT_NONCE, (int)m, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
 
@@ -130,7 +130,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             clearCommandBuffer();
             // arg0: APDU number
             // arg1: offset into the APDU
-            SendCommandOLD(CMD_EPA_PACE_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
+            SendCommandOLD(CMD_HF_EPA_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
             WaitForResponse(CMD_ACK, &resp);
             if (resp.oldarg[0] != 0) {
                 PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
@@ -141,7 +141,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
     // now perform the replay
     clearCommandBuffer();
-    SendCommandMIX(CMD_EPA_PACE_REPLAY, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_EPA_REPLAY, 0, 0, 0, NULL, 0);
     WaitForResponse(CMD_ACK, &resp);
     if (resp.oldarg[0] != 0) {
         PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);

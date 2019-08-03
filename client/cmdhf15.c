@@ -212,7 +212,7 @@ static int getUID(uint8_t *buf) {
     for (retry = 0; retry < 3; retry++) {
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_ISO_15693_COMMAND, sizeof(data), 1, 1, data, sizeof(data));
+        SendCommandOLD(CMD_HF_ISO15693_COMMAND, sizeof(data), 1, 1, data, sizeof(data));
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
@@ -583,7 +583,7 @@ static int CmdHF15Samples(const char *Cmd) {
     if (cmdp == 'h') return usage_15_samples();
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693, NULL, 0);
+    SendCommandNG(CMD_HF_ISO15693_ACQ_RAW_ADC, NULL, 0);
 
     getSamples(0, false);
     return 0;
@@ -617,7 +617,7 @@ static int CmdHF15Info(const char *Cmd) {
     //PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_15693_COMMAND, reqlen, arg1, 1, req, reqlen);
+    SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "iso15693 card select failed");
@@ -680,7 +680,7 @@ static int CmdHF15Record(const char *Cmd) {
     if (cmdp == 'h') return usage_15_record();
 
     clearCommandBuffer();
-    SendCommandNG(CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693, NULL, 0);
+    SendCommandNG(CMD_HF_ISO15693_RAWADC, NULL, 0);
     return 0;
 }
 
@@ -707,7 +707,7 @@ static int CmdHF15Sim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Starting simulating UID %s", sprint_hex(uid, sizeof(uid)));
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SIMTAG_ISO_15693, 0, 0, 0, uid, 8);
+    SendCommandOLD(CMD_HF_ISO15693_SIMULATE, 0, 0, 0, uid, 8);
     return 0;
 }
 
@@ -721,7 +721,7 @@ static int CmdHF15Afi(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_ISO_15693_FIND_AFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO15693_FINDAFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
     return 0;
 }
 
@@ -798,7 +798,7 @@ static int CmdHF15Dump(const char *Cmd) {
         AddCrc15(req, 11);
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_ISO_15693_COMMAND, sizeof(req), 1, 1, req, sizeof(req));
+        SendCommandOLD(CMD_HF_ISO15693_COMMAND, sizeof(req), 1, 1, req, sizeof(req));
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
@@ -915,7 +915,7 @@ static int CmdHF15Raw(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_15693_COMMAND, datalen, fast, reply, data, datalen);
+    SendCommandOLD(CMD_HF_ISO15693_COMMAND, datalen, fast, reply, data, datalen);
 
     if (reply) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -970,7 +970,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     reqlen += 2;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_15693_COMMAND, reqlen, arg1, 1, req, reqlen);
+    SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(FAILED, "iso15693 card select failed");
@@ -1048,7 +1048,7 @@ static int CmdHF15Read(const char *Cmd) {
     reqlen += 2;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_15693_COMMAND, reqlen, arg1, 1, req, reqlen);
+    SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(NORMAL, "iso15693 card select failed");
@@ -1131,7 +1131,7 @@ static int CmdHF15Write(const char *Cmd) {
     PrintAndLogEx(NORMAL, "iso15693 writing to page %02d (0x%02X) | data ", pagenum, pagenum);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_15693_COMMAND, reqlen, arg1, 1, req, reqlen);
+    SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(FAILED, "iso15693 card timeout, data may be written anyway");
@@ -1352,7 +1352,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         AddCrc15(data[i], 7);
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_ISO_15693_COMMAND, sizeof(data[i]), fast, reply, data[i], sizeof(data[i]));
+        SendCommandOLD(CMD_HF_ISO15693_COMMAND, sizeof(data[i]), fast, reply, data[i], sizeof(data[i]));
 
         if (reply) {
             if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {

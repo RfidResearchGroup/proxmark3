@@ -527,7 +527,7 @@ static int CmdLegicRfSim(const char *Cmd) {
     uint64_t id = 1;
     sscanf(Cmd, " %" SCNi64, &id);
     clearCommandBuffer();
-    SendCommandMIX(CMD_SIMULATE_TAG_LEGIC_RF, id, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_LEGIC_SIMULATE, id, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -644,7 +644,7 @@ static int CmdLegicRfWrite(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_WRITER_LEGIC_RF, offset, len, IV, data, len);
+    SendCommandOLD(CMD_HF_LEGIC_WRITER, offset, len, IV, data, len);
 
 
     uint8_t timeout = 0;
@@ -755,7 +755,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     legic_chk_iv(&iv);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_LEGIC_RF, offset, len, iv, NULL, 0);
+    SendCommandMIX(CMD_HF_LEGIC_READER, offset, len, iv, NULL, 0);
     PacketResponseNG resp;
 
     uint8_t timeout = 0;
@@ -808,7 +808,7 @@ int legic_get_type(legic_card_select_t *card) {
     if (card == NULL) return 1;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LEGIC_INFO, NULL, 0);
+    SendCommandNG(CMD_HF_LEGIC_INFO, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         return 2;
@@ -842,7 +842,7 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
             conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandOLD(CMD_LEGIC_ESET, i, len, 0, src + i, len);
+        SendCommandOLD(CMD_HF_LEGIC_ESET, i, len, 0, src + i, len);
     }
 }
 
@@ -898,7 +898,7 @@ static int CmdLegicDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reading tag memory %d b...", dumplen);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_LEGIC_RF, 0x00, dumplen, 0x55, NULL, 0);
+    SendCommandMIX(CMD_HF_LEGIC_READER, 0x00, dumplen, 0x55, NULL, 0);
     PacketResponseNG resp;
 
     uint8_t timeout = 0;
@@ -1057,7 +1057,7 @@ static int CmdLegicRestore(const char *Cmd) {
             conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandOLD(CMD_WRITER_LEGIC_RF, i, len, 0x55, data + i, len);
+        SendCommandOLD(CMD_HF_LEGIC_WRITER, i, len, 0x55, data + i, len);
 
         uint8_t timeout = 0;
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -1254,7 +1254,7 @@ static int CmdLegicWipe(const char *Cmd) {
             conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandOLD(CMD_WRITER_LEGIC_RF, i, len, 0x55, data + i, len);
+        SendCommandOLD(CMD_HF_LEGIC_WRITER, i, len, 0x55, data + i, len);
 
         uint8_t timeout = 0;
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {

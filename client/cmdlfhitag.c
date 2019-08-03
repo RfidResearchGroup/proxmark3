@@ -262,7 +262,7 @@ static int CmdLFHitagSniff(const char *Cmd) {
     if (ctmp == 'h') return usage_hitag_sniff();
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SNIFF_HITAG, NULL, 0);
+    SendCommandNG(CMD_LF_HITAG_SNIFF, NULL, 0);
     return 0;
 }
 
@@ -277,7 +277,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     int res = 0;
     char filename[FILE_PATH_SIZE] = { 0x00 };
 
-    uint16_t cmd = CMD_SIMULATE_HITAG;
+    uint16_t cmd = CMD_LF_HITAG_SIMULATE;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -288,7 +288,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 's':
-                cmd = CMD_SIMULATE_HITAG_S;
+                cmd = CMD_LF_HITAGS_SIMULATE;
                 maxdatalen = 4 * 64;
                 cmdp++;
                 break;
@@ -459,7 +459,7 @@ static bool getHitagUid(uint32_t *uid) {
     hitag_data htd;
     memset(&htd, 0, sizeof(htd));
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_HITAG, RHT2F_UID_ONLY, 0, 0, &htd, sizeof(htd));
+    SendCommandMIX(CMD_LF_HITAG_READER, RHT2F_UID_ONLY, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -512,19 +512,19 @@ static int CmdLFHitagInfo(const char *Cmd) {
 //
 static int CmdLFHitagReader(const char *Cmd) {
 
-    uint16_t cmd = CMD_READER_HITAG;
+    uint16_t cmd = CMD_LF_HITAG_READER;
     hitag_data htd;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
     switch (htf) {
         case RHTSF_CHALLENGE: {
-            cmd = CMD_READ_HITAG_S;
+            cmd = CMD_LF_HITAGS_READ;
             num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd.auth.NrAr);
             num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd.auth.NrAr + 4);
             break;
         }
         case RHTSF_KEY: {
-            cmd = CMD_READ_HITAG_S;
+            cmd = CMD_LF_HITAGS_READ;
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd.crypto.key);
             break;
         }
@@ -633,9 +633,9 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
     clearCommandBuffer();
     if (file_given)
-        SendCommandOLD(CMD_TEST_HITAGS_TRACES, 1, 0, 0, data, datalen);
+        SendCommandOLD(CMD_LF_HITAGS_TEST_TRACES, 1, 0, 0, data, datalen);
     else
-        SendCommandMIX(CMD_TEST_HITAGS_TRACES, 0, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, 0, 0, 0, NULL, 0);
 
     free(data);
     return 0;
@@ -678,7 +678,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_WR_HITAG_S, htf, 0, arg2, &htd, sizeof(htd));
+    SendCommandOLD(CMD_LF_HITAGS_WRITE, htf, 0, arg2, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");

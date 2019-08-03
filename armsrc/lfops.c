@@ -432,7 +432,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     // tell client we are done
-    reply_ng(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, PM3_SUCCESS, NULL, 0);
+    reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_SUCCESS, NULL, 0);
 }
 
 /* blank r/w tag data stream
@@ -1012,7 +1012,7 @@ void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, bool ledcontrol, int numcycles) {
 
 void CmdHIDsimTAG(uint32_t hi, uint32_t lo, bool ledcontrol) {
     CmdHIDsimTAGEx(hi, lo, ledcontrol, -1);
-    reply_ng(CMD_HID_SIM_TAG, PM3_EOPABORTED, NULL, 0);
+    reply_ng(CMD_LF_HID_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
 
 // prepare a waveform pattern in the buffer based on the ID given then
@@ -1050,7 +1050,7 @@ void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk,
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
     if (ledcontrol) LED_A_OFF();
-    reply_ng(CMD_FSK_SIM_TAG, PM3_EOPABORTED, NULL, 0);
+    reply_ng(CMD_LF_FSK_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
 
 // compose ask waveform for one bit(ASK)
@@ -1139,7 +1139,7 @@ void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t c
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
     if (ledcontrol) LED_A_OFF();
-    reply_ng(CMD_ASK_SIM_TAG, PM3_EOPABORTED, NULL, 0);
+    reply_ng(CMD_LF_ASK_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
 
 //carrier can be 2,4 or 8
@@ -1186,7 +1186,7 @@ void CmdPSKsimTag(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, u
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
     if (ledcontrol) LED_A_OFF();
-    reply_ng(CMD_PSK_SIM_TAG, PM3_EOPABORTED, NULL, 0);
+    reply_ng(CMD_LF_PSK_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
@@ -1803,7 +1803,7 @@ void T55xxWriteBlock(uint8_t *data) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // cmd_send(CMD_ACK,0,0,0,0,0);
-    reply_ng(CMD_T55XX_WRITE_BLOCK, PM3_SUCCESS, NULL, 0);
+    reply_ng(CMD_LF_T55XX_WRITEBL, PM3_SUCCESS, NULL, 0);
     LED_A_OFF();
 }
 
@@ -1812,7 +1812,7 @@ void T55xxWriteBlock(uint8_t *data) {
 void T55xxWriteBlock(uint8_t *data) {
     t55xx_write_block_t *c = (t55xx_write_block_t *)data;
     T55xxWriteBlockExt(c->data, c->blockno, c->pwd, c->flags);
-    // reply_ng(CMD_T55XX_WRITE_BLOCK, PM3_SUCCESS, NULL, 0);
+    // reply_ng(CMD_LF_T55XX_WRITEBL, PM3_SUCCESS, NULL, 0);
 }
 */
 /*
@@ -1864,7 +1864,7 @@ bool brute_mem = (flags & 0x0100) >> 8;
     // Turn the field off
     if (!brute_mem) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        reply_ng(CMD_T55XX_READ_BLOCK, PM3_SUCCESS, NULL, 0);
+        reply_ng(CMD_LF_T55XX_READBL, PM3_SUCCESS, NULL, 0);
         LED_A_OFF();
     }
 }
@@ -1924,7 +1924,7 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
     // Turn the field off
     if (!brute_mem) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        reply_ng(CMD_T55XX_READ_BLOCK, PM3_SUCCESS, NULL, 0);
+        reply_ng(CMD_LF_T55XX_READBL, PM3_SUCCESS, NULL, 0);
         LED_A_OFF();
     }
 
@@ -2412,7 +2412,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
     DoPartialAcquisition(20, true, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_EM4X_READ_WORD, PM3_SUCCESS, NULL, 0);
+    reply_ng(CMD_LF_EM4X_READWORD, PM3_SUCCESS, NULL, 0);
     LED_A_OFF();
 }
 
@@ -2445,7 +2445,7 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
     DoPartialAcquisition(20, true, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_EM4X_WRITE_WORD, PM3_SUCCESS, NULL, 0);
+    reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
     LED_A_OFF();
 }
 

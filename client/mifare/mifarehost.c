@@ -25,7 +25,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
     while (true) {
         clearCommandBuffer();
-        SendCommandMIX(CMD_READER_MIFARE, arg0, blockno, key_type, NULL, 0);
+        SendCommandMIX(CMD_HF_MIFARE_READER, arg0, blockno, key_type, NULL, 0);
 
         //flush queue
         while (kbd_enter_pressed()) {
@@ -125,10 +125,10 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
     data[2] = clear_trace;
     data[3] = keycnt;
     memcpy(data + 4, keyBlock, 6 * keycnt);
-    SendCommandNG(CMD_MIFARE_CHKKEYS, data, (4 + 6 * keycnt));
+    SendCommandNG(CMD_HF_MIFARE_CHKKEYS, data, (4 + 6 * keycnt));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_MIFARE_CHKKEYS, &resp, 2500)) return PM3_ETIMEOUT;
+    if (!WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2500)) return PM3_ETIMEOUT;
     if (resp.status != PM3_SUCCESS) return resp.status;
 
     struct kr {
@@ -153,7 +153,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
 
     // send keychunk
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_CHKKEYS_FAST, (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size, keyBlock, 6 * size);
+    SendCommandOLD(CMD_HF_MIFARE_CHKKEYS_FAST, (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size, keyBlock, 6 * size);
     PacketResponseNG resp;
 
     while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -299,7 +299,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     struct Crypto1State *p1, *p2, *p3, *p4;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_NESTED, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate, key, 6);
+    SendCommandOLD(CMD_HF_MIFARE_NESTED, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate, key, 6);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return PM3_ETIMEOUT;
 
     // error during nested
@@ -419,7 +419,7 @@ out:
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
+    SendCommandOLD(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -456,10 +456,10 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
     payload.blockcnt = blocksCount;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_MIFARE_EML_MEMGET, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFARE_EML_MEMGET, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_MIFARE_EML_MEMGET, &resp, 1500) == 0) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_EML_MEMGET, &resp, 1500) == 0) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
@@ -495,7 +495,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
     memcpy(payload->data, data, size);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_MIFARE_EML_MEMSET, (uint8_t *)payload, sizeof(payload) + size);
+    SendCommandNG(CMD_HF_MIFARE_EML_MEMSET, (uint8_t *)payload, sizeof(payload) + size);
     return PM3_SUCCESS;
 }
 
@@ -536,7 +536,7 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_CSETBLOCK, params, blockNo, 0, data, 16);
+    SendCommandOLD(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, 16);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -553,7 +553,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_MIFARE_CGETBLOCK, params, blockNo, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_MIFARE_CGETBL, params, blockNo, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -905,7 +905,7 @@ int detect_classic_prng(void) {
     uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_ISO_14443a, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
+    SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "PRNG UID: Reply timeout.");
@@ -942,7 +942,7 @@ returns:
 int detect_classic_nackbug(bool verbose) {
 
     clearCommandBuffer();
-    SendCommandNG(CMD_MIFARE_NACK_DETECT, NULL, 0);
+    SendCommandNG(CMD_HF_MIFARE_NACK_DETECT, NULL, 0);
     PacketResponseNG resp;
 
     if (verbose)
@@ -955,7 +955,7 @@ int detect_classic_nackbug(bool verbose) {
             return PM3_EOPABORTED;
         }
 
-        if (WaitForResponseTimeout(CMD_MIFARE_NACK_DETECT, &resp, 500)) {
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_NACK_DETECT, &resp, 500)) {
 
             if (resp.status == PM3_EOPABORTED) {
                 PrintAndLogEx(WARNING, "button pressed. Aborted.");
@@ -1010,8 +1010,8 @@ void detect_classic_magic(void) {
     uint8_t isGeneration = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_MIFARE_CIDENT, NULL, 0);
-    if (WaitForResponseTimeout(CMD_MIFARE_CIDENT, &resp, 1500)) {
+    SendCommandNG(CMD_HF_MIFARE_CIDENT, NULL, 0);
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
         if (resp.status == PM3_SUCCESS)
             isGeneration = resp.data.asBytes[0];
     }

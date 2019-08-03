@@ -471,12 +471,12 @@ static char *getUlev1CardSizeStr(uint8_t fsize) {
 
 static void ul_switch_on_field(void) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
 }
 
 static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
+    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
     if (!resp.oldarg[0] && responseLength) return -1;
@@ -543,7 +543,7 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 static int ulc_authentication(uint8_t *key, bool switch_off_field) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
+    SendCommandOLD(CMD_HF_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 0;
     if (resp.oldarg[0] == 1) return 1;
@@ -630,7 +630,7 @@ static int ul_fudan_check(void) {
 
     uint8_t cmd[4] = {0x30, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
     clearCommandBuffer();
-    SendCommandOLD(CMD_READER_ISO_14443a, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
+    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return UL_ERROR;
     if (resp.oldarg[0] != 1) return UL_ERROR;
@@ -1562,7 +1562,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
+    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, blockNo, keytype, 0, cmddata, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -1667,7 +1667,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREU_READBL, blockNo, keytype, 0, authKeyPtr, datalen);
+    SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNo, keytype, 0, authKeyPtr, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK = resp.oldarg[0] & 0xff;
@@ -1933,7 +1933,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREU_READCARD, startPage, pages, keytype, authKeyPtr, dataLen);
+    SendCommandOLD(CMD_HF_MIFAREU_READCARD, startPage, pages, keytype, authKeyPtr, dataLen);
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
@@ -2235,7 +2235,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommandOLD(CMD_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
 
             wait4response(MFU_NTAG_SPECIAL_PWD);
 
@@ -2251,7 +2251,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         data[3] = 0;
         PrintAndLogEx(NORMAL, "special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));
         clearCommandBuffer();
-        SendCommandOLD(CMD_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
+        SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
         wait4response(MFU_NTAG_SPECIAL_PACK);
 
         // Signature
@@ -2259,7 +2259,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             memcpy(data, mem->signature + i, 4);
             PrintAndLogEx(NORMAL, "special SIG     block written 0x%X - %s\n", s, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommandOLD(CMD_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
             wait4response(s);
         }
 
@@ -2268,7 +2268,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             memcpy(data, mem->version + i, 4);
             PrintAndLogEx(NORMAL, "special VERSION block written 0x%X - %s\n", s, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommandOLD(CMD_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
             wait4response(s);
         }
     }
@@ -2282,7 +2282,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         //Send write Block
         memcpy(data, mem->data + (b * 4), 4);
         clearCommandBuffer();
-        SendCommandOLD(CMD_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
+        SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
         wait4response(b);
         printf(".");
         fflush(stdout);
@@ -2302,7 +2302,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             uint8_t b = blocks[i];
             memcpy(data, mem->data + (b * 4), 4);
             clearCommandBuffer();
-            SendCommandOLD(CMD_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
             wait4response(b);
             PrintAndLogEx(NORMAL, "special block written %u - %s\n", b, sprint_hex(data, 4));
         }
@@ -2477,7 +2477,7 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREUC_SETPWD, 0, 0, 0, pwd, 16);
+    SendCommandOLD(CMD_HF_MIFAREUC_SETPWD, 0, 0, 0, pwd, 16);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -2512,7 +2512,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
     // read block2.
     clearCommandBuffer();
-    SendCommandMIX(CMD_MIFAREU_READBL, 2, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 2;
@@ -2529,7 +2529,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[2] = uid[2];
     data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
+    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 3;
@@ -2541,7 +2541,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[2] = uid[5];
     data[3] = uid[6];
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
+    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 4;
@@ -2553,7 +2553,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[2] = oldblock2[2];
     data[3] = oldblock2[3];
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
+    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 5;
@@ -2570,7 +2570,7 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
     if (cmdp == 'r') {
         // read uid from tag
         clearCommandBuffer();
-        SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
         iso14a_card_select_t card;
@@ -2684,7 +2684,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     if (cmdp == 'r') {
         // read uid from tag
         clearCommandBuffer();
-        SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
         iso14a_card_select_t card;

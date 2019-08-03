@@ -69,7 +69,7 @@ end
 --
 -- Sends an instruction to do nothing, only disconnect
 function disconnect()
-    local command = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a, arg1 = 0,}
+    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER, arg1 = 0,}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
     return command:sendMIX(true)
@@ -93,7 +93,7 @@ end
 -- @return nil, errormessage if unsuccessfull
 local function getBlock(blockno)
     local block, err
-    local c = Command:newMIX{cmd = cmds.CMD_MIFAREU_READBL, arg1 = blockno, data = 0}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_MIFAREU_READBL, arg1 = blockno, data = 0}
     block, err = getblockdata(c:sendMIX(false))
     if not block then return oops(err) end
 

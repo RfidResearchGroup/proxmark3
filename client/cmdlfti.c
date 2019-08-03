@@ -276,7 +276,7 @@ out:
 static int CmdTIRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    SendCommandNG(CMD_READ_TI_TYPE, NULL, 0);
+    SendCommandNG(CMD_LF_TI_READ, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -294,7 +294,7 @@ static int CmdTIWrite(const char *Cmd) {
         return PM3_EINVARG;
     }
     clearCommandBuffer();
-    SendCommandMIX(CMD_WRITE_TI_TYPE, arg0, arg1, arg2, NULL, 0);
+    SendCommandMIX(CMD_LF_TI_WRITE, arg0, arg1, arg2, NULL, 0);
     return PM3_SUCCESS;
 }
 

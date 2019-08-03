@@ -42,7 +42,7 @@ static int CmdHFMFPInfo(const char *cmd) {
     infoHF14A(false, false);
 
     // Mifare Plus info
-    SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);

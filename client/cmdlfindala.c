@@ -411,11 +411,11 @@ static int CmdIndalaSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Simulating");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_PSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_PSK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_PSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -461,14 +461,14 @@ static int CmdIndalaClone(const char *Cmd) {
         datawords[5] = bytes_to_num(data + 20, 4);
         datawords[6] = bytes_to_num(data + 24, 4);
         clearCommandBuffer();
-        SendCommandOLD(CMD_INDALA_CLONE_TAG_L, 0, 0, 0, datawords, sizeof(datawords));
+        SendCommandOLD(CMD_LF_INDALA224_CLONE, 0, 0, 0, datawords, sizeof(datawords));
     } else {
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with RawID %s", sprint_hex(data, datalen));
         uint32_t datawords[2] = {0};
         datawords[0] = bytes_to_num(data, 4);
         datawords[1] = bytes_to_num(data + 4, 4);
         clearCommandBuffer();
-        SendCommandOLD(CMD_INDALA_CLONE_TAG, 0, 0, 0, datawords, sizeof(datawords));
+        SendCommandOLD(CMD_LF_INDALA_CLONE, 0, 0, 0, datawords, sizeof(datawords));
     }
 
     return PM3_SUCCESS;

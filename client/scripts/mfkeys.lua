@@ -90,7 +90,7 @@ local function checkBlock(blockno, testkeys, keytype)
 
         print(("Testing block %d, keytype %d, with %d keys"):format(blockno, keytype, chunksize))
 
-        local c = Command:newNG{cmd = cmds.CMD_MIFARE_CHKKEYS, data = d0..d1}
+        local c = Command:newNG{cmd = cmds.CMD_HF_MIFARE_CHKKEYS, data = d0..d1}
         key, err = checkCommand(c:sendNG(false))
 
         if key then return key, blockno end

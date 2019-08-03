@@ -101,7 +101,7 @@ static int CmdLFPCF7931Read(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_PCF7931_READ, NULL, 0);
+    SendCommandNG(CMD_LF_PCF7931_READ, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 1;
@@ -151,7 +151,7 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     buf[9] = configPcf.InitDelay;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_PCF7931_WRITE, block, bytepos, data, buf, sizeof(buf));
+    SendCommandOLD(CMD_LF_PCF7931_WRITE, block, bytepos, data, buf, sizeof(buf));
     //no ack?
     return 0;
 }

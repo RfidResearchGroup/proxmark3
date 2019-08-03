@@ -260,7 +260,7 @@ local function test(modulation)
 
         local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(p_config_cmd, 32), password, block, flags)
 
-        local wc = Command:newNG{cmd = cmds.CMD_T55XX_WRITE_BLOCK, data = data}
+        local wc = Command:newNG{cmd = cmds.CMD_LF_T55XX_WRITEBL, data = data}
         local response, err = wc:sendNG(false, TIMEOUT)
         if not response then return oops(err) end
 

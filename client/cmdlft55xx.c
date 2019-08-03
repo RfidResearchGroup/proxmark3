@@ -1136,7 +1136,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
 
     flags = (downlink_mode & 3) << 3;
     clearCommandBuffer();
-    SendCommandMIX(CMD_T55XX_WAKEUP, password, flags, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_T55XX_WAKEUP, password, flags, 0, NULL, 0);
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
 
     return PM3_SUCCESS;
@@ -1228,8 +1228,8 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     ng.blockno = block;
     ng.flags   = flags;
 
-    SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-    if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, 2000)) {
+    SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+    if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, 2000)) {
         PrintAndLogEx(ERR, "Error occurred, device did not ACK write operation. (May be due to old firmware)");
         return PM3_ETIMEOUT;
     }
@@ -1696,8 +1696,8 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, ui
     payload.downlink_mode = downlink_mode;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_T55XX_READ_BLOCK, (uint8_t *)&payload, sizeof(payload));
-    if (!WaitForResponseTimeout(CMD_T55XX_READ_BLOCK, NULL, 2500)) {
+    SendCommandNG(CMD_LF_T55XX_READBL, (uint8_t *)&payload, sizeof(payload));
+    if (!WaitForResponseTimeout(CMD_LF_T55XX_READBL, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }
@@ -1966,7 +1966,7 @@ static int CmdResetRead(const char *Cmd) {
     printf("DL : %d\n", downlink_mode);
     flags = downlink_mode << 3;
     clearCommandBuffer();
-    SendCommandNG(CMD_T55XX_RESET_READ, &flags, sizeof(flags));
+    SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
@@ -2076,7 +2076,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
     if (from_flash) {
         clearCommandBuffer();
-        SendCommandNG(CMD_T55XX_CHKPWDS, &flags, sizeof(flags));
+        SendCommandNG(CMD_LF_T55XX_CHK_PWDS, &flags, sizeof(flags));
         PacketResponseNG resp;
 
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -2649,7 +2649,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_SET_LF_T55XX_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
+    SendCommandOLD(CMD_LF_T55XX_SET_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
     return PM3_SUCCESS;
 }
 
