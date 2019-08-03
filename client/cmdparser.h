@@ -38,6 +38,7 @@ bool IfPm3Iso15693(void);
 bool IfPm3Felica(void);
 bool IfPm3Legicrf(void);
 bool IfPm3Iclass(void);
+bool IfPm3NfcBarcode(void);
 bool IfPm3Lcd(void);
 
 // Print help for each command in the command array

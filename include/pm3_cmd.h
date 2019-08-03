@@ -178,6 +178,7 @@ typedef struct {
     bool compiled_with_felica          : 1;
     bool compiled_with_legicrf         : 1;
     bool compiled_with_iclass          : 1;
+    bool compiled_with_nfcbarcode      : 1;
     // misc
     bool compiled_with_lcd             : 1;
 
@@ -185,7 +186,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 2
+#define CAPABILITIES_VERSION 3
 extern capabilities_t pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL

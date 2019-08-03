@@ -27,13 +27,14 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
-SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c thinfilm.c
+SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
 SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
 SRC_CRAPTO1 = crypto1.c des.c desfire_key.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
+SRC_NFCBARCODE = thinfilm.c
 
 #   SRC_BEE = bee.c
 
@@ -114,6 +115,7 @@ THUMBSRC = start.c \
 # These are to be compiled in ARM mode
 ARMSRC = fpgaloader.c \
     $(SRC_ISO14443a) \
+    $(SRC_NFCBARCODE) \
     $(SRC_ISO14443b) \
     $(SRC_CRAPTO1) \
     $(SRC_ICLASS) \

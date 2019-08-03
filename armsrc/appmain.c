@@ -527,6 +527,11 @@ void SendCapabilities(void) {
 #else
     capabilities.compiled_with_iclass = false;
 #endif
+#ifdef WITH_NFCBARCODE
+    capabilities.compiled_with_nfcbarcode = true;
+#else
+    capabilities.compiled_with_nfcbarcode = false;
+#endif
 #ifdef WITH_LCD
     capabilities.compiled_with_lcd = true;
 #else
@@ -1279,6 +1284,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             DetectNACKbug();
             break;
         }
+#endif
+
+#ifdef WITH_NFCBARCODE
         case CMD_HF_THINFILM_READ: {
             ReadThinFilm();
             break;

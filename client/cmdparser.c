@@ -133,6 +133,12 @@ bool IfPm3Iclass(void) {
     return pm3_capabilities.compiled_with_iclass;
 }
 
+bool IfPm3NfcBarcode(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_nfcbarcode;
+}
+
 bool IfPm3Lcd(void) {
     if (!IfPm3Present())
         return false;

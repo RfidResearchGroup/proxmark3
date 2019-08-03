@@ -111,7 +111,9 @@ PLATFORM_DEFS += \
     -DWITH_ISO14443a \
     -DWITH_ICLASS \
     -DWITH_FELICA \
+    -DWITH_NFCBARCODE \
     -DWITH_HFSNIFF
+
 
 # Standalone mode
 ifneq ($(strip $(filter $(PLATFORM_DEFS),$(STANDALONE_REQ_DEFS))),$(strip $(STANDALONE_REQ_DEFS)))

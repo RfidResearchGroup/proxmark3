@@ -213,9 +213,9 @@ static int CmdHfThinFilmList(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"info",    CmdHfThinFilmInfo,  IfPm3Flash,      "Tag information"},
-    {"list",    CmdHfThinFilmList,  AlwaysAvailable, "List ISO 14443A / Thinfilm history - not correct"},
-    {"sim",     CmdHfThinFilmSim,   IfPm3Flash,      "Fake Thinfilm tag"},
+    {"info",    CmdHfThinFilmInfo,  IfPm3NfcBarcode, "Tag information"},
+    {"list",    CmdHfThinFilmList,  AlwaysAvailable, "List NFC Barcode / Thinfilm history - not correct"},
+    {"sim",     CmdHfThinFilmSim,   IfPm3NfcBarcode, "Fake Thinfilm tag"},
     {NULL, NULL, NULL, NULL}
 };
 
