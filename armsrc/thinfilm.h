@@ -18,7 +18,6 @@ extern "C" {
 #include "pm3_cmd.h"
 #include "cmd.h"
 #include "apps.h"
-//#include "util.h"
 #include "iso14443a.h"
 
 void ReadThinFilm(void);

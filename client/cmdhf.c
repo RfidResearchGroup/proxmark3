@@ -18,7 +18,7 @@ static int usage_hf_search() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h               - This help");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_hf_sniff() {
@@ -34,7 +34,7 @@ static int usage_hf_sniff() {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "           hf sniff");
     PrintAndLogEx(NORMAL, "           hf sniff 1000 0");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_hf_tune() {
@@ -44,7 +44,7 @@ static int usage_hf_tune() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       <iter>               - number of iterations (default: infinite)");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHFSearch(const char *Cmd) {
@@ -57,46 +57,47 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
-            return 1;
+            return PM3_SUCCESS;
         }
     }
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false) > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
-            return 1;
+            return PM3_SUCCESS;
         }
     }
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
             DropField();
-            return 1;
+            return PM3_SUCCESS;
         }
+        // until refactoring of ISO15693 cmds,  this is needed.
         DropField();
     }
     if (IfPm3Legicrf()) {
-        if (readLegicUid(false) == 0) {
+        if (readLegicUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") " found\n");
-            return 1;
+            return PM3_SUCCESS;
         }
     }
     if (IfPm3Iso14443a()) {
-        if (readTopazUid() == 0) {
+        if (readTopazUid() == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
-            return 1;
+            return PM3_SUCCESS;
         }
     }
     // 14b and iclass is the longest test (put last)
     if (IfPm3Iso14443a()) {
         if (readHF14B(false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
-            return 1;
+            return PM3_SUCCESS;
         }
     }
     if (IfPm3Iclass()) {
         if (readIclass(false, false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
-            return 1;
+            return PM3_SUCCESS;
         }
     }
 
@@ -111,7 +112,7 @@ int CmdHFSearch(const char *Cmd) {
     */
 
     PrintAndLogEx(FAILED, "\nno known/supported 13.56 MHz tags found\n");
-    return 0;
+    return PM3_ESOFT;
 }
 
 int CmdHFTune(const char *Cmd) {
@@ -164,7 +165,7 @@ int CmdHFSniff(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_SNIFF, skippairs, skiptriggers, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -198,5 +199,5 @@ int CmdHF(const char *Cmd) {
 int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }

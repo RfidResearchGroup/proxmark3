@@ -2,7 +2,8 @@ local getopt = require('getopt')
 local cmds = require('commands')
 local lib14a = require('read14a')
 local utils = require('utils')
-
+--
+-- Refactored iceman, 2019
 copyright = ''
 author = 'Martin Holst Swende & Asper'
 version = 'v1.0.1'

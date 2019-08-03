@@ -26,7 +26,7 @@ static int usage_legic_calccrc(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic crc d deadbeef1122");
     PrintAndLogEx(NORMAL, "      hf legic crc d deadbeef1122 u 9A c 16");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_rdmem(void) {
     PrintAndLogEx(NORMAL, "Read data from a legic tag.");
@@ -41,7 +41,7 @@ static int usage_legic_rdmem(void) {
     PrintAndLogEx(NORMAL, "      hf legic rdmem 0 16        - reads from byte[0] 0x16 bytes(system header)");
     PrintAndLogEx(NORMAL, "      hf legic rdmem 0 4 55      - reads from byte[0] 0x4 bytes with IV 0x55");
     PrintAndLogEx(NORMAL, "      hf legic rdmem 0 100 55    - reads 0x100 bytes with IV 0x55");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_sim(void) {
     PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
@@ -55,7 +55,7 @@ static int usage_legic_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic sim 2");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_write(void) {
     PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size");
@@ -68,7 +68,7 @@ static int usage_legic_write(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic write o 10 d 11223344    - Write 0x11223344 starting from offset 0x10");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_reader(void) {
     PrintAndLogEx(NORMAL, "Read UID and type information from a legic tag.");
@@ -78,7 +78,7 @@ static int usage_legic_reader(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic reader");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_info(void) {
     PrintAndLogEx(NORMAL, "Reads information from a legic prime tag.");
@@ -89,7 +89,7 @@ static int usage_legic_info(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic info");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Reads all pages from LEGIC Prime MIM22, MIM256, MIM1024");
@@ -103,7 +103,7 @@ static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic dump");
     PrintAndLogEx(NORMAL, "      hf legic dump o myfile");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "Reads binary file and it autodetects card type and verifies that the file has the same size");
@@ -115,7 +115,7 @@ static int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic restore i myfile");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_eload(void) {
     PrintAndLogEx(NORMAL, "It loads binary dump from the file `filename.bin`");
@@ -129,7 +129,7 @@ static int usage_legic_eload(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic eload 2 myfile");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_esave(void) {
     PrintAndLogEx(NORMAL, "It saves binary dump into the file `filename.bin` or `cardID.bin`");
@@ -143,7 +143,7 @@ static int usage_legic_esave(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic esave 2 myfile");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_legic_wipe(void) {
     PrintAndLogEx(NORMAL, "Fills a legic tag memory with zeros. From byte7 and to the end.");
@@ -153,7 +153,7 @@ static int usage_legic_wipe(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic wipe");
-    return 0;
+    return PM3_SUCCESS;
 }
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
@@ -175,9 +175,9 @@ static int CmdLegicInfo(const char *Cmd) {
 
     // tagtype
     legic_card_select_t card;
-    if (legic_get_type(&card)) {
+    if (legic_get_type(&card) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed to identify tagtype");
-        return 1;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(SUCCESS, "Reading full tag memory of %d bytes...", card.cardsize);
@@ -186,14 +186,14 @@ static int CmdLegicInfo(const char *Cmd) {
     uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Cannot allocate memory");
-        return 2;
+        return PM3_EMALLOC;
     }
 
     int status = legic_read_mem(0, card.cardsize, 0x55, data, &datalen);
-    if (status > 0) {
+    if (status != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed reading memory");
         free(data);
-        return 3;
+        return status;
     }
 
     // Output CDF System area (9 bytes) plus remaining header area (12 bytes)
@@ -479,7 +479,7 @@ static int CmdLegicInfo(const char *Cmd) {
 
 out:
     free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // params:
@@ -497,7 +497,7 @@ static int CmdLegicRdmem(const char *Cmd) {
     // sanity checks
     if (len + offset >= MAX_LENGTH) {
         PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", MAX_LENGTH, len + offset);
-        return -1;
+        return PM3_EOUTOFBOUND;
     }
 
     PrintAndLogEx(SUCCESS, "Reading %d bytes, from offset %d", len, offset);
@@ -506,11 +506,11 @@ static int CmdLegicRdmem(const char *Cmd) {
     uint8_t *data = calloc(len, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Cannot allocate memory");
-        return -2;
+        return PM3_EMALLOC;
     }
 
     int status = legic_read_mem(offset, len, iv, data, &datalen);
-    if (status == 0) {
+    if (status == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "\n ##  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F");
         PrintAndLogEx(NORMAL, "-----+------------------------------------------------------------------------------------------------");
         print_hex_break(data, datalen, 32);
@@ -528,7 +528,7 @@ static int CmdLegicRfSim(const char *Cmd) {
     sscanf(Cmd, " %" SCNi64, &id);
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_LEGIC_SIMULATE, id, 0, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLegicRfWrite(const char *Cmd) {
@@ -607,9 +607,9 @@ static int CmdLegicRfWrite(const char *Cmd) {
 
     // tagtype
     legic_card_select_t card;
-    if (legic_get_type(&card)) {
+    if (legic_get_type(&card) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed to identify tagtype");
-        return -1;
+        return PM3_ESOFT;
     }
 
     legic_print_type(card.cardsize, 0);
@@ -618,12 +618,12 @@ static int CmdLegicRfWrite(const char *Cmd) {
     // UID 4+1 bytes can't be written to.
     if (offset < 5) {
         PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
-        return -2;
+        return PM3_EOUTOFBOUND;
     }
 
     if (len + offset >= card.cardsize) {
         PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
-        return -2;
+        return PM3_EOUTOFBOUND;
     }
 
     if (offset == 5 || offset == 6) {
@@ -634,7 +634,7 @@ static int CmdLegicRfWrite(const char *Cmd) {
         bool overwrite = (answer[0] == 'y' || answer[0] == 'Y');
         if (!overwrite) {
             PrintAndLogEx(NORMAL, "command cancelled");
-            return 0;
+            return PM3_EOPABORTED;
         }
     }
 
@@ -654,7 +654,7 @@ static int CmdLegicRfWrite(const char *Cmd) {
         fflush(stdout);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
-            return 1;
+            return PM3_ETIMEOUT;
         }
     }
     PrintAndLogEx(NORMAL, "\n");
@@ -662,10 +662,10 @@ static int CmdLegicRfWrite(const char *Cmd) {
     uint8_t isOK = resp.oldarg[0] & 0xFF;
     if (!isOK) {
         PrintAndLogEx(WARNING, "Failed writing tag");
-        return 1;
+        return PM3_ERFTRANS;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLegicCalcCrc(const char *Cmd) {
@@ -747,7 +747,7 @@ static int CmdLegicCalcCrc(const char *Cmd) {
     }
 
     if (data) free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen) {
@@ -765,7 +765,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
         fflush(stdout);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
-            return 1;
+            return PM3_ETIMEOUT;
         }
     }
     PrintAndLogEx(NORMAL, "\n");
@@ -774,7 +774,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     *outlen = resp.oldarg[1];
     if (!isOK) {
         PrintAndLogEx(WARNING, "Failed reading tag");
-        return 2;
+        return PM3_ESOFT;
     }
 
     if (*outlen != len)
@@ -783,9 +783,9 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     // copy data from device
     if (!GetFromDevice(BIG_BUF_EML, out, *outlen, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
-        return 4;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int legic_print_type(uint32_t tagtype, uint8_t spaces) {
@@ -801,24 +801,24 @@ int legic_print_type(uint32_t tagtype, uint8_t spaces) {
         PrintAndLogEx(SUCCESS, "%sTYPE : MIM%d card (1002 bytes)", spacer, tagtype);
     else
         PrintAndLogEx(INFO, "%sTYPE : Unknown %06x", spacer, tagtype);
-    return 0;
+    return PM3_SUCCESS;
 }
 int legic_get_type(legic_card_select_t *card) {
 
-    if (card == NULL) return 1;
+    if (card == NULL) return PM3_EINVARG;
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_LEGIC_INFO, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
-        return 2;
+        return PM3_ETIMEOUT;
 
     uint8_t isOK = resp.oldarg[0] & 0xFF;
     if (!isOK)
-        return 3;
+        return PM3_ESOFT;
 
     memcpy(card, (legic_card_select_t *)resp.data.asBytes, sizeof(legic_card_select_t));
-    return 0;
+    return PM3_SUCCESS;
 }
 void legic_chk_iv(uint32_t *iv) {
     if ((*iv & 0x7F) != *iv) {
@@ -888,9 +888,9 @@ static int CmdLegicDump(const char *Cmd) {
 
     // tagtype
     legic_card_select_t card;
-    if (legic_get_type(&card)) {
+    if (legic_get_type(&card) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed to identify tagtype");
-        return -1;
+        return PM3_ESOFT;
     }
     dumplen = card.cardsize;
 
@@ -908,7 +908,7 @@ static int CmdLegicDump(const char *Cmd) {
         fflush(stdout);
         if (timeout > 7) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
-            return 1;
+            return PM3_ETIMEOUT;
         }
     }
     PrintAndLogEx(NORMAL, "\n");
@@ -916,14 +916,14 @@ static int CmdLegicDump(const char *Cmd) {
     uint8_t isOK = resp.oldarg[0] & 0xFF;
     if (!isOK) {
         PrintAndLogEx(WARNING, "Failed dumping tag data");
-        return 2;
+        return PM3_ERFTRANS;
     }
 
     uint16_t readlen = resp.oldarg[1];
     uint8_t *data = calloc(readlen, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return 3;
+        return PM3_EMALLOC;
     }
 
     if (readlen != dumplen)
@@ -933,7 +933,7 @@ static int CmdLegicDump(const char *Cmd) {
     if (!GetFromDevice(BIG_BUF_EML, data, readlen, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(data);
-        return 4;
+        return PM3_ETIMEOUT;
     }
 
     // user supplied filename?
@@ -994,9 +994,9 @@ static int CmdLegicRestore(const char *Cmd) {
 
     // tagtype
     legic_card_select_t card;
-    if (legic_get_type(&card)) {
+    if (legic_get_type(&card) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed to identify tagtype");
-        return 1;
+        return PM3_ESOFT;
     }
     numofbytes = card.cardsize;
 
@@ -1004,7 +1004,7 @@ static int CmdLegicRestore(const char *Cmd) {
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return 2;
+        return PM3_EMALLOC;
     }
 
     legic_print_type(numofbytes, 0);
@@ -1029,7 +1029,7 @@ static int CmdLegicRestore(const char *Cmd) {
         PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%u != %u]", filesize, numofbytes);
         free(data);
         fclose(f);
-        return 4;
+        return PM3_EFILE;
     }
 
     // load file
@@ -1039,7 +1039,7 @@ static int CmdLegicRestore(const char *Cmd) {
     if (bytes_read == 0) {
         PrintAndLogEx(ERR, "File reading error");
         free(data);
-        return 2;
+        return PM3_EFILE;
     }
 
     PrintAndLogEx(SUCCESS, "Restoring to card");
@@ -1067,7 +1067,7 @@ static int CmdLegicRestore(const char *Cmd) {
             if (timeout > 7) {
                 PrintAndLogEx(WARNING, "\ncommand execution time out");
                 free(data);
-                return 1;
+                return PM3_ETIMEOUT;
             }
         }
         PrintAndLogEx(NORMAL, "\n");
@@ -1076,7 +1076,7 @@ static int CmdLegicRestore(const char *Cmd) {
         if (!isOK) {
             PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.oldarg[1] & 0xFF);
             free(data);
-            return 1;
+            return PM3_ERFTRANS;
         }
         PrintAndLogEx(SUCCESS, "Wrote chunk [offset %d | len %d | total %d", i, len, i + len);
     }
@@ -1118,7 +1118,7 @@ static int CmdLegicELoad(const char *Cmd) {
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return 3;
+        return PM3_EMALLOC;
     }
 
     // set up file
@@ -1143,7 +1143,7 @@ static int CmdLegicELoad(const char *Cmd) {
         free(data);
         fclose(f);
         f = NULL;
-        return 2;
+        return PM3_EFILE;
     }
     fclose(f);
     f = NULL;
@@ -1195,7 +1195,7 @@ static int CmdLegicESave(const char *Cmd) {
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return 3;
+        return PM3_EMALLOC;
     }
 
     // download emulator memory
@@ -1203,7 +1203,7 @@ static int CmdLegicESave(const char *Cmd) {
     if (!GetFromDevice(BIG_BUF_EML, data, numofbytes, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(data);
-        return 4;
+        return PM3_ETIMEOUT;
     }
     // user supplied filename?
     if (fileNlen < 1)
@@ -1213,7 +1213,7 @@ static int CmdLegicESave(const char *Cmd) {
 
     saveFileEML(filename, data, numofbytes, 8);
     saveFile(filename, ".bin", data, numofbytes);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLegicWipe(const char *Cmd) {
@@ -1224,16 +1224,16 @@ static int CmdLegicWipe(const char *Cmd) {
 
     // tagtype
     legic_card_select_t card;
-    if (legic_get_type(&card)) {
+    if (legic_get_type(&card) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed to identify tagtype");
-        return 1;
+        return PM3_ESOFT;
     }
 
     // set up buffer
     uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-        return 2;
+        return PM3_EMALLOC;
     }
 
     legic_print_type(card.cardsize, 0);
@@ -1264,7 +1264,7 @@ static int CmdLegicWipe(const char *Cmd) {
             if (timeout > 7) {
                 PrintAndLogEx(WARNING, "\ncommand execution time out");
                 free(data);
-                return 3;
+                return PM3_ETIMEOUT;
             }
         }
         PrintAndLogEx(NORMAL, "\n");
@@ -1273,18 +1273,18 @@ static int CmdLegicWipe(const char *Cmd) {
         if (!isOK) {
             PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.oldarg[1] & 0xFF);
             free(data);
-            return 4;
+            return PM3_ERFTRANS;
         }
     }
     PrintAndLogEx(SUCCESS, "ok\n");
     free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLegicList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdTraceList("legic");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] =  {
@@ -1307,7 +1307,7 @@ static command_t CommandTable[] =  {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHFLegic(const char *Cmd) {
@@ -1319,18 +1319,18 @@ int readLegicUid(bool verbose) {
 
     legic_card_select_t card;
     switch (legic_get_type(&card)) {
-        case 1:
-            return 2;
-        case 2:
+        case PM3_EINVARG:
+            return PM3_EINVARG;
+        case PM3_ETIMEOUT:
             if (verbose) PrintAndLogEx(WARNING, "command execution time out");
-            return 1;
-        case 3:
+            return PM3_ETIMEOUT;
+        case PM3_ESOFT:
             if (verbose) PrintAndLogEx(WARNING, "legic card select failed");
-            return 2;
+            return PM3_ESOFT;
         default:
             break;
     }
     PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
     legic_print_type(card.cardsize, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
