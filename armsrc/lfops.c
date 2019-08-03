@@ -156,11 +156,11 @@ t55xx_configurations_t T55xx_Timing  = {
 
 void printT55xxConfig(void) {
 
-#define PRN_NA   sprintf(s  + strlen(s), _RED_("   N/A     |"));
+#define PRN_NA   sprintf(s  + strlen(s), _RED_("   N/A    ") "| ");
     
     DbpString(_BLUE_("LF T55XX config"));
-    Dbprintf("                                [a]          [b]          [c]          [d]          [e]          [f]          [g]");
-    Dbprintf("   Mode                    |  startgap  |  writegap  |  write 0   |  write 1   |  readgap   |  write_2   |  write_3");
+    Dbprintf("           [r]                  [a]          [b]          [c]          [d]          [e]          [f]          [g]");
+    Dbprintf("           mode            |  startgap  |  writegap  |  write 0   |  write 1   |  readgap   |  write_2   |  write_3");
     Dbprintf("---------------------------+------------+------------+------------+------------+------------+------------+-------------");
     
     for (uint8_t i = 0; i < 4; i++) {
@@ -170,23 +170,23 @@ void printT55xxConfig(void) {
         
         switch (i) {
             case T55XX_DLMODE_FIXED :
-                sprintf(s, _YELLOW_("fixed bit length (default) |"));
+                sprintf(s, _YELLOW_("fixed bit length") _GREEN_("(default)") "|");
                 break;
             case T55XX_DLMODE_LLR :
-                sprintf(s, _YELLOW_("    long leading reference |"));
+                sprintf(s, _YELLOW_("    long leading reference") "|");
                 break;
             case T55XX_DLMODE_LEADING_ZERO :
-                sprintf(s, _YELLOW_("              leading zero |"));
+                sprintf(s, _YELLOW_("              leading zero") "|");
                 break;
             case T55XX_DLMODE_1OF4 :
-                sprintf(s, _YELLOW_("   1 of 4 coding reference |"));
+                sprintf(s, _YELLOW_("   1 of 4 coding reference") "|");
                 break;
             default:
                 break;
         }
         
         if (T55xx_Timing.m[i].start_gap != 0xFFFF)
-            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].start_gap / 8, T55xx_Timing.m[i].start_gap);
+            sprintf(s + strlen(s), " %3d (%4d) | ", T55xx_Timing.m[i].start_gap / 8, T55xx_Timing.m[i].start_gap);
         else
             PRN_NA;
 
