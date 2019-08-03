@@ -157,7 +157,7 @@ t55xx_configurations_t T55xx_Timing  = {
 void printT55xxConfig(void) {
 
 #define PRN_NA   sprintf(s  + strlen(s), _RED_("N/A") "| ");
-    
+
     DbpString(_BLUE_("LF T55XX config"));
     Dbprintf("           [r]               [a]   [b]   [c]   [d]   [e]   [f]   [g]");
     Dbprintf("           mode            |start|write|write|write| read|write|write");
@@ -168,7 +168,7 @@ void printT55xxConfig(void) {
 
         char s[160];
         memset(s, 0, sizeof(s));
-        
+
         switch (i) {
             case T55XX_DLMODE_FIXED :
                 sprintf(s, _YELLOW_("fixed bit length") _GREEN_("(default)") "|");
@@ -185,7 +185,7 @@ void printT55xxConfig(void) {
             default:
                 break;
         }
-        
+
         if (T55xx_Timing.m[i].start_gap != 0xFFFF)
             sprintf(s + strlen(s), " %3d | ", T55xx_Timing.m[i].start_gap / 8);
         else
@@ -194,33 +194,33 @@ void printT55xxConfig(void) {
         if (T55xx_Timing.m[i].write_gap != 0xFFFF)
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_gap / 8);
         else
-             PRN_NA;
+            PRN_NA;
 
         if (T55xx_Timing.m[i].write_0 != 0xFFFF)
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_0 / 8);
         else
-             PRN_NA;
+            PRN_NA;
 
         if (T55xx_Timing.m[i].write_1 != 0xFFFF)
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_1 / 8);
         else
-             PRN_NA;
+            PRN_NA;
 
         if (T55xx_Timing.m[i].read_gap != 0xFFFF)
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].read_gap / 8);
         else
             PRN_NA;
 
-        if (T55xx_Timing.m[i].write_2 != 0xFFFF && i == T55XX_DLMODE_1OF4 )
+        if (T55xx_Timing.m[i].write_2 != 0xFFFF && i == T55XX_DLMODE_1OF4)
             sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_2 / 8);
-            else
+        else
             PRN_NA
 
-        if (T55xx_Timing.m[i].write_3 != 0xFFFF && i == T55XX_DLMODE_1OF4)
-            sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_3 / 8);
+            if (T55xx_Timing.m[i].write_3 != 0xFFFF && i == T55XX_DLMODE_1OF4)
+                sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_3 / 8);
             else
-            PRN_NA;
-        
+                PRN_NA;
+
         s[strlen(s)] = 0;
         DbpString(s);
     }

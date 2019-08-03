@@ -407,8 +407,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                     bAuthenticating = true;
                     memcpy(tx, password, 4);
                     *txlen = 32;
-                }
-                else {
+                } else {
                     // stage 2, got config byte+password TAG, discard as will read later
                     if (bAuthenticating) {
                         bAuthenticating = false;
