@@ -136,13 +136,13 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
             EmSendCmdThinfilmRaw(ToSend, ToSendMax);
             if (!reader_detected) {
                 LED_B_ON();
-                Dbprintf("Reader detected, start beaming data");
+                //Dbprintf("Reader detected, start beaming data");
                 reader_detected = true;
             }
         } else {
             if (reader_detected) {
                 LED_B_OFF();
-                Dbprintf("Reader gone, stop beaming data");
+                //Dbprintf("Reader gone, stop beaming data");
                 reader_detected = false;
             }
         }

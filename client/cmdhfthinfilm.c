@@ -196,12 +196,17 @@ static int CmdHfThinFilmSim(const char *Cmd) {
     PacketResponseNG resp;
     PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 
-    while (!kbd_enter_pressed()) {
-        if (WaitForResponseTimeout(CMD_HF_THINFILM_SIMULATE, &resp, 1500) == 0) continue;
+    int ret;
+    while (!(ret = kbd_enter_pressed())) {
+        if (WaitForResponseTimeout(CMD_HF_THINFILM_SIMULATE, &resp, 500) == 0) continue;
         if (resp.status != PM3_SUCCESS) break;
     }
-
-    PrintAndLogEx(INFO, "Done");
+    if (ret) {
+        PrintAndLogEx(INFO, "Client side interrupted");
+        PrintAndLogEx(WARNING, "Simulation still running on Proxmark3 till next command or button press");
+    } else {
+        PrintAndLogEx(INFO, "Done");
+    }
     return PM3_SUCCESS;
 }
 
