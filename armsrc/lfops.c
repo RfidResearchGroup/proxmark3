@@ -156,13 +156,14 @@ t55xx_configurations_t T55xx_Timing  = {
 
 void printT55xxConfig(void) {
 
-#define PRN_NA   sprintf(s  + strlen(s), _RED_("   N/A    ") "| ");
+#define PRN_NA   sprintf(s  + strlen(s), _RED_("N/A") "| ");
     
     DbpString(_BLUE_("LF T55XX config"));
-    Dbprintf("           [r]                  [a]          [b]          [c]          [d]          [e]          [f]          [g]");
-    Dbprintf("           mode            |  startgap  |  writegap  |  write 0   |  write 1   |  readgap   |  write_2   |  write_3");
-    Dbprintf("---------------------------+------------+------------+------------+------------+------------+------------+-------------");
-    
+    Dbprintf("           [r]               [a]   [b]   [c]   [d]   [e]   [f]   [g]");
+    Dbprintf("           mode            |start|write|write|write| read|write|write");
+    Dbprintf("                           | gap | gap |  0  |  1  | gap |  2  |  3");
+    Dbprintf("---------------------------+-----+-----+-----+-----+-----+-----+------");
+
     for (uint8_t i = 0; i < 4; i++) {
 
         char s[160];
@@ -186,37 +187,37 @@ void printT55xxConfig(void) {
         }
         
         if (T55xx_Timing.m[i].start_gap != 0xFFFF)
-            sprintf(s + strlen(s), " %3d (%4d) | ", T55xx_Timing.m[i].start_gap / 8, T55xx_Timing.m[i].start_gap);
+            sprintf(s + strlen(s), " %3d | ", T55xx_Timing.m[i].start_gap / 8);
         else
             PRN_NA;
 
         if (T55xx_Timing.m[i].write_gap != 0xFFFF)
-            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_gap / 8, T55xx_Timing.m[i].write_gap);
+            sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_gap / 8);
         else
              PRN_NA;
 
         if (T55xx_Timing.m[i].write_0 != 0xFFFF)
-            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_0 / 8, T55xx_Timing.m[i].write_0);
+            sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_0 / 8);
         else
              PRN_NA;
 
         if (T55xx_Timing.m[i].write_1 != 0xFFFF)
-            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_1 / 8, T55xx_Timing.m[i].write_1);
+            sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_1 / 8);
         else
              PRN_NA;
 
         if (T55xx_Timing.m[i].read_gap != 0xFFFF)
-            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].read_gap / 8, T55xx_Timing.m[i].read_gap);
+            sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].read_gap / 8);
         else
             PRN_NA;
 
         if (T55xx_Timing.m[i].write_2 != 0xFFFF && i == T55XX_DLMODE_1OF4 )
-            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_2 / 8, T55xx_Timing.m[i].write_2);
+            sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_2 / 8);
             else
             PRN_NA
 
         if (T55xx_Timing.m[i].write_3 != 0xFFFF && i == T55XX_DLMODE_1OF4)
-            sprintf(s + strlen(s), "%3d (%4d) | ", T55xx_Timing.m[i].write_3 / 8, T55xx_Timing.m[i].write_3);
+            sprintf(s + strlen(s), "%3d | ", T55xx_Timing.m[i].write_3 / 8);
             else
             PRN_NA;
         
@@ -1700,7 +1701,7 @@ void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
 
     // Trigger T55x7 in mode.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    WaitUS(T55xx_Timing.m[downlink_mode].start_gap * 8);
+    WaitUS(T55xx_Timing.m[downlink_mode].start_gap);
 
     // If long leading 0 send long reference pulse
     if (downlink_mode == T55XX_DLMODE_LLR)
