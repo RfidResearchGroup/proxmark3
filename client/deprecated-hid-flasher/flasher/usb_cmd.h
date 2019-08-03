@@ -68,7 +68,6 @@ typedef struct {
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
 #define CMD_WRITE_TI_TYPE                                                 0x0203
-#define CMD_DOWNLOADED_RAW_BITS_TI_TYPE                                   0x0204
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_125K                                  0x0205
 #define CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K                         0x0206
 #define CMD_DOWNLOAD_RAW_ADC_SAMPLES_125K                                 0x0207
@@ -118,7 +117,6 @@ typedef struct {
 #define CMD_SIMTAG_ISO_15693                                              0x0311
 #define CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693                              0x0312
 #define CMD_ISO_15693_COMMAND                                             0x0313
-#define CMD_ISO_15693_COMMAND_DONE                                        0x0314
 #define CMD_ISO_15693_FIND_AFI                                            0x0315
 #define CMD_LF_SNIFF_RAW_ADC_SAMPLES                                      0x0317
 
@@ -132,7 +130,6 @@ typedef struct {
 #define CMD_TEST_HITAGS_TRACES                                            0x0367
 #define CMD_READ_HITAG_S                                                  0x0373
 #define CMD_WR_HITAG_S                                                    0x0375
-#define CMD_EMU_HITAG_S                                                   0x0376
 
 #define CMD_ANTIFUZZ_ISO_14443a                                           0x0380
 #define CMD_SIMULATE_TAG_ISO_14443B                                       0x0381
@@ -150,7 +147,6 @@ typedef struct {
 
 #define CMD_LEGIC_INFO                                                    0x03BC
 #define CMD_LEGIC_ESET                                                    0x03BD
-#define CMD_LEGIC_EGET                                                    0x03BE
 
 #define CMD_SNIFF_ICLASS                                                  0x0392
 #define CMD_SIMULATE_TAG_ICLASS                                           0x0393

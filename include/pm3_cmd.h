@@ -317,7 +317,6 @@ typedef struct {
 // For low-frequency tags
 #define CMD_READ_TI_TYPE                                                  0x0202
 #define CMD_WRITE_TI_TYPE                                                 0x0203
-#define CMD_DOWNLOADED_RAW_BITS_TI_TYPE                                   0x0204
 #define CMD_ACQUIRE_RAW_ADC_SAMPLES_125K                                  0x0205
 #define CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K                         0x0206
 #define CMD_DOWNLOAD_BIGBUF                                               0x0207
@@ -367,7 +366,6 @@ typedef struct {
 #define CMD_SIMTAG_ISO_15693                                              0x0311
 #define CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693                              0x0312
 #define CMD_ISO_15693_COMMAND                                             0x0313
-#define CMD_ISO_15693_COMMAND_DONE                                        0x0314
 #define CMD_ISO_15693_FIND_AFI                                            0x0315
 #define CMD_LF_SNIFF_RAW_ADC_SAMPLES                                      0x0317
 
@@ -381,7 +379,6 @@ typedef struct {
 #define CMD_SIMULATE_HITAG_S                                              0x0368
 #define CMD_READ_HITAG_S                                                  0x0373
 #define CMD_WR_HITAG_S                                                    0x0375
-#define CMD_EMU_HITAG_S                                                   0x0376
 
 #define CMD_ANTIFUZZ_ISO_14443a                                           0x0380
 #define CMD_SIMULATE_TAG_ISO_14443B                                       0x0381
@@ -392,7 +389,6 @@ typedef struct {
 
 #define CMD_READER_ISO_14443a                                             0x0385
 
-#define CMD_RAW_WRITER_LEGIC_RF                                           0x0386
 #define CMD_SIMULATE_TAG_LEGIC_RF                                         0x0387
 #define CMD_READER_LEGIC_RF                                               0x0388
 #define CMD_WRITER_LEGIC_RF                                               0x0389
@@ -402,7 +398,6 @@ typedef struct {
 
 #define CMD_LEGIC_INFO                                                    0x03BC
 #define CMD_LEGIC_ESET                                                    0x03BD
-#define CMD_LEGIC_EGET                                                    0x03BE
 
 #define CMD_ICLASS_READCHECK                                              0x038F
 #define CMD_ICLASS_CLONE                                                  0x0390
@@ -482,17 +477,6 @@ typedef struct {
 #define CMD_MIFARE_NACK_DETECT                                            0x0730
 
 #define CMD_HF_SNIFFER                                                    0x0800
-
-// For EMV Commands
-#define CMD_EMV_READ_RECORD                                               0x0700
-#define CMD_EMV_TRANSACTION                                               0x0701
-#define CMD_EMV_CLONE                                                     0x0702
-#define CMD_EMV_SIM                                                       0x0703
-#define CMD_EMV_TEST                                                      0x0704
-#define CMD_EMV_FUZZ_RATS                                                 0x0705
-#define CMD_EMV_GET_RANDOM_NUM                                            0x0706
-#define CMD_EMV_LOAD_VALUE                                                0x0707
-#define CMD_EMV_DUMP_CARD                                                 0x0708
 
 // For ThinFilm Kovio
 #define CMD_THINFILM_READ                                                 0x0810
