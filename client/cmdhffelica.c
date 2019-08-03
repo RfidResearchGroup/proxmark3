@@ -11,6 +11,7 @@
 
 static int CmdHelp(const char *Cmd);
 
+/*
 static int usage_hf_felica_sim(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa tag \n");
     PrintAndLogEx(NORMAL, "Usage: hf felica sim [h] t <type> [v]");
@@ -23,6 +24,7 @@ static int usage_hf_felica_sim(void) {
     PrintAndLogEx(NORMAL, "          hf felica sim t 1 ");
     return 0;
 }
+*/
 static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list felica'");
@@ -78,6 +80,8 @@ static int CmdHFFelicaReader(const char *Cmd) {
 }
 
 // simulate iso18092 / FeliCa tag
+// Commented, there is no counterpart in ARM at the moment
+/*
 static int CmdHFFelicaSim(const char *Cmd) {
     bool errors = false;
     uint8_t flags = 0;
@@ -140,6 +144,7 @@ static int CmdHFFelicaSim(const char *Cmd) {
     }
     return 0;
 }
+*/
 
 static int CmdHFFelicaSniff(const char *Cmd) {
 
@@ -535,7 +540,7 @@ static command_t CommandTable[] = {
     {"help",      CmdHelp,              AlwaysAvailable, "This help"},
     {"list",      CmdHFFelicaList,      AlwaysAvailable,     "List ISO 18092/FeliCa history"},
     {"reader",    CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
-    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
+//    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
     {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "sniff ISO 18092/Felica traffic"},
     {"raw",       CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
 
