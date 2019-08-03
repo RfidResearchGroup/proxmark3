@@ -478,14 +478,8 @@ static bool getHitagUid(uint32_t *uid) {
 }
 
 static int CmdLFHitagInfo(const char *Cmd) {
-    PrintAndLogEx(INFO, "Hitag2 tag information ");
-    PrintAndLogEx(INFO, "To be done!");
-    PrintAndLogEx(INFO, "------------------------------------");
-
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_info();
-
-    // pwd or key
 
     // read UID
     uint32_t uid = 0;
@@ -495,8 +489,8 @@ static int CmdLFHitagInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "UID: %08X", uid);
 
     // how to detemine Hitag types?
-
     // read block3,  get configuration byte.
+    PrintAndLogEx(FAILED, _RED_("TODO: This is a hardcoded example!"));
 
     // common configurations.
     printHitagConfiguration(0x06);
