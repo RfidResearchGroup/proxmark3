@@ -205,7 +205,7 @@ local function main(args)
       return
    end
 
-   parsed_tag = reader.parse1443a(tag)
+   parsed_tag = reader.parse14443a(tag)
    print('Tag type:', parsed_tag.name)
    print('Tag UID:', parsed_tag.uid)
    print('Tag len:', tag:len())

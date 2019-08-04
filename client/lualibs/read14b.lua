@@ -28,7 +28,7 @@ local ISO14B_COMMAND = {
     ISO14B_SELECT_SR = 0x80,
 }
 
-local function parse1443b(data)
+local function parse14443b(data)
     --[[
 
     Based on this struct :
@@ -79,7 +79,7 @@ local function read14443b(disconnect)
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
         if arg0 == 0 then
             data = string.sub(result, count)
-            info, err = parse1443b(data)
+            info, err = parse14443b(data)
         else
             err = 'iso14443b card select failed'
         end
@@ -126,7 +126,7 @@ end
 local library = {
     read = read14443b,
     waitFor14443b = waitFor14443b,
-    parse1443b  = parse1443b,
+    parse14443b  = parse14443b,
     connect = connect14443b,
     disconnect = disconnect14443b,
     ISO14B_COMMAND = ISO14B_COMMAND,
