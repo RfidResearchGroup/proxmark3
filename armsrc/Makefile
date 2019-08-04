@@ -147,7 +147,7 @@ version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o 
 	$(info [-] GEN $@)
 	$(Q)perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@
 
-fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
+fpga_version_info.c: $(FPGA_BITSTREAMS) | $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
 	$(Q)$(FPGA_COMPRESSOR) -v $(filter %.bit,$^) $@
 
@@ -155,7 +155,7 @@ $(OBJDIR)/fpga_all.o: $(OBJDIR)/fpga_all.bit.z
 	$(info [-] GEN $@)
 	$(Q)$(OBJCOPY) -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit $^ $@
 
-$(OBJDIR)/fpga_all.bit.z: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
+$(OBJDIR)/fpga_all.bit.z: $(FPGA_BITSTREAMS) | $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
 ifeq ($(Q),@)
 	@$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@ >/dev/null
@@ -183,7 +183,7 @@ $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(info [-] GEN $@)
 	$(Q)$(OBJCOPY) -O binary -I elf32-littlearm --only-section .data $^ $@
 
-$(OBJDIR)/fullimage.data.bin.z: $(OBJDIR)/fullimage.data.bin $(FPGA_COMPRESSOR)
+$(OBJDIR)/fullimage.data.bin.z: $(OBJDIR)/fullimage.data.bin | $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
 ifeq ($(Q),@)
 	@$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@ >/dev/null
