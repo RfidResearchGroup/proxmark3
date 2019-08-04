@@ -42,6 +42,7 @@
 #include <stdbool.h> // for bool
 #include "parity.h"  // for parity test
 #include "commonutil.h" // colors
+#include "pm3_cmd.h" // error codes
 //**********************************************************************************************
 //---------------------------------Utilities Section--------------------------------------------
 //**********************************************************************************************
@@ -223,13 +224,13 @@ size_t addParity(uint8_t *src, uint8_t *dest, uint8_t sourceLen, uint8_t pLen, u
 }
 
 // array must be size dividable with 8
-uint8_t bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest) {
-    if ((size == 0) || (size % 8) != 0) return 0;
+int bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest) {
+    if ((size == 0) || (size % 8) != 0) return PM3_EINVARG;
 
     for (uint32_t i = 0; i < (size / 8); i++)
         dest[i] = bytebits_to_byte((uint8_t *) bits + (i * 8), 8);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 uint32_t bytebits_to_byte(uint8_t *src, size_t numbits) {

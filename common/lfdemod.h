@@ -49,7 +49,7 @@ int      askdemod(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr
 int      askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType, int *startIdx);
 void     askAmp(uint8_t *bits, size_t size);
 int      BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert);
-uint8_t  bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
+int      bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
 uint32_t bytebits_to_byte(uint8_t *src, size_t numbits);
 uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits);
 uint16_t countFC(uint8_t *bits, size_t size, bool fskAdj);
