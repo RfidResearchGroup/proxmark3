@@ -444,7 +444,7 @@ int main(int argc, char *argv[]) {
         }
 
         // go to interactive instead of quitting after a script/command
-        if(strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--interactive") == 0){
+        if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--interactive") == 0) {
             stayInCommandLoop = true;
             continue;
         }
