@@ -1382,12 +1382,12 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     //This is used for responding to READ-block commands or other data which is dynamically generated
     //First the 'trace'-data, not encoded for FPGA
-    uint8_t *data_generic_trace = BigBuf_malloc(8 + 2);//8 bytes data + 2byte CRC is max tag answer
+    uint8_t *data_generic_trace = BigBuf_malloc((8 * 4) + 2);//8 bytes data + 2byte CRC is max tag answer
 
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
-    uint8_t *data_response = BigBuf_malloc((8 + 2) * 2 + 2);
-
+    uint8_t *data_response = BigBuf_malloc(((8 * 4) + 2) * 2 + 2);
+    
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
     SpinDelay(100);
     StartCountSspClk();
@@ -1544,12 +1544,25 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
             goto send;
         } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4) { // 0x0C
             //Read block
-            uint16_t blk = receivedCmd[1];
+            uint8_t blk = receivedCmd[1];
             //Take the data...
             memcpy(data_generic_trace, emulator + (blk << 3), 8);
             AddCrc(data_generic_trace, 8);
             trace_data = data_generic_trace;
             trace_data_size = 10;
+            CodeIClassTagAnswer(trace_data, trace_data_size);
+            memcpy(data_response, ToSend, ToSendMax);
+            modulated_response = data_response;
+            modulated_response_size = ToSendMax;
+            goto send;
+        } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ4 && len == 4) {  // 0x06
+            //Read block
+            uint8_t blk = receivedCmd[1];
+            //Take the data...
+            memcpy(data_generic_trace, emulator + (blk << 3), 8 * 4);
+            AddCrc(data_generic_trace, 8 * 4);
+            trace_data = data_generic_trace;
+            trace_data_size = 34;
             CodeIClassTagAnswer(trace_data, trace_data_size);
             memcpy(data_response, ToSend, ToSendMax);
             modulated_response = data_response;
