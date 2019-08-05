@@ -888,8 +888,8 @@ void RAMFUNC SniffIClass(void) {
     for (;;) {
         WDT_HIT();
 
-        if ( checked == 1000 ) {
-            if (BUTTON_PRESS() || data_available() ) break;
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) break;
             checked = 0;
         } else {
             checked++;
@@ -1008,9 +1008,9 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) 
     for (;;) {
 
         WDT_HIT();
-        
-        if ( checked == 1000 ) {
-            if( BUTTON_PRESS() || data_available() ) return false;
+
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) return false;
             checked = 0;
         } else {
             checked++;
@@ -1404,7 +1404,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
     uint8_t *data_response = BigBuf_malloc(((8 * 4) + 2) * 2 + 2);
-    
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
     SpinDelay(100);
     StartCountSspClk();
@@ -1665,8 +1665,8 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
     uint16_t checked = 0;
     for (;;) {
 
-        if ( checked == 1000 ) {
-            if ( BUTTON_PRESS() || data_available()) return 0;
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) return 0;
             checked = 0;
         } else {
             checked++;
@@ -1836,13 +1836,13 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
-    
+
     uint16_t checked = 0;
-    
+
     for (;;) {
         WDT_HIT();
-        
-        if ( checked == 1000 ) {
+
+        if (checked == 1000) {
             if (BUTTON_PRESS() || data_available()) return false;
             checked = 0;
         } else {
@@ -2139,8 +2139,8 @@ void ReaderIClass(uint8_t arg0) {
             }
         }
         LED_B_OFF();
-        
-        if ( checked == 1000 ) {
+
+        if (checked == 1000) {
             userCancelled = BUTTON_PRESS() || data_available();
             checked = 0;
         } else {
@@ -2344,7 +2344,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t startup_limit = 10;
     while (read_status != 2) {
 
-        if ( checked == 1000 ) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || !data_available()) goto out;
             checked = 0;
         } else {
@@ -2364,7 +2364,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     for (i = 0; i < keyCount; i++) {
 
         // Allow button press / usb cmd to interrupt device
-        if ( checked == 1000 ) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || !data_available()) goto out;
             checked = 0;
         } else {

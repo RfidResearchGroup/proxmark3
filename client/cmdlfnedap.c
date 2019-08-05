@@ -58,7 +58,7 @@ static int usage_lf_nedap_sim(void) {
     PrintAndLogEx(NORMAL, "      h               : This help");
     PrintAndLogEx(NORMAL, "      s <subtype>     : subtype, default=5");
     PrintAndLogEx(NORMAL, "      c <code>        : customerCode");
-    PrintAndLogEx(NORMAL, "      i <id>          : ID  (max 99999)");    
+    PrintAndLogEx(NORMAL, "      i <id>          : ID  (max 99999)");
     PrintAndLogEx(NORMAL, "      l               : long (128), default to short (64)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -88,7 +88,7 @@ static uint8_t isEven_64_63(const uint8_t *data) { // 8
 //NEDAP demod - ASK/Biphase (or Diphase),  RF/64 with preamble of 1111111110  (always a 128 bit data stream)
 static int CmdLFNedapDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    
+
     uint8_t data[16], buffer[7], r0, r1, r2, r3, r4, r5, idxC1, idxC2, idxC3, idxC4, idxC5, fixed0, fixed1, unk1, unk2, subtype; // 4 bits
     size_t size, offset = 0;
     uint16_t checksum, customerCode; // 12 bits
@@ -104,11 +104,11 @@ static int CmdLFNedapDemod(const char *Cmd) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NEDAP: preamble not found");
         return PM3_ESOFT;
     }
-    
+
     // set plot
     setDemodBuff(DemodBuffer, size, offset);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (g_DemodClock * offset));
-    
+
     // sanity checks
     if ((size != 128) && (size != 64)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NEDAP: Size not correct: %d", size);
@@ -124,7 +124,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
     int ret = PM3_SUCCESS;
 
     // first part
-    
+
     // parity 1 check
     if (isEven_64_63(data) != (data[7] & 0x01)) {
         PrintAndLogEx(ERR, "Bad parity (%1u)", data[7] & 0x01);
@@ -137,7 +137,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
         PrintAndLogEx(ERR, "Bad header");
         ret = PM3_ESOFT;
     }
-    
+
     buffer[0] = (data[0] << 7) | (data[1] >> 1);
     buffer[1] = (data[1] << 7) | (data[2] >> 1);
     buffer[2] = (data[2] << 7) | (data[3] >> 1);
@@ -146,7 +146,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
     // CHECKSUM
     init_table(CRC_XMODEM);
-    checksum = crc16_xmodem(buffer, 5);    
+    checksum = crc16_xmodem(buffer, 5);
 
     buffer[6] = (data[3] << 7) | ((data[4] & 0xe0) >> 1) | ((data[4] & 0x01) << 3) | ((data[5] & 0xe0) >> 5);
     buffer[5] = (data[5] << 7) | ((data[6] & 0xe0) >> 1) | ((data[6] & 0x01) << 3) | ((data[7] & 0xe0) >> 5);
@@ -156,11 +156,11 @@ static int CmdLFNedapDemod(const char *Cmd) {
     subtype = (data[1] & 0x1e) >> 1;
     customerCode = ((data[1] & 0x01) << 11) | (data[2] << 3) | ((data[3] & 0xe0) >> 5);
 
-    if ( isValid == false ) {
-         PrintAndLogEx(ERR, "Checksum : %s (calc 0x%04X != 0x%04X)", _RED_("failed"), checksum, *(uint16_t *)(buffer + 5));
-         ret = PM3_ESOFT;
+    if (isValid == false) {
+        PrintAndLogEx(ERR, "Checksum : %s (calc 0x%04X != 0x%04X)", _RED_("failed"), checksum, *(uint16_t *)(buffer + 5));
+        ret = PM3_ESOFT;
     }
-    
+
     idxC1 = invTranslateTable[(data[3] & 0x1e) >> 1];
     idxC2 = invTranslateTable[(data[4] & 0x1e) >> 1];
     idxC3 = invTranslateTable[(data[5] & 0x1e) >> 1];
@@ -178,45 +178,45 @@ static int CmdLFNedapDemod(const char *Cmd) {
         badgeId = r1 * 10000 + r2 * 1000 + r3 * 100 + r4 * 10 + r5;
 
         PrintAndLogEx(SUCCESS, "NEDAP Tag Found: Card ID "_YELLOW_("%05u")" subtype: "_YELLOW_("%1u")" customer code: "_YELLOW_("%03x"), badgeId, subtype, customerCode);
-        PrintAndLogEx(SUCCESS, "Checksum is %s (0x%04X)",  _GREEN_("OK"), checksum );
-        PrintAndLogEx(SUCCESS, "Raw: %s", sprint_hex(data, size/8));
+        PrintAndLogEx(SUCCESS, "Checksum is %s (0x%04X)",  _GREEN_("OK"), checksum);
+        PrintAndLogEx(SUCCESS, "Raw: %s", sprint_hex(data, size / 8));
     } else {
         PrintAndLogEx(ERR, "Invalid idx (1:%02x - 2:%02x - 3:%02x - 4:%02x - 5:%02x)", idxC1, idxC2, idxC3, idxC4, idxC5);
         ret = PM3_ESOFT;
     }
 
     if (size > 64) {
-        // second part     
+        // second part
         PrintAndLogEx(DEBUG, "NEDAP Tag, second part found");
-        
+
         if (isEven_64_63(data + 8) != (data[15] & 0x01)) {
             PrintAndLogEx(ERR, "Bad parity (%1u)", data[15] & 0x01);
             return ret;
         }
-        
-        // validation 
-        if (   (data[8] & 0x80) 
-            && (data[9] & 0x40) 
-            && (data[10] & 0x20) 
-            && (data[11] & 0x10) 
-            && (data[12] & 0x08) 
-            && (data[13] & 0x04) 
-            && (data[14] & 0x02)) {
+
+        // validation
+        if ((data[8] & 0x80)
+                && (data[9] & 0x40)
+                && (data[10] & 0x20)
+                && (data[11] & 0x10)
+                && (data[12] & 0x08)
+                && (data[13] & 0x04)
+                && (data[14] & 0x02)) {
             PrintAndLogEx(ERR, "Bad zeros");
             return ret;
         }
-    
-        // 
+
+        //
         r4 = (data[8] >> 3) & 0x0F;
         r5 = ((data[8] << 1) & 0x0F) | (data[9] >> 7);
         r2 = (data[9] >> 2) & 0x0F;
         r3 = ((data[9] << 2) & 0x0F) | (data[10] >> 6);
         r0 = ((data[10] >> 1) & 0x0F);
         r1 = ((data[10] << 3) & 0x0F) | (data[11] >> 5);
-        
+
         fixed0 = ((data[11] << 4) & 0xF0) | (data[12] >> 4);
         fixed1 = ((data[12] << 5) & 0xE0) | (data[13] >> 3);
-        
+
         unk1 = ((data[13] << 6) & 0xC0) | (data[14] >> 2);
         unk2 = ((data[14] << 7) & 0xC0) | (data[15] >> 1);
 
@@ -228,7 +228,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
             if ((fixed0 == FIXED_71) && (fixed1 == FIXED_40))
                 PrintAndLogEx(DEBUG, "Fixed part {0 = 0x%02x, 1 = 0x%02x}", fixed0, fixed1);
-            else 
+            else
                 PrintAndLogEx(DEBUG, "Bad fixed: {0 = 0x%02x (%0x02x), 1 = 0x%02x (%0x02x)}", fixed0, FIXED_71, fixed1, FIXED_40);
 
             PrintAndLogEx(DEBUG, "Unknown part  {1 = 0x%02x, 2 = 0x%02x}", unk1, unk2);
@@ -237,7 +237,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
             return ret;
         }
     }
-    
+
     return PM3_SUCCESS;
 }
 
@@ -390,7 +390,7 @@ static int CmdLfNedapGen(const char *Cmd) {
     //Validations
     if ((!customerCode) || (!id) || (subType > 0xF) || (customerCode > 0xFFF) || (id > 99999))
         errors = true;
-    
+
     if (errors || cmdp == 0) {
         usage();
         return PM3_EINVARG;
@@ -402,13 +402,13 @@ static int CmdLfNedapGen(const char *Cmd) {
                   , subType
                   , customerCode
                   , id
-            );
+                 );
 
     NedapGen(subType, customerCode, id, isLong, data);
-    
+
     for (i = 0; i < (isLong ? 16 : 8); i++)
         num_to_bytebits(data[i], 8, bin + i * 8);
-    
+
     setDemodBuff(bin, (isLong ? 128 : 64), 0);
     return PM3_SUCCESS;
 }
@@ -421,16 +421,16 @@ int CmdLFNedapClone(const char *Cmd) {
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_nedap_clone();
 
     usage_to_be_displayed = usage_lf_nedap_clone;
-    
+
     int ret = CmdLfNedapGen(Cmd);
     if (ret != PM3_SUCCESS)
         return ret;
-    
+
     if ((DemodBufferLen != 128) && (DemodBufferLen != 64)) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
-    
+
     CmdPrintDemodBuff("x");
 
 // What we had before in commented code:
@@ -479,7 +479,7 @@ int CmdLFNedapClone(const char *Cmd) {
     }
     // TODO info correct?
     PrintAndLogEx(INFO, "The block 0 was changed (eXtended) which can be hard to detect. Configure it manually with");
-    PrintAndLogEx(INFO,  _YELLOW_("`lf t55xx config b 64 d BI i 1 o 32`") );
+    PrintAndLogEx(INFO,  _YELLOW_("`lf t55xx config b 64 d BI i 1 o 32`"));
     return PM3_SUCCESS;
 }
 
@@ -489,11 +489,11 @@ static int CmdLFNedapSim(const char *Cmd) {
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_nedap_sim();
 
     usage_to_be_displayed = usage_lf_nedap_sim;
-    
+
     int ret = CmdLfNedapGen(Cmd);
     if (ret != PM3_SUCCESS)
         return ret;
-    
+
     if ((DemodBufferLen != 128) && (DemodBufferLen != 64)) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
@@ -520,7 +520,7 @@ static int CmdLFNedapSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
-    
+
     return PM3_SUCCESS;
 }
 
