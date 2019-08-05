@@ -131,8 +131,8 @@ static int CmdNoralsyClone(const char *Cmd) {
     uint8_t bits[96];
     memset(bits, 0, sizeof(bits));
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_noralsy_clone();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_noralsy_clone();
 
     id = param_get32ex(Cmd, 0, 0, 10);
     year = param_get32ex(Cmd, 1, 2000, 10);
@@ -187,8 +187,8 @@ static int CmdNoralsySim(const char *Cmd) {
     uint16_t year = 0;
     uint32_t id = 0;
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H')
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h')
         return usage_lf_noralsy_sim();
 
     id = param_get32ex(Cmd, 0, 0, 10);
@@ -218,6 +218,7 @@ static int CmdNoralsySim(const char *Cmd) {
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
+
     return PM3_SUCCESS;
 }
 
