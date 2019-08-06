@@ -28,7 +28,7 @@ void SpinDelayUs(int us) {
 
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-        if (now >= (uint16_t)(start + ticks))
+        if (now == (uint16_t)(start + ticks))
             return;
 
         WDT_HIT();

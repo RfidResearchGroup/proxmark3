@@ -216,7 +216,7 @@ int BUTTON_CLICKED(int ms) {
             // Still haven't let it off
             else
                 // Have we held down a full second?
-                if (now >= (uint16_t)(start + ticks))
+                if (now == (uint16_t)(start + ticks))
                     return BUTTON_HOLD;
         }
 
@@ -227,7 +227,7 @@ int BUTTON_CLICKED(int ms) {
                 return BUTTON_DOUBLE_CLICK;
 
         // Have we ran out of time to double click?
-            else if (now >= (uint16_t)(start + ticks))
+            else if (now == (uint16_t)(start + ticks))
                 // At least we did a single click
                 return BUTTON_SINGLE_CLICK;
 
@@ -271,7 +271,7 @@ int BUTTON_HELD(int ms) {
             return BUTTON_SINGLE_CLICK;
 
         // Have we waited the full second?
-        else if (now >= (uint16_t)(start + ticks))
+        else if (now == (uint16_t)(start + ticks))
             return BUTTON_HOLD;
 
         WDT_HIT();
