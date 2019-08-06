@@ -1611,7 +1611,7 @@ int CmdTuneSamples(const char *Cmd) {
     }
 
     if (test1 > 0) {
-        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
+        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134kHz, 95 is 125kHz.\n\n");
         GraphTraceLen = 256;
         ShowGraphWindow();
         RepaintGraphWindow();

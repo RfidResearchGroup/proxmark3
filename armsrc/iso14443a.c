@@ -25,7 +25,7 @@ static uint8_t iso14_pcb_blocknum = 0;
 //
 // ISO14443 timing:
 //
-// minimum time between the start bits of consecutive transfers from reader to tag: 7000 carrier (13.56Mhz) cycles
+// minimum time between the start bits of consecutive transfers from reader to tag: 7000 carrier (13.56MHz) cycles
 #define REQUEST_GUARD_TIME (7000/16 + 1)
 // minimum time between last modulation of tag and next start bit from reader to tag: 1172 carrier cycles
 #define FRAME_DELAY_TIME_PICC_TO_PCD (1172/16 + 1)

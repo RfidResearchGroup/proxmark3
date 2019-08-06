@@ -48,7 +48,7 @@ assign dbg = adc_clk;
 assign adc_clk = ~clk_state;
 // serialized SSP data is gated by clk_state to suppress unwanted signal
 assign ssp_din = to_arm_shiftreg[7] && !clk_state;
-// SSP clock always runs at 24Mhz
+// SSP clock always runs at 24MHz
 assign ssp_clk = pck0;
 // SSP frame is gated by clk_state and goes high when pck_divider=8..15
 assign ssp_frame = (pck_divider[7:3] == 5'd1) && !clk_state;

@@ -26,7 +26,7 @@
 
 volatile unsigned long c;
 
-// Direct use the loop to delay. 6 instructions loop, Masterclock 48Mhz,
+// Direct use the loop to delay. 6 instructions loop, Masterclock 48MHz,
 // delay=1 is about 200kbps
 // timer.
 // I2CSpinDelayClk(4) = 12.31us
@@ -41,7 +41,7 @@ void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 
 #define  ISO7618_MAX_FRAME 255
 
-// try i2c bus recovery at 100kHz = 5uS high, 5uS low
+// try i2c bus recovery at 100kHz = 5us high, 5us low
 void I2C_recovery(void) {
 
     DbpString("Performing i2c bus recovery");

@@ -81,7 +81,7 @@ void SetupSpi(int mode) {
             AT91C_BASE_SPI->SPI_CSR[0] =
                 (1 << 24)          |  // Delay between Consecutive Transfers (32 MCK periods)
                 (1 << 16)          |  // Delay Before SPCK (1 MCK period)
-                (6 << 8)           |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
+                (6 << 8)           |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
                 AT91C_SPI_BITS_16   | // Bits per Transfer (16 bits)
                 (0 << 3)           |  // Chip Select inactive after transfer
                 AT91C_SPI_NCPHA     | // Clock Phase data captured on leading edge, changes on following edge
@@ -101,7 +101,7 @@ void SetupSpi(int mode) {
                     AT91C_BASE_SPI->SPI_CSR[2] =
                         ( 1 << 24)          | // Delay between Consecutive Transfers (32 MCK periods)
                         ( 1 << 16)          | // Delay Before SPCK (1 MCK period)
-                        ( 6 << 8)           | // Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
+                        ( 6 << 8)           | // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
                         AT91C_SPI_BITS_9    | // Bits per Transfer (9 bits)
                         ( 0 << 3)           | // Chip Select inactive after transfer
                         ( 1 << 1)           | // Clock Phase data captured on leading edge, changes on following edge

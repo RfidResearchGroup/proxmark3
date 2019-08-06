@@ -7,7 +7,7 @@
 #include "crc16.h"   // crc16 ccitt
 
 // FeliCa timings
-// minimum time between the start bits of consecutive transfers from reader to tag: 6800 carrier (13.56Mhz) cycles
+// minimum time between the start bits of consecutive transfers from reader to tag: 6800 carrier (13.56MHz) cycles
 #ifndef FELICA_REQUEST_GUARD_TIME
 # define FELICA_REQUEST_GUARD_TIME (6800/16 + 1)
 #endif

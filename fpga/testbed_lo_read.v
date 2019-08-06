@@ -1,14 +1,14 @@
 `include "lo_read.v"
 /*
-    pck0            - input main 24Mhz clock (PLL / 4)
+    pck0            - input main 24MHz clock (PLL / 4)
     [7:0] adc_d     - input data from A/D converter
-    lo_is_125khz    - input freq selector (1=125Khz, 0=136Khz)
+    lo_is_125khz    - input freq selector (1=125kHz, 0=136kHz)
 
     pwr_lo          - output to coil drivers (ssp_clk / 8)
     adc_clk         - output A/D clock signal
     ssp_frame       - output SSS frame indicator (goes high while the 8 bits are shifted)
     ssp_din         - output SSP data to ARM (shifts 8 bit A/D value serially to ARM MSB first)
-    ssp_clk         - output SSP clock signal 1Mhz/1.09Mhz (pck0 / 2*(11+lo_is_125khz) )
+    ssp_clk         - output SSP clock signal 1MHz/1.09MHz (pck0 / 2*(11+lo_is_125khz) )
 
     ck_1356meg      - input unused
     ck_1356megb     - input unused
@@ -90,9 +90,9 @@ module testbed_lo_read;
         adc_d = 0;
         ssp_dout = 0;
         lo_is_125khz = 1;
-        divisor = 255;  //min 16, 95=125Khz, max 255
+        divisor = 255;  //min 16, 95=125kHz, max 255
 
-        // simulate 4 A/D cycles at 125Khz
+        // simulate 4 A/D cycles at 125kHz
         for (i = 0 ;  i < 8 ;  i = i + 1) begin
             crank_dut;
         end

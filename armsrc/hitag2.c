@@ -965,7 +965,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
     // Set up simulator mode, frequency divisor which will drive the FPGA
     // and analog mux selection.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
     // Configure output pin that is connected to the FPGA (for modulating)
@@ -1171,7 +1171,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
     // Configure output and enable pin that is connected to the FPGA (for modulating)
@@ -1442,7 +1442,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
     // Disable modulation at default, which means enable the field

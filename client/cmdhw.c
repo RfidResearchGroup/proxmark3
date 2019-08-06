@@ -449,7 +449,7 @@ static int CmdSetDivisor(const char *Cmd) {
         PrintAndLogEx(ERR, "divisor must be between 19 and 255");
         return PM3_EINVARG;
     }
-    // 12 000 000 (12Mhz)
+    // 12 000 000 (12MHz)
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SET_DIVISOR, (uint8_t *)&arg, sizeof(arg));
     PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f kHz", ((double)12000 / (arg + 1)));
@@ -596,7 +596,7 @@ static command_t CommandTable[] = {
     {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responsive"},
     {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
     {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
-    {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
+    {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)"},
     {"setmux",        CmdSetMux,      IfPm3Present,    "Set the ADC mux to a specific value"},
     {"standalone",    CmdStandalone,  IfPm3Present,    "Jump to the standalone mode"},
     {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},

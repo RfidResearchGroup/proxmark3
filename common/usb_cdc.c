@@ -446,8 +446,8 @@ AT91S_CDC_LINE_CODING line = { // purely informative, actual values don't matter
     8                // 8 Data bits
 };
 
-// timer counts in 21.3uS increments (1024/48Mhz), rounding applies
-// WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
+// timer counts in 21.3us increments (1024/48MHz), rounding applies
+// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 static void SpinDelay(int ms) {
     int us = ms * 1000;
     int ticks = ((MCK / 1000000) * us + 512) >> 10;

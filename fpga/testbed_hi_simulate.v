@@ -1,7 +1,7 @@
 `include "hi_simulate.v"
 
 /*
-    pck0            - input main 24Mhz clock (PLL / 4)
+    pck0            - input main 24MHz clock (PLL / 4)
     [7:0] adc_d     - input data from A/D converter
     mod_type    - modulation type
 

@@ -61,7 +61,7 @@ static int usage_sm_upgrade(void) {
 static int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
-    PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16mhz, 1=8mhz, 2=4mhz) ");
+    PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz) ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc setclock c 2");
@@ -843,13 +843,13 @@ static int CmdSmartSetClock(const char *Cmd) {
 
     switch (clock1) {
         case 0:
-            PrintAndLogEx(SUCCESS, "Clock changed to 16mhz giving 10800 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 16MHz giving 10800 baudrate");
             break;
         case 1:
-            PrintAndLogEx(SUCCESS, "Clock changed to 8mhz giving 21600 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 8MHz giving 21600 baudrate");
             break;
         case 2:
-            PrintAndLogEx(SUCCESS, "Clock changed to 4mhz giving 86400 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 4MHz giving 86400 baudrate");
             break;
         default:
             break;

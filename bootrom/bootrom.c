@@ -52,7 +52,7 @@ void DbpString(char *str) {
 
 static void ConfigClocks(void) {
     // we are using a 16 MHz crystal as the basis for everything
-    // slow clock runs at 32Khz typical regardless of crystal
+    // slow clock runs at 32kHz typical regardless of crystal
 
     // enable system clock and USB clock
     AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_PCK | AT91C_PMC_UDP;
@@ -66,8 +66,8 @@ static void ConfigClocks(void) {
         (1 << AT91C_ID_PWMC)   |
         (1 << AT91C_ID_UDP);
 
-    // worst case scenario, with MAINCK = 16Mhz xtal, startup delay is 1.4ms
-    // if SLCK slow clock runs at its worst case (max) frequency of 42khz
+    // worst case scenario, with MAINCK = 16MHz xtal, startup delay is 1.4ms
+    // if SLCK slow clock runs at its worst case (max) frequency of 42kHz
     // max startup delay = (1.4ms*42k)/8 = 7.356 so round up to 8
 
     // enable main oscillator and set startup delay
@@ -80,7 +80,7 @@ static void ConfigClocks(void) {
 
     // PLL output clock frequency in range  80 - 160 MHz needs CKGR_PLL = 00
     // PLL output clock frequency in range 150 - 180 MHz needs CKGR_PLL = 10
-    // PLL output is MAINCK * multiplier / divisor = 16Mhz * 12 / 2 = 96Mhz
+    // PLL output is MAINCK * multiplier / divisor = 16MHz * 12 / 2 = 96MHz
     AT91C_BASE_PMC->PMC_PLLR =
         PMC_PLL_DIVISOR(2) |
         //PMC_PLL_COUNT_BEFORE_LOCK(0x10) |
@@ -92,7 +92,7 @@ static void ConfigClocks(void) {
     // wait for PLL to lock
     while (!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_LOCK)) {};
 
-    // we want a master clock (MCK) to be PLL clock / 2 = 96Mhz / 2 = 48Mhz
+    // we want a master clock (MCK) to be PLL clock / 2 = 96MHz / 2 = 48MHz
     // datasheet recommends that this register is programmed in two operations
     // when changing to PLL, program the prescaler first then the source
     AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2;

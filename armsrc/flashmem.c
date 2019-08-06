@@ -16,7 +16,7 @@ uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
-    Dbprintf("Spi Baudrate : %dMhz", FLASHMEM_SPIBAUDRATE / 1000000);
+    Dbprintf("Spi Baudrate : %dMHz", FLASHMEM_SPIBAUDRATE / 1000000);
 }
 
 // initialize

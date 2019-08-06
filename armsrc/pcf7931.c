@@ -404,7 +404,7 @@ void SendCmdPCF7931(uint32_t *tab) {
     Dbprintf("Sending data frame...");
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
     LED_A_ON();

@@ -33,7 +33,7 @@ still benefit from this repo.  This is why its configurable and we use to set th
 
 
 //  VALUES TAKEN FROM EM4x function: SendForward
-//  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
+//  START_GAP = 440;       (55*8) cycles at 125kHz (8us = 1cycle)
 //  WRITE_GAP = 128;       (16*8)
 //  WRITE_1   = 256 32*8;  (32*8)
 
@@ -374,7 +374,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
         }
 
         // hack2 needed---  it appears to take about 8-16us to turn the antenna back on
-        // leading to ~ 1 to 2 125khz samples extra in every off period
+        // leading to ~ 1 to 2 125kHz samples extra in every off period
         // so we should test for last 0 before next 1 and reduce period_0 by this extra amount...
         // but is this time different for every antenna or other hw builds???  more testing needed
 
@@ -447,9 +447,9 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 void ReadTItag(void) {
     StartTicks();
     // some hardcoded initial params
-    // when we read a TI tag we sample the zerocross line at 2Mhz
-    // TI tags modulate a 1 as 16 cycles of 123.2Khz
-    // TI tags modulate a 0 as 16 cycles of 134.2Khz
+    // when we read a TI tag we sample the zerocross line at 2MHz
+    // TI tags modulate a 1 as 16 cycles of 123.2kHz
+    // TI tags modulate a 0 as 16 cycles of 134.2kHz
 #define FSAMPLE 2000000
 #define FREQLO 123200
 #define FREQHI 134200
@@ -465,9 +465,9 @@ void ReadTItag(void) {
     // when to tell if we're close enough to one freq or another
     uint32_t threshold = (sampleslo - sampleshi + 1) >> 1;
 
-    // TI tags charge at 134.2Khz
+    // TI tags charge at 134.2kHz
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8kHz
 
     // Place FPGA in passthrough mode, in this mode the CROSS_LO line
     // connects to SSP_DIN and the SSP_DOUT logic level controls
@@ -693,8 +693,8 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc) {
     }
     Dbprintf("Writing to tag: %x%08x, crc=%x", idhi, idlo, crc);
 
-    // TI tags charge at 134.2Khz
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+    // TI tags charge at 134.2kHz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8kHz
     // Place FPGA in passthrough mode, in this mode the CROSS_LO line
     // connects to SSP_DIN and the SSP_DOUT logic level controls
     // whether we're modulating the antenna (high)
@@ -767,9 +767,9 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
     sample_config *sc = getSamplingConfig();
 
     if ((sc->divisor == 1) || (sc->divisor < 0) || (sc->divisor > 255))
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8kHz
     else if (sc->divisor == 0)
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     else
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
 
@@ -1195,7 +1195,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
     size_t size;
     uint32_t hi2 = 0, hi = 0, lo = 0;
     int dummyIdx = 0;
-    // Configure to go in 125Khz listen mode
+    // Configure to go in 125kHz listen mode
     LFSetupFPGAForADC(95, true);
 
     //clear read buffer
@@ -1446,7 +1446,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 
     BigBuf_Clear_keep_EM();
 
-    // Configure to go in 125Khz listen mode
+    // Configure to go in 125kHz listen mode
     LFSetupFPGAForADC(95, true);
 
     while (!BUTTON_PRESS() && !data_available()) {
@@ -2254,7 +2254,7 @@ uint8_t *fwd_write_ptr;  //forwardlink bit pointer
 //====================================================================
 //--------------------------------------------------------------------
 //  VALUES TAKEN FROM EM4x function: SendForward
-//  START_GAP = 440;       (55*8) cycles at 125Khz (8us = 1cycle)
+//  START_GAP = 440;       (55*8) cycles at 125kHz (8us = 1cycle)
 //  WRITE_GAP = 128;       (16*8)
 //  WRITE_1   = 256 32*8;  (32*8)
 

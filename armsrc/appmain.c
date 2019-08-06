@@ -267,9 +267,9 @@ void MeasureAntennaTuning(void) {
         SpinDelay(20);
         uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
         if (i == 95)
-            v_lf125 = adcval; // voltage at 125Khz
+            v_lf125 = adcval; // voltage at 125kHz
         if (i == 89)
-            v_lf134 = adcval; // voltage at 134Khz
+            v_lf134 = adcval; // voltage at 134kHz
 
         LF_Results[i] = adcval >> 9; // scale int to fit in byte for graphing purposes
         if (LF_Results[i] > peak) {
@@ -1956,8 +1956,8 @@ void  __attribute__((noreturn)) AppMain(void) {
     AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
     AT91C_BASE_PIOA->PIO_PDR = GPIO_PCK0;
     AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_PCK0;
-    // PCK0 is PLL clock / 4 = 96Mhz / 4 = 24Mhz
-    AT91C_BASE_PMC->PMC_PCKR[0] = AT91C_PMC_CSS_PLL_CLK | AT91C_PMC_PRES_CLK_4; //  4 for 24Mhz pck0, 2 for 48 MHZ pck0
+    // PCK0 is PLL clock / 4 = 96MHz / 4 = 24MHz
+    AT91C_BASE_PMC->PMC_PCKR[0] = AT91C_PMC_CSS_PLL_CLK | AT91C_PMC_PRES_CLK_4; //  4 for 24MHz pck0, 2 for 48 MHZ pck0
     AT91C_BASE_PIOA->PIO_OER = GPIO_PCK0;
 
     // Reset SPI

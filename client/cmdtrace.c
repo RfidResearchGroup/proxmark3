@@ -804,9 +804,9 @@ int CmdTraceList(const char *Cmd) {
     } else {
         PrintAndLogEx(NORMAL, "Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
         if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ)
-            PrintAndLogEx(NORMAL, "ISO14443A - All times are in carrier periods (1/13.56Mhz)");
+            PrintAndLogEx(NORMAL, "ISO14443A - All times are in carrier periods (1/13.56MHz)");
         if (protocol == THINFILM)
-            PrintAndLogEx(NORMAL, "Thinfilm - All times are in carrier periods (1/13.56Mhz)");
+            PrintAndLogEx(NORMAL, "Thinfilm - All times are in carrier periods (1/13.56MHz)");
         if (protocol == ICLASS)
             PrintAndLogEx(NORMAL, "iClass - Timings are not as accurate");
         if (protocol == LEGIC)

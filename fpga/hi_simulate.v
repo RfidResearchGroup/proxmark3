@@ -69,7 +69,7 @@ begin
       // Get next bit at 212kHz
       ssp_clk <= ssp_clk_divider[5];
     else
-      // Get next bit at 424Khz
+      // Get next bit at 424kHz
       ssp_clk <= ssp_clk_divider[4];
 end
 

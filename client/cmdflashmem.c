@@ -29,9 +29,9 @@ static int usage_flashmem_spibaud(void) {
     PrintAndLogEx(NORMAL, "           h    this help");
     PrintAndLogEx(NORMAL, "      <baudrate>    SPI baudrate in MHz [24|48]");
     PrintAndLogEx(NORMAL, "           ");
-    PrintAndLogEx(NORMAL, "           If >= 24Mhz, FASTREADS instead of READS instruction will be used.");
-    PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48Mhz setting");
-    PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24Mhz");
+    PrintAndLogEx(NORMAL, "           If >= 24MHz, FASTREADS instead of READS instruction will be used.");
+    PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48MHz setting");
+    PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24MHz");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "           mem spibaud 48");
     return PM3_SUCCESS;

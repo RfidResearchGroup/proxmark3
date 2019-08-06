@@ -10,8 +10,8 @@
 //-----------------------------------------------------------------------------
 #include "ticks.h"
 
-// timer counts in 21.3uS increments (1024/48Mhz), rounding applies
-// WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
+// timer counts in 21.3us increments (1024/48MHz), rounding applies
+// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 void SpinDelayUs(int us) {
     int ticks = ((MCK / 1000000) * us + 512) >> 10;
 
@@ -35,13 +35,13 @@ void SpinDelayUs(int us) {
     }
 }
 
-// WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
+// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 void SpinDelay(int ms) {
     if (ms > 1390) {
         Dbprintf(_RED_("Error, SpinDelay called with %i > 1390"), ms);
         ms = 1390;
     }
-    // convert to uS and call microsecond delay function
+    // convert to us and call microsecond delay function
     SpinDelayUs(ms * 1000);
 }
 //  -------------------------------------------------------------------------

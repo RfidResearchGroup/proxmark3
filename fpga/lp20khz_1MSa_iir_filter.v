@@ -28,7 +28,7 @@
 // https://fail0verflow.com/blog/2014/proxmark3-fpga-iir-filter.html
 module lp20khz_1MSa_iir_filter(input clk, input [7:0] adc_d, output rdy, output [7:0] out);
 
-    // clk is 24Mhz, the IIR filter is designed for 1MS/s
+    // clk is 24MHz, the IIR filter is designed for 1MS/s
     // hence we need to divide it by 24
     // using a shift register takes less area than a counter
     reg [23:0] cnt = 1;

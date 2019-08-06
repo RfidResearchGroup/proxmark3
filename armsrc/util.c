@@ -176,8 +176,8 @@ void SpinUp(uint32_t speed) {
 // double click, otherwise it will waste 500ms -- use BUTTON_HELD instead
 int BUTTON_CLICKED(int ms) {
     // Up to 500ms in between clicks to mean a double click
-    // timer counts in 21.3uS increments (1024/48Mhz)
-    // WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
+    // timer counts in 21.3us increments (1024/48MHz)
+    // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
     if (ms > 1390) {
         Dbprintf(_RED_("Error, BUTTON_CLICKED called with %i > 1390"), ms);
         ms = 1390;
@@ -240,8 +240,8 @@ int BUTTON_CLICKED(int ms) {
 
 // Determine if a button is held down
 int BUTTON_HELD(int ms) {
-    // timer counts in 21.3uS increments (1024/48Mhz)
-    // WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
+    // timer counts in 21.3us increments (1024/48MHz)
+    // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
     if (ms > 1390) {
         Dbprintf(_RED_("Error, BUTTON_HELD called with %i > 1390"), ms);
         ms = 1390;

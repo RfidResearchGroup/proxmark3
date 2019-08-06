@@ -32,8 +32,8 @@
 //
 // VICC (tag) -> VCD (reader)
 // Modulation:
-//    ASK / one subcarrier (423,75 khz)
-//    FSK / two subcarriers (423,75 khz && 484,28 khz)
+//    ASK / one subcarrier (423,75 kHz)
+//    FSK / two subcarriers (423,75 kHz && 484,28 kHz)
 // Data Rates / Modes:
 //  low ASK: 6,62 kbit/s
 //  low FSK: 6.67 kbit/s

@@ -1,7 +1,7 @@
 `include "lo_simulate.v"
 
 /*
-    pck0            - input main 24Mhz clock (PLL / 4)
+    pck0            - input main 24MHz clock (PLL / 4)
     [7:0] adc_d     - input data from A/D converter
 
 
@@ -74,7 +74,7 @@ module testbed_lo_simulate;
     // main clock
     always #5 pck0 = !pck0;
 
-    //cross_lo is not really synced to pck0 but it's roughly pck0/192 (24Mhz/192=125Khz)
+    //cross_lo is not really synced to pck0 but it's roughly pck0/192 (24MHz/192=125kHz)
     task crank_dut;
     begin
         @(posedge pck0) ;

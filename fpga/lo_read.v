@@ -19,7 +19,7 @@ module lo_read(
 
 reg [7:0] to_arm_shiftreg;
 
-// this task also runs at pck0 frequency (24Mhz) and is used to serialize
+// this task also runs at pck0 frequency (24MHz) and is used to serialize
 // the ADC output which is then clocked into the ARM SSP.
 
 // because pck_divclk always transitions when pck_cnt = 0 we use the
@@ -55,7 +55,7 @@ end
 
 // serialized SSP data is gated by ant_lo to suppress unwanted signal
 assign ssp_din = to_arm_shiftreg[7] && !pck_divclk;
-// SSP clock always runs at 24Mhz
+// SSP clock always runs at 24MHz
 assign ssp_clk = pck0;
 // SSP frame is gated by ant_lo and goes high when pck_divider=8..15
 assign ssp_frame = (pck_cnt[7:3] == 5'd1) && !pck_divclk;

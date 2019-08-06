@@ -13,7 +13,7 @@ Default LF config is set to:
     decimation = 1  (we keep 1 out of 1 samples)
     bits_per_sample = 8
     averaging = YES
-    divisor = 95 (125khz)
+    divisor = 95 (125kHz)
     trigger_threshold = 0
     */
 sample_config config = { 1, 8, 1, 95, 0 } ;
@@ -83,9 +83,9 @@ void pushBit(BitstreamOut *stream, uint8_t bit) {
 void LFSetupFPGAForADC(int divisor, bool lf_field) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     if ((divisor == 1) || (divisor < 0) || (divisor > 255))
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8Khz
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8kHz
     else if (divisor == 0)
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     else
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
 
