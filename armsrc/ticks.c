@@ -67,7 +67,7 @@ void StartTickCount(void) {
 * Get the current count.
 */
 uint32_t RAMFUNC GetTickCount(void) {
-    return AT91C_BASE_RTTC->RTTC_RTVR;// was * 2;
+    return AT91C_BASE_RTTC->RTTC_RTVR;
 }
 
 uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks) {
