@@ -1192,9 +1192,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint16_t flags;
                 uint8_t exitAfter;
                 uint8_t uid[10];
+                uint16_t atqa;
+                uint8_t sak;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            Mifare1ksim(payload->flags, payload->exitAfter, payload->uid);
+            Mifare1ksim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
             break;
         }
         // emulator

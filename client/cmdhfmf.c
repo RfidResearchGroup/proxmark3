@@ -74,6 +74,8 @@ static int usage_hf14_mfsim(void) {
     PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 1k (Default)");
     PrintAndLogEx(NORMAL, "                        2 = MIFARE Classic 2k plus in SL0 mode");
     PrintAndLogEx(NORMAL, "                        4 = MIFARE Classic 4k");
+    PrintAndLogEx(NORMAL, "      a    (Optional)   Provide explicitly ATQA (2 bytes, override option t)");
+    PrintAndLogEx(NORMAL, "      s    (Optional)   Provide explicitly SAK (1 byte, override option t)");
     PrintAndLogEx(NORMAL, "      n    (Optional) Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite");
     PrintAndLogEx(NORMAL, "      i    (Optional) Interactive, means that console will not be returned until simulation finishes or is aborted");
     PrintAndLogEx(NORMAL, "      x    (Optional) Crack, performs the 'reader attack', nr/ar attack against a reader");
@@ -2164,6 +2166,10 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
 static int CmdHF14AMfSim(const char *Cmd) {
 
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t atqa[2] = {0, 0};
+    int atqalen = 0;
+    uint8_t sak[1] = {0};
+    int saklen = 0;
     uint8_t exitAfterNReads = 0;
     uint16_t flags = 0;
     int uidlen = 0;
@@ -2195,6 +2201,10 @@ static int CmdHF14AMfSim(const char *Cmd) {
                         flags |= FLAG_MF_MINI;
                         sprintf(csize, "MINI");
                         break;
+                    case 1:
+                        flags |= FLAG_MF_1K;
+                        sprintf(csize, "1K");
+                        break;
                     case 2:
                         flags |= FLAG_MF_2K;
                         sprintf(csize, "2K with RATS");
@@ -2203,12 +2213,31 @@ static int CmdHF14AMfSim(const char *Cmd) {
                         flags |= FLAG_MF_4K;
                         sprintf(csize, "4K");
                         break;
-                    case 1:
                     default:
-                        flags |= FLAG_MF_1K;
-                        sprintf(csize, "1K");
+                        PrintAndLogEx(WARNING, "Unknown parameter for option t");
+                        errors = true;
                         break;
                 }
+                cmdp += 2;
+                break;
+            case 'a':
+                param_gethex_ex(Cmd, cmdp + 1, atqa, &atqalen);
+                if (atqalen >> 1 != 2) {
+                    PrintAndLogEx(WARNING, "Wrong ATQA length");
+                    errors = true;
+                    break;
+                }
+                flags |= FLAG_FORCED_ATQA;
+                cmdp += 2;
+                break;
+            case 's':
+                param_gethex_ex(Cmd, cmdp + 1, sak, &saklen);
+                if (saklen >> 1 != 1) {
+                    PrintAndLogEx(WARNING, "Wrong SAK length");
+                    errors = true;
+                    break;
+                }
+                flags |= FLAG_FORCED_SAK;
                 cmdp += 2;
                 break;
             case 'u':
@@ -2269,11 +2298,15 @@ static int CmdHF14AMfSim(const char *Cmd) {
         uint16_t flags;
         uint8_t exitAfter;
         uint8_t uid[10];
+        uint16_t atqa;
+        uint8_t sak;
     } PACKED payload;
 
     payload.flags = flags;
     payload.exitAfter = exitAfterNReads;
     memcpy(payload.uid, uid, uidlen);
+    payload.atqa = (atqa[1] << 8) | atqa[0];
+    payload.sak = sak[0];
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_SIMULATE, (uint8_t *)&payload, sizeof(payload));

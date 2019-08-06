@@ -495,6 +495,8 @@ typedef struct {
 #define FLAG_MF_1K              0x100
 #define FLAG_MF_2K              0x200
 #define FLAG_MF_4K              0x400
+#define FLAG_FORCED_ATQA        0x800
+#define FLAG_FORCED_SAK         0x1000
 
 //Iclass reader flags
 #define FLAG_ICLASS_READER_ONLY_ONCE   0x01

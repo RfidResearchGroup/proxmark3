@@ -163,7 +163,7 @@ static bool IsAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action) {
     }
 }
 
-static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
+static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
 
     // SPEC: https://www.nxp.com/docs/en/application-note/AN10833.pdf
     // ATQA
@@ -340,8 +340,16 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         Dbprintf("[-] ERROR: UID size not defined");
         return false;
     }
+    if (flags & FLAG_FORCED_ATQA) {
+        rATQA[0] = atqa >> 8;
+        rATQA[1] = atqa & 0xff;
+    }
+    if (flags & FLAG_FORCED_SAK) {
+        rSAK[0] = sak;
+    }
     if (DBGLEVEL > DBG_NONE) {
-        Dbprintf("ATQA = %02X %02X and SAK = %02X)", rATQA[1], rATQA[0], rSAK[0]);
+        Dbprintf("ATQA  : %02X %02X", rATQA[1], rATQA[0]);
+        Dbprintf("SAK   : %02X", rSAK[0]);
     }
 
     // clone UIDs for byte-frame anti-collision multiple tag selection procedure
@@ -435,7 +443,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
 *@param exitAfterNReads, exit simulation after n blocks have been read, 0 is infinite ...
 * (unless reader attack mode enabled then it runs util it gets enough nonces to recover all keys attmpted)
 */
-void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
+void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t atqa, uint8_t sak) {
     tag_response_info_t *responses;
     uint8_t cardSTATE = MFEMUL_NOFIELD;
     uint8_t uid_len = 0; // 4,7, 10
@@ -503,7 +511,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
 
-    if (MifareSimInit(flags, datain, &responses, &cuid, &uid_len, &rats, &rats_len) == false) {
+    if (MifareSimInit(flags, datain, atqa, sak, &responses, &cuid, &uid_len, &rats, &rats_len) == false) {
         BigBuf_free_keep_EM();
         return;
     }
