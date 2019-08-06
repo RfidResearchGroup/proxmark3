@@ -179,7 +179,7 @@ int BUTTON_CLICKED(int ms) {
     // timer counts in 21.3us increments (1024/48MHz)
     // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
     if (ms > 1390) {
-        Dbprintf(_RED_("Error, BUTTON_CLICKED called with %i > 1390"), ms);
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf(_RED_("Error, BUTTON_CLICKED called with %i > 1390"), ms);
         ms = 1390;
     }
     int ticks = ((MCK / 1000) * (ms ? ms : 1000)) >> 10;
@@ -243,7 +243,7 @@ int BUTTON_HELD(int ms) {
     // timer counts in 21.3us increments (1024/48MHz)
     // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
     if (ms > 1390) {
-        Dbprintf(_RED_("Error, BUTTON_HELD called with %i > 1390"), ms);
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf(_RED_("Error, BUTTON_HELD called with %i > 1390"), ms);
         ms = 1390;
     }
     // If button is held for one second
