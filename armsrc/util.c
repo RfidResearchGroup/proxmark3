@@ -182,7 +182,7 @@ int BUTTON_CLICKED(int ms) {
         Dbprintf(_RED_("Error, BUTTON_CLICKED called with %i > 1390"), ms);
         ms = 1390;
     }
-    int ticks = (48000 * (ms ? ms : 1000)) >> 10;
+    int ticks = ((MCK / 1000) * (ms ? ms : 1000)) >> 10;
 
     // If we're not even pressed, forget about it!
     if (!BUTTON_PRESS())
@@ -210,7 +210,7 @@ int BUTTON_CLICKED(int ms) {
 
                 // reset our timer for 500ms
                 start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-                ticks = (48000 * (500)) >> 10;
+                ticks = ((MCK / 1000) * (500)) >> 10;
             }
 
             // Still haven't let it off

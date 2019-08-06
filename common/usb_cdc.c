@@ -450,7 +450,7 @@ AT91S_CDC_LINE_CODING line = { // purely informative, actual values don't matter
 // WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
 static void SpinDelay(int ms) {
     int us = ms * 1000;
-    int ticks = (48 * us + 512) >> 10;
+    int ticks = ((MCK / 1000000) * us + 512) >> 10;
 
     // Borrow a PWM unit for my real-time clock
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);

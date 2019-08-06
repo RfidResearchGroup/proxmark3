@@ -229,9 +229,9 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
     //       OVER = 1,  -yes we are oversampling
     //          baudrate == selected clock/8/CD    --> this is ours
     //
-    uint32_t brgr = 48000000 / (usart_baudrate << 3);
+    uint32_t brgr = MCK / (usart_baudrate << 3);
     // doing fp = round((mck / (usart_baudrate << 3) - brgr) * 8) with integers:
-    uint32_t fp = ((16 * 48000000 / (usart_baudrate << 3) - 16 * brgr) + 1) / 2;
+    uint32_t fp = ((16 * MCK / (usart_baudrate << 3) - 16 * brgr) + 1) / 2;
 
     pUS1->US_BRGR = (fp << 16) | brgr;
 

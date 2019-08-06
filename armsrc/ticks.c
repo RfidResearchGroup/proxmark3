@@ -13,7 +13,7 @@
 // timer counts in 21.3uS increments (1024/48Mhz), rounding applies
 // WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
 void SpinDelayUs(int us) {
-    int ticks = (48 * us + 512) >> 10;
+    int ticks = ((MCK / 1000000) * us + 512) >> 10;
 
     // Borrow a PWM unit for my real-time clock
     // This resets PWMC_CPRDR as well
@@ -59,7 +59,7 @@ void StartTickCount(void) {
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
     // set RealTimeCounter divider to count at 1kHz, should be 32 if RC is exactly at 32kHz:
-    AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST | ((((16000000 / 1000 * 16) + (mainf / 2)) / mainf) & AT91C_RTTC_RTPRES);
+    AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST | ((((MAINCK / 1000 * 16) + (mainf / 2)) / mainf) & AT91C_RTTC_RTPRES);
     // note: worst case precision is approx 2.5%
 }
 

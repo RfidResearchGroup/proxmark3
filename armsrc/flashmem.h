@@ -102,7 +102,6 @@
 #define MAX_BLOCKS      4
 #define MAX_SECTORS     16
 
-#define MCK 48000000
 //#define FLASH_BAUD 24000000
 #define FLASH_MINFAST 24000000 //33000000
 #define FLASH_BAUD MCK/2
