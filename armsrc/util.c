@@ -189,7 +189,6 @@ int BUTTON_CLICKED(int ms) {
         return BUTTON_NO_CLICK;
 
     // Borrow a PWM unit for my real-time clock
-    // This resets PWMC_CPRDR as well
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
     // 48 MHz / 1024 gives 46.875 kHz
     AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
@@ -254,7 +253,6 @@ int BUTTON_HELD(int ms) {
         return BUTTON_NO_CLICK;
 
     // Borrow a PWM unit for my real-time clock
-    // This resets PWMC_CPRDR as well
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
     // 48 MHz / 1024 gives 46.875 kHz
     AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);

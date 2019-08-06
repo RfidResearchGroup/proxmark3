@@ -16,7 +16,6 @@ void SpinDelayUs(int us) {
     int ticks = ((MCK / 1000000) * us + 512) >> 10;
 
     // Borrow a PWM unit for my real-time clock
-    // This resets PWMC_CPRDR as well
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
 
     // 48 MHz / 1024 gives 46.875 kHz
