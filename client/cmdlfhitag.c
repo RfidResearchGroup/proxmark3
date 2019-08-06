@@ -87,6 +87,7 @@ static int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "      01 <nr> <ar>     Read all pages, challenge mode");
     PrintAndLogEx(NORMAL, "      02 <key>         Read all pages, crypto mode. Set key=0 for no auth");
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
+    PrintAndLogEx(NORMAL, "      Not implemented");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
     PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: 4D494B52 (\"MIKR\")");
     PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Read all pages, challenge mode");
@@ -104,6 +105,7 @@ static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "      03 <nr,ar> <page> <byte0...byte3>      Write page, challenge mode");
     PrintAndLogEx(NORMAL, "      04 <key> <page> <byte0...byte3>        Write page, crypto mode. Set key=0 for no auth");
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
+    PrintAndLogEx(NORMAL, "      Not implemented");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
     PrintAndLogEx(NORMAL, "      24  <key> <page> <byte0...byte3>       Write page, crypto mode. Key format: ISK high + ISK low.");
     PrintAndLogEx(NORMAL, "                                             Default: 4F4E4D494B52 (\"ONMIKR\"). Set key=0 for no auth");
