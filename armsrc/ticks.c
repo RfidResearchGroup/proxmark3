@@ -9,12 +9,14 @@
 // Timers, Clocks functions used in LF or Legic where you would need detailed time.
 //-----------------------------------------------------------------------------
 #include "ticks.h"
-// attempt at high resolution microsecond timer
-// beware: timer counts in 21.3uS increments (1024/48Mhz)
+
+// timer counts in 21.3uS increments (1024/48Mhz), rounding applies
+// WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
 void SpinDelayUs(int us) {
-    int ticks = (48 * us) >> 10;
+    int ticks = (48 * us + 512) >> 10;
 
     // Borrow a PWM unit for my real-time clock
+    // This resets PWMC_CPRDR as well
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
 
     // 48 MHz / 1024 gives 46.875 kHz
@@ -26,14 +28,19 @@ void SpinDelayUs(int us) {
 
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-        if (now == (uint16_t)(start + ticks))
+        if (now >= (uint16_t)(start + ticks))
             return;
 
         WDT_HIT();
     }
 }
 
+// WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
 void SpinDelay(int ms) {
+    if (ms > 1390) {
+        Dbprintf(_RED_("Error, SpinDelay called with %i > 1390"), ms);
+        ms = 1390;
+    }
     // convert to uS and call microsecond delay function
     SpinDelayUs(ms * 1000);
 }
@@ -49,9 +56,10 @@ void SpinDelay(int ms) {
 void StartTickCount(void) {
     // This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
     // We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
-    uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & 0xffff;        // = 16 * main clock frequency (16MHz) / slow clock frequency
-    // set RealTimeCounter divider to count at 1kHz:
-    AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST | ((256000 + (mainf / 2)) / mainf);
+    while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
+    uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
+    // set RealTimeCounter divider to count at 1kHz, should be 32 if RC is exactly at 32kHz:
+    AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST | ((((16000000 / 1000 * 16) + (mainf / 2)) / mainf) & AT91C_RTTC_RTPRES);
     // note: worst case precision is approx 2.5%
 }
 

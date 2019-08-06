@@ -176,6 +176,12 @@ void SpinUp(uint32_t speed) {
 // double click, otherwise it will waste 500ms -- use BUTTON_HELD instead
 int BUTTON_CLICKED(int ms) {
     // Up to 500ms in between clicks to mean a double click
+    // timer counts in 21.3uS increments (1024/48Mhz)
+    // WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
+    if (ms > 1390) {
+        Dbprintf(_RED_("Error, BUTTON_CLICKED called with %i > 1390"), ms);
+        ms = 1390;
+    }
     int ticks = (48000 * (ms ? ms : 1000)) >> 10;
 
     // If we're not even pressed, forget about it!
@@ -183,6 +189,7 @@ int BUTTON_CLICKED(int ms) {
         return BUTTON_NO_CLICK;
 
     // Borrow a PWM unit for my real-time clock
+    // This resets PWMC_CPRDR as well
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
     // 48 MHz / 1024 gives 46.875 kHz
     AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
@@ -209,7 +216,7 @@ int BUTTON_CLICKED(int ms) {
             // Still haven't let it off
             else
                 // Have we held down a full second?
-                if (now == (uint16_t)(start + ticks))
+                if (now >= (uint16_t)(start + ticks))
                     return BUTTON_HOLD;
         }
 
@@ -220,7 +227,7 @@ int BUTTON_CLICKED(int ms) {
                 return BUTTON_DOUBLE_CLICK;
 
         // Have we ran out of time to double click?
-            else if (now == (uint16_t)(start + ticks))
+            else if (now >= (uint16_t)(start + ticks))
                 // At least we did a single click
                 return BUTTON_SINGLE_CLICK;
 
@@ -233,6 +240,12 @@ int BUTTON_CLICKED(int ms) {
 
 // Determine if a button is held down
 int BUTTON_HELD(int ms) {
+    // timer counts in 21.3uS increments (1024/48Mhz)
+    // WARNING: timer can't measure more than 1.39s (21.3uS * 0xffff)
+    if (ms > 1390) {
+        Dbprintf(_RED_("Error, BUTTON_HELD called with %i > 1390"), ms);
+        ms = 1390;
+    }
     // If button is held for one second
     int ticks = (48000 * (ms ? ms : 1000)) >> 10;
 
@@ -241,6 +254,7 @@ int BUTTON_HELD(int ms) {
         return BUTTON_NO_CLICK;
 
     // Borrow a PWM unit for my real-time clock
+    // This resets PWMC_CPRDR as well
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
     // 48 MHz / 1024 gives 46.875 kHz
     AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
@@ -257,7 +271,7 @@ int BUTTON_HELD(int ms) {
             return BUTTON_SINGLE_CLICK;
 
         // Have we waited the full second?
-        else if (now == (uint16_t)(start + ticks))
+        else if (now >= (uint16_t)(start + ticks))
             return BUTTON_HOLD;
 
         WDT_HIT();
