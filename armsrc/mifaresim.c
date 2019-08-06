@@ -250,21 +250,21 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
     if ((flags & FLAG_MF_MINI) == FLAG_MF_MINI) {
         memcpy(rATQA, rATQA_Mini, sizeof(rATQA));
         rSAK[0] = rSAK_Mini;
-        Dbprintf("Mifare Mini");
+        if (DBGLEVEL > DBG_NONE) Dbprintf("Enforcing Mifare Mini ATQA/SAK");
     } else if ((flags & FLAG_MF_1K) == FLAG_MF_1K) {
         memcpy(rATQA, rATQA_1k, sizeof(rATQA));
         rSAK[0] = rSAK_1k;
-        Dbprintf("Mifare 1K");
+        if (DBGLEVEL > DBG_NONE) Dbprintf("Enforcing Mifare 1K ATQA/SAK");
     } else if ((flags & FLAG_MF_2K) == FLAG_MF_2K) {
         memcpy(rATQA, rATQA_2k, sizeof(rATQA));
         rSAK[0] = rSAK_2k;
         *rats = rRATS;
         *rats_len = sizeof(rRATS);
-        Dbprintf("Mifare 2K with RATS support");
+        if (DBGLEVEL > DBG_NONE) Dbprintf("Enforcing Mifare 2K ATQA/SAK with RATS support");
     } else if ((flags & FLAG_MF_4K) == FLAG_MF_4K) {
         memcpy(rATQA, rATQA_4k, sizeof(rATQA));
         rSAK[0] = rSAK_4k;
-        Dbprintf("Mifare 4K");
+        if (DBGLEVEL > DBG_NONE) Dbprintf("Enforcing Mifare 4K ATQA/SAK");
     }
 
     // Prepare UID arrays
@@ -279,7 +279,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         *cuid = bytes_to_num(rUIDBCC1, 4);
         // BCC
         rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
-        if (DBGLEVEL >= DBG_NONE) {
+        if (DBGLEVEL > DBG_NONE) {
             Dbprintf("4B UID: %02x%02x%02x%02x", rUIDBCC1[0], rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3]);
         }
 
@@ -300,7 +300,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         // BCC
         rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
         rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
-        if (DBGLEVEL >= DBG_NONE) {
+        if (DBGLEVEL > DBG_NONE) {
             Dbprintf("7B UID: %02x %02x %02x %02x %02x %02x %02x",
                      rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3], rUIDBCC2[0], rUIDBCC2[1], rUIDBCC2[2], rUIDBCC2[3]);
         }
@@ -326,7 +326,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
         rUIDBCC3[4] = rUIDBCC3[0] ^ rUIDBCC3[1] ^ rUIDBCC3[2] ^ rUIDBCC3[3];
 
-        if (DBGLEVEL >= DBG_NONE) {
+        if (DBGLEVEL > DBG_NONE) {
             Dbprintf("10B UID: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
                      rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3],
                      rUIDBCC2[1], rUIDBCC2[2], rUIDBCC2[3],
@@ -339,6 +339,9 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
     } else {
         Dbprintf("[-] ERROR: UID size not defined");
         return false;
+    }
+    if (DBGLEVEL > DBG_NONE) {
+        Dbprintf("ATQA = %02X %02X and SAK = %02X)", rATQA[1], rATQA[0], rSAK[0]);
     }
 
     // clone UIDs for byte-frame anti-collision multiple tag selection procedure

@@ -68,8 +68,9 @@ static int usage_hf14_mfsim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
-    PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b from emulator memory will be used");
-    PrintAndLogEx(NORMAL, "      t    (Optional)   0 = MIFARE Mini");
+    PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b/7b from emulator memory will be used");
+    PrintAndLogEx(NORMAL, "      t    (Optional)   Enforce ATQA/SAK:");
+    PrintAndLogEx(NORMAL, "                        0 = MIFARE Mini");
     PrintAndLogEx(NORMAL, "                        1 = MIFARE Classic 1k (Default)");
     PrintAndLogEx(NORMAL, "                        2 = MIFARE Classic 2k plus in SL0 mode");
     PrintAndLogEx(NORMAL, "                        4 = MIFARE Classic 4k");
