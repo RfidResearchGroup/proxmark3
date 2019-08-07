@@ -53,6 +53,8 @@ static pthread_mutex_t rxBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 // as sending lot of these packets can slow down things wuite a lot on slow links (e.g. hw status or lf read at 9600)
 static uint64_t timeout_start_time;
 
+static uint64_t last_packet_time;
+
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
 // Simple alias to track usages linked to the Bootloader, these commands must not be migrated.
@@ -248,11 +250,14 @@ static int getReply(PacketResponseNG *packet) {
 //-----------------------------------------------------------------------------
 static void PacketResponseReceived(PacketResponseNG *packet) {
 
-//  PrintAndLogEx(NORMAL, "RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
-//                packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
-
     // we got a packet, reset WaitForResponseTimeout timeout
-    __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
+    uint64_t prev_clk = __atomic_load_n(&last_packet_time, __ATOMIC_SEQ_CST);
+    uint64_t clk = msclock();
+    __atomic_store_n(&timeout_start_time,  clk, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&last_packet_time, clk, __ATOMIC_SEQ_CST);
+    (void) prev_clk;
+//    PrintAndLogEx(NORMAL, "[%07"PRIu64"] RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
+//                clk - prev_clk, packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
 
     switch (packet->cmd) {
         // First check if we are handling a debug message
@@ -585,6 +590,7 @@ int TestProxmark(void) {
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
 
+    __atomic_store_n(&last_packet_time,  msclock(), __ATOMIC_SEQ_CST);
     clearCommandBuffer();
     SendCommandNG(CMD_PING, data, len);
 
