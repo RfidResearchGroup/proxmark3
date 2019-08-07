@@ -721,7 +721,7 @@ readysim:
     // if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
     flags |= FLAG_UID_IN_EMUL;
     //}
-    Mifare1ksim(flags | FLAG_MF_1K, 0, cjuid);
+    Mifare1ksim(flags | FLAG_MF_1K, 0, cjuid, 0, 0);
     LED_C_OFF();
     SpinOff(50);
     vtsend_cursor_position_restore(NULL);

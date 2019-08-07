@@ -400,7 +400,7 @@ void RunMod() {
                         simflags = FLAG_4B_UID_IN_DATA;
                         break;
                 }
-                Mifare1ksim(simflags | FLAG_MF_1K, 0, uid);
+                Mifare1ksim(simflags | FLAG_MF_1K, 0, uid, 0, 0);
                 LED_B_OFF();
 
                 /*
