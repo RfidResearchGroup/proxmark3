@@ -433,7 +433,7 @@ void SendStatus(void) {
     Dbprintf("  ToSend BUFFERSIZE.......%d", TOSEND_BUFFER_SIZE);
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
-    Dbprintf("  Slow clock..............%d Hz", (16*MAINCK) / mainf);
+    Dbprintf("  Slow clock..............%d Hz", (16 * MAINCK) / mainf);
     DbpString(_BLUE_("Installed StandAlone Mode"));
     ModInfo();
 

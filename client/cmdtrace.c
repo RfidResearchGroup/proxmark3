@@ -830,7 +830,7 @@ int CmdTraceList(const char *Cmd) {
         ClearAuthData();
         while (tracepos < traceLen) {
             tracepos = printTraceLine(tracepos, traceLen, trace, protocol, showWaitCycles, markCRCBytes);
-            
+
             if (kbd_enter_pressed())
                 break;
         }
