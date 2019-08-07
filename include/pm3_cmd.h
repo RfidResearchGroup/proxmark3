@@ -258,6 +258,7 @@ typedef struct {
 #define CMD_QUIT_SESSION                                                  0x0113
 #define CMD_SET_DBGMODE                                                   0x0114
 #define CMD_STANDALONE                                                    0x0115
+#define CMD_WTX                                                           0x0116
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_WRITE                                                0x0121

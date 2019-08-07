@@ -395,6 +395,8 @@ void FpgaDownloadAndGo(int bitstream_version) {
     if (downloaded_bitstream == bitstream_version)
         return;
 
+    // Send waiting time extension request as this will take a while
+    send_wtx(1500);
     z_stream compressed_fpga_stream;
     uint8_t output_buffer[OUTPUT_BUFFER_LEN] = {0x00};
 

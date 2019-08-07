@@ -59,6 +59,7 @@ int ToSendMax = -1;
 static int ToSendBit;
 struct common_area common_area __attribute__((section(".commonarea")));
 int button_status = BUTTON_NO_CLICK;
+bool allow_send_wtx = false;
 
 void ToSendReset(void) {
     ToSendMax = -1;
@@ -117,6 +118,12 @@ void print_result(char *name, uint8_t *buf, size_t len) {
 //=============================================================================
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
+
+inline void send_wtx(uint16_t wtx) {
+    if (allow_send_wtx) {
+        reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));
+    }
+}
 
 void DbpStringEx(uint32_t flags, char *str) {
 #if DEBUG
@@ -1994,6 +2001,7 @@ void  __attribute__((noreturn)) AppMain(void) {
     // against device such as http://www.hobbytronics.co.uk/usb-host-board-v2
     usb_disable();
     usb_enable();
+    allow_send_wtx = true;
 
 #ifdef WITH_FLASH
     // If flash is not present, BUSY_TIMEOUT kicks in, let's do it after USB
@@ -2023,7 +2031,9 @@ void  __attribute__((noreturn)) AppMain(void) {
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
             * All standalone mod "main loop" should be the RunMod() function.
             */
+            allow_send_wtx = false;
             RunMod();
+            allow_send_wtx = true;
         }
     }
 }

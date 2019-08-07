@@ -125,7 +125,7 @@ int CmdHFTune(const char *Cmd) {
     clearCommandBuffer();
     uint8_t mode[] = {1};
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
-    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 2000)) {
+    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF initialization, aborting");
         return PM3_ETIMEOUT;
     }
@@ -136,7 +136,7 @@ int CmdHFTune(const char *Cmd) {
             break;
         }
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
-        if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 2000)) {
+        if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
             return PM3_ETIMEOUT;
         }
@@ -147,7 +147,7 @@ int CmdHFTune(const char *Cmd) {
     }
     mode[0] = 3;
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
-    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 2000)) {
+    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF shutdown, aborting");
         return PM3_ETIMEOUT;
     }

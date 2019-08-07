@@ -710,6 +710,12 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             if (cmd == CMD_UNKNOWN || response->cmd == cmd) {
                 return true;
             }
+            if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
+                uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
+                PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
+                if (ms_timeout != (size_t) - 1)
+                    ms_timeout += wtx;
+            }
         }
 
         uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
@@ -824,6 +830,11 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
                 bytes_completed += copy_bytes;
             } else if (response->cmd == CMD_ACK) {
                 return true;
+            } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
+                uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
+                PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
+                if (ms_timeout != (size_t) - 1)
+                    ms_timeout += wtx;
             }
         }
 

@@ -43,6 +43,7 @@ extern uint8_t trigger;
 /// appmain.h
 void ReadMem(int addr);
 void __attribute__((noreturn)) AppMain(void);
+void send_wtx(uint16_t wtx);
 //void DbpIntegers(int a, int b, int c);
 void DbpString(char *str);
 void DbpStringEx(uint32_t flags, char *str);
