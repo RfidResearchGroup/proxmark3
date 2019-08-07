@@ -19,7 +19,7 @@
 
 // Check bootrom.c for actual clock settings
 #define MAINCK                                  16000000
-#define MCK                                     (4 * MAINCK)
+#define MCK                                     (3 * MAINCK)
 
 #define WDT_HIT()                               AT91C_BASE_WDTC->WDTC_WDCR = 0xa5000001
 
