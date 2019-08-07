@@ -142,7 +142,7 @@ int CmdHFTune(const char *Cmd) {
         }
         if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t)))
             break;
-        uint16_t volt = resp.data.asDwords[0];
+        uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
         PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
     }
     mode[0] = 3;
