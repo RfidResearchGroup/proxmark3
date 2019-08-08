@@ -8,13 +8,12 @@
 // Command parser
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "util.h"
-#include "ui.h"
 #include "cmdparser.h"
-#include "proxmark3.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "ui.h"
 #include "comms.h"
 
 bool AlwaysAvailable(void) {

@@ -27,6 +27,7 @@
  */
 
 #include "des.h"
+#include "string.h"
 
 const uint8_t sbox[256]  = {
     /* S-box 1 */

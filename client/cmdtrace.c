@@ -9,6 +9,15 @@
 //-----------------------------------------------------------------------------
 #include "cmdtrace.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "protocols.h"
+#include "parity.h"             // oddparity
+#include "cmdhflist.h"          // annotations
+#include "comms.h"              // for sending cmds to device. GetFromBigBuf
+#include "loclass/fileutils.h"  // for saveFile
+
 static int CmdHelp(const char *Cmd);
 
 // trace pointer

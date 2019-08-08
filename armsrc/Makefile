@@ -2,16 +2,14 @@
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
 #-----------------------------------------------------------------------------
-# Makefile for armsrc, see ../common/Makefile.common for common settings
+# Makefile for armsrc, see ../common_arm/Makefile.common for common settings
 #-----------------------------------------------------------------------------
-
-APP_INCLUDES = apps.h
 
 # This Makefile might have been called directly, not via the root Makefile, so:
 ifeq ($(PLTNAME),)
     -include ../Makefile.platform
     -include ../.Makefile.options.cache
-    include ../common/Makefile.hal
+    include ../common_arm/Makefile.hal
 # detect if there were changes in the platform definitions, requiring a clean
     ifeq ($(PLATFORM_CHANGED), true)
         $(error platform definitions have been changed, please "make clean" at the root of the project)
@@ -28,9 +26,10 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
+#UNUSED: mifaresniff.c desfire_crypto.c
 SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
-SRC_CRAPTO1 = crypto1.c des.c desfire_key.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
+SRC_CRAPTO1 = crypto1.c des.c desfire_key.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
@@ -83,7 +82,7 @@ SRC_ZLIB = inflate.c inffast.c inftrees.c adler32.c zutil.c
 ZLIB_CFLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED
 APP_CFLAGS += $(ZLIB_CFLAGS)
 # zlib includes:
-APP_CFLAGS += -I../zlib
+APP_CFLAGS += -I../common/zlib
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant,
 # stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
@@ -91,7 +90,6 @@ APP_CFLAGS += -I. -fno-stack-protector -fno-pie
 
 # Compile these in thumb mode (small size)
 THUMBSRC = start.c \
-    protocols.c \
     $(SRC_LCD) \
     $(SRC_ISO15693) \
     $(SRC_NFCBARCODE) \
@@ -105,6 +103,7 @@ THUMBSRC = start.c \
     $(SRC_SPIFFS) \
     appmain.c \
     printf.c \
+    dbprint.c \
     commonutil.c \
     util.c \
     string.c \
@@ -131,7 +130,7 @@ VERSIONSRC = version.c \
     fpga_version_info.c
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
-include ../common/Makefile.common
+include ../common_arm/Makefile.common
 
 COMMON_FLAGS =  -Os
 
@@ -220,3 +219,4 @@ help:
 	@echo Possible targets:
 	@echo +	all    - Build the full image $(OBJDIR)/fullimage.s19
 	@echo +	clean             - Clean $(OBJDIR)
+

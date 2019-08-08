@@ -12,14 +12,8 @@
 #ifndef __MIFAREUTIL_H
 #define __MIFAREUTIL_H
 
-#include "proxmark3.h"
-#include "apps.h"
-#include "parity.h"
-#include "util.h"
-#include "string.h"
-#include "iso14443a.h"
+#include "common.h"
 #include "crapto1/crapto1.h"
-#include "des.h"
 
 // mifare authentication
 #define CRYPT_NONE    0

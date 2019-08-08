@@ -12,9 +12,7 @@
 #ifndef MIFARE4_H
 #define MIFARE4_H
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include "common.h"
 
 typedef struct {
     bool Authenticated;

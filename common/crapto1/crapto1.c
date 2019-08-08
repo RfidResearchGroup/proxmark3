@@ -19,6 +19,8 @@
 */
 #include "crapto1.h"
 
+#include "bucketsort.h"
+
 #include <stdlib.h>
 #include "parity.h"
 

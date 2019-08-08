@@ -17,12 +17,12 @@
 #include <config.h>
 #endif
 
-#include "commonutil.h"
-#include "tlv.h"
 #include "emv_tags.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+#include "commonutil.h"
 
 #ifndef PRINT_INDENT
 # define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}

@@ -15,6 +15,26 @@
 #endif
 #include "cmdmain.h"
 
+#include <string.h>
+#include <ctype.h>
+#include <time.h> // MingW
+
+#include "comms.h"
+#include "cmdhf.h"
+#include "cmddata.h"
+#include "cmdhw.h"
+#include "cmdlf.h"
+#include "cmdtrace.h"
+#include "cmdscript.h"
+#include "cmdcrc.h"
+#include "cmdanalyse.h"
+#include "emv/cmdemv.h"   // EMV
+#include "cmdflashmem.h"  // rdv40 flashmem commands
+#include "cmdsmartcard.h" // rdv40 smart card ISO7816 commands
+#include "cmdusart.h"     // rdv40 FPC USART commands
+#include "ui.h"
+#include "util_posix.h"
+
 static int CmdHelp(const char *Cmd);
 
 static int CmdRem(const char *Cmd) {

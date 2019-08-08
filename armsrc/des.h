@@ -27,8 +27,7 @@
 #ifndef __DES_H_
 #define __DES_H_
 
-#include <stdint.h>
-#include <string.h>
+#include "common.h"
 
 /* the FIPS 46-3 (1999-10-25) name for triple DES is triple data encryption algorithm so TDEA.
  * Also we only implement the three key mode  */

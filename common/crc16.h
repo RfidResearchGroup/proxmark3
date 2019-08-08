@@ -8,11 +8,7 @@
 #ifndef __CRC16_H
 #define __CRC16_H
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include "commonutil.h"
+#include "common.h"
 
 #define CRC16_POLY_CCITT  0x1021
 #define CRC16_POLY_LEGIC  0xc6c6 //0x6363

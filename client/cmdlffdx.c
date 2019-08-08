@@ -10,6 +10,21 @@
 
 #include "cmdlffdx.h"
 
+#include <inttypes.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"
+
+#include "ui.h"         // PrintAndLog
+#include "cmddata.h"
+#include "cmdlf.h"      // lf read
+#include "crc16.h"      // for checksum crc-16_ccitt
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+
 /*
     FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
     8 databits + 1 parity (1)

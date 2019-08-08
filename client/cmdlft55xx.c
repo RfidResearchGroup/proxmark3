@@ -14,6 +14,21 @@
 
 #include "cmdlft55xx.h"
 
+#include <ctype.h>
+#include <time.h> // MingW
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"
+#include "protocols.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "lfdemod.h"
+#include "cmdhf14a.h"   // for getTagInfo
+#include "loclass/fileutils.h"  // loadDictionary
+#include "util_posix.h"
+
+
 // Some defines for readability
 #define T55XX_DLMODE_FIXED         0 // Default Mode
 #define T55XX_DLMODE_LLR           1 // Long Leading Reference
@@ -2117,7 +2132,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         // TODO, a way of reallocating memory if file was larger
         keyBlock = calloc(4 * 200, sizeof(uint8_t));
         if (keyBlock == NULL) {
-            PrintAndLogDevice(ERR, "error, cannot allocate memory ");
+            PrintAndLogEx(ERR, "error, cannot allocate memory ");
             return PM3_ESOFT;
         }
 

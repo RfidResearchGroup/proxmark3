@@ -11,6 +11,15 @@
 //-----------------------------------------------------------------------------
 #include "fpgaloader.h"
 
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "BigBuf.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "zlib.h"
+#include "fpga.h"
+#include "string.h"
 
 // remember which version of the bitstream we have already downloaded to the FPGA
 static int downloaded_bitstream = 0;
@@ -153,8 +162,7 @@ void FpgaSetupSsc(void) {
 //-----------------------------------------------------------------------------
 // Set up DMA to receive samples from the FPGA. We will use the PDC, with
 // a single buffer as a circular buffer (so that we just chain back to
-// ourselves, not to another buffer). The stuff to manipulate those buffers
-// is in apps.h, because it should be inlined, for speed.
+// ourselves, not to another buffer).
 //-----------------------------------------------------------------------------
 bool FpgaSetupSscDma(uint8_t *buf, int len) {
     if (buf == NULL) return false;

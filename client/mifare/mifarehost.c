@@ -8,7 +8,22 @@
 // mifare commands
 //-----------------------------------------------------------------------------
 #include "mifarehost.h"
-#include "cmdmain.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "comms.h"
+#include "commonutil.h"
+#include "mifare4.h"
+#include "ui.h"         // PrintAndLog...
+#include "crapto1/crapto1.h"
+#include "crc16.h"
+#include "protocols.h"
+#include "mfkey.h"
+#include "util_posix.h"  // msclock
+
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;

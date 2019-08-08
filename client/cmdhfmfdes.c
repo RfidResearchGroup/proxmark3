@@ -9,6 +9,15 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfmfdes.h"
 
+#include <stdio.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmdhf14a.h"
+#include "mbedtls/des.h"
+
 uint8_t key_zero_data[16] = { 0x00 };
 uint8_t key_ones_data[16] = { 0x01 };
 uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };

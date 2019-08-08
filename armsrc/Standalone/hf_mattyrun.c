@@ -33,7 +33,21 @@ on a blank card.
 ## Spanish full description of the project [here](http://bit.ly/2c9nZXR).
 */
 
-#include "hf_mattyrun.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "string.h"
+#include "commonutil.h"
+#include "iso14443a.h"
+#include "mifarecmd.h"
+#include "crc16.h"
+#include "BigBuf.h"
+#include "mifaresim.h"  // mifare1ksim
+#include "mifareutil.h"
 
 uint8_t uid[10];
 uint32_t cuid;

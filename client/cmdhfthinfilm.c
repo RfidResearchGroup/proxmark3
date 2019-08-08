@@ -9,6 +9,17 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfthinfilm.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "cmdtrace.h"
+#include "crc16.h"
+#include "ui.h"
+#include "cmdhf14a.h" // manufacture
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_thinfilm_info(void) {

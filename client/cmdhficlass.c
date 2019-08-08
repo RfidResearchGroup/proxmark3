@@ -13,6 +13,23 @@
 
 #include "cmdhficlass.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "cmdtrace.h"
+#include "util_posix.h"
+
+#include "comms.h"
+#include "mbedtls/des.h"
+#include "loclass/cipherutils.h"
+#include "loclass/cipher.h"
+#include "loclass/ikeys.h"
+#include "loclass/elite_crack.h"
+#include "loclass/fileutils.h"
+#include "protocols.h"
+
+
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
 
@@ -271,6 +288,145 @@ static int xorbits_8(uint8_t val) {
     return res & 1;
 }
 */
+
+// iclass / picopass chip config structures and shared routines
+typedef struct {
+    uint8_t app_limit;      //[8]
+    uint8_t otp[2];         //[9-10]
+    uint8_t block_writelock;//[11]
+    uint8_t chip_config;    //[12]
+    uint8_t mem_config;     //[13]
+    uint8_t eas;            //[14]
+    uint8_t fuses;          //[15]
+} picopass_conf_block;
+
+
+typedef struct {
+    uint8_t csn[8];
+    picopass_conf_block conf;
+    uint8_t epurse[8];
+    uint8_t key_d[8];
+    uint8_t key_c[8];
+    uint8_t app_issuer_area[8];
+} picopass_hdr;
+
+static uint8_t isset(uint8_t val, uint8_t mask) {
+    return (val & mask);
+}
+
+static uint8_t notset(uint8_t val, uint8_t mask) {
+    return !(val & mask);
+}
+
+static void fuse_config(const picopass_hdr *hdr) {
+    uint8_t fuses = hdr->conf.fuses;
+
+    if (isset(fuses, FUSE_FPERS))
+        PrintAndLogEx(SUCCESS, "\tMode: Personalization [Programmable]");
+    else
+        PrintAndLogEx(NORMAL, "\tMode: Application [Locked]");
+
+    if (isset(fuses, FUSE_CODING1)) {
+        PrintAndLogEx(NORMAL, "\tCoding: RFU");
+    } else {
+        if (isset(fuses, FUSE_CODING0))
+            PrintAndLogEx(NORMAL, "\tCoding: ISO 14443-2 B/ISO 15693");
+        else
+            PrintAndLogEx(NORMAL, "\tCoding: ISO 14443B only");
+    }
+    // 1 1
+    if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "\tCrypt: Secured page, keys not locked");
+    // 1 0
+    if (isset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "\tCrypt: Secured page, keys locked");
+    // 0 1
+    if (notset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "\tCrypt: Non secured page");
+    // 0 0
+    if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "\tCrypt: No auth possible. Read only if RA is enabled");
+
+    if (isset(fuses, FUSE_RA))
+        PrintAndLogEx(NORMAL, "\tRA: Read access enabled");
+    else
+        PrintAndLogEx(WARNING, "\tRA: Read access not enabled");
+}
+
+static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
+    // mem-bit 5, mem-bit 7, chip-bit 4: defines chip type
+    uint8_t k16 = isset(mem_cfg, 0x80);
+    //uint8_t k2 = isset(mem_cfg, 0x08);
+    uint8_t book = isset(mem_cfg, 0x20);
+
+    if (isset(chip_cfg, 0x10) && !k16 && !book) {
+        *kb = 2;
+        *app_areas = 2;
+        *max_blk = 31;
+    } else if (isset(chip_cfg, 0x10) && k16 && !book) {
+        *kb = 16;
+        *app_areas = 2;
+        *max_blk = 255; //16kb
+    } else if (notset(chip_cfg, 0x10) && !k16 && !book) {
+        *kb = 16;
+        *app_areas = 16;
+        *max_blk = 255; //16kb
+    } else if (isset(chip_cfg, 0x10) && k16 && book) {
+        *kb = 32;
+        *app_areas = 3;
+        *max_blk = 255; //16kb
+    } else if (notset(chip_cfg, 0x10) && !k16 && book) {
+        *kb = 32;
+        *app_areas = 17;
+        *max_blk = 255; //16kb
+    } else {
+        *kb = 32;
+        *app_areas = 2;
+        *max_blk = 255;
+    }
+}
+
+static void mem_app_config(const picopass_hdr *hdr) {
+    uint8_t mem = hdr->conf.mem_config;
+    uint8_t chip = hdr->conf.chip_config;
+    uint8_t applimit = hdr->conf.app_limit;
+    uint8_t kb = 2;
+    uint8_t app_areas = 2;
+    uint8_t max_blk = 31;
+
+    getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
+
+    if (applimit < 6) applimit = 26;
+    if (kb == 2 && (applimit > 0x1f)) applimit = 26;
+
+    PrintAndLogEx(NORMAL, " Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
+    PrintAndLogEx(NORMAL, "\tAA1: blocks 06-%02X", applimit);
+    PrintAndLogEx(NORMAL, "\tAA2: blocks %02X-%02X", applimit + 1, max_blk);
+    PrintAndLogEx(NORMAL, "\tOTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
+    PrintAndLogEx(NORMAL, "\nKeyAccess:");
+
+    uint8_t book = isset(mem, 0x20);
+    if (book) {
+        PrintAndLogEx(NORMAL, "\tRead A - Kd");
+        PrintAndLogEx(NORMAL, "\tRead B - Kc");
+        PrintAndLogEx(NORMAL, "\tWrite A - Kd");
+        PrintAndLogEx(NORMAL, "\tWrite B - Kc");
+        PrintAndLogEx(NORMAL, "\tDebit  - Kd or Kc");
+        PrintAndLogEx(NORMAL, "\tCredit - Kc");
+    } else {
+        PrintAndLogEx(NORMAL, "\tRead A - Kd or Kc");
+        PrintAndLogEx(NORMAL, "\tRead B - Kd or Kc");
+        PrintAndLogEx(NORMAL, "\tWrite A - Kc");
+        PrintAndLogEx(NORMAL, "\tWrite B - Kc");
+        PrintAndLogEx(NORMAL, "\tDebit  - Kd or Kc");
+        PrintAndLogEx(NORMAL, "\tCredit - Kc");
+    }
+}
+static void print_picopass_info(const picopass_hdr *hdr) {
+    fuse_config(hdr);
+    mem_app_config(hdr);
+}
+static void printIclassDumpInfo(uint8_t *iclass_dump) {
+    print_picopass_info((picopass_hdr *) iclass_dump);
+}
+
+
 static int CmdHFiClassList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list iclass' instead");
@@ -550,14 +706,14 @@ static int CmdHFiClassELoad(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogDevice(ERR, "error, when getting filesize");
+        PrintAndLogEx(ERR, "error, when getting filesize");
         fclose(f);
         return 1;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(ERR, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         fclose(f);
         return 1;
     }
@@ -569,7 +725,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     //Validate
 
     if (bytes_read < fsize) {
-        PrintAndLogDevice(ERR, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
+        PrintAndLogEx(ERR, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
         free(dump);
         return 1;
     }
@@ -1449,7 +1605,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         errors += testMAC();
         errors += doKeyTests(0);
         errors += testElite();
-        if (errors) PrintAndLogDevice(ERR, "There were errors!!!");
+        if (errors) PrintAndLogEx(ERR, "There were errors!!!");
         return errors;
     }
     return PM3_SUCCESS;

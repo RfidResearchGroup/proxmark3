@@ -7,6 +7,8 @@
 #ifndef __FPGA_H
 #define __FPGA_H
 
+#include "common.h"
+
 #define FPGA_BITSTREAM_FIXED_HEADER_SIZE    sizeof(bitparse_fixed_header)
 #define FPGA_INTERLEAVE_SIZE                288
 #define FPGA_CONFIG_SIZE                    42336L  // our current fpga_[lh]f.bit files are 42175 bytes. Rounded up to next multiple of FPGA_INTERLEAVE_SIZE

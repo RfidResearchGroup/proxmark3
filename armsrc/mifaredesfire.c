@@ -1,5 +1,20 @@
 #include "mifaredesfire.h"
 
+#include "common.h"
+#include "proxmark3_arm.h"
+#include "string.h"
+#include "BigBuf.h"
+#include "desfire_key.h"
+#include "mifareutil.h"
+#include "des.h"
+#include "cmd.h"
+#include "dbprint.h"
+#include "fpgaloader.h"
+#include "iso14443a.h"
+#include "crc16.h"
+#include "mbedtls/aes.h"
+#include "commonutil.h"
+
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
 #define MAX_DESFIRE_FRAME_SIZE 60

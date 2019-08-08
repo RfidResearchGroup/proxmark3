@@ -1,5 +1,3 @@
-include ../common/Makefile.common      # for $(DETECTED_OS)
-
 all: fpga_lf.bit fpga_hf.bit
 clean:
 	$(Q)$(DELETE) *.bgn *.drc *.ncd *.ngd *_par.xrpt *-placed.* *-placed_pad.* *_usage.xml xst_hf.srp xst_lf.srp
@@ -38,7 +36,6 @@ fpga_lf.ngc: fpga_lf.v fpga.ucf xst_lf.scr util.v clk_divider.v lo_edge_detect.v
 
 .PHONY: all clean help
 help:
-	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:
 	@echo +	all   - Make fpga.bit, the FPGA bitstream
 	@echo +	clean - Clean intermediate files, does not clean fpga.bit

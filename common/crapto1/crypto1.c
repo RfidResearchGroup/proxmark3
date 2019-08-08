@@ -17,9 +17,9 @@
 
     Copyright (C) 2008-2008 bla <blapost@gmail.com>
 */
-#include "crapto1.h"
-
 #include <stdlib.h>
+
+#include "crapto1.h"
 #include "parity.h"
 
 #define SWAPENDIAN(x)\

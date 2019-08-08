@@ -9,6 +9,21 @@
 //-----------------------------------------------------------------------------
 #include "cmddata.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
+#include <math.h>     // pow
+#include <ctype.h>    // tolower
+
+#include "commonutil.h"  // ARRAYLEN
+#include "cmdparser.h" // for command_t
+#include "ui.h"       // for show graph controls
+#include "graph.h"    // for graph data
+#include "comms.h"
+#include "lfdemod.h"  // for demod code
+#include "loclass/cipherutils.h" // for decimating samples in getsamples
+#include "cmdlfem4x.h" // askem410xdecode
+
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
 size_t g_DemodStartIdx = 0;

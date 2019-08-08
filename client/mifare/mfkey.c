@@ -11,6 +11,8 @@
 //-----------------------------------------------------------------------------
 #include "mfkey.h"
 
+#include "crapto1/crapto1.h"
+
 // MIFARE
 int compare_uint64(const void *a, const void *b) {
     if (*(uint64_t *)b == *(uint64_t *)a) return 0;

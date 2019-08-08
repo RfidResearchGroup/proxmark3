@@ -12,6 +12,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <mbedtls/asn1.h>
+
+#include "ui.h"  // Print...
+
 #include "emv/tlv.h"
 #include "emv/dump.h"
 #include "asn1dump.h"

@@ -11,26 +11,9 @@
 #ifndef CMDDATA_H__
 #define CMDDATA_H__
 
-#include <stdlib.h>  //size_t
-#include <stdint.h>  //uint_32+
-#include <stdbool.h> //bool
-#include "cmdparser.h" // for command_t
+#include "common.h"
 
-#include <stdio.h>    // also included in util.h
-#include <string.h>   // also included in util.h
-#include <inttypes.h>
-#include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
-#include "util.h"
-#include "cmdmain.h"
-#include "proxmark3.h"// sendcommand
-#include "ui.h"       // for show graph controls
-#include "graph.h"    // for graph data
-#include "comms.h"
-#include "lfdemod.h"  // for demod code
-#include "crc.h"      // for pyramid checksum maxim
-#include "crc16.h"    // for FDXB demod checksum
-#include "loclass/cipherutils.h" // for decimating samples in getsamples
-#include "cmdlfem4x.h" // askem410xdecode
+//#include <stdlib.h>  //size_t
 
 int CmdData(const char *Cmd);
 

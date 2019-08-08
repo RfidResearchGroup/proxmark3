@@ -11,10 +11,7 @@
 #ifndef ISO15693_H__
 #define ISO15693_H__
 
-#include "proxmark3.h"
-#include <stdint.h>
-#include <stdlib.h>
-#include "crc16.h"
+#include "common.h"
 
 // REQUEST FLAGS
 #define ISO15_REQ_SUBCARRIER_SINGLE      0x00 // Tag should respond using one subcarrier (ASK)
@@ -70,8 +67,6 @@
 #define ISO15_CMD_SYSINFO                0x2B
 #define ISO15_CMD_SECSTATUS              0x2C
 
-char *Iso15693sprintUID(char *target, uint8_t *uid);
-
 //-----------------------------------------------------------------------------
 // Map a sequence of octets (~layer 2 command) into the set of bits to feed
 // to the FPGA, to transmit that command to the tag.
@@ -122,5 +117,7 @@ static const int Iso15693FrameEOF[] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
+
+char *Iso15693sprintUID(char *target, uint8_t *uid);
 
 #endif

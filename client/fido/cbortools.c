@@ -11,7 +11,9 @@
 //
 
 #include "cbortools.h"
-#include <stdlib.h>
+
+#include <inttypes.h>
+
 #include "emv/emvjson.h"
 #include "util.h"
 #include "fidocore.h"

@@ -9,6 +9,18 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfepa.h"
 
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <inttypes.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"        // clearCommandBuffer
+#include "ui.h"
+#include "util_posix.h"
+
 static int CmdHelp(const char *Cmd);
 
 // Perform (part of) the PACE protocol

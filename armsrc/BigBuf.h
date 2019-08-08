@@ -12,10 +12,7 @@
 #ifndef __BIGBUF_H
 #define __BIGBUF_H
 
-#include <stdbool.h> // for bool
-#include "proxmark3.h"
-#include "string.h"
-#include "ticks.h"
+#include "common.h"
 
 #define BIGBUF_SIZE             40000
 #define MAX_FRAME_SIZE          256 // maximum allowed ISO14443 frame
@@ -43,4 +40,5 @@ void set_tracelen(uint32_t value);
 bool get_tracing(void);
 bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag);
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length);
+
 #endif /* __BIGBUF_H */

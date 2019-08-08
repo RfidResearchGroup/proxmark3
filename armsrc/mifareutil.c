@@ -9,6 +9,17 @@
 //-----------------------------------------------------------------------------
 #include "mifareutil.h"
 
+#include "string.h"
+#include "BigBuf.h"
+#include "iso14443a.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "parity.h"
+#include "commonutil.h"
+#include "crc16.h"
+#include "protocols.h"
+#include "des.h"
+
 int DBGLEVEL = DBG_ERROR;
 
 // crypto1 helpers

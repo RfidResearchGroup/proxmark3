@@ -17,10 +17,11 @@
 #include <config.h>
 #endif
 
+#include "commonutil.h"  // ARRAYLEN
+
 #include "../crypto.h"
 #include "../dump.h"
 #include "util_posix.h"
-#include "commonutil.h"
 
 #include <stdlib.h>
 #include <string.h>

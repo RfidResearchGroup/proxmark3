@@ -8,7 +8,20 @@
 // Proxmark3 RDV40 Smartcard module commands
 //-----------------------------------------------------------------------------
 #include "cmdsmartcard.h"
-#include "../emv/emvjson.h"
+
+#include <ctype.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "protocols.h"
+#include "cmdtrace.h"
+#include "proxmark3.h"
+#include "comms.h"              // getfromdevice
+#include "emv/emvcore.h"        // decodeTVL
+#include "crypto/libpcrypto.h"  // sha512hash
+#include "emv/dump.h"
+#include "ui.h"
 
 static int CmdHelp(const char *Cmd);
 

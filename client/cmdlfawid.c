@@ -12,6 +12,21 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfawid.h"  // AWID function declarations
 
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "graph.h"
+#include "cmddata.h"
+
+#include "ui.h"         // PrintAndLog
+#include "lfdemod.h"    // parityTest
+#include "cmdlf.h"      // lf read
+#include "protocols.h"  // for T55xx config register definitions
+#include "util_posix.h"
+
 static int CmdHelp(const char *Cmd);
 /*
 static int usage_lf_awid_read(void) {

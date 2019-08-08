@@ -9,6 +9,14 @@
 //-----------------------------------------------------------------------------
 #include "util.h"
 
+#include "proxmark3_arm.h"
+#include "ticks.h"
+#include "commonutil.h"
+#include "dbprint.h"
+#include "string.h"
+#include "usb_cdc.h"
+#include "usart.h"
+
 size_t nbytes(size_t nbits) {
     return (nbits >> 3) + ((nbits % 8) > 0);
 }

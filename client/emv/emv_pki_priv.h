@@ -16,11 +16,11 @@
 #ifndef EMV_PKI_PRIV_H
 #define EMV_PKI_PRIV_H
 
+#include "common.h"
+
 #include "crypto.h"
 #include "emv_pk.h"
 #include "tlv.h"
-
-#include <stddef.h>
 
 struct emv_pk *emv_pki_make_ca(const struct crypto_pk *cp,
                                const unsigned char *rid, unsigned char index,

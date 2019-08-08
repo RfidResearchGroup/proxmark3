@@ -11,16 +11,16 @@
 #ifndef UTIL_POSIX_H__
 #define UTIL_POSIX_H__
 
-#include <stdint.h>
+#include "common.h"
 
 #ifdef _WIN32
 # include <windows.h>
 # define sleep(n) Sleep(1000 *(n))
 # define msleep(n) Sleep((n))
 #else
-extern void msleep(uint32_t n); // sleep n milliseconds
+void msleep(uint32_t n); // sleep n milliseconds
 #endif // _WIN32
 
-extern uint64_t msclock(void);      // a milliseconds clock
+uint64_t msclock(void);      // a milliseconds clock
 
 #endif

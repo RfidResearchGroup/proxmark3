@@ -43,6 +43,12 @@
     RDV40_SPIFFS_SAFE_FOOTER
 
 #include "spiffs.h"
+#include "flashmem.h"
+#include "dbprint.h"
+#include "printf.h"
+#include "common.h"
+#include "string.h"
+#include "BigBuf.h"
 
 ///// FLASH LEVEL R/W/E operations  for feeding SPIFFS Driver/////////////////
 static s32_t rdv40_spiffs_llread(u32_t addr, u32_t size, u8_t *dst) {

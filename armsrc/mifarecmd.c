@@ -15,9 +15,23 @@
 
 #include "mifarecmd.h"
 
-#include <inttypes.h>
-
 #include "pmflash.h"
+#include "proxmark3_arm.h"
+#include "string.h"
+#include "mifareutil.h"
+#include "protocols.h"
+#include "parity.h"
+#include "BigBuf.h"
+#include "cmd.h"
+#include "flashmem.h"
+#include "fpgaloader.h"
+#include "iso14443a.h"
+#include "mifaredesfire.h"
+#include "util.h"
+#include "commonutil.h"
+#include "crc16.h"
+#include "dbprint.h"
+#include "ticks.h"
 
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
 # define HARDNESTED_AUTHENTICATION_TIMEOUT  848     // card times out 1ms after wrong authentication (according to NXP documentation)

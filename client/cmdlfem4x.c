@@ -10,6 +10,23 @@
 
 #include "cmdlfem4x.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"
+#include "util_posix.h"
+#include "protocols.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "lfdemod.h"
+
 uint64_t g_em410xid = 0;
 
 static int CmdHelp(const char *Cmd);

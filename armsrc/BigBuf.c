@@ -10,6 +10,9 @@
 //-----------------------------------------------------------------------------
 #include "BigBuf.h"
 
+#include "string.h"
+#include "dbprint.h"
+
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
 // Also used to hold various smaller buffers and the Mifare Emulator Memory.
 // declare it as uint32_t to achieve alignment to 4 Byte boundary

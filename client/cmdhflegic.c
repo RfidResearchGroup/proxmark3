@@ -9,6 +9,16 @@
 //-----------------------------------------------------------------------------
 #include "cmdhflegic.h"
 
+#include <stdio.h> // for Mingw readline
+#include <readline/readline.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"        // clearCommandBuffer
+#include "cmdtrace.h"
+#include "crc.h"
+#include "crc16.h"
+#include "loclass/fileutils.h"  //saveFile
+
 static int CmdHelp(const char *Cmd);
 
 #define MAX_LENGTH 1024

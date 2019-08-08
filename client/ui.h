@@ -11,18 +11,11 @@
 #ifndef UI_H__
 #define UI_H__
 
-#define _USE_MATH_DEFINES
-#include <stdarg.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include <readline/readline.h>
+#include "common.h"
 #include <pthread.h>
-#include <math.h>
-#include <complex.h>
-#include "util.h"
+#include "ansi.h"
+
+#define _USE_MATH_DEFINES
 
 typedef struct {
     bool stdinOnTTY;

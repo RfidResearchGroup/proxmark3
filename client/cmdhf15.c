@@ -24,6 +24,19 @@
 // variant, but offers the possibility to analyze the waveforms directly.
 #include "cmdhf15.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"        // clearCommandBuffer
+#include "cmdtrace.h"
+#include "iso15693tools.h"
+
+#include "graph.h"
+#include "crc16.h"             // iso15 crc
+#include "cmddata.h"           // getsamples
+#include "loclass/fileutils.h" // savefileEML
+
 #define FrameSOF                Iso15693FrameSOF
 #define Logic0                  Iso15693Logic0
 #define Logic1                  Iso15693Logic1

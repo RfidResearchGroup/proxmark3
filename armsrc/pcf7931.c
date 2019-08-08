@@ -1,5 +1,15 @@
 #include "pcf7931.h"
 
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "lfsampling.h"
+#include "string.h"
+
 #define T0_PCF 8 //period for the pcf7931 in us
 #define ALLOC 16
 

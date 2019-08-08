@@ -8,18 +8,8 @@
 //-----------------------------------------------------------------------------
 #ifndef CMDLFVIKING_H__
 #define CMDLFVIKING_H__
-#include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "lfdemod.h"
+
+#include "common.h"
 
 int CmdLFViking(const char *Cmd);
 

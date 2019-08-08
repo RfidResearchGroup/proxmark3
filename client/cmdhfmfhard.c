@@ -21,18 +21,18 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
-#include <time.h>
-#include <pthread.h>
 #include <locale.h>
 #include <math.h>
+#include <time.h> // MingW
+
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"
+
 #include "proxmark3.h"
-#include "cmdmain.h"
 #include "ui.h"
-#include "util.h"
 #include "util_posix.h"
 #include "crapto1/crapto1.h"
 #include "parity.h"
-#include "hardnested/hardnested_bruteforce.h"
 #include "hardnested/hardnested_bf_core.h"
 #include "hardnested/hardnested_bitarray_core.h"
 #include "zlib.h"

@@ -32,14 +32,10 @@
 #ifndef _PRINTF_H_
 #define _PRINTF_H_
 
-#include <stdarg.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stddef.h>
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include <stdarg.h>
 
 /**
  * Output a character to a custom device like UART, used by the printf() function
@@ -107,11 +103,5 @@ int vprintf_(const char *format, va_list va);
  * \return The number of characters that are sent to the output function, not counting the terminating null character
  */
 int fctprintf(void (*out)(char character, void *arg), void *arg, const char *format, ...);
-
-
-#ifdef __cplusplus
-}
-#endif
-
 
 #endif  // _PRINTF_H_

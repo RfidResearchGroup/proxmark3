@@ -8,19 +8,13 @@
 // Low frequency Hitag support
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "common.h"
-#include "util.h"
-#include "parity.h"
-#include "hitag.h"
-#include "util_posix.h"
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
 #include "comms.h"
-#include "cmddata.h"
+#include "cmdtrace.h"
+#include "commonutil.h"
+#include "hitag.h"
 #include "loclass/fileutils.h"  // savefile
 
 static int CmdHelp(const char *Cmd);
@@ -299,7 +293,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 res = loadFileEML(filename, data, &datalen);
                 if (res > 0 || datalen != maxdatalen) {
-                    PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
+                    PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
                     errors = true;
                     break;
                 }

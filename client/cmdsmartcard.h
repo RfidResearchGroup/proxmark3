@@ -11,21 +11,8 @@
 #ifndef CMDSMARTCARD_H__
 #define CMDSMARTCARD_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
 #include "common.h"
-#include "util.h"
-#include "loclass/fileutils.h"  // saveFile
-#include "comms.h"              // getfromdevice
-#include "emv/emvcore.h"        // decodeTVL
-#include "emv/apduinfo.h"       // APDUcode description
-#include "emv/dump.h"           // dump_buffer
-#include "crypto/libpcrypto.h"  // sha512hash
+#include "mifare.h" // structs
 
 int CmdSmartcard(const char *Cmd);
 

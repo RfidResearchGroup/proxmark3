@@ -8,6 +8,14 @@
 
 #include "lfsampling.h"
 
+#include "proxmark3_arm.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "lfdemod.h"
+
 /*
 Default LF config is set to:
     decimation = 1  (we keep 1 out of 1 samples)

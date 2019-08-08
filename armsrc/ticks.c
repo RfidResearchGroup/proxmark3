@@ -10,6 +10,9 @@
 //-----------------------------------------------------------------------------
 #include "ticks.h"
 
+#include "proxmark3_arm.h"
+#include "dbprint.h"
+
 // timer counts in 21.3us increments (1024/48MHz), rounding applies
 // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 void SpinDelayUs(int us) {

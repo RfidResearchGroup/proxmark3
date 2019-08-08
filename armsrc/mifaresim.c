@@ -20,19 +20,24 @@
 //  /!\ Printing Debug message is disrupting emulation,
 //  Only use with caution during debugging
 
+#include "mifaresim.h"
+
+#include <inttypes.h>
 
 #include "iso14443a.h"
-#include "mifaresim.h"
-#include "crapto1/crapto1.h"
 #include "BigBuf.h"
 #include "string.h"
 #include "mifareutil.h"
 #include "fpgaloader.h"
-#include "proxmark3.h"
-#include "usb_cdc.h"
+#include "proxmark3_arm.h"
 #include "cmd.h"
 #include "protocols.h"
-#include "apps.h"
+#include "appmain.h"
+#include "util.h"
+#include "commonutil.h"
+#include "crc16.h"
+#include "dbprint.h"
+#include "ticks.h"
 
 static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action) {
     uint8_t sector_trailer[16];
@@ -506,7 +511,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     uint8_t rAUTH_NT_keystream[4];
     uint32_t nonce = 0;
 
-    tUart *uart = GetUart();
+    tUart14a *uart = GetUart14a();
 
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();

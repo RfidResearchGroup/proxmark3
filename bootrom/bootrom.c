@@ -6,8 +6,9 @@
 // Main code for the bootloader
 //-----------------------------------------------------------------------------
 
-#include <proxmark3.h>
 #include "usb_cdc.h"
+
+#include "proxmark3_arm.h"
 
 struct common_area common_area __attribute__((section(".commonarea")));
 unsigned int start_addr, end_addr, bootrom_unlocked;

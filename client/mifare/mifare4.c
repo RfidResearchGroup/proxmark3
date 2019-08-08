@@ -10,10 +10,10 @@
 //-----------------------------------------------------------------------------
 
 #include "mifare4.h"
-#include <ctype.h>
 #include <string.h>
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h" // DropField
 #include "cmdhf14a.h"
-#include "util.h"
 #include "ui.h"
 #include "crypto/libpcrypto.h"
 

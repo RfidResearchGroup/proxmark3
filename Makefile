@@ -31,7 +31,7 @@ endif
 
 -include Makefile.platform
 -include .Makefile.options.cache
-include common/Makefile.hal
+include common_arm/Makefile.hal
 
 all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/%
 

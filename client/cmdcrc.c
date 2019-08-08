@@ -9,6 +9,23 @@
 //-----------------------------------------------------------------------------
 #include "cmdcrc.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#ifdef _WIN32
+#  include <io.h>
+#  include <fcntl.h>
+#  ifndef STDIN_FILENO
+#    define STDIN_FILENO 0
+#  endif /* STDIN_FILENO */
+#endif /* _WIN32 */
+
+#include "reveng/reveng.h"
+#include "ui.h"
+#include "util.h"
+
 #define MAX_ARGS 20
 
 static int split(char *str, char *arr[MAX_ARGS]) {

@@ -8,18 +8,23 @@
 // Also routines for raw mode reading/simulating of LF waveform
 //-----------------------------------------------------------------------------
 
-#include "proxmark3.h"
-#include "apps.h"
+#include "lfops.h"
+
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
 #include "util.h"
-#include "hitag2.h"
+#include "commonutil.h"
+
 #include "crc16.h"
 #include "string.h"
 #include "printf.h"
 #include "lfdemod.h"
 #include "lfsampling.h"
 #include "protocols.h"
-#include "usb_cdc.h" // for usb_poll_validate_length
-#include "common.h"
 #include "pmflash.h"
 #include "flashmem.h" // persistence on flash
 
@@ -153,6 +158,30 @@ t55xx_configurations_t T55xx_Timing  = {
 #define T55XX_DLMODE_LEADING_ZERO  2 // Leading Zero
 #define T55XX_DLMODE_1OF4          3 // 1 of 4
 #define T55XX_LONGLEADINGREFERENCE 4 // Value to tell Write Bit to send long reference
+
+// ATA55xx shared presets & routines
+static uint32_t GetT55xxClockBit(uint32_t clock) {
+    switch (clock) {
+        case 128:
+            return T55x7_BITRATE_RF_128;
+        case 100:
+            return T55x7_BITRATE_RF_100;
+        case  64:
+            return T55x7_BITRATE_RF_64;
+        case  50:
+            return T55x7_BITRATE_RF_50;
+        case  40:
+            return T55x7_BITRATE_RF_40;
+        case  32:
+            return T55x7_BITRATE_RF_32;
+        case  16:
+            return T55x7_BITRATE_RF_16;
+        case   8:
+            return T55x7_BITRATE_RF_8;
+        default :
+            return 0;
+    }
+}
 
 void printT55xxConfig(void) {
 

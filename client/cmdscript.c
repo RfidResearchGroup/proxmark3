@@ -11,27 +11,21 @@
 // this define is needed for scandir/alphasort to work
 #define _GNU_SOURCE
 
-#include <stdio.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <sys/types.h>
-#include <dirent.h>
 
-#include "proxmark3.h"
+#include "cmdparser.h"    // command_t
 #include "scripting.h"
-#include "ui.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmdmain.h"
 #include "comms.h"
 #include "cmdscript.h"
 #include "cmdhfmf.h"
 #include "pm3_binlib.h"
 #include "pm3_bitlib.h"
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#include "lualib.h"
+#include "lauxlib.h"
+#include "proxmark3.h"
+#include "ui.h"
 
 #ifdef _WIN32
 #include "scandir.h"

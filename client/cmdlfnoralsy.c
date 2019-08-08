@@ -9,6 +9,18 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfnoralsy.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_noralsy_clone(void) {

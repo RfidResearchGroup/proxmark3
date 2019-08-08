@@ -15,6 +15,16 @@
 
 #include "util.h"
 
+#include <stdarg.h>
+#include <inttypes.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h> // Mingw
+
+#include "ui.h"     // PrintAndLog
+
 #define UTIL_BUFFER_SIZE_SPRINT 4097
 // global client debug variable
 uint8_t g_debugMode = 0;

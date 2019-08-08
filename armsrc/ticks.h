@@ -12,11 +12,7 @@
 #ifndef __TICKS_H
 #define __TICKS_H
 
-#include <stddef.h>
-#include <stdint.h>
 #include "common.h"
-#include "apps.h"
-#include "proxmark3.h"
 
 #ifndef GET_TICKS
 #define GET_TICKS GetTicks()
@@ -45,4 +41,5 @@ void WaitUS(uint16_t us);
 void WaitMS(uint16_t ms);
 
 void StopTicks(void);
+
 #endif

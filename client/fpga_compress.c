@@ -15,13 +15,9 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <inttypes.h>
 #include "fpga.h"
 #include "zlib.h"
-
-#define MAX(a,b) ((a)>(b)?(a):(b))
 
 // zlib configuration
 #define COMPRESS_LEVEL          9  // use best possible compression

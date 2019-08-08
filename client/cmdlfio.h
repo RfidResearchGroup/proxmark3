@@ -4,17 +4,7 @@
 #ifndef CMDLFIO_H__
 #define CMDLFIO_H__
 
-#include <stdio.h>      // sscanf
-#include <stdlib.h>
-#include <string.h>
-#include "proxmark3.h"  // Definitions, USB controls, etc
-#include "ui.h"         // PrintAndLog
-#include "cmdparser.h"  // CmdsParse, CmdsHelp
-#include "lfdemod.h"    // parityTest, bitbytes_to_byte
-#include "util.h"       // weigandparity
-#include "protocols.h"  // for T55xx config register definitions
-#include "cmdmain.h"
-#include "cmddata.h"
+#include "common.h"
 
 int CmdLFIO(const char *Cmd);
 

@@ -16,9 +16,9 @@
 #ifndef DUMP_H
 #define DUMP_H
 
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
+#include "common.h"
+
+#include <stdio.h> // FILE
 
 void dump_buffer_simple(const unsigned char *ptr, size_t len, FILE *f);
 void dump_buffer(const unsigned char *ptr, size_t len, FILE *f, int level);

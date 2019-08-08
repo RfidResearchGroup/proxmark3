@@ -10,22 +10,9 @@
 #ifndef __MIFARE_HOST_H
 #define __MIFARE_HOST_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <pthread.h>
-
-#include "proxmark3.h"  // time_t
 #include "common.h"
+
 #include "util.h"       // FILE_PATH_SIZE
-#include "ui.h"         // PrintAndLog...
-#include "crapto1/crapto1.h"
-#include "crc16.h"
-#include "protocols.h"
-#include "mifare.h"
-#include "mfkey.h"
-#include "util_posix.h"  // msclock
 
 #define MIFARE_SECTOR_RETRY     10
 

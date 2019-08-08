@@ -12,6 +12,8 @@
 #ifndef CMDLFPCF7931_H__
 #define CMDLFPCF7931_H__
 
+#include "common.h"
+
 struct pcf7931_config {
     uint8_t Pwd[7];
     uint16_t InitDelay;

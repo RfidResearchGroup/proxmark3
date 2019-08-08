@@ -16,22 +16,6 @@
 #ifndef __HF_COLIN_H
 #define __HF_COLIN_H
 
-#include "proxmark3.h"
-#include "mifaresim.h"  // mifare1ksim
-#include "mifareutil.h"
-#include "iso14443a.h"
-#include "protocols.h"
-#include "util.h"
-#include "pmflash.h"
-#include "standalone.h" // standalone definitions
-#include <stdbool.h>    // for bool
-#include <stdio.h>
-#include <string.h>
-#include "vtsend.h"
-#include "apps.h"
-#include "printf.h"
-#include "spiffs.h"
-
 #define _XRED_ "\x1b[31m"
 #define _XGREEN_ "\x1b[32m"
 #define _XYELLOW_ "\x1b[33m"

@@ -9,6 +9,8 @@
 //-----------------------------------------------------------------------------
 
 #include "proxgui.h"
+
+#include <string.h>
 #include "proxguiqt.h"
 #include "proxmark3.h"
 

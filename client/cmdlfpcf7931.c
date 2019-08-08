@@ -8,17 +8,13 @@
 //-----------------------------------------------------------------------------
 // Low frequency PCF7931 commands
 //-----------------------------------------------------------------------------
-#include <stdio.h>
-#include <string.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
 #include "cmdlfpcf7931.h"
+
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
 
 static int CmdHelp(const char *Cmd);
 

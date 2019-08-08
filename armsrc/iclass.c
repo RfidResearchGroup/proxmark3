@@ -36,15 +36,24 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "apps.h"
+#include "iclass.h"
+
+#include "proxmark3_arm.h"
 #include "cmd.h"
 // Needed for CRC in emulation mode;
 // same construction as in ISO 14443;
 // different initial value (CRC_ICLASS)
 #include "crc16.h"
-#include "protocols.h"
 #include "optimized_cipher.h"
-#include "usb_cdc.h" // for usb_poll_validate_length
+
+#include "appmain.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "string.h"
+#include "util.h"
+#include "dbprint.h"
+#include "protocols.h"
+#include "ticks.h"
 
 static int timeout = 4096;
 static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay);
@@ -92,21 +101,21 @@ typedef struct {
     int     bitBuffer;
     int     dropPosition;
     uint8_t *output;
-} tUart;
+} tUartIc;
 */
 typedef struct {
     enum {
-        DEMOD_UNSYNCD,
-        DEMOD_START_OF_COMMUNICATION,
-        DEMOD_START_OF_COMMUNICATION2,
-        DEMOD_START_OF_COMMUNICATION3,
-        DEMOD_SOF_COMPLETE,
-        DEMOD_MANCHESTER_D,
-        DEMOD_MANCHESTER_E,
-        DEMOD_END_OF_COMMUNICATION,
-        DEMOD_END_OF_COMMUNICATION2,
-        DEMOD_MANCHESTER_F,
-        DEMOD_ERROR_WAIT
+        DEMOD_IC_UNSYNCD,
+        DEMOD_IC_START_OF_COMMUNICATION,
+        DEMOD_IC_START_OF_COMMUNICATION2,
+        DEMOD_IC_START_OF_COMMUNICATION3,
+        DEMOD_IC_SOF_COMPLETE,
+        DEMOD_IC_MANCHESTER_D,
+        DEMOD_IC_MANCHESTER_E,
+        DEMOD_IC_END_OF_COMMUNICATION,
+        DEMOD_IC_END_OF_COMMUNICATION2,
+        DEMOD_IC_MANCHESTER_F,
+        DEMOD_IC_ERROR_WAIT
     }       state;
     int     bitCount;
     int     posCount;
@@ -125,7 +134,7 @@ typedef struct {
         SUB_BOTH
     } sub;
     uint8_t   *output;
-} tDemod;
+} tDemodIc;
 
 /*
 * Abrasive's uart implementation
@@ -138,8 +147,13 @@ typedef struct {
     bool frame_done;
     uint8_t *buf;
     int len;
-} tUart;
-static tUart Uart;
+} tUartIc;
+static tUartIc Uart;
+
+static void OnError(uint8_t reason) {
+    reply_old(CMD_ACK, 0, reason, 0, 0, 0);
+    switch_off();
+}
 
 static void uart_reset(void) {
     Uart.frame_done = false;
@@ -499,8 +513,8 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 //=============================================================================
 // Manchester
 //=============================================================================
-static tDemod Demod;
-static void DemodReset() {
+static tDemodIc Demod;
+static void DemodIcReset() {
     Demod.bitCount = 0;
     Demod.posCount = 0;
     Demod.syncBit = 0;
@@ -512,11 +526,11 @@ static void DemodReset() {
     Demod.samples = 0;
     Demod.len = 0;
     Demod.sub = SUB_NONE;
-    Demod.state = DEMOD_UNSYNCD;
+    Demod.state = DEMOD_IC_UNSYNCD;
 }
-static void DemodInit(uint8_t *data) {
+static void DemodIcInit(uint8_t *data) {
     Demod.output = data;
-    DemodReset();
+    DemodIcReset();
 }
 
 // UART debug
@@ -592,7 +606,7 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
         return false;
     }
 
-    if (Demod.state == DEMOD_UNSYNCD) {
+    if (Demod.state == DEMOD_IC_UNSYNCD) {
         Demod.output[Demod.len] = 0xfa;
         Demod.syncBit = 0;
         //Demod.samples = 0;
@@ -620,7 +634,7 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
 
         if (Demod.syncBit) {
             Demod.len = 0;
-            Demod.state = DEMOD_START_OF_COMMUNICATION;
+            Demod.state = DEMOD_IC_START_OF_COMMUNICATION;
             Demod.sub = SUB_FIRST_HALF;
             Demod.bitCount = 0;
             Demod.shiftReg = 0;
@@ -644,12 +658,12 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
                 }
                 // SOF must be long burst... otherwise stay unsynced!!!
                 if (!(Demod.buffer & Demod.syncBit) || !(Demod.buffer2 & Demod.syncBit))
-                    Demod.state = DEMOD_UNSYNCD;
+                    Demod.state = DEMOD_IC_UNSYNCD;
 
             } else {
                 // SOF must be long burst... otherwise stay unsynced!!!
                 if (!(Demod.buffer2 & Demod.syncBit) || !(Demod.buffer3 & Demod.syncBit)) {
-                    Demod.state = DEMOD_UNSYNCD;
+                    Demod.state = DEMOD_IC_UNSYNCD;
                     error = 0x88;
                     uart_debug(error, bit);
                     return false;
@@ -682,74 +696,74 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
     }
 
     if (Demod.sub == SUB_NONE) {
-        if (Demod.state == DEMOD_SOF_COMPLETE) {
+        if (Demod.state == DEMOD_IC_SOF_COMPLETE) {
             Demod.output[Demod.len] = 0x0f;
             Demod.len++;
-            Demod.state = DEMOD_UNSYNCD;
+            Demod.state = DEMOD_IC_UNSYNCD;
             return true;
         } else {
-            Demod.state = DEMOD_ERROR_WAIT;
+            Demod.state = DEMOD_IC_ERROR_WAIT;
             error = 0x33;
         }
     }
 
     switch (Demod.state) {
 
-        case DEMOD_START_OF_COMMUNICATION:
+        case DEMOD_IC_START_OF_COMMUNICATION:
             if (Demod.sub == SUB_BOTH) {
 
-                Demod.state = DEMOD_START_OF_COMMUNICATION2;
+                Demod.state = DEMOD_IC_START_OF_COMMUNICATION2;
                 Demod.posCount = 1;
                 Demod.sub = SUB_NONE;
             } else {
                 Demod.output[Demod.len] = 0xab;
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0xd2;
             }
             break;
 
-        case DEMOD_START_OF_COMMUNICATION2:
+        case DEMOD_IC_START_OF_COMMUNICATION2:
             if (Demod.sub == SUB_SECOND_HALF) {
-                Demod.state = DEMOD_START_OF_COMMUNICATION3;
+                Demod.state = DEMOD_IC_START_OF_COMMUNICATION3;
             } else {
                 Demod.output[Demod.len] = 0xab;
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0xd3;
             }
             break;
 
-        case DEMOD_START_OF_COMMUNICATION3:
+        case DEMOD_IC_START_OF_COMMUNICATION3:
             if (Demod.sub == SUB_SECOND_HALF) {
-                Demod.state = DEMOD_SOF_COMPLETE;
+                Demod.state = DEMOD_IC_SOF_COMPLETE;
             } else {
                 Demod.output[Demod.len] = 0xab;
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0xd4;
             }
             break;
 
-        case DEMOD_SOF_COMPLETE:
-        case DEMOD_MANCHESTER_D:
-        case DEMOD_MANCHESTER_E:
+        case DEMOD_IC_SOF_COMPLETE:
+        case DEMOD_IC_MANCHESTER_D:
+        case DEMOD_IC_MANCHESTER_E:
             // OPPOSITE FROM ISO14443 - 11110000 = 0 (1 in 14443)
             //                          00001111 = 1 (0 in 14443)
             if (Demod.sub == SUB_SECOND_HALF) { // SUB_FIRST_HALF
                 Demod.bitCount++;
                 Demod.shiftReg = (Demod.shiftReg >> 1) ^ 0x100;
-                Demod.state = DEMOD_MANCHESTER_D;
+                Demod.state = DEMOD_IC_MANCHESTER_D;
             } else if (Demod.sub == SUB_FIRST_HALF) { // SUB_SECOND_HALF
                 Demod.bitCount++;
                 Demod.shiftReg >>= 1;
-                Demod.state = DEMOD_MANCHESTER_E;
+                Demod.state = DEMOD_IC_MANCHESTER_E;
             } else if (Demod.sub == SUB_BOTH) {
-                Demod.state = DEMOD_MANCHESTER_F;
+                Demod.state = DEMOD_IC_MANCHESTER_F;
             } else {
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0x55;
             }
             break;
 
-        case DEMOD_MANCHESTER_F:
+        case DEMOD_IC_MANCHESTER_F:
             // Tag response does not need to be a complete byte!
             if (Demod.len > 0 || Demod.bitCount > 0) {
                 if (Demod.bitCount > 1) {  // was > 0, do not interpret last closing bit, is part of EOF
@@ -758,22 +772,22 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
                     Demod.len++;
                 }
 
-                Demod.state = DEMOD_UNSYNCD;
+                Demod.state = DEMOD_IC_UNSYNCD;
                 return true;
             } else {
                 Demod.output[Demod.len] = 0xad;
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0x03;
             }
             break;
 
-        case DEMOD_ERROR_WAIT:
-            Demod.state = DEMOD_UNSYNCD;
+        case DEMOD_IC_ERROR_WAIT:
+            Demod.state = DEMOD_IC_UNSYNCD;
             break;
 
         default:
             Demod.output[Demod.len] = 0xdd;
-            Demod.state = DEMOD_UNSYNCD;
+            Demod.state = DEMOD_IC_UNSYNCD;
             break;
     }
 
@@ -818,10 +832,10 @@ static void iclass_setup_sniff(void) {
     set_tracing(true);
 
     // Initialize Demod and Uart structs
-    DemodInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
+    DemodIcInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
 
     uart_init(BigBuf_malloc(ICLASS_BUFFER_SIZE));
-    //UartInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
+    //UartIcInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
 
     if (DBGLEVEL > 1) {
         // Print debug information about the buffer sizes
@@ -927,7 +941,7 @@ void RAMFUNC SniffIClass(void) {
                 if (Uart.frame_done) {
                     time_stop = GetCountSspClk() - time_0;
                     LogTrace(Uart.buf, Uart.len, time_start, time_stop, NULL, true);
-                    DemodReset();
+                    DemodIcReset();
                     uart_reset();
                 } else {
                     time_start = GetCountSspClk() - time_0;
@@ -959,12 +973,12 @@ void RAMFUNC SniffIClass(void) {
                 if (ManchesterDecoding_iclass(foo)) {
                     time_stop = GetCountSspClk() - time_0;
                     LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
-                    DemodReset();
+                    DemodIcReset();
                     uart_reset();
                 } else {
                     time_start = GetCountSspClk() - time_0;
                 }
-                TagIsActive = (Demod.state != DEMOD_UNSYNCD);
+                TagIsActive = (Demod.state != DEMOD_IC_UNSYNCD);
             }
             tag_byte = 0;
             foo = 0;
@@ -1821,7 +1835,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
     bool skip = false;
 
     // Setup UART/DEMOD to receive
-    DemodInit(receivedResponse);
+    DemodIcInit(receivedResponse);
 
     if (elapsed) *elapsed = 0;
 

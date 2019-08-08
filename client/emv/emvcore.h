@@ -11,22 +11,12 @@
 #ifndef EMVCORE_H__
 #define EMVCORE_H__
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <string.h>
-#include <jansson.h>
-#include "util.h"
 #include "common.h"
-#include "ui.h"
-#include "cmdhf14a.h"
+
+#include <inttypes.h>
+#include <jansson.h>
+
 #include "apduinfo.h"
-#include "tlv.h"
-#include "dol.h"
-#include "dump.h"
-#include "emv_tags.h"
-#include "emv_pk.h"
 #include "emv_pki.h"
 
 #define APDU_RES_LEN 260

@@ -8,7 +8,29 @@
 //-----------------------------------------------------------------------------
 // High frequency commands
 //-----------------------------------------------------------------------------
-#include "cmdhf.h"
+//#include "cmdhf.h"
+
+#include <ctype.h>        // tolower
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"        // clearCommandBuffer
+
+#include "cmdhf14a.h"       // ISO14443-A
+#include "cmdhf14b.h"       // ISO14443-B
+#include "cmdhf15.h"        // ISO15693
+#include "cmdhfepa.h"
+#include "cmdhflegic.h"     // LEGIC
+#include "cmdhficlass.h"    // ICLASS
+#include "cmdhfmf.h"        // CLASSIC
+#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
+#include "cmdhfmfp.h"       // Mifare Plus
+#include "cmdhfmfdes.h"     // DESFIRE
+#include "cmdhftopaz.h"     // TOPAZ
+#include "cmdhffelica.h"    // ISO18092 / FeliCa
+#include "cmdhffido.h"      // FIDO authenticators
+#include "cmdhfthinfilm.h"  // Thinfilm
+#include "cmdtrace.h"       // trace list
+#include "ui.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -101,15 +123,15 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    /*
-    if (IfPm3Felica()) {
-        ans = CmdHFFelicaReader("s");
-        if (ans) {
-            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
-            return ans;
-        }
-    }
-    */
+    
+    //if (IfPm3Felica()) {
+    //    ans = CmdHFFelicaReader("s");
+    //    if (ans) {
+    //        PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+    //        return ans;
+    //    }
+    //}
+
 
     PrintAndLogEx(FAILED, "\nno known/supported 13.56 MHz tags found\n");
     return PM3_ESOFT;

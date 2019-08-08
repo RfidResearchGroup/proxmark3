@@ -9,12 +9,12 @@
 //-----------------------------------------------------------------------------
 
 #include "emvjson.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <inttypes.h>
+
 #include <string.h>
+
+#include "commonutil.h"  // ARRAYLEN
 #include "ui.h"
+#include "util.h"
 #include "proxmark3.h"
 #include "emv_tags.h"
 

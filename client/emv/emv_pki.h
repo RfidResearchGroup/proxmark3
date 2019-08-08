@@ -19,8 +19,6 @@
 #include "emv_pk.h"
 #include "tlv.h"
 
-#include <stddef.h>
-
 void PKISetStrictExecution(bool se);
 
 unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len);

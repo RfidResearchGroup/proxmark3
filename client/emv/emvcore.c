@@ -9,6 +9,18 @@
 //-----------------------------------------------------------------------------
 
 #include "emvcore.h"
+
+#include <string.h>
+
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"       // DropField
+#include "cmdparser.h"
+#include "cmdsmartcard.h" // ExchangeAPDUSC
+#include "ui.h"
+#include "cmdhf14a.h"
+#include "dol.h"
+#include "dump.h"
+#include "emv_tags.h"
 #include "emvjson.h"
 #include "util_posix.h"
 
