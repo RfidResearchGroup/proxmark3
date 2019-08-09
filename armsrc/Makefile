@@ -204,6 +204,7 @@ tarbin: $(OBJS)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=armsrc/%) $(OBJS:%.s19=armsrc/%.elf)
 
 clean:
+	$(Q)$(DELETE) $(DEPENDENCY_FILES)
 	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.o
 	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.elf
 	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
