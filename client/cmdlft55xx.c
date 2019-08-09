@@ -2614,7 +2614,7 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_lf_deviceconfig();
 
-    t55xx_configurations_t configurations = {0};
+    t55xx_configurations_t configurations = {{{0},{0},{0},{0}}};
 
     if (set_defaults) {
         // fixed bit length
