@@ -358,7 +358,7 @@ void getKeySettings(uint8_t *aid) {
                     str = "All keys (except AMK,see Bit0) within this application are frozen";
                     break;
                 default:
-                    str = "Authentication with the specified key is necessary to change any ley. A change key and a PICC master key (CMK) can only be changed after authentication with the master key. For keys other then the master or change key, an authentication with the same key is needed.";
+                    str = "Authentication with the specified key is necessary to change any key. A change key and a PICC master key (CMK) can only be changed after authentication with the master key. For keys other then the master or change key, an authentication with the same key is needed.";
                     break;
             }
             PrintAndLogEx(NORMAL, "Changekey Access rights");
