@@ -135,7 +135,7 @@ include ../common_arm/Makefile.common
 COMMON_FLAGS =  -Os
 
 OBJS = $(OBJDIR)/fullimage.s19
-FPGA_COMPRESSOR = ../client/fpga_compress
+FPGA_COMPRESSOR = ../tools/fpga_compress/fpga_compress
 
 all: $(OBJS)
 
@@ -163,8 +163,8 @@ else
 endif
 
 $(FPGA_COMPRESSOR):
-	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C ../client $(notdir $(FPGA_COMPRESSOR))
+	$(error [!] MISSING $@ => To build it, go the root of the repo and do "make $(notdir $@)")
+	$(error [!] MISSING $@)
 
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [=] LD $@)

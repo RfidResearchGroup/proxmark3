@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include <string.h>
-#include <inttypes.h>
 #include "fpga.h"
 #include "zlib.h"
 
@@ -23,6 +22,7 @@
 #define COMPRESS_LEVEL          9  // use best possible compression
 #define COMPRESS_WINDOW_BITS    15 // default = max = 15 for a window of 2^15 = 32KBytes
 #define COMPRESS_MEM_LEVEL      9  // determines the amount of memory allocated during compression. Default = 8.
+
 /* COMPRESS_STRATEGY can be
     Z_DEFAULT_STRATEGY (the default),
     Z_FILTERED (more huffmann, less string matching),

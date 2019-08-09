@@ -33,7 +33,7 @@ endif
 -include .Makefile.options.cache
 include common_arm/Makefile.hal
 
-all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/%
+all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% fpga_compress/%
 
 mfkey/%: FORCE
 	$(info [*] MAKE $@)
@@ -41,10 +41,13 @@ mfkey/%: FORCE
 nonce2key/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/nonce2key $(patsubst nonce2key/%,%,$@)
+fpga_compress/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress $(patsubst fpga_compress/%,%,$@)
 bootrom/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C bootrom $(patsubst bootrom/%,%,$@)
-armsrc/%: FORCE cleanifplatformchanged
+armsrc/%: FORCE cleanifplatformchanged fpga_compress/%
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C armsrc $(patsubst armsrc/%,%,$@)
 client/%: FORCE
@@ -74,6 +77,7 @@ help:
 	@echo "+ client        - Make only the OS-specific host client"
 	@echo "+ mfkey         - Make tools/mfkey"
 	@echo "+ nonce2key     - Make tools/nonce2key"
+	@echo "+ fpga_compress - Make tools/fpga_compress"
 	@echo
 	@echo "+ style         - Apply some automated source code formatting rules"
 	@echo "+ checks        - Detect various encoding issues in source code"
@@ -92,6 +96,8 @@ recovery: recovery/all
 mfkey: mfkey/all
 
 nonce2key: nonce2key/all
+
+fpga_compress: fpga_compress/all
 
 flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$<)

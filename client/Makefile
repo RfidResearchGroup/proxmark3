@@ -291,14 +291,14 @@ ifeq "$(SUPPORTS_AVX512)" "True"
     MULTIARCHOBJS +=  $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX512.o)
 endif
 
-BINS = proxmark3 flasher fpga_compress
+BINS = proxmark3 flasher
 CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
 all: lua_build jansson_build mbedtls_build cbor_build $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
-all-static: proxmark3 flasher fpga_compress
+all-static: $(BINS)
 
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
@@ -308,10 +308,6 @@ proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS)
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-fpga_compress: $(OBJDIR)/fpga_compress.o $(ZLIBOBJS)
-	$(info [=] LD $@)
-	$(Q)$(LD) $(LDFLAGS) $(ZLIBFLAGS) $^ $(LDLIBS) -o $@
 
 proxgui.cpp: ui/ui_overlays.h
 
@@ -427,7 +423,7 @@ DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBS
 	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
-	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/flasher.d $(OBJDIR)/fpga_compress.d
+	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/flasher.d
 
 $(DEPENDENCY_FILES): ;
 .PRECIOUS: $(DEPENDENCY_FILES)

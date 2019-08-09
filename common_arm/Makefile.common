@@ -35,7 +35,7 @@ MV=mv
 
 OBJDIR = obj
 
-INCLUDE = -I../include -I../common_arm -I../common -I.
+INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
 
 TAR=tar
 TARFLAGS = -C .. -rvf

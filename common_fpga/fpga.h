@@ -7,7 +7,8 @@
 #ifndef __FPGA_H
 #define __FPGA_H
 
-#include "common.h"
+#include <stdbool.h>
+#include <inttypes.h>
 
 #define FPGA_BITSTREAM_FIXED_HEADER_SIZE    sizeof(bitparse_fixed_header)
 #define FPGA_INTERLEAVE_SIZE                288
