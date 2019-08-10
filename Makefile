@@ -55,7 +55,7 @@ recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style checks FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -73,7 +73,7 @@ help:
 	@echo
 	@echo "+ client        - Make only the OS-specific host client"
 	@echo "+ mfkey         - Make tools/mfkey"
-	@echo "+ nounce2key    - Make tools/nounce2key"
+	@echo "+ nonce2key     - Make tools/nonce2key"
 	@echo
 	@echo "+ style         - Apply some automated source code formatting rules"
 	@echo "+ checks        - Detect various encoding issues in source code"
