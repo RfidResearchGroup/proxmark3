@@ -1062,6 +1062,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // save the dump to .bin file
     PrintAndLogEx(SUCCESS, "saving dump file - %d blocks read", gotBytes / 8);
     saveFile(filename, ".bin", tag_data, gotBytes);
+    saveFileEML(filename, tag_data, gotBytes, 8);
     return 1;
 }
 
