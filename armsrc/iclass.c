@@ -1324,7 +1324,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     // Reader 81 anticoll. CSN
     // Tag    CSN
 
-    uint8_t *modulated_response;
+    uint8_t *modulated_response = NULL;
     int modulated_response_size = 0;
     uint8_t *trace_data = NULL;
     int trace_data_size = 0;
@@ -1453,6 +1453,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                 trace_data_size = sizeof(anticoll_data);
                 goto send;
             }
+
             if (len == 4) {
                 // block0,1,2,5 is always readable.
                 switch (receivedCmd[1]) {
@@ -1461,13 +1462,13 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                         modulated_response_size = resp_csn_len;
                         trace_data = csn_data;
                         trace_data_size = sizeof(csn_data);
-                        break;
+                        goto send;
                     case 1: // configuration (0c 01)
                         modulated_response = resp_conf;
                         modulated_response_size = resp_conf_len;
                         trace_data = conf_data;
                         trace_data_size = sizeof(conf_data);
-                        break;
+                        goto send;
                     case 2: // e-purse (0c 02)
                         modulated_response = resp_cc;
                         modulated_response_size = resp_cc_len;
@@ -1477,19 +1478,30 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                         if (reader_mac_buf != NULL) {
                             memcpy(reader_mac_buf, card_challenge_data, 8);
                         }
-                        break;
+                        goto send;
                     case 5:// Application Issuer Area (0c 05)
                         modulated_response = resp_aia;
                         modulated_response_size = resp_aia_len;
                         trace_data = aia_data;
                         trace_data_size = sizeof(aia_data);
-                        break;
-                    default:
-                        break;
-                }
-                goto send;
-            }
-
+                        goto send;
+                    default : {
+                        if (simulationMode == MODE_FULLSIM) { // 0x0C
+                           //Read block
+                           //Take the data...
+                           memcpy(data_generic_trace, emulator + (receivedCmd[1] << 3), 8);
+                           AddCrc(data_generic_trace, 8);
+                           trace_data = data_generic_trace;
+                           trace_data_size = 10;
+                           CodeIClassTagAnswer(trace_data, trace_data_size);
+                           memcpy(modulated_response, ToSend, ToSendMax);
+                           modulated_response_size = ToSendMax;
+                           goto send;
+                         }
+                         break;
+                      }
+                    }//swith
+              }// if 4
         } else if (receivedCmd[0] == ICLASS_CMD_SELECT) { // 0x81
             // Reader selects anticollission CSN.
             // Tag sends the corresponding real CSN
@@ -1559,30 +1571,15 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
             trace_data = NULL;
             trace_data_size = 0;
             goto send;
-        } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4) { // 0x0C
-            //Read block
-            uint8_t blk = receivedCmd[1];
-            //Take the data...
-            memcpy(data_generic_trace, emulator + (blk << 3), 8);
-            AddCrc(data_generic_trace, 8);
-            trace_data = data_generic_trace;
-            trace_data_size = 10;
-            CodeIClassTagAnswer(trace_data, trace_data_size);
-            memcpy(data_response, ToSend, ToSendMax);
-            modulated_response = data_response;
-            modulated_response_size = ToSendMax;
-            goto send;
         } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ4 && len == 4) {  // 0x06
             //Read block
-            uint8_t blk = receivedCmd[1];
             //Take the data...
-            memcpy(data_generic_trace, emulator + (blk << 3), 8 * 4);
+            memcpy(data_generic_trace, emulator + (receivedCmd[1] << 3), 8 * 4);
             AddCrc(data_generic_trace, 8 * 4);
             trace_data = data_generic_trace;
             trace_data_size = 34;
             CodeIClassTagAnswer(trace_data, trace_data_size);
-            memcpy(data_response, ToSend, ToSendMax);
-            modulated_response = data_response;
+            memcpy(modulated_response, ToSend, ToSendMax);
             modulated_response_size = ToSendMax;
             goto send;
         } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_UPDATE) {
