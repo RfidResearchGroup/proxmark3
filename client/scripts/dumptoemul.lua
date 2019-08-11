@@ -108,7 +108,7 @@ local function main(args)
     if infile == nil then
         return oops('Could not read file ', input)
     end
- 
+
    local dumpdata = readdump(infile)
     -- The hex-data is now in ascii-format,
    if dumpdata == NIL then return oops('Dumpfle not loaded') end

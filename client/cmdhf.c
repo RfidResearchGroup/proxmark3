@@ -123,7 +123,7 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    
+
     //if (IfPm3Felica()) {
     //    ans = CmdHFFelicaReader("s");
     //    if (ans) {

@@ -1501,21 +1501,21 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                         goto send;
                     default : {
                         if (simulationMode == MODE_FULLSIM) { // 0x0C
-                           //Read block
-                           //Take the data...
-                           memcpy(data_generic_trace, emulator + (receivedCmd[1] << 3), 8);
-                           AddCrc(data_generic_trace, 8);
-                           trace_data = data_generic_trace;
-                           trace_data_size = 10;
-                           CodeIClassTagAnswer(trace_data, trace_data_size);
-                           memcpy(modulated_response, ToSend, ToSendMax);
-                           modulated_response_size = ToSendMax;
-                           goto send;
-                         }
-                         break;
-                      }
-                    }//swith
-              }// if 4
+                            //Read block
+                            //Take the data...
+                            memcpy(data_generic_trace, emulator + (receivedCmd[1] << 3), 8);
+                            AddCrc(data_generic_trace, 8);
+                            trace_data = data_generic_trace;
+                            trace_data_size = 10;
+                            CodeIClassTagAnswer(trace_data, trace_data_size);
+                            memcpy(modulated_response, ToSend, ToSendMax);
+                            modulated_response_size = ToSendMax;
+                            goto send;
+                        }
+                        break;
+                    }
+                }//swith
+            }// if 4
         } else if (receivedCmd[0] == ICLASS_CMD_SELECT) { // 0x81
             // Reader selects anticollission CSN.
             // Tag sends the corresponding real CSN
