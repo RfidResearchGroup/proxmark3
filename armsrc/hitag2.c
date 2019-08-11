@@ -20,12 +20,14 @@
 
 #include "hitag2.h"
 #include "hitag2_crypto.h"
-#include "hitag.h"
-#include "proxmark3.h"
-#include "apps.h"
-#include "util.h"
 #include "string.h"
+#include "proxmark3_arm.h"
+#include "cmd.h"
 #include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
 
 // Successful crypto auth
 static bool bCrypto;

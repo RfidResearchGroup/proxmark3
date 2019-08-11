@@ -162,7 +162,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 */
 int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
 
-#define PrintAndLogDevice(level, format, args...)  PrintAndLogEx(level, format , ## args)
+#define PrintAndLogEx(level, format, args...)  PrintAndLogEx(level, format , ## args)
 #else
 
 /**
@@ -172,7 +172,7 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
 * write also to a logfile. When doing so, just point this function to use PrintAndLog
 * @param fmt
 */
-#define PrintAndLogDevice(level, format, args...) { }
+#define PrintAndLogEx(level, format, args...) { }
 
 
 

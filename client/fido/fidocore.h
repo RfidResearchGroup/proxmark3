@@ -12,10 +12,10 @@
 #ifndef __FIDOCORE_H__
 #define __FIDOCORE_H__
 
-#include <stddef.h>
-#include <stdint.h>
+#include "common.h"
+
 #include <jansson.h>
-#include "cmdhf14a.h"
+#include "emv/apduinfo.h" // sAPDU
 
 typedef enum {
     fido2CmdMakeCredential      = 0x01,

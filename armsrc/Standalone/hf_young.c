@@ -9,8 +9,21 @@
 // main code for HF standalone mode Mifare /sniff/emulation by Craig Young
 //-----------------------------------------------------------------------------
 
-#include "hf_young.h"
-#include "common.h"
+#include "standalone.h" // standalone definitions
+#include <inttypes.h>
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "string.h"
+#include "commonutil.h"
+#include "mifarecmd.h"
+#include "iso14443a.h"
+#include "protocols.h"
+
+#define OPTS 2
 
 typedef struct {
     uint8_t uid[10];

@@ -10,6 +10,28 @@
 //-----------------------------------------------------------------------------
 #include "scripting.h"
 
+#include <stdlib.h>
+#include <string.h>
+
+#include "lauxlib.h"
+#include "cmdmain.h"
+#include "comms.h"
+#include "mifare/mifarehost.h"
+#include "crc.h"
+#include "crc64.h"
+#include "mbedtls/sha1.h"
+#include "mbedtls/aes.h"
+#include "cmdcrc.h"
+#include "cmdhfmfhard.h"
+#include "cmdhfmfu.h"
+#include "cmdlft55xx.h"   // read t55xx etc
+#include "mifare/ndef.h"  // ndef parsing
+#include "commonutil.h"
+#include "ui.h"
+#include "proxmark3.h"
+#include "crc16.h"
+#include "protocols.h"
+
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
     va_list args;

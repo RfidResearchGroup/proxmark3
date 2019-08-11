@@ -10,6 +10,21 @@
 
 #include "cmdlfio.h"
 
+#include <stdio.h>      // sscanf
+#include <stdlib.h>
+#include <string.h>
+
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "graph.h"
+#include "cmdlf.h"
+#include "ui.h"         // PrintAndLog
+#include "lfdemod.h"    // parityTest, bitbytes_to_byte
+#include "protocols.h"  // for T55xx config register definitions
+#include "cmddata.h"
+
 static int CmdHelp(const char *Cmd);
 /*
 static int usage_lf_io_read(void) {

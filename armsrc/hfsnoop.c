@@ -1,8 +1,9 @@
-#include "proxmark3.h"
-#include "apps.h"
+#include "proxmark3_arm.h"
 #include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
 #include "util.h"
-#include "usb_cdc.h" // for usb_poll_validate_length
 
 static void RAMFUNC optimizedSniff(void);
 

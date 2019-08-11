@@ -7,6 +7,9 @@
 //-----------------------------------------------------------------------------
 #include "crc16.h"
 
+#include <string.h>
+#include "commonutil.h"
+
 static uint16_t crc_table[256];
 static bool crc_table_init = false;
 static CrcType_t current_crc_type = CRC_NONE;

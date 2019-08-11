@@ -16,6 +16,15 @@
 #endif
 
 #include "ui.h"
+#include "commonutil.h"  // ARRAYLEN
+
+#include <stdio.h> // for Mingw readline
+#include <stdarg.h>
+#include <stdlib.h>
+#include <readline/readline.h>
+#include <complex.h>
+#include "util.h"
+
 session_arg_t session;
 
 double CursorScaleFactor = 1;

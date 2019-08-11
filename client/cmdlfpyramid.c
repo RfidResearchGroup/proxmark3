@@ -9,6 +9,21 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfpyramid.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+#include "crc.h"
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_pyramid_clone(void) {

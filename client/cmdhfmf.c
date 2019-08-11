@@ -9,10 +9,22 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmf.h"
-#include "mifare/mifare4.h"
+
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"        // clearCommandBuffer
+#include "loclass/fileutils.h"
+#include "cmdtrace.h"
+#include "emv/dump.h"
+#include "mifare/mifaredefault.h"          // mifare default key array
+#include "cliparser/cliparser.h"           // argtable
+#include "hardnested/hardnested_bf_core.h" // SetSIMDInstr
 #include "mifare/mad.h"
 #include "mifare/ndef.h"
-
+#include "protocols.h"
+#include "util_posix.h"  // msclock
 
 #define MFBLOCK_SIZE 16
 

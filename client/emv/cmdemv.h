@@ -11,21 +11,7 @@
 #ifndef CMDEMV_H__
 #define CMDEMV_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <string.h>
-#include <ctype.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
 #include "common.h"
-#include "util.h"
-#include "util_posix.h"
-#include "cmdmain.h"
-#include "emvcore.h"
-#include "apduinfo.h"
-#include "emv_roca.h"
 
 int CmdEMV(const char *Cmd);
 

@@ -28,9 +28,7 @@
 #ifndef __FLASHMEM_H
 #define __FLASHMEM_H
 
-#include "proxmark3.h"
-#include "apps.h"
-#include "ticks.h"
+#include "common.h"
 
 //    Used Command
 #define ID              0x90
@@ -111,7 +109,6 @@
 #define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-void Dbprintf(const char *fmt, ...);
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate);
 bool FlashInit();

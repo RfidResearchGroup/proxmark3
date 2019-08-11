@@ -9,26 +9,37 @@
 // The main application code. This is the first thing called after start.c
 // executes.
 //-----------------------------------------------------------------------------
-#include <stdarg.h>
-#include <inttypes.h>
+#include "appmain.h"
+
 #include "usb_cdc.h"
-#include "proxmark3.h"
+#include "proxmark3_arm.h"
+#include "dbprint.h"
 #include "pmflash.h"
-#include "apps.h"
 #include "fpga.h"
-#include "util.h"
-#include "printf.h"
+#include "fpgaloader.h"
 #include "string.h"
 #include "legicrf.h"
-#include "legicrfsim.h"
-#include "lfsampling.h"
 #include "BigBuf.h"
-#include "mifareutil.h"
-#include "mifaresim.h"
-#include "hitag.h"
+#include "iso14443a.h"
+#include "iso14443b.h"
+#include "iso15693.h"
 #include "thinfilm.h"
-
-#define DEBUG 1
+#include "felica.h"
+#include "hitag2.h"
+#include "hitagS.h"
+#include "iclass.h"
+#include "legicrfsim.h"
+#include "epa.h"
+#include "hfsnoop.h"
+#include "lfops.h"
+#include "lfsampling.h"
+#include "mifarecmd.h"
+#include "mifaredesfire.h"
+#include "mifaresim.h"
+#include "pcf7931.h"
+#include "Standalone/standalone.h"
+#include "util.h"
+#include "ticks.h"
 
 #ifdef WITH_LCD
 #include "LCD.h"
@@ -61,6 +72,12 @@ struct common_area common_area __attribute__((section(".commonarea")));
 int button_status = BUTTON_NO_CLICK;
 bool allow_send_wtx = false;
 
+inline void send_wtx(uint16_t wtx) {
+    if (allow_send_wtx) {
+        reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));
+    }
+}
+
 void ToSendReset(void) {
     ToSendMax = -1;
     ToSendBit = 8;
@@ -82,128 +99,6 @@ void ToSendStuffBit(int b) {
         ToSendBit = 0;
         DbpString("ToSendStuffBit overflowed!");
     }
-}
-
-/* useful when debugging new protocol implementations like FeliCa
-void PrintToSendBuffer(void) {
-    DbpString("Printing ToSendBuffer:");
-    Dbhexdump(ToSendMax, ToSend, 0);
-}
-*/
-
-void print_result(char *name, uint8_t *buf, size_t len) {
-
-    uint8_t *p = buf;
-    uint16_t tmp = len & 0xFFF0;
-
-    for (; p - buf < tmp; p += 16) {
-        Dbprintf("[%s: %02d/%02d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-                 name,
-                 p - buf,
-                 len,
-                 p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
-                );
-    }
-    if (len % 16 != 0) {
-        char s[46] = {0};
-        char *sp = s;
-        for (; p - buf < len; p++) {
-            sprintf(sp, "%02x ", p[0]);
-            sp += 3;
-        }
-        Dbprintf("[%s: %02d/%02d] %s", name, p - buf, len, s);
-    }
-}
-
-//=============================================================================
-// Debug print functions, to go out over USB, to the usual PC-side client.
-//=============================================================================
-
-inline void send_wtx(uint16_t wtx) {
-    if (allow_send_wtx) {
-        reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));
-    }
-}
-
-void DbpStringEx(uint32_t flags, char *str) {
-#if DEBUG
-    struct {
-        uint16_t flag;
-        uint8_t buf[PM3_CMD_DATA_SIZE - sizeof(uint16_t)];
-    } PACKED data;
-    data.flag = flags;
-    uint16_t len = MIN(strlen(str), sizeof(data.buf));
-    memcpy(data.buf, str, len);
-    reply_ng(CMD_DEBUG_PRINT_STRING, PM3_SUCCESS, (uint8_t *)&data, sizeof(data.flag) + len);
-#endif
-}
-
-void DbpString(char *str) {
-#if DEBUG
-    DbpStringEx(FLAG_LOG, str);
-#endif
-}
-
-#if 0
-void DbpIntegers(int x1, int x2, int x3) {
-    reply_old(CMD_DEBUG_PRINT_INTEGERS, x1, x2, x3, 0, 0);
-}
-#endif
-void DbprintfEx(uint32_t flags, const char *fmt, ...) {
-#if DEBUG
-    // should probably limit size here; oh well, let's just use a big buffer
-    char output_string[128] = {0x00};
-    va_list ap;
-    va_start(ap, fmt);
-    kvsprintf(fmt, output_string, 10, ap);
-    va_end(ap);
-
-    DbpStringEx(flags, output_string);
-#endif
-}
-
-void Dbprintf(const char *fmt, ...) {
-#if DEBUG
-    // should probably limit size here; oh well, let's just use a big buffer
-    char output_string[128] = {0x00};
-    va_list ap;
-
-    va_start(ap, fmt);
-    kvsprintf(fmt, output_string, 10, ap);
-    va_end(ap);
-
-    DbpString(output_string);
-#endif
-}
-
-// prints HEX & ASCII
-void Dbhexdump(int len, uint8_t *d, bool bAsci) {
-#if DEBUG
-    char ascii[9];
-
-    while (len > 0) {
-
-        int l = (len > 8) ? 8 : len;
-
-        memcpy(ascii, d, l);
-        ascii[l] = 0;
-
-        // filter safe ascii
-        for (int i = 0; i < l; i++) {
-            if (ascii[i] < 32 || ascii[i] > 126) {
-                ascii[i] = '.';
-            }
-        }
-
-        if (bAsci)
-            Dbprintf("%-8s %*D", ascii, l, d, " ");
-        else
-            Dbprintf("%*D", l, d, " ");
-
-        len -= 8;
-        d += 8;
-    }
-#endif
 }
 
 //-----------------------------------------------------------------------------

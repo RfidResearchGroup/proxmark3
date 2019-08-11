@@ -11,10 +11,19 @@
 //-----------------------------------------------------------------------------
 #include "legicrf.h"
 
-#include "ticks.h"              /* timers */
 #include "crc.h"                /* legic crc-4 */
 #include "legic_prng.h"         /* legic PRNG impl */
 #include "legic.h"              /* legic_card_select_t struct */
+
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "string.h"
+#include "protocols.h"
 
 static uint8_t *legic_mem;      /* card memory, used for read, write */
 static legic_card_select_t card;/* metadata of currently selected card */

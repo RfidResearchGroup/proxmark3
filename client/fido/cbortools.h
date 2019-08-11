@@ -13,8 +13,7 @@
 #ifndef __CBORTOOLS_H__
 #define __CBORTOOLS_H__
 
-#include <stddef.h>
-#include <stdint.h>
+#include "common.h"
 #include <jansson.h>
 #include <cbor.h>
 

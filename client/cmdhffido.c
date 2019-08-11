@@ -21,31 +21,23 @@
 
 #include "cmdhffido.h"
 
-#include <inttypes.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
 #include <unistd.h>
-#include <jansson.h>
-#include <mbedtls/x509_crt.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/pk.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"
+
 #include "comms.h"
-#include "cmdmain.h"
-#include "util.h"
-#include "ui.h"
 #include "proxmark3.h"
-#include "mifare.h"
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
-#include "emv/dump.h"
 #include "cliparser/cliparser.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
 #include "fido/cbortools.h"
 #include "fido/fidocore.h"
-#include "fido/cose.h"
+#include "emv/dump.h"
+#include "ui.h"
+#include "cmdhf14a.h"
 
 static int CmdHelp(const char *Cmd);
 

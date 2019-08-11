@@ -8,19 +8,8 @@
 //-----------------------------------------------------------------------------
 #ifndef CMDLFNEDAP_H__
 #define CMDLFNEDAP_H__
-#include <string.h>
-#include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-#include "crc.h"
+
+#include "common.h"
 
 int CmdLFNedap(const char *Cmd);
 

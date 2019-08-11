@@ -1,4 +1,4 @@
-include ../common/Makefile.common
+include ../common_arm/Makefile.common
 
 BINS = bootrom.bin fullimage.bin proxmark3_recovery.bin
 

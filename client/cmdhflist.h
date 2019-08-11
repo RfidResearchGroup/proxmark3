@@ -10,32 +10,7 @@
 #ifndef CMDHFLIST_H
 #define CMDHFLIST_H
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include "util.h"
-#include "ui.h"
-#include "cmdhf14a.h"       // ISO14443-A
-#include "cmdhf14b.h"       // ISO14443-B
-#include "cmdhf15.h"        // ISO15693
-#include "cmdhfepa.h"
-#include "cmdhflegic.h"     // LEGIC
-#include "cmdhficlass.h"    // ICLASS
-#include "cmdhfmf.h"        // CLASSIC
-#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
-#include "cmdhfmfdes.h"     // DESFIRE
-#include "cmdhftopaz.h"     // TOPAZ
-#include "cmdhffelica.h"    // ISO18092 / FeliCa
-#include "emv/cmdemv.h"     // EMV
-#include "protocols.h"
-#include "crapto1/crapto1.h"
-#include "mifare/mifarehost.h"
-#include "mifare/mifaredefault.h"
-#include "parity.h"         // oddparity
-#include "iso15693tools.h"  // ISO15693 crc
-
+#include "common.h"
 
 typedef struct {
     uint32_t uid;       // UID

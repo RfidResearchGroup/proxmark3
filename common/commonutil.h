@@ -11,8 +11,8 @@
 #ifndef __COMMONUTIL_H
 #define __COMMONUTIL_H
 
-#include <stddef.h>
-#include <inttypes.h>
+#include "common.h"
+
 // endian change for 16bit
 #ifdef __GNUC__
 #ifndef BSWAP_16
@@ -52,12 +52,5 @@ void rol(uint8_t *data, const size_t len);
 void lsl(uint8_t *data, size_t len);
 int32_t le24toh(uint8_t data[3]);
 void htole24(uint32_t val, uint8_t data[3]);
-
-# define _BLUE_(s) "\x1b[34m" s "\x1b[0m "
-# define _RED_(s) "\x1b[31m" s "\x1b[0m "
-# define _GREEN_(s) "\x1b[32m" s "\x1b[0m "
-# define _YELLOW_(s) "\x1b[33m" s "\x1b[0m "
-# define _MAGENTA_(s) "\x1b[35m" s "\x1b[0m "
-# define _CYAN_(s) "\x1b[36m" s "\x1b[0m "
 
 #endif

@@ -13,6 +13,17 @@
 
 #include "hitagS.h"
 
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "string.h"
+#include "commonutil.h"
+#include "hitag2_crypto.h"
+
 #define CRC_PRESET 0xFF
 #define CRC_POLYNOM 0x1D
 

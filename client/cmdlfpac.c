@@ -9,6 +9,13 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfpac.h"
 
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "lfdemod.h"    // preamble test
+
 static int CmdHelp(const char *Cmd);
 
 //see NRZDemod for what args are accepted

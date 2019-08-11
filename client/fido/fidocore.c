@@ -11,17 +11,20 @@
 //
 
 #include "fidocore.h"
+
+#include "commonutil.h"  // ARRAYLEN
+
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
-#include <cbor.h>
 #include "cbortools.h"
-#include <mbedtls/x509_crt.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/pk.h>
+#include "mbedtls/x509_crt.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
-#include "fido/additional_ca.h"
-#include "fido/cose.h"
+#include "additional_ca.h"
+#include "cose.h"
+#include "emv/dump.h"
+#include "ui.h"
+#include "util.h"
 
 typedef struct {
     uint8_t ErrorCode;

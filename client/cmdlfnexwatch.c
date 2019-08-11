@@ -10,6 +10,13 @@
 
 #include "cmdlfnexwatch.h"
 
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h" // preamblesearch
+#include "cmdlf.h"
+#include "lfdemod.h"
+
 static int CmdHelp(const char *Cmd);
 
 static int CmdNexWatchDemod(const char *Cmd) {

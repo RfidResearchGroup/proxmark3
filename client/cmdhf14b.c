@@ -11,6 +11,17 @@
 
 #include "cmdhf14b.h"
 
+#include <ctype.h>
+#include "loclass/fileutils.h"
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"        // clearCommandBuffer
+#include "cmdtrace.h"
+
+#include "crc16.h"
+#include "cmdhf14a.h"
+#include "protocols.h"  // definitions of ISO14B protocol
+
 #define TIMEOUT 2000
 static int CmdHelp(const char *Cmd);
 

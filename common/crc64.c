@@ -1,5 +1,3 @@
-#include <stdint.h>
-#include <stddef.h>
 #include "crc64.h"
 
 #define CRC64_ISO_PRESET 0xFFFFFFFFFFFFFFFF

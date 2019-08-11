@@ -11,6 +11,19 @@
 
 #include "cmdhflist.h"
 
+#include <inttypes.h>
+#include <string.h>
+#include <stdio.h>
+
+#include "commonutil.h"  // ARRAYLEN
+#include "mifare/mifarehost.h"
+#include "mifare/mifaredefault.h"
+#include "parity.h"         // oddparity
+#include "ui.h"
+#include "crc16.h"
+#include "crapto1/crapto1.h"
+#include "protocols.h"
+
 enum MifareAuthSeq {
     masNone,
     masNt,

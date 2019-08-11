@@ -9,6 +9,18 @@
 //-----------------------------------------------------------------------------
 #include "cmdusart.h"
 
+#include <stdlib.h>       // size_t
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"
+#include "util_posix.h"
+#include "usart_defs.h"
+#include "ui.h"           // PrintAndLog
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_usart_bt_pin(void) {

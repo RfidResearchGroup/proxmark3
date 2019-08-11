@@ -9,20 +9,7 @@
 #ifndef CMDLFSECURAKEY_H__
 #define CMDLFSECURAKEY_H__
 
-#include <string.h>
-#include <inttypes.h>
-#include <math.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // preamble test
-#include "parity.h"     // for wiegand parity test
+#include "common.h"
 
 int CmdLFSecurakey(const char *Cmd);
 

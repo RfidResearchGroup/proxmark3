@@ -10,6 +10,22 @@
 
 #include "cmdlfhid.h"
 
+#include <stdio.h>
+#include <string.h>
+
+#include <ctype.h>
+#include <inttypes.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"  // ARRAYLEN
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"  //for g_debugMode, demodbuff cmds
+#include "cmdlf.h"    // lf_read
+#include "util_posix.h"
+#include "lfdemod.h"
+
 #ifndef BITS
 # define BITS 96
 #endif

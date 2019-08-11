@@ -13,10 +13,7 @@
 #ifndef __COSE_H__
 #define __COSE_H__
 
-#include <stddef.h>
-#include <stdint.h>
-#include <cbor.h>
-#include "util.h"
+#include "common.h"
 
 const char *GetCOSEAlgName(int id);
 const char *GetCOSEAlgDescription(int id);

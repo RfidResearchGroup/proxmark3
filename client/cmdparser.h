@@ -11,6 +11,8 @@
 #ifndef CMDPARSER_H__
 #define CMDPARSER_H__
 
+#include "common.h"
+
 typedef struct command_s {
     const char *Name;
     int (*Parse)(const char *Cmd);

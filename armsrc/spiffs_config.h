@@ -8,22 +8,7 @@
 #ifndef SPIFFS_CONFIG_H_
 #define SPIFFS_CONFIG_H_
 
-// ----------- 8< ------------
-// Following includes are for the linux test build of spiffs
-// These may/should/must be removed/altered/replaced in your target
-//#include <stdio.h>
-//#include <stdlib.h>
-//
-#include "printf.h"
-#include "string.h"
-#include "flashmem.h"
-
-void Dbprintf(const char *fmt, ...);
-
-//#include <stddef.h>
-//#include <unistd.h>
-// ----------- >8 ------------
-
+#include "common.h"
 
 typedef int s32_t;
 typedef uint32_t u32_t;

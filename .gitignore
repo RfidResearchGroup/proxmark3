@@ -39,6 +39,7 @@ client/ui/ui_overlays.h
 hardnested_stats.txt
 proxmark3
 flasher
+!flasher/
 lua
 luac
 fpga_compress

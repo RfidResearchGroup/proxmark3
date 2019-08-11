@@ -9,6 +9,20 @@
 //-----------------------------------------------------------------------------
 #include "cmdhftopaz.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "cmdtrace.h"
+
+#include "cmdhf14a.h"
+#include "ui.h"
+#include "crc16.h"
+#include "protocols.h"
+
 #define TOPAZ_STATIC_MEMORY (0x0f * 8)  // 15 blocks with 8 Bytes each
 
 // a struct to describe a memory area which contains lock bits and the corresponding lockable memory area

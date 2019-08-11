@@ -1,0 +1,125 @@
+#-----------------------------------------------------------------------------
+# This code is licensed to you under the terms of the GNU GPL, version 2 or,
+# at your option, any later version. See the LICENSE.txt file for the text of
+# the license.
+#-----------------------------------------------------------------------------
+# Common makefile functions for all platforms
+#-----------------------------------------------------------------------------
+
+# This new makefile replaces the previous Makefile/Makefile.linux
+# with as much common code for both environments as possible.
+# Following is a short OS detection to set up variables, all the
+# remaining Makefile should be portable and only depend on these
+# variables
+#
+
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
+
+# Make sure that all is the default target
+# (The including Makefile still needs to define what 'all' is)
+
+platform = $(shell uname)
+
+all:
+
+CROSS  ?= arm-none-eabi-
+CC = $(CROSS)gcc
+AS = $(CROSS)as
+LD = $(CROSS)ld
+OBJCOPY = $(CROSS)objcopy
+GZIP=gzip
+MV=mv
+
+OBJDIR = obj
+
+INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
+
+TAR=tar
+TARFLAGS = -C .. -rvf
+
+# Windows' echo echos its input verbatim, on Posix there is some
+#  amount of shell command line parsing going on. echo "" on 
+#  Windows yields literal "", on Linux yields an empty line
+ifeq ($(shell echo ""),)
+DELETE=rm -rf
+MOVE=mv
+COPY=cp
+PATHSEP=/
+FLASH_TOOL=client/flasher
+# This is probably a proper system, so we can use uname
+DETECTED_OS=$(platform)
+else
+
+# Assume that we are running on Windows.
+DELETE=del /q
+MOVE=ren
+COPY=copy
+PATHSEP=\\#
+FLASH_TOOL=client\\flasher.exe
+DETECTED_OS=Windows
+
+endif
+
+# Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
+VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/zlib ../fpga ../armsrc/Standalone
+
+INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
+
+CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -Wunused -std=c99 $(APP_CFLAGS) -Os
+LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
+LIBS = -lgcc
+
+# Flags to generate temporary dependency files
+DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
+# make temporary to final dependency files after successful compilation
+POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
+
+THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(THUMBSRC)))
+ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(ARMSRC)))
+ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(notdir $(ASMSRC)))
+VERSIONOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(VERSIONSRC)))
+
+$(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -mthumb -mthumb-interwork -o $@ $< 
+	$(Q)$(POSTCOMPILE)
+
+$(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -mthumb-interwork -o $@ $< 
+	$(Q)$(POSTCOMPILE)
+
+$(ASMOBJ): $(OBJDIR)/%.o: %.s
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
+
+$(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
+
+# This objcopy call translates physical flash addresses to logical addresses
+# without touching start address or RAM addresses (.bss and .data sections)
+# See ldscript.common. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27
+OBJCOPY_TRANSLATIONS = --no-change-warnings \
+    --change-addresses -0x100000 --change-start 0 \
+    --change-section-address .bss+0 --change-section-address .data-0x100000 \
+    --change-section-address .commonarea+0
+$(OBJDIR)/%.s19: $(OBJDIR)/%.elf
+	$(info [=] GEN $@)
+	$(Q)$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
+
+# easy printing of MAKE VARIABLES
+print-%: ; @echo $* = $($*) 
+
+# Automatic dependency generation
+DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
+	$(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(ARMSRC))) \
+	$(patsubst %.s,$(OBJDIR)/%.d,$(notdir $(ASMSRC)))
+
+$(DEPENDENCY_FILES): Makefile ../common_arm/Makefile.common
+.PRECIOUS: $(DEPENDENCY_FILES)
+
+-include $(DEPENDENCY_FILES)

@@ -18,11 +18,8 @@
 #include <config.h>
 #endif
 
-#include "crypto.h"
 #include "crypto_backend.h"
 
-#include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

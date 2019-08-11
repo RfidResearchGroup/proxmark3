@@ -11,8 +11,7 @@
 #ifndef _HITAG2_H_
 #define _HITAG2_H_
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "common.h"
 #include "hitag.h"
 
 void SniffHitag(void);

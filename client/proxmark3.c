@@ -10,24 +10,24 @@
 //-----------------------------------------------------------------------------
 #include "proxmark3.h"
 
-#include <stdio.h>
+#include <limits.h>
+
+#include <stdio.h> // for Mingw readline
 #include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+
+#include "usart_defs.h"
 
 #include "util_posix.h"
 #include "proxgui.h"
 #include "cmdmain.h"
 #include "ui.h"
-#include "util.h"
-#include "cmdparser.h"
 #include "cmdhw.h"
 #include "whereami.h"
 #include "comms.h"
-#include "usart.h"
+//#include "usart.h"
 
 static void showBanner(void) {
     PrintAndLogEx(NORMAL, "\n");

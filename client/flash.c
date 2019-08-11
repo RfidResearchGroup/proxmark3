@@ -10,6 +10,17 @@
 
 #include "flash.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "ui.h"
+#include "elf.h"
+#include "proxendian.h"
+#include "at91sam7s512.h"
+#include "util_posix.h"
+#include "comms.h"
+
 #define FLASH_START            0x100000
 
 #define BOOTLOADER_SIZE        0x2000

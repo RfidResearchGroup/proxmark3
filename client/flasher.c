@@ -6,18 +6,11 @@
 // Flasher frontend tool
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
-#include <pthread.h>
 #include <unistd.h>
-#include "util_posix.h"
-#include "proxmark3.h"
-#include "util.h"
+#include "usart_defs.h"
 #include "flash.h"
 #include "comms.h"
-#include "pm3_cmd.h"
 #include "ui.h"
 
 #define MAX_FILES 4

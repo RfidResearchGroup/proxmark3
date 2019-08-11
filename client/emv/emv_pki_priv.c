@@ -18,7 +18,6 @@
 #endif
 
 #include "emv_pki_priv.h"
-#include "crypto.h"
 
 #include <stdlib.h>
 #include <string.h>

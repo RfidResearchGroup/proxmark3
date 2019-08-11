@@ -1,17 +1,9 @@
 #ifndef CMDHFMFU_H__
 #define CMDHFMFU_H__
 
-#include <stdint.h>
-#include <stdio.h>
-#include "mbedtls/des.h"
-#include "cmdhfmf.h"
-#include "cmdhf14a.h"
-#include "mifare.h"
-#include "util.h"
-#include "protocols.h"
-#include "comms.h"
-#include "loclass/fileutils.h"
+#include "common.h"
 
+#include "mifare.h" // structs
 
 // Old Ultralight/NTAG dump file format
 // It is used only for converting

@@ -9,6 +9,19 @@
 //-----------------------------------------------------------------------------
 #include "cmdhffelica.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "cmdtrace.h"
+#include "crc16.h"
+
+#include "ui.h"
+#include "mifare.h"     // felica_card_select_t struct
+
 static int CmdHelp(const char *Cmd);
 
 /*

@@ -8,8 +8,10 @@
 // utilities requiring Posix library functions
 //-----------------------------------------------------------------------------
 
+// ensure availability even with -std=c99; must be included before
 #if !defined(_WIN32)
-#define _POSIX_C_SOURCE 199309L // need nanosleep()
+//#define _POSIX_C_SOURCE 199309L // need nanosleep()
+#define _POSIX_C_SOURCE 200112L  // need localtime_r()
 #else
 #include <windows.h>
 #endif

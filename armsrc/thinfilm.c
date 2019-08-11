@@ -10,6 +10,16 @@
 
 #include "thinfilm.h"
 
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "appmain.h"
+#include "BigBuf.h"
+#include "iso14443a.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+
 /**
   * ref
   *   https://www.thinfilmnfc.com/wp-content/uploads/2017/09/Thinfilm-Kovio-NFC-Barcode-Protocol-Tag-Functional-Specification-v3.4-2017-05-26.pdf

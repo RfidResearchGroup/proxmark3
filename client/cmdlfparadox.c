@@ -7,15 +7,17 @@
 // Low frequency Paradox tag commands
 // FSK2a, rf/50, 96 bits (completely known)
 //-----------------------------------------------------------------------------
+#include "cmdlfparadox.h"
+
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
-#include "cmdlfparadox.h"
-#include "proxmark3.h"
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
 #include "ui.h"
-#include "util.h"
 #include "graph.h"
-#include "cmdparser.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"

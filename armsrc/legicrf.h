@@ -12,7 +12,7 @@
 #ifndef __LEGICRF_H
 #define __LEGICRF_H
 
-#include "proxmark3.h"
+#include "common.h"
 
 void LegicRfInfo(void);
 void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv);

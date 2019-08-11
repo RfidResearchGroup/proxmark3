@@ -9,6 +9,45 @@
 //-----------------------------------------------------------------------------
 #include "cmdlf.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"  // ARRAYLEN
+
+#include "lfdemod.h"        // device/client demods of LF signals
+#include "ui.h"             // for show graph controls
+#include "graph.h"          // for graph data
+#include "cmddata.h"        // for `lf search`
+#include "cmdlfawid.h"      // for awid menu
+#include "cmdlfem4x.h"      // for em4x menu
+#include "cmdlfhid.h"       // for hid menu
+#include "cmdlfhitag.h"     // for hitag menu
+#include "cmdlfio.h"        // for ioprox menu
+#include "cmdlft55xx.h"     // for t55xx menu
+#include "cmdlfti.h"        // for ti menu
+#include "cmdlfpresco.h"    // for presco menu
+#include "cmdlfpcf7931.h"   // for pcf7931 menu
+#include "cmdlfpyramid.h"   // for pyramid menu
+#include "cmdlfviking.h"    // for viking menu
+#include "cmdlfnedap.h"     // for NEDAP menu
+#include "cmdlfjablotron.h" // for JABLOTRON menu
+#include "cmdlfvisa2000.h"  // for VISA2000 menu
+#include "cmdlfnoralsy.h"   // for NORALSY meny
+#include "cmdlfcotag.h"     // for COTAG meny
+#include "cmdlfindala.h"    // for indala menu
+#include "cmdlfguard.h"     // for gproxii menu
+#include "cmdlffdx.h"       // for fdx-b menu
+#include "cmdlfparadox.h"   // for paradox menu
+#include "cmdlfnexwatch.h"  // for nexwatch menu
+#include "cmdlfsecurakey.h" // for securakey menu
+#include "cmdlfpac.h"       // for pac menu
+#include "cmdlfkeri.h"      // for keri menu
+
 bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);

@@ -9,6 +9,20 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfkeri.h"
 
+#include <string.h>
+#include <inttypes.h>
+
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // preamble test
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_keri_clone(void) {

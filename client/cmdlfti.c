@@ -11,13 +11,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"
+#include "comms.h"
 #include "crc16.h"
-#include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
-#include "cmdparser.h"
 #include "cmdlfti.h"
-#include "cmdmain.h"
 
 static int CmdHelp(const char *Cmd);
 

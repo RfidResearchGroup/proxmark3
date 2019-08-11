@@ -12,19 +12,22 @@
 #ifndef COMMS_H_
 #define COMMS_H_
 
-#include <stdbool.h>
-#include <pthread.h>
-
-#include "pm3_cmd.h"
-#include "uart.h"
-#include "ui.h"
 #include "common.h"
-#include "util_posix.h"
-#include "util.h"
-#include "util_darwin.h"
+#include "pm3_cmd.h"    // Packet structs
+#include "util.h"       // FILE_PATH_SIZE
 
-#if defined(__linux__) && !defined(NO_UNLINK)
-#include <unistd.h> // for unlink()
+#ifndef DropField
+#define DropField() { \
+        clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
+    }
+#endif
+
+#ifndef DropFieldEx
+#define DropFieldEx(x) { \
+        if ( (x) == ECC_CONTACTLESS) { \
+            DropField(); \
+        } \
+    }
 #endif
 
 //For storing command that are received from the device

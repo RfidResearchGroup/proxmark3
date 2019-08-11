@@ -9,6 +9,18 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfmfu.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"
+#include "commonutil.h"
+#include "crypto/libpcrypto.h"
+#include "mbedtls/des.h"
+#include "cmdhfmf.h"
+#include "cmdhf14a.h"
+#include "comms.h"
+#include "loclass/fileutils.h"
+#include "protocols.h"
+
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2B
 #define MAX_ULEV1a_BLOCKS   0x13

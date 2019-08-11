@@ -12,14 +12,6 @@
 #ifndef __PMFLASH_H
 #define __PMFLASH_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
-
 #include "common.h"
 
 // Flashmem spi baudrate
@@ -89,9 +81,5 @@ typedef struct {
     uint8_t flashid[FLASH_MEM_ID_LEN];
     uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
 } PACKED rdv40_validation_t;
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // __PMFLASH_H

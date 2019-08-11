@@ -11,23 +11,20 @@
 
 #include "cmdhfmfp.h"
 
-#include <inttypes.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+
 #include "comms.h"
-#include "cmdmain.h"
-#include "util.h"
 #include "ui.h"
 #include "cmdhf14a.h"
-#include "mifare.h"
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
 #include "mifare/ndef.h"
 #include "cliparser/cliparser.h"
-#include "crypto/libpcrypto.h"
 #include "emv/dump.h"
+#include "mifare/mifaredefault.h"
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 

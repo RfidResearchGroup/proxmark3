@@ -11,8 +11,7 @@
 #ifndef CMDHFMFHARD_H__
 #define CMDHFMFHARD_H__
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "common.h"
 
 #define NUM_SUMS 19 // number of possible sum property values
 

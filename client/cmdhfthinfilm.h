@@ -11,16 +11,7 @@
 #ifndef CMDHFTHINFILM_H__
 #define CMDHFTHINFILM_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "common.h"
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "util.h"
-#include "cmdhf.h"  // list cmd
-#include "cmdhf14a.h" // manufacture
 
 int infoThinFilm(bool verbose);
 

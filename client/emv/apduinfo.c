@@ -10,6 +10,13 @@
 
 #include "apduinfo.h"
 
+#include <string.h> // memmove
+#include <stdio.h>
+
+#include "ui.h"  // Print...
+#include "util.h"
+#include "commonutil.h"  // ARRAYLEN
+
 const APDUCode APDUCodeTable[] = {
     //  ID             Type                  Description
     {"XXXX",     APDUCODE_TYPE_NONE,         ""}, // blank string

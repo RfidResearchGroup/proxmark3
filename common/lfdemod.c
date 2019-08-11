@@ -36,12 +36,9 @@
 // marshmellow
 //-----------------------------------------------------------------------------
 
-#include <string.h>  // for memset, memcmp and size_t
 #include "lfdemod.h"
-#include <stdint.h>  // for uint_32+
-#include <stdbool.h> // for bool
+#include <string.h>  // for memset, memcmp and size_t
 #include "parity.h"  // for parity test
-#include "commonutil.h" // colors
 #include "pm3_cmd.h" // error codes
 //**********************************************************************************************
 //---------------------------------Utilities Section--------------------------------------------
@@ -51,15 +48,12 @@
 
 //to allow debug print calls when used not on dev
 
-//void dummy(char *fmt, ...){}
-void Dbprintf(const char *fmt, ...);
-
 #ifndef ON_DEVICE
 #include "ui.h"
-# include "cmdparser.h"
 # include "cmddata.h"
 # define prnt(args...) PrintAndLogEx(DEBUG, ## args );
 #else
+# include "dbprint.h"
 uint8_t g_debugMode = 0;
 # define prnt Dbprintf
 #endif

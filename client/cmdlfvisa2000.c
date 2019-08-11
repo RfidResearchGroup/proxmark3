@@ -11,6 +11,19 @@
 
 #include "cmdlfvisa2000.h"
 
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+
 #define BL0CK1 0x56495332
 
 static int CmdHelp(const char *Cmd);

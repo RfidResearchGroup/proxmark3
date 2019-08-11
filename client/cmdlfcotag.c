@@ -9,6 +9,15 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfcotag.h"  // COTAG function declarations
 
+#include <string.h>
+#include <stdio.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "lfdemod.h"
+#include "cmddata.h"    // getSamples
+#include "ui.h"         // PrintAndLog
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_cotag_read(void) {

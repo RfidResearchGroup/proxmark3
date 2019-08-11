@@ -10,6 +10,22 @@
 
 #include "cmdlfindala.h"
 
+#include <stdlib.h>
+#include <string.h>
+
+#include <ctype.h>
+#include <inttypes.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "graph.h"
+#include "cliparser/cliparser.h"
+#include "commonutil.h"
+#include "ui.h"         // PrintAndLog
+#include "lfdemod.h"    // parityTest, bitbytes_to_byte
+#include "cmddata.h"
+#include "cmdlf.h"      // lf_read
+
 static int CmdHelp(const char *Cmd);
 
 //large 224 bit indala formats (different preamble too...)

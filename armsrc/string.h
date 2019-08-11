@@ -12,7 +12,7 @@
 #ifndef __STRING_H
 #define __STRING_H
 
-#include <common.h>
+#include "common.h"
 
 int strlen(const char *str);
 void *memcpy(void *dest, const void *src, int len);
@@ -35,8 +35,5 @@ char *strpbrk(const char *s1, const char *s2);
 int strncmp(const char *s1, const char *s2, size_t n);
 char c_tolower(int c);
 char c_isprint(unsigned char c);
-
-
-
 
 #endif /* __STRING_H */

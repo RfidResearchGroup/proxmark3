@@ -10,13 +10,8 @@
 
 #ifndef GRAPH_H__
 #define GRAPH_H__
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include "ui.h"
-#include "lfdemod.h"
-#include "cmddata.h" //for g_debugmode
+
+#include "common.h"
 
 void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);

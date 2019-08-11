@@ -10,6 +10,21 @@
 
 #include "cmdlfjablotron.h"
 
+#include <string.h>
+#include <inttypes.h>
+#include <math.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_jablotron_clone(void) {

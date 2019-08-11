@@ -12,6 +12,21 @@
 //-----------------------------------------------------------------------------
 #include "cmdhf14a.h"
 
+#include <ctype.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"        // clearCommandBuffer
+#include "cmdtrace.h"
+#include "cliparser/cliparser.h"
+#include "cmdhfmf.h"
+#include "cmdhfmfu.h"
+#include "emv/emvcore.h"
+#include "ui.h"
+#include "crc16.h"
+#include "util_posix.h"  // msclock
+
 bool APDUInFramingEnable = true;
 
 static int CmdHelp(const char *Cmd);

@@ -19,20 +19,8 @@
 #ifndef CS_FROZEN_FROZEN_H_
 #define CS_FROZEN_FROZEN_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #include <stdarg.h>
-#include <stddef.h>
 #include <stdio.h>
-
-#if defined(_WIN32) && _MSC_VER < 1700
-typedef int bool;
-enum { false = 0, true = 1 };
-#else
-#include <stdbool.h>
-#endif
 
 /* JSON token type */
 enum json_token_type {
@@ -321,9 +309,5 @@ void *json_next_elem(const char *s, int len, void *handle, const char *path,
 #ifndef JSON_ENABLE_HEX
 #define JSON_ENABLE_HEX !JSON_MINIMAL
 #endif
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* CS_FROZEN_FROZEN_H_ */

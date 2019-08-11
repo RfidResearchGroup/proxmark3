@@ -9,6 +9,20 @@
 
 #include "cmdlfnedap.h"
 
+#include <string.h>
+
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "crc16.h"
+#include "cmdlft55xx.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "lfdemod.h"
+
 #define FIXED_71    0x71
 #define FIXED_40    0x40
 #define UNKNOWN_A   0x00

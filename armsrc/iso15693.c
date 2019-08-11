@@ -58,12 +58,20 @@
 // *) remove or refactor code under "depricated"
 // *) document all the functions
 
-#include "proxmark3.h"
+#include "iso15693.h"
+
+#include "proxmark3_arm.h"
 #include "util.h"
-#include "apps.h"
 #include "string.h"
 #include "iso15693tools.h"
 #include "cmd.h"
+#include "appmain.h"
+#include "dbprint.h"
+#include "fpgaloader.h"
+#include "commonutil.h"
+#include "ticks.h"
+#include "BigBuf.h"
+#include "crc16.h"
 
 ///////////////////////////////////////////////////////////////////////
 // ISO 15693 Part 2 - Air Interface

@@ -9,6 +9,16 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfsecurakey.h"
 
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "lfdemod.h"    // preamble test
+#include "parity.h"     // for wiegand parity test
+
 static int CmdHelp(const char *Cmd);
 
 //see ASKDemod for what args are accepted

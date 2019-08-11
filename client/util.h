@@ -10,16 +10,6 @@
 #ifndef __UTIL_H_
 #define __UTIL_H_
 
-#include <stdint.h> //included in data.h
-#include <stddef.h>
-#include <inttypes.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include "ui.h"     // PrintAndLog
-#include "commonutil.h"
 #include "common.h"
 
 #ifdef ANDROID
@@ -29,20 +19,6 @@
 // used for save/load files
 #ifndef FILE_PATH_SIZE
 # define FILE_PATH_SIZE 1000
-#endif
-
-#ifndef DropField
-#define DropField() { \
-        clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
-    }
-#endif
-
-#ifndef DropFieldEx
-#define DropFieldEx(x) { \
-        if ( (x) == ECC_CONTACTLESS) { \
-            DropField(); \
-        } \
-    }
 #endif
 
 uint8_t g_debugMode;
