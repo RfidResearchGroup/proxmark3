@@ -10,6 +10,8 @@ LD = g++
 RM = rm -f
 MV = mv
 
+platform = $(shell uname)
+
 VPATH = ../../common/zlib
 OBJDIR = obj
 
