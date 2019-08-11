@@ -9,6 +9,7 @@ CXX = g++
 LD = g++
 RM = rm -f
 MV = mv
+CP = cp -a
 
 platform = $(shell uname)
 
@@ -40,6 +41,10 @@ ZLIBOBJS = $(ZLIBSRCS:%.c=$(OBJDIR)/%.o)
 
 BINS = fpga_compress
 CLEAN = $(BINS) $(DEPENDENCY_FILES) $(ZLIBOBJS) $(OBJDIR)/*.o
+# OSX Brew is expecting fpga_compress in client folder, some workaround for now:
+ifeq ($(platform),Darwin)
+CLEAN += $(foreach bin,$(BINS),../../client/$(bin))
+endif
 
 # need to assign dependancies to build these first...
 all: $(BINS)
@@ -50,6 +55,10 @@ all-static: $(BINS)
 fpga_compress: $(OBJDIR)/fpga_compress.o $(ZLIBOBJS)
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(ZLIBFLAGS) $^ $(LDLIBS) -o $@
+# OSX Brew is expecting fpga_compress in client folder, some workaround for now:
+ifeq ($(platform),Darwin)
+	$(Q)$(CP) $@ ../../client/
+endif
 
 clean:
 	$(Q)$(RM) $(CLEAN)
