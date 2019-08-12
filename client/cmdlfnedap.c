@@ -411,11 +411,11 @@ static int CmdLfNedapGen(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS,
-                  "Tag (%s) ; subtype : %1u , customer : %03x ,  ID : %05u"
-                  , isLong ? "long (128b)" : "short (64b)"
+                  "Tag - subtype: %1u , customer code: %03x , ID: %05u  | %s"
                   , subType
                   , customerCode
                   , id
+                  , isLong ? "(128b)" : "(64b)"
                  );
 
     NedapGen(subType, customerCode, id, isLong, data);
@@ -467,7 +467,7 @@ int CmdLFNedapClone(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Preparing to clone NEDAP to T55x7");
-    print_blocks(blocks, 5);
+    print_blocks(blocks, max);
 
     PacketResponseNG resp;
 
@@ -491,9 +491,9 @@ int CmdLFNedapClone(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
     }
-    // TODO info correct?
-    PrintAndLogEx(INFO, "The block 0 was changed (eXtended) which can be hard to detect. Configure it manually with");
-    PrintAndLogEx(INFO,  _YELLOW_("`lf t55xx config b 64 d BI i 1 o 32`"));
+    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(INFO, "The block 0 was changed (eXtended) which can be hard to detect.");
+    PrintAndLogEx(INFO,  " Configure it manually " _YELLOW_("`lf t55xx config b 64 d BI i 1 o 32`"));
     return PM3_SUCCESS;
 }
 
