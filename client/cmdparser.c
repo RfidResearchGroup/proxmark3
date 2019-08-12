@@ -72,6 +72,11 @@ bool IfPm3FpcUsartDevFromUsb(void) {
     return !conn.send_via_fpc_usart;
 }
 
+bool IfPm3FpcUsartFromUsb(void) {
+    // true if FPC USART Host or developer support and if talking from USB-CDC interface
+    return IfPm3FpcUsartHostFromUsb() || IfPm3FpcUsartDevFromUsb();
+}
+
 bool IfPm3Lf(void) {
     if (!IfPm3Present())
         return false;

@@ -30,6 +30,7 @@ bool IfPm3FpcUsart(void);
 bool IfPm3FpcUsartHost(void);
 bool IfPm3FpcUsartHostFromUsb(void);
 bool IfPm3FpcUsartDevFromUsb(void);
+bool IfPm3FpcUsartFromUsb(void);
 bool IfPm3Lf(void);
 bool IfPm3Hitag(void);
 bool IfPm3Hfsniff(void);
