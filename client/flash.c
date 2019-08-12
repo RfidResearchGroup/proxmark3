@@ -448,7 +448,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
 
     int mem_avail = chipid_to_mem_avail(chipinfo);
     if (mem_avail != 0) {
-        PrintAndLogEx(NORMAL, "Available memory on this board: "_YELLOW_("%uK") "bytes\n", mem_avail);
+        PrintAndLogEx(INFO, "Available memory on this board: "_YELLOW_("%uK") "bytes\n", mem_avail);
         if (mem_avail > 256) {
             if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(BL_VERSION_1_0_0)) {
                 PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================"));
@@ -460,7 +460,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
             }
         }
     } else {
-        PrintAndLogEx(NORMAL, "Available memory on this board: "_RED_("UNKNOWN")"\n");
+        PrintAndLogEx(INFO, "Available memory on this board: "_RED_("UNKNOWN")"\n");
         PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================================"));
         PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("CHIP_INFO") _RED_("command")));
         flash_suggest_update_bootloader();
