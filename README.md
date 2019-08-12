@@ -18,7 +18,7 @@ Note that it also supports other Proxmark3 platforms as well!
 |[Why didn't you base it on official PM3 Master?](#why-didnt-you-base-it-on-official-pm3-master)| [Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 |[PM3 GUI](#pm3-gui)|[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) |[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|
-|[Notes on UART](/doc/uart_notes.md)|||
+|[Notes on UART](/doc/uart_notes.md)||[Command Cheat sheet](/doc/cheatsheet.md)|
 |[Notes on Frame format](/doc/new_frame_format.md)|||
 |[Notes on external flash](/doc/ext_flash_notes.md)|||
 |[Notes on Termux / Android](/doc/termux_notes.md)|||
