@@ -7,7 +7,7 @@ PM3PATH=$(dirname "$0")
 cd "$PM3PATH" || exit 1
 
 function wait4proxmark_Linux {
-    echo >&2 "Waiting for Proxmark to appear..."
+    echo >&2 "[=] Waiting for Proxmark to appear..."
     while true; do
         PM3=$(find /dev/pm3-* /dev/ttyACM* 2>/dev/null | head -1)
         if [[ $PM3 != "" ]]; then
@@ -19,7 +19,7 @@ function wait4proxmark_Linux {
 }
 
 function wait4proxmark_macOS {
-    echo >&2 "Waiting for Proxmark to appear..."
+    echo >&2 "[=] Waiting for Proxmark to appear..."
     while true; do
         PM3=$(find /dev/pm3-* /dev/cu.usbmodem* 2>/dev/null | head -1)
         if [[ $PM3 != "" ]]; then
@@ -31,7 +31,7 @@ function wait4proxmark_macOS {
 }
 
 function wait4proxmark_Windows {
-    echo >&2 "Waiting for Proxmark to appear..."
+    echo >&2 "[=] Waiting for Proxmark to appear..."
     while true; do
         device=$(wmic path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
         if [[ $device != "" ]]; then
@@ -44,7 +44,7 @@ function wait4proxmark_Windows {
 }
 
 function wait4proxmark_WSL {
-    echo >&2 "Waiting for Proxmark to appear..."
+    echo >&2 "[=] Waiting for Proxmark to appear..."
     while true; do
         device=$(wmic.exe path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
         if [[ $device != "" ]]; then
@@ -55,7 +55,7 @@ function wait4proxmark_WSL {
         sleep .1
     done
     if [ -e "$PM3" ] && [ ! -w "$PM3" ]; then
-        echo "We need to give current user read/write access to $PM3"
+        echo "[!!] We need to give current user read/write access to $PM3"
         sudo chmod 666 "$PM3"
     fi
     echo "$PM3"
@@ -72,7 +72,7 @@ elif [ "$SCRIPT" = "flash-fullimage.sh" ]; then
 elif [ "$SCRIPT" = "flash-bootrom.sh" ]; then
   CMD() { client/flasher "$1" -b "$BOOTIMAGE"; }
 else
-  echo "Script ran under unknown name, abort: $SCRIPT"
+  echo "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1
 fi
 HOSTOS=$(uname | awk '{print toupper($0)}')
@@ -87,11 +87,11 @@ elif [ "$HOSTOS" = "DARWIN" ]; then
 elif [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
     PORT=$(wait4proxmark_Windows)
 else
-    echo "Host OS not recognized, abort: $HOSTOS"
+    echo "[!!] Host OS not recognized, abort: $HOSTOS"
     exit 1
 fi
 if [ "$PORT" = "" ]; then
-    echo "No port, abort"
+    echo "[!!] No port, abort"
     exit 1
 fi
 
