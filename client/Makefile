@@ -28,7 +28,7 @@ ENV_CFLAGS := $(CFLAGS)
 
 platform = $(shell uname)
 
-VPATH = ../common ../zlib ../uart
+VPATH = ../common ../common/zlib uart
 OBJDIR = obj
 
 LDLIBS =
@@ -44,18 +44,19 @@ ifneq ($(platform),Darwin)
     LDLIBS += -Wl,--as-needed -latomic -Wl,--no-as-needed
 endif
 
-LUALIB = ../liblua/liblua.a
+LUALIBPATH = ./liblua
+LUALIB = $(LUALIBPATH)/liblua.a
 JANSSONLIBPATH = ./jansson
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
 MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIB = $(MBEDTLSLIBPATH)/libmbedtls.a
 CBORLIBPATH = ./tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
-LIBS = -I../zlib -I../uart -I../liblua -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
+LIBS = -I../common/zlib -Iuart -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
 INCLUDES_CLIENT = -I. -I../include -I../common -I/opt/local/include $(LIBS)
 LDFLAGS = $(ENV_LDFLAGS)
 
-CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -g -O3
+CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -Werror -g -O3
 ifneq (,$(findstring MINGW,$(platform)))
     CFLAGS += -mno-ms-bitfields
 endif
@@ -117,7 +118,7 @@ endif
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
-# make temporary to final dependeny files after successful compilation
+# make temporary to final dependency files after successful compilation
 POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
 
 CORESRCS =  uart_posix.c \
@@ -130,7 +131,7 @@ CORESRCS =  uart_posix.c \
             crc16.c \
             comms.c
 
-CMDSRCS =    crapto1/crapto1.c \
+CMDSRCS =   crapto1/crapto1.c \
             crapto1/crypto1.c \
             mifare/mfkey.c \
             tea.c \
@@ -199,6 +200,7 @@ CMDSRCS =    crapto1/crapto1.c \
             cmdhftopaz.c \
             cmdhffido.c \
             cmdhffelica.c \
+            cmdhfthinfilm.c \
             cmdhw.c \
             cmdlf.c \
             cmdlfawid.c \
@@ -236,7 +238,6 @@ CMDSRCS =    crapto1/crapto1.c \
             scripting.c \
             cmdscript.c \
             pm3_bitlib.c \
-            protocols.c \
             cmdcrc.c \
             reveng/preset.c \
             reveng/reveng.c \
@@ -290,14 +291,14 @@ ifeq "$(SUPPORTS_AVX512)" "True"
     MULTIARCHOBJS +=  $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX512.o)
 endif
 
-BINS = proxmark3 flasher fpga_compress
-CLEAN = $(BINS) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+BINS = proxmark3 flasher
+CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
 all: lua_build jansson_build mbedtls_build cbor_build $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
-all-static: proxmark3 flasher fpga_compress
+all-static: $(BINS)
 
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
@@ -307,10 +308,6 @@ proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS)
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-fpga_compress: $(OBJDIR)/fpga_compress.o $(ZLIBOBJS)
-	$(info [=] LD $@)
-	$(Q)$(LD) $(LDFLAGS) $(ZLIBFLAGS) $^ $(LDLIBS) -o $@
 
 proxgui.cpp: ui/ui_overlays.h
 
@@ -332,7 +329,7 @@ lualibs/mf_default_keys.lua : default_keys.dic
 
 clean:
 	$(Q)$(RM) $(CLEAN)
-	$(Q)$(MAKE) --no-print-directory -C ../liblua clean
+	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
@@ -343,7 +340,7 @@ tarbin: $(BINS)
 
 lua_build:
 	$(info [*] MAKE liblua for $(LUAPLATFORM))
-	$(Q)$(MAKE) --no-print-directory -C ../liblua $(LUAPLATFORM)
+	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) $(LUAPLATFORM)
 
 jansson_build:
 	$(info [*] MAKE jansson)
@@ -426,7 +423,7 @@ DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBS
 	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
-	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/flasher.d $(OBJDIR)/fpga_compress.d
+	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/flasher.d
 
 $(DEPENDENCY_FILES): ;
 .PRECIOUS: $(DEPENDENCY_FILES)

@@ -9,12 +9,12 @@
 //-----------------------------------------------------------------------------
 
 #include "emvjson.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <inttypes.h>
+
 #include <string.h>
+
+#include "commonutil.h"  // ARRAYLEN
 #include "ui.h"
+#include "util.h"
 #include "proxmark3.h"
 #include "emv_tags.h"
 
@@ -57,10 +57,9 @@ static const ApplicationDataElm ApplicationData[] = {
 
     {0x00,    "end..."}
 };
-int ApplicationDataLen = sizeof(ApplicationData) / sizeof(ApplicationDataElm);
 
 const char *GetApplicationDataName(tlv_tag_t tag) {
-    for (int i = 0; i < ApplicationDataLen; i++)
+    for (int i = 0; i < ARRAYLEN(ApplicationData); i++)
         if (ApplicationData[i].Tag == tag)
             return ApplicationData[i].Name;
 

@@ -9,6 +9,17 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfviking.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "lfdemod.h"
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_viking_clone(void) {
@@ -88,7 +99,7 @@ static int CmdVikingClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID " _YELLOW_("%08X")" raw " _YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_VIKING_CLONE_TAG, rawID >> 32, rawID & 0xFFFFFFFF, Q5, NULL, 0);
+    SendCommandMIX(CMD_LF_VIKING_CLONE, rawID >> 32, rawID & 0xFFFFFFFF, Q5, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
         PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
@@ -121,11 +132,11 @@ static int CmdVikingSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)

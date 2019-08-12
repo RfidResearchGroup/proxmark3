@@ -13,18 +13,10 @@
 #ifndef __ISO14443B_H
 #define __ISO14443B_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "common.h"
 
-#include "proxmark3.h"
-#include "common.h"  // access to global variable: DBGLEVEL
-#include "apps.h"
-#include "util.h"
-#include "string.h"
-#include "crc16.h"
 #include "mifare.h"
-#include "protocols.h"
+#include "pm3_cmd.h"
 
 #ifndef AddCrc14A
 # define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
@@ -34,11 +26,17 @@ extern "C" {
 # define AddCrc14B(data, len) compute_crc(CRC_14443_B, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
-void SendRawCommand14443B_Ex(PacketCommandNG *c);
 void iso14443b_setup();
 uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *response);
 uint8_t iso14443b_select_card(iso14b_card_select_t *card);
 uint8_t iso14443b_select_card_srx(iso14b_card_select_t *card);
+
+void SimulateIso14443bTag(uint32_t pupi);
+void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
+void ReadSTMemoryIso14443b(uint8_t numofblocks);
+void RAMFUNC SniffIso14443b(void);
+void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
+void SendRawCommand14443B_Ex(PacketCommandNG *c);
 
 // testfunctions
 void WaitForFpgaDelayQueueIsEmpty(uint16_t delay);
@@ -52,9 +50,5 @@ void ClearFpgaShiftingRegisters(void);
 #define SIM_HALTING     4
 #define SIM_ACKNOWLEDGE 5
 #define SIM_WORK        6
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __ISO14443B_H */

@@ -10,6 +10,8 @@
 #ifndef EMVJSON_H__
 #define EMVJSON_H__
 
+#include "common.h"
+
 #include <jansson.h>
 #include "tlv.h"
 

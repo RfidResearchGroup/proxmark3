@@ -10,6 +10,28 @@
 //-----------------------------------------------------------------------------
 #include "scripting.h"
 
+#include <stdlib.h>
+#include <string.h>
+
+#include "lauxlib.h"
+#include "cmdmain.h"
+#include "comms.h"
+#include "mifare/mifarehost.h"
+#include "crc.h"
+#include "crc64.h"
+#include "mbedtls/sha1.h"
+#include "mbedtls/aes.h"
+#include "cmdcrc.h"
+#include "cmdhfmfhard.h"
+#include "cmdhfmfu.h"
+#include "cmdlft55xx.h"   // read t55xx etc
+#include "mifare/ndef.h"  // ndef parsing
+#include "commonutil.h"
+#include "ui.h"
+#include "proxmark3.h"
+#include "crc16.h"
+#include "protocols.h"
+
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
     va_list args;
@@ -66,7 +88,7 @@ static int l_fast_push_mode(lua_State *L) {
  * @return
  */
 static int l_SendCommandOLD(lua_State *L) {
-//  SendCommandMIX(CMD_HF_SNIFFER, skippairs, skiptriggers, 0, NULL, 0);
+//  SendCommandMIX(CMD_HF_SNIFF, skippairs, skiptriggers, 0, NULL, 0);
 // (uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
 
     uint64_t cmd, arg0, arg1, arg2;
@@ -395,7 +417,7 @@ static int l_foobar(lua_State *L) {
     printf("Arguments discarded, stack now contains %d elements", lua_gettop(L));
 
     // todo: this is not used, where was it intended for?
-    // PacketCommandOLD response =  {CMD_MIFARE_READBL, {1337, 1338, 1339}, {{0}}};
+    // PacketCommandOLD response =  {CMD_HF_MIFARE_READBL, {1337, 1338, 1339}, {{0}}};
 
     printf("Now returning a uint64_t as a string");
     uint64_t x = 0xDEADC0DE;

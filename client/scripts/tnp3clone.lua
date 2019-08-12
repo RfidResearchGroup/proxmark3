@@ -77,7 +77,7 @@ local function readblock( blocknum, keyA )
     -- Read block N
     local keytype = '00'
     local data = ('%02x%s%s'):format(blocknum, keytype, keyA)
-    local c = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+    local c = Command:newNG{cmd = cmds.CMD_HF_MIFARE_READBL, data = data}
     local b, err = getblockdata(c:sendNG(false))
     if not b then return oops(err) end
     return b
@@ -88,7 +88,7 @@ local function readmagicblock( blocknum )
     -- Read block N
     local CSETBLOCK_SINGLE_OPERATION = 0x1F
     local c = Command:newMIX{
-                    cmd = cmds.CMD_MIFARE_CGETBLOCK
+                    cmd = cmds.CMD_HF_MIFARE_CGETBL
                     , arg1 = CSETBLOCK_SINGLE_OPERATION
                     , arg3 = blocknum
                     }

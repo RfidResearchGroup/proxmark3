@@ -60,6 +60,7 @@ THE SOFTWARE.
 #include "crapto1/crapto1.h"
 #include "parity.h"
 #include "util.h"
+#include "common.h"
 
 // bitslice type
 // while AVX supports 256 bit vector floating point operations, we need integer operations for boolean logic

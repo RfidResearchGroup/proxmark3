@@ -11,17 +11,20 @@
 //
 
 #include "fidocore.h"
+
+#include "commonutil.h"  // ARRAYLEN
+
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
-#include <cbor.h>
 #include "cbortools.h"
-#include <mbedtls/x509_crt.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/pk.h>
+#include "mbedtls/x509_crt.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
-#include "fido/additional_ca.h"
-#include "fido/cose.h"
+#include "additional_ca.h"
+#include "cose.h"
+#include "emv/dump.h"
+#include "ui.h"
+#include "util.h"
 
 typedef struct {
     uint8_t ErrorCode;
@@ -150,7 +153,7 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 };
 
 const char *fido2GetCmdErrorDescription(uint8_t errorCode) {
-    for (size_t i = 0; i < sizeof(fido2Errors) / sizeof(fido2Error_t); i++)
+    for (size_t i = 0; i < ARRAYLEN(fido2Errors); i++)
         if (fido2Errors[i].ErrorCode == errorCode)
             return fido2Errors[i].Description;
 
@@ -158,7 +161,7 @@ const char *fido2GetCmdErrorDescription(uint8_t errorCode) {
 }
 
 const char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum) {
-    for (size_t i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
+    for (size_t i = 0; i < ARRAYLEN(fido2CmdGetInfoRespDesc); i++)
         if (fido2CmdGetInfoRespDesc[i].Command == cmdCode &&
                 fido2CmdGetInfoRespDesc[i].PckType == (isResponse ? ptResponse : ptQuery) &&
                 fido2CmdGetInfoRespDesc[i].MemberNumber == memberNum)
@@ -262,7 +265,7 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
     }
 
     // get public key
-    res = ecdsa_public_key_from_pk(&cert.pk, publicKey, publicKeyMaxLen);
+    res = ecdsa_public_key_from_pk(&cert.pk, MBEDTLS_ECP_DP_SECP256R1, publicKey, publicKeyMaxLen);
     if (res) {
         PrintAndLogEx(ERR, "ERROR: getting public key from certificate 0x%x - %s", (res < 0) ? -res : res, ecdsa_get_error(res));
     } else {
@@ -381,10 +384,10 @@ static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, 
                          clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
                          NULL, 0);
         //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-        res = ecdsa_signature_verify(publickey, xbuf, xbuflen, sign, signLen);
+        res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, publickey, xbuf, xbuflen, sign, signLen, true);
         if (res) {
-            if (res == -0x4e00) {
-                PrintAndLogEx(WARNING, "Signature is NOT VALID.");
+            if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
+                PrintAndLogEx(WARNING, "Signature is " _RED_("NOT VALID"));
             } else {
                 PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }

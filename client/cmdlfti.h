@@ -11,6 +11,8 @@
 #ifndef CMDLFTI_H__
 #define CMDLFTI_H__
 
+#include "common.h"
+
 int CmdLFTI(const char *Cmd);
 
 int demodTI(void);

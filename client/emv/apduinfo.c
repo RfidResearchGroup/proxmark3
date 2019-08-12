@@ -10,6 +10,13 @@
 
 #include "apduinfo.h"
 
+#include <string.h> // memmove
+#include <stdio.h>
+
+#include "ui.h"  // Print...
+#include "util.h"
+#include "commonutil.h"  // ARRAYLEN
+
 const APDUCode APDUCodeTable[] = {
     //  ID             Type                  Description
     {"XXXX",     APDUCODE_TYPE_NONE,         ""}, // blank string
@@ -257,7 +264,6 @@ const APDUCode APDUCodeTable[] = {
     {"9FXX",     APDUCODE_TYPE_NONE,         "Command successfully executed; 'xx' bytes of data are available and can be requested using GET RESPONSE."},
     {"9XXX",     APDUCODE_TYPE_NONE,         "Application related status, (ISO 7816-3)"}
 };
-const size_t APDUCodeTableLen = sizeof(APDUCodeTable) / sizeof(APDUCode);
 
 static int CodeCmp(const char *code1, const char *code2) {
     int xsymb = 0;
@@ -279,12 +285,12 @@ static int CodeCmp(const char *code1, const char *code2) {
 
 const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
     char buf[6] = {0};
-    int mineq = APDUCodeTableLen;
+    int mineq = ARRAYLEN(APDUCodeTable);
     int mineqindx = 0;
 
     sprintf(buf, "%02X%02X", sw1, sw2);
 
-    for (int i = 0; i < APDUCodeTableLen; i++) {
+    for (int i = 0; i < ARRAYLEN(APDUCodeTable); i++) {
         int res = CodeCmp(APDUCodeTable[i].ID, buf);
 
         // equal
@@ -300,7 +306,7 @@ const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
     }
 
     // if we have not equal, but with some 'X'
-    if (mineqindx < APDUCodeTableLen) {
+    if (mineqindx < ARRAYLEN(APDUCodeTable)) {
         return &APDUCodeTable[mineqindx];
     }
 

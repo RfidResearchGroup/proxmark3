@@ -13,6 +13,23 @@
 
 #include "cmdhficlass.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "cmdtrace.h"
+#include "util_posix.h"
+
+#include "comms.h"
+#include "mbedtls/des.h"
+#include "loclass/cipherutils.h"
+#include "loclass/cipher.h"
+#include "loclass/ikeys.h"
+#include "loclass/elite_crack.h"
+#include "loclass/fileutils.h"
+#include "protocols.h"
+
+
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
 
@@ -271,6 +288,145 @@ static int xorbits_8(uint8_t val) {
     return res & 1;
 }
 */
+
+// iclass / picopass chip config structures and shared routines
+typedef struct {
+    uint8_t app_limit;      //[8]
+    uint8_t otp[2];         //[9-10]
+    uint8_t block_writelock;//[11]
+    uint8_t chip_config;    //[12]
+    uint8_t mem_config;     //[13]
+    uint8_t eas;            //[14]
+    uint8_t fuses;          //[15]
+} picopass_conf_block;
+
+
+typedef struct {
+    uint8_t csn[8];
+    picopass_conf_block conf;
+    uint8_t epurse[8];
+    uint8_t key_d[8];
+    uint8_t key_c[8];
+    uint8_t app_issuer_area[8];
+} picopass_hdr;
+
+static uint8_t isset(uint8_t val, uint8_t mask) {
+    return (val & mask);
+}
+
+static uint8_t notset(uint8_t val, uint8_t mask) {
+    return !(val & mask);
+}
+
+static void fuse_config(const picopass_hdr *hdr) {
+    uint8_t fuses = hdr->conf.fuses;
+
+    if (isset(fuses, FUSE_FPERS))
+        PrintAndLogEx(SUCCESS, "\tMode: Personalization [Programmable]");
+    else
+        PrintAndLogEx(NORMAL, "\tMode: Application [Locked]");
+
+    if (isset(fuses, FUSE_CODING1)) {
+        PrintAndLogEx(NORMAL, "\tCoding: RFU");
+    } else {
+        if (isset(fuses, FUSE_CODING0))
+            PrintAndLogEx(NORMAL, "\tCoding: ISO 14443-2 B/ISO 15693");
+        else
+            PrintAndLogEx(NORMAL, "\tCoding: ISO 14443B only");
+    }
+    // 1 1
+    if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "\tCrypt: Secured page, keys not locked");
+    // 1 0
+    if (isset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "\tCrypt: Secured page, keys locked");
+    // 0 1
+    if (notset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "\tCrypt: Non secured page");
+    // 0 0
+    if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "\tCrypt: No auth possible. Read only if RA is enabled");
+
+    if (isset(fuses, FUSE_RA))
+        PrintAndLogEx(NORMAL, "\tRA: Read access enabled");
+    else
+        PrintAndLogEx(WARNING, "\tRA: Read access not enabled");
+}
+
+static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
+    // mem-bit 5, mem-bit 7, chip-bit 4: defines chip type
+    uint8_t k16 = isset(mem_cfg, 0x80);
+    //uint8_t k2 = isset(mem_cfg, 0x08);
+    uint8_t book = isset(mem_cfg, 0x20);
+
+    if (isset(chip_cfg, 0x10) && !k16 && !book) {
+        *kb = 2;
+        *app_areas = 2;
+        *max_blk = 31;
+    } else if (isset(chip_cfg, 0x10) && k16 && !book) {
+        *kb = 16;
+        *app_areas = 2;
+        *max_blk = 255; //16kb
+    } else if (notset(chip_cfg, 0x10) && !k16 && !book) {
+        *kb = 16;
+        *app_areas = 16;
+        *max_blk = 255; //16kb
+    } else if (isset(chip_cfg, 0x10) && k16 && book) {
+        *kb = 32;
+        *app_areas = 3;
+        *max_blk = 255; //16kb
+    } else if (notset(chip_cfg, 0x10) && !k16 && book) {
+        *kb = 32;
+        *app_areas = 17;
+        *max_blk = 255; //16kb
+    } else {
+        *kb = 32;
+        *app_areas = 2;
+        *max_blk = 255;
+    }
+}
+
+static void mem_app_config(const picopass_hdr *hdr) {
+    uint8_t mem = hdr->conf.mem_config;
+    uint8_t chip = hdr->conf.chip_config;
+    uint8_t applimit = hdr->conf.app_limit;
+    uint8_t kb = 2;
+    uint8_t app_areas = 2;
+    uint8_t max_blk = 31;
+
+    getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
+
+    if (applimit < 6) applimit = 26;
+    if (kb == 2 && (applimit > 0x1f)) applimit = 26;
+
+    PrintAndLogEx(NORMAL, " Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
+    PrintAndLogEx(NORMAL, "\tAA1: blocks 06-%02X", applimit);
+    PrintAndLogEx(NORMAL, "\tAA2: blocks %02X-%02X", applimit + 1, max_blk);
+    PrintAndLogEx(NORMAL, "\tOTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
+    PrintAndLogEx(NORMAL, "\nKeyAccess:");
+
+    uint8_t book = isset(mem, 0x20);
+    if (book) {
+        PrintAndLogEx(NORMAL, "\tRead A - Kd");
+        PrintAndLogEx(NORMAL, "\tRead B - Kc");
+        PrintAndLogEx(NORMAL, "\tWrite A - Kd");
+        PrintAndLogEx(NORMAL, "\tWrite B - Kc");
+        PrintAndLogEx(NORMAL, "\tDebit  - Kd or Kc");
+        PrintAndLogEx(NORMAL, "\tCredit - Kc");
+    } else {
+        PrintAndLogEx(NORMAL, "\tRead A - Kd or Kc");
+        PrintAndLogEx(NORMAL, "\tRead B - Kd or Kc");
+        PrintAndLogEx(NORMAL, "\tWrite A - Kc");
+        PrintAndLogEx(NORMAL, "\tWrite B - Kc");
+        PrintAndLogEx(NORMAL, "\tDebit  - Kd or Kc");
+        PrintAndLogEx(NORMAL, "\tCredit - Kc");
+    }
+}
+static void print_picopass_info(const picopass_hdr *hdr) {
+    fuse_config(hdr);
+    mem_app_config(hdr);
+}
+static void printIclassDumpInfo(uint8_t *iclass_dump) {
+    print_picopass_info((picopass_hdr *) iclass_dump);
+}
+
+
 static int CmdHFiClassList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list iclass' instead");
@@ -281,7 +437,7 @@ static int CmdHFiClassList(const char *Cmd) {
 static int CmdHFiClassSniff(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_sniff();
-    SendCommandNG(CMD_SNIFF_ICLASS, NULL, 0);
+    SendCommandNG(CMD_HF_ICLASS_SNIFF, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -379,7 +535,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandOLD(CMD_SIMULATE_TAG_ICLASS, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandOLD(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
@@ -428,7 +584,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandOLD(CMD_SIMULATE_TAG_ICLASS, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandOLD(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
@@ -491,7 +647,7 @@ static int CmdHFiClassSim(const char *Cmd) {
         default: {
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
-            SendCommandOLD(CMD_SIMULATE_TAG_ICLASS, simType, numberOfCSNs, 0, CSN, 8);
+            SendCommandOLD(CMD_HF_ICLASS_SIMULATE, simType, numberOfCSNs, 0, CSN, 8);
             break;
         }
     }
@@ -519,7 +675,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_ICLASS_REPLAY, readerType, 0, 0, MAC, 4);
+    SendCommandMIX(CMD_HF_ICLASS_REPLAY, readerType, 0, 0, MAC, 4);
     return PM3_SUCCESS;
 }
 
@@ -550,14 +706,14 @@ static int CmdHFiClassELoad(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogDevice(ERR, "error, when getting filesize");
+        PrintAndLogEx(ERR, "error, when getting filesize");
         fclose(f);
         return 1;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(ERR, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         fclose(f);
         return 1;
     }
@@ -569,7 +725,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     //Validate
 
     if (bytes_read < fsize) {
-        PrintAndLogDevice(ERR, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
+        PrintAndLogEx(ERR, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
         free(dump);
         return 1;
     }
@@ -588,7 +744,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
             conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandOLD(CMD_ICLASS_EML_MEMSET, bytes_sent, bytes_in_packet, 0, dump + bytes_sent, bytes_in_packet);
+        SendCommandOLD(CMD_HF_ICLASS_EML_MEMSET, bytes_sent, bytes_in_packet, 0, dump + bytes_sent, bytes_in_packet);
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;
     }
@@ -757,7 +913,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
         flags |= FLAG_ICLASS_READER_CEDITKEY;
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return false;
@@ -802,7 +958,7 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
     doMAC(CCNR, div_key, MAC);
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_ICLASS_AUTHENTICATION, 0, 0, 0, MAC, 4);
+    SendCommandOLD(CMD_HF_ICLASS_AUTH, 0, 0, 0, MAC, 4);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         if (verbose) PrintAndLogEx(FAILED, "auth command execute timeout");
         return false;
@@ -923,7 +1079,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     uint8_t tag_data[255 * 8];
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         DropField();
@@ -961,7 +1117,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     // begin dump
     clearCommandBuffer();
-    SendCommandMIX(CMD_ICLASS_DUMP, blockno, numblks - blockno + 1, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ICLASS_DUMP, blockno, numblks - blockno + 1, 0, NULL, 0);
     while (true) {
         printf(".");
         fflush(stdout);
@@ -1015,7 +1171,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
         if (maxBlk > blockno + numblks + 1) {
             // setup dump and start
             clearCommandBuffer();
-            SendCommandMIX(CMD_ICLASS_DUMP, blockno + blocksRead, maxBlk - (blockno + blocksRead), 0, NULL, 0);
+            SendCommandMIX(CMD_HF_ICLASS_DUMP, blockno + blocksRead, maxBlk - (blockno + blocksRead), 0, NULL, 0);
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
                 PrintAndLogEx(WARNING, "command execute timeout 2");
                 return 0;
@@ -1062,6 +1218,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // save the dump to .bin file
     PrintAndLogEx(SUCCESS, "saving dump file - %d blocks read", gotBytes / 8);
     saveFile(filename, ".bin", tag_data, gotBytes);
+    saveFileEML(filename, tag_data, gotBytes, 8);
     return 1;
 }
 
@@ -1079,7 +1236,7 @@ static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_c
     memcpy(data + 8, MAC, 4);
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ICLASS_WRITEBLOCK, blockno, 0, 0, data, sizeof(data));
+    SendCommandOLD(CMD_HF_ICLASS_WRITEBL, blockno, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
         if (verbose) PrintAndLogEx(WARNING, "Write Command execute timeout");
         return 0;
@@ -1317,7 +1474,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_ICLASS_CLONE, startblock, endblock, 0, data, (endblock - startblock) * 12);
+    SendCommandOLD(CMD_HF_ICLASS_CLONE, startblock, endblock, 0, data, (endblock - startblock) * 12);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return 0;
@@ -1341,7 +1498,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_ICLASS_READBLOCK, blockno, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ICLASS_READBL, blockno, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return 0;
@@ -1448,7 +1605,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         errors += testMAC();
         errors += doKeyTests(0);
         errors += testElite();
-        if (errors) PrintAndLogDevice(ERR, "There were errors!!!");
+        if (errors) PrintAndLogEx(ERR, "There were errors!!!");
         return errors;
     }
     return PM3_SUCCESS;
@@ -1570,7 +1727,7 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
     //get new div key
     HFiClassCalcDivKey(CSN, NEWKEY, new_div_key, elite);
 
-    for (uint8_t i = 0; i < sizeof(old_div_key); i++) {
+    for (uint8_t i = 0; i < ARRAYLEN(old_div_key); i++) {
         xor_div_key[i] = old_div_key[i] ^ new_div_key[i];
     }
     if (verbose) {
@@ -1959,7 +2116,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         flags |= (use_credit_key << 16);
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_ICLASS_CHECK_KEYS, flags, keys, 0, pre + i, 4 * keys);
+        SendCommandOLD(CMD_HF_ICLASS_CHKKEYS, flags, keys, 0, pre + i, 4 * keys);
         PacketResponseNG resp;
 
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -2441,7 +2598,7 @@ int readIclass(bool loop, bool verbose) {
     while (!kbd_enter_pressed()) {
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_READER_ICLASS, flags, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
             uint8_t readStatus = resp.oldarg[0] & 0xff;
             uint8_t *data = resp.data.asBytes;

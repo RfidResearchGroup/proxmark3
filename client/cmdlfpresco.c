@@ -8,6 +8,20 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfpresco.h"
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_presco_clone(void) {
@@ -136,8 +150,8 @@ static int CmdPrescoClone(const char *Cmd) {
         ng.blockno = i;
         ng.flags = 0;
 
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
+        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
@@ -167,11 +181,11 @@ static int CmdPrescoSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)

@@ -9,7 +9,16 @@
 //-----------------------------------------------------------------------------
 // main code for LF aka Proxbrute by Brad antoniewicz
 //-----------------------------------------------------------------------------
-#include "lf_proxbrute.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "lfops.h"
+
+#define OPTS 2
 
 void ModInfo(void) {
     DbpString("  LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");

@@ -36,6 +36,13 @@
  ****************************************************************************/
 #include "fileutils.h"
 
+#include <ctype.h>
+
+#include "pm3_cmd.h"
+#include "commonutil.h"
+#include "util.h"
+
+
 #ifndef ON_DEVICE
 
 #define PATH_MAX_LENGTH 100
@@ -100,14 +107,14 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     /*Opening file for writing in binary mode*/
     FILE *f = fopen(fileName, "wb");
     if (!f) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
         free(fileName);
         return PM3_EFILE;
     }
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogDevice(SUCCESS, "saved %u bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved %u bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -127,7 +134,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     /*Opening file for writing in text mode*/
     FILE *f = fopen(fileName, "w+");
     if (!f) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
         retval = PM3_EFILE;
         goto out;
     }
@@ -150,7 +157,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     }
     fflush(f);
     fclose(f);
-    PrintAndLogDevice(SUCCESS, "saved %d blocks to text file " _YELLOW_("%s"), blocks, fileName);
+    PrintAndLogEx(SUCCESS, "saved %d blocks to text file " _YELLOW_("%s"), blocks, fileName);
 
 out:
     free(fileName);
@@ -273,12 +280,12 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
 
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
     if (res) {
-        PrintAndLogDevice(FAILED, "error: can't save the file: " _YELLOW_("%s"), fileName);
+        PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), fileName);
         json_decref(root);
         retval = 200;
         goto out;
     }
-    PrintAndLogDevice(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
+    PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
     json_decref(root);
 
 out:
@@ -296,7 +303,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
 
     FILE *f = fopen(fileName, "rb");
     if (!f) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
         free(fileName);
         return PM3_EFILE;
     }
@@ -307,14 +314,14 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogDevice(FAILED, "error, when getting filesize");
+        PrintAndLogEx(FAILED, "error, when getting filesize");
         retval = 1;
         goto out;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(FAILED, "error, cannot allocate memory");
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
         retval = 2;
         goto out;
     }
@@ -322,21 +329,21 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     size_t bytes_read = fread(dump, 1, fsize, f);
 
     if (bytes_read != fsize) {
-        PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
+        PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
         free(dump);
         retval = 3;
         goto out;
     }
 
     if (bytes_read > maxdatalen) {
-        PrintAndLogDevice(WARNING, "Warning, bytes read exceed calling array limit. Max bytes is %d bytes", maxdatalen);
+        PrintAndLogEx(WARNING, "Warning, bytes read exceed calling array limit. Max bytes is %d bytes", maxdatalen);
         bytes_read = maxdatalen;
     }
 
     memcpy((data), dump, bytes_read);
     free(dump);
 
-    PrintAndLogDevice(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
+    PrintAndLogEx(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
 
     *datalen = bytes_read;
 
@@ -358,7 +365,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
     FILE *f = fopen(fileName, "r");
     if (!f) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
         retval = PM3_EFILE;
         goto out;
     }
@@ -391,7 +398,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogDevice(SUCCESS, "loaded %d bytes from text file " _YELLOW_("%s"), counter, fileName);
+    PrintAndLogEx(SUCCESS, "loaded %d bytes from text file " _YELLOW_("%s"), counter, fileName);
 
     if (datalen)
         *datalen = counter;
@@ -532,7 +539,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 
     FILE *f = fopen(fileName, "r");
     if (!f) {
-        PrintAndLogDevice(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
         retval = PM3_EFILE;
         goto out;
     }
@@ -564,7 +571,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         counter += (keylen >> 1);
     }
     fclose(f);
-    PrintAndLogDevice(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, fileName);
 
     if (datalen)
         *datalen = counter;
@@ -601,7 +608,7 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     *dumplen = new_dump_len;
     free(*dump);
     *dump = (uint8_t *) mfu_dump;
-    PrintAndLogDevice(SUCCESS, "old mfu dump format, was converted on load to " _GREEN_("%d") " pages", mfu_dump->pages + 1);
+    PrintAndLogEx(SUCCESS, "old mfu dump format, was converted on load to " _GREEN_("%d") " pages", mfu_dump->pages + 1);
     return PM3_SUCCESS;
 }
 

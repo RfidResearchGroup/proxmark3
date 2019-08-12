@@ -118,7 +118,7 @@ typedef struct {
     bool averaging;
     int divisor;
     int trigger_threshold;
-} sample_config;
+} PACKED sample_config;
 /*
 typedef struct {
     uint16_t start_gap;
@@ -131,20 +131,20 @@ typedef struct {
 
 // Extended to support 1 of 4 timing
 typedef struct  {
-    uint16_t start_gap ;
-    uint16_t write_gap ;
-    uint16_t write_0   ;
-    uint16_t write_1   ;
-    uint16_t read_gap  ;
-    uint16_t write_2   ;
-    uint16_t write_3   ;
-
+    uint16_t start_gap;
+    uint16_t write_gap;
+    uint16_t write_0;
+    uint16_t write_1;
+    uint16_t read_gap;
+    uint16_t write_2;
+    uint16_t write_3;
 } t55xx_config_t;
+
 // This setup will allow for the 4 downlink modes "m" as well as other items if needed.
 // Given the one struct we can then read/write to flash/client in one go.
 typedef struct {
     t55xx_config_t m[4]; // mode
-} t55xx_config;
+} t55xx_configurations_t;
 
 /*typedef struct  {
     uint16_t start_gap [4];
@@ -178,6 +178,7 @@ typedef struct {
     bool compiled_with_felica          : 1;
     bool compiled_with_legicrf         : 1;
     bool compiled_with_iclass          : 1;
+    bool compiled_with_nfcbarcode      : 1;
     // misc
     bool compiled_with_lcd             : 1;
 
@@ -185,10 +186,10 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 2
+#define CAPABILITIES_VERSION 3
 extern capabilities_t pm3_capabilities;
 
-// For CMD_T55XX_WRITE_BLOCK
+// For CMD_LF_T55XX_WRITEBL
 typedef struct {
     uint32_t data;
     uint32_t pwd;
@@ -196,7 +197,7 @@ typedef struct {
     uint8_t flags;
 } PACKED t55xx_write_block_t;
 
-// For CMD_FSK_SIM_TAG (FSK)
+// For CMD_LF_FSK_SIMULATE (FSK)
 typedef struct {
     uint8_t fchigh;
     uint8_t fclow;
@@ -205,7 +206,7 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_fsksim_t;
 
-// For CMD_ASK_SIM_TAG (ASK)
+// For CMD_LF_ASK_SIMULATE (ASK)
 typedef struct {
     uint8_t encoding;
     uint8_t invert;
@@ -214,7 +215,7 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_asksim_t;
 
-// For CMD_PSK_SIM_TAG (PSK)
+// For CMD_LF_PSK_SIMULATE (PSK)
 typedef struct {
     uint8_t carrier;
     uint8_t invert;
@@ -257,6 +258,7 @@ typedef struct {
 #define CMD_QUIT_SESSION                                                  0x0113
 #define CMD_SET_DBGMODE                                                   0x0114
 #define CMD_STANDALONE                                                    0x0115
+#define CMD_WTX                                                           0x0116
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_WRITE                                                0x0121
@@ -315,184 +317,171 @@ typedef struct {
 #define CMD_USART_CONFIG                                                  0x0163
 
 // For low-frequency tags
-#define CMD_READ_TI_TYPE                                                  0x0202
-#define CMD_WRITE_TI_TYPE                                                 0x0203
-#define CMD_DOWNLOADED_RAW_BITS_TI_TYPE                                   0x0204
-#define CMD_ACQUIRE_RAW_ADC_SAMPLES_125K                                  0x0205
-#define CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K                         0x0206
+#define CMD_LF_TI_READ                                                    0x0202
+#define CMD_LF_TI_WRITE                                                   0x0203
+#define CMD_LF_ACQ_RAW_ADC                                                0x0205
+#define CMD_LF_MOD_THEN_ACQ_RAW_ADC                                       0x0206
 #define CMD_DOWNLOAD_BIGBUF                                               0x0207
 #define CMD_DOWNLOADED_BIGBUF                                             0x0208
-#define CMD_UPLOAD_SIM_SAMPLES_125K                                       0x0209
-#define CMD_SIMULATE_TAG_125K                                             0x020A
-#define CMD_HID_DEMOD_FSK                                                 0x020B
-#define CMD_HID_SIM_TAG                                                   0x020C
-#define CMD_SET_LF_DIVISOR                                                0x020D
+#define CMD_LF_UPLOAD_SIM_SAMPLES                                         0x0209
+#define CMD_LF_SIMULATE                                                   0x020A
+#define CMD_LF_HID_DEMOD                                                  0x020B
+#define CMD_LF_HID_SIMULATE                                               0x020C
+#define CMD_LF_SET_DIVISOR                                                0x020D
 #define CMD_LF_SIMULATE_BIDIR                                             0x020E
 #define CMD_SET_ADC_MUX                                                   0x020F
-#define CMD_HID_CLONE_TAG                                                 0x0210
-#define CMD_EM410X_WRITE_TAG                                              0x0211
-#define CMD_INDALA_CLONE_TAG                                              0x0212
+#define CMD_LF_HID_CLONE                                                  0x0210
+#define CMD_LF_EM410X_WRITE                                               0x0211
+#define CMD_LF_INDALA_CLONE                                               0x0212
 // for 224 bits UID
-#define CMD_INDALA_CLONE_TAG_L                                            0x0213
-#define CMD_T55XX_READ_BLOCK                                              0x0214
-#define CMD_T55XX_WRITE_BLOCK                                             0x0215
-#define CMD_T55XX_RESET_READ                                              0x0216
-#define CMD_PCF7931_READ                                                  0x0217
-#define CMD_PCF7931_WRITE                                                 0x0223
-#define CMD_EM4X_READ_WORD                                                0x0218
-#define CMD_EM4X_WRITE_WORD                                               0x0219
-#define CMD_IO_DEMOD_FSK                                                  0x021A
-#define CMD_IO_CLONE_TAG                                                  0x021B
-#define CMD_EM410X_DEMOD                                                  0x021c
+#define CMD_LF_INDALA224_CLONE                                            0x0213
+#define CMD_LF_T55XX_READBL                                               0x0214
+#define CMD_LF_T55XX_WRITEBL                                              0x0215
+#define CMD_LF_T55XX_RESET_READ                                           0x0216
+#define CMD_LF_PCF7931_READ                                               0x0217
+#define CMD_LF_PCF7931_WRITE                                              0x0223
+#define CMD_LF_EM4X_READWORD                                              0x0218
+#define CMD_LF_EM4X_WRITEWORD                                             0x0219
+#define CMD_LF_IO_DEMOD                                                   0x021A
+#define CMD_LF_IO_CLONE                                                   0x021B
+#define CMD_LF_EM410X_DEMOD                                               0x021c
 // Sampling configuration for LF reader/sniffer
-#define CMD_SET_LF_SAMPLING_CONFIG                                        0x021d
-#define CMD_FSK_SIM_TAG                                                   0x021E
-#define CMD_ASK_SIM_TAG                                                   0x021F
-#define CMD_PSK_SIM_TAG                                                   0x0220
-#define CMD_AWID_DEMOD_FSK                                                0x0221
-#define CMD_VIKING_CLONE_TAG                                              0x0222
-#define CMD_T55XX_WAKEUP                                                  0x0224
-#define CMD_COTAG                                                         0x0225
-#define CMD_SET_LF_T55XX_CONFIG                                           0x0226
+#define CMD_LF_SAMPLING_SET_CONFIG                                        0x021d
+#define CMD_LF_FSK_SIMULATE                                               0x021E
+#define CMD_LF_ASK_SIMULATE                                               0x021F
+#define CMD_LF_PSK_SIMULATE                                               0x0220
+#define CMD_LF_AWID_DEMOD                                                 0x0221
+#define CMD_LF_VIKING_CLONE                                               0x0222
+#define CMD_LF_T55XX_WAKEUP                                               0x0224
+#define CMD_LF_COTAG_READ                                                 0x0225
+#define CMD_LF_T55XX_SET_CONFIG                                           0x0226
 
-#define CMD_T55XX_CHKPWDS                                                 0x0230
+#define CMD_LF_T55XX_CHK_PWDS                                             0x0230
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 
 // For the 13.56 MHz tags
-#define CMD_ACQUIRE_RAW_ADC_SAMPLES_ISO_15693                             0x0300
-#define CMD_READ_SRI_TAG                                                  0x0303
-#define CMD_ISO_14443B_COMMAND                                            0x0305
-#define CMD_READER_ISO_15693                                              0x0310
-#define CMD_SIMTAG_ISO_15693                                              0x0311
-#define CMD_RECORD_RAW_ADC_SAMPLES_ISO_15693                              0x0312
-#define CMD_ISO_15693_COMMAND                                             0x0313
-#define CMD_ISO_15693_COMMAND_DONE                                        0x0314
-#define CMD_ISO_15693_FIND_AFI                                            0x0315
-#define CMD_LF_SNIFF_RAW_ADC_SAMPLES                                      0x0317
+#define CMD_HF_ISO15693_ACQ_RAW_ADC                                       0x0300
+#define CMD_HF_SRI_READ                                                   0x0303
+#define CMD_HF_ISO14443B_COMMAND                                          0x0305
+#define CMD_HF_ISO15693_READER                                            0x0310
+#define CMD_HF_ISO15693_SIMULATE                                          0x0311
+#define CMD_HF_ISO15693_RAWADC                                            0x0312
+#define CMD_HF_ISO15693_COMMAND                                           0x0313
+#define CMD_HF_ISO15693_FINDAFI                                           0x0315
+#define CMD_LF_SNIFF_RAW_ADC                                              0x0317
 
 // For Hitag2 transponders
-#define CMD_SNIFF_HITAG                                                   0x0370
-#define CMD_SIMULATE_HITAG                                                0x0371
-#define CMD_READER_HITAG                                                  0x0372
+#define CMD_LF_HITAG_SNIFF                                                0x0370
+#define CMD_LF_HITAG_SIMULATE                                             0x0371
+#define CMD_LF_HITAG_READER                                               0x0372
 
 // For HitagS
-#define CMD_TEST_HITAGS_TRACES                                            0x0367
-#define CMD_SIMULATE_HITAG_S                                              0x0368
-#define CMD_READ_HITAG_S                                                  0x0373
-#define CMD_WR_HITAG_S                                                    0x0375
-#define CMD_EMU_HITAG_S                                                   0x0376
+#define CMD_LF_HITAGS_TEST_TRACES                                         0x0367
+#define CMD_LF_HITAGS_SIMULATE                                            0x0368
+#define CMD_LF_HITAGS_READ                                                0x0373
+#define CMD_LF_HITAGS_WRITE                                               0x0375
 
-#define CMD_ANTIFUZZ_ISO_14443a                                           0x0380
-#define CMD_SIMULATE_TAG_ISO_14443B                                       0x0381
-#define CMD_SNIFF_ISO_14443B                                              0x0382
+#define CMD_HF_ISO14443A_ANTIFUZZ                                         0x0380
+#define CMD_HF_ISO14443B_SIMULATE                                         0x0381
+#define CMD_HF_ISO14443B_SNIFF                                            0x0382
 
-#define CMD_SNIFF_ISO_14443a                                              0x0383
-#define CMD_SIMULATE_TAG_ISO_14443a                                       0x0384
+#define CMD_HF_ISO14443A_SNIFF                                            0x0383
+#define CMD_HF_ISO14443A_SIMULATE                                         0x0384
 
-#define CMD_READER_ISO_14443a                                             0x0385
+#define CMD_HF_ISO14443A_READER                                           0x0385
 
-#define CMD_RAW_WRITER_LEGIC_RF                                           0x0386
-#define CMD_SIMULATE_TAG_LEGIC_RF                                         0x0387
-#define CMD_READER_LEGIC_RF                                               0x0388
-#define CMD_WRITER_LEGIC_RF                                               0x0389
+#define CMD_HF_LEGIC_SIMULATE                                             0x0387
+#define CMD_HF_LEGIC_READER                                               0x0388
+#define CMD_HF_LEGIC_WRITER                                               0x0389
 
-#define CMD_EPA_PACE_COLLECT_NONCE                                        0x038A
-#define CMD_EPA_PACE_REPLAY                                               0x038B
+#define CMD_HF_EPA_COLLECT_NONCE                                          0x038A
+#define CMD_HF_EPA_REPLAY                                                 0x038B
 
-#define CMD_LEGIC_INFO                                                    0x03BC
-#define CMD_LEGIC_ESET                                                    0x03BD
-#define CMD_LEGIC_EGET                                                    0x03BE
+#define CMD_HF_LEGIC_INFO                                                 0x03BC
+#define CMD_HF_LEGIC_ESET                                                 0x03BD
 
-#define CMD_ICLASS_READCHECK                                              0x038F
-#define CMD_ICLASS_CLONE                                                  0x0390
-#define CMD_ICLASS_DUMP                                                   0x0391
-#define CMD_SNIFF_ICLASS                                                  0x0392
-#define CMD_SIMULATE_TAG_ICLASS                                           0x0393
-#define CMD_READER_ICLASS                                                 0x0394
-#define CMD_READER_ICLASS_REPLAY                                          0x0395
-#define CMD_ICLASS_READBLOCK                                              0x0396
-#define CMD_ICLASS_WRITEBLOCK                                             0x0397
-#define CMD_ICLASS_EML_MEMSET                                             0x0398
-#define CMD_ICLASS_AUTHENTICATION                                         0x0399
-#define CMD_ICLASS_CHECK_KEYS                                             0x039A
+#define CMD_HF_ICLASS_READCHECK                                           0x038F
+#define CMD_HF_ICLASS_CLONE                                               0x0390
+#define CMD_HF_ICLASS_DUMP                                                0x0391
+#define CMD_HF_ICLASS_SNIFF                                               0x0392
+#define CMD_HF_ICLASS_SIMULATE                                            0x0393
+#define CMD_HF_ICLASS_READER                                              0x0394
+#define CMD_HF_ICLASS_REPLAY                                              0x0395
+#define CMD_HF_ICLASS_READBL                                              0x0396
+#define CMD_HF_ICLASS_WRITEBL                                             0x0397
+#define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
+#define CMD_HF_ICLASS_AUTH                                                0x0399
+#define CMD_HF_ICLASS_CHKKEYS                                             0x039A
 
 // For ISO1092 / FeliCa
-#define CMD_FELICA_SIMULATE_TAG                                           0x03A0
-#define CMD_FELICA_SNIFF                                                  0x03A1
-#define CMD_FELICA_COMMAND                                                0x03A2
+#define CMD_HF_FELICA_SIMULATE                                            0x03A0
+#define CMD_HF_FELICA_SNIFF                                               0x03A1
+#define CMD_HF_FELICA_COMMAND                                             0x03A2
 //temp
-#define CMD_FELICA_LITE_DUMP                                              0x03AA
-#define CMD_FELICA_LITE_SIM                                               0x03AB
+#define CMD_HF_FELICALITE_DUMP                                            0x03AA
+#define CMD_HF_FELICALITE_SIMULATE                                        0x03AB
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400
 #define CMD_MEASURE_ANTENNA_TUNING_HF                                     0x0401
 #define CMD_LISTEN_READER_FIELD                                           0x0420
+#define CMD_HF_DROPFIELD                                                  0x0430
 
 // For direct FPGA control
 #define CMD_FPGA_MAJOR_MODE_OFF                                           0x0500
 
 // For mifare commands
-#define CMD_MIFARE_EML_MEMCLR                                             0x0601
-#define CMD_MIFARE_EML_MEMSET                                             0x0602
-#define CMD_MIFARE_EML_MEMGET                                             0x0603
-#define CMD_MIFARE_EML_CARDLOAD                                           0x0604
+#define CMD_HF_MIFARE_EML_MEMCLR                                          0x0601
+#define CMD_HF_MIFARE_EML_MEMSET                                          0x0602
+#define CMD_HF_MIFARE_EML_MEMGET                                          0x0603
+#define CMD_HF_MIFARE_EML_LOAD                                            0x0604
 
 // magic chinese card commands
-#define CMD_MIFARE_CSETBLOCK                                              0x0605
-#define CMD_MIFARE_CGETBLOCK                                              0x0606
-#define CMD_MIFARE_CIDENT                                                 0x0607
+#define CMD_HF_MIFARE_CSETBL                                              0x0605
+#define CMD_HF_MIFARE_CGETBL                                              0x0606
+#define CMD_HF_MIFARE_CIDENT                                              0x0607
 
-#define CMD_SIMULATE_MIFARE_CARD                                          0x0610
+#define CMD_HF_MIFARE_SIMULATE                                            0x0610
 
-#define CMD_READER_MIFARE                                                 0x0611
-#define CMD_MIFARE_NESTED                                                 0x0612
-#define CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES                               0x0613
-#define CMD_MIFARE_ACQUIRE_NONCES                                         0x0614
+#define CMD_HF_MIFARE_READER                                              0x0611
+#define CMD_HF_MIFARE_NESTED                                              0x0612
+#define CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                                0x0613
+#define CMD_HF_MIFARE_ACQ_NONCES                                          0x0614
 
-#define CMD_MIFARE_READBL                                                 0x0620
-#define CMD_MIFAREU_READBL                                                0x0720
-#define CMD_MIFARE_READSC                                                 0x0621
-#define CMD_MIFAREU_READCARD                                              0x0721
-#define CMD_MIFARE_WRITEBL                                                0x0622
-#define CMD_MIFAREU_WRITEBL                                               0x0722
-#define CMD_MIFAREU_WRITEBL_COMPAT                                        0x0723
+#define CMD_HF_MIFARE_READBL                                              0x0620
+#define CMD_HF_MIFAREU_READBL                                             0x0720
+#define CMD_HF_MIFARE_READSC                                              0x0621
+#define CMD_HF_MIFAREU_READCARD                                           0x0721
+#define CMD_HF_MIFARE_WRITEBL                                             0x0622
+#define CMD_HF_MIFAREU_WRITEBL                                            0x0722
 
-#define CMD_MIFARE_CHKKEYS                                                0x0623
-#define CMD_MIFARE_SETMOD                                                 0x0624
-#define CMD_MIFARE_CHKKEYS_FAST                                           0x0625
+#define CMD_HF_MIFARE_CHKKEYS                                             0x0623
+#define CMD_HF_MIFARE_SETMOD                                              0x0624
+#define CMD_HF_MIFARE_CHKKEYS_FAST                                        0x0625
 
-#define CMD_MIFARE_SNIFFER                                                0x0630
+#define CMD_HF_MIFARE_SNIFF                                               0x0630
 //ultralightC
-#define CMD_MIFAREUC_AUTH                                                 0x0724
+#define CMD_HF_MIFAREUC_AUTH                                              0x0724
 //0x0725 and 0x0726 no longer used
-#define CMD_MIFAREUC_SETPWD                                               0x0727
+#define CMD_HF_MIFAREUC_SETPWD                                            0x0727
 
 // mifare desfire
-#define CMD_MIFARE_DESFIRE_READBL                                         0x0728
-#define CMD_MIFARE_DESFIRE_WRITEBL                                        0x0729
-#define CMD_MIFARE_DESFIRE_AUTH1                                          0x072a
-#define CMD_MIFARE_DESFIRE_AUTH2                                          0x072b
-#define CMD_MIFARE_DES_READER                                             0x072c
-#define CMD_MIFARE_DESFIRE_INFO                                           0x072d
-#define CMD_MIFARE_DESFIRE                                                0x072e
+#define CMD_HF_DESFIRE_READBL                                             0x0728
+#define CMD_HF_DESFIRE_WRITEBL                                            0x0729
+#define CMD_HF_DESFIRE_AUTH1                                              0x072a
+#define CMD_HF_DESFIRE_AUTH2                                              0x072b
+#define CMD_HF_DESFIRE_READER                                             0x072c
+#define CMD_HF_DESFIRE_INFO                                               0x072d
+#define CMD_HF_DESFIRE_COMMAND                                            0x072e
 
-#define CMD_MIFARE_COLLECT_NONCES                                         0x072f
-#define CMD_MIFARE_NACK_DETECT                                            0x0730
+#define CMD_HF_MIFARE_NACK_DETECT                                         0x0730
 
-#define CMD_HF_SNIFFER                                                    0x0800
+#define CMD_HF_SNIFF                                                      0x0800
 
-// For EMV Commands
-#define CMD_EMV_READ_RECORD                                               0x0700
-#define CMD_EMV_TRANSACTION                                               0x0701
-#define CMD_EMV_CLONE                                                     0x0702
-#define CMD_EMV_SIM                                                       0x0703
-#define CMD_EMV_TEST                                                      0x0704
-#define CMD_EMV_FUZZ_RATS                                                 0x0705
-#define CMD_EMV_GET_RANDOM_NUM                                            0x0706
-#define CMD_EMV_LOAD_VALUE                                                0x0707
-#define CMD_EMV_DUMP_CARD                                                 0x0708
+// For ThinFilm Kovio
+#define CMD_HF_THINFILM_READ                                              0x0810
+#define CMD_HF_THINFILM_SIMULATE                                          0x0811
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
@@ -507,6 +496,8 @@ typedef struct {
 #define FLAG_MF_1K              0x100
 #define FLAG_MF_2K              0x200
 #define FLAG_MF_4K              0x400
+#define FLAG_FORCED_ATQA        0x800
+#define FLAG_FORCED_SAK         0x1000
 
 //Iclass reader flags
 #define FLAG_ICLASS_READER_ONLY_ONCE   0x01
@@ -559,6 +550,10 @@ typedef struct {
 #define PM3_ENOTTY            -14
 // Initialization error                 pm3:        error related to trying to initalize the pm3 / fpga for different operations
 #define PM3_EINIT             -15
+// Expected a different answer error    client/pm3: error when expecting one answer and got another one
+#define PM3_EWRONGANSVER      -16
+// Memory out-of-bounds error           client/pm3: error when a read/write is outside the expected array
+#define PM3_EOUTOFBOUND       -17
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
@@ -577,7 +572,7 @@ typedef struct {
 // uart_windows.c & uart_posix.c
 # define UART_FPC_CLIENT_RX_TIMEOUT_MS  200
 # define UART_USB_CLIENT_RX_TIMEOUT_MS  20
-# define UART_TCP_CLIENT_RX_TIMEOUT_MS  300
+# define UART_TCP_CLIENT_RX_TIMEOUT_MS  500
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:

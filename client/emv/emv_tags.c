@@ -17,11 +17,12 @@
 #include <config.h>
 #endif
 
-#include "tlv.h"
 #include "emv_tags.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+#include "commonutil.h"
 
 #ifndef PRINT_INDENT
 # define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}
@@ -437,7 +438,7 @@ static int emv_tlv_compare(const void *a, const void *b) {
 }
 
 static const struct emv_tag *emv_get_tag(const struct tlv *tlv) {
-    struct emv_tag *tag = bsearch(tlv, emv_tags, sizeof(emv_tags) / sizeof(emv_tags[0]),
+    struct emv_tag *tag = bsearch(tlv, emv_tags, ARRAYLEN(emv_tags),
                                   sizeof(emv_tags[0]), emv_tlv_compare);
 
     return tag ? tag : &emv_tags[0];

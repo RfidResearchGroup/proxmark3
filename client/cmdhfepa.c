@@ -9,6 +9,18 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfepa.h"
 
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <inttypes.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"        // clearCommandBuffer
+#include "ui.h"
+#include "util_posix.h"
+
 static int CmdHelp(const char *Cmd);
 
 // Perform (part of) the PACE protocol
@@ -32,7 +44,7 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
         clearCommandBuffer();
-        SendCommandMIX(CMD_EPA_PACE_COLLECT_NONCE, (int)m, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_EPA_COLLECT_NONCE, (int)m, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
 
@@ -75,7 +87,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
     int skip = 0, skip_add = 0, scan_return;
     // for each APDU
-    for (int i = 0; i < sizeof(apdu_lengths); i++) {
+    for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
         // scan to next space or end of string
         while (Cmd[skip] != ' ' && Cmd[skip] != '\0') {
             // convert
@@ -96,7 +108,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
         // break on EOF
         if (Cmd[skip] == '\0') {
-            if (i < sizeof(apdu_lengths) - 1) {
+            if (i < ARRAYLEN(apdu_lengths) - 1) {
 
                 PrintAndLogEx(NORMAL, (char *)usage_msg);
                 return 0;
@@ -111,7 +123,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE];
     // fast push mode
     conn.block_after_ACK = true;
-    for (int i = 0; i < sizeof(apdu_lengths); i++) {
+    for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
         // transfer the APDU in several parts if necessary
         for (int j = 0; j * sizeof(data) < apdu_lengths[i]; j++) {
             // amount of data in this packet
@@ -119,7 +131,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             if (packet_length > sizeof(data)) {
                 packet_length = sizeof(data);
             }
-            if ((i == sizeof(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
+            if ((i == ARRAYLEN(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
                 // Disable fast mode on last packet
                 conn.block_after_ACK = false;
             }
@@ -130,7 +142,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             clearCommandBuffer();
             // arg0: APDU number
             // arg1: offset into the APDU
-            SendCommandOLD(CMD_EPA_PACE_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
+            SendCommandOLD(CMD_HF_EPA_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
             WaitForResponse(CMD_ACK, &resp);
             if (resp.oldarg[0] != 0) {
                 PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
@@ -141,7 +153,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
     // now perform the replay
     clearCommandBuffer();
-    SendCommandMIX(CMD_EPA_PACE_REPLAY, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_EPA_REPLAY, 0, 0, 0, NULL, 0);
     WaitForResponse(CMD_ACK, &resp);
     if (resp.oldarg[0] != 0) {
         PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);

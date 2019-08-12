@@ -63,6 +63,9 @@ From "Dismantling iclass":
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
+
+#include "commonutil.h"  // ARRAYLEN
+
 #include "fileutils.h"
 #include "cipherutils.h"
 #include "mbedtls/des.h"
@@ -218,7 +221,7 @@ static void printbegin() {
     if (debug_print < 2)
         return;
 
-    PrintAndLogDevice(NORMAL, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+    PrintAndLogEx(NORMAL, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
 }
 
 static void printState(const char *desc, uint64_t c) {
@@ -281,7 +284,7 @@ void hash0(uint64_t c, uint8_t k[8]) {
     if (x & 1) //Check if x7 is 1
         p = ~p;
 
-    if (debug_print >= 2) PrintAndLogDevice(DEBUG, "p:%02x", p);
+    if (debug_print >= 2) PrintAndLogEx(DEBUG, "p:%02x", p);
 
     BitstreamIn p_in = { &p, 8, 0 };
     uint8_t outbuffer[] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -426,7 +429,7 @@ static int testDES(Testcase testcase, mbedtls_des_context ctx_enc, mbedtls_des_c
 
     if (memcmp(testcase.uid, decrypted, 8) != 0) {
         //Decryption fail
-        PrintAndLogDevice(FAILED, "Encryption <-> Decryption FAIL");
+        PrintAndLogEx(FAILED, "Encryption <-> Decryption FAIL");
         printarr("Input", testcase.uid, 8);
         printarr("Decrypted", decrypted, 8);
         retval = 1;
@@ -434,7 +437,7 @@ static int testDES(Testcase testcase, mbedtls_des_context ctx_enc, mbedtls_des_c
 
     if (memcmp(des_encrypted_csn, testcase.t_key, 8) != 0) {
         //Encryption fail
-        PrintAndLogDevice(FAILED, "Encryption != Expected result");
+        PrintAndLogEx(FAILED, "Encryption != Expected result");
         printarr("Output", des_encrypted_csn, 8);
         printarr("Expected", testcase.t_key, 8);
         retval = 1;
@@ -444,7 +447,7 @@ static int testDES(Testcase testcase, mbedtls_des_context ctx_enc, mbedtls_des_c
 
     if (memcmp(div_key, testcase.div_key, 8) != 0) {
         //Key diversification fail
-        PrintAndLogDevice(FAILED, "Div key != expected result");
+        PrintAndLogEx(FAILED, "Div key != expected result");
         printarr("  csn   ", testcase.uid, 8);
         printarr("{csn}   ", des_encrypted_csn, 8);
         printarr("hash0   ", div_key, 8);
@@ -469,13 +472,13 @@ static void des_checkParity(uint8_t *key) {
         bool parity = des_getParityBitFromKey(key[i]);
         if (parity != (key[i] & 0x1)) {
             fails++;
-            PrintAndLogDevice(FAILED, "parity1 fail, byte %d [%02x] was %d, should be %d", i, key[i], (key[i] & 0x1), parity);
+            PrintAndLogEx(FAILED, "parity1 fail, byte %d [%02x] was %d, should be %d", i, key[i], (key[i] & 0x1), parity);
         }
     }
     if (fails) {
-        PrintAndLogDevice(FAILED, "parity fails: %d", fails);
+        PrintAndLogEx(FAILED, "parity fails: %d", fails);
     } else {
-        PrintAndLogDevice(SUCCESS, "Key syntax is with parity bits inside each byte");
+        PrintAndLogEx(SUCCESS, "Key syntax is with parity bits inside each byte");
     }
 }
 
@@ -554,15 +557,15 @@ static int testKeyDiversificationWithMasterkeyTestcases() {
     int i, error = 0;
     uint8_t empty[8] = {0};
 
-    PrintAndLogDevice(INFO, "Testing encryption/decryption");
+    PrintAndLogEx(INFO, "Testing encryption/decryption");
 
     for (i = 0; memcmp(testcases + i, empty, 8); i++)
         error += testDES(testcases[i], ctx_enc, ctx_dec);
 
     if (error)
-        PrintAndLogDevice(FAILED, "%d errors occurred (%d testcases)", error, i);
+        PrintAndLogEx(FAILED, "%d errors occurred (%d testcases)", error, i);
     else
-        PrintAndLogDevice(SUCCESS, "Hashing seems to work (%d testcases)", i);
+        PrintAndLogEx(SUCCESS, "Hashing seems to work (%d testcases)", i);
     return error;
 }
 
@@ -573,7 +576,7 @@ static void print64bits(const char *name, uint64_t val) {
 static uint64_t testCryptedCSN(uint64_t crypted_csn, uint64_t expected) {
     int retval = 0;
     uint8_t result[8] = {0};
-    if (debug_print) PrintAndLogDevice(DEBUG, "debug_print %d", debug_print);
+    if (debug_print) PrintAndLogEx(DEBUG, "debug_print %d", debug_print);
     if (debug_print) print64bits("    {csn}      ", crypted_csn);
 
     uint64_t crypted_csn_swapped = swapZvalues(crypted_csn);
@@ -586,13 +589,13 @@ static uint64_t testCryptedCSN(uint64_t crypted_csn, uint64_t expected) {
 
     if (resultbyte != expected) {
         if (debug_print) {
-            PrintAndLogDevice(NORMAL, "\n");
-            PrintAndLogDevice(FAILED, "FAIL!");
+            PrintAndLogEx(NORMAL, "\n");
+            PrintAndLogEx(FAILED, "FAIL!");
             print64bits("    expected       ",  expected);
         }
         retval = 1;
     } else {
-        if (debug_print) PrintAndLogDevice(SUCCESS, "[OK]");
+        if (debug_print) PrintAndLogEx(SUCCESS, "[OK]");
     }
     return retval;
 }
@@ -611,7 +614,7 @@ static int testDES2(uint64_t csn, uint64_t expected) {
     print64bits("   expected ", expected);
 
     if (expected == crypt_csn) {
-        PrintAndLogDevice(SUCCESS, "OK");
+        PrintAndLogEx(SUCCESS, "OK");
         return 0;
     } else {
         return 1;
@@ -626,13 +629,13 @@ static int testDES2(uint64_t csn, uint64_t expected) {
 static int doTestsWithKnownInputs() {
     // KSel from http://www.proxmark.org/forum/viewtopic.php?pid=10977#p10977
     int errors = 0;
-    PrintAndLogDevice(SUCCESS, "Testing DES encryption");
+    PrintAndLogEx(SUCCESS, "Testing DES encryption");
     uint8_t key[8] = {0x6c, 0x8d, 0x44, 0xf9, 0x2a, 0x2d, 0x01, 0xbf};
 
     mbedtls_des_setkey_enc(&ctx_enc, key);
     testDES2(0xbbbbaaaabbbbeeee, 0xd6ad3ca619659e6b);
 
-    PrintAndLogDevice(SUCCESS, "Testing hashing algorithm");
+    PrintAndLogEx(SUCCESS, "Testing hashing algorithm");
 
     errors += testCryptedCSN(0x0102030405060708, 0x0bdd6512073c460a);
     errors += testCryptedCSN(0x1020304050607080, 0x0208211405f3381f);
@@ -645,9 +648,9 @@ static int doTestsWithKnownInputs() {
     errors += testCryptedCSN(0x14e2adfc5bb7e134, 0x6ac90c6508bd9ea3);
 
     if (errors)
-        PrintAndLogDevice(FAILED, "%d errors occurred (9 testcases)", errors);
+        PrintAndLogEx(FAILED, "%d errors occurred (9 testcases)", errors);
     else
-        PrintAndLogDevice(SUCCESS, "Hashing seems to work (9 testcases)");
+        PrintAndLogEx(SUCCESS, "Hashing seems to work (9 testcases)");
     return errors;
 }
 
@@ -683,32 +686,32 @@ static bool readKeyFile(uint8_t key[8]) {
 int doKeyTests(uint8_t debuglevel) {
     debug_print = debuglevel;
 
-    PrintAndLogDevice(INFO, "Checking if the master key is present (iclass_key.bin)...");
+    PrintAndLogEx(INFO, "Checking if the master key is present (iclass_key.bin)...");
     uint8_t key[8] = {0};
     if (!readKeyFile(key)) {
-        PrintAndLogDevice(FAILED, "Master key not present, will not be able to do all testcases");
+        PrintAndLogEx(FAILED, "Master key not present, will not be able to do all testcases");
     } else {
 
         //Test if it's the right key...
         uint8_t i;
         uint8_t j = 0;
-        for (i = 0; i < sizeof(key); i++)
+        for (i = 0; i < ARRAYLEN(key); i++)
             j += key[i];
 
         if (j != 185) {
-            PrintAndLogDevice(INFO, "A key was loaded, but it does not seem to be the correct one. Aborting these tests");
+            PrintAndLogEx(INFO, "A key was loaded, but it does not seem to be the correct one. Aborting these tests");
         } else {
-            PrintAndLogDevice(SUCCESS, "Key present");
-            PrintAndLogDevice(SUCCESS, "Checking key parity...");
+            PrintAndLogEx(SUCCESS, "Key present");
+            PrintAndLogEx(SUCCESS, "Checking key parity...");
             des_checkParity(key);
             mbedtls_des_setkey_enc(&ctx_enc, key);
             mbedtls_des_setkey_dec(&ctx_dec, key);
             // Test hashing functions
-            PrintAndLogDevice(SUCCESS, "The following tests require the correct 8-byte master key");
+            PrintAndLogEx(SUCCESS, "The following tests require the correct 8-byte master key");
             testKeyDiversificationWithMasterkeyTestcases();
         }
     }
-    PrintAndLogDevice(SUCCESS, "Testing key diversification with non-sensitive keys...");
+    PrintAndLogEx(SUCCESS, "Testing key diversification with non-sensitive keys...");
     doTestsWithKnownInputs();
     return 0;
 }

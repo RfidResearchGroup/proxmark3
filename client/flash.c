@@ -10,6 +10,17 @@
 
 #include "flash.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "ui.h"
+#include "elf.h"
+#include "proxendian.h"
+#include "at91sam7s512.h"
+#include "util_posix.h"
+#include "comms.h"
+
 #define FLASH_START            0x100000
 
 #define BOOTLOADER_SIZE        0x2000
@@ -378,12 +389,12 @@ static int wait_for_ack(PacketResponseNG *ack) {
 }
 
 static void flash_suggest_update_bootloader(void) {
-    PrintAndLogEx(ERR, _RED_("It is recommended that you first update your bootloader alone,"));
+    PrintAndLogEx(ERR, _RED_("It is recommended that you first " _YELLOW_("update your bootloader") _RED_("alone,")));
     PrintAndLogEx(ERR, _RED_("reboot the Proxmark3 then only update the main firmware") "\n");
 }
 
 static void flash_suggest_update_flasher(void) {
-    PrintAndLogEx(ERR, _RED_("It is recommended that you first update your flasher"));
+    PrintAndLogEx(ERR, _RED_("It is recommended that you first " _YELLOW_("update your flasher")));
 }
 
 // Go into flashing mode
@@ -413,18 +424,22 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         if ((BL_VERSION_MAJOR(version) < BL_VERSION_FIRST_MAJOR) || (BL_VERSION_MAJOR(version) > BL_VERSION_LAST_MAJOR)) {
             // version info seems fishy
             version = BL_VERSION_INVALID;
+            PrintAndLogEx(ERR, _RED_("====================== OBS ! ==========================="));
             PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported an invalid version number"));
             flash_suggest_update_bootloader();
             //
         } else if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(FLASHER_VERSION)) {
+            PrintAndLogEx(ERR, _RED_("====================== OBS ! ==================================="));
             PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported a version older than this flasher"));
             flash_suggest_update_bootloader();
         } else if (BL_VERSION_MAJOR(version) > BL_VERSION_MAJOR(FLASHER_VERSION)) {
+            PrintAndLogEx(ERR, _RED_("====================== OBS ! ========================="));
             PrintAndLogEx(ERR, _RED_("Note: Your bootloader is more recent than this flasher"));
             flash_suggest_update_flasher();
         }
     } else {
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CMD_BL_VERSION command"));
+        PrintAndLogEx(ERR, _RED_("====================== OBS ! ==========================================="));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("CMD_BL_VERSION") _RED_("command")));
         flash_suggest_update_bootloader();
     }
 
@@ -433,9 +448,10 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
 
     int mem_avail = chipid_to_mem_avail(chipinfo);
     if (mem_avail != 0) {
-        PrintAndLogEx(NORMAL, "Available memory on this board: %uK bytes\n", mem_avail);
+        PrintAndLogEx(NORMAL, "Available memory on this board: "_YELLOW_("%uK") "bytes\n", mem_avail);
         if (mem_avail > 256) {
             if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(BL_VERSION_1_0_0)) {
+                PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================"));
                 PrintAndLogEx(ERR, _RED_("Your bootloader does not support writing above 256k"));
                 flash_suggest_update_bootloader();
             } else {
@@ -445,7 +461,8 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         }
     } else {
         PrintAndLogEx(NORMAL, "Available memory on this board: "_RED_("UNKNOWN")"\n");
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new CHIP_INFO command"));
+        PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================================"));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("CHIP_INFO") _RED_("command")));
         flash_suggest_update_bootloader();
     }
 
@@ -464,7 +481,8 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         }
         return wait_for_ack(&resp);
     } else {
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new START_FLASH command"));
+        PrintAndLogEx(ERR, _RED_("====================== OBS ! ========================================"));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("START_FLASH") _RED_("command")));
         flash_suggest_update_bootloader();
     }
     return 0;

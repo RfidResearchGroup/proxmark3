@@ -9,11 +9,21 @@
 //-----------------------------------------------------------------------------
 
 // ensure gmtime_r is available even with -std=c99; must be included before
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__APPLE__)
 #define _POSIX_C_SOURCE 200112L
 #endif
 
 #include "util.h"
+
+#include <stdarg.h>
+#include <inttypes.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h> // Mingw
+
+#include "ui.h"     // PrintAndLog
 
 #define UTIL_BUFFER_SIZE_SPRINT 4097
 // global client debug variable
@@ -807,24 +817,12 @@ int num_CPUs(void) {
     SYSTEM_INFO sysinfo;
     GetSystemInfo(&sysinfo);
     return sysinfo.dwNumberOfProcessors;
-#elif defined(__linux__) && defined(_SC_NPROCESSORS_ONLN)
+#else
 #include <unistd.h>
     int count = sysconf(_SC_NPROCESSORS_ONLN);
     if (count <= 0)
         count = 1;
     return count;
-#elif defined(__APPLE__)
-    /*
-       TODO ICEMAN 2019, its commented out until someone finds a better solution
-#include "sys/sysctl.h"
-        uint32_t logicalcores = 0;
-        size_t size = sizeof( logicalcores );
-        sysctlbyname( "hw.logicalcpu", &logicalcores, &size, NULL, 0 );
-        return logicalcores;
-        */
-    return 1;
-#else
-    return 1;
 #endif
 }
 

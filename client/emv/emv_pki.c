@@ -18,14 +18,14 @@
 #endif
 
 #include "emv_pki.h"
-#include "crypto.h"
-#include "dump.h"
-#include "util.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
+#include "crypto.h"
+#include "dump.h"
+#include "util.h"
 
 static bool strictExecution = true;
 void PKISetStrictExecution(bool se) {

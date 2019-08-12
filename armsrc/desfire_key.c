@@ -18,6 +18,7 @@
  */
 
 #include "desfire_key.h"
+#include "string.h"
 
 static inline void update_key_schedules(desfirekey_t key);
 

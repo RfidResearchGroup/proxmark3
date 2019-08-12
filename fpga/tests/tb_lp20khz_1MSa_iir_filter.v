@@ -13,43 +13,43 @@
 
 module lp20khz_1MSa_iir_filter_tb;
 
-	integer fin, fout, r;
+    integer fin, fout, r;
 
-	reg clk;
-	reg [7:0] adc_d;
-	wire data_rdy;
-	wire [7:0] adc_filtered;
+    reg clk;
+    reg [7:0] adc_d;
+    wire data_rdy;
+    wire [7:0] adc_filtered;
 
-	initial
-	begin
-		clk = 0;
-		fin = $fopen(`FIN, "r");
-		if (!fin) begin
-			$display("ERROR: can't open the data file");
-			$finish;
-		end
-		fout = $fopen(`FOUT, "w+");
-		if (!$feof(fin))
-			adc_d = $fgetc(fin); // read the first value
-	end
+    initial
+    begin
+        clk = 0;
+        fin = $fopen(`FIN, "r");
+        if (!fin) begin
+            $display("ERROR: can't open the data file");
+            $finish;
+        end
+        fout = $fopen(`FOUT, "w+");
+        if (!$feof(fin))
+            adc_d = $fgetc(fin); // read the first value
+    end
 
-	always
-		# 1 clk = !clk;
+    always
+        # 1 clk = !clk;
 
-	always @(posedge clk)
-		if (data_rdy) begin
-			if ($time > 1)
-				r = $fputc(adc_filtered, fout);				
-			if (!$feof(fin))
-				adc_d <= $fgetc(fin);
-			else begin
-				$fclose(fin);
-				$fclose(fout);
-				$finish;				
-			end
-		end
+    always @(posedge clk)
+        if (data_rdy) begin
+            if ($time > 1)
+                r = $fputc(adc_filtered, fout);
+            if (!$feof(fin))
+                adc_d <= $fgetc(fin);
+            else begin
+                $fclose(fin);
+                $fclose(fout);
+                $finish;
+            end
+        end
 
-	// module to test
-	lp20khz_1MSa_iir_filter filter(clk, adc_d, data_rdy, adc_filtered);
+    // module to test
+    lp20khz_1MSa_iir_filter filter(clk, adc_d, data_rdy, adc_filtered);
 
 endmodule

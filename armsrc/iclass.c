@@ -36,15 +36,24 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "apps.h"
+#include "iclass.h"
+
+#include "proxmark3_arm.h"
 #include "cmd.h"
 // Needed for CRC in emulation mode;
 // same construction as in ISO 14443;
 // different initial value (CRC_ICLASS)
 #include "crc16.h"
-#include "protocols.h"
 #include "optimized_cipher.h"
-#include "usb_cdc.h" // for usb_poll_validate_length
+
+#include "appmain.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "string.h"
+#include "util.h"
+#include "dbprint.h"
+#include "protocols.h"
+#include "ticks.h"
 
 static int timeout = 4096;
 static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay);
@@ -92,21 +101,21 @@ typedef struct {
     int     bitBuffer;
     int     dropPosition;
     uint8_t *output;
-} tUart;
+} tUartIc;
 */
 typedef struct {
     enum {
-        DEMOD_UNSYNCD,
-        DEMOD_START_OF_COMMUNICATION,
-        DEMOD_START_OF_COMMUNICATION2,
-        DEMOD_START_OF_COMMUNICATION3,
-        DEMOD_SOF_COMPLETE,
-        DEMOD_MANCHESTER_D,
-        DEMOD_MANCHESTER_E,
-        DEMOD_END_OF_COMMUNICATION,
-        DEMOD_END_OF_COMMUNICATION2,
-        DEMOD_MANCHESTER_F,
-        DEMOD_ERROR_WAIT
+        DEMOD_IC_UNSYNCD,
+        DEMOD_IC_START_OF_COMMUNICATION,
+        DEMOD_IC_START_OF_COMMUNICATION2,
+        DEMOD_IC_START_OF_COMMUNICATION3,
+        DEMOD_IC_SOF_COMPLETE,
+        DEMOD_IC_MANCHESTER_D,
+        DEMOD_IC_MANCHESTER_E,
+        DEMOD_IC_END_OF_COMMUNICATION,
+        DEMOD_IC_END_OF_COMMUNICATION2,
+        DEMOD_IC_MANCHESTER_F,
+        DEMOD_IC_ERROR_WAIT
     }       state;
     int     bitCount;
     int     posCount;
@@ -125,7 +134,7 @@ typedef struct {
         SUB_BOTH
     } sub;
     uint8_t   *output;
-} tDemod;
+} tDemodIc;
 
 /*
 * Abrasive's uart implementation
@@ -138,8 +147,13 @@ typedef struct {
     bool frame_done;
     uint8_t *buf;
     int len;
-} tUart;
-static tUart Uart;
+} tUartIc;
+static tUartIc Uart;
+
+static void OnError(uint8_t reason) {
+    reply_old(CMD_ACK, 0, reason, 0, 0, 0);
+    switch_off();
+}
 
 static void uart_reset(void) {
     Uart.frame_done = false;
@@ -499,8 +513,8 @@ static RAMFUNC int OutOfNDecoding(int bit) {
 //=============================================================================
 // Manchester
 //=============================================================================
-static tDemod Demod;
-static void DemodReset() {
+static tDemodIc Demod;
+static void DemodIcReset() {
     Demod.bitCount = 0;
     Demod.posCount = 0;
     Demod.syncBit = 0;
@@ -512,11 +526,11 @@ static void DemodReset() {
     Demod.samples = 0;
     Demod.len = 0;
     Demod.sub = SUB_NONE;
-    Demod.state = DEMOD_UNSYNCD;
+    Demod.state = DEMOD_IC_UNSYNCD;
 }
-static void DemodInit(uint8_t *data) {
+static void DemodIcInit(uint8_t *data) {
     Demod.output = data;
-    DemodReset();
+    DemodIcReset();
 }
 
 // UART debug
@@ -592,7 +606,7 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
         return false;
     }
 
-    if (Demod.state == DEMOD_UNSYNCD) {
+    if (Demod.state == DEMOD_IC_UNSYNCD) {
         Demod.output[Demod.len] = 0xfa;
         Demod.syncBit = 0;
         //Demod.samples = 0;
@@ -620,7 +634,7 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
 
         if (Demod.syncBit) {
             Demod.len = 0;
-            Demod.state = DEMOD_START_OF_COMMUNICATION;
+            Demod.state = DEMOD_IC_START_OF_COMMUNICATION;
             Demod.sub = SUB_FIRST_HALF;
             Demod.bitCount = 0;
             Demod.shiftReg = 0;
@@ -644,12 +658,12 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
                 }
                 // SOF must be long burst... otherwise stay unsynced!!!
                 if (!(Demod.buffer & Demod.syncBit) || !(Demod.buffer2 & Demod.syncBit))
-                    Demod.state = DEMOD_UNSYNCD;
+                    Demod.state = DEMOD_IC_UNSYNCD;
 
             } else {
                 // SOF must be long burst... otherwise stay unsynced!!!
                 if (!(Demod.buffer2 & Demod.syncBit) || !(Demod.buffer3 & Demod.syncBit)) {
-                    Demod.state = DEMOD_UNSYNCD;
+                    Demod.state = DEMOD_IC_UNSYNCD;
                     error = 0x88;
                     uart_debug(error, bit);
                     return false;
@@ -682,74 +696,74 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
     }
 
     if (Demod.sub == SUB_NONE) {
-        if (Demod.state == DEMOD_SOF_COMPLETE) {
+        if (Demod.state == DEMOD_IC_SOF_COMPLETE) {
             Demod.output[Demod.len] = 0x0f;
             Demod.len++;
-            Demod.state = DEMOD_UNSYNCD;
+            Demod.state = DEMOD_IC_UNSYNCD;
             return true;
         } else {
-            Demod.state = DEMOD_ERROR_WAIT;
+            Demod.state = DEMOD_IC_ERROR_WAIT;
             error = 0x33;
         }
     }
 
     switch (Demod.state) {
 
-        case DEMOD_START_OF_COMMUNICATION:
+        case DEMOD_IC_START_OF_COMMUNICATION:
             if (Demod.sub == SUB_BOTH) {
 
-                Demod.state = DEMOD_START_OF_COMMUNICATION2;
+                Demod.state = DEMOD_IC_START_OF_COMMUNICATION2;
                 Demod.posCount = 1;
                 Demod.sub = SUB_NONE;
             } else {
                 Demod.output[Demod.len] = 0xab;
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0xd2;
             }
             break;
 
-        case DEMOD_START_OF_COMMUNICATION2:
+        case DEMOD_IC_START_OF_COMMUNICATION2:
             if (Demod.sub == SUB_SECOND_HALF) {
-                Demod.state = DEMOD_START_OF_COMMUNICATION3;
+                Demod.state = DEMOD_IC_START_OF_COMMUNICATION3;
             } else {
                 Demod.output[Demod.len] = 0xab;
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0xd3;
             }
             break;
 
-        case DEMOD_START_OF_COMMUNICATION3:
+        case DEMOD_IC_START_OF_COMMUNICATION3:
             if (Demod.sub == SUB_SECOND_HALF) {
-                Demod.state = DEMOD_SOF_COMPLETE;
+                Demod.state = DEMOD_IC_SOF_COMPLETE;
             } else {
                 Demod.output[Demod.len] = 0xab;
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0xd4;
             }
             break;
 
-        case DEMOD_SOF_COMPLETE:
-        case DEMOD_MANCHESTER_D:
-        case DEMOD_MANCHESTER_E:
+        case DEMOD_IC_SOF_COMPLETE:
+        case DEMOD_IC_MANCHESTER_D:
+        case DEMOD_IC_MANCHESTER_E:
             // OPPOSITE FROM ISO14443 - 11110000 = 0 (1 in 14443)
             //                          00001111 = 1 (0 in 14443)
             if (Demod.sub == SUB_SECOND_HALF) { // SUB_FIRST_HALF
                 Demod.bitCount++;
                 Demod.shiftReg = (Demod.shiftReg >> 1) ^ 0x100;
-                Demod.state = DEMOD_MANCHESTER_D;
+                Demod.state = DEMOD_IC_MANCHESTER_D;
             } else if (Demod.sub == SUB_FIRST_HALF) { // SUB_SECOND_HALF
                 Demod.bitCount++;
                 Demod.shiftReg >>= 1;
-                Demod.state = DEMOD_MANCHESTER_E;
+                Demod.state = DEMOD_IC_MANCHESTER_E;
             } else if (Demod.sub == SUB_BOTH) {
-                Demod.state = DEMOD_MANCHESTER_F;
+                Demod.state = DEMOD_IC_MANCHESTER_F;
             } else {
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0x55;
             }
             break;
 
-        case DEMOD_MANCHESTER_F:
+        case DEMOD_IC_MANCHESTER_F:
             // Tag response does not need to be a complete byte!
             if (Demod.len > 0 || Demod.bitCount > 0) {
                 if (Demod.bitCount > 1) {  // was > 0, do not interpret last closing bit, is part of EOF
@@ -758,22 +772,22 @@ static RAMFUNC int ManchesterDecoding_iclass(uint32_t v) {
                     Demod.len++;
                 }
 
-                Demod.state = DEMOD_UNSYNCD;
+                Demod.state = DEMOD_IC_UNSYNCD;
                 return true;
             } else {
                 Demod.output[Demod.len] = 0xad;
-                Demod.state = DEMOD_ERROR_WAIT;
+                Demod.state = DEMOD_IC_ERROR_WAIT;
                 error = 0x03;
             }
             break;
 
-        case DEMOD_ERROR_WAIT:
-            Demod.state = DEMOD_UNSYNCD;
+        case DEMOD_IC_ERROR_WAIT:
+            Demod.state = DEMOD_IC_UNSYNCD;
             break;
 
         default:
             Demod.output[Demod.len] = 0xdd;
-            Demod.state = DEMOD_UNSYNCD;
+            Demod.state = DEMOD_IC_UNSYNCD;
             break;
     }
 
@@ -818,10 +832,10 @@ static void iclass_setup_sniff(void) {
     set_tracing(true);
 
     // Initialize Demod and Uart structs
-    DemodInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
+    DemodIcInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
 
     uart_init(BigBuf_malloc(ICLASS_BUFFER_SIZE));
-    //UartInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
+    //UartIcInit(BigBuf_malloc(ICLASS_BUFFER_SIZE));
 
     if (DBGLEVEL > 1) {
         // Print debug information about the buffer sizes
@@ -884,8 +898,16 @@ void RAMFUNC SniffIClass(void) {
     //     contains LOW nibble = tag data
     // so two bytes are needed in order to get 1byte of either reader or tag data.  (ie 2 sample bytes)
     // since reader data is manchester encoded,  we need 2bytes of data in order to get one demoded byte.  (ie:  4 sample bytes)
-    while (!BUTTON_PRESS()) {
+    uint16_t checked = 0;
+    for (;;) {
         WDT_HIT();
+
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) break;
+            checked = 0;
+        } else {
+            checked++;
+        }
 
         previous_data <<= 8;
         previous_data |= *data;
@@ -919,7 +941,7 @@ void RAMFUNC SniffIClass(void) {
                 if (Uart.frame_done) {
                     time_stop = GetCountSspClk() - time_0;
                     LogTrace(Uart.buf, Uart.len, time_start, time_stop, NULL, true);
-                    DemodReset();
+                    DemodIcReset();
                     uart_reset();
                 } else {
                     time_start = GetCountSspClk() - time_0;
@@ -951,12 +973,12 @@ void RAMFUNC SniffIClass(void) {
                 if (ManchesterDecoding_iclass(foo)) {
                     time_stop = GetCountSspClk() - time_0;
                     LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
-                    DemodReset();
+                    DemodIcReset();
                     uart_reset();
                 } else {
                     time_start = GetCountSspClk() - time_0;
                 }
-                TagIsActive = (Demod.state != DEMOD_UNSYNCD);
+                TagIsActive = (Demod.state != DEMOD_IC_UNSYNCD);
             }
             tag_byte = 0;
             foo = 0;
@@ -996,8 +1018,17 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) 
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
-    while (!BUTTON_PRESS()) {
+    uint16_t checked = 0;
+    for (;;) {
+
         WDT_HIT();
+
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) return false;
+            checked = 0;
+        } else {
+            checked++;
+        }
 
         // keep tx buffer in a defined state anyway.
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
@@ -1195,11 +1226,11 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
             if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
                 // Button pressed
-                reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+                reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
                 goto out;
             }
         }
-        reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+        reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
 
     } else if (simType == 3) {
         //This is 'full sim' mode, where we use the emulator storage for data.
@@ -1226,20 +1257,20 @@ void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain
 
             // keyroll 1
             if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + i * EPURSE_MAC_SIZE)) {
-                reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
                 // Button pressed
                 goto out;
             }
 
             // keyroll 2
             if (doIClassSimulation(MODE_EXIT_AFTER_MAC, mac_responses + (i + numberOfCSNS) * EPURSE_MAC_SIZE)) {
-                reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
                 // Button pressed
                 goto out;
             }
         }
         // double the amount of collected data.
-        reply_old(CMD_ACK, CMD_SIMULATE_TAG_ICLASS, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+        reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
     } else {
         // We may want a mode here where we hardcode the csns to use (from proxclone).
@@ -1307,7 +1338,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     // Reader 81 anticoll. CSN
     // Tag    CSN
 
-    uint8_t *modulated_response;
+    uint8_t *modulated_response = NULL;
     int modulated_response_size = 0;
     uint8_t *trace_data = NULL;
     int trace_data_size = 0;
@@ -1382,11 +1413,11 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     //This is used for responding to READ-block commands or other data which is dynamically generated
     //First the 'trace'-data, not encoded for FPGA
-    uint8_t *data_generic_trace = BigBuf_malloc(8 + 2);//8 bytes data + 2byte CRC is max tag answer
+    uint8_t *data_generic_trace = BigBuf_malloc((8 * 4) + 2);//8 bytes data + 2byte CRC is max tag answer
 
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
-    uint8_t *data_response = BigBuf_malloc((8 + 2) * 2 + 2);
+    uint8_t *data_response = BigBuf_malloc(((8 * 4) + 2) * 2 + 2);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
     SpinDelay(100);
@@ -1436,6 +1467,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                 trace_data_size = sizeof(anticoll_data);
                 goto send;
             }
+
             if (len == 4) {
                 // block0,1,2,5 is always readable.
                 switch (receivedCmd[1]) {
@@ -1444,13 +1476,13 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                         modulated_response_size = resp_csn_len;
                         trace_data = csn_data;
                         trace_data_size = sizeof(csn_data);
-                        break;
+                        goto send;
                     case 1: // configuration (0c 01)
                         modulated_response = resp_conf;
                         modulated_response_size = resp_conf_len;
                         trace_data = conf_data;
                         trace_data_size = sizeof(conf_data);
-                        break;
+                        goto send;
                     case 2: // e-purse (0c 02)
                         modulated_response = resp_cc;
                         modulated_response_size = resp_cc_len;
@@ -1460,19 +1492,30 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                         if (reader_mac_buf != NULL) {
                             memcpy(reader_mac_buf, card_challenge_data, 8);
                         }
-                        break;
+                        goto send;
                     case 5:// Application Issuer Area (0c 05)
                         modulated_response = resp_aia;
                         modulated_response_size = resp_aia_len;
                         trace_data = aia_data;
                         trace_data_size = sizeof(aia_data);
+                        goto send;
+                    default : {
+                        if (simulationMode == MODE_FULLSIM) { // 0x0C
+                            //Read block
+                            //Take the data...
+                            memcpy(data_generic_trace, emulator + (receivedCmd[1] << 3), 8);
+                            AddCrc(data_generic_trace, 8);
+                            trace_data = data_generic_trace;
+                            trace_data_size = 10;
+                            CodeIClassTagAnswer(trace_data, trace_data_size);
+                            memcpy(modulated_response, ToSend, ToSendMax);
+                            modulated_response_size = ToSendMax;
+                            goto send;
+                        }
                         break;
-                    default:
-                        break;
-                }
-                goto send;
-            }
-
+                    }
+                }//swith
+            }// if 4
         } else if (receivedCmd[0] == ICLASS_CMD_SELECT) { // 0x81
             // Reader selects anticollission CSN.
             // Tag sends the corresponding real CSN
@@ -1542,17 +1585,15 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
             trace_data = NULL;
             trace_data_size = 0;
             goto send;
-        } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY && len == 4) { // 0x0C
+        } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ4 && len == 4) {  // 0x06
             //Read block
-            uint16_t blk = receivedCmd[1];
             //Take the data...
-            memcpy(data_generic_trace, emulator + (blk << 3), 8);
-            AddCrc(data_generic_trace, 8);
+            memcpy(data_generic_trace, emulator + (receivedCmd[1] << 3), 8 * 4);
+            AddCrc(data_generic_trace, 8 * 4);
             trace_data = data_generic_trace;
-            trace_data_size = 10;
+            trace_data_size = 34;
             CodeIClassTagAnswer(trace_data, trace_data_size);
-            memcpy(data_response, ToSend, ToSendMax);
-            modulated_response = data_response;
+            memcpy(modulated_response, ToSend, ToSendMax);
             modulated_response_size = ToSendMax;
             goto send;
         } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_UPDATE) {
@@ -1632,8 +1673,15 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
 
     AT91C_BASE_SSC->SSC_THR = 0x00;
 
-    while (!BUTTON_PRESS()) {
+    uint16_t checked = 0;
+    for (;;) {
 
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) return 0;
+            checked = 0;
+        } else {
+            checked++;
+        }
         // Prevent rx holding register from overflowing
         if ((AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)) {
             b = AT91C_BASE_SSC->SSC_RHR;
@@ -1787,7 +1835,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
     bool skip = false;
 
     // Setup UART/DEMOD to receive
-    DemodInit(receivedResponse);
+    DemodIcInit(receivedResponse);
 
     if (elapsed) *elapsed = 0;
 
@@ -1800,8 +1848,17 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
-    while (!BUTTON_PRESS()) {
+    uint16_t checked = 0;
+
+    for (;;) {
         WDT_HIT();
+
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) return false;
+            checked = 0;
+        } else {
+            checked++;
+        }
 
         // keep tx buffer in a defined state anyway.
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
@@ -1993,6 +2050,7 @@ void ReaderIClass(uint8_t arg0) {
 
     setupIclassReader();
 
+    uint16_t checked = 0;
     bool userCancelled = BUTTON_PRESS() || data_available();
     while (!userCancelled) {
 
@@ -2092,7 +2150,13 @@ void ReaderIClass(uint8_t arg0) {
             }
         }
         LED_B_OFF();
-        userCancelled = BUTTON_PRESS() || data_available();
+
+        if (checked == 1000) {
+            userCancelled = BUTTON_PRESS() || data_available();
+            checked = 0;
+        } else {
+            checked++;
+        }
     }
 
     if (userCancelled) {
@@ -2222,7 +2286,7 @@ void ReaderIClass_Replay(uint8_t arg0, uint8_t *mac) {
     switch_off();
 }
 
-// not used. ?!? ( CMD_ICLASS_READCHECK)
+// not used. ?!? ( CMD_HF_ICLASS_READCHECK)
 // turn off afterwards
 void iClass_ReadCheck(uint8_t blockno, uint8_t keytype) {
     uint8_t readcheck[] = { keytype, blockno };
@@ -2286,11 +2350,17 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
 
     setupIclassReader();
 
+    uint16_t checked = 0;
     int read_status = 0;
     uint8_t startup_limit = 10;
     while (read_status != 2) {
 
-        if (BUTTON_PRESS() && !data_available()) goto out;
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || !data_available()) goto out;
+            checked = 0;
+        } else {
+            checked++;
+        }
 
         read_status = handshakeIclassTag_ext(card_data, use_credit_key);
         if (startup_limit-- == 0) {
@@ -2305,7 +2375,12 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     for (i = 0; i < keyCount; i++) {
 
         // Allow button press / usb cmd to interrupt device
-        if (BUTTON_PRESS() && !data_available()) break;
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || !data_available()) goto out;
+            checked = 0;
+        } else {
+            checked++;
+        }
 
         WDT_HIT();
         LED_B_ON();

@@ -114,7 +114,7 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
     data = data or "00"
 
     command = Command:newMIX{
-            cmd = cmds.CMD_ISO_14443B_COMMAND,
+            cmd = cmds.CMD_HF_ISO14443B_COMMAND,
             arg1 = flags,
             arg2 = #data/2, -- LEN of data, half the length of the ASCII-string hex string
             data = data}    -- data bytes (commands etc)

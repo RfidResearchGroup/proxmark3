@@ -10,24 +10,24 @@
 //-----------------------------------------------------------------------------
 #include "proxmark3.h"
 
-#include <stdio.h>
+#include <limits.h>
+
+#include <stdio.h> // for Mingw readline
 #include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+
+#include "usart_defs.h"
 
 #include "util_posix.h"
 #include "proxgui.h"
 #include "cmdmain.h"
 #include "ui.h"
-#include "util.h"
-#include "cmdparser.h"
 #include "cmdhw.h"
 #include "whereami.h"
 #include "comms.h"
-#include "usart.h"
+//#include "usart.h"
 
 static void showBanner(void) {
     PrintAndLogEx(NORMAL, "\n");
@@ -70,7 +70,7 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-main_loop(char *script_cmds_file, char *script_cmd) {
+main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
@@ -138,7 +138,7 @@ main_loop(char *script_cmds_file, char *script_cmd) {
                 script_cmd_len -= len;
             } else {
                 // exit after exec command
-                if (script_cmd)
+                if (script_cmd && !stayInCommandLoop)
                     break;
 
                 // if there is a pipe from stdin
@@ -206,7 +206,10 @@ main_loop(char *script_cmds_file, char *script_cmd) {
             cmd = NULL;
         } else {
             PrintAndLogEx(NORMAL, "\n");
-            break;
+            if (script_cmds_file && stayInCommandLoop)
+                stayInCommandLoop = false;
+            else
+                break;
         }
     } // end while
 
@@ -266,7 +269,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "syntax: %s [-h|-t|-m]\n", exec_name);
-    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>]\n", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]\n", exec_name);
 
     if (showFullHelp) {
         PrintAndLogEx(NORMAL, "options:");
@@ -280,6 +283,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one Proxmark3 command (or several separated by ';').");
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
+        PrintAndLogEx(NORMAL, "      -i/--interactive                    enter interactive mode after executing the script or the command");
         PrintAndLogEx(NORMAL, "\nsamples:");
         PrintAndLogEx(NORMAL, "      %s -h\n", exec_name);
         PrintAndLogEx(NORMAL, "      %s -m\n", exec_name);
@@ -302,6 +306,7 @@ int main(int argc, char *argv[]) {
     session.help_dump_mode = false;
     bool waitCOMPort = false;
     bool addLuaExec = false;
+    bool stayInCommandLoop = false;
     char *script_cmds_file = NULL;
     char *script_cmd = NULL;
     char *port = NULL;
@@ -438,6 +443,12 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // go to interactive instead of quitting after a script/command
+        if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--interactive") == 0) {
+            stayInCommandLoop = true;
+            continue;
+        }
+
         // We got an unknown parameter
         PrintAndLogEx(ERR, _RED_("ERROR:") "invalid parameter: " _YELLOW_("%s") "\n", argv[i]);
         show_help(false, exec_name);
@@ -512,21 +523,21 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_GUI
 
 #  ifdef _WIN32
-    InitGraphics(argc, argv, script_cmds_file, script_cmd);
+    InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
     MainGraphics();
 #  else
     // for *nix distro's,  check enviroment variable to verify a display
     char *display = getenv("DISPLAY");
     if (display && strlen(display) > 1) {
-        InitGraphics(argc, argv, script_cmds_file, script_cmd);
+        InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
         MainGraphics();
     } else {
-        main_loop(script_cmds_file, script_cmd);
+        main_loop(script_cmds_file, script_cmd, stayInCommandLoop);
     }
 #  endif
 
 #else
-    main_loop(script_cmds_file, script_cmd);
+    main_loop(script_cmds_file, script_cmd, stayInCommandLoop);
 #endif
 
     // Clean up the port

@@ -20,9 +20,6 @@
 #ifndef CRAPTO1_H__
 #define CRAPTO1_H__
 #include <stdint.h>
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct Crypto1State {uint32_t odd, even;};
 struct Crypto1State *crypto1_create(uint64_t);
@@ -87,7 +84,4 @@ static inline int filter(uint32_t const x) {
     f |= 0x0d938 >> (x >> 16 & 0xf) &  1;
     return BIT(0xEC57E80A, f);
 }
-#ifdef __cplusplus
-}
-#endif
 #endif

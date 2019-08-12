@@ -9,8 +9,22 @@
 //-----------------------------------------------------------------------------
 #include "cmdhffelica.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "cmdtrace.h"
+#include "crc16.h"
+
+#include "ui.h"
+#include "mifare.h"     // felica_card_select_t struct
+
 static int CmdHelp(const char *Cmd);
 
+/*
 static int usage_hf_felica_sim(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa tag \n");
     PrintAndLogEx(NORMAL, "Usage: hf felica sim [h] t <type> [v]");
@@ -23,6 +37,7 @@ static int usage_hf_felica_sim(void) {
     PrintAndLogEx(NORMAL, "          hf felica sim t 1 ");
     return 0;
 }
+*/
 static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list felica'");
@@ -78,6 +93,8 @@ static int CmdHFFelicaReader(const char *Cmd) {
 }
 
 // simulate iso18092 / FeliCa tag
+// Commented, there is no counterpart in ARM at the moment
+/*
 static int CmdHFFelicaSim(const char *Cmd) {
     bool errors = false;
     uint8_t flags = 0;
@@ -129,7 +146,7 @@ static int CmdHFFelicaSim(const char *Cmd) {
     if (errors || cmdp == 0) return usage_hf_felica_sim();
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FELICA_SIMULATE_TAG,  tagtype, flags, 0, uid, uidlen >> 1);
+    SendCommandOLD(CMD_HF_FELICA_SIMULATE,  tagtype, flags, 0, uid, uidlen >> 1);
     PacketResponseNG resp;
 
     if (verbose)
@@ -140,6 +157,7 @@ static int CmdHFFelicaSim(const char *Cmd) {
     }
     return 0;
 }
+*/
 
 static int CmdHFFelicaSniff(const char *Cmd) {
 
@@ -173,7 +191,7 @@ static int CmdHFFelicaSniff(const char *Cmd) {
     if (errors || cmdp == 0) return usage_hf_felica_sniff();
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_FELICA_SNIFF, samples2skip, triggers2skip, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_FELICA_SNIFF, samples2skip, triggers2skip, 0, NULL, 0);
     return 0;
 }
 
@@ -186,7 +204,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
         return usage_hf_felica_simlite();
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_FELICA_LITE_SIM, uid, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_FELICALITE_SIMULATE, uid, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -349,7 +367,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "FeliCa lite - dump started");
     PrintAndLogEx(SUCCESS, "press pm3-button to cancel");
     clearCommandBuffer();
-    SendCommandNG(CMD_FELICA_LITE_DUMP, NULL, 0);
+    SendCommandNG(CMD_HF_FELICALITE_DUMP, NULL, 0);
     PacketResponseNG resp;
 
     uint8_t timeout = 0;
@@ -520,7 +538,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
+    SendCommandOLD(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 
     if (reply) {
         if (active_select)
@@ -535,7 +553,7 @@ static command_t CommandTable[] = {
     {"help",      CmdHelp,              AlwaysAvailable, "This help"},
     {"list",      CmdHFFelicaList,      AlwaysAvailable,     "List ISO 18092/FeliCa history"},
     {"reader",    CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
-    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
+//    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
     {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "sniff ISO 18092/Felica traffic"},
     {"raw",       CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
 
@@ -558,11 +576,11 @@ int CmdHFFelica(const char *Cmd) {
 int readFelicaUid(bool verbose) {
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
-        //SendCommandMIX(CMD_FELICA_COMMAND, 0, 0, 0, NULL, 0);
+        //SendCommandMIX(CMD_HF_FELICA_COMMAND, 0, 0, 0, NULL, 0);
         return 0;
     }
 

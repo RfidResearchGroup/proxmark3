@@ -1,5 +1,15 @@
 #include "pcf7931.h"
 
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "lfsampling.h"
+#include "string.h"
+
 #define T0_PCF 8 //period for the pcf7931 in us
 #define ALLOC 16
 
@@ -404,7 +414,7 @@ void SendCmdPCF7931(uint32_t *tab) {
     Dbprintf("Sending data frame...");
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
     LED_A_ON();

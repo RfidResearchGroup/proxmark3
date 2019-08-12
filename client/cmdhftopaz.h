@@ -11,19 +11,7 @@
 #ifndef CMDHFTOPAZ_H__
 #define CMDHFTOPAZ_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include "cmdmain.h"
-#include "cmdparser.h"
-#include "cmdhf14a.h"
-#include "ui.h"
-#include "mifare.h"
-#include "proxmark3.h"
-#include "crc16.h"
-#include "protocols.h"
-#include "cmdhf.h"
+#include "common.h"
 
 int CmdHFTopaz(const char *Cmd);
 

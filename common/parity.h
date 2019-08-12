@@ -11,12 +11,7 @@
 #ifndef __PARITY_H
 #define __PARITY_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <stdint.h>
-#include <stdbool.h>
+#include "common.h"
 
 extern const uint8_t OddByteParity[256];
 
@@ -51,9 +46,5 @@ static inline bool oddparity32(uint32_t x) {
     return !__builtin_parity(x);
 #endif
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __PARITY_H */

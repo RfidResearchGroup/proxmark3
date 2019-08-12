@@ -12,7 +12,7 @@
 #ifndef __ADDITIONAL_CA_H__
 #define __ADDITIONAL_CA_H__
 
-#include <stddef.h>
+#include "common.h"
 
 // Concatenation of all CA certificates in PEM format if available
 extern const char   additional_ca_pem[];

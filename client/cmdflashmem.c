@@ -9,9 +9,17 @@
 //-----------------------------------------------------------------------------
 #include "cmdflashmem.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+
+#include "pmflash.h"
+#include "loclass/fileutils.h"  //saveFile
+#include "comms.h"              //getfromdevice
+#include "cmdflashmemspiffs.h" // spiffs commands
+
 #include "mbedtls/rsa.h"
 #include "mbedtls/sha1.h"
-#include "mbedtls/base64.h"
 
 #define MCK 48000000
 #define FLASH_MINFAST 24000000 //33000000
@@ -29,9 +37,9 @@ static int usage_flashmem_spibaud(void) {
     PrintAndLogEx(NORMAL, "           h    this help");
     PrintAndLogEx(NORMAL, "      <baudrate>    SPI baudrate in MHz [24|48]");
     PrintAndLogEx(NORMAL, "           ");
-    PrintAndLogEx(NORMAL, "           If >= 24Mhz, FASTREADS instead of READS instruction will be used.");
-    PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48Mhz setting");
-    PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24Mhz");
+    PrintAndLogEx(NORMAL, "           If >= 24MHz, FASTREADS instead of READS instruction will be used.");
+    PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48MHz setting");
+    PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24MHz");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "           mem spibaud 48");
     return PM3_SUCCESS;
@@ -209,7 +217,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             }
 
             if (datalen > FLASH_MEM_MAX_SIZE) {
-                PrintAndLogDevice(ERR, "error, filesize is larger than available memory");
+                PrintAndLogEx(ERR, "error, filesize is larger than available memory");
                 free(data);
                 return PM3_EOVFLOW;
             }
@@ -310,7 +318,7 @@ static int CmdFlashMemDump(const char *Cmd) {
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(ERR, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
 

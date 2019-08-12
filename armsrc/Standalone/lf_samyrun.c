@@ -8,7 +8,16 @@
 //-----------------------------------------------------------------------------
 // main code for LF aka SamyRun by Samy Kamkar
 //-----------------------------------------------------------------------------
-#include "lf_samyrun.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "lfops.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+
+#define OPTS 2
 
 void ModInfo(void) {
     DbpString("  LF HID26 standalone - aka SamyRun (Samy Kamkar)");

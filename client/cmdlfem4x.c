@@ -10,6 +10,23 @@
 
 #include "cmdlfem4x.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"
+#include "util_posix.h"
+#include "protocols.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "lfdemod.h"
+
 uint64_t g_em410xid = 0;
 
 static int CmdHelp(const char *Cmd);
@@ -401,7 +418,7 @@ int AskEm410xDemod(const char *Cmd, uint32_t *hi, uint64_t *lo, bool verbose) {
 static int CmdEM410xRead_device(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     uint8_t findone = (cmdp == '1') ? 1 : 0;
-    SendCommandMIX(CMD_EM410X_DEMOD, findone, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_EM410X_DEMOD, findone, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 */
@@ -645,7 +662,7 @@ static int CmdEM410xWrite(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 " (clock rate: %d)", "T55x7", id, clock1);
         // NOTE: We really should pass the clock in as a separate argument, but to
         //   provide for backwards-compatibility for older firmware, and to avoid
-        //   having to add another argument to CMD_EM410X_WRITE_TAG, we just store
+        //   having to add another argument to CMD_LF_EM410X_WRITE, we just store
         //   the clock rate in bits 8-15 of the card value
         card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
     } else if (card == 0) {
@@ -656,7 +673,7 @@ static int CmdEM410xWrite(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    SendCommandMIX(CMD_EM410X_WRITE_TAG, card, (uint32_t)(id >> 32), (uint32_t)id, NULL, 0);
+    SendCommandMIX(CMD_LF_EM410X_WRITE, card, (uint32_t)(id >> 32), (uint32_t)id, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -1147,9 +1164,9 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     payload.usepwd = usePwd;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_EM4X_READ_WORD, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_LF_EM4X_READWORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_EM4X_READ_WORD, &resp, 2500)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X_READWORD, &resp, 2500)) {
         PrintAndLogEx(DEBUG, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -1259,9 +1276,9 @@ static int CmdEM4x05Write(const char *Cmd) {
     payload.usepwd = usePwd;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_EM4X_WRITE_WORD, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_LF_EM4X_WRITEWORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_EM4X_WRITE_WORD, &resp, 2000)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X_WRITEWORD, &resp, 2000)) {
         PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }

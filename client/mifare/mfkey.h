@@ -13,11 +13,8 @@
 #ifndef MFKEY_H
 #define MFKEY_H
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "common.h"
 #include "mifare.h"
-#include "crapto1/crapto1.h"
 
 uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t par_info, uint64_t ks_info, uint64_t **keys);
 bool mfkey32(nonces_t data, uint64_t *outputkey);

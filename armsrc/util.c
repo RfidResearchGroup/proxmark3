@@ -9,6 +9,14 @@
 //-----------------------------------------------------------------------------
 #include "util.h"
 
+#include "proxmark3_arm.h"
+#include "ticks.h"
+#include "commonutil.h"
+#include "dbprint.h"
+#include "string.h"
+#include "usb_cdc.h"
+#include "usart.h"
+
 size_t nbytes(size_t nbits) {
     return (nbits >> 3) + ((nbits % 8) > 0);
 }
@@ -176,7 +184,13 @@ void SpinUp(uint32_t speed) {
 // double click, otherwise it will waste 500ms -- use BUTTON_HELD instead
 int BUTTON_CLICKED(int ms) {
     // Up to 500ms in between clicks to mean a double click
-    int ticks = (48000 * (ms ? ms : 1000)) >> 10;
+    // timer counts in 21.3us increments (1024/48MHz)
+    // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
+    if (ms > 1390) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf(_RED_("Error, BUTTON_CLICKED called with %i > 1390"), ms);
+        ms = 1390;
+    }
+    int ticks = ((MCK / 1000) * (ms ? ms : 1000)) >> 10;
 
     // If we're not even pressed, forget about it!
     if (!BUTTON_PRESS())
@@ -203,7 +217,7 @@ int BUTTON_CLICKED(int ms) {
 
                 // reset our timer for 500ms
                 start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-                ticks = (48000 * (500)) >> 10;
+                ticks = ((MCK / 1000) * (500)) >> 10;
             }
 
             // Still haven't let it off
@@ -233,6 +247,12 @@ int BUTTON_CLICKED(int ms) {
 
 // Determine if a button is held down
 int BUTTON_HELD(int ms) {
+    // timer counts in 21.3us increments (1024/48MHz)
+    // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
+    if (ms > 1390) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf(_RED_("Error, BUTTON_HELD called with %i > 1390"), ms);
+        ms = 1390;
+    }
     // If button is held for one second
     int ticks = (48000 * (ms ? ms : 1000)) >> 10;
 

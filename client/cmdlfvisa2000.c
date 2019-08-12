@@ -11,6 +11,19 @@
 
 #include "cmdlfvisa2000.h"
 
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+
 #define BL0CK1 0x56495332
 
 static int CmdHelp(const char *Cmd);
@@ -183,8 +196,8 @@ static int CmdVisa2kClone(const char *Cmd) {
         ng.blockno = i;
         ng.flags = 0;
 
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
+        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
 
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
@@ -218,11 +231,11 @@ static int CmdVisa2kSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)

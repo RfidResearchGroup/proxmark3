@@ -12,26 +12,11 @@
 #ifndef __COMMON_H
 #define __COMMON_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include <stdint.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdbool.h>
 
-typedef unsigned char byte_t;
-
-#ifdef _MSC_VER
-typedef DWORD uint32_t;
-typedef BYTE uint8_t;
-#define PACKED
-// stuff
-#else
-#include <stdint.h>
-#include <stdbool.h>
 #define PACKED __attribute__((packed))
-#endif
 
 // debug
 #define DBG_NONE          0 // no messages
@@ -138,7 +123,4 @@ extern int DBGLEVEL;
 # define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 #endif

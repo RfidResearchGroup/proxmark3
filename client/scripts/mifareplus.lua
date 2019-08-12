@@ -74,7 +74,7 @@ local function sendRaw(rawdata, crc, power)
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT
     end
 
-    local command = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a,
+    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
                                 arg1 = flags, -- Send raw
                                 arg2 = string.len(rawdata) / 2, -- arg2 contains the length, which is half the length of the ASCII-string rawdata
                                 data = rawdata

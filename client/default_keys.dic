@@ -113,8 +113,13 @@ a9b43414F585,--Tehran Railway
 # Data from: http://irq5.io/2013/04/13/decoding-bcard-conference-badges/
 f4a9ef2afc6d,--BCARD KeyB
 #
+# Data from: ...
+89eac97f8c2a // S0 B
+43c7600dee6b // S4 A
+0120bf672a64 // S6 A
+fb0b20df1f34 // S6 B
 #
-a9f953def0a3,--
+a9f953def0a3,
 #
 # Here be BIP keys...
 3A42F33AF429,
@@ -162,6 +167,11 @@ AAFB06045877, --EPI Envisionte# 3dprinter
 # gym
 3e65e4fb65b3, --Fysiken A
 25094df6f148, --Fysiken B
+a05dbd98e0fc, -- CleverFit
+#
+d3b595e9dd63, -- Hotel KeyCard
+afbecd121004, -- Hotel KeyCard
+6471a5ef2d1a, -- SimonsVoss
 #
 # 24-7
 D21762B2DE3B,
@@ -516,6 +526,9 @@ EC0A9B1A9E06,--Vingcard Mifare 4k Staff card
 BEDB604CC9D1,
 B8A1F613CF3D,
 B578F38A5C61,
+B66AC040203A
+6D0B6A2A0003
+2E641D99AD5B	
 AD4FB33388BF,
 69FB7B7CD8EE,
 2A6D9205E7CA,
@@ -950,3 +963,4 @@ A0004A000036
 DFE73BE48AC6
 #
 B069D0D03D17
+000131B93F28

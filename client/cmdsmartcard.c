@@ -8,7 +8,20 @@
 // Proxmark3 RDV40 Smartcard module commands
 //-----------------------------------------------------------------------------
 #include "cmdsmartcard.h"
-#include "../emv/emvjson.h"
+
+#include <ctype.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "protocols.h"
+#include "cmdtrace.h"
+#include "proxmark3.h"
+#include "comms.h"              // getfromdevice
+#include "emv/emvcore.h"        // decodeTVL
+#include "crypto/libpcrypto.h"  // sha512hash
+#include "emv/dump.h"
+#include "ui.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -61,7 +74,7 @@ static int usage_sm_upgrade(void) {
 static int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
-    PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16mhz, 1=8mhz, 2=4mhz) ");
+    PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz) ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc setclock c 2");
@@ -843,13 +856,13 @@ static int CmdSmartSetClock(const char *Cmd) {
 
     switch (clock1) {
         case 0:
-            PrintAndLogEx(SUCCESS, "Clock changed to 16mhz giving 10800 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 16MHz giving 10800 baudrate");
             break;
         case 1:
-            PrintAndLogEx(SUCCESS, "Clock changed to 8mhz giving 21600 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 8MHz giving 21600 baudrate");
             break;
         case 2:
-            PrintAndLogEx(SUCCESS, "Clock changed to 4mhz giving 86400 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 4MHz giving 86400 baudrate");
             break;
         default:
             break;
@@ -878,7 +891,7 @@ static void smart_brute_prim() {
 
     PrintAndLogEx(INFO, "Reading primitives");
 
-    for (int i = 0; i < sizeof(get_card_data); i += 5) {
+    for (int i = 0; i < ARRAYLEN(get_card_data); i += 5) {
 
         clearCommandBuffer();
         SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, 5, 0, get_card_data + i, 5);

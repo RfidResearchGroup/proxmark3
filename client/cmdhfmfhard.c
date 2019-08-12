@@ -21,18 +21,18 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
-#include <time.h>
-#include <pthread.h>
 #include <locale.h>
 #include <math.h>
+#include <time.h> // MingW
+
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"
+
 #include "proxmark3.h"
-#include "cmdmain.h"
 #include "ui.h"
-#include "util.h"
 #include "util_posix.h"
 #include "crapto1/crapto1.h"
 #include "parity.h"
-#include "hardnested/hardnested_bruteforce.h"
 #include "hardnested/hardnested_bf_core.h"
 #include "hardnested/hardnested_bitarray_core.h"
 #include "zlib.h"
@@ -1379,7 +1379,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         flags |= field_off ? 0x0004 : 0;
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
+        SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
 
         if (field_off) break;
 
@@ -1388,7 +1388,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 uint8_t nullkey[6] = {0};
                 //strange second call (iceman)
                 clearCommandBuffer();
-                SendCommandMIX(CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, nullkey, sizeof(nullkey));
+                SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, nullkey, sizeof(nullkey));
                 return 1;
             }
             if (resp.oldarg[0]) return resp.oldarg[0];  // error during nested_hard

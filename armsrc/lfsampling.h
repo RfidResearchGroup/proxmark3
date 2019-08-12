@@ -1,12 +1,8 @@
 #ifndef __LFSAMPLING_H
 #define __LFSAMPLING_H
 
-#include "proxmark3.h"
-#include "apps.h"
-#include "util.h"
-#include "string.h"
-#include "usb_cdc.h" // for usb_poll_validate_length
-#include "ticks.h"   // for StartTicks
+#include "common.h"
+#include "pm3_cmd.h"
 
 typedef struct BitstreamOut BitstreamOut;
 
@@ -81,6 +77,5 @@ void setSamplingConfig(sample_config *sc);
 sample_config *getSamplingConfig();
 
 void printConfig();
-
 
 #endif // __LFSAMPLING_H

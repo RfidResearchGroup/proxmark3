@@ -10,23 +10,7 @@
 #ifndef CMDLFT55XX_H__
 #define CMDLFT55XX_H__
 
-#include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
-#include <time.h>
-#include <ctype.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "graph.h"
-#include "comms.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "util.h"
-#include "lfdemod.h"
-#include "cmdhf14a.h"   // for getTagInfo
-#include "loclass/fileutils.h"  // loadDictionary
-
+#include "common.h"
 
 #define T55x7_CONFIGURATION_BLOCK 0x00
 #define T55x7_TRACE_BLOCK1 0x01

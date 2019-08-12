@@ -8,13 +8,12 @@
 // Command parser
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "util.h"
-#include "ui.h"
 #include "cmdparser.h"
-#include "proxmark3.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "ui.h"
 #include "comms.h"
 
 bool AlwaysAvailable(void) {
@@ -133,6 +132,12 @@ bool IfPm3Iclass(void) {
     return pm3_capabilities.compiled_with_iclass;
 }
 
+bool IfPm3NfcBarcode(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_nfcbarcode;
+}
+
 bool IfPm3Lcd(void) {
     if (!IfPm3Present())
         return false;
@@ -145,7 +150,7 @@ void CmdsHelp(const command_t Commands[]) {
     int i = 0;
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable())
-            PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
+            PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
         ++i;
     }
 }

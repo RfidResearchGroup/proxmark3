@@ -9,6 +9,15 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfmfdes.h"
 
+#include <stdio.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmdhf14a.h"
+#include "mbedtls/des.h"
+
 uint8_t key_zero_data[16] = { 0x00 };
 uint8_t key_ones_data[16] = { 0x01 };
 uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
@@ -51,7 +60,7 @@ static int CmdHF14ADesWb(const char *Cmd) {
         uint8_t data[26];
         memcpy(data, key, 6);
         memcpy(data + 10, bldata, 16);
-        SendCommandOLD(CMD_MIFARE_WRITEBL, blockNo, keyType, 0, data, sizeof(data));
+        SendCommandOLD(CMD_HF_MIFARE_WRITEBL, blockNo, keyType, 0, data, sizeof(data));
 
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_ACK,&resp,1500)) {
@@ -92,10 +101,10 @@ static int CmdHF14ADesRb(const char *Cmd) {
 
 
     mf_readblock_t payload = { blockNo, keyType, key };
-    SendCommandNG(CMD_MIFARE_READBL, (uint8_t *)payload, sizeof(mf_readblock_t) );
+    SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)payload, sizeof(mf_readblock_t) );
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_MIFARE_READBL, &resp, 1500)) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) {
     uint8_t              * data  = resp.data.asBytes;
 
     if (resp.status == PM3_SUCCESS)
@@ -112,7 +121,7 @@ static int CmdHF14ADesRb(const char *Cmd) {
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
-    SendCommandNG(CMD_MIFARE_DESFIRE_INFO, NULL, 0);
+    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -164,7 +173,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     // Free memory on card
     uint8_t data[1] = {GET_FREE_MEMORY};
-    SendCommandOLD(CMD_MIFARE_DESFIRE, (INIT | DISCONNECT), 0x01, 0, data, sizeof(data));
+    SendCommandOLD(CMD_HF_DESFIRE_COMMAND, (INIT | DISCONNECT), 0x01, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         return 0;
 
@@ -256,7 +265,7 @@ void getKeySettings(uint8_t *aid) {
         PrintAndLogEx(NORMAL, "");
         {
             uint8_t data[1] = {GET_KEY_SETTINGS};  // 0x45
-            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.oldarg[0] & 0xff;
@@ -275,7 +284,7 @@ void getKeySettings(uint8_t *aid) {
         PrintAndLogEx(NORMAL, "   [0x01] CMK is changeable              : %s", str);
         {
             uint8_t data[2] = {GET_KEY_VERSION, 0};  // 0x64
-            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) { return; }
         isOK  = resp.oldarg[0] & 0xff;
@@ -290,7 +299,7 @@ void getKeySettings(uint8_t *aid) {
 
         {
             uint8_t data[2] = {AUTHENTICATE, 0};  // 0x0A, KEY 0
-            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
@@ -298,7 +307,7 @@ void getKeySettings(uint8_t *aid) {
 
         {
             uint8_t data[2] = {AUTHENTICATE_ISO, 0};  // 0x1A, KEY 0
-            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
@@ -306,7 +315,7 @@ void getKeySettings(uint8_t *aid) {
 
         {
             uint8_t data[2] = {AUTHENTICATE_AES, 0};  // 0xAA, KEY 0
-            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
@@ -321,7 +330,7 @@ void getKeySettings(uint8_t *aid) {
         {
             uint8_t data[4] = {SELECT_APPLICATION};  // 0x5a
             memcpy(data + 1, aid, 3);
-            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | CLEARTRACE, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | CLEARTRACE, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
@@ -336,7 +345,7 @@ void getKeySettings(uint8_t *aid) {
         // KEY SETTINGS
         {
             uint8_t data[1] = {GET_KEY_SETTINGS};  // 0x45
-            SendCommandOLD(CMD_MIFARE_DESFIRE, NONE, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             return;
@@ -358,7 +367,7 @@ void getKeySettings(uint8_t *aid) {
                     str = "All keys (except AMK,see Bit0) within this application are frozen";
                     break;
                 default:
-                    str = "Authentication with the specified key is necessary to change any ley. A change key and a PICC master key (CMK) can only be changed after authentication with the master key. For keys other then the master or change key, an authentication with the same key is needed.";
+                    str = "Authentication with the specified key is necessary to change any key. A change key and a PICC master key (CMK) can only be changed after authentication with the master key. For keys other then the master or change key, an authentication with the same key is needed.";
                     break;
             }
             PrintAndLogEx(NORMAL, "Changekey Access rights");
@@ -378,7 +387,7 @@ void getKeySettings(uint8_t *aid) {
         // KEY VERSION  - AMK
         {
             uint8_t data[2] = {GET_KEY_VERSION, 0};  // 0x64
-            SendCommandOLD(CMD_MIFARE_DESFIRE, NONE, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
@@ -417,7 +426,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t aid[3];
     {
         uint8_t data[1] = {GET_APPLICATION_IDS}; //0x6a
-        SendCommandOLD(CMD_MIFARE_DESFIRE, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
     }
     PacketResponseNG resp;
 
@@ -452,7 +461,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         {
             uint8_t data[4] = {SELECT_APPLICATION};  // 0x5a
             memcpy(data + 1, &resp.data.asBytes[i], 3);
-            SendCommandOLD(CMD_MIFARE_DESFIRE, INIT, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respAid, 1500)) {
@@ -468,7 +477,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         // Get File IDs
         {
             uint8_t data[1] = {GET_FILE_IDS};  // 0x6f
-            SendCommandOLD(CMD_MIFARE_DESFIRE, NONE, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
@@ -489,7 +498,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         // Get ISO File IDs
         {
             uint8_t data[1] = {GET_ISOFILE_IDS};  // 0x61
-            SendCommandOLD(CMD_MIFARE_DESFIRE, DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
@@ -600,7 +609,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
     memcpy(data + 1, key, keylength);
     clearCommandBuffer();
-    SendCommandOLD(CMD_MIFARE_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength + 1);
+    SendCommandOLD(CMD_HF_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength + 1);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {

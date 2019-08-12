@@ -9,6 +9,45 @@
 //-----------------------------------------------------------------------------
 #include "cmdlf.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"  // ARRAYLEN
+
+#include "lfdemod.h"        // device/client demods of LF signals
+#include "ui.h"             // for show graph controls
+#include "graph.h"          // for graph data
+#include "cmddata.h"        // for `lf search`
+#include "cmdlfawid.h"      // for awid menu
+#include "cmdlfem4x.h"      // for em4x menu
+#include "cmdlfhid.h"       // for hid menu
+#include "cmdlfhitag.h"     // for hitag menu
+#include "cmdlfio.h"        // for ioprox menu
+#include "cmdlft55xx.h"     // for t55xx menu
+#include "cmdlfti.h"        // for ti menu
+#include "cmdlfpresco.h"    // for presco menu
+#include "cmdlfpcf7931.h"   // for pcf7931 menu
+#include "cmdlfpyramid.h"   // for pyramid menu
+#include "cmdlfviking.h"    // for viking menu
+#include "cmdlfnedap.h"     // for NEDAP menu
+#include "cmdlfjablotron.h" // for JABLOTRON menu
+#include "cmdlfvisa2000.h"  // for VISA2000 menu
+#include "cmdlfnoralsy.h"   // for NORALSY meny
+#include "cmdlfcotag.h"     // for COTAG meny
+#include "cmdlfindala.h"    // for indala menu
+#include "cmdlfguard.h"     // for gproxii menu
+#include "cmdlffdx.h"       // for fdx-b menu
+#include "cmdlfparadox.h"   // for paradox menu
+#include "cmdlfnexwatch.h"  // for nexwatch menu
+#include "cmdlfsecurakey.h" // for securakey menu
+#include "cmdlfpac.h"       // for pac menu
+#include "cmdlfkeri.h"      // for keri menu
+
 bool g_lf_threshold_set = false;
 
 static int CmdHelp(const char *Cmd);
@@ -201,11 +240,11 @@ int CmdLFCommandRead(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Sending");
     clearCommandBuffer();
-    SendCommandNG(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, (uint8_t *)&payload, 8 + datalen);
+    SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, 8 + datalen);
 
     printf("\n");
     uint8_t i = 10;
-    while (!WaitForResponseTimeout(CMD_MOD_THEN_ACQUIRE_RAW_ADC_SAMPLES_125K, NULL, 2000) && i != 0) {
+    while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, NULL, 2000) && i != 0) {
         printf(".");
         fflush(stdout);
         i--;
@@ -361,7 +400,7 @@ int CmdLFSetConfig(const char *Cmd) {
     sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SET_LF_SAMPLING_CONFIG, (uint8_t *)&config, sizeof(sample_config));
+    SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)&config, sizeof(sample_config));
     return PM3_SUCCESS;
 }
 
@@ -378,13 +417,13 @@ int lf_read(bool silent, uint32_t samples) {
     payload.samples = samples;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
     if (g_lf_threshold_set) {
-        WaitForResponse(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, &resp);
+        WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
     } else {
-        if (!WaitForResponseTimeout(CMD_ACQUIRE_RAW_ADC_SAMPLES_125K, &resp, 2500)) {
+        if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
@@ -438,7 +477,7 @@ int CmdLFSniff(const char *Cmd) {
     if (cmdp == 'h') return usage_lf_sniff();
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_SNIFF_RAW_ADC_SAMPLES, NULL, 0);
+    SendCommandNG(CMD_LF_SNIFF_RAW_ADC, NULL, 0);
     WaitForResponse(CMD_ACK, NULL);
     getSamples(0, false);
     return PM3_SUCCESS;
@@ -501,8 +540,8 @@ int CmdLFSim(const char *Cmd) {
             payload_up.data[j] = GraphBuffer[i + j];
 
 
-        SendCommandNG(CMD_UPLOAD_SIM_SAMPLES_125K, (uint8_t *)&payload_up, sizeof(struct pupload));
-        WaitForResponse(CMD_UPLOAD_SIM_SAMPLES_125K, NULL);
+        SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));
+        WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, NULL);
         printf(".");
         fflush(stdout);
         payload_up.flag = 0;
@@ -522,10 +561,10 @@ int CmdLFSim(const char *Cmd) {
     payload.gap = gap;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SIMULATE_TAG_125K, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_SIMULATE_TAG_125K, &resp);
+    WaitForResponse(CMD_LF_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -624,12 +663,12 @@ int CmdLFfskSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Simulating");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
+    SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + size);
     free(payload);
 
     setClockGrid(clk, 0);
     PacketResponseNG resp;
-    WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -726,11 +765,11 @@ int CmdLFaskSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Simulating");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + size);
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + size);
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -845,11 +884,11 @@ int CmdLFpskSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Simulating");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_PSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_psksim_t) + size);
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + size);
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_PSK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_PSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)

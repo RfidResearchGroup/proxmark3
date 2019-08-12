@@ -15,9 +15,23 @@
 
 #include "mifarecmd.h"
 
-#include <inttypes.h>
-
 #include "pmflash.h"
+#include "proxmark3_arm.h"
+#include "string.h"
+#include "mifareutil.h"
+#include "protocols.h"
+#include "parity.h"
+#include "BigBuf.h"
+#include "cmd.h"
+#include "flashmem.h"
+#include "fpgaloader.h"
+#include "iso14443a.h"
+#include "mifaredesfire.h"
+#include "util.h"
+#include "commonutil.h"
+#include "crc16.h"
+#include "dbprint.h"
+#include "ticks.h"
 
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
 # define HARDNESTED_AUTHENTICATION_TIMEOUT  848     // card times out 1ms after wrong authentication (according to NXP documentation)
@@ -94,7 +108,7 @@ void MifareReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *datain) {
     if (DBGLEVEL >= 2) DbpString("READ BLOCK FINISHED");
 
     LED_B_ON();
-    reply_ng(CMD_MIFARE_READBL, status, dataoutbuf, 16);
+    reply_ng(CMD_HF_MIFARE_READBL, status, dataoutbuf, 16);
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1495,7 +1509,7 @@ OUT:
 
         uint16_t bar = 0;
         uint8_t j = 0;
-        for (uint8_t m = 64; m < sizeof(found); m++) {
+        for (uint8_t m = 64; m < ARRAYLEN(found); m++) {
             bar |= ((uint16_t)(found[m] & 1) << j++);
         }
 
@@ -1601,7 +1615,7 @@ void MifareChkKeys(uint8_t *datain) {
 
     LED_B_ON();
 
-    reply_ng(CMD_MIFARE_CHKKEYS, PM3_SUCCESS, (uint8_t *)&keyresult, sizeof(keyresult));
+    reply_ng(CMD_HF_MIFARE_CHKKEYS, PM3_SUCCESS, (uint8_t *)&keyresult, sizeof(keyresult));
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 
@@ -1637,7 +1651,7 @@ void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
     //
     size_t size = blockcnt * 16;
     if (size > PM3_CMD_DATA_SIZE) {
-        reply_ng(CMD_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+        reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
         return;
     }
 
@@ -1646,7 +1660,7 @@ void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
     emlGetMem(buf, blockno, blockcnt); // data, block num, blocks count (max 4)
 
     LED_B_ON();
-    reply_ng(CMD_MIFARE_EML_MEMGET, PM3_SUCCESS, buf, size);
+    reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_SUCCESS, buf, size);
     LED_B_OFF();
     BigBuf_free_keep_EM();
 }
@@ -1990,7 +2004,7 @@ TEST2:
 OUT:
 
     data[0] = isGen;
-    reply_ng(CMD_MIFARE_CIDENT, PM3_SUCCESS, data, sizeof(data));
+    reply_ng(CMD_HF_MIFARE_CIDENT, PM3_SUCCESS, data, sizeof(data));
     // turns off
     OnSuccessMagic();
     BigBuf_free();
@@ -2059,7 +2073,7 @@ void MifareSetMod(uint8_t *datain) {
     crypto1_destroy(pcs);
 
     LED_B_ON();
-    reply_ng(CMD_MIFARE_SETMOD, isOK, NULL, 0);
+    reply_ng(CMD_HF_MIFARE_SETMOD, isOK, NULL, 0);
 
     LED_B_OFF();
 

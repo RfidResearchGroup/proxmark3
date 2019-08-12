@@ -9,6 +9,21 @@
 //-----------------------------------------------------------------------------
 #include "cmddata.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
+#include <math.h>     // pow
+#include <ctype.h>    // tolower
+
+#include "commonutil.h"  // ARRAYLEN
+#include "cmdparser.h" // for command_t
+#include "ui.h"       // for show graph controls
+#include "graph.h"    // for graph data
+#include "comms.h"
+#include "lfdemod.h"  // for demod code
+#include "loclass/cipherutils.h" // for decimating samples in getsamples
+#include "cmdlfem4x.h" // askem410xdecode
+
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
 size_t g_DemodStartIdx = 0;
@@ -870,7 +885,7 @@ static int CmdBitsamples(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    for (size_t j = 0; j < sizeof(got); j++) {
+    for (size_t j = 0; j < ARRAYLEN(got); j++) {
         for (uint8_t k = 0; k < 8; k++) {
             if (got[j] & (1 << (7 - k)))
                 GraphBuffer[cnt++] = 1;
@@ -1611,7 +1626,7 @@ int CmdTuneSamples(const char *Cmd) {
     }
 
     if (test1 > 0) {
-        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134khz, 95 is 125khz.\n\n");
+        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134kHz, 95 is 125kHz.\n\n");
         GraphTraceLen = 256;
         ShowGraphWindow();
         RepaintGraphWindow();

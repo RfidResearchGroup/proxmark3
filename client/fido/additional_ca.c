@@ -10,7 +10,6 @@
 //
 
 #include "additional_ca.h"
-#include "mbedtls/certs.h"
 
 #define GLOBALSIGN_CA \
     "-----BEGIN CERTIFICATE-----\r\n" \

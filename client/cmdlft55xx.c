@@ -14,12 +14,27 @@
 
 #include "cmdlft55xx.h"
 
+#include <ctype.h>
+#include <time.h> // MingW
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"
+#include "protocols.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "lfdemod.h"
+#include "cmdhf14a.h"   // for getTagInfo
+#include "loclass/fileutils.h"  // loadDictionary
+#include "util_posix.h"
+
+
 // Some defines for readability
-#define T55xx_DLMode_Fixed         0 // Default Mode
-#define T55xx_DLMode_LLR           1 // Long Leading Reference
-#define T55xx_DLMode_Leading0      2 // Leading Zero
-#define T55xx_DLMode_1of4          3 // 1 of 4
-#define T55xx_LongLeadingReference 4 // Value to tell Write Bit to send long reference
+#define T55XX_DLMODE_FIXED         0 // Default Mode
+#define T55XX_DLMODE_LLR           1 // Long Leading Reference
+#define T55XX_DLMODE_LEADING_ZERO  2 // Leading Zero
+#define T55XX_DLMODE_1OF4          3 // 1 of 4
+#define T55XX_LONGLEADINGREFERENCE 4 // Value to tell Write Bit to send long reference
 
 // Default configuration
 t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = false, .offset = 0x00, .block0 = 0x00, .Q5 = false };
@@ -29,6 +44,14 @@ t55xx_conf_block_t Get_t55xx_Config() {
 }
 void Set_t55xx_Config(t55xx_conf_block_t conf) {
     config = conf;
+}
+
+static void print_usage_t55xx_downloadlink(void) {
+    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3");
+    PrintAndLogEx(NORMAL, "                       0 - fixed bit length (default)");
+    PrintAndLogEx(NORMAL, "                       1 - long leading reference");
+    PrintAndLogEx(NORMAL, "                       2 - leading zero");
+    PrintAndLogEx(NORMAL, "                       3 - 1 of 4 coding reference");
 }
 
 static int usage_t55xx_config() {
@@ -55,9 +78,8 @@ static int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "     b <block>    - block number to read. Between 0-7");
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password (8 hex characters)");
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override safety check");
-    PrintAndLogEx(NORMAL, "     1            - OPTIONAL read Page 1 instead of Page 0");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    PrintAndLogEx(NORMAL, "     1            - OPTIONAL 0|1  read Page 1 instead of Page 0");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     ****WARNING****");
     PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured for a pwd");
     PrintAndLogEx(NORMAL, "     can damage the tag");
@@ -77,8 +99,7 @@ static int usage_t55xx_write() {
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password 4bytes (8 hex characters)");
     PrintAndLogEx(NORMAL, "     1            - OPTIONAL write Page 1 instead of Page 0");
     PrintAndLogEx(NORMAL, "     t            - OPTIONAL test mode write - ****DANGER****");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx write b 3 d 11223344            - write 11223344 to block 3");
@@ -89,8 +110,7 @@ static int usage_t55xx_write() {
 static int usage_t55xx_trace() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx trace [r mode]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                               '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     // Command did not seem to support the 1 option (yet) so have removed the help lines
     // PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "");
@@ -108,8 +128,7 @@ static int usage_t55xx_info() {
     PrintAndLogEx(NORMAL, "     d <data>     - 4 bytes of data (8 hex characters)");
     PrintAndLogEx(NORMAL, "                    if set, use these data instead of reading tag.");
     PrintAndLogEx(NORMAL, "     q            - if set, provided data are interpreted as Q5 config.");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx info");
@@ -124,8 +143,7 @@ static int usage_t55xx_dump() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     <password>   - OPTIONAL password 4bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override, force pwd read despite danger to card");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx dump");
@@ -138,9 +156,7 @@ static int usage_t55xx_detect() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "     p <password  - OPTIONAL password (8 hex characters)");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                      '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                      '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx detect");
@@ -155,9 +171,7 @@ static int usage_t55xx_detectP1() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password (8 hex characters)");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                      '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                      '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx p1detect");
@@ -172,8 +186,7 @@ static int usage_t55xx_wakup() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
     PrintAndLogEx(NORMAL, "     p <password> - password 4bytes (8 hex symbols)");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx wakeup p 11223344  - send wakeup password");
@@ -188,9 +201,7 @@ static int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
     PrintAndLogEx(NORMAL, "     m            - use dictionary from flashmemory\n");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                      '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                      '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     i <*.dic>    - loads a default keys dictionary file <*.dic>");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -208,9 +219,7 @@ static int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                      '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                      '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     <start_pwd>  - 4 byte hex value to start pwd search at");
     PrintAndLogEx(NORMAL, "     <end_pwd>    - 4 byte hex value to end pwd search at");
     PrintAndLogEx(NORMAL, "");
@@ -229,9 +238,7 @@ static int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "       default password is 51243648, used by many cloners");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default)");
-    PrintAndLogEx(NORMAL, "                       '1' long leading ref.,  '2' leading zero ");
-    PrintAndLogEx(NORMAL, "                       '3' 1 of 4 coding ref., '4' try all modes");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     [password]   - 4 byte hex value of password written by cloner");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -265,8 +272,7 @@ static int usage_lf_deviceconfig() {
     PrintAndLogEx(NORMAL, "     f <8..255>   - Set write TWO gap (1 of 4 only)");
     PrintAndLogEx(NORMAL, "     g <8..255>   - Set write THREE gap (1 of 4 only)");
     PrintAndLogEx(NORMAL, "     p            - persist to flashmemory");
-    PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding '0' fixed bit length (default), '1' long leading ref.");
-    PrintAndLogEx(NORMAL, "                                      '2' leading zero,               '3' 1 of 4 coding ref.");
+    print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "     z            - Set default t55x7 timings (use p to save if required)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -564,28 +570,25 @@ static int SanityOfflineCheck(bool useGraphBuffer) {
 }
 
 void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
-    char Msg[80];
-    sprintf(Msg, "Downlink Mode used : ");
+    char msg[80];
+    sprintf(msg, "Downlink Mode used : ");
 
     switch (downlink_mode) {
-        case  0 :
-            strcat(Msg, "default/fixed bit length");
-            break;
         case  1 :
-            strcat(Msg, "long leading reference (r 1)");
+            strcat(msg, _YELLOW_("long leading reference"));
             break;
         case  2 :
-            strcat(Msg, "leading zero reference (r 2)");
+            strcat(msg, _YELLOW_("leading zero reference"));
             break;
         case  3 :
-            strcat(Msg, "1 of 4 coding reference (r 3)");
+            strcat(msg, _YELLOW_("1 of 4 coding reference"));
             break;
         default :
-            strcat(Msg, "default/fixed bit length");
+            strcat(msg, _YELLOW_("default/fixed bit length"));
             break;
     }
 
-    PrintAndLogEx(NORMAL, Msg);
+    PrintAndLogEx(NORMAL, msg);
 }
 //
 static int CmdT55xxDetect(const char *Cmd) {
@@ -1148,7 +1151,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
 
     flags = (downlink_mode & 3) << 3;
     clearCommandBuffer();
-    SendCommandMIX(CMD_T55XX_WAKEUP, password, flags, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_T55XX_WAKEUP, password, flags, 0, NULL, 0);
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
 
     return PM3_SUCCESS;
@@ -1240,8 +1243,8 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     ng.blockno = block;
     ng.flags   = flags;
 
-    SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-    if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, 2000)) {
+    SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+    if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, 2000)) {
         PrintAndLogEx(ERR, "Error occurred, device did not ACK write operation. (May be due to old firmware)");
         return PM3_ETIMEOUT;
     }
@@ -1708,8 +1711,8 @@ bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, ui
     payload.downlink_mode = downlink_mode;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_T55XX_READ_BLOCK, (uint8_t *)&payload, sizeof(payload));
-    if (!WaitForResponseTimeout(CMD_T55XX_READ_BLOCK, NULL, 2500)) {
+    SendCommandNG(CMD_LF_T55XX_READBL, (uint8_t *)&payload, sizeof(payload));
+    if (!WaitForResponseTimeout(CMD_LF_T55XX_READBL, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }
@@ -1978,7 +1981,7 @@ static int CmdResetRead(const char *Cmd) {
     printf("DL : %d\n", downlink_mode);
     flags = downlink_mode << 3;
     clearCommandBuffer();
-    SendCommandNG(CMD_T55XX_RESET_READ, &flags, sizeof(flags));
+    SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
@@ -2088,7 +2091,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
     if (from_flash) {
         clearCommandBuffer();
-        SendCommandNG(CMD_T55XX_CHKPWDS, &flags, sizeof(flags));
+        SendCommandNG(CMD_LF_T55XX_CHK_PWDS, &flags, sizeof(flags));
         PacketResponseNG resp;
 
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -2129,7 +2132,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         // TODO, a way of reallocating memory if file was larger
         keyBlock = calloc(4 * 200, sizeof(uint8_t));
         if (keyBlock == NULL) {
-            PrintAndLogDevice(ERR, "error, cannot allocate memory ");
+            PrintAndLogEx(ERR, "error, cannot allocate memory ");
             return PM3_ESOFT;
         }
 
@@ -2551,12 +2554,10 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
 }
 
 static int CmdT55xxSetDeviceConfig(const char *Cmd) {
-    uint8_t startgap      = 0, writegap = 0, readgap = 0;
-    uint8_t write0        = 0, write1   = 0, write2  = 0, write3 = 0;
-    bool    errors        = false, shall_persist = false;
-    uint8_t cmdp          = 0;
-    uint8_t downlink_mode = 0;
-    bool    set_defaults  = false;
+    uint8_t startgap = 0, writegap = 0, readgap = 0;
+    uint8_t write0 = 0, write1 = 0, write2 = 0, write3 = 0;
+    uint8_t cmdp = 0, downlink_mode = 0;
+    bool errors = false, shall_persist = false, set_defaults  = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -2613,63 +2614,57 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_lf_deviceconfig();
 
-    t55xx_config conf = {0};
-/* 	 if (erase) {
-		memset (&conf,0xff, sizeof(conf));
-		printf ("Conf.m[0] %x\n",conf.m[0].start_gap);
-		*/
-		//
-    if (set_defaults){
-		// fixed bit length
-		conf.m[T55xx_DLMode_Fixed].start_gap  = 29 * 8;
-		conf.m[T55xx_DLMode_Fixed].write_gap  = 17 * 8;
-		conf.m[T55xx_DLMode_Fixed].write_0    = 15 * 8;
-		conf.m[T55xx_DLMode_Fixed].write_1    = 47 * 8;
-		conf.m[T55xx_DLMode_Fixed].read_gap   = 15 * 8;
-		conf.m[T55xx_DLMode_Fixed].write_2    = 0;
-		conf.m[T55xx_DLMode_Fixed].write_3    = 0;
-	
-	   // long leading reference
-		conf.m[T55xx_DLMode_LLR].start_gap  = 31 * 8;
-		conf.m[T55xx_DLMode_LLR].write_gap  = 20 * 8;
-		conf.m[T55xx_DLMode_LLR].write_0    = 18 * 8;
-		conf.m[T55xx_DLMode_LLR].write_1    = 50 * 8;
-		conf.m[T55xx_DLMode_LLR].read_gap   = 15 * 8;
-		conf.m[T55xx_DLMode_LLR].write_2    = 0;
-		conf.m[T55xx_DLMode_LLR].write_3    = 0;
-   
-	   // leading zero
-		conf.m[T55xx_DLMode_Leading0].start_gap  = 31 * 8;
-		conf.m[T55xx_DLMode_Leading0].write_gap  = 20 * 8;
-		conf.m[T55xx_DLMode_Leading0].write_0    = 18 * 8;
-		conf.m[T55xx_DLMode_Leading0].write_1    = 40 * 8;
-		conf.m[T55xx_DLMode_Leading0].read_gap   = 15 * 8;
-		conf.m[T55xx_DLMode_Leading0].write_2    = 0;
-		conf.m[T55xx_DLMode_Leading0].write_3    = 0;
+    t55xx_configurations_t configurations = {{{0}, {0}, {0}, {0}}};
 
-		// 1 of 4 coding reference
-		conf.m[T55xx_DLMode_1of4].start_gap  = 29 * 8;
-		conf.m[T55xx_DLMode_1of4].write_gap  = 17 * 8;
-		conf.m[T55xx_DLMode_1of4].write_0    = 15 * 8;
-		conf.m[T55xx_DLMode_1of4].write_1    = 31 * 8;
-		conf.m[T55xx_DLMode_1of4].read_gap   = 15 * 8;
-		conf.m[T55xx_DLMode_1of4].write_2    = 47 * 8;
-		conf.m[T55xx_DLMode_1of4].write_3    = 63 * 8;
+    if (set_defaults) {
+        // fixed bit length
+        configurations.m[T55XX_DLMODE_FIXED].start_gap  = 29 * 8;
+        configurations.m[T55XX_DLMODE_FIXED].write_gap  = 17 * 8;
+        configurations.m[T55XX_DLMODE_FIXED].write_0    = 15 * 8;
+        configurations.m[T55XX_DLMODE_FIXED].write_1    = 47 * 8;
+        configurations.m[T55XX_DLMODE_FIXED].read_gap   = 15 * 8;
+        configurations.m[T55XX_DLMODE_FIXED].write_2    = 0;
+        configurations.m[T55XX_DLMODE_FIXED].write_3    = 0;
 
-	 }
-	 else {
-	 
-		conf.m[downlink_mode].start_gap  = startgap * 8;
-		conf.m[downlink_mode].write_gap  = writegap * 8;
-		conf.m[downlink_mode].write_0    = write0   * 8;
-		conf.m[downlink_mode].write_1    = write1   * 8;
-		conf.m[downlink_mode].read_gap   = readgap  * 8;
-		conf.m[downlink_mode].write_2    = write2   * 8;
-		conf.m[downlink_mode].write_3    = write3   * 8;
-	 }
-	 
+        // long leading reference
+        configurations.m[T55XX_DLMODE_LLR].start_gap  = 31 * 8;
+        configurations.m[T55XX_DLMODE_LLR].write_gap  = 20 * 8;
+        configurations.m[T55XX_DLMODE_LLR].write_0    = 18 * 8;
+        configurations.m[T55XX_DLMODE_LLR].write_1    = 50 * 8;
+        configurations.m[T55XX_DLMODE_LLR].read_gap   = 15 * 8;
+        configurations.m[T55XX_DLMODE_LLR].write_2    = 0;
+        configurations.m[T55XX_DLMODE_LLR].write_3    = 0;
+
+        // leading zero
+        configurations.m[T55XX_DLMODE_LEADING_ZERO].start_gap  = 31 * 8;
+        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_gap  = 20 * 8;
+        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_0    = 18 * 8;
+        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_1    = 40 * 8;
+        configurations.m[T55XX_DLMODE_LEADING_ZERO].read_gap   = 15 * 8;
+        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_2    = 0;
+        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_3    = 0;
+
+        // 1 of 4 coding reference
+        configurations.m[T55XX_DLMODE_1OF4].start_gap  = 29 * 8;
+        configurations.m[T55XX_DLMODE_1OF4].write_gap  = 17 * 8;
+        configurations.m[T55XX_DLMODE_1OF4].write_0    = 15 * 8;
+        configurations.m[T55XX_DLMODE_1OF4].write_1    = 31 * 8;
+        configurations.m[T55XX_DLMODE_1OF4].read_gap   = 15 * 8;
+        configurations.m[T55XX_DLMODE_1OF4].write_2    = 47 * 8;
+        configurations.m[T55XX_DLMODE_1OF4].write_3    = 63 * 8;
+
+    } else {
+        configurations.m[downlink_mode].start_gap  = startgap * 8;
+        configurations.m[downlink_mode].write_gap  = writegap * 8;
+        configurations.m[downlink_mode].write_0    = write0   * 8;
+        configurations.m[downlink_mode].write_1    = write1   * 8;
+        configurations.m[downlink_mode].read_gap   = readgap  * 8;
+        configurations.m[downlink_mode].write_2    = write2   * 8;
+        configurations.m[downlink_mode].write_3    = write3   * 8;
+    }
+
     clearCommandBuffer();
-    SendCommandOLD(CMD_SET_LF_T55XX_CONFIG, shall_persist, 0, 0, &conf, sizeof(t55xx_config));
+    SendCommandOLD(CMD_LF_T55XX_SET_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
     return PM3_SUCCESS;
 }
 

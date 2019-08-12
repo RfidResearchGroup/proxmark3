@@ -3,13 +3,13 @@
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
 #-----------------------------------------------------------------------------
-# Makefile for bootrom, see ../common/Makefile.common for common settings
+# Makefile for bootrom, see ../common_arm/Makefile.common for common settings
 #-----------------------------------------------------------------------------
 
 # DO NOT use thumb mode in the phase 1 bootloader since that generates a section with glue code
 ARMSRC =
 THUMBSRC = usb_cdc.c \
-	bootrom.c
+           bootrom.c
 
 ASMSRC = ram-reset.s flash-reset.s
 VERSIONSRC = version.c
@@ -29,7 +29,7 @@ APP_CFLAGS += -fno-stack-protector -fno-pie
 
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
-include ../common/Makefile.common
+include ../common_arm/Makefile.common
 
 OBJS = $(OBJDIR)/bootrom.s19
 

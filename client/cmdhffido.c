@@ -21,31 +21,23 @@
 
 #include "cmdhffido.h"
 
-#include <inttypes.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
 #include <unistd.h>
-#include <jansson.h>
-#include <mbedtls/x509_crt.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/pk.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"
+
 #include "comms.h"
-#include "cmdmain.h"
-#include "util.h"
-#include "ui.h"
 #include "proxmark3.h"
-#include "mifare.h"
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
-#include "emv/dump.h"
 #include "cliparser/cliparser.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
 #include "fido/cbortools.h"
 #include "fido/fidocore.h"
-#include "fido/cose.h"
+#include "emv/dump.h"
+#include "ui.h"
+#include "cmdhf14a.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -346,15 +338,15 @@ static int CmdHFFidoRegister(const char *cmd) {
                          &buf[1], 65,             // user public key
                          NULL, 0);
         //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-        res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[hashp], len - hashp);
+        res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[hashp], len - hashp, true);
         if (res) {
-            if (res == -0x4e00) {
-                PrintAndLogEx(WARNING, "Signature is NOT VALID.");
+            if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
+                PrintAndLogEx(WARNING, "Signature is" _RED_("NOT VALID"));
             } else {
                 PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }
         } else {
-            PrintAndLogEx(SUCCESS, "Signature is OK.");
+            PrintAndLogEx(SUCCESS, "Signature is" _GREEN_("OK"));
         }
 
     } else {
@@ -572,15 +564,15 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
                              data, 32,      // challenge parameter
                              NULL, 0);
             //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-            res = ecdsa_signature_verify(public_key, xbuf, xbuflen, &buf[5], len - 5);
+            res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, public_key, xbuf, xbuflen, &buf[5], len - 5, true);
             if (res) {
-                if (res == -0x4e00) {
-                    PrintAndLogEx(WARNING, "Signature is NOT VALID.");
+                if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
+                    PrintAndLogEx(WARNING, "Signature is" _RED_("NOT VALID."));
                 } else {
                     PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
                 }
             } else {
-                PrintAndLogEx(SUCCESS, "Signature is OK.");
+                PrintAndLogEx(SUCCESS, "Signature is" _GREEN_("OK"));
             }
         } else {
             PrintAndLogEx(WARNING, "No public key provided. can't check signature.");

@@ -10,6 +10,22 @@
 
 #include "cmdlfhid.h"
 
+#include <stdio.h>
+#include <string.h>
+
+#include <ctype.h>
+#include <inttypes.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "commonutil.h"  // ARRAYLEN
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"  //for g_debugMode, demodbuff cmds
+#include "cmdlf.h"    // lf_read
+#include "util_posix.h"
+#include "lfdemod.h"
+
 #ifndef BITS
 # define BITS 96
 #endif
@@ -111,7 +127,7 @@ static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uin
     calcWiegand(fmtlen, fc, cn, bits, 0);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HID_SIM_TAG, bytebits_to_byte(bits, 32), bytebits_to_byte(bits + 32, 32), 0, NULL, 0);
+    SendCommandMIX(CMD_LF_HID_SIMULATE, bytebits_to_byte(bits, 32), bytebits_to_byte(bits + 32, 32), 0, NULL, 0);
 
     msleep(delay);
     return sendPing();
@@ -240,7 +256,7 @@ static int CmdHIDRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_hid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HID_DEMOD_FSK, findone, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_HID_DEMOD, findone, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 */
@@ -260,9 +276,9 @@ static int CmdHIDSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HID_SIM_TAG, hi, lo, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_HID_SIMULATE, hi, lo, 0, NULL, 0);
     PacketResponseNG resp;
-    WaitForResponse(CMD_HID_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_HID_SIMULATE, &resp);
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
@@ -297,7 +313,7 @@ static int CmdHIDClone(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HID_CLONE_TAG, hi2, hi, lo, longid, sizeof(longid));
+    SendCommandOLD(CMD_LF_HID_CLONE, hi2, hi, lo, longid, sizeof(longid));
     return PM3_SUCCESS;
 }
 
@@ -485,7 +501,7 @@ static int CmdHIDWiegand(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "HID | OEM | FC   | CN      |  Wiegand  |  HID Formatted");
     PrintAndLogEx(NORMAL, "----+-----+------+---------+-----------+--------------------");
-    for (uint8_t i = 0; i < sizeof(fmtlen); i++) {
+    for (uint8_t i = 0; i < ARRAYLEN(fmtlen); i++) {
         memset(bits, 0x00, sizeof(bits));
         calcWiegand(fmtlen[i], fc, cardnum, bs, oem);
         PrintAndLogEx(NORMAL, "ice:: %s \n", sprint_bin(bs, fmtlen[i]));
@@ -545,7 +561,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp += 2;
                 bool is_ftm_ok = false;
                 uint8_t ftms[] = {26, 33, 34, 35, 37};
-                for (uint8_t i = 0; i < sizeof(ftms); i++) {
+                for (uint8_t i = 0; i < ARRAYLEN(ftms); i++) {
                     if (ftms[i] == fmtlen) {
                         is_ftm_ok = true;
                     }

@@ -24,10 +24,7 @@
 #ifndef EMV_ROCA_H__
 #define EMV_ROCA_H__
 
-#include <stdbool.h>
-#include <string.h>
-#include "mbedtls/bignum.h"
-#include "util.h"
+#include "common.h"
 
 #define ROCA_PRINTS_LENGTH 17
 

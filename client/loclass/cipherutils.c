@@ -34,12 +34,15 @@
  *
  *
  ****************************************************************************/
+#include "cipherutils.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "commonutil.h"  // ARRAYLEN
+
 #include "fileutils.h"
-#include "cipherutils.h"
 /**
  *
  * @brief Return and remove the first bit (x0) in the stream : <x0 x1 x2 x3 ... xn >
@@ -152,7 +155,7 @@ void printarr(const char *name, uint8_t *arr, int len) {
         cx += snprintf(output + cx, outsize - cx, "0x%02x,", *(arr + i)); //5 bytes per byte
     }
     snprintf(output + cx, outsize - cx, "};");
-    PrintAndLogDevice(NORMAL, output);
+    PrintAndLogEx(NORMAL, output);
     free(output);
 }
 
@@ -165,7 +168,7 @@ void printvar(const char *name, uint8_t *arr, int len) {
         cx += snprintf(output + cx, outsize - cx, "%02x", *(arr + i)); //2 bytes per byte
     }
 
-    PrintAndLogDevice(NORMAL, output);
+    PrintAndLogEx(NORMAL, output);
     free(output);
 }
 
@@ -179,7 +182,7 @@ void printarr_human_readable(const char *title, uint8_t *arr, int len) {
             cx += snprintf(output + cx, outsize - cx, "\n%02x| ", i);
         cx += snprintf(output + cx, outsize - cx, "%02x ", *(arr + i));
     }
-    PrintAndLogDevice(NORMAL, output);
+    PrintAndLogEx(NORMAL, output);
     free(output);
 }
 
@@ -201,12 +204,12 @@ static int testBitStream() {
     }
 
     if (memcmp(input, output, sizeof(input)) == 0) {
-        PrintAndLogDevice(SUCCESS, "    Bitstream test 1 ok");
+        PrintAndLogEx(SUCCESS, "    Bitstream test 1 ok");
     } else {
-        PrintAndLogDevice(FAILED, "    Bitstream test 1 failed");
+        PrintAndLogEx(FAILED, "    Bitstream test 1 failed");
         uint8_t i;
-        for (i = 0 ; i < sizeof(input) ; i++) {
-            PrintAndLogDevice(NORMAL, "    IN %02x, OUT %02x", input[i], output[i]);
+        for (i = 0 ; i < ARRAYLEN(input) ; i++) {
+            PrintAndLogEx(NORMAL, "    IN %02x, OUT %02x", input[i], output[i]);
         }
         return 1;
     }
@@ -231,12 +234,12 @@ static int testReversedBitstream() {
     }
 
     if (memcmp(input, output, sizeof(input)) == 0) {
-        PrintAndLogDevice(SUCCESS, "    Bitstream test 2 ok");
+        PrintAndLogEx(SUCCESS, "    Bitstream test 2 ok");
     } else {
-        PrintAndLogDevice(FAILED, "    Bitstream test 2 failed");
+        PrintAndLogEx(FAILED, "    Bitstream test 2 failed");
         uint8_t i;
-        for (i = 0 ; i < sizeof(input) ; i++) {
-            PrintAndLogDevice(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i], reverse[i], output[i]);
+        for (i = 0 ; i < ARRAYLEN(input) ; i++) {
+            PrintAndLogEx(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i], reverse[i], output[i]);
         }
         return 1;
     }
@@ -245,7 +248,7 @@ static int testReversedBitstream() {
 
 
 int testCipherUtils(void) {
-    PrintAndLogDevice(INFO, "Testing some internals...");
+    PrintAndLogEx(INFO, "Testing some internals...");
     int retval = 0;
     retval |= testBitStream();
     retval |= testReversedBitstream();

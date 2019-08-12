@@ -8,14 +8,24 @@
 // EMV commands
 //-----------------------------------------------------------------------------
 
-#include <ctype.h>
-#include "mifare.h"
 #include "cmdemv.h"
+
+#include <string.h>
+
+#include "comms.h" // DropField
+#include "cmdsmartcard.h" // smart_select
+#include "cmdtrace.h"
 #include "emvjson.h"
-#include "emv_pki.h"
 #include "test/cryptotest.h"
 #include "cliparser/cliparser.h"
-#include <jansson.h>
+#include "cmdparser.h"
+#include "proxmark3.h"
+#include "emv_roca.h"
+#include "emvcore.h"
+#include "cmdhf14a.h"
+#include "dol.h"
+#include "ui.h"
+#include "emv_tags.h"
 
 static int CmdHelp(const char *Cmd);
 

@@ -28,7 +28,7 @@ local ISO14B_COMMAND = {
     ISO14B_SELECT_SR = 0x80,
 }
 
-local function parse1443b(data)
+local function parse14443b(data)
     --[[
 
     Based on this struct :
@@ -70,7 +70,7 @@ local function read14443b(disconnect)
     end
 
     command = Command:newMIX{
-            cmd = cmds.CMD_ISO_14443B_COMMAND,
+            cmd = cmds.CMD_HF_ISO14443B_COMMAND,
             arg1 = flags
             }
 
@@ -79,7 +79,7 @@ local function read14443b(disconnect)
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
         if arg0 == 0 then
             data = string.sub(result, count)
-            info, err = parse1443b(data)
+            info, err = parse14443b(data)
         else
             err = 'iso14443b card select failed'
         end
@@ -111,13 +111,13 @@ end
 ---
 -- turns on the HF field.
 local function connect14443b()
-    local c = Command:newMIX{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_CONNECT}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_CONNECT}
     return c:sendMIX(true)
 end
 ---
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect14443b()
-    local c = Command:newMIX{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_DISCONNECT}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_DISCONNECT}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443b.c, ReaderIso14443b() for details
     return c:sendMIX(true)
@@ -126,7 +126,7 @@ end
 local library = {
     read = read14443b,
     waitFor14443b = waitFor14443b,
-    parse1443b  = parse1443b,
+    parse14443b  = parse14443b,
     connect = connect14443b,
     disconnect = disconnect14443b,
     ISO14B_COMMAND = ISO14B_COMMAND,

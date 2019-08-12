@@ -1,8 +1,7 @@
 #ifndef BUCKETSORT_H__
 #define BUCKETSORT_H__
 
-#include <stdint.h>
-#include <stdlib.h>
+#include "common.h"
 
 typedef struct bucket {
     uint32_t *head;
@@ -21,4 +20,5 @@ typedef struct bucket_info {
 void bucket_sort_intersect(uint32_t *const estart, uint32_t *const estop,
                            uint32_t *const ostart, uint32_t *const ostop,
                            bucket_info_t *bucket_info, bucket_array_t bucket);
+
 #endif

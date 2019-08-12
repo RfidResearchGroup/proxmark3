@@ -9,7 +9,11 @@
 //-----------------------------------------------------------------------------
 
 #include "ndef.h"
+
+#include <string.h>
+
 #include "ui.h"
+#include "util.h" // sprint_hex...
 #include "emv/dump.h"
 #include "crypto/asn1utils.h"
 

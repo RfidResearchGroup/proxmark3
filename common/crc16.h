@@ -8,11 +8,7 @@
 #ifndef __CRC16_H
 #define __CRC16_H
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include "commonutil.h"
+#include "common.h"
 
 #define CRC16_POLY_CCITT  0x1021
 #define CRC16_POLY_LEGIC  0xc6c6 //0x6363
@@ -30,6 +26,7 @@ typedef enum {
     CRC_LEGIC,
     CRC_CCITT,
     CRC_KERMIT,
+    CRC_XMODEM,
 } CrcType_t;
 
 uint16_t update_crc16_ex(uint16_t crc, uint8_t c, uint16_t polynomial);

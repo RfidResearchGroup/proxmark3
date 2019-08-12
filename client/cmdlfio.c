@@ -10,6 +10,21 @@
 
 #include "cmdlfio.h"
 
+#include <stdio.h>      // sscanf
+#include <stdlib.h>
+#include <string.h>
+
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "graph.h"
+#include "cmdlf.h"
+#include "ui.h"         // PrintAndLog
+#include "lfdemod.h"    // parityTest, bitbytes_to_byte
+#include "protocols.h"  // for T55xx config register definitions
+#include "cmddata.h"
+
 static int CmdHelp(const char *Cmd);
 /*
 static int usage_lf_io_read(void) {
@@ -67,7 +82,7 @@ static int CmdIOProxRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_read();
     int findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
-    SendCommandMIX(CMD_IO_DEMOD_FSK, findone, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_IO_DEMOD, findone, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 */
@@ -214,11 +229,11 @@ static int CmdIOProxSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -263,7 +278,7 @@ static int CmdIOProxClone(const char *Cmd) {
     print_blocks(blocks, 3);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_IO_CLONE_TAG, blocks[1], blocks[2], 0, NULL, 0);
+    SendCommandMIX(CMD_LF_IO_CLONE, blocks[1], blocks[2], 0, NULL, 0);
     return PM3_SUCCESS;
 }
 

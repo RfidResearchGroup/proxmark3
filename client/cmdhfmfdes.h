@@ -10,19 +10,7 @@
 #ifndef __MFDESFIRE_H
 #define __MFDESFIRE_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include "cmdmain.h"
-#include "proxmark3.h"
-#include "../include/common.h"
-#include "../include/mifare.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "util.h"
-#include "cmdhf14a.h"
-#include "mbedtls/des.h"
+#include "common.h"
 
 int CmdHFMFDes(const char *Cmd);
 

@@ -475,7 +475,7 @@ local function readblock( blockno, key )
     -- Read block N
     local keytype = '00'
     local data = ('%02x%s%s'):format(blockno, keytype, key)
-    local c = Command:newNG{cmd = cmds.CMD_MIFARE_READBL, data = data}
+    local c = Command:newNG{cmd = cmds.CMD_HF_MIFARE_READBL, data = data}
     local b, err = getblockdata(c:sendNG(false))
     if not b then return oops(err) end
     return b

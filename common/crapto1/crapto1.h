@@ -19,13 +19,10 @@
 */
 #ifndef CRAPTO1_INCLUDED
 #define CRAPTO1_INCLUDED
-#include <stdint.h>
-#include <stdbool.h>
-#include "bucketsort.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 
 struct Crypto1State {uint32_t odd, even;};
 #if defined(__arm__) && !defined(__linux__) && !defined(_WIN32) && !defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
@@ -77,7 +74,4 @@ static inline int filter(uint32_t const x) {
     f |= 0x0d938 >> (x >> 16 & 0xf) &  1;
     return BIT(0xEC57E80A, f);
 }
-#ifdef __cplusplus
-}
-#endif
 #endif

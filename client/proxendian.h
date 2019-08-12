@@ -11,7 +11,7 @@
 #ifndef PROXENDIAN_H__
 #define PROXENDIAN_H__
 
-#include <stdint.h>
+#include "common.h"
 
 #ifdef _WIN32
 # define HOST_LITTLE_ENDIAN

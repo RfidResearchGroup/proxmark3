@@ -20,8 +20,6 @@
 #include "crypto.h"
 #include "crypto_backend.h"
 
-#include <string.h>
-
 static struct crypto_backend *crypto_backend;
 
 static bool crypto_init(void) {

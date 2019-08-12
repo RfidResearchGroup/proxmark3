@@ -12,6 +12,21 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfawid.h"  // AWID function declarations
 
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "graph.h"
+#include "cmddata.h"
+
+#include "ui.h"         // PrintAndLog
+#include "lfdemod.h"    // parityTest
+#include "cmdlf.h"      // lf read
+#include "protocols.h"  // for T55xx config register definitions
+#include "util_posix.h"
+
 static int CmdHelp(const char *Cmd);
 /*
 static int usage_lf_awid_read(void) {
@@ -115,7 +130,7 @@ static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uin
     memcpy(payload->data, bits, bs_len);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + bs_len);
+    SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + bs_len);
     free(payload);
 
     msleep(delay);
@@ -172,7 +187,7 @@ static int CmdAWIDRead_device(const char *Cmd) {
     if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_read();
     uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
     clearCommandBuffer();
-    SendCommandMIX(CMD_AWID_DEMOD_FSK, findone, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_AWID_DEMOD, findone, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 */
@@ -352,11 +367,11 @@ static int CmdAWIDSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -417,8 +432,8 @@ static int CmdAWIDClone(const char *Cmd) {
         ng.blockno = i;
         ng.flags = 0;
 
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
+        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }

@@ -11,6 +11,19 @@
 
 #include "cmdhflist.h"
 
+#include <inttypes.h>
+#include <string.h>
+#include <stdio.h>
+
+#include "commonutil.h"  // ARRAYLEN
+#include "mifare/mifarehost.h"
+#include "mifare/mifaredefault.h"
+#include "parity.h"         // oddparity
+#include "ui.h"
+#include "crc16.h"
+#include "crapto1/crapto1.h"
+#include "protocols.h"
+
 enum MifareAuthSeq {
     masNone,
     masNt,
@@ -279,14 +292,26 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         }
         case MIFARE_ULEV1_READSIG:
-            snprintf(exp, size, "READ_SIG");
+            snprintf(exp, size, "READ SIG");
             break;
         case MIFARE_ULEV1_CHECKTEAR:
-            snprintf(exp, size, "CHK_TEARING(%d)", cmd[1]);
+            snprintf(exp, size, "CHK TEARING(%d)", cmd[1]);
             break;
         case MIFARE_ULEV1_VCSL:
             snprintf(exp, size, "VCSL");
             break;
+        case MIFARE_ULNANO_WRITESIG:
+            snprintf(exp, size, "WRITE SIG");
+            break;
+        case MIFARE_ULNANO_LOCKSIF: {
+            if (cmd[1] == 0)
+                snprintf(exp, size, "UNLOCK SIG");
+            else if (cmd[1] == 2)
+                snprintf(exp, size, "LOCK SIG");
+            else
+                snprintf(exp, size, "?");
+            break;
+        }
         default:
             return 0;
     }
@@ -1114,7 +1139,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
 
             // check default keys
             if (!traceCrypto1) {
-                for (int i = 0; i < MIFARE_DEFAULTKEYS_SIZE; i++) {
+                for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
                     if (NestedCheckKey(g_mifare_default_keys[i], &AuthData, cmd, cmdsize, parity)) {
                         PrintAndLogEx(NORMAL, "            |            |  *  |%61s %012"PRIx64"|     |", "key", g_mifare_default_keys[i]);
 

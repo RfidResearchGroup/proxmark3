@@ -11,6 +11,8 @@
 #ifndef CMDPARSER_H__
 #define CMDPARSER_H__
 
+#include "common.h"
+
 typedef struct command_s {
     const char *Name;
     int (*Parse)(const char *Cmd);
@@ -38,6 +40,7 @@ bool IfPm3Iso15693(void);
 bool IfPm3Felica(void);
 bool IfPm3Legicrf(void);
 bool IfPm3Iclass(void);
+bool IfPm3NfcBarcode(void);
 bool IfPm3Lcd(void);
 
 // Print help for each command in the command array

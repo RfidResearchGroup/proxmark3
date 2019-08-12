@@ -24,7 +24,18 @@
 //-----------------------------------------------------------------------------------
 // main code for LF aka HID corporate brutefore by Federico Dotta & Maurizio Agazzini
 //-----------------------------------------------------------------------------------
+#include "standalone.h" // standalone definitions
 #include "lf_hidbrute.h"
+
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "lfops.h"
+
+#define OPTS 3
 
 void ModInfo(void) {
     DbpString("  LF HID corporate 1000 bruteforce - aka Corporatebrute (Federico dotta & Maurizio Agazzini)");

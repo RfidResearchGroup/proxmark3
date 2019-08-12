@@ -110,6 +110,11 @@
 #ifndef SPIFFS_NUCLEUS_H_
 #define SPIFFS_NUCLEUS_H_
 
+#include "common.h"
+
+#include "string.h"
+#include "spiffs.h"
+
 #define _SPIFFS_ERR_CHECK_FIRST         (SPIFFS_ERR_INTERNAL - 1)
 #define SPIFFS_ERR_CHECK_OBJ_ID_MISM    (SPIFFS_ERR_INTERNAL - 1)
 #define SPIFFS_ERR_CHECK_SPIX_MISM      (SPIFFS_ERR_INTERNAL - 2)

@@ -31,9 +31,9 @@ endif
 
 -include Makefile.platform
 -include .Makefile.options.cache
-include common/Makefile.hal
+include common_arm/Makefile.hal
 
-all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/%
+all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% fpga_compress/%
 
 mfkey/%: FORCE
 	$(info [*] MAKE $@)
@@ -41,10 +41,13 @@ mfkey/%: FORCE
 nonce2key/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/nonce2key $(patsubst nonce2key/%,%,$@)
+fpga_compress/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress $(patsubst fpga_compress/%,%,$@)
 bootrom/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C bootrom $(patsubst bootrom/%,%,$@)
-armsrc/%: FORCE cleanifplatformchanged
+armsrc/%: FORCE cleanifplatformchanged fpga_compress/%
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C armsrc $(patsubst armsrc/%,%,$@)
 client/%: FORCE
@@ -55,7 +58,7 @@ recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nounce2key style checks FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -73,7 +76,8 @@ help:
 	@echo
 	@echo "+ client        - Make only the OS-specific host client"
 	@echo "+ mfkey         - Make tools/mfkey"
-	@echo "+ nounce2key    - Make tools/nounce2key"
+	@echo "+ nonce2key     - Make tools/nonce2key"
+	@echo "+ fpga_compress - Make tools/fpga_compress"
 	@echo
 	@echo "+ style         - Apply some automated source code formatting rules"
 	@echo "+ checks        - Detect various encoding issues in source code"
@@ -92,6 +96,8 @@ recovery: recovery/all
 mfkey: mfkey/all
 
 nonce2key: nonce2key/all
+
+fpga_compress: fpga_compress/all
 
 flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$<)
@@ -145,7 +151,7 @@ style:
 	# Make sure astyle is installed
 	@which astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )
 	# Remove spaces & tabs at EOL, add LF at EOF if needed on *.c, *.h, *.cpp. *.lua, *.py, *.pl, Makefile
-	find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
+	find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" \) \
 	    -exec perl -pi -e 's/[ \t]+$$//' {} \; \
 	    -exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
 	    -exec sh -c "echo >> {}" \;
@@ -158,11 +164,11 @@ style:
 
 # Detecting weird codepages and tabs.
 checks:
-	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" \) \
+	find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" \) \
 	      -exec sh -c "cat {} |recode utf8.. >/dev/null || echo {}" \;
-	find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" \) \
+	find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \
 	      -exec grep -lP '\t' {} \;
-# to remove tabs within lines, one can try with vi: :set tabstop=4   :set et|retab
+# to remove tabs within lines, one can try with: vi $file -c ':set tabstop=4' -c ':set et|retab' -c ':wq'
 
 # Dummy target to test for GNU make availability
 _test:

@@ -9,6 +9,15 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfcotag.h"  // COTAG function declarations
 
+#include <string.h>
+#include <stdio.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "lfdemod.h"
+#include "cmddata.h"    // getSamples
+#include "ui.h"         // PrintAndLog
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_cotag_read(void) {
@@ -75,7 +84,7 @@ static int CmdCOTAGRead(const char *Cmd) {
     sscanf(Cmd, "%u", &rawsignal);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_COTAG, rawsignal, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_COTAG_READ, rawsignal, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 7000)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;

@@ -7,15 +7,17 @@
 // Low frequency Paradox tag commands
 // FSK2a, rf/50, 96 bits (completely known)
 //-----------------------------------------------------------------------------
+#include "cmdlfparadox.h"
+
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
-#include "cmdlfparadox.h"
-#include "proxmark3.h"
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
 #include "ui.h"
-#include "util.h"
 #include "graph.h"
-#include "cmdparser.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
@@ -142,11 +144,11 @@ static int CmdParadoxSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
