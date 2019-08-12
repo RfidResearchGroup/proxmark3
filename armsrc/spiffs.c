@@ -533,16 +533,21 @@ void rdv40_spiffs_safe_print_fsinfo() {
     rdv40_spiffs_fsinfo fsinfo;
     rdv40_spiffs_getfsinfo(&fsinfo, RDV40_SPIFFS_SAFETY_SAFE);
     DbpString(_BLUE_("Flash Memory FileSystem Info (SPIFFS)"));
-    Dbprintf("-------------------------------------");
-    Dbprintf("* Filesystem Logical Block Size.........%d bytes", fsinfo.blockSize);
-    Dbprintf("* Filesystem Logical Page Size..........%d bytes", fsinfo.pageSize);
-    Dbprintf("--");
-    Dbprintf("* Filesystem Max Open Files.............%d file descriptors", fsinfo.maxOpenFiles);
-    Dbprintf("* Filesystem Max Path Length............%d chars", fsinfo.maxPathLength);
-    Dbprintf("--");
-    Dbprintf("Filesystem\tSize\tUsed\tAvailable\tUse%\tMounted on");
-    Dbprintf("spiffs\t%dB\t%dB\t%dB\t\t%d%\t/", fsinfo.totalBytes, fsinfo.usedBytes, fsinfo.freeBytes,
-             fsinfo.usedPercent);
+//    Dbprintf("-------------------------------------");
+    Dbprintf("  Logical Block Size........." _YELLOW_("%d")"bytes", fsinfo.blockSize);
+    Dbprintf("  Logical Page Size.........." _YELLOW_("%d")"bytes", fsinfo.pageSize);
+    Dbprintf("");
+    Dbprintf("  Max Open Files............." _YELLOW_("%d")"file descriptors", fsinfo.maxOpenFiles);
+    Dbprintf("  Max Path Length............" _YELLOW_("%d")"chars", fsinfo.maxPathLength);
+//    DbpString(_BLUE_("Details"));
+    DbpString("");
+    Dbprintf("  Filesystem\tSize\tUsed\tAvailable\tUse%\tMounted on");
+    Dbprintf("  spiffs    \t%d B\t%d B\t%d B\t\t"_YELLOW_("%d%")"\t/"
+             , fsinfo.totalBytes
+             , fsinfo.usedBytes
+             , fsinfo.freeBytes
+             , fsinfo.usedPercent
+            );
 }
 
 // this function is safe and WILL rollback since it is only a PRINTING function,
