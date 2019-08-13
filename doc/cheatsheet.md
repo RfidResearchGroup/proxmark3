@@ -1,14 +1,14 @@
 # Cheatsheet
 
-[Generic](#Generic)
-[iClass](#iClass)
-[Mifare](#Mifare)
-[HID Prox](#prox-id)
-[Indala](#indala-id)
-[Hitag](#hitag-id)
-[T55XX](#T55XX)
-[Data](#Data)
-[Lua Scripts](#Lua Scripts)
+- [Generic](#Generic)
+- [iClass](#iClass)
+- [Mifare](#Mifare)
+- [HID Prox](#HID-Prox)
+- [Indala](#Indala)
+- [Hitag](#Hitag)
+- [T55XX](#T55XX)
+- [Data](#Data)
+- [Lua Scripts](#Lua-Scripts)
 
 
 ## Generic
