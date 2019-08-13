@@ -1,17 +1,17 @@
 # Cheatsheet
 
-[Generic](#generic-id)
-[iClass](#iclass-id)
-[Mifare](#mifare-id)
+[Generic](#Generic)
+[iClass](#iClass)
+[Mifare](#Mifare)
 [HID Prox](#prox-id)
 [Indala](#indala-id)
 [Hitag](#hitag-id)
-[T55XX](#t55xx-id)
-[Data](#data-id)
-[Lua Scripts](#lua-id)
+[T55XX](#T55XX)
+[Data](#Data)
+[Lua Scripts](#Lua Scripts)
 
 
-## Generic {#generic-id}
+## Generic
 
 Identify High Frequency cards
 ```
@@ -33,7 +33,7 @@ Check versioning
 pm3 --> hw version
 ```
 
-## iClass {#iclass-id}
+## iClass
 
 Reverse permute iClass master key
 ```
@@ -162,7 +162,7 @@ e            : elite
 pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f default_iclass_keys.dic e
 ```
 
-## Mifare {#mifare-id}
+## Mifare
 
 Check for default keys
 ```
@@ -387,7 +387,7 @@ pm3 --> lf hitag reader 21 56713368
 pm3 --> lf hitag sim c378181c_a8f7.ht2 
 ```
 
-## T55XX {#t55xx-id}
+## T55XX
 
 Detect T55XX card
 ```
@@ -419,7 +419,7 @@ Wipe a T55xx tag and set defaults
 lf t55xx wipe
 ```
 
-## Data {#data-id}
+## Data
 
 Get raw samples [512-40000]
 ```
@@ -436,7 +436,7 @@ Load samples from file
 data load <filename>
 ```
 
-## Lua Scripts {#lua-id}
+## Lua Scripts
 
 List Lua Scripts
 
