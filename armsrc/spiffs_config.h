@@ -8,7 +8,22 @@
 #ifndef SPIFFS_CONFIG_H_
 #define SPIFFS_CONFIG_H_
 
-#include "common.h"
+// ----------- 8< ------------
+// Following includes are for the linux test build of spiffs
+// These may/should/must be removed/altered/replaced in your target
+//#include <stdio.h>
+//#include <stdlib.h>
+//
+#include "printf.h"
+#include "string.h"
+#include "flashmem.h"
+
+void Dbprintf(const char *fmt, ...);
+
+//#include <stddef.h>
+//#include <unistd.h>
+// ----------- >8 ------------
+
 
 typedef int s32_t;
 typedef uint32_t u32_t;
@@ -26,7 +41,7 @@ typedef uint8_t u8_t;
 #endif
 // Set spiffs debug output call for garbage collecting.
 #ifndef SPIFFS_GC_DBG
-#define SPIFFS_GC_DBG(_f, ...)
+#define SPIFFS_GC_DBG(_f, ...) //Dbprintf(_f, ## __VA_ARGS__)
 #define SPIFFS_GC_DBGF(str) SPIFFS_GC_DBG(str,NULL)
 #endif
 // Set spiffs debug output call for caching.
@@ -36,7 +51,7 @@ typedef uint8_t u8_t;
 #endif
 // Set spiffs debug output call for system consistency checks.
 #ifndef SPIFFS_CHECK_DBG
-#define SPIFFS_CHECK_DBG(_f, ...) //SPIFFS_CHECK_DBG(_f, ## __VA_ARGS__)
+#define SPIFFS_CHECK_DBG(_f, ...) //Dbprintf(_f, ## __VA_ARGS__)
 #define SPIFFS_CHECK_DBGF(str) SPIFFS_CHECK_DBG(str,NULL)
 #endif
 // Set spiffs debug output call for all api invocations.
