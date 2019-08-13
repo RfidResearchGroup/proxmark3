@@ -8,7 +8,23 @@
 //-----------------------------------------------------------------------------
 // main code for HF Mifare aka ColinRun by Colin Brigato
 //-----------------------------------------------------------------------------
+
+#include "standalone.h" // standalone definitions
+
 #include "hf_colin.h"
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "util.h"
+#include "commonutil.h"
+#include "BigBuf.h"
+#include "iso14443a.h"
+#include "mifareutil.h"
+#include "mifaresim.h"
+#include "vtsend.h"
+#include "spiffs.h"
 #include "frozen.h"
 
 #define MF1KSZ 1024
@@ -733,7 +749,7 @@ readysim:
     DbprintfEx(FLAG_NEWLINE,"\n\n\n\n\n\n\n\nn\n\nn\n\n\nflags: %d (0x%02x)",flags,flags);
     cjSetCursLeft();
     SpinOff(1000);
-    Mifare1ksim(flags , 0, cjuid);
+    Mifare1ksim(flags , 0, cjuid, 0, 0);
     LED_C_OFF();
     SpinOff(50);
     vtsend_cursor_position_restore(NULL);
