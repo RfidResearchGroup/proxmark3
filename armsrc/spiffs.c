@@ -74,18 +74,18 @@ static s32_t rdv40_spiffs_llerase(u32_t addr, u32_t size) {
     if (!FlashInit()) {
         return 130;
     }
-	if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Orig addr : %d\n", addr);
-        uint8_t block, sector = 0;
-        block = addr / RDV40_LLERASE_BLOCKSIZE;
-        if (block){
-            addr = addr - (block*RDV40_LLERASE_BLOCKSIZE);
-	}
-        if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Result addr : %d\n", addr);
-	sector = addr / SPIFFS_CFG_LOG_BLOCK_SZ;
-        Flash_CheckBusy(BUSY_TIMEOUT);
-        Flash_WriteEnable();
-        if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : block : %d, sector : %d \n", block, sector);
-        erased = Flash_Erase4k(block, sector);
+    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Orig addr : %d\n", addr);
+    uint8_t block, sector = 0;
+    block = addr / RDV40_LLERASE_BLOCKSIZE;
+    if (block) {
+        addr = addr - (block * RDV40_LLERASE_BLOCKSIZE);
+    }
+    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Result addr : %d\n", addr);
+    sector = addr / SPIFFS_CFG_LOG_BLOCK_SZ;
+    Flash_CheckBusy(BUSY_TIMEOUT);
+    Flash_WriteEnable();
+    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : block : %d, sector : %d \n", block, sector);
+    erased = Flash_Erase4k(block, sector);
 
     Flash_CheckBusy(BUSY_TIMEOUT);
     FlashStop();
@@ -163,12 +163,12 @@ int rdv40_spiffs_unmount() {
 }
 
 int rdv40_spiffs_check() {
-   rdv40_spiffs_lazy_mount();
-   SPIFFS_check(&fs);
-   SPIFFS_gc_quick(&fs,0);
-   rdv40_spiffs_lazy_unmount();
-   rdv40_spiffs_lazy_mount();
-   return SPIFFS_gc(&fs,8192) == SPIFFS_OK;
+    rdv40_spiffs_lazy_mount();
+    SPIFFS_check(&fs);
+    SPIFFS_gc_quick(&fs, 0);
+    rdv40_spiffs_lazy_unmount();
+    rdv40_spiffs_lazy_mount();
+    return SPIFFS_gc(&fs, 8192) == SPIFFS_OK;
 }
 ////////////////////////////////////////////////////////////////////////////////
 

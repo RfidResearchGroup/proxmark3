@@ -746,10 +746,10 @@ readysim:
     //flags = 0x10;
     uint16_t flags = 0;
     flags = 16;
-    DbprintfEx(FLAG_NEWLINE,"\n\n\n\n\n\n\n\nn\n\nn\n\n\nflags: %d (0x%02x)",flags,flags);
+    DbprintfEx(FLAG_NEWLINE, "\n\n\n\n\n\n\n\nn\n\nn\n\n\nflags: %d (0x%02x)", flags, flags);
     cjSetCursLeft();
     SpinOff(1000);
-    Mifare1ksim(flags , 0, cjuid, 0, 0);
+    Mifare1ksim(flags, 0, cjuid, 0, 0);
     LED_C_OFF();
     SpinOff(50);
     vtsend_cursor_position_restore(NULL);
