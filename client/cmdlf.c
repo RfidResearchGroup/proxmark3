@@ -453,7 +453,7 @@ int CmdLFRead(const char *Cmd) {
                 cmdp++;
                 break;
             case 'd':
-                samples = param_get32ex(Cmd, cmdp, 0, 10);
+                samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             default:
