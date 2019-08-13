@@ -448,7 +448,7 @@ Convert .bin to .eml
 ```
 Options
 ---
-i <file>	: Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
+i <file>    : Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
 
 script run dumptoemul -i xxxxxxxxxxxxxx.bin
 ```
