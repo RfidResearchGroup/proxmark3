@@ -34,7 +34,6 @@ void __attribute__((noreturn)) AppMain(void);
 
 uint16_t AvgAdc(int ch);
 
-void print_result(char *name, uint8_t *buf, size_t len);
 //void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
