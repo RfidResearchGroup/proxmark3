@@ -250,7 +250,7 @@ pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
 ```
 
-## HID Prox {#prox-id}
+## HID Prox
 
 Read HID Prox card
 ```
@@ -299,7 +299,7 @@ pm3 --> lf hid brute a 26 f 224
 pm3 --> lf hid brute v a 26 f 21 c 200 d 2000
 ```
 
-## Indala {#indala-id}
+## Indala
 
 Read Indala card
 ```
@@ -329,7 +329,7 @@ Options
 pm3 --> lf indala clone a0000000c2c436c1
 ```
 
-## Hitag {#hitag-id}
+## Hitag
 
 Read Hitag information
 ```
