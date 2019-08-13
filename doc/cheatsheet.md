@@ -1,6 +1,17 @@
 # Cheatsheet
 
-## Generic
+[Generic](#generic-id)
+[iClass](#iclass-id)
+[Mifare](#mifare-id)
+[HID Prox](#prox-id)
+[Indala](#indala-id)
+[Hitag](#hitag-id)
+[T55XX](#t55xx-id)
+[Data](#data-id)
+[Lua Scripts](#lua-id)
+
+
+## Generic {#generic-id}
 
 Identify High Frequency cards
 ```
@@ -22,7 +33,7 @@ Check versioning
 pm3 --> hw version
 ```
 
-## iClass
+## iClass {#iclass-id}
 
 Reverse permute iClass master key
 ```
@@ -151,7 +162,7 @@ e            : elite
 pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f default_iclass_keys.dic e
 ```
 
-## Mifare
+## Mifare {#mifare-id}
 
 Check for default keys
 ```
@@ -239,7 +250,7 @@ pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
 ```
 
-## HID Prox
+## HID Prox {#prox-id}
 
 Read HID Prox card
 ```
@@ -288,7 +299,7 @@ pm3 --> lf hid brute a 26 f 224
 pm3 --> lf hid brute v a 26 f 21 c 200 d 2000
 ```
 
-## Indala
+## Indala {#indala-id}
 
 Read Indala card
 ```
@@ -318,7 +329,7 @@ Options
 pm3 --> lf indala clone a0000000c2c436c1
 ```
 
-## Hitag
+## Hitag {#hitag-id}
 
 Read Hitag information
 ```
@@ -376,7 +387,7 @@ pm3 --> lf hitag reader 21 56713368
 pm3 --> lf hitag sim c378181c_a8f7.ht2 
 ```
 
-## T55XX
+## T55XX {#t55xx-id}
 
 Detect T55XX card
 ```
@@ -408,7 +419,7 @@ Wipe a T55xx tag and set defaults
 lf t55xx wipe
 ```
 
-## Data
+## Data {#data-id}
 
 Get raw samples [512-40000]
 ```
@@ -425,7 +436,7 @@ Load samples from file
 data load <filename>
 ```
 
-## Lua Scripts
+## Lua Scripts {#lua-id}
 
 List Lua Scripts
 
