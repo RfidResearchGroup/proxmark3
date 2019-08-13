@@ -8,27 +8,8 @@
 //-----------------------------------------------------------------------------
 // main code for HF Mifare aka ColinRun by Colin Brigato
 //-----------------------------------------------------------------------------
-#include "standalone.h" // standalone definitions
-#include <stdbool.h>    // for bool
-#include <stdio.h>
-#include <inttypes.h>
 #include "hf_colin.h"
-#include "appmain.h"
-#include "fpgaloader.h"
-#include "dbprint.h"
-#include "ticks.h"
-#include "commonutil.h"
-#include "crc16.h"
-#include "BigBuf.h"
 #include "frozen.h"
-#include "proxmark3_arm.h"
-#include "mifaresim.h"  // mifare1ksim
-#include "mifareutil.h"
-#include "iso14443a.h"
-#include "util.h"
-#include "vtsend.h"
-#include "spiffs.h"
-#include "string.h"
 
 #define MF1KSZ 1024
 #define MF1KSZSIZE 64
@@ -720,8 +701,10 @@ readysim:
     SpinOff(100);
     LED_C_ON();
 
-    uint16_t flags;
-    switch (p_card.uidlen) {
+    DBGLEVEL = DBG_NONE;
+
+    //uint16_t flags=0;
+    /*switch (p_card.uidlen) {
         case 10:
             flags = FLAG_10B_UID_IN_DATA;
             break;
@@ -734,13 +717,23 @@ readysim:
         default:
             flags = FLAG_UID_IN_EMUL;
             break;
-    }
+    }*/
 
     // Use UID, SAK, ATQA from EMUL, if uid not defined
     // if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-    flags |= FLAG_UID_IN_EMUL;
+    //flags |= FLAG_UID_IN_EMUL;
     //}
-    Mifare1ksim(flags | FLAG_MF_1K, 0, cjuid, 0, 0);
+    //flags |= FLAG_MF_1K;
+    //if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
+    //    flags |= FLAG_UID_IN_EMUL;
+    //}
+    //flags = 0x10;
+    uint16_t flags = 0;
+    flags = 16;
+    DbprintfEx(FLAG_NEWLINE,"\n\n\n\n\n\n\n\nn\n\nn\n\n\nflags: %d (0x%02x)",flags,flags);
+    cjSetCursLeft();
+    SpinOff(1000);
+    Mifare1ksim(flags , 0, cjuid);
     LED_C_OFF();
     SpinOff(50);
     vtsend_cursor_position_restore(NULL);

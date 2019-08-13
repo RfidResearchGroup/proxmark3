@@ -7,8 +7,9 @@
 
 #ifndef SPIFFS_H_
 #define SPIFFS_H_
-
-#include "common.h"
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 #include "spiffs_config.h"
 
@@ -32,7 +33,7 @@ typedef struct rdv40_spiffs_fsinfo {
 
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
 
-
+int rdv40_spiffs_check();
 int rdv40_spiffs_lazy_unmount();
 int rdv40_spiffs_lazy_mount();
 int rdv40_spiffs_lazy_mount_rollback(int changed);
@@ -852,6 +853,9 @@ u32_t SPIFFS_buffer_bytes_for_cache(spiffs *fs, u32_t num_pages);
 #endif
 
 #if SPIFFS_CACHE
+#endif
+#if defined(__cplusplus)
+}
 #endif
 
 #endif /* SPIFFS_H_ */

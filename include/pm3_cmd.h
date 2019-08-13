@@ -299,6 +299,7 @@ typedef struct {
 #define CMD_SPIFFS_PRINT_FSINFO                                           0x2133
 #define CMD_SPIFFS_DOWNLOAD                                               0x2134
 #define CMD_SPIFFS_DOWNLOADED                                             0x2135
+#define CMD_SPIFFS_CHECK						  0x3000
 // more ?
 
 
