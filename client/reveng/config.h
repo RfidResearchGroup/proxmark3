@@ -83,7 +83,6 @@
 #define BMP_BIT   64
 #define BMP_SUB   32
 
-//#elif INTPTR_MAX == INT32_MAX
 #elif UINTMAX_MAX == UINT32_MAX
 // 32-bit
 #define PRESETS  1
