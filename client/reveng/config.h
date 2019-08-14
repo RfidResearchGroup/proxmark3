@@ -77,6 +77,7 @@
  */
 
 
+#include <stdint.h>
 #if UINTPTR_MAX == UINT64_MAX
 // 64-bit
 #define PRESETS  1
