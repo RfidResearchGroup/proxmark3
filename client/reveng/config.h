@@ -77,13 +77,13 @@
  */
 
 
-#if UINTMAX_MAX == UINT64_MAX
+#if UINTPTR_MAX == UINT64_MAX
 // 64-bit
 #define PRESETS  1
 #define BMP_BIT   64
 #define BMP_SUB   32
 
-#elif UINTMAX_MAX == UINT32_MAX
+#elif UINTPTR_MAX == UINT32_MAX
 // 32-bit
 #define PRESETS  1
 #define BMP_BIT   32
