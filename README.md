@@ -49,11 +49,14 @@ This fork now compiles just fine on
 If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
 
 - Internal notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
-- Internal notes on UART
-- Internal notes on Frame format
-- Internal notes on standalone mode
+- Internal notes on [UART](/doc/uart_notes.md)
+- Internal notes on [Frame format](/doc/new_frame_format.md)
+- Internal notes on [external flash](/doc/ext_flash_notes.md)
+- Internal notes on [standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)
+- Internal notes on [Termux / Android](/doc/termux_notes.md)
 
-
+## Cheat sheet
+Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
 
 ## Why didn't you base it on official Proxmark3 Master?
 
