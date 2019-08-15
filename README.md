@@ -1,7 +1,9 @@
-# Proxmark3 RDV4.0 Dedicated Github
+# RRG / Iceman repo, dedicated to Proxmark3 RDV4.0 
 
 This repo is based on iceman fork for Proxmark3. It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.0 new hardware and design.
-Note that it also supports other Proxmark3 platforms as well!
+
+_Note that it also supports other Proxmark3 platforms as well!_
+
 
 | Releases     | Linux & OSX CI       | Windows CI |
 | ------------------- |:-------------------:| -------------------:|
