@@ -42,8 +42,8 @@ This fork now compiles just fine on
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604, 1804, 1904
    - Mac OS X / Homebrew
-   - ParrotOS
-   - WSL (Windows subsystem linux) on Windows 10
+   - ParrotOS, Gentoo, Pentoo
+   - WSL, WSL2  (Windows subsystem linux) on Windows 10
    - Docker container
 
 If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
