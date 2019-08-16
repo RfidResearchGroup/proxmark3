@@ -1,17 +1,11 @@
 # Cheatsheet
+||||
+|---|---|---|
+|[Generic](#Generic)|[iClass](#iClass)|[Mifare](#Mifare)|
+|[HID Prox](#HID-Prox)|[Indala](#Indala)|[Hitag](#Hitag)|
+|[T55XX](#T55XX)|[Data](#Data)|[Lua Scripts](#Lua-Scripts)|
+|[Memory](#Memory)|[Sim Module](#Sim-Module)|[Smart Card](#Smart-Card)|
 
-- [Generic](#Generic)
-- [iClass](#iClass)
-- [Mifare](#Mifare)
-- [HID Prox](#HID-Prox)
-- [Indala](#Indala)
-- [Hitag](#Hitag)
-- [T55XX](#T55XX)
-- [Data](#Data)
-- [Lua Scripts](#Lua-Scripts)
-- [Memory](#Memory)
-- [Sim Module](#Sim-Module)
-- [Smart Card](#Smart-Card)
 
 ## Generic
 
