@@ -67,7 +67,7 @@ main(int argc, char *argv[]) {
     setbmp();
     if (BMP_BIT != bmpbit || BMP_SUB != bmpsub) {
         fprintf(stderr, "reveng: configuration fault.  Update "
-                "config.h with these definitions and "
+                "reveng/config.h with these definitions and "
                 "recompile:\n"
                 "\t#define BMP_BIT   %d\n"
                 "\t#define BMP_SUB   %d\n",

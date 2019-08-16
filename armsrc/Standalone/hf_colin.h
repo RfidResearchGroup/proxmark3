@@ -9,6 +9,10 @@
 // StandAlone Mod
 //-----------------------------------------------------------------------------
 
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+
 #ifndef FALSE
 #define FALSE 0
 #endif

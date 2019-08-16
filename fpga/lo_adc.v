@@ -55,28 +55,28 @@ assign ssp_frame = (pck_divider[7:3] == 5'd1) && !clk_state;
 
 always @(posedge pck0)
 begin
-	if(pck_divider == divisor[7:0])
+    if(pck_divider == divisor[7:0])
   begin
-		pck_divider <= 8'd0;
-		clk_state = !clk_state;
+        pck_divider <= 8'd0;
+        clk_state = !clk_state;
   end
-	else
-	begin
-		pck_divider <= pck_divider + 1;
-	end
+    else
+    begin
+        pck_divider <= pck_divider + 1;
+    end
 end
 
 always @(posedge pck0)
 begin
-	if((pck_divider == 8'd7) && !clk_state)
+    if((pck_divider == 8'd7) && !clk_state)
   begin
       to_arm_shiftreg <= adc_d;
   end
   else
-	begin
+    begin
     to_arm_shiftreg[7:1] <= to_arm_shiftreg[6:0];
     to_arm_shiftreg[0] <= 1'b0;
-	end
+    end
 end
 
 endmodule
