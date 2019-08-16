@@ -28,7 +28,7 @@ FALSE = false
 
 platform = $(shell uname)
 
-VPATH = ../common ../common/zlib uart
+VPATH = ../common uart
 OBJDIR = obj
 
 LDLIBS ?= -L/usr/local/lib
@@ -49,8 +49,10 @@ MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIB = $(MBEDTLSLIBPATH)/libmbedtls.a
 CBORLIBPATH = ./tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
+ZLIBPATH = ../common/zlib
+ZLIB = $(ZLIBPATH)/libz.a
 REVENGFLAGS = -DPRESETS
-LIBS = -I../common/zlib -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
+LIBS = -I$(ZLIBPATH) -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
 INCLUDES_CLIENT = -I. -I../include -I../common -Iuart $(LIBS)
 CFLAGS ?= -Wall -Werror -g -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
@@ -251,9 +253,6 @@ ifeq ($(MULTIARCHSRCS), )
     CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
 
-ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
-ZLIBFLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED
-#-DDEBUG -Dverbose=1
 
 REVENGSRCS = reveng/preset.c \
             reveng/reveng.c \
@@ -267,7 +266,6 @@ QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp guidummy.cpp
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 OBJCOBJS = $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
-ZLIBOBJS = $(ZLIBSRCS:%.c=$(OBJDIR)/%.o)
 REVENGOBJS = $(REVENGSRCS:%.c=$(OBJDIR)/%.o)
 MULTIARCHOBJS = $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
             $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_MMX.o) \
@@ -293,18 +291,18 @@ ifeq "$(SUPPORTS_AVX512)" "True"
 endif
 
 BINS = proxmark3 flasher
-CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(REVENGOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua reveng/bmptst
+CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(REVENGOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua reveng/bmptst
 
 # need to assign dependancies to build these first...
-all: lua_build jansson_build mbedtls_build cbor_build $(BINS)
+all: zlib_build lua_build jansson_build mbedtls_build cbor_build $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
-proxmark3: reveng/bmptst $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(REVENGOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+proxmark3: LDLIBS+=$(ZLIB) $(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
+proxmark3: reveng/bmptst $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(REVENGOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 	$(info [=] LD $@)
-	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(REVENGOBJS) $(LDLIBS)  -o $@
+	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(REVENGOBJS) $(LDLIBS)  -o $@
 
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
 	$(info [=] LD $@)
@@ -330,6 +328,7 @@ lualibs/mf_default_keys.lua : default_keys.dic
 
 clean:
 	$(Q)$(RM) $(CLEAN)
+	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
@@ -338,6 +337,10 @@ clean:
 tarbin: $(BINS)
 	$(info [=] TAR ../proxmark3-$(platform)-bin.tar)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
+
+zlib_build:
+	$(info [*] MAKE zlib)
+	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) all
 
 lua_build:
 	$(info [*] MAKE liblua for $(LUAPLATFORM))
@@ -395,10 +398,11 @@ $(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%_AVX512.d
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d
 
+
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
 	$(info [-] CC $<)
-	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) $(ZLIBFLAGS) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 %.o: %.cpp
@@ -413,7 +417,7 @@ $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
-DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBSRCS) $(REVENGSRCS)) \
+DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(REVENGSRCS)) \
 	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
