@@ -9,7 +9,9 @@
 - [T55XX](#T55XX)
 - [Data](#Data)
 - [Lua Scripts](#Lua-Scripts)
-
+- [Memory](#Memory)
+- [Sim Module](#Sim-Module)
+- [Smart Card](#Smart-Card)
 
 ## Generic
 
@@ -31,6 +33,11 @@ pm3 --> hw tune
 Check versioning
 ```
 pm3 --> hw version
+```
+
+Check overall status
+```
+pm3 --> hw status
 ```
 
 ## iClass
@@ -169,20 +176,30 @@ Check for default keys
 Options
 ---
 <*card memory> <key type (A/B/?)> [t|d|s|ss] <dic (*.dic)>
-* - all sectors
-card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
-d - write keys to binary file
+*              : all sectors
+card memory    : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
+d              : write keys to binary file
 
 pm3 --> hf mf chk *1 ? d default_keys.dic
+```
+
+Check for default keys from local memory
+```
+Options
+---
+card memory   : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K          
+m             : use dictionary from flashmemory
+
+pm3 --> hf mf fchk 1 m
 ```
 
 Dump Mifare card contents
 ```
 Options
 ---
-<card memory>: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K
-k <name>     : key filename, if no <name> given, UID will be used as filename"
-f <name>     : data filename, if no <name> given, UID will be used as filename
+<card memory> : 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K
+k <name>      : key filename, if no <name> given, UID will be used as filename"
+f <name>      : data filename, if no <name> given, UID will be used as filename
 
 pm3 --> hf mf dump 1
 pm3 --> hf mf dump 1 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
@@ -192,7 +209,7 @@ Convert .bin to .eml
 ```
 Options
 ---
-i ?????????????
+i <file>     : Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
 
 pm3 --> script run dumptoemul -i dumpdata.bin
 ```
@@ -289,11 +306,11 @@ Brute force HID reader
 ```
 Options
 ---
-a <format>        :  26|33|34|35|37|40|44|84");
-f <facility-code> :  8-bit value HID facility code");
-c <cardnumber>    :  (optional) cardnumber to start with, max 65535");
-d <delay>         :  delay betweens attempts in ms. Default 1000ms");
-v                 :  verbose logging, show all tries");
+a <format>        :  26|33|34|35|37|40|44|84
+f <facility-code> :  8-bit value HID facility code
+c <cardnumber>    :  (optional) cardnumber to start with, max 65535
+d <delay>         :  delay betweens attempts in ms. Default 1000ms
+v                 :  verbose logging, show all tries
 
 pm3 --> lf hid brute a 26 f 224
 pm3 --> lf hid brute v a 26 f 21 c 200 d 2000
@@ -345,7 +362,7 @@ HitagS:
 02 <key>        : Read all pages, crypto mode. Set key=0 for no auth
 
 Hitag2:
-21 <password>   : Read all pages, password mode. Default: 4D494B52 (\"MIKR\")
+21 <password>   : Read all pages, password mode. Default: 4D494B52 ("MIKR")
 22 <nr> <ar>    : Read all pages, challenge mode
 23 <key>        : Read all pages, crypto mode. Key format: ISK high + ISK low. Default: 4F4E4D494B52 ("ONMIKR")
 25              : Test recorded authentications
@@ -394,16 +411,26 @@ Detect T55XX card
 pm3 --> lf t55xx detect
 ```
 
-Configure demodulation
+Configure modulation
 ```
 Options
 ---
-<FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  : Set demodulation
+<FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  : Set modulation
 EM is ASK
 HID Prox is FSK
 Indala is PSK
 
 pm3 --> lf t55xx config FSK
+```
+
+Set timings to default
+```
+Options
+---
+p            : persist to flashmemory          
+z            : Set default t55x7 timings (use p to save if required)    
+
+pm3 --> lf t55xx deviceconfig z p
 ```
 
 Write to T55xx block
@@ -416,24 +443,24 @@ pm3 --> lf t55xx wr b 0 d 00081040
 
 Wipe a T55xx tag and set defaults
 ```
-lf t55xx wipe
+pm3 --> lf t55xx wipe
 ```
 
 ## Data
 
 Get raw samples [512-40000]
 ```
-data samples <size>
+pm3 --> data samples <size>
 ```
 
 Save samples to file
 ```
-data save <filename>
+pm3 --> data save <filename>
 ```
 
 Load samples from file
 ```
-data load <filename>
+pm3 --> data load <filename>
 ```
 
 ## Lua Scripts
@@ -441,7 +468,7 @@ data load <filename>
 List Lua Scripts
 
 ```
-script list
+pm3 --> script list
 ```
 
 Convert .bin to .eml
@@ -450,7 +477,7 @@ Options
 ---
 i <file>    : Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
 
-script run dumptoemul -i xxxxxxxxxxxxxx.bin
+pm3 --> script run dumptoemul -i xxxxxxxxxxxxxx.bin
 ```
 
 Format Mifare card
@@ -462,5 +489,77 @@ n <key>       : the new key that will be written to the card
 a <access>    : the new access bytes that will be written to the card
 x             : execute the commands aswell.
 
-script run formatMifare -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
+pm3 --> script run formatMifare -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
+```
+
+## Memory
+
+Load default keys into memory
+```
+Options
+---
+o <offset>         : offset in memory          
+f <filename>       : file name          
+m                  : upload 6 bytes keys (mifare key dictionary)          
+i                  : upload 8 bytes keys (iClass key dictionary)          
+t                  : upload 4 bytes keys (pwd dictionary)   
+
+pm3 --> mem load f default_keys m
+pm3 --> mem load f default_pwd t
+pm3 --> mem load f default_iclass_keys i
+```
+
+## Sim Module
+
+Upgrade Sim Module firmware
+```
+pm3 --> sc upgrade f ../tools/simmodule/SIM011.BIN 
+```
+
+## Smart Card
+
+Get Smart Card Information
+```
+pm3 --> sc info
+```
+
+Act like an IS07816 reader
+```
+pm3 --> sc reader
+```
+
+Set clock speed
+```
+Options
+---
+c <speed>       : clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz)           
+          
+pm3 --> sc setclock c 2 
+```
+
+Send raw hex data
+```
+Options
+---          
+r           : do not read response          
+a           : active smartcard without select (reset sc module)          
+s           : active smartcard with select (get ATR)          
+t           : executes TLV decoder if it possible          
+0           : use protocol T=0          
+d <bytes>   : bytes to send          
+          
+pm3 --> sc raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR          
+pm3 --> sc raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory          
+pm3 --> sc raw 0 t d 00a4040007a0000000041010               : Mastercard          
+pm3 --> sc raw 0 t d 00a4040007a0000000031010               : Visa  
+````
+
+Bruteforce SPI
+```
+Options
+---
+t          : executes TLV decoder if it possible
+
+pm3 --> sc brute 
+pm3 --> sc brute t
 ```
