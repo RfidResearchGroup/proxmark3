@@ -51,12 +51,13 @@ CBORLIBPATH = ./tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
 ZLIBPATH = ../common/zlib
 ZLIB = $(ZLIBPATH)/libz.a
-REVENGFLAGS = -DPRESETS
-LIBS = -I$(ZLIBPATH) -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
+REVENGPATH = ./reveng
+REVENGLIB = $(REVENGPATH)/libreveng.a
+LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH)
 INCLUDES_CLIENT = -I. -I../include -I../common -Iuart $(LIBS)
 CFLAGS ?= -Wall -Werror -g -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
-PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(REVENGFLAGS) $(INCLUDES_CLIENT)
+PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
 ifneq (,$(findstring MINGW,$(platform)))
     PM3CFLAGS += -mno-ms-bitfields
 endif
@@ -253,20 +254,11 @@ ifeq ($(MULTIARCHSRCS), )
     CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
 
-
-REVENGSRCS = reveng/preset.c \
-            reveng/reveng.c \
-            reveng/cli.c \
-            reveng/bmpbit.c \
-            reveng/model.c \
-            reveng/poly.c
-
 QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp guidummy.cpp
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 OBJCOBJS = $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
-REVENGOBJS = $(REVENGSRCS:%.c=$(OBJDIR)/%.o)
 MULTIARCHOBJS = $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
             $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_MMX.o) \
             $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_SSE2.o) \
@@ -291,18 +283,18 @@ ifeq "$(SUPPORTS_AVX512)" "True"
 endif
 
 BINS = proxmark3 flasher
-CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(REVENGOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua reveng/bmptst
+CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
-all: zlib_build lua_build jansson_build mbedtls_build cbor_build $(BINS)
+all: lua_build jansson_build mbedtls_build cbor_build zlib_build reveng_build $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: LDLIBS+=$(ZLIB) $(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
-proxmark3: reveng/bmptst $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(REVENGOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(QTLDLIBS)
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 	$(info [=] LD $@)
-	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(REVENGOBJS) $(LDLIBS)  -o $@
+	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LDLIBS)  -o $@
 
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
 	$(info [=] LD $@)
@@ -328,19 +320,16 @@ lualibs/mf_default_keys.lua : default_keys.dic
 
 clean:
 	$(Q)$(RM) $(CLEAN)
-	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) clean
 
 tarbin: $(BINS)
 	$(info [=] TAR ../proxmark3-$(platform)-bin.tar)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
-
-zlib_build:
-	$(info [*] MAKE zlib)
-	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) all
 
 lua_build:
 	$(info [*] MAKE liblua for $(LUAPLATFORM))
@@ -358,10 +347,13 @@ cbor_build:
 	$(info [*] MAKE tinycbor)
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) all
 
+zlib_build:
+	$(info [*] MAKE zlib)
+	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) all
 
-reveng/bmptst: reveng/bmpbit.c reveng/config.h reveng/reveng.h
-	$(CC) $(CFLAGS) $(REVENGFLAGS) -DBMPTST -o $@ $<
-	( ./$@ && $(TOUCH) $@ ) || ( $(RM) $@ && $(FALSE) )
+reveng_build:
+	$(info [*] MAKE reveng)
+	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) all
 
 .PHONY: all clean
 
