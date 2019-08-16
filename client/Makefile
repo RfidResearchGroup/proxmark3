@@ -19,25 +19,20 @@ CC = gcc
 CXX = g++
 LD = g++
 TAR = tar
-TARFLAGS = -C .. --ignore-failed-read -rvf
+TARFLAGS ?= -v --ignore-failed-read -r
+TARFLAGS += -C .. -f
 RM = rm -f
 MV = mv
 TOUCH = touch
 FALSE = false
-
-ENV_LDFLAGS := $(LDFLAGS)
-ENV_CFLAGS := $(CFLAGS)
 
 platform = $(shell uname)
 
 VPATH = ../common ../common/zlib uart
 OBJDIR = obj
 
-LDLIBS =
-ifneq ($(platform),Darwin)
-    LDLIBS += -L/opt/local/lib
-endif
-LDLIBS += -L/usr/local/lib -lreadline -lpthread -lm
+LDLIBS ?= -L/usr/local/lib
+LDLIBS += -lreadline -lpthread -lm
 
 # RPi Zero gcc requires -latomic
 # but MacOSX /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
@@ -55,14 +50,16 @@ MBEDTLSLIB = $(MBEDTLSLIBPATH)/libmbedtls.a
 CBORLIBPATH = ./tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
 REVENGFLAGS = -DPRESETS
-LIBS = -I../common/zlib -Iuart -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
-INCLUDES_CLIENT = -I. -I../include -I../common -I/opt/local/include $(LIBS)
-LDFLAGS = $(ENV_LDFLAGS)
-CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE $(REVENGFLAGS) $(INCLUDES_CLIENT) -Wall -Werror -g -O3
+LIBS = -I../common/zlib -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
+INCLUDES_CLIENT = -I. -I../include -I../common -Iuart $(LIBS)
+CFLAGS ?= -Wall -Werror -g -O3
+# We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
+PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(REVENGFLAGS) $(INCLUDES_CLIENT)
 ifneq (,$(findstring MINGW,$(platform)))
-    CFLAGS += -mno-ms-bitfields
+    PM3CFLAGS += -mno-ms-bitfields
 endif
-CXXFLAGS = -I../include -Wall -O3
+CXXFLAGS ?= -Wall -Werror -O3
+PM3CXXFLAGS = $(CXXFLAGS) -I../include
 
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
@@ -93,7 +90,7 @@ ifeq ($(QTINCLUDES), )
     MOC = $(shell pkg-config --variable=moc_location QtCore)
     UIC = $(shell pkg-config --variable=uic_location QtCore)
 else
-    CXXFLAGS += -std=c++11 -fPIC
+    PM3CXXFLAGS += -std=c++11 -fPIC
 endif
 ifeq ($(QTINCLUDES), )
 # if both pkg-config commands failed, search in common places
@@ -103,7 +100,7 @@ ifeq ($(QTINCLUDES), )
         ifneq ($(wildcard $(QTDIR)/include/QtWidgets),)
             QTINCLUDES += -I$(QTDIR)/include/QtWidgets
             QTLDLIBS = -L$(QTDIR)/lib -lQt5Widgets -lQt5Gui -lQt5Core
-            CXXFLAGS += -std=c++11 -fPIC
+            PM3CXXFLAGS += -std=c++11 -fPIC
         endif
         MOC = $(QTDIR)/bin/moc
         UIC = $(QTDIR)/bin/uic
@@ -113,7 +110,7 @@ endif
 
 ifneq ($(QTLDLIBS),)
     QTGUIOBJS = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
-    CFLAGS += -DHAVE_GUI
+    PM3CFLAGS += -DHAVE_GUI
 else
     QTGUIOBJS = $(OBJDIR)/guidummy.o
 endif
@@ -370,63 +367,51 @@ print-%: ; @echo $* = $($*)
 
 $(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%_NOSIMD.d
 	$(info [-] CC(NOSIMD) $<)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_NOSIMD.Td) $(CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_NOSIMD.Td) $(PM3CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_NOSIMD.Td $(OBJDIR)/$*_NOSIMD.d
 
 $(OBJDIR)/%_MMX.o : %.c $(OBJDIR)/%_MMX.d
 	$(info [-] CC(MMX) $<)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_MMX.Td) $(CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_MMX.Td) $(PM3CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_MMX.Td $(OBJDIR)/$*_MMX.d
 
 $(OBJDIR)/%_SSE2.o : %.c $(OBJDIR)/%_SSE2.d
 	$(info [-] CC(SSE2) $<)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_SSE2.Td) $(CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_SSE2.Td) $(PM3CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_SSE2.Td $(OBJDIR)/$*_SSE2.d
 
 $(OBJDIR)/%_AVX.o : %.c $(OBJDIR)/%_AVX.d
 	$(info [-] CC(AVX) $<)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX.Td) $(CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_AVX.Td $(OBJDIR)/$*_AVX.d
 
 $(OBJDIR)/%_AVX2.o : %.c $(OBJDIR)/%_AVX2.d
 	$(info [-] CC(AVX2) $<)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX2.Td) $(CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX2.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_AVX2.Td $(OBJDIR)/$*_AVX2.d
 
 $(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%_AVX512.d
 	$(info [-] CC(AVX512) $<)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
 	$(info [-] CC $<)
-	$(Q)$(CC) $(DEPFLAGS) $(CFLAGS) $(ZLIBFLAGS) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) $(ZLIBFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 %.o: %.cpp
 $(OBJDIR)/%.o : %.cpp $(OBJDIR)/%.d
 	$(info [-] CXX $<)
-	$(Q)$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(QTINCLUDES) -c -o $@ $<
+	$(Q)$(CXX) $(DEPFLAGS) $(PM3CXXFLAGS) $(QTINCLUDES) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 %.o: %.m
 $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(info [-] CC $<)
-	$(Q)$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
+	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
-
-#$(CMDOBJS) $(COREOBJS): $(notdir $(%.c)) %.d
-#	$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
-#	$(POSTCOMPILE)
-
-#$(ZLIBOBJS): $(notdir $(%.c)) %.d
-#	$(CC) $(DEPFLAGS) $(CFLAGS) $(ZLIBFLAGS) -c -o $@ $<
-#	$(POSTCOMPILE)
-
-#$(QTGUIOBJS): $(notdir $(%.cpp)) %.d
-#	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c -o $@ $<
-#	$(POSTCOMPILE)
 
 DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBSRCS) $(REVENGSRCS)) \
 	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
