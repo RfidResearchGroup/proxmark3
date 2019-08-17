@@ -7,8 +7,8 @@ compiler: gcc
 # move some env variables to homebrew env
 env:
   global:
-    - HOMEBREW_TRAVIS_BRANCH=TRAVIS_BRANCH
-    - HOMEBREW_TRAVIS_COMMIT=TRAVIS_COMMIT
+    - HOMEBREW_TRAVIS_BRANCH=$TRAVIS_BRANCH
+    - HOMEBREW_TRAVIS_COMMIT=$TRAVIS_COMMIT
 
 # Test on Linux and MacOS
 matrix:
