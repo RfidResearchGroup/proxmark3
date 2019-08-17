@@ -31,10 +31,9 @@ addons:
 
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-    echo ${TRAVIS_COMMIT};
     brew info proxmark3;
     brew options proxmark3;	
-    brew install proxmark3;
+    brew install --HEAD proxmark3;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
     make all;
   fi
