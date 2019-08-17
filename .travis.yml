@@ -30,6 +30,7 @@ addons:
     taps: merlokk/proxmark3i
     
 env:
+  global:
     - HOMEBREW_TRAVIS_BRANCH=TRAVIS_BRANCH
     - HOMEBREW_TRAVIS_COMMIT=TRAVIS_COMMIT
 
