@@ -22,11 +22,14 @@ TAR = tar
 TARFLAGS ?= -v --ignore-failed-read -r
 TARFLAGS += -C .. -f
 RM = rm -f
+RMDIR= rm -rf
+MKDIR = mkdir -p
 MV = mv
 TOUCH = touch
 FALSE = false
 
 platform = $(shell uname)
+ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
 VPATH = ../common uart
 OBJDIR = obj
@@ -41,18 +44,22 @@ ifneq ($(platform),Darwin)
     LDLIBS += -Wl,--as-needed -latomic -Wl,--no-as-needed
 endif
 
+# local libraries
 LUALIBPATH = ./liblua
 LUALIB = $(LUALIBPATH)/liblua.a
 JANSSONLIBPATH = ./jansson
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
-MBEDTLSLIBPATH = ../common/mbedtls
-MBEDTLSLIB = $(MBEDTLSLIBPATH)/libmbedtls.a
 CBORLIBPATH = ./tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
-ZLIBPATH = ../common/zlib
-ZLIB = $(ZLIBPATH)/libz.a
 REVENGPATH = ./reveng
 REVENGLIB = $(REVENGPATH)/libreveng.a
+
+# common libraries
+MBEDTLSLIBPATH = ../common/mbedtls
+MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
+ZLIBPATH = ../common/zlib
+ZLIB = $(OBJDIR)/libz.a
+
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH)
 INCLUDES_CLIENT = -I. -I../include -I../common -Iuart $(LIBS)
 CFLAGS ?= -Wall -Werror -g -O3
@@ -283,10 +290,10 @@ ifeq "$(SUPPORTS_AVX512)" "True"
 endif
 
 BINS = proxmark3 flasher
-CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+CLEAN = $(BINS) *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
-all: lua_build jansson_build mbedtls_build cbor_build zlib_build reveng_build $(BINS)
+all: lua_build jansson_build cbor_build reveng_build mbedtls_build zlib_build $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
@@ -320,17 +327,17 @@ lualibs/mf_default_keys.lua : default_keys.dic
 
 clean:
 	$(Q)$(RM) $(CLEAN)
+	$(Q)$(RMDIR) $(OBJDIR)
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
-	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) clean
 
 tarbin: $(BINS)
 	$(info [=] TAR ../proxmark3-$(platform)-bin.tar)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
 
+# local libraries:
 lua_build:
 	$(info [*] MAKE liblua for $(LUAPLATFORM))
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) $(LUAPLATFORM)
@@ -339,21 +346,22 @@ jansson_build:
 	$(info [*] MAKE jansson)
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
 
-mbedtls_build:
-	$(info [*] MAKE mbedtls)
-	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) all
-
 cbor_build:
 	$(info [*] MAKE tinycbor)
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) all
 
-zlib_build:
-	$(info [*] MAKE zlib)
-	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) all
-
 reveng_build:
 	$(info [*] MAKE reveng)
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) all
+
+# common libraries:
+mbedtls_build:
+	$(info [*] MAKE mbedtls)
+	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
+
+zlib_build:
+	$(info [*] MAKE zlib)
+	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
 .PHONY: all clean
 
@@ -362,50 +370,58 @@ print-%: ; @echo $* = $($*)
 
 $(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%_NOSIMD.d
 	$(info [-] CC(NOSIMD) $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_NOSIMD.Td) $(PM3CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_NOSIMD.Td $(OBJDIR)/$*_NOSIMD.d
 
 $(OBJDIR)/%_MMX.o : %.c $(OBJDIR)/%_MMX.d
 	$(info [-] CC(MMX) $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_MMX.Td) $(PM3CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_MMX.Td $(OBJDIR)/$*_MMX.d
 
 $(OBJDIR)/%_SSE2.o : %.c $(OBJDIR)/%_SSE2.d
 	$(info [-] CC(SSE2) $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_SSE2.Td) $(PM3CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_SSE2.Td $(OBJDIR)/$*_SSE2.d
 
 $(OBJDIR)/%_AVX.o : %.c $(OBJDIR)/%_AVX.d
 	$(info [-] CC(AVX) $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_AVX.Td $(OBJDIR)/$*_AVX.d
 
 $(OBJDIR)/%_AVX2.o : %.c $(OBJDIR)/%_AVX2.d
 	$(info [-] CC(AVX2) $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX2.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_AVX2.Td $(OBJDIR)/$*_AVX2.d
 
 $(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%_AVX512.d
 	$(info [-] CC(AVX512) $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
 	$(Q)$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d
-
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
 	$(info [-] CC $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 %.o: %.cpp
 $(OBJDIR)/%.o : %.cpp $(OBJDIR)/%.d
 	$(info [-] CXX $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CXX) $(DEPFLAGS) $(PM3CXXFLAGS) $(QTINCLUDES) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 %.o: %.m
 $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(info [-] CC $<)
+	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
@@ -419,4 +435,3 @@ $(DEPENDENCY_FILES): ;
 .PRECIOUS: $(DEPENDENCY_FILES)
 
 -include $(DEPENDENCY_FILES)
-
