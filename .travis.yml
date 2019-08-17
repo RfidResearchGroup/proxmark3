@@ -19,6 +19,14 @@ addons:
       - gcc-arm-none-eabi
       - libnewlib-dev
   homebrew:
+    packages:
+      - readline
+      - p7zip
+      - libusb-compat
+      - perl
+      - qt5
+      - wget
+      - gcc-arm-none-eabi
     taps: RfidResearchGroup/proxmark3
 
 install:
