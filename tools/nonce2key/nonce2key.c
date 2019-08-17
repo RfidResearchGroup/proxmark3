@@ -1,4 +1,4 @@
-#include "crapto1.h"
+#include "crapto1/crapto1.h"
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <stdio.h>
@@ -48,7 +48,7 @@ int main(const int argc, const char *argv[]) {
     }
     printf("+----+--------+---+-----+---------------+\n");
 
-    state = lfsr_common_prefix(nr, rr, ks3x, par);
+    state = lfsr_common_prefix(nr, rr, ks3x, par, false);
     lfsr_rollback_word(state, uid ^ nt, 0);
     crypto1_get_lfsr(state, &key_recovered);
     printf("\nkey recovered: %012" PRIx64 "\n\n", key_recovered);
