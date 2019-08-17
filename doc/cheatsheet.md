@@ -1,5 +1,5 @@
-# Cheatsheet
-|Generic|LF|HF|
+# command Cheat Sheet
+|Generic|Low Frequence 125kHz|High Frequence 13.56MHz|
 |---|---|---|
 |[Generic](#Generic)|[T55XX](#T55XX)|[Mifare](#Mifare)|
 |[Data](#Data)|[HID Prox](#HID-Prox)|[iClass](#iClass)|
