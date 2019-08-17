@@ -1,5 +1,5 @@
 # Cheatsheet
-|Genrice|LF|HF|
+|Generic|LF|HF|
 |---|---|---|
 |[Generic](#Generic)|[T55XX](#T55XX)|[Mifare](#Mifare)|
 |[Data](#Data)|[HID Prox](#HID-Prox)|[iClass](#iClass)|
