@@ -5,30 +5,27 @@
 #-----------------------------------------------------------------------------
 
 CC=gcc
-CXX=g++
-#COMMON_FLAGS = -m32
+LD=gcc
 
 OBJDIR = obj
 
-LDLIBS = -lreadline -lpthread
-CFLAGS = -std=gnu99 -Wall -Wno-unused-function $(COMMON_FLAGS) -g -O3
+LDLIBS =
+CFLAGS ?= -Wall -Werror -g -O3
+CFLAGS += -std=gnu99
 ifeq ($(platform),Darwin)
 	LDLIBS += -lusb-1.0
 else
 	LDLIBS += -lusb
 endif
 
-LDFLAGS = $(COMMON_FLAGS)
-CXXFLAGS =
-
 RM = rm -f
-BINS = flasher
-CLEAN = flasher flasher.exe $(OBJDIR)/*.o *.o
+BINS = pm3-hid-flasher
+CLEAN = pm3-hid-flasher pm3-hid-flasher.exe $(OBJDIR)/*.o
 
 all: $(BINS)
 
-flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(OBJDIR)/proxusb.o
-	$(CXX) $(CXXFLAGS) $^ $(LDLIBS) -o $@
+pm3-hid-flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(OBJDIR)/proxusb.o
+	$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(OBJDIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
