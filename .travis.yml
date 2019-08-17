@@ -4,6 +4,12 @@ language: c
 #default linux build env is: xenial
 compiler: gcc
 
+# move some env variables to homebrew env
+env:
+  global:
+    - HOMEBREW_TRAVIS_BRANCH=TRAVIS_BRANCH
+    - HOMEBREW_TRAVIS_COMMIT=TRAVIS_COMMIT
+
 # Test on Linux and MacOS
 matrix:
   include:
@@ -29,11 +35,6 @@ addons:
       - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     taps: merlokk/proxmark3i
     
-env:
-  global:
-    - HOMEBREW_TRAVIS_BRANCH=TRAVIS_BRANCH
-    - HOMEBREW_TRAVIS_COMMIT=TRAVIS_COMMIT
-
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
     brew info proxmark3;
