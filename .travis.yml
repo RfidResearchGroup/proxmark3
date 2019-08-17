@@ -26,11 +26,12 @@ addons:
       - perl
       - qt5
       - wget
-      - gcc-arm-none-eabi
+      - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     taps: RfidResearchGroup/proxmark3
 
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
+    echo ${TRAVIS_COMMIT}
     brew info proxmark3;
     brew options proxmark3;	
     brew install --HEAD proxmark3;
