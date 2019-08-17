@@ -293,13 +293,13 @@ BINS = proxmark3 flasher
 CLEAN = $(BINS) *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 
 # need to assign dependancies to build these first...
-all: lua_build jansson_build cbor_build reveng_build mbedtls_build zlib_build $(BINS)
+all: $(BINS)
 
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LDLIBS)  -o $@
 
@@ -338,28 +338,28 @@ tarbin: $(BINS)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
 
 # local libraries:
-lua_build:
+$(LUALIB):
 	$(info [*] MAKE liblua for $(LUAPLATFORM))
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) $(LUAPLATFORM)
 
-jansson_build:
+$(JANSSONLIB):
 	$(info [*] MAKE jansson)
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) all
 
-cbor_build:
+$(CBORLIB):
 	$(info [*] MAKE tinycbor)
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) all
 
-reveng_build:
+$(REVENGLIB):
 	$(info [*] MAKE reveng)
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) all
 
 # common libraries:
-mbedtls_build:
+$(MBEDTLSLIB):
 	$(info [*] MAKE mbedtls)
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
-zlib_build:
+$(ZLIB):
 	$(info [*] MAKE zlib)
 	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
