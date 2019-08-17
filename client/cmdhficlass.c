@@ -322,31 +322,31 @@ static void fuse_config(const picopass_hdr *hdr) {
     uint8_t fuses = hdr->conf.fuses;
 
     if (isset(fuses, FUSE_FPERS))
-        PrintAndLogEx(SUCCESS, "\tMode: Personalization [Programmable]");
+        PrintAndLogEx(SUCCESS, "    Mode: Personalization [Programmable]");
     else
-        PrintAndLogEx(NORMAL, "\tMode: Application [Locked]");
+        PrintAndLogEx(NORMAL, "    Mode: Application [Locked]");
 
     if (isset(fuses, FUSE_CODING1)) {
-        PrintAndLogEx(NORMAL, "\tCoding: RFU");
+        PrintAndLogEx(NORMAL, "    Coding: RFU");
     } else {
         if (isset(fuses, FUSE_CODING0))
-            PrintAndLogEx(NORMAL, "\tCoding: ISO 14443-2 B/ISO 15693");
+            PrintAndLogEx(NORMAL, "    Coding: ISO 14443-2 B/ISO 15693");
         else
-            PrintAndLogEx(NORMAL, "\tCoding: ISO 14443B only");
+            PrintAndLogEx(NORMAL, "    Coding: ISO 14443B only");
     }
     // 1 1
-    if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "\tCrypt: Secured page, keys not locked");
+    if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "    Crypt: Secured page, keys not locked");
     // 1 0
-    if (isset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "\tCrypt: Secured page, keys locked");
+    if (isset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "    Crypt: Secured page, keys locked");
     // 0 1
-    if (notset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "\tCrypt: Non secured page");
+    if (notset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "    Crypt: Non secured page");
     // 0 0
-    if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "\tCrypt: No auth possible. Read only if RA is enabled");
+    if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "    Crypt: No auth possible. Read only if RA is enabled");
 
     if (isset(fuses, FUSE_RA))
-        PrintAndLogEx(NORMAL, "\tRA: Read access enabled");
+        PrintAndLogEx(NORMAL, "    RA: Read access enabled");
     else
-        PrintAndLogEx(WARNING, "\tRA: Read access not enabled");
+        PrintAndLogEx(WARNING, "    RA: Read access not enabled");
 }
 
 static void getMemConfig(uint8_t mem_cfg, uint8_t chip_cfg, uint8_t *max_blk, uint8_t *app_areas, uint8_t *kb) {
@@ -396,26 +396,26 @@ static void mem_app_config(const picopass_hdr *hdr) {
     if (kb == 2 && (applimit > 0x1f)) applimit = 26;
 
     PrintAndLogEx(NORMAL, " Mem: %u KBits/%u App Areas (%u * 8 bytes) [%02X]", kb, app_areas, max_blk, mem);
-    PrintAndLogEx(NORMAL, "\tAA1: blocks 06-%02X", applimit);
-    PrintAndLogEx(NORMAL, "\tAA2: blocks %02X-%02X", applimit + 1, max_blk);
-    PrintAndLogEx(NORMAL, "\tOTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
-    PrintAndLogEx(NORMAL, "\nKeyAccess:");
+    PrintAndLogEx(NORMAL, "    AA1: blocks 06-%02X", applimit);
+    PrintAndLogEx(NORMAL, "    AA2: blocks %02X-%02X", applimit + 1, max_blk);
+    PrintAndLogEx(NORMAL, "    OTP: 0x%02X%02X", hdr->conf.otp[1],  hdr->conf.otp[0]);
+    PrintAndLogEx(NORMAL, "    KeyAccess:");
 
     uint8_t book = isset(mem, 0x20);
     if (book) {
-        PrintAndLogEx(NORMAL, "\tRead A - Kd");
-        PrintAndLogEx(NORMAL, "\tRead B - Kc");
-        PrintAndLogEx(NORMAL, "\tWrite A - Kd");
-        PrintAndLogEx(NORMAL, "\tWrite B - Kc");
-        PrintAndLogEx(NORMAL, "\tDebit  - Kd or Kc");
-        PrintAndLogEx(NORMAL, "\tCredit - Kc");
+        PrintAndLogEx(NORMAL, "    Read A - Kd");
+        PrintAndLogEx(NORMAL, "    Read B - Kc");
+        PrintAndLogEx(NORMAL, "    Write A - Kd");
+        PrintAndLogEx(NORMAL, "    Write B - Kc");
+        PrintAndLogEx(NORMAL, "    Debit  - Kd or Kc");
+        PrintAndLogEx(NORMAL, "    Credit - Kc");
     } else {
-        PrintAndLogEx(NORMAL, "\tRead A - Kd or Kc");
-        PrintAndLogEx(NORMAL, "\tRead B - Kd or Kc");
-        PrintAndLogEx(NORMAL, "\tWrite A - Kc");
-        PrintAndLogEx(NORMAL, "\tWrite B - Kc");
-        PrintAndLogEx(NORMAL, "\tDebit  - Kd or Kc");
-        PrintAndLogEx(NORMAL, "\tCredit - Kc");
+        PrintAndLogEx(NORMAL, "    Read A - Kd or Kc");
+        PrintAndLogEx(NORMAL, "    Read B - Kd or Kc");
+        PrintAndLogEx(NORMAL, "    Write A - Kc");
+        PrintAndLogEx(NORMAL, "    Write B - Kc");
+        PrintAndLogEx(NORMAL, "    Debit  - Kd or Kc");
+        PrintAndLogEx(NORMAL, "    Credit - Kc");
     }
 }
 static void print_picopass_info(const picopass_hdr *hdr) {
@@ -453,14 +453,14 @@ static int CmdHFiClassSim(const char *Cmd) {
 
     if (simType == 0) {
         if (param_gethex(Cmd, 1, CSN, 16)) {
-            PrintAndLogEx(WARNING, "A CSN should consist of 16 HEX symbols");
+            PrintAndLogEx(ERR, "A CSN should consist of 16 HEX symbols");
             return usage_hf_iclass_sim();
         }
-        PrintAndLogEx(NORMAL, "--simtype:%02x csn:%s", simType, sprint_hex(CSN, 8));
+        PrintAndLogEx(NORMAL, " simtype: %02x csn: %s", simType, sprint_hex(CSN, 8));
     }
 
     if (simType > 4) {
-        PrintAndLogEx(WARNING, "Undefined simptype %d", simType);
+        PrintAndLogEx(ERR, "Undefined simptype %d", simType);
         return usage_hf_iclass_sim();
     }
 
@@ -1903,7 +1903,7 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
             case 'f':
                 fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 if (fileNameLen < 1) {
-                    PrintAndLogEx(WARNING, "No filename found after f");
+                    PrintAndLogEx(ERR, "No filename found");
                     errors = true;
                 }
                 cmdp += 2;
@@ -1911,7 +1911,7 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
             case 'n':
                 keyNbr = param_get8(Cmd, cmdp + 1);
                 if (keyNbr >= ICLASS_KEYS_MAX) {
-                    PrintAndLogEx(WARNING, "Invalid block number");
+                    PrintAndLogEx(ERR, "Invalid block number, MAX is "_YELLOW_("%d"), ICLASS_KEYS_MAX);
                     errors = true;
                 }
                 cmdp += 2;
