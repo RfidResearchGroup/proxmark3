@@ -37,9 +37,9 @@ addons:
     
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-    brew info proxmark3i;
-    brew options proxmark3i;	
-    brew install --HEAD proxmark3i;
+    brew info merlokk/proxmark3i;
+    brew options merlokk/proxmark3i;	
+    brew install --HEAD merlokk/proxmark3i;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
     make all;
   fi
