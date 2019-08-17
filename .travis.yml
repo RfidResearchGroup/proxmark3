@@ -27,7 +27,9 @@ addons:
       - qt5
       - wget
       - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
-    taps: merlokk/proxmark3i --env=std
+
+before_install:
+    - brew tap merlokk/proxmark3i --env=std
 
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
