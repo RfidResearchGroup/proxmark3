@@ -77,14 +77,16 @@
  */
 
 
-#if UINTPTR_MAX == UINT64_MAX
-// 64-bit
+#include <stdint.h>
+#include <limits.h>
+#if ULONG_MAX == UINT64_MAX
+// most 64-bit platforms
 #define PRESETS  1
 #define BMP_BIT   64
 #define BMP_SUB   32
 
-#elif UINTPTR_MAX == UINT32_MAX
-// 32-bit
+#elif ULONG_MAX == UINT32_MAX
+// 32-bit platforms and Mingw64
 #define PRESETS  1
 #define BMP_BIT   32
 #define BMP_SUB   16
