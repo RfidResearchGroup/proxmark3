@@ -42,7 +42,7 @@ install:
     brew install --HEAD proxmark3;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
     make clean;
-    make all;
+    make all V=1;
   fi
 
 before_script:
