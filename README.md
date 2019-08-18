@@ -24,6 +24,7 @@ _Note that it also supports other Proxmark3 platforms as well!_
 |[Notes on Frame format](/doc/new_frame_format.md)|||
 |[Notes on external flash](/doc/ext_flash_notes.md)|||
 |[Notes on Termux / Android](/doc/termux_notes.md)|||
+|[Notes on Wireshark / tracedata](/doc/trace_wireshark_notes.md)|||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
 
@@ -54,6 +55,7 @@ If you intend to contribute to the code, please read the [coding style notes](HA
 - Internal notes on [external flash](/doc/ext_flash_notes.md)
 - Internal notes on [standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)
 - Internal notes on [Termux / Android](/doc/termux_notes.md)
+- Internal notes on [Wireshark / tracedata](/doc/trace_wireshark_notes.md)
 
 ## Cheat sheet
 Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
