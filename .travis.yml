@@ -34,7 +34,7 @@ addons:
       - wget
       - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     taps: RfidResearchGroup/proxmark3
-    
+
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
     brew info proxmark3;
@@ -45,10 +45,13 @@ install:
     make all;
   fi
 
+before_script:
+  - chmod +x pm3test.sh
+  
 script: 
 ## start and run a test script
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
     proxmark3 -h ;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
-    ./client/proxmark3 -h ;
+    ./pm3test.sh;
   fi
