@@ -52,6 +52,7 @@ script:
 ## start and run a test script
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     cd /Users/travis/Library/Caches/Homebrew/proxmark3--git;
+    chmod +x pm3test.sh;
     pwd;
     ls -la;    
     ./pm3test.sh;
