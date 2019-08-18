@@ -45,11 +45,13 @@ install:
     make all;
   fi
 
+before_script:
+  - chmod +x pm3test.sh
+  
 script: 
 ## start and run a test script
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
     proxmark3 -h ;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
-    chmod a+w ./pm3test.sh;
     ./pm3test.sh;
   fi
