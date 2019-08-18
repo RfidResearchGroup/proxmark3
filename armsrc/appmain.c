@@ -1518,6 +1518,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             test_spiffs();
             break;
         }
+        case CMD_SPIFFS_CHECK: {
+            rdv40_spiffs_check();
+            break;
+        }
         case CMD_SPIFFS_MOUNT: {
             rdv40_spiffs_lazy_mount();
             break;
@@ -1901,6 +1905,11 @@ void  __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_FLASH
     // If flash is not present, BUSY_TIMEOUT kicks in, let's do it after USB
     loadT55xxConfig();
+
+    //
+    // Enforce a spiffs check/garbage collection at boot so we are likely to never
+    // fall under the 2 contigous free blocks availables
+    rdv40_spiffs_check();
 #endif
 
     for (;;) {

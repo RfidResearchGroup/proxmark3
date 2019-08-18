@@ -102,13 +102,13 @@ lo_edge_detect le(
 );
 
 lo_adc la(
-	pck0,
-	la_pwr_lo, la_pwr_hi, la_pwr_oe1, la_pwr_oe2, la_pwr_oe3, la_pwr_oe4,
-	adc_d, la_adc_clk,
-	la_ssp_frame, la_ssp_din, ssp_dout, la_ssp_clk,
-	cross_hi, cross_lo,
-	la_dbg, divisor,
-	lo_is_125khz, lf_field
+    pck0,
+    la_pwr_lo, la_pwr_hi, la_pwr_oe1, la_pwr_oe2, la_pwr_oe3, la_pwr_oe4,
+    adc_d, la_adc_clk,
+    la_ssp_frame, la_ssp_din, ssp_dout, la_ssp_clk,
+    cross_hi, cross_lo,
+    la_dbg, divisor,
+    lo_is_125khz, lf_field
 );
 
 // Major modes:

@@ -442,7 +442,7 @@ static int CmdEM410xDemod(const char *Cmd) {
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdEM410xRead(const char *Cmd) {
-    lf_read(true, 8192);
+    lf_read(true, 12288);
     return CmdEM410xDemod(Cmd);
 }
 
@@ -599,7 +599,7 @@ static int CmdEM410xWatch(const char *Cmd) {
             PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             break;
         }
-        lf_read(true, 8201);
+        lf_read(true, 12288);
 
     } while (CmdEM410xRead("") != PM3_SUCCESS);
     return PM3_SUCCESS;

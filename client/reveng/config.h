@@ -57,32 +57,43 @@
 
 /* #define ALWPCK   1 */
 
-/* Define PRESETS to compile CRC RevEng with the preset models from the
+/* #define PRESETS  1
+ * Define PRESETS to compile CRC RevEng with the preset models from the
  * CRC Catalogue.  This implies BMPMACRO and so makes the code platform-
  * specific.
  */
 
-#ifdef _WIN32
-#define PRESETS  1 //
-#endif
-
-
-/* Macros defining the size of a bmp_t.
+/* #define BMP_BIT   32
+ * Macros defining the size of a bmp_t.
  * Their values only matter if PRESETS and/or BMPMACRO are defined, in
  * which case edit the macros below to suit your architecture.
  * Otherwise, BMP_BIT and BMP_SUB will be redefined as aliases of bmpbit
  * and bmpsub, global objects initialised at run time.
  */
 
-/* Size in bits of a bmp_t.  Not necessarily a power of two. */
-
-#define BMP_BIT   32
-
-/* The highest power of two that is strictly less than BMP_BIT.
+/* #define BMP_SUB   16
+ * The highest power of two that is strictly less than BMP_BIT.
  * Initialises the index of a binary search for set bits in a bmp_t.
  */
 
+
+#include <stdint.h>
+#include <limits.h>
+#if ULONG_MAX == UINT64_MAX
+// most 64-bit platforms
+#define PRESETS  1
+#define BMP_BIT   64
+#define BMP_SUB   32
+
+#elif ULONG_MAX == UINT32_MAX
+// 32-bit platforms and Mingw64
+#define PRESETS  1
+#define BMP_BIT   32
 #define BMP_SUB   16
+
+#else
+#error Cannot determine automatically REVENG PRESETS Macros for your platform, you need to set them manually
+#endif
 
 /*****************************************
  *                                       *

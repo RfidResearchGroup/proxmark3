@@ -16,6 +16,7 @@
 #include "common.h"
 #include "mifare.h" // struct
 #include "pm3_cmd.h"
+#include "crc16.h"  // compute_crc
 
 // When the PM acts as tag and is receiving it takes
 // 2 ticks delay in the RF part (for the first falling edge),

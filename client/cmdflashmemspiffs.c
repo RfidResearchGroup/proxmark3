@@ -39,6 +39,13 @@ static int CmdFlashMemSpiFFSTest(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdFlashMemSpiFFSCheck(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_CHECK, NULL, 0);
+    return PM3_SUCCESS;
+}
+
 static int CmdFlashMemSpiFFSTree(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
@@ -439,6 +446,7 @@ static command_t CommandTable[] = {
         "copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
         "Copy a file to another (destructively) in SPIFFS FileSystem in FlashMEM (spiffs)"
     },
+    {"check", CmdFlashMemSpiFFSCheck, IfPm3Flash, "Check/try to defrag faulty/fragmented Filesystem"},
     {"dump", CmdFlashMemSpiFFSDump, IfPm3Flash, "Dump a file from SPIFFS FileSystem in FlashMEM (spiffs)"},
     {"info", CmdFlashMemSpiFFSInfo, IfPm3Flash, "Print filesystem info and usage statistics (spiffs)"},
     {"load", CmdFlashMemSpiFFSLoad, IfPm3Flash, "Upload file into SPIFFS Filesystem (spiffs)"},

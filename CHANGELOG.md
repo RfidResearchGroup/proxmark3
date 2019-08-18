@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix reveng integration for all platforms else than WIN32 (@doegox)
+ - Add cheat sheet for easy operations of the Proxmark3 (scund00r)
+ - Chg commands are now in green in the helptext list (@iceman1001)
+ - Fix 'script run ndefdump' - better exit messages when failing (@iceman1001)
+ - Fix 'hf iclass dump' - now also saves in EML format (@iceman1001)
+ - Fix 'hf iclass sim 3' - now works on legacy readers and legacy SE readers (@iceman1001)
  - Rework hitag2 read/write help (@ViRb3)
  - Add 'lf nedap' - encoding / decoding  (anon)
  - Add client option `-i` to stay in interactive mode after a script or command (@DidierStevens/@doegox)

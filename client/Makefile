@@ -22,6 +22,8 @@ TAR = tar
 TARFLAGS = -C .. --ignore-failed-read -rvf
 RM = rm -f
 MV = mv
+TOUCH = touch
+FALSE = false
 
 ENV_LDFLAGS := $(LDFLAGS)
 ENV_CFLAGS := $(CFLAGS)
@@ -52,11 +54,11 @@ MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIB = $(MBEDTLSLIBPATH)/libmbedtls.a
 CBORLIBPATH = ./tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
+REVENGFLAGS = -DPRESETS
 LIBS = -I../common/zlib -Iuart -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH)
 INCLUDES_CLIENT = -I. -I../include -I../common -I/opt/local/include $(LIBS)
 LDFLAGS = $(ENV_LDFLAGS)
-
-CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE -DPRESETS $(INCLUDES_CLIENT) -Wall -Werror -g -O3
+CFLAGS = $(ENV_CFLAGS) -std=c99 -D_ISOC99_SOURCE $(REVENGFLAGS) $(INCLUDES_CLIENT) -Wall -Werror -g -O3
 ifneq (,$(findstring MINGW,$(platform)))
     CFLAGS += -mno-ms-bitfields
 endif
@@ -239,12 +241,6 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdscript.c \
             pm3_bitlib.c \
             cmdcrc.c \
-            reveng/preset.c \
-            reveng/reveng.c \
-            reveng/cli.c \
-            reveng/bmpbit.c \
-            reveng/model.c \
-            reveng/poly.c \
             bucketsort.c
 
 cpu_arch = $(shell uname -m)
@@ -262,12 +258,20 @@ ZLIBSRCS = deflate.c adler32.c trees.c zutil.c inflate.c inffast.c inftrees.c
 ZLIBFLAGS = -DZ_SOLO -DZ_PREFIX -DNO_GZIP -DZLIB_PM3_TUNED
 #-DDEBUG -Dverbose=1
 
+REVENGSRCS = reveng/preset.c \
+            reveng/reveng.c \
+            reveng/cli.c \
+            reveng/bmpbit.c \
+            reveng/model.c \
+            reveng/poly.c
+
 QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp guidummy.cpp
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 OBJCOBJS = $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 ZLIBOBJS = $(ZLIBSRCS:%.c=$(OBJDIR)/%.o)
+REVENGOBJS = $(REVENGSRCS:%.c=$(OBJDIR)/%.o)
 MULTIARCHOBJS = $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
             $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_MMX.o) \
             $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_SSE2.o) \
@@ -292,7 +296,7 @@ ifeq "$(SUPPORTS_AVX512)" "True"
 endif
 
 BINS = proxmark3 flasher
-CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+CLEAN = $(BINS) $(DEPENDENCY_FILES) $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(ZLIBOBJS) $(REVENGOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(OBJDIR)/*.o *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua reveng/bmptst
 
 # need to assign dependancies to build these first...
 all: lua_build jansson_build mbedtls_build cbor_build $(BINS)
@@ -301,9 +305,9 @@ all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+proxmark3: reveng/bmptst $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(REVENGOBJS) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
 	$(info [=] LD $@)
-	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(LDLIBS)  -o $@
+	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(ZLIBOBJS) $(REVENGOBJS) $(LDLIBS)  -o $@
 
 flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
 	$(info [=] LD $@)
@@ -353,6 +357,11 @@ mbedtls_build:
 cbor_build:
 	$(info [*] MAKE tinycbor)
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) all
+
+
+reveng/bmptst: reveng/bmpbit.c reveng/config.h reveng/reveng.h
+	$(CC) $(CFLAGS) $(REVENGFLAGS) -DBMPTST -o $@ $<
+	( ./$@ && $(TOUCH) $@ ) || ( $(RM) $@ && $(FALSE) )
 
 .PHONY: all clean
 
@@ -419,7 +428,7 @@ $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 #	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c -o $@ $<
 #	$(POSTCOMPILE)
 
-DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBSRCS)) \
+DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(ZLIBSRCS) $(REVENGSRCS)) \
 	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \

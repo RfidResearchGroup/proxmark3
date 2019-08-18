@@ -102,7 +102,7 @@ static command_t CommandTable[] = {
     {"sc",      CmdSmartcard, IfPm3Smartcard,          "{ Smart card ISO7816 commands... }"},
     {"script",  CmdScript,    AlwaysAvailable,         "{ Scripting commands }"},
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
-    {"usart",   CmdUsart,     IfPm3FpcUsartDevFromUsb, "{ USART commands... }"},
+    {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
     {"quit",    CmdQuit,      AlwaysAvailable,         ""},
     {"exit",    CmdQuit,      AlwaysAvailable,         "Exit program"},
     {NULL, NULL, NULL, NULL}

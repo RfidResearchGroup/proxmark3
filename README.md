@@ -1,7 +1,9 @@
-# Proxmark3 RDV4.0 Dedicated Github
+# RRG / Iceman repo, dedicated to Proxmark3 RDV4.0 
 
 This repo is based on iceman fork for Proxmark3. It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.0 new hardware and design.
-Note that it also supports other Proxmark3 platforms as well!
+
+_Note that it also supports other Proxmark3 platforms as well!_
+
 
 | Releases     | Linux & OSX CI       | Windows CI |
 | ------------------- |:-------------------:| -------------------:|
@@ -18,7 +20,7 @@ Note that it also supports other Proxmark3 platforms as well!
 |[Why didn't you base it on official PM3 Master?](#why-didnt-you-base-it-on-official-pm3-master)| [Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 |[PM3 GUI](#pm3-gui)|[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) |[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|
-|[Notes on UART](/doc/uart_notes.md)|||
+|[Notes on UART](/doc/uart_notes.md)||[Command Cheat sheet](/doc/cheatsheet.md)|
 |[Notes on Frame format](/doc/new_frame_format.md)|||
 |[Notes on external flash](/doc/ext_flash_notes.md)|||
 |[Notes on Termux / Android](/doc/termux_notes.md)|||
@@ -40,18 +42,21 @@ This fork now compiles just fine on
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604, 1804, 1904
    - Mac OS X / Homebrew
-   - ParrotOS
-   - WSL (Windows subsystem linux) on Windows 10
+   - ParrotOS, Gentoo, Pentoo
+   - WSL, WSL2  (Windows subsystem linux) on Windows 10
    - Docker container
 
 If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
 
 - Internal notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
-- Internal notes on UART
-- Internal notes on Frame format
-- Internal notes on standalone mode
+- Internal notes on [UART](/doc/uart_notes.md)
+- Internal notes on [Frame format](/doc/new_frame_format.md)
+- Internal notes on [external flash](/doc/ext_flash_notes.md)
+- Internal notes on [standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)
+- Internal notes on [Termux / Android](/doc/termux_notes.md)
 
-
+## Cheat sheet
+Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
 
 ## Why didn't you base it on official Proxmark3 Master?
 

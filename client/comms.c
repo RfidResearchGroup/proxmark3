@@ -19,6 +19,7 @@
 #include "ui.h"
 #include "crc16.h"
 #include "util_posix.h" // msclock
+#include "util_darwin.h" // en/dis-ableNapp();
 
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW

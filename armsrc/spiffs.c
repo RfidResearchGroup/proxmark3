@@ -22,8 +22,10 @@
 // case, will ensure a flush by rollbacking to previous Unmounted state
 #define RDV40_SPIFFS_CACHE_SZ ((LOG_PAGE_SIZE + 32) * 4)
 #define SPIFFS_FD_SIZE (32)
-#define RDV40_SPIFFS_MAX_FD (2)
+#define RDV40_SPIFFS_MAX_FD (3)
 #define RDV40_SPIFFS_FDBUF_SZ (SPIFFS_FD_SIZE * RDV40_SPIFFS_MAX_FD)
+
+#define RDV40_LLERASE_BLOCKSIZE (64*1024)
 
 #define RDV40_SPIFFS_LAZY_HEADER                                                                                       \
     int changed = 0;                                                                                                   \
@@ -43,12 +45,8 @@
     RDV40_SPIFFS_SAFE_FOOTER
 
 #include "spiffs.h"
-#include "flashmem.h"
-#include "dbprint.h"
-#include "printf.h"
-#include "common.h"
-#include "string.h"
 #include "BigBuf.h"
+#include "dbprint.h"
 
 ///// FLASH LEVEL R/W/E operations  for feeding SPIFFS Driver/////////////////
 static s32_t rdv40_spiffs_llread(u32_t addr, u32_t size, u8_t *dst) {
@@ -70,28 +68,29 @@ static s32_t rdv40_spiffs_llwrite(u32_t addr, u32_t size, u8_t *src) {
 
 static s32_t rdv40_spiffs_llerase(u32_t addr, u32_t size) {
 
+
+    uint8_t erased = 0;
+
     if (!FlashInit()) {
         return 130;
     }
-
-    uint32_t bytes_erased = 0, bytes_remaining = size;
-    while (bytes_remaining > 0) {
-
-        addr += bytes_erased;
-        Flash_CheckBusy(BUSY_TIMEOUT);
-        Flash_WriteEnable();
-        FlashSendByte(SECTORERASE);
-        Flash_TransferAdresse(addr);
-        FlashSendLastByte(0);
-
-        bytes_remaining -= 4096;
-        bytes_erased += 4096;
+    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Orig addr : %d\n", addr);
+    uint8_t block, sector = 0;
+    block = addr / RDV40_LLERASE_BLOCKSIZE;
+    if (block) {
+        addr = addr - (block * RDV40_LLERASE_BLOCKSIZE);
     }
+    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : Result addr : %d\n", addr);
+    sector = addr / SPIFFS_CFG_LOG_BLOCK_SZ;
+    Flash_CheckBusy(BUSY_TIMEOUT);
+    Flash_WriteEnable();
+    if (DBGLEVEL > 2) Dbprintf("LLERASEDBG : block : %d, sector : %d \n", block, sector);
+    erased = Flash_Erase4k(block, sector);
 
     Flash_CheckBusy(BUSY_TIMEOUT);
     FlashStop();
 
-    return SPIFFS_OK;
+    return SPIFFS_OK == erased ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -161,6 +160,15 @@ int rdv40_spiffs_unmount() {
         RDV40_SPIFFS_MOUNT_STATUS = RDV40_SPIFFS_UNMOUNTED;
     }
     return ret;
+}
+
+int rdv40_spiffs_check() {
+    rdv40_spiffs_lazy_mount();
+    SPIFFS_check(&fs);
+    SPIFFS_gc_quick(&fs, 0);
+    rdv40_spiffs_lazy_unmount();
+    rdv40_spiffs_lazy_mount();
+    return SPIFFS_gc(&fs, 8192) == SPIFFS_OK;
 }
 ////////////////////////////////////////////////////////////////////////////////
 
