@@ -7,7 +7,7 @@ PM3PATH=$(dirname "$0")
 cd "$PM3PATH" || exit 1
 
 function wait4proxmark_Linux {
-    echo >&2 "[=] Waiting for Proxmark to appear..."
+    echo >&2 "[=] Waiting for Proxmark3 to appear..."
     while true; do
         PM3=$(find /dev/pm3-* /dev/ttyACM* 2>/dev/null | head -1)
         if [[ $PM3 != "" ]]; then
@@ -19,7 +19,7 @@ function wait4proxmark_Linux {
 }
 
 function wait4proxmark_macOS {
-    echo >&2 "[=] Waiting for Proxmark to appear..."
+    echo >&2 "[=] Waiting for Proxmark3 to appear..."
     while true; do
         PM3=$(find /dev/pm3-* /dev/cu.usbmodem* 2>/dev/null | head -1)
         if [[ $PM3 != "" ]]; then
@@ -31,7 +31,7 @@ function wait4proxmark_macOS {
 }
 
 function wait4proxmark_Windows {
-    echo >&2 "[=] Waiting for Proxmark to appear..."
+    echo >&2 "[=] Waiting for Proxmark3 to appear..."
     while true; do
         device=$(wmic path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
         if [[ $device != "" ]]; then
@@ -44,7 +44,7 @@ function wait4proxmark_Windows {
 }
 
 function wait4proxmark_WSL {
-    echo >&2 "[=] Waiting for Proxmark to appear..."
+    echo >&2 "[=] Waiting for Proxmark3 to appear..."
     while true; do
         device=$(wmic.exe path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
         if [[ $device != "" ]]; then
