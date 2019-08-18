@@ -1,4 +1,6 @@
 # Command Cheat Sheet
+<a id="Top"></a>
+
 |Generic|Low Frequence 125 kHz|High Frequence 13.56 MHz|
 |---|---|---|
 |[Generic](#Generic)|[T55XX](#T55XX)|[Mifare](#Mifare)|
@@ -10,6 +12,7 @@
 
 
 ## Generic
+^[Top](#top)
 
 Identify High Frequency cards
 ```
@@ -37,6 +40,7 @@ pm3 --> hw status
 ```
 
 ## iClass
+^[Top](#top)
 
 Reverse permute iClass master key
 ```
@@ -166,6 +170,7 @@ pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b
 ```
 
 ## Mifare
+^[Top](#top)
 
 Check for default keys
 ```
@@ -264,6 +269,7 @@ pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-dat
 ```
 
 ## HID Prox
+^[Top](#top)
 
 Read HID Prox card
 ```
@@ -313,6 +319,7 @@ pm3 --> lf hid brute v a 26 f 21 c 200 d 2000
 ```
 
 ## Indala
+^[Top](#top)
 
 Read Indala card
 ```
@@ -343,6 +350,7 @@ pm3 --> lf indala clone a0000000c2c436c1
 ```
 
 ## Hitag
+^[Top](#top)
 
 Read Hitag information
 ```
@@ -401,6 +409,7 @@ pm3 --> lf hitag sim c378181c_a8f7.ht2
 ```
 
 ## T55XX
+^[Top](#top)
 
 Detect T55XX card
 ```
@@ -443,6 +452,7 @@ pm3 --> lf t55xx wipe
 ```
 
 ## Data
+^[Top](#top)
 
 Get raw samples [512-40000]
 ```
@@ -460,6 +470,7 @@ pm3 --> data load <filename>
 ```
 
 ## Lua Scripts
+^[Top](#top)
 
 List Lua Scripts
 
@@ -489,6 +500,7 @@ pm3 --> script run formatMifare -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
 ```
 
 ## Memory
+^[Top](#top)
 
 Load default keys into memory
 ```
@@ -506,6 +518,7 @@ pm3 --> mem load f default_iclass_keys i
 ```
 
 ## Sim Module
+^[Top](#top)
 
 Upgrade Sim Module firmware
 ```
@@ -513,6 +526,7 @@ pm3 --> sc upgrade f ../tools/simmodule/SIM011.BIN
 ```
 
 ## Smart Card
+^[Top](#top)
 
 Get Smart Card Information
 ```
