@@ -337,6 +337,8 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
         for (uint16_t i = 0; i < fpga_info_len; i++) {
             char c = (char)fgetc(infile);
             if (i < sizeof(tempstr)) {
+                if ( c == '/' ) c = '-';
+                if ( c == ' ' ) c = '0';
                 tempstr[i] = c;
             }
         }
