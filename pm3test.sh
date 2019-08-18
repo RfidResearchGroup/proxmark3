@@ -37,6 +37,20 @@ function CheckExecute() {
 
 printf "\n${C_BLUE}RRG Proxmark3 test tool ${C_NC}\n\n"
 
+if [ "$TRAVIS_COMMIT" ]; then
+  if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    echo "Travis branch: $TRAVIS_BRANCH slug: $TRAVIS_REPO_SLUG commit: $TRAVIS_COMMIT"
+  else
+    echo "Travis pull request: $TRAVIS_PULL_REQUEST branch: $TRAVIS_BRANCH slug: $TRAVIS_PULL_REQUEST_SLUG commit: $TRAVIS_COMMIT"
+  fi
+fi
+
+printf "git branch: " 
+git describe --all
+printf "git sha: " 
+git rev-parse HEAD
+echo ""
+
 while true; do
   if ! CheckFileExist "proxmark3 exists" "./client/proxmark3"; then break; fi
   if ! CheckFileExist "arm image exists" "./armsrc/obj/fullimage.elf"; then break; fi
