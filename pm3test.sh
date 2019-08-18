@@ -11,27 +11,27 @@ C_NC='\033[0m' # No Color
 function CheckFileExist() {
  
   if [ -f "$2" ]; then
-    echo "$1 [OK]"
+    echo -e "$1 ${C_GREEN}[OK]${C_NC}"
 	return 0
   fi  
   
   if ls $2 1> /dev/null 2>&1; then
-    echo "$1 [OK]"
+    echo -e "$1 ${C_GREEN}[OK]${C_NC}"
 	return 0
   fi
   
-  echo "$1 [Fail]"
+  echo -e "$1 ${C_RED}[Fail]${C_NC}"
   return 1
 }
 
 function CheckExecute() {
 
-  if eval "$2 | grep -q $3"; then
-    echo "$1 [OK]"
+  if eval "$2 | grep -q '$3'"; then
+    echo -e "$1 ${C_GREEN}[OK]${C_NC}"
 	return 0
   fi
   
-  echo "$1 [Fail]"
+  echo -e "$1 ${C_RED}[Fail]${C_NC}"
   return 1
 }
 
@@ -50,7 +50,7 @@ while true; do
   if ! CheckExecute "hf mf offline text" "./client/proxmark3 -c 'hf mf'" "at_enc"; then break; fi
 
   if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:"; then break; fi
-  #if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test?s? ? OK"; then break; fi
+  if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test(s) \[ OK"; then break; fi
   
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
   exit 0
