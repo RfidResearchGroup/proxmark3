@@ -50,5 +50,5 @@ script:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
     proxmark3 -h ;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then 
-    ./client/proxmark3 -h ;
+    ./pm3test.sh;
   fi
