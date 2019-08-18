@@ -39,7 +39,7 @@ printf "\n${C_BLUE}RRG Proxmark3 test tool ${C_NC}\n\n"
 
 if [ "$TRAVIS_COMMIT" ]; then
   if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    echo "Travis branch: $TRAVIS_BRANCH slug: $TRAVIS_REPO_SLUG commit: $TRAVIS_PULL_REQUEST_SHA"
+    echo "Travis branch: $TRAVIS_BRANCH slug: $TRAVIS_REPO_SLUG commit: $TRAVIS_COMMIT"
   else
     echo "Travis pull request: $TRAVIS_PULL_REQUEST branch: $TRAVIS_BRANCH slug: $TRAVIS_PULL_REQUEST_SLUG commit: $TRAVIS_COMMIT"
   fi
