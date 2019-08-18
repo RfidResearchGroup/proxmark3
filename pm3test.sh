@@ -24,14 +24,34 @@ function CheckFileExist() {
   return 1
 }
 
+function CheckExecute() {
+
+  if eval "$2 | grep -q $3"; then
+    echo "$1 [OK]"
+	return 0
+  fi
+  
+  echo "$1 [Fail]"
+  return 1
+}
+
 printf "\n${C_BLUE}RRG Proxmark3 test tool ${C_NC}\n\n"
 
 while true; do
-  if ! CheckFileExist "proxmark3 exists" "client/proxmark3"; then break; fi
-  if ! CheckFileExist "arm image exists" "armsrc/obj/fullimage.elf"; then break; fi
-  if ! CheckFileExist "bootrom exists" "bootrom/obj/bootrom.elf"; then break; fi
-  if ! CheckFileExist "hardnested tables exists" "client/hardnested/tables/*.z"; then break; fi
+  if ! CheckFileExist "proxmark3 exists" "./client/proxmark3"; then break; fi
+  if ! CheckFileExist "arm image exists" "./armsrc/obj/fullimage.elf"; then break; fi
+  if ! CheckFileExist "bootrom exists" "./bootrom/obj/bootrom.elf"; then break; fi
+  if ! CheckFileExist "hardnested tables exists" "./client/hardnested/tables/*.z"; then break; fi
 
+  if ! CheckExecute "proxmark help" "./client/proxmark3 -h" "wait"; then break; fi
+  if ! CheckExecute "proxmark help text ISO7816" "./client/proxmark3 -t 2>&1" "ISO7816"; then break; fi
+  if ! CheckExecute "proxmark help text hardnested" "./client/proxmark3 -t 2>&1" "hardnested"; then break; fi
+
+  if ! CheckExecute "hf mf offline text" "./client/proxmark3 -c 'hf mf'" "at_enc"; then break; fi
+
+  if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:"; then break; fi
+  #if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test?s? ? OK"; then break; fi
+  
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
   exit 0
 done
