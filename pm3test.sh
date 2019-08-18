@@ -37,13 +37,11 @@ function CheckExecute() {
 
 printf "\n${C_BLUE}RRG Proxmark3 test tool ${C_NC}\n\n"
 
-echo "var $TRAVIS_COMMIT $TRAVIS_PULL_REQUEST"
-
-if [ ! "$TRAVIS_COMMIT"=="" ]; then
-  if [ "$TRAVIS_PULL_REQUEST"=="" ]; then
-    echo "Travis pull request: $TRAVIS_PULL_REQUEST branch: $TRAVIS_PULL_REQUEST_SLUG commit: $TRAVIS_COMMIT"
-  else
+if [ "$TRAVIS_COMMIT" ]; then
+  if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     echo "Travis branch: $TRAVIS_REPO_SLUG commit: $TRAVIS_PULL_REQUEST_SHA"
+  else
+    echo "Travis pull request: $TRAVIS_PULL_REQUEST branch: $TRAVIS_PULL_REQUEST_SLUG commit: $TRAVIS_COMMIT"
   fi
 fi
 
