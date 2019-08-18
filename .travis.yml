@@ -34,7 +34,7 @@ addons:
       - wget
       - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     taps: RfidResearchGroup/proxmark3
-    
+
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
     brew info proxmark3;
