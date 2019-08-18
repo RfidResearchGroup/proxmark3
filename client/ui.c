@@ -20,6 +20,7 @@
 
 #include <stdio.h> // for Mingw readline
 #include <stdarg.h>
+#include <string.h>
 #include <stdlib.h>
 #include <readline/readline.h>
 #include <complex.h>
@@ -155,8 +156,10 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 }
 
 static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
+#ifdef RL_STATE_READCMD
     char *saved_line;
     int saved_point;
+#endif
     va_list argptr;
     static FILE *logfile = NULL;
     static int logging = 1;

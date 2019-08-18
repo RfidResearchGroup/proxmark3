@@ -13,8 +13,10 @@
 #include <limits.h>
 
 #include <stdio.h> // for Mingw readline
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 

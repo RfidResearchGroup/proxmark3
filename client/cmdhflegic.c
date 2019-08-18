@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 #include "cmdhflegic.h"
 
+#include <ctype.h>
 #include <stdio.h> // for Mingw readline
 #include <readline/readline.h>
 
