@@ -39,7 +39,8 @@ install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     brew info proxmark3;
     brew options proxmark3;
-    brew install --verbose --HEAD proxmark3;
+    make clean;
+    make all V=1;
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     make clean;
     make all V=1;
@@ -51,7 +52,7 @@ before_script:
 script:
 ## start and run a test script
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    proxmark3 -h ;
+   ./pm3test.sh;  
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     ./pm3test.sh;
   fi

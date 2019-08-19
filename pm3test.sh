@@ -49,6 +49,9 @@ function CheckExecute() {
 
 printf "\n${C_BLUE}RRG/Iceman Proxmark3 test tool ${C_NC}\n\n"
 
+printf "work directory: "
+pwd
+
 if [ "$TRAVIS_COMMIT" ]; then
   if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     echo "Travis branch: $TRAVIS_BRANCH slug: $TRAVIS_REPO_SLUG commit: $TRAVIS_COMMIT"
