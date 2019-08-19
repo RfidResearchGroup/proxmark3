@@ -37,7 +37,8 @@ function CheckExecute() {
 
   for I in $RETRY
   do
-    if eval "$2 | grep -q '$3'"; then
+    RES=$(eval "$2")
+    if echo "$RES" | grep -q "$3"; then
       echo -e "$1 ${C_GREEN}[OK]${C_NC}"
       return 0
     fi
@@ -51,6 +52,7 @@ function CheckExecute() {
   fi
 
   echo -e "$1 ${C_RED}[Fail]${C_NC}"
+  echo -e "Execution trace:\n$RES"
   return 1
 }
 
