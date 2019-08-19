@@ -56,7 +56,7 @@ script:
    pwd;
    ls -la;
    cd client;
-   ls-la;
+   ls -la;
    cd ..;    
    ./pm3test.sh;  
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
