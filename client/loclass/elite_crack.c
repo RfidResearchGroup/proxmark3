@@ -479,7 +479,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
         return 1;
     } else {
         PrintAndLogEx(NORMAL, "\n");
-        PrintAndLogEx(SUCCESS, "Key verified ok!\n");
+        PrintAndLogEx(SUCCESS, _GREEN_("Key verified ok!") );
     }
     return 0;
 }
@@ -502,10 +502,18 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     for (i = 0 ; i * itemsize < dumpsize ; i++) {
         memcpy(attack, dump + i * itemsize, itemsize);
         errors += bruteforceItem(*attack, keytable);
+		if ( errors ) 
+			break;
     }
     free(attack);
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds", t1 / 1000);
+
+    
+	if ( errors ) {
+		PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim 2`") "again and collect new data");
+		return 1;
+	}
 
     // Pick out the first 16 bytes of the keytable.
     // The keytable is now in 16-bit ints, where the upper 8 bits
@@ -516,8 +524,10 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     for (i = 0 ; i < 16 ; i++) {
         first16bytes[i] = keytable[i] & 0xFF;
 
-        if (!(keytable[i] & CRACKED))
+        if (!(keytable[i] & CRACKED)) {
             PrintAndLogEx(WARNING, "Warning: we are missing byte %d, custom key calculation will fail...", i);
+			return 1;
+		}
     }
     errors += calculateMasterKey(first16bytes, NULL);
     return errors;
@@ -532,7 +542,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 int bruteforceFile(const char *filename, uint16_t keytable[]) {
     FILE *f = fopen(filename, "rb");
     if (!f) {
-        PrintAndLogEx(WARNING, "Failed to read from file '%s'", filename);
+        PrintAndLogEx(WARNING, "Failed to read from file " _YELLOW_("%s"), filename);
         return 1;
     }
 
@@ -612,7 +622,7 @@ static int _testBruteforce() {
         } else if (fileExists("client/loclass/iclass_dump.bin")) {
             errors |= bruteforceFile("client/loclass/iclass_dump.bin", keytable);
         } else {
-            PrintAndLogEx(ERR, "Error: The file iclass_dump.bin was not found!");
+            PrintAndLogEx(ERR, "Error: The file " _YELLOW_("iclass_dump.bin") "was not found!");
         }
     }
     return errors;

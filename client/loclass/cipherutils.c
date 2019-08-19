@@ -39,7 +39,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
+#include "util.h" // sprint_hex
 #include "commonutil.h"  // ARRAYLEN
 
 #include "fileutils.h"
@@ -160,23 +160,26 @@ void printarr(const char *name, uint8_t *arr, int len) {
 }
 
 void printvar(const char *name, uint8_t *arr, int len) {
-    int cx, i;
+/*   
+   int cx, i;
     size_t outsize = 40 + strlen(name) + len * 2;
     char *output = calloc(outsize, sizeof(char));
     cx = snprintf(output, outsize, "%s = ", name);
     for (i = 0; i < len; i++) {
         cx += snprintf(output + cx, outsize - cx, "%02x", *(arr + i)); //2 bytes per byte
     }
-
     PrintAndLogEx(NORMAL, output);
     free(output);
+	*/
+    PrintAndLogEx(NORMAL, "%s = " _YELLOW_("%s"), name, sprint_hex(arr, len) );
+
 }
 
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {
-    int cx, i;
+    int cx = 0, i;
     size_t outsize = 100 + strlen(title) + len * 4;
     char *output = calloc(outsize, sizeof(char));
-    cx = snprintf(output, outsize,  "\n\t%s\n", title);
+    PrintAndLogEx(NORMAL, "\n    %s", title);
     for (i = 0;  i < len; i++) {
         if (i % 16 == 0)
             cx += snprintf(output + cx, outsize - cx, "\n%02x| ", i);
