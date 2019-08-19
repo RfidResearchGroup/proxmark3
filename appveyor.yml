@@ -113,7 +113,7 @@ build_script:
 
     #make
 
-    bash -c -i 'pwd;make clean;make all'
+    bash -c -i 'pwd;make clean;make all V=1'
 
 
     #some checks
