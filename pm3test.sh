@@ -11,17 +11,17 @@ C_NC='\033[0m' # No Color
 
 # title, file name or file wildcard to check
 function CheckFileExist() {
- 
+
   if [ -f "$2" ]; then
     echo -e "$1 ${C_GREEN}[OK]${C_NC}"
     return 0
-  fi  
-  
+  fi
+
   if ls $2 1> /dev/null 2>&1; then
     echo -e "$1 ${C_GREEN}[OK]${C_NC}"
     return 0
   fi
-  
+
   echo -e "$1 ${C_RED}[Fail]${C_NC}"
   return 1
 }
@@ -34,8 +34,8 @@ function CheckExecute() {
   else
     local RETRY="e"
   fi
-  
-  for I in $RETRY 
+
+  for I in $RETRY
   do
     if eval "$2 | grep -q '$3'"; then
       echo -e "$1 ${C_GREEN}[OK]${C_NC}"
@@ -43,13 +43,13 @@ function CheckExecute() {
     fi
     if [ ! $I == "e" ]; then echo "retry $I"; fi
   done
-  
-  
+
+
   if [ $5 ]; then
     echo -e "$1 ${C_YELLOW}[Ignored]${C_NC}"
     return 0
   fi
-  
+
   echo -e "$1 ${C_RED}[Fail]${C_NC}"
   return 1
 }
@@ -67,9 +67,9 @@ if [ "$TRAVIS_COMMIT" ]; then
   fi
 fi
 
-printf "git branch: " 
+printf "git branch: "
 git describe --all
-printf "git sha: " 
+printf "git sha: "
 git rev-parse HEAD
 echo ""
 
@@ -88,7 +88,7 @@ while true; do
   if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
   if ! CheckExecute "hf mf iclass test" "./client/proxmark3 -c 'hf iclass loclass t'" "verified ok"; then break; fi
   if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test(s) \[ OK"; then break; fi
-  
+
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
   exit 0
 done
