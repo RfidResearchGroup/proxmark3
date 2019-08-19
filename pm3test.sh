@@ -86,7 +86,7 @@ while true; do
   if ! CheckExecute "hf mf offline text" "./client/proxmark3 -c 'hf mf'" "at_enc"; then break; fi
 
   if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
-  if ! CheckExecute "hf mf iclass test" "./client/proxmark3 -c 'hf iclass loclass t'" "found:"; then break; fi
+  if ! CheckExecute "hf mf iclass test" "./client/proxmark3 -c 'hf iclass loclass t'" "verified ok"; then break; fi
   if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test(s) \[ OK"; then break; fi
   
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
