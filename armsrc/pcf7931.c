@@ -146,16 +146,24 @@ bool IsBlock0PCF7931(uint8_t *block) {
 
 bool IsBlock1PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
+
+    uint8_t rb1 = block[14] & 0x80;
+    uint8_t rfb = block[14] & 0x7f;
+    uint8_t rlb = block[15];
+
     if (block[10] == 0
             && block[11] == 0
             && block[12] == 0
             && block[13] == 0) {
-
-        if ((block[14] & 0x7f) <= 9
-                && block[15] <= 9) {
+        // block 1 is sent only if (RLB >= 1 && RFB <= 1) or RB1 enabled
+        if (rfb <= rlb
+                && rfb <= 9
+                && rlb <= 9
+                && ((rfb <= 1 && rlb >= 1) || rb1)) {
             return true;
         }
     }
+
     return false;
 }
 
@@ -200,9 +208,11 @@ void ReadPCF7931() {
 
         // our logic breaks if we don't get at least two blocks
         if (n < 2) {
+            // skip if all 0s block or no blocks
             if (n == 0 || !memcmp(tmp_blocks[0], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16))
                 continue;
 
+            // add block to single blocks list
             if (single_blocks_cnt < max_blocks) {
                 for (i = 0; i < single_blocks_cnt; ++i) {
                     if (!memcmp(single_blocks[i], tmp_blocks[0], 16)) {
@@ -212,6 +222,7 @@ void ReadPCF7931() {
                 }
                 if (j != 1) {
                     memcpy(single_blocks[single_blocks_cnt], tmp_blocks[0], 16);
+                    print_result("got single block", single_blocks[single_blocks_cnt], 16);
                     single_blocks_cnt++;
                 }
                 j = 0;
@@ -221,6 +232,10 @@ void ReadPCF7931() {
         }
 
         Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (max_blocks == 0 ? found_blocks : max_blocks), tries, errors);
+        for (i = 0; i < n; ++i)
+        {
+            print_result("got consecutive blocks", tmp_blocks[i], 16);
+        }
 
         i = 0;
         if (!found_0_1) {
@@ -282,7 +297,7 @@ void ReadPCF7931() {
             Dbprintf("Button pressed, stopping.");
             goto end;
         }
-    } while (found_blocks != max_blocks);
+    } while (found_blocks < max_blocks);
 
 end:
     Dbprintf("-----------------------------------------");
