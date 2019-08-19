@@ -15,9 +15,18 @@ matrix:
   include:
     - os: osx
       osx_image: xcode11
+      env: MAKE_PARAMS='PLATFORM_EXTRAS='
+    - os: osx
+      osx_image: xcode11
+      env: MAKE_PARAMS='PLATFORM_EXTRAS=BTADDON'
     - os: linux
       dist: xenial
       sudo: required
+      env: MAKE_PARAMS='PLATFORM_EXTRAS='
+    - os: linux
+      dist: xenial
+      sudo: required
+      env: MAKE_PARAMS='PLATFORM_EXTRAS=BTADDON'
 
 addons:
   apt:
@@ -37,19 +46,20 @@ addons:
 
 install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    brew update;
     brew info proxmark3;
     brew options proxmark3;
     make clean;
-    make all V=1;
+    make all V=1 "$MAKE_PARAMS";
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     make clean;
-    make all V=1;
+    make all V=1 "$MAKE_PARAMS";
   fi
 
 script:
 ## start and run a test script
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-   ./pm3test.sh;  
+    ./pm3test.sh;  
   elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     ./pm3test.sh;
   fi
