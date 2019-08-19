@@ -5,6 +5,7 @@ cd "$PM3PATH" || exit 1
 
 C_RED='\033[0;31m'
 C_GREEN='\033[0;32m'
+C_YELLOW='\033[0;33m'
 C_BLUE='\033[0;34m'
 C_NC='\033[0m' # No Color
 
@@ -25,7 +26,7 @@ function CheckFileExist() {
   return 1
 }
 
-# title, command line, check result, repeat several times if failed
+# title, command line, check result, repeat several times if failed, ignore if fail
 function CheckExecute() {
 
   if [ $4 ]; then
@@ -42,6 +43,12 @@ function CheckExecute() {
     fi
     if [ ! $I == "e" ]; then echo "retry $I"; fi
   done
+  
+  
+  if [ $5 ]; then
+    echo -e "$1 ${C_YELLOW}[Ignored]${C_NC}"
+    return 0
+  fi
   
   echo -e "$1 ${C_RED}[Fail]${C_NC}"
   return 1
@@ -78,7 +85,8 @@ while true; do
 
   if ! CheckExecute "hf mf offline text" "./client/proxmark3 -c 'hf mf'" "at_enc"; then break; fi
 
-  if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat"; then break; fi
+  if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
+  if ! CheckExecute "hf mf iclass test" "./client/proxmark3 -c 'hf iclass loclass t'" "verified ok"; then break; fi
   if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test(s) \[ OK"; then break; fi
   
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
