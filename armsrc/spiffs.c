@@ -96,9 +96,9 @@ static s32_t rdv40_spiffs_llerase(u32_t addr, u32_t size) {
 ////////////////////////////////////////////////////////////////////////////////
 
 ////// SPIFFS LOW LEVEL OPERATIONS /////////////////////////////////////////////
-static u8_t spiffs_work_buf[RDV40_SPIFFS_WORKBUF_SZ];
-static u8_t spiffs_fds[RDV40_SPIFFS_FDBUF_SZ];
-static u8_t spiffs_cache_buf[RDV40_SPIFFS_CACHE_SZ];
+static u8_t spiffs_work_buf[RDV40_SPIFFS_WORKBUF_SZ] __attribute__((aligned));
+static u8_t spiffs_fds[RDV40_SPIFFS_FDBUF_SZ] __attribute__((aligned));
+static u8_t spiffs_cache_buf[RDV40_SPIFFS_CACHE_SZ] __attribute__((aligned));
 
 static spiffs fs;
 
