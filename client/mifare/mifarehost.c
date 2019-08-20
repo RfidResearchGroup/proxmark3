@@ -1041,6 +1041,9 @@ void detect_classic_magic(void) {
         case 4:
             PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 2 / CUID): "  _GREEN_("YES"));
             break;
+        case 5:
+            PrintAndLogEx(SUCCESS, "Answers to magic commands (Write Once / FUID): " _GREEN_("YES"));
+            break;
         default:
             PrintAndLogEx(INFO, "Answers to magic commands: " _YELLOW_("NO"));
             break;
