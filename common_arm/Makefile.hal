@@ -21,6 +21,8 @@ Known definitions:
 +----------------------------------------------------------+
 | PM3EVO          | Proxmark3 EVO       with AT91SAM7S512  |
 +----------------------------------------------------------+
+| PM3V40          | Proxmark3 V4.0      with AT91SAM7S512  |
++----------------------------------------------------------+
 | PM3EASY         | Proxmark3 rdv3 Easy with AT91SAM7S256  |
 +----------------------------------------------------------+
 | PM3EASY512      | Proxmark3 rdv3 Easy with AT91SAM7S512  |
@@ -72,6 +74,9 @@ ifeq ($(PLATFORM),PM3RDV4)
 else ifeq ($(PLATFORM),PM3EVO)
     MCU = AT91SAM7S512
     PLTNAME = Proxmark3 EVO
+else ifeq ($(PLATFORM),PM3V40)
+    MCU = AT91SAM7S512
+    PLTNAME = Proxmark3 V4.0
 else ifeq ($(PLATFORM),PM3EASY)
     MCU = AT91SAM7S256
     PLTNAME = Proxmark3 rdv3 Easy

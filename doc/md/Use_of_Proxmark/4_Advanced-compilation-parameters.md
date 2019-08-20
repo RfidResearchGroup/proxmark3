@@ -32,6 +32,7 @@ Here are the supported values you can assign to `PLATFORM` in `Makefile.platform
 |-----------------|----------------------------------------|
 | PM3RDV4 (def)   | Proxmark3 rdv4      with AT91SAM7S512  |
 | PM3EVO          | Proxmark3 EVO       with AT91SAM7S512  |
+| PM3V40          | Proxmark3 V4.0      with AT91SAM7S512  |
 | PM3EASY         | Proxmark3 rdv3 Easy with AT91SAM7S256  |
 | PM3EASY512      | Proxmark3 rdv3 Easy with AT91SAM7S512  |
 | PM3RDV2         | Proxmark3 rdv2      with AT91SAM7S512  |
@@ -39,6 +40,8 @@ Here are the supported values you can assign to `PLATFORM` in `Makefile.platform
 | PM3OLD512       | Proxmark3 V1        with AT91SAM7S512  |
 
 By default `PLATFORM=PM3RDV4`.
+
+Note that besides `PM3RDV4` and its unique features, all other platforms are equivalent and the MCU version (256 or 512) will be detected automatically during flashing.
 
 Known issues:
 
