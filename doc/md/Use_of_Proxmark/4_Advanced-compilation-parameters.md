@@ -33,6 +33,7 @@ Here are the supported values you can assign to `PLATFORM` in `Makefile.platform
 | PM3RDV4 (def)   | Proxmark3 rdv4      with AT91SAM7S512  |
 | PM3EVO          | Proxmark3 EVO       with AT91SAM7S512  |
 | PM3EASY         | Proxmark3 rdv3 Easy with AT91SAM7S256  |
+| PM3EASY512      | Proxmark3 rdv3 Easy with AT91SAM7S512  |
 | PM3RDV2         | Proxmark3 rdv2      with AT91SAM7S512  |
 | PM3OLD256       | Proxmark3 V1        with AT91SAM7S256  |
 | PM3OLD512       | Proxmark3 V1        with AT91SAM7S512  |
