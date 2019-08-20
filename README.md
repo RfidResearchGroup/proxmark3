@@ -21,7 +21,7 @@ _Note that it also supports other Proxmark3 platforms as well!_
 |[PM3 GUI](#pm3-gui)|[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) |[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|
 |[Notes on UART](/doc/uart_notes.md)||[Command Cheat sheet](/doc/cheatsheet.md)|
-|[Notes on Frame format](/doc/new_frame_format.md)|||
+|[Notes on Frame format](/doc/new_frame_format.md)||[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 |[Notes on external flash](/doc/ext_flash_notes.md)|||
 |[Notes on Termux / Android](/doc/termux_notes.md)|||
 |[Notes on Wireshark / tracedata](/doc/trace_wireshark_notes.md)|||
