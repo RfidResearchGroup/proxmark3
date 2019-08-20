@@ -21,7 +21,7 @@ function wait4proxmark_Linux {
 function wait4proxmark_macOS {
     echo >&2 "[=] Waiting for Proxmark3 to appear..."
     while true; do
-        PM3=$(find /dev/pm3-* /dev/cu.usbmodem* 2>/dev/null | head -1)
+        PM3=$(find /dev/pm3-* /dev/tty.usbmodem* 2>/dev/null | head -1)
         if [[ $PM3 != "" ]]; then
             break
         fi
