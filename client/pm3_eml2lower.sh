@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Andrei Costin <zveriu@gmail.com>, 2011
-# eml2UPPER.sh
-# Converts PM3 Mifare Classic emulator EML file to UPPER case (for easier comparison in some text-comparison tools)
+# pm3_eml2lower.sh
+# Converts PM3 Mifare Classic emulator EML file to lower case (for easier comparison in some text-comparison tools)
 
 # http://www.linuxquestions.org/questions/programming-9/bash-script-parsing-optional-parameters-621728/
 
@@ -28,4 +28,4 @@ if [[ $ARGC -lt $MINARGS ]] ; then
     show_usage
 fi
 
-tr '[:lower:]' '[:upper:]' < $1 > $2
+tr '[:upper:]' '[:lower:]' < $1 > $2
