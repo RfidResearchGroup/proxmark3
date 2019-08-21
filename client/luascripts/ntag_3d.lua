@@ -223,7 +223,7 @@ local function configure_magic_ntag(uid)
     -- -p    == set pwd
     -- -a    == set pack
     args =('-t 12 -u %s -p %08X -a %04X'):format(uid, pwd, pack)
-    require('../scripts/mfu_magic')
+    require('mfu_magic')
 
     -- Set back args. Not that it's used, just for the karma...
     args = myargs

@@ -77,7 +77,7 @@ static int CmdScriptList(const char *Cmd) {
 
     n = scandir(script_directory_path, &namelist, NULL, alphasort);
     if (n == -1) {
-        PrintAndLogEx(FAILED, "Couldn't open the scripts-directory");
+        PrintAndLogEx(FAILED, "Couldn't open the luascripts-directory");
         return 1;
     }
 
@@ -175,7 +175,7 @@ static command_t CommandTable[] = {
  */
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place lua-scripts within the scripts/-folder. ");
+    PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place Lua-scripts within the luascripts/-folder. ");
     return 0;
 }
 

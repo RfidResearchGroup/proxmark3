@@ -1133,7 +1133,7 @@ int set_pm3_libraries(lua_State *L) {
 
 
     //--add to the LUA_PATH (package.path in lua)
-    // so we can load scripts from the ./scripts/ - directory
+    // so we can load scripts from the ./luascripts/ - directory
     char scripts_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
     strcpy(scripts_path, get_my_executable_directory());
     strcat(scripts_path, LUA_SCRIPTS_DIRECTORY);
