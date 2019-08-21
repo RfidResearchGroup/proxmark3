@@ -56,29 +56,13 @@ static bool endsWith(const char *base, const char *str) {
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
 }
 
-/**
-* Generate a sorted list of available commands, what it does is
-* generate a file listing of the script-directory for files
-* ending with .lua
-*/
-static int CmdScriptList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-
-    char const *exedir = get_my_executable_directory();
-    if (exedir == NULL)
-        return 0;
-    char script_directory_path[strlen(exedir) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
-    strcpy(script_directory_path, exedir);
-    strcpy(script_directory_path, get_my_executable_directory());
-    strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
-
+static int scriptlist(const char *path) {
     struct dirent **namelist;
     int n;
 
-    n = scandir(script_directory_path, &namelist, NULL, alphasort);
+    n = scandir(path, &namelist, NULL, alphasort);
     if (n == -1) {
-        PrintAndLogEx(FAILED, "Couldn't open the luascripts-directory");
-        return 1;
+        return PM3_EFILE;
     }
 
     for (uint16_t i = 0; i < n; i++) {
@@ -87,6 +71,37 @@ static int CmdScriptList(const char *Cmd) {
         free(namelist[i]);
     }
     free(namelist);
+    return PM3_SUCCESS;
+}
+
+/**
+* Generate a sorted list of available commands, what it does is
+* generate a file listing of the script-directory for files
+* ending with .lua
+*/
+static int CmdScriptList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+
+    if (get_my_executable_directory() != NULL) {
+        char script_directory_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+        strcpy(script_directory_path, get_my_executable_directory());
+        strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
+        scriptlist(script_directory_path);
+    }
+    char *userpath = getenv("HOME");
+    if (userpath != NULL) {
+        char script_directory_path[strlen(userpath) + strlen(LUA_PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+        strcpy(script_directory_path, userpath);
+        strcat(script_directory_path, LUA_PM3_USER_DIRECTORY);
+        strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
+        scriptlist(script_directory_path);
+    }
+    {
+        char script_directory_path[strlen(LUA_PM3_SYSTEM_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+        strcpy(script_directory_path, LUA_PM3_SYSTEM_DIRECTORY);
+        strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
+        scriptlist(script_directory_path);
+    }
     return 0;
 }
 
@@ -125,16 +140,60 @@ static int CmdScriptRun(const char *Cmd) {
         suffix = ".lua";
     }
 
-    char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
-    strcpy(script_path, get_my_executable_directory());
-    strcat(script_path, LUA_SCRIPTS_DIRECTORY);
-    strcat(script_path, script_name);
-    strcat(script_path, suffix);
+    bool found = false;
+    int error;
+    if (get_my_executable_directory() != NULL) {
+        char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
+        strcpy(script_path, get_my_executable_directory());
+        strcat(script_path, LUA_SCRIPTS_DIRECTORY);
+        strcat(script_path, script_name);
+        strcat(script_path, suffix);
+        FILE *file;
+        if ((file = fopen(script_path, "r")))
+        {
+            fclose(file);
+            PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
+            found = true;
+            error = luaL_loadfile(lua_state, script_path);
+        }
+    }
+    char *userpath = getenv("HOME");
+    if ((!found) && (userpath != NULL)) {
+        char script_path[strlen(userpath) + strlen(LUA_PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
+        strcpy(script_path, userpath);
+        strcat(script_path, LUA_PM3_USER_DIRECTORY);
+        strcat(script_path, LUA_SCRIPTS_DIRECTORY);
+        strcat(script_path, script_name);
+        strcat(script_path, suffix);
+        FILE *file;
+        if ((file = fopen(script_path, "r")))
+        {
+            fclose(file);
+            PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
+            found = true;
+            error = luaL_loadfile(lua_state, script_path);
+        }
+    }
+    if (!found) {
+        char script_path[strlen(LUA_PM3_SYSTEM_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
+        strcpy(script_path, LUA_PM3_SYSTEM_DIRECTORY);
+        strcat(script_path, LUA_SCRIPTS_DIRECTORY);
+        strcat(script_path, script_name);
+        strcat(script_path, suffix);
+        FILE *file;
+        if ((file = fopen(script_path, "r")))
+        {
+            fclose(file);
+            PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
+            found = true;
+            error = luaL_loadfile(lua_state, script_path);
+        }
+    }
+    if (!found) {
+        PrintAndLogEx(FAILED, "Error - can't find script %s%s", script_name, suffix);
+        return PM3_EFILE;
+    }
 
-    PrintAndLogEx(SUCCESS, "Executing: %s%s, args '%s'\n", script_name, suffix, arguments);
-
-    // run the Lua script
-    int error = luaL_loadfile(lua_state, script_path);
     if (!error) {
         lua_pushstring(lua_state, arguments);
         lua_setglobal(lua_state, "args");
