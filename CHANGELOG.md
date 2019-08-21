@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
+ - Add Lua paths: look for scripts also in ~/.proxmark/lua{scripts,libs} and /usr/local/share/proxmark3/lua{scripts,libs} (@doegox)
+ - Change Lua directory scripts/ to luascript/ (@doegox)
  - Change non-rdv4 PLATFORM must now use the generic PM3OTHER, simpler (@doegox)
  - Fix reveng integration for all platforms else than WIN32 (@doegox)
  - Add cheat sheet for easy operations of the Proxmark3 (scund00r)
