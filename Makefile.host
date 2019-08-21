@@ -9,7 +9,7 @@ LD = gcc
 RM = rm -f
 MV = mv
 CP = cp -a
-MKDIR = mkdir
+MKDIR = mkdir -p
 
 CFLAGS ?= -Wall -Werror -O3
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
