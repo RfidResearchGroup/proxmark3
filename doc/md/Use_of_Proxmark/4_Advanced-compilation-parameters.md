@@ -19,7 +19,7 @@ These features make it very different from all other devices, there is non other
 
 **Recommendation**: if you don't have a RDV4, we strongly recommend your device to have at least a 512kb arm chip, since this repo is on the very edge of 256kb limit.
 
-A firmware built for the RDV4 can still run on the other platforms as it will auto-detect during boot that external SPI and Sim are not present, still it will boot faster if it's tuned to the platform.
+A firmware built for the RDV4 can still run on the other platforms as it will auto-detect during boot that external SPI and Sim are not present, still it will boot faster if it's tuned to the platform, which solves USB enumeration issues on some OSes.
 
 If you need to tune things and save the configuration, create a file `Makefile.platform` in the root directory of the repository, see `Makefile.platform.sample`.
 For an up-to-date exhaustive list of options, you can run `make PLATFORM=`.
@@ -28,20 +28,14 @@ For an up-to-date exhaustive list of options, you can run `make PLATFORM=`.
 
 Here are the supported values you can assign to `PLATFORM` in `Makefile.platform`:
 
-| PLATFORM        | DESCRIPTION                            |
-|-----------------|----------------------------------------|
-| PM3RDV4 (def)   | Proxmark3 rdv4      with AT91SAM7S512  |
-| PM3EVO          | Proxmark3 EVO       with AT91SAM7S512  |
-| PM3V40          | Proxmark3 V4.0      with AT91SAM7S512  |
-| PM3EASY         | Proxmark3 rdv3 Easy with AT91SAM7S256  |
-| PM3EASY512      | Proxmark3 rdv3 Easy with AT91SAM7S512  |
-| PM3RDV2         | Proxmark3 rdv2      with AT91SAM7S512  |
-| PM3OLD256       | Proxmark3 V1        with AT91SAM7S256  |
-| PM3OLD512       | Proxmark3 V1        with AT91SAM7S512  |
+| PLATFORM        | DESCRIPTION              |
+|-----------------|--------------------------|
+| PM3RDV4 (def)   | Proxmark3 rdv4           |
+| PM3OTHER        | Proxmark3 generic target |
 
 By default `PLATFORM=PM3RDV4`.
 
-Note that besides `PM3RDV4` and its unique features, all other platforms are equivalent and the MCU version (256 or 512) will be detected automatically during flashing.
+The MCU version (256 or 512) will be detected automatically during flashing.
 
 Known issues:
 

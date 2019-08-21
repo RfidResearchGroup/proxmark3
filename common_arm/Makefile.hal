@@ -14,41 +14,29 @@ define KNOWN_PLATFORM_DEFINITIONS
 
 Known definitions:
 
-+==========================================================+
-| PLATFORM        | DESCRIPTION                            |
-+==========================================================+
-| PM3RDV4 (def)   | Proxmark3 rdv4      with AT91SAM7S512  |
-+----------------------------------------------------------+
-| PM3EVO          | Proxmark3 EVO       with AT91SAM7S512  |
-+----------------------------------------------------------+
-| PM3V40          | Proxmark3 V4.0      with AT91SAM7S512  |
-+----------------------------------------------------------+
-| PM3EASY         | Proxmark3 rdv3 Easy with AT91SAM7S256  |
-+----------------------------------------------------------+
-| PM3EASY512      | Proxmark3 rdv3 Easy with AT91SAM7S512  |
-+----------------------------------------------------------+
-| PM3RDV2         | Proxmark3 rdv2      with AT91SAM7S512  |
-+----------------------------------------------------------+
-| PM3OLD256       | Proxmark3 V1        with AT91SAM7S256  |
-+----------------------------------------------------------+
-| PM3OLD512       | Proxmark3 V1        with AT91SAM7S512  |
-+----------------------------------------------------------+
++============================================+
+| PLATFORM        | DESCRIPTION              |
++============================================+
+| PM3RDV4 (def)   | Proxmark3 rdv4           |
++--------------------------------------------+
+| PM3OTHER        | Proxmark3 Generic target |
++--------------------------------------------+
 
-+==========================================================+
-| PLATFORM_EXTRAS | DESCRIPTION                            |
-+==========================================================+
-| BTADDON         | Proxmark3 rdv4 BT add-on               |
-+----------------------------------------------------------+
++============================================+
+| PLATFORM_EXTRAS | DESCRIPTION              |
++============================================+
+| BTADDON         | Proxmark3 rdv4 BT add-on |
++--------------------------------------------+
 
 endef
 
 define HELP_DEFINITIONS
 Options to define platform, platform extras and/or standalone mode:
-(1) Run make with PLATFORM, PLATFORM_EXTRAS and/or STANDALONE as follows:
-make PLATFORM=PM3EASY STANDALONE=$(HELP_EXAMPLE_STANDALONE)
+(1) Run make with your PLATFORM, PLATFORM_EXTRAS and/or STANDALONE choices as follows:
+make PLATFORM=PM3OTHER STANDALONE=$(HELP_EXAMPLE_STANDALONE)
 
-(2) Save a file called Makefile.platform with contents:
-PLATFORM=PM3EASY
+(2) Save a file called Makefile.platform with contents, e.g.:
+PLATFORM=PM3OTHER
 
 or if you have a Proxmark 3 RDV4 with the BT add-on:
 PLATFORM=PM3RDV4
@@ -68,30 +56,10 @@ endef
 PLTNAME = Unknown Platform
 
 ifeq ($(PLATFORM),PM3RDV4)
-    MCU = AT91SAM7S512
     PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH
     PLTNAME = Proxmark3 rdv4
-else ifeq ($(PLATFORM),PM3EVO)
-    MCU = AT91SAM7S512
-    PLTNAME = Proxmark3 EVO
-else ifeq ($(PLATFORM),PM3V40)
-    MCU = AT91SAM7S512
-    PLTNAME = Proxmark3 V4.0
-else ifeq ($(PLATFORM),PM3EASY)
-    MCU = AT91SAM7S256
-    PLTNAME = Proxmark3 rdv3 Easy
-else ifeq ($(PLATFORM),PM3EASY512)
-    MCU = AT91SAM7S512
-    PLTNAME = Proxmark3 rdv3 Easy 512
-else ifeq ($(PLATFORM),PM3RDV2)
-    MCU = AT91SAM7S512
-    PLTNAME = Proxmark3 rdv2
-else ifeq ($(PLATFORM),PM3OLD256)
-    MCU = AT91SAM7S256
-    PLTNAME = Proxmark3 V1 with AT91SAM7S256
-else ifeq ($(PLATFORM),PM3OLD512)
-    MCU = AT91SAM7S512
-    PLTNAME = Proxmark3 V1 with AT91SAM7S512
+else ifeq ($(PLATFORM),PM3OTHER)
+    PLTNAME = Proxmark3 Generic target
 else
     $(error Invalid or empty PLATFORM: $(PLATFORM). $(KNOWN_DEFINITIONS))
 endif
@@ -178,7 +146,6 @@ export PLATFORM
 export PLATFORM_EXTRAS
 export PLATFORM_EXTRAS_INFO
 export PLTNAME
-export MCU
 export PLATFORM_DEFS
 export PLATFORM_DEFS_INFO
 export PLATFORM_DEFS_INFO_STANDALONE

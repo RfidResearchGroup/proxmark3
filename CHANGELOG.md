@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change non-rdv4 PLATFORM must now use the generic PM3OTHER, simpler (@doegox)
  - Fix reveng integration for all platforms else than WIN32 (@doegox)
  - Add cheat sheet for easy operations of the Proxmark3 (scund00r)
  - Chg commands are now in green in the helptext list (@iceman1001)
