@@ -157,7 +157,7 @@ CMDSRCS =   crapto1/crapto1.c \
             loclass/cipherutils.c \
             loclass/ikeys.c \
             loclass/elite_crack.c \
-            loclass/fileutils.c \
+            fileutils.c \
             whereami.c \
             mifare/mifarehost.c \
             parity.c \

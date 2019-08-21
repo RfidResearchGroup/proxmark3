@@ -26,7 +26,7 @@
 #include "loclass/cipher.h"
 #include "loclass/ikeys.h"
 #include "loclass/elite_crack.h"
-#include "loclass/fileutils.h"
+#include "fileutils.h"
 #include "protocols.h"
 
 

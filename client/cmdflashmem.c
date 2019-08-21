@@ -14,7 +14,7 @@
 #include "cmdparser.h"    // command_t
 
 #include "pmflash.h"
-#include "loclass/fileutils.h"  //saveFile
+#include "fileutils.h"  //saveFile
 #include "comms.h"              //getfromdevice
 #include "cmdflashmemspiffs.h" // spiffs commands
 

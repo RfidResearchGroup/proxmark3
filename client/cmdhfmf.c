@@ -15,7 +15,7 @@
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"        // clearCommandBuffer
-#include "loclass/fileutils.h"
+#include "fileutils.h"
 #include "cmdtrace.h"
 #include "emv/dump.h"
 #include "mifare/mifaredefault.h"          // mifare default key array

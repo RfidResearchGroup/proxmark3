@@ -18,7 +18,7 @@
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
 #include "comms.h"
-#include "loclass/fileutils.h"
+#include "fileutils.h"
 #include "protocols.h"
 
 #define MAX_UL_BLOCKS       0x0F

@@ -17,7 +17,7 @@
 #include "cmdtrace.h"
 #include "crc.h"
 #include "crc16.h"
-#include "loclass/fileutils.h"  //saveFile
+#include "fileutils.h"  //saveFile
 
 static int CmdHelp(const char *Cmd);
 

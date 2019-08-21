@@ -25,7 +25,7 @@
 #include "cmddata.h"
 #include "lfdemod.h"
 #include "cmdhf14a.h"   // for getTagInfo
-#include "loclass/fileutils.h"  // loadDictionary
+#include "fileutils.h"  // loadDictionary
 #include "util_posix.h"
 
 
