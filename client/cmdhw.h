@@ -15,6 +15,6 @@
 
 int CmdHW(const char *Cmd);
 
-void pm3_version(bool verbose);
+void pm3_version(bool verbose, bool oneliner);
 
 #endif

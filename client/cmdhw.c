@@ -493,7 +493,7 @@ static int CmdTune(const char *Cmd) {
 
 static int CmdVersion(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    pm3_version(true);
+    pm3_version(true, false);
     return PM3_SUCCESS;
 }
 
@@ -617,7 +617,21 @@ int CmdHW(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-void pm3_version(bool verbose) {
+void pm3_version(bool verbose, bool oneliner) {
+
+    if (oneliner) {
+        char msg[70];
+        memset(msg, 0x00, sizeof(msg));
+        strcat(msg, "Client: RRG/Iceman compiled with ");
+#if defined(__clang__)
+        strcat(msg + strlen(msg), _YELLOW_("Clang/LLVM "__VERSION__));
+#elif defined(__GNUC__) || defined(__GNUG__)
+        strcat(msg + strlen(msg), _YELLOW_("GCC "__VERSION__));
+#endif
+        PrintAndLogEx(NORMAL, "%s",  msg);
+        return;
+    }
+
     if (!verbose)
         return;
 
@@ -635,6 +649,7 @@ void pm3_version(bool verbose) {
 #elif defined(__GNUC__) || defined(__GNUG__)
         PrintAndLogEx(NORMAL, "  compiled with GCC "__VERSION__);
 #endif
+
         PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 ]");
         PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
         PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
