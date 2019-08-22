@@ -168,17 +168,16 @@ static int usage_hf14_hardnested(void) {
 }
 static int usage_hf14_hardautopwn(void) {
     PrintAndLogEx(NORMAL, "Usage:");
-    PrintAndLogEx(NORMAL, "      hf mf hardautopwn [k] <block number> <key A|B> <key (12 hex symbols)>");
-    PrintAndLogEx(NORMAL, "                       <card memory> [d] [f] [s] [t] [i]");
+    PrintAndLogEx(NORMAL, "      hf mf hardautopwn [k] <sector number> <key A|B> <key (12 hex symbols)>");
+    PrintAndLogEx(NORMAL, "                       * <card memory> [d] [f] [s] [t] [i]");
     PrintAndLogEx(NORMAL, "                       (card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h                          this help");
-    PrintAndLogEx(NORMAL, "      k <block> <keytype> <key>  if a known key for a block is supplied");
+    PrintAndLogEx(NORMAL, "      k <sector> <keytype> <key> if a known key for a block is supplied");
     PrintAndLogEx(NORMAL, "      d                          write keys to binary file");
     PrintAndLogEx(NORMAL, "      f <name>                   keys to test (speed up the cracking, if some keys are known)");
     PrintAndLogEx(NORMAL, "      s                          slower acquisition (required by some non standard cards)");
-    PrintAndLogEx(NORMAL, "      t                          tests?");
     PrintAndLogEx(NORMAL, "      i <X>     set type of SIMD instructions. Without this flag programs autodetect it.");
     PrintAndLogEx(NORMAL, "        i 5   = AVX512");
     PrintAndLogEx(NORMAL, "        i 2   = AVX2");
@@ -188,9 +187,9 @@ static int usage_hf14_hardautopwn(void) {
     PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf hardautopwn b 0 A FFFFFFFFFFFF 1 d");
-    PrintAndLogEx(NORMAL, "      hf mf hardautopwn 0 A FFFFFFFFFFFF 1 d f default_keys.dic");
-    PrintAndLogEx(NORMAL, "      hf mf hardautopwn 0 A FFFFFFFFFFFF 4 A f nonces.bin w s");
+    PrintAndLogEx(NORMAL, "      hf mf hardautopwn k 0 A FFFFFFFFFFFF d");
+    PrintAndLogEx(NORMAL, "      hf mf hardautopwn k 0 A FFFFFFFFFFFF * 1 d f default_keys.dic");
+    PrintAndLogEx(NORMAL, "      hf mf hardautopwn k 0 A FFFFFFFFFFFF * 4 s i 5");
     PrintAndLogEx(NORMAL, "");
     return 0;
 }
@@ -1560,22 +1559,45 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
 
 static int CmdHF14AMfHardAuto(const char *Cmd) {
+    /*
+        Author: Matthias Konrath
+        Company: Trustworks GmbH
+        Email: m.konrath@trustworks.at
+    */
+    
     uint8_t blockNo = 0;
     uint8_t keyType = 0;
     uint8_t *keyBlock, *p;
-    uint8_t sectorsCnt = 1;
+    uint8_t sectorsCnt = MIFARE_1K_MAXSECTOR;
+    sector_t *e_sector;
+    uint8_t arr[80];
     uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t cmdp = 0;
+    uint8_t tmpKey[6];
     uint64_t key64 = 0;
-    char filename[FILE_PATH_SIZE] = {0}, *fptr;
-    char ctmp;
+
+    uint64_t t1;
+    uint8_t foundKeysDictionary = 0;
+    uint8_t foundKeysReuse = 0;
+    uint8_t foundKeysHardnested = 0;
 
     keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
     if (keyBlock == NULL) return 1;
 
     for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
         num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
+    
+    FILE* f;
+    char buf[13] = {0};
+    char filename[FILE_PATH_SIZE] = {0}, *fptr;
+    uint8_t cmdp = 0;
+    char ctmp;
+
+    uint64_t foundkey = 0;
+    int16_t isOK = 0;
+    
+    int i, i2, keycnt = 0;;
+    int current_sector_i, current_key_type_i, default_keys_i, found_keys_i;
+    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
 
     bool slow = false;
     bool nonce_file_read = false;
@@ -1624,7 +1646,7 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
             case 'k':
                 // Get the known block number
                 if (param_getchar(Cmd, cmdp + 1) == 0x00) {
-                    PrintAndLogEx(WARNING, "Block number is missing");
+                    PrintAndLogEx(WARNING, "Sector number is missing");
                     return 1;
                 }
                 blockNo = param_get8(Cmd, cmdp + 1);
@@ -1685,41 +1707,26 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
 
     // Print parameters
     PrintAndLogEx(NORMAL, "Used Parameters:");
-    PrintAndLogEx(NORMAL, "\t[+] Dumping the found keys: %d", createDumpFile);
-    PrintAndLogEx(NORMAL, "\t[+] Card sectors: %d", sectorsCnt);
-    PrintAndLogEx(NORMAL, "\t[+] Key supplied: %d", know_target_key);
-    PrintAndLogEx(NORMAL, "\t[+] Known block: %d", blockNo);
-    PrintAndLogEx(NORMAL, "\t[+] Keytype: %c", keyType ? 'B' : 'A');
-    PrintAndLogEx(NORMAL, "\t[+] Kown key: 0x%02x%02x%02x%02x%02x%02x", key[0], key[1], key[2], key[3], key[4], key[5]);
-    PrintAndLogEx(NORMAL, "\t[+] Dictionary: %s", filename);
+    PrintAndLogEx(NORMAL, "[+] Dumping the found keys: %s", createDumpFile ? "True" : "False");
+    PrintAndLogEx(NORMAL, "[+] Card sectors: %d", sectorsCnt);
+    PrintAndLogEx(NORMAL, "[+] Key supplied: %s", know_target_key ? "True" : "False");
+    PrintAndLogEx(NORMAL, "[+] Known sector: %d", blockNo);
+    PrintAndLogEx(NORMAL, "[+] Keytype: %c", keyType ? 'B' : 'A');
+    PrintAndLogEx(NORMAL, "[+] Kown key: 0x%02x%02x%02x%02x%02x%02x", key[0], key[1], key[2], key[3], key[4], key[5]);
+    PrintAndLogEx(NORMAL, "[+] Dictionary: %s", filename);
 
+    e_sector = calloc(sectorsCnt, sizeof(sector_t));
 
     if (know_target_key) {
         // check if we can authenticate to sector
         if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to sector:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+            free(e_sector);
             return 3;
         }
     } else {
         PrintAndLogEx(WARNING, "No known key was supplied, if no usable key is found in the dictionary, then this attack will fail!");
     }
-
-
-    // General stuff
-    // Add check for the hardnested attack!!
-    uint64_t foundkey = 0;
-    int16_t isOK = 0;
-
-    // Bruteforce stuff
-    FILE* f;
-    sector_t *e_sector = calloc(sectorsCnt, sizeof(sector_t));
-    uint8_t arr[80];
-    uint8_t tmpKey[6];
-    char buf[13] = {0};
-    int i, i2, keycnt = 0;;
-    int current_sector_i, current_key_type_i, default_keys_i, found_keys_i;
-    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
-
 
     // Clear the datastructures
     for (i=0; i<80; i++) {
@@ -1737,6 +1744,7 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
         f = fopen(filename, "r");
         if (!f) {
             PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+            free(e_sector);
             return 1;
         }
 
@@ -1760,6 +1768,7 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
                     PrintAndLogEx(FAILED, "Cannot allocate memory for default keys");
                     free(keyBlock);
                     fclose(f);
+                    free(e_sector);
                     return 2;
                 }
                 keyBlock = p;
@@ -1774,8 +1783,9 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
     }
 
+    t1 = msclock();
 
-    // If no key is supplied by the user brute force with the dictionary
+    // If no key is supplied by the user, brute force with the dictionary
     if (know_target_key == false) {
         for (current_sector_i=0; current_sector_i < sectorsCnt; current_sector_i++) {
             for (current_key_type_i=0; current_key_type_i < 2; current_key_type_i++) {
@@ -1786,7 +1796,8 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
                     }
 
                     if (mfCheckKeys(current_sector_i*4, current_key_type_i, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "[  KEY ENUM  ] Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                        PrintAndLogEx(SUCCESS, "Jackpot, we found a key! Now let the fun begin!");
+                        PrintAndLogEx(SUCCESS, "[Dictio. KEYS] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
                             tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
@@ -1797,6 +1808,7 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
                         know_target_key = true;
                         blockNo = current_sector_i;
                         keyType = current_key_type_i;
+                        foundKeysDictionary++;
 
                         // Exit the loop
                         current_sector_i = sectorsCnt;
@@ -1809,17 +1821,17 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
         }
     }
 
-    // Set the user defined key
+    // Set the user defined / bruteforced key
     if (know_target_key) {
         e_sector[blockNo].Key[keyType] = bytes_to_num(key, 6);
         arr[blockNo + (keyType * sectorsCnt)] = 1;
     } else {
         PrintAndLogEx(FAILED, "No usable key was found!");
-        return 1; 
+        free(e_sector);
+        return 1;
     }
 
-
-    // Iterate over each sector and key
+    // Iterate over each sector and key(A/B)
     for (current_sector_i=0; current_sector_i < sectorsCnt; current_sector_i++) {
         for (current_key_type_i=0; current_key_type_i < 2; current_key_type_i++) {
 
@@ -1827,29 +1839,29 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
 
             // Try the found keys
             if (foundkey == 0) {
-                for (found_keys_i=0; found_keys_i < current_sector_i; found_keys_i++) {
+                for (found_keys_i=0; found_keys_i < sectorsCnt; found_keys_i++) {
                     // Iterate over the keys
                     if (arr[found_keys_i + (current_key_type_i * sectorsCnt)] == 1) {
                         num_to_bytes(e_sector[found_keys_i].Key[current_key_type_i], 6, tmpKey);
                         if (mfCheckKeys(current_sector_i*4, current_key_type_i, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
-                            PrintAndLogEx(SUCCESS, "[FOUND KEYS %c] Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
-                                current_key_type_i ? 'B' : 'A',
+                            PrintAndLogEx(SUCCESS, "[REUSED  KEYS] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                                 current_sector_i,
                                 current_key_type_i ? 'B' : 'A',
                                 tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
                             foundkey = bytes_to_num(tmpKey, 6);
+                            foundKeysReuse++;
                             break;
                         }
                     }
                     if (arr[found_keys_i + (((current_key_type_i+1)%2) * sectorsCnt)] == 1) {
                         num_to_bytes(e_sector[found_keys_i].Key[(current_key_type_i+1)%2], 6, tmpKey);
                         if (mfCheckKeys(current_sector_i*4, current_key_type_i, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
-                            PrintAndLogEx(SUCCESS, "[FOUND KEYS %c] Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
-                                (current_key_type_i+1)%2 ? 'B' : 'A',
+                            PrintAndLogEx(SUCCESS, "[REUSED  KEYS] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                                 current_sector_i,
                                 current_key_type_i ? 'B' : 'A',
                                 tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
                             foundkey = bytes_to_num(tmpKey, 6);
+                            foundKeysReuse++;
                             break;
                         }
                     }
@@ -1864,29 +1876,48 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
                     }
 
                     if (mfCheckKeys(current_sector_i*4, current_key_type_i, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "[DEFAULT KEYS] Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                        PrintAndLogEx(SUCCESS, "[Dictio. KEYS] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
                             tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
                         foundkey = bytes_to_num(tmpKey, 6);
+                        foundKeysDictionary++;
                         break;
                     }
                 }
             }
             // Bruteforce with hardnested
             if (foundkey == 0) {
-                PrintAndLogEx(SUCCESS, "[ BRUTEFORCE ] block no:%3d, target key type:%c, Slow: %s, Tests: %d ",
+                PrintAndLogEx(SUCCESS, "[ BRUTEFORCE ] sector no:%3d, target key type:%c, Slow: %s, Tests: %d ",
                     current_sector_i,
                     current_key_type_i ? 'B' : 'A',
                     slow ? "Yes" : "No",
                     tests);
 
-                isOK = mfnestedhard(blockNo, keyType, key, current_sector_i*4, current_key_type_i, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
+                isOK = mfnestedhard(blockNo, keyType, key, current_sector_i*4, current_key_type_i, NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, NULL);
+                
+                DropField();
+                if (isOK) {
+                    switch (isOK) {
+                        case 1 :
+                            PrintAndLogEx(ERR, "Error: No response from Proxmark3.\n");
+                            break;
+                        case 2 :
+                            PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n");
+                            break;
+                        default :
+                            break;
+                    }
+                    free(e_sector);
+                    return 2;
+                }
+
                 num_to_bytes(foundkey, 6, tmpKey);
-                PrintAndLogEx(SUCCESS, "[CRACKED  KEY]  Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                PrintAndLogEx(SUCCESS, "[CRACKED  KEY]  Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                                 current_sector_i,
                                 current_key_type_i ? 'B' : 'A',
                                 tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
+                foundKeysHardnested++;
             }
             // Add the key
             if (foundkey != 0) {
@@ -1908,8 +1939,10 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
 
     if (createDumpFile) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
-        if (fptr == NULL)
+        if (fptr == NULL) {
+            free(e_sector);
             return 1;
+        }
 
         FILE *fkeys = fopen(fptr, "wb");
         if (fkeys == NULL) {
@@ -1933,24 +1966,11 @@ static int CmdHF14AMfHardAuto(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
     }
 
+    t1 = msclock() - t1;
+    PrintAndLogEx(SUCCESS, "Key statistics: Dictionary: " _GREEN_("%d") ", Reuse: " _YELLOW_("%d") ", Bruteforce: " _MAGENTA_("%d") ", Total: " _YELLOW_("%d"), foundKeysDictionary, foundKeysReuse, foundKeysHardnested, sectorsCnt*2);
+    PrintAndLogEx(SUCCESS, "Required time for the hardautopwn attack: " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    
     free(e_sector);
-
-    DropField();
-    if (isOK) {
-        switch (isOK) {
-            case 1 :
-                PrintAndLogEx(ERR, "Error: No response from Proxmark3.\n");
-                break;
-            case 2 :
-                PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n");
-                break;
-            default :
-                break;
-        }
-        return 2;
-    }
-
-
     return 0;
 }
 
