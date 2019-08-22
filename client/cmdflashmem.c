@@ -59,9 +59,9 @@ static int usage_flashmem_load(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        mem load f myfile");         // upload file myfile at default offset 0
     PrintAndLogEx(NORMAL, "        mem load f myfile o 1024");  // upload file myfile at offset 1024
-    PrintAndLogEx(NORMAL, "        mem load f default_keys m");
-    PrintAndLogEx(NORMAL, "        mem load f default_pwd t");
-    PrintAndLogEx(NORMAL, "        mem load f default_iclass_keys i");
+    PrintAndLogEx(NORMAL, "        mem load f dictionaries/mfc_default_keys m");
+    PrintAndLogEx(NORMAL, "        mem load f dictionaries/t55xx_default_pwds t");
+    PrintAndLogEx(NORMAL, "        mem load f dictionaries/iclass_default_keys i");
     return PM3_SUCCESS;
 }
 static int usage_flashmem_dump(void) {

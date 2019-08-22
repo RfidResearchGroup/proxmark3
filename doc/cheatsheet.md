@@ -166,7 +166,7 @@ p            : EPURSE
 m            : macs
 e            : elite
 
-pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f default_iclass_keys.dic e
+pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f dictionaries/iclass_default_keys.dic e
 ```
 
 ## Mifare
@@ -181,7 +181,7 @@ Options
 card memory    : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
 d              : write keys to binary file
 
-pm3 --> hf mf chk *1 ? d default_keys.dic
+pm3 --> hf mf chk *1 ? d dictionaries/mfc_default_keys.dic
 ```
 
 Check for default keys from local memory
@@ -254,7 +254,7 @@ pm3 --> hf mf sim u 353c2aa6
 
 Simulate Mifare Sequence
 ```
-pm3 --> hf mf chk *1 ? d default_keys.dic
+pm3 --> hf mf chk *1 ? d dictionaries/mfc_default_keys.dic
 pm3 --> hf mf dump 1
 pm3 --> script run dumptoemul -i dumpdata.bin
 pm3 --> hf mf eload 353C2AA6
@@ -263,7 +263,7 @@ pm3 --> hf mf sim u 353c2aa6
 
 Clone Mifare 1K Sequence
 ```
-pm3 --> hf mf chk *1 ? d default_keys.dic
+pm3 --> hf mf chk *1 ? d dictionaries/mfc_default_keys.dic
 pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
 ```
@@ -512,9 +512,9 @@ m                  : upload 6 bytes keys (mifare key dictionary)
 i                  : upload 8 bytes keys (iClass key dictionary)          
 t                  : upload 4 bytes keys (pwd dictionary)   
 
-pm3 --> mem load f default_keys m
-pm3 --> mem load f default_pwd t
-pm3 --> mem load f default_iclass_keys i
+pm3 --> mem load f dictionaries/mfc_default_keys m
+pm3 --> mem load f dictionaries/t55xx_default_pwds t
+pm3 --> mem load f dictionaries/iclass_default_keys i
 ```
 
 ## Sim Module

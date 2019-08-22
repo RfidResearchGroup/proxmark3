@@ -244,8 +244,8 @@ static int usage_hf_iclass_chk(void) {
     PrintAndLogEx(NORMAL, "      e             elite");
     PrintAndLogEx(NORMAL, "      c             credit key  (if not use, default is debit)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf iclass chk f default_iclass_keys.dic");
-    PrintAndLogEx(NORMAL, "         hf iclass chk f default_iclass_keys.dic e");
+    PrintAndLogEx(NORMAL, "         hf iclass chk f dictionaries/iclass_default_keys.dic");
+    PrintAndLogEx(NORMAL, "         hf iclass chk f dictionaries/iclass_default_keys.dic e");
     return 0;
 }
 static int usage_hf_iclass_lookup(void) {
@@ -260,8 +260,8 @@ static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "      r             raw");
     PrintAndLogEx(NORMAL, "      e             elite");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic");
-    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic e");
+    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic");
+    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic e");
     return 0;
 }
 static int usage_hf_iclass_permutekey(void) {

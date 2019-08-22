@@ -32,6 +32,7 @@ platform = $(shell uname)
 ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
 VPATH = ../common uart
+vpath %.dic dictionaries
 OBJDIR = obj
 
 LDLIBS ?= -L/usr/local/lib
@@ -290,7 +291,7 @@ ifeq "$(SUPPORTS_AVX512)" "True"
 endif
 
 BINS = proxmark3 flasher
-CLEAN = $(BINS) *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+CLEAN = $(BINS) *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 
 # need to assign dependancies to build these first...
 all: $(BINS)
@@ -299,7 +300,7 @@ all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
 proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) lualibs/pm3_cmd.lua lualibs/mf_default_keys.lua
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LDLIBS)  -o $@
 
@@ -321,7 +322,7 @@ lualibs/pm3_cmd.lua: ../include/pm3_cmd.h
 	$(info [=] GEN $@)
 	$(Q)awk -f pm3_cmd_h2lua.awk $^ > $@
 
-lualibs/mf_default_keys.lua : default_keys.dic
+lualibs/mfc_default_keys.lua : mfc_default_keys.dic
 	$(info [=] GEN $@)
 	$(Q)awk -f default_keys_dic2lua.awk $^ > $@
 
