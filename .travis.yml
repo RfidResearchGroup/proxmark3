@@ -45,7 +45,7 @@ addons:
     taps: RfidResearchGroup/proxmark3
 
 install:
-  if ! arm-none-eabi-gccx -v; then 
+  if ! arm-none-eabi-gcc -v; then 
     echo "arm-none-eabi-gcc [ERROR]";
     travis_terminate 1;
   fi
