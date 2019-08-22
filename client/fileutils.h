@@ -38,8 +38,6 @@
 #ifndef FILEUTILS_H
 #define FILEUTILS_H
 
-#ifndef ON_DEVICE
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -161,21 +159,5 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
  * @return 0 for ok, 1 for fails
 */
 int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
-
-#define PrintAndLogEx(level, format, args...)  PrintAndLogEx(level, format , ## args)
-#else
-
-/**
-* Utility function to print to console. This is used consistently within the library instead
-* of printf, but it actually only calls printf. The reason to have this method is to
-*make it simple to plug this library into proxmark, which has this function already to
-* write also to a logfile. When doing so, just point this function to use PrintAndLog
-* @param fmt
-*/
-#define PrintAndLogEx(level, format, args...) { }
-
-
-
-#endif //ON_DEVICE
 
 #endif // FILEUTILS_H

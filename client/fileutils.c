@@ -42,9 +42,6 @@
 #include "commonutil.h"
 #include "util.h"
 
-
-#ifndef ON_DEVICE
-
 #define PATH_MAX_LENGTH 100
 
 /**
@@ -612,7 +609,3 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     return PM3_SUCCESS;
 }
 
-
-#else //if we're on ARM
-
-#endif
