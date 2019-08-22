@@ -56,18 +56,21 @@ static bool endsWith(const char *base, const char *str) {
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
 }
 
-static int scriptlist(const char *path) {
+static int scriptlist(const char *path, bool last) {
     struct dirent **namelist;
     int n;
 
     n = scandir(path, &namelist, NULL, alphasort);
     if (n == -1) {
+        PrintAndLogEx(NORMAL, "%s── %s => NOT FOUND", last ? "└" : "├", path);
         return PM3_EFILE;
     }
 
+    PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
     for (uint16_t i = 0; i < n; i++) {
-        if (str_ends_with(namelist[i]->d_name, ".lua"))
-            PrintAndLogEx(NORMAL, "%-21s", namelist[i]->d_name);
+        if (str_ends_with(namelist[i]->d_name, ".lua")) {
+            PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " ":"│", i == n-1 ? "└" : "├", namelist[i]->d_name);
+        }
         free(namelist[i]);
     }
     free(namelist);
@@ -86,7 +89,7 @@ static int CmdScriptList(const char *Cmd) {
         char script_directory_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
         strcpy(script_directory_path, get_my_executable_directory());
         strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
-        scriptlist(script_directory_path);
+        scriptlist(script_directory_path, false);
     }
     char *userpath = getenv("HOME");
     if (userpath != NULL) {
@@ -94,13 +97,13 @@ static int CmdScriptList(const char *Cmd) {
         strcpy(script_directory_path, userpath);
         strcat(script_directory_path, PM3_USER_DIRECTORY);
         strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
-        scriptlist(script_directory_path);
+        scriptlist(script_directory_path, false);
     }
     {
         char script_directory_path[strlen(PM3_SYSTEM_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
         strcpy(script_directory_path, PM3_SYSTEM_DIRECTORY);
         strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
-        scriptlist(script_directory_path);
+        scriptlist(script_directory_path, true);
     }
     return 0;
 }
