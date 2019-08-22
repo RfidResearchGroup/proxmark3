@@ -166,6 +166,34 @@ static int usage_hf14_hardnested(void) {
     PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
     return 0;
 }
+static int usage_hf14_hardautopwn(void) {
+    PrintAndLogEx(NORMAL, "Usage:");
+    PrintAndLogEx(NORMAL, "      hf mf hardautopwn [k] <block number> <key A|B> <key (12 hex symbols)>");
+    PrintAndLogEx(NORMAL, "                       <card memory> [d] [f] [s] [t] [i]");
+    PrintAndLogEx(NORMAL, "                       (card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K)");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "      h                          this help");
+    PrintAndLogEx(NORMAL, "      k <block> <keytype> <key>  if a known key for a block is supplied");
+    PrintAndLogEx(NORMAL, "      d                          write keys to binary file");
+    PrintAndLogEx(NORMAL, "      f <name>                   keys to test (speed up the cracking, if some keys are known)");
+    PrintAndLogEx(NORMAL, "      s                          slower acquisition (required by some non standard cards)");
+    PrintAndLogEx(NORMAL, "      t                          tests?");
+    PrintAndLogEx(NORMAL, "      i <X>     set type of SIMD instructions. Without this flag programs autodetect it.");
+    PrintAndLogEx(NORMAL, "        i 5   = AVX512");
+    PrintAndLogEx(NORMAL, "        i 2   = AVX2");
+    PrintAndLogEx(NORMAL, "        i a   = AVX");
+    PrintAndLogEx(NORMAL, "        i s   = SSE2");
+    PrintAndLogEx(NORMAL, "        i m   = MMX");
+    PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      hf mf hardautopwn b 0 A FFFFFFFFFFFF 1 d");
+    PrintAndLogEx(NORMAL, "      hf mf hardautopwn 0 A FFFFFFFFFFFF 1 d f default_keys.dic");
+    PrintAndLogEx(NORMAL, "      hf mf hardautopwn 0 A FFFFFFFFFFFF 4 A f nonces.bin w s");
+    PrintAndLogEx(NORMAL, "");
+    return 0;
+}
 static int usage_hf14_chk(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mf chk [h] <block number>|<*card memory> <key type (A/B/?)> [t|d] [<key (12 hex symbols)>] [<dic (*.dic)>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -1527,6 +1555,402 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         }
         return 2;
     }
+    return 0;
+}
+
+
+static int CmdHF14AMfHardAuto(const char *Cmd) {
+    uint8_t blockNo = 0;
+    uint8_t keyType = 0;
+    uint8_t *keyBlock, *p;
+    uint8_t sectorsCnt = 1;
+    uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+    uint8_t trgkey[6] = {0, 0, 0, 0, 0, 0};
+    uint8_t cmdp = 0;
+    uint64_t key64 = 0;
+    char filename[FILE_PATH_SIZE] = {0}, *fptr;
+    char ctmp;
+
+    keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
+    if (keyBlock == NULL) return 1;
+
+    for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
+        num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
+
+    bool slow = false;
+    bool nonce_file_read = false;
+    bool nonce_file_write = false;
+    bool createDumpFile = false;
+    bool know_target_key = false;
+    int tests = 0;
+
+    ctmp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf14_hardautopwn();
+
+
+    while ((ctmp = param_getchar(Cmd, cmdp))) {
+        switch (tolower(ctmp)) {
+            case 'h':
+                return usage_hf14_hardautopwn();
+            case 'f':
+                if (param_getstr(Cmd, cmdp +1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                }
+                cmdp ++;
+                break;
+            case 'd':
+                createDumpFile = true;
+                break;
+            case '*':
+                // sectors
+                switch (param_getchar(Cmd, cmdp + 1)) {
+                    case '0':
+                        sectorsCnt =  MIFARE_MINI_MAXSECTOR;
+                        break;
+                    case '1':
+                        sectorsCnt = MIFARE_1K_MAXSECTOR;
+                        break;
+                    case '2':
+                        sectorsCnt = MIFARE_2K_MAXSECTOR;
+                        break;
+                    case '4':
+                        sectorsCnt = MIFARE_4K_MAXSECTOR;
+                        break;
+                    default:
+                        sectorsCnt = MIFARE_1K_MAXSECTOR;
+                }
+                cmdp ++;
+                break;
+            case 'k':
+                // Get the known block number
+                if (param_getchar(Cmd, cmdp + 1) == 0x00) {
+                    PrintAndLogEx(WARNING, "Block number is missing");
+                    return 1;
+                }
+                blockNo = param_get8(Cmd, cmdp + 1);
+                // Get the knonwn block type
+                ctmp = tolower(param_getchar(Cmd, cmdp + 2));
+                if (ctmp != 'a' && ctmp != 'b') {
+                    PrintAndLogEx(WARNING, "Key type must be A or B");
+                    return 1;
+                }
+                if (ctmp != 'a') {
+                    keyType = 1;
+                }
+                // Get the known block key
+                if (param_gethex(Cmd, cmdp + 3, key, 12)) {
+                    PrintAndLogEx(WARNING, "Key must include 12 HEX symbols");
+                    return 1;
+                }
+                know_target_key = true;
+                cmdp += 3;
+            case 's':
+                slow = true;
+                break;
+            case 'i':
+                SetSIMDInstr(SIMD_AUTO);
+                ctmp = tolower(param_getchar(Cmd, cmdp + 1));
+                switch (ctmp) {
+                    case '5':
+                        SetSIMDInstr(SIMD_AVX512);
+                        break;
+                    case '2':
+                        SetSIMDInstr(SIMD_AVX2);
+                        break;
+                    case 'a':
+                        SetSIMDInstr(SIMD_AVX);
+                        break;
+                    case 's':
+                        SetSIMDInstr(SIMD_SSE2);
+                        break;
+                    case 'm':
+                        SetSIMDInstr(SIMD_MMX);
+                        break;
+                    case 'n':
+                        SetSIMDInstr(SIMD_NONE);
+                        break;
+                    default:
+                        PrintAndLogEx(WARNING, "Unknown SIMD type. %c", ctmp);
+                        return 1;
+                }
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
+                usage_hf14_hardnested();
+                return 1;
+        }
+        cmdp++;
+    }
+
+    // Print parameters
+    PrintAndLogEx(NORMAL, "Used Parameters:");
+    PrintAndLogEx(NORMAL, "\t[+] Dumping the found keys: %d", createDumpFile);
+    PrintAndLogEx(NORMAL, "\t[+] Card sectors: %d", sectorsCnt);
+    PrintAndLogEx(NORMAL, "\t[+] Key supplied: %d", know_target_key);
+    PrintAndLogEx(NORMAL, "\t[+] Known block: %d", blockNo);
+    PrintAndLogEx(NORMAL, "\t[+] Keytype: %c", keyType ? 'B' : 'A');
+    PrintAndLogEx(NORMAL, "\t[+] Kown key: 0x%02x%02x%02x%02x%02x%02x", key[0], key[1], key[2], key[3], key[4], key[5]);
+    PrintAndLogEx(NORMAL, "\t[+] Dictionary: %s", filename);
+
+
+    if (know_target_key) {
+        // check if we can authenticate to sector
+        if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+            return 3;
+        }
+    } else {
+        PrintAndLogEx(WARNING, "No known key was supplied, if no usable key is found in the dictionary, then this attack will fail!");
+    }
+
+
+    // General stuff
+    // Add check for the hardnested attack!!
+    uint64_t foundkey = 0;
+    int16_t isOK = 0;
+
+    // Bruteforce stuff
+    FILE* f;
+    sector_t *e_sector = calloc(sectorsCnt, sizeof(sector_t));
+    uint8_t arr[80];
+    uint8_t tmpKey[6];
+    char buf[13] = {0};
+    int i, i2, keycnt = 0;;
+    int current_sector_i, current_key_type_i, default_keys_i, found_keys_i;
+    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
+
+
+    // Clear the datastructures
+    for (i=0; i<80; i++) {
+        arr[i] = 0;
+    }
+    for (i=0; i<sectorsCnt; i++) {
+        for (i2=0; i2<2; i2++) {
+            e_sector[i].Key[i2] = 0;
+            e_sector[i].foundKey[i2] = 0;
+        }
+    }
+
+    // Load the keyfiles
+    if (strlen(filename) != 0) {
+        f = fopen(filename, "r");
+        if (!f) {
+            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+            return 1;
+        }
+
+        // read file
+        while (fgets(buf, sizeof(buf), f)) {
+            if (strlen(buf) < 12 || buf[11] == '\n')
+                continue;
+            
+            while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
+
+            if (buf[0] == '#') continue; //The line start with # is comment, skip
+            if (!isxdigit(buf[0])) {
+                PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
+                continue;
+            }
+
+            buf[12] = 0;
+            if (keyitems - keycnt < 2) {
+                p = realloc(keyBlock, 6 * (keyitems += 64));
+                if (!p) {
+                    PrintAndLogEx(FAILED, "Cannot allocate memory for default keys");
+                    free(keyBlock);
+                    fclose(f);
+                    return 2;
+                }
+                keyBlock = p;
+            }
+            int pos = 6 * keycnt;
+            memset(keyBlock + pos, 0, 6);
+            num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + pos);
+            keycnt++;
+            memset(buf, 0, sizeof(buf));
+        }
+        fclose(f);
+        PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
+    }
+
+
+    // If no key is supplied by the user brute force with the dictionary
+    if (know_target_key == false) {
+        for (current_sector_i=0; current_sector_i < sectorsCnt; current_sector_i++) {
+            for (current_key_type_i=0; current_key_type_i < 2; current_key_type_i++) {
+                for (default_keys_i=0; default_keys_i < keycnt; default_keys_i++) {
+                    // Iterate over the keys
+                    for (i=0; i<6; i++) {
+                        tmpKey[i] = keyBlock[i + (6*default_keys_i)];
+                    }
+
+                    if (mfCheckKeys(current_sector_i*4, current_key_type_i, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "[  KEY ENUM  ] Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                            current_sector_i,
+                            current_key_type_i ? 'B' : 'A',
+                            tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
+                        // Store the new key
+                        for (i=0; i<6; i++) {
+                            key[i] = tmpKey[i];
+                        }
+                        know_target_key = true;
+                        blockNo = current_sector_i;
+                        keyType = current_key_type_i;
+
+                        // Exit the loop
+                        current_sector_i = sectorsCnt;
+                        current_key_type_i = 2;
+                        default_keys_i = keycnt;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Set the user defined key
+    if (know_target_key) {
+        e_sector[blockNo].Key[keyType] = bytes_to_num(key, 6);
+        arr[blockNo + (keyType * sectorsCnt)] = 1;
+    } else {
+        PrintAndLogEx(FAILED, "No usable key was found!");
+        return 1; 
+    }
+
+
+    // Iterate over each sector and key
+    for (current_sector_i=0; current_sector_i < sectorsCnt; current_sector_i++) {
+        for (current_key_type_i=0; current_key_type_i < 2; current_key_type_i++) {
+
+            foundkey = e_sector[current_sector_i].Key[current_key_type_i];
+
+            // Try the found keys
+            if (foundkey == 0) {
+                for (found_keys_i=0; found_keys_i < current_sector_i; found_keys_i++) {
+                    // Iterate over the keys
+                    if (arr[found_keys_i + (current_key_type_i * sectorsCnt)] == 1) {
+                        num_to_bytes(e_sector[found_keys_i].Key[current_key_type_i], 6, tmpKey);
+                        if (mfCheckKeys(current_sector_i*4, current_key_type_i, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
+                            PrintAndLogEx(SUCCESS, "[FOUND KEYS %c] Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                                current_key_type_i ? 'B' : 'A',
+                                current_sector_i,
+                                current_key_type_i ? 'B' : 'A',
+                                tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
+                            foundkey = bytes_to_num(tmpKey, 6);
+                            break;
+                        }
+                    }
+                    if (arr[found_keys_i + (((current_key_type_i+1)%2) * sectorsCnt)] == 1) {
+                        num_to_bytes(e_sector[found_keys_i].Key[(current_key_type_i+1)%2], 6, tmpKey);
+                        if (mfCheckKeys(current_sector_i*4, current_key_type_i, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
+                            PrintAndLogEx(SUCCESS, "[FOUND KEYS %c] Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                                (current_key_type_i+1)%2 ? 'B' : 'A',
+                                current_sector_i,
+                                current_key_type_i ? 'B' : 'A',
+                                tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
+                            foundkey = bytes_to_num(tmpKey, 6);
+                            break;
+                        }
+                    }
+                }
+            }
+            // Try the default keys
+            if (foundkey == 0) {
+                for (default_keys_i=0; default_keys_i < keycnt; default_keys_i++) {
+                    // Iterate over the keys
+                    for (i=0; i<6; i++) {
+                        tmpKey[i] = keyBlock[i + (6*default_keys_i)];
+                    }
+
+                    if (mfCheckKeys(current_sector_i*4, current_key_type_i, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "[DEFAULT KEYS] Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                            current_sector_i,
+                            current_key_type_i ? 'B' : 'A',
+                            tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
+                        foundkey = bytes_to_num(tmpKey, 6);
+                        break;
+                    }
+                }
+            }
+            // Bruteforce with hardnested
+            if (foundkey == 0) {
+                PrintAndLogEx(SUCCESS, "[ BRUTEFORCE ] block no:%3d, target key type:%c, Slow: %s, Tests: %d ",
+                    current_sector_i,
+                    current_key_type_i ? 'B' : 'A',
+                    slow ? "Yes" : "No",
+                    tests);
+
+                isOK = mfnestedhard(blockNo, keyType, key, current_sector_i*4, current_key_type_i, know_target_key ? trgkey : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
+                num_to_bytes(foundkey, 6, tmpKey);
+                PrintAndLogEx(SUCCESS, "[CRACKED  KEY]  Valid KEY FOUND: block:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                                current_sector_i,
+                                current_key_type_i ? 'B' : 'A',
+                                tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
+            }
+            // Add the key
+            if (foundkey != 0) {
+                e_sector[current_sector_i].Key[current_key_type_i] = foundkey;
+                arr[current_sector_i + (current_key_type_i * sectorsCnt)] = 1;
+            }
+        }
+    }
+
+    // Link the found keys
+    for (i=0; i<sectorsCnt; i++) {
+        for (i2=0; i2<2; i2++) {
+            e_sector[i].foundKey[i2] = arr[i + (i2 * sectorsCnt)];
+        }
+    }
+
+    // Dump all the data
+    printKeyTable(sectorsCnt, e_sector);
+
+    if (createDumpFile) {
+        fptr = GenerateFilename("hf-mf-", "-key.bin");
+        if (fptr == NULL)
+            return 1;
+
+        FILE *fkeys = fopen(fptr, "wb");
+        if (fkeys == NULL) {
+            PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
+            free(e_sector);
+            return 1;
+        }
+        PrintAndLogEx(SUCCESS, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
+
+        for (i = 0; i < sectorsCnt; i++) {
+            num_to_bytes(e_sector[i].Key[0], 6, tmpKey);
+            fwrite(tmpKey, 1, 6, fkeys);
+        }
+
+        for (i = 0; i < sectorsCnt; i++) {
+            num_to_bytes(e_sector[i].Key[1], 6, tmpKey);
+            fwrite(tmpKey, 1, 6, fkeys);
+        }
+
+        fclose(fkeys);
+        PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
+    }
+
+    free(e_sector);
+
+    DropField();
+    if (isOK) {
+        switch (isOK) {
+            case 1 :
+                PrintAndLogEx(ERR, "Error: No response from Proxmark3.\n");
+                break;
+            case 2 :
+                PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n");
+                break;
+            default :
+                break;
+        }
+        return 2;
+    }
+
+
     return 0;
 }
 
@@ -3638,6 +4062,7 @@ static command_t CommandTable[] = {
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack. read parity error messages."},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack. Test nested authentication"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened Mifare cards"},
+    {"hardautopwn", CmdHF14AMfHardAuto,     AlwaysAvailable, "Nested attack for hardened Mifare cards that breaks all sector keys autmatically"},
     {"keybrute",    CmdHF14AMfKeyBrute,     IfPm3Iso14443a,  "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
     {"nack",        CmdHf14AMfNack,         IfPm3Iso14443a,  "Test for Mifare NACK bug"},
     {"chk",         CmdHF14AMfChk,          IfPm3Iso14443a,  "Check keys"},
