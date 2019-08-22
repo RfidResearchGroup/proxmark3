@@ -46,8 +46,8 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <stdarg.h>
-#include "../ui.h"
-#include "../emv/emvjson.h"
+#include "ui.h"
+#include "emv/emvjson.h"
 #include "mifare/mifare4.h"
 #include "cmdhfmfu.h"
 
