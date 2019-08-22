@@ -34,13 +34,21 @@
  *
  *
  ****************************************************************************/
+
+// this define is needed for scandir/alphasort to work
+#define _GNU_SOURCE
 #include "fileutils.h"
 
+#include <dirent.h>
 #include <ctype.h>
 
 #include "pm3_cmd.h"
 #include "commonutil.h"
+#include "proxmark3.h"
 #include "util.h"
+#ifdef _WIN32
+#include "scandir.h"
+#endif
 
 #define PATH_MAX_LENGTH 100
 
@@ -609,3 +617,91 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     return PM3_SUCCESS;
 }
 
+static int filelist(const char *path, const char *ext, bool last) {
+    struct dirent **namelist;
+    int n;
+
+    n = scandir(path, &namelist, NULL, alphasort);
+    if (n == -1) {
+        PrintAndLogEx(NORMAL, "%s── %s => NOT FOUND", last ? "└" : "├", path);
+        return PM3_EFILE;
+    }
+
+    PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
+    for (uint16_t i = 0; i < n; i++) {
+        if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || (str_endswith(namelist[i]->d_name, ext))) {
+            PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " ":"│", i == n-1 ? "└" : "├", namelist[i]->d_name);
+        }
+        free(namelist[i]);
+    }
+    free(namelist);
+    return PM3_SUCCESS;
+}
+
+int searchAndList(const char *pm3dir, const char *ext) {
+    if (get_my_executable_directory() != NULL) {
+        char script_directory_path[strlen(get_my_executable_directory()) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, get_my_executable_directory());
+        strcat(script_directory_path, pm3dir);
+        filelist(script_directory_path, ext, false);
+    }
+    char *userpath = getenv("HOME");
+    if (userpath != NULL) {
+        char script_directory_path[strlen(userpath) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, userpath);
+        strcat(script_directory_path, PM3_USER_DIRECTORY);
+        strcat(script_directory_path, pm3dir);
+        filelist(script_directory_path, ext, false);
+    }
+    {
+        char script_directory_path[strlen(PM3_SYSTEM_DIRECTORY) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, PM3_SYSTEM_DIRECTORY);
+        strcat(script_directory_path, pm3dir);
+        filelist(script_directory_path, ext, true);
+    }
+    return PM3_SUCCESS;
+}
+
+char *searchFile(const char *pm3dir, const char *ext, const char *filename) {
+    const char *suffix = "";
+    if (!str_endswith(filename, ext)) {
+        suffix = ext;
+    }
+    const char *exec_path = get_my_executable_directory();
+    if (exec_path != NULL) {
+        char *path = malloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + strlen(suffix) + 1);
+        strcpy(path, exec_path);
+        strcat(path, pm3dir);
+        strcat(path, filename);
+        strcat(path, suffix);
+        if (fileExists(path))
+            return path;
+        else
+            free(path);
+    }
+    char *user_path = getenv("HOME");
+    if (user_path != NULL) {
+        char *path = malloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + strlen(suffix) + 1);
+        strcpy(path, user_path);
+        strcat(path, PM3_USER_DIRECTORY);
+        strcat(path, pm3dir);
+        strcat(path, filename);
+        strcat(path, suffix);
+        if (fileExists(path))
+            return path;
+        else
+            free(path);
+    }
+    {
+        char *path = malloc(strlen(PM3_SYSTEM_DIRECTORY) + strlen(pm3dir) + strlen(filename) + strlen(suffix) + 1);
+        strcpy(path, PM3_SYSTEM_DIRECTORY);
+        strcat(path, pm3dir);
+        strcat(path, filename);
+        strcat(path, suffix);
+        if (fileExists(path))
+            return path;
+        else
+            free(path);
+    }
+    return NULL;
+}
