@@ -142,9 +142,11 @@ static int CmdScriptRun(const char *Cmd) {
 
     bool found = false;
     int error;
-    if (get_my_executable_directory() != NULL) {
-        char script_path[strlen(get_my_executable_directory()) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
-        strcpy(script_path, get_my_executable_directory());
+    const char* exec_path = get_my_executable_directory();
+
+    if (exec_path != NULL) {
+        char script_path[strlen(exec_path) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
+        strcpy(script_path, exec_path);
         strcat(script_path, LUA_SCRIPTS_DIRECTORY);
         strcat(script_path, script_name);
         strcat(script_path, suffix);
