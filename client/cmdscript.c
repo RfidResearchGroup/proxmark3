@@ -26,6 +26,7 @@
 #include "lauxlib.h"
 #include "proxmark3.h"
 #include "ui.h"
+#include "fileutils.h"
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -153,10 +154,8 @@ static int CmdScriptRun(const char *Cmd) {
         strcat(script_path, LUA_SCRIPTS_DIRECTORY);
         strcat(script_path, script_name);
         strcat(script_path, suffix);
-        FILE *file;
-        if ((file = fopen(script_path, "r")))
+        if (fileExists(script_path))
         {
-            fclose(file);
             PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
             found = true;
             error = luaL_loadfile(lua_state, script_path);
@@ -170,10 +169,8 @@ static int CmdScriptRun(const char *Cmd) {
         strcat(script_path, LUA_SCRIPTS_DIRECTORY);
         strcat(script_path, script_name);
         strcat(script_path, suffix);
-        FILE *file;
-        if ((file = fopen(script_path, "r")))
+        if (fileExists(script_path))
         {
-            fclose(file);
             PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
             found = true;
             error = luaL_loadfile(lua_state, script_path);
@@ -185,10 +182,8 @@ static int CmdScriptRun(const char *Cmd) {
         strcat(script_path, LUA_SCRIPTS_DIRECTORY);
         strcat(script_path, script_name);
         strcat(script_path, suffix);
-        FILE *file;
-        if ((file = fopen(script_path, "r")))
+        if (fileExists(script_path))
         {
-            fclose(file);
             PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
             found = true;
             error = luaL_loadfile(lua_state, script_path);
