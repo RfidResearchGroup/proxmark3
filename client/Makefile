@@ -128,7 +128,7 @@ endif
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
 # make temporary to final dependency files after successful compilation
-POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
+POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 
 CORESRCS =  uart_posix.c \
             uart_win32.c \
@@ -372,37 +372,37 @@ $(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%_NOSIMD.d
 	$(info [-] CC(NOSIMD) $<)
 	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_NOSIMD.Td) $(PM3CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_NOSIMD.Td $(OBJDIR)/$*_NOSIMD.d
+	$(Q)$(MV) -f $(OBJDIR)/$*_NOSIMD.Td $(OBJDIR)/$*_NOSIMD.d && $(TOUCH) $@
 
 $(OBJDIR)/%_MMX.o : %.c $(OBJDIR)/%_MMX.d
 	$(info [-] CC(MMX) $<)
 	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_MMX.Td) $(PM3CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_MMX.Td $(OBJDIR)/$*_MMX.d
+	$(Q)$(MV) -f $(OBJDIR)/$*_MMX.Td $(OBJDIR)/$*_MMX.d && $(TOUCH) $@
 
 $(OBJDIR)/%_SSE2.o : %.c $(OBJDIR)/%_SSE2.d
 	$(info [-] CC(SSE2) $<)
 	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_SSE2.Td) $(PM3CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_SSE2.Td $(OBJDIR)/$*_SSE2.d
+	$(Q)$(MV) -f $(OBJDIR)/$*_SSE2.Td $(OBJDIR)/$*_SSE2.d && $(TOUCH) $@
 
 $(OBJDIR)/%_AVX.o : %.c $(OBJDIR)/%_AVX.d
 	$(info [-] CC(AVX) $<)
 	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_AVX.Td $(OBJDIR)/$*_AVX.d
+	$(Q)$(MV) -f $(OBJDIR)/$*_AVX.Td $(OBJDIR)/$*_AVX.d && $(TOUCH) $@
 
 $(OBJDIR)/%_AVX2.o : %.c $(OBJDIR)/%_AVX2.d
 	$(info [-] CC(AVX2) $<)
 	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX2.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_AVX2.Td $(OBJDIR)/$*_AVX2.d
+	$(Q)$(MV) -f $(OBJDIR)/$*_AVX2.Td $(OBJDIR)/$*_AVX2.d && $(TOUCH) $@
 
 $(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%_AVX512.d
 	$(info [-] CC(AVX512) $<)
 	$(Q)$(MKDIR) $(dir $@)
 	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d
+	$(Q)$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d && $(TOUCH) $@
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d

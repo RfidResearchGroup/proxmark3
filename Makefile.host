@@ -10,6 +10,8 @@ RM = rm -f
 MV = mv
 CP = cp -a
 MKDIR = mkdir -p
+TOUCH = touch
+FALSE = false
 
 CFLAGS ?= -Wall -Werror -O3
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
@@ -31,7 +33,7 @@ vpath %.c $(MYSRCPATHS)
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
 # make temporary to final dependency files after successful compilation
-POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
+POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 
 BINDIR := .
 OBJDIR := obj
