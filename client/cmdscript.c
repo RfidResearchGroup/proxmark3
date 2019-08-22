@@ -90,15 +90,15 @@ static int CmdScriptList(const char *Cmd) {
     }
     char *userpath = getenv("HOME");
     if (userpath != NULL) {
-        char script_directory_path[strlen(userpath) + strlen(LUA_PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+        char script_directory_path[strlen(userpath) + strlen(PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
         strcpy(script_directory_path, userpath);
-        strcat(script_directory_path, LUA_PM3_USER_DIRECTORY);
+        strcat(script_directory_path, PM3_USER_DIRECTORY);
         strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
         scriptlist(script_directory_path);
     }
     {
-        char script_directory_path[strlen(LUA_PM3_SYSTEM_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
-        strcpy(script_directory_path, LUA_PM3_SYSTEM_DIRECTORY);
+        char script_directory_path[strlen(PM3_SYSTEM_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + 1];
+        strcpy(script_directory_path, PM3_SYSTEM_DIRECTORY);
         strcat(script_directory_path, LUA_SCRIPTS_DIRECTORY);
         scriptlist(script_directory_path);
     }
@@ -161,9 +161,9 @@ static int CmdScriptRun(const char *Cmd) {
     }
     char *userpath = getenv("HOME");
     if ((!found) && (userpath != NULL)) {
-        char script_path[strlen(userpath) + strlen(LUA_PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
+        char script_path[strlen(userpath) + strlen(PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
         strcpy(script_path, userpath);
-        strcat(script_path, LUA_PM3_USER_DIRECTORY);
+        strcat(script_path, PM3_USER_DIRECTORY);
         strcat(script_path, LUA_SCRIPTS_DIRECTORY);
         strcat(script_path, script_name);
         strcat(script_path, suffix);
@@ -177,8 +177,8 @@ static int CmdScriptRun(const char *Cmd) {
         }
     }
     if (!found) {
-        char script_path[strlen(LUA_PM3_SYSTEM_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
-        strcpy(script_path, LUA_PM3_SYSTEM_DIRECTORY);
+        char script_path[strlen(PM3_SYSTEM_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(script_name) + strlen(suffix) + 1];
+        strcpy(script_path, PM3_SYSTEM_DIRECTORY);
         strcat(script_path, LUA_SCRIPTS_DIRECTORY);
         strcat(script_path, script_name);
         strcat(script_path, suffix);

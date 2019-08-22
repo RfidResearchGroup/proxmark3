@@ -14,8 +14,6 @@
 //#include <lualib.h>
 //#include <lauxlib.h>
 
-#define LUA_PM3_SYSTEM_DIRECTORY "/usr/local/share/proxmark3/"
-#define LUA_PM3_USER_DIRECTORY "/.proxmark3/"
 #define LUA_LIBRARIES_DIRECTORY "lualibs/"
 #define LUA_SCRIPTS_DIRECTORY   "luascripts/"
 #define LUA_LIBRARIES_WILDCARD  "?.lua"

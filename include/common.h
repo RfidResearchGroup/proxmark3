@@ -16,6 +16,12 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifndef PREFIX
+# define PREFIX "/usr/local/"
+#endif
+#define PM3_SYSTEM_DIRECTORY PREFIX "share/proxmark3/"
+#define PM3_USER_DIRECTORY "/.proxmark3/"
+
 #define PACKED __attribute__((packed))
 
 // debug
