@@ -662,64 +662,63 @@ int searchAndList(const char *pm3dir, const char *ext) {
     return PM3_SUCCESS;
 }
 
-char *searchFile(const char *pm3dir, const char *ext, const char *filename) {
-    const char *suffix = "";
-    if (!str_endswith(filename, ext)) {
-        suffix = ext;
-    }
+char *searchFile(const char *pm3dir, const char *suffix, const char *preferredName) {
+    char *filename = filenamemcopy(preferredName, suffix);
+    if (filename == NULL) return NULL;
 
     // explicit absolute (/) or relative path (./) => try only to match it directly
     if (((strlen(filename) > 1) && (filename[0] == '/')) ||
         ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/')))
     {
-        char *path = malloc(strlen(filename) + strlen(suffix) + 1);
-        strcpy(path, filename);
-        strcat(path, suffix);
-        if (fileExists(path))
-            return path;
+        if (fileExists(filename))
+            return filename;
         else
-            free(path);
+            free(filename);
         return NULL;
     }
     // else
     // try pm3 dirs in current workdir (dev mode)
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {
-        char *path = malloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + strlen(suffix) + 1);
+        char *path = malloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + 1);
         strcpy(path, exec_path);
         strcat(path, pm3dir);
         strcat(path, filename);
-        strcat(path, suffix);
-        if (fileExists(path))
+        if (fileExists(path)) {
+            free(filename);
             return path;
-        else
+        } else {
             free(path);
+        }
     }
     // try pm3 dirs in user .proxmark3 (user mode)
     char *user_path = getenv("HOME");
     if (user_path != NULL) {
-        char *path = malloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + strlen(suffix) + 1);
+        char *path = malloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1);
         strcpy(path, user_path);
         strcat(path, PM3_USER_DIRECTORY);
         strcat(path, pm3dir);
         strcat(path, filename);
-        strcat(path, suffix);
-        if (fileExists(path))
+        if (fileExists(path)) {
+            free(filename);
             return path;
-        else
+        } else {
             free(path);
+        }
     }
     // try pm3 dirs in pm3 installation dir (install mode)
     {
-        char *path = malloc(strlen(PM3_SHARE_PATH) + strlen(pm3dir) + strlen(filename) + strlen(suffix) + 1);
+        char *path = malloc(strlen(PM3_SHARE_PATH) + strlen(pm3dir) + strlen(filename) + 1);
         strcpy(path, PM3_SHARE_PATH);
         strcat(path, pm3dir);
         strcat(path, filename);
-        strcat(path, suffix);
-        if (fileExists(path))
+        if (fileExists(path)) {
+            free(filename);
             return path;
-        else
+        } else {
             free(path);
+        }
     }
+    free(filename);
     return NULL;
 }
