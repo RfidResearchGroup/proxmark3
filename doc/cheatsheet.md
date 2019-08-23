@@ -512,9 +512,9 @@ m                  : upload 6 bytes keys (mifare key dictionary)
 i                  : upload 8 bytes keys (iClass key dictionary)          
 t                  : upload 4 bytes keys (pwd dictionary)   
 
-pm3 --> mem load f dictionaries/mfc_default_keys m
-pm3 --> mem load f dictionaries/t55xx_default_pwds t
-pm3 --> mem load f dictionaries/iclass_default_keys i
+pm3 --> mem load f mfc_default_keys m
+pm3 --> mem load f t55xx_default_pwds t
+pm3 --> mem load f iclass_default_keys i
 ```
 
 ## Sim Module
