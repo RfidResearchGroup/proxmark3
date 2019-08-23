@@ -27,6 +27,7 @@
 #define PM3_USER_DIRECTORY "/.proxmark3/"
 
 // PM3 subdirectories:
+#define DICTIONARIES_SUBDIR "dictionaries/"
 #define LUA_LIBRARIES_SUBDIR "lualibs/"
 #define LUA_SCRIPTS_SUBDIR   "luascripts/"
 

@@ -523,7 +523,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 
 
     if (data == NULL) return 1;
-    char *fileName = filenamemcopy(preferredName, ".dic");
+    char *fileName = searchFile(DICTIONARIES_SUBDIR, ".dic", preferredName);
     if (fileName == NULL) return 1;
 
     // t5577 == 4bytes
