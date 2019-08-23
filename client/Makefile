@@ -66,6 +66,12 @@ INCLUDES_CLIENT = -I. -I../include -I../common -Iuart $(LIBS)
 CFLAGS ?= -Wall -Werror -g -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
+ifneq (,$(PM3_BIN_PATH))
+    PM3CFLAGS += -DPM3_BIN_PATH=\"$(PM3_BIN_PATH)\"
+endif
+ifneq (,$(PM3_SHARE_PATH))
+    PM3CFLAGS += -DPM3_SHARE_PATH=\"$(PM3_SHARE_PATH)\"
+endif
 ifneq (,$(findstring MINGW,$(platform)))
     PM3CFLAGS += -mno-ms-bitfields
 endif
