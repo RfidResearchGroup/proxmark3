@@ -677,6 +677,12 @@ char *searchFile(const char *pm3dir, const char *suffix, const char *preferredNa
         return NULL;
     }
     // else
+
+    // try implicit relative path
+    {
+        if (fileExists(filename))
+            return filename;
+    }
     // try pm3 dirs in current workdir (dev mode)
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {
