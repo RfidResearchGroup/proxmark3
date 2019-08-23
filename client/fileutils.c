@@ -293,6 +293,36 @@ out:
     return retval;
 }
 
+int createKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char* fptr) {
+    uint8_t tmpKey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    int i;
+
+    if (fptr == NULL) {
+        return 1;
+    }
+
+    FILE *fkeys = fopen(fptr, "wb");
+    if (fkeys == NULL) {
+        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
+        return 1;
+    }
+    PrintAndLogEx(SUCCESS, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
+
+    for (i = 0; i < sectorsCnt; i++) {
+        num_to_bytes(e_sector[i].Key[0], 6, tmpKey);
+        fwrite(tmpKey, 1, 6, fkeys);
+    }
+
+    for (i = 0; i < sectorsCnt; i++) {
+        num_to_bytes(e_sector[i].Key[1], 6, tmpKey);
+        fwrite(tmpKey, 1, 6, fkeys);
+    }
+
+    fclose(fkeys);
+    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
+    return 0;
+}
+
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
 
     if (data == NULL) return 1;

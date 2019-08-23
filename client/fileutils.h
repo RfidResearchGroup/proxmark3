@@ -49,6 +49,7 @@
 #include "../ui.h"
 #include "../emv/emvjson.h"
 #include "mifare/mifare4.h"
+#include "mifare/mifarehost.h"
 #include "cmdhfmfu.h"
 
 typedef enum {
@@ -102,6 +103,16 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
  * @return 0 for ok, 1 for failz
  */
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
+
+/**
+ * @brief Utility function to save a keydump.
+ *
+ * @param sectorsCnt the used sectors
+ * @param e_sector the keys in question
+ * @param fptr string pointer to the filename
+ * @return 0 for ok, 1 for failz
+ */
+int createKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char* fptr);
 
 /** STUB
  * @brief Utility function to load data from a binary file. This method takes a preferred name.
