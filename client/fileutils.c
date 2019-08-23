@@ -654,8 +654,8 @@ int searchAndList(const char *pm3dir, const char *ext) {
         filelist(script_directory_path, ext, false);
     }
     {
-        char script_directory_path[strlen(PM3_SYSTEM_DIRECTORY) + strlen(pm3dir) + 1];
-        strcpy(script_directory_path, PM3_SYSTEM_DIRECTORY);
+        char script_directory_path[strlen(PM3_SHARE_PATH) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, PM3_SHARE_PATH);
         strcat(script_directory_path, pm3dir);
         filelist(script_directory_path, ext, true);
     }
@@ -711,8 +711,8 @@ char *searchFile(const char *pm3dir, const char *ext, const char *filename) {
     }
     // try pm3 dirs in pm3 installation dir (install mode)
     {
-        char *path = malloc(strlen(PM3_SYSTEM_DIRECTORY) + strlen(pm3dir) + strlen(filename) + strlen(suffix) + 1);
-        strcpy(path, PM3_SYSTEM_DIRECTORY);
+        char *path = malloc(strlen(PM3_SHARE_PATH) + strlen(pm3dir) + strlen(filename) + strlen(suffix) + 1);
+        strcpy(path, PM3_SHARE_PATH);
         strcat(path, pm3dir);
         strcat(path, filename);
         strcat(path, suffix);

@@ -16,10 +16,14 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#ifndef PREFIX
-# define PREFIX "/usr/local/"
+// brew prefixes are a bit weird so we've to split bin & share to be prepared:
+#ifndef PM3_BIN_PATH
+# define PM3_BIN_PATH "/usr/local/bin/"
 #endif
-#define PM3_SYSTEM_DIRECTORY PREFIX "share/proxmark3/"
+#ifndef PM3_SHARE_PATH
+# define PM3_SHARE_PATH "/usr/local/share/proxmark3/"
+#endif
+// PM3_USER_DIRECTORY will be expanded as if with a "~" upfront, e.g. ~/.proxmark3/
 #define PM3_USER_DIRECTORY "/.proxmark3/"
 
 #define PACKED __attribute__((packed))

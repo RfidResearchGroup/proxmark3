@@ -64,12 +64,7 @@ These instructions will show how to setup the environment on OSX to the point wh
 2. Install dependencies:
 
 ```
-brew install readline
-brew install p7zip
-brew install libusb-compat
-brew install perl
-brew install qt5
-brew install wget
+brew install readline p7zip libusb-compat perl qt5 wget
 brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 ```
 
