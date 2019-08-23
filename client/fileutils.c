@@ -69,7 +69,7 @@ int fileExists(const char *filename) {
     return result == 0;
 }
 
-static char *filenamemcopy(const char *preferredName, const char *suffix) {
+char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
     char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
@@ -521,11 +521,16 @@ out:
 
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
 
-
-    if (data == NULL) return 1;
-    char *fileName = searchFile(DICTIONARIES_SUBDIR, ".dic", preferredName);
-    if (fileName == NULL) return 1;
-
+    if (data == NULL) return PM3_ESOFT;
+    char *fileName = filenamemcopy(preferredName, ".dic");
+    if (fileName == NULL) return PM3_EMALLOC;
+    char *path = searchFile(DICTIONARIES_SUBDIR, fileName);
+    if (path == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        free(fileName);
+        return PM3_EFILE;
+    }
+    free(fileName);
     // t5577 == 4bytes
     // mifare == 6 bytes
     // iclass == 8 bytes
@@ -542,9 +547,9 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     size_t counter = 0;
     int retval = PM3_SUCCESS;
 
-    FILE *f = fopen(fileName, "r");
+    FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
         retval = PM3_EFILE;
         goto out;
     }
@@ -576,12 +581,12 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         counter += (keylen >> 1);
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
 
     if (datalen)
         *datalen = counter;
 out:
-    free(fileName);
+    free(path);
     return retval;
 }
 
@@ -662,19 +667,18 @@ int searchAndList(const char *pm3dir, const char *ext) {
     return PM3_SUCCESS;
 }
 
-char *searchFile(const char *pm3dir, const char *suffix, const char *preferredName) {
-    char *filename = filenamemcopy(preferredName, suffix);
-    if (filename == NULL) return NULL;
-
+char *searchFile(const char *pm3dir, const char *searchname) {
     // explicit absolute (/) or relative path (./) => try only to match it directly
+    char *filename = malloc(strlen(searchname) + 1);
+    if (filename == NULL) return NULL;
+    strcpy(filename, searchname);
     if (((strlen(filename) > 1) && (filename[0] == '/')) ||
         ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/')))
     {
         if (fileExists(filename))
             return filename;
         else
-            free(filename);
-        return NULL;
+            goto out;
     }
     // else
 
@@ -687,6 +691,8 @@ char *searchFile(const char *pm3dir, const char *suffix, const char *preferredNa
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {
         char *path = malloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + 1);
+        if (path == NULL)
+            goto out;
         strcpy(path, exec_path);
         strcat(path, pm3dir);
         strcat(path, filename);
@@ -701,6 +707,8 @@ char *searchFile(const char *pm3dir, const char *suffix, const char *preferredNa
     char *user_path = getenv("HOME");
     if (user_path != NULL) {
         char *path = malloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1);
+        if (path == NULL)
+            goto out;
         strcpy(path, user_path);
         strcat(path, PM3_USER_DIRECTORY);
         strcat(path, pm3dir);
@@ -715,6 +723,8 @@ char *searchFile(const char *pm3dir, const char *suffix, const char *preferredNa
     // try pm3 dirs in pm3 installation dir (install mode)
     {
         char *path = malloc(strlen(PM3_SHARE_PATH) + strlen(pm3dir) + strlen(filename) + 1);
+        if (path == NULL)
+            goto out;
         strcpy(path, PM3_SHARE_PATH);
         strcat(path, pm3dir);
         strcat(path, filename);
@@ -725,6 +735,7 @@ char *searchFile(const char *pm3dir, const char *suffix, const char *preferredNa
             free(path);
         }
     }
+out:
     free(filename);
     return NULL;
 }

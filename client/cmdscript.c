@@ -59,18 +59,23 @@ static int CmdScriptRun(const char *Cmd) {
     //Add the 'bit' library
     set_bit_library(lua_state);
 
-    char script_name[128] = {0};
+    char preferredName[128] = {0};
     char arguments[256] = {0};
 
     int name_len = 0;
     int arg_len = 0;
-    sscanf(Cmd, "%127s%n %255[^\n\r]%n", script_name, &name_len, arguments, &arg_len);
+    sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
 
-    char *script_path = searchFile(LUA_SCRIPTS_SUBDIR, ".lua", script_name);
+    char *script_name = filenamemcopy(preferredName, ".lua");
+    if (script_name == NULL) return PM3_EMALLOC;
+    char *script_path = searchFile(LUA_SCRIPTS_SUBDIR, script_name);
+
     if (script_path == NULL) {
         PrintAndLogEx(FAILED, "Error - can't find script %s", script_name);
+        free(script_name);
         return PM3_EFILE;
     }
+    free(script_name);
     int error;
     PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
     error = luaL_loadfile(lua_state, script_path);
