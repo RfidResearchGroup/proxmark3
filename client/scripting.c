@@ -1136,48 +1136,48 @@ int set_pm3_libraries(lua_State *L) {
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {
         // from the ./luascripts/ directory
-        char scripts_path[strlen(exec_path) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+        char scripts_path[strlen(exec_path) + strlen(LUA_SCRIPTS_SUBDIR) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, exec_path);
-        strcat(scripts_path, LUA_SCRIPTS_DIRECTORY);
+        strcat(scripts_path, LUA_SCRIPTS_SUBDIR);
         strcat(scripts_path, LUA_LIBRARIES_WILDCARD);
         setLuaPath(L, scripts_path);
         // from the ./lualib/ directory
-        char libraries_path[strlen(exec_path) + strlen(LUA_LIBRARIES_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+        char libraries_path[strlen(exec_path) + strlen(LUA_LIBRARIES_SUBDIR) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
         strcpy(libraries_path, exec_path);
-        strcat(libraries_path, LUA_LIBRARIES_DIRECTORY);
+        strcat(libraries_path, LUA_LIBRARIES_SUBDIR);
         strcat(libraries_path, LUA_LIBRARIES_WILDCARD);
         setLuaPath(L, libraries_path);
     }
     char *user_path = getenv("HOME");
     if (user_path != NULL) {
         // from the ~/.proxmark3/luascripts/ directory
-        char scripts_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+        char scripts_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_SUBDIR) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, user_path);
         strcat(scripts_path, PM3_USER_DIRECTORY);
-        strcat(scripts_path, LUA_SCRIPTS_DIRECTORY);
+        strcat(scripts_path, LUA_SCRIPTS_SUBDIR);
         strcat(scripts_path, LUA_LIBRARIES_WILDCARD);
         setLuaPath(L, scripts_path);
 
        // from the ~/.proxmark3/lualib/ directory
-        char libraries_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(LUA_LIBRARIES_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+        char libraries_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(LUA_LIBRARIES_SUBDIR) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
         strcpy(libraries_path, user_path);
         strcat(libraries_path, PM3_USER_DIRECTORY);
-        strcat(libraries_path, LUA_LIBRARIES_DIRECTORY);
+        strcat(libraries_path, LUA_LIBRARIES_SUBDIR);
         strcat(libraries_path, LUA_LIBRARIES_WILDCARD);
         setLuaPath(L, libraries_path);
     }
 
-    if (strlen(PM3_SHARE_PATH) != 0 || strlen(LUA_SCRIPTS_DIRECTORY) != 0 || strlen(LUA_LIBRARIES_WILDCARD) != 0 ) {
+    if (strlen(PM3_SHARE_PATH) != 0 || strlen(LUA_SCRIPTS_SUBDIR) != 0 || strlen(LUA_LIBRARIES_WILDCARD) != 0 ) {
         // from the /usr/local/share/proxmark3/luascripts/ directory
-        char scripts_path[strlen(PM3_SHARE_PATH) + strlen(LUA_SCRIPTS_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+        char scripts_path[strlen(PM3_SHARE_PATH) + strlen(LUA_SCRIPTS_SUBDIR) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, PM3_SHARE_PATH);
-        strcat(scripts_path, LUA_SCRIPTS_DIRECTORY);
+        strcat(scripts_path, LUA_SCRIPTS_SUBDIR);
         strcat(scripts_path, LUA_LIBRARIES_WILDCARD);
         setLuaPath(L, scripts_path);
         // from the /usr/local/share/proxmark3/lualib/ directory
-        char libraries_path[strlen(PM3_SHARE_PATH) + strlen(LUA_LIBRARIES_DIRECTORY) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
+        char libraries_path[strlen(PM3_SHARE_PATH) + strlen(LUA_LIBRARIES_SUBDIR) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
         strcpy(libraries_path, PM3_SHARE_PATH);
-        strcat(libraries_path, LUA_LIBRARIES_DIRECTORY);
+        strcat(libraries_path, LUA_LIBRARIES_SUBDIR);
         strcat(libraries_path, LUA_LIBRARIES_WILDCARD);
         setLuaPath(L, libraries_path);
     }

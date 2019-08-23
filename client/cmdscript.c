@@ -33,7 +33,7 @@ static int CmdHelp(const char *Cmd);
 */
 static int CmdScriptList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    return searchAndList(LUA_SCRIPTS_DIRECTORY, ".lua");
+    return searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
 }
 
 /**
@@ -66,7 +66,7 @@ static int CmdScriptRun(const char *Cmd) {
     int arg_len = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", script_name, &name_len, arguments, &arg_len);
 
-    char *script_path = searchFile(LUA_SCRIPTS_DIRECTORY, ".lua", script_name);
+    char *script_path = searchFile(LUA_SCRIPTS_SUBDIR, ".lua", script_name);
     if (script_path == NULL) {
         PrintAndLogEx(FAILED, "Error - can't find script %s", script_name);
         return PM3_EFILE;
