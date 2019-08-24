@@ -54,6 +54,7 @@ typedef enum {
     jsfCardMemory,
     jsfMfuMemory,
     jsfHitag,
+    jsfIclass,
 //    jsf14b,
 //    jsf15,
 //    jsfLegic,

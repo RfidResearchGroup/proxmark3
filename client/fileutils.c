@@ -281,6 +281,19 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             }
             break;
         }
+        case jsfIclass: {
+            JsonSaveStr(root, "FileType", "iclass");
+            uint8_t uid[8] = {0};
+            memcpy(uid, data, 8);
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
+
+            for (size_t i = 0; i < (datalen / 8 ); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 8), 8);
+            }
+            break;
+        }
     }
 
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
@@ -509,6 +522,27 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
             sptr += len;
         }
 
+        *datalen = sptr;
+    }
+
+    if (!strcmp(ctype, "iclass")) {
+        size_t sptr = 0;
+        for (size_t i = 0; i < (maxdatalen / 8); i++) {
+            if (sptr + 8 > maxdatalen) {
+                retval = 5;
+                goto out;
+            }
+
+            char path[30] = {0};
+            sprintf(path, "$.blocks.%zu", i);
+
+            size_t len = 0;
+            JsonLoadBufAsHex(root, path, &udata[sptr], 8, &len);
+            if (!len) 
+                 break;
+
+            sptr += len;
+        }
         *datalen = sptr;
     }
 
