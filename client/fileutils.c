@@ -669,7 +669,7 @@ int searchAndList(const char *pm3dir, const char *ext) {
 
 char *searchFile(const char *pm3dir, const char *searchname) {
     // explicit absolute (/) or relative path (./) => try only to match it directly
-    char *filename = malloc(strlen(searchname) + 1);
+    char *filename = calloc(strlen(searchname) + 1, sizeof(char));
     if (filename == NULL) return NULL;
     strcpy(filename, searchname);
     if (((strlen(filename) > 1) && (filename[0] == '/')) ||
@@ -690,7 +690,7 @@ char *searchFile(const char *pm3dir, const char *searchname) {
     // try pm3 dirs in current workdir (dev mode)
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {
-        char *path = malloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + 1);
+        char *path = calloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;
         strcpy(path, exec_path);
@@ -706,7 +706,7 @@ char *searchFile(const char *pm3dir, const char *searchname) {
     // try pm3 dirs in user .proxmark3 (user mode)
     char *user_path = getenv("HOME");
     if (user_path != NULL) {
-        char *path = malloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1);
+        char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;
         strcpy(path, user_path);
@@ -722,7 +722,7 @@ char *searchFile(const char *pm3dir, const char *searchname) {
     }
     // try pm3 dirs in pm3 installation dir (install mode)
     {
-        char *path = malloc(strlen(PM3_SHARE_PATH) + strlen(pm3dir) + strlen(filename) + 1);
+        char *path = calloc(strlen(PM3_SHARE_PATH) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;
         strcpy(path, PM3_SHARE_PATH);
