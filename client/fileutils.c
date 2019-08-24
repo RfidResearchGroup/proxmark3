@@ -69,7 +69,7 @@ int fileExists(const char *filename) {
     return result == 0;
 }
 
-char *filenamemcopy(const char *preferredName, const char *suffix) {
+static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
     char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
@@ -522,15 +522,10 @@ out:
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
 
     if (data == NULL) return PM3_ESOFT;
-    char *fileName = filenamemcopy(preferredName, ".dic");
-    if (fileName == NULL) return PM3_EMALLOC;
-    char *path = searchFile(DICTIONARIES_SUBDIR, fileName);
-    if (path == NULL) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
-        free(fileName);
+    char *path;
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic") != PM3_SUCCESS)
         return PM3_EFILE;
-    }
-    free(fileName);
+
     // t5577 == 4bytes
     // mifare == 6 bytes
     // iclass == 8 bytes
@@ -667,25 +662,31 @@ int searchAndList(const char *pm3dir, const char *ext) {
     return PM3_SUCCESS;
 }
 
-char *searchFile(const char *pm3dir, const char *searchname) {
+static int searchFinalFile(char **foundpath, const char *pm3dir, const char *searchname) {
+    if ((foundpath == NULL)||(pm3dir == NULL)||(searchname == NULL)) return PM3_ESOFT;
     // explicit absolute (/) or relative path (./) => try only to match it directly
     char *filename = calloc(strlen(searchname) + 1, sizeof(char));
-    if (filename == NULL) return NULL;
+    if (filename == NULL) return PM3_EMALLOC;
     strcpy(filename, searchname);
     if (((strlen(filename) > 1) && (filename[0] == '/')) ||
         ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/')))
     {
-        if (fileExists(filename))
-            return filename;
-        else
+        if (fileExists(filename)) {
+            *foundpath = filename;
+            return PM3_SUCCESS;
+        }
+        else {
             goto out;
+        }
     }
     // else
 
     // try implicit relative path
     {
-        if (fileExists(filename))
-            return filename;
+        if (fileExists(filename)) {
+            *foundpath = filename;
+            return PM3_SUCCESS;
+        }
     }
     // try pm3 dirs in current workdir (dev mode)
     const char *exec_path = get_my_executable_directory();
@@ -698,7 +699,8 @@ char *searchFile(const char *pm3dir, const char *searchname) {
         strcat(path, filename);
         if (fileExists(path)) {
             free(filename);
-            return path;
+            *foundpath = path;
+            return PM3_SUCCESS;
         } else {
             free(path);
         }
@@ -715,7 +717,8 @@ char *searchFile(const char *pm3dir, const char *searchname) {
         strcat(path, filename);
         if (fileExists(path)) {
             free(filename);
-            return path;
+            *foundpath = path;
+            return PM3_SUCCESS;
         } else {
             free(path);
         }
@@ -730,12 +733,27 @@ char *searchFile(const char *pm3dir, const char *searchname) {
         strcat(path, filename);
         if (fileExists(path)) {
             free(filename);
-            return path;
+            *foundpath = path;
+            return PM3_SUCCESS;
         } else {
             free(path);
         }
     }
 out:
     free(filename);
-    return NULL;
+    return PM3_EFILE;
+}
+
+int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix) {
+    char *filename = filenamemcopy(searchname, suffix);
+    if (filename == NULL) return PM3_EMALLOC;
+    int res = searchFinalFile(foundpath, pm3dir, filename);
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_EFILE)
+            PrintAndLogEx(FAILED, "Error - can't find %s", filename);
+        free(filename);
+        return res;
+    }
+    free(filename);
+    return PM3_SUCCESS;
 }

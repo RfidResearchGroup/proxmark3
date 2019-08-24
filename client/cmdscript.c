@@ -66,16 +66,11 @@ static int CmdScriptRun(const char *Cmd) {
     int arg_len = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
 
-    char *script_name = filenamemcopy(preferredName, ".lua");
-    if (script_name == NULL) return PM3_EMALLOC;
-    char *script_path = searchFile(LUA_SCRIPTS_SUBDIR, script_name);
+    char *script_path;
+    int res = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua");
+    if (res != PM3_SUCCESS)
+        return res;
 
-    if (script_path == NULL) {
-        PrintAndLogEx(FAILED, "Error - can't find script %s", script_name);
-        free(script_name);
-        return PM3_EFILE;
-    }
-    free(script_name);
     int error;
     PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
     error = luaL_loadfile(lua_state, script_path);

@@ -160,8 +160,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 */
 int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
 
-char *filenamemcopy(const char *preferredName, const char *suffix);
 int searchAndList(const char *pm3dir, const char *ext);
-char *searchFile(const char *pm3dir, const char *searchname);
+int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix);
 
 #endif // FILEUTILS_H
