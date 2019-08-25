@@ -169,13 +169,13 @@ static int usage_hf14_hardnested(void) {
 static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf autopwn [k] <sector number> <key A|B> <key (12 hex symbols)>");
-    PrintAndLogEx(NORMAL, "                       [*] <card memory> [f] <dictionary>.dic [s] [i] [l]");
+    PrintAndLogEx(NORMAL, "                       [*] <card memory> [f] <dictionary>.dic [s] [i] [l] [t] [d]");
     PrintAndLogEx(NORMAL, "                       (card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Description:");
     PrintAndLogEx(NORMAL, "      This command is used to automate the attack process on mifare classic nfc cards.");
     PrintAndLogEx(NORMAL, "      The program tries to identify the prng type and then automatically attack it with the best algorithm.");
-    PrintAndLogEx(NORMAL, "      If all the sector keys are broken, they will be dumped to a file.");
+    PrintAndLogEx(NORMAL, "      After the program is done, the keys and card data is dumped.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h                          this help");
@@ -1575,6 +1575,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint16_t keycnt = 0;
     sector_t *e_sector;
     uint8_t sectorsCnt = MIFARE_1K_MAXSECTOR;
+    int blockCnt = MIFARE_1K_MAXBLOCK;
     uint8_t tmpKey[6] = {0};
     size_t datalen = 0;
     // For the timier
@@ -1589,6 +1590,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Loop counter
     int i, i2, i3;
     int current_sector_i = 0, current_key_type_i = 0;
+    // Dumping and transfere to simulater memory
+    uint8_t block[16] = {0x00};
+    uint8_t *dump;
+    int bytes;
+    char* fnameptr = filename;
     // Settings
     bool slow = false;
     bool nonce_file_read = false;
@@ -1616,6 +1622,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             case '*':
                 // Get the number of sectors
                 sectorsCnt = NumOfSectors(param_getchar(Cmd, cmdp + 1));
+                blockCnt = NumOfBlocks(param_getchar(Cmd, cmdp + 1));
                 cmdp ++;
                 break;
             case 'k':
@@ -1695,14 +1702,14 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     prng_type = detect_classic_prng();
 
     // Print operating parameters
-    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] Card sectors .. " _YELLOW_("%d"), sectorsCnt);
-    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] Key supplied .. " _YELLOW_("%s"), know_target_key ? "True" : "False");
-    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] Known sector .. " _YELLOW_("%d"), blockNo);
-    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] Keytype ....... " _YELLOW_("%c"), keyType ? 'B' : 'A');
-    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] Kown key ...... " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), key[0], key[1], key[2], key[3], key[4], key[5]);
-    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] Card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
-    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] Dictionary .... " _YELLOW_("%s"), strlen(filename) ? filename : "NONE");
-    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] Legacy mode ... " _YELLOW_("%s"), legacy_mfchk ? "True" : "False");
+    PrintAndLogEx(INFO, "[  SETTINGS  ] Card sectors .. " _YELLOW_("%d"), sectorsCnt);
+    PrintAndLogEx(INFO, "[  SETTINGS  ] Key supplied .. " _YELLOW_("%s"), know_target_key ? "True" : "False");
+    PrintAndLogEx(INFO, "[  SETTINGS  ] Known sector .. " _YELLOW_("%d"), blockNo);
+    PrintAndLogEx(INFO, "[  SETTINGS  ] Keytype ....... " _YELLOW_("%c"), keyType ? 'B' : 'A');
+    PrintAndLogEx(INFO, "[  SETTINGS  ] Kown key ...... " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), key[0], key[1], key[2], key[3], key[4], key[5]);
+    PrintAndLogEx(INFO, "[  SETTINGS  ] Card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
+    PrintAndLogEx(INFO, "[  SETTINGS  ] Dictionary .... " _YELLOW_("%s"), strlen(filename) ? filename : "NONE");
+    PrintAndLogEx(INFO, "[  SETTINGS  ] Legacy mode ... " _YELLOW_("%s"), legacy_mfchk ? "True" : "False");
     PrintAndLogEx(WARNING, "Starting attack!");
     
     // Check the user supplied key
@@ -1710,7 +1717,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(WARNING, "No known key was supplied, the following attacks might fail!");
     else {
         if (mfCheckKeys(FirstBlockOfSector(blockNo), keyType, true, 1, key, &key64) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "[  SETTINGS  ] The following key will be used to the nested / hardnested attack: Sector:"
+            PrintAndLogEx(INFO, "[  SETTINGS  ] The following key will be used to the nested / hardnested attack: Sector:"
                 _RED_("%3d") " key type:"_RED_("%c") " key: " _RED_("0x%02x%02x%02x%02x%02x%02x"),
                 blockNo, 
                 keyType ? 'B' : 'A',
@@ -1774,7 +1781,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     t1 = msclock();
 
     // Use the dictionary to find sector keys on the card
-    PrintAndLogEx(SUCCESS, "Enumerating the card keys with the dictionary!");
+    PrintAndLogEx(INFO, "Enumerating the card keys with the dictionary!");
     if (legacy_mfchk) {
         // Check all the sectors    
         for (i=0; i<sectorsCnt; i++) {
@@ -1797,7 +1804,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         int chunksize = keycnt > (PM3_CMD_DATA_SIZE / 6) ? (PM3_CMD_DATA_SIZE / 6) : keycnt;
         bool firstChunk = true, lastChunk = false;
         for (uint8_t strategy = 1; strategy < 3; strategy++) {
-            PrintAndLogEx(SUCCESS, "Running strategy %u", strategy);
+            PrintAndLogEx(INFO, "Running strategy %u", strategy);
             // main keychunk loop
             for (i = 0; i < keycnt; i += chunksize) {
 
@@ -1851,7 +1858,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (know_target_key == false) {
         // Check if the darkside attack can be used
         if (prng_type) {
-            PrintAndLogEx(WARNING, "No key was found ... time to go to the dark side ;)");
+            PrintAndLogEx(INFO, "No key was found ... time to go to the dark side ;)");
             int isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType, &key64);
             switch (isOK) {
                 case -1 :
@@ -1933,7 +1940,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 // Use the nested / hardnested attack
                 if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
                     if (prng_type) {
-                        PrintAndLogEx(SUCCESS, "[   NESTED   ] Sector no:%3d, target key type:%c",
+                        PrintAndLogEx(INFO, "[   NESTED   ] Sector no:%3d, target key type:%c",
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A');
 
@@ -1969,7 +1976,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         }
                     } else {
                         tryHardnested: // If the nested attack failes then we try the hardnested attack
-                        PrintAndLogEx(SUCCESS, "[ HARDNESTED ] Sector no:%3d, target key type:%c, Slow: %s",
+                        PrintAndLogEx(INFO, "[ HARDNESTED ] Sector no:%3d, target key type:%c, Slow: %s",
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
                             slow ? "Yes" : "No");
@@ -1998,12 +2005,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     }
                     // Check if the key was found
                     if (e_sector[current_sector_i].foundKey[current_key_type_i] != 0) {
-                        PrintAndLogEx(SUCCESS, "[BROCKEN  KEY]  Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                        PrintAndLogEx(SUCCESS, "[BROCKEN  KEY] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
                             tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
                     } else {
-                        PrintAndLogEx(FAILED, "[BROCKEN  KEY]  Valid KEY NOT FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                        PrintAndLogEx(FAILED, "[BROCKEN  KEY] Valid KEY NOT FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
                             tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
@@ -2015,35 +2022,61 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Show the results to the user
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Found KEYS:");
+    PrintAndLogEx(INFO, "Found KEYS:");
     printKeyTable(sectorsCnt, e_sector);
-    PrintAndLogEx(SUCCESS, "[    INFO    ] Key res types:");
-    PrintAndLogEx(SUCCESS, "                   1: Dictionary");
-    PrintAndLogEx(SUCCESS, "                   2: Darkside attack");
-    PrintAndLogEx(SUCCESS, "                   3: User supplied");
-    PrintAndLogEx(SUCCESS, "                   4: Reused");
-    PrintAndLogEx(SUCCESS, "                   5: Nested");
-    PrintAndLogEx(SUCCESS, "                   6: Hardnested");
+    PrintAndLogEx(INFO, "[    INFO    ] Key res types:");
+    PrintAndLogEx(INFO, "                   1: Dictionary");
+    PrintAndLogEx(INFO, "                   2: Darkside attack");
+    PrintAndLogEx(INFO, "                   3: User supplied");
+    PrintAndLogEx(INFO, "                   4: Reused");
+    PrintAndLogEx(INFO, "                   5: Nested");
+    PrintAndLogEx(INFO, "                   6: Hardnested");
     
     // Generate and show statistics
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "Required time for the autopwn attack: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(INFO, "Required time for the autopwn attack: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
 
-    // Create a dumpfile if all keys are known
-    for (current_sector_i=0; current_sector_i < sectorsCnt; current_sector_i++) {
-        for (current_key_type_i=0; current_key_type_i < 2; current_key_type_i++) {
-            // If the key is already known, just skip it
-            if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
-                PrintAndLogEx(FAILED, "Not all keys were discovered --> no dump file will be created!");
-                goto notAllKeysFound;
-            }
-        }
-    }
+    // Transfere the found keys to the simulator and dump the keys and card data
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "All keys were discovered, dumping them now:");
+    PrintAndLogEx(INFO, "Dumping the keys:");
     createKeyDump(sectorsCnt, e_sector, GenerateFilename("hf-mf-", "-key.bin"));
     
-    notAllKeysFound:
+    PrintAndLogEx(SUCCESS, "Transfering the found keys to the simulator memory");
+    for (current_sector_i=0; current_sector_i < sectorsCnt; current_sector_i++) {
+        mfEmlGetMem(block, current_sector_i, 1);
+        if (e_sector[current_sector_i].foundKey[0])
+            num_to_bytes(e_sector[current_sector_i].Key[0], 6, block);
+        if (e_sector[current_sector_i].foundKey[1])
+            num_to_bytes(e_sector[current_sector_i].Key[1], 6, block + 10);
+        mfEmlSetMem(block, FirstBlockOfSector(current_sector_i) + NumBlocksPerSector(current_sector_i) - 1, 1);    
+    }
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFARE_EML_LOAD, sectorsCnt, 0, 0, NULL, 0);
+
+    bytes = blockCnt * MFBLOCK_SIZE;
+    dump = calloc(bytes, sizeof(uint8_t));
+    if (!dump) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+    memset(dump, 0, bytes);
+
+    PrintAndLogEx(INFO, "Downloading the card content from emulator memory");
+    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+
+    fnameptr += sprintf(fnameptr, "hf-mf-");
+    FillFileNameByUID(fnameptr, dump, "-dump", 4);
+
+    saveFile(filename, ".bin", dump, bytes);
+    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
+    saveFileJSON(filename, jsfCardMemory, dump, bytes);
+    free(dump);
+    
     free(e_sector);
     return 0;
 }
