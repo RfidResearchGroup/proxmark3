@@ -169,7 +169,7 @@ static int usage_hf14_hardnested(void) {
 static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf autopwn [k] <sector number> <key A|B> <key (12 hex symbols)>");
-    PrintAndLogEx(NORMAL, "                       [*] <card memory> [f] <dictionary>.dic [s] [i] [l] [t] [d]");
+    PrintAndLogEx(NORMAL, "                       [*] <card memory> [f] <dictionary>.dic [s] [i] [l]");
     PrintAndLogEx(NORMAL, "                       (card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Description:");
