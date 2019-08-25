@@ -169,8 +169,7 @@ static int usage_hf14_hardnested(void) {
 static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf autopwn [k] <sector number> <key A|B> <key (12 hex symbols)>");
-    PrintAndLogEx(NORMAL, "                       [*] <card memory> [f] <dictionary>.dic [s] [i] [l]");
-    PrintAndLogEx(NORMAL, "                       (card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K)");
+    PrintAndLogEx(NORMAL, "                    [*] <card memory> [f] <dictionary>.dic [s] [i] [l] [v]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Description:");
     PrintAndLogEx(NORMAL, "      This command is used to automate the attack process on mifare classic nfc cards.");
@@ -182,7 +181,13 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "      k <sector> <keytype> <key> if a known key for a block is supplied");
     PrintAndLogEx(NORMAL, "      f <name>.dic               dictionary file for key discovery (the file has to end in .dic)");
     PrintAndLogEx(NORMAL, "      s                          slower acquisition (required by some non standard cards) for hardnested");
+    PrintAndLogEx(NORMAL, "      v                          verbose output (statistcs)");
     PrintAndLogEx(NORMAL, "      l                          legacy mode (use the slow mfchk for the key enumeration)");
+    PrintAndLogEx(NORMAL, "      * <X>     all sectors based on card memory, other values then below defaults to 1k");
+    PrintAndLogEx(NORMAL, "        * 0   = MINI(320 bytes)");
+    PrintAndLogEx(NORMAL, "        * 1   = 1K");
+    PrintAndLogEx(NORMAL, "        * 2   = 2K");
+    PrintAndLogEx(NORMAL, "        * 4   = 4K");
     PrintAndLogEx(NORMAL, "      i <X>     set type of SIMD instructions. Without this flag programs autodetect it. (for hardnested)");
     PrintAndLogEx(NORMAL, "        i 5   = AVX512");
     PrintAndLogEx(NORMAL, "        i 2   = AVX2");
@@ -1570,14 +1575,16 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint8_t keyType = 0;
     uint8_t key[6] = {0};
     uint64_t key64 = 0;
+    bool calibrate = true;
     // Attack key storage variables
     uint8_t *keyBlock;
     uint16_t keycnt = 0;
-    sector_t *e_sector;
+    sector_t *eSector;
     uint8_t sectorsCnt = MIFARE_1K_MAXSECTOR;
     int blockCnt = MIFARE_1K_MAXBLOCK;
     uint8_t tmpKey[6] = {0};
     size_t datalen = 0;
+    bool knowTargetKey = false;
     // For the timier
     uint64_t t1;
     // Parameters and dictionary file
@@ -1597,12 +1604,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     char* fnameptr = filename;
     // Settings
     bool slow = false;
-    bool nonce_file_read = false;
-    bool nonce_file_write = false;
-    bool know_target_key = false;
     bool legacy_mfchk = false;
     bool prng_type = false;
-    bool calibrate = true;
+    bool verbose = false;
 
     // Parse the options given by the user
     ctmp = tolower(param_getchar(Cmd, 0));
@@ -1618,6 +1622,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 break;
             case 'l':
                 legacy_mfchk = true;
+                break;
+            case 'v':
+                verbose = true;
                 break;
             case '*':
                 // Get the number of sectors
@@ -1646,7 +1653,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     PrintAndLogEx(WARNING, "Key must include 12 HEX symbols");
                     return 1;
                 }
-                know_target_key = true;
+                knowTargetKey = true;
                 cmdp += 3;
             case 's':
                 slow = true;
@@ -1688,13 +1695,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // Create the key storage stucture
-    e_sector = calloc(sectorsCnt, sizeof(sector_t));
-    if (e_sector == NULL) return PM3_EMALLOC;
+    eSector = calloc(sectorsCnt, sizeof(sector_t));
+    if (eSector == NULL) return PM3_EMALLOC;
     // Clear the key storage datastructure
     for (i=0; i<sectorsCnt; i++) {
         for (i2=0; i2<2; i2++) {
-            e_sector[i].Key[i2] = 0;
-            e_sector[i].foundKey[i2] = 0;
+            eSector[i].Key[i2] = 0;
+            eSector[i].foundKey[i2] = 0;
         }
     }
 
@@ -1702,56 +1709,57 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     prng_type = detect_classic_prng();
 
     // Print operating parameters
-    PrintAndLogEx(INFO, "[  SETTINGS  ] Card sectors .. " _YELLOW_("%d"), sectorsCnt);
-    PrintAndLogEx(INFO, "[  SETTINGS  ] Key supplied .. " _YELLOW_("%s"), know_target_key ? "True" : "False");
-    PrintAndLogEx(INFO, "[  SETTINGS  ] Known sector .. " _YELLOW_("%d"), blockNo);
-    PrintAndLogEx(INFO, "[  SETTINGS  ] Keytype ....... " _YELLOW_("%c"), keyType ? 'B' : 'A');
-    PrintAndLogEx(INFO, "[  SETTINGS  ] Kown key ...... " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), key[0], key[1], key[2], key[3], key[4], key[5]);
-    PrintAndLogEx(INFO, "[  SETTINGS  ] Card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
-    PrintAndLogEx(INFO, "[  SETTINGS  ] Dictionary .... " _YELLOW_("%s"), strlen(filename) ? filename : "NONE");
-    PrintAndLogEx(INFO, "[  SETTINGS  ] Legacy mode ... " _YELLOW_("%s"), legacy_mfchk ? "True" : "False");
-    PrintAndLogEx(WARNING, "Starting attack!");
+    if (verbose) {
+        PrintAndLogEx(INFO, "[  SETTINGS  ] Card sectors .. " _YELLOW_("%d"), sectorsCnt);
+        PrintAndLogEx(INFO, "[  SETTINGS  ] Key supplied .. " _YELLOW_("%s"), knowTargetKey ? "True" : "False");
+        PrintAndLogEx(INFO, "[  SETTINGS  ] Known sector .. " _YELLOW_("%d"), blockNo);
+        PrintAndLogEx(INFO, "[  SETTINGS  ] Keytype ....... " _YELLOW_("%c"), keyType ? 'B' : 'A');
+        PrintAndLogEx(INFO, "[  SETTINGS  ] Kown key ...... " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), key[0], key[1], key[2], key[3], key[4], key[5]);
+        PrintAndLogEx(INFO, "[  SETTINGS  ] Card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
+        PrintAndLogEx(INFO, "[  SETTINGS  ] Dictionary .... " _YELLOW_("%s"), strlen(filename) ? filename : "NONE");
+        PrintAndLogEx(INFO, "[  SETTINGS  ] Legacy mode ... " _YELLOW_("%s"), legacy_mfchk ? "True" : "False");
+    }
     
     // Check the user supplied key
-    if (know_target_key == false)
+    if (knowTargetKey == false)
         PrintAndLogEx(WARNING, "No known key was supplied, the following attacks might fail!");
     else {
         if (mfCheckKeys(FirstBlockOfSector(blockNo), keyType, true, 1, key, &key64) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "[  SETTINGS  ] The following key will be used to the nested / hardnested attack: Sector:"
+            PrintAndLogEx(INFO, "[  SETTINGS  ] The following key will be used for the nested / hardnested attack: sector:"
                 _RED_("%3d") " key type:"_RED_("%c") " key: " _RED_("0x%02x%02x%02x%02x%02x%02x"),
                 blockNo, 
                 keyType ? 'B' : 'A',
                 key[0], key[1], key[2], key[3], key[4], key[5]);
             
             // Store the key for the nested / hardnested attack (if supplied by the user)
-            e_sector[blockNo].Key[keyType] = bytes_to_num(key, 6);
-            e_sector[blockNo].foundKey[keyType] = 3;
+            eSector[blockNo].Key[keyType] = bytes_to_num(key, 6);
+            eSector[blockNo].foundKey[keyType] = 3;
         } else {
-            know_target_key = false;
+            knowTargetKey = false;
             PrintAndLogEx(FAILED, "Key is wrong. Can't authenticate to sector:"_RED_("%3d") " key type:"_RED_("%c") " key: " _RED_("0x%02x%02x%02x%02x%02x%02x"),
                 blockNo, 
                 keyType ? 'B' : 'A',
                 key[0], key[1], key[2], key[3], key[4], key[5]);
-            PrintAndLogEx(WARNING, "Let's see if just the sector or keytype are not correct, and then we also give the dictionary a try ;)");
+            PrintAndLogEx(WARNING, "Let's see if just the sector or key type are not correct, and then we also give the dictionary a try ;)");
         }
         // Check if the user supplied key is used by other sectors 
         for (i=0; i<sectorsCnt; i++) {
             for (i2=0; i2<2; i2++) {
-                if (e_sector[i].foundKey[i2] == 0) {
+                if (eSector[i].foundKey[i2] == 0) {
                     if (mfCheckKeys(FirstBlockOfSector(i), i2, true, 1, key, &key64) == PM3_SUCCESS) {
-                        e_sector[i].Key[i2] = bytes_to_num(key, 6);
-                        e_sector[i].foundKey[i2] = 4;
+                        eSector[i].Key[i2] = bytes_to_num(key, 6);
+                        eSector[i].foundKey[i2] = 4;
                         PrintAndLogEx(SUCCESS, "[ REUSED KEY ] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                             i,
                             i2 ? 'B' : 'A',
                             key[0], key[1], key[2], key[3], key[4], key[5]);
                     
                         // If the user supplied secctor / keytype was wrong --> just be nice and correct it ;)
-                        if (know_target_key == false) {
-                            num_to_bytes(e_sector[i].Key[i2], 6, key);
-                            know_target_key = true;
+                        if (knowTargetKey == false) {
+                            num_to_bytes(eSector[i].Key[i2], 6, key);
+                            knowTargetKey = true;
                             blockNo = i; keyType = i2;
-                            PrintAndLogEx(SUCCESS, "[  SETTINGS  ] The following key will be used to the nested / hardnested attack: Sector:"
+                            PrintAndLogEx(SUCCESS, "[  SETTINGS  ] The following key will be used for the nested / hardnested attack: sector:"
                                 _RED_("%3d") " key type:"_RED_("%c") " key: " _RED_("0x%02x%02x%02x%02x%02x%02x"),
                                 blockNo, 
                                 keyType ? 'B' : 'A',
@@ -1769,7 +1777,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         loadFileDICTIONARY(filename, keyBlock, &datalen, 6, &keycnt);
     } else {
         keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
-        if (keyBlock == NULL) return 1;
+        if (keyBlock == NULL) {
+            free(eSector);
+            return 1;
+        }
 
         for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++) {
             num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
@@ -1787,12 +1798,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         for (i=0; i<sectorsCnt; i++) {
             for (i2=0; i2<2; i2++) {
                 // Check if the key is known
-                if (e_sector[i].foundKey[i2] == 0) {
+                if (eSector[i].foundKey[i2] == 0) {
                     for (i3=0; i3<keycnt; i3++) {
                         printf("."); fflush(stdout);
                         if (mfCheckKeys(FirstBlockOfSector(i), i2, true, 1, (keyBlock + (6*i3)), &key64) == PM3_SUCCESS) {
-                            e_sector[i].Key[i2] = bytes_to_num((keyBlock + (6*i3)), 6);
-                            e_sector[i].foundKey[i2] = 1;
+                            eSector[i].Key[i2] = bytes_to_num((keyBlock + (6*i3)), 6);
+                            eSector[i].foundKey[i2] = 1;
                             break;
                         }
                     }
@@ -1816,7 +1827,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 // last chunk?
                 if (size == keycnt - i)
                     lastChunk = true;
-                int res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
+                int res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), eSector, false);
                 if (firstChunk)
                     firstChunk = false;
                 // all keys,  aborted
@@ -1832,19 +1843,19 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Analyse the dictionary attack
     for (i=0; i<sectorsCnt; i++) {
         for (i2=0; i2<2; i2++) {
-            if (e_sector[i].foundKey[i2] == 1) {
-                num_to_bytes(e_sector[i].Key[i2], 6, tmpKey);
+            if (eSector[i].foundKey[i2] == 1) {
+                num_to_bytes(eSector[i].Key[i2], 6, tmpKey);
                 PrintAndLogEx(SUCCESS, "[ DICT.  KEY ] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                     i,
                     i2 ? 'B' : 'A',
                     tmpKey[0], tmpKey[1], tmpKey[2], tmpKey[3], tmpKey[4], tmpKey[5]);
             
                 // Store vaild credentials for the nested / hardnested attack if none exist
-                if (know_target_key == false) {
-                    num_to_bytes(e_sector[i].Key[i2], 6, key);
-                    know_target_key = true;
+                if (knowTargetKey == false) {
+                    num_to_bytes(eSector[i].Key[i2], 6, key);
+                    knowTargetKey = true;
                     blockNo = i; keyType = i2;
-                    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] The following key will be used to the nested / hardnested attack: Sector:"
+                    PrintAndLogEx(SUCCESS, "[  SETTINGS  ] The following key will be used for the nested / hardnested attack: sector:"
                         _RED_("%3d") " key type:"_RED_("%c") " key: " _RED_("0x%02x%02x%02x%02x%02x%02x"),
                         blockNo, 
                         keyType ? 'B' : 'A',
@@ -1855,36 +1866,36 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // Check if at least one sector key was found
-    if (know_target_key == false) {
+    if (knowTargetKey == false) {
         // Check if the darkside attack can be used
         if (prng_type) {
             PrintAndLogEx(INFO, "No key was found ... time to go to the dark side ;)");
             int isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType, &key64);
             switch (isOK) {
                 case -1 :
-                    PrintAndLogEx(WARNING, "\nbutton pressed. Aborted.");
+                    PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
                     goto noValidKeyFound;
                 case -2 :
-                    PrintAndLogEx(FAILED, "\ncard is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).");
+                    PrintAndLogEx(FAILED, "\nCard is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).");
                     goto noValidKeyFound;
                 case -3 :
-                    PrintAndLogEx(FAILED, "\ncard is not vulnerable to Darkside attack (its random number generator is not predictable).");
+                    PrintAndLogEx(FAILED, "\nCard is not vulnerable to Darkside attack (its random number generator is not predictable).");
                     goto noValidKeyFound;
                 case -4 :
-                    PrintAndLogEx(FAILED, "\ncard is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
+                    PrintAndLogEx(FAILED, "\nCard is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
                     PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour.");
                     goto noValidKeyFound;
                 case -5 :
-                    PrintAndLogEx(WARNING, "\naborted via keyboard.");
+                    PrintAndLogEx(WARNING, "\nAborted via keyboard.");
                     goto noValidKeyFound;
                 default :
-                    PrintAndLogEx(SUCCESS, "\nfound valid key: %012" PRIx64 "\n", key64);
+                    PrintAndLogEx(SUCCESS, "\nFound valid key: %012" PRIx64 "\n", key64);
                     break;
             }
             num_to_bytes(key64, 6, key);
             // Check if the darkside key is vaild
             if (mfCheckKeys(FirstBlockOfSector(blockNo), keyType, true, 1, key, &key64) != PM3_SUCCESS) {
-                PrintAndLogEx(FAILED, "The key, generated by the darkside attack is not vaild!"
+                PrintAndLogEx(FAILED, "The key generated by the darkside attack is not vaild!"
                     _RED_("%3d") " key type:"_RED_("%c") " key: " _RED_("0x%02x%02x%02x%02x%02x%02x"),
                     blockNo, 
                     keyType ? 'B' : 'A',
@@ -1892,13 +1903,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 goto noValidKeyFound;
             }
             // Store the keys
-            e_sector[blockNo].Key[keyType] = bytes_to_num(key, 6);
-            e_sector[blockNo].foundKey[keyType] = 2;
+            eSector[blockNo].Key[keyType] = bytes_to_num(key, 6);
+            eSector[blockNo].foundKey[keyType] = 2;
         } else {
             noValidKeyFound:
             PrintAndLogEx(FAILED, "No usable key was found!");
             free(keyBlock);
-            free(e_sector);
+            free(eSector);
             return 1;
         }
     }
@@ -1911,20 +1922,20 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         for (current_key_type_i=0; current_key_type_i < 2; current_key_type_i++) {
 
             // If the key is already known, just skip it
-            if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
+            if (eSector[current_sector_i].foundKey[current_key_type_i] == 0) {
 
                 // Try the found keys are reused
                 if  (bytes_to_num(tmpKey, 6) != 0) {
-                    // <!> The fast check --> mfCheckKeys_fast(sectorsCnt, true, true, 2, 1, tmpKey, e_sector, false);
+                    // <!> The fast check --> mfCheckKeys_fast(sectorsCnt, true, true, 2, 1, tmpKey, eSector, false);
                     // <!> Returns false keys, so we just stick to the slower mfchk.
                     for (i=0; i<sectorsCnt; i++) {
                         for (i2=0; i2<2; i2++) {
                             // Check if the sector key is already broken
-                            if (e_sector[i].foundKey[i2] == 0) {
+                            if (eSector[i].foundKey[i2] == 0) {
                                 // Check if the key works
                                 if (mfCheckKeys(FirstBlockOfSector(i), i2, true, 1, tmpKey, &key64) == PM3_SUCCESS) {
-                                    e_sector[i].Key[i2] = bytes_to_num(tmpKey, 6);
-                                    e_sector[i].foundKey[i2] = 4;
+                                    eSector[i].Key[i2] = bytes_to_num(tmpKey, 6);
+                                    eSector[i].foundKey[i2] = 4;
                                     PrintAndLogEx(SUCCESS, "[ REUSED KEY ] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                                         i,
                                         i2 ? 'B' : 'A',
@@ -1938,7 +1949,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 num_to_bytes(0, 6, tmpKey);
 
                 // Use the nested / hardnested attack
-                if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
+                if (eSector[current_sector_i].foundKey[current_key_type_i] == 0) {
                     if (prng_type) {
                         PrintAndLogEx(INFO, "[   NESTED   ] Sector no:%3d, target key type:%c",
                             current_sector_i,
@@ -1947,15 +1958,17 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         isOK = mfnested(FirstBlockOfSector(blockNo), keyType, key, FirstBlockOfSector(current_sector_i), current_key_type_i, tmpKey, calibrate);
                         switch (isOK) {
                             case -1 :
-                                PrintAndLogEx(ERR, "error: No response from Proxmark3.\n");
+                                PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
+                                free(eSector);
                                 return 1;
                                 break;
                             case -2 :
-                                PrintAndLogEx(WARNING, "button pressed. Aborted.\n");
+                                PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
+                                free(eSector);
                                 return 1;
                                 break;
                             case -3 :
-                                PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n");
+                                PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is probably not predictable).");
                                 PrintAndLogEx(FAILED, "Nested attack failed --> try hardnested instead!");
                                 goto tryHardnested;
                                 break;
@@ -1966,11 +1979,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                                 break;
                             case -5 :
                                 calibrate = false;
-                                e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmpKey, 6);
-                                e_sector[current_sector_i].foundKey[current_key_type_i] = 5;
+                                eSector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmpKey, 6);
+                                eSector[current_sector_i].foundKey[current_key_type_i] = 5;
                                 break;
                             default :
                                 PrintAndLogEx(ERR, "unknown Error.\n");
+                                free(eSector);
                                 return 1;
                                 break;
                         }
@@ -1981,30 +1995,30 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                             current_key_type_i ? 'B' : 'A',
                             slow ? "Yes" : "No");
 
-                        isOK = mfnestedhard(FirstBlockOfSector(blockNo), keyType, key, FirstBlockOfSector(current_sector_i), current_key_type_i, NULL, nonce_file_read, nonce_file_write, slow, 0, &foundkey, NULL);
+                        isOK = mfnestedhard(FirstBlockOfSector(blockNo), keyType, key, FirstBlockOfSector(current_sector_i), current_key_type_i, NULL, false, false, slow, 0, &foundkey, NULL);
                         DropField();
                         if (isOK) {
                             switch (isOK) {
                                 case 1 :
-                                    PrintAndLogEx(ERR, "Error: No response from Proxmark3.\n");
+                                    PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
                                     break;
                                 case 2 :
-                                    PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n");
+                                    PrintAndLogEx(NORMAL, "\nButton pressed. Aborted.");
                                     break;
                                 default :
                                     break;
                             }
-                            free(e_sector);
+                            free(eSector);
                             return 2;
                         }
 
                         // Copy the found key to the tmpKey variale (for the following print statement, and the mfCheckKeys above)
                         num_to_bytes(foundkey, 6, tmpKey);
-                        e_sector[current_sector_i].Key[current_key_type_i] = foundkey;
-                        e_sector[current_sector_i].foundKey[current_key_type_i] = 6;
+                        eSector[current_sector_i].Key[current_key_type_i] = foundkey;
+                        eSector[current_sector_i].foundKey[current_key_type_i] = 6;
                     }
                     // Check if the key was found
-                    if (e_sector[current_sector_i].foundKey[current_key_type_i] != 0) {
+                    if (eSector[current_sector_i].foundKey[current_key_type_i] != 0) {
                         PrintAndLogEx(SUCCESS, "[BROCKEN  KEY] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
@@ -2022,32 +2036,30 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Show the results to the user
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Found KEYS:");
-    printKeyTable(sectorsCnt, e_sector);
-    PrintAndLogEx(INFO, "[    INFO    ] Key res types:");
-    PrintAndLogEx(INFO, "                   1: Dictionary");
-    PrintAndLogEx(INFO, "                   2: Darkside attack");
-    PrintAndLogEx(INFO, "                   3: User supplied");
-    PrintAndLogEx(INFO, "                   4: Reused");
-    PrintAndLogEx(INFO, "                   5: Nested");
-    PrintAndLogEx(INFO, "                   6: Hardnested");
+    PrintAndLogEx(INFO, "Found Keys:");
+    printKeyTable(sectorsCnt, eSector);
+    if (verbose) {
+        PrintAndLogEx(INFO, "[    INFO    ] Key res types:");
+        PrintAndLogEx(INFO, "                   1: Dictionary");
+        PrintAndLogEx(INFO, "                   2: Darkside attack");
+        PrintAndLogEx(INFO, "                   3: User supplied");
+        PrintAndLogEx(INFO, "                   4: Reused");
+        PrintAndLogEx(INFO, "                   5: Nested");
+        PrintAndLogEx(INFO, "                   6: Hardnested");
+    }
     
-    // Generate and show statistics
-    t1 = msclock() - t1;
-    PrintAndLogEx(INFO, "Required time for the autopwn attack: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
-
     // Transfere the found keys to the simulator and dump the keys and card data
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Dumping the keys:");
-    createKeyDump(sectorsCnt, e_sector, GenerateFilename("hf-mf-", "-key.bin"));
+    createKeyDump(sectorsCnt, eSector, GenerateFilename("hf-mf-", "-key.bin"));
     
     PrintAndLogEx(SUCCESS, "Transfering the found keys to the simulator memory");
     for (current_sector_i=0; current_sector_i < sectorsCnt; current_sector_i++) {
         mfEmlGetMem(block, current_sector_i, 1);
-        if (e_sector[current_sector_i].foundKey[0])
-            num_to_bytes(e_sector[current_sector_i].Key[0], 6, block);
-        if (e_sector[current_sector_i].foundKey[1])
-            num_to_bytes(e_sector[current_sector_i].Key[1], 6, block + 10);
+        if (eSector[current_sector_i].foundKey[0])
+            num_to_bytes(eSector[current_sector_i].Key[0], 6, block);
+        if (eSector[current_sector_i].foundKey[1])
+            num_to_bytes(eSector[current_sector_i].Key[1], 6, block + 10);
         mfEmlSetMem(block, FirstBlockOfSector(current_sector_i) + NumBlocksPerSector(current_sector_i) - 1, 1);    
     }
 
@@ -2058,6 +2070,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     dump = calloc(bytes, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        free(eSector);
         return PM3_EMALLOC;
     }
     memset(dump, 0, bytes);
@@ -2065,6 +2078,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     PrintAndLogEx(INFO, "Downloading the card content from emulator memory");
     if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(eSector);
         free(dump);
         return PM3_ETIMEOUT;
     }
@@ -2075,9 +2089,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
     saveFileJSON(filename, jsfCardMemory, dump, bytes);
-    free(dump);
     
-    free(e_sector);
+    // Generate and show statistics
+    t1 = msclock() - t1;
+    PrintAndLogEx(INFO, "Required time for the autopwn attack: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
+
+    free(dump);
+    free(eSector);
     return 0;
 }
 
