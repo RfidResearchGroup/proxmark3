@@ -1963,41 +1963,40 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A');
 
-                        isOK = mfnested(FirstBlockOfSector(blockNo), keyType, key, FirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key, calibrate);
-                        switch (isOK) {
-                            case -1 :
-                                PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
-                                free(e_sector);
-                                return 1;
-                                break;
-                            case -2 :
-                                PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
-                                free(e_sector);
-                                return 1;
-                                break;
-                            case -3 :
-                                PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is probably not predictable).");
-                                PrintAndLogEx(FAILED, "Nested attack failed --> try hardnested instead!");
-                                goto tryHardnested;
-                                break;
-                            case -4 : //key not found
-                                calibrate = false;
-                                PrintAndLogEx(FAILED, "Nested attack failed --> try hardnested instead!");
-                                goto tryHardnested;
-                                break;
-                            case -5 :
-                                calibrate = false;
-                                e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
-                                e_sector[current_sector_i].foundKey[current_key_type_i] = 5;
-                                break;
-                            default :
-                                PrintAndLogEx(ERR, "unknown Error.\n");
-                                free(e_sector);
-                                return 1;
-                                break;
+                        for (int i = 0; i < MIFARE_SECTOR_RETRY; i++) {
+                            if (e_sector[current_sector_i].foundKey[current_key_type_i]) continue;
+                            
+                            isOK = mfnested(FirstBlockOfSector(blockNo), keyType, key, FirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key, calibrate);
+                            switch (isOK) {
+                                case -1 :
+                                    PrintAndLogEx(ERR, "error: No response from Proxmark3.\n");
+                                    break;
+                                case -2 :
+                                    PrintAndLogEx(WARNING, "button pressed. Aborted.\n");
+                                    break;
+                                case -3 :
+                                    PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n");
+                                    break;
+                                case -4 : //key not found
+                                    calibrate = false;
+                                    continue;
+                                case -5 :
+                                    calibrate = false;
+                                    e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
+                                    e_sector[current_sector_i].foundKey[current_key_type_i] = 5;
+                                    break;
+                                default :
+                                    PrintAndLogEx(ERR, "unknown Error.\n");
+                                    break;
+                            }
+                        }
+                        // If the key was not recovered try the hardnested attack
+                        if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
+                            PrintAndLogEx(FAILED, "The nested attack was not able to recover the key! Let's try hardnested instead!");
+                            goto tryHardnested;
                         }
                     } else {
-                        tryHardnested: // If the nested attack failes then we try the hardnested attack
+                        tryHardnested:
                         PrintAndLogEx(INFO, "[ HARDNESTED ] Sector no:%3d, target key type:%c, Slow: %s",
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
