@@ -1243,9 +1243,9 @@ static int CmdHF14AMfNested(const char *Cmd) {
 //        int iterations = 0;
         bool calibrate = true;
 
-        for (int i = 0; i < MIFARE_SECTOR_RETRY; i++) {
+        for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
             for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
-                for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
+                for (int i = 0; i < MIFARE_SECTOR_RETRY; i++) {
 
                     if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
 
