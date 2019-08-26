@@ -160,7 +160,7 @@ void printarr(const char *name, uint8_t *arr, int len) {
 }
 
 void printvar(const char *name, uint8_t *arr, int len) {
-    PrintAndLogEx(NORMAL, "%s = " _YELLOW_("%s"), name, sprint_hex(arr, len) );
+    PrintAndLogEx(NORMAL, "%s = " _YELLOW_("%s"), name, sprint_hex(arr, len));
 }
 
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {

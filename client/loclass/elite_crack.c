@@ -479,7 +479,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
         return 1;
     } else {
         PrintAndLogEx(NORMAL, "\n");
-        PrintAndLogEx(SUCCESS, _GREEN_("Key verified ok!") );
+        PrintAndLogEx(SUCCESS, _GREEN_("Key verified ok!"));
     }
     return 0;
 }
@@ -502,18 +502,18 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     for (i = 0 ; i * itemsize < dumpsize ; i++) {
         memcpy(attack, dump + i * itemsize, itemsize);
         errors += bruteforceItem(*attack, keytable);
-		if ( errors ) 
-			break;
+        if (errors)
+            break;
     }
     free(attack);
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds", t1 / 1000);
 
-    
-	if ( errors ) {
-		PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim 2`") "again and collect new data");
-		return 1;
-	}
+
+    if (errors) {
+        PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim 2`") "again and collect new data");
+        return 1;
+    }
 
     // Pick out the first 16 bytes of the keytable.
     // The keytable is now in 16-bit ints, where the upper 8 bits
@@ -526,8 +526,8 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 
         if (!(keytable[i] & CRACKED)) {
             PrintAndLogEx(WARNING, "Warning: we are missing byte %d, custom key calculation will fail...", i);
-			return 1;
-		}
+            return 1;
+        }
     }
     errors += calculateMasterKey(first16bytes, NULL);
     return errors;

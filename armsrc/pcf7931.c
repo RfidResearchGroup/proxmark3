@@ -232,8 +232,7 @@ void ReadPCF7931() {
         }
 
         Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (max_blocks == 0 ? found_blocks : max_blocks), tries, errors);
-        for (i = 0; i < n; ++i)
-        {
+        for (i = 0; i < n; ++i) {
             print_result("got consecutive blocks", tmp_blocks[i], 16);
         }
 

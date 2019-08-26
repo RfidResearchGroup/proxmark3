@@ -1992,9 +1992,9 @@ TEST2:
 
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
     if (res == 2) {
-        if (cuid == 0xAA55C396 ) {
-           isGen = GEN_UNFUSED;
-           goto OUT;
+        if (cuid == 0xAA55C396) {
+            isGen = GEN_UNFUSED;
+            goto OUT;
         }
 
         ReaderTransmit(rats, sizeof(rats), NULL);

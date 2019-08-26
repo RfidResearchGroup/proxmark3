@@ -287,7 +287,7 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             memcpy(uid, data, 8);
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
 
-            for (size_t i = 0; i < (datalen / 8 ); i++) {
+            for (size_t i = 0; i < (datalen / 8); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
                 sprintf(path, "$blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 8), 8);
@@ -311,7 +311,7 @@ out:
     return retval;
 }
 
-int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char* fptr) {
+int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr) {
     uint8_t tmpKey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     int i;
 
@@ -568,8 +568,8 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
 
             size_t len = 0;
             JsonLoadBufAsHex(root, path, &udata[sptr], 8, &len);
-            if (!len) 
-                 break;
+            if (!len)
+                break;
 
             sptr += len;
         }
@@ -694,7 +694,7 @@ static int filelist(const char *path, const char *ext, bool last) {
     PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
     for (uint16_t i = 0; i < n; i++) {
         if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || (str_endswith(namelist[i]->d_name, ext))) {
-            PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " ":"│", i == n-1 ? "└" : "├", namelist[i]->d_name);
+            PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " " : "│", i == n - 1 ? "└" : "├", namelist[i]->d_name);
         }
         free(namelist[i]);
     }
@@ -727,19 +727,17 @@ int searchAndList(const char *pm3dir, const char *ext) {
 }
 
 static int searchFinalFile(char **foundpath, const char *pm3dir, const char *searchname) {
-    if ((foundpath == NULL)||(pm3dir == NULL)||(searchname == NULL)) return PM3_ESOFT;
+    if ((foundpath == NULL) || (pm3dir == NULL) || (searchname == NULL)) return PM3_ESOFT;
     // explicit absolute (/) or relative path (./) => try only to match it directly
     char *filename = calloc(strlen(searchname) + 1, sizeof(char));
     if (filename == NULL) return PM3_EMALLOC;
     strcpy(filename, searchname);
     if (((strlen(filename) > 1) && (filename[0] == '/')) ||
-        ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/')))
-    {
+            ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/'))) {
         if (fileExists(filename)) {
             *foundpath = filename;
             return PM3_SUCCESS;
-        }
-        else {
+        } else {
             goto out;
         }
     }
