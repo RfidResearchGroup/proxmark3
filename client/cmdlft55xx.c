@@ -206,7 +206,7 @@ static int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf t55xx chk m");
-    PrintAndLogEx(NORMAL, "       lf t55xx chk i dictionaries/t55xx_default_pwds.dic");
+    PrintAndLogEx(NORMAL, "       lf t55xx chk i t55xx_default_pwds");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
