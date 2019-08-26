@@ -176,7 +176,7 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "      It uses the darkside, nested and hardnested attack to extract the keys and card content.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h or ?                     this help");
+    PrintAndLogEx(NORMAL, "      h                          this help");
     PrintAndLogEx(NORMAL, "      k <sector> <key A|B> <key> if a known key for a block is supplied");
     PrintAndLogEx(NORMAL, "      f <dictionary>[.dic]       dictionary file for key discovery (the file has to end in .dic, max 2000 entries allowed)");
     PrintAndLogEx(NORMAL, "      s                          slower acquisition for hardnested (required by some non standard cards)");
@@ -1613,8 +1613,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         switch (tolower(ctmp)) {
             case 'h':
                 return usage_hf14_autopwn();
-            case '?':
-                return usage_hf14_autopwn();
             case 'f':
                 if (param_getstr(Cmd, cmdp +1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
                     PrintAndLogEx(FAILED, "Filename too long");
@@ -1965,7 +1963,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
                         for (int i = 0; i < MIFARE_SECTOR_RETRY; i++) {
                             if (e_sector[current_sector_i].foundKey[current_key_type_i]) continue;
-                            
+
                             isOK = mfnested(FirstBlockOfSector(blockNo), keyType, key, FirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key, calibrate);
                             switch (isOK) {
                                 case -1 :
