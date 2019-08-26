@@ -1689,7 +1689,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
-                usage_hf14_hardnested();
+                usage_hf14_autopwn();
                 return 1;
         }
         cmdp++;
