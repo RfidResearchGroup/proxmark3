@@ -1659,9 +1659,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
                 if (!isxdigit(buf[0])) {
                     PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
-                    free(keyBlock);
-                    fclose(f);
-                    return PM3_EFILE;
+                    continue;
                 }
 
                 buf[12] = 0;
@@ -1937,9 +1935,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 // codesmell, only checks first char?
                 if (!isxdigit(buf[0])) {
                     PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
-                    free(keyBlock);
-                    fclose(f);
-                    return PM3_EFILE;
+                    continue;
                 }
 
                 buf[12] = 0;
