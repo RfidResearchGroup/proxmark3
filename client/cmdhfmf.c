@@ -41,7 +41,7 @@
 static int CmdHelp(const char *Cmd);
 
 static int usage_hf14_ice(void) {
-    PrintAndLogEx(NORMAL, "Usage:   hf mf ice [l] <limit> [f] <name>");
+    PrintAndLogEx(NORMAL, "Usage:   hf mf ice [l <limit>] [f <name>]");
     PrintAndLogEx(NORMAL, "  h            this help");
     PrintAndLogEx(NORMAL, "  l <limit>    nonces to be collected");
     PrintAndLogEx(NORMAL, "  f <name>     save nonces to <name> instead of hf-mf-<UID>-nonces.bin");
@@ -53,7 +53,7 @@ static int usage_hf14_ice(void) {
 }
 
 static int usage_hf14_dump(void) {
-    PrintAndLogEx(NORMAL, "Usage:   hf mf dump [card memory] k <name> f <name>");
+    PrintAndLogEx(NORMAL, "Usage:   hf mf dump [card memory] [k <name>] [f <name>]");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
     PrintAndLogEx(NORMAL, "  k <name>     : key filename, if no <name> given, UID will be used as filename");
     PrintAndLogEx(NORMAL, "  f <name>     : data filename, if no <name> given, UID will be used as filename");
@@ -65,7 +65,7 @@ static int usage_hf14_dump(void) {
 }
 
 static int usage_hf14_mifare(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf darkside [h] <block number> <A|B>");
+    PrintAndLogEx(NORMAL, "Usage:  hf mf darkside <block number> <A|B>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h               this help");
     PrintAndLogEx(NORMAL, "      <block number>  (Optional) target other block");
@@ -77,7 +77,7 @@ static int usage_hf14_mifare(void) {
     return 0;
 }
 static int usage_hf14_mfsim(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf mf sim [h] u <uid> n <numreads> [i] [x] [e] [v]");
+    PrintAndLogEx(NORMAL, "Usage:  hf mf sim [u <uid>] [n <numreads>] [t] [a <ATQA>] [s <SAK>] [i] [x] [e] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
     PrintAndLogEx(NORMAL, "      u    (Optional) UID 4,7 or 10bytes. If not specified, the UID 4b/7b from emulator memory will be used");
@@ -169,26 +169,26 @@ static int usage_hf14_hardnested(void) {
 static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf autopwn [k] <sector number> <key A|B> <key (12 hex symbols)>");
-    PrintAndLogEx(NORMAL, "                    [*] <card memory> [f] <dictionary>.dic [s] [i] [l] [v]");
+    PrintAndLogEx(NORMAL, "                    [* <card memory>] [f <dictionary>[.dic]] [s] [i <simd type>] [l] [v]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Description:");
-    PrintAndLogEx(NORMAL, "      This command is used to automate the attack process on mifare classic nfc cards.");
+    PrintAndLogEx(NORMAL, "      This command is used to automate the attack process on mifare classic cards.");
     PrintAndLogEx(NORMAL, "      The program tries to identify the prng type and then automatically attack it with the best algorithm.");
-    PrintAndLogEx(NORMAL, "      After the program is done, the keys and card data is dumped.");
+    PrintAndLogEx(NORMAL, "      At the end, the keys and card data are dumped.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h                          this help");
-    PrintAndLogEx(NORMAL, "      k <sector> <keytype> <key> if a known key for a block is supplied");
-    PrintAndLogEx(NORMAL, "      f <name>.dic               dictionary file for key discovery (the file has to end in .dic) max 2000 entries allowed");
-    PrintAndLogEx(NORMAL, "      s                          slower acquisition (required by some non standard cards) for hardnested");
-    PrintAndLogEx(NORMAL, "      v                          verbose output (statistcs)");
+    PrintAndLogEx(NORMAL, "      k <sector> <key A|B> <key> if a known key for a block is supplied");
+    PrintAndLogEx(NORMAL, "      f <dictionary>[.dic]       dictionary file for key discovery (the file has to end in .dic, max 2000 entries allowed)");
+    PrintAndLogEx(NORMAL, "      s                          slower acquisition for hardnested (required by some non standard cards)");
+    PrintAndLogEx(NORMAL, "      v                          verbose output (statistics)");
     PrintAndLogEx(NORMAL, "      l                          legacy mode (use the slow mfchk for the key enumeration)");
-    PrintAndLogEx(NORMAL, "      * <X>     all sectors based on card memory, other values then below defaults to 1k");
+    PrintAndLogEx(NORMAL, "      * <card memory>            all sectors based on card memory. Default: 1K");
     PrintAndLogEx(NORMAL, "        * 0   = MINI(320 bytes)");
     PrintAndLogEx(NORMAL, "        * 1   = 1K");
     PrintAndLogEx(NORMAL, "        * 2   = 2K");
     PrintAndLogEx(NORMAL, "        * 4   = 4K");
-    PrintAndLogEx(NORMAL, "      i <X>     set type of SIMD instructions. Without this flag programs autodetect it. (for hardnested)");
+    PrintAndLogEx(NORMAL, "      i <simd type>              set type of SIMD instructions for hardnested. Default: autodetection.");
     PrintAndLogEx(NORMAL, "        i 5   = AVX512");
     PrintAndLogEx(NORMAL, "        i 2   = AVX2");
     PrintAndLogEx(NORMAL, "        i a   = AVX");
@@ -198,9 +198,9 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf mf autopwn");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn * 1 f default_keys");
+    PrintAndLogEx(NORMAL, "      hf mf autopwn * 1 f mfc_default_keys");
     PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f default_keys");
+    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f mfc_default_keys");
     PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF * 4 i 5");
     return 0;
 }
@@ -1243,9 +1243,9 @@ static int CmdHF14AMfNested(const char *Cmd) {
 //        int iterations = 0;
         bool calibrate = true;
 
-        for (int i = 0; i < MIFARE_SECTOR_RETRY; i++) {
+        for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
             for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
-                for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
+                for (int i = 0; i < MIFARE_SECTOR_RETRY; i++) {
 
                     if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
 
@@ -1689,7 +1689,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", ctmp);
-                usage_hf14_hardnested();
+                usage_hf14_autopwn();
                 return 1;
         }
         cmdp++;
@@ -2027,12 +2027,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     }
                     // Check if the key was found
                     if (e_sector[current_sector_i].foundKey[current_key_type_i] != 0) {
-                        PrintAndLogEx(SUCCESS, "[BROCKEN  KEY] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                        PrintAndLogEx(SUCCESS, "[TESTING  KEY] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
                             tmp_key[0], tmp_key[1], tmp_key[2], tmp_key[3], tmp_key[4], tmp_key[5]);
                     } else {
-                        PrintAndLogEx(FAILED, "[BROCKEN  KEY] Valid KEY NOT FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
+                        PrintAndLogEx(FAILED, "[TESTING  KEY] Valid KEY NOT FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"), 
                             current_sector_i,
                             current_key_type_i ? 'B' : 'A',
                             tmp_key[0], tmp_key[1], tmp_key[2], tmp_key[3], tmp_key[4], tmp_key[5]);
