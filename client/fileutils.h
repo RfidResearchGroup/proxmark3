@@ -112,7 +112,7 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
  * @param fptr string pointer to the filename
  * @return 0 for ok, 1 for failz
  */
-int createKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char* fptr);
+int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char* fptr);
 
 /** STUB
  * @brief Utility function to load data from a binary file. This method takes a preferred name.

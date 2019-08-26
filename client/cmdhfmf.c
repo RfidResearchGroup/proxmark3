@@ -2059,7 +2059,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Transfere the found keys to the simulator and dump the keys and card data
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Dumping the keys:");
-    createKeyDump(sectors_cnt, e_sector, GenerateFilename("hf-mf-", "-key.bin"));
+    createMfcKeyDump(sectors_cnt, e_sector, GenerateFilename("hf-mf-", "-key.bin"));
     
     PrintAndLogEx(SUCCESS, "Transfering the found keys to the simulator memory (Cmd Error: 04 can occour, but this shouldn't be a problem)");
     for (current_sector_i=0; current_sector_i < sectors_cnt; current_sector_i++) {
@@ -2352,7 +2352,7 @@ out:
 
         if (createDumpFile) {
             fptr = GenerateFilename("hf-mf-", "-key.bin");
-            createKeyDump(sectorsCnt, e_sector, fptr);
+            createMfcKeyDump(sectorsCnt, e_sector, fptr);
         }
     }
 
@@ -2378,7 +2378,6 @@ static int CmdHF14AMfChk(const char *Cmd) {
     uint8_t keyType = 0;
     uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
     uint64_t key64 = 0;
-    uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     char *fptr;
     int clen = 0;
     int transferToEml = 0;
@@ -2633,31 +2632,7 @@ out:
 
     if (createDumpFile) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
-        if (fptr == NULL) {
-            free(keyBlock);
-            free(e_sector);
-            return PM3_EFILE;
-        }
-
-        FILE *fkeys = fopen(fptr, "wb");
-        if (fkeys == NULL) {
-            PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
-            free(keyBlock);
-            free(e_sector);
-            return PM3_EFILE;
-        }
-        PrintAndLogEx(INFO, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
-
-        for (i = 0; i < SectorsCnt; i++) {
-            num_to_bytes(e_sector[i].Key[0], 6, tempkey);
-            fwrite(tempkey, 1, 6, fkeys);
-        }
-        for (i = 0; i < SectorsCnt; i++) {
-            num_to_bytes(e_sector[i].Key[1], 6, tempkey);
-            fwrite(tempkey, 1, 6, fkeys);
-        }
-        fclose(fkeys);
-        PrintAndLogEx(SUCCESS, "Found keys have been dumped to file " _YELLOW_("%s")". 0xffffffffffff has been inserted for unknown keys.", fptr);
+        createMfcKeyDump(SectorsCnt, e_sector, fptr);
     }
 
     free(keyBlock);

@@ -293,7 +293,7 @@ out:
     return retval;
 }
 
-int createKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char* fptr) {
+int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char* fptr) {
     uint8_t tmpKey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     int i;
 
