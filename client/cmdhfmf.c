@@ -173,8 +173,7 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Description:");
     PrintAndLogEx(NORMAL, "      This command is used to automate the attack process on mifare classic cards.");
-    PrintAndLogEx(NORMAL, "      The program tries to identify the prng type and then automatically attack it with the best algorithm.");
-    PrintAndLogEx(NORMAL, "      At the end, the keys and card data are dumped.");
+    PrintAndLogEx(NORMAL, "      It uses the darkside, nested and hardnested attack to extract the keys and card content.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h                          this help");
@@ -197,11 +196,10 @@ static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "        i n   = none (use CPU regular instruction set)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn * 1 f mfc_default_keys");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f mfc_default_keys");
-    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF * 4 i 5");
+    PrintAndLogEx(NORMAL, "      hf mf autopwn                                             -- attack a mifare classic card with the default keys");
+    PrintAndLogEx(NORMAL, "      hf mf autopwn * 1 f mfc_default_keys                      -- attack a mifare classic card (size 1K) with the default dictionary");
+    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF                          -- attack a mifare classic card with the known key 'FFFFFFFFFFFF' for sector 0 and key type A");
+    PrintAndLogEx(NORMAL, "      hf mf autopwn k 0 A FFFFFFFFFFFF * 1 f mfc_default_keys   -- this command combines the two above (reduce the need for nested / hardnested attacks, by using a dictionary)");
     return 0;
 }
 static int usage_hf14_chk(void) {
