@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-
+ - Add autopwn command to break mifare classic cards completely automatic (breaks all sector keys and dumps them and the card content)
  - Add Lua paths: look for scripts also in ~/.proxmark/lua{scripts,libs} and /usr/local/share/proxmark3/lua{scripts,libs} (@doegox)
  - Change Lua directory scripts/ to luascript/ (@doegox)
  - Change non-rdv4 PLATFORM must now use the generic PM3OTHER, simpler (@doegox)
