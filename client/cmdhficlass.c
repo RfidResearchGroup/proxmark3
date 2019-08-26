@@ -244,8 +244,8 @@ static int usage_hf_iclass_chk(void) {
     PrintAndLogEx(NORMAL, "      e             elite");
     PrintAndLogEx(NORMAL, "      c             credit key  (if not use, default is debit)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf iclass chk f dictionaries/iclass_default_keys.dic");
-    PrintAndLogEx(NORMAL, "         hf iclass chk f dictionaries/iclass_default_keys.dic e");
+    PrintAndLogEx(NORMAL, "         hf iclass chk f iclass_default_keys");
+    PrintAndLogEx(NORMAL, "         hf iclass chk f iclass_default_keys e");
     return PM3_SUCCESS;;
 }
 static int usage_hf_iclass_lookup(void) {
@@ -260,8 +260,8 @@ static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "      r             raw");
     PrintAndLogEx(NORMAL, "      e             elite");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic");
-    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic e");
+    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f iclass_default_keys");
+    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f iclass_default_keys e");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_permutekey(void) {
@@ -2059,9 +2059,9 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     // load keys into keyblock
     int res = LoadDictionaryKeyFile(filename, &keyBlock, &keycnt);
-    if (res > 0) {
+    if (res != PM3_SUCCESS) {
         free(keyBlock);
-        return PM3_EFILE;
+        return res;
     }
 
     pre = calloc(keycnt, sizeof(iclass_premac_t));
@@ -2312,33 +2312,33 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "MAC_TAG | %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
 
     int res = LoadDictionaryKeyFile(filename, &keyBlock, &keycnt);
-    if (res > 0) {
+    if (res != PM3_SUCCESS) {
         free(keyBlock);
-        return 1;
+        return res;
     }
     //iclass_prekey_t
     prekey = calloc(keycnt, sizeof(iclass_prekey_t));
     if (!prekey) {
         free(keyBlock);
-        return 1;
+        return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(FAILED, "Generating diversified keys and MAC");
+    PrintAndLogEx(INFO, "Generating diversified keys and MAC");
     res = GenerateFromKeyFile(CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, prekey);
-    if (res > 0) {
+    if (res != PM3_SUCCESS) {
         free(keyBlock);
         free(prekey);
-        return 1;
+        return PM3_ESOFT;
     }
 
-    PrintAndLogEx(FAILED, "Sorting");
+    PrintAndLogEx(INFO, "Sorting");
 
     // sort mac list.
     qsort(prekey, keycnt, sizeof(iclass_prekey_t), cmp_uint32);
 
     //PrintPreCalc(prekey, keycnt);
 
-    PrintAndLogEx(FAILED, "Searching");
+    PrintAndLogEx(INFO, "Searching");
     iclass_prekey_t *item;
     iclass_prekey_t lookup;
     memcpy(lookup.mac, MAC_TAG, 4);
@@ -2377,10 +2377,19 @@ int LoadDictionaryKeyFile(char *filename, uint8_t **keys, int *keycnt) {
     uint8_t *p;
     int keyitems = 0;
 
-    if (!(f = fopen(filename, "r"))) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-        return 1;
+
+    char *dict_path;
+    int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic");
+    if (res != PM3_SUCCESS) {
+        return res;
     }
+    f = fopen(dict_path, "r");
+    if (!f) {
+        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
+        free(dict_path);
+        return PM3_EFILE;
+    }
+    free(dict_path);
 
     while (fgets(buf, sizeof(buf), f)) {
         if (strlen(buf) < 16 || buf[15] == '\n')
@@ -2396,7 +2405,8 @@ int LoadDictionaryKeyFile(char *filename, uint8_t **keys, int *keycnt) {
         // doesn't this only test first char only?
         if (!isxdigit(buf[0])) {
             PrintAndLogEx(ERR, "file content error. '%s' must include 16 HEX symbols", buf);
-            continue;
+            fclose(f);
+            return PM3_EFILE;
         }
 
         // null terminator (skip the rest of the line)
@@ -2406,7 +2416,7 @@ int LoadDictionaryKeyFile(char *filename, uint8_t **keys, int *keycnt) {
         if (!p) {
             PrintAndLogEx(ERR, "cannot allocate memory for default keys");
             fclose(f);
-            return 2;
+            return PM3_EMALLOC;
         }
         *keys = p;
 
