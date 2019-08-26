@@ -1,8 +1,8 @@
-# RRG / Iceman repo, dedicated to Proxmark3 RDV4.0 
+# RRG / Iceman repo - Proxmark3 RDV4.0 and other Proxmark3 platforms.
 
-This repo is based on iceman fork for Proxmark3. It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.0 new hardware and design.
+This repo is based on iceman fork for Proxmark3.  It supports other Proxmark3 platforms as well.
 
-_Note that it also supports other Proxmark3 platforms as well!_
+It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.0 new hardware and design.
 
 
 | Releases     | Linux & OSX CI       | Windows CI |
@@ -27,6 +27,9 @@ _Note that it also supports other Proxmark3 platforms as well!_
 |[Notes on Wireshark / tracedata](/doc/trace_wireshark_notes.md)|||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
+
+## Support on other Proxmark3 platforms
+In order to build this repo for other Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
 ## What has changed?
 

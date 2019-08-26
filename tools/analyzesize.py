@@ -16,7 +16,7 @@ except FileNotFoundError:
     db = dict()
 
 if len(sys.argv) < 3:
-    print("Usage: analazysize.py <info|add|diff> <datasetname>")
+    print("Usage: analyzesize.py <info|add|diff> <datasetname>")
     exit(-1)
 action, name = sys.argv[1:3]
 currentdata = subprocess.run(["arm-none-eabi-size","armsrc/obj/fullimage.stage1.elf"], stdout=subprocess.PIPE).stdout

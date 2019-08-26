@@ -16,6 +16,21 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+// brew prefixes are a bit weird so we've to split bin & share to be prepared:
+#ifndef PM3_BIN_PATH
+# define PM3_BIN_PATH "/usr/local/bin/"
+#endif
+#ifndef PM3_SHARE_PATH
+# define PM3_SHARE_PATH "/usr/local/share/proxmark3/"
+#endif
+// PM3_USER_DIRECTORY will be expanded as if with a "~" upfront, e.g. ~/.proxmark3/
+#define PM3_USER_DIRECTORY "/.proxmark3/"
+
+// PM3 subdirectories:
+#define DICTIONARIES_SUBDIR "dictionaries/"
+#define LUA_LIBRARIES_SUBDIR "lualibs/"
+#define LUA_SCRIPTS_SUBDIR   "luascripts/"
+
 #define PACKED __attribute__((packed))
 
 // debug

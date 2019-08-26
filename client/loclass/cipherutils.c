@@ -160,19 +160,7 @@ void printarr(const char *name, uint8_t *arr, int len) {
 }
 
 void printvar(const char *name, uint8_t *arr, int len) {
-/*   
-   int cx, i;
-    size_t outsize = 40 + strlen(name) + len * 2;
-    char *output = calloc(outsize, sizeof(char));
-    cx = snprintf(output, outsize, "%s = ", name);
-    for (i = 0; i < len; i++) {
-        cx += snprintf(output + cx, outsize - cx, "%02x", *(arr + i)); //2 bytes per byte
-    }
-    PrintAndLogEx(NORMAL, output);
-    free(output);
-	*/
     PrintAndLogEx(NORMAL, "%s = " _YELLOW_("%s"), name, sprint_hex(arr, len) );
-
 }
 
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {

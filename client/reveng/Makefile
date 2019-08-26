@@ -18,9 +18,6 @@ MYSRCS = \
 
 LIB_A = libreveng.a
 
-TOUCH = touch
-FALSE = false
-
 include ../../Makefile.host
 
 CLEAN += bmptst

@@ -34,16 +34,21 @@
  *
  *
  ****************************************************************************/
+
+// this define is needed for scandir/alphasort to work
+#define _GNU_SOURCE
 #include "fileutils.h"
 
+#include <dirent.h>
 #include <ctype.h>
 
 #include "pm3_cmd.h"
 #include "commonutil.h"
+#include "proxmark3.h"
 #include "util.h"
-
-
-#ifndef ON_DEVICE
+#ifdef _WIN32
+#include "scandir.h"
+#endif
 
 #define PATH_MAX_LENGTH 100
 
@@ -276,6 +281,19 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             }
             break;
         }
+        case jsfIclass: {
+            JsonSaveStr(root, "FileType", "iclass");
+            uint8_t uid[8] = {0};
+            memcpy(uid, data, 8);
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
+
+            for (size_t i = 0; i < (datalen / 8 ); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 8), 8);
+            }
+            break;
+        }
     }
 
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
@@ -291,6 +309,36 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
 out:
     free(fileName);
     return retval;
+}
+
+int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char* fptr) {
+    uint8_t tmpKey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    int i;
+
+    if (fptr == NULL) {
+        return 1;
+    }
+
+    FILE *fkeys = fopen(fptr, "wb");
+    if (fkeys == NULL) {
+        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
+        return 1;
+    }
+    PrintAndLogEx(SUCCESS, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
+
+    for (i = 0; i < sectorsCnt; i++) {
+        num_to_bytes(e_sector[i].Key[0], 6, tmpKey);
+        fwrite(tmpKey, 1, 6, fkeys);
+    }
+
+    for (i = 0; i < sectorsCnt; i++) {
+        num_to_bytes(e_sector[i].Key[1], 6, tmpKey);
+        fwrite(tmpKey, 1, 6, fkeys);
+    }
+
+    fclose(fkeys);
+    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
+    return 0;
 }
 
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
@@ -507,6 +555,27 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         *datalen = sptr;
     }
 
+    if (!strcmp(ctype, "iclass")) {
+        size_t sptr = 0;
+        for (size_t i = 0; i < (maxdatalen / 8); i++) {
+            if (sptr + 8 > maxdatalen) {
+                retval = 5;
+                goto out;
+            }
+
+            char path[30] = {0};
+            sprintf(path, "$.blocks.%zu", i);
+
+            size_t len = 0;
+            JsonLoadBufAsHex(root, path, &udata[sptr], 8, &len);
+            if (!len) 
+                 break;
+
+            sptr += len;
+        }
+        *datalen = sptr;
+    }
+
     PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
     json_decref(root);
@@ -516,10 +585,10 @@ out:
 
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
 
-
-    if (data == NULL) return 1;
-    char *fileName = filenamemcopy(preferredName, ".dic");
-    if (fileName == NULL) return 1;
+    if (data == NULL) return PM3_ESOFT;
+    char *path;
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic") != PM3_SUCCESS)
+        return PM3_EFILE;
 
     // t5577 == 4bytes
     // mifare == 6 bytes
@@ -537,9 +606,9 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     size_t counter = 0;
     int retval = PM3_SUCCESS;
 
-    FILE *f = fopen(fileName, "r");
+    FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
         retval = PM3_EFILE;
         goto out;
     }
@@ -571,12 +640,12 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         counter += (keylen >> 1);
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
 
     if (datalen)
         *datalen = counter;
 out:
-    free(fileName);
+    free(path);
     return retval;
 }
 
@@ -612,7 +681,143 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     return PM3_SUCCESS;
 }
 
+static int filelist(const char *path, const char *ext, bool last) {
+    struct dirent **namelist;
+    int n;
 
-#else //if we're on ARM
+    n = scandir(path, &namelist, NULL, alphasort);
+    if (n == -1) {
+        PrintAndLogEx(NORMAL, "%s── %s => NOT FOUND", last ? "└" : "├", path);
+        return PM3_EFILE;
+    }
 
-#endif
+    PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
+    for (uint16_t i = 0; i < n; i++) {
+        if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || (str_endswith(namelist[i]->d_name, ext))) {
+            PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " ":"│", i == n-1 ? "└" : "├", namelist[i]->d_name);
+        }
+        free(namelist[i]);
+    }
+    free(namelist);
+    return PM3_SUCCESS;
+}
+
+int searchAndList(const char *pm3dir, const char *ext) {
+    if (get_my_executable_directory() != NULL) {
+        char script_directory_path[strlen(get_my_executable_directory()) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, get_my_executable_directory());
+        strcat(script_directory_path, pm3dir);
+        filelist(script_directory_path, ext, false);
+    }
+    char *userpath = getenv("HOME");
+    if (userpath != NULL) {
+        char script_directory_path[strlen(userpath) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, userpath);
+        strcat(script_directory_path, PM3_USER_DIRECTORY);
+        strcat(script_directory_path, pm3dir);
+        filelist(script_directory_path, ext, false);
+    }
+    {
+        char script_directory_path[strlen(PM3_SHARE_PATH) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, PM3_SHARE_PATH);
+        strcat(script_directory_path, pm3dir);
+        filelist(script_directory_path, ext, true);
+    }
+    return PM3_SUCCESS;
+}
+
+static int searchFinalFile(char **foundpath, const char *pm3dir, const char *searchname) {
+    if ((foundpath == NULL)||(pm3dir == NULL)||(searchname == NULL)) return PM3_ESOFT;
+    // explicit absolute (/) or relative path (./) => try only to match it directly
+    char *filename = calloc(strlen(searchname) + 1, sizeof(char));
+    if (filename == NULL) return PM3_EMALLOC;
+    strcpy(filename, searchname);
+    if (((strlen(filename) > 1) && (filename[0] == '/')) ||
+        ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/')))
+    {
+        if (fileExists(filename)) {
+            *foundpath = filename;
+            return PM3_SUCCESS;
+        }
+        else {
+            goto out;
+        }
+    }
+    // else
+
+    // try implicit relative path
+    {
+        if (fileExists(filename)) {
+            *foundpath = filename;
+            return PM3_SUCCESS;
+        }
+    }
+    // try pm3 dirs in current workdir (dev mode)
+    const char *exec_path = get_my_executable_directory();
+    if (exec_path != NULL) {
+        char *path = calloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
+        if (path == NULL)
+            goto out;
+        strcpy(path, exec_path);
+        strcat(path, pm3dir);
+        strcat(path, filename);
+        if (fileExists(path)) {
+            free(filename);
+            *foundpath = path;
+            return PM3_SUCCESS;
+        } else {
+            free(path);
+        }
+    }
+    // try pm3 dirs in user .proxmark3 (user mode)
+    char *user_path = getenv("HOME");
+    if (user_path != NULL) {
+        char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
+        if (path == NULL)
+            goto out;
+        strcpy(path, user_path);
+        strcat(path, PM3_USER_DIRECTORY);
+        strcat(path, pm3dir);
+        strcat(path, filename);
+        if (fileExists(path)) {
+            free(filename);
+            *foundpath = path;
+            return PM3_SUCCESS;
+        } else {
+            free(path);
+        }
+    }
+    // try pm3 dirs in pm3 installation dir (install mode)
+    {
+        char *path = calloc(strlen(PM3_SHARE_PATH) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
+        if (path == NULL)
+            goto out;
+        strcpy(path, PM3_SHARE_PATH);
+        strcat(path, pm3dir);
+        strcat(path, filename);
+        if (fileExists(path)) {
+            free(filename);
+            *foundpath = path;
+            return PM3_SUCCESS;
+        } else {
+            free(path);
+        }
+    }
+out:
+    free(filename);
+    return PM3_EFILE;
+}
+
+int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix) {
+    char *filename = filenamemcopy(searchname, suffix);
+    if (filename == NULL) return PM3_EMALLOC;
+    int res = searchFinalFile(foundpath, pm3dir, filename);
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_EFILE)
+            PrintAndLogEx(FAILED, "Error - can't find %s", filename);
+        free(filename);
+        return res;
+    }
+    free(filename);
+    return PM3_SUCCESS;
+}
