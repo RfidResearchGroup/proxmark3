@@ -181,7 +181,7 @@ Options
 card memory    : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
 d              : write keys to binary file
 
-pm3 --> hf mf chk *1 ? d dictionaries/mfc_default_keys.dic
+pm3 --> hf mf chk *1 ? d mfc_default_keys
 ```
 
 Check for default keys from local memory
@@ -254,7 +254,7 @@ pm3 --> hf mf sim u 353c2aa6
 
 Simulate Mifare Sequence
 ```
-pm3 --> hf mf chk *1 ? d dictionaries/mfc_default_keys.dic
+pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump 1
 pm3 --> script run dumptoemul -i dumpdata.bin
 pm3 --> hf mf eload 353C2AA6
@@ -263,7 +263,7 @@ pm3 --> hf mf sim u 353c2aa6
 
 Clone Mifare 1K Sequence
 ```
-pm3 --> hf mf chk *1 ? d dictionaries/mfc_default_keys.dic
+pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
 ```

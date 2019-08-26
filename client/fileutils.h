@@ -141,7 +141,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
 
 /**
  * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
- * E.g. default_keys.dic
+ * E.g. mfc_default_keys.dic
  *
  * @param preferredName
  * @param data The data array to store the loaded bytes from file

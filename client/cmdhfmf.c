@@ -179,10 +179,10 @@ static int usage_hf14_chk(void) {
     PrintAndLogEx(NORMAL, "      t    write keys to emulator memory\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf chk 0 A 1234567890ab       -- target block 0, Key A using key 1234567890ab");
-    PrintAndLogEx(NORMAL, "      hf mf chk 0 A default_keys.dic   -- target block 0, Key A using default dictionary file");
-    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? t                 -- target all blocks, all keys, 1K, write to emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                 -- target all blocks, all keys, 1K, write to file");
+    PrintAndLogEx(NORMAL, "      hf mf chk 0 A 1234567890ab         -- target block 0, Key A using key 1234567890ab");
+    PrintAndLogEx(NORMAL, "      hf mf chk 0 A mfc_default_keys.dic -- target block 0, Key A using default dictionary file");
+    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? t                   -- target all blocks, all keys, 1K, write to emulator memory");
+    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                   -- target all blocks, all keys, 1K, write to file");
     return 0;
 }
 static int usage_hf14_chk_fast(void) {
@@ -200,12 +200,12 @@ static int usage_hf14_chk_fast(void) {
     PrintAndLogEx(NORMAL, "      m    use dictionary from flashmemory\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 1234567890ab       -- target 1K using key 1234567890ab");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 default_keys.dic   -- target 1K using default dictionary file");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 t                  -- target 1K, write to emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 d                  -- target 1K, write to file");
+    PrintAndLogEx(NORMAL, "      hf mf fchk 1 1234567890ab         -- target 1K using key 1234567890ab");
+    PrintAndLogEx(NORMAL, "      hf mf fchk 1 mfc_default_keys.dic -- target 1K using default dictionary file");
+    PrintAndLogEx(NORMAL, "      hf mf fchk 1 t                    -- target 1K, write to emulator memory");
+    PrintAndLogEx(NORMAL, "      hf mf fchk 1 d                    -- target 1K, write to file");
     if (IfPm3Flash())
-        PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                  -- target 1K, use dictionary from flashmemory");
+        PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                    -- target 1K, use dictionary from flashmemory");
     return 0;
 }
 static int usage_hf14_keybrute(void) {
@@ -1575,7 +1575,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     sector_t *e_sector = NULL;
 
     keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
-    if (keyBlock == NULL) return 1;
+    if (keyBlock == NULL) return PM3_EMALLOC;
 
     for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
         num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
@@ -1615,7 +1615,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 if (!p) {
                     PrintAndLogEx(FAILED, "Cannot allocate memory for Keys");
                     free(keyBlock);
-                    return 2;
+                    return PM3_EMALLOC;
                 }
                 keyBlock = p;
             }
@@ -1629,14 +1629,24 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
             // May be a dic file
             if (param_getstr(Cmd, i, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
                 PrintAndLogEx(FAILED, "Filename too long");
-                continue;
+                free(keyBlock);
+                return PM3_EINVARG;
             }
 
-            f = fopen(filename, "r");
-            if (!f) {
-                PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-                continue;
+            char *dict_path;
+            int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic");
+            if (res != PM3_SUCCESS) {
+                free(keyBlock);
+                return res;
             }
+            f = fopen(dict_path, "r");
+            if (!f) {
+                PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
+                free(dict_path);
+                free(keyBlock);
+                return PM3_EFILE;
+            }
+            free(dict_path);
 
             // read file
             while (fgets(buf, sizeof(buf), f)) {
@@ -1649,7 +1659,9 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
                 if (!isxdigit(buf[0])) {
                     PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
-                    continue;
+                    free(keyBlock);
+                    fclose(f);
+                    return PM3_EFILE;
                 }
 
                 buf[12] = 0;
@@ -1659,7 +1671,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                         PrintAndLogEx(FAILED, "Cannot allocate memory for default keys");
                         free(keyBlock);
                         fclose(f);
-                        return 2;
+                        return PM3_EMALLOC;
                     }
                     keyBlock = p;
                 }
@@ -1686,7 +1698,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     e_sector = calloc(sectorsCnt, sizeof(sector_t));
     if (e_sector == NULL) {
         free(keyBlock);
-        return 1;
+        return PM3_EMALLOC;
     }
 
     uint32_t chunksize = keycnt > (PM3_CMD_DATA_SIZE / 6) ? (PM3_CMD_DATA_SIZE / 6) : keycnt;
@@ -1894,14 +1906,24 @@ static int CmdHF14AMfChk(const char *Cmd) {
             // May be a dic file
             if (param_getstr(Cmd, i, filename, sizeof(filename)) >= FILE_PATH_SIZE) {
                 PrintAndLogEx(FAILED, "File name too long");
-                continue;
+                free(keyBlock);
+                return PM3_EINVARG;
             }
 
-            f = fopen(filename, "r");
-            if (!f) {
-                PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-                continue;
+            char *dict_path;
+            int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic");
+            if (res != PM3_SUCCESS) {
+                free(keyBlock);
+                return PM3_EFILE;
             }
+            f = fopen(dict_path, "r");
+            if (!f) {
+                PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
+                free(dict_path);
+                free(keyBlock);
+                return PM3_EFILE;
+            }
+            free(dict_path);
 
             // load keys from dictionary file
             while (fgets(buf, sizeof(buf), f)) {
@@ -1915,7 +1937,9 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 // codesmell, only checks first char?
                 if (!isxdigit(buf[0])) {
                     PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
-                    continue;
+                    free(keyBlock);
+                    fclose(f);
+                    return PM3_EFILE;
                 }
 
                 buf[12] = 0;
