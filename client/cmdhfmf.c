@@ -1873,7 +1873,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         for (int j = 0; j < 2; j++) {
             if (e_sector[i].foundKey[j] == 1) {
                 num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
-                PrintAndLogEx(SUCCESS, "Found valid key: sector:%3d key type:%c key: " _YELLOW_("%s"),
+                PrintAndLogEx(SUCCESS, "Found valid key: sector: %3d key type: %c  key: " _YELLOW_("%s"),
                               i,
                               j ? 'B' : 'A',
                               sprint_hex(tmp_key, sizeof(tmp_key))
@@ -1983,6 +1983,43 @@ noValidKeyFound:
                 // Clear the last found key
                 num_to_bytes(0, 6, tmp_key);
 
+                if (current_key_type_i == 1) {
+                    if (e_sector[current_sector_i].foundKey[0] && !e_sector[current_sector_i].foundKey[1]) {
+                        PrintAndLogEx(INFO, "Reading  B  key: sector: %3d", current_sector_i);
+                        uint8_t sectrail = (FirstBlockOfSector(current_sector_i) + NumBlocksPerSector(current_sector_i) - 1);
+
+                        mf_readblock_t payload;
+                        payload.blockno = sectrail;
+                        payload.keytype = 0;
+
+                        num_to_bytes(e_sector[current_sector_i].Key[0], 6, payload.key); // KEY A
+
+                        clearCommandBuffer();
+                        SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
+
+                        PacketResponseNG resp;
+                        if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) continue;
+
+                        if (resp.status != PM3_SUCCESS) continue;
+
+                        uint8_t *data = resp.data.asBytes;
+                        key64 = bytes_to_num(data + 10, 6);
+                        if (verbose){
+                            num_to_bytes(key64, 6, tmp_key);
+                            PrintAndLogEx(INFO, "Discovered  key: sector: %3d key type: %c  key: " _YELLOW_("%s"),
+                                          current_sector_i,
+                                          current_key_type_i ? 'B' : 'A',
+                                          sprint_hex(tmp_key, sizeof(tmp_key))
+                                         );
+                        }
+                        if (key64) {
+                            e_sector[current_sector_i].foundKey[current_key_type_i] = 7;
+                            e_sector[current_sector_i].Key[current_key_type_i] = key64;
+                            num_to_bytes(key64, 6, tmp_key);
+                        }
+                    }
+                }
+
                 // Use the nested / hardnested attack
                 if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
                     if (prng_type && (! nested_failed)) {
@@ -2082,6 +2119,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
         PrintAndLogEx(INFO, "   4: Reused");
         PrintAndLogEx(INFO, "   5: Nested");
         PrintAndLogEx(INFO, "   6: Hardnested");
+        PrintAndLogEx(INFO, "   7: Read B key with A key");
     }
 
     PrintAndLogEx(INFO, "\nSaving keys");
