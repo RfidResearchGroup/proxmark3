@@ -101,16 +101,16 @@ static const uint8_t opt_select_LUT[256] = {
 /********************** the table above has been generated with this code: ********
 #include "util.h"
 static void init_opt_select_LUT(void) {
-	for (int r = 0; r < 256; r++) {
-		uint8_t r_ls2 = r << 2;
-		uint8_t r_and_ls2 = r & r_ls2;
-		uint8_t r_or_ls2  = r | r_ls2;
-		uint8_t z0 = (r_and_ls2 >> 5) ^ ((r & ~r_ls2) >> 4) ^ ( r_or_ls2 >> 3);
-		uint8_t z1 = (r_or_ls2 >> 6) ^ ( r_or_ls2 >> 1) ^ (r >> 5) ^ r;
-		uint8_t z2 = ((r & ~r_ls2) >> 4) ^ (r_and_ls2 >> 3) ^ r;
-		opt_select_LUT[r] = (z0 & 4) | (z1 & 2) | (z2 & 1);
-	}
-	print_result("", opt_select_LUT, 256);
+    for (int r = 0; r < 256; r++) {
+        uint8_t r_ls2 = r << 2;
+        uint8_t r_and_ls2 = r & r_ls2;
+        uint8_t r_or_ls2  = r | r_ls2;
+        uint8_t z0 = (r_and_ls2 >> 5) ^ ((r & ~r_ls2) >> 4) ^ ( r_or_ls2 >> 3);
+        uint8_t z1 = (r_or_ls2 >> 6) ^ ( r_or_ls2 >> 1) ^ (r >> 5) ^ r;
+        uint8_t z2 = ((r & ~r_ls2) >> 4) ^ (r_and_ls2 >> 3) ^ r;
+        opt_select_LUT[r] = (z0 & 4) | (z1 & 2) | (z2 & 1);
+    }
+    print_result("", opt_select_LUT, 256);
 }
 ***********************************************************************************/
 
