@@ -31,7 +31,7 @@
 
 static void showBanner(void) {
     PrintAndLogEx(NORMAL, "\n");
-#if defined(__linux__) || (__APPLE__)
+#if defined(__linux__) || (__APPLE__) || (_WIN32)
     PrintAndLogEx(NORMAL, _BLUE_("██████╗ ███╗   ███╗ ████╗ ") "    ...iceman fork");
     PrintAndLogEx(NORMAL, _BLUE_("██╔══██╗████╗ ████║   ══█║") "      ...dedicated to " _BLUE_("RDV40"));
     PrintAndLogEx(NORMAL, _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));

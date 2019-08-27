@@ -73,7 +73,7 @@ ifneq (,$(PM3_SHARE_PATH))
     PM3CFLAGS += -DPM3_SHARE_PATH=\"$(PM3_SHARE_PATH)\"
 endif
 ifneq (,$(findstring MINGW,$(platform)))
-    PM3CFLAGS += -mno-ms-bitfields
+    PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
 endif
 CXXFLAGS ?= -Wall -Werror -O3
 PM3CXXFLAGS = $(CXXFLAGS) -I../include
