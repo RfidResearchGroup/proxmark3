@@ -752,10 +752,10 @@ static uint8_t NumBlocksPerSector(uint8_t sectorNo) {
     }
 }
 static uint8_t GetSectorFromBlockNo(uint8_t blockNo) {
-	if ( blockNo < 128 )
-		return blockNo / 4;
-	else
-		return 32 + ((128 - blockNo) / 16);
+    if (blockNo < 128)
+        return blockNo / 4;
+    else
+        return 32 + ((128 - blockNo) / 16);
 }
 static int CmdHF14AMfDump(const char *Cmd) {
 
@@ -963,11 +963,11 @@ static int CmdHF14AMfDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "\nSucceded in dumping all blocks");
 
     if (strlen(dataFilename) < 1) {
-		fptr = GenerateFilename("hf-mf-", "-data");
-		if (fptr == NULL)
-			return PM3_ESOFT;
+        fptr = GenerateFilename("hf-mf-", "-data");
+        if (fptr == NULL)
+            return PM3_ESOFT;
 
-		strcpy(dataFilename, fptr);
+        strcpy(dataFilename, fptr);
     }
 
     uint16_t bytes = 16 * (FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1));
@@ -1229,9 +1229,9 @@ static int CmdHF14AMfNested(const char *Cmd) {
         e_sector = calloc(SectorsCnt, sizeof(sector_t));
         if (e_sector == NULL) return PM3_EMALLOC;
 
-		// add our known key
-		e_sector[GetSectorFromBlockNo(blockNo)].foundKey[keyType] = 1;
-		e_sector[GetSectorFromBlockNo(blockNo)].Key[keyType] = key64;
+        // add our known key
+        e_sector[GetSectorFromBlockNo(blockNo)].foundKey[keyType] = 1;
+        e_sector[GetSectorFromBlockNo(blockNo)].Key[keyType] = key64;
 
         //test current key and additional standard keys first
         // add parameter key
@@ -1703,7 +1703,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Create the key storage stucture
     e_sector = calloc(sectors_cnt, sizeof(sector_t));
     if (e_sector == NULL) return PM3_EMALLOC;
-	
+
     // clear the key storage
     for (int i = 0; i < sectors_cnt; i++) {
         for (int j = 0; j < 2; j++) {
@@ -1740,7 +1740,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                           blockNo,
                           keyType ? 'B' : 'A',
                           sprint_hex(key, sizeof(key))
-						  );
+                         );
 
             // Store the key for the nested / hardnested attack (if supplied by the user)
             e_sector[blockNo].Key[keyType] = bytes_to_num(key, 6);
@@ -1751,7 +1751,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                           blockNo,
                           keyType ? 'B' : 'A',
                           sprint_hex(key, sizeof(key))
-						  );
+                         );
             PrintAndLogEx(WARNING, "Falling back to dictionary");
         }
         // Check if the user supplied key is used by other sectors
@@ -1765,7 +1765,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                                       i,
                                       j ? 'B' : 'A',
                                       sprint_hex(key, sizeof(key))
-									  );
+                                     );
 
                         // If the user supplied secctor / keytype was wrong --> just be nice and correct it ;)
                         if (know_target_key == false) {
@@ -1778,7 +1778,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                                           blockNo,
                                           keyType ? 'B' : 'A',
                                           sprint_hex(key, sizeof(key))
-										  );
+                                         );
                         }
                     }
                 }
@@ -1792,7 +1792,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         loadFileDICTIONARY(filename, keyBlock, &data_length, 6, &key_cnt);
         if ((data_length / 6) > max_dictionary_size) {
             // This is not a good solution (loadFileDICTIONARY needs a maxdatalen)!
-			// loadfiledictionary will reallocate to correct size.
+            // loadfiledictionary will reallocate to correct size.
             PrintAndLogEx(FAILED, "Dictionary is too large: %d (allowed: %d)", data_length, max_dictionary_size);
             free(keyBlock);
             free(e_sector);
@@ -1813,7 +1813,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Use the dictionary to find sector keys on the card
     PrintAndLogEx(INFO, "Enter dictionary run...");
-	
+
     if (legacy_mfchk) {
         // Check all the sectors
         for (int i = 0; i < sectors_cnt; i++) {
@@ -1877,7 +1877,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                               i,
                               j ? 'B' : 'A',
                               sprint_hex(tmp_key, sizeof(tmp_key))
-							  );
+                             );
 
                 // Store valid credentials for the nested / hardnested attack if none exist
                 if (know_target_key == false) {
@@ -1890,7 +1890,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                                   blockNo,
                                   keyType ? 'B' : 'A',
                                   sprint_hex(key, sizeof(key))
-								  );
+                                 );
                 }
             }
         }
@@ -1931,7 +1931,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                               blockNo,
                               keyType ? 'B' : 'A',
                               sprint_hex(key, sizeof(key))
-							  );
+                             );
                 goto noValidKeyFound;
             }
             // Store the keys
@@ -1965,17 +1965,17 @@ noValidKeyFound:
                         for (int j = 0; j < 2; j++) {
                             // Check if the sector key is already broken
                             if (e_sector[i].foundKey[j])
-								continue;
-								
-							// Check if the key works
-							if (mfCheckKeys(FirstBlockOfSector(i), j, true, 1, tmp_key, &key64) == PM3_SUCCESS) {
-								e_sector[i].Key[j] = bytes_to_num(tmp_key, 6);
-								e_sector[i].foundKey[j] = 4;
-								PrintAndLogEx(SUCCESS, "Found valid key: sector: %3d key type: %c  key: " _YELLOW_("%s"),
-											  i,
-											  j ? 'B' : 'A',
-											  sprint_hex(tmp_key, sizeof(tmp_key))
-											  );
+                                continue;
+
+                            // Check if the key works
+                            if (mfCheckKeys(FirstBlockOfSector(i), j, true, 1, tmp_key, &key64) == PM3_SUCCESS) {
+                                e_sector[i].Key[j] = bytes_to_num(tmp_key, 6);
+                                e_sector[i].foundKey[j] = 4;
+                                PrintAndLogEx(SUCCESS, "Found valid key: sector: %3d key type: %c  key: " _YELLOW_("%s"),
+                                              i,
+                                              j ? 'B' : 'A',
+                                              sprint_hex(tmp_key, sizeof(tmp_key))
+                                             );
                             }
                         }
                     }
@@ -2063,7 +2063,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                       current_sector_i,
                                       current_key_type_i ? 'B' : 'A',
                                       sprint_hex(tmp_key, sizeof(tmp_key))
-									  );
+                                     );
                     }
                 }
             }
@@ -2089,7 +2089,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
     createMfcKeyDump(sectors_cnt, e_sector, GenerateFilename("hf-mf-", "-key.bin"));
 
     PrintAndLogEx(SUCCESS, "Transferring keys to simulator memory (Cmd Error: 04 can occur)");
-	
+
     for (current_sector_i = 0; current_sector_i < sectors_cnt; current_sector_i++) {
         mfEmlGetMem(block, current_sector_i, 1);
         if (e_sector[current_sector_i].foundKey[0])
@@ -2100,11 +2100,11 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
         mfEmlSetMem(block, FirstBlockOfSector(current_sector_i) + NumBlocksPerSector(current_sector_i) - 1, 1);
     }
 
-	// using ecfill trick,  keys already in emulator mem,  load data using Key A
+    // using ecfill trick,  keys already in emulator mem,  load data using Key A
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_EML_LOAD, sectors_cnt, 0, 0, NULL, 0);
 
-	// using ecfill trick,  keys already in emulator mem,  load data using Key B
+    // using ecfill trick,  keys already in emulator mem,  load data using Key B
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_EML_LOAD, sectors_cnt, 1, 0, NULL, 0);
 
@@ -2126,13 +2126,13 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
     }
 
     fnameptr = GenerateFilename("hf-mf-", "-data");
-	if (fnameptr == NULL) {
-		free(dump);
-		free(e_sector);
-		return PM3_ESOFT;
+    if (fnameptr == NULL) {
+        free(dump);
+        free(e_sector);
+        return PM3_ESOFT;
     }
-	strcpy(filename, fnameptr);
-  
+    strcpy(filename, fnameptr);
+
     saveFile(filename, ".bin", dump, bytes);
     saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
     saveFileJSON(filename, jsfCardMemory, dump, bytes);

@@ -71,7 +71,7 @@
   * Removing many unnecessary bit maskings (& 0x1)
   * updating state in place instead of alternating use of a second state structure
   * remove the necessity to reverse bits of input and output bytes
- 
+
   opt_doTagMAC_2() now completes in 270 microseconds.
 
   -- piwi 2019
@@ -80,22 +80,22 @@
 #include "optimized_cipher.h"
 
 static const uint8_t opt_select_LUT[256] = {
-	00, 03, 02, 01, 02, 03, 00, 01, 04, 07, 07, 04, 06, 07, 05, 04,
-	01, 02, 03, 00, 02, 03, 00, 01, 05, 06, 06, 05, 06, 07, 05, 04,
-	06, 05, 04, 07, 04, 05, 06, 07, 06, 05, 05, 06, 04, 05, 07, 06,
-	07, 04, 05, 06, 04, 05, 06, 07, 07, 04, 04, 07, 04, 05, 07, 06,
-	06, 05, 04, 07, 04, 05, 06, 07, 02, 01, 01, 02, 00, 01, 03, 02,
-	03, 00, 01, 02, 00, 01, 02, 03, 07, 04, 04, 07, 04, 05, 07, 06,
-	00, 03, 02, 01, 02, 03, 00, 01, 00, 03, 03, 00, 02, 03, 01, 00,
-	05, 06, 07, 04, 06, 07, 04, 05, 05, 06, 06, 05, 06, 07, 05, 04,
-	02, 01, 00, 03, 00, 01, 02, 03, 06, 05, 05, 06, 04, 05, 07, 06,
-	03, 00, 01, 02, 00, 01, 02, 03, 07, 04, 04, 07, 04, 05, 07, 06,
-	02, 01, 00, 03, 00, 01, 02, 03, 02, 01, 01, 02, 00, 01, 03, 02,
-	03, 00, 01, 02, 00, 01, 02, 03, 03, 00, 00, 03, 00, 01, 03, 02,
-	04, 07, 06, 05, 06, 07, 04, 05, 00, 03, 03, 00, 02, 03, 01, 00,
-	01, 02, 03, 00, 02, 03, 00, 01, 05, 06, 06, 05, 06, 07, 05, 04,
-	04, 07, 06, 05, 06, 07, 04, 05, 04, 07, 07, 04, 06, 07, 05, 04,
-	01, 02, 03, 00, 02, 03, 00, 01, 01, 02, 02, 01, 02, 03, 01, 00
+    00, 03, 02, 01, 02, 03, 00, 01, 04, 07, 07, 04, 06, 07, 05, 04,
+    01, 02, 03, 00, 02, 03, 00, 01, 05, 06, 06, 05, 06, 07, 05, 04,
+    06, 05, 04, 07, 04, 05, 06, 07, 06, 05, 05, 06, 04, 05, 07, 06,
+    07, 04, 05, 06, 04, 05, 06, 07, 07, 04, 04, 07, 04, 05, 07, 06,
+    06, 05, 04, 07, 04, 05, 06, 07, 02, 01, 01, 02, 00, 01, 03, 02,
+    03, 00, 01, 02, 00, 01, 02, 03, 07, 04, 04, 07, 04, 05, 07, 06,
+    00, 03, 02, 01, 02, 03, 00, 01, 00, 03, 03, 00, 02, 03, 01, 00,
+    05, 06, 07, 04, 06, 07, 04, 05, 05, 06, 06, 05, 06, 07, 05, 04,
+    02, 01, 00, 03, 00, 01, 02, 03, 06, 05, 05, 06, 04, 05, 07, 06,
+    03, 00, 01, 02, 00, 01, 02, 03, 07, 04, 04, 07, 04, 05, 07, 06,
+    02, 01, 00, 03, 00, 01, 02, 03, 02, 01, 01, 02, 00, 01, 03, 02,
+    03, 00, 01, 02, 00, 01, 02, 03, 03, 00, 00, 03, 00, 01, 03, 02,
+    04, 07, 06, 05, 06, 07, 04, 05, 00, 03, 03, 00, 02, 03, 01, 00,
+    01, 02, 03, 00, 02, 03, 00, 01, 05, 06, 06, 05, 06, 07, 05, 04,
+    04, 07, 06, 05, 06, 07, 04, 05, 04, 07, 07, 04, 06, 07, 05, 04,
+    01, 02, 03, 00, 02, 03, 00, 01, 01, 02, 02, 01, 02, 03, 01, 00
 };
 
 /********************** the table above has been generated with this code: ********
@@ -143,65 +143,65 @@ uint8_t xopt__select(bool x, bool y, uint8_t r)
 
 static void opt_successor(const uint8_t *k, State *s, uint8_t y) {
 // #define opt_T(s) (0x1 & ((s->t >> 15) ^ (s->t >> 14) ^ (s->t >> 10) ^ (s->t >> 8) ^ (s->t >> 5) ^ (s->t >> 4)^ (s->t >> 1) ^ s->t))
-	// uint8_t Tt = opt_T(s);
-	uint16_t Tt = s->t & 0xc533;
-	Tt = Tt ^ (Tt >> 1);
-	Tt = Tt ^ (Tt >> 4);
-	Tt = Tt ^ (Tt >> 10);
-	Tt = Tt ^ (Tt >> 8);
+    // uint8_t Tt = opt_T(s);
+    uint16_t Tt = s->t & 0xc533;
+    Tt = Tt ^ (Tt >> 1);
+    Tt = Tt ^ (Tt >> 4);
+    Tt = Tt ^ (Tt >> 10);
+    Tt = Tt ^ (Tt >> 8);
 
-	s->t = (s->t >> 1);
-	s->t |= (Tt ^ (s->r >> 7) ^ (s->r >> 3)) << 15;
+    s->t = (s->t >> 1);
+    s->t |= (Tt ^ (s->r >> 7) ^ (s->r >> 3)) << 15;
 
-	uint8_t opt_B = s->b;
-	opt_B ^= s->b >> 6;
-	opt_B ^= s->b >> 5;
-	opt_B ^= s->b >> 4;
+    uint8_t opt_B = s->b;
+    opt_B ^= s->b >> 6;
+    opt_B ^= s->b >> 5;
+    opt_B ^= s->b >> 4;
 
-	s->b = s->b >> 1;
-	s->b |= (opt_B ^ s->r) << 7;
+    s->b = s->b >> 1;
+    s->b |= (opt_B ^ s->r) << 7;
 
-	uint8_t opt_select = opt_select_LUT[s->r] & 0x04;
-	opt_select |= (opt_select_LUT[s->r] ^ ((Tt ^ y) << 1)) & 0x02;
-	opt_select |= (opt_select_LUT[s->r] ^ Tt) & 0x01;
+    uint8_t opt_select = opt_select_LUT[s->r] & 0x04;
+    opt_select |= (opt_select_LUT[s->r] ^ ((Tt ^ y) << 1)) & 0x02;
+    opt_select |= (opt_select_LUT[s->r] ^ Tt) & 0x01;
 
-	uint8_t r = s->r;
-	s->r = (k[opt_select] ^ s->b) + s->l ;
-	s->l = s->r + r;
+    uint8_t r = s->r;
+    s->r = (k[opt_select] ^ s->b) + s->l ;
+    s->l = s->r + r;
 }
 
 static void opt_suc(const uint8_t *k, State *s, uint8_t *in, uint8_t length, bool add32Zeroes) {
     for (int i = 0; i < length; i++) {
         uint8_t head;
-		head = in[i];
-		opt_successor(k, s, head);
+        head = in[i];
+        opt_successor(k, s, head);
 
-		head >>= 1;
-		opt_successor(k, s, head);
+        head >>= 1;
+        opt_successor(k, s, head);
 
-		head >>= 1;
-		opt_successor(k, s, head);
+        head >>= 1;
+        opt_successor(k, s, head);
 
-		head >>= 1;
-		opt_successor(k, s, head);
+        head >>= 1;
+        opt_successor(k, s, head);
 
-		head >>= 1;
-		opt_successor(k, s, head);
+        head >>= 1;
+        opt_successor(k, s, head);
 
-		head >>= 1;
-		opt_successor(k, s, head);
+        head >>= 1;
+        opt_successor(k, s, head);
 
-		head >>= 1;
-		opt_successor(k, s, head);
+        head >>= 1;
+        opt_successor(k, s, head);
 
-		head >>= 1;
-		opt_successor(k, s, head);
+        head >>= 1;
+        opt_successor(k, s, head);
     }
     //For tag MAC, an additional 32 zeroes
     if (add32Zeroes) {
         for (int i = 0; i < 16; i++) {
-			opt_successor(k, s, 0);
-			opt_successor(k, s, 0);
+            opt_successor(k, s, 0);
+            opt_successor(k, s, 0);
         }
     }
 }
@@ -209,22 +209,22 @@ static void opt_suc(const uint8_t *k, State *s, uint8_t *in, uint8_t length, boo
 static void opt_output(const uint8_t *k, State *s,  uint8_t *buffer) {
     for (uint8_t times = 0; times < 4; times++) {
         uint8_t bout = 0;
-		bout |= (s->r & 0x4) >> 2;
-		opt_successor(k, s, 0);
+        bout |= (s->r & 0x4) >> 2;
+        opt_successor(k, s, 0);
         bout |= (s->r & 0x4) >> 1;
-		opt_successor(k, s, 0);
-		bout |= (s->r & 0x4);
-		opt_successor(k, s, 0);
-		bout |= (s->r & 0x4) << 1;
-		opt_successor(k, s, 0);
-		bout |= (s->r & 0x4) << 2;
-		opt_successor(k, s, 0);
-		bout |= (s->r & 0x4) << 3;
-		opt_successor(k, s, 0);
-		bout |= (s->r & 0x4) << 4;
-		opt_successor(k, s, 0);
-		bout |= (s->r & 0x4) << 5;
-		opt_successor(k, s, 0);
+        opt_successor(k, s, 0);
+        bout |= (s->r & 0x4);
+        opt_successor(k, s, 0);
+        bout |= (s->r & 0x4) << 1;
+        opt_successor(k, s, 0);
+        bout |= (s->r & 0x4) << 2;
+        opt_successor(k, s, 0);
+        bout |= (s->r & 0x4) << 3;
+        opt_successor(k, s, 0);
+        bout |= (s->r & 0x4) << 4;
+        opt_successor(k, s, 0);
+        bout |= (s->r & 0x4) << 5;
+        opt_successor(k, s, 0);
         buffer[times] = bout;
     }
 }
@@ -243,8 +243,8 @@ static void opt_MAC(uint8_t *k, uint8_t *input, uint8_t *out) {
 
 void opt_doReaderMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
-	opt_MAC(div_key_p, cc_nr_p, dest);
-	memcpy(mac, dest, 4);
+    opt_MAC(div_key_p, cc_nr_p, dest);
+    memcpy(mac, dest, 4);
     return;
 }
 
@@ -255,8 +255,8 @@ void opt_doTagMAC(uint8_t *cc_p, const uint8_t *div_key_p, uint8_t mac[4]) {
         0x4c, // b
         0xE012 // t
     };
-	opt_suc(div_key_p, &_init, cc_p, 12, true);
-	opt_output(div_key_p, &_init, mac);
+    opt_suc(div_key_p, &_init, cc_p, 12, true);
+    opt_output(div_key_p, &_init, mac);
     return;
 }
 
@@ -275,7 +275,7 @@ State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p) {
         0x4c, // b
         0xE012 // t
     };
-	opt_suc(div_key_p, &_init, cc_p, 8, false);
+    opt_suc(div_key_p, &_init, cc_p, 8, false);
     return _init;
 }
 
@@ -289,7 +289,7 @@ State opt_doTagMAC_1(uint8_t *cc_p, const uint8_t *div_key_p) {
  * @param div_key_p - the key to use
  */
 void opt_doTagMAC_2(State _init,  uint8_t *nr, uint8_t mac[4], const uint8_t *div_key_p) {
-	opt_suc(div_key_p, &_init, nr, 4, true);
-	opt_output(div_key_p, &_init, mac);
+    opt_suc(div_key_p, &_init, nr, 4, true);
+    opt_output(div_key_p, &_init, mac);
     return;
 }
