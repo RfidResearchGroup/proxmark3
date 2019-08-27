@@ -1773,7 +1773,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Load the dictionary
     if (strlen(filename) != 0) {
         keyBlock = loadFileDICTIONARY_safe(filename, 6, &key_cnt);
-        if (keyBlock == NULL) {
+        if (keyBlock == NULL || key_cnt == 0) {
             PrintAndLogEx(FAILED, "An error occurred while parsing the dictionary!");
             goto useDefaultKeys;
         }
