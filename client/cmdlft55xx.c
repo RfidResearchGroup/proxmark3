@@ -2127,19 +2127,10 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
     if (use_pwd_file) {
         uint16_t keycount = 0;
-        size_t datalen = 0;
 
-        // TODO, a way of reallocating memory if file was larger
-        keyBlock = calloc(4 * 200, sizeof(uint8_t));
-        if (keyBlock == NULL) {
-            PrintAndLogEx(ERR, "error, cannot allocate memory ");
-            return PM3_ESOFT;
-        }
-
-        int res = loadFileDICTIONARY(filename, keyBlock, &datalen, 4, &keycount);
-        if (res || keycount == 0) {
-            PrintAndLogEx(WARNING, "No keys found in file");
-            free(keyBlock);
+        keyBlock = loadFileDICTIONARY_safe(filename, 4, &keycount);
+        if (keyBlock == NULL || keycount == 0) {
+            PrintAndLogEx(ERR, "An error occurred while parsing the dictionary");
             return PM3_ESOFT;
         }
 
