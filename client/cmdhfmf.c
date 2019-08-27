@@ -1581,6 +1581,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
     int block_cnt = MIFARE_1K_MAXBLOCK;
     uint8_t tmp_key[6] = {0};
+    uint8_t reused_key[6] = {0};
     size_t data_length = 0;
     bool know_target_key = false;
     // For the timier
@@ -1940,7 +1941,7 @@ noValidKeyFound:
             if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
 
                 // Try the found keys are reused
-                if (bytes_to_num(tmp_key, 6) != 0) {
+                if (bytes_to_num(reused_key, 6) != 0) {
                     // <!> The fast check --> mfCheckKeys_fast(sectors_cnt, true, true, 2, 1, tmp_key, e_sector, false);
                     // <!> Returns false keys, so we just stick to the slower mfchk.
                     for (i = 0; i < sectors_cnt; i++) {
@@ -1948,20 +1949,60 @@ noValidKeyFound:
                             // Check if the sector key is already broken
                             if (e_sector[i].foundKey[i2] == 0) {
                                 // Check if the key works
-                                if (mfCheckKeys(FirstBlockOfSector(i), i2, true, 1, tmp_key, &key64) == PM3_SUCCESS) {
-                                    e_sector[i].Key[i2] = bytes_to_num(tmp_key, 6);
+                                if (mfCheckKeys(FirstBlockOfSector(i), i2, true, 1, reused_key, &key64) == PM3_SUCCESS) {
+                                    e_sector[i].Key[i2] = bytes_to_num(reused_key, 6);
                                     e_sector[i].foundKey[i2] = 4;
                                     PrintAndLogEx(SUCCESS, "[ REUSED KEY ] Valid KEY FOUND: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"),
                                                   i,
                                                   i2 ? 'B' : 'A',
-                                                  tmp_key[0], tmp_key[1], tmp_key[2], tmp_key[3], tmp_key[4], tmp_key[5]);
+                                                  reused_key[0], reused_key[1], reused_key[2], reused_key[3], reused_key[4], reused_key[5]);
                                 }
                             }
                         }
                     }
                 }
                 // Clear the last found key
-                num_to_bytes(0, 6, tmp_key);
+                num_to_bytes(0, 6, reused_key);
+
+                // Get B Keys
+                // If Sector A is found, but not Sector B, try just reading it of the tag?
+                if (current_key_type_i == 1) {
+                    if (e_sector[current_sector_i].foundKey[0] && !e_sector[current_sector_i].foundKey[1]) {
+                        PrintAndLogEx(INFO, "[ READ B KEY ] Trying to read B key: sector:%3d", current_sector_i);
+                        uint8_t sectrail = (FirstBlockOfSector(current_sector_i) + NumBlocksPerSector(current_sector_i) - 1);
+
+                        mf_readblock_t payload;
+                        payload.blockno = sectrail;
+                        payload.keytype = 0;
+
+                        num_to_bytes(e_sector[current_sector_i].Key[0], 6, payload.key); // KEY A
+
+                        clearCommandBuffer();
+                        SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
+
+                        PacketResponseNG resp;
+                        if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) continue;
+
+                        if (resp.status != PM3_SUCCESS) continue;
+
+                        uint8_t *data = resp.data.asBytes;
+                        key64 = bytes_to_num(data + 10, 6);
+                        if (verbose){
+                            num_to_bytes(key64, 6, tmp_key);
+                            PrintAndLogEx(INFO, "[ READ B KEY ] DISCOVERED KEY: sector:%3d key type:%c key: " _YELLOW_("0x%02x%02x%02x%02x%02x%02x"),
+                                          i,
+                                          i2 ? 'B' : 'A',
+                                          tmp_key[0], tmp_key[1], tmp_key[2], tmp_key[3], tmp_key[4], tmp_key[5]);
+                        }
+                        if (key64) {
+                            e_sector[current_sector_i].foundKey[1] = 7;
+                            e_sector[current_sector_i].Key[1] = key64;
+                            num_to_bytes(key64, 6, tmp_key);
+                            num_to_bytes(key64, 6, reused_key);
+                        }
+                    }
+                }
+                
 
                 // Use the nested / hardnested attack
                 if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
@@ -2005,6 +2046,11 @@ tryNested:
                                 calibrate = false;
                                 e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
                                 e_sector[current_sector_i].foundKey[current_key_type_i] = 5;
+                                // Depending on the legacy mode a key search with the recovered key is started
+                                if (legacy_mfchk)
+                                    num_to_bytes(e_sector[current_sector_i].Key[current_key_type_i], 6, reused_key);
+                                else
+                                    mfCheckKeys_fast(sectors_cnt, true, true, 2, 1, tmp_key, e_sector, false);
                                 break;
                             default :
                                 PrintAndLogEx(ERR, "unknown Error.\n");
@@ -2038,6 +2084,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
 
                         // Copy the found key to the tmp_key variale (for the following print statement, and the mfCheckKeys above)
                         num_to_bytes(foundkey, 6, tmp_key);
+                        num_to_bytes(foundkey, 6, reused_key);
                         e_sector[current_sector_i].Key[current_key_type_i] = foundkey;
                         e_sector[current_sector_i].foundKey[current_key_type_i] = 6;
                     }
@@ -2063,13 +2110,14 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
     PrintAndLogEx(INFO, "Found Keys:");
     printKeyTable(sectors_cnt, e_sector);
     if (verbose) {
-        PrintAndLogEx(INFO, "[    INFO    ] Key res types:");
+        PrintAndLogEx(INFO, "[    INFO    ] Key res types: (this can be wrong if the nested attack is used!)");
         PrintAndLogEx(INFO, "                   1: Dictionary");
         PrintAndLogEx(INFO, "                   2: Darkside attack");
         PrintAndLogEx(INFO, "                   3: User supplied");
         PrintAndLogEx(INFO, "                   4: Reused");
         PrintAndLogEx(INFO, "                   5: Nested");
         PrintAndLogEx(INFO, "                   6: Hardnested");
+        PrintAndLogEx(INFO, "                   7: Read B key with A key");
     }
 
     // Transfere the found keys to the simulator and dump the keys and card data
@@ -2077,7 +2125,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
     PrintAndLogEx(INFO, "Dumping the keys:");
     createMfcKeyDump(sectors_cnt, e_sector, GenerateFilename("hf-mf-", "-key.bin"));
 
-    PrintAndLogEx(SUCCESS, "Transferring the found keys to the simulator memory (Cmd Error: 04 can occur, but this shouldn't be a problem)");
+    PrintAndLogEx(SUCCESS, "Transferring the found keys to the simulator memory (Cmd Error: 04 should only occur once, but this shouldn't be a problem)");
     for (current_sector_i = 0; current_sector_i < sectors_cnt; current_sector_i++) {
         mfEmlGetMem(block, current_sector_i, 1);
         if (e_sector[current_sector_i].foundKey[0])
