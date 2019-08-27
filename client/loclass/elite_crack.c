@@ -475,7 +475,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
         memcpy(master_key, key64, 8);
 
     if (memcmp(z_0, result, 4) != 0) {
-        PrintAndLogEx(WARNING, "Failed to verify calculated master key (k_cus)! Something is wrong.");
+        PrintAndLogEx(WARNING, _RED_("Failed to verify") "calculated master key (k_cus)! Something is wrong.");
         return 1;
     } else {
         PrintAndLogEx(NORMAL, "\n");
