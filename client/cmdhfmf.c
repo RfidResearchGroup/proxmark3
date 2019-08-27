@@ -2016,6 +2016,11 @@ noValidKeyFound:
                             e_sector[current_sector_i].foundKey[current_key_type_i] = 7;
                             e_sector[current_sector_i].Key[current_key_type_i] = key64;
                             num_to_bytes(key64, 6, tmp_key);
+                            PrintAndLogEx(SUCCESS, "Found valid key: sector: %3d key type: %c  key: " _YELLOW_("%s"),
+                                          current_sector_i,
+                                          current_key_type_i ? 'B' : 'A',
+                                          sprint_hex(tmp_key, sizeof(tmp_key))
+                                         );
                         }
                     }
                 }
