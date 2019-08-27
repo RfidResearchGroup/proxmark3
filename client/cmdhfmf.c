@@ -751,7 +751,12 @@ static uint8_t NumBlocksPerSector(uint8_t sectorNo) {
         return 16;
     }
 }
-
+static uint8_t GetSectorFromBlockNo(uint8_t blockNo) {
+	if ( blockNo < 128 )
+		return blockNo / 4;
+	else
+		return 32 + ((128 - blockNo) / 16);
+}
 static int CmdHF14AMfDump(const char *Cmd) {
 
     uint64_t t1 = msclock();
@@ -1221,6 +1226,10 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
         e_sector = calloc(SectorsCnt, sizeof(sector_t));
         if (e_sector == NULL) return PM3_EMALLOC;
+
+		// add our known key
+		e_sector[GetSectorFromBlockNo(blockNo)].foundKey[keyType] = 1;
+		e_sector[GetSectorFromBlockNo(blockNo)].Key[keyType] = key64;
 
         //test current key and additional standard keys first
         // add parameter key
