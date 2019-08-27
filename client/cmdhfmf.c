@@ -1998,9 +1998,9 @@ noValidKeyFound:
                         SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
 
                         PacketResponseNG resp;
-                        if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) continue;
+                        if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) goto skipReadBKey;
 
-                        if (resp.status != PM3_SUCCESS) continue;
+                        if (resp.status != PM3_SUCCESS) goto skipReadBKey;
 
                         uint8_t *data = resp.data.asBytes;
                         key64 = bytes_to_num(data + 10, 6);
@@ -2021,6 +2021,7 @@ noValidKeyFound:
                 }
 
                 // Use the nested / hardnested attack
+skipReadBKey:
                 if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
                     if (prng_type && (! nested_failed)) {
                         uint8_t retries = 0;
