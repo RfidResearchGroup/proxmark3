@@ -963,9 +963,11 @@ static int CmdHF14AMfDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "\nSucceded in dumping all blocks");
 
     if (strlen(dataFilename) < 1) {
-        fptr = dataFilename;
-        fptr += sprintf(fptr, "hf-mf-");
-        FillFileNameByUID(fptr, (uint8_t *)carddata, "-data", 4);
+        fptr = GenerateFilename("hf-mf-", "-data");
+        if (fptr == NULL)
+            return PM3_ESOFT;
+
+        strcpy(dataFilename, fptr);
     }
 
     uint16_t bytes = 16 * (FirstBlockOfSector(numSectors - 1) + NumBlocksPerSector(numSectors - 1));
