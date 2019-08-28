@@ -102,8 +102,13 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
             PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", script_cmds_file);
     }
 
-    read_history(".history");
-
+    char *my_history_path = NULL;
+    if (searchHomeFilePath(&my_history_path, PROXHISTORY, true) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "could not create $HOME/" PROXHISTORY ", no history will be recorded");
+        my_history_path = NULL;
+    } else {
+        read_history(my_history_path);
+    }
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
@@ -220,8 +225,10 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     if (sf)
         fclose(sf);
 
-    write_history(".history");
-
+    if (my_history_path) {
+        write_history(my_history_path);
+        free(my_history_path);
+    }
     if (cmd) {
         free(cmd);
         cmd = NULL;

@@ -896,6 +896,8 @@ out:
 }
 
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix) {
+    if (foundpath == NULL)
+        return PM3_EINVARG;
     char *filename = filenamemcopy(searchname, suffix);
     if (filename == NULL) return PM3_EMALLOC;
     int res = searchFinalFile(foundpath, pm3dir, filename);
