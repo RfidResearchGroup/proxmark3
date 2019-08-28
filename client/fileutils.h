@@ -149,7 +149,6 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen);
 */
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen);
 
-
 /**
  * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
  * E.g. mfc_default_keys.dic
@@ -162,6 +161,17 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
  * @return 0 for ok, 1 for failz
 */
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
+
+/**
+ * @brief  Utility function to load data from a DICTIONARY safely into a textfile. This method takes a preferred name.
+ * E.g. mfc_default_keys.dic
+ *
+ * @param preferredName
+ * @param data The data array to store the loaded bytes from file
+ * @param keylen  the number of bytes a key per row is
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileDICTIONARY_safe(const char *preferredName, uint8_t **data, uint8_t keylen, uint16_t *keycnt);
 
 /**
  * @brief  Utility function to check and convert old mfu dump format to new

@@ -2127,7 +2127,6 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
     if (use_pwd_file) {
         uint16_t keycount = 0;
-        size_t datalen = 0;
 
         // TODO, a way of reallocating memory if file was larger
         keyBlock = calloc(4 * 200, sizeof(uint8_t));
@@ -2136,7 +2135,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        int res = loadFileDICTIONARY(filename, keyBlock, &datalen, 4, &keycount);
+        int res = loadFileDICTIONARY_safe(filename, &keyBlock, 4, &keycount);
         if (res || keycount == 0) {
             PrintAndLogEx(WARNING, "No keys found in file");
             free(keyBlock);

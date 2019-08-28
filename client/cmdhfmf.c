@@ -1591,7 +1591,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
     int block_cnt = MIFARE_1K_MAXBLOCK;
     uint8_t tmp_key[6] = {0};
-    size_t data_length = 0;
     bool know_target_key = false;
     // For the timier
     uint64_t t1;
@@ -1613,7 +1612,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool legacy_mfchk = false;
     bool prng_type = false;
     bool verbose = false;
-    int max_dictionary_size = 2000;
 
     // Parse the options given by the user
     ctmp = tolower(param_getchar(Cmd, 0));
@@ -1788,17 +1786,14 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Load the dictionary
     if (strlen(filename) != 0) {
-        keyBlock = calloc(6 * max_dictionary_size, sizeof(uint8_t));
-        loadFileDICTIONARY(filename, keyBlock, &data_length, 6, &key_cnt);
-        if ((data_length / 6) > max_dictionary_size) {
-            // This is not a good solution (loadFileDICTIONARY needs a maxdatalen)!
-            // loadfiledictionary will reallocate to correct size.
-            PrintAndLogEx(FAILED, "Dictionary is too large: %d (allowed: %d)", data_length, max_dictionary_size);
-            free(keyBlock);
-            free(e_sector);
-            return PM3_EMALLOC;
+        int res = loadFileDICTIONARY_safe(filename, &keyBlock, 6, &key_cnt);
+        if (res != PM3_SUCCESS || key_cnt <= 0) {
+            PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
+            free(keyBlock); // free the memory, just in case an allocation happened
+            goto useDefaultKeys;
         }
     } else {
+useDefaultKeys:
         keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
         if (keyBlock == NULL) {
             free(e_sector);
