@@ -77,9 +77,9 @@ clone_script:
 
     $env:Path = "C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;$env:Path"
 
-    C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null 1> msys1.txt 2>&1
+    C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start
 
-    C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null 1> msys1.txt 2>&1
+    C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start 
 
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
