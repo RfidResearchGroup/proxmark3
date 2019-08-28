@@ -123,7 +123,7 @@ clone_script:
             break
           }
 
-          if ([System.Environment]::TickCount-$JobTime -gt 30000) {
+          if ([System.Environment]::TickCount-$JobTime -gt 600000) {
             Write-host "Exit by timeout"
             break
           }
