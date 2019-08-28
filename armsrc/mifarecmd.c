@@ -1342,8 +1342,6 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
             for (uint16_t i = s_point; i < keyCount; ++i) {
 
-                //if ( i % 100 == 0) Dbprintf("ChkKeys_fast: sector %d | checking %d | %d found | s_point %d", s, i, foundkeys, s_point);
-
                 // Allow button press / usb cmd to interrupt device
                 if (BUTTON_PRESS() && !data_available()) {
                     goto OUT;
@@ -1525,6 +1523,33 @@ OUT:
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         BigBuf_free();
         BigBuf_Clear_ext(false);
+		
+		// special trick ecfill
+		if (use_flashmem && foundkeys == allkeys) {
+			
+			uint8_t block[16] = {0};
+		    for (int i = 0; i < sectorcnt; i++) {
+				
+				uint8_t blockno;
+				if (i < 32) {
+					blockno = (i * 4) ^ 0x3;
+    } else {
+					blockno = (32 * 4 + (i - 32) * 16) ^ 0xF;
+				}
+				// get ST
+				emlGetMem(block, blockno, 1);
+
+				memcpy(block, k_sector[i].keyA, 6);
+				memcpy(block + 10, k_sector[i].keyB, 6);
+				
+				emlSetMem_xt(block, blockno, 1, sizeof(block));
+			}
+		    int oldbg = DBGLEVEL;
+			DBGLEVEL = DBG_NONE;
+			MifareECardLoad(sectorcnt, 0);
+			MifareECardLoad(sectorcnt, 1);
+			DBGLEVEL = oldbg;
+		}
     } else {
         // partial/none keys found
         reply_mix(CMD_ACK, foundkeys, 0, 0, 0, 0);
@@ -1669,10 +1694,15 @@ void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
 // Load a card into the emulator memory
 //
 //-----------------------------------------------------------------------------
-int MifareECardLoad(uint32_t arg0, uint32_t arg1) {
+int MifareECardLoadExt(uint8_t numSectors, uint8_t keyType) {
+	int retval = MifareECardLoad(numSectors, keyType);
+	reply_ng(CMD_HF_MIFARE_EML_LOAD, retval, NULL, 0);
+	return retval;
+}
+
+int MifareECardLoad(uint8_t numSectors, uint8_t keyType) {
+
     uint32_t cuid = 0;
-    uint8_t numSectors = arg0;
-    uint8_t keyType = arg1;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -1683,42 +1713,40 @@ int MifareECardLoad(uint32_t arg0, uint32_t arg1) {
     uint8_t uid[10] = {0x00};
 
     LED_A_ON();
-    LED_B_OFF();
-    LED_C_OFF();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     clear_trace();
     set_tracing(true);
 
-    bool isOK = true;
+    int retval;
 
     if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-        isOK = false;
-        if (DBGLEVEL >= 1) Dbprintf("Can't select card");
+        retval = PM3_ESOFT;
+        if (DBGLEVEL > DBG_ERROR) Dbprintf("Can't select card");
+		goto out;
     }
 
-    for (uint8_t sectorNo = 0; isOK && sectorNo < numSectors; sectorNo++) {
+    for (uint8_t sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         uint64_t ui64Key = emlGetKey(sectorNo, keyType);
         if (sectorNo == 0) {
-            if (isOK && mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
-                if (DBGLEVEL >= 1) Dbprintf("Sector[%2d]. Auth error", sectorNo);
+            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
+                if (DBGLEVEL > DBG_ERROR) Dbprintf("Sector[%2d]. Auth error", sectorNo);
                 break;
             }
         } else {
-            if (isOK && mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_NESTED)) {
-                isOK = false;
-                if (DBGLEVEL >= 1) Dbprintf("Sector[%2d]. Auth nested error", sectorNo);
-                break;
+            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_NESTED)) {
+                retval = PM3_ESOFT;
+                if (DBGLEVEL > DBG_ERROR) Dbprintf("Sector[%2d]. Auth nested error", sectorNo);
+                goto out;
             }
         }
 
-        for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
-            if (isOK && mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf)) {
-                isOK = false;
-                if (DBGLEVEL >= 1) Dbprintf("Error reading sector %2d block %2d", sectorNo, blockNo);
+        for (uint8_t blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
+            if (mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf)) {
+                retval = PM3_ESOFT;
+                if (DBGLEVEL > DBG_ERROR) Dbprintf("Error reading sector %2d block %2d", sectorNo, blockNo);
                 break;
             }
-            if (isOK) {
                 if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
                     emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
                 } else { // sector trailer, keep the keys, set only the AC
@@ -1729,22 +1757,19 @@ int MifareECardLoad(uint32_t arg0, uint32_t arg1) {
             }
         }
 
-    }
-
-    if (mifare_classic_halt(pcs, cuid))
-        if (DBGLEVEL >= 1)
+    if (mifare_classic_halt(pcs, cuid)) {
+        if (DBGLEVEL > DBG_ERROR)
             Dbprintf("Halt error");
+	}
 
-    //  ----------------------------- crypto1 destroy
+	if (DBGLEVEL >= DBG_INFO) DbpString("Emulator fill sectors finished");
+
+out:
     crypto1_destroy(pcs);
-
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
-
-    if (DBGLEVEL >= 2) DbpString("EMUL FILL SECTORS FINISHED");
-
     set_tracing(false);
-    return (isOK) ? PM3_SUCCESS : PM3_EUNDEF;
+    return retval;
 }
 
 
