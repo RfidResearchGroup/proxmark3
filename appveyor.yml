@@ -131,9 +131,9 @@ clone_script:
         Remove-Job -Force $Job
     }
 
-    #ExecUpdate "update1"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start"  "count?5"
+    ExecUpdate "update1"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2?without?returning?to?shell"
  
-    #ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start"  "count?5"
+    ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2?without?returning?to?shell"
 
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
