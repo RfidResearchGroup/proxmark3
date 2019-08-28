@@ -1585,7 +1585,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint64_t key64 = 0;
     bool calibrate = true;
     // Attack key storage variables
-    uint8_t *keyBlock;
+    uint8_t *keyBlock = NULL;
     uint16_t key_cnt = 0;
     sector_t *e_sector;
     uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
@@ -1787,9 +1787,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Load the dictionary
     if (strlen(filename) != 0) {
         int res = loadFileDICTIONARY_safe(filename, &keyBlock, 6, &key_cnt);
-        if (res != PM3_SUCCESS || key_cnt <= 0) {
+        if (res != PM3_SUCCESS || key_cnt <= 0 || keyBlock == NULL) {
             PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
-            free(keyBlock); // free the memory, just in case an allocation happened
+            if (keyBlock != NULL) free(keyBlock);
             goto useDefaultKeys;
         }
     } else {
