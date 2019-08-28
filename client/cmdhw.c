@@ -619,15 +619,18 @@ int CmdHW(const char *Cmd) {
 
 void pm3_version(bool verbose, bool oneliner) {
 
-    if (oneliner) {
-        char msg[70];
-        memset(msg, 0x00, sizeof(msg));
-        strcat(msg, "Client: RRG/Iceman compiled with ");
+#define PM3CLIENTONELINER "Client: RRG/Iceman compiled with "
 #if defined(__clang__)
-        strcat(msg + strlen(msg), _YELLOW_("Clang/LLVM "__VERSION__));
+# define PM3CLIENTCOMPILER "Clang/LLVM "
 #elif defined(__GNUC__) || defined(__GNUG__)
-        strcat(msg + strlen(msg), _YELLOW_("GCC "__VERSION__));
+# define PM3CLIENTCOMPILER "GCC "
 #endif
+
+    if (oneliner) {
+        char msg[sizeof(PM3CLIENTONELINER)+sizeof(PM3CLIENTCOMPILER)+sizeof(__VERSION__)];
+        memset(msg, 0x00, sizeof(msg));
+        strcat(msg, PM3CLIENTONELINER);
+        strcat(msg + strlen(msg), _YELLOW_(PM3CLIENTCOMPILER __VERSION__));
         PrintAndLogEx(NORMAL, "%s",  msg);
         return;
     }
@@ -644,12 +647,7 @@ void pm3_version(bool verbose, bool oneliner) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
-#if defined(__clang__)
-        PrintAndLogEx(NORMAL, "  compiled with Clang/LLVM "__VERSION__);
-#elif defined(__GNUC__) || defined(__GNUG__)
-        PrintAndLogEx(NORMAL, "  compiled with GCC "__VERSION__);
-#endif
-
+        PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__);
         PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 ]");
         PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
         PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
