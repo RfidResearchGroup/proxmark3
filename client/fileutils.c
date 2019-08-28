@@ -649,6 +649,84 @@ out:
     return retval;
 }
 
+int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt) {
+
+    int block_size = 512;
+    int allocation_size = block_size;
+    size_t counter = 0;
+    int retval = PM3_SUCCESS;
+    char *path;
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic") != PM3_SUCCESS)
+        return PM3_EFILE;
+
+    // t5577 == 4bytes
+    // mifare == 6 bytes
+    // iclass == 8 bytes
+    // default to 6 bytes.
+    if (keylen != 4 && keylen != 6 && keylen != 8) {
+        keylen = 6;
+    }
+
+    // double up since its chars
+    keylen <<= 1;
+
+    char line[255];
+
+    // allocate some space for the dictionary
+    *pdata = calloc(keylen * allocation_size, sizeof(uint8_t));
+    if (*pdata == NULL) return PM3_EFILE;
+
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        retval = PM3_EFILE;
+        goto out;    }
+
+    // read file
+    while (fgets(line, sizeof(line), f)) {
+        // check if we have enough space (if not allocate more)
+        if ((*keycnt) >= allocation_size) {
+            allocation_size += block_size;
+            *pdata = realloc(*pdata, keylen * allocation_size * sizeof(uint8_t));
+            if (*pdata == NULL) {
+                return PM3_EFILE;
+            } else {
+                // zero the new memory (safety first)
+                memset(*pdata + allocation_size - block_size, 0, block_size);
+            }
+        }
+
+        // add null terminator
+        line[keylen] = 0;
+
+        // smaller keys than expected is skipped
+        if (strlen(line) < keylen)
+            continue;
+
+        // The line start with # is comment, skip
+        if (line[0] == '#')
+            continue;
+
+        if (!isxdigit(line[0])) {
+            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_("%2d") "HEX symbols", line, keylen);
+            continue;
+        }
+
+        uint64_t key = strtoull(line, NULL, 16);
+
+        num_to_bytes(key, keylen >> 1, *pdata + counter);
+        (*keycnt)++;
+        memset(line, 0, sizeof(line));
+        counter += (keylen >> 1);
+    }
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
+
+out:
+    free(path);
+    return retval;
+}
+
 int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     if (!dump || !dumplen || *dumplen < OLD_MFU_DUMP_PREFIX_LENGTH)
         return 1;
