@@ -167,7 +167,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
  * E.g. mfc_default_keys.dic
  *
  * @param preferredName
- * @param data The data array to store the loaded bytes from file
+ * @param pdata A pointer to a pointer  (for reverencing the loaded dictionary)
  * @param keylen  the number of bytes a key per row is
  * @return 0 for ok, 1 for failz
 */
