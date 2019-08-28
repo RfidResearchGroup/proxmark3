@@ -649,7 +649,7 @@ out:
     return retval;
 }
 
-int loadFileDICTIONARY_safe(const char *preferredName, uint8_t **data, uint8_t keylen, uint16_t *keycnt) {
+int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt) {
 
     int block_size = 512;
     int allocation_size = block_size;
@@ -673,8 +673,8 @@ int loadFileDICTIONARY_safe(const char *preferredName, uint8_t **data, uint8_t k
     char line[255];
 
     // allocate some space for the dictionary
-    *data = (uint8_t*) calloc(keylen * allocation_size, sizeof(uint8_t));
-    if (*data == NULL) return PM3_EFILE;
+    *pdata = calloc(keylen * allocation_size, sizeof(uint8_t));
+    if (*pdata == NULL) return PM3_EFILE;
 
     FILE *f = fopen(path, "r");
     if (!f) {
@@ -687,12 +687,12 @@ int loadFileDICTIONARY_safe(const char *preferredName, uint8_t **data, uint8_t k
         // check if we have enough space (if not allocate more)
         if ((*keycnt) >= allocation_size) {
             allocation_size += block_size;
-            *data = (uint8_t*) realloc((void*) *data, keylen * allocation_size * sizeof(uint8_t));
-            if (*data == NULL) {
+            *pdata = realloc(*pdata, keylen * allocation_size * sizeof(uint8_t));
+            if (*pdata == NULL) {
                 return PM3_EFILE;
             } else {
                 // zero the new memeory (safety first)
-                memset(*data + counter, 0, block_size);
+                memset(*pdata + counter, 0, block_size);
             }
         }
 
@@ -714,7 +714,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, uint8_t **data, uint8_t k
 
         uint64_t key = strtoull(line, NULL, 16);
 
-        num_to_bytes(key, keylen >> 1, *data + counter);
+        num_to_bytes(key, keylen >> 1, *pdata + counter);
         (*keycnt)++;
         memset(line, 0, sizeof(line));
         counter += (keylen >> 1);

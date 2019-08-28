@@ -171,7 +171,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
  * @param keylen  the number of bytes a key per row is
  * @return 0 for ok, 1 for failz
 */
-int loadFileDICTIONARY_safe(const char *preferredName, uint8_t **data, uint8_t keylen, uint16_t *keycnt);
+int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt);
 
 /**
  * @brief  Utility function to check and convert old mfu dump format to new

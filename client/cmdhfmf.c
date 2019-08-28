@@ -1786,7 +1786,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Load the dictionary
     if (strlen(filename) != 0) {
-        int res = loadFileDICTIONARY_safe(filename, &keyBlock, 6, &key_cnt);
+        int res = loadFileDICTIONARY_safe(filename, (void**) &keyBlock, 6, &key_cnt);
         if (res != PM3_SUCCESS || key_cnt <= 0 || keyBlock == NULL) {
             PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
             if (keyBlock != NULL) free(keyBlock);
@@ -1804,6 +1804,10 @@ useDefaultKeys:
             num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
         }
         key_cnt = ARRAYLEN(g_mifare_default_keys);
+    }
+
+    for (int k = 0; k < key_cnt; k++) {
+        PrintAndLogEx(SUCCESS, "ID: %d KEY: %s", k, sprint_hex((keyBlock + (6 * k)), sizeof(key)));
     }
 
     // Use the dictionary to find sector keys on the card
