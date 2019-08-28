@@ -394,4 +394,4 @@ on_success:
 on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
-- ps: $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
