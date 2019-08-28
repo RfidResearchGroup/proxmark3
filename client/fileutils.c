@@ -673,7 +673,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, uint8_t **data, uint8_t k
     char line[255];
 
     // allocate some space for the dictionary
-    *data = (uint8_t*) malloc(keylen * allocation_size * sizeof(uint8_t));
+    *data = (uint8_t*) calloc(keylen * allocation_size, sizeof(uint8_t));
     if (*data == NULL) return PM3_EFILE;
 
     FILE *f = fopen(path, "r");
@@ -688,7 +688,12 @@ int loadFileDICTIONARY_safe(const char *preferredName, uint8_t **data, uint8_t k
         if ((*keycnt) >= allocation_size) {
             allocation_size += block_size;
             *data = (uint8_t*) realloc((void*) *data, keylen * allocation_size * sizeof(uint8_t));
-            if (*data == NULL) return PM3_EFILE;
+            if (*data == NULL) {
+                return PM3_EFILE;
+            } else {
+                // zero the new memeory (safety first)
+                memset(*data + counter, 0, block_size);
+            }
         }
 
         // add null terminator
