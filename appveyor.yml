@@ -131,9 +131,9 @@ clone_script:
         Remove-Job -Force $Job
     }
 
-    ExecUpdate "update1"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2?without?returning?to?shell"
+    ExecUpdate "update1"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
  
-    ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2?without?returning?to?shell"
+    ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
 
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
@@ -167,7 +167,7 @@ build_script:
 
     #make
 
-    bash -c -i 'pwd;make clean;make all'
+    bash -c -i 'pwd;make clean;make all V=1'
 
 
     #some checks
@@ -394,4 +394,4 @@ on_success:
 on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
-- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
