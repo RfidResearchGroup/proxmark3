@@ -27,7 +27,10 @@
 #include "proxmark3.h"  // PROXLOG
 #include "fileutils.h"
 #include "pm3_cmd.h"
-
+#ifdef _WIN32
+# include <direct.h>    // _mkdir
+#endif
+#include <time.h>
 session_arg_t session;
 
 double CursorScaleFactor = 1;
@@ -55,15 +58,16 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
     strcpy(path, user_path);
     strcat(path, PM3_USER_DIRECTORY);
 
-#ifdef _WIN32
-    struct _stat st;
-    int result = _stat(path, &st);
-#else
+// Mingw: _stat fails on mangled HOME path /pm3 => C:\ProxSpace\pm3, while stat works fine
     struct stat st;
     int result = stat(path, &st);
-#endif
     if ((result != 0) && create_home) {
+
+#ifdef _WIN32
+        if (_mkdir(path)) {
+#else
         if (mkdir(path, 0700)) {
+#endif
             free(path);
             return PM3_EFILE;
         }
