@@ -691,8 +691,8 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
             if (*pdata == NULL) {
                 return PM3_EFILE;
             } else {
-                // zero the new memeory (safety first)
-                memset(*pdata + counter, 0, block_size);
+                // zero the new memory (safety first)
+                memset(*pdata + allocation_size - block_size, 0, block_size);
             }
         }
 
