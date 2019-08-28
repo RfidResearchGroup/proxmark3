@@ -168,7 +168,7 @@ build_script:
 
     #make
 
-    bash -c -i 'pwd;make clean;make all V=1'
+    bash -c -i 'pwd;make clean;make all'
 
 
     #some checks
