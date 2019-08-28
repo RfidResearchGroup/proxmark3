@@ -759,13 +759,14 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     return PM3_SUCCESS;
 }
 
-static int filelist(const char *path, const char *ext, bool last) {
+static int filelist(const char *path, const char *ext, bool last, bool tentative) {
     struct dirent **namelist;
     int n;
 
     n = scandir(path, &namelist, NULL, alphasort);
     if (n == -1) {
-        PrintAndLogEx(NORMAL, "%s── %s => NOT FOUND", last ? "└" : "├", path);
+        if (!tentative)
+            PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
         return PM3_EFILE;
     }
 
@@ -781,25 +782,29 @@ static int filelist(const char *path, const char *ext, bool last) {
 }
 
 int searchAndList(const char *pm3dir, const char *ext) {
+    // display in same order as searched by searchFile
+    // try pm3 dirs in current workdir (dev mode)
     if (get_my_executable_directory() != NULL) {
         char script_directory_path[strlen(get_my_executable_directory()) + strlen(pm3dir) + 1];
         strcpy(script_directory_path, get_my_executable_directory());
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, false);
+        filelist(script_directory_path, ext, false, true);
     }
+    // try pm3 dirs in user .proxmark3 (user mode)
     char *userpath = getenv("HOME");
     if (userpath != NULL) {
         char script_directory_path[strlen(userpath) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + 1];
         strcpy(script_directory_path, userpath);
         strcat(script_directory_path, PM3_USER_DIRECTORY);
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, false);
+        filelist(script_directory_path, ext, false, false);
     }
+    // try pm3 dirs in pm3 installation dir (install mode)
     {
         char script_directory_path[strlen(PM3_SHARE_PATH) + strlen(pm3dir) + 1];
         strcpy(script_directory_path, PM3_SHARE_PATH);
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, true);
+        filelist(script_directory_path, ext, true, false);
     }
     return PM3_SUCCESS;
 }
