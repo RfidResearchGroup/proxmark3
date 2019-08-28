@@ -163,7 +163,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
 
 /**
- * @brief  Utility function to load data from a DICTIONARY safely into a textfile. This method takes a preferred name.
+ * @brief  Utility function to load data safely from a DICTIONARY textfile. This method takes a preferred name.
  * E.g. mfc_default_keys.dic
  *
  * @param preferredName
