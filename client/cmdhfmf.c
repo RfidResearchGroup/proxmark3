@@ -1806,10 +1806,6 @@ useDefaultKeys:
         key_cnt = ARRAYLEN(g_mifare_default_keys);
     }
 
-    for (int k = 0; k < key_cnt; k++) {
-        PrintAndLogEx(SUCCESS, "ID: %d KEY: %s", k, sprint_hex((keyBlock + (6 * k)), sizeof(key)));
-    }
-
     // Use the dictionary to find sector keys on the card
     PrintAndLogEx(INFO, "Enter dictionary run...");
 
