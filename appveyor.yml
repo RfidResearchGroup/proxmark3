@@ -87,7 +87,6 @@ clone_script:
 
           $sb=[scriptblock]::Create("$using:Cmd")
           #execute scriptblock
-          Write-host "Update [$using:Name] job: $using:Cmd"
           $Cond=&$sb
 
           return $Cond
@@ -118,7 +117,7 @@ clone_script:
             }
           }
 
-          if(Wait-Job $Job -Timeout 1){
+          if(Wait-Job $Job -Timeout 5){
             Write-host "Exit by end job"
             break
           }
