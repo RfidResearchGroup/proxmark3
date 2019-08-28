@@ -77,9 +77,9 @@ clone_script:
 
     $env:Path = "C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;$env:Path"
 
-    C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start
+    rem C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start
 
-    C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start 
+    rem C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start 
 
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
@@ -340,4 +340,4 @@ on_success:
 on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
-- ps: $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
