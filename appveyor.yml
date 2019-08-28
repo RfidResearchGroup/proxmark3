@@ -76,10 +76,65 @@ clone_script:
     Write-Host "Update msys2 packages..." -NoNewLine
 
     $env:Path = "C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;$env:Path"
+    
+    Function ExecUpdate($Name, $Cmd, $ErrorLine) {
 
-    rem C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start
+        #--- begin Job
+        
+        $Job = Start-Job -Name "$Name" -ScriptBlock {
+          $env:Path = "C:\ProxSpace\msys\bin;$env:Path"
+          Set-Location $using:PWD
 
-    rem C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start 
+          $sb=[scriptblock]::Create("$using:Cmd")
+          #execute scriptblock
+          Write-host "Update [$using:Name] job: $using:Cmd"
+          $Cond=&$sb
+
+          return $Cond
+        }
+
+        #--- end Job
+
+        $JobTime=[System.Environment]::TickCount
+        while($true) {
+          Receive-Job -Job $Job -Keep -OutVariable Res 2>&1 6>&1 | Out-Null 
+          
+          if ($Res -is "String" -and $Res -like "*$ErrorLine*"){
+            Write-host "Exit by stop phrase"
+            break
+          }
+
+          if ($Res -is [Object]){
+            [bool]$needexit = $false
+            ForEach($line in $Res){
+              if ($line -like "*$ErrorLine*"){
+                Write-host "Exit by stop phrase [obj]"
+                $needexit = $true
+                break
+              }
+            }
+            if ($needexit) {
+              break
+            }
+          }
+
+          if(Wait-Job $Job -Timeout 1){
+            Write-host "Exit by end job"
+            break
+          }
+
+          if ([System.Environment]::TickCount-$JobTime -gt 30000) {
+            Write-host "Exit by timeout"
+            break
+          }
+        }
+
+        Remove-Job -Force $Job
+    }
+
+    ExecUpdate "update1"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start"  "count?5"
+ 
+    ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start"  "count?5"
 
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
