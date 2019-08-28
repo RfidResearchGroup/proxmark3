@@ -619,7 +619,6 @@ int CmdHW(const char *Cmd) {
 
 void pm3_version(bool verbose, bool oneliner) {
 
-#define PM3CLIENTONELINER "Client: RRG/Iceman compiled with "
 #if defined(__clang__)
 # define PM3CLIENTCOMPILER "Clang/LLVM "
 #elif defined(__GNUC__) || defined(__GNUG__)
@@ -627,11 +626,7 @@ void pm3_version(bool verbose, bool oneliner) {
 #endif
 
     if (oneliner) {
-        char msg[sizeof(PM3CLIENTONELINER)+sizeof(PM3CLIENTCOMPILER)+sizeof(__VERSION__)];
-        memset(msg, 0x00, sizeof(msg));
-        strcat(msg, PM3CLIENTONELINER);
-        strcat(msg + strlen(msg), _YELLOW_(PM3CLIENTCOMPILER __VERSION__));
-        PrintAndLogEx(NORMAL, "%s",  msg);
+        PrintAndLogEx(NORMAL, "Client: RRG/Iceman compiled with " _YELLOW_(PM3CLIENTCOMPILER __VERSION__));
         return;
     }
 
