@@ -58,9 +58,21 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
     strcpy(path, user_path);
     strcat(path, PM3_USER_DIRECTORY);
 
-// Mingw: _stat fails on mangled HOME path /pm3 => C:\ProxSpace\pm3, while stat works fine
+    int result;
+#ifdef _WIN32
+    struct _stat st;
+    // Mingw _stat fails if path ends with /, so let's use a stripped path
+    if (path[strlen(path)-1]=='/') {
+        path[strlen(path)-1]='\0';
+        result = _stat(path, &st);
+        path[strlen(path)]='/';
+    } else {
+        result = _stat(path, &st);
+    }
+#else
     struct stat st;
-    int result = stat(path, &st);
+    result = stat(path, &st);
+#endif
     if ((result != 0) && create_home) {
 
 #ifdef _WIN32
@@ -216,7 +228,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         timenow = gmtime(&now);
         strftime(filename, sizeof(filename), PROXLOG, timenow);
         if (searchHomeFilePath(&my_logfile_path, filename, true) != PM3_SUCCESS) {
-            fprintf(stderr, "Could not create $HOME/.proxmark3/%s, no log will be recorded\n", filename);
+            fprintf(stderr, "Could not create $HOME" PM3_USER_DIRECTORY "%s, no log will be recorded\n", filename);
             my_logfile_path = NULL;
             logging = 0;
         } else {
@@ -224,8 +236,9 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
             if (logfile == NULL) {
                 fprintf(stderr, "Can't open logfile %s, logging disabled!\n", my_logfile_path);
                 logging = 0;
+            } else {
+                printf("Session is logged into %s\n", my_logfile_path);
             }
-            printf("Session is logged into %s\n", my_logfile_path);
             free(my_logfile_path);
         }
     }
