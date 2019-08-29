@@ -144,7 +144,7 @@ all: $(OBJS)
 # version.c should be remade on every time fullimage.stage1.elf should be remade
 version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [-] GEN $@)
-	$(Q)perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@
+	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(COPY) $^ $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) | $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
