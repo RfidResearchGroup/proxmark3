@@ -341,6 +341,7 @@ test_script:
       Remove-Job -Force $Job
 
       if(!$res){
+      Write-host "--------------------- tests fail" -ForegroundColor Red
         $global:TestsPassed=$false
       }
     }
