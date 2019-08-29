@@ -280,6 +280,8 @@ test_script:
 
 
     Function ExecTest($Name, $File, $Cmd, $CheckResult) {
+    
+    if ($CheckResult -eq $null ) { $CheckResult="passed" }
 
     #--- begin Job
 
@@ -373,7 +375,7 @@ test_script:
 
     #proxmark logic tests
 
-    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h 2>&1 '}
+    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h 2>&1 | grep -q wait && echo passed || echo failed'}
 
     ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q ISO7816 && echo passed || echo failed'}
 
