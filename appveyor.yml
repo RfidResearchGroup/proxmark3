@@ -73,12 +73,13 @@ clone_script:
     Write-Host "[ OK ]" -ForegroundColor Green
 
 
-    Write-Host "Update msys2 packages..." -NoNewLine
+    Write-Host "Update msys2 packages..."
 
     $env:Path = "C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;$env:Path"
     
     Function ExecUpdate($Name, $Cmd, $ErrorLine) {
 
+        Write-Host "Exec [$Name]...  " -NoNewLine 
         #--- begin Job
         
         $Job = Start-Job -Name "$Name" -ScriptBlock {
@@ -99,7 +100,7 @@ clone_script:
           Receive-Job -Job $Job -Keep -OutVariable Res 2>&1 6>&1 | Out-Null 
           
           if ($Res -is "String" -and $Res -like "*$ErrorLine*"){
-            Write-host "Exit by stop phrase"
+            Write-host "Exit by stop phrase" -ForegroundColor Green
             break
           }
 
@@ -107,7 +108,7 @@ clone_script:
             [bool]$needexit = $false
             ForEach($line in $Res){
               if ($line -like "*$ErrorLine*"){
-                Write-host "Exit by stop phrase [obj]"
+                Write-host "Exit by stop phrase [obj]" -ForegroundColor Green
                 $needexit = $true
                 break
               }
@@ -118,12 +119,23 @@ clone_script:
           }
 
           if(Wait-Job $Job -Timeout 5){
-            Write-host "Exit by end job"
+            Write-host "Exit by end job" -ForegroundColor Green
             break
           }
 
-          if ([System.Environment]::TickCount-$JobTime -gt 600000) {
-            Write-host "Exit by timeout"
+          if ([System.Environment]::TickCount-$JobTime -gt 700000) {
+            Write-host "Exit by timeout" -ForegroundColor Yellow
+            
+          Receive-Job -Job $Job -Keep -OutVariable Res 2>&1 6>&1 | Out-Null
+          if ($Res -is [Object]){
+            ForEach($line in $Res){
+              Write-host "$line" -ForegroundColor Gray
+              if ($line -like "*$ErrorLine*"){
+                Write-host "...[obj]..." -ForegroundColor Green
+              }
+            }
+            
+
             break
           }
         }
@@ -135,6 +147,7 @@ clone_script:
  
     ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
 
+    Write-Host "Update " -NoNewLine
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
 - ps: >-
