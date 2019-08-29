@@ -30,6 +30,7 @@
 #define DICTIONARIES_SUBDIR "dictionaries/"
 #define LUA_LIBRARIES_SUBDIR "lualibs/"
 #define LUA_SCRIPTS_SUBDIR   "luascripts/"
+#define RESOURCES_SUBDIR   "resources/"
 
 #define PACKED __attribute__((packed))
 

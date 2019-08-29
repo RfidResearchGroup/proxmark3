@@ -405,7 +405,7 @@ out:
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen) {
 
     char *path;
-    int res = searchFile(&path, "", preferredName, suffix);
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix);
     if (res != PM3_SUCCESS) {
         return PM3_EFILE;
     }
