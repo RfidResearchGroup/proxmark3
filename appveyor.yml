@@ -129,7 +129,7 @@ clone_script:
             break
           }
 
-          if ([System.Environment]::TickCount-$JobTime -gt 700000) {
+          if ([System.Environment]::TickCount-$JobTime -gt 1000000) {
             Write-host "Exit by timeout" -ForegroundColor Yellow
             break
           }
