@@ -407,7 +407,6 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     char *path;
     int res = searchFile(&path, "", preferredName, suffix);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "res:  %d  Curr path:: %s", res, path);
         return PM3_EFILE;
     }
 
