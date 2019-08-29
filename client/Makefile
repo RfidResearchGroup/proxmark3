@@ -90,7 +90,6 @@ else
     LIBS := -I/usr/local/opt/readline/include $(LIBS)
 else
     LUALIB +=  -ldl
-    LDLIBS += $(shell pkg-config --libs ncurses 2>/dev/null)
     LUAPLATFORM = linux
 endif
 endif

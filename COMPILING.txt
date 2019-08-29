@@ -1,3 +1,6 @@
+
+** BEWARE the instructions here might be outdated, better refer to doc/md/Installation_Instructions/ **
+
 The project compiles on Linux, Mac OS X and Windows (MinGW/MSYS).
 
 it requires:
@@ -7,7 +10,6 @@ it requires:
 - libusb
 - perl
 - an ARM cross-compiler to compile the firmware
-- libncurses5-dev
 
 and optionally QT for the GUI
 
