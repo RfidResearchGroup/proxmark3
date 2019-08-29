@@ -24,7 +24,13 @@
 #include <readline/readline.h>
 #include <complex.h>
 #include "util.h"
-
+#include "proxmark3.h"  // PROXLOG
+#include "fileutils.h"
+#include "pm3_cmd.h"
+#ifdef _WIN32
+# include <direct.h>    // _mkdir
+#endif
+#include <time.h>
 session_arg_t session;
 
 double CursorScaleFactor = 1;
@@ -36,8 +42,45 @@ bool GridLocked = false;
 bool showDemod = true;
 
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
-static const char *logfilename = "proxmark3.log";
+
 static void fPrintAndLog(FILE *stream, const char *fmt, ...);
+
+// needed by flasher, so let's put it here instead of fileutils.c
+int searchHomeFilePath(char **foundpath, const char *filename, bool create_home) {
+    if (foundpath == NULL)
+        return PM3_EINVARG;
+    char *user_path = getenv("HOME");
+    if (user_path == NULL)
+        return PM3_EFILE;
+    char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1, sizeof(char));
+    if (path == NULL)
+        return PM3_EMALLOC;
+    strcpy(path, user_path);
+    strcat(path, PM3_USER_DIRECTORY);
+
+// Mingw: _stat fails on mangled HOME path /pm3 => C:\ProxSpace\pm3, while stat works fine
+    struct stat st;
+    int result = stat(path, &st);
+    if ((result != 0) && create_home) {
+
+#ifdef _WIN32
+        if (_mkdir(path)) {
+#else
+        if (mkdir(path, 0700)) {
+#endif
+            free(path);
+            return PM3_EFILE;
+        }
+    }
+    if (filename == NULL) {
+        *foundpath = path;
+        return PM3_SUCCESS;
+    }
+    path = realloc(path, (strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(filename) + 1) * sizeof(char));
+    strcat(path, filename);
+    *foundpath = path;
+    return PM3_SUCCESS;
+}
 
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     char buff[2000] = "Options:\n";
@@ -166,10 +209,24 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     pthread_mutex_lock(&print_lock);
 
     if (logging && !logfile) {
-        logfile = fopen(logfilename, "a");
-        if (!logfile) {
-            fprintf(stderr, "Can't open logfile, logging disabled!\n");
+        char *my_logfile_path = NULL;
+        char filename[40];
+        struct tm *timenow;
+        time_t now = time(NULL);
+        timenow = gmtime(&now);
+        strftime(filename, sizeof(filename), PROXLOG, timenow);
+        if (searchHomeFilePath(&my_logfile_path, filename, true) != PM3_SUCCESS) {
+            fprintf(stderr, "Could not create $HOME/.proxmark3/%s, no log will be recorded\n", filename);
+            my_logfile_path = NULL;
             logging = 0;
+        } else {
+            logfile = fopen(my_logfile_path, "a");
+            if (logfile == NULL) {
+                fprintf(stderr, "Can't open logfile %s, logging disabled!\n", my_logfile_path);
+                logging = 0;
+            }
+            printf("Session is logged into %s\n", my_logfile_path);
+            free(my_logfile_path);
         }
     }
 
@@ -226,10 +283,6 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 
     //release lock
     pthread_mutex_unlock(&print_lock);
-}
-
-void SetLogFilename(char *fn) {
-    logfilename = fn;
 }
 
 void SetFlushAfterWrite(bool value) {

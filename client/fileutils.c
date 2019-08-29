@@ -283,9 +283,9 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
         }
         case jsfIclass: {
             JsonSaveStr(root, "FileType", "iclass");
-            uint8_t uid[8] = {0};
-            memcpy(uid, data, 8);
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
+            uint8_t csn[8] = {0};
+            memcpy(csn, data, 8);
+            JsonSaveBufAsHexCompact(root, "$.Card.CSN", csn, sizeof(csn));
 
             for (size_t i = 0; i < (datalen / 8); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
@@ -316,13 +316,13 @@ int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr) {
     int i;
 
     if (fptr == NULL) {
-        return 1;
+        return PM3_EINVARG;
     }
 
     FILE *fkeys = fopen(fptr, "wb");
     if (fkeys == NULL) {
         PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
-        return 1;
+        return PM3_EFILE;
     }
     PrintAndLogEx(SUCCESS, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
 
@@ -338,14 +338,14 @@ int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr) {
 
     fclose(fkeys);
     PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
 
     if (data == NULL) return 1;
     char *fileName = filenamemcopy(preferredName, suffix);
-    if (fileName == NULL) return 1;
+    if (fileName == NULL) return PM3_EINVARG;
 
     int retval = PM3_SUCCESS;
 
@@ -363,23 +363,24 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
 
     if (fsize <= 0) {
         PrintAndLogEx(FAILED, "error, when getting filesize");
-        retval = 1;
+        retval = PM3_EFILE;
         goto out;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
-        retval = 2;
+        retval = PM3_EMALLOC;
         goto out;
     }
 
     size_t bytes_read = fread(dump, 1, fsize, f);
+    fclose(f);
 
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
         free(dump);
-        retval = 3;
+        retval = PM3_EFILE;
         goto out;
     }
 
@@ -396,9 +397,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     *datalen = bytes_read;
 
 out:
-    fclose(f);
     free(fileName);
-
     return retval;
 }
 
@@ -432,7 +431,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
                 break;
             fclose(f);
             PrintAndLogEx(FAILED, "File reading error.");
-            retval = 2;
+            retval = PM3_EFILE;
             goto out;
         }
 
@@ -471,13 +470,13 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
     root = json_load_file(fileName, 0, &error);
     if (!root) {
         PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", fileName, error.line, error.text);
-        retval = 2;
+        retval = PM3_ESOFT;
         goto out;
     }
 
     if (!json_is_object(root)) {
         PrintAndLogEx(ERR, "ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", fileName);
-        retval = 3;
+        retval = PM3_ESOFT;
         goto out;
     }
 
@@ -493,7 +492,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         size_t sptr = 0;
         for (int i = 0; i < 256; i++) {
             if (sptr + 16 > maxdatalen) {
-                retval = 5;
+                retval = PM3_EMALLOC;
                 goto out;
             }
 
@@ -515,7 +514,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         size_t sptr = 0;
         for (int i = 0; i < 256; i++) {
             if (sptr + 4 > maxdatalen) {
-                retval = 5;
+                retval = PM3_EMALLOC;
                 goto out;
             }
 
@@ -537,7 +536,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         size_t sptr = 0;
         for (size_t i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
-                retval = 5;
+                retval = PM3_EMALLOC;
                 goto out;
             }
 
@@ -559,7 +558,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         size_t sptr = 0;
         for (size_t i = 0; i < (maxdatalen / 8); i++) {
             if (sptr + 8 > maxdatalen) {
-                retval = 5;
+                retval = PM3_EMALLOC;
                 goto out;
             }
 
@@ -651,10 +650,8 @@ out:
 
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt) {
 
-    int block_size = 512;
-    int allocation_size = block_size;
-    size_t counter = 0;
     int retval = PM3_SUCCESS;
+	
     char *path;
     if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic") != PM3_SUCCESS)
         return PM3_EFILE;
@@ -667,14 +664,20 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         keylen = 6;
     }
 
+    size_t mem_size;
+	size_t block_size = 10 * keylen;
+
     // double up since its chars
     keylen <<= 1;
 
     char line[255];
 
     // allocate some space for the dictionary
-    *pdata = calloc(keylen * allocation_size, sizeof(uint8_t));
-    if (*pdata == NULL) return PM3_EFILE;
+    *pdata = calloc( block_size , sizeof(uint8_t));
+    if (*pdata == NULL)
+		return PM3_EFILE;
+
+	mem_size = block_size;
 
     FILE *f = fopen(path, "r");
     if (!f) {
@@ -684,15 +687,17 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
     // read file
     while (fgets(line, sizeof(line), f)) {
+
         // check if we have enough space (if not allocate more)
-        if ((*keycnt) >= allocation_size) {
-            allocation_size += block_size;
-            *pdata = realloc(*pdata, keylen * allocation_size * sizeof(uint8_t));
+        if ( (*keycnt * (keylen >> 1) ) >= mem_size ) {
+			
+            mem_size += block_size;
+            *pdata = realloc(*pdata, mem_size);
+
             if (*pdata == NULL) {
                 return PM3_EFILE;
             } else {
-                // zero the new memory (safety first)
-                memset(*pdata + allocation_size - block_size, 0, block_size);
+                memset(*pdata + (mem_size - block_size), 0, block_size);
             }
         }
 
@@ -714,10 +719,11 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
         uint64_t key = strtoull(line, NULL, 16);
 
-        num_to_bytes(key, keylen >> 1, *pdata + counter);
+        num_to_bytes(key, keylen >> 1, *pdata + (*keycnt * (keylen >> 1)) );
+        
         (*keycnt)++;
+		
         memset(line, 0, sizeof(line));
-        counter += (keylen >> 1);
     }
     fclose(f);
     PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
@@ -759,13 +765,14 @@ int convertOldMfuDump(uint8_t **dump, size_t *dumplen) {
     return PM3_SUCCESS;
 }
 
-static int filelist(const char *path, const char *ext, bool last) {
+static int filelist(const char *path, const char *ext, bool last, bool tentative) {
     struct dirent **namelist;
     int n;
 
     n = scandir(path, &namelist, NULL, alphasort);
     if (n == -1) {
-        PrintAndLogEx(NORMAL, "%s── %s => NOT FOUND", last ? "└" : "├", path);
+        if (!tentative)
+            PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
         return PM3_EFILE;
     }
 
@@ -781,25 +788,29 @@ static int filelist(const char *path, const char *ext, bool last) {
 }
 
 int searchAndList(const char *pm3dir, const char *ext) {
+    // display in same order as searched by searchFile
+    // try pm3 dirs in current workdir (dev mode)
     if (get_my_executable_directory() != NULL) {
         char script_directory_path[strlen(get_my_executable_directory()) + strlen(pm3dir) + 1];
         strcpy(script_directory_path, get_my_executable_directory());
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, false);
+        filelist(script_directory_path, ext, false, true);
     }
+    // try pm3 dirs in user .proxmark3 (user mode)
     char *userpath = getenv("HOME");
     if (userpath != NULL) {
         char script_directory_path[strlen(userpath) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + 1];
         strcpy(script_directory_path, userpath);
         strcat(script_directory_path, PM3_USER_DIRECTORY);
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, false);
+        filelist(script_directory_path, ext, false, false);
     }
+    // try pm3 dirs in pm3 installation dir (install mode)
     {
         char script_directory_path[strlen(PM3_SHARE_PATH) + strlen(pm3dir) + 1];
         strcpy(script_directory_path, PM3_SHARE_PATH);
         strcat(script_directory_path, pm3dir);
-        filelist(script_directory_path, ext, true);
+        filelist(script_directory_path, ext, true, false);
     }
     return PM3_SUCCESS;
 }
@@ -885,6 +896,8 @@ out:
 }
 
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix) {
+    if (foundpath == NULL)
+        return PM3_EINVARG;
     char *filename = filenamemcopy(searchname, suffix);
     if (filename == NULL) return PM3_EMALLOC;
     int res = searchFinalFile(foundpath, pm3dir, filename);

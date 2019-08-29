@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Chg history and logfile are now saved into $HOME/.proxmark3/ (@doegox)
  - Chg optimization of iclass mac calculations on deviceside (@pwpiwi)
  - Add 'hf mf autopwn' - Autopwn function for Mifare Classic, extract all keys and dump card memory (@matthiaskonrath)
  - Add Lua paths: look for scripts also in ~/.proxmark/lua{scripts,libs} and /usr/local/share/proxmark3/lua{scripts,libs} (@doegox)

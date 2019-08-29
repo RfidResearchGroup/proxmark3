@@ -62,6 +62,13 @@ typedef enum {
 //    jsfT55xx,
 } JSONFileType;
 
+typedef enum {
+    BIN = 0,
+    EML,
+    JSON,
+    DICTIONARY,
+} DumpFileType_t;
+
 int fileExists(const char *filename);
 
 /**

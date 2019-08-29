@@ -18,6 +18,8 @@
 #define PROXPROMPT_USB "[usb] pm3 --> "
 #define PROXPROMPT_FPC "[fpc] pm3 --> "
 #define PROXPROMPT_OFFLINE "[offline] pm3 --> "
+#define PROXHISTORY "history.txt"
+#define PROXLOG "log_%Y%m%d.txt"
 
 #ifdef __cplusplus
 extern "C" {

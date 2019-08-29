@@ -209,7 +209,8 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         // initialize storage for found keys
         icesector_t *tmp = calloc(sectorsCnt, sizeof(icesector_t));
         if (tmp == NULL)
-            return 1;
+            return PM3_EMALLOC;
+		
         memcpy(tmp, resp.data.asBytes, sectorsCnt * sizeof(icesector_t));
 
         for (int i = 0; i < sectorsCnt; i++) {
@@ -227,11 +228,11 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         free(tmp);
 
         if (curr_keys == sectorsCnt * 2)
-            return 0;
+            return PM3_SUCCESS;
         if (lastChunk)
-            return 1;
+            return PM3_ESOFT;
     }
-    return 1;
+    return PM3_ESOFT;
 }
 
 // PM3 imp of J-Run mf_key_brute (part 2)
