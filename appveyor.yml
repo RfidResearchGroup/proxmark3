@@ -97,7 +97,13 @@ clone_script:
 
         $JobTime=[System.Environment]::TickCount
         while($true) {
-          Receive-Job -Job $Job -Keep -OutVariable Res 2>&1 6>&1 | Out-Null 
+          Try {
+            Receive-Job -Job $Job -Keep -OutVariable Res 2>&1 6>&1 | Out-Null 
+          }
+          Catch {
+            $Res = ""
+            Write-host "error in Receive-Job"
+          }
           
           if ($Res -is "String" -and $Res -like "*$ErrorLine*"){
             Write-host "Exit by stop phrase" -ForegroundColor Green
