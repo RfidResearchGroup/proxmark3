@@ -231,16 +231,16 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         timenow = gmtime(&now);
         strftime(filename, sizeof(filename), PROXLOG, timenow);
         if (searchHomeFilePath(&my_logfile_path, filename, true) != PM3_SUCCESS) {
-            fprintf(stderr, "Logging disabled!\n\n");
+            fprintf(stderr, "[-] Logging disabled!\n\n");
             my_logfile_path = NULL;
             logging = 0;
         } else {
             logfile = fopen(my_logfile_path, "a");
             if (logfile == NULL) {
-                fprintf(stderr, "Can't open logfile %s, logging disabled!\n", my_logfile_path);
+                fprintf(stderr, "[-] Can't open logfile %s, logging disabled!\n", my_logfile_path);
                 logging = 0;
             } else {
-                printf("Session is logged into %s\n", my_logfile_path);
+                printf("[=] Session log %s\n", my_logfile_path);
             }
             free(my_logfile_path);
         }

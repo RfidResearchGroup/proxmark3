@@ -627,47 +627,47 @@ void pm3_version(bool verbose, bool oneliner) {
 
 #if defined(__APPLE__) || defined(__MACH__)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on OS X"
+# define PM3HOSTOS " on OS X"
 #endif
 
 #elif defined(_MINGW_)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on MingW"
+# define PM3HOSTOS " on MingW"
 #endif
 
 #elif defined(__LINUX__)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on linux"
+# define PM3HOSTOS " on linux"
 #endif
 
 #elif defined(__FreeBSd__)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on FreeBSD"
+# define PM3HOSTOS " on FreeBSD"
 #endif
 
 #elif defined(__NetBSD__)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on NetBSD"
+# define PM3HOSTOS " on NetBSD"
 #endif
 
 #elif defined(__OpenBSD__)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on OpenBSD"
+# define PM3HOSTOS " on OpenBSD"
 #endif
 
 #elif defined(_WIN32) | defined(__WIN32__)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on Windows (32b)"
+# define PM3HOSTOS " on Windows (32b)"
 #endif
 
 #elif defined(_WIN64) | defined(__WIN64__)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on Windows (64b)"
+# define PM3HOSTOS " on Windows (64b)"
 #endif
 
 #elif defined(__ANDROID__) || defined(ANDROID)
 #ifndef PM3HOSTOS
-# define PM3HOSTOS "on Android"
+# define PM3HOSTOS " on Android"
 #endif
 #endif
 
@@ -678,7 +678,7 @@ void pm3_version(bool verbose, bool oneliner) {
 
 
     if (oneliner) {
-        PrintAndLogEx(NORMAL, "Client: RRG/Iceman compiled with " _YELLOW_(PM3CLIENTCOMPILER __VERSION__) " %s", _YELLOW_(PM3HOSTOS));
+        PrintAndLogEx(NORMAL, "Client: RRG/Iceman compiled with " _YELLOW_(PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS));
         return;
     }
 
