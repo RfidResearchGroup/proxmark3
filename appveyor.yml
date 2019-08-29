@@ -388,11 +388,11 @@ test_script:
 
     #proxmark logic tests
 
-    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q wait && echo Passed || echo Failed'}
+    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h 2>&1 | grep -q wait && echo passed || echo failed'}
 
-    ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q ISO7816 && echo Passed || echo Failed'}
+    ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q ISO7816 && echo passed || echo failed'}
 
-    ExecTest "proxmark help text hardnested" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q hardnested && echo Passed || echo Failed'}
+    ExecTest "proxmark help text hardnested" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q hardnested && echo passed || echo failed'}
 
 
     ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf'"} "at_enc"
