@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Chg remove deprecated termcap, use ncurses instead (@ZeroChaos-)
+ - Chg 'hf iclass encrypt' - now takes transport key as param. (@iceman1001)
+ - Chg 'hf iclass decrypt' - now takes transport key as param. (@iceman1001)
+ - Chg 'hf mf fchk m' - now secretly dumps card to emul, if all keys are found (@iceman1001)
  - Chg history and logfile are now saved into $HOME/.proxmark3/ (@doegox)
  - Chg optimization of iclass mac calculations on deviceside (@pwpiwi)
  - Add 'hf mf autopwn' - Autopwn function for Mifare Classic, extract all keys and dump card memory (@matthiaskonrath)
