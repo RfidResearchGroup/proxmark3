@@ -694,7 +694,7 @@ void pm3_version(bool verbose, bool oneliner) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
-        PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ " on " PM3HOSTOS);
+        PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS);
         PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 ]");
         PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
         PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
