@@ -50,8 +50,10 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
     if (foundpath == NULL)
         return PM3_EINVARG;
     char *user_path = getenv("HOME");
-    if (user_path == NULL)
+    if (user_path == NULL) {
+        fprintf(stderr, "Could not retrieve $HOME from the environment\n");
         return PM3_EFILE;
+    }
     char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1, sizeof(char));
     if (path == NULL)
         return PM3_EMALLOC;
@@ -80,6 +82,7 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
 #else
         if (mkdir(path, 0700)) {
 #endif
+            fprintf(stderr, "Could not create user directory %s\n", path);
             free(path);
             return PM3_EFILE;
         }
@@ -228,7 +231,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         timenow = gmtime(&now);
         strftime(filename, sizeof(filename), PROXLOG, timenow);
         if (searchHomeFilePath(&my_logfile_path, filename, true) != PM3_SUCCESS) {
-            fprintf(stderr, "Could not create $HOME" PM3_USER_DIRECTORY "%s, no log will be recorded\n", filename);
+            fprintf(stderr, "Logging disabled!\n\n");
             my_logfile_path = NULL;
             logging = 0;
         } else {

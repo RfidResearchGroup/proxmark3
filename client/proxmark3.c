@@ -104,7 +104,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
     char *my_history_path = NULL;
     if (searchHomeFilePath(&my_history_path, PROXHISTORY, true) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "could not create $HOME/" PROXHISTORY ", no history will be recorded");
+        PrintAndLogEx(ERR, "No history will be recorded");
         my_history_path = NULL;
     } else {
         read_history(my_history_path);
