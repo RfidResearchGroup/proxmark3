@@ -98,7 +98,7 @@ clone_script:
         $JobTime=[System.Environment]::TickCount
         while($true) {
           Try {
-            Receive-Job -Job $Job -Keep -OutVariable Res 2>&1 6>&1 | Out-Null 
+            $Res = Receive-Job -Job $Job -Keep 2>&1 6>&1
           }
           Catch {
             $Res = ""
@@ -134,21 +134,6 @@ clone_script:
             break
           }
         }
-
-          $Res = Receive-Job -Job $Job -Keep 2>&1 6>&1
-          if ($Res -is "String" -and $Res -like "*$ErrorLine*"){
-            Write-host "Exit by stop phrase" -ForegroundColor Green
-            break
-          }
-          if ($Res -is [Object]){
-            ForEach($line in $Res){
-              Write-host "$line" -ForegroundColor Gray
-              if ($line -like "*$ErrorLine*"){
-                Write-host "...[obj]..." -ForegroundColor Green
-              }
-            }
-          }
-
 
         Remove-Job -Force $Job
     }
