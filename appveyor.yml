@@ -281,8 +281,6 @@ test_script:
 
     Function ExecTest($Name, $File, $Cmd, $CheckResult) {
     
-    if ($CheckResult -eq $null ) { $CheckResult="passed" }
-
     #--- begin Job
 
     $Job = Start-Job -ScriptBlock {
@@ -319,6 +317,11 @@ test_script:
             }
             if ($Cond -is "String" -and $Cond -like "*true*"){
               $res= $true
+            }
+            ForEach($line in $Cond){
+              if ($line -like "*passed*"){
+                $res= $true
+              }
             }
         } Else {
           $res=$Cond
