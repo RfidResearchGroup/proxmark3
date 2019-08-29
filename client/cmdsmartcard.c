@@ -22,6 +22,7 @@
 #include "crypto/libpcrypto.h"  // sha512hash
 #include "emv/dump.h"
 #include "ui.h"
+#include "fileutils.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -92,33 +93,35 @@ static int usage_sm_brute(void) {
     return 0;
 }
 
-static int smart_loadjson(const char *preferredName, const char *suffix, json_t **root) {
+static int smart_loadjson(const char *preferredName, json_t **root) {
 
     json_error_t error;
 
     if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
 
-    int retval = 0;
-    int size = sizeof(char) * (strlen(get_my_executable_directory()) + strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s%s.%s", get_my_executable_directory(), preferredName, suffix);
-    *root = json_load_file(fileName, 0, &error);
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json");
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    int retval = PM3_SUCCESS;
+    *root = json_load_file(path, 0, &error);
     if (!*root) {
-        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", fileName, error.line, error.text);
-        retval = 2;
+        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
+        retval = PM3_ESOFT;
         goto out;
     }
 
     if (!json_is_array(*root)) {
-        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", fileName);
-        retval = 3;
+        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
+        retval = PM3_ESOFT;
         goto out;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK.", fileName);
+    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK.", path);
 out:
-    free(fileName);
+    free(path);
     return retval;
 }
 
@@ -1035,7 +1038,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Importing AID list");
     json_t *root = NULL;
-    smart_loadjson("aidlist", "json", &root);
+    smart_loadjson("aidlist", &root);
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!buf)
