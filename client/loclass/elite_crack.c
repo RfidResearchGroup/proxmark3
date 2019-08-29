@@ -569,39 +569,30 @@ int bruteforceFileNoKeys(const char *filename) {
 // TEST CODE BELOW
 // ----------------------------------------------------------------------------
 static int _testBruteforce() {
-    int errors = 0;
-    if (true) {
-        // First test
-        PrintAndLogEx(INFO, "Testing crack from dumpfile...");
 
-        /**
-          Expected values for the dumpfile:
-            High Security Key Table
+    PrintAndLogEx(INFO, "Testing crack from dumpfile...");
 
-            00  F1 35 59 A1 0D 5A 26 7F 18 60 0B 96 8A C0 25 C1
-            10  BF A1 3B B0 FF 85 28 75 F2 1F C6 8F 0E 74 8F 21
-            20  14 7A 55 16 C8 A9 7D B3 13 0C 5D C9 31 8D A9 B2
-            30  A3 56 83 0F 55 7E DE 45 71 21 D2 6D C1 57 1C 9C
-            40  78 2F 64 51 42 7B 64 30 FA 26 51 76 D3 E0 FB B6
-            50  31 9F BF 2F 7E 4F 94 B4 BD 4F 75 91 E3 1B EB 42
-            60  3F 88 6F B8 6C 2C 93 0D 69 2C D5 20 3C C1 61 95
-            70  43 08 A0 2F FE B3 26 D7 98 0B 34 7B 47 70 A0 AB
+    /**
+      Expected values for the dumpfile:
+        High Security Key Table
 
-            **** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ****
-        **/
-        uint16_t keytable[128] = {0};
+        00  F1 35 59 A1 0D 5A 26 7F 18 60 0B 96 8A C0 25 C1
+        10  BF A1 3B B0 FF 85 28 75 F2 1F C6 8F 0E 74 8F 21
+        20  14 7A 55 16 C8 A9 7D B3 13 0C 5D C9 31 8D A9 B2
+        30  A3 56 83 0F 55 7E DE 45 71 21 D2 6D C1 57 1C 9C
+        40  78 2F 64 51 42 7B 64 30 FA 26 51 76 D3 E0 FB B6
+        50  31 9F BF 2F 7E 4F 94 B4 BD 4F 75 91 E3 1B EB 42
+        60  3F 88 6F B8 6C 2C 93 0D 69 2C D5 20 3C C1 61 95
+        70  43 08 A0 2F FE B3 26 D7 98 0B 34 7B 47 70 A0 AB
 
-        //Test a few variants
-        if (fileExists("iclass_dump.bin")) {
-            errors |= bruteforceFile("iclass_dump.bin", keytable);
-        } else if (fileExists("loclass/iclass_dump.bin")) {
-            errors |= bruteforceFile("loclass/iclass_dump.bin", keytable);
-        } else if (fileExists("client/loclass/iclass_dump.bin")) {
-            errors |= bruteforceFile("client/loclass/iclass_dump.bin", keytable);
-        } else {
-            PrintAndLogEx(ERR, "Error: The file " _YELLOW_("iclass_dump.bin") "was not found!");
-        }
+        **** The 64-bit HS Custom Key Value = 5B7C62C491C11B39 ****
+    **/
+    uint16_t keytable[128] = {0};
+    int errors = bruteforceFile("iclass_dump.bin", keytable);
+    if (errors) {
+        PrintAndLogEx(ERR, "Error: The file " _YELLOW_("iclass_dump.bin") "was not found!");
     }
+
     return errors;
 }
 

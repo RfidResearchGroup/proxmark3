@@ -1662,7 +1662,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         errors += doKeyTests(0);
         errors += testElite();
         if (errors) PrintAndLogEx(ERR, "There were errors!!!");
-        return errors;
+        return PM3_ESOFT;
     }
     return PM3_SUCCESS;
 }
@@ -1971,7 +1971,7 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
             case 'n':
                 keyNbr = param_get8(Cmd, cmdp + 1);
                 if (keyNbr >= ICLASS_KEYS_MAX) {
-                    PrintAndLogEx(ERR, "Invalid block number, MAX is "_YELLOW_("%d"), ICLASS_KEYS_MAX);
+                    PrintAndLogEx(ERR, "Invalid block number, MAX is " _YELLOW_("%d"), ICLASS_KEYS_MAX);
                     errors = true;
                 }
                 cmdp += 2;
