@@ -131,8 +131,15 @@ clone_script:
 
           if ([System.Environment]::TickCount-$JobTime -gt 700000) {
             Write-host "Exit by timeout" -ForegroundColor Yellow
-            
-          Receive-Job -Job $Job -Keep -OutVariable Res 2>&1 6>&1 | Out-Null
+            break
+          }
+        }
+
+          $Res = Receive-Job -Job $Job -Keep 2>&1 6>&1
+          if ($Res -is "String" -and $Res -like "*$ErrorLine*"){
+            Write-host "Exit by stop phrase" -ForegroundColor Green
+            break
+          }
           if ($Res -is [Object]){
             ForEach($line in $Res){
               Write-host "$line" -ForegroundColor Gray
@@ -141,11 +148,7 @@ clone_script:
               }
             }
           }
-            
 
-            break
-          }
-        }
 
         Remove-Job -Force $Job
     }
