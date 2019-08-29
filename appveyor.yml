@@ -140,6 +140,7 @@ clone_script:
                 Write-host "...[obj]..." -ForegroundColor Green
               }
             }
+          }
             
 
             break
