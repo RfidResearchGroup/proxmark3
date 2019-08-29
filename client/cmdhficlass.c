@@ -811,7 +811,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_decrypt();
             case 'f':
-                if ( param_getstr(Cmd, cmdp + 1, filename, sizeof(filename) ) == 0){
+                if ( param_getstr(Cmd, cmdp + 1, filename, sizeof(filename) ) == 0) {
+                    PrintAndLogEx(WARNING, "no filename found after f");
                     errors = true;
                     break;
                 }
@@ -1261,9 +1262,10 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
-        snprintf(filename, FILE_PATH_SIZE, "iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x",
-                 tag_data[0], tag_data[1], tag_data[2], tag_data[3],
-                 tag_data[4], tag_data[5], tag_data[6], tag_data[7]);
+
+        //Use the first block (CSN) for filename
+        strcat(filename, "hf-iclass-");
+        FillFileNameByUID(filename, tag_data, "-data", 8 );
     }
 
     // save the dump to .bin file
@@ -1271,7 +1273,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     saveFile(filename, ".bin", tag_data, gotBytes);
     saveFileEML(filename, tag_data, gotBytes, 8);
     saveFileJSON(filename, jsfIclass, tag_data, gotBytes);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool verbose) {

@@ -540,37 +540,14 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
  * @return
  */
 int bruteforceFile(const char *filename, uint16_t keytable[]) {
-    FILE *f = fopen(filename, "rb");
-    if (!f) {
-        PrintAndLogEx(WARNING, "Failed to read from file " _YELLOW_("%s"), filename);
-        return 1;
+
+    size_t dumplen = 0;
+    uint8_t *dump = NULL;
+    if ( loadFile_safe(filename, "", (void**)&dump, &dumplen) != PM3_SUCCESS ) {
+        return PM3_EFILE;
     }
 
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "Error, when getting filesize");
-        fclose(f);
-        return 1;
-    }
-
-    uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        fclose(f);
-        return 2;
-    }
-    size_t bytes_read = fread(dump, 1, fsize, f);
-
-    fclose(f);
-
-    if (bytes_read < fsize) {
-        PrintAndLogEx(WARNING, "Warning: could only read %d bytes (should be %d)", bytes_read, fsize);
-    }
-
-    uint8_t res = bruteforceDump(dump, fsize, keytable);
+    uint8_t res = bruteforceDump(dump, dumplen, keytable);
     free(dump);
     return res;
 }
