@@ -19,7 +19,7 @@ Step by step guides are online such as [RiscCorps](https://store.ryscc.com/blogs
 
 ## Download / clone ProxSpace repo
 
-Download the Gator96100 ProxSpace package from https://github.com/Gator96100/ProxSpace/
+Download the Gator96100 ProxSpace package from https://github.com/Gator96100/ProxSpace/releases
 
 If you prefer, you can clone it, provided that you installed Github for Windows https://desktop.github.com/.
 

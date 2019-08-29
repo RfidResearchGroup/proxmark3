@@ -11,6 +11,8 @@ For further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.c
 
 3. Install Proxmark3: `brew install proxmark3` for stable release or `brew install --HEAD proxmark3` for latest non-stable from GitHub.
 
+For more info, go to https://github.com/RfidResearchGroup/homebrew-proxmark3
+
 ## Upgrade HomeBrew tap formula
 
 *This method is useful for those looking to run bleeding-edge versions of RRG/iceman's client. Keep this in mind when attempting to update your HomeBrew tap formula as this procedure could easily cause a build to break if an update is unstable on macOS.* 
@@ -64,7 +66,7 @@ These instructions will show how to setup the environment on OSX to the point wh
 2. Install dependencies:
 
 ```
-brew install readline p7zip libusb-compat perl qt5 wget
+brew install readline p7zip libusb-compat perl qt5 wget pkgconfig
 brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 ```
 
