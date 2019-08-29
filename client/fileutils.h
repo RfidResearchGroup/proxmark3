@@ -120,7 +120,7 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
  */
 int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr);
 
-/** STUB
+/**
  * @brief Utility function to load data from a binary file. This method takes a preferred name.
  * E.g. dumpdata-15.bin
  *
@@ -129,10 +129,22 @@ int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr);
  * @param data The data array to store the loaded bytes from file
  * @param maxdatalen the number of bytes that your data array has
  * @param datalen the number of bytes loaded from file
- * @return 0 for ok, 1 for failz
+ * @return PM3_SUCCESS for ok, PM3_E* for failz
 */
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
 
+
+/**
+ * @brief Utility function to load data from a binary file. This method takes a preferred name.
+ * E.g. dumpdata-15.bin,  tries to search for it,  and allocated memory.
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Including the ".".
+ * @param data The data array to store the loaded bytes from file
+ * @param datalen the number of bytes loaded from file
+ * @return PM3_SUCCESS for ok, PM3_E* for failz
+*/
+int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.
  * E.g. dumpdata-15.txt

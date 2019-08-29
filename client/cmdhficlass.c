@@ -790,75 +790,61 @@ static int CmdHFiClassELoad(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int readKeyfile(const char *filename, size_t len, uint8_t **buffer) {
-
-    char *path;
-    int res = searchFile(&path, PM3_USER_DIRECTORY, filename, ".bin");
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "res:  %d  Curr path:: %s", res, path);
-        return PM3_EFILE;
-    }
-
-    size_t datalen = 0;
-    res = loadFile(path, ".bin", (void*)*buffer, len, &datalen);
-    if ( res != PM3_SUCCESS )
-        return res;
-
-    if (datalen != len) {
-        PrintAndLogEx(ERR, "ERROR, Wrong filesize. Got %d bytes, expected %d", datalen, len);
-        return PM3_EFILE;
-    }
-    return PM3_SUCCESS;
-}
+#define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
 
 static int CmdHFiClassDecrypt(const char *Cmd) {
-
-    char opt = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || opt == 'h') return usage_hf_iclass_decrypt();
-
-    uint8_t key[16] = { 0 };
-    uint8_t *keyptr = key;
-    if (readKeyfile("iclass_decryptionkey", sizeof(key), &keyptr) != PM3_SUCCESS) 
-        return usage_hf_iclass_decrypt();
-
-    PrintAndLogEx(SUCCESS, "decryption key loaded from file");
-
-    //Open the tagdump-file
-    FILE *f;
+    
+    bool errors = false;
+    bool have_key = false;
+    uint8_t cmdp = 0;
+       
+    size_t keylen = 0;
+    uint8_t key[32] = {0};
+    uint8_t *keyptr = NULL;
+    
+    size_t decryptedlen = 0;
+    uint8_t *decrypted = NULL;
     char filename[FILE_PATH_SIZE];
-    if (opt == 'f' && param_getstr(Cmd, 1, filename, sizeof(filename)) > 0) {
-        f = fopen(filename, "rb");
-        if (!f) {
-            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-            return PM3_EFILE;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_decrypt();
+            case 'f':
+                if ( param_getstr(Cmd, cmdp + 1, filename, sizeof(filename) ) == 0){
+                    errors = true;
+                    break;
+                }
+
+                if ( loadFile_safe(filename, "", (void**)&decrypted, &decryptedlen) != PM3_SUCCESS ) {
+                    errors = true;
+                    break;
+                }
+                cmdp += 2;
+                break;
+            case 'k':
+                if (param_gethex(Cmd, cmdp + 1, key, 32)) {
+                    PrintAndLogEx(ERR, "Transport key must include 32 HEX symbols");
+                    errors = true;
+                }
+                have_key = true;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
-    } else {
-        return usage_hf_iclass_decrypt();
     }
 
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
 
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "error, when getting filesize");
-        fclose(f);
-        return 2;
-    }
-
-    uint8_t *decrypted = calloc(fsize, sizeof(uint8_t));
-    if (!decrypted) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        fclose(f);
-        return 1;
-    }
-
-    size_t bytes_read = fread(decrypted, 1, fsize, f);
-    fclose(f);
-    if (bytes_read == 0) {
-        PrintAndLogEx(ERR, "file reading error");
-        free(decrypted);
-        return 3;
+    if ( have_key == false ) {
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void**)&keyptr, &keylen);
+        if (res != PM3_SUCCESS)
+            return PM3_EINVARG;
+        
+        memcpy(key, keyptr, sizeof(key));
     }
 
     picopass_hdr *hdr = (picopass_hdr *)decrypted;
@@ -870,13 +856,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     uint8_t app_areas = 2;
     uint8_t max_blk = 31;
     getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
-
-    //Use the first block (CSN) for filename
-    char outfilename[FILE_PATH_SIZE] = {0};
-    snprintf(outfilename, FILE_PATH_SIZE, "iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x-decrypted",
-             hdr->csn[0], hdr->csn[1], hdr->csn[2], hdr->csn[3],
-             hdr->csn[4], hdr->csn[5], hdr->csn[6], hdr->csn[7]);
-
+    
     // tripledes
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_dec(&ctx, key);
@@ -894,12 +874,18 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
     }
 
-    saveFile(outfilename, ".bin", decrypted, fsize);
-    saveFileEML(outfilename, decrypted, fsize, 8);
-    saveFileJSON(outfilename, jsfIclass, decrypted, fsize);
+    //Use the first block (CSN) for filename
+    char *fptr = calloc(42, sizeof(uint8_t)); 
+    strcat(fptr, "hf-iclass-");
+    FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn) );
+        
+    saveFile(fptr, ".bin", decrypted, decryptedlen);
+    saveFileEML(fptr, decrypted, decryptedlen, 8);
+    saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
 
-    printIclassDumpContents(decrypted, 1, (fsize / 8), fsize);
+    printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
     free(decrypted);
+    free(fptr);
     return PM3_SUCCESS;
 }
 
@@ -917,7 +903,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     bool have_key = false;
     uint8_t blk_data[8] = {0};
     uint8_t key[16] = {0};
-    uint8_t *keyptr = key;
+    uint8_t *keyptr = NULL;
     uint8_t cmdp = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -925,17 +911,16 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_encrypt();
             case 'd':
-    //get the bytes to encrypt
-                if (param_gethex(Cmd, cmdp + 1, blk_data, 16) != PM3_SUCCESS) {
+                if (param_gethex(Cmd, cmdp + 1, blk_data, 16)) {
                     PrintAndLogEx(ERR, "Block data must include 16 HEX symbols");
-                    errors = true;;
+                    errors = true;
                 }
                 cmdp += 2;
                 break;
             case 'k':
-                if (param_gethex(Cmd, cmdp + 1, key, 32) != PM3_SUCCESS) {
+                if (param_gethex(Cmd, cmdp + 1, key, 32)) {
                     PrintAndLogEx(ERR, "Transport key must include 32 HEX symbols");
-                    errors = true;;
+                    errors = true;
                 }
                 have_key = true;
                 cmdp += 2;
@@ -950,10 +935,12 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
 
     if ( have_key == false ) {
-        if (readKeyfile("./iclass_decryptionkey", sizeof(key), &keyptr) != PM3_SUCCESS) {
-            return usage_hf_iclass_encrypt();
-        }
-        PrintAndLogEx(SUCCESS, "Loaded transport key from decryption file");
+        size_t keylen = 0;
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void**)&keyptr, &keylen);
+        if (res != PM3_SUCCESS)
+            return PM3_EINVARG;
+        
+        memcpy(key, keyptr, sizeof(key));
     }
 
     iClassEncryptBlkData(blk_data, key);
@@ -1283,6 +1270,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "saving dump file - %d blocks read", gotBytes / 8);
     saveFile(filename, ".bin", tag_data, gotBytes);
     saveFileEML(filename, tag_data, gotBytes, 8);
+    saveFileJSON(filename, jsfIclass, tag_data, gotBytes);
     return 1;
 }
 

@@ -50,7 +50,7 @@
 #include "scandir.h"
 #endif
 
-#define PATH_MAX_LENGTH 100
+#define PATH_MAX_LENGTH 200
 
 /**
  * @brief checks if a file exists
@@ -289,7 +289,7 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
 
             for (size_t i = 0; i < (datalen / 8); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
-                sprintf(path, "$blocks.%zu", i);
+                sprintf(path, "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 8), 8);
             }
             break;
@@ -340,6 +340,7 @@ int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr) {
     PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
     return PM3_SUCCESS;
 }
+
 
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
 
@@ -398,6 +399,54 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
 
 out:
     free(fileName);
+    return retval;
+}
+
+int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen) {
+
+    char *path;
+    int res = searchFile(&path, "", preferredName, suffix);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "res:  %d  Curr path:: %s", res, path);
+        return PM3_EFILE;
+    }
+
+    int retval = PM3_SUCCESS;
+
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        return PM3_EFILE;
+    }
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        return PM3_EFILE;
+    }
+
+    *pdata = calloc(fsize, sizeof(uint8_t));
+    if (!pdata) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t bytes_read = fread(*pdata, 1, fsize, f);
+    
+    fclose(f);
+
+    if (bytes_read != fsize) {
+        PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
+        return PM3_EFILE;
+    }
+
+    *datalen = bytes_read;
+
+    PrintAndLogEx(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
     return retval;
 }
 
