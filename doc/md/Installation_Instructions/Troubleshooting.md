@@ -4,13 +4,13 @@
 
 Always use the latest repository commits from *master* branch. There are always many fixes done almost daily.
 
-## `./proxmark.sh` or `./flash-*.sh` doesn't see my Proxmark
+## `./proxmark3.sh` or `./proxmark3-flash-*.sh` doesn't see my Proxmark
 
 Try using directly the client or flasher:
 
 ```
-client/flasher <YOUR_PORT_HERE> ...
-client/proxmark <YOUR_PORT_HERE> ...
+client/proxmark3-flasher <YOUR_PORT_HERE> ...
+client/proxmark3 <YOUR_PORT_HERE> ...
 ```
 
 Refer to the installation guide specific to your OS for details about ports.
@@ -35,8 +35,8 @@ The flasher refused to flash your Proxmark3? Are there any messages in *red*? Th
 ```
 or
 ```
-client/flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
-client/flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+client/proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+client/proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 ```
 
 ### Find out why it would be bricked
@@ -57,7 +57,7 @@ Once in bootloader mode, flash the main image.
 ```
 or
 ```
-client/flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+client/proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 ```
 
 You should be back on tracks now. In case the flasher complains about bootloader version, you can follow the button procedure and flash first your bootloader.
@@ -67,7 +67,7 @@ You should be back on tracks now. In case the flasher complains about bootloader
 ```
 or
 ```
-client/flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+client/proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
 ```
 
 ### Ok, my bootloader is definitively dead, now what?
@@ -98,14 +98,14 @@ Instructions evolve over time so check if you're still up to date!
 Depending how you launch the client, your working directory might be the root of the repository:
 
 ```
-./proxmark.sh ...
-client/proxmark ...
+./proxmark3.sh ...
+client/proxmark3 ...
 ```
 
 or the `client/` subdirectory:
 
 ```
-cd client; ./proxmark ...
+cd client; ./proxmark3 ...
 ```
 
 Therefore client commands referring to files of the repo must be adapted, e.g.

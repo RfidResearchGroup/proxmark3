@@ -17,8 +17,7 @@ endif
 
 INSTALLBINRELPATH = /bin/
 INSTALLSHARERELPATH = /share/proxmark3/
-#TODO INSTALLBIN = proxmark3 proxmark3-flasher
-INSTALLBIN = proxmark3 flasher
+INSTALLBIN = proxmark3 proxmark3-flasher
 INSTALLSHARE = lualibs luascripts resources dictionaries
 
 CC = gcc
@@ -297,8 +296,10 @@ ifeq "$(SUPPORTS_AVX512)" "True"
     MULTIARCHOBJS +=  $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX512.o)
 endif
 
-BINS = proxmark3 flasher
+BINS = proxmark3 proxmark3-flasher
 CLEAN = $(BINS) *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+# transition: make sure old flasher is gone too
+CLEAN += flasher
 
 # need to assign dependancies to build these first...
 all: $(BINS)
@@ -311,7 +312,7 @@ proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS)
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LDLIBS)  -o $@
 
-flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
+proxmark3-flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
@@ -459,7 +460,7 @@ DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(REVEN
 	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
-	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/flasher.d
+	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/proxmark3-flasher.d $(OBJDIR)/flasher.d
 
 $(DEPENDENCY_FILES): ;
 .PRECIOUS: $(DEPENDENCY_FILES)

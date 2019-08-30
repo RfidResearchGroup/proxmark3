@@ -31,7 +31,7 @@ In most cases, you can run the script `flash-all.sh` which try to auto-detect th
 For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
 
 ```sh
-client/flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/proxmark3-flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
 ## Run the client

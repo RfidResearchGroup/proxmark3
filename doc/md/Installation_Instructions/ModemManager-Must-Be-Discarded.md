@@ -121,7 +121,7 @@ In short:
 * unplug device
 * press button and keep it pressed (IMPORTANT)
 * plug in device
-* run flash command `sudo client/flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
+* run flash command `sudo client/proxmark3-flasher /dev/ttyACM0 armsrc/obj/fullimage.elf`
 * wait until flash is finished
 * release button
 * un/plug device

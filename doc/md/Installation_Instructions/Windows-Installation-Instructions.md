@@ -54,7 +54,7 @@ pacman -S mingw-w64-x86_64-astyle
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-To use the compiled client and flasher, the only differences are that executables end with `.exe` (e.g. `client/flasher.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows.
+To use the compiled client and flasher, the only differences are that executables end with `.exe` (e.g. `client/proxmark3-flasher.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows.
 
 To flash: In principle, the helper script `flash-all.sh` should auto-detect your COM port, so you can just try:
 
@@ -65,7 +65,7 @@ To flash: In principle, the helper script `flash-all.sh` should auto-detect your
 If COM port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-client/flasher.exe comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/proxmark3-flasher.exe comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:
@@ -151,7 +151,7 @@ To flash: In principle, the helper script `flash-all.sh` should auto-detect your
 If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-client/flasher /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/proxmark3-flasher /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:

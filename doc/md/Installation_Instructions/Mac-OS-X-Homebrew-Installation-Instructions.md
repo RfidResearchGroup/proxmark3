@@ -87,7 +87,7 @@ In principle, the helper script `flash-all.sh` should auto-detect your port, so 
 If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-client/flasher /dev/tty.usbmodemiceman1 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/proxmark3-flasher /dev/tty.usbmodemiceman1 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:
