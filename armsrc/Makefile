@@ -213,7 +213,15 @@ clean:
 	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.bin
 	$(Q)$(DELETE) version.c
 
-.PHONY: all clean help
+install: all
+	$(info [@] Installing fullimage to $(PREFIX))
+	@true
+
+uninstall:
+	$(info [@] Uninstalling fullimage from $(PREFIX))
+	@true
+
+.PHONY: all clean help install uninstall
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

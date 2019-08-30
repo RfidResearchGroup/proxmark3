@@ -56,7 +56,15 @@ clean:
 	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.d
 	$(Q)$(DELETE) version.c
 
-.PHONY: all clean help
+install: all
+	$(info [@] Installing bootrom to $(PREFIX))
+	@true
+
+uninstall:
+	$(info [@] Uninstalling bootrom from $(PREFIX))
+	@true
+
+.PHONY: all clean help install
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

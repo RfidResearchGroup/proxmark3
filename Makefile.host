@@ -48,7 +48,15 @@ clean:
 	$(Q)$(RM) $(CLEAN)
 	$(Q)$(RMDIR) $(OBJDIR)
 
-.PHONY: all clean
+install: all
+	$(info [@] Installing $(BINS) $(LIB_A) to $(PREFIX))
+	@true
+
+uninstall:
+	$(info [@] Uninstalling $(BINS) $(LIB_A) from $(PREFIX))
+	@true
+
+.PHONY: all clean install uninstall
 
 $(BINDIR)/$(LIB_A): $(MYOBJS)
 	$(info [=] AR $(notdir $@))

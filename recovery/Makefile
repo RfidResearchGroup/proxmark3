@@ -19,3 +19,12 @@ proxmark3_recovery.bin: bootrom.bin fullimage.bin
 clean:
 	$(Q)rm -f $(BINS)
 
+install: all
+	$(info [@] Installing recovery to $(PREFIX))
+	@true
+
+uninstall: all
+	$(info [@] Uninstalling recovery from $(PREFIX))
+	@true
+
+PHONY: all clean install uninstall

@@ -4,12 +4,13 @@ ifneq ($(V),1)
 endif
 # To see full command lines, use make V=1
 
+COPY=cp
 GZIP=gzip
 -include Makefile.platform
 -include .Makefile.options.cache
 include common_arm/Makefile.hal
 
-all clean: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% fpga_compress/%
+all clean install uninstall: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% fpga_compress/%
 
 mfkey/%: FORCE
 	$(info [*] MAKE $@)
@@ -34,7 +35,7 @@ recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test bootrom fullimage recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"

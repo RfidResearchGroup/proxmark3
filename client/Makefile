@@ -334,6 +334,14 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) clean
 
+install: all
+	$(info [@] Installing client to $(PREFIX))
+	@true
+
+uninstall:
+	$(info [@] Uninstalling client from $(PREFIX))
+	@true
+
 tarbin: $(BINS)
 	$(info [=] TAR ../proxmark3-$(platform)-bin.tar)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(BINS:%=client/%) $(WINBINS:%=client/%)
@@ -364,7 +372,7 @@ $(ZLIB):
 	$(info [*] MAKE zlib)
 	$(Q)$(MAKE) --no-print-directory -C $(ZLIBPATH) OBJDIR=$(ROOT_DIR)$(OBJDIR) BINDIR=$(ROOT_DIR)$(OBJDIR) all
 
-.PHONY: all clean
+.PHONY: all clean install uninstall
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)

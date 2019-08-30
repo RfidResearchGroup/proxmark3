@@ -21,9 +21,10 @@ endif
 # Make sure that all is the default target
 # (The including Makefile still needs to define what 'all' is)
 
-platform = $(shell uname)
-
 all:
+
+platform = $(shell uname)
+PREFIX?=/usr/local
 
 CROSS  ?= arm-none-eabi-
 CC = $(CROSS)gcc
