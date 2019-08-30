@@ -16,6 +16,57 @@ endif
 
 all clean install uninstall: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% fpga_compress/%
 
+INSTALLTOOLS=pm3_eml2lower.sh pm3_eml2upper.sh pm3_mfdread.py pm3_mfd2eml.py pm3_eml2mfd.py findbits.py rfidtest.pl xorcheck.py
+INSTALLSIMFW=sim011.bin sim011.sha512.txt
+
+install: all
+	$(info [@] Installing common resources to $(MYDESTDIR)$(PREFIX)...)
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)
+	# TODO scripts must be adapted, they're currently broken
+	$(Q)$(CP) proxmark3.sh $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3
+	$(Q)$(CP) flash-all.sh $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-all
+	$(Q)$(CP) flash-bootrom.sh $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-bootrom
+	$(Q)$(CP) flash-fullimage.sh $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-fullimage
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
+	$(Q)$(CP) tools/jtag_openocd $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
+	$(Q)$(CP) traces $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLDOCRELPATH)
+	$(Q)$(CP) doc/* $(DESTDIR)$(PREFIX)$(INSTALLDOCRELPATH)
+ifneq (,$(INSTALLTOOLS))
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
+	$(Q)$(CP) $(foreach tool,$(INSTALLTOOLS),tools/$(tool)) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
+endif
+ifneq (,$(INSTALLSIMFW))
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(foreach fw,$(INSTALLSIMFW),tools/simmodule/$(fw)) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)
+endif
+ifeq ($(platform),Linux)
+	$(Q)$(MKDIR) $(DESTDIR)$(UDEV_PREFIX)
+	$(Q)$(CP) driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+endif
+
+uninstall:
+	$(info [@] Uninstalling common resources from $(MYDESTDIR)$(PREFIX)...)
+	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3
+	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-all
+	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-bootrom
+	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-fullimage
+	$(Q)$(RMDIR) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)/jtag_openocd
+	$(Q)$(RMDIR) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)/traces
+	$(Q)$(RMDIR) $(DESTDIR)$(PREFIX)$(INSTALLDOCRELPATH)
+ifneq (,$(INSTALLTOOLS))
+	$(Q)$(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)$(notdir $(tool)))
+endif
+	$(Q)$(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
+ifneq (,$(INSTALLSIMFW))
+	$(Q)$(RM) $(foreach fw,$(INSTALLSIMFW),$(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)$(notdir $(fw)))
+endif
+	$(Q)$(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)
+ifeq ($(platform),Linux)
+	$(Q)$(RM) $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+endif
+	$(Q)$(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
+
 mfkey/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mfkey $(patsubst mfkey/%,%,$@) DESTDIR=$(MYDESTDIR)

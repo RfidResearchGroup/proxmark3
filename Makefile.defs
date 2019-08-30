@@ -12,6 +12,8 @@ GZIP = gzip
 MKDIR = mkdir -p
 RM = rm -f
 RMDIR = rm -rf
+# rmdir only if dir is empty, tolerate failure
+RMDIR_SOFT = -rmdir
 MV = mv
 TOUCH = touch
 FALSE = false
@@ -25,10 +27,12 @@ LD = g++
 
 PATHSEP=/
 PREFIX ?=             /usr/local
+UDEV_PREFIX ?=        /etc/udev/rules.d
 INSTALLBINRELPATH =   /bin/
 INSTALLSHARERELPATH = /share/proxmark3/
 INSTALLFWRELPATH =    /share/proxmark3/firmware/
 INSTALLTOOLSRELPATH = /share/proxmark3/tools/
+INSTALLDOCRELPATH =   /share/doc/proxmark3/
 
 platform = $(shell uname)
 DETECTED_OS=$(platform)
