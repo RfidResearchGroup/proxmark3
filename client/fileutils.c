@@ -869,6 +869,9 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     char *filename = calloc(strlen(searchname) + 1, sizeof(char));
     if (filename == NULL) return PM3_EMALLOC;
     strcpy(filename, searchname);
+    if (g_debugMode == 2) {
+        PrintAndLogEx(INFO, "Searching %s", filename);
+    }
     if (((strlen(filename) > 1) && (filename[0] == '/')) ||
             ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/'))) {
         if (fileExists(filename)) {
@@ -887,15 +890,44 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
             return PM3_SUCCESS;
         }
     }
-    // try pm3 dirs in current workdir (dev mode)
+    // try pm3 dirs in current client workdir (dev mode)
     const char *exec_path = get_my_executable_directory();
-    if (exec_path != NULL) {
+    if ((exec_path != NULL) &&
+            ((strcmp(DICTIONARIES_SUBDIR, pm3dir) == 0) ||
+             (strcmp(LUA_LIBRARIES_SUBDIR, pm3dir) == 0) ||
+             (strcmp(LUA_SCRIPTS_SUBDIR, pm3dir) == 0) ||
+             (strcmp(RESOURCES_SUBDIR, pm3dir) == 0))) {
         char *path = calloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;
         strcpy(path, exec_path);
         strcat(path, pm3dir);
         strcat(path, filename);
+        if (g_debugMode == 2) {
+            PrintAndLogEx(INFO, "Searching %s", path);
+        }
+        if (fileExists(path)) {
+            free(filename);
+            *foundpath = path;
+            return PM3_SUCCESS;
+        } else {
+            free(path);
+        }
+    }
+    // try pm3 dirs in current repo workdir (dev mode)
+    if ((exec_path != NULL) &&
+            ((strcmp(TRACES_SUBDIR, pm3dir) == 0))) {
+        char *above = "../";
+        char *path = calloc(strlen(exec_path) + strlen(above) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
+        if (path == NULL)
+            goto out;
+        strcpy(path, exec_path);
+        strcat(path, above);
+        strcat(path, pm3dir);
+        strcat(path, filename);
+        if (g_debugMode == 2) {
+            PrintAndLogEx(INFO, "Searching %s", path);
+        }
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
@@ -914,6 +946,9 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         strcat(path, PM3_USER_DIRECTORY);
         strcat(path, pm3dir);
         strcat(path, filename);
+        if (g_debugMode == 2) {
+            PrintAndLogEx(INFO, "Searching %s", path);
+        }
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
@@ -930,6 +965,9 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         strcpy(path, PM3_SHARE_PATH);
         strcat(path, pm3dir);
         strcat(path, filename);
+        if (g_debugMode == 2) {
+            PrintAndLogEx(INFO, "Searching %s", path);
+        }
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
