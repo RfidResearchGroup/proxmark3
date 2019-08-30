@@ -202,6 +202,6 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
 
 int searchAndList(const char *pm3dir, const char *ext);
-int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix);
+int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);
 
 #endif // FILEUTILS_H

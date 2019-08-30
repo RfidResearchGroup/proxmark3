@@ -1648,7 +1648,7 @@ static int CmdLoad(const char *Cmd) {
     memcpy(filename, Cmd, len);
 
     char *path;
-    if (searchFile(&path, TRACES_SUBDIR, filename, "") != PM3_SUCCESS) {
+    if (searchFile(&path, TRACES_SUBDIR, filename, "", false) != PM3_SUCCESS) {
         return PM3_EFILE;
     }
 

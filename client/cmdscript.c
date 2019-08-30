@@ -67,7 +67,7 @@ static int CmdScriptRun(const char *Cmd) {
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
 
     char *script_path;
-    int res = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua");
+    int res = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
     if (res != PM3_SUCCESS)
         return res;
 

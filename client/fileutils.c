@@ -405,7 +405,7 @@ out:
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen) {
 
     char *path;
-    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix);
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
     if (res != PM3_SUCCESS) {
         return PM3_EFILE;
     }
@@ -634,7 +634,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 
     if (data == NULL) return PM3_ESOFT;
     char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic") != PM3_SUCCESS)
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
         return PM3_EFILE;
 
     // t5577 == 4bytes
@@ -701,7 +701,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     int retval = PM3_SUCCESS;
 	
     char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic") != PM3_SUCCESS)
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
         return PM3_EFILE;
 
     // t5577 == 4bytes
@@ -863,19 +863,22 @@ int searchAndList(const char *pm3dir, const char *ext) {
     return PM3_SUCCESS;
 }
 
-static int searchFinalFile(char **foundpath, const char *pm3dir, const char *searchname) {
+static int searchFinalFile(char **foundpath, const char *pm3dir, const char *searchname, bool silent) {
     if ((foundpath == NULL) || (pm3dir == NULL) || (searchname == NULL)) return PM3_ESOFT;
     // explicit absolute (/) or relative path (./) => try only to match it directly
     char *filename = calloc(strlen(searchname) + 1, sizeof(char));
     if (filename == NULL) return PM3_EMALLOC;
     strcpy(filename, searchname);
-    if (g_debugMode == 2) {
+    if ((g_debugMode == 2) && (!silent)) {
         PrintAndLogEx(INFO, "Searching %s", filename);
     }
     if (((strlen(filename) > 1) && (filename[0] == '/')) ||
             ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/'))) {
         if (fileExists(filename)) {
             *foundpath = filename;
+            if ((g_debugMode == 2) && (!silent)) {
+                PrintAndLogEx(INFO, "Found %s", *foundpath);
+            }
             return PM3_SUCCESS;
         } else {
             goto out;
@@ -887,6 +890,9 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     {
         if (fileExists(filename)) {
             *foundpath = filename;
+            if ((g_debugMode == 2) && (!silent)) {
+                PrintAndLogEx(INFO, "Found %s", *foundpath);
+            }
             return PM3_SUCCESS;
         }
     }
@@ -903,12 +909,15 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         strcpy(path, exec_path);
         strcat(path, pm3dir);
         strcat(path, filename);
-        if (g_debugMode == 2) {
+        if ((g_debugMode == 2) && (!silent)) {
             PrintAndLogEx(INFO, "Searching %s", path);
         }
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
+            if ((g_debugMode == 2) && (!silent)) {
+                PrintAndLogEx(INFO, "Found %s", *foundpath);
+            }
             return PM3_SUCCESS;
         } else {
             free(path);
@@ -925,12 +934,15 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         strcat(path, above);
         strcat(path, pm3dir);
         strcat(path, filename);
-        if (g_debugMode == 2) {
+        if ((g_debugMode == 2) && (!silent)) {
             PrintAndLogEx(INFO, "Searching %s", path);
         }
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
+            if ((g_debugMode == 2) && (!silent)) {
+                PrintAndLogEx(INFO, "Found %s", *foundpath);
+            }
             return PM3_SUCCESS;
         } else {
             free(path);
@@ -946,12 +958,15 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         strcat(path, PM3_USER_DIRECTORY);
         strcat(path, pm3dir);
         strcat(path, filename);
-        if (g_debugMode == 2) {
+        if ((g_debugMode == 2) && (!silent)) {
             PrintAndLogEx(INFO, "Searching %s", path);
         }
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
+            if ((g_debugMode == 2) && (!silent)) {
+                PrintAndLogEx(INFO, "Found %s", *foundpath);
+            }
             return PM3_SUCCESS;
         } else {
             free(path);
@@ -965,12 +980,15 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         strcpy(path, PM3_SHARE_PATH);
         strcat(path, pm3dir);
         strcat(path, filename);
-        if (g_debugMode == 2) {
+        if ((g_debugMode == 2) && (!silent)) {
             PrintAndLogEx(INFO, "Searching %s", path);
         }
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
+            if ((g_debugMode == 2) && (!silent)) {
+                PrintAndLogEx(INFO, "Found %s", *foundpath);
+            }
             return PM3_SUCCESS;
         } else {
             free(path);
@@ -981,14 +999,14 @@ out:
     return PM3_EFILE;
 }
 
-int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix) {
+int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent) {
     if (foundpath == NULL)
         return PM3_EINVARG;
     char *filename = filenamemcopy(searchname, suffix);
     if (filename == NULL) return PM3_EMALLOC;
-    int res = searchFinalFile(foundpath, pm3dir, filename);
+    int res = searchFinalFile(foundpath, pm3dir, filename, silent);
     if (res != PM3_SUCCESS) {
-        if (res == PM3_EFILE)
+        if ((res == PM3_EFILE) && (!silent))
             PrintAndLogEx(FAILED, "Error - can't find %s", filename);
         free(filename);
         return res;

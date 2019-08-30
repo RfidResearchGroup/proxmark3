@@ -367,7 +367,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
     uint32_t states_read = 0;
 
     char *path;
-    if (searchFile(&path, RESOURCES_SUBDIR, TEST_BENCH_FILENAME, "") != PM3_SUCCESS) {
+    if (searchFile(&path, RESOURCES_SUBDIR, TEST_BENCH_FILENAME, "", false) != PM3_SUCCESS) {
         return false;
     }
 

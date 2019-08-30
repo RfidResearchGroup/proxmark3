@@ -100,7 +100,7 @@ static int smart_loadjson(const char *preferredName, json_t **root) {
     if (preferredName == NULL) return 1;
 
     char *path;
-    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json");
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
     if (res != PM3_SUCCESS) {
         return PM3_EFILE;
     }

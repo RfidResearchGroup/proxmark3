@@ -2398,7 +2398,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
             }
 
             char *dict_path;
-            int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic");
+            int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
             if (res != PM3_SUCCESS) {
                 free(keyBlock);
                 return res;
@@ -2660,7 +2660,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
             }
 
             char *dict_path;
-            int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic");
+            int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
             if (res != PM3_SUCCESS) {
                 free(keyBlock);
                 return PM3_EFILE;

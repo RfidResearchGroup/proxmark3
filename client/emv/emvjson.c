@@ -306,7 +306,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
     }
 
     char *path;
-    if (searchFile(&path, RESOURCES_SUBDIR, "emv_defparams", ".json") != PM3_SUCCESS) {
+    if (searchFile(&path, RESOURCES_SUBDIR, "emv_defparams", ".json", false) != PM3_SUCCESS) {
         return false;
     }
     root = json_load_file(path, 0, &error);

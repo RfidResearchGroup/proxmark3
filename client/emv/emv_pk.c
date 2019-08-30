@@ -486,7 +486,7 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
         }
     */
     char *path;
-    if (searchFile(&path, RESOURCES_SUBDIR, "capk", ".txt") != PM3_SUCCESS) {
+    if (searchFile(&path, RESOURCES_SUBDIR, "capk", ".txt", false) != PM3_SUCCESS) {
         return NULL;
     }
     pk = emv_pk_get_ca_pk_from_file(path, rid, idx);

@@ -241,7 +241,7 @@ static char *asn1_oid_description(const char *oid, bool with_group_desc) {
     memset(res, 0x00, sizeof(res));
 
     char *path;
-    if (searchFile(&path, RESOURCES_SUBDIR, "oids", ".json") != PM3_SUCCESS) {
+    if (searchFile(&path, RESOURCES_SUBDIR, "oids", ".json", false) != PM3_SUCCESS) {
         return NULL;
     }
 
