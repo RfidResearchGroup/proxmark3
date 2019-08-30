@@ -44,6 +44,7 @@ On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 
 ## Development
 This fork now compiles just fine on 
+   - Proxspace v3.2
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604, 1804, 1904
    - Mac OS X / Homebrew
