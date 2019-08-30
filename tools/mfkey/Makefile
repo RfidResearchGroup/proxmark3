@@ -5,6 +5,7 @@ MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 MYDEFS =
 
 BINS = mfkey32 mfkey32v2 mfkey64
+INSTALLTOOLS = $(BINS)
 
 include ../../Makefile.host
 

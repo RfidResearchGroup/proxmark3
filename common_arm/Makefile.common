@@ -25,6 +25,7 @@ all:
 
 platform = $(shell uname)
 PREFIX?=/usr/local
+INSTALLFWRELPATH = /share/proxmark3/firmware/
 
 CROSS  ?= arm-none-eabi-
 CC = $(CROSS)gcc
@@ -40,10 +41,10 @@ INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
 
 TAR=tar
 TARFLAGS = -C .. -rvf
-
-DELETE=rm -rf
-MOVE=mv
-COPY=cp
+RM=rm -f
+RMDIR=rm -rf
+CP=cp -a
+MKDIR=mkdir -p
 PATHSEP=/
 DETECTED_OS=$(platform)
 

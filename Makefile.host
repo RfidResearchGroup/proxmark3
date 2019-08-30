@@ -4,6 +4,9 @@ ifneq ($(V),1)
 endif
 # To see full command lines, use make V=1
 
+INSTALLBINRELPATH = /bin/
+INSTALLTOOLSRELPATH = /share/proxmark3/tools/
+
 CC = gcc
 LD = gcc
 RM = rm -f
@@ -49,11 +52,18 @@ clean:
 	$(Q)$(RMDIR) $(OBJDIR)
 
 install: all
-	$(info [@] Installing $(BINS) $(LIB_A) to $(PREFIX))
+ifneq (,$(INSTALLTOOLS))
+	    $(info [@] Installing $(BINS) to $(DESTDIR)$(PREFIX)...)
+	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
+	    $(Q)$(CP) $(INSTALLTOOLS) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
+endif
 	@true
 
 uninstall:
-	$(info [@] Uninstalling $(BINS) $(LIB_A) from $(PREFIX))
+ifneq (,$(INSTALLTOOLS))
+	    $(info [@] Uninstalling $(BINS) from $(DESTDIR)$(PREFIX)...)
+	    $(Q)$(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)$(notdir $(tool)))
+endif
 	@true
 
 .PHONY: all clean install uninstall

@@ -15,6 +15,12 @@ ifneq ($(V),1)
 endif
 # To see full command lines, use make V=1
 
+INSTALLBINRELPATH = /bin/
+INSTALLSHARERELPATH = /share/proxmark3/
+#TODO INSTALLBIN = proxmark3 proxmark3-flasher
+INSTALLBIN = proxmark3 flasher
+INSTALLSHARE = lualibs luascripts resources dictionaries
+
 CC = gcc
 CXX = g++
 LD = g++
@@ -27,6 +33,7 @@ MKDIR = mkdir -p
 MV = mv
 TOUCH = touch
 FALSE = false
+CP=cp -a
 
 platform = $(shell uname)
 ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -335,11 +342,25 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) clean
 
 install: all
-	$(info [@] Installing client to $(PREFIX))
+	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
+ifneq (,$(INSTALLBIN))
+	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)
+	    $(Q)$(CP) $(INSTALLBIN) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)
+endif
+ifneq (,$(INSTALLSHARE))
+	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
+	    $(Q)$(CP) $(INSTALLSHARE) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
+endif
 	@true
 
 uninstall:
-	$(info [@] Uninstalling client from $(PREFIX))
+	$(info [@] Uninstalling client from $(DESTDIR)$(PREFIX)...)
+ifneq (,$(INSTALLBIN))
+	    $(Q)$(RM) $(foreach tool,$(INSTALLBIN),$(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)$(notdir $(tool)))
+endif
+ifneq (,$(INSTALLSHARE))
+	    $(Q)$(RMDIR) $(foreach tool,$(INSTALLSHARE),$(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)$(notdir $(tool)))
+endif
 	@true
 
 tarbin: $(BINS)

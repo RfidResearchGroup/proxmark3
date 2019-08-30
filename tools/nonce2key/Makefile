@@ -5,6 +5,7 @@ MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 MYDEFS =
 
 BINS = nonce2key
+INSTALLTOOLS = $(BINS)
 
 include ../../Makefile.host
 

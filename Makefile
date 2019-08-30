@@ -4,35 +4,48 @@ ifneq ($(V),1)
 endif
 # To see full command lines, use make V=1
 
-COPY=cp
+CP = cp -a
 GZIP=gzip
+MKDIR = mkdir -p
+RM = rm -f
+RMDIR = rm -rf
 -include Makefile.platform
 -include .Makefile.options.cache
 include common_arm/Makefile.hal
+
+# preserve relative DESTDIR path for subdir makes
+ifneq (,$(DESTDIR))
+    # realpath needs the directory to exist
+    $(shell $(MKDIR) $(DESTDIR))
+    MYDESTDIR:=$(realpath $(DESTDIR))
+    ifeq (,$(MYDESTDIR))
+        $(error Can't create $(DESTDIR))
+    endif
+endif
 
 all clean install uninstall: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% fpga_compress/%
 
 mfkey/%: FORCE
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C tools/mfkey $(patsubst mfkey/%,%,$@)
+	$(Q)$(MAKE) --no-print-directory -C tools/mfkey $(patsubst mfkey/%,%,$@) DESTDIR=$(MYDESTDIR)
 nonce2key/%: FORCE
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C tools/nonce2key $(patsubst nonce2key/%,%,$@)
+	$(Q)$(MAKE) --no-print-directory -C tools/nonce2key $(patsubst nonce2key/%,%,$@) DESTDIR=$(MYDESTDIR)
 fpga_compress/%: FORCE
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress $(patsubst fpga_compress/%,%,$@)
+	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress $(patsubst fpga_compress/%,%,$@) DESTDIR=$(MYDESTDIR)
 bootrom/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C bootrom $(patsubst bootrom/%,%,$@)
+	$(Q)$(MAKE) --no-print-directory -C bootrom $(patsubst bootrom/%,%,$@) DESTDIR=$(MYDESTDIR)
 armsrc/%: FORCE cleanifplatformchanged fpga_compress/%
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C armsrc $(patsubst armsrc/%,%,$@)
+	$(Q)$(MAKE) --no-print-directory -C armsrc $(patsubst armsrc/%,%,$@) DESTDIR=$(MYDESTDIR)
 client/%: FORCE
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C client $(patsubst client/%,%,$@)
+	$(Q)$(MAKE) --no-print-directory -C client $(patsubst client/%,%,$@) DESTDIR=$(MYDESTDIR)
 recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@)
+	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@) DESTDIR=$(MYDESTDIR)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
 .PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
@@ -77,7 +90,7 @@ nonce2key: nonce2key/all
 fpga_compress: fpga_compress/all
 
 newtarbin:
-	$(DELETE) proxmark3-$(platform)-bin.tar proxmark3-$(platform)-bin.tar.gz
+	$(RM) proxmark3-$(platform)-bin.tar proxmark3-$(platform)-bin.tar.gz
 	@touch proxmark3-$(platform)-bin.tar
 
 tarbin: newtarbin client/tarbin armsrc/tarbin bootrom/tarbin
