@@ -522,7 +522,7 @@ pm3 --> mem load f iclass_default_keys i
 
 Upgrade Sim Module firmware
 ```
-pm3 --> sc upgrade f ../tools/simmodule/SIM011.BIN
+pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
 ```
 
 ## Smart Card

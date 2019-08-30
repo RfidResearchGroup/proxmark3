@@ -32,21 +32,21 @@ Find version in the long output,  look for these two lines
 
 This version is obsolete.
 
-If you didn't download SIM011.bin from the RRG Repo be aware that it might be corrupted or faulty.
+If you didn't download sim011.bin from the RRG Repo be aware that it might be corrupted or faulty.
 You find a hash text file in this folder.   It was generated with the following linux command.
 
 ```
-sha512sum -b SIM011.bin > SIM011.sha512.txt
+sha512sum -b sim011.bin > sim011.sha512.txt
 ```
 
-You should validate the SIM011.bin file against this hash file in order to be sure the file is not corrupted or faulty.
+You should validate the sim011.bin file against this hash file in order to be sure the file is not corrupted or faulty.
 
 The following command upgrades your device sim module firmware.
 Don't not turn off your device during the execution of this command!!
 Even its a quite fast command you should be warned.  You may brick it if you interrupt it.
 
 ```
-pm3 --> sc upgrade f ../tools/simmodule/SIM011.BIN 
+pm3 --> sc upgrade f ../tools/simmodule/sim011.bin 
 ```
 
 You get the following output if the execution was successful:

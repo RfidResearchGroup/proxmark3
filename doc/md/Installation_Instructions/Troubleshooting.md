@@ -111,9 +111,9 @@ cd client; ./proxmark3 ...
 Therefore client commands referring to files of the repo must be adapted, e.g.
 
 ```
-pm3 --> sc upgrade f tools/simmodule/SIM011.BIN
+pm3 --> sc upgrade f tools/simmodule/sim011.bin
 <>
-pm3 --> sc upgrade f ../tools/simmodule/SIM011.BIN
+pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
 ```
 
 ```

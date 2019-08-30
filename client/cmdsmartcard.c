@@ -69,7 +69,7 @@ static int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "       f <filename>    :  firmware file name");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/SIM011.BIN");
+    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/sim011.bin");
     return 0;
 }
 static int usage_sm_setclock(void) {
