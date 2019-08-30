@@ -321,7 +321,9 @@ test_script:
             }
             ForEach($line in $Cond){
               if ($line -like "*passed*"){
-                $res= $true
+                $res = $true
+                $Cond = $line
+                break
               }
             }
         } Else {
