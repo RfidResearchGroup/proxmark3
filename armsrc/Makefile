@@ -135,6 +135,12 @@ include ../common_arm/Makefile.common
 COMMON_FLAGS =  -Os
 
 INSTALLFW = $(OBJDIR)/fullimage.elf
+ifneq (,$(FWTAG))
+    INSTALLFWTAG = $(notdir $(INSTALLFW:%.elf=%-$(FWTAG).elf))
+else
+    INSTALLFWTAG = $(notdir $(INSTALLFW))
+endif
+
 OBJS = $(OBJDIR)/fullimage.s19
 FPGA_COMPRESSOR = ../tools/fpga_compress/fpga_compress
 
@@ -217,11 +223,11 @@ clean:
 install: all
 	$(info [@] Installing fullimage to $(DESTDIR)$(PREFIX)...)
 	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)
-	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)$(INSTALLFWTAG)
 
 uninstall:
 	$(info [@] Uninstalling fullimage from $(DESTDIR)$(PREFIX)...)
-	$(Q)$(RM) $(foreach fw,$(INSTALLFW),$(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)$(notdir $(fw)))
+	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)$(INSTALLFWTAG)
 
 .PHONY: all clean help install uninstall
 help:

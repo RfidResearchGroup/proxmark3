@@ -130,6 +130,8 @@ fullimage: armsrc/all
 
 fullimage/clean: armsrc/clean
 
+fullimage/install: armsrc/install
+
 recovery: recovery/all
 
 mfkey: mfkey/all
