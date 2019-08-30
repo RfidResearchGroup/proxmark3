@@ -855,9 +855,11 @@ int searchAndList(const char *pm3dir, const char *ext) {
         filelist(script_directory_path, ext, false, false);
     }
     // try pm3 dirs in pm3 installation dir (install mode)
-    {
-        char script_directory_path[strlen(PM3_SHARE_PATH) + strlen(pm3dir) + 1];
-        strcpy(script_directory_path, PM3_SHARE_PATH);
+    const char *exec_path = get_my_executable_directory();
+    if (exec_path != NULL) {
+        char script_directory_path[strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, exec_path);
+        strcat(script_directory_path, PM3_SHARE_RELPATH);
         strcat(script_directory_path, pm3dir);
         filelist(script_directory_path, ext, true, false);
     }
@@ -975,10 +977,11 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     }
     // try pm3 dirs in pm3 installation dir (install mode)
     {
-        char *path = calloc(strlen(PM3_SHARE_PATH) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
+        char *path = calloc(strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;
-        strcpy(path, PM3_SHARE_PATH);
+        strcpy(path, exec_path);
+        strcat(path, PM3_SHARE_RELPATH);
         strcat(path, pm3dir);
         strcat(path, filename);
         if ((g_debugMode == 2) && (!silent)) {

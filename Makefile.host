@@ -15,12 +15,7 @@ FALSE = false
 
 CFLAGS ?= -Wall -Werror -O3
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
-ifneq (,$(PM3_BIN_PATH))
-    CFLAGS += -DPM3_BIN_PATH=\"$(PM3_BIN_PATH)\"
-endif
-ifneq (,$(PM3_SHARE_PATH))
-    CFLAGS += -DPM3_SHARE_PATH=\"$(PM3_SHARE_PATH)\"
-endif
+PREFIX ?= /usr/local
 
 platform = $(shell uname)
 
