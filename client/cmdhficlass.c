@@ -74,7 +74,7 @@ static int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "Correct behaviour would be to decrypt only the application areas where the key is valid,");
     PrintAndLogEx(NORMAL, "which is defined by the configuration block.");
     PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-    PrintAndLogEx(NORMAL, "in the working directory. The file should be 16 bytes binary data");
+    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt f <tagdump> k <transport key>");
     PrintAndLogEx(NORMAL, "        options");
@@ -88,7 +88,7 @@ static int usage_hf_iclass_decrypt(void) {
 }
 static int usage_hf_iclass_encrypt(void) {
     PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-    PrintAndLogEx(NORMAL, "in the working directory. The file should be 16 bytes binary data");
+    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: hf iclass encrypt d <blockdata> k <transport key>");
     PrintAndLogEx(NORMAL, "");
