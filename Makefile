@@ -5,30 +5,6 @@ endif
 # To see full command lines, use make V=1
 
 GZIP=gzip
-# Windows' echo echos its input verbatim, on Posix there is some
-#  amount of shell command line parsing going on. echo "" on
-#  Windows yields literal "", on Linux yields an empty line
-ifeq ($(shell echo ""),)
-    # This is probably a proper system, so we can use uname
-    DELETE=rm -rf
-    FLASH_TOOL=client/flasher
-    platform=$(shell uname)
-    ifneq (,$(findstring MINGW,$(platform)))
-        FLASH_PORT=com3
-        PATHSEP=\\#
-    else
-        FLASH_PORT=/dev/ttyACM0
-        PATHSEP=/
-    endif
-else
-    # Assume that we are running on native Windows
-    DELETE=del /q
-    FLASH_TOOL=client/flasher.exe
-    platform=Windows
-    FLASH_PORT=com3
-    PATHSEP=\\#
-endif
-
 -include Makefile.platform
 -include .Makefile.options.cache
 include common_arm/Makefile.hal
@@ -58,7 +34,7 @@ recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test bootrom flash-bootrom fullimage flash-fullimage flash-all recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean help _test bootrom fullimage recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -70,9 +46,6 @@ help:
 	@echo
 	@echo "+ bootrom         - Make bootrom"
 	@echo "+ fullimage       - Make armsrc fullimage (includes fpga)"
-	@echo "+ flash-bootrom   - Make and flash bootrom"
-	@echo "+ flash-fullimage - Make and flash fullimage"
-	@echo "+ flash-all       - Make and flash bootrom and fullimage"
 	@echo "+ recovery        - Make bootrom and fullimage files for JTAG flashing"
 	@echo
 	@echo "+ client          - Make only the OS-specific host client"
@@ -101,15 +74,6 @@ mfkey: mfkey/all
 nonce2key: nonce2key/all
 
 fpga_compress: fpga_compress/all
-
-flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$<)
-
-flash-fullimage: armsrc/obj/fullimage.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$<)
-
-flash-all: bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf $(FLASH_TOOL)
-	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$(filter-out $(FLASH_TOOL),$^))
 
 newtarbin:
 	$(DELETE) proxmark3-$(platform)-bin.tar proxmark3-$(platform)-bin.tar.gz
