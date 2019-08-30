@@ -372,7 +372,7 @@ test_script:
 
     ExecTest "bootrom exists" "bootrom.elf" {Test-Path C:\ProxSpace\Release\arm\bootrom.elf}
 
-    ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\Release\hardnested\tables\*.z}
+    # ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\Release\hardnested\tables\*.z}
 
     ExecTest "release exists" "release.zip" {Test-Path C:\ProxSpace\release.zip}
 
