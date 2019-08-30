@@ -696,7 +696,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
                 return usage_hf_iclass_eload();
             case 'f':
                 if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-        PrintAndLogEx(FAILED, "Filename too long");
+                    PrintAndLogEx(FAILED, "Filename too long");
                     errors = true;
                     break;
                 }
@@ -704,12 +704,12 @@ static int CmdHFiClassELoad(const char *Cmd) {
                 break;
             case 'j':
                 dftype = JSON;
-                 cmdp++;
-                 break;
+                cmdp++;
+                break;
             case 'e':
-                 dftype = EML;
-                 cmdp++;
-                 break;
+                dftype = EML;
+                cmdp++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -733,9 +733,9 @@ static int CmdHFiClassELoad(const char *Cmd) {
     size_t bytes_read = 2048;
     int res = 0;
 
-    switch ( dftype ) {
+    switch (dftype) {
         case BIN: {
-            res = loadFile(filename, ".bin", (void*)&dump, 2048, &bytes_read);
+            res = loadFile(filename, ".bin", (void *)&dump, 2048, &bytes_read);
             break;
         }
         case EML: {
@@ -747,11 +747,11 @@ static int CmdHFiClassELoad(const char *Cmd) {
             break;
         }
         default:
-          PrintAndLogEx(ERR, "No dictionary loaded");
-          return PM3_ESOFT;
+            PrintAndLogEx(ERR, "No dictionary loaded");
+            return PM3_ESOFT;
     }
 
-    if ( res != PM3_SUCCESS ) {
+    if (res != PM3_SUCCESS) {
         free(dump);
         return PM3_EFILE;
     }
@@ -793,15 +793,15 @@ static int CmdHFiClassELoad(const char *Cmd) {
 #define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
 
 static int CmdHFiClassDecrypt(const char *Cmd) {
-    
+
     bool errors = false;
     bool have_key = false;
     uint8_t cmdp = 0;
-       
+
     size_t keylen = 0;
     uint8_t key[32] = {0};
     uint8_t *keyptr = NULL;
-    
+
     size_t decryptedlen = 0;
     uint8_t *decrypted = NULL;
     char filename[FILE_PATH_SIZE];
@@ -811,13 +811,13 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_decrypt();
             case 'f':
-                if ( param_getstr(Cmd, cmdp + 1, filename, sizeof(filename) ) == 0) {
+                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
                     PrintAndLogEx(WARNING, "no filename found after f");
                     errors = true;
                     break;
                 }
 
-                if ( loadFile_safe(filename, "", (void**)&decrypted, &decryptedlen) != PM3_SUCCESS ) {
+                if (loadFile_safe(filename, "", (void **)&decrypted, &decryptedlen) != PM3_SUCCESS) {
                     errors = true;
                     break;
                 }
@@ -840,11 +840,11 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
 
-    if ( have_key == false ) {
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void**)&keyptr, &keylen);
+    if (have_key == false) {
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
         if (res != PM3_SUCCESS)
             return PM3_EINVARG;
-        
+
         memcpy(key, keyptr, sizeof(key));
     }
 
@@ -857,7 +857,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     uint8_t app_areas = 2;
     uint8_t max_blk = 31;
     getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
-    
+
     // tripledes
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_dec(&ctx, key);
@@ -876,10 +876,10 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     }
 
     //Use the first block (CSN) for filename
-    char *fptr = calloc(42, sizeof(uint8_t)); 
+    char *fptr = calloc(42, sizeof(uint8_t));
     strcat(fptr, "hf-iclass-");
-    FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn) );
-        
+    FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn));
+
     saveFile(fptr, ".bin", decrypted, decryptedlen);
     saveFileEML(fptr, decrypted, decryptedlen, 8);
     saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
@@ -935,12 +935,12 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
 
-    if ( have_key == false ) {
+    if (have_key == false) {
         size_t keylen = 0;
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void**)&keyptr, &keylen);
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
         if (res != PM3_SUCCESS)
             return PM3_EINVARG;
-        
+
         memcpy(key, keyptr, sizeof(key));
     }
 
@@ -1265,7 +1265,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
         //Use the first block (CSN) for filename
         strcat(filename, "hf-iclass-");
-        FillFileNameByUID(filename, tag_data, "-data", 8 );
+        FillFileNameByUID(filename, tag_data, "-data", 8);
     }
 
     // save the dump to .bin file
@@ -1565,7 +1565,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
     }
     //data read is stored in: resp.data.asBytes[0-15]
     PrintAndLogEx(NORMAL, "block %02X: %s\n", blockno, sprint_hex(resp.data.asBytes, 8));
-   // should decrypt it if file is accessable.
+    // should decrypt it if file is accessable.
     return 1;
 }
 
@@ -1936,9 +1936,9 @@ static int saveKeys(char *filename) {
 static int printKeys(void) {
     PrintAndLogEx(NORMAL, "");
     for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
-        if ( memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0)
+        if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0)
             PrintAndLogEx(NORMAL, "%u: %s", i, sprint_hex(iClass_Key_Table[i], 8));
-        else 
+        else
             PrintAndLogEx(NORMAL, "%u: "_YELLOW_("%s"), i, sprint_hex(iClass_Key_Table[i], 8));
     }
     PrintAndLogEx(NORMAL, "");
@@ -2096,7 +2096,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     uint16_t keycount = 0;
 
     // load keys
-    int res = loadFileDICTIONARY_safe(filename, (void**)&keyBlock, 8, &keycount);
+    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
     if (res != PM3_SUCCESS || keycount == 0) {
         free(keyBlock);
         return res;
@@ -2106,11 +2106,11 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reading tag CSN");
     for (uint8_t i = 0; i < 10 && !got_csn; i++) {
         got_csn = select_only(CSN, CCNR, false, false);
-        if ( got_csn == false )
+        if (got_csn == false)
             PrintAndLogEx(WARNING, "one more try\n");
-        }
+    }
 
-    if ( got_csn == false ) {
+    if (got_csn == false) {
         PrintAndLogEx(WARNING, "Tried 10 times. Can't select card, aborting...");
         return PM3_ESOFT;
     }
@@ -2232,13 +2232,13 @@ out:
     PrintAndLogEx(SUCCESS, "\nTime in iclass checkkeys: %.0f seconds\n", (float)t1 / 1000.0);
     DropField();
 
-   // add to managekeys 
-    if ( found_debit ) {
-        for (uint8_t i=0; i< ICLASS_KEYS_MAX; i++) { 
+    // add to managekeys
+    if (found_debit) {
+        for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
             // simple check for preexistences
-            if ( memcmp(iClass_Key_Table[i], keyBlock + (key_offset + found_offset) * 8, 8) == 0 ) break;
+            if (memcmp(iClass_Key_Table[i], keyBlock + (key_offset + found_offset) * 8, 8) == 0) break;
 
-            if ( memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0 ) {
+            if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
                 memcpy(iClass_Key_Table[i], keyBlock + (key_offset + found_offset) * 8, 8);
                 PrintAndLogEx(SUCCESS, "Added key to keyslot [%d] - "_YELLOW_("`hf iclass managekeys p`")" to view", i);
                 break;
@@ -2295,7 +2295,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_lookup();
             case 'f':
-                if ( param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) < 1 ) {
+                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) < 1) {
                     PrintAndLogEx(WARNING, "No filename found after f");
                     errors = true;
                 }
@@ -2358,12 +2358,12 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     uint16_t keycount = 0;
 
     // load keys
-	int res = loadFileDICTIONARY_safe(filename, (void**)&keyBlock, 8, &keycount);
+    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
     if (res != PM3_SUCCESS || keycount == 0) {
         free(keyBlock);
         return res;
     }
-    
+
     //iclass_prekey_t
     prekey = calloc(keycount, sizeof(iclass_prekey_t));
     if (!prekey) {
@@ -2395,18 +2395,18 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     // foudn
     if (item != NULL) {
         PrintAndLogEx(SUCCESS, "[debit] found key " _YELLOW_("%s"), sprint_hex(item->key, 8));
-        for (uint8_t i=0; i< ICLASS_KEYS_MAX; i++) {
+        for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
             // simple check for preexistences
-            if ( memcmp(item->key, iClass_Key_Table[i], 8) == 0 ) break;
+            if (memcmp(item->key, iClass_Key_Table[i], 8) == 0) break;
 
-            if ( memcmp(iClass_Key_Table[i] , "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0 ) {
+            if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
                 memcpy(iClass_Key_Table[i], item->key, 8);
                 PrintAndLogEx(SUCCESS, "Added key to keyslot [%d] - "_YELLOW_("`hf iclass managekeys p`")"to view", i);
                 break;
             }
         }
     }
- 
+
     free(prekey);
     free(keyBlock);
     PrintAndLogEx(NORMAL, "");

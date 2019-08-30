@@ -1523,33 +1523,33 @@ OUT:
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         BigBuf_free();
         BigBuf_Clear_ext(false);
-		
-		// special trick ecfill
-		if (use_flashmem && foundkeys == allkeys) {
-			
-			uint8_t block[16] = {0};
-		    for (int i = 0; i < sectorcnt; i++) {
-				
-				uint8_t blockno;
-				if (i < 32) {
-					blockno = (i * 4) ^ 0x3;
-    } else {
-					blockno = (32 * 4 + (i - 32) * 16) ^ 0xF;
-				}
-				// get ST
-				emlGetMem(block, blockno, 1);
 
-				memcpy(block, k_sector[i].keyA, 6);
-				memcpy(block + 10, k_sector[i].keyB, 6);
-				
-				emlSetMem_xt(block, blockno, 1, sizeof(block));
-			}
-		    int oldbg = DBGLEVEL;
-			DBGLEVEL = DBG_NONE;
-			MifareECardLoad(sectorcnt, 0);
-			MifareECardLoad(sectorcnt, 1);
-			DBGLEVEL = oldbg;
-		}
+        // special trick ecfill
+        if (use_flashmem && foundkeys == allkeys) {
+
+            uint8_t block[16] = {0};
+            for (int i = 0; i < sectorcnt; i++) {
+
+                uint8_t blockno;
+                if (i < 32) {
+                    blockno = (i * 4) ^ 0x3;
+                } else {
+                    blockno = (32 * 4 + (i - 32) * 16) ^ 0xF;
+                }
+                // get ST
+                emlGetMem(block, blockno, 1);
+
+                memcpy(block, k_sector[i].keyA, 6);
+                memcpy(block + 10, k_sector[i].keyB, 6);
+
+                emlSetMem_xt(block, blockno, 1, sizeof(block));
+            }
+            int oldbg = DBGLEVEL;
+            DBGLEVEL = DBG_NONE;
+            MifareECardLoad(sectorcnt, 0);
+            MifareECardLoad(sectorcnt, 1);
+            DBGLEVEL = oldbg;
+        }
     } else {
         // partial/none keys found
         reply_mix(CMD_ACK, foundkeys, 0, 0, 0, 0);
@@ -1695,9 +1695,9 @@ void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
 //
 //-----------------------------------------------------------------------------
 int MifareECardLoadExt(uint8_t numSectors, uint8_t keyType) {
-	int retval = MifareECardLoad(numSectors, keyType);
-	reply_ng(CMD_HF_MIFARE_EML_LOAD, retval, NULL, 0);
-	return retval;
+    int retval = MifareECardLoad(numSectors, keyType);
+    reply_ng(CMD_HF_MIFARE_EML_LOAD, retval, NULL, 0);
+    return retval;
 }
 
 int MifareECardLoad(uint8_t numSectors, uint8_t keyType) {
@@ -1723,7 +1723,7 @@ int MifareECardLoad(uint8_t numSectors, uint8_t keyType) {
     if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
         retval = PM3_ESOFT;
         if (DBGLEVEL > DBG_ERROR) Dbprintf("Can't select card");
-		goto out;
+        goto out;
     }
 
     for (uint8_t sectorNo = 0; sectorNo < numSectors; sectorNo++) {
@@ -1747,22 +1747,22 @@ int MifareECardLoad(uint8_t numSectors, uint8_t keyType) {
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Error reading sector %2d block %2d", sectorNo, blockNo);
                 break;
             }
-                if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
-                    emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
-                } else { // sector trailer, keep the keys, set only the AC
-                    emlGetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
-                    memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
-                    emlSetMem(dataoutbuf2,  FirstBlockOfSector(sectorNo) + blockNo, 1);
-                }
+            if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
+                emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
+            } else { // sector trailer, keep the keys, set only the AC
+                emlGetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
+                memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
+                emlSetMem(dataoutbuf2,  FirstBlockOfSector(sectorNo) + blockNo, 1);
             }
         }
+    }
 
     if (mifare_classic_halt(pcs, cuid)) {
         if (DBGLEVEL > DBG_ERROR)
             Dbprintf("Halt error");
-	}
+    }
 
-	if (DBGLEVEL >= DBG_INFO) DbpString("Emulator fill sectors finished");
+    if (DBGLEVEL >= DBG_INFO) DbpString("Emulator fill sectors finished");
 
 out:
     crypto1_destroy(pcs);

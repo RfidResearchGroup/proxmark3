@@ -59,7 +59,7 @@ static int g_wait = 300;
 static int timeout = 2900;
 static uint32_t time_rdr = 0;
 static uint32_t time_delta = 0;
-static uint32_t time_delta_wait = 0; 
+static uint32_t time_delta_wait = 0;
 static uint32_t time_response = 0;
 
 static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay);
@@ -1875,15 +1875,15 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
         }
 
         // keep tx buffer in a defined state anyway.
-/*
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = 0x00;
-        }
-*/
+        /*
+                if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                    AT91C_BASE_SSC->SSC_THR = 0x00;
+                }
+        */
         // Wait for byte be become available in rx holding register
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
-            if ( GetCountSspClk() - foo > timeout) return false; 
+            if (GetCountSspClk() - foo > timeout) return false;
 //            if (c >= timeout) return false;
 
             c++;
@@ -1896,7 +1896,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
             if (ManchesterDecoding_iclass(b & 0x0f)) {
                 if (samples)
                     *samples = c << 3;
-                
+
                 time_response = GetCountSspClk() - foo;
                 return true;
             }
@@ -1959,7 +1959,7 @@ bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *re
         // since its called with fixed sized arrays
 
         // update/write commadn takes 4ms to 15ms before responding
-	if ( command[0] == ICLASS_CMD_UPDATE )
+        if (command[0] == ICLASS_CMD_UPDATE)
             g_wait = 15000;
 
         uint8_t got_n = ReaderReceiveIClass(resp);

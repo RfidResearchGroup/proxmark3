@@ -655,19 +655,19 @@ static int doTestsWithKnownInputs() {
 }
 
 
-static bool readKeyFile(uint8_t* key, size_t keylen) {
+static bool readKeyFile(uint8_t *key, size_t keylen) {
 
     size_t len = 0;
-    uint8_t *keyptr = NULL;    
-    if ( loadFile_safe("iclass_key.bin", "", (void**)&keyptr, &len) != PM3_SUCCESS ) {
+    uint8_t *keyptr = NULL;
+    if (loadFile_safe("iclass_key.bin", "", (void **)&keyptr, &len) != PM3_SUCCESS) {
         return false;
     }
-    
-    if ( keylen != len ) {
+
+    if (keylen != len) {
         return false;
     }
-    
-    memcpy(key, keyptr, keylen );
+
+    memcpy(key, keyptr, keylen);
     return true;
 }
 

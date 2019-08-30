@@ -435,7 +435,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     }
 
     size_t bytes_read = fread(*pdata, 1, fsize, f);
-    
+
     fclose(f);
 
     if (bytes_read != fsize) {
@@ -699,7 +699,7 @@ out:
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt) {
 
     int retval = PM3_SUCCESS;
-	
+
     char *path;
     if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
         return PM3_EFILE;
@@ -713,7 +713,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     }
 
     size_t mem_size;
-	size_t block_size = 10 * keylen;
+    size_t block_size = 10 * keylen;
 
     // double up since its chars
     keylen <<= 1;
@@ -721,24 +721,25 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     char line[255];
 
     // allocate some space for the dictionary
-    *pdata = calloc( block_size , sizeof(uint8_t));
+    *pdata = calloc(block_size, sizeof(uint8_t));
     if (*pdata == NULL)
-		return PM3_EFILE;
+        return PM3_EFILE;
 
-	mem_size = block_size;
+    mem_size = block_size;
 
     FILE *f = fopen(path, "r");
     if (!f) {
         PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
         retval = PM3_EFILE;
-        goto out;    }
+        goto out;
+    }
 
     // read file
     while (fgets(line, sizeof(line), f)) {
 
         // check if we have enough space (if not allocate more)
-        if ( (*keycnt * (keylen >> 1) ) >= mem_size ) {
-			
+        if ((*keycnt * (keylen >> 1)) >= mem_size) {
+
             mem_size += block_size;
             *pdata = realloc(*pdata, mem_size);
 
@@ -767,10 +768,10 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
         uint64_t key = strtoull(line, NULL, 16);
 
-        num_to_bytes(key, keylen >> 1, *pdata + (*keycnt * (keylen >> 1)) );
-        
+        num_to_bytes(key, keylen >> 1, *pdata + (*keycnt * (keylen >> 1)));
+
         (*keycnt)++;
-		
+
         memset(line, 0, sizeof(line));
     }
     fclose(f);

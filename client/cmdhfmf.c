@@ -774,31 +774,31 @@ static char GetFormatFromSector(uint8_t sectorNo) {
     }
 }
 
-static int FastDumpWithEcFill(uint8_t numsectors){
-	PacketResponseNG resp;
-	
-	mfc_eload_t payload;
-	payload.sectorcnt = numsectors;
-	payload.keytype = 0;
+static int FastDumpWithEcFill(uint8_t numsectors) {
+    PacketResponseNG resp;
 
-	// ecfill key A
-	clearCommandBuffer();
-	SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
-	
-	int res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
-	if ( res != PM3_SUCCESS) {
-	}
-	
-	// ecfill key B
-	payload.keytype = 1;
-	
-	clearCommandBuffer();
-	SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
-	res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
-	if ( res != PM3_SUCCESS) {
+    mfc_eload_t payload;
+    payload.sectorcnt = numsectors;
+    payload.keytype = 0;
 
-	}
-	return PM3_SUCCESS;
+    // ecfill key A
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
+
+    int res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
+    if (res != PM3_SUCCESS) {
+    }
+
+    // ecfill key B
+    payload.keytype = 1;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
+    res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2000);
+    if (res != PM3_SUCCESS) {
+
+    }
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfDump(const char *Cmd) {
@@ -1287,11 +1287,11 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
         PrintAndLogEx(SUCCESS, "Testing known keys. Sector count=%d", SectorsCnt);
         int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false);
-		if ( res == PM3_SUCCESS ) {
-			// all keys found
-			PrintAndLogEx(SUCCESS, "Fast check found all keys");
-			goto jumptoend;
-		}
+        if (res == PM3_SUCCESS) {
+            // all keys found
+            PrintAndLogEx(SUCCESS, "Fast check found all keys");
+            goto jumptoend;
+        }
 
         uint64_t t2 = msclock() - t1;
         PrintAndLogEx(SUCCESS, "Time to check %d known keys: %.0f seconds\n", ARRAYLEN(g_mifare_default_keys), (float)t2 / 1000.0);
@@ -1663,29 +1663,29 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool prng_type = false;
     bool verbose = false;
     bool has_filename = false;
-	bool errors = false;
+    bool errors = false;
 
     // Parse the options given by the user
-    while ( (ctmp = param_getchar(Cmd, cmdp)) && !errors ) {
+    while ((ctmp = param_getchar(Cmd, cmdp)) && !errors) {
         switch (tolower(ctmp)) {
             case 'h':
                 return usage_hf14_autopwn();
             case 'f':
                 if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
                     PrintAndLogEx(FAILED, "Filename too long");
-					errors = true;
+                    errors = true;
                 } else {
-				    has_filename = true;
+                    has_filename = true;
                 }
                 cmdp += 2;
                 break;
             case 'l':
                 legacy_mfchk = true;
-				cmdp++;
+                cmdp++;
                 break;
             case 'v':
                 verbose = true;
-				cmdp++;
+                cmdp++;
                 break;
             case '*':
                 // Get the number of sectors
@@ -1696,35 +1696,35 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             case 'k':
                 // Get the known block number
                 if (param_getchar(Cmd, cmdp + 1) == 0x00) {
-					errors = true;
+                    errors = true;
                     break;
                 }
-				
+
                 blockNo = param_get8(Cmd, cmdp + 1);
-				
+
                 // Get the knonwn block type
                 ctmp = tolower(param_getchar(Cmd, cmdp + 2));
                 if (ctmp != 'a' && ctmp != 'b') {
                     PrintAndLogEx(WARNING, "Key type must be A or B");
                     errors = true;
-					break;
+                    break;
                 }
-				
+
                 if (ctmp != 'a') {
                     keyType = 1;
                 }
-				
+
                 // Get the known block key
                 if (param_gethex(Cmd, cmdp + 3, key, 12)) {
                     PrintAndLogEx(WARNING, "Key must include 12 HEX symbols");
-					errors = true;
+                    errors = true;
                     return PM3_EINVARG;
                 }
                 know_target_key = true;
                 cmdp += 3;
             case 's':
                 slow = true;
-				cmdp++;
+                cmdp++;
                 break;
             case 'i':
                 SetSIMDInstr(SIMD_AUTO);
@@ -1759,9 +1759,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 return usage_hf14_autopwn();
         }
     }
-	
-	if ( errors ) {
-		return usage_hf14_autopwn();
+
+    if (errors) {
+        return usage_hf14_autopwn();
     }
 
     // Create the key storage stucture
@@ -1821,7 +1821,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                          );
             PrintAndLogEx(WARNING, "falling back to dictionary");
         }
-		
+
         // Check if the user supplied key is used by other sectors
         for (int i = 0; i < sectors_cnt; i++) {
             for (int j = 0; j < 2; j++) {
@@ -1858,18 +1858,18 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool load_success = true;
     // Load the dictionary
     if (has_filename) {
-        int res = loadFileDICTIONARY_safe(filename, (void**) &keyBlock, 6, &key_cnt);
+        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 6, &key_cnt);
         if (res != PM3_SUCCESS || key_cnt == 0 || keyBlock == NULL) {
             PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
             if (keyBlock != NULL)
                 free(keyBlock);
-			
-			load_success = false;
+
+            load_success = false;
         }
 
     }
 
-	if ( has_filename == false || load_success == false ) {
+    if (has_filename == false || load_success == false) {
         keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
         if (keyBlock == NULL) {
             free(e_sector);
@@ -1880,7 +1880,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
         }
         key_cnt = ARRAYLEN(g_mifare_default_keys);
-		PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from hardcoded default array", key_cnt);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from hardcoded default array", key_cnt);
     }
 
     // Use the dictionary to find sector keys on the card
@@ -1950,7 +1950,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             if (e_sector[i].foundKey[j] == 1) {
                 e_sector[i].foundKey[j] = 'D';
                 num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
-                
+
                 // Store valid credentials for the nested / hardnested attack if none exist
                 if (know_target_key == false) {
                     num_to_bytes(e_sector[i].Key[j], 6, key);
@@ -2018,7 +2018,7 @@ noValidKeyFound:
             return PM3_ESOFT;
         }
     }
-	
+
     free(keyBlock);
     // Clear the needed variables
     num_to_bytes(0, 6, tmp_key);
@@ -2062,7 +2062,7 @@ noValidKeyFound:
                         if (verbose) {
                             PrintAndLogEx(INFO, _YELLOW_("======================= START READ B KEY ATTACK ======================="));
                             PrintAndLogEx(INFO, "reading  B  key: sector: %3d key type: %c",
-                                          current_sector_i, 
+                                          current_sector_i,
                                           current_key_type_i ? 'B' : 'A');
                         }
                         uint8_t sectrail = (FirstBlockOfSector(current_sector_i) + NumBlocksPerSector(current_sector_i) - 1);
@@ -2094,9 +2094,9 @@ noValidKeyFound:
                                          );
                         } else {
                             if (verbose) PrintAndLogEx(WARNING, "unknown  B  key: sector: %3d key type: %c (reading the B key was not possible, maybe due to insufficient access rights) ",
-                                          current_sector_i,
-                                          current_key_type_i ? 'B' : 'A'
-                                         );
+                                                           current_sector_i,
+                                                           current_key_type_i ? 'B' : 'A'
+                                                          );
                         }
                         if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP  READ B KEY ATTACK ======================="));
                     }
@@ -2226,13 +2226,13 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                      );
     }
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
-    PrintAndLogEx(NORMAL, "( " 
+    PrintAndLogEx(NORMAL, "( "
                   _YELLOW_("D") ":Dictionary / "
                   _YELLOW_("S") ":darkSide / "
                   _YELLOW_("U") ":User / "
                   _YELLOW_("R") ":Reused / "
                   _YELLOW_("N") ":Nested / "
-                  _YELLOW_("H") ":Hardnested / " 
+                  _YELLOW_("H") ":Hardnested / "
                   _YELLOW_("A") ":keyA "
                   ")"
                  );
@@ -2254,8 +2254,8 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
         mfEmlSetMem(block, FirstBlockOfSector(current_sector_i) + NumBlocksPerSector(current_sector_i) - 1, 1);
     }
 
-	// use ecfill trick
-	FastDumpWithEcFill(sectors_cnt);
+    // use ecfill trick
+    FastDumpWithEcFill(sectors_cnt);
 
     bytes = block_cnt * MFBLOCK_SIZE;
     dump = calloc(bytes, sizeof(uint8_t));
@@ -2526,12 +2526,12 @@ out:
 
         printKeyTable(sectorsCnt, e_sector);
 
-		if ( use_flashmemory && found_keys == (sectorsCnt << 1) ) {
-			PrintAndLogEx(SUCCESS, "Card dumped aswell. run " _YELLOW_("`%s %c`"),
-			"hf mf esave",
-			GetFormatFromSector(sectorsCnt)
-			);
-		}
+        if (use_flashmemory && found_keys == (sectorsCnt << 1)) {
+            PrintAndLogEx(SUCCESS, "Card dumped aswell. run " _YELLOW_("`%s %c`"),
+                          "hf mf esave",
+                          GetFormatFromSector(sectorsCnt)
+                         );
+        }
 
         if (transferToEml) {
             // fast push mode
@@ -2551,10 +2551,10 @@ out:
                 mfEmlSetMem(block, blockno, 1);
             }
             PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
-			
-			if ( found_keys == (sectorsCnt << 1) ) {
-				FastDumpWithEcFill(sectorsCnt);
-			}
+
+            if (found_keys == (sectorsCnt << 1)) {
+                FastDumpWithEcFill(sectorsCnt);
+            }
         }
 
         if (createDumpFile) {
@@ -3534,10 +3534,10 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     PrintAndLogEx(NORMAL, "--params: numSectors: %d, keyType: %c\n", numSectors, (keyType == 0) ? 'A' : 'B');
 
     mfc_eload_t payload;
-	payload.sectorcnt = numSectors;
-	payload.keytype = keyType;
+    payload.sectorcnt = numSectors;
+    payload.keytype = keyType;
     clearCommandBuffer();
-	SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
     return PM3_SUCCESS;
 }
 

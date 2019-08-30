@@ -210,7 +210,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         icesector_t *tmp = calloc(sectorsCnt, sizeof(icesector_t));
         if (tmp == NULL)
             return PM3_EMALLOC;
-		
+
         memcpy(tmp, resp.data.asBytes, sectorsCnt * sizeof(icesector_t));
 
         for (int i = 0; i < sectorsCnt; i++) {

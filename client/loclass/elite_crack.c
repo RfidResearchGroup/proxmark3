@@ -543,7 +543,7 @@ int bruteforceFile(const char *filename, uint16_t keytable[]) {
 
     size_t dumplen = 0;
     uint8_t *dump = NULL;
-    if ( loadFile_safe(filename, "", (void**)&dump, &dumplen) != PM3_SUCCESS ) {
+    if (loadFile_safe(filename, "", (void **)&dump, &dumplen) != PM3_SUCCESS) {
         return PM3_EFILE;
     }
 

@@ -64,10 +64,10 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
 #ifdef _WIN32
     struct _stat st;
     // Mingw _stat fails if path ends with /, so let's use a stripped path
-    if (path[strlen(path)-1]=='/') {
-        path[strlen(path)-1]='\0';
+    if (path[strlen(path) - 1] == '/') {
+        path[strlen(path) - 1] = '\0';
         result = _stat(path, &st);
-        path[strlen(path)]='/';
+        path[strlen(path)] = '/';
     } else {
         result = _stat(path, &st);
     }
