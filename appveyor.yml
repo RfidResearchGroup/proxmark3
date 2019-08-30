@@ -143,6 +143,7 @@ clone_script:
     ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
 
     Write-Host "Update " -NoNewLine
+    
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
 - ps: >-
@@ -280,7 +281,7 @@ test_script:
 
 
     Function ExecTest($Name, $File, $Cmd, $CheckResult) {
-
+    
     #--- begin Job
 
     $Job = Start-Job -ScriptBlock {
@@ -317,6 +318,13 @@ test_script:
             }
             if ($Cond -is "String" -and $Cond -like "*true*"){
               $res= $true
+            }
+            ForEach($line in $Cond){
+              if ($line -like "*passed*"){
+                $res = $true
+                $Cond = $line
+                break
+              }
             }
         } Else {
           $res=$Cond
@@ -373,11 +381,11 @@ test_script:
 
     #proxmark logic tests
 
-    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h  | grep -q wait && echo passed || echo failed'}
+    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h 2>&1 | grep -q wait && echo passed || echo failed'}
 
-    ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t | grep -q ISO7816 && echo passed || echo failed'}
+    ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q ISO7816 && echo passed || echo failed'}
 
-    ExecTest "proxmark help text hardnested" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t | grep -q hardnested && echo passed || echo failed'}
+    ExecTest "proxmark help text hardnested" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q hardnested && echo passed || echo failed'}
 
 
     ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf'"} "at_enc"
