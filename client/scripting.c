@@ -31,6 +31,7 @@
 #include "proxmark3.h"
 #include "crc16.h"
 #include "protocols.h"
+#include "fileutils.h"    // searchfile
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
@@ -1052,6 +1053,29 @@ static int l_ndefparse(lua_State *L) {
     return 1;
 }
 
+static int l_searchfile(lua_State *L) {
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if (n != 2)  {
+        return returnToLuaWithError(L, "Only filename and extension");
+    }
+    
+    size_t size;
+     // data
+    const char *filename = luaL_checklstring(L, 1, &size);
+    if ( size == 0 )
+        return returnToLuaWithError(L, "Must specify filename");
+    
+    const char *suffix =  luaL_checklstring(L, 2, &size);        
+    char *path;
+    int res = searchFile(&path, "", filename, suffix, false);
+    if ( res != PM3_SUCCESS) {
+        return returnToLuaWithError(L, "Failed to find file");
+    }
+   
+    lua_pushstring(L, path);
+    return 1;
+}
 
 /**
  * @brief Sets the lua path to include "./lualibs/?.lua", in order for a script to be
@@ -1112,6 +1136,7 @@ int set_pm3_libraries(lua_State *L) {
         {"t55xx_detect",                l_T55xx_detect},
         {"ndefparse",                   l_ndefparse},
         {"fast_push_mode",              l_fast_push_mode},
+        {"search_file",                 l_searchfile},
         {NULL, NULL}
     };
 
