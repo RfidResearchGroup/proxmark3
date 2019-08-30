@@ -31,6 +31,7 @@
 #define LUA_LIBRARIES_SUBDIR "lualibs/"
 #define LUA_SCRIPTS_SUBDIR   "luascripts/"
 #define RESOURCES_SUBDIR   "resources/"
+#define TRACES_SUBDIR   "traces/"
 
 #define PACKED __attribute__((packed))
 

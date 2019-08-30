@@ -23,6 +23,7 @@
 #include "lfdemod.h"  // for demod code
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem4x.h" // askem410xdecode
+#include "fileutils.h" // searchFile
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
@@ -1646,11 +1647,18 @@ static int CmdLoad(const char *Cmd) {
     if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
     memcpy(filename, Cmd, len);
 
-    FILE *f = fopen(filename, "r");
-    if (!f) {
-        PrintAndLogEx(WARNING, "couldn't open '%s'", filename);
+    char *path;
+    if (searchFile(&path, TRACES_SUBDIR, filename, "") != PM3_SUCCESS) {
         return PM3_EFILE;
     }
+
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        PrintAndLogEx(WARNING, "couldn't open '%s'", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
 
     GraphTraceLen = 0;
     char line[80];
