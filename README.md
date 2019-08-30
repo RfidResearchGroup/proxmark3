@@ -25,6 +25,7 @@ It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.
 |[Notes on external flash](/doc/ext_flash_notes.md)|||
 |[Notes on Termux / Android](/doc/termux_notes.md)|||
 |[Notes on Wireshark / tracedata](/doc/trace_wireshark_notes.md)|||
+|[Notes on loclass](/doc/loclass_notes.md)|||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
 
@@ -46,7 +47,7 @@ This fork now compiles just fine on
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604, 1804, 1904
    - Mac OS X / Homebrew
-   - ParrotOS, Gentoo, Pentoo
+   - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux
    - WSL, WSL2  (Windows subsystem linux) on Windows 10
    - Docker container
 
@@ -59,6 +60,7 @@ If you intend to contribute to the code, please read the [coding style notes](HA
 - Internal notes on [standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)
 - Internal notes on [Termux / Android](/doc/termux_notes.md)
 - Internal notes on [Wireshark / tracedata](/doc/trace_wireshark_notes.md)
+- Internal notes on [loclass](/doc/loclass_notes.md)
 
 ## Cheat sheet
 Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
