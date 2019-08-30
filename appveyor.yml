@@ -193,9 +193,9 @@ build_script:
 
     }
 
-    if(!(Test-Path C:\ProxSpace\pm3\client\hardnested\tables\*.bin.z)){
+    if(!(Test-Path C:\ProxSpace\pm3\client\resources\hardnested_tables\*.bin.z)){
 
-    throw "Files in hardnested\tables not exists."
+    throw "Files in client\resources\hardnested_tables is not exists."
 
     }
 
@@ -220,9 +220,7 @@ build_script:
 
     New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\hardnested\tables
 
-    Copy-Item C:\ProxSpace\pm3\client\hardnested\*.bin C:\ProxSpace\Release\hardnested
-
-    Copy-Item C:\ProxSpace\pm3\client\hardnested\tables\*.bin.z C:\ProxSpace\Release\hardnested\tables
+    Copy-Item C:\ProxSpace\pm3\client\resources\hardnested_tables\*.bin.z C:\ProxSpace\Release\hardnested\tables
     
     # dll files
 

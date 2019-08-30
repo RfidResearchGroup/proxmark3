@@ -58,7 +58,13 @@ int ExecuteCryptoTests(bool verbose) {
     res = mbedtls_entropy_self_test(verbose);
     if (res) TestFail = true;
 
-    res = mbedtls_timing_self_test(verbose);
+    // retry for CI (when resources too low)
+    for (int i = 0; i < 3; i++) {
+        res = mbedtls_timing_self_test(verbose);
+        if (!res)
+            break;
+        PrintAndLogEx(WARNING, "Repeat timing test %d", i + 1);
+    }
     if (res) TestFail = true;
 
     res = mbedtls_ctr_drbg_self_test(verbose);
