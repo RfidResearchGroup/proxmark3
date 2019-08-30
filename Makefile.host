@@ -1,36 +1,19 @@
-# Hide full compilation line:
-ifneq ($(V),1)
-  Q?=@
+# This Makefile might have been called from various subdirs, trying to find our Makefile.defs
+ifeq ($(DEFSBEENHERE),)
+    -include Makefile.defs
 endif
-# To see full command lines, use make V=1
-
-INSTALLBINRELPATH = /bin/
-INSTALLTOOLSRELPATH = /share/proxmark3/tools/
-
-CC = gcc
-LD = gcc
-RM = rm -f
-MV = mv
-CP = cp -a
-MKDIR = mkdir -p
-TOUCH = touch
-FALSE = false
+ifeq ($(DEFSBEENHERE),)
+    -include ../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    $(error Can't find Makefile.defs)
+endif
 
 CFLAGS ?= -Wall -Werror -O3
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
-PREFIX ?= /usr/local
-
-platform = $(shell uname)
-
-ifeq ($(platform),Darwin)
-AR= /usr/bin/ar rcs
-RANLIB= /usr/bin/ranlib
-else
-AR= ar rcs
-RANLIB= ranlib
-endif
-RM= rm -f
-RMDIR= rm -rf
 
 vpath %.c $(MYSRCPATHS)
 

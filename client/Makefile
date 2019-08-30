@@ -9,33 +9,13 @@
 # Add -DNOFORCE  to disable the -F switch
 # Add -DPRESETS  to compile with preset models (edit config.h)
 
-# Hide full compilation line:
-ifneq ($(V),1)
-  Q?=@
-endif
-# To see full command lines, use make V=1
+# Must be called before any Makefile include
+ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
-INSTALLBINRELPATH = /bin/
-INSTALLSHARERELPATH = /share/proxmark3/
+include ../Makefile.defs
+
 INSTALLBIN = proxmark3 proxmark3-flasher
 INSTALLSHARE = lualibs luascripts resources dictionaries
-
-CC = gcc
-CXX = g++
-LD = g++
-TAR = tar
-TARFLAGS ?= -v --ignore-failed-read -r
-TARFLAGS += -C .. -f
-RM = rm -f
-RMDIR= rm -rf
-MKDIR = mkdir -p
-MV = mv
-TOUCH = touch
-FALSE = false
-CP=cp -a
-
-platform = $(shell uname)
-ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
 VPATH = ../common uart
 vpath %.dic dictionaries

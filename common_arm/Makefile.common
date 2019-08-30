@@ -6,47 +6,33 @@
 # Common makefile functions for all platforms
 #-----------------------------------------------------------------------------
 
-# This new makefile replaces the previous Makefile/Makefile.linux
-# with as much common code for both environments as possible.
-# Following is a short OS detection to set up variables, all the
-# remaining Makefile should be portable and only depend on these
-# variables
-#
-
-ifneq ($(V),1)
-  Q?=@
-endif
-# To see full command lines, use make V=1
-
 # Make sure that all is the default target
 # (The including Makefile still needs to define what 'all' is)
 
 all:
 
-platform = $(shell uname)
-PREFIX?=/usr/local
-INSTALLFWRELPATH = /share/proxmark3/firmware/
+# This Makefile might have been called from various subdirs, trying to find our Makefile.defs
+ifeq ($(DEFSBEENHERE),)
+    -include Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    $(error Can't find Makefile.defs)
+endif
 
-CROSS  ?= arm-none-eabi-
 CC = $(CROSS)gcc
 AS = $(CROSS)as
 LD = $(CROSS)ld
 OBJCOPY = $(CROSS)objcopy
-GZIP=gzip
-MV=mv
 
 OBJDIR = obj
 
 INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
-
-TAR=tar
-TARFLAGS = -C .. -rvf
-RM=rm -f
-RMDIR=rm -rf
-CP=cp -a
-MKDIR=mkdir -p
-PATHSEP=/
-DETECTED_OS=$(platform)
 
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
 VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/zlib ../fpga ../armsrc/Standalone

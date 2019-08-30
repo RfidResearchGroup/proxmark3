@@ -1,14 +1,5 @@
-# Hide full compilation line:
-ifneq ($(V),1)
-  Q?=@
-endif
-# To see full command lines, use make V=1
 
-CP = cp -a
-GZIP=gzip
-MKDIR = mkdir -p
-RM = rm -f
-RMDIR = rm -rf
+include Makefile.defs
 -include Makefile.platform
 -include .Makefile.options.cache
 include common_arm/Makefile.hal
