@@ -58,29 +58,30 @@ recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean help _test bootrom flash-bootrom os flash-os flash-all recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean help _test bootrom flash-bootrom fullimage flash-fullimage flash-all recovery client mfkey nonce2key style checks FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
 	@echo
 	@echo "Possible targets:"
-	@echo "+ all           - Make all targets: bootrom, armsrc and OS-specific host tools"
-	@echo "+ clean         - Clean in all targets"
+	@echo "+ all             - Make all targets: bootrom, fullimage and OS-specific host tools"
+	@echo "+ clean           - Clean in all targets"
+	@echo "+ .../clean       - Clean in specified target and its deps, e.g. bootrom/clean"
 	@echo
-	@echo "+ bootrom       - Make bootrom"
-	@echo "+ os            - Make armsrc (includes fpga)"
-	@echo "+ flash-bootrom - Make bootrom and flash it"
-	@echo "+ flash-os      - Make armsrc and flash os image (includes fpga)"
-	@echo "+ flash-all     - Make bootrom and armsrc and flash bootrom and os image"
-	@echo "+ recovery      - Make bootrom and armsrc images for JTAG flashing"
+	@echo "+ bootrom         - Make bootrom"
+	@echo "+ fullimage       - Make armsrc fullimage (includes fpga)"
+	@echo "+ flash-bootrom   - Make and flash bootrom"
+	@echo "+ flash-fullimage - Make and flash fullimage"
+	@echo "+ flash-all       - Make and flash bootrom and fullimage"
+	@echo "+ recovery        - Make bootrom and fullimage files for JTAG flashing"
 	@echo
-	@echo "+ client        - Make only the OS-specific host client"
-	@echo "+ mfkey         - Make tools/mfkey"
-	@echo "+ nonce2key     - Make tools/nonce2key"
-	@echo "+ fpga_compress - Make tools/fpga_compress"
+	@echo "+ client          - Make only the OS-specific host client"
+	@echo "+ mfkey           - Make tools/mfkey"
+	@echo "+ nonce2key       - Make tools/nonce2key"
+	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
-	@echo "+ style         - Apply some automated source code formatting rules"
-	@echo "+ checks        - Detect various encoding issues in source code"
+	@echo "+ style           - Apply some automated source code formatting rules"
+	@echo "+ checks          - Detect various encoding issues in source code"
 	@echo
 	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
 	@echo "To activate verbose mode, use make V=1"
@@ -89,7 +90,9 @@ client: client/all
 
 bootrom: bootrom/all
 
-os: armsrc/all
+fullimage: armsrc/all
+
+fullimage/clean: armsrc/clean
 
 recovery: recovery/all
 
@@ -102,7 +105,7 @@ fpga_compress: fpga_compress/all
 flash-bootrom: bootrom/obj/bootrom.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) $(FLASH_PORT) -b $(subst /,$(PATHSEP),$<)
 
-flash-os: armsrc/obj/fullimage.elf $(FLASH_TOOL)
+flash-fullimage: armsrc/obj/fullimage.elf $(FLASH_TOOL)
 	$(FLASH_TOOL) $(FLASH_PORT) $(subst /,$(PATHSEP),$<)
 
 flash-all: bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf $(FLASH_TOOL)
