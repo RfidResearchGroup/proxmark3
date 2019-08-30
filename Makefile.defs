@@ -32,7 +32,7 @@ INSTALLBINRELPATH =   /bin/
 INSTALLSHARERELPATH = /share/proxmark3/
 INSTALLFWRELPATH =    /share/proxmark3/firmware/
 INSTALLTOOLSRELPATH = /share/proxmark3/tools/
-INSTALLDOCRELPATH =   /share/doc/proxmark3/
+INSTALLDOCSRELPATH =   /share/doc/proxmark3/
 
 platform = $(shell uname)
 DETECTED_OS=$(platform)

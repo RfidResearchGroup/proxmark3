@@ -18,20 +18,24 @@ all clean install uninstall: %: client/% bootrom/% armsrc/% recovery/% mfkey/% n
 
 INSTALLTOOLS=pm3_eml2lower.sh pm3_eml2upper.sh pm3_mfdread.py pm3_mfd2eml.py pm3_eml2mfd.py findbits.py rfidtest.pl xorcheck.py
 INSTALLSIMFW=sim011.bin sim011.sha512.txt
+INSTALLSCRIPTS=pm3 pm3-flash-all pm3-flash-bootrom pm3-flash-fullimage
+INSTALLSHARES=tools/jtag_openocd traces
+INSTALLDOCS=doc/*.md doc/md
 
 install: all
 	$(info [@] Installing common resources to $(MYDESTDIR)$(PREFIX)...)
+ifneq (,$(INSTALLSCRIPTS))
 	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)
-	# TODO scripts must be adapted, they're currently broken
-	$(Q)$(CP) proxmark3.sh $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3
-	$(Q)$(CP) flash-all.sh $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-all
-	$(Q)$(CP) flash-bootrom.sh $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-bootrom
-	$(Q)$(CP) flash-fullimage.sh $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-fullimage
+	$(Q)$(CP) $(INSTALLSCRIPTS) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)
+endif
+ifneq (,$(INSTALLSHARES))
 	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
-	$(Q)$(CP) tools/jtag_openocd $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
-	$(Q)$(CP) traces $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
-	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLDOCRELPATH)
-	$(Q)$(CP) doc/* $(DESTDIR)$(PREFIX)$(INSTALLDOCRELPATH)
+	$(Q)$(CP) $(INSTALLSHARES) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
+endif
+ifneq (,$(INSTALLDOCS))
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLDOCSRELPATH)
+	$(Q)$(CP) $(INSTALLDOCS) $(DESTDIR)$(PREFIX)$(INSTALLDOCSRELPATH)
+endif
 ifneq (,$(INSTALLTOOLS))
 	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
 	$(Q)$(CP) $(foreach tool,$(INSTALLTOOLS),tools/$(tool)) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
@@ -47,13 +51,16 @@ endif
 
 uninstall:
 	$(info [@] Uninstalling common resources from $(MYDESTDIR)$(PREFIX)...)
-	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3
-	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-all
-	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-bootrom
-	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)/pm3-flash-fullimage
-	$(Q)$(RMDIR) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)/jtag_openocd
-	$(Q)$(RMDIR) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)/traces
-	$(Q)$(RMDIR) $(DESTDIR)$(PREFIX)$(INSTALLDOCRELPATH)
+ifneq (,$(INSTALLSCRIPTS))
+	$(Q)$(RM) $(foreach script,$(INSTALLSCRIPTS),$(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)$(notdir $(script)))
+endif
+ifneq (,$(INSTALLSHARES))
+	$(Q)$(RMDIR) $(foreach share,$(INSTALLSHARES),$(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)$(notdir $(share)))
+endif
+ifneq (,$(INSTALLDOCS))
+	$(Q)$(RMDIR) $(foreach doc,$(INSTALLDOCS),$(DESTDIR)$(PREFIX)$(INSTALLDOCSRELPATH)$(notdir $(doc)))
+	$(Q)$(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(INSTALLDOCSRELPATH)
+endif
 ifneq (,$(INSTALLTOOLS))
 	$(Q)$(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)$(notdir $(tool)))
 endif

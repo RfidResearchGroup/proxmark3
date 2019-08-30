@@ -1,10 +1,25 @@
 #!/bin/bash
 
-FULLIMAGE="armsrc/obj/fullimage.elf"
-BOOTIMAGE="bootrom/obj/bootrom.elf"
-
 PM3PATH=$(dirname "$0")
-cd "$PM3PATH" || exit 1
+# try pm3 dirs in current repo workdir
+if [ -d "$PM3PATH/client/" ]; then
+    CLIENT="$PM3PATH/client/proxmark3"
+    FLASHER="$PM3PATH/client/proxmark3-flasher"
+    FULLIMAGE="$PM3PATH/armsrc/obj/fullimage.elf"
+    BOOTIMAGE="$PM3PATH/bootrom/obj/bootrom.elf"
+# try install dir
+elif [ -x "$PM3PATH/proxmark3" ]; then
+    CLIENT="$PM3PATH/proxmark3"
+    FLASHER="$PM3PATH/proxmark3-flasher"
+    FULLIMAGE="$PM3PATH/../share/proxmark3/firmware/fullimage.elf"
+    BOOTIMAGE="$PM3PATH/../share/proxmark3/firmware/bootrom.elf"
+else
+# hope it's installed somehow, still not sure where fw images are...
+    CLIENT="proxmark3"
+    FLASHER="proxmark3-flasher"
+    FULLIMAGE="$PM3PATH/../share/proxmark3/firmware/fullimage.elf"
+    BOOTIMAGE="$PM3PATH/../share/proxmark3/firmware/bootrom.elf"
+fi
 
 function wait4proxmark_Linux {
     echo >&2 "[=] Waiting for Proxmark3 to appear..."
@@ -63,14 +78,14 @@ function wait4proxmark_WSL {
 
 SCRIPT=$(basename -- "$0")
 
-if [ "$SCRIPT" = "proxmark3.sh" ]; then
-  CMD() { client/proxmark3 "$@"; }
-elif [ "$SCRIPT" = "flash-all.sh" ]; then
-  CMD() { client/flasher "$1" -b "$BOOTIMAGE" "$FULLIMAGE"; }
-elif [ "$SCRIPT" = "flash-fullimage.sh" ]; then
-  CMD() { client/flasher "$1" "$FULLIMAGE"; }
-elif [ "$SCRIPT" = "flash-bootrom.sh" ]; then
-  CMD() { client/flasher "$1" -b "$BOOTIMAGE"; }
+if [ "$SCRIPT" = "pm3" ]; then
+  CMD() { $CLIENT "$@"; }
+elif [ "$SCRIPT" = "pm3-flash-all" ]; then
+  CMD() { $FLASHER "$1" -b "$BOOTIMAGE" "$FULLIMAGE"; }
+elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
+  CMD() { $FLASHER "$1" "$FULLIMAGE"; }
+elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
+  CMD() { $FLASHER "$1" -b "$BOOTIMAGE"; }
 else
   echo "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1
