@@ -66,6 +66,10 @@ If you intend to contribute to the code, please read the [coding style notes](HA
 ## Cheat sheet
 Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
 
+## Maintainers ( package, distro )
+To all distro, package maintainers, we tried to make your life easier. `make install` is now available and if you want to know more.
+- [Maintainers](/doc/md/Development/Maintainers.md)
+
 ## Why didn't you base it on official Proxmark3 Master?
 
 The separation from official Proxmark3 repo gives us a lot of freedom to create a firmware/client that suits the RDV40 features. We don't want to mess up the official Proxmark3 repo with RDV40 specific code.
