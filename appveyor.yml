@@ -200,27 +200,13 @@ build_script:
     }
 
 
-    #copy
+    #install
 
-    Write-Host "Copy release files..." -NoNewLine -ForegroundColor Yellow
+    Write-Host "Installing..." -NoNewLine -ForegroundColor Yellow
 
     New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release
 
-    Copy-Item C:\ProxSpace\pm3\client\*.exe C:\ProxSpace\Release
-
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\arm
-
-    Copy-Item C:\ProxSpace\pm3\armsrc\obj\*.elf C:\ProxSpace\Release\arm
-
-    Copy-Item C:\ProxSpace\pm3\bootrom\obj\*.elf C:\ProxSpace\Release\arm
-
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\luascripts
-
-    Copy-Item C:\ProxSpace\pm3\client\luascripts\*.lua C:\ProxSpace\Release\luascripts
-
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\hardnested\tables
-
-    Copy-Item C:\ProxSpace\pm3\client\resources\hardnested_tables\*.bin.z C:\ProxSpace\Release\hardnested\tables
+    bash -c -i 'make install DESTDIR=C:\ProxSpace\Release PREFIX= UDEV_PREFIX=\udev\rules.d'
     
     # dll files
 
@@ -366,7 +352,7 @@ test_script:
 
     #file test
 
-    ExecTest "proxmark3 exists" "proxmark3.exe" {Test-Path C:\ProxSpace\Release\proxmark3.exe}
+    ExecTest "proxmark3 exists" "proxmark3.exe" {Test-Path C:\ProxSpace\Release\bin\proxmark3.exe}
 
     ExecTest "arm image exists" "\arm\fullimage1.elf" {Test-Path C:\ProxSpace\Release\arm\fullimage.elf}
 
@@ -409,4 +395,4 @@ on_success:
 on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
-- ps: $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
