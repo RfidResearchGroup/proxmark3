@@ -735,7 +735,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     switch (dftype) {
         case BIN: {
-            res = loadFile(filename, ".bin", (void *)&dump, 2048, &bytes_read);
+            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
             break;
         }
         case EML: {
