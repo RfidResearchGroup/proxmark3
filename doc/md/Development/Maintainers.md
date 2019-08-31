@@ -1,4 +1,4 @@
-Hi maintainers!
+# Hi maintainers!
 
 Here are some tips how to integrate this repo in some nice package for your distro.
 Feel free to contact us via Github issues for any question, suggestion or if you want to share useful tricks in this file for other maintainers.
