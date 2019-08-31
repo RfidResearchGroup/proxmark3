@@ -163,7 +163,7 @@ endif
 # configure system to ignore PM3 device as a modem (ModemManager blacklist, effective *only* if ModemManager is not using _strict_ policy)
 # Read doc/md/ModemManager-Must-Be-Discarded.md for more info
 udev:
-	sudo cp -rf driver/77-pm3-usb-device-blacklist.rules /etc/udev/rules.d/77-pm3-usb-device-blacklist.rules
+	sudo cp -rf driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)/etc/udev/rules.d/77-pm3-usb-device-blacklist.rules
 	sudo udevadm control --reload-rules
 
 # configure system to add user to the dialout group

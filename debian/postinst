@@ -1,0 +1,5 @@
+#!/bin/bash
+
+if [ -e /etc/udev/rules.d/77-pm3-usb-device-blacklist.rules ]; then
+	udevadm control --reload-rules || true
+fi
