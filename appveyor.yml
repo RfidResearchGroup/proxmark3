@@ -200,45 +200,31 @@ build_script:
     }
 
 
-    #copy
+    #install
 
-    Write-Host "Copy release files..." -NoNewLine -ForegroundColor Yellow
+    Write-Host "Installing..." -NoNewLine -ForegroundColor Yellow
 
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release
+    New-Item -ItemType Directory -Force -Path C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\pm3\client\*.exe C:\ProxSpace\Release
-
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\arm
-
-    Copy-Item C:\ProxSpace\pm3\armsrc\obj\*.elf C:\ProxSpace\Release\arm
-
-    Copy-Item C:\ProxSpace\pm3\bootrom\obj\*.elf C:\ProxSpace\Release\arm
-
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\luascripts
-
-    Copy-Item C:\ProxSpace\pm3\client\luascripts\*.lua C:\ProxSpace\Release\luascripts
-
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\hardnested\tables
-
-    Copy-Item C:\ProxSpace\pm3\client\resources\hardnested_tables\*.bin.z C:\ProxSpace\Release\hardnested\tables
+    bash -c -i 'make install DESTDIR=Release PREFIX= UDEV_PREFIX=\udev\rules.d'
     
     # dll files
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libgcc_s_dw2-1.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libgcc_s_dw2-1.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libstdc++-6.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libstdc++-6.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libwinpthread-1.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libwinpthread-1.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Core.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Core.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Gui.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Gui.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Widgets.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Widgets.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libreadline*.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libreadline*.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libtermcap-0.dll C:\ProxSpace\Release
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libtermcap-0.dll C:\ProxSpace\pm3\Release\bin
 
     Write-Host "[ OK ]" -ForegroundColor Green
 
@@ -260,7 +246,7 @@ build_script:
 
     cd C:\ProxSpace
 
-    7z a release.zip C:\ProxSpace\Release
+    7z a release.zip C:\ProxSpace\pm3\Release
 
     Push-AppveyorArtifact release.zip -DeploymentName "$releasename"
 
@@ -366,13 +352,13 @@ test_script:
 
     #file test
 
-    ExecTest "proxmark3 exists" "proxmark3.exe" {Test-Path C:\ProxSpace\Release\proxmark3.exe}
+    ExecTest "proxmark3 exists" "proxmark3.exe" {Test-Path C:\ProxSpace\pm3\Release\bin\proxmark3.exe}
 
-    ExecTest "arm image exists" "\arm\fullimage1.elf" {Test-Path C:\ProxSpace\Release\arm\fullimage.elf}
+    ExecTest "arm image exists" "pm3-flash-fullimage" {Test-Path C:\ProxSpace\pm3\Release\bin\pm3-flash-fullimage}
 
-    ExecTest "bootrom exists" "bootrom.elf" {Test-Path C:\ProxSpace\Release\arm\bootrom.elf}
+    ExecTest "bootrom exists" "pm3-flash-bootrom" {Test-Path C:\ProxSpace\pm3\Release\bin\pm3-flash-bootrom}
 
-    ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\Release\hardnested\tables\*.z}
+    ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\resources\hardnested_tables\*.z}
 
     ExecTest "release exists" "release.zip" {Test-Path C:\ProxSpace\release.zip}
 
