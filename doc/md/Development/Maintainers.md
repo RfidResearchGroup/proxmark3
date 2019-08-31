@@ -10,7 +10,10 @@ Makefile
 
 `DESTDIR` can be provided by environment variable, it can be a relative path and it will be prepended to `PREFIX`, so you can use e.g.:
 
-`make -j install DESTDIR=build PREFIX=/usr UDEV_PREFIX=/lib/udev/rules.d`
+```
+make -j
+make install DESTDIR=build PREFIX=/usr UDEV_PREFIX=/lib/udev/rules.d
+```
 
 and it will be deployed as
 
