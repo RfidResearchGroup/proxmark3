@@ -20,7 +20,7 @@ It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.
 |[Why didn't you base it on official Proxmark3 Master?](#why-didnt-you-base-it-on-official-proxmark3-master)| [Homebrew (Mac OS X) & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 |[Proxmark3 GUI](#proxmark3-gui)|[Setup and build for Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)|[Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) |[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|
-|[Notes on UART](/doc/uart_notes.md)||[Command Cheat sheet](/doc/cheatsheet.md)|
+|[Notes on UART](/doc/uart_notes.md)|[Maintainers](/doc/md/Development/Maintainers.md)|[Command Cheat sheet](/doc/cheatsheet.md)|
 |[Notes on Frame format](/doc/new_frame_format.md)||[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 |[Notes on external flash](/doc/ext_flash_notes.md)|||
 |[Notes on Termux / Android](/doc/termux_notes.md)|||
