@@ -356,7 +356,7 @@ test_script:
 
     ExecTest "arm image exists" "pm3-flash-fullimage" {Test-Path C:\ProxSpace\pm3\Release\bin\pm3-flash-fullimage}
 
-    ExecTest "bootrom exists" "pm3-flash-bootrom" {Test-Path C:\ProxSpace\pm3\Release\lib\pm3-flash-bootrom}
+    ExecTest "bootrom exists" "pm3-flash-bootrom" {Test-Path C:\ProxSpace\pm3\Release\bin\pm3-flash-bootrom}
 
     ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\resources\hardnested_tables\*.z}
 
