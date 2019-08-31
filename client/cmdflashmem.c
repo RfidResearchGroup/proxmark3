@@ -209,9 +209,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
             datalen += 2;
             break;
         case DICTIONARY_NONE:
-            res = loadFile(filename, ".bin", data, FLASH_MEM_MAX_SIZE, &datalen);
-            //int res = loadFileEML( filename, data, &datalen);
-            if (res) {
+            res = loadFile_safe(filename, ".bin", (void**)&data, &datalen);
+            if (res != PM3_SUCCESS) {
                 free(data);
                 return PM3_EFILE;
             }
@@ -223,7 +222,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             }
             break;
     }
-
+// not needed when we transite to loadxxxx_safe methods.(iceman)
     uint8_t *newdata = realloc(data, datalen);
     if (newdata == NULL) {
         free(data);
