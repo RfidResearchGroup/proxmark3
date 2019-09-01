@@ -23,7 +23,7 @@ It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.
 |[Notes on UART](/doc/uart_notes.md)|[Maintainers](/doc/md/Development/Maintainers.md)|[Command Cheat sheet](/doc/cheatsheet.md)|
 |[Notes on Frame format](/doc/new_frame_format.md)||[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 |[Notes on external flash](/doc/ext_flash_notes.md)||[EMV](/doc/emv_notes.md)|
-|[Notes on Termux / Android](/doc/termux_notes.md)|||
+|[Notes on Termux / Android](/doc/termux_notes.md)||[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)|
 |[Notes on Wireshark / tracedata](/doc/trace_wireshark_notes.md)|||
 |[Notes on loclass](/doc/loclass_notes.md)|||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
