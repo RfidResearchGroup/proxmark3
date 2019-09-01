@@ -25,7 +25,7 @@ Install the requirements
 
 ```sh
 sudo apt-get install git ca-certificates build-essential libreadline5 libreadline-dev \
-libusb-0.1-4 libusb-dev pkg-config wget gcc-arm-none-eabi libnewlib-dev libqt4-dev
+pkg-config wget gcc-arm-none-eabi libnewlib-dev libqt4-dev
 ```
 
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.
@@ -35,7 +35,7 @@ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to 
 ## On ArchLinux
 
 ```sh
-sudo pacman -Sy base-devel p7zip libusb readline arm-none-eabi-gcc arm-none-eabi-newlib git --needed
+sudo pacman -Sy base-devel readline arm-none-eabi-gcc arm-none-eabi-newlib git --needed
 ```
 If you want graphical output (such as in `hw tune`):
 ```sh
