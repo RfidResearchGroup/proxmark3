@@ -206,8 +206,8 @@ build_script:
 
     New-Item -ItemType Directory -Force -Path C:\ProxSpace\pm3\Release\bin
 
-    bash -c -i 'make install DESTDIR=Release PREFIX= UDEV_PREFIX=\udev\rules.d'
-    
+    bash -c -i 'make install DESTDIR=Release PREFIX='
+
     # dll files
 
     Copy-Item C:\ProxSpace\msys2\mingw32\bin\libgcc_s_dw2-1.dll C:\ProxSpace\pm3\Release\bin
@@ -354,9 +354,11 @@ test_script:
 
     ExecTest "proxmark3 exists" "proxmark3.exe" {Test-Path C:\ProxSpace\pm3\Release\bin\proxmark3.exe}
 
-    ExecTest "arm image exists" "pm3-flash-fullimage" {Test-Path C:\ProxSpace\pm3\Release\bin\pm3-flash-fullimage}
+    ExecTest "arm bootrom exists" "bootrom.elf" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\firmware\bootrom.elf}
 
-    ExecTest "bootrom exists" "pm3-flash-bootrom" {Test-Path C:\ProxSpace\pm3\Release\bin\pm3-flash-bootrom}
+    ExecTest "arm image exists" "fullimage.elf" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\firmware\fullimage.elf}
+
+    ExecTest "arm recovery image exists" "proxmark3_recovery.bin" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\firmware\proxmark3_recovery.bin}
 
     ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\resources\hardnested_tables\*.z}
 
