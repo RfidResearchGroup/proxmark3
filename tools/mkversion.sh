@@ -14,7 +14,7 @@ fullgitinfo="RRG/Iceman"
 clean=2
 
 # Do we have acces to git command?
-commandGIT=$(env which git)
+commandGIT=$(env git)
 
 if [ "$commandGIT" != "" ]; then
 
