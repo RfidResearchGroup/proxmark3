@@ -36,11 +36,7 @@ addons:
   homebrew:
     packages:
       - readline
-      - p7zip
-      - libusb-compat
-      - perl
       - qt5
-      - wget
       - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     taps: RfidResearchGroup/proxmark3
 
