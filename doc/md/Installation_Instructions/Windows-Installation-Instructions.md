@@ -98,12 +98,11 @@ Enter WSL prompt (`wsl`) and from there, follow the [Linux Installation Instruct
 
 ```sh
 sudo apt-get update
-sudo apt-get install git ca-certificates build-essential libreadline5 libreadline-dev \
-pkg-config gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib \
-libqt4-dev
+sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
 ```
 
-If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.
+If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.
 
 ## Clone the RRG/Iceman repository
 

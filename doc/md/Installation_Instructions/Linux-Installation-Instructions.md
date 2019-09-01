@@ -24,11 +24,11 @@ sudo apt-get update
 Install the requirements
 
 ```sh
-sudo apt-get install git ca-certificates build-essential libreadline5 libreadline-dev \
-pkg-config gcc-arm-none-eabi libnewlib-dev libqt4-dev
+sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
 ```
 
-If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.
+If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.
 
 If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_ you may have to install `libcanberra-gtk-module`.
 
@@ -47,6 +47,8 @@ sudo pacman -Su qt5-base
 ```sh
 sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel qt5-qtbase-devel libatomic
 ```
+
+If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qt5-qtbase-devel`.
 
 # Clone the RRG/Iceman repository
 
