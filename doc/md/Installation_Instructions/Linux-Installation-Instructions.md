@@ -25,7 +25,7 @@ Install the requirements
 
 ```sh
 sudo apt-get install git ca-certificates build-essential libreadline5 libreadline-dev \
-pkg-config wget gcc-arm-none-eabi libnewlib-dev libqt4-dev
+pkg-config gcc-arm-none-eabi libnewlib-dev libqt4-dev
 ```
 
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.

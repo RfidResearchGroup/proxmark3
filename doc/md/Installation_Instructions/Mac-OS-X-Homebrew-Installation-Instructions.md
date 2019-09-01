@@ -66,7 +66,7 @@ These instructions will show how to setup the environment on OSX to the point wh
 2. Install dependencies:
 
 ```
-brew install readline qt5 wget pkgconfig
+brew install readline qt5 pkgconfig
 brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 ```
 
