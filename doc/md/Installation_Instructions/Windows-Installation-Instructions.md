@@ -98,7 +98,7 @@ Enter WSL prompt (`wsl`) and from there, follow the [Linux Installation Instruct
 
 ```sh
 sudo apt-get update
-sudo apt-get install p7zip git ca-certificates build-essential libreadline5 libreadline-dev libusb-0.1-4 \
+sudo apt-get install git ca-certificates build-essential libreadline5 libreadline-dev libusb-0.1-4 \
 libusb-dev pkg-config wget gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib \
 libqt4-dev
 ```

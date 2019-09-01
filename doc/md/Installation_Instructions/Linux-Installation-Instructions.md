@@ -24,7 +24,7 @@ sudo apt-get update
 Install the requirements
 
 ```sh
-sudo apt-get install p7zip git ca-certificates build-essential libreadline5 libreadline-dev \
+sudo apt-get install git ca-certificates build-essential libreadline5 libreadline-dev \
 libusb-0.1-4 libusb-dev pkg-config wget gcc-arm-none-eabi libnewlib-dev libqt4-dev
 ```
 
