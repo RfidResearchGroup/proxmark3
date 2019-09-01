@@ -22,7 +22,7 @@ It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.
 |[Issues](#issues)|[Blue shark manual](/doc/bt_manual_v10.md) |[Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)|
 |[Notes on UART](/doc/uart_notes.md)|[Maintainers](/doc/md/Development/Maintainers.md)|[Command Cheat sheet](/doc/cheatsheet.md)|
 |[Notes on Frame format](/doc/new_frame_format.md)||[More cheat sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
-|[Notes on external flash](/doc/ext_flash_notes.md)|||
+|[Notes on external flash](/doc/ext_flash_notes.md)||[EMV](/doc/emv_notes.md)|
 |[Notes on Termux / Android](/doc/termux_notes.md)|||
 |[Notes on Wireshark / tracedata](/doc/trace_wireshark_notes.md)|||
 |[Notes on loclass](/doc/loclass_notes.md)|||
@@ -62,6 +62,7 @@ If you intend to contribute to the code, please read the [coding style notes](HA
 - Internal notes on [Termux / Android](/doc/termux_notes.md)
 - Internal notes on [Wireshark / tracedata](/doc/trace_wireshark_notes.md)
 - Internal notes on [loclass](/doc/loclass_notes.md)
+- Internal notes on [EMV](/doc/emv_notes.md)
 
 ## Cheat sheet
 Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
