@@ -42,6 +42,12 @@ If you want graphical output (such as in `hw tune`):
 sudo pacman -Su qt5-base
 ```
 
+## On Fedora
+
+```sh
+sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel qt5-qtbase-devel libatomic
+```
+
 # Clone the RRG/Iceman repository
 
 ```sh
