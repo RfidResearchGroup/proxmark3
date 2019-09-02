@@ -801,7 +801,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 
     SetAPDULogging(APDULogging);
 
-    int res = GetExistsFileNameJson("fido", "fido2", fname);
+    int res = GetExistsFileNameJson("fido", cjsonname, fname);
     if (res) {
         PrintAndLogEx(ERR, "ERROR: Can't found the json file.");
         return res;
