@@ -13,7 +13,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "keygen.h"
-#include "util.h"
 
 #define NFC3D_AMIIBO_SIZE 520
 

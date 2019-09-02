@@ -40,6 +40,8 @@ CBORLIBPATH = ./tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
 REVENGPATH = ./reveng
 REVENGLIB = $(REVENGPATH)/libreveng.a
+AMIIBOLIBPATH = ./amiitool
+AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
 
 # common libraries
 MBEDTLSLIBPATH = ../common/mbedtls
@@ -47,7 +49,7 @@ MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
 ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
-LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH)
+LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH)
 INCLUDES_CLIENT = -I. -I../include -I../common -Iuart $(LIBS)
 CFLAGS ?= -Wall -Werror -g -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
@@ -287,8 +289,8 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(QTLDLIBS)
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) $(AMIIBOLIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LDLIBS)  -o $@
 
@@ -321,6 +323,7 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) clean
 
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
@@ -364,6 +367,10 @@ $(CBORLIB):
 $(REVENGLIB):
 	$(info [*] MAKE reveng)
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) all
+
+$(AMIIBOLIB):
+	$(info [*] MAKE amiibo)
+	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) all
 
 # common libraries:
 $(MBEDTLSLIB):
