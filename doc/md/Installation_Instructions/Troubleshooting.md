@@ -6,7 +6,7 @@ Always use the latest repository commits from *master* branch. There are always 
 
 ## Table of Contents
 
-  * [./proxmark3.sh or ./proxmark3-flash-*.sh doesn't see my Proxmark](#proxmark3sh-or-proxmark3-flash-sh-doesnt-see-my-proxmark)
+  * [./pm3.sh or ./pma3-flash-*.sh doesn't see my Proxmark](#pm3sh-or-pmk3-flash-sh-doesnt-see-my-proxmark)
   * [My Proxmark3 seems bricked](#my-proxmark3-seems-bricked)
      * [Maybe just a false alarm?](#maybe-just-a-false-alarm)
      * [Find out why it would be bricked](#find-out-why-it-would-be-bricked)
@@ -18,7 +18,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [File not found](#file-not-found)
   * [pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
 
-## `./proxmark3.sh` or `./proxmark3-flash-*.sh` doesn't see my Proxmark
+## `./pm3.sh` or `./pm3-flash-*.sh` doesn't see my Proxmark
 
 Try using directly the client or flasher:
 
@@ -44,8 +44,8 @@ Note that with the Bluetooth adapter, you *have to* use directly the client, and
 The flasher refused to flash your Proxmark3? Are there any messages in *red*? The most common reason is that the Proxmark3 RDV4 firmware recently got a new bootloader able to handle larger firmwares and... the image grew over 256k almost at the same time. So your old bootloader can't flash such new images. But it's easy, you just need to flash *first* the bootloader *only*, then the image.
 
 ```
-./flash-bootrom.sh
-./flash-fullimage.sh
+./pm3-flash-bootrom.sh
+./pm3-flash-fullimage.sh
 ```
 or
 ```
@@ -67,7 +67,7 @@ On new bootloaders, you can release the button. If the pattern disappears, you'r
 Once in bootloader mode, flash the main image.
 
 ```
-./flash-fullimage.sh
+./pm3-flash-fullimage.sh
 ```
 or
 ```
@@ -77,7 +77,7 @@ client/proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 You should be back on tracks now. In case the flasher complains about bootloader version, you can follow the button procedure and flash first your bootloader.
 
 ```
-./flash-bootrom.sh
+./pm3-flash-bootrom.sh
 ```
 or
 ```
@@ -112,7 +112,7 @@ Instructions evolve over time so check if you're still up to date!
 Depending how you launch the client, your working directory might be the root of the repository:
 
 ```
-./proxmark3.sh ...
+./pm3.sh ...
 client/proxmark3 ...
 ```
 
