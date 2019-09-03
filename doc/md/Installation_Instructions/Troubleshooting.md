@@ -6,7 +6,7 @@ Always use the latest repository commits from *master* branch. There are always 
 
 ## Table of Contents
 
-  * [./pm3.sh or ./pma3-flash-*.sh doesn't see my Proxmark](#pm3sh-or-pmk3-flash-sh-doesnt-see-my-proxmark)
+  * [./pm3.sh or ./pm3-flash-*.sh doesn't see my Proxmark](#pm3sh-or-pm3-flash-sh-doesnt-see-my-proxmark)
   * [My Proxmark3 seems bricked](#my-proxmark3-seems-bricked)
      * [Maybe just a false alarm?](#maybe-just-a-false-alarm)
      * [Find out why it would be bricked](#find-out-why-it-would-be-bricked)
