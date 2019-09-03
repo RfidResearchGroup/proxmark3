@@ -54,15 +54,21 @@ pacman -S mingw-w64-x86_64-astyle
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-To use the compiled client and flasher, the only differences are that executables end with `.exe` (e.g. `client/proxmark3-flasher.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows.
+To use the compiled client and flasher, the only differences are that executables end with `.exe` (e.g. `proxmark3-flasher.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows.
 
-To flash: In principle, the helper script `flash-all.sh` should auto-detect your COM port, so you can just try:
+To flash: In principle, the helper script `pm3-flash-all` should auto-detect your COM port, so you can just try:
 
 ```sh
-./flash-all.sh
+pm3-flash-all
 ```
 
 If COM port detection failed, you'll have to call the flasher manually and specify the correct port:
+
+```sh
+proxmark3-flasher.exe comX -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+```
+
+or from the local repo
 
 ```sh
 client/proxmark3-flasher.exe comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
@@ -71,13 +77,13 @@ client/proxmark3-flasher.exe comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimag
 Similarly, to run the client, you may try:
 
 ```sh
-./proxmark3.sh
+pm3
 ```
 
 Or, by specifying the COM port manually:
 
 ```sh
-client/proxmark3.exe comX
+proxmark3.exe comX
 ```
 
 # Installing on Windows with WSL
@@ -141,28 +147,34 @@ and add it to your Bash profile for the next times:
 echo "export DISPLAY=:0" >> ~/.bashrc
 ```
 
-To flash: In principle, the helper script `flash-all.sh` should auto-detect your COMX==/dev/ttySX port, so you can just try:
+To flash: In principle, the helper script `pm3-flash-all` should auto-detect your COMX==/dev/ttySX port, so you can just try:
 
 ```sh
-./flash-all.sh
+pm3-flash-all
 ```
 
 If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-client/proxmark3-flasher /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+proxmark3-flasher.exe /dev/ttySX -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+```
+
+or from the local repo
+
+```sh
+client/proxmark3-flasher.exe /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:
 
 ```sh
-./proxmark3.sh
+pm3
 ```
 
 Or, by specifying the COM port manually:
 
 ```sh
-client/proxmark3 /dev/ttySX
+proxmark3 /dev/ttySX
 ```
 
 Note that it may take a quite long time for a freshly plugged Proxmark3 to be visible on a WSL /dev/ttySX port.

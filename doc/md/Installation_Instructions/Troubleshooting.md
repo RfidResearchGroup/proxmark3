@@ -6,7 +6,7 @@ Always use the latest repository commits from *master* branch. There are always 
 
 ## Table of Contents
 
-  * [./pm3.sh or ./pm3-flash-*.sh doesn't see my Proxmark](#pm3sh-or-pm3-flash-sh-doesnt-see-my-proxmark)
+  * [pm3 or pm3-flash-* doesn't see my Proxmark](#pm3-or-pm3-flash-doesnt-see-my-proxmark)
   * [My Proxmark3 seems bricked](#my-proxmark3-seems-bricked)
      * [Maybe just a false alarm?](#maybe-just-a-false-alarm)
      * [Find out why it would be bricked](#find-out-why-it-would-be-bricked)
@@ -18,7 +18,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [File not found](#file-not-found)
   * [pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
 
-## `./pm3.sh` or `./pm3-flash-*.sh` doesn't see my Proxmark
+## `pm3` or `pm3-flash-*` doesn't see my Proxmark
 
 Try using directly the client or flasher:
 
@@ -44,13 +44,13 @@ Note that with the Bluetooth adapter, you *have to* use directly the client, and
 The flasher refused to flash your Proxmark3? Are there any messages in *red*? The most common reason is that the Proxmark3 RDV4 firmware recently got a new bootloader able to handle larger firmwares and... the image grew over 256k almost at the same time. So your old bootloader can't flash such new images. But it's easy, you just need to flash *first* the bootloader *only*, then the image.
 
 ```
-./pm3-flash-bootrom.sh
-./pm3-flash-fullimage.sh
+pm3-flash-bootrom
+pm3-flash-fullimage
 ```
 or
 ```
-client/proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
-client/proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 ```
 
 ### Find out why it would be bricked
@@ -67,21 +67,21 @@ On new bootloaders, you can release the button. If the pattern disappears, you'r
 Once in bootloader mode, flash the main image.
 
 ```
-./pm3-flash-fullimage.sh
+pm3-flash-fullimage
 ```
 or
 ```
-client/proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 ```
 
 You should be back on tracks now. In case the flasher complains about bootloader version, you can follow the button procedure and flash first your bootloader.
 
 ```
-./pm3-flash-bootrom.sh
+pm3-flash-bootrom
 ```
 or
 ```
-client/proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
 ```
 
 ### Ok, my bootloader is definitively dead, now what?
@@ -109,10 +109,29 @@ Instructions evolve over time so check if you're still up to date!
 
 ## File not found
 
-Depending how you launch the client, your working directory might be the root of the repository:
+If Proxmark3 has been installed with `make install` or packaged for your distro, the binaries should be in your path and you can call them directly:
 
 ```
-./pm3.sh ...
+pm3
+proxmark3
+```
+
+and you must adapt accordingly the file path of some commands, e.g.
+
+```
+proxmark3-flasher <YOUR_PORT_HERE> /usr/local/share/proxmark3/firmware/fullimage.elf
+<>
+proxmark3-flasher <YOUR_PORT_HERE> /usr/share/proxmark3/firmware/fullimage.elf
+
+pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
+<>
+pm3 --> sc upgrade f /usr/share/proxmark3/firmware/sim011.bin
+```
+
+If you didn't install the PRoxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
+
+```
+./pm3 ...
 client/proxmark3 ...
 ```
 
@@ -125,6 +144,10 @@ cd client; ./proxmark3 ...
 Therefore client commands referring to files of the repo must be adapted, e.g.
 
 ```
+client/proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+<>
+./proxmark3-flasher <YOUR_PORT_HERE> ../armsrc/obj/fullimage.elf
+
 pm3 --> sc upgrade f tools/simmodule/sim011.bin
 <>
 pm3 --> sc upgrade f ../tools/simmodule/sim011.bin

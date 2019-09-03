@@ -31,19 +31,31 @@ brew upgrade --fetch-HEAD proxmark3
 
 With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're un bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
 
+In principle, the helper script `pm3-flash-all` should auto-detect your port, so you can just try:
+
 ```sh
-sudo proxmark3-flasher /dev/tty.usbmodemiceman1 -b /usr/local/Cellar/proxmark3/HEAD-<Commit-ID>/share/firmware/bootrom.elf /usr/local/Cellar/proxmark3/HEAD-<Commit-ID>/share/firmware/fullimage.elf
+pm3-flash-all
 ```
 
-> Replace \<Commit-ID\> with the HEAD-XXXX ID displayed by brew.  
-> Depending on the firmware version your Proxmark3 can also appear as `/dev/tty.usbmodem881`
+If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
+```sh
+proxmark3-flasher /dev/tty.usbmodemiceman1 -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+```
+
+> Depending on the firmware version your Proxmark3 can also appear as `/dev/tty.usbmodem881`.
 
 
 ## Run the client
 
 ```sh
-sudo proxmark3 /dev/tty.usbmodemiceman1
+pm3
+```
+
+or, if the port doesn't get properly detected:
+
+```sh
+proxmark3 /dev/tty.usbmodemiceman1
 ```
 
 ## Next steps
@@ -78,13 +90,19 @@ To use the compiled client and flasher, the only difference is that the Proxmark
 
 To flash: With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're un bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
 
-In principle, the helper script `flash-all.sh` should auto-detect your port, so you can just try:
+In principle, the helper script `pm3-flash-all` should auto-detect your port, so you can just try:
 
 ```sh
-./flash-all.sh
+pm3-flash-all
 ```
 
 If port detection failed, you'll have to call the flasher manually and specify the correct port:
+
+```sh
+proxmark3-flasher /dev/tty.usbmodemiceman1 -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+```
+
+or from the local repo
 
 ```sh
 client/proxmark3-flasher /dev/tty.usbmodemiceman1 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
@@ -93,12 +111,12 @@ client/proxmark3-flasher /dev/tty.usbmodemiceman1 -b bootrom/obj/bootrom.elf arm
 Similarly, to run the client, you may try:
 
 ```sh
-./proxmark3.sh
+pm3
 ```
 
 Or, by specifying the port manually:
 
 ```sh
-client/proxmark3 /dev/tty.usbmodemiceman1
+proxmark3 /dev/tty.usbmodemiceman1
 ```
 

@@ -46,7 +46,9 @@ Don't not turn off your device during the execution of this command!!
 Even its a quite fast command you should be warned.  You may brick it if you interrupt it.
 
 ```
-pm3 --> sc upgrade f ../tools/simmodule/sim011.bin 
+pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
+# or if from local repo
+pm3 --> sc upgrade f tools/simmodule/sim011.bin
 ```
 
 You get the following output if the execution was successful:

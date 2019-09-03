@@ -24,11 +24,31 @@ git pull
 make clean && make all
 ```
 
+## Install
+
+This is an optional step. If you do
+
+```sh
+sudo make install
+```
+
+Then the required files will be installed on your system, by default in `/usr/local/bin` and `/usr/local/share/proxmark3`.
+Maintainers can read [this doc](../Development/Maintainers.md) to learn how to modify installation paths via `DESTDIR` and `PREFIX` Makefile variables.
+
+The commands given in the documentation assume you did the installation step. If you didn't, you've to adjust the commands paths and files paths accordingly,
+e.g. calling `./pm3` or `client/proxmark3` instead of just `pm3` or `proxmark3`.
+
 ## Flash the BOOTROM & FULLIMAGE
 
-In most cases, you can run the script `flash-all.sh` which try to auto-detect the port to use, on several OS.
+In most cases, you can run the script `pm3-flash-all` which try to auto-detect the port to use, on several OS.
 
 For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
+
+```sh
+proxmark3-flasher /dev/ttyACM0 -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+```
+
+or from the local repo
 
 ```sh
 client/proxmark3-flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
@@ -36,15 +56,20 @@ client/proxmark3-flasher /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/full
 
 ## Run the client
 
-In most cases, you can run the script `proxmark3.sh` which try to auto-detect the port to use, on several OS.
+In most cases, you can run the script `pm3` which try to auto-detect the port to use, on several OS.
 
 For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
 
 Here, for example, for a Proxmark3 connected via USB under Linux:
 
 ```sh
-cd client
-./proxmark3 /dev/ttyACM0
+proxmark3 /dev/ttyACM0
+```
+
+or from the local repo
+
+```sh
+client/proxmark3 /dev/ttyACM0
 ```
 
 ## Next steps
