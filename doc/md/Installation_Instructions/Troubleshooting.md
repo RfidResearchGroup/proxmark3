@@ -76,7 +76,7 @@ At this point, only reflashing via JTAG can revive your Proxmark3.
 
 See [details here](/doc/jtag_notes.md).
 
-## Slow to boot
+## Slow to boot or difficulties to enumerate the device over USB
 
 You're using another Proxmark3 than a RDV4?
 The RDV4 firmware can run on other Proxmark3 as such but the booting procedure is a bit slower because of the absence of SIM and external flash.
@@ -116,13 +116,8 @@ pm3 --> sc upgrade f tools/simmodule/sim011.bin
 pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
 ```
 
-```
-pm3 --> mem load f default_keys m
-<>
-pm3 --> mem load f client/default_keys m
-```
-
 etc.
 
-This also affects where your history and logfile will be read from and written to.
+## pixmap / pixbuf warnings
 
+If you get warnings related to pixmap or pixbuf such as *Pixbuf theme: Cannot load pixmap file* or *Invalid borders specified for theme pixmap*, it's a problem of your Theme, try another one and the problem should vanish. See e.g. [#354](https://github.com/RfidResearchGroup/proxmark3/issues/354) (Yaru theme on Ubuntu) and [#386](https://github.com/RfidResearchGroup/proxmark3/issues/386) (Kali-X theme on Kali).
