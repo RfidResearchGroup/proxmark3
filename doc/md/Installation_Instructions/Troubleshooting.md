@@ -4,6 +4,20 @@
 
 Always use the latest repository commits from *master* branch. There are always many fixes done almost daily.
 
+## Table of Contents
+
+  * [./proxmark3.sh or ./proxmark3-flash-*.sh doesn't see my Proxmark](#proxmark3sh-or-proxmark3-flash-sh-doesnt-see-my-proxmark)
+  * [My Proxmark3 seems bricked](#my-proxmark3-seems-bricked)
+     * [Maybe just a false alarm?](#maybe-just-a-false-alarm)
+     * [Find out why it would be bricked](#find-out-why-it-would-be-bricked)
+     * [Determine if the bootloader was damaged or only the main OS image](#determine-if-the-bootloader-was-damaged-or-only-the-main-os-image)
+     * [Ok, my bootloader is definitively dead, now what?](#ok-my-bootloader-is-definitively-dead-now-what)
+  * [Slow to boot or difficulties to enumerate the device over USB](#slow-to-boot-or-difficulties-to-enumerate-the-device-over-usb)
+  * [Troubles with SIM card reader](#troubles-with-sim-card-reader)
+  * [Troubles with t5577 commands or MFC/iClass/T55x7 dictionaries](#troubles-with-t5577-commands-or-mfciclasst55x7-dictionaries)
+  * [File not found](#file-not-found)
+  * [pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
+
 ## `./proxmark3.sh` or `./proxmark3-flash-*.sh` doesn't see my Proxmark
 
 Try using directly the client or flasher:
