@@ -30,6 +30,7 @@ It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.
 |[Donations](#Donations)|||
 
 ## Support on other Proxmark3 platforms
+
 In order to build this repo for other Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
 ## What has changed?
@@ -43,12 +44,13 @@ On the hardware side:
 On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 
 ## Development
-This fork now compiles just fine on 
+
+This repo now compiles just fine on 
    - Proxspace v3.2
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604, 1804, 1904
    - Mac OS X / Homebrew
-   - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux
+   - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora
    - WSL, WSL2  (Windows subsystem linux) on Windows 10
    - Docker container
 
@@ -65,9 +67,11 @@ If you intend to contribute to the code, please read the [coding style notes](HA
 - Internal notes on [EMV](/doc/emv_notes.md)
 
 ## Cheat sheet
+
 Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
 
 ## Maintainers ( package, distro )
+
 To all distro, package maintainers, we tried to make your life easier. `make install` is now available and if you want to know more.
 - [Maintainers](/doc/md/Development/Maintainers.md)
 
@@ -76,6 +80,7 @@ To all distro, package maintainers, we tried to make your life easier. `make ins
 The separation from official Proxmark3 repo gives us a lot of freedom to create a firmware/client that suits the RDV40 features. We don't want to mess up the official Proxmark3 repo with RDV40 specific code.
 
 ## Proxmark3 GUI
+
 The official PM3-GUI from Gaucho will not work.
 The new universal GUI will work. [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) Almost, change needed in order to show helptext when client isn't connected to a device.
 
@@ -91,6 +96,7 @@ It's needed to have a good USB cable to connect Proxmark3 to USB. If you have st
 - updated Feb 2019 [@5w0rdfish](https://mobile.twitter.com/5w0rdFish)
 
 # Donations
+
 Nothing says thank you as much as a donation. So if you feel the love, do feel free to become a iceman patron. For some tiers it comes with rewards.
 
 https://www.patreon.com/iceman1001
