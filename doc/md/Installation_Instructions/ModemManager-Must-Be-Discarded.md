@@ -121,7 +121,7 @@ In short:
 * unplug device
 * press button and keep it pressed (IMPORTANT)
 * plug in device
-* run flash command `sudo proxmark3-flasher /dev/ttyACM0 /usr/local/share/proxmark3/firmware/fullimage.elf`
+* run flash command `proxmark3-flasher /dev/ttyACM0 /usr/local/share/proxmark3/firmware/fullimage.elf`
 * wait until flash is finished
 * release button
 * un/plug device
