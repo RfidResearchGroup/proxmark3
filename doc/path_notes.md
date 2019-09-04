@@ -11,14 +11,18 @@ If you install the Proxmark tools yourself with `make install`, they will go und
 
 The main Proxmark3 executables / shellscripts will be copied to
 
-`/usr/local/bin/`
+```
+/usr/local/bin/
+```
 
 * executables: `proxmark3`, `proxmark3-flasher`
 * scripts: `pm3`, `pm3-flash-all`, `pm3-flash-bootloader`, `pm3-flash-fullimage`
 
 Some more executable / scripts will be copied to
 
-`/usr/local/share/proxmark3/tools`
+```
+/usr/local/share/proxmark3/tools
+```
 
 * executables: `mfkey32`, `mfkey32v2`, `mfkey64`, `nonce2key`
 * scripts: `pm3_eml2lower.sh`, `pm3_eml2upper.sh`, `pm3_mfdread.py`, `pm3_mfd2eml.py`, `pm3_eml2mfd.py`, `findbits.py`, `rfidtest.pl`, `xorcheck.py`
@@ -28,7 +32,9 @@ Some more executable / scripts will be copied to
 
 The recovery / firmware files will be copied to
 
-`/usr/local/share/proxmark3/firmware`
+```
+/usr/local/share/proxmark3/firmware
+```
 
 * Proxmark3 firmware: `bootrom.elf`, `fullimage.elf`, `proxmark3_recovery.bin` (used for JTAG)
 * SIM firmware: `sim011.bin`, `sim011.sha512.txt`
@@ -38,7 +44,9 @@ The recovery / firmware files will be copied to
 
 Proxmark3 client has a lot of sample trace files for many different low frequency tags. They will be copied to
 
-`/usr/local/share/proxmark3/traces`
+```
+/usr/local/share/proxmark3/traces
+```
 
 
 ## JTAG-related stuff
@@ -105,7 +113,9 @@ See [here](#proxmark3-client-files-and-traces) how to add your own resources.
 
 Documentation will be copied to
 
-`/usr/local/share/doc/proxmark3`
+```
+/usr/local/share/doc/proxmark3
+```
 
 # User files
 
