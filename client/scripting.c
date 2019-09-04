@@ -1059,20 +1059,20 @@ static int l_searchfile(lua_State *L) {
     if (n != 2)  {
         return returnToLuaWithError(L, "Only filename and extension");
     }
-    
+
     size_t size;
-     // data
+    // data
     const char *filename = luaL_checklstring(L, 1, &size);
-    if ( size == 0 )
+    if (size == 0)
         return returnToLuaWithError(L, "Must specify filename");
-    
-    const char *suffix =  luaL_checklstring(L, 2, &size);        
+
+    const char *suffix =  luaL_checklstring(L, 2, &size);
     char *path;
     int res = searchFile(&path, "", filename, suffix, false);
-    if ( res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         return returnToLuaWithError(L, "Failed to find file");
     }
-   
+
     lua_pushstring(L, path);
     return 1;
 }

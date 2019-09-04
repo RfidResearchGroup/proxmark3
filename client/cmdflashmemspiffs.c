@@ -355,13 +355,13 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
     size_t datalen = 0;
     uint8_t *data = NULL;
 
-    int res = loadFile_safe(filename, "", (void**)&data, &datalen);
+    int res = loadFile_safe(filename, "", (void **)&data, &datalen);
     // int res = loadFileEML( filename, data, &datalen);
     if (res != PM3_SUCCESS) {
         free(data);
         return PM3_EFILE;
     }
-    
+
     // We want to mount before multiple operation so the lazy writes/append will not
     // trigger a mount + umount each loop iteration (lazy ops device side)
     SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);

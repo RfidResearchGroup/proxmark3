@@ -209,7 +209,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             datalen += 2;
             break;
         case DICTIONARY_NONE:
-            res = loadFile_safe(filename, ".bin", (void**)&data, &datalen);
+            res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
             if (res != PM3_SUCCESS) {
                 free(data);
                 return PM3_EFILE;
