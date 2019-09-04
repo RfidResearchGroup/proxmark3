@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add cmdscript example and show usage with shebang (@doegox)
+ - Add instructions for Fedora (@doegox)
+ - Chg reduce the list of requirements to the minimum and move to QT5 (@doegox)
+ - Add `make install` and reorganize/rename stuffs accordingly (@doegox)
+ - Add searchFile for several types of files (@doegox / @iceman1001)
  - Chg posix sh version of mkversion (@doegox)
  - Chg remove entirely ncurses, not needed nowadays (@doegox)
  - Chg remove deprecated termcap, use ncurses instead (@ZeroChaos-)
