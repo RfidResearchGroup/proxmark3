@@ -29,7 +29,10 @@ That should be a good start for you to create your package :)
 
 It's possible to add other firmwares as well with tagged names (`FWTAG=<mytag>`), e.g. here we're compiling another image for non-RDV4 devices:
 
-`make -j fullimage/install DESTDIR=build PREFIX=/usr PLATFORM=PM3OTHER PLATFORM_EXTRAS= FWTAG=other`
+```
+make -j fullimage PLATFORM=PM3OTHER PLATFORM_EXTRAS=
+make fullimage/install PLATFORM=PM3OTHER PLATFORM_EXTRAS= DESTDIR=build PREFIX=/usr FWTAG=other
+```
 
 and it will be added along the other firmware as:
 
@@ -52,7 +55,7 @@ Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `m
 * `make mfkey/install`
 * `make nonce2key/install`
 * `make fpga_compress/install` (dummy)
-* some shared content installation handled by the root Makefile, which can't be installed alone:
+* `make common/install` (some shared content installation:)
   * `pm3-*` scripts
   * `tools/jtag_openocd`, `traces`
   * `doc/md`, `doc/*.md`

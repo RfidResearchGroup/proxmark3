@@ -112,6 +112,8 @@ help:
 	@echo "+ all             - Make all targets: bootrom, fullimage and OS-specific host tools"
 	@echo "+ clean           - Clean in all targets"
 	@echo "+ .../clean       - Clean in specified target and its deps, e.g. bootrom/clean"
+	@echo "+ (un)install     - Install/uninstall Proxmark files in the system, default to /usr/local/share,
+	@echo "                    else provide a PREFIX. See Maintainers.md for more options"
 	@echo
 	@echo "+ bootrom         - Make bootrom"
 	@echo "+ fullimage       - Make armsrc fullimage (includes fpga)"
