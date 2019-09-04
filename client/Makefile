@@ -15,7 +15,7 @@ ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 include ../Makefile.defs
 
 INSTALLBIN = proxmark3 proxmark3-flasher
-INSTALLSHARE = lualibs luascripts resources dictionaries
+INSTALLSHARE = cmdscripts lualibs luascripts resources dictionaries
 
 VPATH = ../common uart
 vpath %.dic dictionaries
