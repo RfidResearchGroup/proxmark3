@@ -1,5 +1,8 @@
+#!/usr/bin/env -S pm3 -l
+
 --[[
 A sampe script file on how to implement at cmd line inteface.
+It also demonstrates how the script can be used with a shebang.
 --]]
 
 print("This is how a cmd-line interface could be implemented\nPrint 'exit' to exit.\n")
