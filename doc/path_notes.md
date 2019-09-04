@@ -73,6 +73,12 @@ First instance where a file is found will be used in the client.
 2. $HOME/.proxmark3   (user home directory
 3. ./    (current working directory)
 
+## .history / log files
+We have now a rolling log file, created new per day.  All those logfiles and the .history file is found
+```
+~/.proxmar3/history.txt
+~/.proxmar3/log_%Y%m%d.txt
+```
 
 ## What is where?
 /resources
