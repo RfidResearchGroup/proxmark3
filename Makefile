@@ -92,7 +92,9 @@ armsrc/%: FORCE cleanifplatformchanged fpga_compress/%
 client/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C client $(patsubst client/%,%,$@) DESTDIR=$(MYDESTDIR)
-recovery/%: FORCE cleanifplatformchanged bootrom/% armsrc/%
+recovery/all: bootrom/all armsrc/all
+recovery/install: bootrom/all armsrc/all
+recovery/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@) DESTDIR=$(MYDESTDIR)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
@@ -126,11 +128,17 @@ client: client/all
 
 bootrom: bootrom/all
 
+# aliases fullimage = armsrc
+
 fullimage: armsrc/all
+
+fullimage/all: armsrc/all
 
 fullimage/clean: armsrc/clean
 
 fullimage/install: armsrc/install
+
+fullimage/uninstall: armsrc/uninstall
 
 recovery: recovery/all
 
