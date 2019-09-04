@@ -27,6 +27,7 @@
 #include "cmdhw.h"
 #include "whereami.h"
 #include "comms.h"
+#include "fileutils.h"
 //#include "usart.h"
 
 static void showBanner(void) {
@@ -95,11 +96,16 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
     if (script_cmds_file) {
 
-        sf = fopen(script_cmds_file, "r");
-        if (sf)
-            PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", script_cmds_file);
-        else
-            PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", script_cmds_file);
+        char *path;
+        int res = searchFile(&path, CMD_SCRIPTS_SUBDIR, script_cmds_file, ".cmd", false);
+        if (res == PM3_SUCCESS) {
+            sf = fopen(path, "r");
+            if (sf)
+                PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", path);
+            else
+                PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", path);
+            free(path);
+        }
     }
 
     char *my_history_path = NULL;
