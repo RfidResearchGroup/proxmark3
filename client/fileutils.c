@@ -899,6 +899,30 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
             return PM3_SUCCESS;
         }
     }
+    // try pm3 dirs in user .proxmark3 (user mode)
+    char *user_path = getenv("HOME");
+    if (user_path != NULL) {
+        char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
+        if (path == NULL)
+            goto out;
+        strcpy(path, user_path);
+        strcat(path, PM3_USER_DIRECTORY);
+        strcat(path, pm3dir);
+        strcat(path, filename);
+        if ((g_debugMode == 2) && (!silent)) {
+            PrintAndLogEx(INFO, "Searching %s", path);
+        }
+        if (fileExists(path)) {
+            free(filename);
+            *foundpath = path;
+            if ((g_debugMode == 2) && (!silent)) {
+                PrintAndLogEx(INFO, "Found %s", *foundpath);
+            }
+            return PM3_SUCCESS;
+        } else {
+            free(path);
+        }
+    }
     // try pm3 dirs in current client workdir (dev mode)
     const char *exec_path = get_my_executable_directory();
     if ((exec_path != NULL) &&
@@ -935,30 +959,6 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
             goto out;
         strcpy(path, exec_path);
         strcat(path, above);
-        strcat(path, pm3dir);
-        strcat(path, filename);
-        if ((g_debugMode == 2) && (!silent)) {
-            PrintAndLogEx(INFO, "Searching %s", path);
-        }
-        if (fileExists(path)) {
-            free(filename);
-            *foundpath = path;
-            if ((g_debugMode == 2) && (!silent)) {
-                PrintAndLogEx(INFO, "Found %s", *foundpath);
-            }
-            return PM3_SUCCESS;
-        } else {
-            free(path);
-        }
-    }
-    // try pm3 dirs in user .proxmark3 (user mode)
-    char *user_path = getenv("HOME");
-    if (user_path != NULL) {
-        char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
-        if (path == NULL)
-            goto out;
-        strcpy(path, user_path);
-        strcat(path, PM3_USER_DIRECTORY);
         strcat(path, pm3dir);
         strcat(path, filename);
         if ((g_debugMode == 2) && (!silent)) {
