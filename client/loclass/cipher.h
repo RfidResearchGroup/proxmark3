@@ -39,6 +39,7 @@
 #ifndef CIPHER_H
 #define CIPHER_H
 #include <stdint.h>
+#include "pm3_cmd.h"
 
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]);
 void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4]);

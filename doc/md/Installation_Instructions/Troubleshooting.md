@@ -4,13 +4,27 @@
 
 Always use the latest repository commits from *master* branch. There are always many fixes done almost daily.
 
-## `./proxmark.sh` or `./flash-*.sh` doesn't see my Proxmark
+## Table of Contents
+
+  * [pm3 or pm3-flash-* doesn't see my Proxmark](#pm3-or-pm3-flash-doesnt-see-my-proxmark)
+  * [My Proxmark3 seems bricked](#my-proxmark3-seems-bricked)
+     * [Maybe just a false alarm?](#maybe-just-a-false-alarm)
+     * [Find out why it would be bricked](#find-out-why-it-would-be-bricked)
+     * [Determine if the bootloader was damaged or only the main OS image](#determine-if-the-bootloader-was-damaged-or-only-the-main-os-image)
+     * [Ok, my bootloader is definitively dead, now what?](#ok-my-bootloader-is-definitively-dead-now-what)
+  * [Slow to boot or difficulties to enumerate the device over USB](#slow-to-boot-or-difficulties-to-enumerate-the-device-over-usb)
+  * [Troubles with SIM card reader](#troubles-with-sim-card-reader)
+  * [Troubles with t5577 commands or MFC/iClass/T55x7 dictionaries](#troubles-with-t5577-commands-or-mfciclasst55x7-dictionaries)
+  * [File not found](#file-not-found)
+  * [pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
+
+## `pm3` or `pm3-flash-*` doesn't see my Proxmark
 
 Try using directly the client or flasher:
 
 ```
-client/flasher <YOUR_PORT_HERE> ...
-client/proxmark <YOUR_PORT_HERE> ...
+client/proxmark3-flasher <YOUR_PORT_HERE> ...
+client/proxmark3 <YOUR_PORT_HERE> ...
 ```
 
 Refer to the installation guide specific to your OS for details about ports.
@@ -30,13 +44,13 @@ Note that with the Bluetooth adapter, you *have to* use directly the client, and
 The flasher refused to flash your Proxmark3? Are there any messages in *red*? The most common reason is that the Proxmark3 RDV4 firmware recently got a new bootloader able to handle larger firmwares and... the image grew over 256k almost at the same time. So your old bootloader can't flash such new images. But it's easy, you just need to flash *first* the bootloader *only*, then the image.
 
 ```
-./flash-bootrom.sh
-./flash-fullimage.sh
+pm3-flash-bootrom
+pm3-flash-fullimage
 ```
 or
 ```
-client/flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
-client/flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 ```
 
 ### Find out why it would be bricked
@@ -53,21 +67,21 @@ On new bootloaders, you can release the button. If the pattern disappears, you'r
 Once in bootloader mode, flash the main image.
 
 ```
-./flash-fullimage.sh
+pm3-flash-fullimage
 ```
 or
 ```
-client/flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 ```
 
 You should be back on tracks now. In case the flasher complains about bootloader version, you can follow the button procedure and flash first your bootloader.
 
 ```
-./flash-bootrom.sh
+pm3-flash-bootrom
 ```
 or
 ```
-client/flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
 ```
 
 ### Ok, my bootloader is definitively dead, now what?
@@ -76,7 +90,7 @@ At this point, only reflashing via JTAG can revive your Proxmark3.
 
 See [details here](/doc/jtag_notes.md).
 
-## Slow to boot
+## Slow to boot or difficulties to enumerate the device over USB
 
 You're using another Proxmark3 than a RDV4?
 The RDV4 firmware can run on other Proxmark3 as such but the booting procedure is a bit slower because of the absence of SIM and external flash.
@@ -95,34 +109,52 @@ Instructions evolve over time so check if you're still up to date!
 
 ## File not found
 
-Depending how you launch the client, your working directory might be the root of the repository:
+If Proxmark3 has been installed with `make install` or packaged for your distro, the binaries should be in your path and you can call them directly:
 
 ```
-./proxmark.sh ...
-client/proxmark ...
+pm3
+proxmark3
+```
+
+and you must adapt accordingly the file path of some commands, e.g.
+
+```
+proxmark3-flasher <YOUR_PORT_HERE> /usr/local/share/proxmark3/firmware/fullimage.elf
+<>
+proxmark3-flasher <YOUR_PORT_HERE> /usr/share/proxmark3/firmware/fullimage.elf
+
+pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
+<>
+pm3 --> sc upgrade f /usr/share/proxmark3/firmware/sim011.bin
+```
+
+If you didn't install the PRoxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
+
+```
+./pm3 ...
+client/proxmark3 ...
 ```
 
 or the `client/` subdirectory:
 
 ```
-cd client; ./proxmark ...
+cd client; ./proxmark3 ...
 ```
 
 Therefore client commands referring to files of the repo must be adapted, e.g.
 
 ```
-pm3 --> sc upgrade f tools/simmodule/SIM011.BIN
+client/proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 <>
-pm3 --> sc upgrade f ../tools/simmodule/SIM011.BIN
-```
+./proxmark3-flasher <YOUR_PORT_HERE> ../armsrc/obj/fullimage.elf
 
-```
-pm3 --> mem load f default_keys m
+pm3 --> sc upgrade f tools/simmodule/sim011.bin
 <>
-pm3 --> mem load f client/default_keys m
+pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
 ```
 
 etc.
 
-This also affects where your history and logfile will be read from and written to.
+## pixmap / pixbuf warnings
 
+If you get warnings related to pixmap or pixbuf such as *Pixbuf theme: Cannot load pixmap file* or *Invalid borders specified for theme pixmap*, it's a problem of your Theme, try another one and the problem should vanish. See e.g. [#354](https://github.com/RfidResearchGroup/proxmark3/issues/354) (Yaru theme on Ubuntu) and [#386](https://github.com/RfidResearchGroup/proxmark3/issues/386) (Kali-X theme on Kali).

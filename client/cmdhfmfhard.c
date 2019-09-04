@@ -36,13 +36,14 @@
 #include "hardnested/hardnested_bf_core.h"
 #include "hardnested/hardnested_bitarray_core.h"
 #include "zlib.h"
+#include "fileutils.h"
 
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
 #define NUM_REDUCTION_WORKING_THREADS   (num_CPUs())
 
 #define IGNORE_BITFLIP_THRESHOLD        0.99 // ignore bitflip arrays which have nearly only valid states
 
-#define STATE_FILES_DIRECTORY           "hardnested/tables/"
+#define STATE_FILES_DIRECTORY           "hardnested_tables/"
 #define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.z"
 
 #define DEBUG_KEY_ELIMINATION
@@ -248,10 +249,15 @@ static void init_bitflip_bitarrays(void) {
             bitflip_bitarrays[odd_even][bitflip] = NULL;
             count_bitflip_bitarrays[odd_even][bitflip] = 1 << 24;
             sprintf(state_file_name, STATE_FILE_TEMPLATE, odd_even, bitflip);
-            strcpy(state_files_path, get_my_executable_directory());
-            strcat(state_files_path, STATE_FILES_DIRECTORY);
+            strcpy(state_files_path, STATE_FILES_DIRECTORY);
             strcat(state_files_path, state_file_name);
-            FILE *statesfile = fopen(state_files_path, "rb");
+            char *path;
+            if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) != PM3_SUCCESS) {
+                continue;
+            }
+
+            FILE *statesfile = fopen(path, "rb");
+            free(path);
             if (statesfile == NULL) {
                 continue;
             } else {

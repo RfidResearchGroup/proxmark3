@@ -71,7 +71,7 @@ tools/jtag_openocd/openocd_configuration
 ppls patches/*
 *- Copy.*
 
-client/lualibs/mf_default_keys.lua
+client/lualibs/mfc_default_keys.lua
 client/lualibs/pm3_cmd.lua
 # recompiled
 fpga_version_info.c

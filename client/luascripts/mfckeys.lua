@@ -9,7 +9,7 @@
     Copyright (C) 2013 m h swende <martin at swende.se>
 --]]
 local cmds = require('commands')
-local keylist = require('mf_default_keys')
+local keylist = require('mfc_default_keys')
 local lib14a = require('read14a')
 local getopt = require('getopt')
 local utils = require('utils')
@@ -19,9 +19,9 @@ author = "Holiman"
 version = 'v1.0.1'
 desc = ("This script implements Mifare check keys.\
 It utilises a large list of default keys (currently %d keys).\
-If you want to add more, just put them inside /lualibs/mf_default_keys.lua\n"):format(#keylist)
+If you want to add more, just put them inside /lualibs/mfc_default_keys.lua\n"):format(#keylist)
 example = [[
-    1. script run mfkeys
+    1. script run mfckeys
 ]]
 usage = [[
 Arguments:
@@ -54,7 +54,7 @@ end
 -- waits for answer from pm3 device
 local function checkCommand(response)
     if not response then
-        print("Timeout while waiting for response. Increase TIMEOUT in mfkeys.lua to wait longer")
+        print("Timeout while waiting for response. Increase TIMEOUT in mfckeys.lua to wait longer")
         return nil, "Timeout while waiting for device to respond"
     end
 
@@ -230,7 +230,7 @@ local function perform_check(numsectors)
 
     local end_time = os.time()
     print('')
-    print('[+] mfkeys - Checkkey execution time: '..os.difftime(end_time, start_time)..' sec')
+    print('[+] mfckeys - Checkkey execution time: '..os.difftime(end_time, start_time)..' sec')
 
     core.fast_push_mode(false)
 

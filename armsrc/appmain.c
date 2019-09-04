@@ -1134,7 +1134,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_EML_LOAD: {
-            MifareECardLoad(packet->oldarg[0], packet->oldarg[1]);
+            mfc_eload_t *payload = (mfc_eload_t *) packet->data.asBytes;
+            MifareECardLoadExt(payload->sectorcnt, payload->keytype);
             break;
         }
         // Work with "magic Chinese" card

@@ -6,62 +6,33 @@
 # Common makefile functions for all platforms
 #-----------------------------------------------------------------------------
 
-# This new makefile replaces the previous Makefile/Makefile.linux
-# with as much common code for both environments as possible.
-# Following is a short OS detection to set up variables, all the
-# remaining Makefile should be portable and only depend on these
-# variables
-#
-
-ifneq ($(V),1)
-  Q?=@
-endif
-# To see full command lines, use make V=1
-
 # Make sure that all is the default target
 # (The including Makefile still needs to define what 'all' is)
 
-platform = $(shell uname)
-
 all:
 
-CROSS  ?= arm-none-eabi-
+# This Makefile might have been called from various subdirs, trying to find our Makefile.defs
+ifeq ($(DEFSBEENHERE),)
+    -include Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    $(error Can't find Makefile.defs)
+endif
+
 CC = $(CROSS)gcc
 AS = $(CROSS)as
 LD = $(CROSS)ld
 OBJCOPY = $(CROSS)objcopy
-GZIP=gzip
-MV=mv
 
 OBJDIR = obj
 
 INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
-
-TAR=tar
-TARFLAGS = -C .. -rvf
-
-# Windows' echo echos its input verbatim, on Posix there is some
-#  amount of shell command line parsing going on. echo "" on 
-#  Windows yields literal "", on Linux yields an empty line
-ifeq ($(shell echo ""),)
-DELETE=rm -rf
-MOVE=mv
-COPY=cp
-PATHSEP=/
-FLASH_TOOL=client/flasher
-# This is probably a proper system, so we can use uname
-DETECTED_OS=$(platform)
-else
-
-# Assume that we are running on Windows.
-DELETE=del /q
-MOVE=ren
-COPY=copy
-PATHSEP=\\#
-FLASH_TOOL=client\\flasher.exe
-DETECTED_OS=Windows
-
-endif
 
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
 VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/zlib ../fpga ../armsrc/Standalone

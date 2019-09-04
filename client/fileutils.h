@@ -38,17 +38,16 @@
 #ifndef FILEUTILS_H
 #define FILEUTILS_H
 
-#ifndef ON_DEVICE
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <stdarg.h>
-#include "../ui.h"
-#include "../emv/emvjson.h"
+#include "ui.h"
+#include "emv/emvjson.h"
 #include "mifare/mifare4.h"
+#include "mifare/mifarehost.h"
 #include "cmdhfmfu.h"
 
 typedef enum {
@@ -56,11 +55,19 @@ typedef enum {
     jsfCardMemory,
     jsfMfuMemory,
     jsfHitag,
+    jsfIclass,
 //    jsf14b,
 //    jsf15,
 //    jsfLegic,
 //    jsfT55xx,
 } JSONFileType;
+
+typedef enum {
+    BIN = 0,
+    EML,
+    JSON,
+    DICTIONARY,
+} DumpFileType_t;
 
 int fileExists(const char *filename);
 
@@ -103,7 +110,17 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
  */
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
 
-/** STUB
+/**
+ * @brief Utility function to save a keydump.
+ *
+ * @param sectorsCnt the used sectors
+ * @param e_sector the keys in question
+ * @param fptr string pointer to the filename
+ * @return 0 for ok, 1 for failz
+ */
+int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr);
+
+/**
  * @brief Utility function to load data from a binary file. This method takes a preferred name.
  * E.g. dumpdata-15.bin
  *
@@ -112,10 +129,22 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
  * @param data The data array to store the loaded bytes from file
  * @param maxdatalen the number of bytes that your data array has
  * @param datalen the number of bytes loaded from file
- * @return 0 for ok, 1 for failz
+ * @return PM3_SUCCESS for ok, PM3_E* for failz
 */
 int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
 
+
+/**
+ * @brief Utility function to load data from a binary file. This method takes a preferred name.
+ * E.g. dumpdata-15.bin,  tries to search for it,  and allocated memory.
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Including the ".".
+ * @param data The data array to store the loaded bytes from file
+ * @param datalen the number of bytes loaded from file
+ * @return PM3_SUCCESS for ok, PM3_E* for failz
+*/
+int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.
  * E.g. dumpdata-15.txt
@@ -139,10 +168,9 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen);
 */
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen);
 
-
 /**
  * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
- * E.g. default_keys.dic
+ * E.g. mfc_default_keys.dic
  *
  * @param preferredName
  * @param data The data array to store the loaded bytes from file
@@ -154,6 +182,17 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
 
 /**
+ * @brief  Utility function to load data safely from a DICTIONARY textfile. This method takes a preferred name.
+ * E.g. mfc_default_keys.dic
+ *
+ * @param preferredName
+ * @param pdata A pointer to a pointer  (for reverencing the loaded dictionary)
+ * @param keylen  the number of bytes a key per row is
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint16_t *keycnt);
+
+/**
  * @brief  Utility function to check and convert old mfu dump format to new
  *
  * @param dump pointer to loaded dump to check and convert format
@@ -162,20 +201,7 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 */
 int convertOldMfuDump(uint8_t **dump, size_t *dumplen);
 
-#define PrintAndLogEx(level, format, args...)  PrintAndLogEx(level, format , ## args)
-#else
-
-/**
-* Utility function to print to console. This is used consistently within the library instead
-* of printf, but it actually only calls printf. The reason to have this method is to
-*make it simple to plug this library into proxmark, which has this function already to
-* write also to a logfile. When doing so, just point this function to use PrintAndLog
-* @param fmt
-*/
-#define PrintAndLogEx(level, format, args...) { }
-
-
-
-#endif //ON_DEVICE
+int searchAndList(const char *pm3dir, const char *ext);
+int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);
 
 #endif // FILEUTILS_H

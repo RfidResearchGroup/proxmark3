@@ -128,7 +128,7 @@ connection is successful.
 
 4. Use Proxmark client on BT-serial port
 ```sh
-./proxmark /dev/rfcomm0
+./proxmark3 /dev/rfcomm0
 ```
 The first time, your OS will ask you for pairing. The default PIN is
 1234. If PIN is not typed in quickly, the client might timeout. Simply
@@ -169,7 +169,7 @@ turn on solid.
 
   4. a serial port `/dev/ttyUSB0` will be created, use Proxmark3 client on it
 ```sh
-./proxmark /dev/ttyUSB0
+./proxmark3 /dev/ttyUSB0
 ```
 
 #### MacOS
@@ -191,7 +191,7 @@ After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
   8. A serial port like `/dev/tty.PM3_RDV40-DevB` will be created, use Proxmark3 client on it
 
 ```sh
-./proxmark /dev/tty.PM3_RDV40-DevB
+./proxmark3 /dev/tty.PM3_RDV40-DevB
 ```
 #### Android
 

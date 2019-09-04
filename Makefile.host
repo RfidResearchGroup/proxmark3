@@ -1,37 +1,26 @@
-# Hide full compilation line:
-ifneq ($(V),1)
-  Q?=@
+# This Makefile might have been called from various subdirs, trying to find our Makefile.defs
+ifeq ($(DEFSBEENHERE),)
+    -include Makefile.defs
 endif
-# To see full command lines, use make V=1
-
-CC = gcc
-LD = gcc
-RM = rm -f
-MV = mv
-CP = cp -a
-MKDIR = mkdir -p
+ifeq ($(DEFSBEENHERE),)
+    -include ../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    $(error Can't find Makefile.defs)
+endif
 
 CFLAGS ?= -Wall -Werror -O3
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
-
-platform = $(shell uname)
-
-ifeq ($(platform),Darwin)
-AR= /usr/bin/ar rcs
-RANLIB= /usr/bin/ranlib
-else
-AR= ar rcs
-RANLIB= ranlib
-endif
-RM= rm -f
-RMDIR= rm -rf
 
 vpath %.c $(MYSRCPATHS)
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
 # make temporary to final dependency files after successful compilation
-POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
+POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 
 BINDIR := .
 OBJDIR := obj
@@ -45,7 +34,22 @@ clean:
 	$(Q)$(RM) $(CLEAN)
 	$(Q)$(RMDIR) $(OBJDIR)
 
-.PHONY: all clean
+install: all
+ifneq (,$(INSTALLTOOLS))
+	    $(info [@] Installing $(BINS) to $(DESTDIR)$(PREFIX)...)
+	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
+	    $(Q)$(CP) $(INSTALLTOOLS) $(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)
+endif
+	@true
+
+uninstall:
+ifneq (,$(INSTALLTOOLS))
+	    $(info [@] Uninstalling $(BINS) from $(DESTDIR)$(PREFIX)...)
+	    $(Q)$(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(INSTALLTOOLSRELPATH)$(notdir $(tool)))
+endif
+	@true
+
+.PHONY: all clean install uninstall
 
 $(BINDIR)/$(LIB_A): $(MYOBJS)
 	$(info [=] AR $(notdir $@))

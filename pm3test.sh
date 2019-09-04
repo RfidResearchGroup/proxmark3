@@ -80,7 +80,7 @@ while true; do
   if ! CheckFileExist "proxmark3 exists" "./client/proxmark3"; then break; fi
   if ! CheckFileExist "arm image exists" "./armsrc/obj/fullimage.elf"; then break; fi
   if ! CheckFileExist "bootrom exists" "./bootrom/obj/bootrom.elf"; then break; fi
-  if ! CheckFileExist "hardnested tables exists" "./client/hardnested/tables/*.z"; then break; fi
+  if ! CheckFileExist "hardnested tables exists" "./client/resources/hardnested_tables/*.z"; then break; fi
 
   printf "\n${C_BLUE}Testing basic help:${C_NC}\n"
   if ! CheckExecute "proxmark help" "./client/proxmark3 -h" "wait"; then break; fi

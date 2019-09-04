@@ -41,6 +41,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "pm3_cmd.h"
 
 typedef struct {
     uint8_t *buffer;

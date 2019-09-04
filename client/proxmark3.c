@@ -31,7 +31,7 @@
 
 static void showBanner(void) {
     PrintAndLogEx(NORMAL, "\n");
-#if defined(__linux__) || (__APPLE__)
+#if defined(__linux__) || (__APPLE__) || (_WIN32)
     PrintAndLogEx(NORMAL, _BLUE_("██████╗ ███╗   ███╗ ████╗ ") "    ...iceman fork");
     PrintAndLogEx(NORMAL, _BLUE_("██╔══██╗████╗ ████║   ══█║") "      ...dedicated to " _BLUE_("RDV40"));
     PrintAndLogEx(NORMAL, _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
@@ -102,8 +102,13 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
             PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", script_cmds_file);
     }
 
-    read_history(".history");
-
+    char *my_history_path = NULL;
+    if (searchHomeFilePath(&my_history_path, PROXHISTORY, true) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "No history will be recorded");
+        my_history_path = NULL;
+    } else {
+        read_history(my_history_path);
+    }
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
@@ -220,8 +225,10 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     if (sf)
         fclose(sf);
 
-    write_history(".history");
-
+    if (my_history_path) {
+        write_history(my_history_path);
+        free(my_history_path);
+    }
     if (cmd) {
         free(cmd);
         cmd = NULL;

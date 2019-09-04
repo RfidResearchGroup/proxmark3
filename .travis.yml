@@ -36,22 +36,18 @@ addons:
   homebrew:
     packages:
       - readline
-      - p7zip
-      - libusb-compat
-      - perl
       - qt5
-      - wget
       - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     taps: RfidResearchGroup/proxmark3
 
 install:
-  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    make clean;
-    make all V=1 "$MAKE_PARAMS";
-  elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-    make clean;
-    make all V=1 "$MAKE_PARAMS";
+  if ! arm-none-eabi-gcc -v; then 
+    echo "arm-none-eabi-gcc [ERROR]";
+    travis_terminate 1;
   fi
+    
+  make clean;
+  make all V=1 "$MAKE_PARAMS";
 
 script:
 ## start and run a test script
