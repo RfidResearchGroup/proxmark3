@@ -22,7 +22,9 @@ INSTALLSCRIPTS=pm3 pm3-flash-all pm3-flash-bootrom pm3-flash-fullimage
 INSTALLSHARES=tools/jtag_openocd traces
 INSTALLDOCS=doc/*.md doc/md
 
-install: all
+install: all common/install
+
+common/install:
 	$(info [@] Installing common resources to $(MYDESTDIR)$(PREFIX)...)
 ifneq (,$(INSTALLSCRIPTS))
 	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)
@@ -49,7 +51,9 @@ ifeq ($(platform),Linux)
 	$(Q)$(CP) driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
 endif
 
-uninstall:
+uninstall: common/uninstall
+
+common/uninstall:
 	$(info [@] Uninstalling common resources from $(MYDESTDIR)$(PREFIX)...)
 ifneq (,$(INSTALLSCRIPTS))
 	$(Q)$(RM) $(foreach script,$(INSTALLSCRIPTS),$(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)$(notdir $(script)))
