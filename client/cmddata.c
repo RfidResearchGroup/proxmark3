@@ -1648,8 +1648,10 @@ static int CmdLoad(const char *Cmd) {
     memcpy(filename, Cmd, len);
 
     char *path;
-    if (searchFile(&path, TRACES_SUBDIR, filename, "", false) != PM3_SUCCESS) {
-        return PM3_EFILE;
+    if (searchFile(&path, TRACES_SUBDIR, filename, ".pm3", true) != PM3_SUCCESS) {
+        if (searchFile(&path, TRACES_SUBDIR, filename, "", false) != PM3_SUCCESS) {
+            return PM3_EFILE;
+        }
     }
 
     FILE *f = fopen(path, "r");
