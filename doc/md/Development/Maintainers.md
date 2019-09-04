@@ -43,3 +43,21 @@ For verbose usage and see the actual commands being executed, add `V=1`.
 
 Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `make client CC=clang CXX=clang++ LD=clang++`.
 
+`make install` is actually triggering the following individual targets which can be accessed individually:
+
+* `make client/install`
+* `make bootrom/install`
+* `make fullimage/install` (alias of `make armsrc/install`)
+* `make recovery/install`
+* `make mfkey/install`
+* `make nonce2key/install`
+* `make fpga_compress/install` (dummy)
+* some shared content installation handled by the root Makefile, which can't be installed alone:
+  * `pm3-*` scripts
+  * `tools/jtag_openocd`, `traces`
+  * `doc/md`, `doc/*.md`
+  * Tools scripts (`pm3_eml2lower.sh` etc)
+  * SIM firmware (beware currently it's binary blob, may break your distro policies on open source)
+  * udev rule on Linux
+
+Same logic for `make all`, `make clean`, `make uninstall`
