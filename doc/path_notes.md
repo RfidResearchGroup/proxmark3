@@ -1,9 +1,9 @@
 # Notes on paths.
 
 
-With the recent (2019-09-01) changes and creation of `make install`  command it is still easy to get lost.
+With the recent (2019-09-01) changes and creation of `make install`  command it is easy to get lost.
 
-If you install the Proxmark tools yourself with `make install`, they will go under the prefix `/usr/local/` but if you install the tools from your distro, there are chances the path is `/usr` so you'll have to adapth the paths presented here.
+If you install the Proxmark tools with `make install`, they will go under the prefix `/usr/local/` but if you install the tools from your distro, there are chances the path is `/usr` so you'll have to adapt the paths presented here.
 
 # Installed elements
 
@@ -54,6 +54,7 @@ Proxmark3 client has a lot of sample trace files for many different low frequenc
 JTAG configurations and helper scripts for OpenOCD will be copied to
 
 `/usr/local/share/proxmark3/jtag_openocd`
+
 
 ## Proxmark3 client files: dictionaries
 
@@ -146,7 +147,7 @@ If you add a file with the same name as the file provided with the Proxmark3 ins
 
 See also [Scripts](#scripts) on how to write your own scripts.
 
-# Seaching files
+# Searching files
 
 With the directory structure explained above, the client applies some heuristics to find its files or the files you specified in command line.
 
@@ -177,9 +178,10 @@ When a user provides a filename (including possibly a path), _searchFile_ will s
 
 # Scripts
 
-We've seen that you can provide your own Lua or cmd scripts.
+You can provide your own lua or cmd scripts.
 Look at existing scripts for ideas how to create your own scripts.
 
+### Proxmark command script (.cmd)
 For cmd scripts, the command line scripts, the client can run a text file containing Proxmark3 commands.
 
 A samplefile could be like this.
@@ -201,8 +203,13 @@ The client will execute each one of the commands in order and then exit.   There
 `$> pm3 -s myscript.cmd -i`
 
 You can place it in `~/.proxmark3/cmdscripts/` and it will be found automatically.
-You can skip the extension, so `pm3 -s myscript` works equally.
 
+You can skip the script file extension, it works equally well with.
+
+`pm3 -s myscript` 
+
+
+### Shebangs (on *nix)
 You can also use the magic of shebangs to make an executable script, e.g. taking the example above, we can write:
 
 ```
@@ -216,6 +223,7 @@ $> chmod +x myscript.cmd
 $> ./myscript.cmd
 ```
 
-And it will be executed invoking the `pm3` script!
+And it will be executed invoking the `pm3` script.
 
-Or use `#!/usr/bin/env -S proxmark3 -s` if your script is intended to work offline.
+use the following if your script is intended to work offline.
+`#!/usr/bin/env -S proxmark3 -s` 
