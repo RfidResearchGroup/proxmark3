@@ -210,6 +210,7 @@ You can skip the script file extension, it works equally well with.
 
 
 ### Shebangs (on *nix)
+
 You can also use the magic of shebangs to make an executable script, e.g. taking the example above, we can write:
 
 ```
@@ -225,5 +226,10 @@ $> ./myscript.cmd
 
 And it will be executed invoking the `pm3` script.
 
-use the following if your script is intended to work offline.
-`#!/usr/bin/env -S proxmark3 -s` 
+Use the following if your script is intended to work offline.
+
+```
+#!/usr/bin/env -S proxmark3 -s
+```
+
+Beware the shebang trick is not available on all the platforms, it requires your `env` to accept the `-S` switch.
