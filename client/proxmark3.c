@@ -8,18 +8,15 @@
 //-----------------------------------------------------------------------------
 // Main binary
 //-----------------------------------------------------------------------------
+
 #include "proxmark3.h"
-
 #include <limits.h>
-
 #include <stdio.h> // for Mingw readline
 #include <stdlib.h>
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-
 #include "usart_defs.h"
-
 #include "util_posix.h"
 #include "proxgui.h"
 #include "cmdmain.h"
@@ -28,7 +25,7 @@
 #include "whereami.h"
 #include "comms.h"
 #include "fileutils.h"
-//#include "usart.h"
+
 
 static void showBanner(void) {
     PrintAndLogEx(NORMAL, "\n");
@@ -47,7 +44,8 @@ static void showBanner(void) {
     PrintAndLogEx(NORMAL, "==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
     PrintAndLogEx(NORMAL, "...     ...     ... .....  pre-release v4.0");
 #endif
-    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon,   https://www.patreon.com/iceman1001/");
+    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
+    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
 //    printf("\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
     PrintAndLogEx(NORMAL, "\n");
     fflush(stdout);
