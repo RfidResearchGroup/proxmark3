@@ -69,7 +69,7 @@ Default compiler is gcc but you can use clang for the non-ARM parts with e.g. `m
   * `tools/jtag_openocd`, `traces`
   * `doc/md`, `doc/*.md`
   * Tools scripts (`pm3_eml2lower.sh` etc)
-  * SIM firmware (beware currently it's binary blob, may break your distro policies on open source)
+  * SIM firmware
   * udev rule on Linux
 
 Same logic for `make all`, `make clean`, `make uninstall`
