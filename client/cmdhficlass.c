@@ -78,7 +78,7 @@ static int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt d <enc data> f <tagdump> k <transport key>");
     PrintAndLogEx(NORMAL, "        options");
-    PrintAndLogEx(NORMAL, "              d <encrypted block>    16 bytes hex")
+    PrintAndLogEx(NORMAL, "              d <encrypted block>    16 bytes hex");
     PrintAndLogEx(NORMAL, "              f <filename>           filename of dump");
     PrintAndLogEx(NORMAL, "              k <transport key>      16 bytes hex");
     PrintAndLogEx(NORMAL, "");
