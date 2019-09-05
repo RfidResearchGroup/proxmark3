@@ -328,22 +328,22 @@ clean:
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
 ifneq (,$(INSTALLBIN))
-	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)
-	    $(Q)$(CP) $(INSTALLBIN) $(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)
+	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)
+	    $(Q)$(CP) $(INSTALLBIN) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)
 endif
 ifneq (,$(INSTALLSHARE))
-	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
-	    $(Q)$(CP) $(INSTALLSHARE) $(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)
+	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
+	    $(Q)$(CP) $(INSTALLSHARE) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
 endif
 	@true
 
 uninstall:
 	$(info [@] Uninstalling client from $(DESTDIR)$(PREFIX)...)
 ifneq (,$(INSTALLBIN))
-	    $(Q)$(RM) $(foreach tool,$(INSTALLBIN),$(DESTDIR)$(PREFIX)$(INSTALLBINRELPATH)$(notdir $(tool)))
+	    $(Q)$(RM) $(foreach tool,$(INSTALLBIN),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)$(PATHSEP)$(notdir $(tool)))
 endif
 ifneq (,$(INSTALLSHARE))
-	    $(Q)$(RMDIR) $(foreach tool,$(INSTALLSHARE),$(DESTDIR)$(PREFIX)$(INSTALLSHARERELPATH)$(notdir $(tool)))
+	    $(Q)$(RMDIR) $(foreach tool,$(INSTALLSHARE),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)$(PATHSEP)$(notdir $(tool)))
 endif
 	@true
 

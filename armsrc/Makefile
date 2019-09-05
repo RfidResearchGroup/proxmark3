@@ -222,12 +222,12 @@ clean:
 
 install: all
 	$(info [@] Installing fullimage to $(DESTDIR)$(PREFIX)...)
-	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)
-	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)$(INSTALLFWTAG)
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
 
 uninstall:
 	$(info [@] Uninstalling fullimage from $(DESTDIR)$(PREFIX)...)
-	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(INSTALLFWRELPATH)$(INSTALLFWTAG)
+	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
 
 .PHONY: all clean help install uninstall
 help:

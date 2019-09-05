@@ -31,10 +31,8 @@ If you need to tune some more paths, see their definition in `Makefile.defs`.
 E.g. you might need to move the documentation elsewhere according to your distro policy:
 
 ```
-make install PREFIX=/usr INSTALLDOCSRELPATH=/share/doc/proxmark3-${version}/
+make install PREFIX=/usr INSTALLDOCSRELPATH=share/doc/proxmark3-${version}
 ```
-
-Be careful to respect the same leading/closing `/` schema else you'll mess up your paths!
 
 It's possible to add other firmwares as well with tagged names (`FWTAG=<mytag>`), e.g. here we're compiling another image for non-RDV4 devices:
 
