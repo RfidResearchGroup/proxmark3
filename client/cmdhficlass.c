@@ -76,14 +76,17 @@ static int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
     PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt f <tagdump> k <transport key>");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt d <enc data> f <tagdump> k <transport key>");
     PrintAndLogEx(NORMAL, "        options");
-    PrintAndLogEx(NORMAL, "                f <filename>        filename of dump");
-    PrintAndLogEx(NORMAL, "                k <transport key>   16 bytes hex");
+    PrintAndLogEx(NORMAL, "              d <encrypted block>    16 bytes hex")
+    PrintAndLogEx(NORMAL, "              f <filename>           filename of dump");
+    PrintAndLogEx(NORMAL, "              k <transport key>      16 bytes hex");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "S       hf iclass decrypt f tagdump_1.bin");
     PrintAndLogEx(NORMAL, "S       hf iclass decrypt f tagdump_1.bin k 000102030405060708090a0b0c0d0e0f");
+    PrintAndLogEx(NORMAL, "S       hf iclass decrypt d 1122334455667788 k 000102030405060708090a0b0c0d0e0f");
+    
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_encrypt(void) {
@@ -796,8 +799,12 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     bool errors = false;
     bool have_key = false;
+    bool have_data = false;
+    bool have_file = false;
     uint8_t cmdp = 0;
 
+    uint8_t enc_data[8] = {0};
+    
     size_t keylen = 0;
     uint8_t key[32] = {0};
     uint8_t *keyptr = NULL;
@@ -810,6 +817,15 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_hf_iclass_decrypt();
+            case 'd':
+                if (param_gethex(Cmd, cmdp + 1, enc_data, 16)) {
+                    PrintAndLogEx(ERR, "data must be 16 HEX symbols");
+                    errors = true;
+                    break;
+                } 
+                have_data = true;
+                cmdp += 2;
+                break;
             case 'f':
                 if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
                     PrintAndLogEx(WARNING, "no filename found after f");
@@ -821,6 +837,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                     errors = true;
                     break;
                 }
+                have_file = true;
                 cmdp += 2;
                 break;
             case 'k':
@@ -848,45 +865,54 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         memcpy(key, keyptr, sizeof(key));
     }
 
-    picopass_hdr *hdr = (picopass_hdr *)decrypted;
-
-    uint8_t mem = hdr->conf.mem_config;
-    uint8_t chip = hdr->conf.chip_config;
-    uint8_t applimit = hdr->conf.app_limit;
-    uint8_t kb = 2;
-    uint8_t app_areas = 2;
-    uint8_t max_blk = 31;
-    getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
-
     // tripledes
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_dec(&ctx, key);
 
-    uint8_t enc_dump[8] = {0};
-    uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    for (uint16_t blocknum = 0; blocknum < applimit; ++blocknum) {
+    uint8_t dec_data[8] = {0};
+    
+    if ( have_data ) {
+        mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
+        PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(dec_data, sizeof(dec_data)));
+    } 
 
-        uint8_t idx = blocknum * 8;
-        memcpy(enc_dump, decrypted + idx, 8);
+    if ( have_file ) {
+        picopass_hdr *hdr = (picopass_hdr *)decrypted;
 
-        // block 7 or higher,  and not empty 0xFF
-        if (blocknum > 6 &&  memcmp(enc_dump, empty, 8) != 0) {
-            mbedtls_des3_crypt_ecb(&ctx, enc_dump, decrypted + idx);
+        uint8_t mem = hdr->conf.mem_config;
+        uint8_t chip = hdr->conf.chip_config;
+        uint8_t applimit = hdr->conf.app_limit;
+        uint8_t kb = 2;
+        uint8_t app_areas = 2;
+        uint8_t max_blk = 31;
+        getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
+
+        uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+        for (uint16_t blocknum = 0; blocknum < applimit; ++blocknum) {
+
+            uint8_t idx = blocknum * 8;
+            memcpy(enc_data, decrypted + idx, 8);
+
+            // block 7 or higher,  and not empty 0xFF
+            if (blocknum > 6 &&  memcmp(enc_data, empty, 8) != 0) {
+                mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+            }
         }
+
+        //Use the first block (CSN) for filename
+        char *fptr = calloc(42, sizeof(uint8_t));
+        strcat(fptr, "hf-iclass-");
+        FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn));
+
+        saveFile(fptr, ".bin", decrypted, decryptedlen);
+        saveFileEML(fptr, decrypted, decryptedlen, 8);
+        saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
+
+        printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
+        free(decrypted);
+        free(fptr);
     }
-
-    //Use the first block (CSN) for filename
-    char *fptr = calloc(42, sizeof(uint8_t));
-    strcat(fptr, "hf-iclass-");
-    FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn));
-
-    saveFile(fptr, ".bin", decrypted, decryptedlen);
-    saveFileEML(fptr, decrypted, decryptedlen, 8);
-    saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
-
-    printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
-    free(decrypted);
-    free(fptr);
     return PM3_SUCCESS;
 }
 
