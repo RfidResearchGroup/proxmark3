@@ -2191,7 +2191,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     // convert old format to new format, if need
     int res = convertOldMfuDump(&dump, &bytes_read);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed convert on load to new Ultralight/NTAG format");
         free(dump);
         return res;
