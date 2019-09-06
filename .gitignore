@@ -77,3 +77,4 @@ client/lualibs/pm3_cmd.lua
 # recompiled
 fpga_version_info.c
 
+.proxmark3/*
