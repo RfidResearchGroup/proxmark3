@@ -103,9 +103,9 @@ static char *newfilenamemcopy(const char *preferredName, const char *suffix) {
 
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
 
-    if (data == NULL) return 1;
+    if (data == NULL) return PM3_EINVARG;
     char *fileName = newfilenamemcopy(preferredName, suffix);
-    if (fileName == NULL) return 1;
+    if (fileName == NULL) return PM3_EMALLOC;
 
     /* We should have a valid filename now, e.g. dumpdata-3.bin */
 
@@ -126,9 +126,9 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
 
 int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize) {
 
-    if (data == NULL) return 1;
+    if (data == NULL) return PM3_EINVARG;
     char *fileName = newfilenamemcopy(preferredName, ".eml");
-    if (fileName == NULL) return 1;
+    if (fileName == NULL) return PM3_EMALLOC;
 
     int retval = PM3_SUCCESS;
     int blocks = datalen / blocksize;
@@ -171,9 +171,9 @@ out:
 
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen) {
 
-    if (data == NULL) return 1;
+    if (data == NULL) return PM3_EINVARG;
     char *fileName = newfilenamemcopy(preferredName, ".json");
-    if (fileName == NULL) return 1;
+    if (fileName == NULL) return PM3_EMALLOC;
 
     int retval = PM3_SUCCESS;
 
@@ -425,12 +425,16 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     if (fsize <= 0) {
         PrintAndLogEx(FAILED, "error, when getting filesize");
+        free(path);
+        fclose(f);
         return PM3_EFILE;
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
     if (!pdata) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        free(path);
+        fclose(f);
         return PM3_EMALLOC;
     }
 
@@ -440,20 +444,22 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
+        free(path);
         return PM3_EFILE;
     }
 
     *datalen = bytes_read;
 
     PrintAndLogEx(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+    free(path);
     return retval;
 }
 
 int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
-    if (data == NULL) return 1;
+    if (data == NULL) return PM3_EINVARG;
     char *fileName = filenamemcopy(preferredName, ".eml");
-    if (fileName == NULL) return 1;
+    if (fileName == NULL) return PM3_EMALLOC;
 
     size_t counter = 0;
     int retval = PM3_SUCCESS, hexlen = 0;
@@ -505,9 +511,9 @@ out:
 
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen) {
 
-    if (data == NULL) return 1;
+    if (data == NULL) return PM3_EINVARG;
     char *fileName = filenamemcopy(preferredName, ".json");
-    if (fileName == NULL) return 1;
+    if (fileName == NULL) return PM3_EMALLOC;
 
     *datalen = 0;
     json_t *root;
@@ -632,7 +638,7 @@ out:
 
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
 
-    if (data == NULL) return PM3_ESOFT;
+    if (data == NULL) return PM3_EINVARG;
     char *path;
     if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
         return PM3_EFILE;
