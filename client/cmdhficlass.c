@@ -870,11 +870,11 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     mbedtls_des3_set2key_dec(&ctx, key);
 
     uint8_t dec_data[8] = {0};
-    
+
     if ( have_data ) {
         mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
         PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(dec_data, sizeof(dec_data)));
-    } 
+    }
 
     if ( have_file ) {
         picopass_hdr *hdr = (picopass_hdr *)decrypted;
@@ -913,6 +913,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         free(decrypted);
         free(fptr);
     }
+
+    mbedtls_des3_free(&ctx);
     return PM3_SUCCESS;
 }
 
@@ -923,6 +925,7 @@ static void iClassEncryptBlkData(uint8_t *blk_data, uint8_t *key) {
     mbedtls_des3_set2key_enc(&ctx, key);
     mbedtls_des3_crypt_ecb(&ctx, blk_data, encrypted);
     memcpy(blk_data, encrypted, 8);
+    mbedtls_des3_free(&ctx);
 }
 
 static int CmdHFiClassEncryptBlk(const char *Cmd) {

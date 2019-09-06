@@ -2519,7 +2519,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
     if (param_gethex(Cmd, 0, uid, 14)) {
         PrintAndLogEx(WARNING, "UID must include 14 HEX symbols");
-        return 1;
+        return PM3_EINVARG;
     }
 
     // read block2.
@@ -2527,7 +2527,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
-        return 2;
+        return PM3_ETIMEOUT;
     }
 
     // save old block2.
@@ -2544,7 +2544,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
-        return 3;
+        return PM3_ETIMEOUT;
     }
 
     // block 1.
@@ -2556,7 +2556,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
-        return 4;
+        return PM3_ETIMEOUT;
     }
 
     // block 2.
@@ -2568,9 +2568,9 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
-        return 5;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
@@ -2681,8 +2681,9 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
     PrintAndLogEx(NORMAL, "Mifare ABA   :\t %s", sprint_hex(dmkey, sizeof(dmkey)));
     PrintAndLogEx(NORMAL, "Mifare Pwd   :\t %s", sprint_hex(newpwd, sizeof(newpwd)));
 
+    mbedtls_des3_free(&ctx);
     // next. from the diversify_key method.
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfUPwdGen(const char *Cmd) {
@@ -2709,11 +2710,11 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         // 3: proprietary Anticollision
         if (select_status == 0) {
             PrintAndLogEx(WARNING, "iso14443a card select failed");
-            return 1;
+            return PM3_ESOFT;
         }
         if (card.uidlen != 7) {
             PrintAndLogEx(WARNING, "Wrong sized UID, expected 7bytes got %d", card.uidlen);
-            return 1;
+            return PM3_ESOFT;
         }
         memcpy(uid, card.uid, sizeof(uid));
     } else {
@@ -2732,7 +2733,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(NORMAL, "------+----------+-----");
     PrintAndLogEx(NORMAL, " Vingcard algo");
     PrintAndLogEx(NORMAL, "--------------------");
-    return 0;
+    return PM3_SUCCESS;
 }
 //------------------------------------
 // Menu Stuff
@@ -2757,7 +2758,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHFMFUltra(const char *Cmd) {
