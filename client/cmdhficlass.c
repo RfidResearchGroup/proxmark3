@@ -1350,10 +1350,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_writeblock();
             case 'b':
-                if (param_gethex(Cmd, cmdp + 1, &blockno, 2)) {
-                    PrintAndLogEx(WARNING, "Block No must include 2 HEX symbols\n");
-                    errors = true;
-                }
+                blockno = param_get8ex(Cmd, cmdp + 1, 06, 16);
                 cmdp += 2;
                 break;
             case 'c':
@@ -1616,10 +1613,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_readblock();
             case 'b':
-                if (param_gethex(Cmd, cmdp + 1, &blockno, 2)) {
-                    PrintAndLogEx(WARNING, "Block No must include 2 HEX symbols\n");
-                    errors = true;
-                }
+                blockno = param_get8ex(Cmd, cmdp + 1, 06, 16);
                 cmdp += 2;
                 break;
             case 'c':
@@ -2610,25 +2604,25 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
-    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc Diversified keys (blocks 3 & 4) to write new keys"},
-    {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "            Check keys"},
-    {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Authenticate and Clone from iClass bin file"},
-    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[f <fname>] Decrypt tagdump" },
+    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc diversified keys (blocks 3 & 4) to write new keys"},
+    {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "[options..] Check keys"},
+    {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Clone (restore from tagdump file)"},
+    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tagdump file" },
     {"dump",        CmdHFiClassReader_Dump,     IfPm3Iclass,     "[options..] Authenticate and Dump iClass tag's AA1"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] (experimental) Load data into iClass emulator memory"},
-    {"encryptblk",  CmdHFiClassEncryptBlk,      AlwaysAvailable, "<BlockData> Encrypt given block data"},
-    {"list",        CmdHFiClassList,            AlwaysAvailable,     "            List iClass history"},
+    {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
+    {"list",        CmdHFiClassList,            AlwaysAvailable, "            List iClass history"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce of reader attack dump"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage the keys to use with iClass"},
     {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
-    {"readblk",     CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Authenticate and Read iClass block"},
+    {"readblk",     CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read iClass block"},
     {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "            Act like an iClass reader"},
     {"readtagfile", CmdHFiClassReadTagFile,     AlwaysAvailable, "[options..] Display Content from tagfile"},
     {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read an iClass tag via Replay Attack"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iClass tag"},
     {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "            Eavesdrop iClass communication"},
-    {"writeblk",    CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Authenticate and Write iClass block"},
+    {"writeblk",    CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write iClass block"},
     {NULL, NULL, NULL, NULL}
 };
 
