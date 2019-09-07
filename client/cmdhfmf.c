@@ -1660,7 +1660,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Settings
     bool slow = false;
     bool legacy_mfchk = false;
-    int prng_type = 0;
+    int prng_type = PM3_EUNDEF;
     bool verbose = false;
     bool has_filename = false;
     bool errors = false;
@@ -1776,11 +1776,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
     }
 
-    // card prng type (weak=1 / hard=0 / select/card comm error fail = -vaule)
+    // card prng type (weak=1 / hard=0 / select/card comm error = negative value)
     prng_type = detect_classic_prng();
     if (prng_type < 0){
         PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error");
-        goto noValidKeyFound;
+        free(e_sector);
+        return prng_type;
     }
 
     // print parameters
