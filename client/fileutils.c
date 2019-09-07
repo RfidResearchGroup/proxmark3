@@ -415,8 +415,10 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     FILE *f = fopen(path, "rb");
     if (!f) {
         PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        free(path);
         return PM3_EFILE;
     }
+    free(path);
 
     // get filesize in order to malloc memory
     fseek(f, 0, SEEK_END);
@@ -425,7 +427,6 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     if (fsize <= 0) {
         PrintAndLogEx(FAILED, "error, when getting filesize");
-        free(path);
         fclose(f);
         return PM3_EFILE;
     }
@@ -433,7 +434,6 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     *pdata = calloc(fsize, sizeof(uint8_t));
     if (!pdata) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
-        free(path);
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -444,14 +444,12 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
-        free(path);
         return PM3_EFILE;
     }
 
     *datalen = bytes_read;
 
     PrintAndLogEx(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
-    free(path);
     return retval;
 }
 
