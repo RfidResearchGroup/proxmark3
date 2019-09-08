@@ -244,6 +244,7 @@ static int usage_hf14_chk_fast(void) {
         PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                    -- target 1K, use dictionary from flashmemory");
     return 0;
 }
+/*
 static int usage_hf14_keybrute(void) {
     PrintAndLogEx(NORMAL, "J_Run's 2nd phase of multiple sector nested authentication key recovery");
     PrintAndLogEx(NORMAL, "You have a known 4 last bytes of a key recovered with mf_nonce_brute tool.");
@@ -261,6 +262,7 @@ static int usage_hf14_keybrute(void) {
     PrintAndLogEx(NORMAL, "           hf mf keybrute 1 A 000011223344");
     return 0;
 }
+*/
 static int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -3250,6 +3252,8 @@ static int CmdHF14AMfSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 */
+
+/*
 static int CmdHF14AMfKeyBrute(const char *Cmd) {
 
     uint8_t blockNo = 0, keytype = 0;
@@ -3280,6 +3284,7 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "\ntime in keybrute: %.0f seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
+*/
 
 void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
     char strA[12 + 1] = {0};
@@ -3307,6 +3312,7 @@ void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
     }
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
 }
+
 
 // EMULATOR COMMANDS
 static int CmdHF14AMfEGet(const char *Cmd) {
