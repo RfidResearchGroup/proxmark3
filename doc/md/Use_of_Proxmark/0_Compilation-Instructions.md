@@ -45,13 +45,13 @@ In most cases, you can run the script `pm3-flash-all` which try to auto-detect t
 For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
 
 ```sh
-pm3-flash /dev/ttyACM0 -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /usr/local/share/proxmark3/firmware/bootrom.elf --image /usr/local/share/proxmark3/firmware/fullimage.elf
 ```
 
 or from the local repo
 
 ```sh
-client/pm3-flash /dev/ttyACM0 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image bootrom/obj/bootrom.elf --image armsrc/obj/fullimage.elf
 ```
 
 ## Run the client

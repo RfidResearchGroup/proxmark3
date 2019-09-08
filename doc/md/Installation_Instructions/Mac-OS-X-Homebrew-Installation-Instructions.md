@@ -40,7 +40,7 @@ pm3-flash-all
 If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-pm3-flash /dev/tty.usbmodemiceman1 -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+proxmark3 /dev/tty.usbmodemiceman1 --flash --unlock-bootloader --image /usr/local/share/proxmark3/firmware/bootrom.elf --image /usr/local/share/proxmark3/firmware/fullimage.elf
 ```
 
 > Depending on the firmware version your Proxmark3 can also appear as `/dev/tty.usbmodem881`.
@@ -99,13 +99,13 @@ pm3-flash-all
 If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-pm3-flash /dev/tty.usbmodemiceman1 -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+proxmark3 /dev/tty.usbmodemiceman1 --flash --unlock-bootloader --image /usr/local/share/proxmark3/firmware/bootrom.elf --image /usr/local/share/proxmark3/firmware/fullimage.elf
 ```
 
 or from the local repo
 
 ```sh
-client/pm3-flash /dev/tty.usbmodemiceman1 -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/proxmark3 /dev/tty.usbmodemiceman1 --flash --unlock-bootloader --image bootrom/obj/bootrom.elf --image armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:

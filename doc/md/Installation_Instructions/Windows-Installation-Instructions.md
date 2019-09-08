@@ -65,13 +65,13 @@ pm3-flash-all
 If COM port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-pm3-flash comX -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+proxmark3 comX --flash --unlock-bootloader --image /usr/local/share/proxmark3/firmware/bootrom.elf --image /usr/local/share/proxmark3/firmware/fullimage.elf
 ```
 
 or from the local repo
 
 ```sh
-client/pm3-flash comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/proxmark3 comX --flash --unlock-bootloader --image bootrom/obj/bootrom.elf --image armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:
@@ -156,13 +156,13 @@ pm3-flash-all
 If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-pm3-flash /dev/ttySX -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+proxmark3 /dev/ttySX --flash --unlock-bootloader --image /usr/local/share/proxmark3/firmware/bootrom.elf --image /usr/local/share/proxmark3/firmware/fullimage.elf
 ```
 
 or from the local repo
 
 ```sh
-client/pm3-flash /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/proxmark3 /dev/ttySX --flash --unlock-bootloader --image bootrom/obj/bootrom.elf --image armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:

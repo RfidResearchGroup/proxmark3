@@ -6,7 +6,7 @@ Always use the latest repository commits from *master* branch. There are always 
 
 ## Table of Contents
 
-  * [pm3 or pm3-flash-* doesn't see my Proxmark](#pm3-or-pm3-flash-doesnt-see-my-proxmark)
+  * [pm3 or pm3-flash* doesn't see my Proxmark](#pm3-or-pm3-flash-doesnt-see-my-proxmark)
   * [My Proxmark3 seems bricked](#my-proxmark3-seems-bricked)
      * [Maybe just a false alarm?](#maybe-just-a-false-alarm)
      * [Find out why it would be bricked](#find-out-why-it-would-be-bricked)
@@ -18,12 +18,11 @@ Always use the latest repository commits from *master* branch. There are always 
   * [File not found](#file-not-found)
   * [pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
 
-## `pm3` or `pm3-flash-*` doesn't see my Proxmark
+## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
-Try using directly the client or flasher:
+Try using directly the client:
 
 ```
-client/pm3-flash <YOUR_PORT_HERE> ...
 client/proxmark3 <YOUR_PORT_HERE> ...
 ```
 
@@ -49,8 +48,8 @@ pm3-flash-fullimage
 ```
 or
 ```
-pm3-flash <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
-pm3-flash <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+proxmark3 <YOUR_PORT_HERE> --flash --unlock-bootloader --image bootrom/obj/bootrom.elf
+proxmark3 <YOUR_PORT_HERE> --flash --image armsrc/obj/fullimage.elf
 ```
 
 ### Find out why it would be bricked
@@ -71,7 +70,7 @@ pm3-flash-fullimage
 ```
 or
 ```
-pm3-flash <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+proxmark3 <YOUR_PORT_HERE> --flash --image armsrc/obj/fullimage.elf
 ```
 
 You should be back on tracks now. In case the flasher complains about bootloader version, you can follow the button procedure and flash first your bootloader.
@@ -81,7 +80,7 @@ pm3-flash-bootrom
 ```
 or
 ```
-pm3-flash <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+proxmark3 <YOUR_PORT_HERE> --flash --unlock-bootloader --image bootrom/obj/bootrom.elf
 ```
 
 ### Ok, my bootloader is definitively dead, now what?
@@ -119,9 +118,9 @@ proxmark3
 and you must adapt accordingly the file path of some commands, e.g.
 
 ```
-pm3-flash <YOUR_PORT_HERE> /usr/local/share/proxmark3/firmware/fullimage.elf
+proxmark3 <YOUR_PORT_HERE> --flash --image /usr/local/share/proxmark3/firmware/fullimage.elf
 <>
-pm3-flash <YOUR_PORT_HERE> /usr/share/proxmark3/firmware/fullimage.elf
+proxmark3 <YOUR_PORT_HERE> --flash --image /usr/share/proxmark3/firmware/fullimage.elf
 
 pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
 <>
@@ -144,9 +143,9 @@ cd client; ./proxmark3 ...
 Therefore client commands referring to files of the repo must be adapted, e.g.
 
 ```
-client/pm3-flash <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+client/proxmark3 <YOUR_PORT_HERE> --flash --image armsrc/obj/fullimage.elf
 <>
-./pm3-flash <YOUR_PORT_HERE> ../armsrc/obj/fullimage.elf
+./proxmark3 <YOUR_PORT_HERE> --flash --image ../armsrc/obj/fullimage.elf
 
 pm3 --> sc upgrade f tools/simmodule/sim011.bin
 <>
