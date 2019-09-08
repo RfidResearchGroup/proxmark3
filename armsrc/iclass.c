@@ -2520,23 +2520,19 @@ void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data) {
     int total_block = (endblock - startblock) + 1;
     for (i = 0; i < total_block; i++) {
         // block number
-        if (iClass_WriteBlock_ext(i + startblock, data + (i * 12))) {
-            Dbprintf("Write block [%02x] successful", i + startblock);
+        if (iClass_WriteBlock_ext(startblock + i, data + (i * 12))) {
+            Dbprintf("Write block [%02x] successful", startblock + i);
             written++;
         } else {
-            if (iClass_WriteBlock_ext(i + startblock, data + (i * 12))) {
-                Dbprintf("Write block [%02x] successful", i + startblock);
-                written++;
-            } else {
-                Dbprintf("Write block [%02x] failed", i + startblock);
-            }
+            Dbprintf("Write block [%02x] failed", startblock + i);
         }
     }
-    if (written == total_block)
-        DbpString("Clone complete");
-    else
-        DbpString("Clone incomplete");
-
-    reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+    
     switch_off();
+    
+    uint8_t isOK = 0;
+    if (written == total_block)
+        isOK = 1;
+    
+    reply_ng(CMD_HF_ICLASS_CLONE, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));        
 }

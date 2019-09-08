@@ -1271,7 +1271,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_CLONE: {
-            iClass_Clone(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            struct p {
+                uint8_t startblock;
+                uint8_t endblock;
+                uint8_t data[];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            iClass_Clone(payload->startblock, payload->endblock, payload->data);
             break;
         }
 #endif
