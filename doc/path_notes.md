@@ -15,8 +15,8 @@ The main Proxmark3 executables / shellscripts will be copied to
 /usr/local/bin/
 ```
 
-* executables: `proxmark3`, `proxmark3-flasher`
-* scripts: `pm3`, `pm3-flash-all`, `pm3-flash-bootloader`, `pm3-flash-fullimage`
+* executables: `proxmark3`
+* scripts: `pm3`, `pm3-flash`, `pm3-flash-all`, `pm3-flash-bootloader`, `pm3-flash-fullimage`
 
 Some more executable / scripts will be copied to
 

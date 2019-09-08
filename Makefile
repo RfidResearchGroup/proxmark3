@@ -18,7 +18,7 @@ all clean install uninstall: %: client/% bootrom/% armsrc/% recovery/% mfkey/% n
 
 INSTALLTOOLS=pm3_eml2lower.sh pm3_eml2upper.sh pm3_mfdread.py pm3_mfd2eml.py pm3_eml2mfd.py findbits.py rfidtest.pl xorcheck.py
 INSTALLSIMFW=sim011.bin sim011.sha512.txt
-INSTALLSCRIPTS=pm3 pm3-flash-all pm3-flash-bootrom pm3-flash-fullimage
+INSTALLSCRIPTS=pm3 pm3-flash pm3-flash-all pm3-flash-bootrom pm3-flash-fullimage
 INSTALLSHARES=tools/jtag_openocd traces
 INSTALLDOCS=doc/*.md doc/md
 

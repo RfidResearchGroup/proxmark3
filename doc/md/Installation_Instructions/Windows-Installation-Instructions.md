@@ -54,7 +54,7 @@ pacman -S mingw-w64-x86_64-astyle
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-To use the compiled client and flasher, the only differences are that executables end with `.exe` (e.g. `proxmark3-flasher.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows.
+To use the compiled client and flasher, the only differences are that executables end with `.exe` (e.g. `proxmark3.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows.
 
 To flash: In principle, the helper script `pm3-flash-all` should auto-detect your COM port, so you can just try:
 
@@ -65,13 +65,13 @@ pm3-flash-all
 If COM port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-proxmark3-flasher.exe comX -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+pm3-flash comX -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
 ```
 
 or from the local repo
 
 ```sh
-client/proxmark3-flasher.exe comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/pm3-flash comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:
@@ -156,13 +156,13 @@ pm3-flash-all
 If port detection failed, you'll have to call the flasher manually and specify the correct port:
 
 ```sh
-proxmark3-flasher.exe /dev/ttySX -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
+pm3-flash /dev/ttySX -b /usr/local/share/proxmark3/firmware/bootrom.elf /usr/local/share/proxmark3/firmware/fullimage.elf
 ```
 
 or from the local repo
 
 ```sh
-client/proxmark3-flasher.exe /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
+client/pm3-flash /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
 ```
 
 Similarly, to run the client, you may try:

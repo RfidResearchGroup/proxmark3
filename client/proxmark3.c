@@ -25,6 +25,7 @@
 #include "whereami.h"
 #include "comms.h"
 #include "fileutils.h"
+#include "flash.h"
 
 
 static void showBanner(void) {
@@ -278,12 +279,12 @@ static void set_my_executable_path(void) {
 
 static void show_help(bool showFullHelp, char *exec_name) {
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "syntax: %s [-h|-t|-m]\n", exec_name);
-    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]\n", exec_name);
+    PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m]", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [-p] <port> --flash [--unlock-bootloader] [--image <imagefile>]+", exec_name);
 
     if (showFullHelp) {
-        PrintAndLogEx(NORMAL, "options:");
+        PrintAndLogEx(NORMAL, "\nOptions in client mode:");
         PrintAndLogEx(NORMAL, "      -h/--help                           this help");
         PrintAndLogEx(NORMAL, "      -t/--text                           dump all interactive command's help at once");
         PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive help at once in markdown syntax");
@@ -296,19 +297,91 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
         PrintAndLogEx(NORMAL, "      -i/--interactive                    enter interactive mode after executing the script or the command");
         PrintAndLogEx(NORMAL, "      -v/--version                        print client version");
-        PrintAndLogEx(NORMAL, "\nsamples:");
-        PrintAndLogEx(NORMAL, "      %s -h\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s -m\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -f             -- flush output everytime\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -w             -- wait for serial port\n", exec_name);
-        PrintAndLogEx(NORMAL, "\n  how to run Proxmark3 client\n");
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H"                -- runs the pm3 client\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s                             -- runs the pm3 client in OFFLINE mode\n", exec_name);
-        PrintAndLogEx(NORMAL, "\n  how to execute different commands from terminal\n");
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")"and quit client\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client\n", exec_name);
+        PrintAndLogEx(NORMAL, "\nOptions in flasher mode:");
+        PrintAndLogEx(NORMAL, "      --flash                             flash Proxmark3, requires at least one --image");
+        PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash or --flash-info)");
+        PrintAndLogEx(NORMAL, "      --image <imagefile>                 image to flash. Can be specified several times.");
+        PrintAndLogEx(NORMAL, "\nExamples:");
+        PrintAndLogEx(NORMAL, "\n  to run Proxmark3 client:\n");
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H"                       -- runs the pm3 client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -f                    -- flush output everytime", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -w                    -- wait for serial port", exec_name);
+        PrintAndLogEx(NORMAL, "      %s                                    -- runs the pm3 client in OFFLINE mode", exec_name);
+        PrintAndLogEx(NORMAL, "\n  to execute different commands from terminal:\n");
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")"and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "\n  to flash fullimage and bootloader:\n");
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" --flash --unlock-bootloader --image bootrom.elf --image fullimage.elf", exec_name);
+#ifdef __linux__
+    PrintAndLogEx(NORMAL, "\nNote (Linux):\nif the flasher gets stuck in 'Waiting for Proxmark3 to reappear on <DEVICE>',");
+    PrintAndLogEx(NORMAL, "you need to blacklist Proxmark3 for modem-manager - see documentation for more details:");
+    PrintAndLogEx(NORMAL, "* https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md");
+    PrintAndLogEx(NORMAL, "\nMore info on flashing procedure from the official Proxmark3 wiki:");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/Gentoo%%20Linux");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/Ubuntu%%20Linux");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/OSX\n");
+#endif
     }
+}
+
+static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[FLASH_MAX_FILES], bool can_write_bl) {
+
+    int ret = PM3_EUNDEF;
+    flash_file_t files[FLASH_MAX_FILES];
+    memset(files, 0, sizeof(files));
+
+    if (serial_port_name == NULL) {
+        PrintAndLogEx(ERR, "You must specify a port.\n");
+        return PM3_EINVARG;
+    }
+
+    if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+        PrintAndLogEx(NORMAL, _GREEN_("Found"));
+    } else {
+        PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
+        return PM3_ETIMEOUT;
+    }
+
+    uint32_t max_allowed = 0;
+    ret = flash_start_flashing(can_write_bl, serial_port_name, &max_allowed);
+    if (ret != PM3_SUCCESS) {
+        goto finish;
+    }
+
+    if (num_files == 0)
+        goto finish;
+
+    for (int i = 0 ; i < num_files; ++i) {
+        ret = flash_load(&files[i], filenames[i], can_write_bl, max_allowed * ONE_KB);
+        if (ret != PM3_SUCCESS) {
+            goto finish;
+        }
+        PrintAndLogEx(NORMAL, "");
+    }
+
+    PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
+
+    for (int i = 0; i < num_files; i++) {
+        ret = flash_write(&files[i]);
+        if (ret != PM3_SUCCESS) {
+            goto finish;
+        }
+        flash_free(&files[i]);
+        PrintAndLogEx(NORMAL, "\n");
+    }
+
+finish:
+    ret = flash_stop_flashing();
+
+    CloseProxmark();
+
+    if (ret == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, _BLUE_("All done."));
+    else
+        PrintAndLogEx(ERR, "Aborted on error.");
+    PrintAndLogEx(NORMAL, "\nHave a nice day!");
+    return ret;
 }
 
 int main(int argc, char *argv[]) {
@@ -340,6 +413,11 @@ int main(int argc, char *argv[]) {
         }
     }
 #endif
+
+    bool flash_mode = false;
+    bool flash_can_write_bl = false;
+    int flash_num_files = 0;
+    char *flash_filenames[FLASH_MAX_FILES];
 
     for (int i = 1; i < argc; i++) {
 
@@ -467,6 +545,33 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // go to flash mode
+        if (strcmp(argv[i], "--flash") == 0) {
+            flash_mode = true;
+            continue;
+        }
+
+        // unlock bootloader area
+        if (strcmp(argv[i], "--unlock-bootloader") == 0) {
+            flash_can_write_bl = true;
+            continue;
+        }
+
+        // flash file
+        if (strcmp(argv[i], "--image") == 0) {
+            if (flash_num_files == FLASH_MAX_FILES) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") "too many --image, please use it max %i times\n", FLASH_MAX_FILES);
+                return 1;
+            }
+            if (i + 1 == argc) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") "missing image specification after --image\n");
+                show_help(false, exec_name);
+                return 1;
+            }
+            flash_filenames[flash_num_files++] = argv[++i];
+            continue;
+        }
+
         // We got an unknown parameter
         PrintAndLogEx(ERR, _RED_("ERROR:") "invalid parameter: " _YELLOW_("%s") "\n", argv[i]);
         show_help(false, exec_name);
@@ -487,12 +592,17 @@ int main(int argc, char *argv[]) {
         session.supports_colors = true;
 #endif
     // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY)
+    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
         showBanner();
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
         speed = USART_BAUD_RATE;
+
+    if (flash_mode) {
+        flash_pm3(port, flash_num_files, flash_filenames, flash_can_write_bl);
+        exit(EXIT_SUCCESS);
+    }
 
     if (script_cmd) {
         while (script_cmd[strlen(script_cmd) - 1] == ' ')

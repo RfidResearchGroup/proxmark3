@@ -14,7 +14,7 @@ ROOT_DIR:=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
 include ../Makefile.defs
 
-INSTALLBIN = proxmark3 proxmark3-flasher
+INSTALLBIN = proxmark3
 INSTALLSHARE = cmdscripts lualibs luascripts resources dictionaries
 
 VPATH = ../common uart
@@ -237,7 +237,8 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdscript.c \
             pm3_bitlib.c \
             cmdcrc.c \
-            bucketsort.c
+            bucketsort.c \
+            flash.c
 
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )
@@ -278,7 +279,7 @@ ifeq "$(SUPPORTS_AVX512)" "True"
     MULTIARCHOBJS +=  $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX512.o)
 endif
 
-BINS = proxmark3 proxmark3-flasher
+BINS = proxmark3
 CLEAN = $(BINS) *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 # transition: make sure old flasher is gone too
 CLEAN += flasher
@@ -293,10 +294,6 @@ proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(RE
 proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) $(AMIIBOLIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LDLIBS)  -o $@
-
-proxmark3-flasher: $(OBJDIR)/flash.o $(OBJDIR)/flasher.o $(COREOBJS) $(OBJCOBJS)
-	$(info [=] LD $@)
-	$(Q)$(LD) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 proxgui.cpp: ui/ui_overlays.h
 
@@ -447,7 +444,7 @@ DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(REVEN
 	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
-	$(OBJDIR)/proxmark3.d $(OBJDIR)/flash.d $(OBJDIR)/proxmark3-flasher.d $(OBJDIR)/flasher.d
+	$(OBJDIR)/proxmark3.d
 
 $(DEPENDENCY_FILES): ;
 .PRECIOUS: $(DEPENDENCY_FILES)

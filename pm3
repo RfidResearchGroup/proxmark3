@@ -4,19 +4,16 @@ PM3PATH=$(dirname "$0")
 # try pm3 dirs in current repo workdir
 if [ -d "$PM3PATH/client/" ]; then
     CLIENT="$PM3PATH/client/proxmark3"
-    FLASHER="$PM3PATH/client/proxmark3-flasher"
     FULLIMAGE="$PM3PATH/armsrc/obj/fullimage.elf"
     BOOTIMAGE="$PM3PATH/bootrom/obj/bootrom.elf"
 # try install dir
 elif [ -x "$PM3PATH/proxmark3" ]; then
     CLIENT="$PM3PATH/proxmark3"
-    FLASHER="$PM3PATH/proxmark3-flasher"
     FULLIMAGE="$PM3PATH/../share/proxmark3/firmware/fullimage.elf"
     BOOTIMAGE="$PM3PATH/../share/proxmark3/firmware/bootrom.elf"
 else
 # hope it's installed somehow, still not sure where fw images are...
     CLIENT="proxmark3"
-    FLASHER="proxmark3-flasher"
     FULLIMAGE="$PM3PATH/../share/proxmark3/firmware/fullimage.elf"
     BOOTIMAGE="$PM3PATH/../share/proxmark3/firmware/bootrom.elf"
 fi
@@ -80,12 +77,26 @@ SCRIPT=$(basename -- "$0")
 
 if [ "$SCRIPT" = "pm3" ]; then
   CMD() { $CLIENT "$@"; }
+elif [ "$SCRIPT" = "pm3-flash" ]; then
+  CMD() {
+      ARGS=("$1" "--flash")
+      shift;
+      while [ "$1" != "" ]; do
+          if [ "$1" == "-b" ]; then
+              ARGS+=("--unlock-bootloader")
+          else
+              ARGS+=("--image" "$1")
+          fi
+          shift;
+      done
+      $CLIENT ${ARGS[@]};
+  }
 elif [ "$SCRIPT" = "pm3-flash-all" ]; then
-  CMD() { $FLASHER "$1" -b "$BOOTIMAGE" "$FULLIMAGE"; }
+  CMD() { $CLIENT "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE" "--image" "$FULLIMAGE"; }
 elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
-  CMD() { $FLASHER "$1" "$FULLIMAGE"; }
+  CMD() { $CLIENT "$1" "--flash" "--image" "$FULLIMAGE"; }
 elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
-  CMD() { $FLASHER "$1" -b "$BOOTIMAGE"; }
+  CMD() { $CLIENT "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE"; }
 else
   echo "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1

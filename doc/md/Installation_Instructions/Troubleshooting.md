@@ -23,7 +23,7 @@ Always use the latest repository commits from *master* branch. There are always 
 Try using directly the client or flasher:
 
 ```
-client/proxmark3-flasher <YOUR_PORT_HERE> ...
+client/pm3-flash <YOUR_PORT_HERE> ...
 client/proxmark3 <YOUR_PORT_HERE> ...
 ```
 
@@ -49,8 +49,8 @@ pm3-flash-fullimage
 ```
 or
 ```
-proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
-proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+pm3-flash <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+pm3-flash <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 ```
 
 ### Find out why it would be bricked
@@ -71,7 +71,7 @@ pm3-flash-fullimage
 ```
 or
 ```
-proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+pm3-flash <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 ```
 
 You should be back on tracks now. In case the flasher complains about bootloader version, you can follow the button procedure and flash first your bootloader.
@@ -81,7 +81,7 @@ pm3-flash-bootrom
 ```
 or
 ```
-proxmark3-flasher <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
+pm3-flash <YOUR_PORT_HERE> -b bootrom/obj/bootrom.elf
 ```
 
 ### Ok, my bootloader is definitively dead, now what?
@@ -119,9 +119,9 @@ proxmark3
 and you must adapt accordingly the file path of some commands, e.g.
 
 ```
-proxmark3-flasher <YOUR_PORT_HERE> /usr/local/share/proxmark3/firmware/fullimage.elf
+pm3-flash <YOUR_PORT_HERE> /usr/local/share/proxmark3/firmware/fullimage.elf
 <>
-proxmark3-flasher <YOUR_PORT_HERE> /usr/share/proxmark3/firmware/fullimage.elf
+pm3-flash <YOUR_PORT_HERE> /usr/share/proxmark3/firmware/fullimage.elf
 
 pm3 --> sc upgrade f /usr/local/share/proxmark3/firmware/sim011.bin
 <>
@@ -144,9 +144,9 @@ cd client; ./proxmark3 ...
 Therefore client commands referring to files of the repo must be adapted, e.g.
 
 ```
-client/proxmark3-flasher <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
+client/pm3-flash <YOUR_PORT_HERE> armsrc/obj/fullimage.elf
 <>
-./proxmark3-flasher <YOUR_PORT_HERE> ../armsrc/obj/fullimage.elf
+./pm3-flash <YOUR_PORT_HERE> ../armsrc/obj/fullimage.elf
 
 pm3 --> sc upgrade f tools/simmodule/sim011.bin
 <>
