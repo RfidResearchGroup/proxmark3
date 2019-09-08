@@ -1238,7 +1238,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     uint8_t isOK = resp.oldarg[0] & 0xff;
     if (!isOK && !blocksRead) {
         PrintAndLogEx(WARNING, "read block failed");
-        return PM3_ESOFt;
+        return PM3_ESOFT;
     }
 
     uint32_t startindex = resp.oldarg[2];
