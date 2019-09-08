@@ -32,6 +32,7 @@
 
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
+#define ICLASS_AUTH_RETRY 10
 
 static int CmdHelp(const char *Cmd);
 
@@ -660,6 +661,10 @@ static int CmdHFiClassSim(const char *Cmd) {
         }
     }
     return PM3_SUCCESS;
+}
+
+static int CmdHFiClassInfo(const char *Cmd) {
+    return PM3_SUCCESS;    
 }
 
 static int CmdHFiClassReader(const char *Cmd) {
@@ -1563,36 +1568,62 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
 }
 
 static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool verbose, bool auth) {
-    // block 0,1 should always be able to read,  and block 5 on some cards.
-    if (auth || blockno >= 2) {
-        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (!select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose))
-            return 0;
+
+    int numberAuthRetries = ICLASS_AUTH_RETRY;
+    // return data.
+    struct p {
+        bool isOK; 
+        uint8_t blockdata[8];
+    } PACKED;
+
+    struct p *result = NULL;
+    
+    do {
+        // block 0,1 should always be able to read,  and block 5 on some cards.
+        if (auth || blockno >= 2) {
+            uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
+            uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            if (!select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose)) {
+                numberAuthRetries--;
+                continue;
+            }
+        } else {
+            uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            if (!select_only(CSN, CCNR, (keyType == 0x18), verbose)) {
+                numberAuthRetries--;
+                continue;
+            }
+        }        
+        
+        PacketResponseNG resp;
+        clearCommandBuffer();        
+        uint8_t payload[] = { blockno };
+        SendCommandNG(CMD_HF_ICLASS_READBL, payload, sizeof(payload));
+        
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_READBL, &resp, 2000) == 0) {
+            PrintAndLogEx(WARNING, "Command execute timeout");
+            return PM3_ETIMEOUT;
+        }
+        
+        if ( resp.status != PM3_SUCCESS ) {
+            PrintAndLogEx(ERR, "failed to communicate with card");
+            return PM3_EWRONGANSVER;
+        }
+        
+        result = (struct p*)resp.data.asBytes;
+        if (result->isOK)
+            break;
+
+    } while (numberAuthRetries);
+
+    if ( numberAuthRetries > 0 ) {
+        PrintAndLogEx(SUCCESS, "block %02X: %s\n", blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
     } else {
-        uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (!select_only(CSN, CCNR, (keyType == 0x18), verbose))
-            return 0;
+        PrintAndLogEx(ERR,"failed to authenticate and read block");
+        return PM3_ESOFT;
     }
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ICLASS_READBL, blockno, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
-        return 0;
-    }
-
-    uint8_t isOK = resp.oldarg[0] & 0xff;
-    if (!isOK) {
-        PrintAndLogEx(WARNING, "read block failed");
-        return 0;
-    }
-    //data read is stored in: resp.data.asBytes[0-15]
-    PrintAndLogEx(NORMAL, "block %02X: %s\n", blockno, sprint_hex(resp.data.asBytes, 8));
-    // should decrypt it if file is accessable.
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFiClass_ReadBlock(const char *Cmd) {
@@ -1613,14 +1644,16 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_readblock();
             case 'b':
-                blockno = param_get8ex(Cmd, cmdp + 1, 06, 16);
+                blockno = param_get8ex(Cmd, cmdp + 1, 7, 16);
                 cmdp += 2;
                 break;
             case 'c':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("CREDIT"));
                 keyType = 0x18;
                 cmdp++;
                 break;
             case 'e':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
                 elite = true;
                 cmdp++;
                 break;
@@ -1632,6 +1665,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 } else if (dataLen == 1) {
                     keyNbr = param_get8(Cmd, cmdp + 1);
                     if (keyNbr < ICLASS_KEYS_MAX) {
+                        PrintAndLogEx(SUCCESS, "Using key[%d] %s", keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8 ));
                         memcpy(KEY, iClass_Key_Table[keyNbr], 8);
                     } else {
                         PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
@@ -1644,6 +1678,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'r':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
                 rawkey = true;
                 cmdp++;
                 break;
@@ -2127,7 +2162,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     // Get CSN / UID and CCNR
     PrintAndLogEx(SUCCESS, "Reading tag CSN");
-    for (uint8_t i = 0; i < 10 && !got_csn; i++) {
+    for (uint8_t i = 0; i < ICLASS_AUTH_RETRY && !got_csn; i++) {
         got_csn = select_only(CSN, CCNR, false, false);
         if (got_csn == false)
             PrintAndLogEx(WARNING, "one more try\n");
@@ -2611,18 +2646,19 @@ static command_t CommandTable[] = {
     {"dump",        CmdHFiClassReader_Dump,     IfPm3Iclass,     "[options..] Authenticate and Dump iClass tag's AA1"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] (experimental) Load data into iClass emulator memory"},
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
+    {"info",        CmdHFiClassInfo,            AlwaysAvailable, "            Tag information"},
     {"list",        CmdHFiClassList,            AlwaysAvailable, "            List iClass history"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce of reader attack dump"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage the keys to use with iClass"},
     {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
-    {"readblk",     CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read iClass block"},
+    {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read iClass block"},
     {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "            Act like an iClass reader"},
     {"readtagfile", CmdHFiClassReadTagFile,     AlwaysAvailable, "[options..] Display Content from tagfile"},
     {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read an iClass tag via Replay Attack"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iClass tag"},
     {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "            Eavesdrop iClass communication"},
-    {"writeblk",    CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write iClass block"},
+    {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write iClass block"},
     {NULL, NULL, NULL, NULL}
 };
 

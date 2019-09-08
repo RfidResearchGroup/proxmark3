@@ -1237,7 +1237,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_READBL: {
-            iClass_ReadBlk(packet->oldarg[0]);
+            struct p {
+                uint8_t blockno;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            iClass_ReadBlk( payload->blockno );
             break;
         }
         case CMD_HF_ICLASS_AUTH: { //check

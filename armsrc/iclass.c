@@ -1720,7 +1720,7 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
 static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int *wait) {
 
     int c = 0;
-    volatile uint32_t b;
+//    volatile uint32_t b;
     bool firstpart = true;
     uint8_t sendbyte;
 
@@ -1758,10 +1758,12 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
         }
 
         // Prevent rx holding register from overflowing
+        /*
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = AT91C_BASE_SSC->SSC_RHR;
             (void)b;
         }
+        */
     }
 
     time_rdr = GetCountSspClk();
@@ -1949,11 +1951,10 @@ void setupIclassReader() {
     LED_A_ON();
 }
 
-bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *resp, uint8_t expected_size, uint8_t retries) {
+bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *resp, uint8_t expected_size, int8_t retries) {
     while (retries-- > 0) {
 
         ReaderTransmitIClass(command, cmdsize);
-
 
         //iceman - if received size is bigger than expected, we smash the stack here
         // since its called with fixed sized arrays
@@ -1967,7 +1968,7 @@ bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *re
         // 0xBB is the internal debug separator byte..
         if (expected_size != got_n || (resp[0] == 0xBB || resp[7] == 0xBB || resp[2] == 0xBB)) {
             //try again
-            SpinDelayUs(400);
+            SpinDelayUs(360);
             continue;
         }
 
@@ -2456,10 +2457,14 @@ bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len) {
 // turn off afterwards
 // readblock 8 + 2.  only want 8.
 void iClass_ReadBlk(uint8_t blockno) {
-    uint8_t data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    bool isOK = iClass_ReadBlock(blockno, data, sizeof(data));
-    reply_mix(CMD_ACK, isOK, 0, 0, data, sizeof(data));
+    struct p {
+        bool isOK; 
+        uint8_t blockdata[8];
+    } PACKED result;
+    
+    result.isOK = iClass_ReadBlock(blockno, result.blockdata, sizeof(result.blockdata));
     switch_off();
+    reply_ng(CMD_HF_ICLASS_READBL, PM3_SUCCESS, (uint8_t *)&result, sizeof(result));
 }
 
 // turn off afterwards
