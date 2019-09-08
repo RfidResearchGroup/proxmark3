@@ -56,10 +56,8 @@
 #include "ticks.h"
 
 static int g_wait = 300;
-static int timeout = 2900;
+static int timeout = 5000;
 static uint32_t time_rdr = 0;
-static uint32_t time_delta = 0;
-static uint32_t time_delta_wait = 0;
 static uint32_t time_response = 0;
 
 static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay);
@@ -1854,12 +1852,9 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
     // only, since we are receiving, not transmitting).
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
-    time_delta =  GetCountSspClk() - time_rdr;
-
     SpinDelayUs(g_wait);  //310 Tout= 330us (iso15603-2)   (330/21.3) take consideration for clock increments.
-    time_delta_wait = GetCountSspClk() - time_rdr - time_delta;
-
     uint32_t foo = GetCountSspClk();
+
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
@@ -1877,21 +1872,15 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
         }
 
         // keep tx buffer in a defined state anyway.
-        /*
-                if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-                    AT91C_BASE_SSC->SSC_THR = 0x00;
-                }
-        */
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+            AT91C_BASE_SSC->SSC_THR = 0x00;
+        }
+
         // Wait for byte be become available in rx holding register
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
-            if (GetCountSspClk() - foo > timeout) return false;
-//            if (c >= timeout) return false;
-
             c++;
-
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-
             skip = !skip;
             if (skip) continue;
 
@@ -1902,6 +1891,8 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
                 time_response = GetCountSspClk() - foo;
                 return true;
             }
+
+            if (GetCountSspClk() - foo > timeout) return false;
         }
     }
 
@@ -1959,11 +1950,14 @@ bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *re
         //iceman - if received size is bigger than expected, we smash the stack here
         // since its called with fixed sized arrays
 
-        // update/write commadn takes 4ms to 15ms before responding
+        // update/write command takes 4ms to 15ms before responding
+        int old_wait = g_wait;
         if (command[0] == ICLASS_CMD_UPDATE)
-            g_wait = 15000;
+            g_wait = 3900;
 
         uint8_t got_n = ReaderReceiveIClass(resp);
+
+        g_wait = old_wait;
 
         // 0xBB is the internal debug separator byte..
         if (expected_size != got_n || (resp[0] == 0xBB || resp[7] == 0xBB || resp[2] == 0xBB)) {
@@ -2337,8 +2331,8 @@ void iClass_Authentication(uint8_t *mac) {
     //memcpy(check+5, mac, 4);
 
     // 6 retries
-    bool isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
-    reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
+    uint8_t isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
+    reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t*)&isOK ,sizeof(uint8_t));
 }
 
 typedef struct iclass_premac {
@@ -2396,6 +2390,8 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
         }
     };
     // since handshakeIclassTag_ext call sends s readcheck,  we start with sending first response.
+
+    checked = 0;
 
     // Keychunk loop
     for (i = 0; i < keyCount; i++) {
@@ -2496,39 +2492,26 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
         }
         memcpy(dataout + (blkCnt * 8), blockdata, 8);
     }
+    
+    switch_off();
     //return pointer to dump memory in arg3
     reply_mix(CMD_ACK, isOK, blkCnt, BigBuf_max_traceLen(), 0, 0);
-    switch_off();
     BigBuf_free();
 }
 
 bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
-
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t write[] = { ICLASS_CMD_UPDATE, blockno, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     memcpy(write + 2, data, 12); // data + mac
     AddCrc(write + 1, 13);
-
-    bool isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
-    if (isOK) { //if reader responded correctly
-
-        //if response is not equal to write values
-        if (memcmp(write + 2, resp, 8)) {
-
-            //if not programming key areas (note key blocks don't get programmed with actual key data it is xor data)
-            if (blockno != 3 && blockno != 4) {
-                isOK = sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
-            }
-        }
-    }
-    return isOK;
+    return sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
 }
 
 // turn off afterwards
 void iClass_WriteBlock(uint8_t blockno, uint8_t *data) {
-    bool isOK = iClass_WriteBlock_ext(blockno, data);
-    reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
+    uint8_t isOK = iClass_WriteBlock_ext(blockno, data);
     switch_off();
+    reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t*)&isOK, sizeof(uint8_t));
 }
 
 // turn off afterwards

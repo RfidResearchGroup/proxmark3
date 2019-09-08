@@ -1229,22 +1229,36 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_WRITEBL: {
-            iClass_WriteBlock(packet->oldarg[0], packet->data.asBytes);
+            struct p {
+                uint8_t blockno;
+                uint8_t data[12];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            iClass_WriteBlock(payload->blockno, payload->data);
             break;
         }
+        // iceman2019, unused?
         case CMD_HF_ICLASS_READCHECK: { // auth step 1
             iClass_ReadCheck(packet->oldarg[0], packet->oldarg[1]);
             break;
         }
         case CMD_HF_ICLASS_READBL: {
+/*
             struct p {
                 uint8_t blockno;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            iClass_ReadBlk( payload->blockno );
+            */
+            iClass_ReadBlk( packet->data.asBytes[0] );
             break;
         }
         case CMD_HF_ICLASS_AUTH: { //check
+/*
+            struct p {
+                uint8_t mac[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+*/
             iClass_Authentication(packet->data.asBytes);
             break;
         }

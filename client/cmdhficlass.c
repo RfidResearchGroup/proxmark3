@@ -1000,7 +1000,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return false;
     }
@@ -1019,7 +1019,9 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
     }
 
     if (isOK <= 1) {
-        PrintAndLogEx(FAILED, "failed to obtain CC! Tag-select is aborting...  (%d)", isOK);
+        if ( verbose )
+            PrintAndLogEx(FAILED, "failed to obtain CC! Tag-select is aborting...  (%d)", isOK);
+        
         return false;
     }
     return true;
@@ -1042,18 +1044,27 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
     if (verbose) PrintAndLogEx(SUCCESS, "authing with %s: %s", rawkey ? "raw key" : "diversified key", sprint_hex(div_key, 8));
 
     doMAC(CCNR, div_key, MAC);
+
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ICLASS_AUTH, 0, 0, 0, MAC, 4);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
-        if (verbose) PrintAndLogEx(FAILED, "auth command execute timeout");
+
+    SendCommandNG(CMD_HF_ICLASS_AUTH, MAC, 4);
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_AUTH, &resp, 2000) == 0) {
+        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
         return false;
     }
-    uint8_t isOK = resp.oldarg[0] & 0xFF;
-    if (!isOK) {
+
+    if ( resp.status != PM3_SUCCESS ) {
+        if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+        return false;
+    }
+
+    uint8_t isOK = resp.data.asBytes[0];
+    if (isOK == 0) {
         if (verbose) PrintAndLogEx(FAILED, "authentication error");
         return false;
     }
+
     return true;
 }
 
@@ -1311,30 +1322,60 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 }
 
 static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
-    uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose))
-        return 0;
 
-    PacketResponseNG resp;
+    int numberAuthRetries = ICLASS_AUTH_RETRY;    
+    do {
+    
+        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
+        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose)) {
+            numberAuthRetries--;
+            DropField();            
+            continue;
+        }
 
-    Calc_wb_mac(blockno, bldata, div_key, MAC);
-    uint8_t data[12];
-    memcpy(data, bldata, 8);
-    memcpy(data + 8, MAC, 4);
+        Calc_wb_mac(blockno, bldata, div_key, MAC);
 
-    clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ICLASS_WRITEBL, blockno, 0, 0, data, sizeof(data));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
-        if (verbose) PrintAndLogEx(WARNING, "Write Command execute timeout");
-        return 0;
+        struct p {
+            uint8_t blockno;
+            uint8_t data[12];
+        } PACKED payload;
+        payload.blockno = blockno;
+        
+        memcpy(payload.data, bldata, 8);
+        memcpy(payload.data + 8, MAC, 4);
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ICLASS_WRITEBL, (uint8_t*)&payload, sizeof(payload));
+        PacketResponseNG resp;
+
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 4000) == 0) {
+            if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+            DropField();
+            return PM3_ETIMEOUT;
+        }
+
+        if ( resp.status != PM3_SUCCESS ) {
+            if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+            DropField();
+            return PM3_EWRONGANSVER;
+        }
+
+        if (resp.data.asBytes[0] == 1)
+            break;
+
+    } while (numberAuthRetries);    
+
+    DropField();
+
+    if ( numberAuthRetries > 0 ) {
+        PrintAndLogEx(SUCCESS, "Write block %02X successful\n", blockno);
+    } else {
+        PrintAndLogEx(ERR,"failed to authenticate and write block");
+        return PM3_ESOFT;
     }
-    uint8_t isOK = resp.oldarg[0] & 0xff;
-    if (isOK)
-        PrintAndLogEx(SUCCESS, "Write block successful");
-    else
-        PrintAndLogEx(WARNING, "Write block failed");
-    return isOK;
+    
+    return PM3_SUCCESS;
 }
 
 static int CmdHFiClass_WriteBlock(const char *Cmd) {
@@ -1344,6 +1385,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     uint8_t keyNbr = 0;
     uint8_t dataLen = 0;
     char tempStr[50] = {0};
+    bool got_blockno = false;
     bool use_credit_key = false;
     bool elite = false;
     bool rawkey = false;
@@ -1355,10 +1397,12 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_writeblock();
             case 'b':
-                blockno = param_get8ex(Cmd, cmdp + 1, 06, 16);
+                blockno = param_get8ex(Cmd, cmdp + 1, 07, 16);
+                got_blockno = true;
                 cmdp += 2;
                 break;
             case 'c':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("CREDIT"));
                 use_credit_key = true;
                 cmdp++;
                 break;
@@ -1370,6 +1414,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'e':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
                 elite = true;
                 cmdp++;
                 break;
@@ -1380,6 +1425,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 } else if (dataLen == 1) {
                     keyNbr = param_get8(Cmd, cmdp + 1);
                     if (keyNbr < ICLASS_KEYS_MAX) {
+                        PrintAndLogEx(SUCCESS, "Using key[%d] %s", keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8 ));
                         memcpy(KEY, iClass_Key_Table[keyNbr], 8);
                     } else {
                         PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
@@ -1392,6 +1438,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'r':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
                 rawkey = true;
                 cmdp++;
                 break;
@@ -1405,11 +1452,12 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 break;
         }
     }
+    if ( got_blockno == false)
+        errors = true;
+    
     if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
 
-    int ans = WriteBlock(blockno, bldata, KEY, use_credit_key, elite, rawkey, verbose);
-    DropField();
-    return ans;
+    return WriteBlock(blockno, bldata, KEY, use_credit_key, elite, rawkey, verbose);
 }
 
 static int CmdHFiClassCloneTag(const char *Cmd) {
@@ -1585,6 +1633,7 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
             uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
             if (!select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose)) {
                 numberAuthRetries--;
+                DropField();
                 continue;
             }
         } else {
@@ -1592,22 +1641,24 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
             uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
             if (!select_only(CSN, CCNR, (keyType == 0x18), verbose)) {
                 numberAuthRetries--;
+                DropField();
                 continue;
             }
         }        
         
         PacketResponseNG resp;
-        clearCommandBuffer();        
-        uint8_t payload[] = { blockno };
-        SendCommandNG(CMD_HF_ICLASS_READBL, payload, sizeof(payload));
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ICLASS_READBL, (uint8_t*)&blockno, sizeof(uint8_t));
         
         if (WaitForResponseTimeout(CMD_HF_ICLASS_READBL, &resp, 2000) == 0) {
-            PrintAndLogEx(WARNING, "Command execute timeout");
+            if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+            DropField();
             return PM3_ETIMEOUT;
         }
         
         if ( resp.status != PM3_SUCCESS ) {
-            PrintAndLogEx(ERR, "failed to communicate with card");
+            if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+            DropField();
             return PM3_EWRONGANSVER;
         }
         
@@ -1617,10 +1668,13 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
 
     } while (numberAuthRetries);
 
+    DropField();
+
     if ( numberAuthRetries > 0 ) {
         PrintAndLogEx(SUCCESS, "block %02X: %s\n", blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
     } else {
         PrintAndLogEx(ERR,"failed to authenticate and read block");
+
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
@@ -1633,6 +1687,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     uint8_t keyNbr = 0;
     uint8_t dataLen = 0;
     char tempStr[50] = {0};
+    bool got_blockno = false;
     bool elite = false;
     bool rawkey = false;
     bool errors = false;
@@ -1645,6 +1700,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 return usage_hf_iclass_readblock();
             case 'b':
                 blockno = param_get8ex(Cmd, cmdp + 1, 7, 16);
+                got_blockno = true;
                 cmdp += 2;
                 break;
             case 'c':
@@ -1692,6 +1748,9 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 break;
         }
     }
+    if ( got_blockno == false)
+        errors = true;
+    
     if (errors || cmdp < 4) return usage_hf_iclass_readblock();
 
     if (!auth)
