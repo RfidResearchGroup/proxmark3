@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Usage: run option -h to get help
+
 PM3PATH=$(dirname "$0")
 # try pm3 dirs in current repo workdir
 if [ -d "$PM3PATH/client/" ]; then
@@ -77,6 +79,22 @@ SCRIPT=$(basename -- "$0")
 
 if [ "$SCRIPT" = "pm3" ]; then
   CMD() { $CLIENT "$@"; }
+  HELP() {
+      cat << EOF
+Quick helper script for proxmark3 client when working with a Proxmark device connected via USB
+
+Description:
+    The usage is the same as for the proxmark3 client, with the following differences:
+     * the correct port name will be automatically guessed;
+     * the script will wait for a Proxmark to be connected (same as option -w of the client).
+    Don't use this script if you want to work offline or with the BT addon.
+
+Usage:
+    $SCRIPT [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]
+
+See "$CLIENT -h" for more details on options.
+EOF
+  }
 elif [ "$SCRIPT" = "pm3-flash" ]; then
   CMD() {
       ARGS=("$1" "--flash")
@@ -91,15 +109,73 @@ elif [ "$SCRIPT" = "pm3-flash" ]; then
       done
       $CLIENT ${ARGS[@]};
   }
+  HELP() {
+      cat << EOF
+Quick helper script for flashing a Proxmark device via USB
+
+Description:
+    The usage is similar to the old proxmark3-flasher binary, except that the correct port name will be automatically guessed.
+    If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
+
+Usage:
+    $SCRIPT [-b] image.elf [image.elf...]
+
+Options:
+    -b         Enable flashing of bootloader area (DANGEROUS)
+
+Example:
+     $SCRIPT -b bootloader.elf fullimage.elf
+EOF
+  }
 elif [ "$SCRIPT" = "pm3-flash-all" ]; then
   CMD() { $CLIENT "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE" "--image" "$FULLIMAGE"; }
+  HELP() {
+      cat << EOF
+Quick helper script for flashing a Proxmark device via USB
+
+Description:
+    The correct port name will be automatically guessed and the stock bootloader and firmware image will be flashed.
+    If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
+
+Usage:
+    $SCRIPT
+EOF
+  }
 elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
   CMD() { $CLIENT "$1" "--flash" "--image" "$FULLIMAGE"; }
+  HELP() {
+      cat << EOF
+Quick helper script for flashing a Proxmark device via USB
+
+Description:
+    The correct port name will be automatically guessed and the stock firmware image will be flashed.
+    If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
+
+Usage:
+    $SCRIPT
+EOF
+  }
 elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
   CMD() { $CLIENT "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE"; }
+  HELP() {
+      cat << EOF
+Quick helper script for flashing a Proxmark device via USB
+
+Description:
+    The correct port name will be automatically guessed and the stock bootloader will be flashed.
+    If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
+
+Usage:
+    $SCRIPT
+EOF
+  }
 else
   echo "[!!] Script ran under unknown name, abort: $SCRIPT"
   exit 1
+fi
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+    HELP
+    exit 0
 fi
 HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
