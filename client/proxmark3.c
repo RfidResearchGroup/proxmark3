@@ -280,23 +280,26 @@ static void set_my_executable_path(void) {
 static void show_help(bool showFullHelp, char *exec_name) {
 
     PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m]", exec_name);
-    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]", exec_name);
-    PrintAndLogEx(NORMAL, "        %s [-p] <port> --flash [--unlock-bootloader] [--image <imagefile>]+", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i] [-d <0|1|2>]", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [-p] <port> --flash [--unlock-bootloader] [--image <imagefile>]+ [-w] [-f] [-d <0|1|2>]", exec_name);
 
     if (showFullHelp) {
-        PrintAndLogEx(NORMAL, "\nOptions in client mode:");
+
+        PrintAndLogEx(NORMAL, "\nCommon options:");
         PrintAndLogEx(NORMAL, "      -h/--help                           this help");
-        PrintAndLogEx(NORMAL, "      -t/--text                           dump all interactive command's help at once");
-        PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive help at once in markdown syntax");
+        PrintAndLogEx(NORMAL, "      -v/--version                        print client version");
         PrintAndLogEx(NORMAL, "      -p/--port                           serial port to connect to");
-        PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS");
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
+        PrintAndLogEx(NORMAL, "      -d/--debug <0|1|2>                  set debugmode");
+        PrintAndLogEx(NORMAL, "\nOptions in client mode:");
+        PrintAndLogEx(NORMAL, "      -t/--text                           dump all interactive command's help at once");
+        PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive help at once in markdown syntax");
+        PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one Proxmark3 command (or several separated by ';').");
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
         PrintAndLogEx(NORMAL, "      -i/--interactive                    enter interactive mode after executing the script or the command");
-        PrintAndLogEx(NORMAL, "      -v/--version                        print client version");
         PrintAndLogEx(NORMAL, "\nOptions in flasher mode:");
         PrintAndLogEx(NORMAL, "      --flash                             flash Proxmark3, requires at least one --image");
         PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash or --flash-info)");
@@ -494,12 +497,28 @@ int main(int argc, char *argv[]) {
             dumpAllHelp(1);
             return 0;
         }
-        // pritn client version
+        // print client version
         if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
             pm3_version(true, true);
             return 0;
         }
 
+        // set debugmode
+        if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
+            if (i + 1 == argc) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") "missing debugmode specification after -d\n");
+                show_help(false, exec_name);
+                return 1;
+            }
+            int demod = atoi(argv[i + 1]);
+            if (demod < 0 || demod > 2) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") "invalid debugmode: -d " _YELLOW_("%s") "\n", argv[i + 1]);
+                return 1;
+            }
+            g_debugMode = demod;
+            i++;
+            continue;
+        }
 
         // flush output
         if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--flush") == 0) {
