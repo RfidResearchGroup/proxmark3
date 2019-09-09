@@ -84,39 +84,14 @@ brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 
 ## Compile and use the project
 
+To use the compiled client, the only difference is that the Proxmark3 port is `/dev/tty.usbmodemiceman1`, so commands become:
+
+```sh
+proxmark3 /dev/ttyACM0  =>  proxmark3 /dev/tty.usbmodemiceman1
+```
+
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 
-To use the compiled client and flasher, the only difference is that the Proxmark3 port is `/dev/tty.usbmodemiceman1`.
-
-To flash: With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're un bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
-
-In principle, the helper script `pm3-flash-all` should auto-detect your port, so you can just try:
-
-```sh
-pm3-flash-all
-```
-
-If port detection failed, you'll have to call the flasher manually and specify the correct port:
-
-```sh
-proxmark3 /dev/tty.usbmodemiceman1 --flash --unlock-bootloader --image /usr/local/share/proxmark3/firmware/bootrom.elf --image /usr/local/share/proxmark3/firmware/fullimage.elf
-```
-
-or from the local repo
-
-```sh
-client/proxmark3 /dev/tty.usbmodemiceman1 --flash --unlock-bootloader --image bootrom/obj/bootrom.elf --image armsrc/obj/fullimage.elf
-```
-
-Similarly, to run the client, you may try:
-
-```sh
-pm3
-```
-
-Or, by specifying the port manually:
-
-```sh
-proxmark3 /dev/tty.usbmodemiceman1
-```
-
+To flash on OS X, better to enter the bootloader mode manually, else you may experience errors.
+With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're in bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
+From there, you can follow the original compilation instructions.

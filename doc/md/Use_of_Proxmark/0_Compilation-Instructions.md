@@ -40,18 +40,28 @@ e.g. calling `./pm3` or `client/proxmark3` instead of just `pm3` or `proxmark3`.
 
 ## Flash the BOOTROM & FULLIMAGE
 
-In most cases, you can run the script `pm3-flash-all` which try to auto-detect the port to use, on several OS.
-
-For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
+In most cases, you can run the following script which try to auto-detect the port to use, on several OS:
 
 ```sh
-proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /usr/local/share/proxmark3/firmware/bootrom.elf --image /usr/local/share/proxmark3/firmware/fullimage.elf
+pm3-flash-all
 ```
 
-or from the local repo
+For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux (adjust the port for your OS):
 
 ```sh
-client/proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image bootrom/obj/bootrom.elf --image armsrc/obj/fullimage.elf
+proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image bootrom.elf --image fullimage.elf
+```
+
+The firmware files will be searched in the expected locations (installed files, working repo files, user folder, etc.). You can also specify their location:
+
+```sh
+pm3-flash -b /tmp/my-bootrom.elf /tmp/my-fullimage.elf
+```
+
+or
+
+```sh
+proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /tmp/my-bootrom.elf --image /tmp/my-fullimage.elf
 ```
 
 ## Run the client
@@ -60,7 +70,7 @@ In most cases, you can run the script `pm3` which try to auto-detect the port to
 
 For the other cases, specify the port by yourself. For example, for a Proxmark3 connected via USB under Linux:
 
-Here, for example, for a Proxmark3 connected via USB under Linux:
+Here, for example, for a Proxmark3 connected via USB under Linux (adjust the port for your OS):
 
 ```sh
 proxmark3 /dev/ttyACM0
