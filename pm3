@@ -124,7 +124,7 @@ Options:
     -b         Enable flashing of bootloader area (DANGEROUS)
 
 Example:
-     $SCRIPT -b bootloader.elf fullimage.elf
+     $SCRIPT -b bootrom.elf fullimage.elf
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-all" ]; then
