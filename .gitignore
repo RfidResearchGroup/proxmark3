@@ -35,6 +35,7 @@ Makefile.platform
 !client/hardnested/*.bin
 !client/hardnested/tables/*.z
 client/ui/ui_overlays.h
+client/reveng/bmptst
 
 hardnested_stats.txt
 proxmark3
