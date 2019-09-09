@@ -2756,21 +2756,21 @@ static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
     {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc diversified keys (blocks 3 & 4) to write new keys"},
     {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "[options..] Check keys"},
-    {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Clone (restore from tagdump file)"},
-    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tagdump file" },
-    {"dump",        CmdHFiClassReader_Dump,     IfPm3Iclass,     "[options..] Authenticate and Dump iClass tag's AA1"},
-    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] (experimental) Load data into iClass emulator memory"},
+    {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Restore a dump file onto a iClass tag"},
+    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tag dump file" },
+    {"dump",        CmdHFiClassReader_Dump,     IfPm3Iclass,     "[options..] Dump iClass tag to file"},
+    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] Load iClass dump file into emulator memory"},
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
     {"info",        CmdHFiClassInfo,            AlwaysAvailable, "            Tag information"},
     {"list",        CmdHFiClassList,            AlwaysAvailable, "            List iClass history"},
-    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce of reader attack dump"},
+    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
-    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage the keys to use with iClass"},
+    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage keys to use with iClass"},
     {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
     {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read iClass block"},
     {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "            Act like an iClass reader"},
-    {"readtagfile", CmdHFiClassReadTagFile,     AlwaysAvailable, "[options..] Display Content from tagfile"},
-    {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read an iClass tag via Replay Attack"},
+    {"readtagfile", CmdHFiClassReadTagFile,     AlwaysAvailable, "[options..] Display content from tag dump file"},
+    {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read iClass tag via replay attack"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iClass tag"},
     {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "            Eavesdrop iClass communication"},
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write iClass block"},
@@ -2812,7 +2812,7 @@ int readIclass(bool loop, bool verbose) {
                 if (verbose) {
                     PrintAndLogEx(FAILED, "Quitting...");
                     DropField();
-                    return 0;
+                    return PM3_EOPABORTED;
                 }
             }
             if (readStatus & FLAG_ICLASS_READER_CSN) {
@@ -2841,7 +2841,7 @@ int readIclass(bool loop, bool verbose) {
 
             if (tagFound && !loop) {
                 DropField();
-                return 1;
+                return PM3_SUCCESS;
             }
         } else {
             if (verbose)
