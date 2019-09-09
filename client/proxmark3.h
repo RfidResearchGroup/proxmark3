@@ -20,11 +20,13 @@
 #define PROXPROMPT_OFFLINE "[offline] pm3 --> "
 #define PROXHISTORY "history.txt"
 #define PROXLOG "log_%Y%m%d.txt"
+#define MAX_NESTED_CMDSCRIPT 10
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+int push_cmdscriptfile(char *path, bool stayafter);
 const char *get_my_executable_path(void);
 const char *get_my_executable_directory(void);
 void main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);

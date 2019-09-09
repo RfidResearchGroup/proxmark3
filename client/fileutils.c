@@ -933,6 +933,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
             ((strcmp(DICTIONARIES_SUBDIR, pm3dir) == 0) ||
              (strcmp(LUA_LIBRARIES_SUBDIR, pm3dir) == 0) ||
              (strcmp(LUA_SCRIPTS_SUBDIR, pm3dir) == 0) ||
+             (strcmp(CMD_SCRIPTS_SUBDIR, pm3dir) == 0) ||
              (strcmp(RESOURCES_SUBDIR, pm3dir) == 0))) {
         char *path = calloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)

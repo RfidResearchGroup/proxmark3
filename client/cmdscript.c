@@ -33,7 +33,10 @@ static int CmdHelp(const char *Cmd);
 */
 static int CmdScriptList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    return searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
+    int ret = searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
+    if (ret != PM3_SUCCESS)
+        return ret;
+    return searchAndList(CMD_SCRIPTS_SUBDIR, ".cmd");
 }
 
 /**
@@ -43,21 +46,6 @@ static int CmdScriptList(const char *Cmd) {
  * @return
  */
 static int CmdScriptRun(const char *Cmd) {
-    // create new Lua state
-    lua_State *lua_state;
-    lua_state = luaL_newstate();
-
-    // load Lua libraries
-    luaL_openlibs(lua_state);
-
-    //Sets the pm3 core libraries, that go a bit 'under the hood'
-    set_pm3_libraries(lua_state);
-
-    //Add the 'bin' library
-    set_bin_library(lua_state);
-
-    //Add the 'bit' library
-    set_bit_library(lua_state);
 
     char preferredName[128] = {0};
     char arguments[256] = {0};
@@ -67,37 +55,65 @@ static int CmdScriptRun(const char *Cmd) {
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
 
     char *script_path;
-    int res = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
-    if (res != PM3_SUCCESS)
-        return res;
+    if ((!str_endswith(preferredName, ".cmd")) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
+        int error;
+        PrintAndLogEx(SUCCESS, "Executing Lua script: %s, args '%s'\n", script_path, arguments);
 
-    int error;
-    PrintAndLogEx(SUCCESS, "Executing: %s, args '%s'\n", script_path, arguments);
-    error = luaL_loadfile(lua_state, script_path);
-    free(script_path);
-    if (!error) {
-        lua_pushstring(lua_state, arguments);
-        lua_setglobal(lua_state, "args");
+        // create new Lua state
+        lua_State *lua_state;
+        lua_state = luaL_newstate();
 
-        //Call it with 0 arguments
-        error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
+        // load Lua libraries
+        luaL_openlibs(lua_state);
+
+        //Sets the pm3 core libraries, that go a bit 'under the hood'
+        set_pm3_libraries(lua_state);
+
+        //Add the 'bin' library
+        set_bin_library(lua_state);
+
+        //Add the 'bit' library
+        set_bit_library(lua_state);
+
+        error = luaL_loadfile(lua_state, script_path);
+        free(script_path);
+        if (!error) {
+            lua_pushstring(lua_state, arguments);
+            lua_setglobal(lua_state, "args");
+
+            //Call it with 0 arguments
+            error = lua_pcall(lua_state, 0, LUA_MULTRET, 0); // once again, returns non-0 on error,
+        }
+        if (error) { // if non-0, then an error
+            // the top of the stack should be the error string
+            if (!lua_isstring(lua_state, lua_gettop(lua_state)))
+                PrintAndLogEx(FAILED, "Error - but no error (?!)");
+
+            // get the top of the stack as the error and pop it off
+            const char *str = lua_tostring(lua_state, lua_gettop(lua_state));
+            lua_pop(lua_state, 1);
+            puts(str);
+        }
+
+        //luaL_dofile(lua_state, buf);
+        // close the Lua state
+        lua_close(lua_state);
+        PrintAndLogEx(SUCCESS, "\nFinished\n");
+        return PM3_SUCCESS;
     }
-    if (error) { // if non-0, then an error
-        // the top of the stack should be the error string
-        if (!lua_isstring(lua_state, lua_gettop(lua_state)))
-            PrintAndLogEx(FAILED, "Error - but no error (?!)");
-
-        // get the top of the stack as the error and pop it off
-        const char *str = lua_tostring(lua_state, lua_gettop(lua_state));
-        lua_pop(lua_state, 1);
-        puts(str);
+    if ((!str_endswith(preferredName, ".lua")) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", true) == PM3_SUCCESS)) {
+        PrintAndLogEx(SUCCESS, "Executing Cmd script: %s, args '%s'\n", script_path, arguments);
+        int ret = push_cmdscriptfile(script_path, true);
+        if (ret != PM3_SUCCESS)
+            PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", script_path);
+        free(script_path);
+        return ret;
     }
-
-    //luaL_dofile(lua_state, buf);
-    // close the Lua state
-    lua_close(lua_state);
-    PrintAndLogEx(SUCCESS, "\nFinished\n");
-    return 0;
+    // file not found, let's search again to display the error messages
+    int ret = PM3_EUNDEF;
+    if (!str_endswith(preferredName, ".cmd")) ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
+    if (!str_endswith(preferredName, ".lua")) ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
+    return ret;
 }
 
 static command_t CommandTable[] = {

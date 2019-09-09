@@ -63,6 +63,38 @@ int check_comm(void) {
     return 0;
 }
 
+// first slot is always NULL, indicating absence of script when idx=0
+FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
+uint8_t cmdscriptfile_idx = 0;
+bool cmdscriptfile_stayafter = false;
+
+int push_cmdscriptfile(char *path, bool stayafter) {
+    if (cmdscriptfile_idx == MAX_NESTED_CMDSCRIPT) {
+        PrintAndLogEx(ERR, "Too many nested scripts, skipping %s\n", path);
+        return PM3_EMALLOC;
+    }
+    FILE *tmp = fopen(path, "r");
+    if (tmp == NULL)
+        return PM3_EFILE;
+    if (cmdscriptfile_idx == 0)
+        cmdscriptfile_stayafter = stayafter;
+    cmdscriptfile[++cmdscriptfile_idx] = tmp;
+    return PM3_SUCCESS;
+}
+
+FILE *current_cmdscriptfile() {
+    return cmdscriptfile[cmdscriptfile_idx];
+}
+
+bool pop_cmdscriptfile() {
+    fclose(cmdscriptfile[cmdscriptfile_idx]);
+    cmdscriptfile[cmdscriptfile_idx--] = NULL;
+    if (cmdscriptfile_idx == 0)
+        return cmdscriptfile_stayafter;
+    else
+        return true;
+}
+
 // Main thread of PM3 Client
 void
 #ifdef __has_attribute
@@ -80,7 +112,6 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         strcreplace(script_cmd, script_cmd_len, ';', '\0');
     }
     bool stdinOnPipe = !isatty(STDIN_FILENO);
-    FILE *sf = NULL;
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 
     PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
@@ -98,8 +129,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         char *path;
         int res = searchFile(&path, CMD_SCRIPTS_SUBDIR, script_cmds_file, ".cmd", false);
         if (res == PM3_SUCCESS) {
-            sf = fopen(path, "r");
-            if (sf)
+            if (push_cmdscriptfile(path, stayInCommandLoop) == PM3_SUCCESS)
                 PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", path);
             else
                 PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", path);
@@ -119,16 +149,18 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         bool printprompt = false;
         char *prompt = PROXPROMPT;
 
+check_script:
         // If there is a script file
-        if (sf) {
+        if (current_cmdscriptfile()) {
 
             // clear array
             memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
 
             // read script file
-            if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), sf)) {
-                fclose(sf);
-                sf = NULL;
+            if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile())) {
+                if (!pop_cmdscriptfile())
+                    break;
+                goto check_script;
             } else {
 
                 // remove linebreaks
@@ -205,12 +237,15 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
                 PrintAndLogEx(NORMAL, "%s%s", prompt, cmd);
                 g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
+                // add to history if not from a script
+                if (!current_cmdscriptfile()) {
+                    HIST_ENTRY *entry = history_get(history_length);
+                    // add if not identical to latest recorded cmd
+                    if ((!entry) || (strcmp(entry->line, cmd) != 0))
+                        add_history(cmd);
+                }
+                // process cmd
                 int ret = CommandReceived(cmd);
-
-                HIST_ENTRY *entry = history_get(history_length);
-                if ((!entry) || (strcmp(entry->line, cmd) != 0))
-                    add_history(cmd);
-
                 // exit or quit
                 if (ret == PM3_EFATAL)
                     break;
@@ -230,8 +265,8 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
     msleep(100); // Make sure command is sent before killing client
 
-    if (sf)
-        fclose(sf);
+    while (current_cmdscriptfile())
+        pop_cmdscriptfile();
 
     if (my_history_path) {
         write_history(my_history_path);
