@@ -29,7 +29,7 @@
 // global client debug variable
 uint8_t g_debugMode = 0;
 // global client disable logging variable
-bool g_disableLogging = false;
+uint8_t g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
 #ifdef _WIN32
 #include <windows.h>

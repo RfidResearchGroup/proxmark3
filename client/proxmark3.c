@@ -117,6 +117,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
+        char *prompt = PROXPROMPT;
 
         // If there is a script file
         if (sf) {
@@ -171,12 +172,12 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
                     rl_event_hook = check_comm;
                     if (session.pm3_present) {
                         if (conn.send_via_fpc_usart == false)
-                            cmd = readline(PROXPROMPT_USB);
+                            prompt = PROXPROMPT_USB;
                         else
-                            cmd = readline(PROXPROMPT_FPC);
+                            prompt = PROXPROMPT_FPC;
                     } else
-                        cmd = readline(PROXPROMPT_OFFLINE);
-
+                        prompt = PROXPROMPT_OFFLINE;
+                    cmd = readline(prompt);
                     fflush(NULL);
                 }
             }
@@ -199,8 +200,10 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
             cmd[strlen(cmd) - off] = '\0';
 
             if (cmd[0] != '\0') {
-                if (printprompt)
-                    PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
+                if (!printprompt)
+                    g_printAndLog = PRINTANDLOG_LOG;
+                PrintAndLogEx(NORMAL, "%s%s", prompt, cmd);
+                g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
                 int ret = CommandReceived(cmd);
 
@@ -481,14 +484,14 @@ int main(int argc, char *argv[]) {
 
         // short help
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            g_disableLogging = true;
+            g_printAndLog = PRINTANDLOG_PRINT;
             show_help(true, exec_name);
             return 0;
         }
 
         // dump help
         if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--text") == 0) {
-            g_disableLogging = true;
+            g_printAndLog = PRINTANDLOG_PRINT;
             show_help(false, exec_name);
             dumpAllHelp(0);
             return 0;
@@ -496,7 +499,7 @@ int main(int argc, char *argv[]) {
 
         // dump markup
         if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--markdown") == 0) {
-            g_disableLogging = true;
+            g_printAndLog = PRINTANDLOG_PRINT;
             dumpAllHelp(1);
             return 0;
         }

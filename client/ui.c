@@ -223,7 +223,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     // lock this section to avoid interlacing prints from different threads
     pthread_mutex_lock(&print_lock);
 
-    if (!g_disableLogging && logging && !logfile) {
+    if ((g_printAndLog & PRINTANDLOG_LOG) && logging && !logfile) {
         char *my_logfile_path = NULL;
         char filename[40];
         struct tm *timenow;
@@ -269,9 +269,11 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 
     bool filter_ansi = !session.supports_colors;
     memcpy_filter_ansi(buffer2, buffer, sizeof(buffer), filter_ansi);
-    fprintf(stream, "%s", buffer2);
-    fprintf(stream, "          "); // cleaning prompt
-    fprintf(stream, "\n");
+    if (g_printAndLog & PRINTANDLOG_PRINT) {
+        fprintf(stream, "%s", buffer2);
+        fprintf(stream, "          "); // cleaning prompt
+        fprintf(stream, "\n");
+    }
 
 #ifdef RL_STATE_READCMD
     // We are using GNU readline. libedit (OSX) doesn't support this flag.
@@ -284,7 +286,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     }
 #endif
 
-    if (!g_disableLogging && logging && logfile) {
+    if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
         if (filter_ansi) { // already done
             fprintf(logfile, "%s\n", buffer2);
         } else {
