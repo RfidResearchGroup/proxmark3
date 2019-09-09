@@ -409,12 +409,12 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uin
     //Password mode
     if (usepwd) {
         // try reading the config block and verify that PWD bit is set before doing this!
-        if (!override) {
+        if (override == 0) {
             if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, downlink_mode)) return PM3_ESOFT;
 
             if (!tryDetectModulation()) {
                 PrintAndLogEx(NORMAL, "Safety Check: Could not detect if PWD bit is set in config block. Exits.");
-                return 0;
+                return PM3_ESOFT;
             } else {
                 PrintAndLogEx(NORMAL, "Safety Check: PWD bit is NOT set in config block. Reading without password...");
                 usepwd = false;
@@ -422,28 +422,31 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uin
             }
         } else {
             // Show only if first for command i.e. override = 1 (override and display) override = 2 (override and dont display)
-            if ((override & 2) != 2)
+            if (override == 1)
                 PrintAndLogEx(NORMAL, "Safety Check Overriden - proceeding despite risk");
         }
     }
 
 
-    if (!AquireData(page1, block, usepwd, password, downlink_mode)) return PM3_ESOFT;
-    if (!DecodeT55xxBlock()) return PM3_ESOFT;
+    if (!AquireData(page1, block, usepwd, password, downlink_mode))
+        return PM3_ESOFT;
+    
+    if (!DecodeT55xxBlock())
+        return PM3_ESOFT;
 
     printT55xxBlock(block);
     return PM3_SUCCESS;
 }
 
 static int CmdT55xxReadBlock(const char *Cmd) {
-    uint8_t  block         = REGULAR_READ_MODE_BLOCK;
-    uint32_t password      = 0; //default to blank Block 7
-    bool     usepwd        = false;
-    bool     override      = false;
-    bool     page1         = false;
-    bool     errors        = false;
-    uint8_t  cmdp          = 0;
-    uint8_t  downlink_mode = 0;
+    uint8_t block = REGULAR_READ_MODE_BLOCK;
+    uint8_t override = 0;
+    uint8_t cmdp = 0;
+    uint8_t downlink_mode = 0;
+    uint32_t password = 0; //default to blank Block 7
+    bool usepwd = false;
+    bool page1 = false;
+    bool errors = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -454,7 +457,7 @@ static int CmdT55xxReadBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'o':
-                override = true;
+                override = 1;
                 cmdp++;
                 break;
             case 'p':
@@ -467,7 +470,6 @@ static int CmdT55xxReadBlock(const char *Cmd) {
                 cmdp++;
                 break;
             case 'r':
-            case 'R':
                 downlink_mode = param_getchar(Cmd, cmdp + 1) - '0';
                 if (downlink_mode > 3) downlink_mode = 0;
                 cmdp += 2;
@@ -1653,26 +1655,27 @@ static int CmdT55xxInfo(const char *Cmd) {
 
 static int CmdT55xxDump(const char *Cmd) {
 
-    uint32_t password      = 0;
-    uint8_t  override      = false;
-    uint8_t  cmd_opt_idx   = 0;
-    uint8_t  downlink_mode = 0;
-    uint8_t  pwd_offset    = 0;
-    char     cmdp = tolower(param_getchar(Cmd, 0));
-
+    uint32_t password = 0;
+    uint8_t override = 0;
+    uint8_t cmd_opt_idx = 0;
+    uint8_t downlink_mode = 0;
+    uint8_t pwd_offset = 0;
+    char cmdp = tolower(param_getchar(Cmd, 0));
 
     if (cmdp == 'h') return usage_t55xx_dump();
     if (cmdp == 'r') {
         cmd_opt_idx++;
         downlink_mode = param_getchar(Cmd, cmd_opt_idx++) - '0';
-        if (downlink_mode > 3) downlink_mode = 0;
+        if (downlink_mode > 3) 
+            downlink_mode = 0;
+        
         pwd_offset = 3;
     }
     bool usepwd = (strlen(Cmd) > pwd_offset);
     if (usepwd) {
         password = param_get32ex(Cmd, cmd_opt_idx++, 0, 16);
         if (param_getchar(Cmd, cmd_opt_idx++) == 'o')
-            override = true;
+            override = 1;
     }
 
     printT5xxHeader(0);
@@ -1680,7 +1683,7 @@ static int CmdT55xxDump(const char *Cmd) {
         T55xxReadBlock(i, 0, usepwd, override, password, downlink_mode);
         // idea for better user experience and display.
         // only show override warning on the first block read
-        if (override) override |= 2; // flag not to show safty for 2nd and on.
+        if (override == 1) override++; // flag not to show safty for 2nd and on.
     }
     printT5xxHeader(1);
     for (uint8_t i = 0; i < 4; i++)
