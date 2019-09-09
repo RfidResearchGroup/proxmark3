@@ -956,7 +956,10 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     }
     // try pm3 dirs in current repo workdir (dev mode)
     if ((exec_path != NULL) &&
-            ((strcmp(TRACES_SUBDIR, pm3dir) == 0))) {
+            ((strcmp(TRACES_SUBDIR, pm3dir) == 0) ||
+             (strcmp(FIRMWARES_SUBDIR, pm3dir) == 0) ||
+             (strcmp(BOOTROM_SUBDIR, pm3dir) == 0) ||
+             (strcmp(FULLIMAGE_SUBDIR, pm3dir) == 0))) {
         char *above = "../";
         char *path = calloc(strlen(exec_path) + strlen(above) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)

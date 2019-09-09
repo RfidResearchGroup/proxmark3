@@ -3,21 +3,17 @@
 # Usage: run option -h to get help
 
 PM3PATH=$(dirname "$0")
+FULLIMAGE="fullimage.elf"
+BOOTIMAGE="bootrom.elf"
 # try pm3 dirs in current repo workdir
 if [ -d "$PM3PATH/client/" ]; then
     CLIENT="$PM3PATH/client/proxmark3"
-    FULLIMAGE="$PM3PATH/armsrc/obj/fullimage.elf"
-    BOOTIMAGE="$PM3PATH/bootrom/obj/bootrom.elf"
 # try install dir
 elif [ -x "$PM3PATH/proxmark3" ]; then
     CLIENT="$PM3PATH/proxmark3"
-    FULLIMAGE="$PM3PATH/../share/proxmark3/firmware/fullimage.elf"
-    BOOTIMAGE="$PM3PATH/../share/proxmark3/firmware/bootrom.elf"
 else
 # hope it's installed somehow, still not sure where fw images are...
     CLIENT="proxmark3"
-    FULLIMAGE="$PM3PATH/../share/proxmark3/firmware/fullimage.elf"
-    BOOTIMAGE="$PM3PATH/../share/proxmark3/firmware/bootrom.elf"
 fi
 
 function wait4proxmark_Linux {

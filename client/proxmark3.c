@@ -330,17 +330,40 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
     int ret = PM3_EUNDEF;
     flash_file_t files[FLASH_MAX_FILES];
     memset(files, 0, sizeof(files));
+    char *filepaths[FLASH_MAX_FILES];
 
     if (serial_port_name == NULL) {
         PrintAndLogEx(ERR, "You must specify a port.\n");
         return PM3_EINVARG;
     }
 
+    for (int i = 0 ; i < num_files; ++i) {
+        char *path;
+        ret = searchFile(&path, FIRMWARES_SUBDIR, filenames[i], ".elf", true);
+        if (ret != PM3_SUCCESS) {
+            ret = searchFile(&path, BOOTROM_SUBDIR, filenames[i], ".elf", true);
+        }
+        if (ret != PM3_SUCCESS) {
+            // Last try, let the error msg be displayed if not found
+            ret = searchFile(&path, FULLIMAGE_SUBDIR, filenames[i], ".elf", false);
+        }
+        if (ret != PM3_SUCCESS) {
+            goto finish2;
+        }
+        filepaths[i] = path;
+    }
+
+    PrintAndLogEx(SUCCESS, "About to use the following file%s:", num_files > 1 ? "s" : "");
+    for (int i = 0 ; i < num_files; ++i) {
+        PrintAndLogEx(SUCCESS, "    %s", filepaths[i]);
+    }
+
     if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         PrintAndLogEx(NORMAL, _GREEN_("Found"));
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
-        return PM3_ETIMEOUT;
+        ret = PM3_ETIMEOUT;
+        goto finish2;
     }
 
     uint32_t max_allowed = 0;
@@ -353,7 +376,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         goto finish;
 
     for (int i = 0 ; i < num_files; ++i) {
-        ret = flash_load(&files[i], filenames[i], can_write_bl, max_allowed * ONE_KB);
+        ret = flash_load(&files[i], filepaths[i], can_write_bl, max_allowed * ONE_KB);
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
@@ -373,9 +396,12 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
 
 finish:
     ret = flash_stop_flashing();
-
     CloseProxmark();
-
+finish2:
+    for (int i = 0 ; i < num_files; ++i) {
+        if (filepaths[i] != NULL)
+            free(filepaths[i]);
+    }
     if (ret == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, _BLUE_("All done."));
     else
@@ -599,6 +625,9 @@ int main(int argc, char *argv[]) {
     if (speed == 0)
         speed = USART_BAUD_RATE;
 
+    // set global variables
+    set_my_executable_path();
+
     if (flash_mode) {
         flash_pm3(port, flash_num_files, flash_filenames, flash_can_write_bl);
         exit(EXIT_SUCCESS);
@@ -628,9 +657,6 @@ int main(int argc, char *argv[]) {
             PrintAndLogEx(SUCCESS, "execute command from commandline: " _YELLOW_("%s") "\n", script_cmd);
         }
     }
-
-    // set global variables
-    set_my_executable_path();
 
     // try to open USB connection to Proxmark
     if (port != NULL) {
