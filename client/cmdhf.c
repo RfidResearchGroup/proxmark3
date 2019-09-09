@@ -76,18 +76,23 @@ int CmdHFSearch(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Checking for known tags...\n");
 
+    PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
             return PM3_SUCCESS;
         }
     }
+
+    PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false) > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
             return PM3_SUCCESS;
         }
     }
+
+    PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
@@ -97,25 +102,33 @@ int CmdHFSearch(const char *Cmd) {
         // until refactoring of ISO15693 cmds,  this is needed.
         DropField();
     }
+
+    PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") " found\n");
             return PM3_SUCCESS;
         }
     }
+
+    PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
         if (readTopazUid() == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
             return PM3_SUCCESS;
         }
     }
+
     // 14b and iclass is the longest test (put last)
+    PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
     if (IfPm3Iso14443a()) {
         if (readHF14B(false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
             return PM3_SUCCESS;
         }
     }
+
+    PrintAndLogEx(INPLACE, "Searching for iClass / PicoPass tag...");
     if (IfPm3Iclass()) {
         if (readIclass(false, false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
@@ -133,7 +146,7 @@ int CmdHFSearch(const char *Cmd) {
     //}
 
 
-    PrintAndLogEx(FAILED, "\nno known/supported 13.56 MHz tags found\n");
+    PrintAndLogEx(FAILED, "\nNo known/supported 13.56 MHz tags found\n");
     return PM3_ESOFT;
 }
 
@@ -208,7 +221,7 @@ static command_t CommandTable[] = {
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
     {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},
-    {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags [preliminary]"},
+    {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags"},
     {"sniff",       CmdHFSniff,       IfPm3Hfsniff,    "<samples to skip (10000)> <triggers to skip (1)> Generic HF Sniff"},
     {NULL, NULL, NULL, NULL}
 };
