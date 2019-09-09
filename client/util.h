@@ -22,6 +22,7 @@
 #endif
 
 uint8_t g_debugMode;
+bool g_disableLogging;
 
 int kbd_enter_pressed(void);
 void AddLogLine(const char *fn, const char *data, const char *c);

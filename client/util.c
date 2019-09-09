@@ -28,6 +28,8 @@
 #define UTIL_BUFFER_SIZE_SPRINT 4097
 // global client debug variable
 uint8_t g_debugMode = 0;
+// global client disable logging variable
+bool g_disableLogging = false;
 
 #ifdef _WIN32
 #include <windows.h>

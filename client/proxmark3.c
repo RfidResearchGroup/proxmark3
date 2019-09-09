@@ -481,12 +481,14 @@ int main(int argc, char *argv[]) {
 
         // short help
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            g_disableLogging = true;
             show_help(true, exec_name);
             return 0;
         }
 
         // dump help
         if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--text") == 0) {
+            g_disableLogging = true;
             show_help(false, exec_name);
             dumpAllHelp(0);
             return 0;
@@ -494,6 +496,7 @@ int main(int argc, char *argv[]) {
 
         // dump markup
         if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--markdown") == 0) {
+            g_disableLogging = true;
             dumpAllHelp(1);
             return 0;
         }

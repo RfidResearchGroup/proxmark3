@@ -223,7 +223,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     // lock this section to avoid interlacing prints from different threads
     pthread_mutex_lock(&print_lock);
 
-    if (logging && !logfile) {
+    if (!g_disableLogging && logging && !logfile) {
         char *my_logfile_path = NULL;
         char filename[40];
         struct tm *timenow;
@@ -284,7 +284,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     }
 #endif
 
-    if (logging && logfile) {
+    if (!g_disableLogging && logging && logfile) {
         if (filter_ansi) { // already done
             fprintf(logfile, "%s\n", buffer2);
         } else {
