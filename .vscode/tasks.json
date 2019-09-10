@@ -14,13 +14,13 @@
         {
             "label": "flash fullimage",
             "type": "shell",
-            "command": "./flash-fullimage.sh",
+            "command": "sudo ./pm3-flash-fullimage",
             "problemMatcher": []
         },
         {
             "label": "FLASH BOOTROM",
             "type": "shell",
-            "command": "./flash-bootrom.sh",
+            "command": "sudo ./pm3-flash-bootrom",
             "problemMatcher": []
         }
     ]
