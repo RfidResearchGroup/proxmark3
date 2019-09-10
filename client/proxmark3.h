@@ -21,6 +21,7 @@
 #define PROXHISTORY "history.txt"
 #define PROXLOG "log_%Y%m%d.txt"
 #define MAX_NESTED_CMDSCRIPT 10
+#define MAX_NESTED_LUASCRIPT 10
 
 #ifdef __cplusplus
 extern "C" {

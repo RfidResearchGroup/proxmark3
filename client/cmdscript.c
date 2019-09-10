@@ -52,12 +52,18 @@ static int CmdScriptRun(const char *Cmd) {
 
     int name_len = 0;
     int arg_len = 0;
+    static uint8_t luascriptfile_idx = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
 
     char *script_path;
     if ((!str_endswith(preferredName, ".cmd")) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
         int error;
+        if (luascriptfile_idx == MAX_NESTED_LUASCRIPT) {
+            PrintAndLogEx(ERR, "Too many nested scripts, skipping %s\n", script_path);
+            return PM3_EMALLOC;
+        }
         PrintAndLogEx(SUCCESS, "Executing Lua script: %s, args '%s'\n", script_path, arguments);
+        luascriptfile_idx++;
 
         // create new Lua state
         lua_State *lua_state;
@@ -98,7 +104,8 @@ static int CmdScriptRun(const char *Cmd) {
         //luaL_dofile(lua_state, buf);
         // close the Lua state
         lua_close(lua_state);
-        PrintAndLogEx(SUCCESS, "\nFinished\n");
+        luascriptfile_idx--;
+        PrintAndLogEx(SUCCESS, "\nFinished %s\n", preferredName);
         return PM3_SUCCESS;
     }
     if ((!str_endswith(preferredName, ".lua")) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", true) == PM3_SUCCESS)) {
