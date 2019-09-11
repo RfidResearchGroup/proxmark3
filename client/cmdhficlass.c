@@ -2805,7 +2805,7 @@ int readIclass(bool loop, bool verbose) {
             uint8_t readStatus = resp.oldarg[0] & 0xff;
             uint8_t *data = resp.data.asBytes;
 
-            if (verbose) PrintAndLogEx(NORMAL, "Readstatus:%02x", readStatus);
+            if (verbose) PrintAndLogEx(INFO, "Readstatus:%02x", readStatus);
             // no tag found or button pressed
             if ((readStatus == 0 && !loop) || readStatus == 0xFF) {
                 // abort
