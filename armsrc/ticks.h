@@ -33,6 +33,7 @@ void SpinDelayCountUs(uint32_t us);
 void StartCountSspClk();
 void ResetSspClk(void);
 uint32_t RAMFUNC GetCountSspClk();
+uint32_t RAMFUNC GetCountSspClkDelta();
 
 void StartTicks(void);
 uint32_t GetTicks(void);
