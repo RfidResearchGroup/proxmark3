@@ -2139,7 +2139,7 @@ void ReaderIClass(uint8_t arg0) {
                 reply_mix(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
                 if (abort_after_read) {
                     LED_B_OFF();
-                    swith_off();
+                    switch_off();
                     return;
                 }
                 //Save that we already sent this....
