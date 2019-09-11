@@ -329,10 +329,6 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         parity ^= (cmd[0] >> i) & 1;
     }
 
-    if ( parity == ((cmd[0] >> 7) & 1) ) {
-        printf("Calc %d,  cmd %02x,  Par %d \n", parity,  cmd[0],  (cmd[0] >> 7) & 1);
-    }
-
     switch (c) {
         case ICLASS_CMD_HALT:
             snprintf(exp, size, "HALT");
