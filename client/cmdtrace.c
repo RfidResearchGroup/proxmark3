@@ -303,7 +303,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x! ", frame[j]);
-        } else if ( protocol == ICLASS  && isResponse == true) {
+        } else if ( protocol == ICLASS  && isResponse == false) {
             uint8_t parity = 0;
             for (int i=0; i<6; i++) {
                 parity ^= ((frame[0] >> i) & 1);
@@ -313,6 +313,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             } else {
                 snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x! ", frame[j]);
             }
+
 	} else {
             snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x  ", frame[j]);
         }
