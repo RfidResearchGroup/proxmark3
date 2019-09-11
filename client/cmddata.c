@@ -39,6 +39,7 @@ static int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "       x          output in hex (omit for binary output)");
     PrintAndLogEx(NORMAL, "       o <offset> enter offset in # of bits");
     PrintAndLogEx(NORMAL, "       l <length> enter length to print in # of bits or hex characters respectively");
+    PrintAndLogEx(NORMAL, "       s          strip leading zeroes, i.e. set offset to first bit equal to one");
     return PM3_SUCCESS;
 }
 static int usage_data_manrawdecode(void) {
@@ -402,6 +403,7 @@ void printDemodBuff(void) {
 int CmdPrintDemodBuff(const char *Cmd) {
     bool hexMode = false;
     bool errors = false;
+    bool lstrip = false;
     uint32_t offset = 0;
     uint32_t length = 512;
     char cmdp = 0;
@@ -423,6 +425,10 @@ int CmdPrintDemodBuff(const char *Cmd) {
                 if (!length) errors = true;
                 cmdp += 2;
                 break;
+            case 's':
+                lstrip = true;
+                cmdp ++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -435,6 +441,15 @@ int CmdPrintDemodBuff(const char *Cmd) {
     if (DemodBufferLen == 0) {
         PrintAndLogEx(NORMAL, "Demodbuffer is empty");
         return PM3_ESOFT;
+    }
+    if (lstrip) {
+        char *buf = (char *)(DemodBuffer + offset);
+        length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
+        uint32_t i;
+        for (i = 0; i < length; i++) {
+            if (buf[i] == 1) break;
+        }
+        offset += i;
     }
     length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
 
