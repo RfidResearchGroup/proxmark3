@@ -1034,7 +1034,7 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
     if (!select_only(CSN, CCNR, use_credit_key, verbose)) {
         if (verbose) PrintAndLogEx(FAILED, "selecting tag failed");
 
-        DropField();
+//        DropField();
         return false;
     }
     //get div_key
@@ -1728,13 +1728,12 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
 
     DropField();
 
-    if ( numberAuthRetries > 0 ) {
-        PrintAndLogEx(SUCCESS, "block %02X: %s\n", blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
-    } else {
+    if ( numberAuthRetries == 0 ) {
         PrintAndLogEx(ERR,"failed to authenticate and read block");
-
         return PM3_ESOFT;
     }
+
+    PrintAndLogEx(SUCCESS, "block %02X: %s\n", blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
     return PM3_SUCCESS;
 }
 

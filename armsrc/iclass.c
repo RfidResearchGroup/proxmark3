@@ -55,7 +55,7 @@
 #include "protocols.h"
 #include "ticks.h"
 
-static int g_wait = 240;
+static int g_wait = 290;
 static int timeout = 5000;
 static uint32_t time_rdr = 0;
 static uint32_t time_response = 0;
@@ -1808,7 +1808,6 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *wait) {
     // maxLen is not used...
     bool skip = false;
 
-
     LED_D_ON();
     // Set FPGA mode to "reader listen mode", no modulation (listen
     // only, since we are receiving, not transmitting).
@@ -1848,7 +1847,6 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *wait) {
             } else if (GetCountSspClkDelta(card_start) > timeout && Demod.state == DEMOD_IC_UNSYNCD) {
                 return false;
             }
-
         }
     }
     return false;
@@ -1910,7 +1908,7 @@ bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *re
         // 0xBB is the internal debug separator byte..
         if (expected_size != got_n || (resp[0] == 0xBB || resp[7] == 0xBB || resp[2] == 0xBB)) {
             //try again
-            SpinDelayUs(360);
+//            SpinDelayUs(360);
             continue;
         }
 
@@ -1942,19 +1940,20 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
         readcheck_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
 
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
-    uint8_t read_status = 0;
 
-    // Send act_all
-    ReaderTransmitIClass_ext(act_all, 1, 330);
+    // Send act_all  ( 330 timeout + 160 timeslot);
+    ReaderTransmitIClass_ext(act_all, 1, 330 + 180);
+
     // Card present?
-    if (!ReaderReceiveIClass(resp)) return read_status;//Fail
+    if (ReaderReceiveIClass(resp) == 0) 
+        return 0;
 
     //Send Identify
     ReaderTransmitIClass(identify, 1);
 
     //We expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
-    uint8_t len = ReaderReceiveIClass(resp);
-    if (len != 10) return read_status;//Fail
+    if ( ReaderReceiveIClass(resp) != 10 )
+        return 0;
 
     //Copy the Anti-collision CSN to our select-packet
     memcpy(&select[1], resp, 8);
@@ -1963,31 +1962,33 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
     ReaderTransmitIClass(select, sizeof(select));
 
     //We expect a 10-byte response here, 8 byte CSN and 2 byte CRC
-    len = ReaderReceiveIClass(resp);
-    if (len != 10) return read_status;//Fail
+    if ( ReaderReceiveIClass(resp) != 10)
+        return 0;
 
-    //Success - level 1, we got CSN
-    //Save CSN in response data
-    memcpy(card_data, resp, 8);
-
-    //Flag that we got to at least stage 1, read CSN
-    read_status = 1;
-
-    // Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
+        // Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
     // ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
     // if (ReaderReceiveIClass(resp) == 8) {
     // //Save CC (e-purse) in response data
     // memcpy(card_data+8, resp, 8);
     // read_status++;
     // }
+    
+    //Success - level 1, we got CSN
+    //Save CSN in response data
+    memcpy(card_data, resp, 8);
+    
+    bool isBlk_2 = sendCmdGetResponseWithRetries(readcheck_cc, sizeof(readcheck_cc), resp, 8, 3);
 
-    bool isOK = sendCmdGetResponseWithRetries(readcheck_cc, sizeof(readcheck_cc), resp, 8, 3);
-    if (!isOK) return read_status;
-
+    //Flag that we got to at least stage 1, read CSN
+    if ( isBlk_2 == false) {
+        return 1;
+    }
+    
     //Save CC (e-purse) in response data
     memcpy(card_data + 8, resp, 8);
-    read_status++;
-    return read_status;
+
+    // we got all data;
+    return 2;
 }
 uint8_t handshakeIclassTag(uint8_t *card_data) {
     return handshakeIclassTag_ext(card_data, false);
@@ -2114,7 +2115,6 @@ void ReaderIClass(uint8_t arg0) {
                 reply_mix(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
                 if (abort_after_read) {
                     LED_B_OFF();
-                    switch_off();
                     return;
                 }
                 //Save that we already sent this....
@@ -2421,7 +2421,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
     BigBuf_free();
     uint8_t *dataout = BigBuf_malloc(255 * 8);
     if (dataout == NULL) {
-        DbpString("[!] out of memory");
+        DbpString("[!] fail to allocate memory");
         OnError(1);
         return;
     }
