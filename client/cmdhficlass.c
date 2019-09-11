@@ -1021,7 +1021,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
     if (isOK <= 1) {
         if ( verbose )
             PrintAndLogEx(FAILED, "failed to obtain CC! Tag-select is aborting...  (%d)", isOK);
-        
+
         return false;
     }
     return true;
@@ -1033,6 +1033,8 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
 
     if (!select_only(CSN, CCNR, use_credit_key, verbose)) {
         if (verbose) PrintAndLogEx(FAILED, "selecting tag failed");
+
+        DropField();
         return false;
     }
     //get div_key
@@ -2042,8 +2044,10 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
 
     if (!givenCSN) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (!select_only(CSN, CCNR, false, true))
+        if (!select_only(CSN, CCNR, false, true)) {
+            DropField();
             return 0;
+        }
     }
 
     HFiClassCalcNewKey(CSN, OLDKEY, NEWKEY, xor_div_key, elite, oldElite, true);
@@ -2280,16 +2284,18 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     for (uint8_t i = 0; i < ICLASS_AUTH_RETRY && !got_csn; i++) {
         got_csn = select_only(CSN, CCNR, false, false);
         if (got_csn == false)
-            PrintAndLogEx(WARNING, "one more try\n");
+            PrintAndLogEx(WARNING, "one more try");
     }
 
     if (got_csn == false) {
         PrintAndLogEx(WARNING, "Tried 10 times. Can't select card, aborting...");
+        DropField();
         return PM3_ESOFT;
     }
 
     pre = calloc(keycount, sizeof(iclass_premac_t));
     if (!pre) {
+        DropField();
         free(keyBlock);
         return PM3_EMALLOC;
     }
