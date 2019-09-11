@@ -55,8 +55,8 @@
 #include "protocols.h"
 #include "ticks.h"
 
-static int g_wait = 200;
-static int timeout = 15000;
+static int g_wait = 100;
+static int timeout = 5000;
 static uint32_t time_rdr = 0;
 static uint32_t time_response = 0;
 
@@ -895,9 +895,7 @@ void RAMFUNC SniffIClass(void) {
 
     // time ZERO, the point from which it all is calculated.
     time_0 = GetCountSspClk();
-
-    int divi = 0;
-    uint8_t tag_byte = 0, foo = 0;
+    
     // loop and listen
     // every sample (1byte in data),
     //     contains HIGH nibble = reader data
@@ -908,12 +906,11 @@ void RAMFUNC SniffIClass(void) {
     for (;;) {
         WDT_HIT();
 
-        if (checked == 1000) {
+        if (checked == 2000) {
             if (BUTTON_PRESS() || data_available()) break;
             checked = 0;
-        } else {
-            checked++;
         }
+        checked++;
 
         previous_data <<= 8;
         previous_data |= *data;
@@ -926,14 +923,6 @@ void RAMFUNC SniffIClass(void) {
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dmaBuf;
             AT91C_BASE_PDC_SSC->PDC_RNCR = ICLASS_DMA_BUFFER_SIZE;
         }
-
-        if (*data & 0xF) {
-            //tag_byte <<= 1;
-            tag_byte ^= (1 << 4);
-            foo ^= (1 << (3 - divi));
-            Dbprintf(" %d|%x == %d|%x", tag_byte, tag_byte, foo, foo);
-        }
-        divi++;
 
         // every odd sample
         if (sniffCounter & 0x01) {
@@ -964,8 +953,6 @@ void RAMFUNC SniffIClass(void) {
                 LED_C_INV();
                 // LOW nibble is always tag data.
                 /*
-
-
                 uint32_t tag_byte =
                         ((previous_data & 0x0F000000) >> 8 )  |
                         ((previous_data & 0x000F0000) >> 4 )  |
@@ -975,8 +962,8 @@ void RAMFUNC SniffIClass(void) {
                         */
 
 
-                //uint8_t tag_byte = ((previous_data & 0xF) << 4 ) | (*data & 0xF);
-                if (ManchesterDecoding_iclass(foo)) {
+                uint8_t tag_byte = ((previous_data & 0xF) << 4 ) | (*data & 0xF);
+                if (ManchesterDecoding_iclass(tag_byte)) {
                     time_stop = GetCountSspClk() - time_0;
                     LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
                     DemodIcReset();
@@ -986,17 +973,15 @@ void RAMFUNC SniffIClass(void) {
                 }
                 TagIsActive = (Demod.state != DEMOD_IC_UNSYNCD);
             }
-            tag_byte = 0;
-            foo = 0;
-            divi = 0;
         }
     } // end main loop
 
+/*
     if (DBGLEVEL >= 1) {
         DbpString("[+] Sniff statistics:");
         Dbhexdump(ICLASS_DMA_BUFFER_SIZE, data, false);
     }
-
+*/
     switch_off();
 }
 
