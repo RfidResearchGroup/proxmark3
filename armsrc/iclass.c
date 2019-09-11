@@ -55,7 +55,7 @@
 #include "protocols.h"
 #include "ticks.h"
 
-static int g_wait = 100;
+static int g_wait = 240;
 static int timeout = 5000;
 static uint32_t time_rdr = 0;
 static uint32_t time_response = 0;
@@ -1700,10 +1700,9 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
 //-----------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
-static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int *wait) {
+static void TransmitIClassCommand(const uint8_t *cmd, int len, int *wait) {
 
     int c = 0;
-//    volatile uint32_t b;
     bool firstpart = true;
     uint8_t sendbyte;
 
@@ -1740,14 +1739,6 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
 
             if (c >= len) break;
         }
-
-        // Prevent rx holding register from overflowing
-        /*
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = AT91C_BASE_SSC->SSC_RHR;
-            (void)b;
-        }
-        */
     }
 
     time_rdr = GetCountSspClk();
@@ -1794,21 +1785,17 @@ void CodeIClassCommand(const uint8_t *cmd, int len) {
 
 void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait) {
 
-    int samples = 0;
-
     // This is tied to other size changes
     CodeIClassCommand(frame, len);
 
     // Select the card
-    TransmitIClassCommand(ToSend, ToSendMax, &samples, &wait);
+    TransmitIClassCommand(ToSend, ToSendMax, &wait);
     LED_A_ON();
-
-    rsamples += samples;
 
     LogTrace(frame, len, rsamples, rsamples, NULL, true);
 }
 void ReaderTransmitIClass(uint8_t *frame, int len) {
-    ReaderTransmitIClass_ext(frame, len, 400);
+    ReaderTransmitIClass_ext(frame, len, 330);
 }
 
 //-----------------------------------------------------------------------------
@@ -1948,14 +1935,17 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
     static uint8_t select[]       = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
-    if (use_credit_key == false)
-        readcheck_cc[0] |= 0x10;
+    // Bit 4: K.If this bit equals to one, the READCHECK will use the Credit Key (Kc); if equals to zero, Debit Key (Kd) willbe used
+    // bit 7: parity.  
+    
+    if (use_credit_key)
+        readcheck_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
 
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     uint8_t read_status = 0;
 
     // Send act_all
-    ReaderTransmitIClass_ext(act_all, 1, 330 + 160);
+    ReaderTransmitIClass_ext(act_all, 1, 330);
     // Card present?
     if (!ReaderReceiveIClass(resp)) return read_status;//Fail
 
@@ -2316,8 +2306,8 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t resp[ICLASS_BUFFER_SIZE];
     uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
-    if (use_credit_key == false)
-        readcheck_cc[0] |= 0x10;
+    if (use_credit_key)
+        readcheck_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
 
     // select card / e-purse
     uint8_t card_data[6 * 8] = {0};
