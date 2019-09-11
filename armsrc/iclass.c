@@ -55,7 +55,7 @@
 #include "protocols.h"
 #include "ticks.h"
 
-static int g_wait = 300;
+static int g_wait = 270;
 static int timeout = 5000;
 static uint32_t time_rdr = 0;
 static uint32_t time_response = 0;
@@ -1054,6 +1054,7 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) 
     return false;
 }
 
+/*
 static uint8_t encode4Bits(const uint8_t b) {
     // OTA, the least significant bits first
     // Manchester encoding added
@@ -1100,6 +1101,9 @@ static uint8_t encode4Bits(const uint8_t b) {
             return 0xaa; // 0000 -> 0000 -> 10101010 -> 0xaa
     }
 }
+*/
+
+static uint8_t lut_enc[] = { 0xAA, 0x6A, 0x9A, 0x5A, 0xA6, 0x66, 0x96, 0x56, 0xA9, 0x69, 0x99, 0x59, 0xA5, 0x65, 0x95, 0x55 };
 
 //-----------------------------------------------------------------------------
 // Prepare tag messages
@@ -1146,8 +1150,8 @@ static void CodeIClassTagAnswer(const uint8_t *cmd, int len) {
     int i;
     for (i = 0; i < len; i++) {
         uint8_t b = cmd[i];
-        ToSend[++ToSendMax] = encode4Bits(b & 0xF); // least significant half
-        ToSend[++ToSendMax] = encode4Bits((b >> 4) & 0xF); // most significant half
+        ToSend[++ToSendMax] = lut_enc[b & 0xF];       // least significant half
+        ToSend[++ToSendMax] = lut_enc[(b >> 4) & 0xF]; // most significant half
     }
 
     // Send EOF
@@ -1642,7 +1646,7 @@ send:
         A legit tag has about 330us delay between reader EOT and tag SOF.
         **/
         if (modulated_response_size > 0) {
-            t2r_stime = (GetCountSspClk() - time_0) << 4;
+            t2r_stime = GetCountSspClkDelta(time_0) << 4;
             SendIClassAnswer(modulated_response, modulated_response_size, 0);
             t2r_etime = ((GetCountSspClk() - time_0) << 4) - t2r_stime;
         }
@@ -1722,6 +1726,7 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
     time_rdr = 0;
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+
     AT91C_BASE_SSC->SSC_THR = 0x00;
 
     // make sure we timeout previous comms.
@@ -1762,13 +1767,6 @@ static void TransmitIClassCommand(const uint8_t *cmd, int len, int *samples, int
     }
 
     time_rdr = GetCountSspClk();
-
-    if (samples) {
-        if (wait)
-            *samples = (c + *wait) << 3;
-        else
-            *samples = c << 3;
-    }
 }
 
 //-----------------------------------------------------------------------------
@@ -1819,15 +1817,14 @@ void ReaderTransmitIClass_ext(uint8_t *frame, int len, int wait) {
 
     // Select the card
     TransmitIClassCommand(ToSend, ToSendMax, &samples, &wait);
-    if (trigger)
-        LED_A_ON();
+    LED_A_ON();
 
     rsamples += samples;
 
     LogTrace(frame, len, rsamples, rsamples, NULL, true);
 }
 void ReaderTransmitIClass(uint8_t *frame, int len) {
-    ReaderTransmitIClass_ext(frame, len, 330);
+    ReaderTransmitIClass_ext(frame, len, 400);
 }
 
 //-----------------------------------------------------------------------------
@@ -1835,23 +1832,21 @@ void ReaderTransmitIClass(uint8_t *frame, int len) {
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
-static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, int *wait) {
+static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *wait) {
     // buffer needs to be 512 bytes
     // maxLen is not used...
-
-    int c = 0;
     bool skip = false;
 
-    // Setup UART/DEMOD to receive
-    DemodIcInit(receivedResponse);
 
+    LED_D_ON();
     // Set FPGA mode to "reader listen mode", no modulation (listen
     // only, since we are receiving, not transmitting).
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
+    // Setup UART/DEMOD to receive
+    DemodIcInit(receivedResponse);
+
     SpinDelayUs(g_wait);  //310 Tout= 330us (iso15603-2)   (330/21.3) take consideration for clock increments.
-    uint32_t foo = GetCountSspClk();
-    uint32_t bar;
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1859,61 +1854,42 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 
     uint16_t checked = 0;
 
+    uint32_t card_start = GetCountSspClk();
     for (;;) {
         WDT_HIT();
 
-        if (checked == 1000) {
+        if (checked == 2000) {
             if (BUTTON_PRESS() || data_available()) return false;
             checked = 0;
-        } else {
-            checked++;
         }
-
-        // keep tx buffer in a defined state anyway.
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = 0x00;
-        }
+        checked++;
 
         // Wait for byte be become available in rx holding register
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
 
-            c++;
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             skip = !skip;
             if (skip) continue;
 
             if (ManchesterDecoding_iclass(b & 0x0f)) {
-                if (samples)
-                    *samples = c << 3;
 
-                time_response = GetCountSspClk() - foo;
+                time_response = GetCountSspClk() - card_start;
                 return true;
+            } else if (GetCountSspClkDelta(card_start) > timeout && Demod.state == DEMOD_IC_UNSYNCD) {
+                return false;
             }
 
-            bar = GetCountSspClk();
-            if ( foo > bar )
-                bar += ( UINT32_MAX - foo );
- 
-            if (bar - foo > timeout) return false;
         }
     }
-
     return false;
 }
 
 int ReaderReceiveIClass(uint8_t *receivedAnswer) {
-    int samples = 0;
 
-    if (GetIClassAnswer(receivedAnswer, 0, &samples, NULL) == false)
+    if (GetIClassAnswer(receivedAnswer, 0, NULL) == false)
         return 0;
-
-    rsamples += samples;
 
     LogTrace(receivedAnswer, Demod.len, rsamples, rsamples, NULL, false);
-
-    if (samples == 0)
-        return 0;
-
     return Demod.len;
 }
 
