@@ -2806,25 +2806,27 @@ int readIclass(bool loop, bool verbose) {
             uint8_t *data = resp.data.asBytes;
 
             if (verbose) PrintAndLogEx(INFO, "Readstatus:%02x", readStatus);
+
             // no tag found or button pressed
             if ((readStatus == 0 && !loop) || readStatus == 0xFF) {
                 // abort
-                if (verbose) {
-                    PrintAndLogEx(FAILED, "Quitting...");
-                    DropField();
-                    return PM3_EOPABORTED;
-                }
+                 DropField();
+                 return PM3_EOPABORTED;
             }
+
             if (readStatus & FLAG_ICLASS_READER_CSN) {
                 PrintAndLogEx(NORMAL, "   CSN: %s", sprint_hex(data, 8));
                 tagFound = true;
             }
+
             if (readStatus & FLAG_ICLASS_READER_CC) {
                 PrintAndLogEx(NORMAL, "    CC: %s", sprint_hex(data + 16, 8));
             }
+
             if (readStatus & FLAG_ICLASS_READER_CONF) {
                 printIclassDumpInfo(data);
             }
+
             if (readStatus & FLAG_ICLASS_READER_AIA) {
                 bool legacy = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
 
