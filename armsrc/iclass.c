@@ -1435,6 +1435,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     uint32_t r2t_stime, r2t_etime = 0;
     LED_A_ON();
     bool buttonPressed = false;
+    uint8_t cmd, options, block;
 
     while (!exitLoop) {
         WDT_HIT();
@@ -1455,7 +1456,11 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
 
         LED_C_ON(); //Signal tracer
 
-        if (receivedCmd[0] == ICLASS_CMD_ACTALL) {   // 0x0A
+        cmd = receivedCmd[0] & 0xF;
+        options = (receivedCmd[0] >> 4) & 0xFF;
+        block = receivedCmd[1];
+
+        if (cmd == ICLASS_CMD_ACTALL) {   // 0x0A
             // Reader in anticollission phase
             modulated_response = resp_sof;
             modulated_response_size = resp_sof_Len; //order = 1;
@@ -1463,7 +1468,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
             trace_data_size = sizeof(sof_data);
             // adjusted for 330 + (160*num of slot)
             goto send;
-        } else if (receivedCmd[0] == ICLASS_CMD_READ_OR_IDENTIFY) { // 0x0C
+        } else if (cmd == ICLASS_CMD_READ_OR_IDENTIFY) { // 0x0C
             if (len == 1) {
                 // Reader asks for anticollission CSN
                 modulated_response = resp_anticoll;
@@ -1475,7 +1480,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
 
             if (len == 4) {
                 // block0,1,2,5 is always readable.
-                switch (receivedCmd[1]) {
+                switch (block) {
                     case 0: // csn (0c 00)
                         modulated_response = resp_csn;
                         modulated_response_size = resp_csn_len;
@@ -1508,7 +1513,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                         if (simulationMode == MODE_FULLSIM) { // 0x0C
                             //Read block
                             //Take the data...
-                            memcpy(data_generic_trace, emulator + (receivedCmd[1] << 3), 8);
+                            memcpy(data_generic_trace, emulator + (block << 3), 8);
                             AddCrc(data_generic_trace, 8);
                             trace_data = data_generic_trace;
                             trace_data_size = 10;
@@ -1521,7 +1526,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                     }
                 }//swith
             }// if 4
-        } else if (receivedCmd[0] == ICLASS_CMD_SELECT) { // 0x81
+        } else if (cmd == ICLASS_CMD_SELECT) { // 0x81
             // Reader selects anticollission CSN.
             // Tag sends the corresponding real CSN
             modulated_response = resp_csn;
@@ -1529,23 +1534,15 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
             trace_data = csn_data;
             trace_data_size = sizeof(csn_data);
             goto send;
-        } else if (receivedCmd[0] == ICLASS_CMD_READCHECK_KD) { // 0x88
-            // Read e-purse (88 02)
+        } else if (cmd == ICLASS_CMD_READCHECK ) { // 0x88
+            // Read e-purse KD (88 02)  KC  (18 02)
             modulated_response = resp_cc;
             modulated_response_size = resp_cc_len; //order = 4;
             trace_data = card_challenge_data;
             trace_data_size = sizeof(card_challenge_data);
             LED_B_ON();
             goto send;
-        } else if (receivedCmd[0] == ICLASS_CMD_READCHECK_KC) { // 0x18
-            // Read e-purse (18 02)
-            modulated_response = resp_cc;
-            modulated_response_size = resp_cc_len; //order = 4;
-            trace_data = card_challenge_data;
-            trace_data_size = sizeof(card_challenge_data);
-            LED_B_ON();
-            goto send;
-        } else if (receivedCmd[0] == ICLASS_CMD_CHECK) { // 0x05
+        } else if (cmd == ICLASS_CMD_CHECK) { // 0x05
             // Reader random and reader MAC!!!
             if (simulationMode == MODE_FULLSIM) {
                 // NR, from reader, is in receivedCmd +1
@@ -1583,17 +1580,17 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
                 }
             }
             goto send;
-        } else if (receivedCmd[0] == ICLASS_CMD_HALT && len == 1) {
+        } else if (cmd == ICLASS_CMD_HALT && options == 0 && len == 1) {
             // Reader ends the session
             modulated_response = resp_sof;
             modulated_response_size = 0; //order = 0;
             trace_data = NULL;
             trace_data_size = 0;
             goto send;
-        } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_READ4 && len == 4) {  // 0x06
+        } else if (simulationMode == MODE_FULLSIM && cmd == ICLASS_CMD_READ4 && len == 4) {  // 0x06
             //Read block
             //Take the data...
-            memcpy(data_generic_trace, emulator + (receivedCmd[1] << 3), 8 * 4);
+            memcpy(data_generic_trace, emulator + (block << 3), 8 * 4);
             AddCrc(data_generic_trace, 8 * 4);
             trace_data = data_generic_trace;
             trace_data_size = 34;
@@ -1601,7 +1598,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
             memcpy(modulated_response, ToSend, ToSendMax);
             modulated_response_size = ToSendMax;
             goto send;
-        } else if (simulationMode == MODE_FULLSIM && receivedCmd[0] == ICLASS_CMD_UPDATE) {
+        } else if (simulationMode == MODE_FULLSIM && cmd == ICLASS_CMD_UPDATE) {
 
             //Probably the reader wants to update the nonce. Let's just ignore that for now.
             // OBS! If this is implemented, don't forget to regenerate the cipher_state
@@ -1854,6 +1851,7 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
 
     SpinDelayUs(g_wait);  //310 Tout= 330us (iso15603-2)   (330/21.3) take consideration for clock increments.
     uint32_t foo = GetCountSspClk();
+    uint32_t bar;
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1892,7 +1890,11 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *samples, 
                 return true;
             }
 
-            if (GetCountSspClk() - foo > timeout) return false;
+            bar = GetCountSspClk();
+            if ( foo > bar )
+                bar += ( UINT32_MAX - foo );
+ 
+            if (bar - foo > timeout) return false;
         }
     }
 
@@ -1985,10 +1987,10 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
     static uint8_t act_all[]      = { ICLASS_CMD_ACTALL };
     static uint8_t identify[]     = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
     static uint8_t select[]       = { ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK_KD, 0x02 };
+    uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK, 0x02 };
 
-    if (use_credit_key)
-        readcheck_cc[0] = ICLASS_CMD_READCHECK_KC;
+    if (use_credit_key == false)
+        readcheck_cc[0] |= 0x10;
 
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     uint8_t read_status = 0;
@@ -2353,10 +2355,10 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t keyCount = arg1 & 0xFF;
     uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t resp[ICLASS_BUFFER_SIZE];
-    uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK_KD, 0x02 };
+    uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK, 0x02 };
 
-    if (use_credit_key)
-        readcheck_cc[0] = ICLASS_CMD_READCHECK_KC;
+    if (use_credit_key == false)
+        readcheck_cc[0] |= 0x10;
 
     // select card / e-purse
     uint8_t card_data[6 * 8] = {0};

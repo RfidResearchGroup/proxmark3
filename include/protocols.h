@@ -120,22 +120,21 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // for instance ICLASS_CMD_SELECT  0x81 tells if ISO14443b/BPSK coding/106 kbits/s
 // for instance ICLASS_CMD_SELECT  0x41 tells if ISO14443b/BPSK coding/423 kbits/s
 //
-#define ICLASS_CMD_HALT             0x00
-#define ICLASS_CMD_SELECT_15        0x01
-#define ICLASS_CMD_ACTALL           0x0A
-#define ICLASS_CMD_DETECT           0x0F
+#define ICLASS_CMD_HALT             0x0
+#define ICLASS_CMD_SELECT           0x1
+#define ICLASS_CMD_ACTALL           0xA
+#define ICLASS_CMD_DETECT           0xF
 
-#define ICLASS_CMD_CHECK            0x05
-#define ICLASS_CMD_READ4            0x06
-#define ICLASS_CMD_READ_OR_IDENTIFY 0x0C
+#define ICLASS_CMD_PAGESEL          0x4
+#define ICLASS_CMD_CHECK            0x5
+#define ICLASS_CMD_READ4            0x6
+#define ICLASS_CMD_UPDATE           0x7
+#define ICLASS_CMD_READCHECK        0x8
+#define ICLASS_CMD_READ_OR_IDENTIFY 0xC
+#define ICLASS_CMD_ACT              0xE
 
-#define ICLASS_CMD_SELECT           0x81
-#define ICLASS_CMD_PAGESEL          0x84
-#define ICLASS_CMD_UPDATE           0x87
-#define ICLASS_CMD_READCHECK_KC     0x18
-#define ICLASS_CMD_READCHECK_KD     0x88
-#define ICLASS_CMD_ACT              0x8E
-
+#define ICLASS_CREDIT(x)            (((x) & 0x5) == 1)
+#define ICLASS_DEBIT(x)             (((x) & 0x5) == 0)
 
 
 #define ISO14443A_CMD_REQA          0x26
