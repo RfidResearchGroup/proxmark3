@@ -55,8 +55,8 @@
 #include "protocols.h"
 #include "ticks.h"
 
-static int g_wait = 270;
-static int timeout = 5000;
+static int g_wait = 200;
+static int timeout = 15000;
 static uint32_t time_rdr = 0;
 static uint32_t time_response = 0;
 
@@ -1029,12 +1029,11 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) 
 
         WDT_HIT();
 
-        if (checked == 1000) {
+        if (checked == 2000) {
             if (BUTTON_PRESS() || data_available()) return false;
             checked = 0;
-        } else {
-            checked++;
         }
+        checked++;
 
         // keep tx buffer in a defined state anyway.
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
@@ -1682,12 +1681,12 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
     uint16_t checked = 0;
     for (;;) {
 
-        if (checked == 1000) {
+        if (checked == 2000) {
             if (BUTTON_PRESS() || data_available()) return 0;
             checked = 0;
-        } else {
-            checked++;
         }
+        checked++;
+
         // Prevent rx holding register from overflowing
         if ((AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)) {
             b = AT91C_BASE_SSC->SSC_RHR;
@@ -1872,7 +1871,6 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *wait) {
             if (skip) continue;
 
             if (ManchesterDecoding_iclass(b & 0x0f)) {
-
                 time_response = GetCountSspClk() - card_start;
                 return true;
             } else if (GetCountSspClkDelta(card_start) > timeout && Demod.state == DEMOD_IC_UNSYNCD) {
@@ -1930,7 +1928,7 @@ bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *re
 
         // update/write command takes 4ms to 15ms before responding
         int old_wait = g_wait;
-        if (command[0] == ICLASS_CMD_UPDATE)
+        if ( (command[0] & 0xF) == ICLASS_CMD_UPDATE)
             g_wait = 3900;
 
         uint8_t got_n = ReaderReceiveIClass(resp);
@@ -1962,8 +1960,8 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
     // act_all...
     static uint8_t act_all[]      = { ICLASS_CMD_ACTALL };
     static uint8_t identify[]     = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
-    static uint8_t select[]       = { ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK, 0x02 };
+    static uint8_t select[]       = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
     if (use_credit_key == false)
         readcheck_cc[0] |= 0x10;
@@ -2055,7 +2053,7 @@ void ReaderIClass(uint8_t arg0) {
         WDT_HIT();
 
         // if only looking for one card try 2 times if we missed it the first time
-        if (try_once && tryCnt > 2) {
+        if (try_once && tryCnt > 10) {
             if (DBGLEVEL > 1) DbpString("Failed to find a tag");
             break;
         }
@@ -2138,9 +2136,10 @@ void ReaderIClass(uint8_t arg0) {
             if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("SEND %c",  send ? 'y' : 'n');
 
             if (send) {
-                reply_old(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
+                reply_mix(CMD_ACK, result_status, 0, 0, card_data, sizeof(card_data));
                 if (abort_after_read) {
                     LED_B_OFF();
+                    swith_off();
                     return;
                 }
                 //Save that we already sent this....
@@ -2149,19 +2148,18 @@ void ReaderIClass(uint8_t arg0) {
         }
         LED_B_OFF();
 
-        if (checked == 1000) {
+        if (checked == 2000) {
             userCancelled = BUTTON_PRESS() || data_available();
             checked = 0;
-        } else {
-            checked++;
         }
+        checked++;
     }
 
     if (userCancelled) {
-        reply_old(CMD_ACK, 0xFF, 0, 0, card_data, 0);
+        reply_mix(CMD_ACK, 0xFF, 0, 0, card_data, 0);
         switch_off();
     } else {
-        reply_old(CMD_ACK, 0, 0, 0, card_data, 0);
+        reply_mix(CMD_ACK, 0, 0, 0, card_data, 0);
     }
 }
 
@@ -2331,7 +2329,7 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t keyCount = arg1 & 0xFF;
     uint8_t check[] = { ICLASS_CMD_CHECK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t resp[ICLASS_BUFFER_SIZE];
-    uint8_t readcheck_cc[] = { ICLASS_CMD_READCHECK, 0x02 };
+    uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
     if (use_credit_key == false)
         readcheck_cc[0] |= 0x10;
@@ -2353,12 +2351,11 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t startup_limit = 10;
     while (read_status != 2) {
 
-        if (checked == 1000) {
+        if (checked == 2000) {
             if (BUTTON_PRESS() || !data_available()) goto out;
             checked = 0;
-        } else {
-            checked++;
         }
+        checked++;
 
         read_status = handshakeIclassTag_ext(card_data, use_credit_key);
         if (startup_limit-- == 0) {
@@ -2375,12 +2372,11 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     for (i = 0; i < keyCount; i++) {
 
         // Allow button press / usb cmd to interrupt device
-        if (checked == 1000) {
+        if (checked == 2000) {
             if (BUTTON_PRESS() || !data_available()) goto out;
             checked = 0;
-        } else {
-            checked++;
         }
+        checked++;
 
         WDT_HIT();
         LED_B_ON();
@@ -2432,10 +2428,10 @@ bool iClass_ReadBlock(uint8_t blockno, uint8_t *data, uint8_t len) {
 // readblock 8 + 2.  only want 8.
 void iClass_ReadBlk(uint8_t blockno) {
     struct p {
-        bool isOK; 
+        bool isOK;
         uint8_t blockdata[8];
     } PACKED result;
-    
+
     result.isOK = iClass_ReadBlock(blockno, result.blockdata, sizeof(result.blockdata));
     switch_off();
     reply_ng(CMD_HF_ICLASS_READBL, PM3_SUCCESS, (uint8_t *)&result, sizeof(result));
@@ -2470,7 +2466,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
         }
         memcpy(dataout + (blkCnt * 8), blockdata, 8);
     }
-    
+
     switch_off();
     //return pointer to dump memory in arg3
     reply_mix(CMD_ACK, isOK, blkCnt, BigBuf_max_traceLen(), 0, 0);
@@ -2479,7 +2475,7 @@ void iClass_Dump(uint8_t blockno, uint8_t numblks) {
 
 bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
     uint8_t resp[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t write[] = { ICLASS_CMD_UPDATE, blockno, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t write[] = { 0x80 | ICLASS_CMD_UPDATE, blockno, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     memcpy(write + 2, data, 12); // data + mac
     AddCrc(write + 1, 13);
     return sendCmdGetResponseWithRetries(write, sizeof(write), resp, sizeof(resp), 5);
@@ -2505,12 +2501,12 @@ void iClass_Clone(uint8_t startblock, uint8_t endblock, uint8_t *data) {
             Dbprintf("Write block [%02x] failed", startblock + i);
         }
     }
-    
+
     switch_off();
-    
+
     uint8_t isOK = 0;
     if (written == total_block)
         isOK = 1;
-    
-    reply_ng(CMD_HF_ICLASS_CLONE, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));        
+
+    reply_ng(CMD_HF_ICLASS_CLONE, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
 }
