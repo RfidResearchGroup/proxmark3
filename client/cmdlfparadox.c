@@ -161,7 +161,7 @@ static command_t CommandTable[] = {
     {"demod", CmdParadoxDemod,  AlwaysAvailable, "Demodulate a Paradox FSK tag from the GraphBuffer"},
     {"read",  CmdParadoxRead,   IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
 //  {"clone", CmdParadoxClone,  IfPm3Lf,         "clone paradox tag"},
-    {"sim",   CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
+//  {"sim",   CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
     {NULL, NULL, NULL, NULL}
 };
 
