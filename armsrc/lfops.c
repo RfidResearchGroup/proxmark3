@@ -2060,6 +2060,7 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags) {
 
     //-- Turn and leave field on to let the begin repeating transmission
     TurnReadLFOn(20 * 1000);
+    reply_ng(CMD_LF_T55XX_WAKEUP, PM3_SUCCESS, NULL, 0);
 }
 
 

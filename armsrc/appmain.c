@@ -797,7 +797,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_T55XX_WAKEUP: {
-            T55xxWakeUp(packet->oldarg[0], packet->oldarg[1]);
+            struct p {
+                uint32_t password;
+                uint8_t flags;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;            
+            T55xxWakeUp(payload->password, payload->flags);
             break;
         }
         case CMD_LF_T55XX_RESET_READ: {

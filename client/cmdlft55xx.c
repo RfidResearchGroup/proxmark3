@@ -493,7 +493,7 @@ static int CmdT55xxReadBlock(const char *Cmd) {
                 break;
         }
     }
-    if (errors) return usage_t55xx_read();
+    if (errors || cmdp == 0) return usage_t55xx_read();
 
     if (block > 7 && block != REGULAR_READ_MODE_BLOCK) {
         PrintAndLogEx(NORMAL, "Block must be between 0 and 7");
@@ -611,11 +611,9 @@ static int CmdT55xxDetect(const char *Cmd) {
     bool useGB = false;
     bool usepwd = false;
     bool try_all_dl_modes = false;
-    bool found = false;
     uint32_t password = 0;
     uint8_t cmdp = 0;
     uint8_t downlink_mode = 0;
-    uint8_t dl_mode = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -627,18 +625,15 @@ static int CmdT55xxDetect(const char *Cmd) {
                 cmdp += 2;
                 break;
             case '1':
-                // use Graphbuffer data
                 useGB = true;
                 cmdp++;
                 break;
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode == 4) 
+                if (downlink_mode >= 4) {
                     try_all_dl_modes = true;
-
-                if (downlink_mode > 3) 
-                    downlink_mode = 0;
-
+                    downlink_mode = 4;
+                }
                 cmdp += 2;
                 break;
             default:
@@ -650,47 +645,31 @@ static int CmdT55xxDetect(const char *Cmd) {
     if (errors) return usage_t55xx_detect();
 
     // sanity check.
-    if (SanityOfflineCheck(useGB) != PM3_SUCCESS) return PM3_ENODATA;
+    if (SanityOfflineCheck(useGB) != PM3_SUCCESS)
+        return PM3_ESOFT;
 
-    if (!useGB) {
-        for (dl_mode = downlink_mode; dl_mode < 4; dl_mode++) {
-            found = AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, dl_mode);
+    if (useGB == false) {
+        if ( try_all_dl_modes ) {
+            for (uint8_t mode = 0; mode < 4; mode++) {
+                
+                if ( AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, mode) == false ) {
+                    continue;
+                }
 
-            // found = false if password is supplied but wrong d/l mode
-            // so keep trying other modes (if requested)
-            /*
-            if (!found) {
-                printf ("Aquire not found");
-                return PM3_ENODATA;
+                if (tryDetectModulation()) {
+                    T55xx_Print_DownlinkMode(mode);
+                    return PM3_SUCCESS;
+                }
             }
-            */
-            if (tryDetectModulation()) {
-                T55xx_Print_DownlinkMode(dl_mode);
-                dl_mode = 4;
-                found = true;
-            } else found = false;
-
-            if (!try_all_dl_modes) dl_mode = 4;
+            return PM3_ESOFT;
+        } else {
+           if ( AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode) == false )
+               return PM3_ENODATA;               
         }
     }
 
-
-    if (useGB) found = tryDetectModulation();
-
-    if (!found)
+    if (tryDetectModulation() == false)
         PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with " _YELLOW_("\'lf t55xx config\'"));
-
-
-    /*
-    if (!useGB) {
-        if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password,downlink_mode))
-            return PM3_ENODATA;
-    }
-    if (!tryDetectModulation())
-        PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with " _YELLOW_("\'lf t55xx config\'"));
-    else
-        T55xx_Print_DownlinkMode (downlink_mode);
-    */
 
     return PM3_SUCCESS;
 }
@@ -1142,7 +1121,6 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
     uint8_t downlink_mode = 0;
-    uint8_t flags = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1168,11 +1146,22 @@ static int CmdT55xxWakeUp(const char *Cmd) {
 
     if (errors) return usage_t55xx_wakup();
 
-    flags = (downlink_mode & 3) << 3;
+    struct p {
+        uint32_t password;
+        uint8_t flags;
+    } PACKED payload;
+    
+    payload.password = password;
+    payload.flags = (downlink_mode & 3) << 3; 
+    
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_T55XX_WAKEUP, password, flags, 0, NULL, 0);
+    SendCommandNG(CMD_LF_T55XX_WAKEUP, (uint8_t *)&payload, sizeof(payload));
+    if (!WaitForResponseTimeout(CMD_LF_T55XX_WAKEUP, NULL, 1000)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
-
     return PM3_SUCCESS;
 }
 
@@ -1506,7 +1495,7 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "FDXB ");
             break;
         case T55X7_HID_26_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b (ProxCard) ");
             break;
         case T55X7_PYRAMID_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyramid ");
@@ -2073,7 +2062,7 @@ static int CmdResetRead(const char *Cmd) {
 }
 
 static int CmdT55xxWipe(const char *Cmd) {
-    char writeData[20] = {0};
+    char writeData[36] = {0};
     char *ptrData = writeData;
     uint32_t password = 0;
     bool usepwd = false;
@@ -2116,12 +2105,9 @@ static int CmdT55xxWipe(const char *Cmd) {
     }
 
     if (Q5)
-        snprintf(ptrData + strlen(ptrData), sizeof(writeData) - strlen(ptrData), "d 6001F004");
+        snprintf(ptrData + strlen(writeData), sizeof(writeData) - strlen(writeData), "d 6001F004");
     else
-        snprintf(ptrData + strlen(ptrData), sizeof(writeData) - strlen(ptrData), "d 000880E0");
-
-    PrintAndLogEx(INFO, "%s", ptrData);
-    return 0;
+        snprintf(ptrData + strlen(writeData), sizeof(writeData) - strlen(writeData), "d 000880E0");
 
     if (CmdT55xxWriteBlock(ptrData) != PM3_SUCCESS)
         PrintAndLogEx(WARNING, "Warning: error writing blk 0");
@@ -2167,12 +2153,10 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 return usage_t55xx_chk();
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode == 4) 
+                if (downlink_mode >= 4) { 
                     try_all_dl_modes = true;
-                
-                if (downlink_mode > 3)
-                    downlink_mode = 0;
-                
+                    downlink_mode = 4;
+                }
                 cmdp += 2;
                 break;
             case 'm':
