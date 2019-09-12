@@ -1070,9 +1070,9 @@ void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk,
     }
     for (i = 0; i < bitslen; i++) {
         if (bits[i])
-            mod = fcAll(fclow, &n, clk+mod, &modCnt);
-        else
             mod = fcAll(fchigh, &n, clk+mod, &modCnt);
+        else
+            mod = fcAll(fclow, &n, clk+mod, &modCnt);
     }
 
     WDT_HIT();
