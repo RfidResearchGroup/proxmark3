@@ -1997,19 +1997,19 @@ void MifareCIdent() {
 
     // Generation 1 test
     ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-    if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
-        goto TEST2;
-    };
+	
+    if (ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
 
-    ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-    if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
-        isGen = GEN_1B;
-        goto OUT;
-    };
-    isGen = GEN_1A;
-    goto OUT;
+		ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+		
+		if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
+			isGen = GEN_1B;
+			goto OUT;
+		};
+		isGen = GEN_1A;
+		goto OUT;
+	}
 
-TEST2:
     // reset card
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelay(100);
@@ -2017,6 +2017,7 @@ TEST2:
 
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
     if (res == 2) {
+		Dbprintf("cident AA55C396 == %08X", cuid);
         if (cuid == 0xAA55C396) {
             isGen = GEN_UNFUSED;
             goto OUT;
