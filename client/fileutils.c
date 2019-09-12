@@ -850,10 +850,10 @@ int searchAndList(const char *pm3dir, const char *ext) {
         filelist(script_directory_path, ext, false, true);
     }
     // try pm3 dirs in user .proxmark3 (user mode)
-    char *userpath = getenv("HOME");
-    if (userpath != NULL) {
-        char script_directory_path[strlen(userpath) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + 1];
-        strcpy(script_directory_path, userpath);
+    const char *user_path = get_my_user_directory();
+    if (user_path != NULL) {
+        char script_directory_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + 1];
+        strcpy(script_directory_path, user_path);
         strcat(script_directory_path, PM3_USER_DIRECTORY);
         strcat(script_directory_path, pm3dir);
         filelist(script_directory_path, ext, false, false);
@@ -904,7 +904,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         }
     }
     // try pm3 dirs in user .proxmark3 (user mode)
-    char *user_path = getenv("HOME");
+    const char *user_path = get_my_user_directory();
     if (user_path != NULL) {
         char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
