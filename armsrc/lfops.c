@@ -1306,7 +1306,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
         hi2 = hi = lo = idx = 0;
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("Stopped");
+    DbpString("HID fsk demod stopped");
     if (ledcontrol) LED_A_OFF();
 }
 
