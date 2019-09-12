@@ -315,6 +315,16 @@ static void set_my_executable_path(void) {
     }
 }
 
+static char *my_user_directory = NULL;
+
+const char *get_my_user_directory(void) {
+    return my_user_directory;
+}
+
+static void set_my_user_directory(void) {
+    my_user_directory = getenv("HOME");
+}
+
 static void show_help(bool showFullHelp, char *exec_name) {
 
     PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m]", exec_name);
@@ -485,6 +495,10 @@ int main(int argc, char *argv[]) {
     bool flash_can_write_bl = false;
     int flash_num_files = 0;
     char *flash_filenames[FLASH_MAX_FILES];
+
+    // set global variables soon enough to get the log path
+    set_my_executable_path();
+    set_my_user_directory();
 
     for (int i = 1; i < argc; i++) {
 
@@ -684,9 +698,6 @@ int main(int argc, char *argv[]) {
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
         speed = USART_BAUD_RATE;
-
-    // set global variables
-    set_my_executable_path();
 
     if (flash_mode) {
         flash_pm3(port, flash_num_files, flash_filenames, flash_can_write_bl);

@@ -49,7 +49,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 int searchHomeFilePath(char **foundpath, const char *filename, bool create_home) {
     if (foundpath == NULL)
         return PM3_EINVARG;
-    char *user_path = getenv("HOME");
+    const char *user_path = get_my_user_directory();
     if (user_path == NULL) {
         fprintf(stderr, "Could not retrieve $HOME from the environment\n");
         return PM3_EFILE;

@@ -1173,7 +1173,7 @@ int set_pm3_libraries(lua_State *L) {
         strcat(libraries_path, LUA_LIBRARIES_WILDCARD);
         setLuaPath(L, libraries_path);
     }
-    char *user_path = getenv("HOME");
+    const char *user_path = get_my_user_directory();
     if (user_path != NULL) {
         // from the $HOME/.proxmark3/luascripts/ directory
         char scripts_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(LUA_SCRIPTS_SUBDIR) + strlen(LUA_LIBRARIES_WILDCARD) + 1];
