@@ -12,26 +12,29 @@
 #ifndef __COMMON_H
 #define __COMMON_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include <stdint.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdbool.h>
 
-typedef unsigned char byte_t;
+#define PATHSEP "/"
+// PM3 share path relative to executable when installed
+#define PM3_SHARE_RELPATH    ".." PATHSEP "share" PATHSEP "proxmark3" PATHSEP
 
-#ifdef _MSC_VER
-typedef DWORD uint32_t;
-typedef BYTE uint8_t;
-#define PACKED
-// stuff
-#else
-#include <stdint.h>
-#include <stdbool.h>
+// PM3_USER_DIRECTORY will be expanded from $HOME, e.g. ~/.proxmark3/
+#define PM3_USER_DIRECTORY   PATHSEP ".proxmark3" PATHSEP
+
+// PM3 subdirectories:
+#define CMD_SCRIPTS_SUBDIR   "cmdscripts" PATHSEP
+#define DICTIONARIES_SUBDIR  "dictionaries" PATHSEP
+#define LUA_LIBRARIES_SUBDIR "lualibs" PATHSEP
+#define LUA_SCRIPTS_SUBDIR   "luascripts" PATHSEP
+#define RESOURCES_SUBDIR     "resources" PATHSEP
+#define TRACES_SUBDIR        "traces" PATHSEP
+#define FIRMWARES_SUBDIR     "firmware" PATHSEP
+#define BOOTROM_SUBDIR       "bootrom/obj" PATHSEP
+#define FULLIMAGE_SUBDIR     "armsrc/obj" PATHSEP
+
 #define PACKED __attribute__((packed))
-#endif
 
 // debug
 #define DBG_NONE          0 // no messages
@@ -138,7 +141,4 @@ extern int DBGLEVEL;
 # define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 #endif

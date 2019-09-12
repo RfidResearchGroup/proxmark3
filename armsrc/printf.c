@@ -35,6 +35,8 @@
  */
 #include "printf.h"
 
+#include "string.h"
+
 typedef unsigned char u_char;
 typedef unsigned int u_int;
 typedef unsigned long long u_quad_t;

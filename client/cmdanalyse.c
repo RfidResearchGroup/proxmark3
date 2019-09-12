@@ -9,6 +9,19 @@
 //-----------------------------------------------------------------------------
 #include "cmdanalyse.h"
 
+#include <stdlib.h>       // size_t
+#include <string.h>
+#include <ctype.h>        // tolower
+
+#include "commonutil.h"   // reflect...
+#include "comms.h"        // clearCommandBuffer
+#include "cmdparser.h"    // command_t
+#include "ui.h"           // PrintAndLog
+#include "crc.h"
+#include "crc16.h"        // crc16 ccitt
+#include "tea.h"
+#include "legic_prng.h"
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_analyse_lcr(void) {

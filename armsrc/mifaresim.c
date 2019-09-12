@@ -20,19 +20,24 @@
 //  /!\ Printing Debug message is disrupting emulation,
 //  Only use with caution during debugging
 
+#include "mifaresim.h"
+
+#include <inttypes.h>
 
 #include "iso14443a.h"
-#include "mifaresim.h"
-#include "crapto1/crapto1.h"
 #include "BigBuf.h"
 #include "string.h"
 #include "mifareutil.h"
 #include "fpgaloader.h"
-#include "proxmark3.h"
-#include "usb_cdc.h"
+#include "proxmark3_arm.h"
 #include "cmd.h"
 #include "protocols.h"
-#include "apps.h"
+#include "appmain.h"
+#include "util.h"
+#include "commonutil.h"
+#include "crc16.h"
+#include "dbprint.h"
+#include "ticks.h"
 
 static bool IsTrailerAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action) {
     uint8_t sector_trailer[16];
@@ -163,7 +168,7 @@ static bool IsAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action) {
     }
 }
 
-static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
+static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
 
     // SPEC: https://www.nxp.com/docs/en/application-note/AN10833.pdf
     // ATQA
@@ -250,21 +255,21 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
     if ((flags & FLAG_MF_MINI) == FLAG_MF_MINI) {
         memcpy(rATQA, rATQA_Mini, sizeof(rATQA));
         rSAK[0] = rSAK_Mini;
-        Dbprintf("Mifare Mini");
+        if (DBGLEVEL > DBG_NONE) Dbprintf("Enforcing Mifare Mini ATQA/SAK");
     } else if ((flags & FLAG_MF_1K) == FLAG_MF_1K) {
         memcpy(rATQA, rATQA_1k, sizeof(rATQA));
         rSAK[0] = rSAK_1k;
-        Dbprintf("Mifare 1K");
+        if (DBGLEVEL > DBG_NONE) Dbprintf("Enforcing Mifare 1K ATQA/SAK");
     } else if ((flags & FLAG_MF_2K) == FLAG_MF_2K) {
         memcpy(rATQA, rATQA_2k, sizeof(rATQA));
         rSAK[0] = rSAK_2k;
         *rats = rRATS;
         *rats_len = sizeof(rRATS);
-        Dbprintf("Mifare 2K with RATS support");
+        if (DBGLEVEL > DBG_NONE) Dbprintf("Enforcing Mifare 2K ATQA/SAK with RATS support");
     } else if ((flags & FLAG_MF_4K) == FLAG_MF_4K) {
         memcpy(rATQA, rATQA_4k, sizeof(rATQA));
         rSAK[0] = rSAK_4k;
-        Dbprintf("Mifare 4K");
+        if (DBGLEVEL > DBG_NONE) Dbprintf("Enforcing Mifare 4K ATQA/SAK");
     }
 
     // Prepare UID arrays
@@ -279,7 +284,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         *cuid = bytes_to_num(rUIDBCC1, 4);
         // BCC
         rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
-        if (DBGLEVEL >= DBG_NONE) {
+        if (DBGLEVEL > DBG_NONE) {
             Dbprintf("4B UID: %02x%02x%02x%02x", rUIDBCC1[0], rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3]);
         }
 
@@ -300,7 +305,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         // BCC
         rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
         rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
-        if (DBGLEVEL >= DBG_NONE) {
+        if (DBGLEVEL > DBG_NONE) {
             Dbprintf("7B UID: %02x %02x %02x %02x %02x %02x %02x",
                      rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3], rUIDBCC2[0], rUIDBCC2[1], rUIDBCC2[2], rUIDBCC2[3]);
         }
@@ -326,7 +331,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
         rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
         rUIDBCC3[4] = rUIDBCC3[0] ^ rUIDBCC3[1] ^ rUIDBCC3[2] ^ rUIDBCC3[3];
 
-        if (DBGLEVEL >= DBG_NONE) {
+        if (DBGLEVEL > DBG_NONE) {
             Dbprintf("10B UID: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
                      rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3],
                      rUIDBCC2[1], rUIDBCC2[2], rUIDBCC2[3],
@@ -339,6 +344,17 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
     } else {
         Dbprintf("[-] ERROR: UID size not defined");
         return false;
+    }
+    if (flags & FLAG_FORCED_ATQA) {
+        rATQA[0] = atqa >> 8;
+        rATQA[1] = atqa & 0xff;
+    }
+    if (flags & FLAG_FORCED_SAK) {
+        rSAK[0] = sak;
+    }
+    if (DBGLEVEL > DBG_NONE) {
+        Dbprintf("ATQA  : %02X %02X", rATQA[1], rATQA[0]);
+        Dbprintf("SAK   : %02X", rSAK[0]);
     }
 
     // clone UIDs for byte-frame anti-collision multiple tag selection procedure
@@ -432,7 +448,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, tag_response_info_t *
 *@param exitAfterNReads, exit simulation after n blocks have been read, 0 is infinite ...
 * (unless reader attack mode enabled then it runs util it gets enough nonces to recover all keys attmpted)
 */
-void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
+void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t atqa, uint8_t sak) {
     tag_response_info_t *responses;
     uint8_t cardSTATE = MFEMUL_NOFIELD;
     uint8_t uid_len = 0; // 4,7, 10
@@ -495,12 +511,12 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
     uint8_t rAUTH_NT_keystream[4];
     uint32_t nonce = 0;
 
-    tUart *uart = GetUart();
+    tUart14a *uart = GetUart14a();
 
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
 
-    if (MifareSimInit(flags, datain, &responses, &cuid, &uid_len, &rats, &rats_len) == false) {
+    if (MifareSimInit(flags, datain, atqa, sak, &responses, &cuid, &uid_len, &rats, &rats_len) == false) {
         BigBuf_free_keep_EM();
         return;
     }
@@ -1221,7 +1237,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain) {
 
     if ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {  // Interactive mode flag, means we need to send ACK
         //Send the collected ar_nr in the response
-        reply_old(CMD_ACK, CMD_SIMULATE_MIFARE_CARD, button_pushed, 0, &ar_nr_resp, sizeof(ar_nr_resp));
+        reply_old(CMD_ACK, CMD_HF_MIFARE_SIMULATE, button_pushed, 0, &ar_nr_resp, sizeof(ar_nr_resp));
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

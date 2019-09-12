@@ -10,11 +10,16 @@
 //-----------------------------------------------------------------------------
 
 #include "comms.h"
+
+#include <inttypes.h>
+#include <string.h>
+#include <stdio.h>
+
+#include "uart.h"
+#include "ui.h"
 #include "crc16.h"
-#if defined(__linux__) || (__APPLE__)
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
+#include "util_posix.h" // msclock
+#include "util_darwin.h" // en/dis-ableNapp();
 
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
@@ -52,6 +57,8 @@ static pthread_mutex_t rxBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 // Global start time for WaitForResponseTimeout & dl_it, so we can reset timeout when we get packets
 // as sending lot of these packets can slow down things wuite a lot on slow links (e.g. hw status or lf read at 9600)
 static uint64_t timeout_start_time;
+
+static uint64_t last_packet_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
@@ -248,11 +255,14 @@ static int getReply(PacketResponseNG *packet) {
 //-----------------------------------------------------------------------------
 static void PacketResponseReceived(PacketResponseNG *packet) {
 
-//  PrintAndLogEx(NORMAL, "RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
-//                packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
-
     // we got a packet, reset WaitForResponseTimeout timeout
-    __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
+    uint64_t prev_clk = __atomic_load_n(&last_packet_time, __ATOMIC_SEQ_CST);
+    uint64_t clk = msclock();
+    __atomic_store_n(&timeout_start_time,  clk, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&last_packet_time, clk, __ATOMIC_SEQ_CST);
+    (void) prev_clk;
+//    PrintAndLogEx(NORMAL, "[%07"PRIu64"] RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
+//                clk - prev_clk, packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
 
     switch (packet->cmd) {
         // First check if we are handling a debug message
@@ -585,6 +595,7 @@ int TestProxmark(void) {
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
 
+    __atomic_store_n(&last_packet_time,  msclock(), __ATOMIC_SEQ_CST);
     clearCommandBuffer();
     SendCommandNG(CMD_PING, data, len);
 
@@ -622,7 +633,9 @@ int TestProxmark(void) {
     conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
     conn.uart_speed = pm3_capabilities.baudrate;
 
-    PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
+    PrintAndLogEx(INFO, "Communicating with PM3 over %s%s",
+                  conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
+                  memcmp(conn.serial_port_name, "tcp:", 4) == 0 ? "over " _YELLOW_("TCP") : "");
 
     if (conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
@@ -701,6 +714,12 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
         while (getReply(response)) {
             if (cmd == CMD_UNKNOWN || response->cmd == cmd) {
                 return true;
+            }
+            if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
+                uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
+                PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
+                if (ms_timeout != (size_t) - 1)
+                    ms_timeout += wtx;
             }
         }
 
@@ -816,6 +835,11 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
                 bytes_completed += copy_bytes;
             } else if (response->cmd == CMD_ACK) {
                 return true;
+            } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
+                uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
+                PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
+                if (ms_timeout != (size_t) - 1)
+                    ms_timeout += wtx;
             }
         }
 

@@ -11,26 +11,9 @@
 #ifndef CMDHFMF_H__
 #define CMDHFMF_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <time.h>
-#include <mbedtls/aes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
 #include "common.h"
-#include "util.h"
-#include "mifare.h"                        // nonces_t struct
-#include "mifare/mfkey.h"                  // mfkey32_moebious
-#include "cmdhfmfhard.h"
-#include "mifare/mifarehost.h"             // icesector_t,  sector_t
-#include "util_posix.h"                    // msclock
-#include "mifare/mifaredefault.h"          // mifare default key array
-#include "cmdhf14a.h"                      // dropfield
-#include "cliparser/cliparser.h"           // argtable
-#include "hardnested/hardnested_bf_core.h" // SetSIMDInstr
+#include "mifare/mfkey.h"
+#include "mifare/mifarehost.h" // struct
 
 int CmdHFMF(const char *Cmd);
 int CmdHF14AMfELoad(const char *Cmd); // used by cmd hf mfu eload

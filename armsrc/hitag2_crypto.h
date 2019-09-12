@@ -1,12 +1,7 @@
 #ifndef __HITAG2_CRYPTO_H
 #define __HITAG2_CRYPTO_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "string.h"
-#include "util.h"
+#include "common.h"
 
 struct hitag2_tag {
     uint32_t uid;
@@ -29,8 +24,5 @@ uint32_t _hitag2_byte(uint64_t *x);
 void hitag2_cipher_reset(struct hitag2_tag *tag, const uint8_t *iv);
 int hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is);
 int hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, uint16_t bytes, uint16_t bits) ;
-#ifdef __cplusplus
-}
-#endif
 
 #endif

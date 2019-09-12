@@ -19,7 +19,18 @@ you can simply run 'script run read_pwd_mem' or just 'mem dump p l 256'
 from the client to view the stored quadlets.
 */
 
-#include "hf_bog.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "iso14443a.h"
+#include "protocols.h"
+#include "util.h"
+#include "spiffs.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "BigBuf.h"
+#include "string.h"
 
 #define DELAY_READER_AIR2ARM_AS_SNIFFER (2 + 3 + 8)
 #define DELAY_TAG_AIR2ARM_AS_SNIFFER (3 + 14 + 8)
@@ -62,10 +73,10 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     bool ReaderIsActive = false;
 
     // Set up the demodulator for tag -> reader responses.
-    DemodInit(receivedResp, receivedRespPar);
+    Demod14aInit(receivedResp, receivedRespPar);
 
     // Set up the demodulator for the reader -> tag commands
-    UartInit(receivedCmd, receivedCmdPar);
+    Uart14aInit(receivedCmd, receivedCmdPar);
 
     // Setup and start DMA.
     if (!FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE)) {
@@ -74,8 +85,8 @@ void RAMFUNC SniffAndStore(uint8_t param) {
         return;
     }
 
-    tUart *uart = GetUart();
-    tDemod *demod = GetDemod();
+    tUart14a *uart = GetUart14a();
+    tDemod14a *demod = GetDemod14a();
 
     // We won't start recording the frames that we acquire until we trigger;
     // a good trigger condition to get started is probably when we see a
@@ -153,13 +164,13 @@ void RAMFUNC SniffAndStore(uint8_t param) {
                             break;
                     }
                     /* ready to receive another command. */
-                    UartReset();
+                    Uart14aReset();
                     /* reset the demod code, which might have been */
                     /* false-triggered by the commands from the reader. */
-                    DemodReset();
+                    Demod14aReset();
                     LED_B_OFF();
                 }
-                ReaderIsActive = (uart->state != STATE_UNSYNCD);
+                ReaderIsActive = (uart->state != STATE_14A_UNSYNCD);
             }
 
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
@@ -176,13 +187,13 @@ void RAMFUNC SniffAndStore(uint8_t param) {
                         triggered = true;
 
                     // ready to receive another response.
-                    DemodReset();
+                    Demod14aReset();
                     // reset the Miller decoder including its (now outdated) input buffer
-                    UartReset();
+                    Uart14aReset();
                     // UartInit(receivedCmd, receivedCmdPar);
                     LED_C_OFF();
                 }
-                TagIsActive = (demod->state != DEMOD_UNSYNCD);
+                TagIsActive = (demod->state != DEMOD_14A_UNSYNCD);
             }
         }
 
@@ -218,7 +229,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     if (DBGLEVEL > 1)
         Dbprintf("[!] Wrote %u Authentification attempts into logfile", auth_attempts);
 
-    SpinErr(0, 200, 5); // blink led A
+    SpinErr(LED_A, 200, 5);
     SpinDelay(100);
 }
 

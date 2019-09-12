@@ -9,20 +9,10 @@
 #ifndef __FLASH_H__
 #define __FLASH_H__
 
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
+#include "common.h"
 
-#include "proxmark3.h"
-#include "elf.h"
-#include "proxendian.h"
-#include "pm3_cmd.h"
-#include "at91sam7s512.h"
-#include "util_posix.h"
-#include "util.h"
-#include "comms.h"
+#define FLASH_MAX_FILES 4
+#define ONE_KB 1024
 
 typedef struct {
     void *data;

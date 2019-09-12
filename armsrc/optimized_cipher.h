@@ -1,10 +1,8 @@
 #ifndef OPTIMIZED_CIPHER_H
 #define OPTIMIZED_CIPHER_H
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-
+#include "common.h"
+#include "string.h"
 /**
 * Definition 1 (Cipher state). A cipher state of iClass s is an element of F 40/2
 * consisting of the following four components:

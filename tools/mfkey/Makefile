@@ -1,27 +1,14 @@
-# Hide full compilation line:
-ifneq ($(V),1)
-  Q?=@
-endif
-# To see full command lines, use make V=1
+MYSRCPATHS = ../../common ../../common/crapto1
+MYSRCS = crypto1.c crapto1.c bucketsort.c
+MYINCLUDES = -I../../include -I../../common
+MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYDEFS =
 
-VPATH = ../../common ../../common/crapto1 ../../client
-CC = gcc
-LD = gcc
-CFLAGS += -std=c99 -D_ISOC99_SOURCE -I../../include -I../../common -I../../client -Wall -O3
-LDFLAGS +=
+BINS = mfkey32 mfkey32v2 mfkey64
+INSTALLTOOLS = $(BINS)
 
-OBJS = crypto1.o crapto1.o parity.o util_posix.o bucketsort.o
-EXES = mfkey32 mfkey32v2 mfkey64
+include ../../Makefile.host
 
-all: $(OBJS) $(EXES)
-
-%.o : %.c
-	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
-
-% : %.c $(OBJS)
-	$(info [=] LD $@)
-	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $<
-
-clean:
-	$(Q)rm -f $(OBJS) $(EXES)
+mfkey32 : $(OBJDIR)/mfkey32.o $(MYOBJS)
+mfkey32v2 : $(OBJDIR)/mfkey32v2.o $(MYOBJS)
+mfkey64 : $(OBJDIR)/mfkey64.o $(MYOBJS)

@@ -11,23 +11,20 @@
 
 #include "cmdhfmfp.h"
 
-#include <inttypes.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+
 #include "comms.h"
-#include "cmdmain.h"
-#include "util.h"
 #include "ui.h"
 #include "cmdhf14a.h"
-#include "mifare.h"
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
 #include "mifare/ndef.h"
 #include "cliparser/cliparser.h"
-#include "crypto/libpcrypto.h"
 #include "emv/dump.h"
+#include "mifare/mifaredefault.h"
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
@@ -42,7 +39,7 @@ static int CmdHFMFPInfo(const char *cmd) {
     infoHF14A(false, false);
 
     // Mifare Plus info
-    SendCommandMIX(CMD_READER_ISO_14443a, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
@@ -89,7 +86,7 @@ static int CmdHFMFPInfo(const char *cmd) {
                 // check SL0
                 uint8_t data[250] = {0};
                 int datalen = 0;
-                // https://github.com/Proxmark/proxmark3/blob/master/client/scripts/mifarePlus.lua#L161
+                // https://github.com/Proxmark/proxmark3/blob/master/client/luascripts/mifarePlus.lua#L161
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen);
                 if (!res && datalen > 1 && data[0] == 0x09) {
@@ -227,7 +224,7 @@ static int CmdHFMFPInitPerso(const char *cmd) {
     }
 
     mfpSetVerboseMode(verbose);
-    for (int i = 0; i < sizeof(CardAddresses) / 2; i++) {
+    for (int i = 0; i < ARRAYLEN(CardAddresses); i++) {
         keyNum[0] = CardAddresses[i] >> 8;
         keyNum[1] = CardAddresses[i] & 0xff;
         res = MFPWritePerso(keyNum, key, false, true, data, sizeof(data), &datalen);

@@ -10,7 +10,6 @@
 //
 
 #include "additional_ca.h"
-#include "mbedtls/certs.h"
 
 #define GLOBALSIGN_CA \
     "-----BEGIN CERTIFICATE-----\r\n" \
@@ -37,6 +36,7 @@
 
 // Name: Yubico U2F Root CA Serial 457200631
 // Issued: 2014-08-01
+// https://github.com/Yubico/developers.yubico.com/tree/master/static/U2F
 #define YUBICO_CA \
     "-----BEGIN CERTIFICATE-----\r\n" \
     "MIIDHjCCAgagAwIBAgIEG0BT9zANBgkqhkiG9w0BAQsFADAuMSwwKgYDVQQDEyNZ\r\n" \

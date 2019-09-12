@@ -16,8 +16,7 @@
 #ifndef EMV_PK_H
 #define EMV_PK_H
 
-#include <stdbool.h>
-#include <stddef.h>
+#include "common.h"
 
 struct emv_pk {
     unsigned char rid[5];

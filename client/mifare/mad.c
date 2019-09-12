@@ -10,6 +10,8 @@
 
 #include "mad.h"
 #include "ui.h"
+#include "commonutil.h"  // ARRAYLEN
+
 #include "crc.h"
 #include "util.h"
 

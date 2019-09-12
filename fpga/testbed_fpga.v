@@ -18,33 +18,33 @@ module testbed_fpga;
         ssp_frame, ssp_din, ssp_dout, ssp_clk
     );
 
-	integer i;
+    integer i;
 
-	initial begin
+    initial begin
 
-		// init inputs
-		#5 ncs=1;
-		#5 spck = 1;
-		#5 mosi = 1;
+        // init inputs
+        #5 ncs=1;
+        #5 spck = 1;
+        #5 mosi = 1;
 
-		#50 ncs=0;
-		for (i = 0 ;  i < 8 ;  i = i + 1) begin
-			#5 mosi = $random;
-			#5 spck = 0;
-			#5 spck = 1;
-		end
-		#5 ncs=1;
+        #50 ncs=0;
+        for (i = 0 ;  i < 8 ;  i = i + 1) begin
+            #5 mosi = $random;
+            #5 spck = 0;
+            #5 spck = 1;
+        end
+        #5 ncs=1;
 
-		#50 ncs=0;
-		for (i = 0 ;  i < 8 ;  i = i + 1) begin
-			#5 mosi = $random;
-			#5 spck = 0;
-			#5 spck = 1;
-		end
-		#5 ncs=1;
+        #50 ncs=0;
+        for (i = 0 ;  i < 8 ;  i = i + 1) begin
+            #5 mosi = $random;
+            #5 spck = 0;
+            #5 spck = 1;
+        end
+        #5 ncs=1;
 
-		#50 mosi=1;
-		$finish;
-	end
-	
+        #50 mosi=1;
+        $finish;
+    end
+
 endmodule // main

@@ -1,13 +1,18 @@
-#include "proxmark3.h"
-#include "apps.h"
+#include "felica.h"
+#include "proxmark3_arm.h"
 #include "BigBuf.h"
 #include "util.h"
-#include "usb_cdc.h" // for usb_poll_validate_length
 #include "protocols.h"
 #include "crc16.h"   // crc16 ccitt
+#include "fpgaloader.h"
+#include "string.h"
+#include "commonutil.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "mifare.h"
 
 // FeliCa timings
-// minimum time between the start bits of consecutive transfers from reader to tag: 6800 carrier (13.56Mhz) cycles
+// minimum time between the start bits of consecutive transfers from reader to tag: 6800 carrier (13.56MHz) cycles
 #ifndef FELICA_REQUEST_GUARD_TIME
 # define FELICA_REQUEST_GUARD_TIME (6800/16 + 1)
 #endif
@@ -746,7 +751,7 @@ void felica_dump_lite_s() {
             // for (c=0; c < 8; c++)
             // ndef[c] = FelicaFrame.framebytes[c+4];
 
-            for (blknum = 0; blknum < sizeof(liteblks);) {
+            for (blknum = 0; blknum < ARRAYLEN(liteblks);) {
 
                 // block to read.
                 BuildFliteRdblk(ndef, 1, &liteblks[blknum]);

@@ -17,11 +17,12 @@
 #include <config.h>
 #endif
 
-#include "tlv.h"
 #include "emv_tags.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+#include "commonutil.h"
 
 #ifndef PRINT_INDENT
 # define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}
@@ -400,11 +401,11 @@ static const struct emv_tag emv_tags[] = {
     { 0xdf811b, "Kernel Configuration",                                        EMV_TAG_GENERIC,  NULL },
     { 0xdf811c, "Max Lifetime of Torn Transaction Log Record",                 EMV_TAG_GENERIC,  NULL },
     { 0xdf811d, "Max Number of Torn Transaction Log Records",                  EMV_TAG_GENERIC,  NULL },
-    { 0xdf811e, "Mag-stripe CVM Capability – CVM Required",                    EMV_TAG_GENERIC,  NULL },
+    { 0xdf811e, "Mag-stripe CVM Capability - CVM Required",                    EMV_TAG_GENERIC,  NULL },
     { 0xdf811f, "Security Capability",                                         EMV_TAG_GENERIC,  NULL },
-    { 0xdf8120, "Terminal Action Code – Default",                              EMV_TAG_GENERIC,  NULL },
-    { 0xdf8121, "Terminal Action Code – Denial",                               EMV_TAG_GENERIC,  NULL },
-    { 0xdf8122, "Terminal Action Code – Online",                               EMV_TAG_GENERIC,  NULL },
+    { 0xdf8120, "Terminal Action Code - Default",                              EMV_TAG_GENERIC,  NULL },
+    { 0xdf8121, "Terminal Action Code - Denial",                               EMV_TAG_GENERIC,  NULL },
+    { 0xdf8122, "Terminal Action Code - Online",                               EMV_TAG_GENERIC,  NULL },
     { 0xdf8123, "Reader Contactless Floor Limit",                              EMV_TAG_GENERIC,  NULL },
     { 0xdf8124, "Reader Contactless Transaction Limit (No On-device CVM)",     EMV_TAG_GENERIC,  NULL },
     { 0xdf8125, "Reader Contactless Transaction Limit (On-device CVM)",        EMV_TAG_GENERIC,  NULL },
@@ -414,7 +415,7 @@ static const struct emv_tag emv_tags[] = {
     { 0xdf8129, "Outcome Parameter Set",                                       EMV_TAG_GENERIC,  NULL },
     { 0xdf812a, "DD Card (Track1)",                                            EMV_TAG_GENERIC,  NULL },
     { 0xdf812b, "DD Card (Track2)",                                            EMV_TAG_GENERIC,  NULL },
-    { 0xdf812c, "Mag-stripe CVM Capability – No CVM Required",                 EMV_TAG_GENERIC,  NULL },
+    { 0xdf812c, "Mag-stripe CVM Capability - No CVM Required",                 EMV_TAG_GENERIC,  NULL },
     { 0xdf812d, "Message Hold Time",                                           EMV_TAG_GENERIC,  NULL },
 
     { 0xff8101, "Torn Record",                                                 EMV_TAG_GENERIC,  NULL },
@@ -437,7 +438,7 @@ static int emv_tlv_compare(const void *a, const void *b) {
 }
 
 static const struct emv_tag *emv_get_tag(const struct tlv *tlv) {
-    struct emv_tag *tag = bsearch(tlv, emv_tags, sizeof(emv_tags) / sizeof(emv_tags[0]),
+    struct emv_tag *tag = bsearch(tlv, emv_tags, ARRAYLEN(emv_tags),
                                   sizeof(emv_tags[0]), emv_tlv_compare);
 
     return tag ? tag : &emv_tags[0];

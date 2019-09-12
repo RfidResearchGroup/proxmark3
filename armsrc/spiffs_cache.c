@@ -39,17 +39,17 @@ static s32_t spiffs_cache_page_free(spiffs *fs, int ix, u8_t write_back) {
                 (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR) == 0 &&
                 (cp->flags & SPIFFS_CACHE_FLAG_DIRTY)) {
             u8_t *mem =  spiffs_get_cache_page(fs, cache, ix);
-            SPIFFS_CACHE_DBG("CACHE_FREE: write cache page "_SPIPRIi" pix "_SPIPRIpg"\n", ix, cp->pix);
+            SPIFFS_CACHE_DBG("CACHE_FREE: write cache page "_SPIPRIi" pix "_SPIPRIpg"\n", ix, cp->ucache.spix.pix);
             res = SPIFFS_HAL_WRITE(fs, SPIFFS_PAGE_TO_PADDR(fs, cp->ucache.spix.pix), SPIFFS_CFG_LOG_PAGE_SZ(fs), mem);
         }
 
 #if SPIFFS_CACHE_WR
         if (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR) {
-            SPIFFS_CACHE_DBG("CACHE_FREE: free cache page "_SPIPRIi" objid "_SPIPRIid"\n", ix, cp->obj_id);
+            SPIFFS_CACHE_DBG("CACHE_FREE: free cache page "_SPIPRIi" objid "_SPIPRIid"\n", ix, cp->ucache.swrc.obj_id);
         } else
 #endif
         {
-            SPIFFS_CACHE_DBG("CACHE_FREE: free cache page "_SPIPRIi" pix "_SPIPRIpg"\n", ix, cp->pix);
+            SPIFFS_CACHE_DBG("CACHE_FREE: free cache page "_SPIPRIi" pix "_SPIPRIpg"\n", ix, cp->ucache.spix.pix);
         }
         cache->cpage_use_map &= ~(1 << ix);
         cp->flags = 0;
@@ -156,7 +156,7 @@ s32_t spiffs_phys_rd(
         if (cp) {
             cp->flags = SPIFFS_CACHE_FLAG_WRTHRU;
             cp->ucache.spix.pix = SPIFFS_PADDR_TO_PAGE(fs, addr);
-            SPIFFS_CACHE_DBG("CACHE_ALLO: allocated cache page "_SPIPRIi" for pix "_SPIPRIpg "\n", cp->ix, cp->pix);
+            SPIFFS_CACHE_DBG("CACHE_ALLO: allocated cache page "_SPIPRIi" for pix "_SPIPRIpg "\n", cp->ix, cp->ucache.spix.pix);
 
             s32_t res2 = SPIFFS_HAL_READ(fs,
                                          addr - SPIFFS_PADDR_TO_PAGE_OFFSET(fs, addr),

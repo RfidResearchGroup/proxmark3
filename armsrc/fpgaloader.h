@@ -12,32 +12,10 @@
 #ifndef __FPGALOADER_H
 #define __FPGALOADER_H
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "apps.h"
-#include "fpga.h"
-#include "common.h"     // standard definitions
-#include "proxmark3.h"  // common area
-#include "string.h"
-#include "BigBuf.h"     // bigbuf mem
-#include "zlib.h"       // uncompress
+#include "common.h"
 
-
-void FpgaSendCommand(uint16_t cmd, uint16_t v);
-void FpgaWriteConfWord(uint8_t v);
-void FpgaDownloadAndGo(int bitstream_version);
-// void FpgaGatherVersion(int bitstream_version, char *dst, int len);
-void FpgaSetupSsc(void);
-void SetupSpi(int mode);
-bool FpgaSetupSscDma(uint8_t *buf, int len);
-void Fpga_print_status(void);
-int FpgaGetCurrent(void);
 #define FpgaDisableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 #define FpgaEnableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
-void SetAdcMuxFor(uint32_t whichGpio);
-
-// extern and generel turn off the antenna method
-void switch_off(void);
 
 // definitions for multiple FPGA config files support
 #define FPGA_BITSTREAM_LF 1
@@ -96,5 +74,19 @@ void switch_off(void);
 #define FPGA_HF_ISO18092_FLAG_NOMOD                 (1<<0) // 0001 disable modulation module
 #define FPGA_HF_ISO18092_FLAG_424K                  (2<<0) // 0010 should enable 414k mode (untested). No autodetect
 #define FPGA_HF_ISO18092_FLAG_READER                (4<<0) // 0100 enables antenna power, to act as a reader instead of tag
+
+void FpgaSendCommand(uint16_t cmd, uint16_t v);
+void FpgaWriteConfWord(uint8_t v);
+void FpgaDownloadAndGo(int bitstream_version);
+// void FpgaGatherVersion(int bitstream_version, char *dst, int len);
+void FpgaSetupSsc(void);
+void SetupSpi(int mode);
+bool FpgaSetupSscDma(uint8_t *buf, int len);
+void Fpga_print_status(void);
+int FpgaGetCurrent(void);
+void SetAdcMuxFor(uint32_t whichGpio);
+
+// extern and generel turn off the antenna method
+void switch_off(void);
 
 #endif

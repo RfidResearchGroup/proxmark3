@@ -33,7 +33,7 @@ typedef struct rdv40_spiffs_fsinfo {
 
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
 
-
+int rdv40_spiffs_check();
 int rdv40_spiffs_lazy_unmount();
 int rdv40_spiffs_lazy_mount();
 int rdv40_spiffs_lazy_mount_rollback(int changed);

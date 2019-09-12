@@ -8,20 +8,14 @@
 // Low frequency Hitag support
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "common.h"
-#include "util.h"
-#include "parity.h"
-#include "hitag.h"
-#include "util_posix.h"
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
 #include "comms.h"
-#include "cmddata.h"
-#include "loclass/fileutils.h"  // savefile
+#include "cmdtrace.h"
+#include "commonutil.h"
+#include "hitag.h"
+#include "fileutils.h"  // savefile
 
 static int CmdHelp(const char *Cmd);
 
@@ -84,13 +78,14 @@ static int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h               This help");
     PrintAndLogEx(NORMAL, "   HitagS (0*)");
-    PrintAndLogEx(NORMAL, "      01 <nr> <ar>     Challenge, read all pages from a Hitag S tag");
-    PrintAndLogEx(NORMAL, "      02 <key>         Set to 0 if no authentication is needed. Read all pages from a Hitag S tag");
+    PrintAndLogEx(NORMAL, "      01 <nr> <ar>     Read all pages, challenge mode");
+    PrintAndLogEx(NORMAL, "      02 <key>         Read all pages, crypto mode. Set key=0 for no auth");
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
+    PrintAndLogEx(NORMAL, "      Not implemented");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
-    PrintAndLogEx(NORMAL, "      21 <password>    Password mode");
-    PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Authentication");
-    PrintAndLogEx(NORMAL, "      23 <key>         Authentication, key is in format: ISK high + ISK low");
+    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: 4D494B52 (\"MIKR\")");
+    PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Read all pages, challenge mode");
+    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: 4F4E4D494B52 (\"ONMIKR\")");
     PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
     PrintAndLogEx(NORMAL, "      26               Just read UID");
     return 0;
@@ -99,14 +94,16 @@ static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "Hitag writer functions");
     PrintAndLogEx(NORMAL, "Usage: lf hitag write [h] <reader function #>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       h                                     This help");
     PrintAndLogEx(NORMAL, "   HitagS (0*)");
-    PrintAndLogEx(NORMAL, "      03 <nr,ar> (Challenge) <page> <byte0...byte3> write page on a Hitag S tag");
-    PrintAndLogEx(NORMAL, "      04 <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag S tag");
+    PrintAndLogEx(NORMAL, "      03 <nr,ar> <page> <byte0...byte3>      Write page, challenge mode");
+    PrintAndLogEx(NORMAL, "      04 <key> <page> <byte0...byte3>        Write page, crypto mode. Set key=0 for no auth");
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
+    PrintAndLogEx(NORMAL, "      Not implemented");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
-    PrintAndLogEx(NORMAL, "      24  <key> (set to 0 if no authentication is needed) <page> <byte0...byte3> write page on a Hitag2 tag");
-    PrintAndLogEx(NORMAL, "      27  <password> <page> <byte0...byte3> write page on a Hitag2 tag");
+    PrintAndLogEx(NORMAL, "      24  <key> <page> <byte0...byte3>       Write page, crypto mode. Key format: ISK high + ISK low.");
+    PrintAndLogEx(NORMAL, "                                             Default: 4F4E4D494B52 (\"ONMIKR\"). Set key=0 for no auth");
+    PrintAndLogEx(NORMAL, "      27  <password> <page> <byte0...byte3>  Write page, password mode. Default: 4D494B52 (\"MIKR\")");
     return 0;
 }
 static int usage_hitag_checkchallenges(void) {
@@ -262,7 +259,7 @@ static int CmdLFHitagSniff(const char *Cmd) {
     if (ctmp == 'h') return usage_hitag_sniff();
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SNIFF_HITAG, NULL, 0);
+    SendCommandNG(CMD_LF_HITAG_SNIFF, NULL, 0);
     return 0;
 }
 
@@ -277,7 +274,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     int res = 0;
     char filename[FILE_PATH_SIZE] = { 0x00 };
 
-    uint16_t cmd = CMD_SIMULATE_HITAG;
+    uint16_t cmd = CMD_LF_HITAG_SIMULATE;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -288,7 +285,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 cmdp++;
                 break;
             case 's':
-                cmd = CMD_SIMULATE_HITAG_S;
+                cmd = CMD_LF_HITAGS_SIMULATE;
                 maxdatalen = 4 * 64;
                 cmdp++;
                 break;
@@ -296,7 +293,7 @@ static int CmdLFHitagSim(const char *Cmd) {
                 param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 res = loadFileEML(filename, data, &datalen);
                 if (res > 0 || datalen != maxdatalen) {
-                    PrintAndLogDevice(FAILED, "error, bytes read mismatch file size");
+                    PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
                     errors = true;
                     break;
                 }
@@ -459,7 +456,7 @@ static bool getHitagUid(uint32_t *uid) {
     hitag_data htd;
     memset(&htd, 0, sizeof(htd));
     clearCommandBuffer();
-    SendCommandMIX(CMD_READER_HITAG, RHT2F_UID_ONLY, 0, 0, &htd, sizeof(htd));
+    SendCommandMIX(CMD_LF_HITAG_READER, RHT2F_UID_ONLY, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -478,14 +475,8 @@ static bool getHitagUid(uint32_t *uid) {
 }
 
 static int CmdLFHitagInfo(const char *Cmd) {
-    PrintAndLogEx(INFO, "Hitag2 tag information ");
-    PrintAndLogEx(INFO, "To be done!");
-    PrintAndLogEx(INFO, "------------------------------------");
-
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hitag_info();
-
-    // pwd or key
 
     // read UID
     uint32_t uid = 0;
@@ -495,8 +486,8 @@ static int CmdLFHitagInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "UID: %08X", uid);
 
     // how to detemine Hitag types?
-
     // read block3,  get configuration byte.
+    PrintAndLogEx(FAILED, _RED_("TODO: This is a hardcoded example!"));
 
     // common configurations.
     printHitagConfiguration(0x06);
@@ -512,19 +503,19 @@ static int CmdLFHitagInfo(const char *Cmd) {
 //
 static int CmdLFHitagReader(const char *Cmd) {
 
-    uint16_t cmd = CMD_READER_HITAG;
+    uint16_t cmd = CMD_LF_HITAG_READER;
     hitag_data htd;
     hitag_function htf = param_get32ex(Cmd, 0, 0, 10);
 
     switch (htf) {
         case RHTSF_CHALLENGE: {
-            cmd = CMD_READ_HITAG_S;
+            cmd = CMD_LF_HITAGS_READ;
             num_to_bytes(param_get32ex(Cmd, 1, 0, 16), 4, htd.auth.NrAr);
             num_to_bytes(param_get32ex(Cmd, 2, 0, 16), 4, htd.auth.NrAr + 4);
             break;
         }
         case RHTSF_KEY: {
-            cmd = CMD_READ_HITAG_S;
+            cmd = CMD_LF_HITAGS_READ;
             num_to_bytes(param_get64ex(Cmd, 1, 0, 16), 6, htd.crypto.key);
             break;
         }
@@ -633,9 +624,9 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
 
     clearCommandBuffer();
     if (file_given)
-        SendCommandOLD(CMD_TEST_HITAGS_TRACES, 1, 0, 0, data, datalen);
+        SendCommandOLD(CMD_LF_HITAGS_TEST_TRACES, 1, 0, 0, data, datalen);
     else
-        SendCommandMIX(CMD_TEST_HITAGS_TRACES, 0, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, 0, 0, 0, NULL, 0);
 
     free(data);
     return 0;
@@ -678,7 +669,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_WR_HITAG_S, htf, 0, arg2, &htd, sizeof(htd));
+    SendCommandOLD(CMD_LF_HITAGS_WRITE, htf, 0, arg2, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");

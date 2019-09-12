@@ -11,18 +11,11 @@
 #ifndef UI_H__
 #define UI_H__
 
-#define _USE_MATH_DEFINES
-#include <stdarg.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include <readline/readline.h>
+#include "common.h"
 #include <pthread.h>
-#include <math.h>
-#include <complex.h>
-#include "util.h"
+#include "ansi.h"
+
+#define _USE_MATH_DEFINES
 
 typedef struct {
     bool stdinOnTTY;
@@ -46,7 +39,6 @@ void ShowGraphWindow(void);
 void RepaintGraphWindow(void);
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
-void SetLogFilename(char *fn);
 void SetFlushAfterWrite(bool value);
 void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter);
 
@@ -55,6 +47,8 @@ extern int PlotGridX, PlotGridY, PlotGridXdefault, PlotGridYdefault, GridOffset;
 extern uint32_t CursorCPos, CursorDPos;
 extern bool GridLocked;
 extern bool showDemod;
+
+int searchHomeFilePath(char **foundpath, const char *filename, bool create_home);
 
 extern pthread_mutex_t print_lock;
 

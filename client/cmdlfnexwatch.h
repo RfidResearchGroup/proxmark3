@@ -9,18 +9,7 @@
 #ifndef CMDLFNEXWATCH_H__
 #define CMDLFNEXWATCH_H__
 
-#include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
-#include <stdbool.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h" // preamblesearch
-#include "cmdlf.h"
-#include "lfdemod.h"
+#include "common.h"
 
 int CmdLFNEXWATCH(const char *Cmd);
 

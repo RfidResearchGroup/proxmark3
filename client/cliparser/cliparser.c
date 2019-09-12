@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 
 #include "cliparser.h"
-#include <stdio.h>
 #include <string.h>
 
 void **argtable = NULL;

@@ -14,61 +14,61 @@
 
 module min_max_tracker_tb;
 
-	integer fin;
-	integer fout_min, fout_max;
-	integer r;
+    integer fin;
+    integer fout_min, fout_max;
+    integer r;
 
-	reg clk;
-	reg [7:0] adc_d;
-	wire [7:0] min;
-	wire [7:0] max;
+    reg clk;
+    reg [7:0] adc_d;
+    wire [7:0] min;
+    wire [7:0] max;
 
-	initial
-	begin
-		clk = 0;
-		fin = $fopen(`FIN, "r");
-		if (!fin) begin
-			$display("ERROR: can't open the data file");
-			$finish;
-		end
-		fout_min = $fopen(`FOUT_MIN, "w+");		
-		fout_max = $fopen(`FOUT_MAX, "w+");		
-		if (!$feof(fin))
-			adc_d = $fgetc(fin); // read the first value
-	end
+    initial
+    begin
+        clk = 0;
+        fin = $fopen(`FIN, "r");
+        if (!fin) begin
+            $display("ERROR: can't open the data file");
+            $finish;
+        end
+        fout_min = $fopen(`FOUT_MIN, "w+");
+        fout_max = $fopen(`FOUT_MAX, "w+");
+        if (!$feof(fin))
+            adc_d = $fgetc(fin); // read the first value
+    end
 
-	always
-		# 1 clk = !clk;
+    always
+        # 1 clk = !clk;
 
-	// input
-	initial
-	begin
-		while (!$feof(fin)) begin
-			@(negedge clk) adc_d <= $fgetc(fin);
-		end
+    // input
+    initial
+    begin
+        while (!$feof(fin)) begin
+            @(negedge clk) adc_d <= $fgetc(fin);
+        end
 
-		if ($feof(fin))
-		begin
-			# 3 $fclose(fin);
-			$fclose(fout_min);
-			$fclose(fout_max);
-			$finish;
-		end
-	end
+        if ($feof(fin))
+        begin
+            # 3 $fclose(fin);
+            $fclose(fout_min);
+            $fclose(fout_max);
+            $finish;
+        end
+    end
 
-	initial
-	begin
-		// $monitor("%d\t min: %x, max: %x", $time, min, max);		
-	end
+    initial
+    begin
+        // $monitor("%d\t min: %x, max: %x", $time, min, max);
+    end
 
-	// output
-	always @(negedge clk)
-	if ($time > 2) begin
-		r = $fputc(min, fout_min);
-		r = $fputc(max, fout_max);
-	end
+    // output
+    always @(negedge clk)
+    if ($time > 2) begin
+        r = $fputc(min, fout_min);
+        r = $fputc(max, fout_max);
+    end
 
-	// module to test
-	min_max_tracker tracker(clk, adc_d, 8'd127, min, max);
+    // module to test
+    min_max_tracker tracker(clk, adc_d, 8'd127, min, max);
 
 endmodule

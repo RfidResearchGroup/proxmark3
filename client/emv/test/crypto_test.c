@@ -17,6 +17,8 @@
 #include <config.h>
 #endif
 
+#include "commonutil.h"  // ARRAYLEN
+
 #include "../crypto.h"
 #include "../dump.h"
 #include "util_posix.h"
@@ -312,7 +314,7 @@ int exec_crypto_test(bool verbose) {
     }
     fprintf(stdout, "Crypto raw test: passed\n\n");
 
-    for (i = 0; i < sizeof(keylengths) / sizeof(keylengths[0]); i++) {
+    for (i = 0; i < ARRAYLEN(keylengths); i++) {
         unsigned int kl = keylengths[i];
         ret = test_genkey(kl, message, kl / 8, verbose);
         if (ret) {

@@ -3,13 +3,13 @@
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
 #-----------------------------------------------------------------------------
-# Makefile for bootrom, see ../common/Makefile.common for common settings
+# Makefile for bootrom, see ../common_arm/Makefile.common for common settings
 #-----------------------------------------------------------------------------
 
 # DO NOT use thumb mode in the phase 1 bootloader since that generates a section with glue code
 ARMSRC =
 THUMBSRC = usb_cdc.c \
-	bootrom.c
+           bootrom.c
 
 ASMSRC = ram-reset.s flash-reset.s
 VERSIONSRC = version.c
@@ -29,14 +29,16 @@ APP_CFLAGS += -fno-stack-protector -fno-pie
 
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
-include ../common/Makefile.common
+include ../common_arm/Makefile.common
+
+INSTALLFW = $(OBJDIR)/bootrom.elf
 
 OBJS = $(OBJDIR)/bootrom.s19
 
 # version.c should be remade on every compilation
 version.c: default_version.c
 	$(info [=] GEN $@)
-	$(Q)perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@
+	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
 
 all: $(OBJS)
 
@@ -49,14 +51,23 @@ $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
 	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 clean:
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.o
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.elf
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.map
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.d
-	$(Q)$(DELETE) version.c
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
+	$(Q)$(RM) version.c
 
-.PHONY: all clean help
+install: all
+	$(info [@] Installing bootrom to $(DESTDIR)$(PREFIX)...)
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+
+uninstall:
+	$(info [@] Uninstalling bootrom from $(DESTDIR)$(PREFIX)...)
+	$(Q)$(RM) $(foreach fw,$(INSTALLFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
+
+.PHONY: all clean help install
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

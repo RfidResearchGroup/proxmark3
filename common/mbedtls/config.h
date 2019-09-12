@@ -645,6 +645,7 @@
  *
  * Comment macros to disable the curve and functions for it
  */
+#define MBEDTLS_ECP_DP_SECP128R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP192R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP224R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED

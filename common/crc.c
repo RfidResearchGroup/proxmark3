@@ -9,6 +9,8 @@
 //
 #include "crc.h"
 
+#include "commonutil.h"
+
 void crc_init_ref(crc_t *crc, int order, uint32_t polynom, uint32_t initial_value, uint32_t final_xor, bool refin, bool refout) {
     crc_init(crc, order, polynom, initial_value, final_xor);
     crc->refin = refin;

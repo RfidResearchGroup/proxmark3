@@ -8,14 +8,24 @@
 // EMV commands
 //-----------------------------------------------------------------------------
 
-#include <ctype.h>
-#include "mifare.h"
 #include "cmdemv.h"
+
+#include <string.h>
+
+#include "comms.h" // DropField
+#include "cmdsmartcard.h" // smart_select
+#include "cmdtrace.h"
 #include "emvjson.h"
-#include "emv_pki.h"
 #include "test/cryptotest.h"
 #include "cliparser/cliparser.h"
-#include <jansson.h>
+#include "cmdparser.h"
+#include "proxmark3.h"
+#include "emv_roca.h"
+#include "emvcore.h"
+#include "cmdhf14a.h"
+#include "dol.h"
+#include "ui.h"
+#include "emv_tags.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -222,7 +232,7 @@ static int CmdEMVGPO(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("kK",  "keep",    "keep field ON for next command"),
-        arg_lit0("pP",  "params",  "load parameters from `emv/defparams.json` file for PDOLdata making from PDOL and parameters"),
+        arg_lit0("pP",  "params",  "load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters"),
         arg_lit0("mM",  "make",    "make PDOLdata from PDOL (tag 9F38) and parameters (by default uses default parameters)"),
         arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
@@ -388,7 +398,7 @@ static int CmdEMVAC(const char *Cmd) {
         arg_lit0("kK",  "keep",     "keep field ON for next command"),
         arg_lit0("cC",  "cda",      "executes CDA transaction. Needs to get SDAD in results."),
         arg_str0("dD",  "decision", "<aac|tc|arqc>", "Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested"),
-        arg_lit0("pP",  "params",   "load parameters from `emv/defparams.json` file for CDOLdata making from CDOL and parameters"),
+        arg_lit0("pP",  "params",   "load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters"),
         arg_lit0("mM",  "make",     "make CDOLdata from CDOL (tag 8C and 8D) and parameters (by default uses default parameters)"),
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",      "TLV decode results of selected applets"),
@@ -554,7 +564,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("kK",  "keep",    "keep field ON for next command"),
-        arg_lit0("pP",  "params",  "load parameters from `emv/defparams.json` file for DDOLdata making from DDOL and parameters"),
+        arg_lit0("pP",  "params",  "load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters"),
         arg_lit0("mM",  "make",    "make DDOLdata from DDOL (tag 9F49) and parameters (by default uses default parameters)"),
         arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
@@ -775,7 +785,7 @@ static int CmdEMVExec(const char *Cmd) {
         arg_lit0("sS",  "select",   "activate field and select card."),
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses."),
         arg_lit0("tT",  "tlv",      "TLV decode results."),
-        arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv/defparams.json` file."),
+        arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv_defparams.json` file."),
         arg_lit0("fF",  "forceaid", "Force search AID. Search AID instead of execute PPSE."),
         arg_rem("By default:",      "Transaction type - MSD"),
         arg_lit0("vV",  "qvsdc",    "Transaction type - qVSDC or M/Chip."),
@@ -1366,7 +1376,7 @@ static int CmdEMVScan(const char *Cmd) {
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses."),
         arg_lit0("tT",  "tlv",      "TLV decode results."),
         arg_lit0("eE",  "extract",  "Extract TLV elements and fill Application Data"),
-        arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv/defparams.json` file."),
+        arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv_defparams.json` file."),
         arg_rem("By default:",      "Transaction type - MSD"),
         arg_lit0("vV",  "qvsdc",    "Transaction type - qVSDC or M/Chip."),
         arg_lit0("cC",  "qvsdccda", "Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)."),

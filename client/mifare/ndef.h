@@ -11,9 +11,7 @@
 #ifndef _NDEF_H_
 #define _NDEF_H_
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include "common.h"
 
 typedef enum {
     tnfEmptyRecord          = 0x00,

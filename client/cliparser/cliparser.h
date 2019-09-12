@@ -12,7 +12,6 @@
 #define __CLIPARSER_H
 #include "argtable3.h"
 #include "util.h"
-#include <stdbool.h>
 
 #define arg_param_begin arg_lit0("hH",  "help",    "print this help and exit")
 #define arg_param_end arg_end(20)

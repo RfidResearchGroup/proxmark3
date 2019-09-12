@@ -11,13 +11,7 @@
 #ifndef APDUINFO_H__
 #define APDUINFO_H__
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <inttypes.h>
-
-#include "util.h"
+#include "common.h"
 
 #define APDUCODE_TYPE_NONE     0
 #define APDUCODE_TYPE_INFO     1

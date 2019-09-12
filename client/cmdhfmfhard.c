@@ -21,28 +21,29 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
-#include <time.h>
-#include <pthread.h>
 #include <locale.h>
 #include <math.h>
+#include <time.h> // MingW
+
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"
+
 #include "proxmark3.h"
-#include "cmdmain.h"
 #include "ui.h"
-#include "util.h"
 #include "util_posix.h"
 #include "crapto1/crapto1.h"
 #include "parity.h"
-#include "hardnested/hardnested_bruteforce.h"
 #include "hardnested/hardnested_bf_core.h"
 #include "hardnested/hardnested_bitarray_core.h"
 #include "zlib.h"
+#include "fileutils.h"
 
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
 #define NUM_REDUCTION_WORKING_THREADS   (num_CPUs())
 
 #define IGNORE_BITFLIP_THRESHOLD        0.99 // ignore bitflip arrays which have nearly only valid states
 
-#define STATE_FILES_DIRECTORY           "hardnested/tables/"
+#define STATE_FILES_DIRECTORY           "hardnested_tables/"
 #define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.z"
 
 #define DEBUG_KEY_ELIMINATION
@@ -248,10 +249,15 @@ static void init_bitflip_bitarrays(void) {
             bitflip_bitarrays[odd_even][bitflip] = NULL;
             count_bitflip_bitarrays[odd_even][bitflip] = 1 << 24;
             sprintf(state_file_name, STATE_FILE_TEMPLATE, odd_even, bitflip);
-            strcpy(state_files_path, get_my_executable_directory());
-            strcat(state_files_path, STATE_FILES_DIRECTORY);
+            strcpy(state_files_path, STATE_FILES_DIRECTORY);
             strcat(state_files_path, state_file_name);
-            FILE *statesfile = fopen(state_files_path, "rb");
+            char *path;
+            if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) != PM3_SUCCESS) {
+                continue;
+            }
+
+            FILE *statesfile = fopen(path, "rb");
+            free(path);
             if (statesfile == NULL) {
                 continue;
             } else {
@@ -1379,7 +1385,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         flags |= field_off ? 0x0004 : 0;
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
+        SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
 
         if (field_off) break;
 
@@ -1388,7 +1394,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 uint8_t nullkey[6] = {0};
                 //strange second call (iceman)
                 clearCommandBuffer();
-                SendCommandMIX(CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, nullkey, sizeof(nullkey));
+                SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, nullkey, sizeof(nullkey));
                 return 1;
             }
             if (resp.oldarg[0]) return resp.oldarg[0];  // error during nested_hard

@@ -9,10 +9,14 @@
 // Timers, Clocks functions used in LF or Legic where you would need detailed time.
 //-----------------------------------------------------------------------------
 #include "ticks.h"
-// attempt at high resolution microsecond timer
-// beware: timer counts in 21.3uS increments (1024/48Mhz)
+
+#include "proxmark3_arm.h"
+#include "dbprint.h"
+
+// timer counts in 21.3us increments (1024/48MHz), rounding applies
+// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 void SpinDelayUs(int us) {
-    int ticks = (48 * us) >> 10;
+    int ticks = ((MCK / 1000000) * us + 512) >> 10;
 
     // Borrow a PWM unit for my real-time clock
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
@@ -33,8 +37,13 @@ void SpinDelayUs(int us) {
     }
 }
 
+// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 void SpinDelay(int ms) {
-    // convert to uS and call microsecond delay function
+    if (ms > 1390) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf(_RED_("Error, SpinDelay called with %i > 1390"), ms);
+        ms = 1390;
+    }
+    // convert to us and call microsecond delay function
     SpinDelayUs(ms * 1000);
 }
 //  -------------------------------------------------------------------------
@@ -49,9 +58,10 @@ void SpinDelay(int ms) {
 void StartTickCount(void) {
     // This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
     // We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
-    uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & 0xffff;        // = 16 * main clock frequency (16MHz) / slow clock frequency
-    // set RealTimeCounter divider to count at 1kHz:
-    AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST | ((256000 + (mainf / 2)) / mainf);
+    while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
+    uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
+    // set RealTimeCounter divider to count at 1kHz, should be 32 if RC is exactly at 32kHz:
+    AT91C_BASE_RTTC->RTTC_RTMR = AT91C_RTTC_RTTRST | ((((MAINCK / 1000 * 16) + (mainf / 2)) / mainf) & AT91C_RTTC_RTPRES);
     // note: worst case precision is approx 2.5%
 }
 
@@ -59,12 +69,12 @@ void StartTickCount(void) {
 * Get the current count.
 */
 uint32_t RAMFUNC GetTickCount(void) {
-    return AT91C_BASE_RTTC->RTTC_RTVR;// was * 2;
+    return AT91C_BASE_RTTC->RTTC_RTVR;
 }
 
 uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks) {
     uint32_t stop_ticks = AT91C_BASE_RTTC->RTTC_RTVR;
-    if (stop_ticks > start_ticks)
+    if (stop_ticks >= start_ticks)
         return stop_ticks - start_ticks;
     return (UINT32_MAX - start_ticks) + stop_ticks;
 }
@@ -173,6 +183,13 @@ uint32_t RAMFUNC GetCountSspClk(void) {
     if ((tmp_count & 0x0000ffff) == 0)  //small chance that we may have missed an increment in TC2
         return (AT91C_BASE_TC2->TC_CV << 16);
     return tmp_count;
+}
+
+uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start) {
+    uint32_t stop = GetCountSspClk();
+    if ( stop >= start ) 
+        return stop - start;
+    return (UINT32_MAX - start) + stop;
 }
 
 //  -------------------------------------------------------------------------

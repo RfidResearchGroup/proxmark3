@@ -12,7 +12,7 @@ local Emulator = {
 function Emulator:set_mem (data, clear_first)
     if clear_first then
         -- Clear out the emulator memory first
-        local memclrCmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMCLR}
+        local memclrCmd = Command:newMIX{cmd = cmds.CMD_HF_MIFARE_EML_MEMCLR}
 
         local _, err = memclrCmd:sendMIX()
         if err then
@@ -30,7 +30,7 @@ function Emulator:set_mem (data, clear_first)
 
       -- arg1: start block number
       -- arg2: block count
-      local memsetCmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMSET,
+      local memsetCmd = Command:newMIX{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET,
                                        data = utils.hexlify(cur_out_block),
                                        arg1 = i * self.BLOCK_COUNT,
                                        arg2 = self.BLOCK_COUNT}
@@ -57,7 +57,7 @@ function Emulator:get_mem (size)
    for i = 0, (size / (MAX_BLOCKS * 16)) do
       -- arg1: start block number
       -- arg2: block count (max 4)
-      local getmemCmd = Command:newMIX{cmd = cmds.CMD_MIFARE_EML_MEMGET,
+      local getmemCmd = Command:newMIX{cmd = cmds.CMD_HF_MIFARE_EML_MEMGET,
                                        arg1 = i * MAX_BLOCKS,
                                        arg2 = MAX_BLOCKS,
                                        arg3 = 0}

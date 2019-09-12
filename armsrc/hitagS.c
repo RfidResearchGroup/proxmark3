@@ -13,6 +13,17 @@
 
 #include "hitagS.h"
 
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "string.h"
+#include "commonutil.h"
+#include "hitag2_crypto.h"
+
 #define CRC_PRESET 0xFF
 #define CRC_POLYNOM 0x1D
 
@@ -983,7 +994,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     // and analog mux selection.
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
     // Configure output pin that is connected to the FPGA (for modulating)
@@ -1182,7 +1193,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
     // Configure output and enable pin that is connected to the FPGA (for modulating)
@@ -1517,7 +1528,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
     // Disable modulation at default, which means enable the field
@@ -1778,7 +1789,7 @@ void check_challenges(bool file_given, uint8_t *data) {
 
     // Set fpga in edge detect with reader field, we can modulate as reader now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
 
     // Disable modulation at default, which means enable the field

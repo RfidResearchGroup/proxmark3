@@ -128,7 +128,7 @@ connection is successful.
 
 4. Use Proxmark client on BT-serial port
 ```sh
-./proxmark /dev/rfcomm0
+./proxmark3 /dev/rfcomm0
 ```
 The first time, your OS will ask you for pairing. The default PIN is
 1234. If PIN is not typed in quickly, the client might timeout. Simply
@@ -169,7 +169,7 @@ turn on solid.
 
   4. a serial port `/dev/ttyUSB0` will be created, use Proxmark3 client on it
 ```sh
-./proxmark /dev/ttyUSB0
+./proxmark3 /dev/ttyUSB0
 ```
 
 #### MacOS
@@ -191,9 +191,19 @@ After reboot you can go ahead to pairing your Proxmark3 RDV4 Blue Shark:
   8. A serial port like `/dev/tty.PM3_RDV40-DevB` will be created, use Proxmark3 client on it
 
 ```sh
-./proxmark /dev/tty.PM3_RDV40-DevB
+./proxmark3 /dev/tty.PM3_RDV40-DevB
 ```
+#### Android
 
+#### (2) Fast connection using dedicated Bluetooth (HC-06 Master + CP2102) adapter under Android with Termux
+ 
+  1. Make sure you already followed this tutorial https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/termux_notes.md#setup and have Termux with an running Proxmark3 client ready. You need additional the `cp210x` serial usb driver enabled and working, like the `USB_ACM` driver to communicate wireless. 
+  2. Insert the Bluetooth adapter with an fitting USB-C/Micro-USB converter into your Android USB port and a serial port `/dev/ttyUSB0` will be created. To see if it's working, run `tsudo ls /dev/ttyU*` and it should list `/dev/ttyUSB0`. 
+  3. The adapter will search automatically and establish the connection to BlueShark. The adapter will remember the device that was first connected and after that the same device will be connected. After the connection is established, the blue state LED on add-on will turn on solid.
+  4. If you see this, congratulations, you can run your Proxmark3 client in Termux with `tsudo proxmark3/client/proxmark3 /dev/ttyUSB0`
+
+##### Notes
+If you bought your Bluetooth adapter somewhere else, make sure to set the baud rate to 115200 `AT+BAUD8` and PIN `AT+PIN1234` correctly
 
 ### 6. OTHER NOTES
 

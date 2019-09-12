@@ -9,6 +9,20 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfkeri.h"
 
+#include <string.h>
+#include <inttypes.h>
+
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // preamble test
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_keri_clone(void) {
@@ -162,8 +176,8 @@ static int CmdKeriClone(const char *Cmd) {
         ng.blockno = i;
         ng.flags = 0;
 
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
+        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
@@ -201,11 +215,11 @@ static int CmdKeriSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Simulating");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_PSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_PSK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_PSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)

@@ -86,7 +86,7 @@ local function read14443a(dont_disconnect, no_rats)
     local command, result, info, err, data
 
     command = Command:newMIX{
-            cmd = cmds.CMD_READER_ISO_14443a,
+            cmd = cmds.CMD_HF_ISO14443A_READER,
             arg1 = ISO14A_COMMAND.ISO14A_CONNECT
             }
 
@@ -132,7 +132,7 @@ end
 
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect14443a()
-    local c = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
     return c:sendMIX(true)

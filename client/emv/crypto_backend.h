@@ -18,8 +18,7 @@
 
 #include "crypto.h"
 
-#include <stddef.h>
-#include <stdarg.h>
+#include <stdarg.h>  // va_list
 
 struct crypto_hash {
     enum crypto_algo_hash algo;

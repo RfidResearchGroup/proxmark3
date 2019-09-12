@@ -8,7 +8,21 @@
 // Proxmark3 RDV40 Smartcard module commands
 //-----------------------------------------------------------------------------
 #include "cmdsmartcard.h"
-#include "../emv/emvjson.h"
+
+#include <ctype.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "protocols.h"
+#include "cmdtrace.h"
+#include "proxmark3.h"
+#include "comms.h"              // getfromdevice
+#include "emv/emvcore.h"        // decodeTVL
+#include "crypto/libpcrypto.h"  // sha512hash
+#include "emv/dump.h"
+#include "ui.h"
+#include "fileutils.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -55,13 +69,13 @@ static int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "       f <filename>    :  firmware file name");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/SIM011.BIN");
+    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/sim011.bin");
     return 0;
 }
 static int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
-    PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16mhz, 1=8mhz, 2=4mhz) ");
+    PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz) ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc setclock c 2");
@@ -79,33 +93,35 @@ static int usage_sm_brute(void) {
     return 0;
 }
 
-static int smart_loadjson(const char *preferredName, const char *suffix, json_t **root) {
+static int smart_loadjson(const char *preferredName, json_t **root) {
 
     json_error_t error;
 
     if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
 
-    int retval = 0;
-    int size = sizeof(char) * (strlen(get_my_executable_directory()) + strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s%s.%s", get_my_executable_directory(), preferredName, suffix);
-    *root = json_load_file(fileName, 0, &error);
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    int retval = PM3_SUCCESS;
+    *root = json_load_file(path, 0, &error);
     if (!*root) {
-        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", fileName, error.line, error.text);
-        retval = 2;
+        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
+        retval = PM3_ESOFT;
         goto out;
     }
 
     if (!json_is_array(*root)) {
-        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", fileName);
-        retval = 3;
+        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
+        retval = PM3_ESOFT;
         goto out;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK.", fileName);
+    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK.", path);
 out:
-    free(fileName);
+    free(path);
     return retval;
 }
 
@@ -843,13 +859,13 @@ static int CmdSmartSetClock(const char *Cmd) {
 
     switch (clock1) {
         case 0:
-            PrintAndLogEx(SUCCESS, "Clock changed to 16mhz giving 10800 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 16MHz giving 10800 baudrate");
             break;
         case 1:
-            PrintAndLogEx(SUCCESS, "Clock changed to 8mhz giving 21600 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 8MHz giving 21600 baudrate");
             break;
         case 2:
-            PrintAndLogEx(SUCCESS, "Clock changed to 4mhz giving 86400 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 4MHz giving 86400 baudrate");
             break;
         default:
             break;
@@ -878,7 +894,7 @@ static void smart_brute_prim() {
 
     PrintAndLogEx(INFO, "Reading primitives");
 
-    for (int i = 0; i < sizeof(get_card_data); i += 5) {
+    for (int i = 0; i < ARRAYLEN(get_card_data); i += 5) {
 
         clearCommandBuffer();
         SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, 5, 0, get_card_data + i, 5);
@@ -1022,7 +1038,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Importing AID list");
     json_t *root = NULL;
-    smart_loadjson("aidlist", "json", &root);
+    smart_loadjson("aidlist", &root);
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!buf)

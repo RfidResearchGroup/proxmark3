@@ -8,17 +8,13 @@
 //-----------------------------------------------------------------------------
 // Low frequency PCF7931 commands
 //-----------------------------------------------------------------------------
-#include <stdio.h>
-#include <string.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
 #include "cmdlfpcf7931.h"
+
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -101,7 +97,7 @@ static int CmdLFPCF7931Read(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_PCF7931_READ, NULL, 0);
+    SendCommandNG(CMD_LF_PCF7931_READ, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return 1;
@@ -151,7 +147,7 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     buf[9] = configPcf.InitDelay;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_PCF7931_WRITE, block, bytepos, data, buf, sizeof(buf));
+    SendCommandOLD(CMD_LF_PCF7931_WRITE, block, bytepos, data, buf, sizeof(buf));
     //no ack?
     return 0;
 }

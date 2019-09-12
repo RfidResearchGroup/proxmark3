@@ -33,7 +33,21 @@ on a blank card.
 ## Spanish full description of the project [here](http://bit.ly/2c9nZXR).
 */
 
-#include "hf_mattyrun.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "string.h"
+#include "commonutil.h"
+#include "iso14443a.h"
+#include "mifarecmd.h"
+#include "crc16.h"
+#include "BigBuf.h"
+#include "mifaresim.h"  // mifare1ksim
+#include "mifareutil.h"
 
 uint8_t uid[10];
 uint32_t cuid;
@@ -262,7 +276,7 @@ void RunMod() {
         keys in keyBlock's memory space .
     */
     keyBlock = BigBuf_malloc(stKeyBlock * 6);
-    int mfKeysCnt = sizeof(mfKeys) / sizeof(uint64_t);
+    int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
         num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
@@ -400,7 +414,7 @@ void RunMod() {
                         simflags = FLAG_4B_UID_IN_DATA;
                         break;
                 }
-                Mifare1ksim(simflags | FLAG_MF_1K, 0, uid);
+                Mifare1ksim(simflags | FLAG_MF_1K, 0, uid, 0, 0);
                 LED_B_OFF();
 
                 /*

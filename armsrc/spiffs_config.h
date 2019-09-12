@@ -41,7 +41,7 @@ typedef uint8_t u8_t;
 #endif
 // Set spiffs debug output call for garbage collecting.
 #ifndef SPIFFS_GC_DBG
-#define SPIFFS_GC_DBG(_f, ...)
+#define SPIFFS_GC_DBG(_f, ...) //Dbprintf(_f, ## __VA_ARGS__)
 #define SPIFFS_GC_DBGF(str) SPIFFS_GC_DBG(str,NULL)
 #endif
 // Set spiffs debug output call for caching.
@@ -51,7 +51,7 @@ typedef uint8_t u8_t;
 #endif
 // Set spiffs debug output call for system consistency checks.
 #ifndef SPIFFS_CHECK_DBG
-#define SPIFFS_CHECK_DBG(_f, ...) //SPIFFS_CHECK_DBG(_f, ## __VA_ARGS__)
+#define SPIFFS_CHECK_DBG(_f, ...) //Dbprintf(_f, ## __VA_ARGS__)
 #define SPIFFS_CHECK_DBGF(str) SPIFFS_CHECK_DBG(str,NULL)
 #endif
 // Set spiffs debug output call for all api invocations.

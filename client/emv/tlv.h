@@ -18,9 +18,7 @@
 #ifndef TLV_H
 #define TLV_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "common.h"
 
 typedef uint32_t tlv_tag_t;
 

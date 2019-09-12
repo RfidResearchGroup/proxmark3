@@ -9,6 +9,15 @@
 //-----------------------------------------------------------------------------
 #include "cmdtrace.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "protocols.h"
+#include "parity.h"             // oddparity
+#include "cmdhflist.h"          // annotations
+#include "comms.h"              // for sending cmds to device. GetFromBigBuf
+#include "fileutils.h"          // for saveFile
+
 static int CmdHelp(const char *Cmd);
 
 // trace pointer
@@ -24,18 +33,19 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "             syntax to use: `text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`");
     PrintAndLogEx(NORMAL, "    <0|1>  - use data from Tracebuffer, if not set, try reading data from tag.");
     PrintAndLogEx(NORMAL, "Supported <protocol> values:");
-    PrintAndLogEx(NORMAL, "    raw    - just show raw data without annotations");
-    PrintAndLogEx(NORMAL, "    14a    - interpret data as iso14443a communications");
-    PrintAndLogEx(NORMAL, "    mf     - interpret data as iso14443a communications and decrypt crypto1 stream");
-    PrintAndLogEx(NORMAL, "    14b    - interpret data as iso14443b communications");
-    PrintAndLogEx(NORMAL, "    15     - interpret data as iso15693 communications");
-    PrintAndLogEx(NORMAL, "    des    - interpret data as DESFire communications");
-    PrintAndLogEx(NORMAL, "    iclass - interpret data as iclass communications");
-    PrintAndLogEx(NORMAL, "    topaz  - interpret data as topaz communications");
-    PrintAndLogEx(NORMAL, "    7816   - interpret data as iso7816-4 communications");
-    PrintAndLogEx(NORMAL, "    legic  - interpret data as LEGIC communications");
-    PrintAndLogEx(NORMAL, "    felica - interpret data as ISO18092 / FeliCa communications");
-    PrintAndLogEx(NORMAL, "    hitag  - interpret data as Hitag2 / HitagS communications");
+    PrintAndLogEx(NORMAL, "    raw      - just show raw data without annotations");
+    PrintAndLogEx(NORMAL, "    14a      - interpret data as iso14443a communications");
+    PrintAndLogEx(NORMAL, "    thinfilm - interpret data as Thinfilm communications");
+    PrintAndLogEx(NORMAL, "    topaz    - interpret data as Topaz communications");
+    PrintAndLogEx(NORMAL, "    mf       - interpret data as iso14443a communications and decrypt crypto1 stream");
+    PrintAndLogEx(NORMAL, "    des      - interpret data as DESFire communications");
+    PrintAndLogEx(NORMAL, "    14b      - interpret data as iso14443b communications");
+    PrintAndLogEx(NORMAL, "    7816     - interpret data as iso7816-4 communications");
+    PrintAndLogEx(NORMAL, "    15       - interpret data as iso15693 communications");
+    PrintAndLogEx(NORMAL, "    iclass   - interpret data as iclass communications");
+    PrintAndLogEx(NORMAL, "    legic    - interpret data as LEGIC communications");
+    PrintAndLogEx(NORMAL, "    felica   - interpret data as ISO18092 / FeliCa communications");
+    PrintAndLogEx(NORMAL, "    hitag    - interpret data as Hitag2 / HitagS communications");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        trace list 14a f");
@@ -254,6 +264,15 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case MFDES:
                 crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
                 break;
+            case THINFILM:
+                frame[data_len - 1] ^= frame[data_len - 2];
+                frame[data_len - 2] ^= frame[data_len - 1];
+                frame[data_len - 1] ^= frame[data_len - 2];
+                crcStatus = iso14443A_CRC_check(true, frame, data_len);
+                frame[data_len - 1] ^= frame[data_len - 2];
+                frame[data_len - 2] ^= frame[data_len - 1];
+                frame[data_len - 1] ^= frame[data_len - 2];
+                break;
             case ISO_15693:
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
@@ -275,13 +294,27 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         uint8_t parityBits = parityBytes[j >> 3];
         if (protocol != LEGIC
                 && protocol != ISO_14443B
+                && protocol != ISO_15693
+                && protocol != ICLASS
                 && protocol != ISO_7816_4
                 && protocol != PROTO_HITAG
+                && protocol != THINFILM
                 && (isResponse || protocol == ISO_14443A)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x! ", frame[j]);
-        } else {
+        } else if ( protocol == ICLASS  && isResponse == false) {
+            uint8_t parity = 0;
+            for (int i=0; i<6; i++) {
+                parity ^= ((frame[0] >> i) & 1);
+            }
+            if ( parity == ((frame[0] >> 7) & 1)) {
+                snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x  ", frame[j]);
+            } else {
+                snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x! ", frame[j]);
+            }
+
+	} else {
             snprintf(line[j / 18] + ((j % 18) * 4), 110, "%02x  ", frame[j]);
         }
 
@@ -727,7 +760,7 @@ int CmdTraceList(const char *Cmd) {
             str_lower(type);
 
             // validate type of output
-            if (strcmp(type,     "iclass") == 0)    protocol = ICLASS;
+            if (strcmp(type,      "iclass") == 0)   protocol = ICLASS;
             else if (strcmp(type, "14a") == 0)      protocol = ISO_14443A;
             else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
             else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
@@ -738,6 +771,7 @@ int CmdTraceList(const char *Cmd) {
             else if (strcmp(type, "felica") == 0)   protocol = FELICA;
             else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
             else if (strcmp(type, "hitag") == 0)    protocol = PROTO_HITAG;
+            else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
             else if (strcmp(type, "raw") == 0)      protocol = -1; //No crc, no annotations
             else errors = true;
 
@@ -791,17 +825,23 @@ int CmdTraceList(const char *Cmd) {
         }
     } else {
         PrintAndLogEx(NORMAL, "Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
-        if (protocol == ISO_14443A || protocol == PROTO_MIFARE)
-            PrintAndLogEx(NORMAL, "iso14443a - All times are in carrier periods (1/13.56Mhz)");
+        if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ)
+            PrintAndLogEx(NORMAL, "ISO14443A - All times are in carrier periods (1/13.56MHz)");
+        if (protocol == THINFILM)
+            PrintAndLogEx(NORMAL, "Thinfilm - All times are in carrier periods (1/13.56MHz)");
         if (protocol == ICLASS)
             PrintAndLogEx(NORMAL, "iClass - Timings are not as accurate");
         if (protocol == LEGIC)
             PrintAndLogEx(NORMAL, "LEGIC - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
                           "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
+        if (protocol == ISO_14443B)
+            PrintAndLogEx(NORMAL, "ISO14443B"); // Timings ?
         if (protocol == ISO_15693)
             PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
         if (protocol == ISO_7816_4)
             PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
+        if (protocol == FELICA)
+            PrintAndLogEx(NORMAL, "Felica"); // Timings ?
         if (protocol == PROTO_HITAG)
             PrintAndLogEx(NORMAL, "Hitag2 / HitagS - Timings in ETU (8us)");
 
@@ -812,6 +852,9 @@ int CmdTraceList(const char *Cmd) {
         ClearAuthData();
         while (tracepos < traceLen) {
             tracepos = printTraceLine(tracepos, traceLen, trace, protocol, showWaitCycles, markCRCBytes);
+
+            if (kbd_enter_pressed())
+                break;
         }
     }
     return 0;

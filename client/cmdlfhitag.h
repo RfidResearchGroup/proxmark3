@@ -11,6 +11,8 @@
 #ifndef CMDLFHITAG_H__
 #define CMDLFHITAG_H__
 
+#include "common.h"
+
 int CmdLFHitag(const char *Cmd);
 
 int readHitagUid(void);

@@ -13,21 +13,10 @@
 #ifndef __ISO14443A_H
 #define __ISO14443A_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include "common.h"
+#include "mifare.h" // struct
 #include "pm3_cmd.h"
-#include "cmd.h"
-#include "apps.h"
-#include "util.h"
-#include "string.h"
-#include "crc16.h"
-#include "mifaresniff.h"
-#include "crapto1/crapto1.h"
-#include "mifareutil.h"
-#include "parity.h"
-#include "mifare.h"  // structs
+#include "crc16.h"  // compute_crc
 
 // When the PM acts as tag and is receiving it takes
 // 2 ticks delay in the RF part (for the first falling edge),
@@ -42,11 +31,11 @@ extern "C" {
 
 typedef struct {
     enum {
-        DEMOD_UNSYNCD,
-        // DEMOD_HALF_SYNCD,
-        // DEMOD_MOD_FIRST_HALF,
-        // DEMOD_NOMOD_FIRST_HALF,
-        DEMOD_MANCHESTER_DATA
+        DEMOD_14A_UNSYNCD,
+        // DEMOD_14A_HALF_SYNCD,
+        // DEMOD_14A_MOD_FIRST_HALF,
+        // DEMOD_14A_NOMOD_FIRST_HALF,
+        DEMOD_14A_MANCHESTER_DATA
     } state;
     uint16_t twoBits;
     uint16_t highCnt;
@@ -61,7 +50,7 @@ typedef struct {
     uint32_t startTime, endTime;
     uint8_t  *output;
     uint8_t  *parity;
-} tDemod;
+} tDemod14a;
 /*
 typedef enum {
     MOD_NOMOD = 0,
@@ -73,11 +62,11 @@ typedef enum {
 
 typedef struct {
     enum {
-        STATE_UNSYNCD,
-        STATE_START_OF_COMMUNICATION,
-        STATE_MILLER_X,
-        STATE_MILLER_Y,
-        STATE_MILLER_Z,
+        STATE_14A_UNSYNCD,
+        STATE_14A_START_OF_COMMUNICATION,
+        STATE_14A_MILLER_X,
+        STATE_14A_MILLER_Y,
+        STATE_14A_MILLER_Z,
         // DROP_NONE,
         // DROP_FIRST_HALF,
     } state;
@@ -93,7 +82,7 @@ typedef struct {
     uint32_t startTime, endTime;
     uint8_t *output;
     uint8_t *parity;
-} tUart;
+} tUart14a;
 
 #ifndef AddCrc14A
 # define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
@@ -109,12 +98,12 @@ typedef struct {
 
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
-tDemod *GetDemod(void);
-void DemodReset(void);
-void DemodInit(uint8_t *data, uint8_t *par);
-tUart *GetUart(void);
-void UartReset(void);
-void UartInit(uint8_t *data, uint8_t *par);
+tDemod14a *GetDemod14a(void);
+void Demod14aReset(void);
+void Demod14aInit(uint8_t *data, uint8_t *par);
+tUart14a *GetUart14a(void);
+void Uart14aReset(void);
+void Uart14aInit(uint8_t *data, uint8_t *par);
 RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
 RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
 
@@ -132,6 +121,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
 int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
+void hf_field_off(void);
 
 int EmSendCmd14443aRaw(uint8_t *resp, uint16_t respLen);
 int EmSend4bit(uint8_t resp);
@@ -148,10 +138,8 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
                 uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
 
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
-void DetectNACKbug();
+void DetectNACKbug(void);
 
-#ifdef __cplusplus
-}
-#endif
+bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint8_t *received_len);
 
 #endif /* __ISO14443A_H */

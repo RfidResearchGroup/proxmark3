@@ -19,16 +19,18 @@
 
 /* For asprintf */
 #define _GNU_SOURCE
-#include <stdio.h>
 
 #include "emv_pk.h"
-#include "crypto.h"
-#include "proxmark3.h"
-#include "util.h"
-#include <stdbool.h>
+
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/types.h>
+
+#include "ui.h"
+#include "crypto.h"
+#include "proxmark3.h"
+#include "fileutils.h"
+#include "pm3_cmd.h"
 
 #define BCD(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : \
                 -1)
@@ -483,13 +485,12 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
             }
         }
     */
-    const char *relfname = "emv/capk.txt";
-
-    char fname[strlen(get_my_executable_directory()) + strlen(relfname) + 1];
-    strcpy(fname, get_my_executable_directory());
-    strcat(fname, relfname);
-
-    pk = emv_pk_get_ca_pk_from_file(fname, rid, idx);
+    char *path;
+    if (searchFile(&path, RESOURCES_SUBDIR, "capk", ".txt", false) != PM3_SUCCESS) {
+        return NULL;
+    }
+    pk = emv_pk_get_ca_pk_from_file(path, rid, idx);
+    free(path);
 
     if (!pk)
         return NULL;

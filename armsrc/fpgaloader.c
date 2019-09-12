@@ -11,6 +11,15 @@
 //-----------------------------------------------------------------------------
 #include "fpgaloader.h"
 
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "BigBuf.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "zlib.h"
+#include "fpga.h"
+#include "string.h"
 
 // remember which version of the bitstream we have already downloaded to the FPGA
 static int downloaded_bitstream = 0;
@@ -81,7 +90,7 @@ void SetupSpi(int mode) {
             AT91C_BASE_SPI->SPI_CSR[0] =
                 (1 << 24)          |  // Delay between Consecutive Transfers (32 MCK periods)
                 (1 << 16)          |  // Delay Before SPCK (1 MCK period)
-                (6 << 8)           |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
+                (6 << 8)           |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
                 AT91C_SPI_BITS_16   | // Bits per Transfer (16 bits)
                 (0 << 3)           |  // Chip Select inactive after transfer
                 AT91C_SPI_NCPHA     | // Clock Phase data captured on leading edge, changes on following edge
@@ -101,7 +110,7 @@ void SetupSpi(int mode) {
                     AT91C_BASE_SPI->SPI_CSR[2] =
                         ( 1 << 24)          | // Delay between Consecutive Transfers (32 MCK periods)
                         ( 1 << 16)          | // Delay Before SPCK (1 MCK period)
-                        ( 6 << 8)           | // Serial Clock Baud Rate (baudrate = MCK/6 = 24Mhz/6 = 4M baud
+                        ( 6 << 8)           | // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
                         AT91C_SPI_BITS_9    | // Bits per Transfer (9 bits)
                         ( 0 << 3)           | // Chip Select inactive after transfer
                         ( 1 << 1)           | // Clock Phase data captured on leading edge, changes on following edge
@@ -153,8 +162,7 @@ void FpgaSetupSsc(void) {
 //-----------------------------------------------------------------------------
 // Set up DMA to receive samples from the FPGA. We will use the PDC, with
 // a single buffer as a circular buffer (so that we just chain back to
-// ourselves, not to another buffer). The stuff to manipulate those buffers
-// is in apps.h, because it should be inlined, for speed.
+// ourselves, not to another buffer).
 //-----------------------------------------------------------------------------
 bool FpgaSetupSscDma(uint8_t *buf, int len) {
     if (buf == NULL) return false;
@@ -395,6 +403,8 @@ void FpgaDownloadAndGo(int bitstream_version) {
     if (downloaded_bitstream == bitstream_version)
         return;
 
+    // Send waiting time extension request as this will take a while
+    send_wtx(1500);
     z_stream compressed_fpga_stream;
     uint8_t output_buffer[OUTPUT_BUFFER_LEN] = {0x00};
 

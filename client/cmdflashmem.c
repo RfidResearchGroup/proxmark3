@@ -9,9 +9,17 @@
 //-----------------------------------------------------------------------------
 #include "cmdflashmem.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+
+#include "pmflash.h"
+#include "fileutils.h"  //saveFile
+#include "comms.h"              //getfromdevice
+#include "cmdflashmemspiffs.h" // spiffs commands
+
 #include "mbedtls/rsa.h"
 #include "mbedtls/sha1.h"
-#include "mbedtls/base64.h"
 
 #define MCK 48000000
 #define FLASH_MINFAST 24000000 //33000000
@@ -29,9 +37,9 @@ static int usage_flashmem_spibaud(void) {
     PrintAndLogEx(NORMAL, "           h    this help");
     PrintAndLogEx(NORMAL, "      <baudrate>    SPI baudrate in MHz [24|48]");
     PrintAndLogEx(NORMAL, "           ");
-    PrintAndLogEx(NORMAL, "           If >= 24Mhz, FASTREADS instead of READS instruction will be used.");
-    PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48Mhz setting");
-    PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24Mhz");
+    PrintAndLogEx(NORMAL, "           If >= 24MHz, FASTREADS instead of READS instruction will be used.");
+    PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48MHz setting");
+    PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24MHz");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "           mem spibaud 48");
     return PM3_SUCCESS;
@@ -51,9 +59,9 @@ static int usage_flashmem_load(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        mem load f myfile");         // upload file myfile at default offset 0
     PrintAndLogEx(NORMAL, "        mem load f myfile o 1024");  // upload file myfile at offset 1024
-    PrintAndLogEx(NORMAL, "        mem load f default_keys m");
-    PrintAndLogEx(NORMAL, "        mem load f default_pwd t");
-    PrintAndLogEx(NORMAL, "        mem load f default_iclass_keys i");
+    PrintAndLogEx(NORMAL, "        mem load f mfc_default_keys m");
+    PrintAndLogEx(NORMAL, "        mem load f t55xx_default_pwds t");
+    PrintAndLogEx(NORMAL, "        mem load f iclass_default_keys i");
     return PM3_SUCCESS;
 }
 static int usage_flashmem_dump(void) {
@@ -201,21 +209,20 @@ static int CmdFlashMemLoad(const char *Cmd) {
             datalen += 2;
             break;
         case DICTIONARY_NONE:
-            res = loadFile(filename, ".bin", data, FLASH_MEM_MAX_SIZE, &datalen);
-            //int res = loadFileEML( filename, data, &datalen);
-            if (res) {
+            res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
+            if (res != PM3_SUCCESS) {
                 free(data);
                 return PM3_EFILE;
             }
 
             if (datalen > FLASH_MEM_MAX_SIZE) {
-                PrintAndLogDevice(ERR, "error, filesize is larger than available memory");
+                PrintAndLogEx(ERR, "error, filesize is larger than available memory");
                 free(data);
                 return PM3_EOVFLOW;
             }
             break;
     }
-
+// not needed when we transite to loadxxxx_safe methods.(iceman)
     uint8_t *newdata = realloc(data, datalen);
     if (newdata == NULL) {
         free(data);
@@ -310,7 +317,7 @@ static int CmdFlashMemDump(const char *Cmd) {
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(ERR, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
 

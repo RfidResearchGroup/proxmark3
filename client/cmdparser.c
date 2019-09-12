@@ -8,13 +8,12 @@
 // Command parser
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "util.h"
-#include "ui.h"
 #include "cmdparser.h"
-#include "proxmark3.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "ui.h"
 #include "comms.h"
 
 bool AlwaysAvailable(void) {
@@ -71,6 +70,11 @@ bool IfPm3FpcUsartDevFromUsb(void) {
     if (!pm3_capabilities.compiled_with_fpc_usart_dev)
         return false;
     return !conn.send_via_fpc_usart;
+}
+
+bool IfPm3FpcUsartFromUsb(void) {
+    // true if FPC USART Host or developer support and if talking from USB-CDC interface
+    return IfPm3FpcUsartHostFromUsb() || IfPm3FpcUsartDevFromUsb();
 }
 
 bool IfPm3Lf(void) {
@@ -133,6 +137,12 @@ bool IfPm3Iclass(void) {
     return pm3_capabilities.compiled_with_iclass;
 }
 
+bool IfPm3NfcBarcode(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_nfcbarcode;
+}
+
 bool IfPm3Lcd(void) {
     if (!IfPm3Present())
         return false;
@@ -145,7 +155,7 @@ void CmdsHelp(const command_t Commands[]) {
     int i = 0;
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable())
-            PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
+            PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
         ++i;
     }
 }
@@ -166,6 +176,9 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     memset(cmd_name, 0, sizeof(cmd_name));
     sscanf(Cmd, "%127s%n", cmd_name, &len);
     str_lower(cmd_name);
+    // Comment
+    if (cmd_name[0] == '#')
+        return PM3_SUCCESS;
     int i = 0;
     while (Commands[i].Name) {
         if (0 == strcmp(Commands[i].Name, cmd_name)) {

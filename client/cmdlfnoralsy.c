@@ -9,6 +9,18 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfnoralsy.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_noralsy_clone(void) {
@@ -131,8 +143,8 @@ static int CmdNoralsyClone(const char *Cmd) {
     uint8_t bits[96];
     memset(bits, 0, sizeof(bits));
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_noralsy_clone();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_noralsy_clone();
 
     id = param_get32ex(Cmd, 0, 0, 10);
     year = param_get32ex(Cmd, 1, 2000, 10);
@@ -170,8 +182,8 @@ static int CmdNoralsyClone(const char *Cmd) {
         ng.blockno = i;
         ng.flags = 0;
 
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
+        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
@@ -187,8 +199,8 @@ static int CmdNoralsySim(const char *Cmd) {
     uint16_t year = 0;
     uint32_t id = 0;
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H')
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h')
         return usage_lf_noralsy_sim();
 
     id = param_get32ex(Cmd, 0, 0, 10);
@@ -209,15 +221,16 @@ static int CmdNoralsySim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
+
     return PM3_SUCCESS;
 }
 

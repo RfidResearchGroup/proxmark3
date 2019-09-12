@@ -1,6 +1,11 @@
 #include "flashmem.h"
 #include "pmflash.h"
 
+#include "proxmark3_arm.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "string.h"
+
 /* here: use NCPS2 @ PA10: */
 #define SPI_CSR_NUM      2
 #define SPI_PCS(npcs)       ((~(1 << (npcs)) & 0xF) << 16)
@@ -16,7 +21,7 @@ uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
-    Dbprintf("Spi Baudrate : %dMhz", FLASHMEM_SPIBAUDRATE / 1000000);
+    Dbprintf("Spi Baudrate : %dMHz", FLASHMEM_SPIBAUDRATE / 1000000);
 }
 
 // initialize
@@ -563,6 +568,7 @@ void Flashmem_print_info(void) {
     uint8_t keysum[2];
     uint16_t num;
 
+    Flash_CheckBusy(BUSY_TIMEOUT);
     uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET, keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
@@ -570,6 +576,7 @@ void Flashmem_print_info(void) {
             Dbprintf("  Mifare.................."_YELLOW_("%d")"keys", num);
     }
 
+    Flash_CheckBusy(BUSY_TIMEOUT);
     isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET, keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
@@ -577,6 +584,7 @@ void Flashmem_print_info(void) {
             Dbprintf("  T55x7..................."_YELLOW_("%d")"keys", num);
     }
 
+    Flash_CheckBusy(BUSY_TIMEOUT);
     isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET, keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);

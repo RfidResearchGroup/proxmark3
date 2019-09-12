@@ -9,6 +9,12 @@
 //-----------------------------------------------------------------------------
 #include "graph.h"
 
+#include <string.h>
+#include "ui.h"
+#include "util.h"    //param_get32ex
+#include "lfdemod.h"
+#include "cmddata.h" //for g_debugmode
+
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 size_t GraphTraceLen;
 int s_Buff[MAX_GRAPH_TRACE_LEN];

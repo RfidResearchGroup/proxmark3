@@ -11,8 +11,11 @@
 //
 
 #include "cose.h"
-#include <cbor.h>
+
 #include "cbortools.h"
+#include "commonutil.h"  // ARRAYLEN
+#include "ui.h" // Print...
+#include "util.h"
 
 static const char COSEEmptyStr[] = "";
 

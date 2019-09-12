@@ -7,7 +7,7 @@
  Linker script for the ARM binary
 -----------------------------------------------------------------------------
 */
-INCLUDE ../common/ldscript.common
+INCLUDE ../common_arm/ldscript.common
 
 PHDRS
 {

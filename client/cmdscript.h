@@ -11,6 +11,8 @@
 #ifndef CMDSCRIPT_H__
 #define CMDSCRIPT_H__
 
+#include "common.h"
+
 int CmdScript(const char *Cmd);
 
 #endif

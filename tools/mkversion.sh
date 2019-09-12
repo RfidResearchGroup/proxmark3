@@ -1,0 +1,60 @@
+#!/bin/sh
+
+# Output a version.c file that includes information about the current build
+# From mkversion.pl
+# pure sh POSIX as now even on Windows we use WSL or ProxSpace with sh available
+
+# Clear environment locale so that git will not use localized strings
+export LC_ALL="C"
+export LANG="C"
+
+# if you are making your own fork,  change this line to reflect your fork-name
+fullgitinfo="RRG/Iceman"
+# GIT status  0 = dirty,  1 = clean ,  2 = undecided
+clean=2
+
+# Do we have acces to git command?
+commandGIT=$(env git)
+
+if [ "$commandGIT" != "" ]; then
+
+    # now avoiding the "fatal: No names found, cannot describe anything." error by fallbacking to abbrev hash in such case
+    gitversion=$(git describe --dirty --always)
+    gitbranch=$(git rev-parse --abbrev-ref HEAD)
+    if [ "$gitversion" != "${gitversion%-dirty}" ]; then
+        clean=0
+    else
+        clean=1
+    fi
+    if [ "$gitbranch" != "" ] && [ "$gitversion" != "" ]; then
+        fullgitinfo="${fullgitinfo}/${gitbranch}/${gitversion}"
+        ctime="$(date '+%Y-%m-%d %H:%M:%S')"
+    else
+        fullgitinfo="${fullgitinfo}/master/release (git)"
+    fi
+else
+    fullgitinfo="${fullgitinfo}/master/release (no_git)"
+    dl_time=$(stat --printf="%y" ../README.md)
+    # POSIX way...
+    ctime=${dl_time%.*}
+fi
+
+# Crop so it fits within 50 characters C string, so max 49 chars
+# POSIX way
+fullgitinfoextra="${fullgitinfo#??????????????????????????????????????????????}"
+if [ "$fullgitinfoextra" != "$fullgitinfo" ]; then
+    fullgitinfo46="${fullgitinfo%"${fullgitinfoextra}"}"
+    fullgitinfo="${fullgitinfo46}..."
+fi
+cat <<EOF
+#include "proxmark3_arm.h"
+/* Generated file, do not edit */
+const struct version_information __attribute__((section(".version_information"))) version_information = {
+    VERSION_INFORMATION_MAGIC,
+    1,
+    1,
+    $clean,
+    "$fullgitinfo",
+    "$ctime",
+};
+EOF

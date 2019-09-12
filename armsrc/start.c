@@ -12,8 +12,8 @@
 #ifndef __START_H
 #define __START_H
 
-#include "proxmark3.h"
-#include "apps.h"
+#include "proxmark3_arm.h"
+#include "appmain.h"
 #include "zlib.h"
 #include "BigBuf.h"
 

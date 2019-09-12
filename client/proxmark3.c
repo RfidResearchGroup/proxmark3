@@ -8,30 +8,29 @@
 //-----------------------------------------------------------------------------
 // Main binary
 //-----------------------------------------------------------------------------
-#include "proxmark3.h"
 
-#include <stdio.h>
+#include "proxmark3.h"
+#include <limits.h>
+#include <stdio.h> // for Mingw readline
 #include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-
+#include "usart_defs.h"
 #include "util_posix.h"
 #include "proxgui.h"
 #include "cmdmain.h"
 #include "ui.h"
-#include "util.h"
-#include "cmdparser.h"
 #include "cmdhw.h"
 #include "whereami.h"
 #include "comms.h"
-#include "usart.h"
+#include "fileutils.h"
+#include "flash.h"
+
 
 static void showBanner(void) {
     PrintAndLogEx(NORMAL, "\n");
-#if defined(__linux__) || (__APPLE__)
+#if defined(__linux__) || (__APPLE__) || (_WIN32)
     PrintAndLogEx(NORMAL, _BLUE_("██████╗ ███╗   ███╗ ████╗ ") "    ...iceman fork");
     PrintAndLogEx(NORMAL, _BLUE_("██╔══██╗████╗ ████║   ══█║") "      ...dedicated to " _BLUE_("RDV40"));
     PrintAndLogEx(NORMAL, _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
@@ -46,7 +45,8 @@ static void showBanner(void) {
     PrintAndLogEx(NORMAL, "==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
     PrintAndLogEx(NORMAL, "...     ...     ... .....  pre-release v4.0");
 #endif
-    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon,   https://www.patreon.com/iceman1001/");
+    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
+    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
 //    printf("\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
     PrintAndLogEx(NORMAL, "\n");
     fflush(stdout);
@@ -63,6 +63,38 @@ int check_comm(void) {
     return 0;
 }
 
+// first slot is always NULL, indicating absence of script when idx=0
+FILE *cmdscriptfile[MAX_NESTED_CMDSCRIPT + 1] = {0};
+uint8_t cmdscriptfile_idx = 0;
+bool cmdscriptfile_stayafter = false;
+
+int push_cmdscriptfile(char *path, bool stayafter) {
+    if (cmdscriptfile_idx == MAX_NESTED_CMDSCRIPT) {
+        PrintAndLogEx(ERR, "Too many nested scripts, skipping %s\n", path);
+        return PM3_EMALLOC;
+    }
+    FILE *tmp = fopen(path, "r");
+    if (tmp == NULL)
+        return PM3_EFILE;
+    if (cmdscriptfile_idx == 0)
+        cmdscriptfile_stayafter = stayafter;
+    cmdscriptfile[++cmdscriptfile_idx] = tmp;
+    return PM3_SUCCESS;
+}
+
+FILE *current_cmdscriptfile() {
+    return cmdscriptfile[cmdscriptfile_idx];
+}
+
+bool pop_cmdscriptfile() {
+    fclose(cmdscriptfile[cmdscriptfile_idx]);
+    cmdscriptfile[cmdscriptfile_idx--] = NULL;
+    if (cmdscriptfile_idx == 0)
+        return cmdscriptfile_stayafter;
+    else
+        return true;
+}
+
 // Main thread of PM3 Client
 void
 #ifdef __has_attribute
@@ -70,7 +102,7 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-main_loop(char *script_cmds_file, char *script_cmd) {
+main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
@@ -80,7 +112,6 @@ main_loop(char *script_cmds_file, char *script_cmd) {
         strcreplace(script_cmd, script_cmd_len, ';', '\0');
     }
     bool stdinOnPipe = !isatty(STDIN_FILENO);
-    FILE *sf = NULL;
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 
     PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
@@ -88,36 +119,48 @@ main_loop(char *script_cmds_file, char *script_cmd) {
     if (session.pm3_present) {
         // cache Version information now:
         if (execCommand || script_cmds_file || stdinOnPipe)
-            pm3_version(false);
+            pm3_version(false, false);
         else
-            pm3_version(true);
+            pm3_version(true, false);
     }
 
     if (script_cmds_file) {
 
-        sf = fopen(script_cmds_file, "r");
-        if (sf)
-            PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", script_cmds_file);
-        else
-            PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", script_cmds_file);
+        char *path;
+        int res = searchFile(&path, CMD_SCRIPTS_SUBDIR, script_cmds_file, ".cmd", false);
+        if (res == PM3_SUCCESS) {
+            if (push_cmdscriptfile(path, stayInCommandLoop) == PM3_SUCCESS)
+                PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", path);
+            else
+                PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", path);
+            free(path);
+        }
     }
 
-    read_history(".history");
-
+    char *my_history_path = NULL;
+    if (searchHomeFilePath(&my_history_path, PROXHISTORY, true) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "No history will be recorded");
+        my_history_path = NULL;
+    } else {
+        read_history(my_history_path);
+    }
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
+        char *prompt = PROXPROMPT;
 
+check_script:
         // If there is a script file
-        if (sf) {
+        if (current_cmdscriptfile()) {
 
             // clear array
             memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
 
             // read script file
-            if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), sf)) {
-                fclose(sf);
-                sf = NULL;
+            if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile())) {
+                if (!pop_cmdscriptfile())
+                    break;
+                goto check_script;
             } else {
 
                 // remove linebreaks
@@ -138,7 +181,7 @@ main_loop(char *script_cmds_file, char *script_cmd) {
                 script_cmd_len -= len;
             } else {
                 // exit after exec command
-                if (script_cmd)
+                if (script_cmd && !stayInCommandLoop)
                     break;
 
                 // if there is a pipe from stdin
@@ -161,12 +204,12 @@ main_loop(char *script_cmds_file, char *script_cmd) {
                     rl_event_hook = check_comm;
                     if (session.pm3_present) {
                         if (conn.send_via_fpc_usart == false)
-                            cmd = readline(PROXPROMPT_USB);
+                            prompt = PROXPROMPT_USB;
                         else
-                            cmd = readline(PROXPROMPT_FPC);
+                            prompt = PROXPROMPT_FPC;
                     } else
-                        cmd = readline(PROXPROMPT_OFFLINE);
-
+                        prompt = PROXPROMPT_OFFLINE;
+                    cmd = readline(prompt);
                     fflush(NULL);
                 }
             }
@@ -189,15 +232,20 @@ main_loop(char *script_cmds_file, char *script_cmd) {
             cmd[strlen(cmd) - off] = '\0';
 
             if (cmd[0] != '\0') {
-                if (printprompt)
-                    PrintAndLogEx(NORMAL, PROXPROMPT"%s", cmd);
+                if (!printprompt)
+                    g_printAndLog = PRINTANDLOG_LOG;
+                PrintAndLogEx(NORMAL, "%s%s", prompt, cmd);
+                g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
+                // add to history if not from a script
+                if (!current_cmdscriptfile()) {
+                    HIST_ENTRY *entry = history_get(history_length);
+                    // add if not identical to latest recorded cmd
+                    if ((!entry) || (strcmp(entry->line, cmd) != 0))
+                        add_history(cmd);
+                }
+                // process cmd
                 int ret = CommandReceived(cmd);
-
-                HIST_ENTRY *entry = history_get(history_length);
-                if ((!entry) || (strcmp(entry->line, cmd) != 0))
-                    add_history(cmd);
-
                 // exit or quit
                 if (ret == PM3_EFATAL)
                     break;
@@ -206,7 +254,10 @@ main_loop(char *script_cmds_file, char *script_cmd) {
             cmd = NULL;
         } else {
             PrintAndLogEx(NORMAL, "\n");
-            break;
+            if (script_cmds_file && stayInCommandLoop)
+                stayInCommandLoop = false;
+            else
+                break;
         }
     } // end while
 
@@ -214,11 +265,13 @@ main_loop(char *script_cmds_file, char *script_cmd) {
     SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
     msleep(100); // Make sure command is sent before killing client
 
-    if (sf)
-        fclose(sf);
+    while (current_cmdscriptfile())
+        pop_cmdscriptfile();
 
-    write_history(".history");
-
+    if (my_history_path) {
+        write_history(my_history_path);
+        free(my_history_path);
+    }
     if (cmd) {
         free(cmd);
         cmd = NULL;
@@ -264,35 +317,138 @@ static void set_my_executable_path(void) {
 
 static void show_help(bool showFullHelp, char *exec_name) {
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "syntax: %s [-h|-t|-m]\n", exec_name);
-    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>]\n", exec_name);
+    PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m]", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i] [-d <0|1|2>]", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [-p] <port> --flash [--unlock-bootloader] [--image <imagefile>]+ [-w] [-f] [-d <0|1|2>]", exec_name);
 
     if (showFullHelp) {
-        PrintAndLogEx(NORMAL, "options:");
+
+        PrintAndLogEx(NORMAL, "\nCommon options:");
         PrintAndLogEx(NORMAL, "      -h/--help                           this help");
-        PrintAndLogEx(NORMAL, "      -t/--text                           dump all interactive command's help at once");
-        PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive help at once in markdown syntax");
+        PrintAndLogEx(NORMAL, "      -v/--version                        print client version");
         PrintAndLogEx(NORMAL, "      -p/--port                           serial port to connect to");
-        PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS");
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
+        PrintAndLogEx(NORMAL, "      -d/--debug <0|1|2>                  set debugmode");
+        PrintAndLogEx(NORMAL, "\nOptions in client mode:");
+        PrintAndLogEx(NORMAL, "      -t/--text                           dump all interactive command's help at once");
+        PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive help at once in markdown syntax");
+        PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      -c/--command <command>              execute one Proxmark3 command (or several separated by ';').");
         PrintAndLogEx(NORMAL, "      -l/--lua <lua script file>          execute lua script.");
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
-        PrintAndLogEx(NORMAL, "\nsamples:");
-        PrintAndLogEx(NORMAL, "      %s -h\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s -m\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -f             -- flush output everytime\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -w             -- wait for serial port\n", exec_name);
-        PrintAndLogEx(NORMAL, "\n  how to run Proxmark3 client\n");
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H"                -- runs the pm3 client\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s                             -- runs the pm3 client in OFFLINE mode\n", exec_name);
-        PrintAndLogEx(NORMAL, "\n  how to execute different commands from terminal\n");
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")"and quit client\n", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client\n", exec_name);
+        PrintAndLogEx(NORMAL, "      -i/--interactive                    enter interactive mode after executing the script or the command");
+        PrintAndLogEx(NORMAL, "\nOptions in flasher mode:");
+        PrintAndLogEx(NORMAL, "      --flash                             flash Proxmark3, requires at least one --image");
+        PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash or --flash-info)");
+        PrintAndLogEx(NORMAL, "      --image <imagefile>                 image to flash. Can be specified several times.");
+        PrintAndLogEx(NORMAL, "\nExamples:");
+        PrintAndLogEx(NORMAL, "\n  to run Proxmark3 client:\n");
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H"                       -- runs the pm3 client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -f                    -- flush output everytime", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -w                    -- wait for serial port", exec_name);
+        PrintAndLogEx(NORMAL, "      %s                                    -- runs the pm3 client in OFFLINE mode", exec_name);
+        PrintAndLogEx(NORMAL, "\n  to execute different commands from terminal:\n");
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")"and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "\n  to flash fullimage and bootloader:\n");
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" --flash --unlock-bootloader --image bootrom.elf --image fullimage.elf", exec_name);
+#ifdef __linux__
+    PrintAndLogEx(NORMAL, "\nNote (Linux):\nif the flasher gets stuck in 'Waiting for Proxmark3 to reappear on <DEVICE>',");
+    PrintAndLogEx(NORMAL, "you need to blacklist Proxmark3 for modem-manager - see documentation for more details:");
+    PrintAndLogEx(NORMAL, "* https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md");
+    PrintAndLogEx(NORMAL, "\nMore info on flashing procedure from the official Proxmark3 wiki:");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/Gentoo%%20Linux");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/Ubuntu%%20Linux");
+    PrintAndLogEx(NORMAL, "* https://github.com/Proxmark/proxmark3/wiki/OSX\n");
+#endif
     }
+}
+
+static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[FLASH_MAX_FILES], bool can_write_bl) {
+
+    int ret = PM3_EUNDEF;
+    flash_file_t files[FLASH_MAX_FILES];
+    memset(files, 0, sizeof(files));
+    char *filepaths[FLASH_MAX_FILES];
+
+    if (serial_port_name == NULL) {
+        PrintAndLogEx(ERR, "You must specify a port.\n");
+        return PM3_EINVARG;
+    }
+
+    for (int i = 0 ; i < num_files; ++i) {
+        char *path;
+        ret = searchFile(&path, FIRMWARES_SUBDIR, filenames[i], ".elf", true);
+        if (ret != PM3_SUCCESS) {
+            ret = searchFile(&path, BOOTROM_SUBDIR, filenames[i], ".elf", true);
+        }
+        if (ret != PM3_SUCCESS) {
+            // Last try, let the error msg be displayed if not found
+            ret = searchFile(&path, FULLIMAGE_SUBDIR, filenames[i], ".elf", false);
+        }
+        if (ret != PM3_SUCCESS) {
+            goto finish2;
+        }
+        filepaths[i] = path;
+    }
+
+    PrintAndLogEx(SUCCESS, "About to use the following file%s:", num_files > 1 ? "s" : "");
+    for (int i = 0 ; i < num_files; ++i) {
+        PrintAndLogEx(SUCCESS, "    %s", filepaths[i]);
+    }
+
+    if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+        PrintAndLogEx(NORMAL, _GREEN_("Found"));
+    } else {
+        PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
+        ret = PM3_ETIMEOUT;
+        goto finish2;
+    }
+
+    uint32_t max_allowed = 0;
+    ret = flash_start_flashing(can_write_bl, serial_port_name, &max_allowed);
+    if (ret != PM3_SUCCESS) {
+        goto finish;
+    }
+
+    if (num_files == 0)
+        goto finish;
+
+    for (int i = 0 ; i < num_files; ++i) {
+        ret = flash_load(&files[i], filepaths[i], can_write_bl, max_allowed * ONE_KB);
+        if (ret != PM3_SUCCESS) {
+            goto finish;
+        }
+        PrintAndLogEx(NORMAL, "");
+    }
+
+    PrintAndLogEx(SUCCESS, "\n" _BLUE_("Flashing..."));
+
+    for (int i = 0; i < num_files; i++) {
+        ret = flash_write(&files[i]);
+        if (ret != PM3_SUCCESS) {
+            goto finish;
+        }
+        flash_free(&files[i]);
+        PrintAndLogEx(NORMAL, "\n");
+    }
+
+finish:
+    ret = flash_stop_flashing();
+    CloseProxmark();
+finish2:
+    for (int i = 0 ; i < num_files; ++i) {
+        if (filepaths[i] != NULL)
+            free(filepaths[i]);
+    }
+    if (ret == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, _BLUE_("All done."));
+    else
+        PrintAndLogEx(ERR, "Aborted on error.");
+    PrintAndLogEx(NORMAL, "\nHave a nice day!");
+    return ret;
 }
 
 int main(int argc, char *argv[]) {
@@ -302,6 +458,7 @@ int main(int argc, char *argv[]) {
     session.help_dump_mode = false;
     bool waitCOMPort = false;
     bool addLuaExec = false;
+    bool stayInCommandLoop = false;
     char *script_cmds_file = NULL;
     char *script_cmd = NULL;
     char *port = NULL;
@@ -323,6 +480,11 @@ int main(int argc, char *argv[]) {
         }
     }
 #endif
+
+    bool flash_mode = false;
+    bool flash_can_write_bl = false;
+    int flash_num_files = 0;
+    char *flash_filenames[FLASH_MAX_FILES];
 
     for (int i = 1; i < argc; i++) {
 
@@ -357,12 +519,14 @@ int main(int argc, char *argv[]) {
 
         // short help
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            g_printAndLog = PRINTANDLOG_PRINT;
             show_help(true, exec_name);
             return 0;
         }
 
         // dump help
         if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--text") == 0) {
+            g_printAndLog = PRINTANDLOG_PRINT;
             show_help(false, exec_name);
             dumpAllHelp(0);
             return 0;
@@ -370,8 +534,31 @@ int main(int argc, char *argv[]) {
 
         // dump markup
         if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--markdown") == 0) {
+            g_printAndLog = PRINTANDLOG_PRINT;
             dumpAllHelp(1);
             return 0;
+        }
+        // print client version
+        if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
+            pm3_version(true, true);
+            return 0;
+        }
+
+        // set debugmode
+        if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
+            if (i + 1 == argc) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") "missing debugmode specification after -d\n");
+                show_help(false, exec_name);
+                return 1;
+            }
+            int demod = atoi(argv[i + 1]);
+            if (demod < 0 || demod > 2) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") "invalid debugmode: -d " _YELLOW_("%s") "\n", argv[i + 1]);
+                return 1;
+            }
+            g_debugMode = demod;
+            i++;
+            continue;
         }
 
         // flush output
@@ -438,6 +625,39 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // go to interactive instead of quitting after a script/command
+        if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--interactive") == 0) {
+            stayInCommandLoop = true;
+            continue;
+        }
+
+        // go to flash mode
+        if (strcmp(argv[i], "--flash") == 0) {
+            flash_mode = true;
+            continue;
+        }
+
+        // unlock bootloader area
+        if (strcmp(argv[i], "--unlock-bootloader") == 0) {
+            flash_can_write_bl = true;
+            continue;
+        }
+
+        // flash file
+        if (strcmp(argv[i], "--image") == 0) {
+            if (flash_num_files == FLASH_MAX_FILES) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") "too many --image, please use it max %i times\n", FLASH_MAX_FILES);
+                return 1;
+            }
+            if (i + 1 == argc) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") "missing image specification after --image\n");
+                show_help(false, exec_name);
+                return 1;
+            }
+            flash_filenames[flash_num_files++] = argv[++i];
+            continue;
+        }
+
         // We got an unknown parameter
         PrintAndLogEx(ERR, _RED_("ERROR:") "invalid parameter: " _YELLOW_("%s") "\n", argv[i]);
         show_help(false, exec_name);
@@ -458,12 +678,20 @@ int main(int argc, char *argv[]) {
         session.supports_colors = true;
 #endif
     // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY)
+    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
         showBanner();
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
         speed = USART_BAUD_RATE;
+
+    // set global variables
+    set_my_executable_path();
+
+    if (flash_mode) {
+        flash_pm3(port, flash_num_files, flash_filenames, flash_can_write_bl);
+        exit(EXIT_SUCCESS);
+    }
 
     if (script_cmd) {
         while (script_cmd[strlen(script_cmd) - 1] == ' ')
@@ -490,9 +718,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // set global variables
-    set_my_executable_path();
-
     // try to open USB connection to Proxmark
     if (port != NULL) {
         OpenProxmark(port, waitCOMPort, 20, false, speed);
@@ -512,21 +737,21 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_GUI
 
 #  ifdef _WIN32
-    InitGraphics(argc, argv, script_cmds_file, script_cmd);
+    InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
     MainGraphics();
 #  else
     // for *nix distro's,  check enviroment variable to verify a display
     char *display = getenv("DISPLAY");
     if (display && strlen(display) > 1) {
-        InitGraphics(argc, argv, script_cmds_file, script_cmd);
+        InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
         MainGraphics();
     } else {
-        main_loop(script_cmds_file, script_cmd);
+        main_loop(script_cmds_file, script_cmd, stayInCommandLoop);
     }
 #  endif
 
 #else
-    main_loop(script_cmds_file, script_cmd);
+    main_loop(script_cmds_file, script_cmd, stayInCommandLoop);
 #endif
 
     // Clean up the port

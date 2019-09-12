@@ -13,12 +13,8 @@
 
 #ifndef LFDEMOD_H__
 #define LFDEMOD_H__
-#include <stdint.h>  // for uint_32+
-#include <stdbool.h> // for bool
-#include <string.h>  // for strcmp, memset, memcmp and size_t
-#include <stdlib.h>  // for
-#include <stdbool.h> // for bool
-#include "parity.h"  // for parity test
+
+#include "common.h"
 
 //might not be high enough for noisy environments
 #define NOISE_AMPLITUDE_THRESHOLD 8
@@ -49,7 +45,7 @@ int      askdemod(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr
 int      askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr, uint8_t amp, uint8_t askType, int *startIdx);
 void     askAmp(uint8_t *bits, size_t size);
 int      BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert);
-uint8_t  bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
+int      bits_to_array(const uint8_t *bits, size_t size, uint8_t *dest);
 uint32_t bytebits_to_byte(uint8_t *src, size_t numbits);
 uint32_t bytebits_to_byteLSBF(uint8_t *src, size_t numbits);
 uint16_t countFC(uint8_t *bits, size_t size, bool fskAdj);
@@ -83,4 +79,5 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx);
 int detectIdteck(uint8_t *dest, size_t *size);
 int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx);
+
 #endif

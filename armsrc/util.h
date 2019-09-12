@@ -12,11 +12,6 @@
 #define __UTIL_H
 
 #include "common.h"
-#include "commonutil.h"
-#include "proxmark3.h"
-#include "string.h"
-#include "BigBuf.h"
-#include "ticks.h"
 
 // Basic macros
 

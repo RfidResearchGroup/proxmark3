@@ -10,10 +10,10 @@
 //-----------------------------------------------------------------------------
 
 #include "mifare4.h"
-#include <ctype.h>
 #include <string.h>
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h" // DropField
 #include "cmdhf14a.h"
-#include "util.h"
 #include "ui.h"
 #include "crypto/libpcrypto.h"
 
@@ -40,10 +40,9 @@ static const PlusErrorsElm PlusErrors[] = {
     {0x0f, "General Manipulation Error. Failure in the operation of the PICC (cannot write to the data block), etc."},
     {0x90, "OK"},
 };
-int PlusErrorsLen = sizeof(PlusErrors) / sizeof(PlusErrorsElm);
 
 const char *mfpGetErrorDescription(uint8_t errorCode) {
-    for (int i = 0; i < PlusErrorsLen; i++)
+    for (int i = 0; i < ARRAYLEN(PlusErrors); i++)
         if (errorCode == PlusErrors[i].Code)
             return PlusErrors[i].Description;
 

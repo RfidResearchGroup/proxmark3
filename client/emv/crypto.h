@@ -16,8 +16,7 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-#include <stdbool.h>
-#include <stddef.h>
+#include "common.h"
 
 enum crypto_algo_hash {
     HASH_INVALID,

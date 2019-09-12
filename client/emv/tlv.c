@@ -22,8 +22,6 @@
 #include "tlv.h"
 
 #include <string.h>
-#include <stdint.h>
-#include <stddef.h>
 #include <stdlib.h>
 
 #define TLV_TAG_CLASS_MASK  0xc0

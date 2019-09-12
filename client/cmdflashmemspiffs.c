@@ -9,9 +9,12 @@
 //-----------------------------------------------------------------------------
 #include "cmdflashmemspiffs.h"
 
-#include "mbedtls/base64.h"
-#include "mbedtls/rsa.h"
-#include "mbedtls/sha1.h"
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "pmflash.h"
+#include "fileutils.h"  //saveFile
+#include "comms.h"              //getfromdevice
 
 static int CmdHelp(const char *Cmd);
 
@@ -33,6 +36,13 @@ static int CmdFlashMemSpiFFSTest(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_TEST, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSCheck(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_CHECK, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -278,7 +288,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(ERR, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
 
@@ -320,12 +330,15 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
                 if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
                     PrintAndLogEx(FAILED, "Filename too long");
                     errors = true;
-                    break;
                 }
                 cmdp += 2;
                 break;
             case 'o':
                 param_getstr(Cmd, cmdp + 1, destfilename, 32);
+                if (strlen(destfilename) == 0) {
+                    PrintAndLogEx(FAILED, "Destination Filename missing or invalid");
+                    errors = true;
+                }
                 cmdp += 2;
                 break;
             default:
@@ -335,40 +348,18 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
         }
     }
 
-    if (destfilename[0] == '\0') {
-        PrintAndLogEx(FAILED, "Destination Filename missing or invalid");
-        errors = true;
-    }
-
     // Validations
-    if (errors || cmdp == 0) {
-        usage_flashmemspiffs_load();
-        return PM3_EINVARG;
-    }
+    if (errors || cmdp == 0)
+        return usage_flashmemspiffs_load();
 
     size_t datalen = 0;
-    int res = 0;
-    uint8_t *data = calloc(FLASH_MEM_MAX_SIZE, sizeof(uint8_t));
+    uint8_t *data = NULL;
 
-    res = loadFile(filename, "", data, FLASH_MEM_MAX_SIZE, &datalen);
+    int res = loadFile_safe(filename, "", (void **)&data, &datalen);
     // int res = loadFileEML( filename, data, &datalen);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         free(data);
         return PM3_EFILE;
-    }
-
-    if (datalen > FLASH_MEM_MAX_SIZE) {
-        PrintAndLogDevice(ERR, "error, filesize is larger than available memory");
-        free(data);
-        return PM3_EOVFLOW;
-    }
-
-    uint8_t *newdata = realloc(data, datalen);
-    if (newdata == NULL) {
-        free(data);
-        return PM3_EMALLOC;
-    } else {
-        data = newdata;
     }
 
     // We want to mount before multiple operation so the lazy writes/append will not
@@ -415,6 +406,7 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
         if (!isok) {
             conn.block_after_ACK = false;
             PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
+            free(data);
             return PM3_EFLASH;
         }
     }
@@ -436,6 +428,7 @@ static command_t CommandTable[] = {
         "copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
         "Copy a file to another (destructively) in SPIFFS FileSystem in FlashMEM (spiffs)"
     },
+    {"check", CmdFlashMemSpiFFSCheck, IfPm3Flash, "Check/try to defrag faulty/fragmented Filesystem"},
     {"dump", CmdFlashMemSpiFFSDump, IfPm3Flash, "Dump a file from SPIFFS FileSystem in FlashMEM (spiffs)"},
     {"info", CmdFlashMemSpiFFSInfo, IfPm3Flash, "Print filesystem info and usage statistics (spiffs)"},
     {"load", CmdFlashMemSpiFFSLoad, IfPm3Flash, "Upload file into SPIFFS Filesystem (spiffs)"},

@@ -11,14 +11,7 @@
 #ifndef CMDUSART_H__
 #define CMDUSART_H__
 
-#include <stdlib.h>       // size_t
-#include <string.h>
-#include <unistd.h>
-#include "cmdmain.h"
-#include "proxmark3.h"
-#include "ui.h"           // PrintAndLog
-#include "util.h"
-//#include "util_posix.h"   // msclock
+#include "common.h"
 
 int CmdUsart(const char *Cmd);
 #endif

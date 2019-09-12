@@ -10,6 +10,20 @@
 //-----------------------------------------------------------------------------
 #include "iso14443b.h"
 
+#include "proxmark3_arm.h"
+#include "common.h"  // access to global variable: DBGLEVEL
+#include "util.h"
+#include "string.h"
+#include "crc16.h"
+#include "protocols.h"
+#include "appmain.h"
+#include "BigBuf.h"
+#include "cmd.h"
+#include "fpgaloader.h"
+#include "commonutil.h"
+#include "dbprint.h"
+#include "ticks.h"
+
 #ifndef FWT_TIMEOUT_14B
 // defaults to 2000ms
 # define FWT_TIMEOUT_14B 35312
@@ -52,7 +66,7 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 
 //=============================================================================
 // An ISO 14443 Type B tag. We listen for commands from the reader, using
-// a UART kind of thing that's implemented in software. When we get a
+// a  kind of thing that's implemented in software. When we get a
 // frame (i.e., a group of bytes between SOF and EOF), we check the CRC.
 // If it's good, then we can do something appropriate with it, and send
 // a response.
@@ -60,14 +74,14 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 
 
 //-----------------------------------------------------------------------------
-// The software UART that receives commands from the reader, and its state variables.
+// The software  that receives commands from the reader, and its state variables.
 //-----------------------------------------------------------------------------
 static struct {
     enum {
-        STATE_UNSYNCD,
-        STATE_GOT_FALLING_EDGE_OF_SOF,
-        STATE_AWAITING_START_BIT,
-        STATE_RECEIVING_DATA
+        STATE_14B_UNSYNCD,
+        STATE_14B_GOT_FALLING_EDGE_OF_SOF,
+        STATE_14B_AWAITING_START_BIT,
+        STATE_14B_RECEIVING_DATA
     }       state;
     uint16_t shiftReg;
     int      bitCnt;
@@ -77,8 +91,8 @@ static struct {
     uint8_t  *output;
 } Uart;
 
-static void UartReset() {
-    Uart.state = STATE_UNSYNCD;
+static void Uart14bReset() {
+    Uart.state = STATE_14B_UNSYNCD;
     Uart.shiftReg = 0;
     Uart.bitCnt = 0;
     Uart.byteCnt = 0;
@@ -86,9 +100,9 @@ static void UartReset() {
     Uart.posCnt = 0;
 }
 
-static void UartInit(uint8_t *data) {
+static void Uart14bInit(uint8_t *data) {
     Uart.output = data;
-    UartReset();
+    Uart14bReset();
 // memset(Uart.output, 0x00, MAX_FRAME_SIZE);
 }
 
@@ -120,7 +134,7 @@ static struct {
 } Demod;
 
 // Clear out the state of the "UART" that receives from the tag.
-static void DemodReset() {
+static void Demod14bReset() {
     Demod.state = DEMOD_UNSYNCD;
     Demod.bitCount = 0;
     Demod.posCount = 0;
@@ -133,9 +147,9 @@ static void DemodReset() {
     Demod.endTime = 0;
 }
 
-static void DemodInit(uint8_t *data) {
+static void Demod14bInit(uint8_t *data) {
     Demod.output = data;
-    DemodReset();
+    Demod14bReset();
     // memset(Demod.output, 0x00, MAX_FRAME_SIZE);
 }
 
@@ -315,16 +329,16 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
  */
 static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
     switch (Uart.state) {
-        case STATE_UNSYNCD:
+        case STATE_14B_UNSYNCD:
             if (!bit) {
                 // we went low, so this could be the beginning of an SOF
-                Uart.state = STATE_GOT_FALLING_EDGE_OF_SOF;
+                Uart.state = STATE_14B_GOT_FALLING_EDGE_OF_SOF;
                 Uart.posCnt = 0;
                 Uart.bitCnt = 0;
             }
             break;
 
-        case STATE_GOT_FALLING_EDGE_OF_SOF:
+        case STATE_14B_GOT_FALLING_EDGE_OF_SOF:
             Uart.posCnt++;
             if (Uart.posCnt == 2) { // sample every 4 1/fs in the middle of a bit
                 if (bit) {
@@ -333,11 +347,11 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
                         // zeros that it's a valid SOF
                         Uart.posCnt = 0;
                         Uart.byteCnt = 0;
-                        Uart.state = STATE_AWAITING_START_BIT;
+                        Uart.state = STATE_14B_AWAITING_START_BIT;
                         LED_A_ON(); // Indicate we got a valid SOF
                     } else {
                         // didn't stay down long enough before going high, error
-                        Uart.state = STATE_UNSYNCD;
+                        Uart.state = STATE_14B_UNSYNCD;
                     }
                 } else {
                     // do nothing, keep waiting
@@ -348,27 +362,27 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
             if (Uart.bitCnt > 12) {
                 // Give up if we see too many zeros without a one, too.
                 LED_A_OFF();
-                Uart.state = STATE_UNSYNCD;
+                Uart.state = STATE_14B_UNSYNCD;
             }
             break;
 
-        case STATE_AWAITING_START_BIT:
+        case STATE_14B_AWAITING_START_BIT:
             Uart.posCnt++;
             if (bit) {
                 if (Uart.posCnt > 50 / 2) { // max 57us between characters = 49 1/fs, max 3 etus after low phase of SOF = 24 1/fs
                     // stayed high for too long between characters, error
-                    Uart.state = STATE_UNSYNCD;
+                    Uart.state = STATE_14B_UNSYNCD;
                 }
             } else {
                 // falling edge, this starts the data byte
                 Uart.posCnt = 0;
                 Uart.bitCnt = 0;
                 Uart.shiftReg = 0;
-                Uart.state = STATE_RECEIVING_DATA;
+                Uart.state = STATE_14B_RECEIVING_DATA;
             }
             break;
 
-        case STATE_RECEIVING_DATA:
+        case STATE_14B_RECEIVING_DATA:
             Uart.posCnt++;
             if (Uart.posCnt == 2) {
                 // time to sample a bit
@@ -391,30 +405,30 @@ static RAMFUNC int Handle14443bReaderUartBit(uint8_t bit) {
                     if (Uart.byteCnt >= Uart.byteCntMax) {
                         // Buffer overflowed, give up
                         LED_A_OFF();
-                        Uart.state = STATE_UNSYNCD;
+                        Uart.state = STATE_14B_UNSYNCD;
                     } else {
                         // so get the next byte now
                         Uart.posCnt = 0;
-                        Uart.state = STATE_AWAITING_START_BIT;
+                        Uart.state = STATE_14B_AWAITING_START_BIT;
                     }
                 } else if (Uart.shiftReg == 0x000) {
                     // this is an EOF byte
                     LED_A_OFF(); // Finished receiving
-                    Uart.state = STATE_UNSYNCD;
+                    Uart.state = STATE_14B_UNSYNCD;
                     if (Uart.byteCnt != 0)
                         return true;
 
                 } else {
                     // this is an error
                     LED_A_OFF();
-                    Uart.state = STATE_UNSYNCD;
+                    Uart.state = STATE_14B_UNSYNCD;
                 }
             }
             break;
 
         default:
             LED_A_OFF();
-            Uart.state = STATE_UNSYNCD;
+            Uart.state = STATE_14B_UNSYNCD;
             break;
     }
     return false;
@@ -454,7 +468,7 @@ static int GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
         }
         */
     // Now run a `software UART' on the stream of incoming samples.
-    UartInit(received);
+    Uart14bInit(received);
 
     uint8_t mask;
     while (!BUTTON_PRESS()) {
@@ -949,7 +963,7 @@ static void GetTagSamplesFor14443bDemod() {
     BigBuf_free();
 
     // Set up the demodulator for tag -> reader responses.
-    DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
 
     // The DMA buffer, used to stream samples from the FPGA
     int8_t *dmaBuf = (int8_t *) BigBuf_malloc(ISO14443B_DMA_BUFFER_SIZE);
@@ -1306,8 +1320,8 @@ void iso14443b_setup() {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // Initialize Demod and Uart structs
-    DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
-    UartInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    Uart14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
 
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -1411,8 +1425,8 @@ static void iso1444b_setup_sniff(void) {
     set_tracing(true);
 
     // Initialize Demod and Uart structs
-    DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
-    UartInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    Uart14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
 
     if (DBGLEVEL > 1) {
         // Print debug information about the buffer sizes
@@ -1502,8 +1516,8 @@ void RAMFUNC SniffIso14443b(void) {
             if (Handle14443bReaderUartBit(ci & 0x01)) {
                 time_stop = GetCountSspClk() - time_0;
                 LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
-                UartReset();
-                DemodReset();
+                Uart14bReset();
+                Demod14bReset();
             } else {
                 time_start = GetCountSspClk() - time_0;
             }
@@ -1511,12 +1525,12 @@ void RAMFUNC SniffIso14443b(void) {
             if (Handle14443bReaderUartBit(cq & 0x01)) {
                 time_stop = GetCountSspClk() - time_0;
                 LogTrace(Uart.output, Uart.byteCnt, time_start, time_stop, NULL, true);
-                UartReset();
-                DemodReset();
+                Uart14bReset();
+                Demod14bReset();
             } else {
                 time_start = GetCountSspClk() - time_0;
             }
-            ReaderIsActive = (Uart.state > STATE_GOT_FALLING_EDGE_OF_SOF);
+            ReaderIsActive = (Uart.state > STATE_14B_GOT_FALLING_EDGE_OF_SOF);
         }
 
         // no need to try decoding tag data if the reader is sending - and we cannot afford the time
@@ -1527,8 +1541,8 @@ void RAMFUNC SniffIso14443b(void) {
             if (Handle14443bTagSamplesDemod(ci, cq)) {
                 time_stop = GetCountSspClk() - time_0;
                 LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
-                UartReset();
-                DemodReset();
+                Uart14bReset();
+                Demod14bReset();
             } else {
                 time_start = GetCountSspClk() - time_0;
             }

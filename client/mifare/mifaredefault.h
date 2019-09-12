@@ -11,9 +11,7 @@
 #ifndef MIFAREDEFAULT_H__
 #define MIFAREDEFAULT_H__
 
-#include <inttypes.h>
-
-#define MIFARE_DEFAULTKEYS_SIZE sizeof(g_mifare_default_keys) / sizeof(uint64_t)
+#include "common.h"
 
 static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)
