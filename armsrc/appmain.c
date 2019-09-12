@@ -447,15 +447,12 @@ void SendCapabilities(void) {
 
 // Show some leds in a pattern to identify StandAlone mod is running
 void StandAloneMode(void) {
-
-    DbpString("Stand-alone mode! No PC necessary.");
-
+    DbpString("Stand-alone mode, no computer necessary");
     SpinDown(50);
-    SpinOff(50);
+    SpinDelay(50);
     SpinUp(50);
-    SpinOff(50);
+    SpinDelay(50);
     SpinDown(50);
-    SpinDelay(500);
 }
 
 /*
@@ -1215,7 +1212,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_READER: {
-            ReaderIClass(packet->oldarg[0]);
+            struct p {
+                uint8_t flags;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            ReaderIClass(payload->flags);
             break;
         }
         case CMD_HF_ICLASS_REPLAY: {

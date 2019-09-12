@@ -90,6 +90,7 @@ void LEDsoff() {
     LED_D_OFF();
 }
 
+//ICEMAN:   LED went from 1,2,3,4 -> 1,2,4,8   
 void LED(int led, int ms) {
     if (led & LED_A) // Proxmark3 historical mapping: LED_ORANGE
         LED_A_ON();
@@ -123,26 +124,27 @@ void SpinOff(uint32_t pause) {
     SpinDelay(pause);
 }
 
-// 0=A, 1=B, 2=C, 3=D
+// Blinks..
+// A = 1, B = 2, C = 4, D = 8
 void SpinErr(uint8_t led, uint32_t speed, uint8_t times) {
     SpinOff(speed);
     NTIME(times) {
-        switch (led) {
-            case 0:
-                LED_A_INV();
-                break;
-            case 1:
-                LED_B_INV();
-                break;
-            case 2:
-                LED_C_INV();
-                break;
-            case 3:
-                LED_D_INV();
-                break;
-        }
+
+        if (led & LED_A) // Proxmark3 historical mapping: LED_ORANGE
+            LED_A_INV();
+        if (led & LED_B) // Proxmark3 historical mapping: LED_GREEN
+            LED_B_INV();
+        if (led & LED_C) // Proxmark3 historical mapping: LED_RED
+            LED_C_INV();
+        if (led & LED_D) // Proxmark3 historical mapping: LED_RED2
+            LED_D_INV();
+
         SpinDelay(speed);
     }
+    LED_A_OFF();
+    LED_B_OFF();
+    LED_C_OFF();
+    LED_D_OFF();
 }
 
 void SpinDown(uint32_t speed) {

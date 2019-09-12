@@ -229,7 +229,7 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     if (DBGLEVEL > 1)
         Dbprintf("[!] Wrote %u Authentification attempts into logfile", auth_attempts);
 
-    SpinErr(0, 200, 5); // blink led A
+    SpinErr(LED_A, 200, 5);
     SpinDelay(100);
 }
 
