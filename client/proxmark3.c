@@ -323,6 +323,9 @@ const char *get_my_user_directory(void) {
 
 static void set_my_user_directory(void) {
     my_user_directory = getenv("HOME");
+    // if not found, default to current directory
+    if (my_user_directory == NULL)
+        my_user_directory = ".";
 }
 
 static void show_help(bool showFullHelp, char *exec_name) {
