@@ -1,4 +1,4 @@
-# RRG / Iceman repo - Proxmark3 RDV4.0 and other Proxmark3 platforms.
+# RRG / Iceman repo - Proxmark3
 
 This repo is based on iceman fork for Proxmark3.  It supports other Proxmark3 platforms as well.
 
