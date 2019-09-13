@@ -102,6 +102,14 @@ static int usage_lf_em410x_brute(void) {
 }
 
 //////////////// 4050 / 4450 commands
+static int usage_lf_em4x50_demod(void) {
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x50_demod [h]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h         - this help");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf em 4x50_demod");
+    return PM3_SUCCESS;
+}
 static int usage_lf_em4x50_dump(void) {
     PrintAndLogEx(NORMAL, "Dump EM4x50/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
@@ -979,17 +987,25 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     return AllPTest ? PM3_SUCCESS : PM3_ESOFT;
 }
 
+static int CmdEM4x50Demod(const char *Cmd) {
+    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_lf_em4x50_demod();
+    return EM4x50Read(Cmd, true);
+}
+
 static int CmdEM4x50Read(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_read();
     return EM4x50Read(Cmd, true);
 }
+
 static int CmdEM4x50Write(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_write();
     PrintAndLogEx(NORMAL, "no implemented yet");
     return PM3_SUCCESS;
 }
+
 static int CmdEM4x50Dump(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_dump();
@@ -1531,6 +1547,7 @@ static command_t CommandTable[] = {
     {"4x05_info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
     {"4x05_read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
     {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
+    {"4x50_demod",  CmdEM4x50Demod,       AlwaysAvailable, "demodulate a EM4x50 tag from the GraphBuffer"},
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3Lf,         "dump EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3Lf,         "read word data from EM4x50"},
     {"4x50_write",  CmdEM4x50Write,       IfPm3Lf,         "write word data to EM4x50"},

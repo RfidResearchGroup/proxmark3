@@ -114,7 +114,7 @@ static int CmdParadoxRead(const char *Cmd) {
 
 
 static int CmdParadoxSim(const char *Cmd) {
-    PrintAndLogEx(INFO," To be implemented, feel free to contribute!");
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
     return PM3_SUCCESS;
 }
 /*

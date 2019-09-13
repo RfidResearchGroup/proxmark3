@@ -895,7 +895,7 @@ void RAMFUNC SniffIClass(void) {
 
     // time ZERO, the point from which it all is calculated.
     time_0 = GetCountSspClk();
-    
+
     // loop and listen
     // every sample (1byte in data),
     //     contains HIGH nibble = reader data
@@ -962,7 +962,7 @@ void RAMFUNC SniffIClass(void) {
                         */
 
 
-                uint8_t tag_byte = ((previous_data & 0xF) << 4 ) | (*data & 0xF);
+                uint8_t tag_byte = ((previous_data & 0xF) << 4) | (*data & 0xF);
                 if (ManchesterDecoding_iclass(tag_byte)) {
                     time_stop = GetCountSspClk() - time_0;
                     LogTrace(Demod.output, Demod.len, time_start, time_stop, NULL, false);
@@ -976,12 +976,12 @@ void RAMFUNC SniffIClass(void) {
         }
     } // end main loop
 
-/*
-    if (DBGLEVEL >= 1) {
-        DbpString("[+] Sniff statistics:");
-        Dbhexdump(ICLASS_DMA_BUFFER_SIZE, data, false);
-    }
-*/
+    /*
+        if (DBGLEVEL >= 1) {
+            DbpString("[+] Sniff statistics:");
+            Dbhexdump(ICLASS_DMA_BUFFER_SIZE, data, false);
+        }
+    */
     switch_off();
 }
 
@@ -1522,7 +1522,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
             trace_data = csn_data;
             trace_data_size = sizeof(csn_data);
             goto send;
-        } else if (cmd == ICLASS_CMD_READCHECK ) { // 0x88
+        } else if (cmd == ICLASS_CMD_READCHECK) {  // 0x88
             // Read e-purse KD (88 02)  KC  (18 02)
             modulated_response = resp_cc;
             modulated_response_size = resp_cc_len; //order = 4;
@@ -1898,7 +1898,7 @@ bool sendCmdGetResponseWithRetries(uint8_t *command, size_t cmdsize, uint8_t *re
 
         // update/write command takes 4ms to 15ms before responding
         int old_wait = g_wait;
-        if ( (command[0] & 0xF) == ICLASS_CMD_UPDATE)
+        if ((command[0] & 0xF) == ICLASS_CMD_UPDATE)
             g_wait = 3900;
 
         uint8_t got_n = ReaderReceiveIClass(resp);
@@ -1934,8 +1934,8 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
     uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
     // Bit 4: K.If this bit equals to one, the READCHECK will use the Credit Key (Kc); if equals to zero, Debit Key (Kd) willbe used
-    // bit 7: parity.  
-    
+    // bit 7: parity.
+
     if (use_credit_key)
         readcheck_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
 
@@ -1945,14 +1945,14 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
     ReaderTransmitIClass_ext(act_all, 1, 330 + 180);
 
     // Card present?
-    if (ReaderReceiveIClass(resp) == 0) 
+    if (ReaderReceiveIClass(resp) == 0)
         return 0;
 
     //Send Identify
     ReaderTransmitIClass(identify, 1);
 
     //We expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
-    if ( ReaderReceiveIClass(resp) != 10 )
+    if (ReaderReceiveIClass(resp) != 10)
         return 0;
 
     //Copy the Anti-collision CSN to our select-packet
@@ -1962,28 +1962,28 @@ uint8_t handshakeIclassTag_ext(uint8_t *card_data, bool use_credit_key) {
     ReaderTransmitIClass(select, sizeof(select));
 
     //We expect a 10-byte response here, 8 byte CSN and 2 byte CRC
-    if ( ReaderReceiveIClass(resp) != 10)
+    if (ReaderReceiveIClass(resp) != 10)
         return 0;
 
-        // Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
+    // Card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
     // ReaderTransmitIClass(readcheck_cc, sizeof(readcheck_cc));
     // if (ReaderReceiveIClass(resp) == 8) {
     // //Save CC (e-purse) in response data
     // memcpy(card_data+8, resp, 8);
     // read_status++;
     // }
-    
+
     //Success - level 1, we got CSN
     //Save CSN in response data
     memcpy(card_data, resp, 8);
-    
+
     bool isBlk_2 = sendCmdGetResponseWithRetries(readcheck_cc, sizeof(readcheck_cc), resp, 8, 3);
 
     //Flag that we got to at least stage 1, read CSN
-    if ( isBlk_2 == false) {
+    if (isBlk_2 == false) {
         return 1;
     }
-    
+
     //Save CC (e-purse) in response data
     memcpy(card_data + 8, resp, 8);
 
@@ -2283,7 +2283,7 @@ void iClass_Authentication(uint8_t *mac) {
 
     // 6 retries
     uint8_t isOK = sendCmdGetResponseWithRetries(check, sizeof(check), resp, 4, 6);
-    reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t*)&isOK ,sizeof(uint8_t));
+    reply_ng(CMD_HF_ICLASS_AUTH, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
 }
 
 typedef struct iclass_premac {
@@ -2460,7 +2460,7 @@ bool iClass_WriteBlock_ext(uint8_t blockno, uint8_t *data) {
 void iClass_WriteBlock(uint8_t blockno, uint8_t *data) {
     uint8_t isOK = iClass_WriteBlock_ext(blockno, data);
     switch_off();
-    reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t*)&isOK, sizeof(uint8_t));
+    reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&isOK, sizeof(uint8_t));
 }
 
 // turn off afterwards

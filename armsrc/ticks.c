@@ -187,7 +187,7 @@ uint32_t RAMFUNC GetCountSspClk(void) {
 
 uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start) {
     uint32_t stop = GetCountSspClk();
-    if ( stop >= start ) 
+    if (stop >= start)
         return stop - start;
     return (UINT32_MAX - start) + stop;
 }
