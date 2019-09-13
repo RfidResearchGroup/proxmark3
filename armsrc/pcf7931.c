@@ -94,10 +94,10 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
             } else {
                 // Error
                 if (++warnings > 10) {
-                    
-                    if ( DBGLEVEL >= DBG_EXTENDED )
+
+                    if (DBGLEVEL >= DBG_EXTENDED)
                         Dbprintf("Error: too many detection errors, aborting.");
-                    
+
                     return 0;
                 }
             }
@@ -138,10 +138,10 @@ bool IsBlock0PCF7931(uint8_t *block) {
     // assuming all RFU bits are set to 0
     // if PAC is enabled password is set to 0
     if (block[7] == 0x01) {
-        if (!memcmp(block, "\x00\x00\x00\x00\x00\x00\x00", 7)  
-            && !memcmp(block + 9, "\x00\x00\x00\x00\x00\x00\x00", 7)) {
+        if (!memcmp(block, "\x00\x00\x00\x00\x00\x00\x00", 7)
+                && !memcmp(block + 9, "\x00\x00\x00\x00\x00\x00\x00", 7)) {
             return true;
-            }
+        }
     } else if (block[7] == 0x00) {
         if (!memcmp(block + 9, "\x00\x00\x00\x00\x00\x00\x00", 7)) {
             return true;
@@ -158,14 +158,14 @@ bool IsBlock1PCF7931(uint8_t *block) {
     uint8_t rlb = block[15];
 
     if (block[10] == 0
-        && block[11] == 0
-        && block[12] == 0
-        && block[13] == 0) {
+            && block[11] == 0
+            && block[12] == 0
+            && block[13] == 0) {
         // block 1 is sent only if (RLB >= 1 && RFB <= 1) or RB1 enabled
         if (rfb <= rlb
-            && rfb <= 9
-            && rlb <= 9
-            && ((rfb <= 1 && rlb >= 1) || rb1)) {
+                && rfb <= 9
+                && rlb <= 9
+                && ((rfb <= 1 && rlb >= 1) || rb1)) {
             return true;
         }
     }
@@ -203,17 +203,17 @@ void ReadPCF7931() {
         // exit if no block is received
         if (errors >= 10 && found_blocks == 0 && single_blocks_cnt == 0) {
 
-            if ( DBGLEVEL >= DBG_INFO )
+            if (DBGLEVEL >= DBG_INFO)
                 Dbprintf("[!!] Error, no tag or bad tag");
-            
+
             return;
         }
         // exit if too many errors during reading
         if (tries > 50 && (2 * errors > tries)) {
-            
-            if ( DBGLEVEL >= DBG_INFO )
+
+            if (DBGLEVEL >= DBG_INFO)
                 Dbprintf("[!!] Error reading the tag, only partial content");
-            
+
             goto end;
         }
 
@@ -242,9 +242,9 @@ void ReadPCF7931() {
             continue;
         }
 
-        if ( DBGLEVEL >= DBG_EXTENDED )
+        if (DBGLEVEL >= DBG_EXTENDED)
             Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (max_blocks == 0 ? found_blocks : max_blocks), tries, errors);
-        
+
         for (i = 0; i < n; ++i) {
             print_result("got consecutive blocks", tmp_blocks[i], 16);
         }
@@ -306,9 +306,9 @@ void ReadPCF7931() {
         }
         ++tries;
         if (BUTTON_PRESS()) {
-            if ( DBGLEVEL >= DBG_EXTENDED) 
+            if (DBGLEVEL >= DBG_EXTENDED)
                 Dbprintf("Button pressed, stopping.");
-            
+
             goto end;
         }
     } while (found_blocks < max_blocks);
@@ -421,7 +421,7 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
  */
 void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data) {
 
-    if ( DBGLEVEL >= DBG_INFO ) { 
+    if (DBGLEVEL >= DBG_INFO) {
         Dbprintf("Initialization delay : %d us", init_delay);
         Dbprintf("Offsets : %d us on the low pulses width, %d us on the low pulses positions", l, p);
     }
@@ -444,10 +444,10 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
 void SendCmdPCF7931(uint32_t *tab) {
     uint16_t u = 0, tempo = 0;
 
-    if ( DBGLEVEL >= DBG_INFO ) { 
+    if (DBGLEVEL >= DBG_INFO) {
         Dbprintf("Sending data frame...");
     }
-    
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);

@@ -54,15 +54,15 @@ void RunMod() {
 
         // Was our button held down or pressed?
         int button_pressed = BUTTON_HELD(280);
-        if ( button_pressed != BUTTON_HOLD )
+        if (button_pressed != BUTTON_HOLD)
             continue;
-/*
-#define BUTTON_NO_CLICK 0
-#define BUTTON_SINGLE_CLICK -1
-#define BUTTON_DOUBLE_CLICK -2
-*/
+        /*
+        #define BUTTON_NO_CLICK 0
+        #define BUTTON_SINGLE_CLICK -1
+        #define BUTTON_DOUBLE_CLICK -2
+        */
 
-        if ( state == STATE_READ ) {
+        if (state == STATE_READ) {
 
             if (selected == 0) {
                 LED_A_ON();
@@ -89,17 +89,17 @@ void RunMod() {
             Dbprintf("[=]   recorded %x | %x%08x", selected, high[selected], low[selected]);
 
             // got nothing. blink and loop.
-            if ( hi == 0 && lo == 0 ) {
-                SpinErr( (selected == 0) ? LED_A : LED_B, 100, 12);
+            if (hi == 0 && lo == 0) {
+                SpinErr((selected == 0) ? LED_A : LED_B, 100, 12);
                 DbpString("[=] only got zeros, retry recording after click");
                 continue;
             }
 
-            SpinErr( (selected == 0) ? LED_A : LED_B, 250, 2);
+            SpinErr((selected == 0) ? LED_A : LED_B, 250, 2);
             state = STATE_SIM;
             continue;
 
-        } else if ( state == STATE_SIM ) {
+        } else if (state == STATE_SIM) {
 
             LED_C_ON();   // Simulate
             LED_D_OFF();
@@ -113,11 +113,11 @@ void RunMod() {
             DbpString("[=] simulating done");
 
             uint8_t leds = ((selected == 0) ? LED_A : LED_B) | LED_C;
-            SpinErr( leds , 250, 2);
+            SpinErr(leds, 250, 2);
             state = STATE_CLONE;
             continue;
 
-        } else if ( state == STATE_CLONE ) {
+        } else if (state == STATE_CLONE) {
 
             LED_C_OFF();
             LED_D_ON();   // clone
@@ -138,7 +138,7 @@ void RunMod() {
         }
     }
 
-    SpinErr( (LED_A | LED_B | LED_C | LED_D), 250, 5);
+    SpinErr((LED_A | LED_B | LED_C | LED_D), 250, 5);
     DbpString("[=] You can take shell back :) ...");
     LEDsoff();
 }
