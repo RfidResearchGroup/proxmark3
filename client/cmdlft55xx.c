@@ -36,8 +36,17 @@
 #define T55XX_DLMODE_1OF4          3 // 1 of 4
 #define T55XX_LONGLEADINGREFERENCE 4 // Value to tell Write Bit to send long reference
 
+//static uint8_t bit_rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
+
 // Default configuration
-t55xx_conf_block_t config = { .modulation = DEMOD_ASK, .inverted = false, .offset = 0x00, .block0 = 0x00, .Q5 = false };
+t55xx_conf_block_t config = { 
+    .modulation = DEMOD_ASK,
+    .inverted = false,
+    .offset = 0x00,
+    .block0 = 0x00,
+    .Q5 = false,
+    .usepwd = false
+    };
 
 t55xx_conf_block_t Get_t55xx_Config() {
     return config;
@@ -55,9 +64,10 @@ static void print_usage_t55xx_downloadlink(void) {
 }
 
 static int usage_t55xx_config() {
-    PrintAndLogEx(NORMAL, "Usage: lf t55xx config [d <demodulation>] [i [0/1]] [o <offset>] [Q5 [0/1]] [ST [0/1]]");
+    PrintAndLogEx(NORMAL, "Usage: lf t55xx config [c <blk0>] [d <demodulation>] [i [0/1]] [o <offset>] [Q5 [0/1]] [ST [0/1]]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                                - This help");
+    PrintAndLogEx(NORMAL, "       c <block0>                       - set configuration from a block0");
     PrintAndLogEx(NORMAL, "       b <8|16|32|40|50|64|100|128>     - Set bitrate");
     PrintAndLogEx(NORMAL, "       d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  - Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
     PrintAndLogEx(NORMAL, "       i [0/1]                          - Set/reset data signal inversion");
@@ -131,14 +141,14 @@ static int usage_t55xx_trace() {
     return PM3_SUCCESS;
 }
 static int usage_t55xx_info() {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx info [1] [r <mode>] [d <data> [q]]");
+    PrintAndLogEx(NORMAL, "Usage:  lf t55xx info [1] [r <mode>] [c <blk0> [q]]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     (default)      - read data from tag.");
-    PrintAndLogEx(NORMAL, "     p <password>   - OPTIONAL password 4bytes (8 hex symbols)");
-    PrintAndLogEx(NORMAL, "     1              - if set, use Graphbuffer instead of reading tag.");
-    PrintAndLogEx(NORMAL, "     d <data>       - 4 bytes of data (8 hex characters)");
+    PrintAndLogEx(NORMAL, "       (default)      - read data from tag.");
+    PrintAndLogEx(NORMAL, "       p <password>   - OPTIONAL password 4bytes (8 hex symbols)");
+    PrintAndLogEx(NORMAL, "       1              - if set, use Graphbuffer instead of reading tag.");
+    PrintAndLogEx(NORMAL, "       c <block0>     - set configuration from a block0");
     PrintAndLogEx(NORMAL, "                      if set, use these data instead of reading tag.");
-    PrintAndLogEx(NORMAL, "     q              - if set, provided data are interpreted as Q5 config.");
+    PrintAndLogEx(NORMAL, "       q              - if set, provided data are interpreted as Q5 config.");
     print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -312,6 +322,9 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     uint8_t rates[9] = {8, 16, 32, 40, 50, 64, 100, 128, 0};
     uint8_t cmdp = 0;
     bool errors = false;
+    uint32_t block0 = 0;
+    bool gotconf = false;
+    
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         char tmp = tolower(param_getchar(Cmd, cmdp));
         switch (tmp) {
@@ -329,6 +342,11 @@ static int CmdT55xxSetConfig(const char *Cmd) {
                     }
                     if (i == 9) errors = true;
                 }
+                cmdp += 2;
+                break;
+            case 'c':
+                block0 = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                gotconf = true;
                 cmdp += 2;
                 break;
             case 'd':
@@ -413,7 +431,36 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     //Validations
     if (errors) return usage_t55xx_config();
 
-    config.block0 = 0;
+    if ( gotconf ) {
+
+        // Q5
+
+            
+        // T55x7
+        uint32_t extend = (block0 >> (32 - 15)) & 0x01;
+        uint32_t dbr;
+        if (extend)
+            dbr = (block0 >> (32 - 14)) & 0x3F;
+        else
+            dbr = (block0 >> (32 - 14)) & 0x07;
+
+        uint32_t datamod  = (block0 >> (32 - 20)) & 0x1F;
+        bool pwd = (bool)((block0 >> (32 - 28)) & 0x01);
+        bool sst = (bool)((block0 >> (32 - 29)) & 0x01);
+        bool inv = (bool)((block0 >> (32 - 31)) & 0x01);
+                
+        config.modulation = datamod;
+        config.bitrate = dbr;
+        config.inverted = inv;
+        config.Q5 = 0;
+        config.ST = sst;
+        config.usepwd = pwd;
+        config.offset = 0;
+        config.block0 = block0;
+    } else {
+        config.block0 = 0;
+    }
+
     return printConfiguration(config);
 }
 
@@ -1014,11 +1061,14 @@ static bool testQ5(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk) 
         si += 3;
         //uint8_t ST        = PackBits(si, 1, DemodBuffer); si += 1;
         if (maxBlk == 0) continue;
+        
         //test modulation
         if (!testQ5Modulation(mode, modread)) continue;
         if (bitRate != clk) continue;
+        
         *fndBitRate = convertQ5bitRate(bitRate);
         if (*fndBitRate < 0) continue;
+        
         *offset = idx;
 
         return true;
@@ -1550,7 +1600,7 @@ static int CmdT55xxInfo(const char *Cmd) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_t55xx_info();
-            case 'd':
+            case 'c':
                 block0 = param_get32ex(Cmd, cmdp + 1, 0, 16);
                 gotdata = true;
                 cmdp += 2;
@@ -1602,7 +1652,7 @@ static int CmdT55xxInfo(const char *Cmd) {
         if (DemodBufferLen < 32 + config.offset) return PM3_ESOFT;
 
         //PrintAndLogEx(NORMAL, "Offset+32 ==%d\n DemodLen == %d", config.offset + 32, DemodBufferLen);
-        block0   = PackBits(config.offset, 32, DemodBuffer);
+        block0 = PackBits(config.offset, 32, DemodBuffer);
     }
 
     PrintAndLogEx(NORMAL, "");

@@ -116,6 +116,7 @@ typedef struct {
     } bitrate;
     bool Q5;
     bool ST;
+    bool usepwd;
 } t55xx_conf_block_t;
 
 t55xx_conf_block_t Get_t55xx_Config(void);
