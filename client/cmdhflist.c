@@ -325,7 +325,7 @@ void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     uint8_t c = cmd[0] & 0x0F;
     uint8_t parity = 0;
-    for ( uint8_t i=0; i<7; i++) {
+    for (uint8_t i = 0; i < 7; i++) {
         parity ^= (cmd[0] >> i) & 1;
     }
 
@@ -363,7 +363,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "UPDATE(%d)", cmd[1]);
             break;
         case ICLASS_CMD_READCHECK:
-            if ( ICLASS_CREDIT(c) ) {
+            if (ICLASS_CREDIT(c)) {
                 snprintf(exp, size, "READCHECK[Kc](%d)", cmd[1]);
             } else {
                 snprintf(exp, size, "READCHECK[Kd](%d)", cmd[1]);

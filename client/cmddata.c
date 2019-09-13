@@ -461,10 +461,10 @@ int CmdPrintDemodBuff(const char *Cmd) {
     if (invert) {
         char *buf = (char *)(DemodBuffer + offset);
         for (uint32_t i = 0; i < length; i++) {
-            if ( buf[i] == 1 )
+            if (buf[i] == 1)
                 buf[i] = 0;
             else {
-                if ( buf[i] == 0 )
+                if (buf[i] == 0)
                     buf[i] = 1;
             }
         }

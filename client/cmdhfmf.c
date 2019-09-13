@@ -1780,7 +1780,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // card prng type (weak=1 / hard=0 / select/card comm error = negative value)
     prng_type = detect_classic_prng();
-    if (prng_type < 0){
+    if (prng_type < 0) {
         PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error");
         free(e_sector);
         return prng_type;
