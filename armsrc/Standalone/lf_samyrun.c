@@ -138,6 +138,7 @@ void RunMod() {
         }
     }
 
+    SpinErr( (LED_A | LED_B | LED_C | LED_D), 250, 5);
     DbpString("[=] You can take shell back :) ...");
     LEDsoff();
 }
