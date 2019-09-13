@@ -482,8 +482,8 @@ static int CmdT55xxReadBlock(const char *Cmd) {
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 if (downlink_mode > 3)
-                     downlink_mode = 0;
-                 
+                    downlink_mode = 0;
+
                 cmdp += 2;
                 break;
 
@@ -649,10 +649,10 @@ static int CmdT55xxDetect(const char *Cmd) {
         return PM3_ESOFT;
 
     if (useGB == false) {
-        if ( try_all_dl_modes ) {
+        if (try_all_dl_modes) {
             for (uint8_t mode = 0; mode < 4; mode++) {
-                
-                if ( AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, mode) == false ) {
+
+                if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, mode) == false) {
                     continue;
                 }
 
@@ -663,8 +663,8 @@ static int CmdT55xxDetect(const char *Cmd) {
             }
             return PM3_ESOFT;
         } else {
-           if ( AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode) == false )
-               return PM3_ENODATA;               
+            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode) == false)
+                return PM3_ENODATA;
         }
     }
 
@@ -1132,9 +1132,9 @@ static int CmdT55xxWakeUp(const char *Cmd) {
                 break;
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3) 
+                if (downlink_mode > 3)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             default:
@@ -1150,17 +1150,17 @@ static int CmdT55xxWakeUp(const char *Cmd) {
         uint32_t password;
         uint8_t flags;
     } PACKED payload;
-    
+
     payload.password = password;
-    payload.flags = (downlink_mode & 3) << 3; 
-    
+    payload.flags = (downlink_mode & 3) << 3;
+
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_WAKEUP, (uint8_t *)&payload, sizeof(payload));
     if (!WaitForResponseTimeout(CMD_LF_T55XX_WAKEUP, NULL, 1000)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
-    
+
     PrintAndLogEx(SUCCESS, "Wake up command sent. Try read now");
     return PM3_SUCCESS;
 }
@@ -1212,7 +1212,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 if (downlink_mode > 3)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             default:
@@ -1273,9 +1273,9 @@ static int CmdT55xxReadTrace(const char *Cmd) {
                 return usage_t55xx_trace();
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3) 
+                if (downlink_mode > 3)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             case '1':
@@ -1302,7 +1302,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         if (!AquireData(T55x7_PAGE1, REGULAR_READ_MODE_BLOCK, pwdmode, password, downlink_mode))
             return PM3_ENODATA;
     }
-    
+
     if (config.Q5) {
         if (!DecodeT5555TraceBlock()) return PM3_ESOFT;
     } else {
@@ -1570,9 +1570,9 @@ static int CmdT55xxInfo(const char *Cmd) {
                 break;
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3) 
+                if (downlink_mode > 3)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             default:
@@ -1594,7 +1594,7 @@ static int CmdT55xxInfo(const char *Cmd) {
         if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode))
             return PM3_ENODATA;
     }
-    
+
     if (!gotdata) {
         if (!DecodeT55xxBlock()) return PM3_ESOFT;
 
@@ -1697,10 +1697,10 @@ static int CmdT55xxDump(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return usage_t55xx_dump();    
+                return usage_t55xx_dump();
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3) 
+                if (downlink_mode > 3)
                     downlink_mode = 0;
 
                 cmdp += 2;
@@ -2027,9 +2027,9 @@ static int CmdResetRead(const char *Cmd) {
                 return usage_t55xx_resetread();
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 3) 
+                if (downlink_mode > 3)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             default:
@@ -2042,9 +2042,9 @@ static int CmdResetRead(const char *Cmd) {
     if (errors) return usage_t55xx_resetread();
 
     PrintAndLogEx(INFO, "DL : %d\n", downlink_mode);
-    
+
     flags = downlink_mode << 3;
-    
+
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
     if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
@@ -2153,7 +2153,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 return usage_t55xx_chk();
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode >= 4) { 
+                if (downlink_mode >= 4) {
                     try_all_dl_modes = true;
                     downlink_mode = 4;
                 }
@@ -2164,7 +2164,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 cmdp++;
                 break;
             case 'i':
-                if ( param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0 ) {
+                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
                     PrintAndLogEx(ERR, "Error, no filename after 'f' was found");
                     errors = true;
                 }
@@ -2305,9 +2305,9 @@ static int CmdT55xxBruteForce(const char *Cmd) {
                 return usage_t55xx_bruteforce();
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 4) 
+                if (downlink_mode > 4)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             case 's':
@@ -2415,9 +2415,9 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
                 break;
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode > 4) 
+                if (downlink_mode > 4)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             default:
@@ -2644,12 +2644,12 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
                 break;
             case 'r':
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (downlink_mode == 4) 
+                if (downlink_mode == 4)
                     try_all_dl_modes = true;
-                
+
                 if (downlink_mode > 3)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             default:
@@ -2725,10 +2725,10 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'r':
-                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);                
-                if (downlink_mode > 3) 
+                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                if (downlink_mode > 3)
                     downlink_mode = 0;
-                
+
                 cmdp += 2;
                 break;
             case 'p':
