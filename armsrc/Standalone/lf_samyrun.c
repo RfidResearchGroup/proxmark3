@@ -78,7 +78,7 @@ void RunMod() {
             WAIT_BUTTON_RELEASED();
 
             // record
-            DbpString("[=] starting recording");
+            DbpString("[=] start recording");
 
             // findone, high, low, no ledcontrol (A)
             uint32_t hi = 0, lo = 0;
@@ -86,16 +86,16 @@ void RunMod() {
             high[selected] = hi;
             low[selected] = lo;
 
-            Dbprintf("[=] recorded bank %x | %x%08x", selected, high[selected], low[selected]);
+            Dbprintf("[=]   recorded %x | %x%08x", selected, high[selected], low[selected]);
 
             // got nothing. blink and loop.
             if ( hi == 0 && lo == 0 ) {
                 SpinErr( (selected == 0) ? LED_A : LED_B, 100, 12);
-                Dbprintf("[=] recorded nothing, looping");
+                DbpString("[=] only got zeros, retry recording after click");
                 continue;
             }
 
-            SpinErr( (select==0) ? LED_A : LED_B, 250, 2);
+            SpinErr( (selected == 0) ? LED_A : LED_B, 250, 2);
             state = STATE_SIM;
             continue;
 
@@ -109,7 +109,11 @@ void RunMod() {
 
             // high, low, no led control(A)  no time limit
             CmdHIDsimTAGEx(high[selected], low[selected], false, -1);
-            SpinErr( LED_C, 250, 2);
+
+            DbpString("[=] simulating done");
+
+            uint8_t leds = ((selected == 0) ? LED_A : LED_B) | LED_C;
+            SpinErr( leds , 250, 2);
             state = STATE_CLONE;
             continue;
 
@@ -119,17 +123,21 @@ void RunMod() {
             LED_D_ON();   // clone
             WAIT_BUTTON_RELEASED();
 
-            Dbprintf("[=] cloning %x | %x%08x", selected, high[selected], low[selected]);
+            Dbprintf("[=]    cloning %x | %x%08x", selected, high[selected], low[selected]);
 
             // high2, high, low,  no longFMT
             CopyHIDtoT55x7(0, high[selected], low[selected], 0);
+
+            DbpString("[=] cloned done");
+
             state = STATE_READ;
-            SpinErr( LED_D, 250, 2);
+            uint8_t leds = ((selected == 0) ? LED_A : LED_B) | LED_D;
+            SpinErr(leds, 250, 2);
             selected = (selected + 1) % OPTS;
             LEDsoff();
         }
     }
 
-    DbpString("[=] exiting samyrun");
+    DbpString("[=] You can take shell back :) ...");
     LEDsoff();
 }
