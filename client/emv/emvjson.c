@@ -17,6 +17,8 @@
 #include "util.h"
 #include "proxmark3.h"
 #include "emv_tags.h"
+#include "fileutils.h"
+#include "pm3_cmd.h"
 
 static const ApplicationDataElm ApplicationData[] = {
     {0x82,    "AIP"},
@@ -303,13 +305,12 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         return false;
     }
 
-    // current path + file name
-    const char *relfname = "emv/defparams.json";
-    char fname[strlen(get_my_executable_directory()) + strlen(relfname) + 1];
-    strcpy(fname, get_my_executable_directory());
-    strcat(fname, relfname);
-
-    root = json_load_file(fname, 0, &error);
+    char *path;
+    if (searchFile(&path, RESOURCES_SUBDIR, "emv_defparams", ".json", false) != PM3_SUCCESS) {
+        return false;
+    }
+    root = json_load_file(path, 0, &error);
+    free(path);
     if (!root) {
         PrintAndLogEx(ERR, "Load params: json error on line " _YELLOW_("%d") ": %s", error.line, error.text);
         return false;

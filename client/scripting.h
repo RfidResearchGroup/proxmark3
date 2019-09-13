@@ -14,8 +14,6 @@
 //#include <lualib.h>
 //#include <lauxlib.h>
 
-#define LUA_LIBRARIES_DIRECTORY "lualibs/"
-#define LUA_SCRIPTS_DIRECTORY   "scripts/"
 #define LUA_LIBRARIES_WILDCARD  "?.lua"
 
 /**

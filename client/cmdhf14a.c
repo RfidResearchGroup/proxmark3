@@ -133,7 +133,7 @@ static const manufactureName manufactureMapping[] = {
     { 0x61, "Wearlinks Technology Inc. China" },
     { 0x62, "Userstar Information Systems Co., Ltd Taiwan" },
     { 0x63, "Pragmatic Printing Ltd. UK" },
-    { 0x64, "Associacao do Laboratorio de Sistemas Integraveis Tecnologico – LSI-TEC Brazil" },
+    { 0x64, "Associacao do Laboratorio de Sistemas Integraveis Tecnologico - LSI-TEC Brazil" },
     { 0x65, "Tendyron Corporation China" },
     { 0x66, "MUTO Smart Co., Ltd. Korea" },
     { 0x67, "ON Semiconductor USA" },

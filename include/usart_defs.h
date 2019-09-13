@@ -18,7 +18,7 @@
 #if defined (_WIN32)
 #define SERIAL_PORT_EXAMPLE_H   "com3"
 #elif defined(__APPLE__)
-#define SERIAL_PORT_EXAMPLE_H   "/dev/cu.usbmodem"
+#define SERIAL_PORT_EXAMPLE_H   "/dev/tty.usbmodemiceman1"
 #else
 #define SERIAL_PORT_EXAMPLE_H   "/dev/ttyACM0"
 #endif

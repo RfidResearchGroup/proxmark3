@@ -23,6 +23,7 @@
 #include "lfdemod.h"  // for demod code
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem4x.h" // askem410xdecode
+#include "fileutils.h" // searchFile
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
@@ -38,6 +39,7 @@ static int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "       x          output in hex (omit for binary output)");
     PrintAndLogEx(NORMAL, "       o <offset> enter offset in # of bits");
     PrintAndLogEx(NORMAL, "       l <length> enter length to print in # of bits or hex characters respectively");
+    PrintAndLogEx(NORMAL, "       s          strip leading zeroes, i.e. set offset to first bit equal to one");
     return PM3_SUCCESS;
 }
 static int usage_data_manrawdecode(void) {
@@ -401,6 +403,7 @@ void printDemodBuff(void) {
 int CmdPrintDemodBuff(const char *Cmd) {
     bool hexMode = false;
     bool errors = false;
+    bool lstrip = false;
     uint32_t offset = 0;
     uint32_t length = 512;
     char cmdp = 0;
@@ -422,6 +425,10 @@ int CmdPrintDemodBuff(const char *Cmd) {
                 if (!length) errors = true;
                 cmdp += 2;
                 break;
+            case 's':
+                lstrip = true;
+                cmdp ++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -434,6 +441,15 @@ int CmdPrintDemodBuff(const char *Cmd) {
     if (DemodBufferLen == 0) {
         PrintAndLogEx(NORMAL, "Demodbuffer is empty");
         return PM3_ESOFT;
+    }
+    if (lstrip) {
+        char *buf = (char *)(DemodBuffer + offset);
+        length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
+        uint32_t i;
+        for (i = 0; i < length; i++) {
+            if (buf[i] == 1) break;
+        }
+        offset += i;
     }
     length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
 
@@ -1646,11 +1662,20 @@ static int CmdLoad(const char *Cmd) {
     if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
     memcpy(filename, Cmd, len);
 
-    FILE *f = fopen(filename, "r");
+    char *path;
+    if (searchFile(&path, TRACES_SUBDIR, filename, ".pm3", true) != PM3_SUCCESS) {
+        if (searchFile(&path, TRACES_SUBDIR, filename, "", false) != PM3_SUCCESS) {
+            return PM3_EFILE;
+        }
+    }
+
+    FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "couldn't open '%s'", filename);
+        PrintAndLogEx(WARNING, "couldn't open '%s'", path);
+        free(path);
         return PM3_EFILE;
     }
+    free(path);
 
     GraphTraceLen = 0;
     char line[80];

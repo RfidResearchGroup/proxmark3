@@ -941,7 +941,7 @@ static void fcSTT(int *n) {
 }
 
 // compose fc/X fc/Y waveform (FSKx)
-static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
+static uint8_t fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
     uint8_t *dest = BigBuf_get_addr();
     uint8_t halfFC = fc >> 1;
     uint8_t wavesPerClock = clock / fc;
@@ -966,12 +966,15 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
                 *n += fc;
             }
         }
+/*  This code interfers with FSK2 and I don't see any example of FSK1 simulation in the code...
         if (!modAdjOk) { //fsk1
             memset(dest + (*n), 0, mod - (mod >> 1));
             memset(dest + (*n) + (mod - (mod >> 1)), 1, mod >> 1);
             *n += mod;
         }
+*/
     }
+    return mod;
 }
 
 // prepare a waveform pattern in the buffer based on the ID given then
@@ -1059,17 +1062,17 @@ void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk,
 
     int n = 0, i = 0;
     uint16_t modCnt = 0;
+    uint8_t mod = 0;
 
     if (separator) {
         //int fsktype = ( fchigh == 8 && fclow == 5) ? 1 : 2;
         //fcSTT(&n);
     }
-
     for (i = 0; i < bitslen; i++) {
         if (bits[i])
-            fcAll(fclow, &n, clk, &modCnt);
+            mod = fcAll(fchigh, &n, clk+mod, &modCnt);
         else
-            fcAll(fchigh, &n, clk, &modCnt);
+            mod = fcAll(fclow, &n, clk+mod, &modCnt);
     }
 
     WDT_HIT();
@@ -1306,7 +1309,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
         hi2 = hi = lo = idx = 0;
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("Stopped");
+    DbpString("HID fsk demod stopped");
     if (ledcontrol) LED_A_OFF();
 }
 
@@ -2060,6 +2063,7 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags) {
 
     //-- Turn and leave field on to let the begin repeating transmission
     TurnReadLFOn(20 * 1000);
+    reply_ng(CMD_LF_T55XX_WAKEUP, PM3_SUCCESS, NULL, 0);
 }
 
 

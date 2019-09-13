@@ -90,6 +90,7 @@
 #define LED_D_OFF()       LOW(GPIO_LED_D)
 #define LED_D_INV()       INVBIT(GPIO_LED_D)
 
+
 // SPI
 #define SCK_LOW           LOW(GPIO_SPCK)
 #define SCK_HIGH          HIGH(GPIO_SPCK)
@@ -107,7 +108,9 @@
 
 #define RELAY_ON()        HIGH(GPIO_RELAY)
 #define RELAY_OFF()       LOW(GPIO_RELAY)
-#define BUTTON_PRESS()    !((AT91C_BASE_PIOA->PIO_PDSR & GPIO_BUTTON) == GPIO_BUTTON)
+
+#define BUTTON_PRESS()         !((AT91C_BASE_PIOA->PIO_PDSR & GPIO_BUTTON) == GPIO_BUTTON)
+#define WAIT_BUTTON_RELEASED() { while ( BUTTON_PRESS() )  { WDT_HIT(); }; }
 
 //NVDD goes LOW when USB is attached.
 #define USB_ATTACHED()    !((AT91C_BASE_PIOA->PIO_PDSR & GPIO_NVDD_ON) == GPIO_NVDD_ON)

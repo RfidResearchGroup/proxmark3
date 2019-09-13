@@ -26,20 +26,21 @@
 #include "loclass/cipher.h"
 #include "loclass/ikeys.h"
 #include "loclass/elite_crack.h"
-#include "loclass/fileutils.h"
+#include "fileutils.h"
 #include "protocols.h"
 
 
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
+#define ICLASS_AUTH_RETRY 10
 
 static int CmdHelp(const char *Cmd);
 
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
+    { 0x76, 0x65, 0x54, 0x43, 0x32, 0x21, 0x10, 0x00 },
+    { 0x5B, 0x7C, 0x62, 0xC4, 0x91, 0xc1, 0x1b, 0x39 },
+    { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -60,38 +61,46 @@ static int usage_hf_iclass_sim(void) {
     PrintAndLogEx(NORMAL, "        hf iclass eload 'tagdump.bin'");
     PrintAndLogEx(NORMAL, "        hf iclass sim 3");
     PrintAndLogEx(NORMAL, "        hf iclass sim 4");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_eload(void) {
     PrintAndLogEx(NORMAL, "Loads iclass tag-dump into emulator memory on device");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass eload f <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_decrypt(void) {
     PrintAndLogEx(NORMAL, "This is simple implementation, it tries to decrypt every block after block 6.");
     PrintAndLogEx(NORMAL, "Correct behaviour would be to decrypt only the application areas where the key is valid,");
     PrintAndLogEx(NORMAL, "which is defined by the configuration block.");
     PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-    PrintAndLogEx(NORMAL, "in the working directory. The file should be 16 bytes binary data");
+    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt f <tagdump>");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt d <enc data> f <tagdump> k <transport key>");
+    PrintAndLogEx(NORMAL, "        options");
+    PrintAndLogEx(NORMAL, "              d <encrypted block>    16 bytes hex");
+    PrintAndLogEx(NORMAL, "              f <filename>           filename of dump");
+    PrintAndLogEx(NORMAL, "              k <transport key>      16 bytes hex");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "S       hf iclass decrypt f tagdump_12312342343.bin");
-    return 0;
+    PrintAndLogEx(NORMAL, "S       hf iclass decrypt f tagdump_1.bin");
+    PrintAndLogEx(NORMAL, "S       hf iclass decrypt f tagdump_1.bin k 000102030405060708090a0b0c0d0e0f");
+    PrintAndLogEx(NORMAL, "S       hf iclass decrypt d 1122334455667788 k 000102030405060708090a0b0c0d0e0f");
+    
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_encrypt(void) {
     PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-    PrintAndLogEx(NORMAL, "in the working directory. The file should be 16 bytes binary data");
+    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass encrypt <BlockData>");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass encrypt d <blockdata> k <transport key>");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass encrypt 0102030405060708");
+    PrintAndLogEx(NORMAL, "        hf iclass encrypt d 0102030405060708");
+    PrintAndLogEx(NORMAL, "        hf iclass encrypt d 0102030405060708 k 00112233445566778899AABBCCDDEEFF");
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_dump(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass dump f <fileName> k <key> c <creditkey> [e|r|v]\n");
@@ -107,23 +116,23 @@ static int usage_hf_iclass_dump(void) {
     PrintAndLogEx(NORMAL, "        hf iclass dump k 001122334455667B");
     PrintAndLogEx(NORMAL, "        hf iclass dump k AAAAAAAAAAAAAAAA c 001122334455667B");
     PrintAndLogEx(NORMAL, "        hf iclass dump k AAAAAAAAAAAAAAAA e");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_clone(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  f <filename>: specify a filename to clone from");
-    PrintAndLogEx(NORMAL, "  b <Block>   : The first block to clone as 2 hex symbols");
-    PrintAndLogEx(NORMAL, "  l <Last Blk>: Set the Data to write as 16 hex symbols");
-    PrintAndLogEx(NORMAL, "  k <Key>     : Access Key as 16 hex symbols or 1 hex to select key from memory");
-    PrintAndLogEx(NORMAL, "  c           : If 'c' is specified, the key set is assumed to be the credit key\n");
-    PrintAndLogEx(NORMAL, "  e           : If 'e' is specified, elite computations applied to key");
-    PrintAndLogEx(NORMAL, "  r           : If 'r' is specified, no computations applied to key");
+    PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to clone from");
+    PrintAndLogEx(NORMAL, "  b <Block>    : The first block to clone as 2 hex symbols");
+    PrintAndLogEx(NORMAL, "  l <Last Blk> : Set the Data to write as 16 hex symbols");
+    PrintAndLogEx(NORMAL, "  k <Key>      : Access Key as 16 hex symbols or 1 hex to select key from memory");
+    PrintAndLogEx(NORMAL, "  c            : If 'c' is specified, the key set is assumed to be the credit key\n");
+    PrintAndLogEx(NORMAL, "  e            : If 'e' is specified, elite computations applied to key");
+    PrintAndLogEx(NORMAL, "  r            : If 'r' is specified, no computations applied to key");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       hf iclass clone f iclass_tagdump-121345.bin b 06 l 1A k 1122334455667788 e");
     PrintAndLogEx(NORMAL, "       hf iclass clone f iclass_tagdump-121345.bin b 05 l 19 k 0");
     PrintAndLogEx(NORMAL, "       hf iclass clone f iclass_tagdump-121345.bin b 06 l 19 k 0 e");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_writeblock(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass writeblk b <block> d <data> k <key> [c|e|r|v]\n");
@@ -138,7 +147,7 @@ static int usage_hf_iclass_writeblock(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA k 001122334455667B");
     PrintAndLogEx(NORMAL, "        hf iclass writeblk b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readblock(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass readblk b <block> k <key> [c|e|r|v]\n");
@@ -153,11 +162,11 @@ static int usage_hf_iclass_readblock(void) {
     PrintAndLogEx(NORMAL, "        hf iclass readblk b 06 k 0011223344556677");
     PrintAndLogEx(NORMAL, "        hf iclass readblk b 1B k 0011223344556677 c");
     PrintAndLogEx(NORMAL, "        hf iclass readblk b 0A k 0");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readtagfile() {
     PrintAndLogEx(NORMAL, "Usage: hf iclass readtagfile <filename> [startblock] [endblock]");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, "Calculate new key for updating\n");
@@ -173,24 +182,24 @@ static int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, " std key to e key read csn : hf iclass calcnewkey o 1122334455667788 n 2233445566778899 e");
     PrintAndLogEx(NORMAL, " std to std read csn       : hf iclass calcnewkey o 1122334455667788 n 2233445566778899");
     PrintAndLogEx(NORMAL, "\nNOTE: * = required\n");
-    return 0;
+    return PM3_SUCCESS;;
 }
 static int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, "HELP :  Manage iClass Keys in client memory:\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass managekeys n [keynbr] k [key] f [filename] s l p\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  n <keynbr>  : specify the keyNbr to set in memory");
-    PrintAndLogEx(NORMAL, "  k <key>     : set a key in memory");
-    PrintAndLogEx(NORMAL, "  f <filename>: specify a filename to use with load or save operations");
-    PrintAndLogEx(NORMAL, "  s           : save keys in memory to file specified by filename");
-    PrintAndLogEx(NORMAL, "  l           : load keys to memory from file specified by filename");
-    PrintAndLogEx(NORMAL, "  p           : print keys loaded into memory\n");
+    PrintAndLogEx(NORMAL, "  n <keynbr>   : specify the keyNbr to set in memory");
+    PrintAndLogEx(NORMAL, "  k <key>      : set a key in memory");
+    PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to use with load or save operations");
+    PrintAndLogEx(NORMAL, "  s            : save keys in memory to file specified by filename");
+    PrintAndLogEx(NORMAL, "  l            : load keys to memory from file specified by filename");
+    PrintAndLogEx(NORMAL, "  p            : print keys loaded into memory\n");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, " set key      : hf iclass managekeys n 0 k 1122334455667788");
-    PrintAndLogEx(NORMAL, " save key file: hf iclass managekeys f mykeys.bin s");
-    PrintAndLogEx(NORMAL, " load key file: hf iclass managekeys f mykeys.bin l");
-    PrintAndLogEx(NORMAL, " print keys   : hf iclass managekeys p\n");
-    return 0;
+    PrintAndLogEx(NORMAL, " set key       : hf iclass managekeys n 0 k 1122334455667788");
+    PrintAndLogEx(NORMAL, " save key file : hf iclass managekeys f mykeys.bin s");
+    PrintAndLogEx(NORMAL, " load key file : hf iclass managekeys f mykeys.bin l");
+    PrintAndLogEx(NORMAL, " print keys    : hf iclass managekeys p\n");
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_reader(void) {
     PrintAndLogEx(NORMAL, "Act as a Iclass reader.  Look for iClass tags until Enter or the pm3 button is pressed\n");
@@ -200,7 +209,7 @@ static int usage_hf_iclass_reader(void) {
     PrintAndLogEx(NORMAL, "    1   read only 1 tag");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf iclass reader 1");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_replay(void) {
     PrintAndLogEx(NORMAL, "Replay a collected mac message");
@@ -210,29 +219,29 @@ static int usage_hf_iclass_replay(void) {
     PrintAndLogEx(NORMAL, "    <mac>   Mac bytes to replay (8 hexsymbols)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf iclass replay 00112233");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff the communication between reader and tag");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass sniff [h]");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         hf iclass sniff");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_loclass(void) {
     PrintAndLogEx(NORMAL, "Usage: hf iclass loclass [options]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "h             Show this help");
-    PrintAndLogEx(NORMAL, "t             Perform self-test");
-    PrintAndLogEx(NORMAL, "f <filename>  Bruteforce iclass dumpfile");
-    PrintAndLogEx(NORMAL, "                   An iclass dumpfile is assumed to consist of an arbitrary number of");
-    PrintAndLogEx(NORMAL, "                   malicious CSNs, and their protocol responses");
-    PrintAndLogEx(NORMAL, "                   The binary format of the file is expected to be as follows: ");
-    PrintAndLogEx(NORMAL, "                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "                   <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "                  ... totalling N*24 bytes");
-    return 0;
+    PrintAndLogEx(NORMAL, "      h             Show this help");
+    PrintAndLogEx(NORMAL, "      t             Perform self-test");
+    PrintAndLogEx(NORMAL, "      f <filename>  Bruteforce iclass dumpfile");
+    PrintAndLogEx(NORMAL, "                    An iclass dumpfile is assumed to consist of an arbitrary number of");
+    PrintAndLogEx(NORMAL, "                    malicious CSNs, and their protocol responses");
+    PrintAndLogEx(NORMAL, "                    The binary format of the file is expected to be as follows: ");
+    PrintAndLogEx(NORMAL, "                    <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+    PrintAndLogEx(NORMAL, "                    <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+    PrintAndLogEx(NORMAL, "                    <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+    PrintAndLogEx(NORMAL, "                   ... totalling N*24 bytes");
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_chk(void) {
     PrintAndLogEx(NORMAL, "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag");
@@ -244,9 +253,9 @@ static int usage_hf_iclass_chk(void) {
     PrintAndLogEx(NORMAL, "      e             elite");
     PrintAndLogEx(NORMAL, "      c             credit key  (if not use, default is debit)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf iclass chk f default_iclass_keys.dic");
-    PrintAndLogEx(NORMAL, "         hf iclass chk f default_iclass_keys.dic e");
-    return 0;
+    PrintAndLogEx(NORMAL, "         hf iclass chk f dictionaries/iclass_default_keys.dic");
+    PrintAndLogEx(NORMAL, "         hf iclass chk f dictionaries/iclass_default_keys.dic e");
+    return PM3_SUCCESS;;
 }
 static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file");
@@ -260,9 +269,9 @@ static int usage_hf_iclass_lookup(void) {
     PrintAndLogEx(NORMAL, "      r             raw");
     PrintAndLogEx(NORMAL, "      e             elite");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic");
-    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f default_iclass_keys.dic e");
-    return 0;
+    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic");
+    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic e");
+    return PM3_SUCCESS;
 }
 static int usage_hf_iclass_permutekey(void) {
     PrintAndLogEx(NORMAL, "Permute function from 'heart of darkness' paper.");
@@ -276,7 +285,7 @@ static int usage_hf_iclass_permutekey(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf iclass permute r 0123456789abcdef");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /*
@@ -541,11 +550,11 @@ static int CmdHFiClassSim(const char *Cmd) {
                 tries++;
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard.");
-                    return 0;
+                    return PM3_EOPABORTED;
                 }
                 if (tries > 20) {
                     PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
-                    return 0;
+                    return PM3_ETIMEOUT;
                 }
             }
             uint8_t num_mac  = resp.oldarg[1];
@@ -559,7 +568,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             uint8_t *dump = calloc(datalen, sizeof(uint8_t));
             if (!dump) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
-                return 2;
+                return PM3_EMALLOC;
             }
 
             memset(dump, 0, datalen);//<-- Need zeroes for the EPURSE - field (offical)
@@ -590,11 +599,11 @@ static int CmdHFiClassSim(const char *Cmd) {
                 tries++;
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard.");
-                    return 0;
+                    return PM3_EOPABORTED;
                 }
                 if (tries > 20) {
                     PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
-                    return 0;
+                    return PM3_ETIMEOUT;
                 }
             }
             uint8_t num_mac = resp.oldarg[1];
@@ -608,7 +617,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             uint8_t *dump = calloc(datalen, sizeof(uint8_t));
             if (!dump) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
-                return 2;
+                return PM3_EMALLOC;
             }
 
 #define MAC_ITEM_SIZE 24
@@ -654,6 +663,10 @@ static int CmdHFiClassSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFiClassInfo(const char *Cmd) {
+    return PM3_SUCCESS;    
+}
+
 static int CmdHFiClassReader(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_iclass_reader();
@@ -681,54 +694,85 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
 
 static int CmdHFiClassELoad(const char *Cmd) {
 
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_hf_iclass_eload();
-
-    if (ctmp != 'f') return usage_hf_iclass_eload();
-
-    //File handling and reading
-    char filename[FILE_PATH_SIZE];
-
-    if (param_getstr(Cmd, 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
-        PrintAndLogEx(FAILED, "Filename too long");
-        return 1;
+    DumpFileType_t dftype = BIN;
+    char filename[FILE_PATH_SIZE] = {0};
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_eload();
+            case 'f':
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                    errors = true;
+                    break;
+                }
+                cmdp += 2;
+                break;
+            case 'j':
+                dftype = JSON;
+                cmdp++;
+                break;
+            case 'e':
+                dftype = EML;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
     }
 
-    FILE *f = fopen(filename, "rb");
-    if (!f) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+    //Validations
+    if (errors || cmdp == 0) {
+        usage_hf_iclass_eload();
+        return PM3_EINVARG;
+    }
+
+
+    uint8_t *dump = calloc(2048, sizeof(uint8_t));
+    if (!dump) {
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        return PM3_EMALLOC;
+    }
+
+    size_t bytes_read = 2048;
+    int res = 0;
+
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
+            break;
+        }
+        case EML: {
+            res = loadFileEML(filename, dump, &bytes_read);
+            break;
+        }
+        case JSON: {
+            res = loadFileJSON(filename, dump, 2048, &bytes_read);
+            break;
+        }
+        default:
+            PrintAndLogEx(ERR, "No dictionary loaded");
+            return PM3_ESOFT;
+    }
+
+    if (res != PM3_SUCCESS) {
+        free(dump);
         return PM3_EFILE;
     }
 
-    // get filesize in order to malloc memory
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "error, when getting filesize");
-        fclose(f);
-        return 1;
+    uint8_t *newdump = realloc(dump, bytes_read);
+    if (newdump == NULL) {
+        free(dump);
+        return PM3_EMALLOC;
+    } else {
+        dump = newdump;
     }
-
-    uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        fclose(f);
-        return 1;
-    }
-
-    size_t bytes_read = fread(dump, 1, fsize, f);
-    fclose(f);
 
     printIclassDumpInfo(dump);
-    //Validate
-
-    if (bytes_read < fsize) {
-        PrintAndLogEx(ERR, "error, could only read %d bytes (should be %d)", bytes_read, fsize);
-        free(dump);
-        return 1;
-    }
 
     // fast push mode
     conn.block_after_ACK = true;
@@ -754,147 +798,189 @@ static int CmdHFiClassELoad(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int readKeyfile(const char *filename, size_t len, uint8_t *buffer) {
-    FILE *f = fopen(filename, "rb");
-    if (!f) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-        return PM3_EFILE;
-    }
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    size_t bytes_read = fread(buffer, 1, len, f);
-    fclose(f);
-
-    if (fsize != len) {
-        PrintAndLogEx(WARNING, "Warning, file size is %d, expected %d", fsize, len);
-        return 1;
-    }
-
-    if (bytes_read != len) {
-        PrintAndLogEx(WARNING, "Warning, could only read %d bytes, expected %d", bytes_read, len);
-        return 1;
-    }
-    return PM3_SUCCESS;
-}
+#define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
 
 static int CmdHFiClassDecrypt(const char *Cmd) {
 
-    char opt = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || opt == 'h') return usage_hf_iclass_decrypt();
+    bool errors = false;
+    bool have_key = false;
+    bool have_data = false;
+    bool have_file = false;
+    uint8_t cmdp = 0;
 
-    uint8_t key[16] = { 0 };
-    if (readKeyfile("iclass_decryptionkey.bin", 16, key)) return usage_hf_iclass_decrypt();
+    uint8_t enc_data[8] = {0};
+    
+    size_t keylen = 0;
+    uint8_t key[32] = {0};
+    uint8_t *keyptr = NULL;
 
-    PrintAndLogEx(SUCCESS, "decryption key loaded from file");
-
-    //Open the tagdump-file
-    FILE *f;
+    size_t decryptedlen = 0;
+    uint8_t *decrypted = NULL;
     char filename[FILE_PATH_SIZE];
-    if (opt == 'f' && param_getstr(Cmd, 1, filename, sizeof(filename)) > 0) {
-        f = fopen(filename, "rb");
-        if (!f) {
-            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-            return PM3_EFILE;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_decrypt();
+            case 'd':
+                if (param_gethex(Cmd, cmdp + 1, enc_data, 16)) {
+                    PrintAndLogEx(ERR, "data must be 16 HEX symbols");
+                    errors = true;
+                    break;
+                } 
+                have_data = true;
+                cmdp += 2;
+                break;
+            case 'f':
+                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
+                    PrintAndLogEx(WARNING, "no filename found after f");
+                    errors = true;
+                    break;
+                }
+
+                if (loadFile_safe(filename, "", (void **)&decrypted, &decryptedlen) != PM3_SUCCESS) {
+                    errors = true;
+                    break;
+                }
+                have_file = true;
+                cmdp += 2;
+                break;
+            case 'k':
+                if (param_gethex(Cmd, cmdp + 1, key, 32)) {
+                    PrintAndLogEx(ERR, "Transport key must include 32 HEX symbols");
+                    errors = true;
+                }
+                have_key = true;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
-    } else {
-        return usage_hf_iclass_decrypt();
     }
 
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
 
-    if (fsize <= 0) {
-        PrintAndLogEx(ERR, "error, when getting filesize");
-        fclose(f);
-        return 2;
+    if (have_key == false) {
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+        if (res != PM3_SUCCESS)
+            return PM3_EINVARG;
+
+        memcpy(key, keyptr, sizeof(key));
     }
-
-    uint8_t *decrypted = calloc(fsize, sizeof(uint8_t));
-    if (!decrypted) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        fclose(f);
-        return 1;
-    }
-
-    size_t bytes_read = fread(decrypted, 1, fsize, f);
-    fclose(f);
-    if (bytes_read == 0) {
-        PrintAndLogEx(ERR, "file reading error");
-        free(decrypted);
-        return 3;
-    }
-
-    picopass_hdr *hdr = (picopass_hdr *)decrypted;
-
-    uint8_t mem = hdr->conf.mem_config;
-    uint8_t chip = hdr->conf.chip_config;
-    uint8_t applimit = hdr->conf.app_limit;
-    uint8_t kb = 2;
-    uint8_t app_areas = 2;
-    uint8_t max_blk = 31;
-    getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
-
-    //Use the first block (CSN) for filename
-    char outfilename[FILE_PATH_SIZE] = {0};
-    snprintf(outfilename, FILE_PATH_SIZE, "iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x-decrypted",
-             hdr->csn[0], hdr->csn[1], hdr->csn[2], hdr->csn[3],
-             hdr->csn[4], hdr->csn[5], hdr->csn[6], hdr->csn[7]);
 
     // tripledes
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_dec(&ctx, key);
 
-    uint8_t enc_dump[8] = {0};
-    uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    for (uint16_t blocknum = 0; blocknum < applimit; ++blocknum) {
+    uint8_t dec_data[8] = {0};
 
-        uint8_t idx = blocknum * 8;
-        memcpy(enc_dump, decrypted + idx, 8);
-
-        // block 7 or higher,  and not empty 0xFF
-        if (blocknum > 6 &&  memcmp(enc_dump, empty, 8) != 0) {
-            mbedtls_des3_crypt_ecb(&ctx, enc_dump, decrypted + idx);
-        }
+    if ( have_data ) {
+        mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
+        PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(dec_data, sizeof(dec_data)));
     }
 
-    saveFile(outfilename, ".bin", decrypted, fsize);
-    printIclassDumpContents(decrypted, 1, (fsize / 8), fsize);
-    free(decrypted);
+    if ( have_file ) {
+        picopass_hdr *hdr = (picopass_hdr *)decrypted;
+
+        uint8_t mem = hdr->conf.mem_config;
+        uint8_t chip = hdr->conf.chip_config;
+        uint8_t applimit = hdr->conf.app_limit;
+        uint8_t kb = 2;
+        uint8_t app_areas = 2;
+        uint8_t max_blk = 31;
+        getMemConfig(mem, chip, &max_blk, &app_areas, &kb);
+
+        uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+        for (uint16_t blocknum = 0; blocknum < applimit; ++blocknum) {
+
+            uint8_t idx = blocknum * 8;
+            memcpy(enc_data, decrypted + idx, 8);
+
+            // block 7 or higher,  and not empty 0xFF
+            if (blocknum > 6 &&  memcmp(enc_data, empty, 8) != 0) {
+                mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+            }
+        }
+
+        //Use the first block (CSN) for filename
+        char *fptr = calloc(42, sizeof(uint8_t));
+        strcat(fptr, "hf-iclass-");
+        FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn));
+
+        saveFile(fptr, ".bin", decrypted, decryptedlen);
+        saveFileEML(fptr, decrypted, decryptedlen, 8);
+        saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
+
+        printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
+        free(decrypted);
+        free(fptr);
+    }
+
+    mbedtls_des3_free(&ctx);
     return PM3_SUCCESS;
 }
 
-static int iClassEncryptBlkData(uint8_t *blkData) {
-    uint8_t key[16] = { 0 };
-    if (readKeyfile("iclass_decryptionkey.bin", 16, key)) {
-        usage_hf_iclass_encrypt();
-        return 1;
-    }
-    PrintAndLogEx(SUCCESS, "decryption file found");
-    uint8_t encryptedData[16];
-    uint8_t *encrypted = encryptedData;
+static void iClassEncryptBlkData(uint8_t *blk_data, uint8_t *key) {
+    uint8_t encrypted_data[16];
+    uint8_t *encrypted = encrypted_data;
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_enc(&ctx, key);
-
-    mbedtls_des3_crypt_ecb(&ctx, blkData, encrypted);
-    memcpy(blkData, encrypted, 8);
-    return 1;
+    mbedtls_des3_crypt_ecb(&ctx, blk_data, encrypted);
+    memcpy(blk_data, encrypted, 8);
+    mbedtls_des3_free(&ctx);
 }
 
 static int CmdHFiClassEncryptBlk(const char *Cmd) {
-    uint8_t blkData[8] = {0};
-    char opt = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || opt == 'h') return usage_hf_iclass_encrypt();
+    bool errors = false;
+    bool have_key = false;
+    uint8_t blk_data[8] = {0};
+    uint8_t key[16] = {0};
+    uint8_t *keyptr = NULL;
+    uint8_t cmdp = 0;
 
-    //get the bytes to encrypt
-    if (param_gethex(Cmd, 0, blkData, 16)) {
-        PrintAndLogEx(NORMAL, "BlockData must include 16 HEX symbols");
-        return 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_encrypt();
+            case 'd':
+                if (param_gethex(Cmd, cmdp + 1, blk_data, 16)) {
+                    PrintAndLogEx(ERR, "Block data must include 16 HEX symbols");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 'k':
+                if (param_gethex(Cmd, cmdp + 1, key, 32)) {
+                    PrintAndLogEx(ERR, "Transport key must include 32 HEX symbols");
+                    errors = true;
+                }
+                have_key = true;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
     }
-    if (!iClassEncryptBlkData(blkData)) return 0;
 
-    printvar("encrypted block", blkData, 8);
+    if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
+
+    if (have_key == false) {
+        size_t keylen = 0;
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+        if (res != PM3_SUCCESS)
+            return PM3_EINVARG;
+
+        memcpy(key, keyptr, sizeof(key));
+    }
+
+    iClassEncryptBlkData(blk_data, key);
+
+    printvar("encrypted block", blk_data, 8);
     return PM3_SUCCESS;
 }
 
@@ -914,7 +1000,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ICLASS_READER, flags, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return false;
     }
@@ -933,7 +1019,9 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool use_credit_key, bool v
     }
 
     if (isOK <= 1) {
-        PrintAndLogEx(FAILED, "failed to obtain CC! Tag-select is aborting...  (%d)", isOK);
+        if ( verbose )
+            PrintAndLogEx(FAILED, "failed to obtain CC! Tag-select is aborting...  (%d)", isOK);
+
         return false;
     }
     return true;
@@ -945,6 +1033,8 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
 
     if (!select_only(CSN, CCNR, use_credit_key, verbose)) {
         if (verbose) PrintAndLogEx(FAILED, "selecting tag failed");
+
+//        DropField();
         return false;
     }
     //get div_key
@@ -956,18 +1046,27 @@ static bool select_and_auth(uint8_t *KEY, uint8_t *MAC, uint8_t *div_key, bool u
     if (verbose) PrintAndLogEx(SUCCESS, "authing with %s: %s", rawkey ? "raw key" : "diversified key", sprint_hex(div_key, 8));
 
     doMAC(CCNR, div_key, MAC);
+
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ICLASS_AUTH, 0, 0, 0, MAC, 4);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
-        if (verbose) PrintAndLogEx(FAILED, "auth command execute timeout");
+
+    SendCommandNG(CMD_HF_ICLASS_AUTH, MAC, 4);
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_AUTH, &resp, 2000) == 0) {
+        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
         return false;
     }
-    uint8_t isOK = resp.oldarg[0] & 0xFF;
-    if (!isOK) {
+
+    if ( resp.status != PM3_SUCCESS ) {
+        if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+        return false;
+    }
+
+    uint8_t isOK = resp.data.asBytes[0];
+    if (isOK == 0) {
         if (verbose) PrintAndLogEx(FAILED, "authentication error");
         return false;
     }
+
     return true;
 }
 
@@ -1021,6 +1120,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'e':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
                 elite = true;
                 cmdp++;
                 break;
@@ -1052,6 +1152,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'r':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
                 rawkey = true;
                 cmdp++;
                 break;
@@ -1083,7 +1184,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
         PrintAndLogEx(WARNING, "command execute timeout");
         DropField();
-        return 0;
+        return PM3_ESOFT;
     }
     DropField();
 
@@ -1092,7 +1193,8 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     if (readStatus == 0) {
         PrintAndLogEx(FAILED, "no tag found");
-        return 0;
+        DropField();
+        return PM3_ESOFT;
     }
 
     if (readStatus & (FLAG_ICLASS_READER_CSN | FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_CC)) {
@@ -1105,14 +1207,16 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     }
 
     // authenticate debit key and get div_key - later store in dump block 3
-    if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose)) {
-        //try twice - for some reason it sometimes fails the first time...
-        PrintAndLogEx(SUCCESS, "retry to select card");
-        if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose)) {
-            PrintAndLogEx(WARNING, "failed authenticating with debit key");
-            DropField();
-            return 0;
-        }
+    int numberAuthRetries = ICLASS_AUTH_RETRY;
+    do {
+        if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose))
+            break;
+    } while (numberAuthRetries--);
+
+    if ( numberAuthRetries <= 0) {
+        PrintAndLogEx(WARNING, "failed authenticating with debit key");
+        DropField();
+        return PM3_ESOFT;
     }
 
     // begin dump
@@ -1136,7 +1240,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     uint8_t isOK = resp.oldarg[0] & 0xff;
     if (!isOK && !blocksRead) {
         PrintAndLogEx(WARNING, "read block failed");
-        return 0;
+        return PM3_ESOFT;
     }
 
     uint32_t startindex = resp.oldarg[2];
@@ -1148,7 +1252,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // response ok - now get bigbuf content of the dump
     if (!GetFromDevice(BIG_BUF, tag_data + (blockno * 8), blocksRead * 8, startindex, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
-        return 0;
+        return PM3_ETIMEOUT;
     }
 
     size_t gotBytes = blocksRead * 8 + blockno * 8;
@@ -1157,16 +1261,22 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     if (have_credit_key) {
         //turn off hf field before authenticating with different key
         DropField();
+
         memset(MAC, 0, 4);
+
         // AA2 authenticate credit key and git c_div_key - later store in dump block 4
-        if (!select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, verbose)) {
-            //try twice - for some reason it sometimes fails the first time...
-            if (!select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, verbose)) {
-                PrintAndLogEx(WARNING, "failed authenticating with credit key");
-                DropField();
-                return 0;
-            }
+        numberAuthRetries = ICLASS_AUTH_RETRY;
+        do {
+            if (select_and_auth(CreditKEY, MAC, c_div_key, true, elite, rawkey, verbose))
+                break;
+        } while (numberAuthRetries--);
+
+        if ( numberAuthRetries <= 0) {
+            PrintAndLogEx(WARNING, "failed authenticating with credit key");
+            DropField();
+            return PM3_ESOFT;
         }
+
         // do we still need to read more block?  (aa2 enabled?)
         if (maxBlk > blockno + numblks + 1) {
             // setup dump and start
@@ -1174,13 +1284,13 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
             SendCommandMIX(CMD_HF_ICLASS_DUMP, blockno + blocksRead, maxBlk - (blockno + blocksRead), 0, NULL, 0);
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
                 PrintAndLogEx(WARNING, "command execute timeout 2");
-                return 0;
+                return PM3_ETIMEOUT;
             }
             isOK = resp.oldarg[0] & 0xff;
             blocksRead = resp.oldarg[1];
             if (!isOK && !blocksRead) {
                 PrintAndLogEx(WARNING, "read block failed 2");
-                return 0;
+                return PM3_ESOFT;
             }
 
             startindex = resp.oldarg[2];
@@ -1191,7 +1301,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
             // get dumped data from bigbuf
             if (!GetFromDevice(BIG_BUF, tag_data + gotBytes, blocksRead * 8, startindex, NULL, 0, NULL, 2500, false)) {
                 PrintAndLogEx(WARNING, "command execution time out");
-                return 0;
+                return PM3_ETIMEOUT;
             }
 
             gotBytes += blocksRead * 8;
@@ -1201,52 +1311,88 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     DropField();
 
     // add diversified keys to dump
-    if (have_debit_key) memcpy(tag_data + (3 * 8), div_key, 8);
-    if (have_credit_key) memcpy(tag_data + (4 * 8), c_div_key, 8);
+    if (have_debit_key)
+        memcpy(tag_data + (3 * 8), div_key, 8);
+    
+    if (have_credit_key)
+        memcpy(tag_data + (4 * 8), c_div_key, 8);
+
 
     // print the dump
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+\n");
-    PrintAndLogEx(NORMAL, "CSN   |00| %s|\n", sprint_hex(tag_data, 8));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
+    PrintAndLogEx(NORMAL, "CSN   |00| %s|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
-        snprintf(filename, FILE_PATH_SIZE, "iclass_tagdump-%02x%02x%02x%02x%02x%02x%02x%02x",
-                 tag_data[0], tag_data[1], tag_data[2], tag_data[3],
-                 tag_data[4], tag_data[5], tag_data[6], tag_data[7]);
+        //Use the first block (CSN) for filename
+        strcat(filename, "hf-iclass-");
+        FillFileNameByUID(filename, tag_data, "-data", 8);
     }
 
     // save the dump to .bin file
     PrintAndLogEx(SUCCESS, "saving dump file - %d blocks read", gotBytes / 8);
     saveFile(filename, ".bin", tag_data, gotBytes);
     saveFileEML(filename, tag_data, gotBytes, 8);
-    return 1;
+    saveFileJSON(filename, jsfIclass, tag_data, gotBytes);
+    return PM3_SUCCESS;
 }
 
 static int WriteBlock(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool verbose) {
-    uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose))
-        return 0;
 
-    PacketResponseNG resp;
+    int numberAuthRetries = ICLASS_AUTH_RETRY;    
+    do {
+    
+        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
+        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose)) {
+            numberAuthRetries--;
+            DropField();            
+            continue;
+        }
 
-    Calc_wb_mac(blockno, bldata, div_key, MAC);
-    uint8_t data[12];
-    memcpy(data, bldata, 8);
-    memcpy(data + 8, MAC, 4);
+        Calc_wb_mac(blockno, bldata, div_key, MAC);
 
-    clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ICLASS_WRITEBL, blockno, 0, 0, data, sizeof(data));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
-        if (verbose) PrintAndLogEx(WARNING, "Write Command execute timeout");
-        return 0;
+        struct p {
+            uint8_t blockno;
+            uint8_t data[12];
+        } PACKED payload;
+        payload.blockno = blockno;
+        
+        memcpy(payload.data, bldata, 8);
+        memcpy(payload.data + 8, MAC, 4);
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ICLASS_WRITEBL, (uint8_t*)&payload, sizeof(payload));
+        PacketResponseNG resp;
+
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 4000) == 0) {
+            if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+            DropField();
+            return PM3_ETIMEOUT;
+        }
+
+        if ( resp.status != PM3_SUCCESS ) {
+            if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+            DropField();
+            return PM3_EWRONGANSVER;
+        }
+
+        if (resp.data.asBytes[0] == 1)
+            break;
+
+    } while (numberAuthRetries);    
+
+    DropField();
+
+    if ( numberAuthRetries > 0 ) {
+        PrintAndLogEx(SUCCESS, "Write block %02X successful\n", blockno);
+    } else {
+        PrintAndLogEx(ERR,"failed to authenticate and write block");
+        return PM3_ESOFT;
     }
-    uint8_t isOK = resp.oldarg[0] & 0xff;
-    if (isOK)
-        PrintAndLogEx(SUCCESS, "Write block successful");
-    else
-        PrintAndLogEx(WARNING, "Write block failed");
-    return isOK;
+    
+    return PM3_SUCCESS;
 }
 
 static int CmdHFiClass_WriteBlock(const char *Cmd) {
@@ -1256,6 +1402,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     uint8_t keyNbr = 0;
     uint8_t dataLen = 0;
     char tempStr[50] = {0};
+    bool got_blockno = false;
     bool use_credit_key = false;
     bool elite = false;
     bool rawkey = false;
@@ -1267,13 +1414,12 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_writeblock();
             case 'b':
-                if (param_gethex(Cmd, cmdp + 1, &blockno, 2)) {
-                    PrintAndLogEx(WARNING, "Block No must include 2 HEX symbols\n");
-                    errors = true;
-                }
+                blockno = param_get8ex(Cmd, cmdp + 1, 07, 16);
+                got_blockno = true;
                 cmdp += 2;
                 break;
             case 'c':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("CREDIT"));
                 use_credit_key = true;
                 cmdp++;
                 break;
@@ -1285,6 +1431,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'e':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
                 elite = true;
                 cmdp++;
                 break;
@@ -1295,6 +1442,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 } else if (dataLen == 1) {
                     keyNbr = param_get8(Cmd, cmdp + 1);
                     if (keyNbr < ICLASS_KEYS_MAX) {
+                        PrintAndLogEx(SUCCESS, "Using key[%d] %s", keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8 ));
                         memcpy(KEY, iClass_Key_Table[keyNbr], 8);
                     } else {
                         PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
@@ -1307,6 +1455,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'r':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
                 rawkey = true;
                 cmdp++;
                 break;
@@ -1320,11 +1469,12 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
                 break;
         }
     }
+    if ( got_blockno == false)
+        errors = true;
+    
     if (errors || cmdp < 6) return usage_hf_iclass_writeblock();
 
-    int ans = WriteBlock(blockno, bldata, KEY, use_credit_key, elite, rawkey, verbose);
-    DropField();
-    return ans;
+    return WriteBlock(blockno, bldata, KEY, use_credit_key, elite, rawkey, verbose);
 }
 
 static int CmdHFiClassCloneTag(const char *Cmd) {
@@ -1336,6 +1486,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
     uint8_t startblock = 0;
     uint8_t endblock = 0;
     uint8_t dataLen = 0;
+    bool got_startblk = false, got_endblk = false;
     bool use_credit_key = false;
     bool elite = false;
     bool rawkey = false;
@@ -1347,17 +1498,17 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_clone();
             case 'b':
-                if (param_gethex(Cmd, cmdp + 1, &startblock, 2)) {
-                    PrintAndLogEx(WARNING, "start block No must include 2 HEX symbols\n");
-                    errors = true;
-                }
+                startblock = param_get8ex(Cmd, cmdp + 1, 07, 16);
+                got_startblk = true;
                 cmdp += 2;
                 break;
             case 'c':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("CREDIT"));
                 use_credit_key = true;
                 cmdp++;
                 break;
             case 'e':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
                 elite = true;
                 cmdp++;
                 break;
@@ -1376,6 +1527,7 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
                 } else if (dataLen == 1) {
                     keyNbr = param_get8(Cmd, cmdp + 1);
                     if (keyNbr < ICLASS_KEYS_MAX) {
+                        PrintAndLogEx(SUCCESS, "Using key[%d] %s", keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8 ));
                         memcpy(KEY, iClass_Key_Table[keyNbr], 8);
                     } else {
                         PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
@@ -1388,13 +1540,12 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'l':
-                if (param_gethex(Cmd, cmdp + 1, &endblock, 2)) {
-                    PrintAndLogEx(WARNING, "start Block No must include 2 HEX symbols\n");
-                    errors = true;
-                }
+                endblock = param_get8ex(Cmd, cmdp + 1, 07, 16);
+                got_endblk = true;
                 cmdp += 2;
                 break;
             case 'r':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
                 rawkey = true;
                 cmdp++;
                 break;
@@ -1408,53 +1559,66 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
                 break;
         }
     }
+    if ( got_endblk == false || got_startblk == false)
+        errors = true;
 
     if (errors || cmdp < 8) return usage_hf_iclass_clone();
 
-    FILE *f;
-
-    iclass_block_t tag_data[PM3_CMD_DATA_SIZE / 12];
-
-    if ((endblock - startblock + 1) * 12 > PM3_CMD_DATA_SIZE) {
-        PrintAndLogEx(NORMAL, "Trying to write too many blocks at once.  Max: %d", PM3_CMD_DATA_SIZE / 8);
+    if (startblock < 5) {
+        PrintAndLogEx(WARNING, "you cannot write key blocks this way. yet... make your start block > 4");
+        return PM3_EINVARG;
     }
+
+    int total_bytes = (((endblock - startblock) + 1) * 12);
+    
+    if (total_bytes > PM3_CMD_DATA_SIZE - 2) {
+        PrintAndLogEx(NORMAL, "Trying to write too many blocks at once.  Max: %d", PM3_CMD_DATA_SIZE / 8);
+        return PM3_EINVARG;
+    }
+
     // file handling and reading
-    f = fopen(filename, "rb");
+    FILE *f = fopen(filename, "rb");
     if (!f) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
     }
 
-    if (startblock < 5) {
-        PrintAndLogEx(WARNING, "you cannot write key blocks this way. yet... make your start block > 4");
-        fclose(f);
-        return 0;
-    }
-    // now read data from the file from block 6 --- 19
-    // ok we will use this struct [data 8 bytes][MAC 4 bytes] for each block calculate all mac number for each data
-    // then copy to usbcommand->asbytes; the max is 32 - 6 = 24 block 12 bytes each block 288 bytes then we can only accept to clone 21 blocks at the time,
-    // else we have to create a share memory
+    iclass_block_t tag_data[PM3_CMD_DATA_SIZE / 12];
+
+    // read data from file from block 6 --- 19
+    // we will use this struct [data 8 bytes][MAC 4 bytes] for each block calculate all mac number for each data
+    // then copy to usbcommand->asbytes;
+    // max is 32 - 6 = 28 block.  28 x 12 bytes gives 336 bytes
     int i;
     fseek(f, startblock * 8, SEEK_SET);
     size_t bytes_read = fread(tag_data, sizeof(iclass_block_t), endblock - startblock + 1, f);
+    fclose(f);
+    
     if (bytes_read == 0) {
         PrintAndLogEx(ERR, "file reading error.");
-        fclose(f);
-        return 2;
+        return PM3_EFILE;
     }
-
-    fclose(f);
 
     uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-    if (!select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose)) {
-        return 0;
+    
+    int numberAuthRetries = ICLASS_AUTH_RETRY;
+    do {
+        if (select_and_auth(KEY, MAC, div_key, use_credit_key, elite, rawkey, verbose))
+            break;
+    } while (numberAuthRetries--);
+    
+    if ( numberAuthRetries <= 0 ) {
+        PrintAndLogEx(ERR, "failed to authenticate");
+        DropField();
+        return PM3_ESOFT;
     }
 
-    uint8_t data[(endblock - startblock) * 12];
+    uint8_t data[total_bytes];
+
     // calculate all mac for every the block we will write
     for (i = startblock; i <= endblock; i++) {
+        
         Calc_wb_mac(i, tag_data[i - startblock].d, div_key, MAC);
         // usb command d start pointer = d + (i - 6) * 12
         // memcpy(pointer,tag_data[i - 6],8) 8 bytes
@@ -1464,54 +1628,113 @@ static int CmdHFiClassCloneTag(const char *Cmd) {
         memcpy(ptr, &(tag_data[i - startblock].d[0]), 8);
         memcpy(ptr + 8, MAC, 4);
     }
-    uint8_t p[12];
-    for (i = 0; i <= endblock - startblock; i++) {
-        memcpy(p, data + (i * 12), 12);
-        PrintAndLogEx(NORMAL, "Block |%02x|", i + startblock);
-        PrintAndLogEx(NORMAL, " %02x%02x%02x%02x%02x%02x%02x%02x |", p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
-        PrintAndLogEx(NORMAL, " MAC |%02x%02x%02x%02x|\n", p[8], p[9], p[10], p[11]);
+
+    if ( verbose ) {
+        PrintAndLogEx(NORMAL,"------+--------------------------+-------------");
+        PrintAndLogEx(NORMAL,"block | data                     | mac");
+        PrintAndLogEx(NORMAL,"------+--------------------------+-------------");
+        uint8_t p[12];
+        for (i = 0; i <= endblock - startblock; i++) {
+            memcpy(p, data + (i * 12), 12);
+            char *s = calloc(70, sizeof(uint8_t));
+            sprintf(s, "| %s ", sprint_hex(p, 8));
+            sprintf(s + strlen(s), "| %s", sprint_hex(p + 8, 4));
+            PrintAndLogEx(NORMAL, "  %02X  %s", i + startblock, s );
+            free(s);
+        }
     }
 
+    struct p {
+        uint8_t startblock;
+        uint8_t endblock;
+        uint8_t data[PM3_CMD_DATA_SIZE - 2];
+    } PACKED payload;
+    
+    payload.startblock = startblock;
+    payload.endblock = endblock;    
+    memcpy(payload.data, data, total_bytes);
+ 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ICLASS_CLONE, startblock, endblock, 0, data, (endblock - startblock) * 12);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
+    SendCommandNG(CMD_HF_ICLASS_CLONE, (uint8_t*)&payload, total_bytes + 2 );
+
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_CLONE, &resp, 4500) == 0) {
         PrintAndLogEx(WARNING, "command execute timeout");
-        return 0;
+        DropField();
+        return PM3_ETIMEOUT;
     }
-    return PM3_SUCCESS;
+    
+    if (resp.status == PM3_SUCCESS) {    
+        if ( resp.data.asBytes[0] == 1 )
+            PrintAndLogEx(SUCCESS, "Clone successful");
+        else
+            PrintAndLogEx(WARNING, "Clone failed");
+    }
+    return resp.status;
 }
 
 static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool verbose, bool auth) {
-    // block 0,1 should always be able to read,  and block 5 on some cards.
-    if (auth || blockno >= 2) {
-        uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
-        uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (!select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose))
-            return 0;
-    } else {
-        uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (!select_only(CSN, CCNR, (keyType == 0x18), verbose))
-            return 0;
+
+    int numberAuthRetries = ICLASS_AUTH_RETRY;
+    // return data.
+    struct p {
+        bool isOK; 
+        uint8_t blockdata[8];
+    } PACKED;
+
+    struct p *result = NULL;
+    
+    do {
+        // block 0,1 should always be able to read,  and block 5 on some cards.
+        if (auth || blockno >= 2) {
+            uint8_t MAC[4] = {0x00, 0x00, 0x00, 0x00};
+            uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            if (!select_and_auth(KEY, MAC, div_key, (keyType == 0x18), elite, rawkey, verbose)) {
+                numberAuthRetries--;
+                DropField();
+                continue;
+            }
+        } else {
+            uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            if (!select_only(CSN, CCNR, (keyType == 0x18), verbose)) {
+                numberAuthRetries--;
+                DropField();
+                continue;
+            }
+        }        
+        
+        PacketResponseNG resp;
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ICLASS_READBL, (uint8_t*)&blockno, sizeof(uint8_t));
+        
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_READBL, &resp, 2000) == 0) {
+            if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+            DropField();
+            return PM3_ETIMEOUT;
+        }
+        
+        if ( resp.status != PM3_SUCCESS ) {
+            if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+            DropField();
+            return PM3_EWRONGANSVER;
+        }
+        
+        result = (struct p*)resp.data.asBytes;
+        if (result->isOK)
+            break;
+
+    } while (numberAuthRetries);
+
+    DropField();
+
+    if ( numberAuthRetries == 0 ) {
+        PrintAndLogEx(ERR,"failed to authenticate and read block");
+        return PM3_ESOFT;
     }
 
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ICLASS_READBL, blockno, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 4500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
-        return 0;
-    }
-
-    uint8_t isOK = resp.oldarg[0] & 0xff;
-    if (!isOK) {
-        PrintAndLogEx(WARNING, "read block failed");
-        return 0;
-    }
-    //data read is stored in: resp.data.asBytes[0-15]
-    PrintAndLogEx(NORMAL, "block %02X: %s\n", blockno, sprint_hex(resp.data.asBytes, 8));
-    return 1;
+    PrintAndLogEx(SUCCESS, "block %02X: %s\n", blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
+    return PM3_SUCCESS;
 }
 
 static int CmdHFiClass_ReadBlock(const char *Cmd) {
@@ -1521,6 +1744,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     uint8_t keyNbr = 0;
     uint8_t dataLen = 0;
     char tempStr[50] = {0};
+    bool got_blockno = false;
     bool elite = false;
     bool rawkey = false;
     bool errors = false;
@@ -1532,17 +1756,17 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_readblock();
             case 'b':
-                if (param_gethex(Cmd, cmdp + 1, &blockno, 2)) {
-                    PrintAndLogEx(WARNING, "Block No must include 2 HEX symbols\n");
-                    errors = true;
-                }
+                blockno = param_get8ex(Cmd, cmdp + 1, 7, 16);
+                got_blockno = true;
                 cmdp += 2;
                 break;
             case 'c':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("CREDIT"));
                 keyType = 0x18;
                 cmdp++;
                 break;
             case 'e':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
                 elite = true;
                 cmdp++;
                 break;
@@ -1554,6 +1778,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 } else if (dataLen == 1) {
                     keyNbr = param_get8(Cmd, cmdp + 1);
                     if (keyNbr < ICLASS_KEYS_MAX) {
+                        PrintAndLogEx(SUCCESS, "Using key[%d] %s", keyNbr, sprint_hex(iClass_Key_Table[keyNbr], 8 ));
                         memcpy(KEY, iClass_Key_Table[keyNbr], 8);
                     } else {
                         PrintAndLogEx(WARNING, "\nERROR: Credit KeyNbr is invalid\n");
@@ -1566,6 +1791,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'r':
+                PrintAndLogEx(SUCCESS, "Using " _YELLOW_("raw mode"));
                 rawkey = true;
                 cmdp++;
                 break;
@@ -1579,10 +1805,14 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 break;
         }
     }
+    if ( got_blockno == false)
+        errors = true;
+    
     if (errors || cmdp < 4) return usage_hf_iclass_readblock();
 
     if (!auth)
         PrintAndLogEx(FAILED, "warning: no authentication used with read, only a few specific blocks can be read accurately without authentication.");
+
     return ReadBlock(KEY, blockno, keyType, elite, rawkey, verbose, auth);
 }
 
@@ -1590,7 +1820,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
     char opt = tolower(param_getchar(Cmd, 0));
 
     if (strlen(Cmd) < 1 || opt == 'h')
-        usage_hf_iclass_loclass();
+        return usage_hf_iclass_loclass();
 
     if (opt == 'f') {
         char fileName[FILE_PATH_SIZE] = {0};
@@ -1598,7 +1828,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
             return bruteforceFileNoKeys(fileName);
         } else {
             PrintAndLogEx(WARNING, "You must specify a filename");
-            return 0;
+            return PM3_EFILE;
         }
     } else if (opt == 't') {
         int errors = testCipherUtils();
@@ -1606,7 +1836,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         errors += doKeyTests(0);
         errors += testElite();
         if (errors) PrintAndLogEx(ERR, "There were errors!!!");
-        return errors;
+        return PM3_ESOFT;
     }
     return PM3_SUCCESS;
 }
@@ -1636,13 +1866,13 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     //PrintAndLog ("startblock: %d, endblock: %d, filesize: %d, maxmemcount: %d, filemaxblock: %d",startblock, endblock,filesize, maxmemcount, filemaxblock);
 
     int i = startblock;
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+\n");
+    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
-        PrintAndLogEx(NORMAL, "      |%02X| %s\n", i, sprint_hex_ascii(blk, 8));
+        PrintAndLogEx(NORMAL, "      |%02X| %s", i, sprint_hex_ascii(blk, 8));
         i++;
     }
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+\n");
+    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
 }
 
 static int CmdHFiClassReadTagFile(const char *Cmd) {
@@ -1813,8 +2043,10 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
 
     if (!givenCSN) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (!select_only(CSN, CCNR, false, true))
+        if (!select_only(CSN, CCNR, false, true)) {
+            DropField();
             return 0;
+        }
     }
 
     HFiClassCalcNewKey(CSN, OLDKEY, NEWKEY, xor_div_key, elite, oldElite, true);
@@ -1856,7 +2088,7 @@ static int loadKeys(char *filename) {
         memcpy(iClass_Key_Table[i], dump + (i * 8), 8);
 
     free(dump);
-    PrintAndLogEx(SUCCESS, "%u keys loaded", i);
+    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") "keys from %s", i, filename);
     return PM3_SUCCESS;
 }
 
@@ -1879,8 +2111,12 @@ static int saveKeys(char *filename) {
 
 static int printKeys(void) {
     PrintAndLogEx(NORMAL, "");
-    for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++)
-        PrintAndLogEx(NORMAL, "%u: %s", i, sprint_hex(iClass_Key_Table[i], 8));
+    for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
+        if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0)
+            PrintAndLogEx(NORMAL, "%u: %s", i, sprint_hex(iClass_Key_Table[i], 8));
+        else
+            PrintAndLogEx(NORMAL, "%u: "_YELLOW_("%s"), i, sprint_hex(iClass_Key_Table[i], 8));
+    }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -1911,7 +2147,7 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
             case 'n':
                 keyNbr = param_get8(Cmd, cmdp + 1);
                 if (keyNbr >= ICLASS_KEYS_MAX) {
-                    PrintAndLogEx(ERR, "Invalid block number, MAX is "_YELLOW_("%d"), ICLASS_KEYS_MAX);
+                    PrintAndLogEx(ERR, "Invalid block number, MAX is " _YELLOW_("%d"), ICLASS_KEYS_MAX);
                     errors = true;
                 }
                 cmdp += 2;
@@ -1963,14 +2199,13 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
     switch (operation) {
         case 3:
             memcpy(iClass_Key_Table[keyNbr], KEY, 8);
-            return 1;
+            return PM3_SUCCESS;
         case 4:
             return printKeys();
         case 5:
             return loadKeys(filename);
         case 6:
             return saveKeys(filename);
-            break;
     }
     return PM3_SUCCESS;
 }
@@ -1995,10 +2230,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE] = {0};
     uint8_t fileNameLen = 0;
-
-    uint8_t *keyBlock = NULL;
     iclass_premac_t *pre = NULL;
-    int keycnt = 0;
 
     // time
     uint64_t t1 = msclock();
@@ -2010,7 +2242,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             case 'f':
                 fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
                 if (fileNameLen < 1) {
-                    PrintAndLogEx(WARNING, "no filename found after f");
+                    PrintAndLogEx(WARNING, _RED_("no filename found after f"));
                     errors = true;
                 }
                 cmdp += 2;
@@ -2036,62 +2268,64 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     if (errors) return usage_hf_iclass_chk();
 
 
+    uint8_t *keyBlock = NULL;
+    uint16_t keycount = 0;
+
+    // load keys
+    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
+    if (res != PM3_SUCCESS || keycount == 0) {
+        free(keyBlock);
+        return res;
+    }
+
     // Get CSN / UID and CCNR
     PrintAndLogEx(SUCCESS, "Reading tag CSN");
-    for (uint8_t i = 0; i < 10 && !got_csn; i++) {
-        if (select_only(CSN, CCNR, false, false)) {
-            got_csn = true;
-        } else {
-            PrintAndLogEx(WARNING, "one more try\n");
-        }
+    for (uint8_t i = 0; i < ICLASS_AUTH_RETRY && !got_csn; i++) {
+        got_csn = select_only(CSN, CCNR, false, false);
+        if (got_csn == false)
+            PrintAndLogEx(WARNING, "one more try");
     }
 
-    if (!got_csn) {
-        PrintAndLogEx(WARNING, "can't select card, aborting...");
-        return 1;
+    if (got_csn == false) {
+        PrintAndLogEx(WARNING, "Tried 10 times. Can't select card, aborting...");
+        DropField();
+        return PM3_ESOFT;
     }
 
-    // load keys into keyblock
-    int res = LoadDictionaryKeyFile(filename, &keyBlock, &keycnt);
-    if (res > 0) {
-        free(keyBlock);
-        return 1;
-    }
-
-    pre = calloc(keycnt, sizeof(iclass_premac_t));
+    pre = calloc(keycount, sizeof(iclass_premac_t));
     if (!pre) {
+        DropField();
         free(keyBlock);
-        return 1;
+        return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(SUCCESS, "Generating diversified keys, MAC");
+    PrintAndLogEx(SUCCESS, "Generating diversified keys");
     if (use_elite)
-        PrintAndLogEx(SUCCESS, "Using elite algo");
+        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("elite algo"));
     if (use_raw)
-        PrintAndLogEx(SUCCESS, "Using raw mode");
+        PrintAndLogEx(SUCCESS, "Using " _YELLOW_(" raw mode"));
 
-    PrintAndLogEx(SUCCESS, "Searching for %s key", (use_credit_key) ? "CREDIT" : "DEBIT");
+    PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") "key", (use_credit_key) ? "CREDIT" : "DEBIT");
     PrintAndLogEx(SUCCESS, "Tag info");
     PrintAndLogEx(SUCCESS, "CSN     | %s", sprint_hex(CSN, sizeof(CSN)));
     PrintAndLogEx(SUCCESS, "CCNR    | %s", sprint_hex(CCNR, sizeof(CCNR)));
-    res = GenerateMacFromKeyFile(CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, pre);
-    if (res > 0) {
-        free(keyBlock);
-        free(pre);
-        return 1;
-    }
+
+    GenerateMacFrom(CSN, CCNR, use_raw, use_elite, keyBlock, keycount, pre);
 
     //PrintPreCalcMac(keyBlock, keycnt, pre);
 
     // max 42 keys inside USB_COMMAND.  512/4 = 103 mac
-    uint32_t chunksize = keycnt > (PM3_CMD_DATA_SIZE / 4) ? (PM3_CMD_DATA_SIZE / 4) : keycnt;
+    uint32_t chunksize = keycount > (PM3_CMD_DATA_SIZE / 4) ? (PM3_CMD_DATA_SIZE / 4) : keycount;
     bool lastChunk = false;
 
     // fast push mode
     conn.block_after_ACK = true;
 
+    // keep track of position of found key
+    uint8_t found_offset = 0;
+    uint32_t key_offset = 0;
     // main keychunk loop
-    for (uint32_t i = 0; i < keycnt; i += chunksize) {
+    for (uint32_t key_offset = 0; key_offset < keycount; key_offset += chunksize) {
 
         uint64_t t2 = msclock();
         uint8_t timeout = 0;
@@ -2101,10 +2335,10 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             goto out;
         }
 
-        uint32_t keys = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
+        uint32_t keys = ((keycount - key_offset)  > chunksize) ? chunksize : keycount - key_offset;
 
         // last chunk?
-        if (keys == keycnt - i) {
+        if (keys == keycount - key_offset) {
             lastChunk = true;
             // Disable fast mode on last command
             conn.block_after_ACK = false;
@@ -2116,7 +2350,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         flags |= (use_credit_key << 16);
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_ICLASS_CHKKEYS, flags, keys, 0, pre + i, 4 * keys);
+        SendCommandOLD(CMD_HF_ICLASS_CHKKEYS, flags, keys, 0, pre + key_offset, 4 * keys);
         PacketResponseNG resp;
 
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
@@ -2129,7 +2363,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             }
         }
 
-        uint8_t found = resp.oldarg[1] & 0xFF;
+        found_offset = resp.oldarg[1] & 0xFF;
         uint8_t isOK = resp.oldarg[0] & 0xFF;
 
         t2 = msclock() - t2;
@@ -2137,20 +2371,20 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             case 1: {
                 found_debit = true;
 
-                PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d]: %.1fs [%s]  found key  %s (index %u)"
-                              , i
-                              , keycnt
+                PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d]: %.1fs [%s] idx [%u] - found key "_YELLOW_("%s")
+                              , key_offset
+                              , keycount
                               , (float)(t2 / 1000.0)
                               , (use_credit_key) ? "credit" : "debit"
-                              , sprint_hex(keyBlock + (i + found) * 8, 8)
-                              , found
+                              , found_offset
+                              , sprint_hex(keyBlock + (key_offset + found_offset) * 8, 8)
                              );
                 break;
             }
             case 0: {
                 PrintAndLogEx(NORMAL, "\n[-] Chunk [%d/%d] : %.1fs [%s]"
-                              , i
-                              , keycnt
+                              , key_offset
+                              , keycount
                               , (float)(t2 / 1000.0)
                               , (use_credit_key) ? "credit" : "debit"
                              );
@@ -2174,8 +2408,22 @@ out:
     t1 = msclock() - t1;
 
     PrintAndLogEx(SUCCESS, "\nTime in iclass checkkeys: %.0f seconds\n", (float)t1 / 1000.0);
-
     DropField();
+
+    // add to managekeys
+    if (found_debit) {
+        for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
+            // simple check for preexistences
+            if (memcmp(iClass_Key_Table[i], keyBlock + (key_offset + found_offset) * 8, 8) == 0) break;
+
+            if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
+                memcpy(iClass_Key_Table[i], keyBlock + (key_offset + found_offset) * 8, 8);
+                PrintAndLogEx(SUCCESS, "Added key to keyslot [%d] - "_YELLOW_("`hf iclass managekeys p`")" to view", i);
+                break;
+            }
+        }
+    }
+
     free(pre);
     free(keyBlock);
     return PM3_SUCCESS;
@@ -2212,12 +2460,9 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     uint8_t cmdp = 0x00;
 
     char filename[FILE_PATH_SIZE] = {0};
-    uint8_t fileNameLen = 0;
 
-    uint8_t *keyBlock = NULL;
     iclass_prekey_t *prekey = NULL;
-    int keycnt = 0, len = 0;
-
+    int len = 0;
     // if empty string
     if (strlen(Cmd) == 0) errors = true;
     // time
@@ -2228,8 +2473,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
             case 'h':
                 return usage_hf_iclass_lookup();
             case 'f':
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
-                if (fileNameLen < 1) {
+                if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) < 1) {
                     PrintAndLogEx(WARNING, "No filename found after f");
                     errors = true;
                 }
@@ -2288,103 +2532,67 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "CCNR    | %s", sprint_hex(CCNR, sizeof(CCNR)));
     PrintAndLogEx(SUCCESS, "MAC_TAG | %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
 
-    int res = LoadDictionaryKeyFile(filename, &keyBlock, &keycnt);
-    if (res > 0) {
+    uint8_t *keyBlock = NULL;
+    uint16_t keycount = 0;
+
+    // load keys
+    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
+    if (res != PM3_SUCCESS || keycount == 0) {
         free(keyBlock);
-        return 1;
+        return res;
     }
+
     //iclass_prekey_t
-    prekey = calloc(keycnt, sizeof(iclass_prekey_t));
+    prekey = calloc(keycount, sizeof(iclass_prekey_t));
     if (!prekey) {
         free(keyBlock);
-        return 1;
+        return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(FAILED, "Generating diversified keys and MAC");
-    res = GenerateFromKeyFile(CSN, CCNR, use_raw, use_elite, keyBlock, keycnt, prekey);
-    if (res > 0) {
-        free(keyBlock);
-        free(prekey);
-        return 1;
-    }
+    PrintAndLogEx(INFO, "Generating diversified keys");
+    GenerateMacKeyFrom(CSN, CCNR, use_raw, use_elite, keyBlock, keycount, prekey);
 
-    PrintAndLogEx(FAILED, "Sorting");
+    PrintAndLogEx(INFO, "Sorting");
 
     // sort mac list.
-    qsort(prekey, keycnt, sizeof(iclass_prekey_t), cmp_uint32);
+    qsort(prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
 
     //PrintPreCalc(prekey, keycnt);
 
-    PrintAndLogEx(FAILED, "Searching");
+    PrintAndLogEx(INFO, "Searching");
     iclass_prekey_t *item;
     iclass_prekey_t lookup;
     memcpy(lookup.mac, MAC_TAG, 4);
 
     // binsearch
-    item = (iclass_prekey_t *) bsearch(&lookup, prekey, keycnt, sizeof(iclass_prekey_t), cmp_uint32);
-    if (item != NULL)
-        PrintAndLogEx(SUCCESS, "\n[debit] found key %s", sprint_hex(item->key, 8));
+    item = (iclass_prekey_t *) bsearch(&lookup, prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
 
     t1 = msclock() - t1;
     PrintAndLogEx(NORMAL, "\nTime in iclass : %.0f seconds\n", (float)t1 / 1000.0);
+
+    // foudn
+    if (item != NULL) {
+        PrintAndLogEx(SUCCESS, "[debit] found key " _YELLOW_("%s"), sprint_hex(item->key, 8));
+        for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
+            // simple check for preexistences
+            if (memcmp(item->key, iClass_Key_Table[i], 8) == 0) break;
+
+            if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
+                memcpy(iClass_Key_Table[i], item->key, 8);
+                PrintAndLogEx(SUCCESS, "Added key to keyslot [%d] - "_YELLOW_("`hf iclass managekeys p`")"to view", i);
+                break;
+            }
+        }
+    }
+
     free(prekey);
     free(keyBlock);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
-int LoadDictionaryKeyFile(char *filename, uint8_t **keys, int *keycnt) {
-
-    char buf[17];
-    FILE *f;
-    uint8_t *p;
-    int keyitems = 0;
-
-    if (!(f = fopen(filename, "r"))) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-        return 1;
-    }
-
-    while (fgets(buf, sizeof(buf), f)) {
-        if (strlen(buf) < 16 || buf[15] == '\n')
-            continue;
-
-        //goto next line
-        while (fgetc(f) != '\n' && !feof(f)) {};
-
-        //The line start with # is comment, skip
-        if (buf[0] == '#')
-            continue;
-
-        // doesn't this only test first char only?
-        if (!isxdigit(buf[0])) {
-            PrintAndLogEx(ERR, "file content error. '%s' must include 16 HEX symbols", buf);
-            continue;
-        }
-
-        // null terminator (skip the rest of the line)
-        buf[16] = 0;
-
-        p = realloc(*keys, 8 * (keyitems += 64));
-        if (!p) {
-            PrintAndLogEx(ERR, "cannot allocate memory for default keys");
-            fclose(f);
-            return 2;
-        }
-        *keys = p;
-
-        memset(*keys + 8 * (*keycnt), 0, 8);
-        num_to_bytes(strtoull(buf, NULL, 16), 8, *keys + 8 * (*keycnt));
-        (*keycnt)++;
-        memset(buf, 0, sizeof(buf));
-    }
-    fclose(f);
-    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from %s", *keycnt, filename);
-    return PM3_SUCCESS;
-}
-
 // precalc diversified keys and their MAC
-int GenerateMacFromKeyFile(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, int keycnt, iclass_premac_t *list) {
+void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, int keycnt, iclass_premac_t *list) {
     uint8_t key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -2399,10 +2607,9 @@ int GenerateMacFromKeyFile(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_e
 
         doMAC(CCNR, div_key, list[i].mac);
     }
-    return PM3_SUCCESS;
 }
 
-int GenerateFromKeyFile(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, int keycnt, iclass_prekey_t *list) {
+void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, uint8_t *keys, int keycnt, iclass_prekey_t *list) {
 
     uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -2419,7 +2626,6 @@ int GenerateFromKeyFile(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
         // generate MAC
         doMAC(CCNR, div_key, list[i].mac);
     }
-    return PM3_SUCCESS;
 }
 
 // print diversified keys
@@ -2553,25 +2759,26 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
-    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc Diversified keys (blocks 3 & 4) to write new keys"},
-    {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "            Check keys"},
-    {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Authenticate and Clone from iClass bin file"},
-    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[f <fname>] Decrypt tagdump" },
-    {"dump",        CmdHFiClassReader_Dump,     IfPm3Iclass,     "[options..] Authenticate and Dump iClass tag's AA1"},
-    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] (experimental) Load data into iClass emulator memory"},
-    {"encryptblk",  CmdHFiClassEncryptBlk,      AlwaysAvailable, "<BlockData> Encrypt given block data"},
-    {"list",        CmdHFiClassList,            AlwaysAvailable,     "            List iClass history"},
-    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce of reader attack dump"},
+    {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "[options..] Calc diversified keys (blocks 3 & 4) to write new keys"},
+    {"chk",         CmdHFiClassCheckKeys,       AlwaysAvailable, "[options..] Check keys"},
+    {"clone",       CmdHFiClassCloneTag,        IfPm3Iclass,     "[options..] Restore a dump file onto a iClass tag"},
+    {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "[options..] Decrypt given block data or tag dump file" },
+    {"dump",        CmdHFiClassReader_Dump,     IfPm3Iclass,     "[options..] Dump iClass tag to file"},
+    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "[f <fname>] Load iClass dump file into emulator memory"},
+    {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "[options..] Encrypt given block data"},
+    {"info",        CmdHFiClassInfo,            AlwaysAvailable, "            Tag information"},
+    {"list",        CmdHFiClassList,            AlwaysAvailable, "            List iClass history"},
+    {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "[options..] Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "[options..] Uses authentication trace to check for key in dictionary file"},
-    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage the keys to use with iClass"},
+    {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "[options..] Manage keys to use with iClass"},
     {"permutekey",  CmdHFiClassPermuteKey,      IfPm3Iclass,     "            Permute function from 'heart of darkness' paper"},
-    {"readblk",     CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Authenticate and Read iClass block"},
+    {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "[options..] Read iClass block"},
     {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "            Act like an iClass reader"},
-    {"readtagfile", CmdHFiClassReadTagFile,     AlwaysAvailable, "[options..] Display Content from tagfile"},
-    {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read an iClass tag via Replay Attack"},
+    {"readtagfile", CmdHFiClassReadTagFile,     AlwaysAvailable, "[options..] Display content from tag dump file"},
+    {"replay",      CmdHFiClassReader_Replay,   IfPm3Iclass,     "<mac>       Read iClass tag via replay attack"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "[options..] Simulate iClass tag"},
     {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "            Eavesdrop iClass communication"},
-    {"writeblk",    CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Authenticate and Write iClass block"},
+    {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "[options..] Write iClass block"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -2603,26 +2810,28 @@ int readIclass(bool loop, bool verbose) {
             uint8_t readStatus = resp.oldarg[0] & 0xff;
             uint8_t *data = resp.data.asBytes;
 
-            if (verbose) PrintAndLogEx(NORMAL, "Readstatus:%02x", readStatus);
+            if (verbose) PrintAndLogEx(INFO, "Readstatus:%02x", readStatus);
+
             // no tag found or button pressed
             if ((readStatus == 0 && !loop) || readStatus == 0xFF) {
                 // abort
-                if (verbose) {
-                    PrintAndLogEx(FAILED, "Quitting...");
-                    DropField();
-                    return 0;
-                }
+                 DropField();
+                 return PM3_EOPABORTED;
             }
+
             if (readStatus & FLAG_ICLASS_READER_CSN) {
                 PrintAndLogEx(NORMAL, "   CSN: %s", sprint_hex(data, 8));
                 tagFound = true;
             }
+
             if (readStatus & FLAG_ICLASS_READER_CC) {
                 PrintAndLogEx(NORMAL, "    CC: %s", sprint_hex(data + 16, 8));
             }
+
             if (readStatus & FLAG_ICLASS_READER_CONF) {
                 printIclassDumpInfo(data);
             }
+
             if (readStatus & FLAG_ICLASS_READER_AIA) {
                 bool legacy = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
 
@@ -2639,7 +2848,7 @@ int readIclass(bool loop, bool verbose) {
 
             if (tagFound && !loop) {
                 DropField();
-                return 1;
+                return PM3_SUCCESS;
             }
         } else {
             if (verbose)

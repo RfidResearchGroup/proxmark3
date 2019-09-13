@@ -11,6 +11,9 @@
 
 #include "common.h"
 
+#define FLASH_MAX_FILES 4
+#define ONE_KB 1024
+
 typedef struct {
     void *data;
     uint32_t start;

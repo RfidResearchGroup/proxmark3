@@ -654,33 +654,21 @@ static int doTestsWithKnownInputs() {
     return errors;
 }
 
-static bool readKeyFile(uint8_t key[8]) {
-    bool retval = false;
 
-    //Test a few variants
-    char filename[30] = {0};
+static bool readKeyFile(uint8_t *key, size_t keylen) {
 
-    if (fileExists("iclass_key.bin")) {
-        sprintf(filename, "%s.bin", "iclass_key");
-    } else if (fileExists("loclass/iclass_key.bin")) {
-        sprintf(filename, "%s.bin", "loclass/iclass_key");
-    } else if (fileExists("client/loclass/iclass_key.bin")) {
-        sprintf(filename, "%s.bin", "client/loclass/iclass_key");
+    size_t len = 0;
+    uint8_t *keyptr = NULL;
+    if (loadFile_safe("iclass_key.bin", "", (void **)&keyptr, &len) != PM3_SUCCESS) {
+        return false;
     }
 
-    if (strlen(filename) == 0)
-        return retval;
+    if (keylen != len) {
+        return false;
+    }
 
-    FILE *f = fopen(filename, "rb");
-    if (!f)
-        return retval;
-
-    size_t bytes_read = fread(key, sizeof(uint8_t), 8, f);
-    if (bytes_read == 8)
-        retval = true;
-
-    fclose(f);
-    return retval;
+    memcpy(key, keyptr, keylen);
+    return true;
 }
 
 int doKeyTests(uint8_t debuglevel) {
@@ -688,7 +676,7 @@ int doKeyTests(uint8_t debuglevel) {
 
     PrintAndLogEx(INFO, "Checking if the master key is present (iclass_key.bin)...");
     uint8_t key[8] = {0};
-    if (!readKeyFile(key)) {
+    if (readKeyFile(key, sizeof(key)) == false) {
         PrintAndLogEx(FAILED, "Master key not present, will not be able to do all testcases");
     } else {
 

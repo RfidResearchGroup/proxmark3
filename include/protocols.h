@@ -120,22 +120,21 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // for instance ICLASS_CMD_SELECT  0x81 tells if ISO14443b/BPSK coding/106 kbits/s
 // for instance ICLASS_CMD_SELECT  0x41 tells if ISO14443b/BPSK coding/423 kbits/s
 //
-#define ICLASS_CMD_HALT             0x00
-#define ICLASS_CMD_SELECT_15        0x01
-#define ICLASS_CMD_ACTALL           0x0A
-#define ICLASS_CMD_DETECT           0x0F
+#define ICLASS_CMD_HALT             0x0
+#define ICLASS_CMD_SELECT           0x1
+#define ICLASS_CMD_ACTALL           0xA
+#define ICLASS_CMD_DETECT           0xF
 
-#define ICLASS_CMD_CHECK            0x05
-#define ICLASS_CMD_READ4            0x06
-#define ICLASS_CMD_READ_OR_IDENTIFY 0x0C
+#define ICLASS_CMD_PAGESEL          0x4
+#define ICLASS_CMD_CHECK            0x5
+#define ICLASS_CMD_READ4            0x6
+#define ICLASS_CMD_UPDATE           0x7
+#define ICLASS_CMD_READCHECK        0x8
+#define ICLASS_CMD_READ_OR_IDENTIFY 0xC
+#define ICLASS_CMD_ACT              0xE
 
-#define ICLASS_CMD_SELECT           0x81
-#define ICLASS_CMD_PAGESEL          0x84
-#define ICLASS_CMD_UPDATE           0x87
-#define ICLASS_CMD_READCHECK_KC     0x18
-#define ICLASS_CMD_READCHECK_KD     0x88
-#define ICLASS_CMD_ACT              0x8E
-
+#define ICLASS_CREDIT(x)            (((x) & 0x5) == 1)
+#define ICLASS_DEBIT(x)             (((x) & 0x5) == 0)
 
 
 #define ISO14443A_CMD_REQA          0x26
@@ -541,6 +540,27 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define CALYPSO_SV_UN_DEBIT             0xBC
 #define CALYPSO_SAM_SV_DEBIT            0x54
 #define CALYPSO_SAM_SV_RELOAD           0x56
+
+// HITAG1 commands
+#define HITAG1_SET_CCNEW                0xC2    // left 5 bits only
+#define HITAG1_READ_ID                  0x00    // not a real command, consists of 5 bits length, <length> bits partial SN, 8 bits CRC
+#define HITAG1_SELECT                   0x00    // left 5 bits only, followed by 32 bits SN and 8 bits CRC
+#define HITAG1_WRPPAGE                  0x80    // left 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_WRPBLK                   0x90    // left 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_WRCPAGE                  0xA0    // left 4 bits only, followed by 8 bits page or key information and 8 bits CRC
+#define HITAG1_WRCBLK                   0xB0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_RDPPAGE                  0xC0    // left 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_RDPBLK                   0xD0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_RDCPAGE                  0xE0    // left 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_RDCBLK                   0xF0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_HALT                     0x70    // left 4 bits only, followed by 8 bits (dummy) page and 8 bits CRC
+
+// HITAG2 commands
+#define HITAG2_START_AUTH               0xC0    // left 5 bits only
+#define HITAG2_READ_PAGE                0xC0    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_READ_PAGE_INVERTED       0x44    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_WRITE_PAGE               0x82    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_HALT                     0x00    // left 5 bits only
 
 #endif
 // PROTOCOLS_H

@@ -763,8 +763,8 @@ static int CmdUsartRXhex(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",         CmdHelp,            AlwaysAvailable,          "This help"},
-    {"btpin",        CmdUsartBtPin,      IfPm3FpcUsartHostFromUsb, "Change BT add-on PIN"},
-    {"btfactory",    CmdUsartBtFactory,  IfPm3FpcUsartHostFromUsb, "Reset BT add-on to factory settings"},
+    {"btpin",        CmdUsartBtPin,      IfPm3FpcUsartFromUsb,     "Change BT add-on PIN"},
+    {"btfactory",    CmdUsartBtFactory,  IfPm3FpcUsartFromUsb,     "Reset BT add-on to factory settings"},
     {"tx",           CmdUsartTX,         IfPm3FpcUsartDevFromUsb,  "Send string over USART"},
     {"rx",           CmdUsartRX,         IfPm3FpcUsartDevFromUsb,  "Receive string over USART"},
     {"txrx",         CmdUsartTXRX,       IfPm3FpcUsartDevFromUsb,  "Send string over USART and wait for response"},

@@ -35,9 +35,11 @@ Makefile.platform
 !client/hardnested/*.bin
 !client/hardnested/tables/*.z
 client/ui/ui_overlays.h
+client/reveng/bmptst
 
 hardnested_stats.txt
 proxmark3
+proxmark3-flasher
 flasher
 !flasher/
 lua
@@ -71,8 +73,9 @@ tools/jtag_openocd/openocd_configuration
 ppls patches/*
 *- Copy.*
 
-client/lualibs/mf_default_keys.lua
+client/lualibs/mfc_default_keys.lua
 client/lualibs/pm3_cmd.lua
 # recompiled
 fpga_version_info.c
 
+.proxmark3/*

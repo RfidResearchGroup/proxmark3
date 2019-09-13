@@ -19,7 +19,7 @@ Step by step guides are online such as [RiscCorps](https://store.ryscc.com/blogs
 
 ## Download / clone ProxSpace repo
 
-Download the Gator96100 ProxSpace package from https://github.com/Gator96100/ProxSpace/
+Download the Gator96100 ProxSpace package from https://github.com/Gator96100/ProxSpace/releases
 
 If you prefer, you can clone it, provided that you installed Github for Windows https://desktop.github.com/.
 
@@ -52,33 +52,13 @@ pacman -S mingw-w64-x86_64-astyle
 
 ## Compile and use the project
 
+To use the compiled client, the only differences are that executables end with `.exe` (e.g. `proxmark3.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows, so commands become:
+
+```sh
+proxmark3 /dev/ttyACM0  =>  proxmark3.exe comX
+```
+
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
-
-To use the compiled client and flasher, the only differences are that executables end with `.exe` (e.g. `client/flasher.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows.
-
-To flash: In principle, the helper script `flash-all.sh` should auto-detect your COM port, so you can just try:
-
-```sh
-./flash-all.sh
-```
-
-If COM port detection failed, you'll have to call the flasher manually and specify the correct port:
-
-```sh
-client/flasher.exe comX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
-```
-
-Similarly, to run the client, you may try:
-
-```sh
-./proxmark3.sh
-```
-
-Or, by specifying the COM port manually:
-
-```sh
-client/proxmark3.exe comX
-```
 
 # Installing on Windows with WSL
 
@@ -98,12 +78,11 @@ Enter WSL prompt (`wsl`) and from there, follow the [Linux Installation Instruct
 
 ```sh
 sudo apt-get update
-sudo apt-get install p7zip git ca-certificates build-essential libreadline5 libreadline-dev libusb-0.1-4 \
-libusb-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib \
-libqt4-dev
+sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
 ```
 
-If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.
+If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.
 
 ## Clone the RRG/Iceman repository
 
@@ -113,9 +92,11 @@ git clone https://github.com/RfidResearchGroup/proxmark3.git
 
 ## Compile and use the project
 
-Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
+To use the compiled client, the only difference is that the Proxmark3 port is translated from your `comX` port where "X" is the com port number assigned to proxmark3 under Windows, to a `/dev/ttySX`, so commands become:
 
-To use the compiled client and flasher, the only difference is that the Proxmark3 port is translated from your `comX` port where "X" is the com port number assigned to proxmark3 under Windows, to a `/dev/ttySX`.
+```sh
+proxmark3 /dev/ttyACM0  =>  proxmark3 /dev/ttySX
+```
 
 Depending on the Windows version, you might need to give permission to the current user to access `/dev/ttySX`: (change X to your port number)
 
@@ -142,28 +123,6 @@ and add it to your Bash profile for the next times:
 echo "export DISPLAY=:0" >> ~/.bashrc
 ```
 
-To flash: In principle, the helper script `flash-all.sh` should auto-detect your COMX==/dev/ttySX port, so you can just try:
-
-```sh
-./flash-all.sh
-```
-
-If port detection failed, you'll have to call the flasher manually and specify the correct port:
-
-```sh
-client/flasher /dev/ttySX -b bootrom/obj/bootrom.elf armsrc/obj/fullimage.elf
-```
-
-Similarly, to run the client, you may try:
-
-```sh
-./proxmark3.sh
-```
-
-Or, by specifying the COM port manually:
-
-```sh
-client/proxmark3 /dev/ttySX
-```
-
 Note that it may take a quite long time for a freshly plugged Proxmark3 to be visible on a WSL /dev/ttySX port.
+
+Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).

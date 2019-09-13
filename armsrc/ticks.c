@@ -185,6 +185,13 @@ uint32_t RAMFUNC GetCountSspClk(void) {
     return tmp_count;
 }
 
+uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start) {
+    uint32_t stop = GetCountSspClk();
+    if ( stop >= start ) 
+        return stop - start;
+    return (UINT32_MAX - start) + stop;
+}
+
 //  -------------------------------------------------------------------------
 //  Timer for bitbanging, or LF stuff when you need a very precis timer
 //  1us = 1.5ticks

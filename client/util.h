@@ -22,6 +22,9 @@
 #endif
 
 uint8_t g_debugMode;
+uint8_t g_printAndLog;
+#define PRINTANDLOG_PRINT 1
+#define PRINTANDLOG_LOG   2
 
 int kbd_enter_pressed(void);
 void AddLogLine(const char *fn, const char *data, const char *c);

@@ -1,4 +1,6 @@
 # Command Cheat Sheet
+<a id="Top"></a>
+
 |Generic|Low Frequence 125 kHz|High Frequence 13.56 MHz|
 |---|---|---|
 |[Generic](#Generic)|[T55XX](#T55XX)|[Mifare](#Mifare)|
@@ -10,6 +12,7 @@
 
 
 ## Generic
+^[Top](#top)
 
 Identify High Frequency cards
 ```
@@ -37,12 +40,13 @@ pm3 --> hw status
 ```
 
 ## iClass
+^[Top](#top)
 
 Reverse permute iClass master key
 ```
 Options
 ---
-r          reverse permuted key 
+r          reverse permuted key
 
 pm3 --> hf iclass permute r 3F90EBF0910F7B6F
 ```
@@ -162,10 +166,11 @@ p            : EPURSE
 m            : macs
 e            : elite
 
-pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f default_iclass_keys.dic e
+pm3 --> hf iclass lookup u 010a0ffff7ff12e0 p feffffffffffffff m 66348979153c41b9 f iclass_default_keys e
 ```
 
 ## Mifare
+^[Top](#top)
 
 Check for default keys
 ```
@@ -176,14 +181,14 @@ Options
 card memory    : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
 d              : write keys to binary file
 
-pm3 --> hf mf chk *1 ? d default_keys.dic
+pm3 --> hf mf chk *1 ? d mfc_default_keys
 ```
 
 Check for default keys from local memory
 ```
 Options
 ---
-card memory   : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K          
+card memory   : 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K
 m             : use dictionary from flashmemory
 
 pm3 --> hf mf fchk 1 m
@@ -240,7 +245,7 @@ pm3 --> hf mf eload 353C2AA6
 pm3 --> hf mf eload 1 353C2AA6
 ```
 
-Simulate Mifare 
+Simulate Mifare
 ```
 u     : (Optional) UID 4,7 or 10 bytes. If not specified, the UID 4B from emulator memory will be used
 
@@ -249,7 +254,7 @@ pm3 --> hf mf sim u 353c2aa6
 
 Simulate Mifare Sequence
 ```
-pm3 --> hf mf chk *1 ? d default_keys.dic
+pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump 1
 pm3 --> script run dumptoemul -i dumpdata.bin
 pm3 --> hf mf eload 353C2AA6
@@ -258,12 +263,13 @@ pm3 --> hf mf sim u 353c2aa6
 
 Clone Mifare 1K Sequence
 ```
-pm3 --> hf mf chk *1 ? d default_keys.dic
+pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
 ```
 
 ## HID Prox
+^[Top](#top)
 
 Read HID Prox card
 ```
@@ -279,10 +285,10 @@ Convert Site & Facility code to Wiegand
 ```
 Options
 ---
-<OEM> <FC> <CN> 
-OEM           : OEM number / site code          
-FC            : facility code          
-CN            : card number  
+<OEM> <FC> <CN>
+OEM           : OEM number / site code
+FC            : facility code
+CN            : card number
 
 pm3 --> lf hid wiegand 0 56 150
 ```
@@ -313,6 +319,7 @@ pm3 --> lf hid brute v a 26 f 21 c 200 d 2000
 ```
 
 ## Indala
+^[Top](#top)
 
 Read Indala card
 ```
@@ -343,6 +350,7 @@ pm3 --> lf indala clone a0000000c2c436c1
 ```
 
 ## Hitag
+^[Top](#top)
 
 Read Hitag information
 ```
@@ -368,7 +376,7 @@ pm3 --> lf hitag 26
 pm3 --> lf hitag 21 4D494B52
 ```
 
-Sniff Hitag traffic 
+Sniff Hitag traffic
 ```
 pm3 --> lf hitag sniff
 pm3 --> lf hitag list
@@ -376,7 +384,7 @@ pm3 --> lf hitag list
 
 Simulate Hitag
 ```
-pm3 --> lf hitag sim c378181c_a8f7.ht2 
+pm3 --> lf hitag sim c378181c_a8f7.ht2
 ```
 
 Write to Hitag block
@@ -397,10 +405,11 @@ pm3 --> lf hitag writer 24 499602D2 1 00000000
 Simulate Hitag2 sequence
 ```
 pm3 --> lf hitag reader 21 56713368
-pm3 --> lf hitag sim c378181c_a8f7.ht2 
+pm3 --> lf hitag sim c378181c_a8f7.ht2
 ```
 
 ## T55XX
+^[Top](#top)
 
 Detect T55XX card
 ```
@@ -423,16 +432,16 @@ Set timings to default
 ```
 Options
 ---
-p            : persist to flashmemory          
-z            : Set default t55x7 timings (use p to save if required)    
+p            : persist to flashmemory
+z            : Set default t55x7 timings (use p to save if required)
 
 pm3 --> lf t55xx deviceconfig z p
 ```
 
 Write to T55xx block
 ```
-b <block>    : block number to write. Between 0-7          
-d <data>     : 4 bytes of data to write (8 hex characters) 
+b <block>    : block number to write. Between 0-7
+d <data>     : 4 bytes of data to write (8 hex characters)
 
 pm3 --> lf t55xx wr b 0 d 00081040
 ```
@@ -443,6 +452,7 @@ pm3 --> lf t55xx wipe
 ```
 
 ## Data
+^[Top](#top)
 
 Get raw samples [512-40000]
 ```
@@ -460,6 +470,7 @@ pm3 --> data load <filename>
 ```
 
 ## Lua Scripts
+^[Top](#top)
 
 List Lua Scripts
 
@@ -489,30 +500,33 @@ pm3 --> script run formatMifare -k FFFFFFFFFFFF -n FFFFFFFFFFFF -x
 ```
 
 ## Memory
+^[Top](#top)
 
 Load default keys into memory
 ```
 Options
 ---
-o <offset>         : offset in memory          
-f <filename>       : file name          
-m                  : upload 6 bytes keys (mifare key dictionary)          
-i                  : upload 8 bytes keys (iClass key dictionary)          
-t                  : upload 4 bytes keys (pwd dictionary)   
+o <offset>         : offset in memory
+f <filename>       : file name
+m                  : upload 6 bytes keys (mifare key dictionary)
+i                  : upload 8 bytes keys (iClass key dictionary)
+t                  : upload 4 bytes keys (pwd dictionary)
 
-pm3 --> mem load f default_keys m
-pm3 --> mem load f default_pwd t
-pm3 --> mem load f default_iclass_keys i
+pm3 --> mem load f mfc_default_keys m
+pm3 --> mem load f t55xx_default_pwds t
+pm3 --> mem load f iclass_default_keys i
 ```
 
 ## Sim Module
+^[Top](#top)
 
 Upgrade Sim Module firmware
 ```
-pm3 --> sc upgrade f ../tools/simmodule/SIM011.BIN 
+pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
 ```
 
 ## Smart Card
+^[Top](#top)
 
 Get Smart Card Information
 ```
@@ -528,26 +542,26 @@ Set clock speed
 ```
 Options
 ---
-c <speed>       : clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz)           
-          
-pm3 --> sc setclock c 2 
+c <speed>       : clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz)
+
+pm3 --> sc setclock c 2
 ```
 
 Send raw hex data
 ```
 Options
----          
-r           : do not read response          
-a           : active smartcard without select (reset sc module)          
-s           : active smartcard with select (get ATR)          
-t           : executes TLV decoder if it possible          
-0           : use protocol T=0          
-d <bytes>   : bytes to send          
-          
-pm3 --> sc raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR          
-pm3 --> sc raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory          
-pm3 --> sc raw 0 t d 00a4040007a0000000041010               : Mastercard          
-pm3 --> sc raw 0 t d 00a4040007a0000000031010               : Visa  
+---
+r           : do not read response
+a           : active smartcard without select (reset sc module)
+s           : active smartcard with select (get ATR)
+t           : executes TLV decoder if it possible
+0           : use protocol T=0
+d <bytes>   : bytes to send
+
+pm3 --> sc raw s 0 d 00a404000e315041592e5359532e4444463031 : 1PAY.SYS.DDF01 PPSE directory with get ATR
+pm3 --> sc raw 0 d 00a404000e325041592e5359532e4444463031   : 2PAY.SYS.DDF01 PPSE directory
+pm3 --> sc raw 0 t d 00a4040007a0000000041010               : Mastercard
+pm3 --> sc raw 0 t d 00a4040007a0000000031010               : Visa
 ````
 
 Bruteforce SPI
@@ -556,6 +570,6 @@ Options
 ---
 t          : executes TLV decoder if it possible
 
-pm3 --> sc brute 
+pm3 --> sc brute
 pm3 --> sc brute t
 ```

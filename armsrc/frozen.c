@@ -44,7 +44,7 @@
 int cs_win_snprintf(char *str, size_t size, const char *format, ...);
 int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap);
 #if _MSC_VER >= 1700
-#include <stdint.h>
+#include "stdint.h"
 #else
 typedef _int64 int64_t;
 typedef unsigned _int64 uint64_t;

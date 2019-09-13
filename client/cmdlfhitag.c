@@ -15,7 +15,7 @@
 #include "cmdtrace.h"
 #include "commonutil.h"
 #include "hitag.h"
-#include "loclass/fileutils.h"  // savefile
+#include "fileutils.h"  // savefile
 
 static int CmdHelp(const char *Cmd);
 

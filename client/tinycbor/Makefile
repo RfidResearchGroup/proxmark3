@@ -1,11 +1,10 @@
-# Hide full compilation line:
-ifneq ($(V),1)
-  Q?=@
-endif
-# To see full command lines, use make V=1
-
-LIB_A = tinycbor.a
-tinycbor_SOURCES = \
+MYSRCPATHS =
+MYINCLUDES =
+# Strange errors on Mingw when compiling with C99
+#MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYCFLAGS =
+MYDEFS =
+MYSRCS = \
     cborencoder.c \
     cborencoder_close_container_checked.c \
     cborerrorstrings.c \
@@ -15,48 +14,9 @@ tinycbor_SOURCES = \
     cbortojson.c \
     cborvalidation.c \
 
-CFILES = $(filter %.c, $(tinycbor_SOURCES))
-CMDOBJS = $(CFILES:%.c=%.o)
-CLEAN = $(CMDOBJS)
+LIB_A = tinycbor.a
 
-platform = $(shell uname)
+# Strange errors on Mingw when compiling with -O3
+CFLAGS ?= -Wall -Werror -O2
 
-CC= gcc
-CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function
-LIBS=  $(SYSLIBS) $(MYLIBS)
-DEFAULT_INCLUDES = -I. -I..
-DEFS = -DHAVE_STDINT_H
-
-ifeq ($(platform),Darwin)
-AR= /usr/bin/ar rcs
-RANLIB= /usr/bin/ranlib
-else
-AR= ar rcs
-RANLIB= ranlib
-endif
-RM= rm -f
-TST= echo
-
-SYSLDFLAGS=
-SYSLIBS=
-
-MYLIBS=
-MYOBJS=
-
-$(LIB_A): $(CMDOBJS)
-	$(info [=] AR $@)
-	$(Q)$(AR) $(LIB_A) $(CMDOBJS)
-	$(Q)$(RANLIB) $(LIB_A)
-
-all: $(LIB_A)
-
-clean:
-	$(Q)$(RM) $(CLEAN)
-	$(Q)$(RM) $(LIB_A)
-
-%.o: %.c
-	$(info [-] CC $<)
-	$(Q)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(CFLAGS) -c -o $@ $< $(LIBS)
-
-.PHONY: all clean
-
+include ../../Makefile.host

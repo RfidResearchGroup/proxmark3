@@ -493,7 +493,7 @@ static int CmdTune(const char *Cmd) {
 
 static int CmdVersion(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    pm3_version(true);
+    pm3_version(true, false);
     return PM3_SUCCESS;
 }
 
@@ -617,7 +617,66 @@ int CmdHW(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-void pm3_version(bool verbose) {
+void pm3_version(bool verbose, bool oneliner) {
+
+#if defined(__MINGW64__)
+# define PM3CLIENTCOMPILER "MinGW-w64 "
+#elif defined(__MINGW32__)
+# define PM3CLIENTCOMPILER "MinGW "
+#elif defined(__clang__)
+# define PM3CLIENTCOMPILER "Clang/LLVM "
+#elif defined(__GNUC__) || defined(__GNUG__)
+# define PM3CLIENTCOMPILER "GCC "
+#else
+# define PM3CLIENTCOMPILER "unknown compiler "
+#endif
+
+#if defined(__APPLE__) || defined(__MACH__)
+# define PM3HOSTOS " OS:OSX"
+#elif defined(__ANDROID__) || defined(ANDROID)
+// must be tested before __linux__
+# define PM3HOSTOS " OS:Android"
+#elif defined(__linux__)
+# define PM3HOSTOS " OS:Linux"
+#elif defined(__FreeBSD__)
+# define PM3HOSTOS " OS:FreeBSD"
+#elif defined(__NetBSD__)
+# define PM3HOSTOS " OS:NetBSD"
+#elif defined(__OpenBSD__)
+# define PM3HOSTOS " OS:OpenBSD"
+#elif defined(__CYGWIN__)
+# define PM3HOSTOS " OS:Cygwin"
+#elif defined(_WIN64) | defined(__WIN64__)
+// must be tested before _WIN32
+# define PM3HOSTOS " OS:Windows (64b)"
+#elif defined(_WIN32) | defined(__WIN32__)
+# define PM3HOSTOS " OS:Windows (32b)"
+#else
+# define PM3HOSTOS " OS:unknown"
+#endif
+
+#if defined(__x86_64__)
+# define PM3HOSTARCH " ARCH:x86_64"
+#elif defined(__i386__)
+# define PM3HOSTARCH " ARCH:x86"
+#elif defined(__aarch64__)
+# define PM3HOSTARCH " ARCH:aarch64"
+#elif defined(__arm__)
+# define PM3HOSTARCH " ARCH:arm"
+#elif defined(__powerpc64__)
+# define PM3HOSTARCH " ARCH:powerpc64"
+#elif defined(__mips__)
+# define PM3HOSTARCH " ARCH:mips"
+#else
+# define PM3HOSTARCH " ARCH:unknown"
+#endif
+
+    if (oneliner) {
+        // For "proxmark3 -v", simple printf, avoid logging
+        printf("Client: RRG/Iceman compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n");
+        return;
+    }
+
     if (!verbose)
         return;
 
@@ -630,11 +689,7 @@ void pm3_version(bool verbose) {
         PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
-#if defined(__clang__)
-        PrintAndLogEx(NORMAL, "  compiled with Clang/LLVM "__VERSION__);
-#elif defined(__GNUC__) || defined(__GNUG__)
-        PrintAndLogEx(NORMAL, "  compiled with GCC "__VERSION__);
-#endif
+        PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
         PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 ]");
         PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
         PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));

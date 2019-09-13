@@ -323,9 +323,30 @@ void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 }
 
 void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
-    switch (cmd[0]) {
+    uint8_t c = cmd[0] & 0x0F;
+    uint8_t parity = 0;
+    for ( uint8_t i=0; i<7; i++) {
+        parity ^= (cmd[0] >> i) & 1;
+    }
+
+    switch (c) {
+        case ICLASS_CMD_HALT:
+            snprintf(exp, size, "HALT");
+            break;
+        case ICLASS_CMD_SELECT:
+            snprintf(exp, size, "SELECT");
+            break;
         case ICLASS_CMD_ACTALL:
             snprintf(exp, size, "ACTALL");
+            break;
+        case ICLASS_CMD_DETECT:
+            snprintf(exp, size, "DETECT");
+            break;
+        case ICLASS_CMD_CHECK:
+            snprintf(exp, size, "CHECK");
+            break;
+        case ICLASS_CMD_READ4:
+            snprintf(exp, size, "READ4(%d)", cmd[1]);
             break;
         case ICLASS_CMD_READ_OR_IDENTIFY: {
             if (cmdsize > 1) {
@@ -335,35 +356,21 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             }
             break;
         }
-        case ICLASS_CMD_SELECT:
-            snprintf(exp, size, "SELECT");
-            break;
         case ICLASS_CMD_PAGESEL:
             snprintf(exp, size, "PAGESEL(%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_READCHECK_KC:
-            snprintf(exp, size, "READCHECK[Kc](%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_READCHECK_KD:
-            snprintf(exp, size, "READCHECK[Kd](%d)", cmd[1]);
-            break;
-        case ICLASS_CMD_CHECK:
-            snprintf(exp, size, "CHECK");
-            break;
-        case ICLASS_CMD_DETECT:
-            snprintf(exp, size, "DETECT");
-            break;
-        case ICLASS_CMD_HALT:
-            snprintf(exp, size, "HALT");
             break;
         case ICLASS_CMD_UPDATE:
             snprintf(exp, size, "UPDATE(%d)", cmd[1]);
             break;
+        case ICLASS_CMD_READCHECK:
+            if ( ICLASS_CREDIT(c) ) {
+                snprintf(exp, size, "READCHECK[Kc](%d)", cmd[1]);
+            } else {
+                snprintf(exp, size, "READCHECK[Kd](%d)", cmd[1]);
+            }
+            break;
         case ICLASS_CMD_ACT:
             snprintf(exp, size, "ACT");
-            break;
-        case ICLASS_CMD_READ4:
-            snprintf(exp, size, "READ4(%d)", cmd[1]);
             break;
         default:
             snprintf(exp, size, "?");

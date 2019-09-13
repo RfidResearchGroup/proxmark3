@@ -86,7 +86,7 @@ static int CmdHFMFPInfo(const char *cmd) {
                 // check SL0
                 uint8_t data[250] = {0};
                 int datalen = 0;
-                // https://github.com/Proxmark/proxmark3/blob/master/client/scripts/mifarePlus.lua#L161
+                // https://github.com/Proxmark/proxmark3/blob/master/client/luascripts/mifarePlus.lua#L161
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen);
                 if (!res && datalen > 1 && data[0] == 0x09) {

@@ -535,7 +535,7 @@ void Plot::paintEvent(QPaintEvent *event) {
     sprintf(str, "@%d  dt=%d [%2.2f] zoom=%2.2f  CursorAPos=%d  CursorBPos=%d  GridX=%d  GridY=%d (%s) GridXoffset=%d",
             GraphStart,
             CursorBPos - CursorAPos,
-            (CursorBPos - CursorAPos) / CursorScaleFactor,
+            ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor,
             GraphPixelsPerPoint,
             CursorAPos,
             CursorBPos,

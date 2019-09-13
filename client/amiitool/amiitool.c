@@ -5,10 +5,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <amiibo.h>
 #include <stdio.h>
 #include <string.h>
-#include "../loclass/fileutils.h"
+#include "fileutils.h"
+#include "amiibo.h"
+#include "getopt.h"
 
 #define NTAG215_SIZE 540
 
@@ -16,7 +17,7 @@ static char *self;
 
 void amiitool_usage() {
     fprintf(stderr,
-            "amiitool build %i (commit %s-%08x)\n"
+            /*"amiitool build %i (commit %s-%08x)\n"*/
             "by Marcos Del Sol Vives <marcos@dracon.es>\n"
             "\n"
             "Usage: %s (-e|-d|-c) -k keyfile [-i input] [-s input2] [-o output]\n"
@@ -28,7 +29,7 @@ void amiitool_usage() {
             "   -s input save file, save from this file will replace input file ones.\n"
             "   -o output file. If not specified, stdout will be used.\n"
             "   -l decrypt files with invalid signatures.\n",
-            , self
+            self
            );
 }
 
@@ -62,6 +63,9 @@ int main(int argc, char **argv) {
             case 'i':
                 infile = optarg;
                 break;
+            case 'k':
+                keyfile = optarg;
+                break;
             case 's':
                 savefile = optarg;
                 break;
@@ -83,7 +87,8 @@ int main(int argc, char **argv) {
     }
 
     nfc3d_amiibo_keys amiiboKeys;
-
+    if (! LoadAmiikey(amiiboKeys, keyfile))
+        return 5;
 
     uint8_t original[NTAG215_SIZE];
     uint8_t modified[NFC3D_AMIIBO_SIZE];

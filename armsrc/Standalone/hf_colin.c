@@ -518,7 +518,7 @@ failtag:
     if (cjcuid == 0) {
         cjSetCursLeft();
         DbprintfEx(FLAG_NEWLINE, "%s>>%s BUG: 0000_CJCUID! Retrying...", _XRED_, _XWHITE_);
-        SpinErr(0, 100, 8);
+        SpinErr(LED_A, 100, 8);
         goto failtag;
     }
 
@@ -636,7 +636,7 @@ failtag:
         cjTabulize();
         DbprintfEx(FLAG_NEWLINE, "%s[ FAIL ]%s\r\n->did not found all the keys :'(", _XRED_, _XWHITE_);
         cjSetCursLeft();
-        SpinErr(1, 100, 8);
+        SpinErr(LED_B, 100, 8);
         SpinOff(100);
         return;
     }
@@ -672,7 +672,7 @@ failtag:
             cjSetCursLeft();
 
             DbprintfEx(FLAG_NEWLINE, "FATAL:EML_FALLBACKFILL_B");
-            SpinErr(2, 100, 8);
+            SpinErr(LED_C, 100, 8);
             SpinOff(100);
             return;
         }
@@ -778,7 +778,7 @@ readysim:
     DbprintfEx(FLAG_NEWLINE, "- [ LA FIN ] -\r\n%s`-> You can take shell back :) ...", _XWHITE_);
     cjSetCursLeft();
     vtsend_set_attribute(NULL, 0);
-    SpinErr(3, 100, 16);
+    SpinErr(LED_D, 100, 16);
     SpinDown(75);
     SpinOff(100);
     return;

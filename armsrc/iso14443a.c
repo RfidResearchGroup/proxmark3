@@ -1672,26 +1672,11 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
     // clear TXRDY
     AT91C_BASE_SSC->SSC_THR = SEC_Y;
 
-    volatile uint8_t b;
     uint16_t c = 0;
-    uint32_t sendtimer = GetTickCount();
-    uint32_t cntr = 0;
     while (c < len) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = cmd[c++];
-            cntr = 0;
-        } else {
-            if (cntr++ > 1000) {
-                cntr = 0;
-                if (GetTickCount() - sendtimer > 100)
-                    break;
-            }
-        }
-
-        //iceman test
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
-            (void)b;
+            AT91C_BASE_SSC->SSC_THR = cmd[c];
+            c++;
         }
     }
 

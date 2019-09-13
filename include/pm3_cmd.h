@@ -229,6 +229,10 @@ typedef struct {
     uint8_t key[6];
 } PACKED mf_readblock_t;
 
+typedef struct {
+    uint8_t sectorcnt;
+    uint8_t keytype;
+} PACKED mfc_eload_t;
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000

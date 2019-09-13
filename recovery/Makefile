@@ -1,6 +1,13 @@
 include ../common_arm/Makefile.common
 
-BINS = bootrom.bin fullimage.bin proxmark3_recovery.bin
+INSTALLFW = proxmark3_recovery.bin
+ifneq (,$(FWTAG))
+    INSTALLFWTAG = $(notdir $(INSTALLFW:%.bin=%-$(FWTAG).bin))
+else
+    INSTALLFWTAG = $(notdir $(INSTALLFW))
+endif
+
+BINS = bootrom.bin fullimage.bin $(INSTALLFW)
 
 all: $(BINS)
 
@@ -17,5 +24,15 @@ proxmark3_recovery.bin: bootrom.bin fullimage.bin
 	$(Q)cat bootrom.bin fullimage.bin > $@
 
 clean:
-	$(Q)rm -f $(BINS)
+	$(Q)$(RM) $(BINS)
 
+install: all
+	$(info [@] Installing recovery to $(DESTDIR)$(PREFIX)...)
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
+
+uninstall:
+	$(info [@] Uninstalling recovery from $(DESTDIR)$(PREFIX)...)
+	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
+
+.PHONY: all clean install uninstall

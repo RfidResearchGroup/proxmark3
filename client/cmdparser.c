@@ -176,6 +176,9 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     memset(cmd_name, 0, sizeof(cmd_name));
     sscanf(Cmd, "%127s%n", cmd_name, &len);
     str_lower(cmd_name);
+    // Comment
+    if (cmd_name[0] == '#')
+        return PM3_SUCCESS;
     int i = 0;
     while (Commands[i].Name) {
         if (0 == strcmp(Commands[i].Name, cmd_name)) {

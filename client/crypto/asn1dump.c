@@ -25,6 +25,8 @@
 #include "emv/emvjson.h"
 #include "util.h"
 #include "proxmark3.h"
+#include "fileutils.h"
+#include "pm3_cmd.h"
 
 #ifndef PRINT_INDENT
 # define PRINT_INDENT(level) {for (int myi = 0; myi < (level); myi++) fprintf(f, "   ");}
@@ -235,25 +237,17 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
     json_error_t error;
     json_t *root = NULL;
-    char fname[300] = {0};
     static char res[300];
     memset(res, 0x00, sizeof(res));
 
-    size_t len = strlen(get_my_executable_directory());
-    if (len >= 300) len = 299;
-
-    strncpy(fname, get_my_executable_directory(), len);
-    strcat(fname, "crypto/oids.json");
-    if (access(fname, F_OK) < 0) {
-        strncpy(fname, get_my_executable_directory(), len);
-        strcat(fname, "oids.json");
-        if (access(fname, F_OK) < 0) {
-            goto error; // file not found
-        }
+    char *path;
+    if (searchFile(&path, RESOURCES_SUBDIR, "oids", ".json", false) != PM3_SUCCESS) {
+        return NULL;
     }
 
     // load `oids.json`
-    root = json_load_file(fname, 0, &error);
+    root = json_load_file(path, 0, &error);
+    free(path);
 
     if (!root || !json_is_object(root)) {
         goto error;

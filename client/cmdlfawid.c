@@ -58,7 +58,7 @@ static int usage_lf_awid_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf awid sim 26 224 1337");
-    PrintAndLogEx(NORMAL, "       lf awid sim 50 2001 deadc0de");
+    PrintAndLogEx(NORMAL, "       lf awid sim 50 2001 13371337");
     return PM3_SUCCESS;
 }
 

@@ -12,7 +12,7 @@
 #include "cmdhf14b.h"
 
 #include <ctype.h>
-#include "loclass/fileutils.h"
+#include "fileutils.h"
 
 #include "cmdparser.h"    // command_t
 #include "comms.h"        // clearCommandBuffer

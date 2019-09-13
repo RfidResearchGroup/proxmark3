@@ -8,6 +8,7 @@
 #include "amiibo.h"
 #include "mbedtls/md.h"
 #include "mbedtls/aes.h"
+#include "commonutil.h"
 
 #define HMAC_POS_DATA 0x008
 #define HMAC_POS_TAG 0x1B4

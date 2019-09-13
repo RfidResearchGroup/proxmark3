@@ -134,6 +134,13 @@ include ../common_arm/Makefile.common
 
 COMMON_FLAGS =  -Os
 
+INSTALLFW = $(OBJDIR)/fullimage.elf
+ifneq (,$(FWTAG))
+    INSTALLFWTAG = $(notdir $(INSTALLFW:%.elf=%-$(FWTAG).elf))
+else
+    INSTALLFWTAG = $(notdir $(INSTALLFW))
+endif
+
 OBJS = $(OBJDIR)/fullimage.s19
 FPGA_COMPRESSOR = ../tools/fpga_compress/fpga_compress
 
@@ -144,7 +151,7 @@ all: $(OBJS)
 # version.c should be remade on every time fullimage.stage1.elf should be remade
 version.c: default_version.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [-] GEN $@)
-	$(Q)perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@
+	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) | $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
@@ -203,17 +210,26 @@ tarbin: $(OBJS)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=armsrc/%) $(OBJS:%.s19=armsrc/%.elf)
 
 clean:
-	$(Q)$(DELETE) $(DEPENDENCY_FILES)
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.o
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.elf
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.map
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.d
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.z
-	$(Q)$(DELETE) $(OBJDIR)$(PATHSEP)*.bin
-	$(Q)$(DELETE) version.c
+	$(Q)$(RM) $(DEPENDENCY_FILES)
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.z
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.bin
+	$(Q)$(RM) version.c
 
-.PHONY: all clean help
+install: all
+	$(info [@] Installing fullimage to $(DESTDIR)$(PREFIX)...)
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
+
+uninstall:
+	$(info [@] Uninstalling fullimage from $(DESTDIR)$(PREFIX)...)
+	$(Q)$(RM) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
+
+.PHONY: all clean help install uninstall
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

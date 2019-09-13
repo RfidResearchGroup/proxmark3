@@ -24,7 +24,13 @@
 #include <readline/readline.h>
 #include <complex.h>
 #include "util.h"
-
+#include "proxmark3.h"  // PROXLOG
+#include "fileutils.h"
+#include "pm3_cmd.h"
+#ifdef _WIN32
+# include <direct.h>    // _mkdir
+#endif
+#include <time.h>
 session_arg_t session;
 
 double CursorScaleFactor = 1;
@@ -36,8 +42,60 @@ bool GridLocked = false;
 bool showDemod = true;
 
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
-static const char *logfilename = "proxmark3.log";
+
 static void fPrintAndLog(FILE *stream, const char *fmt, ...);
+
+// needed by flasher, so let's put it here instead of fileutils.c
+int searchHomeFilePath(char **foundpath, const char *filename, bool create_home) {
+    if (foundpath == NULL)
+        return PM3_EINVARG;
+    const char *user_path = get_my_user_directory();
+    if (user_path == NULL) {
+        fprintf(stderr, "Could not retrieve $HOME from the environment\n");
+        return PM3_EFILE;
+    }
+    char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1, sizeof(char));
+    if (path == NULL)
+        return PM3_EMALLOC;
+    strcpy(path, user_path);
+    strcat(path, PM3_USER_DIRECTORY);
+
+    int result;
+#ifdef _WIN32
+    struct _stat st;
+    // Mingw _stat fails if path ends with /, so let's use a stripped path
+    if (path[strlen(path) - 1] == '/') {
+        path[strlen(path) - 1] = '\0';
+        result = _stat(path, &st);
+        path[strlen(path)] = '/';
+    } else {
+        result = _stat(path, &st);
+    }
+#else
+    struct stat st;
+    result = stat(path, &st);
+#endif
+    if ((result != 0) && create_home) {
+
+#ifdef _WIN32
+        if (_mkdir(path)) {
+#else
+        if (mkdir(path, 0700)) {
+#endif
+            fprintf(stderr, "Could not create user directory %s\n", path);
+            free(path);
+            return PM3_EFILE;
+        }
+    }
+    if (filename == NULL) {
+        *foundpath = path;
+        return PM3_SUCCESS;
+    }
+    path = realloc(path, (strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(filename) + 1) * sizeof(char));
+    strcat(path, filename);
+    *foundpath = path;
+    return PM3_SUCCESS;
+}
 
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     char buff[2000] = "Options:\n";
@@ -165,11 +223,26 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     // lock this section to avoid interlacing prints from different threads
     pthread_mutex_lock(&print_lock);
 
-    if (logging && !logfile) {
-        logfile = fopen(logfilename, "a");
-        if (!logfile) {
-            fprintf(stderr, "Can't open logfile, logging disabled!\n");
+    if ((g_printAndLog & PRINTANDLOG_LOG) && logging && !logfile) {
+        char *my_logfile_path = NULL;
+        char filename[40];
+        struct tm *timenow;
+        time_t now = time(NULL);
+        timenow = gmtime(&now);
+        strftime(filename, sizeof(filename), PROXLOG, timenow);
+        if (searchHomeFilePath(&my_logfile_path, filename, true) != PM3_SUCCESS) {
+            fprintf(stderr, "[-] Logging disabled!\n\n");
+            my_logfile_path = NULL;
             logging = 0;
+        } else {
+            logfile = fopen(my_logfile_path, "a");
+            if (logfile == NULL) {
+                fprintf(stderr, "[-] Can't open logfile %s, logging disabled!\n", my_logfile_path);
+                logging = 0;
+            } else {
+                printf("[=] Session log %s\n", my_logfile_path);
+            }
+            free(my_logfile_path);
         }
     }
 
@@ -196,9 +269,11 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 
     bool filter_ansi = !session.supports_colors;
     memcpy_filter_ansi(buffer2, buffer, sizeof(buffer), filter_ansi);
-    fprintf(stream, "%s", buffer2);
-    fprintf(stream, "          "); // cleaning prompt
-    fprintf(stream, "\n");
+    if (g_printAndLog & PRINTANDLOG_PRINT) {
+        fprintf(stream, "%s", buffer2);
+        fprintf(stream, "          "); // cleaning prompt
+        fprintf(stream, "\n");
+    }
 
 #ifdef RL_STATE_READCMD
     // We are using GNU readline. libedit (OSX) doesn't support this flag.
@@ -211,7 +286,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     }
 #endif
 
-    if (logging && logfile) {
+    if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
         if (filter_ansi) { // already done
             fprintf(logfile, "%s\n", buffer2);
         } else {
@@ -226,10 +301,6 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 
     //release lock
     pthread_mutex_unlock(&print_lock);
-}
-
-void SetLogFilename(char *fn) {
-    logfilename = fn;
 }
 
 void SetFlushAfterWrite(bool value) {
