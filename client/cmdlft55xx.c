@@ -113,18 +113,20 @@ static int usage_t55xx_resetread() {
     return PM3_SUCCESS;
 }
 static int usage_t55xx_write() {
-    PrintAndLogEx(NORMAL, "Usage:  lf t55xx write [r <mode>] b <block> d <data> [p <password>] [1] [t]");
+    PrintAndLogEx(NORMAL, "Usage:  lf t55xx write [r <mode>] b <block> d <data> [p <password>] [1] [t] [v]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     b <block>    - block number to write. Between 0-7");
     PrintAndLogEx(NORMAL, "     d <data>     - 4 bytes of data to write (8 hex characters)");
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password 4bytes (8 hex characters)");
     PrintAndLogEx(NORMAL, "     1            - OPTIONAL write Page 1 instead of Page 0");
     PrintAndLogEx(NORMAL, "     t            - OPTIONAL test mode write - ****DANGER****");
+    PrintAndLogEx(NORMAL, "     v            - OPTIONAL validate data afterwards");
     print_usage_t55xx_downloadlink();
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx write b 3 d 11223344            - write 11223344 to block 3");
     PrintAndLogEx(NORMAL, "      lf t55xx write b 3 d 11223344 p feedbeef - write 11223344 to block 3 password feedbeef");
+    PrintAndLogEx(NORMAL, "      lf t55xx write b 3 d 11223344 v          - write 11223344 to block 3 and try to validate data");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -305,6 +307,48 @@ static int usage_lf_deviceconfig() {
 }
 
 static int CmdHelp(const char *Cmd);
+
+static bool t55xxVerifyWrite( uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data) {
+  
+    //Password mode
+    if (usepwd) {
+        // try reading the config block and verify that PWD bit is set before doing this!
+        if (override == 0) {
+            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, downlink_mode) == false)
+                return false;
+
+            if (tryDetectModulation() == false) {
+                PrintAndLogEx(NORMAL, "Safety Check: Could not detect if PWD bit is set in config block. Exits.");
+                return false;
+            } else {
+                PrintAndLogEx(NORMAL, "Safety Check: PWD bit is NOT set in config block. Reading without password...");
+                usepwd = false;
+            }
+        } else if (override == 1) {
+            PrintAndLogEx(NORMAL, "Safety Check Overriden - proceeding despite risk");
+        }
+    }
+
+    if (AquireData(page1, block, usepwd, password, downlink_mode) == false)
+        return false;
+
+    if (block == 0 && page1 == false) {
+        if (tryDetectModulation() == false) {
+            PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
+            return false;
+        }
+    }
+    
+    if (DecodeT55xxBlock() == false)
+        return false;
+
+    // compare...
+    uint32_t readblock = 0;
+   if (GetT55xxBlockData(&readblock) == false)
+       return false;
+   
+   return (readblock == data);
+}
 
 void printT5xxHeader(uint8_t page) {
     PrintAndLogEx(NORMAL, "Reading Page %d:", page);
@@ -1224,6 +1268,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     bool gotdata = false;
     bool testMode = false;
     bool errors = false;
+    bool validate = false;
     uint8_t cmdp = 0;
     uint32_t downlink_mode = 0;
 
@@ -1265,6 +1310,10 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
 
                 cmdp += 2;
                 break;
+            case 'v':
+                validate = true;
+                cmdp++;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -1285,8 +1334,6 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Writing page %d  block: %02d  data: 0x%08X %s", page1, block, data, (usepwd) ? pwdStr : "");
 
-    clearCommandBuffer();
-
     /*
         OLD style
        arg0 = data, (4 bytes)
@@ -1303,11 +1350,22 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     ng.blockno = block;
     ng.flags   = flags;
 
+    clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
     if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, 2000)) {
         PrintAndLogEx(ERR, "Error occurred, device did not ACK write operation. (May be due to old firmware)");
         return PM3_ETIMEOUT;
     }
+    
+    if (validate) {
+//t55xxVerifyWrite( uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data) {        
+        bool isOK = t55xxVerifyWrite(block, page1, usepwd, 1, password, downlink_mode, data);
+        if (isOK) 
+            PrintAndLogEx(SUCCESS, "Write OK, validation succesful");
+        else
+            PrintAndLogEx(WARNING, "Write could not validate the written data");
+    }
+    
     return PM3_SUCCESS;
 }
 
