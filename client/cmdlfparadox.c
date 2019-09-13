@@ -22,7 +22,7 @@
 #include "cmdlf.h"
 #include "lfdemod.h"
 static int CmdHelp(const char *Cmd);
-
+/*
 static int usage_lf_paradox_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Paradox card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
@@ -38,6 +38,7 @@ static int usage_lf_paradox_sim(void) {
     PrintAndLogEx(NORMAL, "       lf paradox sim 123 11223");
     return PM3_SUCCESS;
 }
+*/
 
 //by marshmellow
 //Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
@@ -111,8 +112,12 @@ static int CmdParadoxRead(const char *Cmd) {
     return CmdParadoxDemod(Cmd);
 }
 
-static int CmdParadoxSim(const char *Cmd) {
 
+static int CmdParadoxSim(const char *Cmd) {
+    PrintAndLogEx(INFO," To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+/*
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_paradox_sim();
 
@@ -155,13 +160,13 @@ static int CmdParadoxSim(const char *Cmd) {
         return resp.status;
     return PM3_SUCCESS;
 }
-
+*/
 static command_t CommandTable[] = {
     {"help",  CmdHelp,          AlwaysAvailable, "This help"},
     {"demod", CmdParadoxDemod,  AlwaysAvailable, "Demodulate a Paradox FSK tag from the GraphBuffer"},
     {"read",  CmdParadoxRead,   IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
 //  {"clone", CmdParadoxClone,  IfPm3Lf,         "clone paradox tag"},
-//  {"sim",   CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
+    {"sim",   CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
     {NULL, NULL, NULL, NULL}
 };
 
