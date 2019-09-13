@@ -941,12 +941,10 @@ static void fcSTT(int *n) {
 }
 
 // compose fc/X fc/Y waveform (FSKx)
-static uint8_t fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
+static void fcAll(uint8_t fc, int *n, uint8_t clock, int16_t *remainder) {
     uint8_t *dest = BigBuf_get_addr();
     uint8_t halfFC = fc >> 1;
-    uint8_t wavesPerClock = clock / fc;
-    uint8_t mod = clock % fc;    //modifier
-
+    uint8_t wavesPerClock = (clock + *remainder) / fc;
     // loop through clock - step field clock
     for (uint8_t idx = 0; idx < wavesPerClock; idx++) {
         // put 1/2 FC length 1's and 1/2 0's per field clock wave (to create the wave)
@@ -954,27 +952,14 @@ static uint8_t fcAll(uint8_t fc, int *n, uint8_t clock, uint16_t *modCnt) {
         memset(dest + (*n) + (fc - halfFC), 1, halfFC);
         *n += fc;
     }
-    if (mod > 0) {
-        uint8_t modAdj = fc / mod;   //how often to apply modifier
-        bool modAdjOk = !(fc % mod); //if (fc % mod==0) modAdjOk = true;
-        (*modCnt)++;
-
-        if (modAdjOk) { //fsk2
-            if ((*modCnt % modAdj) == 0) { //if 4th 8 length wave in a rf/50 add extra 8 length wave
-                memset(dest + (*n), 0, fc - halfFC);
-                memset(dest + (*n) + (fc - halfFC), 1, halfFC);
-                *n += fc;
-            }
-        }
-/*  This code interfers with FSK2 and I don't see any example of FSK1 simulation in the code...
-        if (!modAdjOk) { //fsk1
-            memset(dest + (*n), 0, mod - (mod >> 1));
-            memset(dest + (*n) + (mod - (mod >> 1)), 1, mod >> 1);
-            *n += mod;
-        }
-*/
+    *remainder = (clock + *remainder) % fc;
+    // if we've room for more than a half wave, add a full wave and use negative remainder
+    if (*remainder > halfFC) {
+        memset(dest + (*n), 0, fc - halfFC);  //in case of odd number use extra here
+        memset(dest + (*n) + (fc - halfFC), 1, halfFC);
+        *n += fc;
+        *remainder -= fc;
     }
-    return mod;
 }
 
 // prepare a waveform pattern in the buffer based on the ID given then
@@ -1061,8 +1046,7 @@ void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk,
     set_tracing(false);
 
     int n = 0, i = 0;
-    uint16_t modCnt = 0;
-    uint8_t mod = 0;
+    int16_t remainder = 0;
 
     if (separator) {
         //int fsktype = ( fchigh == 8 && fclow == 5) ? 1 : 2;
@@ -1070,9 +1054,9 @@ void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk,
     }
     for (i = 0; i < bitslen; i++) {
         if (bits[i])
-            mod = fcAll(fchigh, &n, clk+mod, &modCnt);
+            fcAll(fchigh, &n, clk, &remainder);
         else
-            mod = fcAll(fclow, &n, clk+mod, &modCnt);
+            fcAll(fclow, &n, clk, &remainder);
     }
 
     WDT_HIT();
