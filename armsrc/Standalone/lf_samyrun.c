@@ -41,14 +41,14 @@ void RunMod() {
 
 #define STATE_READ 0
 #define STATE_SIM 1
-#define STATE_CLONE 2   
+#define STATE_CLONE 2
 
     uint8_t state = STATE_READ;
-    
+
     for (;;) {
-           
+
         WDT_HIT();
-              
+
         // exit from SamyRun,   send a usbcommand.
         if (data_available()) break;
 
@@ -65,70 +65,71 @@ void RunMod() {
         if ( state == STATE_READ ) {
 
             if (selected == 0) {
-                LED_A_ON(); 
+                LED_A_ON();
                 LED_B_OFF();
-            } else { 
-                LED_B_ON(); 
+            } else {
+                LED_B_ON();
                 LED_A_OFF();
             }
-            
+
             LED_C_OFF();
             LED_D_OFF();
 
             WAIT_BUTTON_RELEASED();
-                
+
             // record
             DbpString("[=] starting recording");
 
-            // findone, high, low, no ledcontrol (A) 
+            // findone, high, low, no ledcontrol (A)
             uint32_t hi = 0, lo = 0;
             CmdHIDdemodFSK(1, &hi, &lo, 0);
             high[selected] = hi;
             low[selected] = lo;
-            
+
             Dbprintf("[=] recorded bank %x | %x%08x", selected, high[selected], low[selected]);
 
             // got nothing. blink and loop.
             if ( hi == 0 && lo == 0 ) {
-                SpinErr( (selected == 0) ? LED_A : LED_B, 100, 12); 
+                SpinErr( (selected == 0) ? LED_A : LED_B, 100, 12);
                 Dbprintf("[=] recorded nothing, looping");
                 continue;
             }
-            
+
+            SpinErr( (select==0) ? LED_A : LED_B, 250, 2);
             state = STATE_SIM;
             continue;
 
         } else if ( state == STATE_SIM ) {
- 
-            LED_C_ON();   // Simulate 
+
+            LED_C_ON();   // Simulate
             LED_D_OFF();
             WAIT_BUTTON_RELEASED();
-            
+
             Dbprintf("[=] simulating %x | %x%08x", selected, high[selected], low[selected]);
 
             // high, low, no led control(A)  no time limit
-            CmdHIDsimTAGEx(high[selected], low[selected], false, -1);  
+            CmdHIDsimTAGEx(high[selected], low[selected], false, -1);
+            SpinErr( LED_C, 250, 2);
             state = STATE_CLONE;
             continue;
-            
+
         } else if ( state == STATE_CLONE ) {
 
             LED_C_OFF();
-            LED_D_ON();   // clone 
+            LED_D_ON();   // clone
             WAIT_BUTTON_RELEASED();
-            
+
             Dbprintf("[=] cloning %x | %x%08x", selected, high[selected], low[selected]);
 
             // high2, high, low,  no longFMT
             CopyHIDtoT55x7(0, high[selected], low[selected], 0);
             state = STATE_READ;
-                        
+            SpinErr( LED_D, 250, 2);
             selected = (selected + 1) % OPTS;
-
             LEDsoff();
         }
     }
 
-    DbpString("[=] exiting samyrun");    
+    DbpString("[=] exiting samyrun");
     LEDsoff();
 }
