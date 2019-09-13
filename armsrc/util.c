@@ -90,7 +90,7 @@ void LEDsoff() {
     LED_D_OFF();
 }
 
-//ICEMAN:   LED went from 1,2,3,4 -> 1,2,4,8   
+//ICEMAN:   LED went from 1,2,3,4 -> 1,2,4,8
 void LED(int led, int ms) {
     if (led & LED_A) // Proxmark3 historical mapping: LED_ORANGE
         LED_A_ON();
