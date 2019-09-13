@@ -42,13 +42,13 @@ void RunMod() {
         // exit from SamyRun,   send a usbcommand.
         if (data_available()) break;
 
-       // Was our button held down or pressed?
+        // Was our button held down or pressed?
         int button_pressed = BUTTON_HELD(280);
-        if ( button_pressed != BUTTON_HOLD )
+        if (button_pressed != BUTTON_HOLD)
             continue;
 
         // Button was held for a second, begin recording
-        if ( state == STATE_READ ) {
+        if (state == STATE_READ) {
 
             LEDsoff();
             LED_A_ON();
@@ -63,8 +63,8 @@ void RunMod() {
             Dbprintf("[=]   recorded | %x%08x", high, low);
 
             // got nothing. blink and loop.
-            if ( high == 0 && low == 0 ) {
-                SpinErr( LED_A, 100, 12);
+            if (high == 0 && low == 0) {
+                SpinErr(LED_A, 100, 12);
                 DbpString("[=] only got zeros, retry recording after click");
                 continue;
             }
@@ -73,7 +73,7 @@ void RunMod() {
             state = STATE_BRUTE;
             continue;
 
-        } else if ( state == STATE_BRUTE ) {
+        } else if (state == STATE_BRUTE) {
 
             LED_C_ON();   // Simulate
             WAIT_BUTTON_RELEASED();
@@ -97,7 +97,7 @@ void RunMod() {
 
                 // Was our button held down or pressed?
                 int button_pressed = BUTTON_HELD(280);
-                if ( button_pressed != BUTTON_HOLD ) break;
+                if (button_pressed != BUTTON_HOLD) break;
 
                 Dbprintf("[=] trying Facility = %08x ID %08x", high, i);
 
@@ -107,13 +107,13 @@ void RunMod() {
                 SpinDelay(100);
             }
 
-           state = STATE_READ;
-           SpinErr( (LED_A | LED_C ), 250, 2);
-           LEDsoff();
+            state = STATE_READ;
+            SpinErr((LED_A | LED_C), 250, 2);
+            LEDsoff();
         }
     }
 
-    SpinErr( (LED_A | LED_B | LED_C | LED_D), 250, 5);
+    SpinErr((LED_A | LED_B | LED_C | LED_D), 250, 5);
     DbpString("[=] You can take the shell back :) ...");
     LEDsoff();
 }
