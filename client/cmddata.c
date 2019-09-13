@@ -36,6 +36,7 @@ static int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       i          invert Demodbuffer before printing");
     PrintAndLogEx(NORMAL, "       x          output in hex (omit for binary output)");
     PrintAndLogEx(NORMAL, "       o <offset> enter offset in # of bits");
     PrintAndLogEx(NORMAL, "       l <length> enter length to print in # of bits or hex characters respectively");
@@ -251,7 +252,6 @@ static int usage_data_fsktonrz() {
     return PM3_SUCCESS;
 }
 
-
 //set the demod buffer with given array of binary (one bit per byte)
 //by marshmellow
 void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx) {
@@ -404,6 +404,7 @@ int CmdPrintDemodBuff(const char *Cmd) {
     bool hexMode = false;
     bool errors = false;
     bool lstrip = false;
+    bool invert = false;
     uint32_t offset = 0;
     uint32_t length = 512;
     char cmdp = 0;
@@ -427,7 +428,11 @@ int CmdPrintDemodBuff(const char *Cmd) {
                 break;
             case 's':
                 lstrip = true;
-                cmdp ++;
+                cmdp++;
+                break;
+            case 'i':
+                invert = true;
+                cmdp++;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -452,6 +457,18 @@ int CmdPrintDemodBuff(const char *Cmd) {
         offset += i;
     }
     length = (length > (DemodBufferLen - offset)) ? DemodBufferLen - offset : length;
+
+    if (invert) {
+        char *buf = (char *)(DemodBuffer + offset);
+        for (uint32_t i = 0; i < length; i++) {
+            if ( buf[i] == 1 )
+                buf[i] = 0;
+            else {
+                if ( buf[i] == 0 )
+                    buf[i] = 1;
+            }
+        }
+    }
 
     if (hexMode) {
         char *buf = (char *)(DemodBuffer + offset);
@@ -2160,7 +2177,6 @@ static command_t CommandTable[] = {
     {"dec",             CmdDec,                  AlwaysAvailable, "Decimate samples"},
     {"detectclock",     CmdDetectClockRate,      AlwaysAvailable, "[<a|f|n|p>] Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
     {"fsktonrz",        CmdFSKToNRZ,             AlwaysAvailable, "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},
-
     {"getbitstream",    CmdGetBitStream,         AlwaysAvailable, "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
     {"grid",            CmdGrid,                 AlwaysAvailable, "<x> <y> -- overlay grid on graph window, use zero value to turn off either"},
     {"hexsamples",      CmdHexsamples,           IfPm3Present,    "<bytes> [<offset>] -- Dump big buffer as hex bytes"},
