@@ -636,7 +636,7 @@ failtag:
         cjTabulize();
         DbprintfEx(FLAG_NEWLINE, "%s[ FAIL ]%s\r\n->did not found all the keys :'(", _XRED_, _XWHITE_);
         cjSetCursLeft();
-        SpinErr(LEB_B, 100, 8);
+        SpinErr(LED_B, 100, 8);
         SpinOff(100);
         return;
     }
