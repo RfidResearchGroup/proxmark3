@@ -354,7 +354,6 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
     if (GetT55xxBlockData(&block0) == false)
         return false;
 
-    uint32_t old = block0;
     bool isPwdBitAlreadySet = (block0 >> (32-28) & 1);
     if (isPwdBitAlreadySet) {
         PrintAndLogEx(INFO, "PWD bit is already set");
