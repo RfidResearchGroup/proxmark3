@@ -90,8 +90,8 @@ local function getblockdata(response)
     return nil, "Couldn't read block"
 end
 ---_ Gets data from a block
--- @return {block, block+1, block+2, block+3} if successfull
--- @return nil, errormessage if unsuccessfull
+-- @return {block, block+1, block+2, block+3} if successful
+-- @return nil, errormessage if unsuccessful
 local function getBlock(blockno)
     local block, err
     local c = Command:newMIX{cmd = cmds.CMD_HF_MIFAREU_READBL, arg1 = blockno, data = 0}

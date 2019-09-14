@@ -340,14 +340,14 @@ static int CmdHelp(const char *Cmd);
 
 static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t new_password ) {
 
-    PrintAndLogEx(INFO, "Checking current block0");
+    PrintAndLogEx(INFO, "Checking current configuration");
     
     bool testmode = false;
     uint32_t block0 = 0;
 
     int res = T55xxReadBlockEx(T55x7_CONFIGURATION_BLOCK, T55x7_PAGE0, usepwd, override, password, downlink_mode, false);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "fail to read current block0, use `p` password parameter ?");
+        PrintAndLogEx(WARNING, "Failed to read block0, use `p` password parameter?");
         return false;
     }
         
@@ -360,41 +360,27 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
         PrintAndLogEx(INFO, "PWD bit is already set");
         usepwd = true;
     }
-    
+
+    // set / clear pwd bit    
     if (lock) {
-        // set pwd bit
         block0 |= 1 << 4;
     } else {
         block0 &= ~(1 << 4);
     }
-    
-    PrintAndLogEx(INFO, " old %08X vs %08X", old, block0);
 
     // write new password  
     if ( t55xxWrite(T55x7_PWD_BLOCK, T55x7_PAGE0, usepwd, testmode, password, downlink_mode, new_password ) != PM3_SUCCESS ) {
-        PrintAndLogEx(ERR, "Failed writing new pwd");
+        PrintAndLogEx(ERR, "Failed to write new password");
         return false;
     } else {
         PrintAndLogEx(SUCCESS, "Wrote new password");
     }
 
-    // password bit already set
-    // write b 7 new key  old_pwd
-    // validate b 7 new_key old_pwd
-    // write b0 new_key
-    // validate b0 new_key    
-    
-    // write b7 new key
-    // validate b7 (no key)
-    // write b0 (no key)
-    // validate b0 w new key
-
-    
     // validate new password
     uint32_t curr_password = (isPwdBitAlreadySet) ? new_password : password;
     
     if (t55xxVerifyWrite(T55x7_PWD_BLOCK, T55x7_PAGE0, usepwd, override, curr_password, downlink_mode, new_password) == false) {
-        PrintAndLogEx(WARNING, "Could not validate the new password write. aborting.");
+        PrintAndLogEx(WARNING, "Failed to validate the password write. aborting.");
         return false;
     } else {
         PrintAndLogEx(SUCCESS, "Validated new password");
@@ -402,7 +388,7 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
     
     // write config
     if ( t55xxWrite(T55x7_CONFIGURATION_BLOCK, T55x7_PAGE0, usepwd, testmode, curr_password, downlink_mode, block0 ) != PM3_SUCCESS ) {
-        PrintAndLogEx(ERR, "Failed writing modified configuration block  %08X", block0);
+        PrintAndLogEx(ERR, "Failed to write modified configuration block %08X", block0);
         return false;
     } else {
         PrintAndLogEx(SUCCESS, "Wrote modified configuration block");
@@ -411,7 +397,7 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
     // validate new config.  If all went well,  card should now demand pwd, hence override = 0.
     override = 0;
     if (t55xxVerifyWrite(T55x7_CONFIGURATION_BLOCK, T55x7_PAGE0, true, override, new_password, downlink_mode, block0) == false) {
-        PrintAndLogEx(WARNING, "Could not validate pwd bit set on configuration block. aborting.");
+        PrintAndLogEx(WARNING, "Failed to validate pwd bit set on configuration block. aborting.");
         return false;
     } else {
         PrintAndLogEx(SUCCESS, "New configuration block " _YELLOW_("%08X")"password " _YELLOW_("%08X"), block0, new_password);
@@ -681,15 +667,15 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
                 return PM3_ERFTRANS;
 
             if (tryDetectModulation(downlink_mode, false) == false) {
-                PrintAndLogEx(WARNING, "Safety Check: Could not detect if PWD bit is set in config block. Exits.");
+                PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
                 return PM3_EWRONGANSVER;
             } else {
-                PrintAndLogEx(WARNING, "Safety Check: PWD bit is NOT set in config block. Reading without password...");
+                PrintAndLogEx(WARNING, "Safety check: PWD bit is NOT set in config block. Reading without password...");
                 usepwd = false;
                 page1 = false; // ??
             }
         } else if (override == 1) {
-            PrintAndLogEx(INFO, "Safety Check Overriden - proceeding despite risk");
+            PrintAndLogEx(INFO, "Safety check overridden - proceeding despite risk");
         }
     }
 
@@ -1525,7 +1511,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     if (validate) {
         bool isOK = t55xxVerifyWrite(block, page1, usepwd, 1, password, downlink_mode, data);
         if (isOK) 
-            PrintAndLogEx(SUCCESS, "Write OK, validation succesful");
+            PrintAndLogEx(SUCCESS, "Write OK, validation successful");
         else
             PrintAndLogEx(WARNING, "Write could not validate the written data");
     }
@@ -3173,10 +3159,7 @@ static int CmdT55xxProtect(const char *Cmd) {
         return PM3_ESOFT;
     
     // lock
-    bool res = t55xxProtect(true, usepwd, override, password, downlink_mode, new_password );
-    // unlock
-//    res = t55xxProtect(false, usepwd, override, password, downlink_mode, new_password );
-    if (res == false) {
+    if  ( t55xxProtect(true, usepwd, override, password, downlink_mode, new_password) == false ) {
         PrintAndLogEx(WARNING, "Command failed. Did you run `lf t55xx detect` before?");
         return PM3_ESOFT;
     }

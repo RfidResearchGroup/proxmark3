@@ -245,7 +245,7 @@ static int CmdLFHitagList(const char *Cmd) {
 
     if (f) {
         fclose(f);
-        PrintAndLogEx(NORMAL, "Recorded activity succesfully written to file: %s", filename);
+        PrintAndLogEx(NORMAL, "Recorded activity successfully written to file: %s", filename);
     }
 
     free(got);

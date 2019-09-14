@@ -59,7 +59,7 @@ local Utils =
     -- @param blockData. Assumed to be on the format {'\0\1\2\3,'\b\e\e\f' ...,
     -- that is, blockData[row] contains a string with the actual data, not ascii hex representation
     -- return filename if all went well,
-    -- @reurn nil, error message if unsuccessfulls
+    -- @reurn nil, error message if unsuccessful
     WriteDumpFile = function(uid, blockData)
         local destination = string.format("%s.eml", uid)
         local file = io.open(destination, "w")

@@ -357,7 +357,7 @@ CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxda
     return CborGetArrayBinStringValueEx(elm, data, maxdatalen, datalen, NULL, 0);
 }
 
-CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimeter, size_t delimeterlen) {
+CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimiter, size_t delimiterlen) {
     CborValue array;
     if (datalen)
         *datalen = 0;
@@ -373,9 +373,9 @@ CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t max
         cbor_check(res);
 
         totallen += slen;
-        if (delimeter) {
-            memcpy(&data[totallen], delimeter, delimeterlen);
-            totallen += delimeterlen;
+        if (delimiter) {
+            memcpy(&data[totallen], delimiter, delimiterlen);
+            totallen += delimiterlen;
         }
         slen = maxdatalen - totallen;
     }
@@ -404,7 +404,7 @@ CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen
     return CborNoError;
 };
 
-CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimeter) {
+CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimiter) {
     CborValue array;
     if (datalen)
         *datalen = 0;
@@ -420,9 +420,9 @@ CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen,
         cbor_check(res);
 
         totallen += slen;
-        if (delimeter) {
-            strcat(data, delimeter);
-            totallen += strlen(delimeter);
+        if (delimiter) {
+            strcat(data, delimiter);
+            totallen += strlen(delimiter);
         }
         slen = maxdatalen - totallen;
         data[totallen] = 0x00;
