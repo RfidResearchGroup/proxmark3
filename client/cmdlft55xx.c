@@ -1397,7 +1397,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
 //t55xxVerifyWrite( uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data) {        
         bool isOK = t55xxVerifyWrite(block, page1, usepwd, 1, password, downlink_mode, data);
         if (isOK) 
-            PrintAndLogEx(SUCCESS, "Write OK, validation succesful");
+            PrintAndLogEx(SUCCESS, "Write OK, validation successful");
         else
             PrintAndLogEx(WARNING, "Write could not validate the written data");
     }

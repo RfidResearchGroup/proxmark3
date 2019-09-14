@@ -427,7 +427,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                     }
 
                     if (blocknr > 7) {
-                        DbpString("Read succesful!");
+                        DbpString("Read successful!");
                         bSuccessful = true;
                         return false;
                     }
@@ -440,7 +440,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
 
             // Unexpected response
             default: {
-                Dbprintf("Uknown frame length: %d", rxlen);
+                Dbprintf("Unknown frame length: %d", rxlen);
                 return false;
             }
             break;
@@ -532,7 +532,7 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
                         blocknr++;
                     }
                     if (blocknr > 7) {
-                        DbpString("Read succesful!");
+                        DbpString("Read successful!");
                         bSuccessful = true;
                         return false;
                     } else {
@@ -546,7 +546,7 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
 
             // Unexpected response
             default: {
-                Dbprintf("Uknown frame length: %d", rxlen);
+                Dbprintf("Unknown frame length: %d", rxlen);
                 return false;
             }
             break;
@@ -588,7 +588,7 @@ static bool hitag2_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                 memcpy(tx, NrAr, 8);
                 bCrypto = true;
             } else {
-                DbpString("Authentication succesful!");
+                DbpString("Authentication successful!");
                 return true;
             }
         }
@@ -596,7 +596,7 @@ static bool hitag2_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
 
         // Unexpected response
         default: {
-            Dbprintf("Uknown frame length: %d", rxlen);
+            Dbprintf("Unknown frame length: %d", rxlen);
             return false;
         }
         break;
@@ -655,7 +655,7 @@ static bool hitag2_test_auth_attempts(uint8_t *rx, const size_t rxlen, uint8_t *
         break;
 
         default: {
-            Dbprintf("Uknown frame length: %d", rxlen);
+            Dbprintf("Unknown frame length: %d", rxlen);
             return false;
         }
         break;
@@ -696,7 +696,7 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
         break;
         // Unexpected response
         default: {
-            Dbprintf("Uknown frame length: %d", rxlen);
+            Dbprintf("Unknown frame length: %d", rxlen);
             return false;
         }
         break;

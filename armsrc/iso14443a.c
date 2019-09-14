@@ -1005,7 +1005,7 @@ static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_res
         }
         break;
         default: {
-            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Error: unkown tagtype (%d)", tagType);
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Error: unknown tagtype (%d)", tagType);
             return false;
         }
         break;
@@ -2999,7 +2999,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 
     mf_nr_ar[3] &= 0x1F;
 
-    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Number of sent auth requestes: %u", i);
+    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Number of sent auth requests: %u", i);
 
     uint8_t buf[32] = {0x00};
     memset(buf, 0x00, sizeof(buf));

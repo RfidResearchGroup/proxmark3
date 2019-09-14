@@ -528,7 +528,7 @@ int mbedtls_ecp_tls_write_point(const mbedtls_ecp_group *grp, const mbedtls_ecp_
  *
  * \return          \c 0 on success,
  * \return          An \c MBEDTLS_ERR_MPI_XXX error code on initialization failure.
- * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE for unkownn groups.
+ * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE for unknown groups.
 
  */
 int mbedtls_ecp_group_load(mbedtls_ecp_group *grp, mbedtls_ecp_group_id id);
