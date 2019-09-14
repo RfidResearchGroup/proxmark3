@@ -30,8 +30,8 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
 void SimulateTagLowFrequency(int period, int gap, bool ledcontrol);
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 
-void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, bool ledcontrol, int numcycles);
-void CmdHIDsimTAG(uint32_t hi, uint32_t lo, bool ledcontrol);
+void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol, int numcycles);
+void CmdHIDsimTAG(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol);
 
 void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol, int numcycles);
 void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol);

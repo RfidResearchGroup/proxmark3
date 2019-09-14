@@ -102,7 +102,7 @@ void RunMod() {
                 Dbprintf("[=] trying Facility = %08x ID %08x", high, i);
 
                 // high, i, ledcontrol,  timelimit 20000
-                CmdHIDsimTAGEx(high, i, false, 20000);
+                CmdHIDsimTAGEx(0, high, i, 0, false, 20000);
 
                 SpinDelay(100);
             }

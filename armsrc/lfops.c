@@ -901,16 +901,8 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, int16_t *remainder) {
 
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
-void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, bool ledcontrol, int numcycles) {
+void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol, int numcycles) {
 
-    if (hi > 0xFFF) {
-        DbpString("[!] tags can only have 44 bits. - USE lf simfsk for larger tags");
-        return;
-    }
-
-    // special start of frame marker containing invalid Manchester bit sequences
-    uint8_t bits[8+44*2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
-    uint16_t n = 8;
     /*
      HID tag bitstream format
      The tag contains a 44bit unique code. This is sent out MSB first in sets of 4 bits
@@ -925,32 +917,87 @@ void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, bool ledcontrol, int numcycles) {
      bit 0 = fc8
     */
 
-    // TODO isn't there a manchester encoding function already available?
-    // manchester encode bits 43 to 32
-    for (int i = 11; i >= 0; i--) {
-        if ((hi >> i) & 1) {
-            bits[n++] = 1;
-            bits[n++] = 0;
-        } else {
-            bits[n++] = 0;
-            bits[n++] = 1;
+    uint8_t bits[8+84*2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
+    uint8_t bitlen = 0;
+
+    if (longFMT) {
+        // Ensure no more than 84 bits supplied
+        if (hi2 > 0xFFFFF) {
+            DbpString("Tags can only have 84 bits.");
+            return;
+        }
+        bitlen = 8+84*2;
+        // special start of frame marker containing invalid Manchester bit sequences
+        uint16_t n = 8;
+        hi2 |= 0x9E00000; // 9E: long format identifier
+        // manchester encode "9E" and bits 83 to 64
+        for (int i = 27; i >= 0; i--) {
+            if ((hi2 >> i) & 1) {
+                bits[n++] = 1;
+                bits[n++] = 0;
+            } else {
+                bits[n++] = 0;
+                bits[n++] = 1;
+            }
+        }
+        // manchester encode bits 63 to 32
+        for (int i = 31; i >= 0; i--) {
+            if ((hi >> i) & 1) {
+                bits[n++] = 1;
+                bits[n++] = 0;
+            } else {
+                bits[n++] = 0;
+                bits[n++] = 1;
+            }
+        }
+        // manchester encode bits 31 to 0
+        for (int i = 31; i >= 0; i--) {
+            if ((lo >> i) & 1) {
+                bits[n++] = 1;
+                bits[n++] = 0;
+            } else {
+                bits[n++] = 0;
+                bits[n++] = 1;
+            }
+        }
+
+    } else {
+
+        if (hi > 0xFFF) {
+            DbpString("[!] tags can only have 44 bits. - USE lf simfsk for larger tags");
+            return;
+        }
+
+        bitlen = 8+44*2;
+        // special start of frame marker containing invalid Manchester bit sequences
+        uint16_t n = 8;
+
+        // manchester encode bits 43 to 32
+        for (int i = 11; i >= 0; i--) {
+            if ((hi >> i) & 1) {
+                bits[n++] = 1;
+                bits[n++] = 0;
+            } else {
+                bits[n++] = 0;
+                bits[n++] = 1;
+            }
+        }
+        // manchester encode bits 31 to 0
+        for (int i = 31; i >= 0; i--) {
+            if ((lo >> i) & 1) {
+                bits[n++] = 1;
+                bits[n++] = 0;
+            } else {
+                bits[n++] = 0;
+                bits[n++] = 1;
+            }
         }
     }
-    // manchester encode bits 31 to 0
-    for (int i = 31; i >= 0; i--) {
-        if ((lo >> i) & 1) {
-            bits[n++] = 1;
-            bits[n++] = 0;
-        } else {
-            bits[n++] = 0;
-            bits[n++] = 1;
-        }
-    }
-    CmdFSKsimTAGEx(10, 8, 0, 50, sizeof(bits), bits, ledcontrol, numcycles);
+    CmdFSKsimTAGEx(10, 8, 0, 50, bitlen, bits, ledcontrol, numcycles);
 }
 
-void CmdHIDsimTAG(uint32_t hi, uint32_t lo, bool ledcontrol) {
-    CmdHIDsimTAGEx(hi, lo, ledcontrol, -1);
+void CmdHIDsimTAG(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol) {
+    CmdHIDsimTAGEx(hi2, hi, lo, longFMT, ledcontrol, -1);
     reply_ng(CMD_LF_HID_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
 

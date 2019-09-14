@@ -702,7 +702,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HID_SIMULATE: {
-            CmdHIDsimTAG(packet->oldarg[0], packet->oldarg[1], 1);
+            lf_hidsim_t *payload = (lf_hidsim_t *)packet->data.asBytes;
+            CmdHIDsimTAG(payload->hi2, payload->hi, payload->lo, payload->longFMT, 1);
             break;
         }
         case CMD_LF_FSK_SIMULATE: {

@@ -261,22 +261,41 @@ static int CmdHIDRead_device(const char *Cmd) {
 }
 */
 static int CmdHIDSim(const char *Cmd) {
-    uint32_t hi = 0, lo = 0;
+    lf_hidsim_t payload;
+    payload.longFMT = 0;
+    uint32_t hi2 = 0, hi = 0, lo = 0;
     uint32_t n = 0, i = 0;
 
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_hid_sim();
 
-    while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
-        hi = (hi << 4) | (lo >> 28);
-        lo = (lo << 4) | (n & 0xf);
+    if (strchr(Cmd, 'l') != 0) {
+        i++;
+        while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
+            hi2 = (hi2 << 4) | (hi >> 28);
+            hi = (hi << 4) | (lo >> 28);
+            lo = (lo << 4) | (n & 0xf);
+        }
+
+        PrintAndLogEx(INFO, "Simulating HID tag with long ID %x%08x%08x", hi2, hi, lo);
+        payload.longFMT = 1;
+    } else {
+        while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
+            hi = (hi << 4) | (lo >> 28);
+            lo = (lo << 4) | (n & 0xf);
+        }
+        PrintAndLogEx(SUCCESS, "Simulating HID tag with ID %x%08x", hi, lo);
+        hi2 = 0;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating HID tag with ID %x%08x", hi, lo);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
+    payload.hi2 = hi2;
+    payload.hi = hi;
+    payload.lo = lo;
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_HID_SIMULATE, hi, lo, 0, NULL, 0);
+    SendCommandNG(CMD_LF_HID_SIMULATE, (uint8_t *)&payload,  sizeof(payload));
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_HID_SIMULATE, &resp);
     PrintAndLogEx(INFO, "Done");

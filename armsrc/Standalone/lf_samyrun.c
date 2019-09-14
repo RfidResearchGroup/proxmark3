@@ -108,7 +108,7 @@ void RunMod() {
             Dbprintf("[=] simulating %x | %x%08x", selected, high[selected], low[selected]);
 
             // high, low, no led control(A)  no time limit
-            CmdHIDsimTAGEx(high[selected], low[selected], false, -1);
+            CmdHIDsimTAGEx(0, high[selected], low[selected], 0, false, -1);
 
             DbpString("[=] simulating done");
 
