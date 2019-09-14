@@ -33,6 +33,7 @@ void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, bool ledcontrol, int numcycles);
 void CmdHIDsimTAG(uint32_t hi, uint32_t lo, bool ledcontrol);
 
+void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol, int numcycles);
 void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol);
 void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol);
 void CmdPSKsimTag(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol);

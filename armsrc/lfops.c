@@ -876,69 +876,6 @@ void SimulateTagLowFrequency(int period, int gap, bool ledcontrol) {
 #define DEBUG_FRAME_CONTENTS 1
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen) {
 }
-// compose fc/5 fc/8  waveform (FSK1)
-
-// compose fc/8 fc/10 waveform (FSK2)
-// also manchester,
-static void fc(int c, int *n) {
-    uint8_t *dest = BigBuf_get_addr();
-    int idx;
-
-    // for when we want an fc8 pattern every 4 logical bits
-    if (c == 0) {
-        dest[((*n)++)] = 1;
-        dest[((*n)++)] = 1;
-        dest[((*n)++)] = 1;
-        dest[((*n)++)] = 1;
-        dest[((*n)++)] = 0;
-        dest[((*n)++)] = 0;
-        dest[((*n)++)] = 0;
-        dest[((*n)++)] = 0;
-    }
-
-    // an fc/8  encoded bit is a bit pattern of  11110000  x6 = 48 samples
-    if (c == 8) {
-        for (idx = 0; idx < 6; idx++) {
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 0;
-            dest[((*n)++)] = 0;
-            dest[((*n)++)] = 0;
-            dest[((*n)++)] = 0;
-        }
-    }
-
-    // an fc/10 encoded bit is a bit pattern of 1111100000 x5 = 50 samples
-    if (c == 10) {
-        for (idx = 0; idx < 5; idx++) {
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 1;
-            dest[((*n)++)] = 0;
-            dest[((*n)++)] = 0;
-            dest[((*n)++)] = 0;
-            dest[((*n)++)] = 0;
-            dest[((*n)++)] = 0;
-        }
-    }
-}
-
-// special start of frame marker containing invalid bit sequences
-// this one is focused on HID,  with manchester encoding.
-static void fcSTT(int *n) {
-    fc(8,  n);
-    fc(8,  n); // invalid
-    fc(8,  n);
-    fc(10, n); // logical 0
-    fc(10, n);
-    fc(10, n); // invalid
-    fc(8,  n);
-    fc(10, n); // logical 0
-}
 
 // compose fc/X fc/Y waveform (FSKx)
 static void fcAll(uint8_t fc, int *n, uint8_t clock, int16_t *remainder) {
@@ -971,10 +908,9 @@ void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, bool ledcontrol, int numcycles) {
         return;
     }
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    set_tracing(false);
-
-    int n = 0, i = 0;
+    // special start of frame marker containing invalid Manchester bit sequences
+    uint8_t bits[8+44*2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
+    uint16_t n = 8;
     /*
      HID tag bitstream format
      The tag contains a 44bit unique code. This is sent out MSB first in sets of 4 bits
@@ -989,42 +925,28 @@ void CmdHIDsimTAGEx(uint32_t hi, uint32_t lo, bool ledcontrol, int numcycles) {
      bit 0 = fc8
     */
 
-    fc(0, &n);
-
-    // special start of frame marker containing invalid bit sequences
-    fcSTT(&n);
-
+    // TODO isn't there a manchester encoding function already available?
     // manchester encode bits 43 to 32
-    for (i = 11; i >= 0; i--) {
-
-        if ((i % 4) == 3) fc(0, &n);
-
+    for (int i = 11; i >= 0; i--) {
         if ((hi >> i) & 1) {
-            fc(10, &n);
-            fc(8,  &n); // low-high transition
+            bits[n++] = 1;
+            bits[n++] = 0;
         } else {
-            fc(8,  &n);
-            fc(10, &n); // high-low transition
+            bits[n++] = 0;
+            bits[n++] = 1;
         }
     }
-
     // manchester encode bits 31 to 0
-    for (i = 31; i >= 0; i--) {
-
-        if ((i % 4) == 3) fc(0, &n);
-
+    for (int i = 31; i >= 0; i--) {
         if ((lo >> i) & 1) {
-            fc(10, &n);
-            fc(8,  &n); // low-high transition
+            bits[n++] = 1;
+            bits[n++] = 0;
         } else {
-            fc(8,  &n);
-            fc(10, &n); // high-low transition
+            bits[n++] = 0;
+            bits[n++] = 1;
         }
     }
-
-    if (ledcontrol) LED_A_ON();
-    SimulateTagLowFrequencyEx(n, 0, ledcontrol, numcycles);
-    if (ledcontrol) LED_A_OFF();
+    CmdFSKsimTAGEx(10, 8, 0, 50, sizeof(bits), bits, ledcontrol, numcycles);
 }
 
 void CmdHIDsimTAG(uint32_t hi, uint32_t lo, bool ledcontrol) {
@@ -1035,7 +957,7 @@ void CmdHIDsimTAG(uint32_t hi, uint32_t lo, bool ledcontrol) {
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
-void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol) {
+void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol, int numcycles) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
@@ -1064,8 +986,15 @@ void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk,
     Dbprintf("Simulating with fcHigh: %d, fcLow: %d, clk: %d, STT: %d, n: %d", fchigh, fclow, clk, separator, n);
 
     if (ledcontrol) LED_A_ON();
-    SimulateTagLowFrequency(n, 0, ledcontrol);
+    SimulateTagLowFrequencyEx(n, 0, ledcontrol, numcycles);
     if (ledcontrol) LED_A_OFF();
+}
+
+// prepare a waveform pattern in the buffer based on the ID given then
+// simulate a FSK tag until the button is pressed
+// arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
+void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol) {
+    CmdFSKsimTAGEx(fchigh, fclow, separator, clk, bitslen, bits, ledcontrol, -1);
     reply_ng(CMD_LF_FSK_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
 
