@@ -913,7 +913,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
         LED_B_ON();
         WDT_HIT();
 
-        uint16_t unsuccessfull_tries = 0;
+        uint16_t unsuccessful_tries = 0;
         uint16_t davg = 0;
         dmax = 0;
         dmin = 2000;
@@ -970,8 +970,8 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
                 }
                 if (DBGLEVEL >= 3) Dbprintf("Nested: calibrating... ntdist=%d", i);
             } else {
-                unsuccessfull_tries++;
-                if (unsuccessfull_tries > NESTED_MAX_TRIES) { // card isn't vulnerable to nested attack (random numbers are not predictable)
+                unsuccessful_tries++;
+                if (unsuccessful_tries > NESTED_MAX_TRIES) { // card isn't vulnerable to nested attack (random numbers are not predictable)
                     isOK = -3;
                 }
             }
@@ -1038,7 +1038,7 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
 
                 if (valid_nonce(nttest, nt2, ks1, par_array)) {
                     if (ncount > 0) { // we are only interested in disambiguous nonces, try again
-                        if (DBGLEVEL >= 3) Dbprintf("Nonce#%d: dismissed (ambigous), ntdist=%d", i + 1, j);
+                        if (DBGLEVEL >= 3) Dbprintf("Nonce#%d: dismissed (ambiguous), ntdist=%d", i + 1, j);
                         target_nt[i] = 0;
                         break;
                     }
@@ -1118,7 +1118,7 @@ uint8_t chkKey(struct chk_t *c) {
 
         CHK_TIMEOUT();
 
-        // if successfull auth, send HALT
+        // if successful auth, send HALT
         // if ( !res )
         // mifare_classic_halt_ex(c->pcs);
         break;

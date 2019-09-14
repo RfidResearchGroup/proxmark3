@@ -64,8 +64,8 @@ end
 
 -- This function does a connect and retrieves som info
 -- @param dont_disconnect - if true, does not disable the field
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function read15693(slow, dont_readresponse)
 
 --[[
@@ -130,8 +130,8 @@ end
 
 ---
 -- Waits for a ISO15693 card to be placed within the vicinity of the reader.
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function waitFor15693()
     print('Waiting for card... press Enter to quit')
     while not core.kbd_enter_pressed() do

@@ -339,7 +339,7 @@ static bool t55xxVerifyWrite( uint8_t block, bool page1, bool usepwd, uint8_t ov
                 usepwd = false;
             }
         } else if (override == 1) {
-            PrintAndLogEx(NORMAL, "Safety Check Overriden - proceeding despite risk");
+            PrintAndLogEx(NORMAL, "Safety Check Overridden - proceeding despite risk");
         }
     }
 
@@ -548,7 +548,7 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uin
             }
         } else if (override == 1) {
             // Show only if first for command i.e. override = 1 (override and display) override = 2 (override and dont display)
-            PrintAndLogEx(NORMAL, "Safety Check Overriden - proceeding despite risk");
+            PrintAndLogEx(NORMAL, "Safety Check Overridden - proceeding despite risk");
         }
     }
 
@@ -1397,7 +1397,7 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
 //t55xxVerifyWrite( uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data) {        
         bool isOK = t55xxVerifyWrite(block, page1, usepwd, 1, password, downlink_mode, data);
         if (isOK) 
-            PrintAndLogEx(SUCCESS, "Write OK, validation succesful");
+            PrintAndLogEx(SUCCESS, "Write OK, validation successful");
         else
             PrintAndLogEx(WARNING, "Write could not validate the written data");
     }

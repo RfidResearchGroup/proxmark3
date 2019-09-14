@@ -24,7 +24,7 @@
 #include "usb_cmd.h"
 
 extern unsigned char return_on_error;
-extern unsigned char error_occured;
+extern unsigned char error_occurred;
 
 void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 bool ReceiveCommandPoll(PacketResponseOLD *c);

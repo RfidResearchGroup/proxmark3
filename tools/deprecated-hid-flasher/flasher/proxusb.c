@@ -19,7 +19,7 @@
 usb_dev_handle *devh = NULL;
 static unsigned int claimed_iface = 0;
 unsigned char return_on_error = 0;
-unsigned char error_occured = 0;
+unsigned char error_occurred = 0;
 
 void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     int ret;
@@ -37,7 +37,7 @@ void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, vo
 
     ret = usb_bulk_write(devh, 0x01, (char *)&c, sizeof(PacketCommandOLD), 1000);
     if (ret < 0) {
-        error_occured = 1;
+        error_occurred = 1;
         if (return_on_error)
             return;
 
@@ -63,7 +63,7 @@ bool ReceiveCommandPoll(PacketResponseOLD *c) {
     ret = usb_bulk_read(devh, 0x82, (char *)c, sizeof(PacketResponseOLD), 500);
     if (ret < 0) {
         if (ret != -ETIMEDOUT) {
-            error_occured = 1;
+            error_occurred = 1;
             if (return_on_error)
                 return false;
 

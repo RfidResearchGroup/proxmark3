@@ -939,12 +939,12 @@ static int l_T55xx_readblock(lua_State *L) {
                 usepage1 = false;
             }
         } else {
-            PrintAndLogEx(NORMAL, "Safety Check Overriden - proceeding despite risk");
+            PrintAndLogEx(NORMAL, "Safety Check Overridden - proceeding despite risk");
         }
     }
 
     if (!AquireData(usepage1, block, usepwd, password, 0)) {
-        return returnToLuaWithError(L, "Failed to aquire data from card");
+        return returnToLuaWithError(L, "Failed to acquire data from card");
     }
 
     if (!DecodeT55xxBlock()) {
@@ -1002,7 +1002,7 @@ static int l_T55xx_detect(lua_State *L) {
 
         isok = AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, 0);
         if (isok == false) {
-            return returnToLuaWithError(L, "Failed to aquire LF signal data");
+            return returnToLuaWithError(L, "Failed to acquire LF signal data");
         }
     }
 

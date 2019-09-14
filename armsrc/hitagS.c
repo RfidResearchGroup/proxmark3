@@ -1354,7 +1354,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
 
         // Wait for HITAG_T_WAIT_2 carrier periods after the last tag bit before transmitting,
         // Since the clock counts since the last falling edge, a 'one' means that the
-        // falling edge occured halfway the period. with respect to this falling edge,
+        // falling edge occurred halfway the period. with respect to this falling edge,
         // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
         // All timer values are in terms of T0 units
 
@@ -1643,7 +1643,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
 
         // Wait for HITAG_T_WAIT_2 carrier periods after the last tag bit before transmitting,
         // Since the clock counts since the last falling edge, a 'one' means that the
-        // falling edge occured halfway the period. with respect to this falling edge,
+        // falling edge occurred halfway the period. with respect to this falling edge,
         // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
         // All timer values are in terms of T0 units
 
@@ -1952,7 +1952,7 @@ void check_challenges(bool file_given, uint8_t *data) {
 
         // Wait for HITAG_T_WAIT_2 carrier periods after the last tag bit before transmitting,
         // Since the clock counts since the last falling edge, a 'one' means that the
-        // falling edge occured halfway the period. with respect to this falling edge,
+        // falling edge occurred halfway the period. with respect to this falling edge,
         // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
         // All timer values are in terms of T0 units
 
