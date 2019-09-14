@@ -9,7 +9,19 @@
 #ifndef CMDLFVISA2000_H__
 #define CMDLFVISA2000_H__
 
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
 #include "common.h"
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+#include "cmdlft55xx.h"    // write verify
 
 int CmdLFVisa2k(const char *Cmd);
 

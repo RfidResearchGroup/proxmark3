@@ -11,19 +11,6 @@
 
 #include "cmdlfvisa2000.h"
 
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "graph.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-
 #define BL0CK1 0x56495332
 
 static int CmdHelp(const char *Cmd);
@@ -171,7 +158,7 @@ static int CmdVisa2kClone(const char *Cmd) {
     id = param_get32ex(Cmd, 0, 0, 10);
 
     //Q5
-    if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q')
+    if (tolower(param_getchar(Cmd, 1)) == 'q')
         blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
     blocks[2] = id;
@@ -180,8 +167,10 @@ static int CmdVisa2kClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
     print_blocks(blocks, 4);
 
+    uint8_t res = 0;
+    
     PacketResponseNG resp;
-
+    
     // fast push mode
     conn.block_after_ACK = true;
     for (uint8_t i = 0; i < 4; i++) {
@@ -202,7 +191,16 @@ static int CmdVisa2kClone(const char *Cmd) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
+        
+        bool isok = t55xxVerifyWrite(i, 0, false, false, 0, 0, blocks[i]);
+        if ( isok == false) {
+            PrintAndLogEx(WARNING, "Couldn't verify write");
+            res++;
+        }
     }
+    if ( res == 0 )
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+
     return PM3_SUCCESS;
 }
 

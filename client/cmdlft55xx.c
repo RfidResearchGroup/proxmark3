@@ -421,29 +421,28 @@ bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, 
         // this messes up with ppls config..
         if (block == 0 && page1 == false) {
 
-            PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible (pwd == %08X)", password);
-
+            
+            PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible");
             bool got_modulation = false;
             for ( uint8_t m = 0; m < 4; m++) {
 
-                if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password, m) == false) {
-                    PrintAndLogEx(INPLACE, ".");
+                if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false) {
                     continue;
                 }
-                
-                if (tryDetectModulation(m, true) == false) {
+
+                if (tryDetectModulation(m, false) == false) {
                     PrintAndLogEx(INPLACE, ".");
                     continue;
                 } else {
                     got_modulation = true;
-                    PrintAndLogEx(NORMAL, "");
                     break;
                 }
             }
+            PrintAndLogEx(NORMAL, "");
 
             if (got_modulation == false)
                 return false;
-             
+
             return t55xxVerifyWrite(block, page1, usepwd, 2, password, downlink_mode, data);
         }
     }
