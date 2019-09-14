@@ -76,14 +76,14 @@ static int usage_lf_hid_sim(void) {
 static int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "Clone HID to T55x7.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf hid clone [h] [ID] <L>");
+    PrintAndLogEx(NORMAL, "Usage:  lf hid clone [h] [l] ID");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h   - This help");
+    PrintAndLogEx(NORMAL, "       l   - 84bit ID");
     PrintAndLogEx(NORMAL, "       ID  - HID id");
-    PrintAndLogEx(NORMAL, "       L   - 84bit ID");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86");
-    PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86 L");
+    PrintAndLogEx(NORMAL, "      lf hid clone l 2006ec0c86");
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_brute(void) {
@@ -294,6 +294,7 @@ static int CmdHIDClone(const char *Cmd) {
     if (strlen(Cmd) == 0 || ctmp == 'H' || ctmp == 'h') return usage_lf_hid_clone();
     uint8_t longid[1] = {0};
     if (strchr(Cmd, 'l') != 0) {
+        i++;
         while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
             hi2 = (hi2 << 4) | (hi >> 28);
             hi = (hi << 4) | (lo >> 28);
