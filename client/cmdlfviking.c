@@ -9,17 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfviking.h"
 
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "lfdemod.h"
-
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_viking_clone(void) {
@@ -90,22 +79,31 @@ static int CmdVikingClone(const char *Cmd) {
     id = param_get32ex(Cmd, 0, 0, 16);
     if (id == 0) return usage_lf_viking_clone();
 
-    cmdp = param_getchar(Cmd, 1);
-    if (cmdp == 'Q' || cmdp == 'q')
+    cmdp = tolower(param_getchar(Cmd, 1));
+    if (cmdp == 'q')
         Q5 = true;
 
     rawID = getVikingBits(id);
 
-    PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID " _YELLOW_("%08X")" raw " _YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
+    struct p {
+        bool Q5;
+        uint8_t blocks[8];
+    } PACKED payload;
+    payload.Q5 = Q5;
+    
+    num_to_bytes(rawID, 8, &payload.blocks[0]);
 
+    PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID " _YELLOW_("%08X")" raw " _YELLOW_("%s"), id,  sprint_hex(payload.blocks, sizeof(payload.blocks)));
+    
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_VIKING_CLONE, rawID >> 32, rawID & 0xFFFFFFFF, Q5, NULL, 0);
+    
+    SendCommandNG(CMD_LF_VIKING_CLONE, (uint8_t*)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, T55XX_WRITE_TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_VIKING_CLONE, &resp, T55XX_WRITE_TIMEOUT)) {
         PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }
-    return PM3_SUCCESS;
+    return resp.status;
 }
 
 static int CmdVikingSim(const char *Cmd) {

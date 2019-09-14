@@ -2152,13 +2152,19 @@ void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t 
     LED_D_OFF();
 }
 // clone viking tag to T55xx
-void CopyVikingtoT55xx(uint32_t block1, uint32_t block2, uint8_t Q5) {
-    uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), block1, block2};
-    if (Q5) data[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
+void CopyVikingtoT55xx(uint8_t *blocks, uint8_t Q5) {
+  
+    uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), 0, 0};
+    if (Q5) 
+        data[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
+    
+    data[1] = bytes_to_num(blocks, 4);
+    data[2] = bytes_to_num(blocks +4, 4);
+    
     // Program the data blocks for supplied ID and the block 0 config
     WriteT55xx(data, 0, 3);
     LED_D_OFF();
-    reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_ng(CMD_LF_VIKING_CLONE, PM3_SUCCESS, NULL, 0);
 }
 
 // Define 9bit header for EM410x tags

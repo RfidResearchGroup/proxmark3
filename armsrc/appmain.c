@@ -856,7 +856,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_VIKING_CLONE: {
-            CopyVikingtoT55xx(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            struct p {
+                bool Q5;
+                uint8_t blocks[8];
+            } PACKED;
+            struct p *payload = (struct p*)packet->data.asBytes;
+            CopyVikingtoT55xx(payload->blocks, payload->Q5);
             break;
         }
         case CMD_LF_COTAG_READ: {
@@ -1217,7 +1222,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_READER: {
-            ReaderIClass(packet->oldarg[0]);
+            struct p {
+                uint8_t flags;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            ReaderIClass(payload->flags);
             break;
         }
         case CMD_HF_ICLASS_REPLAY: {
