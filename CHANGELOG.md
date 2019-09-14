@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add `lf t55xx protect` - sets password and enables password protection on t55x7 tag (@iceman1001)
+ - Chg `lf t55xx wipe` - now accepts user provided configuration block (@iceman1001)
  - Chg proxmark3-flasher is now merged into proxmark3 client. Add pm3-flash (@doegox)
  - Chg `hf iclass clone\dump\rdbl\wrbl` - now uses NG (@iceman1001)
  - Fix `hf iclass clone` - last block always fails (@iceman1001)
