@@ -349,7 +349,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added  `hf fido` `assert` and `make` commands from fido2 protocol (authenticatorMakeCredential and authenticatorGetAssertion) (@merlokk)
  - Added trailer block decoding to `hf mf rdbl` and `hf mf cgetbl` (@merlokk)
  - Added `hf mf mad` and `hf mfp mad` MAD decode, check and print commands (@merlokk)
- - Added T55x7 downlink mode support r <mode> 0 Default, 1 Long Leading 0, 2 Leading 0, 3 1 of 4 and 4 (in some commands) try all.
+ - Added T55x7 downlink mode support r <mode> 0 Default, 1 Long Leading 0, 2 Leading 0, 3 1 of 4 and 4 (in some commands) try all. (@mwalker33)
+ - Added T55x7 downlink mode auto usage via mode detected (lf t55 detect) (@mwalker33)
+ - Fix T55xx config getting displayed when using password when no password needed on read. (@mwalker33)
 
 ### Fixed
  - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (@pwpiwi)

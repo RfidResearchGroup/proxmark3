@@ -117,6 +117,12 @@ typedef struct {
     bool Q5;
     bool ST;
     bool usepwd;
+    enum {
+        refFixedBit = 0x00,
+        refLongLeading = 0x01,
+        refLeading0 = 0x02,
+        ref1of4 = 0x03,
+    } downlink_mode;
 } t55xx_conf_block_t;
 
 t55xx_conf_block_t Get_t55xx_Config(void);
@@ -131,6 +137,7 @@ char *GetQ5ModulationStr(uint32_t id);
 char *GetModulationStr(uint32_t id, bool xmode);
 char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
+char *GetDownlinkModeStr (uint8_t dlmode);
 void printT5xxHeader(uint8_t page);
 void printT55xxBlock(uint8_t blockNum);
 int  printConfiguration(t55xx_conf_block_t b);
@@ -138,7 +145,7 @@ int  printConfiguration(t55xx_conf_block_t b);
 int  T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode);
 bool GetT55xxBlockData(uint32_t *blockdata);
 bool DecodeT55xxBlock(void);
-bool tryDetectModulation(void);
+bool tryDetectModulation(uint8_t downlink_mode, bool print_config);
 bool testKnownConfigBlock(uint32_t block0);
 
 bool tryDetectP1(bool getData);
