@@ -339,7 +339,7 @@ static bool t55xxVerifyWrite( uint8_t block, bool page1, bool usepwd, uint8_t ov
                 usepwd = false;
             }
         } else if (override == 1) {
-            PrintAndLogEx(NORMAL, "Safety Check Overriden - proceeding despite risk");
+            PrintAndLogEx(NORMAL, "Safety Check Overridden - proceeding despite risk");
         }
     }
 
@@ -548,7 +548,7 @@ int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uin
             }
         } else if (override == 1) {
             // Show only if first for command i.e. override = 1 (override and display) override = 2 (override and dont display)
-            PrintAndLogEx(NORMAL, "Safety Check Overriden - proceeding despite risk");
+            PrintAndLogEx(NORMAL, "Safety Check Overridden - proceeding despite risk");
         }
     }
 

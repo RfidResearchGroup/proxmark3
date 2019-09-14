@@ -29,7 +29,7 @@ typedef enum {
 
 enum TransactionType {
     TT_MSD,
-    TT_VSDC,        // contact only. not standart for contactless
+    TT_VSDC,        // contact only. not standard for contactless
     TT_QVSDCMCHIP,
     TT_CDA,
 };

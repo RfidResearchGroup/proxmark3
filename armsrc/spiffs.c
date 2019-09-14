@@ -302,7 +302,7 @@ int rdv40_spiffs_lazy_mount() {
     if (!rdv40_spiffs_mounted()) {
         changed = rdv40_spiffs_mount();
         /* if changed = 0 = SPIFFS_OK then all went well then the change
-         * actually occured :)*/
+         * actually occurred :)*/
         changed = !changed;
     }
     return changed;
@@ -371,7 +371,7 @@ just get back to this state. If not, just don't.
      [...]
 }
 */
-// Again : This will "toggle" spiffs mount status only if a "change" occured
+// Again : This will "toggle" spiffs mount status only if a "change" occurred
 // (and should be fed by the result of a spiffs_lazy* function) If everything
 // went well, it will return SPIFFS_OK if everything went well, and a report
 // back the chain a SPI_ERRNO if not.

@@ -1006,7 +1006,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
 
-    PrintAndLogEx(SUCCESS, "\nSucceded in dumping all blocks");
+    PrintAndLogEx(SUCCESS, "\nSucceeded in dumping all blocks");
 
     if (strlen(dataFilename) < 1) {
         fptr = GenerateFilename("hf-mf-", "-data");
@@ -1422,14 +1422,14 @@ jumptoend:
             }
 
             PrintAndLogEx(SUCCESS, "saving keys to binary file " _YELLOW_("%s"), fptr);
-            uint8_t standart[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+            uint8_t standard[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
             uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
             for (int i = 0; i < SectorsCnt; i++) {
                 if (e_sector[i].foundKey[0]) {
                     num_to_bytes(e_sector[i].Key[0], 6, tempkey);
                     fwrite(tempkey, 1, 6, fkeys);
                 } else {
-                    fwrite(&standart, 1, 6, fkeys);
+                    fwrite(&standard, 1, 6, fkeys);
                 }
             }
             for (int i = 0; i < SectorsCnt; i++) {
@@ -1437,7 +1437,7 @@ jumptoend:
                     num_to_bytes(e_sector[i].Key[1], 6, tempkey);
                     fwrite(tempkey, 1, 6, fkeys);
                 } else {
-                    fwrite(&standart, 1, 6, fkeys);
+                    fwrite(&standard, 1, 6, fkeys);
                 }
             }
             fflush(fkeys);

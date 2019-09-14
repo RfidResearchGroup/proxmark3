@@ -139,8 +139,8 @@ void EPA_Finish() {
 //-----------------------------------------------------------------------------
 // Parses DER encoded data, e.g. from EF.CardAccess and fills out the given
 // structs. If a pointer is 0, it is ignored.
-// The function returns 0 on success and if an error occured, it returns the
-// offset where it occured.
+// The function returns 0 on success and if an error occurred, it returns the
+// offset where it occurred.
 //
 // TODO: This function can access memory outside of the given data if the DER
 //       encoding is broken
@@ -274,7 +274,7 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
      * ack layout:
      *   arg:
      *       1. element
-     *           step where the error occured or 0 if no error occured
+     *           step where the error occurred or 0 if no error occurred
      *       2. element
      *           return code of the last executed function
      *   d:

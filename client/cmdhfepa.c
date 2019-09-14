@@ -164,7 +164,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
         PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
         PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
     } else {
-        PrintAndLogEx(NORMAL, "PACE replay successfull!");
+        PrintAndLogEx(NORMAL, "PACE replay successful!");
         PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.data.asDwords[0]);
         PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.data.asDwords[1]);
         PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.data.asDwords[2]);

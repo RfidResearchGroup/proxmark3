@@ -67,8 +67,8 @@ local function help()
 end
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader.
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function wait_for_mifare()
     while not core.kbd_enter_pressed() do
         res, err = lib14a.read()

@@ -195,7 +195,7 @@ void RunMod() {
                 MifareCGetBlock(params, 0, testBlock0);
 
                 if (memcmp(testBlock0, newBlock0, 16) == 0) {
-                    DbpString("Cloned successfull!");
+                    DbpString("Cloned successful!");
                     cardRead[selected] = 0; // Only if the card was cloned successfully should we clear it
                     playing = 0;
                     iGotoRecord = 1;

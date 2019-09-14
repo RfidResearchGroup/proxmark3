@@ -394,7 +394,7 @@ static int EMVSelectWithRetry(EMVCommandChannel channel, bool ActivateField, boo
                 }
 
                 retrycnt = 0;
-                PrintAndLogEx(NORMAL, "Retry failed [%s]. Skiped...", sprint_hex_inrow(AID, AIDLen));
+                PrintAndLogEx(NORMAL, "Retry failed [%s]. Skipped...", sprint_hex_inrow(AID, AIDLen));
                 return res;
             }
         }

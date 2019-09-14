@@ -1277,7 +1277,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Wait for HITAG_T_WAIT_2 carrier periods after the last tag bit before transmitting,
         // Since the clock counts since the last falling edge, a 'one' means that the
-        // falling edge occured halfway the period. with respect to this falling edge,
+        // falling edge occurred halfway the period. with respect to this falling edge,
         // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
         // All timer values are in terms of T0 units
         while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit)));
@@ -1533,7 +1533,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
         // Wait for HITAG_T_WAIT_2 carrier periods after the last tag bit before transmitting,
         // Since the clock counts since the last falling edge, a 'one' means that the
-        // falling edge occured halfway the period. with respect to this falling edge,
+        // falling edge occurred halfway the period. with respect to this falling edge,
         // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
         // All timer values are in terms of T0 units
         while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit))) {};
