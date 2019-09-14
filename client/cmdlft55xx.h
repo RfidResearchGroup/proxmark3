@@ -13,6 +13,7 @@
 #include "common.h"
 
 #define T55x7_CONFIGURATION_BLOCK 0x00
+#define T55x7_PWD_BLOCK 0x07
 #define T55x7_TRACE_BLOCK1 0x01
 #define T55x7_TRACE_BLOCK2 0x02
 #define T55x7_PAGE0 0x00
@@ -142,7 +143,12 @@ void printT5xxHeader(uint8_t page);
 void printT55xxBlock(uint8_t blockNum);
 int  printConfiguration(t55xx_conf_block_t b);
 
-int  T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode);
+bool t55xxVerifyWrite( uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data);
+int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode);
+int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, bool verbose);
+
+int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t password, uint8_t downlink_mode, uint32_t data);
+
 bool GetT55xxBlockData(uint32_t *blockdata);
 bool DecodeT55xxBlock(void);
 bool tryDetectModulation(uint8_t downlink_mode, bool print_config);
