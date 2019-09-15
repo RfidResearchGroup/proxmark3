@@ -11,6 +11,19 @@
 
 #include "common.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+#include "cmdlft55xx.h" // verifywrite
+
 int CmdLFNoralsy(const char *Cmd);
 
 int demodNoralsy(void);
