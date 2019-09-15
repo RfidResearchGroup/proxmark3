@@ -486,9 +486,9 @@ int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t p
 }
 
 void printT5xxHeader(uint8_t page) {
-    PrintAndLogEx(NORMAL, "Reading Page %d:", page);
-    PrintAndLogEx(NORMAL, "blk | hex data | binary                           | ascii");
-    PrintAndLogEx(NORMAL, "----+----------+----------------------------------+-------");
+    PrintAndLogEx(SUCCESS, "Reading Page %d:", page);
+    PrintAndLogEx(SUCCESS, "blk | hex data | binary                           | ascii");
+    PrintAndLogEx(SUCCESS, "----+----------+----------------------------------+-------");
 }
 
 static int CmdT55xxSetConfig(const char *Cmd) {
@@ -1185,7 +1185,7 @@ void printT55xxBlock(uint8_t blockNum) {
 
     num_to_bytes(blockData, 4, bytes);
 
-    PrintAndLogEx(NORMAL, " %02d | %08X | %s | %s", blockNum, blockData, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
+    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s", blockNum, blockData, sprint_bin(DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4));
 }
 
 static bool testModulation(uint8_t mode, uint8_t modread) {
