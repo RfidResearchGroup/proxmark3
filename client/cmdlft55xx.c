@@ -405,9 +405,29 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
     }
 }
 
+bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose) {
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible");
+    
+    for ( uint8_t m = 0; m < 4; m++) {
+        if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false)
+            continue;
+
+        if (tryDetectModulationEx(m, verbose, known_block0) == false)
+            continue;
+
+        return true;
+    }
+   return false;
+}
+
 bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data) {
 
     uint32_t read_data = 0;
+    
+    if (downlink_mode == 0xFF) 
+        downlink_mode = config.downlink_mode;
 
     int res = T55xxReadBlockEx(block, page1, usepwd, override, password, downlink_mode, false);
     if (res == PM3_SUCCESS) {
@@ -421,29 +441,10 @@ bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, 
         // this messes up with ppls config..
         if (block == 0 && page1 == false) {
 
-            
-            PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible");
-            bool got_modulation = false;
-            for ( uint8_t m = 0; m < 4; m++) {
-
-                if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false) {
-                    continue;
-                }
-
-                if (tryDetectModulation(m, false) == false) {
-                    PrintAndLogEx(INPLACE, ".");
-                    continue;
-                } else {
-                    got_modulation = true;
-                    break;
-                }
-            }
-            PrintAndLogEx(NORMAL, "");
-
-            if (got_modulation == false)
+            if (t55xxAquireAndDetect(usepwd, password, data, true) == false)
                 return false;
-
-            return t55xxVerifyWrite(block, page1, usepwd, 2, password, downlink_mode, data);
+ 
+            return t55xxVerifyWrite(block, page1, usepwd, 2, password, config.downlink_mode, data);
         }
     }
 
@@ -892,22 +893,25 @@ static int CmdT55xxDetect(const char *Cmd) {
 
     if (useGB == false) {
 	
-	//ICEMAN STRANGE
-        for (uint8_t m = downlink_mode; m < 4; m++) {
-            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false) {
-                continue;
-            }
+        if ( try_all_dl_modes ) {
+    
+            for (uint8_t m = downlink_mode; m < 4; m++) {
+                if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false)
+                    continue;
 
-            if (tryDetectModulation(m, T55XX_PrintConfig)) {
-                m = 4;
+                if (tryDetectModulation(m, T55XX_PrintConfig) == false)
+                    continue;
+
                 found = true;
-            } else {
-			    found = false;
-			}	
+                break;
+            }
+        } else  {
             
-            if (try_all_dl_modes == false)
-			    m = 4;
+            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
+                found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
+            }
         }
+
     } else {
         found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
     }
@@ -920,6 +924,10 @@ static int CmdT55xxDetect(const char *Cmd) {
 
 // detect configuration?
 bool tryDetectModulation(uint8_t downlink_mode, bool print_config) {
+    return tryDetectModulationEx(downlink_mode, print_config, 0);
+}
+
+bool tryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf) {
 
     t55xx_conf_block_t tests[15];
     int bitRate = 0, clk = 0, firstClockEdge = 0;
@@ -1102,8 +1110,13 @@ bool tryDetectModulation(uint8_t downlink_mode, bool print_config) {
     if (hits > 1) {
         PrintAndLogEx(SUCCESS, "Found [%d] possible matches for modulation.", hits);
         for (int i = 0; i < hits; ++i) {
+            
+            bool wanted = false;
+            if (wanted_conf > 0)
+                wanted = (wanted_conf == tests[i].block0);
+            
             retval = testKnownConfigBlock(tests[i].block0);
-            if (retval) {
+            if (retval || wanted ) {
                 PrintAndLogEx(NORMAL, "--[%d]--------------- << selected this", i + 1);
                 config.modulation = tests[i].modulation;
                 config.bitrate = tests[i].bitrate;
@@ -2918,16 +2931,16 @@ bool tryDetectP1(bool getData) {
 }
 //  does this need to be a callable command?
 static int CmdT55xxDetectPage1(const char *Cmd) {
-    bool     errors           = false;
-    bool     useGB            = false;
-    bool     usepwd           = false;
-    bool     try_all_dl_modes = true;
-    bool     found            = false;
-    uint8_t  found_mode       = 0;
-    uint32_t password         = 0;
-    uint8_t  cmdp             = 0;
-    uint8_t  downlink_mode    = 0;
-    uint8_t  dl_mode          = 0;
+    bool errors = false;
+    bool useGB = false;
+    bool usepwd = false;
+    bool try_all_dl_modes = true;
+    bool found = false;
+    uint8_t found_mode = 0;
+    uint32_t password = 0;
+    uint8_t cmdp = 0;
+    uint8_t downlink_mode = config.downlink_mode;
+    uint8_t dl_mode = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -3111,7 +3124,7 @@ static int CmdT55xxProtect(const char *Cmd) {
     uint32_t password = 0, new_password = 0;
     uint8_t override = 0;
     uint8_t cmdp = 0;
-    uint8_t downlink_mode = 0;
+    uint8_t downlink_mode = config.downlink_mode;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
