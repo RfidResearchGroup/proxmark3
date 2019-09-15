@@ -917,7 +917,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
      bit 0 = fc8
     */
 
-    uint8_t bits[8+84*2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
+    uint8_t bits[8+8*2+84*2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
     uint8_t bitlen = 0;
 
     if (longFMT) {
@@ -926,7 +926,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
             DbpString("Tags can only have 84 bits.");
             return;
         }
-        bitlen = 8+84*2;
+        bitlen = 8+8*2+84*2;
         // special start of frame marker containing invalid Manchester bit sequences
         uint16_t n = 8;
         hi2 |= 0x9E00000; // 9E: long format identifier
