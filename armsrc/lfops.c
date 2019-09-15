@@ -917,8 +917,10 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
      bit 0 = fc8
     */
 
+    // special start of frame marker containing invalid Manchester bit sequences
     uint8_t bits[8+8*2+84*2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
     uint8_t bitlen = 0;
+    uint16_t n = 8;
 
     if (longFMT) {
         // Ensure no more than 84 bits supplied
@@ -927,71 +929,19 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
             return;
         }
         bitlen = 8+8*2+84*2;
-        // special start of frame marker containing invalid Manchester bit sequences
-        uint16_t n = 8;
         hi2 |= 0x9E00000; // 9E: long format identifier
-        // manchester encode "9E" and bits 83 to 64
-        for (int i = 27; i >= 0; i--) {
-            if ((hi2 >> i) & 1) {
-                bits[n++] = 1;
-                bits[n++] = 0;
-            } else {
-                bits[n++] = 0;
-                bits[n++] = 1;
-            }
-        }
-        // manchester encode bits 63 to 32
-        for (int i = 31; i >= 0; i--) {
-            if ((hi >> i) & 1) {
-                bits[n++] = 1;
-                bits[n++] = 0;
-            } else {
-                bits[n++] = 0;
-                bits[n++] = 1;
-            }
-        }
-        // manchester encode bits 31 to 0
-        for (int i = 31; i >= 0; i--) {
-            if ((lo >> i) & 1) {
-                bits[n++] = 1;
-                bits[n++] = 0;
-            } else {
-                bits[n++] = 0;
-                bits[n++] = 1;
-            }
-        }
-
+        manchesterEncodeUint32(hi2, 16+12, bits, &n);
+        manchesterEncodeUint32(hi, 32, bits, &n);
+        manchesterEncodeUint32(lo, 32, bits, &n);
     } else {
 
         if (hi > 0xFFF) {
             DbpString("[!] tags can only have 44 bits. - USE lf simfsk for larger tags");
             return;
         }
-
         bitlen = 8+44*2;
-        // special start of frame marker containing invalid Manchester bit sequences
-        uint16_t n = 8;
-
-        // manchester encode bits 43 to 32
-        for (int i = 11; i >= 0; i--) {
-            if ((hi >> i) & 1) {
-                bits[n++] = 1;
-                bits[n++] = 0;
-            } else {
-                bits[n++] = 0;
-                bits[n++] = 1;
-            }
-        }
-        // manchester encode bits 31 to 0
-        for (int i = 31; i >= 0; i--) {
-            if ((lo >> i) & 1) {
-                bits[n++] = 1;
-                bits[n++] = 0;
-            } else {
-                bits[n++] = 0;
-                bits[n++] = 1;
-            }
-        }
+        manchesterEncodeUint32(hi, 12, bits, &n);
+        manchesterEncodeUint32(lo, 32, bits, &n);
     }
     CmdFSKsimTAGEx(10, 8, 0, 50, bitlen, bits, ledcontrol, numcycles);
 }
