@@ -9,19 +9,6 @@
 
 #include "cmdlfpresco.h"
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_presco_clone(void) {
@@ -134,6 +121,7 @@ static int CmdPrescoClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
     print_blocks(blocks, 5);
 
+    uint8_t res = 0;
     PacketResponseNG resp;
 
     // fast push mode
@@ -155,7 +143,22 @@ static int CmdPrescoClone(const char *Cmd) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
+
+        // write block0, needs a detect.
+        if (i == 0) {
+            printf("enter detect ");
+            bool ok = t55xxAquireAndDetect(false, 0, blocks[i], false);        
+            printf(" b0 = '%c' \n", (ok) ? 'Y':'N');
+        }
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false) {
+            res++;
+            printf(" i = %d \n", i);
+        }
     }
+
+    if ( res == 0 )
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+    
     return PM3_SUCCESS;
 }
 

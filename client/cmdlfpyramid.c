@@ -236,8 +236,8 @@ static int CmdPyramidClone(const char *Cmd) {
 
     // fast push mode
     conn.block_after_ACK = true;
-    for (int8_t i = 4; i >= 0; i--) {
-        if (i == 0) {
+    for (int8_t i = 0; i < 5; i++) {
+        if (i == 4) {
             // Disable fast mode on last packet
             conn.block_after_ACK = false;
         }
@@ -254,11 +254,13 @@ static int CmdPyramidClone(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
 
-        bool isok = t55xxVerifyWrite(i, 0, false, false, 0, 0, blocks[i]);
-        if ( isok == false) {
-            PrintAndLogEx(WARNING, "Couldn't verify write");
+        // write block0, needs a detect.
+        if (i == 0)
+            t55xxAquireAndDetect(false, 0, blocks[i], false);
+        
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
             res++;
-        }        
+
     }
 
     if ( res == 0 )

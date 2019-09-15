@@ -168,7 +168,6 @@ static int CmdVisa2kClone(const char *Cmd) {
     print_blocks(blocks, 4);
 
     uint8_t res = 0;
-    
     PacketResponseNG resp;
     
     // fast push mode
@@ -190,14 +189,16 @@ static int CmdVisa2kClone(const char *Cmd) {
 
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
-        }
+        }        
+
+        // write block0, needs a detect.
+        if (i == 0)
+            t55xxAquireAndDetect(false, 0, blocks[i], false);        
         
-        bool isok = t55xxVerifyWrite(i, 0, false, false, 0, 0, blocks[i]);
-        if ( isok == false) {
-            PrintAndLogEx(WARNING, "Couldn't verify write");
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
             res++;
-        }
     }
+    
     if ( res == 0 )
         PrintAndLogEx(SUCCESS, "Success writing to tag");
 
