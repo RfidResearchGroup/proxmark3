@@ -242,6 +242,14 @@ typedef struct {
     uint8_t keytype;
 } PACKED mfc_eload_t;
 
+typedef struct {
+    uint8_t status;
+    uint8_t CSN[8];
+    uint8_t CONFIG[8];
+    uint8_t CC[8];
+    uint8_t AIA[8];
+} PACKED iclass_reader_t;
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 #define CMD_SETUP_WRITE                                                   0x0001
@@ -345,9 +353,6 @@ typedef struct {
 #define CMD_SET_ADC_MUX                                                   0x020F
 #define CMD_LF_HID_CLONE                                                  0x0210
 #define CMD_LF_EM410X_WRITE                                               0x0211
-#define CMD_LF_INDALA_CLONE                                               0x0212
-// for 224 bits UID
-#define CMD_LF_INDALA224_CLONE                                            0x0213
 #define CMD_LF_T55XX_READBL                                               0x0214
 #define CMD_LF_T55XX_WRITEBL                                              0x0215
 #define CMD_LF_T55XX_RESET_READ                                           0x0216

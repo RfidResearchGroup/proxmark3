@@ -769,17 +769,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             SimulateTagLowFrequencyBidir(packet->oldarg[0], packet->oldarg[1]);
             break;
         }
-        case CMD_LF_INDALA_CLONE: {
-            CopyIndala64toT55x7(packet->data.asDwords[0], packet->data.asDwords[1]);
-            break;
-        }
-        case CMD_LF_INDALA224_CLONE: {
-            CopyIndala224toT55x7(
-                packet->data.asDwords[0], packet->data.asDwords[1], packet->data.asDwords[2], packet->data.asDwords[3],
-                packet->data.asDwords[4], packet->data.asDwords[5], packet->data.asDwords[6]
-            );
-            break;
-        }
         case CMD_LF_T55XX_READBL: {
             struct p {
                 uint32_t password;

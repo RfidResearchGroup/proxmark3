@@ -390,7 +390,7 @@ void print_blocks(uint32_t *data, size_t len) {
         PrintAndLogEx(ERR, "..empty data");
     } else {
         for (uint8_t i = 0; i < len; i++)
-            PrintAndLogEx(SUCCESS, " %02d | 0x%08X", i, data[i]);
+            PrintAndLogEx(SUCCESS, " %02d | %08X", i, data[i]);
     }
 }
 
