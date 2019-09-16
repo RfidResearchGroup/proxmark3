@@ -730,10 +730,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             CmdIOdemodFSK(packet->oldarg[0], &high, &low, 1);
             break;
         }
-        case CMD_LF_IO_CLONE: {
-            CopyIOtoT55x7(packet->oldarg[0], packet->oldarg[1]);
-            break;
-        }
         case CMD_LF_EM410X_DEMOD: {
             uint32_t high;
             uint64_t low;

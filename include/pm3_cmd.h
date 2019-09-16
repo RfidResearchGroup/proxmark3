@@ -361,7 +361,6 @@ typedef struct {
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
 #define CMD_LF_IO_DEMOD                                                   0x021A
-#define CMD_LF_IO_CLONE                                                   0x021B
 #define CMD_LF_EM410X_DEMOD                                               0x021c
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021d

@@ -2036,18 +2036,6 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
     LED_D_OFF();
 }
 
-void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
-    uint32_t data[] = {T55x7_BITRATE_RF_64 | T55x7_MODULATION_FSK2a | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
-    //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_SET_BITRATE(64) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
-
-    LED_D_ON();
-    // Program the data blocks for supplied ID
-    // and the block 0 config
-    WriteT55xx(data, 0, 3);
-    LED_D_OFF();
-}
-
 // clone viking tag to T55xx
 void CopyVikingtoT55xx(uint8_t *blocks, uint8_t Q5) {
   
