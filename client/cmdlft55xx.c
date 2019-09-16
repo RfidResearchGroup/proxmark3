@@ -1391,7 +1391,7 @@ int printConfiguration(t55xx_conf_block_t b) {
     PrintAndLogEx(NORMAL, "    Offset         : %d", b.offset);
     PrintAndLogEx(NORMAL, "    Seq. Term.     : %s", (b.ST) ? _GREEN_("Yes") : "No");
     PrintAndLogEx(NORMAL, "    Block0         : 0x%08X", b.block0);
-    PrintAndLogEx(NORMAL, "    Downling Mode  : %s", GetDownlinkModeStr (b.downlink_mode)); 
+    PrintAndLogEx(NORMAL, "    Downlink Mode  : %s", GetDownlinkModeStr (b.downlink_mode)); 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
