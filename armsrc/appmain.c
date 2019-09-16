@@ -1223,11 +1223,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_READER: {
-            struct p {
-                uint8_t flags;
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            ReaderIClass(payload->flags);
+            ReaderIClass(packet->oldarg[0]);
             break;
         }
         case CMD_HF_ICLASS_REPLAY: {
