@@ -519,6 +519,9 @@ void printT5xxHeader(uint8_t page) {
 }
 
 void SetConfigWithBlock0(uint32_t block0) {
+    SetConfigWithBlock0Ex(block0, 0, false);
+}
+void SetConfigWithBlock0Ex(uint32_t block0, uint8_t offset, bool Q5) {
     // T55x7
     uint32_t extend = (block0 >> (32 - 15)) & 0x01;
     uint32_t dbr;
@@ -541,10 +544,10 @@ void SetConfigWithBlock0(uint32_t block0) {
     else
         config.inverted = inv;
     
-    config.Q5 = 0;
+    config.Q5 = Q5;
     config.ST = sst;
     config.usepwd = pwd;
-    config.offset = 0;
+    config.offset = offset;
     config.block0 = block0;
 }
 
@@ -677,12 +680,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     if (errors) return usage_t55xx_config();
 
     if ( gotconf ) {
-
-        // Q5  - to be implemented
-        
-        // T55x7
-        SetConfigWithBlock0(block0); 
-
+        SetConfigWithBlock0Ex(block0, config.offset, config.Q5); 
     } else {
         config.block0 = 0;
     }

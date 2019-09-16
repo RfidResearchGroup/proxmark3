@@ -132,6 +132,7 @@ void Set_t55xx_Config(t55xx_conf_block_t conf);
 int CmdLFT55XX(const char *Cmd);
 
 void SetConfigWithBlock0(uint32_t block0);
+void SetConfigWithBlock0Ex(uint32_t block0, uint8_t offset, bool Q5);
 
 char *GetPskCfStr(uint32_t id, bool q5);
 char *GetBitRateStr(uint32_t id, bool xmode);
