@@ -9,18 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfnoralsy.h"
 
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_noralsy_clone(void) {
@@ -150,7 +138,7 @@ static int CmdNoralsyClone(const char *Cmd) {
     year = param_get32ex(Cmd, 1, 2000, 10);
 
     //Q5
-    if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
+    if (tolower(param_getchar(Cmd, 2) == 'q'))
         blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
     if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
@@ -166,6 +154,7 @@ static int CmdNoralsyClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
     print_blocks(blocks, 4);
 
+    uint8_t res = 0;
     PacketResponseNG resp;
 
     // fast push mode
@@ -187,7 +176,19 @@ static int CmdNoralsyClone(const char *Cmd) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
+
+        // write block0, needs a detect.
+        if (i == 0)
+            t55xxAquireAndDetect(false, 0, blocks[i], false);
+        
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
+            res++;
+
     }
+
+    if ( res == 0 )
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+
     return PM3_SUCCESS;
 }
 

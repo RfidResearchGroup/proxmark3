@@ -112,6 +112,10 @@ static int CmdParadoxRead(const char *Cmd) {
     return CmdParadoxDemod(Cmd);
 }
 
+static int CmdParadoxClone(const char *Cmd) {
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
 
 static int CmdParadoxSim(const char *Cmd) {
     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
@@ -165,7 +169,7 @@ static command_t CommandTable[] = {
     {"help",  CmdHelp,          AlwaysAvailable, "This help"},
     {"demod", CmdParadoxDemod,  AlwaysAvailable, "Demodulate a Paradox FSK tag from the GraphBuffer"},
     {"read",  CmdParadoxRead,   IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
-//  {"clone", CmdParadoxClone,  IfPm3Lf,         "clone paradox tag"},
+    {"clone", CmdParadoxClone,  IfPm3Lf,         "clone paradox tag"},
     {"sim",   CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
     {NULL, NULL, NULL, NULL}
 };

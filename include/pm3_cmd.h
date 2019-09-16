@@ -197,6 +197,14 @@ typedef struct {
     uint8_t flags;
 } PACKED t55xx_write_block_t;
 
+// For CMD_LF_HID_SIMULATE (FSK)
+typedef struct {
+    uint32_t hi2;
+    uint32_t hi;
+    uint32_t lo;
+    uint8_t longFMT;
+} PACKED lf_hidsim_t;
+
 // For CMD_LF_FSK_SIMULATE (FSK)
 typedef struct {
     uint8_t fchigh;

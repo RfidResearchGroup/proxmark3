@@ -81,10 +81,25 @@ static int CmdNexWatchRead(const char *Cmd) {
     return CmdNexWatchDemod(Cmd);
 }
 
+static int CmdNexWatchClone(const char *Cmd) {
+
+    // should be able to clone the raw hex.
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
+static int CmdNexWatchSim(const char *Cmd) {
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
+
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
-    {"demod", CmdNexWatchDemod, AlwaysAvailable, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
-    {"read",  CmdNexWatchRead,  IfPm3Lf,         "Attempt to Read and Extract tag data from the antenna"},
+    {"help",  CmdHelp,           AlwaysAvailable, "This help"},
+    {"demod", CmdNexWatchDemod,  AlwaysAvailable, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
+    {"read",  CmdNexWatchRead,   IfPm3Lf,         "Attempt to Read and Extract tag data from the antenna"},
+    {"clone", CmdNexWatchClone,  IfPm3Lf,         "clone NexWatch tag"},
+    {"sim",   CmdNexWatchSim,    IfPm3Lf,         "simulate NexWatch tag"},
     {NULL, NULL, NULL, NULL}
 };
 

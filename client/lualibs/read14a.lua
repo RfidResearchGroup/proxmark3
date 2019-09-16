@@ -80,8 +80,8 @@ end
 
 -- This function does a connect and retrieves som einfo
 -- @param dont_disconnect - if true, does not disable the field
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function read14443a(dont_disconnect, no_rats)
     local command, result, info, err, data
 
@@ -118,8 +118,8 @@ end
 
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader.
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function waitFor14443a()
     print('Waiting for card... press Enter to quit')
     while not core.kbd_enter_pressed() do

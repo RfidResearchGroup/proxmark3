@@ -9,21 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfpyramid.h"
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "graph.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-#include "crc.h"
-
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_pyramid_clone(void) {
@@ -246,11 +231,12 @@ static int CmdPyramidClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
     print_blocks(blocks, 5);
 
+    uint8_t res = 0;
     PacketResponseNG resp;
 
     // fast push mode
     conn.block_after_ACK = true;
-    for (uint8_t i = 0; i < 5; i++) {
+    for (int8_t i = 0; i < 5; i++) {
         if (i == 4) {
             // Disable fast mode on last packet
             conn.block_after_ACK = false;
@@ -267,7 +253,19 @@ static int CmdPyramidClone(const char *Cmd) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
+
+        // write block0, needs a detect.
+        if (i == 0)
+            t55xxAquireAndDetect(false, 0, blocks[i], false);
+        
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
+            res++;
+
     }
+
+    if ( res == 0 )
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+    
     return PM3_SUCCESS;
 }
 

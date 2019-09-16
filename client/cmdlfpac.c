@@ -9,13 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfpac.h"
 
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
-
 static int CmdHelp(const char *Cmd);
 
 //see NRZDemod for what args are accepted
@@ -63,10 +56,25 @@ static int CmdPacRead(const char *Cmd) {
     return CmdPacDemod(Cmd);
 }
 
+static int CmdPacClone(const char *Cmd) {
+    // possible to raw hex and clone
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
+static int CmdPacSim(const char *Cmd) {
+    
+    // NRZ sim.
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,     AlwaysAvailable, "This help"},
-    {"demod", CmdPacDemod, AlwaysAvailable, "Demodulate an PAC tag from the GraphBuffer"},
-    {"read",  CmdPacRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"help",  CmdHelp,      AlwaysAvailable, "This help"},
+    {"demod", CmdPacDemod,  AlwaysAvailable, "Demodulate an PAC tag from the GraphBuffer"},
+    {"read",  CmdPacRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
+    {"clone", CmdPacClone,  IfPm3Lf,         "clone PAC tag"},
+    {"sim",   CmdPacSim,    IfPm3Lf,         "simulate PAC tag"},
     {NULL, NULL, NULL, NULL}
 };
 

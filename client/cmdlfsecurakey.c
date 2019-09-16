@@ -111,12 +111,22 @@ static int CmdSecurakeyRead(const char *Cmd) {
     return CmdSecurakeyDemod(Cmd);
 }
 
+static int CmdSecurakeyClone(const char *Cmd) {
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
+static int CmdSecurakeySim(const char *Cmd) {
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",  CmdHelp,           AlwaysAvailable, "This help"},
     {"demod", CmdSecurakeyDemod, AlwaysAvailable, "Demodulate an Securakey tag from the GraphBuffer"},
     {"read",  CmdSecurakeyRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    //{"clone", CmdSecurakeyClone, IfPm3Lf,         "clone Securakey tag"},
-    //{"sim",   CmdSecurakeydSim,  IfPm3Lf,         "simulate Securakey tag"},
+    {"clone", CmdSecurakeyClone, IfPm3Lf,         "clone Securakey tag"},
+    {"sim",   CmdSecurakeySim,   IfPm3Lf,         "simulate Securakey tag"},
     {NULL, NULL, NULL, NULL}
 };
 

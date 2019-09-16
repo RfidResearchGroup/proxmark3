@@ -766,7 +766,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
                     strncat(status, "0F: no info", DBD15STATLEN - strlen(status));
                     break;
                 case 0x10:
-                    strncat(status, "10: dont exist", DBD15STATLEN - strlen(status));
+                    strncat(status, "10: don't exist", DBD15STATLEN - strlen(status));
                     break;
                 case 0x11:
                     strncat(status, "11: lock again", DBD15STATLEN - strlen(status));

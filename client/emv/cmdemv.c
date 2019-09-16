@@ -790,7 +790,7 @@ static int CmdEMVExec(const char *Cmd) {
         arg_rem("By default:",      "Transaction type - MSD"),
         arg_lit0("vV",  "qvsdc",    "Transaction type - qVSDC or M/Chip."),
         arg_lit0("cC",  "qvsdccda", "Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)."),
-        arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standart behavior."),
+        arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standard behavior."),
         arg_lit0("gG",  "acgpo",    "VISA. generate AC from GPO."),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
@@ -1380,7 +1380,7 @@ static int CmdEMVScan(const char *Cmd) {
         arg_rem("By default:",      "Transaction type - MSD"),
         arg_lit0("vV",  "qvsdc",    "Transaction type - qVSDC or M/Chip."),
         arg_lit0("cC",  "qvsdccda", "Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)."),
-        arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standart behavior."),
+        arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standard behavior."),
         arg_lit0("gG",  "acgpo",    "VISA. generate AC from GPO."),
         arg_lit0("mM",  "merge",    "Merge output file with card's data. (warning: the file may be corrupted!)"),
         arg_lit0("wW",  "wired",    "Send data via contact (iso7816) interface. Contactless interface set by default."),

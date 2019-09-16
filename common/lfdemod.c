@@ -419,6 +419,18 @@ uint32_t manchesterEncode2Bytes(uint16_t datain) {
     return output;
 }
 
+void manchesterEncodeUint32(uint32_t data_in, uint8_t bitlen_in, uint8_t *bits_out, uint16_t *index) {
+    for (int i = bitlen_in - 1; i >= 0; i--) {
+        if ((data_in >> i) & 1) {
+            bits_out[(*index)++] = 1;
+            bits_out[(*index)++] = 0;
+        } else {
+            bits_out[(*index)++] = 0;
+            bits_out[(*index)++] = 1;
+        }
+    }
+}
+
 //by marshmellow
 //encode binary data into binary manchester
 //NOTE: bitstream must have triple the size of "size" available in memory to do the swap
