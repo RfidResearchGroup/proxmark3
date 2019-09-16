@@ -383,7 +383,7 @@ test_script:
 
     #proxmark crypto tests
 
-    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test'"} "Test?s? ? OK"
+    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test -i'"} "Test?s? ? OK"
 
 
     if ($global:TestsPassed) {
