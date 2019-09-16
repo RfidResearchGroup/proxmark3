@@ -131,6 +131,8 @@ void Set_t55xx_Config(t55xx_conf_block_t conf);
 
 int CmdLFT55XX(const char *Cmd);
 
+void SetConfigWithBlock0(uint32_t block0);
+
 char *GetPskCfStr(uint32_t id, bool q5);
 char *GetBitRateStr(uint32_t id, bool xmode);
 char *GetSaferStr(uint32_t id);
@@ -143,6 +145,7 @@ void printT5xxHeader(uint8_t page);
 void printT55xxBlock(uint8_t blockNum);
 int  printConfiguration(t55xx_conf_block_t b);
 
+bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose);
 bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose);
 bool t55xxVerifyWrite( uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data);
 int T55xxReadBlock(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode);

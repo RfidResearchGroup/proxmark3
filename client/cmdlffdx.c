@@ -24,6 +24,7 @@
 #include "crc16.h"      // for checksum crc-16_ccitt
 #include "protocols.h"  // for T55xx config register definitions
 #include "lfdemod.h"    // parityTest
+#include "cmdlft55xx.h" // verifywrite
 
 /*
     FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
@@ -296,6 +297,7 @@ static int CmdFdxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
     print_blocks(blocks, 5);
 
+    uint8_t res = 0;
     PacketResponseNG resp;
 
     // fast push mode
@@ -318,7 +320,20 @@ static int CmdFdxClone(const char *Cmd) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
+
+        if (i == 0) {
+            SetConfigWithBlock0(blocks[0]);
+            if ( t55xxAquireAndCompareBlock0(false, 0, blocks[0], false) )
+                continue;
+        }
+        
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
+            res++;
     }
+
+    if ( res == 0 )
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+
     return PM3_SUCCESS;
 }
 

@@ -468,21 +468,21 @@ static int CmdIndalaClone(const char *Cmd) {
 
     if (isLongUid) {
         PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with RawID %s", sprint_hex(data, datalen));
-        uint32_t datawords[7] = {0};
-        datawords[0] = bytes_to_num(data, 4);
-        datawords[1] = bytes_to_num(data +  4, 4);
-        datawords[2] = bytes_to_num(data +  8, 4);
-        datawords[3] = bytes_to_num(data + 12, 4);
-        datawords[4] = bytes_to_num(data + 16, 4);
-        datawords[5] = bytes_to_num(data + 20, 4);
-        datawords[6] = bytes_to_num(data + 24, 4);
+        uint32_t blocks[7] = {0};
+        blocks[0] = bytes_to_num(data, 4);
+        blocks[1] = bytes_to_num(data +  4, 4);
+        blocks[2] = bytes_to_num(data +  8, 4);
+        blocks[3] = bytes_to_num(data + 12, 4);
+        blocks[4] = bytes_to_num(data + 16, 4);
+        blocks[5] = bytes_to_num(data + 20, 4);
+        blocks[6] = bytes_to_num(data + 24, 4);
         clearCommandBuffer();
-        SendCommandOLD(CMD_LF_INDALA224_CLONE, 0, 0, 0, datawords, sizeof(datawords));
+        SendCommandOLD(CMD_LF_INDALA224_CLONE, 0, 0, 0, blocks, sizeof(blocks));
     } else {
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with RawID %s", sprint_hex(data, datalen));
-        uint32_t datawords[2] = {0};
-        datawords[0] = bytes_to_num(data, 4);
-        datawords[1] = bytes_to_num(data + 4, 4);
+        uint32_t blocks[2] = {0};
+        blocks[0] = bytes_to_num(data, 4);
+        blocks[1] = bytes_to_num(data + 4, 4);
         clearCommandBuffer();
         SendCommandOLD(CMD_LF_INDALA_CLONE, 0, 0, 0, datawords, sizeof(datawords));
     }

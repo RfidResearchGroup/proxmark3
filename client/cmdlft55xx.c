@@ -405,6 +405,32 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
     }
 }
 
+bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose) {
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible");
+    
+    for ( uint8_t m = 0; m < 4; m++) {
+        if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false) {
+            continue;
+        }
+        
+        if (DecodeT55xxBlock() == false) {
+            continue;
+        }
+        
+        for( uint16_t i = 0; DemodBufferLen - 32; i++) {
+            uint32_t tmp = PackBits(i, 32, DemodBuffer);
+            if ( tmp == known_block0 ) {
+                config.offset = i;
+                config.downlink_mode = m;
+                return true;
+            }
+        }
+    }
+   return false;
+}
+
 bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose) {
 
     if (verbose)
@@ -417,6 +443,7 @@ bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0,
         if (tryDetectModulationEx(m, verbose, known_block0) == false)
             continue;
 
+        config.downlink_mode = m;
         return true;
     }
    return false;
@@ -489,6 +516,36 @@ void printT5xxHeader(uint8_t page) {
     PrintAndLogEx(SUCCESS, "Reading Page %d:", page);
     PrintAndLogEx(SUCCESS, "blk | hex data | binary                           | ascii");
     PrintAndLogEx(SUCCESS, "----+----------+----------------------------------+-------");
+}
+
+void SetConfigWithBlock0(uint32_t block0) {
+    // T55x7
+    uint32_t extend = (block0 >> (32 - 15)) & 0x01;
+    uint32_t dbr;
+    if (extend)
+        dbr = (block0 >> (32 - 14)) & 0x3F;
+    else
+        dbr = (block0 >> (32 - 14)) & 0x07;
+
+    uint32_t datamod  = (block0 >> (32 - 20)) & 0x1F;
+    bool pwd = (bool)((block0 >> (32 - 28)) & 0x01);
+    bool sst = (bool)((block0 >> (32 - 29)) & 0x01);
+    bool inv = (bool)((block0 >> (32 - 31)) & 0x01);
+            
+    config.modulation = datamod;
+    config.bitrate = dbr;
+    
+    // FSK1a, FSK2a
+    if ( datamod == DEMOD_FSK1a || datamod == DEMOD_FSK2a || datamod ==  DEMOD_BIa )
+        config.inverted = 1;
+    else
+        config.inverted = inv;
+    
+    config.Q5 = 0;
+    config.ST = sst;
+    config.usepwd = pwd;
+    config.offset = 0;
+    config.block0 = block0;
 }
 
 static int CmdT55xxSetConfig(const char *Cmd) {
@@ -621,30 +678,11 @@ static int CmdT55xxSetConfig(const char *Cmd) {
 
     if ( gotconf ) {
 
-        // Q5
-
-            
+        // Q5  - to be implemented
+        
         // T55x7
-        uint32_t extend = (block0 >> (32 - 15)) & 0x01;
-        uint32_t dbr;
-        if (extend)
-            dbr = (block0 >> (32 - 14)) & 0x3F;
-        else
-            dbr = (block0 >> (32 - 14)) & 0x07;
+        SetConfigWithBlock0(block0); 
 
-        uint32_t datamod  = (block0 >> (32 - 20)) & 0x1F;
-        bool pwd = (bool)((block0 >> (32 - 28)) & 0x01);
-        bool sst = (bool)((block0 >> (32 - 29)) & 0x01);
-        bool inv = (bool)((block0 >> (32 - 31)) & 0x01);
-                
-        config.modulation = datamod;
-        config.bitrate = dbr;
-        config.inverted = inv;
-        config.Q5 = 0;
-        config.ST = sst;
-        config.usepwd = pwd;
-        config.offset = 0;
-        config.block0 = block0;
     } else {
         config.block0 = 0;
     }

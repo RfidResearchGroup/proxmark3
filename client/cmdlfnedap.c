@@ -9,20 +9,6 @@
 
 #include "cmdlfnedap.h"
 
-#include <string.h>
-
-#include <ctype.h>
-#include <stdlib.h>
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "crc16.h"
-#include "cmdlft55xx.h"
-#include "ui.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "lfdemod.h"
-
 #define FIXED_71    0x71
 #define FIXED_40    0x40
 #define UNKNOWN_A   0x00
@@ -469,6 +455,7 @@ int CmdLFNedapClone(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Preparing to clone NEDAP to T55x7");
     print_blocks(blocks, max);
 
+    uint8_t res = 0;
     PacketResponseNG resp;
 
     // fast push mode
@@ -490,10 +477,24 @@ int CmdLFNedapClone(const char *Cmd) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
+
+        if (i == 0) {
+            SetConfigWithBlock0(blocks[0]);
+            if ( t55xxAquireAndCompareBlock0(false, 0, blocks[0], false) )
+                continue;
+        }
+        
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
+            res++;
     }
-    PrintAndLogEx(NORMAL, "\n");
-    PrintAndLogEx(INFO, "The block 0 was changed (eXtended) which can be hard to detect.");
-    PrintAndLogEx(INFO,  " Configure it manually " _YELLOW_("`lf t55xx config b 64 d BI i 1 o 32`"));
+
+    if ( res == 0 )
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+    else {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "The block 0 was changed (eXtended) which can be hard to detect.");
+        PrintAndLogEx(INFO,  " Configure it manually " _YELLOW_("`lf t55xx config b 64 d BI i 1 o 32`"));
+    }
     return PM3_SUCCESS;
 }
 

@@ -189,11 +189,13 @@ static int CmdVisa2kClone(const char *Cmd) {
 
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
-        }        
+        }
 
-        // write block0, needs a detect.
-        if (i == 0)
-            t55xxAquireAndDetect(false, 0, blocks[i], false);        
+        if (i == 0) {
+            SetConfigWithBlock0(blocks[0]);
+            if ( t55xxAquireAndCompareBlock0(false, 0, blocks[0], false) )
+                continue;
+        }
         
         if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
             res++;
