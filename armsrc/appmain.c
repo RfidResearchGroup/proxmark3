@@ -343,7 +343,7 @@ void SendStatus(void) {
     Flashmem_print_info();
 #endif
 
-    reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_ng(CMD_STATUS, PM3_SUCCESS, NULL, 0);
 }
 
 void SendCapabilities(void) {
