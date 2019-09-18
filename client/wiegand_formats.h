@@ -11,7 +11,7 @@
 #ifndef WIEGAND_FORMATS_H__
 #define WIEGAND_FORMATS_H__
 
-#include <strings.h>    // memset
+#include <string.h>    // memset
 #include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>
