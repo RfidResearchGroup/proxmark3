@@ -32,6 +32,7 @@
 #include "cmdflashmem.h"  // rdv40 flashmem commands
 #include "cmdsmartcard.h" // rdv40 smart card ISO7816 commands
 #include "cmdusart.h"     // rdv40 FPC USART commands
+#include "cmdwiegand.h"   // wiegand commands
 #include "ui.h"
 #include "util_posix.h"
 
@@ -98,11 +99,12 @@ static command_t CommandTable[] = {
     {"mem",     CmdFlashMem,  IfPm3Flash,              "{ Flash Memory manipulation... }"},
     {"msleep",  CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
     {"rem",     CmdRem,       AlwaysAvailable,         "Add text to row in log file"},
-    {"reveng",  CmdRev,       AlwaysAvailable,         "{ Crc calculations from the RevEng software }"},
+    {"reveng",  CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software }"},
     {"sc",      CmdSmartcard, IfPm3Smartcard,          "{ Smart card ISO7816 commands... }"},
     {"script",  CmdScript,    AlwaysAvailable,         "{ Scripting commands }"},
     {"trace",   CmdTrace,     AlwaysAvailable,         "{ Trace manipulation... }"},
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
+    {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
     {"quit",    CmdQuit,      AlwaysAvailable,         ""},
     {"exit",    CmdQuit,      AlwaysAvailable,         "Exit program"},
     {NULL, NULL, NULL, NULL}
