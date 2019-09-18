@@ -5,7 +5,17 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency HID commands
+// Low frequency HID commands (known)
+//
+// Useful resources:
+// RF interface, programming a T55x7 clone, 26-bit HID H10301 encoding:
+// http://www.proxmark.org/files/Documents/125%20kHz%20-%20HID/HID_format_example.pdf
+//
+// "Understanding Card Data Formats"
+// https://www.hidglobal.com/sites/default/files/hid-understanding_card_data_formats-wp-en.pdf
+//
+// "What Format Do You Need?"
+// https://www.hidglobal.com/sites/default/files/resource_files/hid-prox-br-en.pdf
 //-----------------------------------------------------------------------------
 
 #include "cmdlfhid.h"
