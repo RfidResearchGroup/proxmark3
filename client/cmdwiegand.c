@@ -20,7 +20,7 @@
 #include "cmdhflist.h"          // annotations
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
-#include "util.h" 
+#include "util.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -52,18 +52,18 @@ static int usage_wiegand_decode() {
     return PM3_SUCCESS;
 }
 
-void PrintTagId(wiegand_message_t *packed){
+void PrintTagId(wiegand_message_t *packed) {
     if (packed->Top != 0) {
         PrintAndLogEx(SUCCESS, "Card ID: %X%08X%08X",
-            (uint32_t)packed->Top,
-            (uint32_t)packed->Mid,
-            (uint32_t)packed->Bot)
-            ;
+                      (uint32_t)packed->Top,
+                      (uint32_t)packed->Mid,
+                      (uint32_t)packed->Bot)
+        ;
     } else {
         PrintAndLogEx(SUCCESS, "Card ID: %X%08X",
-            (uint32_t)packed->Mid,
-            (uint32_t)packed->Bot)
-            ; 
+                      (uint32_t)packed->Mid,
+                      (uint32_t)packed->Bot)
+        ;
     }
 }
 
@@ -88,7 +88,7 @@ int CmdWiegandEncode(const char *Cmd) {
 
     int format_idx = -1;
     char format[16] = {0};
-  
+
     wiegand_card_t data;
     memset(&data, 0, sizeof(wiegand_card_t));
 
@@ -133,12 +133,12 @@ int CmdWiegandEncode(const char *Cmd) {
 
     wiegand_message_t packed;
     memset(&packed, 0, sizeof(wiegand_message_t));
-    
+
     if (HIDPack(format_idx, &data, &packed) == false) {
         PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
         return PM3_ESOFT;
     }
-    
+
     PrintTagId(&packed);
     return PM3_SUCCESS;
 }
@@ -152,7 +152,7 @@ int CmdWiegandDecode(const char *Cmd) {
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         uint32_t strlen = param_getlength(Cmd, cmdp);
         strlen++; // null termin
-        if ( strlen > 2 ) {
+        if (strlen > 2) {
             char *s = calloc(strlen, sizeof(uint8_t));
             param_getstr(Cmd, cmdp, s, strlen);
             hexstring_to_u96(&top, &mid, &bot, s);
@@ -176,11 +176,11 @@ int CmdWiegandDecode(const char *Cmd) {
     }
     if (gothex == false)
         errors = true;
-    
+
     if (errors || cmdp < 1) return usage_wiegand_decode();
 
     wiegand_message_t packed = initialize_message_object(top, mid, bot);
-    
+
     HIDTryUnpack(&packed, ignore_parity);
     return PM3_SUCCESS;
 }

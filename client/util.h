@@ -98,5 +98,5 @@ void clean_ascii(unsigned char *buf, size_t len);
 void strcleanrn(char *buf, size_t len);
 void strcreplace(char *buf, size_t len, char from, char to);
 char *strmcopy(const char *buf);
-int hexstring_to_u96(uint32_t* hi2, uint32_t* hi, uint32_t* lo, const char* str);
+int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 #endif

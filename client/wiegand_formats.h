@@ -23,26 +23,26 @@
 #include "ui.h"
 
 typedef struct {
-  bool hasCardNumber;
-  bool hasFacilityCode;
-  bool hasIssueLevel;
-  bool hasOEMCode;
-  bool hasParity;
+    bool hasCardNumber;
+    bool hasFacilityCode;
+    bool hasIssueLevel;
+    bool hasOEMCode;
+    bool hasParity;
 } cardformatdescriptor_t;
 
 // Structure for defined Wiegand card formats available for packing/unpacking
 typedef struct {
-  const char* Name;
-  bool (*Pack)(wiegand_card_t* card, wiegand_message_t* packed);
-  bool (*Unpack)(wiegand_message_t* packed, wiegand_card_t* card);
-  const char* Descrp;
-  cardformatdescriptor_t Fields;
+    const char *Name;
+    bool (*Pack)(wiegand_card_t *card, wiegand_message_t *packed);
+    bool (*Unpack)(wiegand_message_t *packed, wiegand_card_t *card);
+    const char *Descrp;
+    cardformatdescriptor_t Fields;
 } cardformat_t;
 
 void HIDListFormats();
 int HIDFindCardFormat(const char *format);
 cardformat_t HIDGetCardFormat(int idx);
-bool HIDPack(int FormatIndex, wiegand_card_t* card, wiegand_message_t* packed);
-bool HIDTryUnpack(wiegand_message_t* packed, bool ignoreParity);
+bool HIDPack(int FormatIndex, wiegand_card_t *card, wiegand_message_t *packed);
+bool HIDTryUnpack(wiegand_message_t *packed, bool ignoreParity);
 
 #endif
