@@ -63,7 +63,7 @@ static int CmdPacClone(const char *Cmd) {
 }
 
 static int CmdPacSim(const char *Cmd) {
-    
+
     // NRZ sim.
     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
     return PM3_SUCCESS;
