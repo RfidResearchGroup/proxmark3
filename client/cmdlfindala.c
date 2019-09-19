@@ -444,7 +444,7 @@ static int CmdIndalaSim(const char *Cmd) {
 static int CmdIndalaClone(const char *Cmd) {
 
     bool isLongUid = false;
-    uint32_t blocks[8] = {0};          
+    uint32_t blocks[8] = {0};
     uint8_t max = 0;
 
     uint8_t data[7 * 4];
@@ -470,17 +470,17 @@ static int CmdIndalaClone(const char *Cmd) {
     CLIGetHexWithReturn(2, data, &datalen);
     CLIParserFree();
 
-/*
-    //TODO add selection of chip for Q5 or T55x7
-    
-    // data[0] =  T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 7 << T5555_MAXBLOCK_SHIFT;
-    //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
-    // T5567WriteBlock(0x603E10E2,0);
-    
-    // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
-    //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
-    // T5567WriteBlock(0x603E1042,0);    
-*/
+    /*
+        //TODO add selection of chip for Q5 or T55x7
+
+        // data[0] =  T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 7 << T5555_MAXBLOCK_SHIFT;
+        //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
+        // T5567WriteBlock(0x603E10E2,0);
+
+        // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
+        //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
+        // T5567WriteBlock(0x603E1042,0);
+    */
 
     if (isLongUid) {
         // config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
@@ -495,7 +495,7 @@ static int CmdIndalaClone(const char *Cmd) {
         blocks[7] = bytes_to_num(data + 24, 4);
         max = 8;
     } else {
-        // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)        
+        // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with RawID %s", sprint_hex(data, datalen));
         blocks[0] =  T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
         blocks[1] = bytes_to_num(data, 4);
@@ -530,15 +530,15 @@ static int CmdIndalaClone(const char *Cmd) {
 
         if (i == 0) {
             SetConfigWithBlock0(blocks[0]);
-            if ( t55xxAquireAndCompareBlock0(false, 0, blocks[0], false) )
+            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
                 continue;
         }
-        
+
         if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
             res++;
     }
 
-    if ( res == 0 )
+    if (res == 0)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
 
     return PM3_SUCCESS;

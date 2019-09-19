@@ -186,17 +186,17 @@ static int CmdKeriClone(const char *Cmd) {
 
         if (i == 0) {
             SetConfigWithBlock0(blocks[0]);
-            if ( t55xxAquireAndCompareBlock0(false, 0, blocks[0], false) )
+            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
                 continue;
         }
-        
+
         if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
-            res++;  
+            res++;
     }
 
-    if ( res == 0 )
+    if (res == 0)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
-    
+
     return PM3_SUCCESS;
 }
 

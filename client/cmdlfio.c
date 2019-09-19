@@ -269,7 +269,7 @@ static int CmdIOProxClone(const char *Cmd) {
     }
 
     uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
- 
+
     if (tolower(param_getchar(Cmd, 3) == 'q'))
         blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
 
@@ -304,17 +304,17 @@ static int CmdIOProxClone(const char *Cmd) {
 
         if (i == 0) {
             SetConfigWithBlock0(blocks[0]);
-            if ( t55xxAquireAndCompareBlock0(false, 0, blocks[0], false) )
+            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
                 continue;
         }
-        
+
         if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
             res++;
     }
 
-    if ( res == 0 )
+    if (res == 0)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
-    
+
     return PM3_SUCCESS;
 }
 
