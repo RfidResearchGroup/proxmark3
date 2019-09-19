@@ -930,7 +930,7 @@ static int l_T55xx_readblock(lua_State *L) {
                 return returnToLuaWithError(L, "Failed to read config block");
             }
 
-            if (!tryDetectModulation(0,true)) { // Default to prev. behaviour (default dl mode and print config)
+            if (!tryDetectModulation(0, true)) { // Default to prev. behaviour (default dl mode and print config)
                 PrintAndLogEx(NORMAL, "Safety Check: Could not detect if PWD bit is set in config block. Exits.");
                 return 0;
             } else {
@@ -1006,7 +1006,7 @@ static int l_T55xx_detect(lua_State *L) {
         }
     }
 
-    isok = tryDetectModulation(0,true); // Default to prev. behaviour (default dl mode and print config)
+    isok = tryDetectModulation(0, true); // Default to prev. behaviour (default dl mode and print config)
     if (isok == false) {
         return returnToLuaWithError(L, "Could not detect modulation automatically. Try setting it manually with \'lf t55xx config\'");
     }

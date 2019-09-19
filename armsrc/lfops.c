@@ -918,7 +918,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     */
 
     // special start of frame marker containing invalid Manchester bit sequences
-    uint8_t bits[8+8*2+84*2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
+    uint8_t bits[8 + 8 * 2 + 84 * 2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
     uint8_t bitlen = 0;
     uint16_t n = 8;
 
@@ -928,9 +928,9 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
             DbpString("Tags can only have 84 bits.");
             return;
         }
-        bitlen = 8+8*2+84*2;
+        bitlen = 8 + 8 * 2 + 84 * 2;
         hi2 |= 0x9E00000; // 9E: long format identifier
-        manchesterEncodeUint32(hi2, 16+12, bits, &n);
+        manchesterEncodeUint32(hi2, 16 + 12, bits, &n);
         manchesterEncodeUint32(hi, 32, bits, &n);
         manchesterEncodeUint32(lo, 32, bits, &n);
     } else {
@@ -939,7 +939,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
             DbpString("[!] tags can only have 44 bits. - USE lf simfsk for larger tags");
             return;
         }
-        bitlen = 8+44*2;
+        bitlen = 8 + 44 * 2;
         manchesterEncodeUint32(hi, 12, bits, &n);
         manchesterEncodeUint32(lo, 32, bits, &n);
     }
@@ -2038,14 +2038,14 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
 
 // clone viking tag to T55xx
 void CopyVikingtoT55xx(uint8_t *blocks, uint8_t Q5) {
-  
+
     uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), 0, 0};
-    if (Q5) 
+    if (Q5)
         data[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
-    
+
     data[1] = bytes_to_num(blocks, 4);
-    data[2] = bytes_to_num(blocks +4, 4);
-    
+    data[2] = bytes_to_num(blocks + 4, 4);
+
     // Program the data blocks for supplied ID and the block 0 config
     WriteT55xx(data, 0, 3);
     LED_D_OFF();

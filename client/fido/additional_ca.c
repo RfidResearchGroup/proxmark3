@@ -89,7 +89,7 @@
     "A1UdDwEB/wQEAwIBBjAKBggqhkjOPQQDAgNHADBEAiAwfPqgIWIUB+QBBaVGsdHy\r\n" \
     "0s5RMxlkzpSX/zSyTZmUpQIgB2wJ6nZRM8oX/nA43Rh6SJovM2XwCCH//+LirBAb\r\n" \
     "B0M=\r\n" \
-    "-----END CERTIFICATE-----\r\n" 
+    "-----END CERTIFICATE-----\r\n"
 
 // FEITIAN FIDO2
 #define FEITIAN_FIDO2_CA \
@@ -104,7 +104,7 @@
     "FEu9hyYRrRyJzwRYvnDSCIxrFiO3MA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/\r\n" \
     "BAQDAgEGMAoGCCqGSM49BAMCA0gAMEUCIDHSb2mbNDAUNXvpPU0oWKeNye0fQ2l9\r\n" \
     "D01AR2+sLZdhAiEAo3wz684IFMVsCCRmuJqxH6FQRESNqezuo1E+KkGxWuM=\r\n" \
-    "-----END CERTIFICATE-----\r\n" 
+    "-----END CERTIFICATE-----\r\n"
 
 // https://hypersecu.com/support/downloads
 // HyperFIDO U2F Security Key Attestation CA
@@ -135,9 +135,9 @@
     "FPFypmsIMAwGA1UdEwQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMAoGCCqGSM49BAMC\r\n" \
     "A0kAMEYCIQCG2/ppMGt7pkcRie5YIohS3uDPIrmiRcTjqDclKVWg0gIhANcPNDZH\r\n" \
     "E2/zZ+uB5ThG9OZus+xSb4knkrbAyXKX2zm/\r\n" \
-    "-----END CERTIFICATE-----\r\n" 
-   
-// NXP   
+    "-----END CERTIFICATE-----\r\n"
+
+// NXP
 // https://fido-mds-parser.appspot.com/?url=https://mds.fidoalliance.org/metadata/JKP5CiDehdMMPwtG5i7to5
 #define NXP_U2F_CA \
     "-----BEGIN CERTIFICATE-----\r\n" \
@@ -151,8 +151,8 @@
     "AJlr23jig2LxRM1PpgMAQXnZJy/HnkRB9O8KD0o2oK/mAiBG5EK1S3yVHdkkVGTJ\r\n" \
     "Q12ffuK8Op7Nx89cszCr0WyIhQ==\r\n" \
     "-----END CERTIFICATE-----\r\n"
-    
+
 /* Concatenation of all additional CA certificates in PEM format if available */
 const char   additional_ca_pem[] = GLOBALSIGN_CA YUBICO_CA SOLOKEY_CA \
-    FEITIAN_U2F_CA FEITIAN_FIDO2_CA HYPERFIDO_U2F_1_CA HYPERFIDO_U2F_2_CA NXP_U2F_CA;
+                                   FEITIAN_U2F_CA FEITIAN_FIDO2_CA HYPERFIDO_U2F_1_CA HYPERFIDO_U2F_2_CA NXP_U2F_CA;
 const size_t additional_ca_pem_len = sizeof(additional_ca_pem);
