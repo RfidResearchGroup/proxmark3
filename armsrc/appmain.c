@@ -208,13 +208,13 @@ void MeasureAntennaTuning(void) {
 
 uint16_t MeasureAntennaTuningHfData(void) {
     uint16_t volt = 0; // in mV
-    volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+    uint16_t avg = AvgAdc(ADC_CHAN_HF);
+    volt = (MAX_ADC_HF_VOLTAGE * avg) >> 10;
     bool use_high = (volt > MAX_ADC_HF_VOLTAGE - 300);
 
-    if (!use_high) {
-        volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-    } else {
+    if (use_high) {
         volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+//        volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
     }
     return volt;
 }
@@ -787,7 +787,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint32_t password;
                 uint8_t flags;
             } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;            
+            struct p *payload = (struct p *) packet->data.asBytes;
             T55xxWakeUp(payload->password, payload->flags);
             break;
         }
@@ -846,7 +846,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 bool Q5;
                 uint8_t blocks[8];
             } PACKED;
-            struct p *payload = (struct p*)packet->data.asBytes;
+            struct p *payload = (struct p *)packet->data.asBytes;
             CopyVikingtoT55xx(payload->blocks, payload->Q5);
             break;
         }
@@ -1236,22 +1236,22 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_READBL: {
-/*
-            struct p {
-                uint8_t blockno;
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            */
-            iClass_ReadBlk( packet->data.asBytes[0] );
+            /*
+                        struct p {
+                            uint8_t blockno;
+                        } PACKED;
+                        struct p *payload = (struct p *)packet->data.asBytes;
+                        */
+            iClass_ReadBlk(packet->data.asBytes[0]);
             break;
         }
         case CMD_HF_ICLASS_AUTH: { //check
-/*
-            struct p {
-                uint8_t mac[4];
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-*/
+            /*
+                        struct p {
+                            uint8_t mac[4];
+                        } PACKED;
+                        struct p *payload = (struct p *)packet->data.asBytes;
+            */
             iClass_Authentication(packet->data.asBytes);
             break;
         }
@@ -1665,7 +1665,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_FLASHMEM_SET_SPIBAUDRATE: {
-            FlashmemSetSpiBaudrate(packet->oldarg[0]);
+            if (packet->length != sizeof(uint32_t))
+                break;
+            FlashmemSetSpiBaudrate(packet->data.asDwords[0]);
             break;
         }
         case CMD_FLASHMEM_WRITE: {
