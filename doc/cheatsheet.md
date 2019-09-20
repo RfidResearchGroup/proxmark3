@@ -9,7 +9,7 @@
 |[Sim Module](#Sim-Module)|[Hitag](#Hitag)||
 |[Lua Scripts](#Lua-Scripts)|||
 |[Smart Card](#Smart-Card)|||
-
+|[Wiegand convertion](#Wiegand-manipulation)|||
 
 ## Generic
 ^[Top](#top)
@@ -62,7 +62,7 @@ Options
 ---
 k <Key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
 
-pm3 --> hf iclass dump k AFA785A7DAB33378
+m3 --> hf iclass dump k 0
 ```
 
 Read iClass Block
@@ -72,7 +72,7 @@ Options
 b <Block>  : The block number as 2 hex symbols
 k <Key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
 
-pm3 --> hf iclass readblk b 7 k AFA785A7DAB33378
+pm3 --> hf iclass rdbl b 7 k 0
 ```
 
 Write to iClass Block
@@ -83,7 +83,7 @@ b <Block>  : The block number as 2 hex symbols
 d <data>   : Set the Data to write as 16 hex symbols
 k <Key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
 
-pm3 --> hf iclass writeblk b 07 d 6ce099fe7e614fd0 k AFA785A7DAB33378
+pm3 --> hf iclass wrbl b 07 d 6ce099fe7e614fd0 k 0
 ```
 
 Print keystore
@@ -107,7 +107,7 @@ pm3 --> hf iclass managekeys n 0 k AFA785A7DAB33378
 
 Encrypt iClass Block
 ```
-pm3 --> hf iclass encryptblk 0000000f2aa3dba8
+pm3 --> hf iclass encrypt 0000000f2aa3dba8
 ```
 
 Load iClass dump into memory for simulation
@@ -116,7 +116,7 @@ Options
 ---
 f <filename>     : load iclass tag-dump filename
 
-pm3 --> hf iclass eload f iclass_tagdump-db883702f8ff12e0.bin
+pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
 ```
 
 Simulate iClass
@@ -124,6 +124,7 @@ Simulate iClass
 Options
 ---
 0 <CSN>     simulate the given CSN
+2           Runs part 1 of LOCLASS attack
 1           simulate default CSN
 3           Full simulation using emulator memory (see 'hf iclass eload')
 
@@ -132,14 +133,14 @@ pm3 --> hf iclass sim 3
 
 Clone iClass Legacy Sequence
 ```
-pm3 --> hf iclass readblk b 7 k AFA785A7DAB33378
-pm3 --> hf iclass writeblk b 07 d 6ce099fe7e614fd0 k AFA785A7DAB33378
+pm3 --> hf iclass rdbl b 7 k 0
+pm3 --> hf iclass wrbl b 7 d 6ce099fe7e614fd0 k 0
 ```
 
 Simulate iClass Sequence
 ```
-pm3 --> hf iclass dump k AFA785A7DAB33378
-pm3 --> hf iclass eload f iclass_tagdump-db883702f8ff12e0.bin
+pm3 --> hf iclass dump k 0
+pm3 --> hf iclass eload f hf-iclass-db883702f8ff12e0.bin
 pm3 --> hf iclass sim 3
 ```
 
@@ -224,6 +225,14 @@ Options
 pm3 --> hf mf wrbl 0 A FFFFFFFFFFFF d3a2859f6b880400c801002000000016
 ```
 
+Run autopwn
+```
+Options
+---
+
+pm3 --> hf mf autopwn
+```
+
 Run Hardnested attack
 ```
 Options
@@ -241,8 +250,8 @@ Options
 <card memory> <file name w/o `.eml`>
 [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K, u = UL
 
-pm3 --> hf mf eload 353C2AA6
-pm3 --> hf mf eload 1 353C2AA6
+pm3 --> hf mf eload hf-mf-353C2AA6
+pm3 --> hf mf eload 1 hf-mf-353C2AA6
 ```
 
 Simulate Mifare
@@ -268,6 +277,37 @@ pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
 ```
 
+## Wiegand manipulation
+^[Top](#top)
+
+List all available weigand formats in client
+```
+pm3 --> wiegand list
+```
+
+Convert Site & Facility code to Wiegand raw hex
+```
+Options
+---
+w <format> o <OEM> f <FC> c <CN> i <issuelevel>
+w            : wiegand format to use
+o            : OEM number / site code
+f            : facility code
+c            : card number
+i            : issue level
+
+pm3 --> wiegand encode 0 56 150
+```
+
+Convert Site & Facility code from Wiegand raw hex to numbers
+```
+Options
+---
+p            : ignore parity errors
+
+pm3 --> wiegand decode 2006f623ae
+```
+
 ## HID Prox
 ^[Top](#top)
 
@@ -279,18 +319,6 @@ pm3 --> lf hid read
 Demodulate HID Prox card
 ```
 pm3 --> lf hid demod
-```
-
-Convert Site & Facility code to Wiegand
-```
-Options
----
-<OEM> <FC> <CN>
-OEM           : OEM number / site code
-FC            : facility code
-CN            : card number
-
-pm3 --> lf hid wiegand 0 56 150
 ```
 
 Simulate Prox card
