@@ -69,6 +69,23 @@ int fileExists(const char *filename) {
     return result == 0;
 }
 
+/**
+ * @brief checks if path is file or directory.
+ * @param filename
+ * @return
+ */
+int is_regular_file(const char *filename) {
+#ifdef _WIN32
+    struct _stat st;
+    _stat(filename, &st);
+    return S_ISREG(_st.st_mode);
+#else
+    struct stat st;
+    stat(filename, &st);
+    return S_ISREG(st.st_mode);
+#endif
+}
+
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
@@ -1016,8 +1033,10 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
         return PM3_EINVARG;
     if (searchname == NULL || strlen(searchname) == 0)
         return PM3_EINVARG;
-    if (searchname[ strlen(searchname)-1] == '/')
+
+    if (is_regular_file(searchname) == 0)
         return PM3_EINVARG;
+
 
     char *filename = filenamemcopy(searchname, suffix);
     if (filename == NULL || strlen(filename) == 0)
