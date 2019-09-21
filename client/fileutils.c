@@ -78,7 +78,7 @@ int is_regular_file(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
     _stat(filename, &st);
-    return S_ISREG(_st.st_mode);
+    return S_ISREG(st.st_mode);
 #else
     struct stat st;
     stat(filename, &st);
