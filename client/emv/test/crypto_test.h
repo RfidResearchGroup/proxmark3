@@ -17,5 +17,5 @@
 #define __CRYPTO_TEST_H
 #include <stdbool.h>
 
-int exec_crypto_test(bool verbose);
+int exec_crypto_test(bool verbose, bool include_slow_tests);
 #endif
