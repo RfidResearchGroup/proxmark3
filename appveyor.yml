@@ -378,11 +378,11 @@ test_script:
 
     #proxmark crypto tests
 
-# Long tests:
-#    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf hardnested t 1 000000000000'"} "found:"
-#    ExecTest "hf mf iclass" "hf mf iclass" {bash -lc "cd ~/client;./proxmark3 -c 'hf iclass loclass t l'"} "verified ok"
-#    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test -i -l'"} "Test?s? ? OK"
-# Short tests:
+    # Long tests:
+    #    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf hardnested t 1 000000000000'"} "found:"
+    #    ExecTest "hf mf iclass" "hf mf iclass" {bash -lc "cd ~/client;./proxmark3 -c 'hf iclass loclass t l'"} "verified ok"
+    #    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test -i -l'"} "Test?s? ? OK"
+    # Short tests:
     ExecTest "hf mf iclass" "hf mf iclass" {bash -lc "cd ~/client;./proxmark3 -c 'hf iclass loclass t'"} "OK!"
     ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test -i'"} "Test?s? ? OK"
 
