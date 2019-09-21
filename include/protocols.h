@@ -205,6 +205,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_WIPE                  0x40
 #define MAGIC_SINGLE                (MAGIC_WUPC | MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
 
+// by CMD_HF_MIFARE_CIDENT
+#define MAGIC_GEN_1A 1
+#define MAGIC_GEN_1B 2
+#define MAGIC_GEN_2  4
+#define MAGIC_GEN_UNFUSED 5
 /**
 06 00 = INITIATE
 0E xx = SELECT ID (xx = Chip-ID)

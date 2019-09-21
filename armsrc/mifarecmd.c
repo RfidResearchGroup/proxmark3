@@ -1977,11 +1977,6 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 }
 
 void MifareCIdent() {
-#define GEN_1A 1
-#define GEN_1B 2
-#define GEN_2  4
-#define GEN_UNFUSED 5
-
     // variables
     uint8_t isGen = 0;
     uint8_t rec[1] = {0x00};
@@ -2000,10 +1995,10 @@ void MifareCIdent() {
     if (ReaderReceive(rec, recpar) && (rec[0] == 0x0a)) {
         ReaderTransmit(wupC2, sizeof(wupC2), NULL);
         if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
-            isGen = GEN_1B;
+            isGen = MAGIC_GEN_1B;
             goto OUT;
         };
-        isGen = GEN_1A;
+        isGen = MAGIC_GEN_1A;
         goto OUT;
     }
 
@@ -2014,20 +2009,19 @@ void MifareCIdent() {
 
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
     if (res == 2) {
-//        Dbprintf("cident AA55C396 == %08X", cuid);
         if (cuid == 0xAA55C396) {
-            isGen = GEN_UNFUSED;
+            isGen = MAGIC_GEN_UNFUSED;
             goto OUT;
         }
 
         ReaderTransmit(rats, sizeof(rats), NULL);
         res = ReaderReceive(buf, par);
         if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
-            isGen = GEN_2;
+            isGen = MAGIC_GEN_2;
             goto OUT;
         }
         if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
-            isGen = GEN_2;
+            isGen = MAGIC_GEN_2;
         }
     };
 
