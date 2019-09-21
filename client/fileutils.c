@@ -1014,8 +1014,14 @@ out:
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent) {
     if (foundpath == NULL)
         return PM3_EINVARG;
+    if (searchname == NULL || strlen(searchname) == 0)
+        return PM3_EINVARG;
+    if (searchname[ strlen(searchname)-1] == '/')
+        return PM3_EINVARG;
+
     char *filename = filenamemcopy(searchname, suffix);
-    if (filename == NULL) return PM3_EMALLOC;
+    if (filename == NULL || strlen(filename) == 0)
+        return PM3_EMALLOC;
     int res = searchFinalFile(foundpath, pm3dir, filename, silent);
     if (res != PM3_SUCCESS) {
         if ((res == PM3_EFILE) && (!silent))

@@ -1676,6 +1676,8 @@ static int CmdLoad(const char *Cmd) {
     int len = 0;
 
     len = strlen(Cmd);
+    if (len == 0) return PM3_EFILE;
+
     if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
     memcpy(filename, Cmd, len);
 
