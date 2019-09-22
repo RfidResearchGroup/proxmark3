@@ -1716,19 +1716,21 @@ static int CmdEMVList(const char *Cmd) {
 static int CmdEMVTest(const char *Cmd) {
     CLIParserInit("emv test",
                   "Executes tests\n",
-                  "Usage:\n\temv test\n");
+                  "Usage:\n\temv test [l]\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("iI",  "ignore",  "ignore timing tests for VM"),
+        arg_lit0("lL",  "long",  "run long tests too"),
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, true);
 
     bool ignoreTimeTest = arg_get_lit(1);
+    bool runSlowTests = arg_get_lit(2);
     CLIParserFree();
 
-    return ExecuteCryptoTests(true, ignoreTimeTest);
+    return ExecuteCryptoTests(true, ignoreTimeTest, runSlowTests);
 }
 
 static int CmdEMVRoca(const char *Cmd) {

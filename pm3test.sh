@@ -3,6 +3,12 @@
 PM3PATH=$(dirname "$0")
 cd "$PM3PATH" || exit 1
 
+if [ "$1" == "long" ]; then
+    SLOWTESTS=true
+else
+    SLOWTESTS=false
+fi
+
 C_RED='\033[0;31m'
 C_GREEN='\033[0;32m'
 C_YELLOW='\033[0;33m'
@@ -95,9 +101,14 @@ while true; do
 
   printf "\n${C_BLUE}Testing HF:${C_NC}\n"
   if ! CheckExecute "hf mf offline text" "./client/proxmark3 -c 'hf mf'" "at_enc"; then break; fi
-  if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
-  if ! CheckExecute "hf iclass test" "./client/proxmark3 -c 'hf iclass loclass t'" "verified ok"; then break; fi
-  if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test(s) \[ OK"; then break; fi
+  if $SLOWTESTS; then
+    if ! CheckExecute "hf mf hardnested test" "./client/proxmark3 -c 'hf mf hardnested t 1 000000000000'" "found:" "repeat" "ignore"; then break; fi
+    if ! CheckExecute "hf iclass test" "./client/proxmark3 -c 'hf iclass loclass t l'" "verified ok"; then break; fi
+    if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test -l'" "Test(s) \[ OK"; then break; fi
+  else
+    if ! CheckExecute "hf iclass test" "./client/proxmark3 -c 'hf iclass loclass t'" "OK!"; then break; fi
+    if ! CheckExecute "emv test" "./client/proxmark3 -c 'emv test'" "Test(s) \[ OK"; then break; fi
+  fi
 
   printf "\n${C_BLUE}Testing tools:${C_NC}\n"
   # Need a decent example for mfkey32...

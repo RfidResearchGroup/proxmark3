@@ -74,15 +74,15 @@ int fileExists(const char *filename) {
  * @param filename
  * @return
  */
-int is_regular_file(const char *filename) {
+bool is_regular_file(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
     _stat(filename, &st);
-    return S_ISREG(st.st_mode);
+    return S_ISREG(st.st_mode) != 0;
 #else
     struct stat st;
     stat(filename, &st);
-    return S_ISREG(st.st_mode);
+    return S_ISREG(st.st_mode) != 0;
 #endif
 }
 /**
@@ -90,15 +90,15 @@ int is_regular_file(const char *filename) {
  * @param filename
  * @return
  */
-int is_directory(const char *filename) {
+bool is_directory(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
     _stat(filename, &st);
-    return S_ISDIR(st.st_mode);
+    return S_ISDIR(st.st_mode) != 0;
 #else
     struct stat st;
     stat(filename, &st);
-    return S_ISDIR(st.st_mode);
+    return S_ISDIR(st.st_mode) != 0;
 #endif
 }
 
@@ -1053,7 +1053,7 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     if (searchname == NULL || strlen(searchname) == 0)
         return PM3_EINVARG;
 
-    if (is_directory(searchname) != 0)
+    if (is_directory(searchname))
         return PM3_EINVARG;
 
 

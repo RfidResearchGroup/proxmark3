@@ -33,7 +33,7 @@
 #include "crypto/libpcrypto.h"
 #include "emv/emv_roca.h"
 
-int ExecuteCryptoTests(bool verbose, bool ignore_time) {
+int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) {
     int res;
     bool TestFail = false;
 
@@ -94,7 +94,7 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time) {
     res = exec_cda_test(verbose);
     if (res) TestFail = true;
 
-    res = exec_crypto_test(verbose);
+    res = exec_crypto_test(verbose, include_slow_tests);
     if (res) TestFail = true;
 
     res = roca_self_test();
