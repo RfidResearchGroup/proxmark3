@@ -29,23 +29,18 @@
 #include "cmdlft55xx.h" // verifywrite
 
 static int CmdHelp(const char *Cmd);
-/*
-static int usage_lf_awid_read(void) {
+
+static int usage_lf_awid_watch(void) {
     PrintAndLogEx(NORMAL, "Enables AWID compatible reader mode printing details of scanned AWID26 or AWID50 tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "If the [1] option is provided, reader mode is exited after reading a single AWID card.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf awid read [h] [1]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h :  This help");
-    PrintAndLogEx(NORMAL, "      1 : (optional) stop after reading a single card");
+    PrintAndLogEx(NORMAL, "Usage:  lf awid watch");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf awid read");
-    PrintAndLogEx(NORMAL, "       lf awid read 1");
+    PrintAndLogEx(NORMAL, "       lf awid watch");
     return PM3_SUCCESS;
 }
-*/
+
 static int usage_lf_awid_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of AWID card with specified facility-code and card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
@@ -180,18 +175,17 @@ static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn) {
             break;
     }
 }
-/*
+
 // this read loops on device side.
 // uses the demod in lfops.c
-static int CmdAWIDRead_device(const char *Cmd) {
-
-    if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_awid_read();
-    uint8_t findone = (Cmd[0] == '1') ? 1 : 0;
+static int CmdAWIDWatch(const char *Cmd) {
+    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_lf_awid_watch();
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_AWID_DEMOD, findone, 0, 0, NULL, 0);
+    SendCommandNG(CMD_LF_AWID_DEMOD, NULL, 0);
     return PM3_SUCCESS;
 }
-*/
+
 //by marshmellow
 //AWID Prox demod - FSK2a RF/50 with preamble of 00000001  (always a 96 bit data stream)
 //print full AWID Prox ID and some bit format details if found
@@ -557,6 +551,7 @@ static command_t CommandTable[] = {
     {"clone",   CmdAWIDClone,   IfPm3Lf,         "clone AWID to T55x7"},
     {"sim",     CmdAWIDSim,     IfPm3Lf,         "simulate AWID tag"},
     {"brute",   CmdAWIDBrute,   IfPm3Lf,         "Bruteforce card number against reader"},
+    {"watch",   CmdAWIDWatch,   IfPm3Lf,         "continuously watch for cards.  Reader mode"},
     {NULL, NULL, NULL, NULL}
 };
 

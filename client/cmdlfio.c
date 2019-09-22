@@ -27,23 +27,18 @@
 #include "cmdlft55xx.h" // verifywrite
 
 static int CmdHelp(const char *Cmd);
-/*
-static int usage_lf_io_read(void) {
+
+static int usage_lf_io_watch(void) {
     PrintAndLogEx(NORMAL, "Enables IOProx compatible reader mode printing details of scanned tags.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
-    PrintAndLogEx(NORMAL, "If the [1] option is provided, reader mode is exited after reading a single card.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf io read [h] [1]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h :  This help");
-    PrintAndLogEx(NORMAL, "      1 : (optional) stop after reading a single card");
+    PrintAndLogEx(NORMAL, "Usage:  lf io watch");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        lf io read");
-    PrintAndLogEx(NORMAL, "        lf io read 1");
+    PrintAndLogEx(NORMAL, "        lf io watch");
     return PM3_SUCCESS;
 }
-*/
+
 static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of IOProx card with specified facility-code and card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
@@ -76,17 +71,17 @@ static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "       lf io clone 26 101 1337");
     return PM3_SUCCESS;
 }
-/*
+
 // this read loops on device side.
 // uses the demod in lfops.c
-static int CmdIOProxRead_device(const char *Cmd) {
-    if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_io_read();
-    int findone = (Cmd[0] == '1') ? 1 : 0;
+static int CmdIOProxWatch(const char *Cmd) {
+    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_lf_io_watch();
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_IO_DEMOD, findone, 0, 0, NULL, 0);
+    SendCommandNG(CMD_LF_IO_DEMOD, NULL, 0);
     return PM3_SUCCESS;
 }
-*/
+
 //by marshmellow
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
 //print ioprox ID and some format details
@@ -324,6 +319,7 @@ static command_t CommandTable[] = {
     {"read",    CmdIOProxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",   CmdIOProxClone, IfPm3Lf,         "clone IOProx to T55x7"},
     {"sim",     CmdIOProxSim,   IfPm3Lf,         "simulate IOProx tag"},
+    {"watch",   CmdIOProxWatch, IfPm3Lf,         "continuously watch for cards.  Reader mode"}, 
     {NULL, NULL, NULL, NULL}
 };
 

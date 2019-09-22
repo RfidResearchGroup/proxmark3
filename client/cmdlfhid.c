@@ -47,9 +47,7 @@ static int usage_lf_hid_watch(void) {
     PrintAndLogEx(NORMAL, "Enables HID compatible reader mode printing details.");
     PrintAndLogEx(NORMAL, "By default, values are printed and logged until the button is pressed or another USB command is issued.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf hid watch [h]");
-    PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h :  This help");
+    PrintAndLogEx(NORMAL, "Usage:  lf hid watch");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf hid watch");
@@ -264,11 +262,10 @@ static int CmdHIDRead(const char *Cmd) {
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdHIDWatch(const char *Cmd) {
-
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if ( strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_hid_watch();
+    if (ctmp == 'h') return usage_lf_hid_watch();
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_HID_DEMOD, 0, 0, 0, NULL, 0);
+    SendCommandNG(CMD_LF_HID_DEMOD, NULL, 0);
     return PM3_SUCCESS;
 }
 
