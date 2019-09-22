@@ -50,7 +50,7 @@ extern z_const char *const z_errmsg[10];  /* indexed by 2-zlib_error */
 #define ERR_MSG(err) z_errmsg[Z_NEED_DICT-(err)]
 
 #define ERR_RETURN(strm,err) \
-    return (strm->msg = ERR_MSG(err), (err))
+  return (strm->msg = ERR_MSG(err), (err))
 /* To be used only when the state is known to be valid */
 
 /* common constants */
@@ -104,7 +104,7 @@ void *_Cdecl farmalloc(unsigned long nbytes);
 #if defined(VAXC) || defined(VMS)
 #  define OS_CODE  0x02
 #  define F_OPEN(name, mode) \
-    fopen((name), (mode), "mbc=60", "ctx=stm", "rfm=fix", "mrs=512")
+     fopen((name), (mode), "mbc=60", "ctx=stm", "rfm=fix", "mrs=512")
 #endif
 
 #if defined(ATARI) || defined(atarist)
@@ -242,7 +242,7 @@ void ZLIB_INTERNAL zcfree  OF((voidpf opaque, voidpf ptr));
 #endif
 
 #define ZALLOC(strm, items, size) \
-    (*((strm)->zalloc))((strm)->opaque, (items), (size))
+           (*((strm)->zalloc))((strm)->opaque, (items), (size))
 #define ZFREE(strm, addr)  (*((strm)->zfree))((strm)->opaque, (voidpf)(addr))
 #define TRY_FREE(s, p) {if (p) ZFREE(s, p);}
 
@@ -251,3 +251,4 @@ void ZLIB_INTERNAL zcfree  OF((voidpf opaque, voidpf ptr));
                     (((q) & 0xff00) << 8) + (((q) & 0xff) << 24))
 
 #endif /* ZUTIL_H */
+

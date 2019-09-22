@@ -52,22 +52,17 @@
 #include "deflate.h"
 
 const char deflate_copyright[] =
+#ifdef ZLIB_PM3_TUNED
     " deflate 1.2.8.f-Proxmark3 Copyright 1995-2013 Jean-loup Gailly and Mark Adler ";
+#else
+    " deflate 1.2.8 Copyright 1995-2013 Jean-loup Gailly and Mark Adler ";
+#endif
 /*
   If you use the zlib library in a product, an acknowledgment is welcome
   in the documentation of your product. If for some reason you cannot
   include such an acknowledgment, I would appreciate that you keep this
   copyright string in the executable of your product.
  */
-
-//-----------------------------------------------------------------------------
-// This version of zlib is modified for use within the Proxmark3 project.
-// Files from the original distribution which are not required for this
-// purpose are not included. All modifications can easily be found
-// by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
-//-----------------------------------------------------------------------------
-
-
 
 /* ===========================================================================
  *  Function prototypes.
@@ -190,14 +185,14 @@ struct static_tree_desc_s {int dummy;}; /* for buggy compilers */
  */
 #ifdef FASTEST
 #define INSERT_STRING(s, str, match_head) \
-    (UPDATE_HASH(s, s->ins_h, s->window[(str) + (MIN_MATCH-1)]), \
-     match_head = s->head[s->ins_h], \
-     s->head[s->ins_h] = (Pos)(str))
+   (UPDATE_HASH(s, s->ins_h, s->window[(str) + (MIN_MATCH-1)]), \
+    match_head = s->head[s->ins_h], \
+    s->head[s->ins_h] = (Pos)(str))
 #else
 #define INSERT_STRING(s, str, match_head) \
-    (UPDATE_HASH(s, s->ins_h, s->window[(str) + (MIN_MATCH-1)]), \
-     match_head = s->prev[(str) & s->w_mask] = s->head[s->ins_h], \
-     s->head[s->ins_h] = (Pos)(str))
+   (UPDATE_HASH(s, s->ins_h, s->window[(str) + (MIN_MATCH-1)]), \
+    match_head = s->prev[(str) & s->w_mask] = s->head[s->ins_h], \
+    s->head[s->ins_h] = (Pos)(str))
 #endif
 
 /* ===========================================================================
@@ -1155,7 +1150,7 @@ IPos cur_match;                             /* current match */
 {
     unsigned chain_length = s->max_chain_length;/* max hash chain length */
     register Bytef *scan = s->window + s->strstart; /* current string */
-    register Bytef *match;                      /* matched string */
+    register Bytef *match;                       /* matched string */
     register int len;                           /* length of current match */
 #ifdef ZLIB_PM3_TUNED
     int best_len = MIN_MATCH - 1;               /* lift the restriction on prev-length */
@@ -1544,21 +1539,21 @@ deflate_state *s;
  * IN assertion: strstart is set to the end of the current match.
  */
 #define FLUSH_BLOCK_ONLY(s, last) { \
-        _tr_flush_block(s, (s->block_start >= 0L ? \
-                            (charf *)&s->window[(unsigned)s->block_start] : \
-                            (charf *)Z_NULL), \
-                        (ulg)((long)s->strstart - s->block_start), \
-                        (last)); \
-        s->block_start = s->strstart; \
-        flush_pending(s->strm); \
-        Tracev((stderr,"[FLUSH]")); \
-    }
+   _tr_flush_block(s, (s->block_start >= 0L ? \
+                   (charf *)&s->window[(unsigned)s->block_start] : \
+                   (charf *)Z_NULL), \
+                (ulg)((long)s->strstart - s->block_start), \
+                (last)); \
+   s->block_start = s->strstart; \
+   flush_pending(s->strm); \
+   Tracev((stderr,"[FLUSH]")); \
+}
 
 /* Same but force premature exit if necessary. */
 #define FLUSH_BLOCK(s, last) { \
-        FLUSH_BLOCK_ONLY(s, last); \
-        if (s->strm->avail_out == 0) return (last) ? finish_started : need_more; \
-    }
+   FLUSH_BLOCK_ONLY(s, last); \
+   if (s->strm->avail_out == 0) return (last) ? finish_started : need_more; \
+}
 
 /* ===========================================================================
  * Copy without compression as much as possible from the input stream, return
@@ -1840,7 +1835,8 @@ int flush;
             INSERT_STRING(s, s->strstart, hash_head);
         }
 
-        /* Find the longest match, discarding those <= prev_length. */
+        /* Find the longest match, discarding those <= prev_length.
+         */
         s->prev_length = s->match_length, s->prev_match = s->match_start;
         s->match_length = MIN_MATCH - 1;
 
@@ -2054,3 +2050,4 @@ int flush;
         FLUSH_BLOCK(s, 0);
     return block_done;
 }
+

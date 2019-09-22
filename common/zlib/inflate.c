@@ -80,15 +80,6 @@
  * The history for versions after 1.2.0 are in ChangeLog in zlib distribution.
  */
 
-//-----------------------------------------------------------------------------
-// This version of zlib is modified for use within the Proxmark3 project.
-// Files from the original distribution which are not required for this
-// purpose are not included. All modifications can easily be found
-// by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
-//-----------------------------------------------------------------------------
-
-
-
 #include "zutil.h"
 #include "inftrees.h"
 #include "inflate.h"
@@ -1520,3 +1511,4 @@ z_streamp strm;
            (state->mode == COPY ? state->length :
             (state->mode == MATCH ? state->was - state->length : 0));
 }
+

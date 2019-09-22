@@ -28,13 +28,6 @@
   (zlib format), rfc1951 (deflate format) and rfc1952 (gzip format).
 */
 
-//-----------------------------------------------------------------------------
-// This version of zlib is modified for use within the Proxmark3 project.
-// Files from the original distribution which are not required for this
-// purpose are not included. All modifications can easily be found
-// by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
-//-----------------------------------------------------------------------------
-
 #ifndef ZLIB_H
 #define ZLIB_H
 
@@ -1663,18 +1656,18 @@ ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,
                                          const char *version,
                                          int stream_size));
 #define deflateInit(strm, level) \
-    deflateInit_((strm), (level), ZLIB_VERSION, (int)sizeof(z_stream))
+        deflateInit_((strm), (level), ZLIB_VERSION, (int)sizeof(z_stream))
 #define inflateInit(strm) \
-    inflateInit_((strm), ZLIB_VERSION, (int)sizeof(z_stream))
+        inflateInit_((strm), ZLIB_VERSION, (int)sizeof(z_stream))
 #define deflateInit2(strm, level, method, windowBits, memLevel, strategy) \
-    deflateInit2_((strm),(level),(method),(windowBits),(memLevel),\
-                  (strategy), ZLIB_VERSION, (int)sizeof(z_stream))
+        deflateInit2_((strm),(level),(method),(windowBits),(memLevel),\
+                      (strategy), ZLIB_VERSION, (int)sizeof(z_stream))
 #define inflateInit2(strm, windowBits) \
-    inflateInit2_((strm), (windowBits), ZLIB_VERSION, \
-                  (int)sizeof(z_stream))
+        inflateInit2_((strm), (windowBits), ZLIB_VERSION, \
+                      (int)sizeof(z_stream))
 #define inflateBackInit(strm, windowBits, window) \
-    inflateBackInit_((strm), (windowBits), (window), \
-                     ZLIB_VERSION, (int)sizeof(z_stream))
+        inflateBackInit_((strm), (windowBits), (window), \
+                      ZLIB_VERSION, (int)sizeof(z_stream))
 
 #ifndef Z_SOLO
 
@@ -1694,10 +1687,10 @@ ZEXTERN int ZEXPORT gzgetc_ OF((gzFile file));  /* backward compatibility */
 #ifdef Z_PREFIX_SET
 #  undef z_gzgetc
 #  define z_gzgetc(g) \
-    ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : gzgetc(g))
+          ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : gzgetc(g))
 #else
 #  define gzgetc(g) \
-    ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : gzgetc(g))
+          ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : gzgetc(g))
 #endif
 
 /* provide 64-bit offset functions if _LARGEFILE64_SOURCE defined, and/or
@@ -1784,3 +1777,4 @@ ZEXTERN int            ZEXPORTVA gzvprintf Z_ARG((gzFile file,
 #endif
 
 #endif /* ZLIB_H */
+

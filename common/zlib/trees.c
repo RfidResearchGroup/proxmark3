@@ -32,15 +32,7 @@
 
 /* @(#) $Id$ */
 
-//-----------------------------------------------------------------------------
-// This version of zlib is modified for use within the Proxmark3 project.
-// Files from the original distribution which are not required for this
-// purpose are not included. All modifications can easily be found
-// by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
-//-----------------------------------------------------------------------------
-
 /* #define GEN_TREES_H */
-
 
 #include "deflate.h"
 
@@ -173,8 +165,8 @@ local void gen_trees_header OF((void));
 
 #else /* DEBUG */
 #  define send_code(s, c, tree) \
-    { if (z_verbose>2) fprintf(stderr,"\ncd %3d ",(c)); \
-        send_bits(s, tree[c].Code, tree[c].Len); }
+     { if (z_verbose>2) fprintf(stderr,"\ncd %3d ",(c)); \
+       send_bits(s, tree[c].Code, tree[c].Len); }
 #endif
 
 /* ===========================================================================
@@ -182,9 +174,9 @@ local void gen_trees_header OF((void));
  * IN assertion: there is enough room in pendingBuf.
  */
 #define put_short(s, w) { \
-        put_byte(s, (uch)((w) & 0xff)); \
-        put_byte(s, (uch)((ush)(w) >> 8)); \
-    }
+    put_byte(s, (uch)((w) & 0xff)); \
+    put_byte(s, (uch)((ush)(w) >> 8)); \
+}
 
 /* ===========================================================================
  * Send a value on a given number of bits.
@@ -219,18 +211,18 @@ int length; /* number of bits */
 #else /* !DEBUG */
 
 #define send_bits(s, value, length) \
-    { int len = length;\
-        if (s->bi_valid > (int)Buf_size - len) {\
-            int val = value;\
-            s->bi_buf |= (ush)val << s->bi_valid;\
-            put_short(s, s->bi_buf);\
-            s->bi_buf = (ush)val >> (Buf_size - s->bi_valid);\
-            s->bi_valid += len - Buf_size;\
-        } else {\
-            s->bi_buf |= (ush)(value) << s->bi_valid;\
-            s->bi_valid += len;\
-        }\
-    }
+{ int len = length;\
+  if (s->bi_valid > (int)Buf_size - len) {\
+    int val = value;\
+    s->bi_buf |= (ush)val << s->bi_valid;\
+    put_short(s, s->bi_buf);\
+    s->bi_buf = (ush)val >> (Buf_size - s->bi_valid);\
+    s->bi_valid += len - Buf_size;\
+  } else {\
+    s->bi_buf |= (ush)(value) << s->bi_valid;\
+    s->bi_valid += len;\
+  }\
+}
 #endif /* DEBUG */
 
 
@@ -329,8 +321,8 @@ local void tr_static_init() {
 #  endif
 
 #  define SEPARATOR(i, last, width) \
-    ((i) == (last)? "\n};\n\n" :    \
-     ((i) % (width) == (width)-1 ? ",\n" : ", "))
+      ((i) == (last)? "\n};\n\n" :    \
+       ((i) % (width) == (width)-1 ? ",\n" : ", "))
 
 void gen_trees_header() {
     FILE *header = fopen("trees.h", "w");
@@ -436,19 +428,19 @@ deflate_state *s;
  * one less element. Updates heap and heap_len.
  */
 #define pqremove(s, tree, top) \
-    {\
-        top = s->heap[SMALLEST]; \
-        s->heap[SMALLEST] = s->heap[s->heap_len--]; \
-        pqdownheap(s, tree, SMALLEST); \
-    }
+{\
+    top = s->heap[SMALLEST]; \
+    s->heap[SMALLEST] = s->heap[s->heap_len--]; \
+    pqdownheap(s, tree, SMALLEST); \
+}
 
 /* ===========================================================================
  * Compares to subtrees, using the tree depth as tie breaker when
  * the subtrees have equal frequency. This minimizes the worst case length.
  */
 #define smaller(tree, n, m, depth) \
-    (tree[n].Freq < tree[m].Freq || \
-     (tree[n].Freq == tree[m].Freq && depth[n] <= depth[m]))
+   (tree[n].Freq < tree[m].Freq || \
+   (tree[n].Freq == tree[m].Freq && depth[n] <= depth[m]))
 
 /* ===========================================================================
  * Restore the heap property by moving down the tree starting at node k,
@@ -1021,7 +1013,8 @@ int last;         /* one if this is the last block for a file */
         s->compressed_len += 7;  /* align on byte boundary */
 #endif
     }
-    Tracev((stderr, "\ncomprlen %lu(%lu) ", s->compressed_len >> 3, s->compressed_len - 7 * last));
+    Tracev((stderr, "\ncomprlen %lu(%lu) ", s->compressed_len >> 3,
+            s->compressed_len - 7 * last));
 }
 
 /* ===========================================================================
@@ -1245,3 +1238,4 @@ int      header;  /* true if block header must be written */
         put_byte(s, *buf++);
     }
 }
+

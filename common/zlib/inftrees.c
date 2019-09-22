@@ -9,7 +9,11 @@
 #define MAXBITS 15
 
 const char inflate_copyright[] =
+#ifdef ZLIB_PM3_TUNED
     " inflate 1.2.8.f-Proxmark3 Copyright 1995-2013 Mark Adler ";
+#else
+    " inflate 1.2.8 Copyright 1995-2013 Mark Adler ";
+#endif
 /*
   If you use the zlib library in a product, an acknowledgment is welcome
   in the documentation of your product. If for some reason you cannot
@@ -300,3 +304,4 @@ int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
     *bits = root;
     return 0;
 }
+

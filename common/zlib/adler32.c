@@ -177,3 +177,4 @@ z_off64_t len2;
 {
     return adler32_combine_(adler1, adler2, len2);
 }
+

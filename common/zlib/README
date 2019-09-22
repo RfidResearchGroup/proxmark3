@@ -1,12 +1,3 @@
-//-----------------------------------------------------------------------------
-// This version of zlib is modified for use within the Proxmark3 project. 
-// Files from the original distribution which are not required for this
-// purpose are not included. All modifications can easily be found
-// by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
-//
-// The rest of this file consists of the original README content
-//-----------------------------------------------------------------------------
-
 ZLIB DATA COMPRESSION LIBRARY
 
 zlib 1.2.8 is a general purpose data compression library.  All the code is

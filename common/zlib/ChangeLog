@@ -1,15 +1,6 @@
 
                 ChangeLog file for zlib
 
-Changes in 1.2.8.f-Proxmark3 (for Proxmark3 project only) (26 May 2015)
-- disable decoding of fixed code blocks in deflate (eliminates the need
-  to store the fixed tree in RAM or ROM)
-- disable generating fixed code blocks in inflate  
-- look harder for local optimum of consecutive matches and single literals
-  in inflate.
-- stripped down version - unnecessary files from original distribution
-  are not included
-
 Changes in 1.2.8 (28 Apr 2013)
 - Update contrib/minizip/iowin32.c for Windows RT [Vollant]
 - Do not force Z_CONST for C++

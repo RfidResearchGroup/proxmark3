@@ -1,0 +1,19 @@
+This version of zlib is modified for use within the Proxmark3 project.
+Files from the original distribution which are not required for this
+purpose are not included. All modifications can easily be found
+by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
+
+Current zlib base version is 1.2.8
+
+
+ChangeLog for Proxmark3 project only
+------------------------------------
+
+Changes in 1.2.8.f-Proxmark3 (26 May 2015)
+- disable decoding of fixed code blocks in deflate (eliminates the need
+  to store the fixed tree in RAM or ROM)
+- disable generating fixed code blocks in inflate  
+- look harder for local optimum of consecutive matches and single literals
+  in inflate.
+- stripped down version - unnecessary files from original distribution
+  are not included
