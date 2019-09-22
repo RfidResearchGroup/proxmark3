@@ -24,6 +24,7 @@
 #include "lfdemod.h"    // parityTest, bitbytes_to_byte
 #include "protocols.h"  // for T55xx config register definitions
 #include "cmddata.h"
+#include "cmdlft55xx.h" // verifywrite
 
 static int CmdHelp(const char *Cmd);
 /*
@@ -243,7 +244,6 @@ static int CmdIOProxSim(const char *Cmd) {
 
 static int CmdIOProxClone(const char *Cmd) {
 
-    uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
     uint16_t cn = 0;
     uint8_t version = 0, fc = 0;
     uint8_t bits[64];
@@ -268,7 +268,9 @@ static int CmdIOProxClone(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (param_getchar(Cmd, 3) == 'Q' || param_getchar(Cmd, 3) == 'q')
+    uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
+
+    if (tolower(param_getchar(Cmd, 3) == 'q'))
         blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
 
     blocks[1] = bytebits_to_byte(bits, 32);
@@ -277,8 +279,42 @@ static int CmdIOProxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
     print_blocks(blocks, 3);
 
-    clearCommandBuffer();
-    SendCommandMIX(CMD_LF_IO_CLONE, blocks[1], blocks[2], 0, NULL, 0);
+    uint8_t res = 0;
+    PacketResponseNG resp;
+
+    // fast push mode
+    conn.block_after_ACK = true;
+    for (uint8_t i = 0; i < 3; i++) {
+        if (i == 2) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
+        clearCommandBuffer();
+        t55xx_write_block_t ng;
+        ng.data = blocks[i];
+        ng.pwd = 0;
+        ng.blockno = i;
+        ng.flags = 0;
+
+        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+            return PM3_ETIMEOUT;
+        }
+
+        if (i == 0) {
+            SetConfigWithBlock0(blocks[0]);
+            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
+                continue;
+        }
+
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
+            res++;
+    }
+
+    if (res == 0)
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+
     return PM3_SUCCESS;
 }
 

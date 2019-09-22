@@ -918,7 +918,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     */
 
     // special start of frame marker containing invalid Manchester bit sequences
-    uint8_t bits[8+8*2+84*2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
+    uint8_t bits[8 + 8 * 2 + 84 * 2] = { 0, 0, 0, 1, 1, 1, 0, 1 };
     uint8_t bitlen = 0;
     uint16_t n = 8;
 
@@ -928,9 +928,9 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
             DbpString("Tags can only have 84 bits.");
             return;
         }
-        bitlen = 8+8*2+84*2;
+        bitlen = 8 + 8 * 2 + 84 * 2;
         hi2 |= 0x9E00000; // 9E: long format identifier
-        manchesterEncodeUint32(hi2, 16+12, bits, &n);
+        manchesterEncodeUint32(hi2, 16 + 12, bits, &n);
         manchesterEncodeUint32(hi, 32, bits, &n);
         manchesterEncodeUint32(lo, 32, bits, &n);
     } else {
@@ -939,7 +939,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
             DbpString("[!] tags can only have 44 bits. - USE lf simfsk for larger tags");
             return;
         }
-        bitlen = 8+44*2;
+        bitlen = 8 + 44 * 2;
         manchesterEncodeUint32(hi, 12, bits, &n);
         manchesterEncodeUint32(lo, 32, bits, &n);
     }
@@ -1712,7 +1712,7 @@ void T55xxWriteBlock(uint8_t *data) {
     c->flags &= (0xff ^ 0x40); // Called for a write, so ensure it is clear/0
 
     LED_A_ON();
-    T55xx_SendCMD(c->data, c->pwd, c->flags | (c->blockno << 9)) ; //, false);
+    T55xx_SendCMD(c->data, c->pwd, c->flags | (c->blockno << 9));
 
     // Perform write (nominal is 5.6 ms for T55x7 and 18ms for E5550,
     // so wait a little more)
@@ -1744,7 +1744,6 @@ void T55xxWriteBlock(uint8_t *data) {
     // turn field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
-    // cmd_send(CMD_ACK,0,0,0,0,0);
     reply_ng(CMD_LF_T55XX_WRITEBL, PM3_SUCCESS, NULL, 0);
     LED_A_OFF();
 }
@@ -2037,56 +2036,16 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT) {
     LED_D_OFF();
 }
 
-void CopyIOtoT55x7(uint32_t hi, uint32_t lo) {
-    uint32_t data[] = {T55x7_BITRATE_RF_64 | T55x7_MODULATION_FSK2a | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
-    //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_SET_BITRATE(64) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | 2 << T5555_MAXBLOCK_SHIFT;
-
-    LED_D_ON();
-    // Program the data blocks for supplied ID
-    // and the block 0 config
-    WriteT55xx(data, 0, 3);
-    LED_D_OFF();
-}
-
-// Clone Indala 64-bit tag by UID to T55x7
-void CopyIndala64toT55x7(uint32_t hi, uint32_t lo) {
-    //Program the 2 data blocks for supplied 64bit UID
-    // and the Config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
-    uint32_t data[] = { T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT), hi, lo};
-    //TODO add selection of chip for Q5 or T55x7
-    // data[0] = T5555_SET_BITRATE(32 | T5555_MODULATION_PSK1 | 2 << T5555_MAXBLOCK_SHIFT;
-    LED_D_ON();
-    WriteT55xx(data, 0, 3);
-    //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=2;Inverse data)
-    // T5567WriteBlock(0x603E1042,0);
-    LED_D_OFF();
-}
-// Clone Indala 224-bit tag by UID to T55x7
-void CopyIndala224toT55x7(uint32_t uid1, uint32_t uid2, uint32_t uid3, uint32_t uid4, uint32_t uid5, uint32_t uid6, uint32_t uid7) {
-    //Program the 7 data blocks for supplied 224bit UID
-    uint32_t data[] = {0, uid1, uid2, uid3, uid4, uid5, uid6, uid7};
-    // and the block 0 for Indala224 format
-    //Config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
-    data[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (7 << T55x7_MAXBLOCK_SHIFT);
-    //TODO add selection of chip for Q5 or T55x7
-    // data[0] =  T5555_SET_BITRATE(32 | T5555_MODULATION_PSK2 | 7 << T5555_MAXBLOCK_SHIFT;
-    LED_D_ON();
-    WriteT55xx(data, 0, 8);
-    //Alternative config for Indala (Extended mode;RF/32;PSK1 with RF/2;Maxblock=7;Inverse data)
-    // T5567WriteBlock(0x603E10E2,0);
-    LED_D_OFF();
-}
 // clone viking tag to T55xx
 void CopyVikingtoT55xx(uint8_t *blocks, uint8_t Q5) {
-  
+
     uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), 0, 0};
-    if (Q5) 
+    if (Q5)
         data[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_MANCHESTER | 2 << T5555_MAXBLOCK_SHIFT;
-    
+
     data[1] = bytes_to_num(blocks, 4);
-    data[2] = bytes_to_num(blocks +4, 4);
-    
+    data[2] = bytes_to_num(blocks + 4, 4);
+
     // Program the data blocks for supplied ID and the block 0 config
     WriteT55xx(data, 0, 3);
     LED_D_OFF();

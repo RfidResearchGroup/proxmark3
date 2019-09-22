@@ -637,7 +637,7 @@ static int _testHash1() {
     return 0;
 }
 
-int testElite() {
+int testElite(bool slowtests) {
     PrintAndLogEx(INFO, "Testing iClass Elite functinality...");
     PrintAndLogEx(INFO, "Testing hash2");
     uint8_t k_cus[8] = {0x5B, 0x7C, 0x62, 0xC4, 0x91, 0xC1, 0x1B, 0x39};
@@ -669,6 +669,7 @@ int testElite() {
     errors += _testHash1();
     PrintAndLogEx(INFO, "Testing key diversification ...");
     errors += _test_iclass_key_permutation();
-    errors += _testBruteforce();
+    if (slowtests)
+        errors += _testBruteforce();
     return errors;
 }

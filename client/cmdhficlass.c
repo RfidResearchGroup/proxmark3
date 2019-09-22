@@ -229,10 +229,11 @@ static int usage_hf_iclass_sniff(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_loclass(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf iclass loclass [options]");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass loclass [h] [t [l]] [f <filename>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             Show this help");
     PrintAndLogEx(NORMAL, "      t             Perform self-test");
+    PrintAndLogEx(NORMAL, "      t l           Perform self-test, including long ones");
     PrintAndLogEx(NORMAL, "      f <filename>  Bruteforce iclass dumpfile");
     PrintAndLogEx(NORMAL, "                    An iclass dumpfile is assumed to consist of an arbitrary number of");
     PrintAndLogEx(NORMAL, "                    malicious CSNs, and their protocol responses");
@@ -1831,10 +1832,11 @@ static int CmdHFiClass_loclass(const char *Cmd) {
             return PM3_EFILE;
         }
     } else if (opt == 't') {
+        char opt2 = tolower(param_getchar(Cmd, 1));
         int errors = testCipherUtils();
         errors += testMAC();
         errors += doKeyTests(0);
-        errors += testElite();
+        errors += testElite(opt2=='l');
         if (errors) PrintAndLogEx(ERR, "There were errors!!!");
         return PM3_ESOFT;
     }

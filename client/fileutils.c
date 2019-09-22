@@ -69,6 +69,40 @@ int fileExists(const char *filename) {
     return result == 0;
 }
 
+/**
+ * @brief checks if path is file.
+ * @param filename
+ * @return
+ */
+bool is_regular_file(const char *filename) {
+#ifdef _WIN32
+    struct _stat st;
+    _stat(filename, &st);
+    return S_ISREG(st.st_mode) != 0;
+#else
+    struct stat st;
+    stat(filename, &st);
+    return S_ISREG(st.st_mode) != 0;
+#endif
+}
+/**
+ * @brief checks if path is directory.
+ * @param filename
+ * @return
+ */
+bool is_directory(const char *filename) {
+#ifdef _WIN32
+    struct _stat st;
+    _stat(filename, &st);
+    return S_ISDIR(st.st_mode) != 0;
+#else
+    struct stat st;
+    stat(filename, &st);
+    return S_ISDIR(st.st_mode) != 0;
+#endif
+}
+
+
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
@@ -1012,10 +1046,20 @@ out:
 }
 
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent) {
+
     if (foundpath == NULL)
         return PM3_EINVARG;
+
+    if (searchname == NULL || strlen(searchname) == 0)
+        return PM3_EINVARG;
+
+    if (is_directory(searchname))
+        return PM3_EINVARG;
+
+
     char *filename = filenamemcopy(searchname, suffix);
-    if (filename == NULL) return PM3_EMALLOC;
+    if (filename == NULL || strlen(filename) == 0)
+        return PM3_EMALLOC;
     int res = searchFinalFile(foundpath, pm3dir, filename, silent);
     if (res != PM3_SUCCESS) {
         if ((res == PM3_EFILE) && (!silent))

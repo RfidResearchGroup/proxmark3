@@ -90,14 +90,14 @@ static int CmdVikingClone(const char *Cmd) {
         uint8_t blocks[8];
     } PACKED payload;
     payload.Q5 = Q5;
-    
+
     num_to_bytes(rawID, 8, &payload.blocks[0]);
 
     PrintAndLogEx(INFO, "Preparing to clone Viking tag - ID " _YELLOW_("%08X")" raw " _YELLOW_("%s"), id,  sprint_hex(payload.blocks, sizeof(payload.blocks)));
-    
+
     clearCommandBuffer();
-    
-    SendCommandNG(CMD_LF_VIKING_CLONE, (uint8_t*)&payload, sizeof(payload));
+
+    SendCommandNG(CMD_LF_VIKING_CLONE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_VIKING_CLONE, &resp, T55XX_WRITE_TIMEOUT)) {
         PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");

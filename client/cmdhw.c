@@ -502,7 +502,7 @@ static int CmdStatus(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_STATUS, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
+    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000) == false)
         PrintAndLogEx(WARNING, "Status command failed. Communication speed test timed out");
     return PM3_SUCCESS;
 }

@@ -390,7 +390,7 @@ void print_blocks(uint32_t *data, size_t len) {
         PrintAndLogEx(ERR, "..empty data");
     } else {
         for (uint8_t i = 0; i < len; i++)
-            PrintAndLogEx(SUCCESS, " %02d | 0x%08X", i, data[i]);
+            PrintAndLogEx(SUCCESS, " %02d | %08X", i, data[i]);
     }
 }
 
@@ -877,4 +877,21 @@ char *strmcopy(const char *buf) {
         strcpy(str, buf);
     }
     return str;
+}
+
+/**
+ * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers, one nibble
+ * at a time.
+ *
+ * Returns the number of nibbles (4 bits) entered.
+ */
+int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
+    int n = 0, i = 0;
+
+    while (sscanf(&str[i++], "%1x", &n) == 1) {
+        *hi2 = (*hi2 << 4) | (*hi >> 28);
+        *hi = (*hi << 4) | (*lo >> 28);
+        *lo = (*lo << 4) | (n & 0xf);
+    }
+    return i - 1;
 }

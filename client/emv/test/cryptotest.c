@@ -33,7 +33,7 @@
 #include "crypto/libpcrypto.h"
 #include "emv/emv_roca.h"
 
-int ExecuteCryptoTests(bool verbose) {
+int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) {
     int res;
     bool TestFail = false;
 
@@ -56,7 +56,7 @@ int ExecuteCryptoTests(bool verbose) {
     if (res) TestFail = true;
 
     res = mbedtls_entropy_self_test(verbose);
-    if (res) TestFail = true;
+    if (res && !ignore_time) TestFail = true;
 
     // retry for CI (when resources too low)
     for (int i = 0; i < 3; i++) {
@@ -65,7 +65,7 @@ int ExecuteCryptoTests(bool verbose) {
             break;
         PrintAndLogEx(WARNING, "Repeat timing test %d", i + 1);
     }
-    if (res) TestFail = true;
+    if (res && !ignore_time) TestFail = true;
 
     res = mbedtls_ctr_drbg_self_test(verbose);
     if (res) TestFail = true;
@@ -94,7 +94,7 @@ int ExecuteCryptoTests(bool verbose) {
     res = exec_cda_test(verbose);
     if (res) TestFail = true;
 
-    res = exec_crypto_test(verbose);
+    res = exec_crypto_test(verbose, include_slow_tests);
     if (res) TestFail = true;
 
     res = roca_self_test();

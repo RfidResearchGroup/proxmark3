@@ -230,6 +230,7 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdflashmemspiffs.c \
             cmdsmartcard.c \
             cmdusart.c \
+            cmdwiegand.c \
             cmdparser.c \
             cmdmain.c \
             pm3_binlib.c \
@@ -238,7 +239,9 @@ CMDSRCS =   crapto1/crapto1.c \
             pm3_bitlib.c \
             cmdcrc.c \
             bucketsort.c \
-            flash.c
+            flash.c \
+            wiegand_formats.c \
+            wiegand_formatutils.c
 
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )

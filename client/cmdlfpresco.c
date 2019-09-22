@@ -144,21 +144,20 @@ static int CmdPrescoClone(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
 
-        // write block0, needs a detect.
         if (i == 0) {
-            printf("enter detect ");
-            bool ok = t55xxAquireAndDetect(false, 0, blocks[i], false);        
-            printf(" b0 = '%c' \n", (ok) ? 'Y':'N');
+            SetConfigWithBlock0(blocks[0]);
+            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
+                continue;
         }
-        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false) {
+
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
             res++;
-            printf(" i = %d \n", i);
-        }
+
     }
 
-    if ( res == 0 )
+    if (res == 0)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
-    
+
     return PM3_SUCCESS;
 }
 
