@@ -698,7 +698,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_HID_DEMOD: {
             uint32_t high, low;
-            CmdHIDdemodFSK(packet->oldarg[0], &high, &low, 1);
+            CmdHIDdemodFSK(0, &high, &low, 1);
             break;
         }
         case CMD_LF_HID_SIMULATE: {
@@ -727,7 +727,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_IO_DEMOD: {
             uint32_t high, low;
-            CmdIOdemodFSK(packet->oldarg[0], &high, &low, 1);
+            CmdIOdemodFSK(0, &high, &low, 1);
             break;
         }
         case CMD_LF_EM410X_DEMOD: {
@@ -838,7 +838,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_AWID_DEMOD:  {
             uint32_t high, low;
             // Set realtime AWID demodulation
-            CmdAWIDdemodFSK(packet->oldarg[0], &high, &low, 1);
+            CmdAWIDdemodFSK(0, &high, &low, 1);
             break;
         }
         case CMD_LF_VIKING_CLONE: {
