@@ -38,11 +38,12 @@
 
 #include "lfdemod.h"
 #include <string.h>  // for memset, memcmp and size_t
+#include <stdlib.h>  // qsort
 #include "parity.h"  // for parity test
 #include "pm3_cmd.h" // error codes
-//**********************************************************************************************
-//---------------------------------Utilities Section--------------------------------------------
-//**********************************************************************************************
+// **********************************************************************************************
+// ---------------------------------Utilities Section--------------------------------------------
+// **********************************************************************************************
 #define LOWEST_DEFAULT_CLOCK 32
 #define FSK_PSK_THRESHOLD   123
 
@@ -81,18 +82,53 @@ static void printSignal(void) {
     prnt("  THRESHOLD noise amplitude......%d", NOISE_AMPLITUDE_THRESHOLD);
 }
 
+#ifndef ON_DEVICE
+static int cmp_uint8(const void *a, const void *b) {
+   if (*(const uint8_t *)a < * (const uint8_t *)b)
+       return -1;
+   else
+       return *(const uint8_t *)a > *(const uint8_t *)b;
+}
+#endif
+
 void computeSignalProperties(uint8_t *samples, uint32_t size) {
     resetSignal();
 
+    if (samples == NULL || size < SIGNAL_MIN_SAMPLES) return;
+
     uint32_t sum = 0;
-    for (uint32_t i = 0; i < size; i++) {
+    uint32_t offset_size = size - SIGNAL_IGNORE_FIRST_SAMPLES;
+
+#ifndef ON_DEVICE
+    uint8_t tmp[offset_size];
+    memcpy(tmp, samples + SIGNAL_IGNORE_FIRST_SAMPLES, sizeof(tmp));
+    qsort(tmp, sizeof(tmp), sizeof(uint8_t), cmp_uint8);
+
+    uint8_t low10 = 0.5 * (tmp[(int)(offset_size * 0.1)] + tmp[(int)((offset_size - 1) * 0.1)]);
+    uint8_t hi90 =  0.5 * (tmp[(int)(offset_size * 0.9)] + tmp[(int)((offset_size - 1) * 0.9)]);
+    uint32_t cnt = 0;
+    for (uint32_t i = SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++) {
+
+        if (samples[i] < signalprop.low) signalprop.low = samples[i];
+        if (samples[i] > signalprop.high) signalprop.high = samples[i];
+
+        if (samples[i] < low10 || samples[i] > hi90)
+            continue;
+
+        sum += samples[i];
+        cnt++;
+   }
+    signalprop.mean = sum / cnt;
+#else
+   for (uint32_t i =  SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++) {
         if (samples[i] < signalprop.low) signalprop.low = samples[i];
         if (samples[i] > signalprop.high) signalprop.high = samples[i];
         sum += samples[i];
     }
+    signalprop.mean = sum / offset_size;
+#endif
 
     // measure amplitude of signal
-    signalprop.mean = sum / size;
     signalprop.amplitude = signalprop.high - signalprop.mean;
     // By measuring mean and look at amplitude of signal from HIGH / LOW,
     // we can detect noise
@@ -106,9 +142,32 @@ void removeSignalOffset(uint8_t *samples, uint32_t size) {
     if (samples == NULL || size < SIGNAL_MIN_SAMPLES) return;
 
     int acc_off = 0;
+    uint32_t offset_size = size - SIGNAL_IGNORE_FIRST_SAMPLES;
+
+#ifndef ON_DEVICE
+
+    uint8_t tmp[offset_size];
+    memcpy(tmp, samples + SIGNAL_IGNORE_FIRST_SAMPLES, sizeof(tmp));
+    qsort(tmp, sizeof(tmp), sizeof(uint8_t), cmp_uint8);
+
+    uint8_t low10 = 0.5 * (tmp[(int)(offset_size * 0.05)] + tmp[(int)((offset_size - 1) * 0.05)]);
+    uint8_t hi90 =  0.5 * (tmp[(int)(offset_size * 0.95)] + tmp[(int)((offset_size - 1) * 0.95)]);
+    int32_t cnt = 0;
+    for (uint32_t i = SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++) {
+
+        if (samples[i] < low10 || samples[i] > hi90)
+            continue;
+
+        acc_off += samples[i] - 128;
+        cnt++;
+   }
+    acc_off /= cnt;
+#else
     for (uint32_t i = SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++)
         acc_off += samples[i] - 128;
-    acc_off /= (int)(size - SIGNAL_IGNORE_FIRST_SAMPLES);
+
+    acc_off /= (int)offset_size;
+#endif
 
     // shift and saturate samples to center the mean
     for (uint32_t i = 0; i < size; i++) {
@@ -265,13 +324,13 @@ bool preambleSearchEx(uint8_t *bits, uint8_t *preamble, size_t pLen, size_t *siz
             //first index found
             foundCnt++;
             if (foundCnt == 1) {
-                prnt("DEBUG: (preambleSearchEx) preamble found at %i", idx);
+                if (g_debugMode >= 1) prnt("DEBUG: (preambleSearchEx) preamble found at %i", idx);
                 *startIdx = idx;
                 if (findone)
                     return true;
             }
             if (foundCnt == 2) {
-                prnt("DEBUG: (preambleSearchEx) preamble 2 found at %i", idx);
+                if (g_debugMode >= 1) prnt("DEBUG: (preambleSearchEx) preamble 2 found at %i", idx);
                 *size = idx - *startIdx;
                 return true;
             }
@@ -479,9 +538,9 @@ bool DetectCleanAskWave(uint8_t *dest, size_t size, uint8_t high, uint8_t low) {
 }
 
 
-//**********************************************************************************************
-//-------------------Clock / Bitrate Detection Section------------------------------------------
-//**********************************************************************************************
+// **********************************************************************************************
+// -------------------Clock / Bitrate Detection Section------------------------------------------
+// **********************************************************************************************
 
 
 // by marshmellow
@@ -1176,9 +1235,9 @@ uint8_t detectFSKClk(uint8_t *bits, size_t size, uint8_t fcHigh, uint8_t fcLow, 
 }
 
 
-//**********************************************************************************************
-//--------------------Modulation Demods &/or Decoding Section-----------------------------------
-//**********************************************************************************************
+// **********************************************************************************************
+// --------------------Modulation Demods &/or Decoding Section-----------------------------------
+// **********************************************************************************************
 
 
 // look for Sequence Terminator - should be pulses of clk*(1 or 2), clk*2, clk*(1.5 or 2), by idx we mean graph position index...
@@ -1985,9 +2044,9 @@ int pskRawDemod(uint8_t *dest, size_t *size, int *clock, int *invert) {
 }
 
 
-//**********************************************************************************************
-//-----------------Tag format detection section-------------------------------------------------
-//**********************************************************************************************
+// **********************************************************************************************
+// -----------------Tag format detection section-------------------------------------------------
+// **********************************************************************************************
 
 
 // by marshmellow
