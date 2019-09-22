@@ -1204,6 +1204,8 @@ static int CmdEM4x05Dump(const char *Cmd) {
     uint32_t pwd = 0;
     bool usePwd = false;
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+    uint8_t bytes[4] = {0};
+
     if (ctmp == 'h') return usage_lf_em4x05_dump();
 
     // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
@@ -1215,7 +1217,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     int success = PM3_SUCCESS;
     int status;
     uint32_t word = 0;
-    PrintAndLogEx(NORMAL, "Addr | data     | info");
+    PrintAndLogEx(NORMAL, "Addr | data     | ascii");
     PrintAndLogEx(NORMAL, "-----+----------+-------");
     for (; addr < 16; addr++) {
 
@@ -1230,10 +1232,12 @@ static int CmdEM4x05Dump(const char *Cmd) {
             status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word); // Get status for single read
             success &= status; // Update status to match previous return
             
-            if (status == PM3_SUCCESS)
-                PrintAndLogEx(NORMAL, "  %02d | %08X | %s", addr, word, (addr > 13) ? "Lock" : "");
+            if (status == PM3_SUCCESS) {
+                num_to_bytes(word, 4, bytes);
+                PrintAndLogEx(NORMAL, "  %02d | %08X | %s", addr, word, (addr > 13) ? "Lock" : sprint_ascii(bytes, 4));
+            }
             else
-                PrintAndLogEx(NORMAL, "  %02d | " _RED_("Fail"), addr);
+                PrintAndLogEx(NORMAL, "  %02d |          | " _RED_("Fail"), addr);
         }
     }
 
@@ -1244,6 +1248,7 @@ static int CmdEM4x05Read(const char *Cmd) {
     uint8_t addr;
     uint32_t pwd;
     bool usePwd = false;
+
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_read();
 
