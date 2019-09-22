@@ -1213,19 +1213,27 @@ static int CmdEM4x05Dump(const char *Cmd) {
         usePwd = true;
 
     int success = PM3_SUCCESS;
+    int status;
     uint32_t word = 0;
-    PrintAndLogEx(NORMAL, "Addr | data   | ascii");
-    PrintAndLogEx(NORMAL, "-----+--------+------");
+    PrintAndLogEx(NORMAL, "Addr | data     | info");
+    PrintAndLogEx(NORMAL, "-----+----------+-------");
     for (; addr < 16; addr++) {
 
         if (addr == 2) {
             if (usePwd) {
-                PrintAndLogEx(NORMAL, " %02u | %08X", addr, pwd, word);
+                PrintAndLogEx(NORMAL, "  %02u | %08X |", addr, pwd, word);
             } else {
-                PrintAndLogEx(NORMAL, " 02 | " _RED_("cannot read"));
+                PrintAndLogEx(NORMAL, "  02 |          | " _RED_("cannot read"));
             }
         } else {
-            success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+            // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+            status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word); // Get status for single read
+            success &= status; // Update status to match previous return
+            
+            if (status == PM3_SUCCESS)
+                PrintAndLogEx(NORMAL, "  %02d | %08X | %s", addr, word, (addr > 13) ? "Lock" : "");
+            else
+                PrintAndLogEx(NORMAL, "  %02d | " _RED_("Fail"), addr);
         }
     }
 
