@@ -3,11 +3,13 @@ Files from the original distribution which are not required for this
 purpose are not included. All modifications can easily be found
 by searching for #ifdef ZLIB_PM3_TUNED and #ifndef ZLIB_PM3_TUNED.
 
-Current zlib base version is 1.2.8
-
+Current zlib base version is 1.2.11
 
 ChangeLog for Proxmark3 project only
 ------------------------------------
+
+Changes in 1.2.11.f-Proxmark3 (26 May 2015)
+- port 1.2.11 upstream changes to 1.2.8.f-Proxmark3
 
 Changes in 1.2.8.f-Proxmark3 (26 May 2015)
 - disable decoding of fixed code blocks in deflate (eliminates the need
@@ -17,3 +19,45 @@ Changes in 1.2.8.f-Proxmark3 (26 May 2015)
   in inflate.
 - stripped down version - unnecessary files from original distribution
   are not included
+
+Notes on porting 1.2.11 upstream changes to 1.2.8.f-Proxmark3
+-------------------------------------------------------------
+
+mkdir zlib-1.2.8-stripped
+for f in adler32.c ChangeLog deflate.c deflate.h FAQ inffast.c inffast.h inffixed.h inflate.c inflate.h inftrees.c inftrees.h README trees.c trees.h zconf.h zlib.h zutil.c zutil.h; do
+  cp zlib-1.2.8/$f zlib-1.2.8-stripped
+done
+# make style
+find zlib-1.2.8-stripped -name "*.[ch]" \
+    -exec perl -pi -e 's/[ \t]+$$//' {} \; \
+    -exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
+    -exec sh -c "echo >> {}" \; \
+    -exec astyle --formatted --mode=c --suffix=none \
+    --indent=spaces=4 --indent-switches \
+    --keep-one-line-blocks --max-instatement-indent=60 \
+    --style=google --pad-oper --unpad-paren --pad-header \
+    --align-pointer=name {} \;
+diff -Naur zlib-1.2.8-stripped zlib > zlib-1.2.8-pm3.diff
+
+mkdir zlib-1.2.11-stripped
+for f in adler32.c ChangeLog deflate.c deflate.h FAQ inffast.c inffast.h inffixed.h inflate.c inflate.h inftrees.c inftrees.h README trees.c trees.h zconf.h zlib.h zutil.c zutil.h; do
+  cp zlib-1.2.11/$f zlib-1.2.11-stripped
+done
+# make style
+find zlib-1.2.11-stripped -name "*.[ch]" \
+    -exec perl -pi -e 's/[ \t]+$$//' {} \; \
+    -exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
+    -exec sh -c "echo >> {}" \; \
+    -exec astyle --formatted --mode=c --suffix=none \
+    --indent=spaces=4 --indent-switches \
+    --keep-one-line-blocks --max-instatement-indent=60 \
+    --style=google --pad-oper --unpad-paren --pad-header \
+    --align-pointer=name {} \;
+
+diff -Naur zlib-1.2.8-stripped zlib-1.2.11-stripped > zlib-1.2.8-to-1.2.11.diff
+
+cd zlib
+patch -p1 < ../zlib-1.2.8-to-1.2.11.diff
+# fix .rej files manually...
+
+diff -Naur zlib-1.2.11-stripped zlib > zlib-1.2.11-pm3.diff

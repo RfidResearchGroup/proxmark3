@@ -1,5 +1,5 @@
 /* inftrees.c -- generate Huffman trees for efficient decoding
- * Copyright (C) 1995-2013 Mark Adler
+ * Copyright (C) 1995-2017 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
@@ -10,9 +10,9 @@
 
 const char inflate_copyright[] =
 #ifdef ZLIB_PM3_TUNED
-    " inflate 1.2.8.f-Proxmark3 Copyright 1995-2013 Mark Adler ";
+    " inflate 1.2.11.f-Proxmark3 Copyright 1995-2017 Mark Adler ";
 #else
-    " inflate 1.2.8 Copyright 1995-2013 Mark Adler ";
+    " inflate 1.2.11 Copyright 1995-2017 Mark Adler ";
 #endif
 /*
   If you use the zlib library in a product, an acknowledgment is welcome
@@ -53,7 +53,7 @@ int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
     code FAR *next;             /* next available space in table */
     const unsigned short FAR *base;     /* base value table to use */
     const unsigned short FAR *extra;    /* extra bits table to use */
-    int end;                    /* use base and extra for symbol > end */
+    unsigned match;             /* use base and extra for symbol >= match */
     unsigned short count[MAXBITS + 1];  /* number of codes of each length */
     unsigned short offs[MAXBITS + 1];   /* offsets in table for each length */
     static const unsigned short lbase[31] = { /* Length codes 257..285 base */
@@ -62,7 +62,7 @@ int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
     };
     static const unsigned short lext[31] = { /* Length codes 257..285 extra */
         16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18,
-        19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78
+        19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 77, 202
     };
     static const unsigned short dbase[32] = { /* Distance codes 0..29 base */
         1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
@@ -184,19 +184,17 @@ int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
     switch (type) {
         case CODES:
             base = extra = work;    /* dummy value--not used */
-            end = 19;
+            match = 20;
             break;
         case LENS:
             base = lbase;
-            base -= 257;
             extra = lext;
-            extra -= 257;
-            end = 256;
+            match = 257;
             break;
-        default:            /* DISTS */
+        default:    /* DISTS */
             base = dbase;
             extra = dext;
-            end = -1;
+            match = 0;
     }
 
     /* initialize state for loop */
@@ -219,12 +217,12 @@ int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
     for (;;) {
         /* create table entry */
         here.bits = (unsigned char)(len - drop);
-        if ((int)(work[sym]) < end) {
+        if (work[sym] + 1U < match) {
             here.op = (unsigned char)0;
             here.val = work[sym];
-        } else if ((int)(work[sym]) > end) {
-            here.op = (unsigned char)(extra[work[sym]]);
-            here.val = base[work[sym]];
+        } else if (work[sym] >= match) {
+            here.op = (unsigned char)(extra[work[sym] - match]);
+            here.val = base[work[sym] - match];
         } else {
             here.op = (unsigned char)(32 + 64);         /* end of block */
             here.val = 0;
