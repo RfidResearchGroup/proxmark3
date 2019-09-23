@@ -810,7 +810,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     // Computed variance
     double variance = compute_variance(in, len);
 
-    static int CorrelBuffer[MAX_GRAPH_TRACE_LEN];
+    int *correl_buf = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
 
     for (size_t i = 0; i < len - window; ++i) {
 
@@ -819,7 +819,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         }
         autocv = (1.0 / (len - i)) * autocv;
 
-        CorrelBuffer[i] = autocv;
+        correl_buf[i] = autocv;
 
         // Computed autocorrelation value to be returned
         // Autocorrelation is autocovariance divided by variance
@@ -836,15 +836,15 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     int hi = 0, idx = 0;
     int distance = 0, hi_1 = 0, idx_1 = 0;
     for (size_t i = 0; i <= len; ++i) {
-        if (CorrelBuffer[i] > hi) {
-            hi = CorrelBuffer[i];
+        if (correl_buf[i] > hi) {
+            hi = correl_buf[i];
             idx = i;
         }
     }
 
     for (size_t i = idx + 1; i <= window; ++i) {
-        if (CorrelBuffer[i] > hi_1) {
-            hi_1 = CorrelBuffer[i];
+        if (correl_buf[i] > hi_1) {
+            hi_1 = correl_buf[i];
             idx_1 = i;
         }
     }
@@ -864,7 +864,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     int retval = correlation;
     if (SaveGrph) {
         //GraphTraceLen = GraphTraceLen - window;
-        memcpy(out, CorrelBuffer, len * sizeof(int));
+        memcpy(out, correl_buf, len * sizeof(int));
         if (distance > 0) {
             setClockGrid(distance, idx);
             retval = distance;
@@ -876,7 +876,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         DemodBufferLen = 0;
         RepaintGraphWindow();
     }
-
+    free(correl_buf);
     return retval;
 }
 
@@ -1115,10 +1115,17 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
     if (getSignalProperties()->isnoise)
         return PM3_ESOFT;
 
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        return PM3_EMALLOC;
+    }
+    
     size_t BitLen = getFromGraphBuf(bits);
-    if (BitLen == 0) return PM3_ESOFT;
-
+    if (BitLen == 0) {
+        free(bits);
+        return PM3_ESOFT;
+    }
+    
     //get field clock lengths
     if (!fchigh || !fclow) {
         uint16_t fcs = countFC(bits, BitLen, true);
@@ -1148,10 +1155,13 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
             PrintAndLogEx(NORMAL, "%s decoded bitstream:", GetFSKType(fchigh, fclow, invert));
             printDemodBuff();
         }
-        return PM3_SUCCESS;
+        goto out;
     } else {
         PrintAndLogEx(DEBUG, "no FSK data found");
     }
+
+out:    
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -1185,19 +1195,26 @@ int PSKDemod(const char *Cmd, bool verbose) {
     if (getSignalProperties()->isnoise)
         return PM3_ESOFT;
 
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        return PM3_EMALLOC;
+    }
     size_t bitlen = getFromGraphBuf(bits);
-    if (bitlen == 0)
+    if (bitlen == 0) {
+        free(bits);
         return PM3_ESOFT;
-
+    }
+    
     int startIdx = 0;
     int errCnt = pskRawDemod_ext(bits, &bitlen, &clk, &invert, &startIdx);
     if (errCnt > maxErr) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, bitlen, errCnt);
+        free(bits);
         return PM3_ESOFT;
     }
     if (errCnt < 0 || bitlen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, bitlen, errCnt);
+        free(bits);
         return PM3_ESOFT;
     }
     if (verbose || g_debugMode) {
@@ -1209,6 +1226,7 @@ int PSKDemod(const char *Cmd, bool verbose) {
     //prime demod buffer for output
     setDemodBuff(bits, bitlen, 0);
     setClockGrid(clk, startIdx);
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -1300,20 +1318,30 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
     if (getSignalProperties()->isnoise)
         return PM3_ESOFT;
 
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        return PM3_EMALLOC;
+    }
+            
     size_t BitLen = getFromGraphBuf(bits);
 
-    if (BitLen == 0) return PM3_ESOFT;
+    if (BitLen == 0) {
+        free(bits);
+        return PM3_ESOFT;
+    }
 
     errCnt = nrzRawDemod(bits, &BitLen, &clk, &invert, &clkStartIdx);
     if (errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
+        free(bits);
         return PM3_ESOFT;
     }
     if (errCnt < 0 || BitLen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
         PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
+        free(bits);
         return PM3_ESOFT;
     }
+    
     if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d", clk, invert, BitLen);
     //prime demod buffer for output
     setDemodBuff(bits, BitLen, 0);
@@ -1326,6 +1354,8 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
         // Now output the bitstream to the scrollback by line of 16 bits
         printDemodBuff();
     }
+    
+    free(bits);
     return PM3_SUCCESS;
 }
 
