@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include "fileutils.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "commonutil.h"
@@ -1199,48 +1200,78 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     return demodEM4x05resp(word);
 }
 
+#define swapedEndian(num) ((num>>24)&0xff) | ((num<<8)&0xff0000) | ((num>>8)&0xff00) | ((num<<24)&0xff000000)
+                    
 static int CmdEM4x05Dump(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
     bool usePwd = false;
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+//uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+    uint8_t cmdp = 0;
     uint8_t bytes[4] = {0};
+    uint32_t data[16];
+    char preferredName[FILE_PATH_SIZE] = {0};
+    bool save = false;
 
-    if (ctmp == 'h') return usage_lf_em4x05_dump();
-
+    while (param_getchar(Cmd, cmdp) != 0x00) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':   return usage_lf_em4x05_dump();
+                        break;
+            case 's':   param_getstr(Cmd, cmdp + 1, preferredName, FILE_PATH_SIZE);
+                        save = true;
+                        cmdp+=2;
+                        break;
+            default :   // for backwards-compatibility options should be > 'f' else assume its the hex password`
+                        pwd = param_get32ex(Cmd, cmdp, 1, 16);
+                        usePwd = true;
+                        cmdp++;
+        };
+    }
+//    if (ctmp == 'h') return usage_lf_em4x05_dump();
+//    if (ctmp == 's') { // save dump 
+//        
+//    }
     // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
-    pwd = param_get32ex(Cmd, 0, 1, 16);
+//    pwd = param_get32ex(Cmd, 0, 1, 16);
 
-    if (pwd != 1)
-        usePwd = true;
+   // if (pwd != 1)
+   //     usePwd = true;
 
     int success = PM3_SUCCESS;
     int status;
     uint32_t word = 0;
-    PrintAndLogEx(NORMAL, "Addr | data     | ascii");
-    PrintAndLogEx(NORMAL, "-----+----------+-------");
+    PrintAndLogEx(NORMAL, "Addr | data     | ascii | info");
+    PrintAndLogEx(NORMAL, "-----+----------+-------+------");
     for (; addr < 16; addr++) {
 
         if (addr == 2) {
             if (usePwd) {
-                PrintAndLogEx(NORMAL, "  %02u | %08X |", addr, pwd, word);
+                data[addr] = swapedEndian(pwd);
+                num_to_bytes(pwd, 4, bytes);
+                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | password", addr, pwd, sprint_ascii(bytes, 4));
             } else {
-                PrintAndLogEx(NORMAL, "  02 |          | " _RED_("cannot read"));
+                data[addr] = 0x00; // Unknown password, but not used to set to zeros
+                PrintAndLogEx(NORMAL, "  02 |          |       | " _RED_("cannot read"));
             }
         } else {
             // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
             status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word); // Get status for single read
             success &= status; // Update status to match previous return
-            
+            data[addr] = swapedEndian(word);
             if (status == PM3_SUCCESS) {
                 num_to_bytes(word, 4, bytes);
-                PrintAndLogEx(NORMAL, "  %02d | %08X | %s", addr, word, (addr > 13) ? "Lock" : sprint_ascii(bytes, 4));
+                PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %s", addr, word, sprint_ascii(bytes, 4), (addr > 13) ? "Lock" : "");
             }
             else
-                PrintAndLogEx(NORMAL, "  %02d |          | " _RED_("Fail"), addr);
+                PrintAndLogEx(NORMAL, "  %02d |          |       | " _RED_("Fail"), addr);
         }
     }
-
+    
+    if ((success == PM3_SUCCESS) && (save)) {// all ok save dump to file
+        saveFileEML(preferredName, (uint8_t *)data, 16*sizeof(uint32_t), sizeof(uint32_t));
+        saveFile   (preferredName, ".bin", data, sizeof(data));
+    }
+    
     return success;
 }
 
