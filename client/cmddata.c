@@ -518,7 +518,6 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     size_t maxLen = 0;
     uint8_t askamp = 0;
     char amp = tolower(param_getchar(Cmd, 0));
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
 
     sscanf(Cmd, "%i %i %i %zu %c", &clk, &invert, &maxErr, &maxLen, &amp);
 
@@ -533,12 +532,19 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
         invert = 1;
         clk = 0;
     }
+    uint8_t *bits =  calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        return PM3_EMALLOC;
+    }
 
     size_t BitLen = getFromGraphBuf(bits);
 
     PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) #samples from graphbuff: %d", BitLen);
 
-    if (BitLen < 255) return PM3_ESOFT;
+    if (BitLen < 255) {
+        free(bits);
+        return PM3_ESOFT;
+    }
 
     if (maxLen < BitLen && maxLen != 0) BitLen = maxLen;
 
@@ -572,11 +578,13 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
     if (errCnt < 0 || BitLen < 16) { //if fatal error (or -1)
         PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%c, bitlen:%d, clock:%d", errCnt, (invert) ? 'Y' : 'N', BitLen, clk);
+        free(bits);
         return PM3_ESOFT;
     }
 
     if (errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%d, clock:%d", errCnt, BitLen, clk);
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -601,6 +609,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     if (emSearch)
         AskEm410xDecode(true, &hi, &lo);
 
+    free(bits);
     return PM3_SUCCESS;
 }
 int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType) {
