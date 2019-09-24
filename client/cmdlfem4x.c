@@ -690,39 +690,43 @@ static int CmdEM410xWrite(const char *Cmd) {
 }
 
 //**************** Start of EM4x50 Code ************************
-static bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+
+// even parity COLUMN
+static bool EM_ColParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
     uint8_t colP = 0;
-    //assume last col is a parity and do not test
-    for (uint8_t colNum = 0; colNum < cols - 1; colNum++) {
-        for (uint8_t rowNum = 0; rowNum < rows; rowNum++) {
-            colP ^= bs[(rowNum * cols) + colNum];
+
+    for (uint8_t c = 0; c < cols - 1; c++) {
+        for (uint8_t r = 0; r < rows; r++) {
+            colP ^= bs[(r * cols) + c];
         }
         if (colP != pType) return false;
+        colP = 0;
     }
     return true;
 }
 
-static bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+// even parity ROW 
+static bool EM_RowParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
-
     uint8_t rowP = 0;
-    //assume last row is a parity row and do not test
-    for (uint8_t rowNum = 0; rowNum < rows - 1; rowNum++) {
-        for (uint8_t colNum = 0; colNum < cols; colNum++) {
-            rowP ^= bs[(rowNum * cols) + colNum];
+
+    for (uint8_t r = 0; r < rows - 1; r++) {
+        for (uint8_t c = 0; c < cols; c++) {
+            rowP ^= bs[(r * cols) + c];
         }
         if (rowP != pType) return false;
+        rowP = 0;
     }
     return true;
 }
 
 // EM word parity test.
 // 9*5 = 45 bits in total
+// 012345678|r0
 // 012345678|r1
 // 012345678|r2
 // 012345678|r3
-// 012345678|r4
 // ------------
 //c012345678| 0
 //            |- must be zero
@@ -795,7 +799,7 @@ static uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose
  *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
  *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
  *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
- *  CCCCCCCC                         <- column parity bits
+ *  CCCCCCC0                         <- column parity bits
  *  0                                <- stop bit
  *  LW                               <- Listen Window
  *
@@ -809,9 +813,8 @@ static uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose
  */
 //completed by Marshmellow
 int EM4x50Read(const char *Cmd, bool verbose) {
-    uint8_t fndClk[] = {8, 16, 32, 40, 50, 64, 128};
     int clk = 0, invert = 0, tol = 0, phaseoff;
-    int i = 0, j = 0, startblock, skip, block, start, end, low = 0, high = 0, minClk = 255;
+    int i = 0, j = 0, startblock, skip, block, start, end, low = 0, high = 0;
     uint32_t Code[6];
     char tmp[6];
     char tmp2[20];
@@ -833,16 +836,28 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 
     computeSignalProperties(bits, size);
 
-    signal_t *sp = getSignalProperties();
-    high = sp->high;
-    low = sp->low;
+    // get fuzzed HI / LOW limits in signal
+    getHiLo( &high, &low, 75, 75);
 
     // get to first full low to prime loop and skip incomplete first pulse
-    while ((i < size) && (bits[i] < high))
-        ++i;
-    while ((i < size) && (bits[i] > low))
-        ++i;
-    skip = i;
+    size_t offset = 0;
+    getNextHigh(bits, size, high, &offset);
+    getNextLow(bits, size, low, &offset);
+
+    i = (int)offset;
+    skip = offset;
+
+    // set clock
+    if (clk == 0) {
+        DetectASKClock(bits, size, &clk, 0);
+        PrintAndLogEx(INFO, " ICE CLOCK  %d", clk);
+        if (clk == 0) {
+            if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - didn't find a clock");
+                return PM3_ESOFT;
+        }
+    }
+    // tolerance
+    tol = clk / 8;
 
     // populate tmpbuff buffer with pulse lengths
     while (i < size) {
@@ -850,32 +865,18 @@ int EM4x50Read(const char *Cmd, bool verbose) {
         while ((i < size) && (bits[i] > low))
             ++i;
         start = i;
+
         while ((i < size) && (bits[i] < high))
             ++i;
+
         while ((i < size) && (bits[i] > low))
             ++i;
+
         if (j >= (MAX_GRAPH_TRACE_LEN / 64)) {
             break;
         }
         tmpbuff[j++] = i - start;
-        if (i - start < minClk && i < size) {
-            minClk = i - start;
-        }
     }
-    // set clock
-    if (!clk) {
-        for (uint8_t clkCnt = 0; clkCnt < 7; clkCnt++) {
-            tol = fndClk[clkCnt] / 8;
-            if (minClk >= fndClk[clkCnt] - tol && minClk <= fndClk[clkCnt] + 1) {
-                clk = fndClk[clkCnt];
-                break;
-            }
-        }
-        if (!clk) {
-            if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - didn't find a clock");
-            return PM3_ESOFT;
-        }
-    } else tol = clk / 8;
 
     // look for data start - should be 2 pairs of LW (pulses of clk*3,clk*2)
     start = -1;
@@ -910,6 +911,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
                     }
     }
     end = i;
+
     // report back
     if (verbose || g_debugMode) {
         if (start >= 0) {
@@ -920,16 +922,23 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             PrintAndLogEx(NORMAL, "  or after a " _YELLOW_("'data askedge'") " command to clean up the read");
             return PM3_ESOFT;
         }
-    } else if (start < 0) return PM3_ESOFT;
+    } else if (start < 0) {
+        return PM3_ESOFT;
+    }
 
     start = skip;
+
     snprintf(tmp2, sizeof(tmp2), "%d %d 1000 %d", clk, invert, clk * 47);
+
     // save GraphBuffer - to restore it later
     save_restoreGB(GRAPH_SAVE);
+
     // get rid of leading crap
     snprintf(tmp, sizeof(tmp), "%i", skip);
     CmdLtrim(tmp);
+
     bool AllPTest = true;
+
     // now work through remaining buffer printing out data blocks
     block = 0;
     i = startblock;
@@ -957,11 +966,12 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             save_restoreGB(GRAPH_RESTORE);
             return PM3_ESOFT;
         }
+
         //set DemodBufferLen to just one block
         DemodBufferLen = skip / clk;
         //test parities
-        bool pTest = EM_ByteParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
-        pTest &= EM_EndParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
+        bool pTest = EM_RowParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
+        pTest &= EM_ColParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
         AllPTest &= pTest;
         //get output
         Code[block] = OutputEM4x50_Block(DemodBuffer, DemodBufferLen, verbose, pTest);
@@ -972,6 +982,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
         block++;
         if (i >= end) break; //in case chip doesn't output 6 blocks
     }
+
     //print full code:
     if (verbose || g_debugMode || AllPTest) {
         if (!complete) {
@@ -1135,7 +1146,7 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
     //test for even parity bits.
     uint8_t parity[45] = {0};
     memcpy(parity, DemodBuffer, 45);
-    if (!EM_EndParityTest(DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
+    if (!EM_ColParityTest(DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - End Parity check failed");
         return PM3_ESOFT;
     }
