@@ -191,15 +191,13 @@ static int usage_lf_find(void) {
     return PM3_SUCCESS;
 }
 static int usage_lf_tune(void) {
-    PrintAndLogEx(NORMAL, "Continuously measure LF antenna tuning.");
+    PrintAndLogEx(NORMAL, "Continuously measure LF antenna tuning at 125 kHz.");
     PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
-    PrintAndLogEx(NORMAL, "Usage:  lf tune [h] <0|1>");
+    PrintAndLogEx(NORMAL, "Usage:  lf tune [h] [<iter>]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       <>         ");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf tune       = ");
+    PrintAndLogEx(NORMAL, "       h             - This help");
+    PrintAndLogEx(NORMAL, "       <iter>        - number of iterations (default: 0=infinite)");
     return PM3_SUCCESS;
 }
 
@@ -208,7 +206,7 @@ int CmdLFTune(const char *Cmd) {
     if (cmdp == 'h') return usage_lf_tune();
     int iter =  param_get32ex(Cmd, 0, 0, 10);
 
-    PrintAndLogEx(SUCCESS, "Measuring LF antenna, click button or press Enter to exit");
+    PrintAndLogEx(SUCCESS, "Measuring LF antenna at 125kHz, click button or press Enter to exit");
 
     uint8_t mode[] = {1};
     PacketResponseNG resp;

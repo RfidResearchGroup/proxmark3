@@ -206,7 +206,7 @@ void MeasureAntennaTuning(void) {
     LEDsoff();
 }
 
-// Measure HF in miliVolt
+// Measure HF in milliVolt
 uint16_t MeasureAntennaTuningHfData(void) {
     uint16_t volt = 0;
     uint16_t avg = AvgAdc(ADC_CHAN_HF);
@@ -220,7 +220,7 @@ uint16_t MeasureAntennaTuningHfData(void) {
     return volt;
 }
 
-// Measure LF in miliVolt
+// Measure LF in milliVolt
 uint32_t MeasureAntennaTuningLfData(void) {
     return  (MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10;
 }
@@ -1451,7 +1451,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             switch (packet->data.asBytes[0]) {
                 case 1: // MEASURE_ANTENNA_TUNING_LF_START
-                    // Let the FPGA drive the low-frequency antenna around 125Khz
+                    // Let the FPGA drive the low-frequency antenna around 125kHz
                     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
                     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95);
