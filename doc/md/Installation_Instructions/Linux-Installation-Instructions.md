@@ -9,7 +9,7 @@ You might want to follow one of these external resources to get an overview, but
 ![Linux Installation Video Screenshot](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)
 
 * ParrotOS: some further notes can be found at @5w0rdfish repo [Proxmark Installation for Parrot OS](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS)
-* Iceman has also added this script to the fork. https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
+
 
 # Install the required dependencies
 
