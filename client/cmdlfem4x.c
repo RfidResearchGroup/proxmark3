@@ -16,9 +16,11 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include "fileutils.h"
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "commonutil.h"
+#include "common.h"
 #include "util_posix.h"
 #include "protocols.h"
 #include "ui.h"
@@ -154,13 +156,15 @@ static int usage_lf_em4x50_write(void) {
 static int usage_lf_em4x05_dump(void) {
     PrintAndLogEx(NORMAL, "Dump EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_dump [h] <pwd>");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_dump [h] [f <filename prefix>] <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       pwd       - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "       h                     - this help");
+    PrintAndLogEx(NORMAL, "       f <filename prefix>   - overide filename prefix (optional).  Default is based on UID");
+    PrintAndLogEx(NORMAL, "       pwd                   - password (hex) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf em 4x05_dump");
     PrintAndLogEx(NORMAL, "      lf em 4x05_dump 11223344");
+    PrintAndLogEx(NORMAL, "      lf em 4x50_dump f card1 11223344");
     return PM3_SUCCESS;
 }
 static int usage_lf_em4x05_read(void) {
@@ -1203,32 +1207,101 @@ static int CmdEM4x05Dump(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
     bool usePwd = false;
-    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_lf_em4x05_dump();
-
-    // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
-    pwd = param_get32ex(Cmd, 0, 1, 16);
-
-    if (pwd != 1)
-        usePwd = true;
+    uint8_t cmdp = 0;
+    uint8_t bytes[4] = {0};
+    uint32_t data[16];
+    char preferredName[FILE_PATH_SIZE] = {0};
+    char optchk[10];
+    
+    while (param_getchar(Cmd, cmdp) != 0x00) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':   return usage_lf_em4x05_dump();
+                        break;
+            case 'f':   // since f could match in password, lets confirm it is 1 character only for an option
+                        param_getstr(Cmd, cmdp,optchk,sizeof(optchk));
+                        if (strlen (optchk) == 1) {// Have a single character f so filename no password
+                            param_getstr(Cmd, cmdp + 1, preferredName, FILE_PATH_SIZE);
+                            cmdp+=2;
+                            break;
+                        } // if not a single 'f' dont break and flow onto default as should be password
+                        
+            default :   // for backwards-compatibility options should be > 'f' else assume its the hex password`
+                        // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
+                        pwd = param_get32ex(Cmd, cmdp, 1, 16);
+                        if (pwd != 1)
+                            usePwd = true;
+                        cmdp++;
+        };
+    }
 
     int success = PM3_SUCCESS;
+    int status;
+    uint32_t lock_bits = 0x00; // no blocks locked
+    
     uint32_t word = 0;
-    PrintAndLogEx(NORMAL, "Addr | data   | ascii");
-    PrintAndLogEx(NORMAL, "-----+--------+------");
-    for (; addr < 16; addr++) {
+    PrintAndLogEx(NORMAL, "Addr | data     | ascii |lck| info");
+    PrintAndLogEx(NORMAL, "-----+----------+-------+---+-----");
+    
+    // To flag any blocks locked we need to read blocks 14 and 15 first
+    // dont swap endin until we get block lock flags.
+    status = EM4x05ReadWord_ext(14, pwd, usePwd, &word);
+    if (status != PM3_SUCCESS)
+        success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+    if (word != 0x00) 
+        lock_bits = word;
+    data[14] = word;
+    
+    status = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
+    if (status != PM3_SUCCESS)
+        success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+    if (word != 0x00) // assume block 15 is the current lock block
+        lock_bits = word;
+    data[15] = word;
+
+    // Now read blocks 0 - 13 as we have 14 and 15
+    for (; addr < 14; addr++) { 
 
         if (addr == 2) {
             if (usePwd) {
-                PrintAndLogEx(NORMAL, " %02u | %08X", addr, pwd, word);
+                data[addr] = BSWAP_32(pwd);
+                num_to_bytes(pwd, 4, bytes);
+                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %c | password", addr, pwd, sprint_ascii(bytes, 4),((lock_bits >> addr) & 1) ? 'x' : ' ');
             } else {
-                PrintAndLogEx(NORMAL, " 02 | " _RED_("cannot read"));
+                data[addr] = 0x00; // Unknown password, but not used to set to zeros
+                PrintAndLogEx(NORMAL, "  02 |          |       |   | " _RED_("cannot read"));
             }
         } else {
-            success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+            // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
+            status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word); // Get status for single read
+            if (status != PM3_SUCCESS)
+                success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+            data[addr] = BSWAP_32(word);
+            if (status == PM3_SUCCESS) {
+                num_to_bytes(word, 4, bytes);
+                PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c |", addr, word, sprint_ascii(bytes, 4),((lock_bits >> addr) & 1) ? 'x' : ' ');
+            }
+            else
+                PrintAndLogEx(NORMAL, "  %02d |          |       |   | " _RED_("Fail"), addr);
         }
     }
+    // Print blocks 14 and 15 
+    // Both lock bits are protected with bit idx 14 (special case)
+    PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c | Lock", 14, data[14], sprint_ascii(bytes, 4),((lock_bits >> 14) & 1) ? 'x' : ' ');
+    PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c | Lock", 15, data[15], sprint_ascii(bytes, 4),((lock_bits >> 14) & 1) ? 'x' : ' ');
+    // Update endian for files
+    data[14] = BSWAP_32(data[14]);
+    data[15] = BSWAP_32(data[15]);
 
+    if (success == PM3_SUCCESS) { // all ok save dump to file
+        // saveFileEML will add .eml extension to filename
+        // saveFile (binary) passes in the .bin extension.
+        if (strcmp (preferredName,"") == 0) // Set default filename, if not set by user
+            sprintf (preferredName,"lf-4x05-%08X-data",BSWAP_32(data[1]));
+
+        saveFileEML(preferredName, (uint8_t *)data, 16*sizeof(uint32_t), sizeof(uint32_t));
+        saveFile   (preferredName, ".bin", data, sizeof(data));
+    }
+    
     return success;
 }
 
@@ -1236,6 +1309,7 @@ static int CmdEM4x05Read(const char *Cmd) {
     uint8_t addr;
     uint32_t pwd;
     bool usePwd = false;
+
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || ctmp == 'h') return usage_lf_em4x05_read();
 
