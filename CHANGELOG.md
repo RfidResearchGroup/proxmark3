@@ -355,6 +355,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added T55x7 downlink mode support r <mode> 0 Default, 1 Long Leading 0, 2 Leading 0, 3 1 of 4 and 4 (in some commands) try all. (@mwalker33)
  - Added T55x7 downlink mode auto usage via mode detected (lf t55 detect) (@mwalker33)
  - Fix T55xx config getting displayed when using password when no password needed on read. (@mwalker33)
+ - Fix `em 4x05_dump` to print all blocks read (@mwalker33)
+ - Added save to .eml and .bin for `em 4x05_dump` (@mwalker33)
 
 ### Fixed
  - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (@pwpiwi)
