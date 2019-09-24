@@ -230,7 +230,7 @@ int CmdLFTune(const char *Cmd) {
         }
         if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint32_t)))
             break;
-        uint32_t volt = resp.data.asDwords[0] & 0xFFFF;
+        uint32_t volt = resp.data.asDwords[0];
         PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint32_t)(volt / 1000));
     }
     mode[0] = 3;
