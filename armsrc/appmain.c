@@ -206,8 +206,9 @@ void MeasureAntennaTuning(void) {
     LEDsoff();
 }
 
+// Measure HF in miliVolt
 uint16_t MeasureAntennaTuningHfData(void) {
-    uint16_t volt = 0; // in mV
+    uint16_t volt = 0;
     uint16_t avg = AvgAdc(ADC_CHAN_HF);
     volt = (MAX_ADC_HF_VOLTAGE * avg) >> 10;
     bool use_high = (volt > MAX_ADC_HF_VOLTAGE - 300);
@@ -217,6 +218,11 @@ uint16_t MeasureAntennaTuningHfData(void) {
 //        volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
     }
     return volt;
+}
+
+// Measure LF in miliVolt
+uint32_t MeasureAntennaTuningLfData(void) {
+    return  (MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10;
 }
 
 void ReadMem(int addr) {
@@ -1415,6 +1421,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_MEASURE_ANTENNA_TUNING_HF: {
             if (packet->length != 1)
                 reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
+
             switch (packet->data.asBytes[0]) {
                 case 1: // MEASURE_ANTENNA_TUNING_HF_START
                     // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
@@ -1434,6 +1441,35 @@ static void PacketReceived(PacketCommandNG *packet) {
                     break;
                 default:
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
+                    break;
+            }
+            break;
+        }
+        case CMD_MEASURE_ANTENNA_TUNING_LF: {
+            if (packet->length != 1)
+                reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_EINVARG, NULL, 0);
+
+            switch (packet->data.asBytes[0]) {
+                case 1: // MEASURE_ANTENNA_TUNING_LF_START
+                    // Let the FPGA drive the low-frequency antenna around 125Khz
+                    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+                    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95);
+                    reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, NULL, 0);
+                    break;
+                case 2:
+                    if (button_status == BUTTON_SINGLE_CLICK)
+                        reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_EOPABORTED, NULL, 0);
+
+                    uint32_t volt = MeasureAntennaTuningLfData();
+                    reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
+                    break;
+                case 3:
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, NULL, 0);
+                    break;
+                default:
+                    reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_EINVARG, NULL, 0);
                     break;
             }
             break;
