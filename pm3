@@ -54,6 +54,13 @@ function wait4proxmark_Windows {
 }
 
 function wait4proxmark_WSL {
+    # Test presence of wmic
+    wmic.exe computersystem get name >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "[!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
+        exit 1
+    fi
+
     echo >&2 "[=] Waiting for Proxmark3 to appear..."
     while true; do
         device=$(wmic.exe path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
