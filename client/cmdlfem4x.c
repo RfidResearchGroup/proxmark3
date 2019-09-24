@@ -20,6 +20,7 @@
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "commonutil.h"
+#include "common.h"
 #include "util_posix.h"
 #include "protocols.h"
 #include "ui.h"
@@ -155,13 +156,15 @@ static int usage_lf_em4x50_write(void) {
 static int usage_lf_em4x05_dump(void) {
     PrintAndLogEx(NORMAL, "Dump EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_dump [h] <pwd>");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_dump [h] [s <filename prefix>] <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h         - this help");
-    PrintAndLogEx(NORMAL, "       pwd       - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "       h                     - this help");
+    PrintAndLogEx(NORMAL, "       s <filename prefix>   - overide filename prefix (optional).  Default is based on card serial number");
+    PrintAndLogEx(NORMAL, "       pwd                   - password (hex) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf em 4x05_dump");
     PrintAndLogEx(NORMAL, "      lf em 4x05_dump 11223344");
+    PrintAndLogEx(NORMAL, "      lf em 4x50_dump s card1 11223344");
     return PM3_SUCCESS;
 }
 static int usage_lf_em4x05_read(void) {
@@ -1200,42 +1203,30 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     return demodEM4x05resp(word);
 }
 
-#define swapedEndian(num) ((num>>24)&0xff) | ((num<<8)&0xff0000) | ((num>>8)&0xff00) | ((num<<24)&0xff000000)
-                    
 static int CmdEM4x05Dump(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
     bool usePwd = false;
-//uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     uint8_t cmdp = 0;
     uint8_t bytes[4] = {0};
     uint32_t data[16];
     char preferredName[FILE_PATH_SIZE] = {0};
-    bool save = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':   return usage_lf_em4x05_dump();
                         break;
             case 's':   param_getstr(Cmd, cmdp + 1, preferredName, FILE_PATH_SIZE);
-                        save = true;
                         cmdp+=2;
                         break;
             default :   // for backwards-compatibility options should be > 'f' else assume its the hex password`
+                        // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
                         pwd = param_get32ex(Cmd, cmdp, 1, 16);
-                        usePwd = true;
+                        if (pwd != 1)
+                            usePwd = true;
                         cmdp++;
         };
     }
-//    if (ctmp == 'h') return usage_lf_em4x05_dump();
-//    if (ctmp == 's') { // save dump 
-//        
-//    }
-    // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
-//    pwd = param_get32ex(Cmd, 0, 1, 16);
-
-   // if (pwd != 1)
-   //     usePwd = true;
 
     int success = PM3_SUCCESS;
     int status;
@@ -1246,7 +1237,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
 
         if (addr == 2) {
             if (usePwd) {
-                data[addr] = swapedEndian(pwd);
+                data[addr] = BSWAP_32(pwd);
                 num_to_bytes(pwd, 4, bytes);
                 PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | password", addr, pwd, sprint_ascii(bytes, 4));
             } else {
@@ -1256,8 +1247,9 @@ static int CmdEM4x05Dump(const char *Cmd) {
         } else {
             // success &= EM4x05ReadWord_ext(addr, pwd, usePwd, &word);
             status = EM4x05ReadWord_ext(addr, pwd, usePwd, &word); // Get status for single read
-            success &= status; // Update status to match previous return
-            data[addr] = swapedEndian(word);
+            if (status != PM3_SUCCESS)
+                success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+            data[addr] = BSWAP_32(word);
             if (status == PM3_SUCCESS) {
                 num_to_bytes(word, 4, bytes);
                 PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %s", addr, word, sprint_ascii(bytes, 4), (addr > 13) ? "Lock" : "");
@@ -1266,8 +1258,13 @@ static int CmdEM4x05Dump(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "  %02d |          |       | " _RED_("Fail"), addr);
         }
     }
-    
-    if ((success == PM3_SUCCESS) && (save)) {// all ok save dump to file
+
+    if (success == PM3_SUCCESS) { // all ok save dump to file
+        // saveFileEML will add .eml extension to filename
+        // saveFile (binary) passes in the .bin extension.
+        if (strcmp (preferredName,"") == 0) // Set default filename, if not set by user
+            sprintf (preferredName,"lf-4x05-%08X-data",BSWAP_32(data[1]));
+
         saveFileEML(preferredName, (uint8_t *)data, 16*sizeof(uint32_t), sizeof(uint32_t));
         saveFile   (preferredName, ".bin", data, sizeof(data));
     }
