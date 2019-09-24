@@ -4,7 +4,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency ioProx commands
+// Low frequency Kantech ioProx commands
 // FSK2a, rf/64, 64 bits (complete)
 //-----------------------------------------------------------------------------
 
@@ -319,7 +319,7 @@ static command_t CommandTable[] = {
     {"read",    CmdIOProxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",   CmdIOProxClone, IfPm3Lf,         "clone IOProx to T55x7"},
     {"sim",     CmdIOProxSim,   IfPm3Lf,         "simulate IOProx tag"},
-    {"watch",   CmdIOProxWatch, IfPm3Lf,         "continuously watch for cards.  Reader mode"}, 
+    {"watch",   CmdIOProxWatch, IfPm3Lf,         "continuously watch for cards. Reader mode"}, 
     {NULL, NULL, NULL, NULL}
 };
 
@@ -343,7 +343,7 @@ int demodIOProx(void) {
 //|           |           |           |           |           |           |
 //01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
 //-----------------------------------------------------------------------------
-//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+//00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1   crc    11
 //XSF(version)facility:codeone+codetwo (raw)
 int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
 #define SEPARATOR 1
