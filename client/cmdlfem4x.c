@@ -850,7 +850,6 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     // set clock
     if (clk == 0) {
         DetectASKClock(bits, size, &clk, 0);
-        PrintAndLogEx(INFO, " ICE CLOCK  %d", clk);
         if (clk == 0) {
             if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - didn't find a clock");
                 return PM3_ESOFT;
@@ -1139,6 +1138,20 @@ static bool detectASK_BI() {
     }
     return true;
 }
+static bool detectNRZ() {
+    int ans = NRZrawDemod("0 0 1", false);
+    if (ans != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - EM: NRZ normal demod failed");
+
+        ans = NRZrawDemod("0 1 1", false);
+        if (ans != PM3_SUCCESS) {
+            PrintAndLogEx(DEBUG, "DEBUG: Error - EM: NRZ inverted demod failed");
+            return false;
+        }
+    }
+
+    return true;
+}
 
 // param: idx - start index in demoded data.
 static int setDemodBufferEM(uint32_t *word, size_t idx) {
@@ -1161,7 +1174,7 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
     return PM3_SUCCESS;
 }
 
-// FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE
+// FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE, NRZ
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
 static int demodEM4x05resp(uint32_t *word) {
@@ -1171,6 +1184,9 @@ static int demodEM4x05resp(uint32_t *word) {
         return setDemodBufferEM(word, idx);
 
     if (detectASK_BI() && doPreambleSearch(&idx))
+        return setDemodBufferEM(word, idx);
+
+    if (detectNRZ() && doPreambleSearch(&idx))
         return setDemodBufferEM(word, idx);
 
     if (detectFSK() && doPreambleSearch(&idx))
@@ -1214,6 +1230,13 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     return demodEM4x05resp(word);
 }
 
+static int CmdEM4x05Demod(const char *Cmd) {
+//    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+ //   if (ctmp == 'h') return usage_lf_em4x05_demod();
+    uint32_t word = 0;
+    return demodEM4x05resp(&word);
+}
+
 static int CmdEM4x05Dump(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
@@ -1223,7 +1246,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     uint32_t data[16];
     char preferredName[FILE_PATH_SIZE] = {0};
     char optchk[10];
-    
+
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':   return usage_lf_em4x05_dump();
@@ -1235,7 +1258,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
                             cmdp+=2;
                             break;
                         } // if not a single 'f' dont break and flow onto default as should be password
-                        
+
             default :   // for backwards-compatibility options should be > 'f' else assume its the hex password`
                         // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
                         pwd = param_get32ex(Cmd, cmdp, 1, 16);
@@ -1248,20 +1271,20 @@ static int CmdEM4x05Dump(const char *Cmd) {
     int success = PM3_SUCCESS;
     int status;
     uint32_t lock_bits = 0x00; // no blocks locked
-    
+
     uint32_t word = 0;
     PrintAndLogEx(NORMAL, "Addr | data     | ascii |lck| info");
     PrintAndLogEx(NORMAL, "-----+----------+-------+---+-----");
-    
+
     // To flag any blocks locked we need to read blocks 14 and 15 first
     // dont swap endin until we get block lock flags.
     status = EM4x05ReadWord_ext(14, pwd, usePwd, &word);
     if (status != PM3_SUCCESS)
         success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
-    if (word != 0x00) 
+    if (word != 0x00)
         lock_bits = word;
     data[14] = word;
-    
+
     status = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
     if (status != PM3_SUCCESS)
         success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
@@ -1270,7 +1293,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     data[15] = word;
 
     // Now read blocks 0 - 13 as we have 14 and 15
-    for (; addr < 14; addr++) { 
+    for (; addr < 14; addr++) {
 
         if (addr == 2) {
             if (usePwd) {
@@ -1634,10 +1657,13 @@ static command_t CommandTable[] = {
     {"410x_watch",  CmdEM410xWatch,       IfPm3Lf,         "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
     {"410x_spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
     {"410x_write",  CmdEM410xWrite,       IfPm3Lf,         "write EM410x UID to T5555(Q5) or T55x7 tag"},
+
+    {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
     {"4x05_info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
     {"4x05_read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
     {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
+
     {"4x50_demod",  CmdEM4x50Demod,       AlwaysAvailable, "demodulate a EM4x50 tag from the GraphBuffer"},
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3Lf,         "dump EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3Lf,         "read word data from EM4x50"},
