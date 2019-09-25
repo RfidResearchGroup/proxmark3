@@ -323,6 +323,7 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
+        PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
         free(bits);
         return false;
     }
