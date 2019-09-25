@@ -191,10 +191,17 @@ static int CmdAWIDWatch(const char *Cmd) {
 //print full AWID Prox ID and some bit format details if found
 static int CmdAWIDDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - AWID failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - AWID not enough samples");
+        free(bits);
         return PM3_ENODATA;
     }
     //get binary from fsk wave
@@ -215,6 +222,7 @@ static int CmdAWIDDemod(const char *Cmd) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - AWID error demoding fsk %d", idx);
 
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -243,6 +251,7 @@ static int CmdAWIDDemod(const char *Cmd) {
     size = removeParity(bits, idx + 8, 4, 1, 88);
     if (size != 66) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - AWID at parity check-tag size does not match AWID format");
+        free(bits);
         return PM3_ESOFT;
     }
     // ok valid card found!
@@ -312,6 +321,7 @@ static int CmdAWIDDemod(const char *Cmd) {
             }
             break;
     }
+    free(bits);
 
     PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %d Printing Demod Buffer:", idx, size);
     if (g_debugMode)
