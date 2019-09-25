@@ -138,6 +138,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
 
+//    PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
     //if (IfPm3Felica()) {
     //    ans = CmdHFFelicaReader("s");
     //    if (ans) {
@@ -147,7 +148,8 @@ int CmdHFSearch(const char *Cmd) {
     //}
 
 
-    PrintAndLogEx(FAILED, "\nNo known/supported 13.56 MHz tags found\n");
+    PrintAndLogEx(INPLACE, "No known/supported 13.56 MHz tags found");
+    PrintAndLogEx(NORMAL, "");
     return PM3_ESOFT;
 }
 
