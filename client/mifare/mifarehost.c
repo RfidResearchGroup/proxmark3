@@ -30,7 +30,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t nt = 0, nr = 0, ar = 0;
     uint64_t par_list = 0, ks_list = 0;
     uint64_t *keylist = NULL, *last_keylist = NULL;
-    bool arg0 = true;
+    bool first_run = true;
 
     // message
     PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
@@ -40,7 +40,15 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
     while (true) {
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFARE_READER, arg0, blockno, key_type, NULL, 0);
+        struct {
+            uint8_t first_run;
+            uint8_t blockno;
+            uint8_t key_type;
+        } PACKED payload;
+        payload.first_run = first_run;
+        payload.blockno = blockno;
+        payload.key_type = key_type;
+        SendCommandNG(CMD_HF_MIFARE_READER, (uint8_t*)&payload, sizeof(payload));
 
         //flush queue
         while (kbd_enter_pressed()) {
@@ -56,26 +64,47 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             }
 
             PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-                int16_t isOK  = resp.oldarg[0];
-                if (isOK < 0)
-                    return isOK;
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_READER, &resp, 2000)) {
+                if (resp.status == PM3_EABORTED) {
+                    return -1;
+                }
 
-                uid = (uint32_t)bytes_to_num(resp.data.asBytes +  0, 4);
-                nt = (uint32_t)bytes_to_num(resp.data.asBytes +  4, 4);
-                par_list = bytes_to_num(resp.data.asBytes +  8, 8);
-                ks_list = bytes_to_num(resp.data.asBytes +  16, 8);
-                nr = (uint32_t)bytes_to_num(resp.data.asBytes + 24, 4);
-                ar = (uint32_t)bytes_to_num(resp.data.asBytes + 28, 4);
+                struct p {
+                    int32_t isOK;
+                    uint8_t cuid[4];
+                    uint8_t nt[4];
+                    uint8_t par_list[8];
+                    uint8_t ks_list[8];
+                    uint8_t nr[4];
+                    uint8_t ar[4];
+                } PACKED;
+
+               struct p* package = (struct p*) resp.data.asBytes;
+
+                if (package->isOK == -6) {
+                     *key = 0101;
+                      return 1;
+                }
+
+                if (package->isOK < 0)
+                    return package->isOK;
+
+
+                uid = (uint32_t)bytes_to_num(package->cuid, sizeof(package->cuid));
+                nt = (uint32_t)bytes_to_num(package->nt, sizeof(package->nr));
+                par_list = bytes_to_num(package->par_list, sizeof(package->par_list));
+                ks_list = bytes_to_num(package->ks_list, sizeof(package->ks_list));
+                nr = (uint32_t)bytes_to_num(package->nr, 4);
+                ar = (uint32_t)bytes_to_num(package->ar, 4);
                 break;
             }
         }
         PrintAndLogEx(NORMAL, "\n");
 
-        if (par_list == 0 && arg0 == true) {
+        if (par_list == 0 && first_run == true) {
             PrintAndLogEx(SUCCESS, "Parity is all zero. Most likely this card sends NACK on every authentication.");
         }
-        arg0 = false;
+        first_run = false;
 
         uint32_t keycount = nonce2key(uid, nt, nr, ar, par_list, ks_list, &keylist);
 
@@ -124,7 +153,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             PrintAndLogEx(FAILED, "all candidate keys failed. Restarting darkside attack");
             free(last_keylist);
             last_keylist = keylist;
-            arg0 = true;
+            first_run = true;
         }
     }
     free(last_keylist);
