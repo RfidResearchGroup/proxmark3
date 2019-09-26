@@ -11,19 +11,6 @@
 
 #include "common.h"
 
-#include <string.h>
-
-#include <ctype.h>
-#include <stdlib.h>
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "crc16.h"
-#include "cmdlft55xx.h" // verifywrite
-#include "ui.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "lfdemod.h"
-
 int CmdLFNedap(const char *Cmd);
 
 int demodNedap(void);
