@@ -9,20 +9,7 @@
 #ifndef CMDLFVIKING_H__
 #define CMDLFVIKING_H__
 
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-
 #include "common.h"
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "lfdemod.h"
-#include "commonutil.h"     // num_to_bytes
-
 
 int CmdLFViking(const char *Cmd);
 
