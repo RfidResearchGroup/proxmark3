@@ -141,7 +141,7 @@ static int CmdSecurakeyClone(const char *Cmd) {
             case 'h':
                 return usage_lf_securakey_clone();
             case 'b': {
-                // skip first block,  3*4 =12 bytes left
+                // skip first block,  3*4 = 12 bytes left
                 uint8_t rawhex[12] = {0}; 
                 int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
                 if ( res != 0 )
