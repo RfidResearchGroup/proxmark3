@@ -1245,6 +1245,10 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
         DoAcquisition_default(-1, true);
         // FSK demodulator
 
+        size  = BigBuf_max_traceLen();
+        //askdemod and manchester decode
+        if (size > 12800) size = 12800; //big enough to catch 2 sequences of largest format
+
         int idx = detectAWID(dest, &size, &dummyIdx);
 
         if (idx <= 0 || size != 96) continue;
@@ -1306,10 +1310,10 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
             *low = rawLo;
             break;
         }
-        WDT_HIT();
     }
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("Stopped");
+    DbpString("AWID fsk demod stopped");
     if (ledcontrol) LED_A_OFF();
 }
 
@@ -1366,12 +1370,12 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
                 break;
             }
         }
-        WDT_HIT();
         hi = lo = size = idx = 0;
         clk = invert = 0;
     }
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("Stopped");
+    DbpString("EM man/ask demod stopped");
     if (ledcontrol) LED_A_OFF();
 }
 
@@ -1398,7 +1402,10 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         DoAcquisition_default(-1, true);
 
         //fskdemod and get start index
-        WDT_HIT();
+        size  = BigBuf_max_traceLen();
+        //askdemod and manchester decode
+        if (size > 12000) size = 12000; //big enough to catch 2 sequences of largest format
+
         int idx = detectIOProx(dest, &size, &dummyIdx);
         if (idx < 0) continue;
         //valid tag found
@@ -1455,10 +1462,11 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         code = code2 = 0;
         version = facilitycode = 0;
         number = 0;
-        WDT_HIT();
+        calccrc = 0;
     }
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    DbpString("Stopped");
+    DbpString("IOProx fsk demod stopped");
     if (ledcontrol) LED_A_OFF();
 }
 

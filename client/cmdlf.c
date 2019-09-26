@@ -190,6 +190,59 @@ static int usage_lf_find(void) {
     PrintAndLogEx(NORMAL, "      lf search 1 u = use data from GraphBuffer & search for known and unknown tags");
     return PM3_SUCCESS;
 }
+static int usage_lf_tune(void) {
+    PrintAndLogEx(NORMAL, "Continuously measure LF antenna tuning at 125 kHz.");
+    PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
+    PrintAndLogEx(NORMAL, "Usage:  lf tune [h] [<iter>]");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h             - This help");
+    PrintAndLogEx(NORMAL, "       <iter>        - number of iterations (default: 0=infinite)");
+    return PM3_SUCCESS;
+}
+
+int CmdLFTune(const char *Cmd) {
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (cmdp == 'h') return usage_lf_tune();
+    int iter =  param_get32ex(Cmd, 0, 0, 10);
+
+    PrintAndLogEx(SUCCESS, "Measuring LF antenna at 125kHz, click button or press Enter to exit");
+
+    uint8_t mode[] = {1};
+    PacketResponseNG resp;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, mode, sizeof(mode));
+    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF initialization, aborting");
+        return PM3_ETIMEOUT;
+    }
+    mode[0] = 2;
+    // loop forever (till button pressed) if iter = 0 (default)
+    for (uint8_t i = 0; iter == 0 || i < iter; i++) {
+        if (kbd_enter_pressed()) { // abort by keyboard press
+            break;
+        }
+        SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, mode, sizeof(mode));
+        if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
+            PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF measure, aborting");
+            return PM3_ETIMEOUT;
+        }
+        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint32_t)))
+            break;
+        uint32_t volt = resp.data.asDwords[0];
+        PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint32_t)(volt / 1000));
+    }
+    mode[0] = 3;
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, mode, sizeof(mode));
+    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
+        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF shutdown, aborting");
+        return PM3_ETIMEOUT;
+    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Done.");
+    return PM3_SUCCESS;
+}
 
 
 /* send a LF command before reading */
@@ -1166,6 +1219,7 @@ static command_t CommandTable[] = {
     {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] \n\t\t-- Simulate LF PSK tag from demodbuffer or input"},
     {"simbidir",    CmdLFSimBidir,      IfPm3Lf,         "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
+    {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},
     {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "['clone'] -- Demodulate samples for VeriChip"},
     {NULL, NULL, NULL, NULL}
 };

@@ -433,6 +433,7 @@ static int CmdHFTopazReader(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "ATQA : %02x %02x", atqa[1], atqa[0]);
 
     topaz_tag.HR01[0] = rid_response[0];

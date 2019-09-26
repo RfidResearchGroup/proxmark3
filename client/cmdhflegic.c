@@ -1340,6 +1340,7 @@ int readLegicUid(bool verbose) {
         default:
             break;
     }
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
     legic_print_type(card.cardsize, 0);
     return PM3_SUCCESS;

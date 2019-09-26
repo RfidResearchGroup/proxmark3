@@ -68,6 +68,8 @@ Install WSL with e.g. the standard Ubuntu.
 
 For WSL configuration, see [Manage and configure Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/wsl-config).
 
+Make sure your WSL can launch Windows processes to get the `pm3` scripts working (cf `interop` in the WSL settings).
+
 ## X Server Installation
 
 If you want to run the graphical components of the Proxmark3 client, you need to install a X Server such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](https://sourceforge.net/projects/xming/) and launch it, e.g. by executing XLaunch.

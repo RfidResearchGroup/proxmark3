@@ -60,11 +60,12 @@ static int usage_hf_sniff() {
 }
 
 static int usage_hf_tune() {
-    PrintAndLogEx(NORMAL, "Usage: hf tune [<iter>]");
     PrintAndLogEx(NORMAL, "Continuously measure HF antenna tuning.");
     PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
+    PrintAndLogEx(NORMAL, "Usage: hf tune [h] [<iter>]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       <iter>               - number of iterations (default: infinite)");
+    PrintAndLogEx(NORMAL, "       h             - This help");
+    PrintAndLogEx(NORMAL, "       <iter>        - number of iterations (default: 0=infinite)");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -137,6 +138,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
 
+//    PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
     //if (IfPm3Felica()) {
     //    ans = CmdHFFelicaReader("s");
     //    if (ans) {
@@ -146,7 +148,8 @@ int CmdHFSearch(const char *Cmd) {
     //}
 
 
-    PrintAndLogEx(FAILED, "\nNo known/supported 13.56 MHz tags found\n");
+    PrintAndLogEx(INPLACE, "No known/supported 13.56 MHz tags found");
+    PrintAndLogEx(NORMAL, "");
     return PM3_ESOFT;
 }
 

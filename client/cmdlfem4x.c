@@ -690,39 +690,43 @@ static int CmdEM410xWrite(const char *Cmd) {
 }
 
 //**************** Start of EM4x50 Code ************************
-static bool EM_EndParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+
+// even parity COLUMN
+static bool EM_ColParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
     uint8_t colP = 0;
-    //assume last col is a parity and do not test
-    for (uint8_t colNum = 0; colNum < cols - 1; colNum++) {
-        for (uint8_t rowNum = 0; rowNum < rows; rowNum++) {
-            colP ^= bs[(rowNum * cols) + colNum];
+
+    for (uint8_t c = 0; c < cols - 1; c++) {
+        for (uint8_t r = 0; r < rows; r++) {
+            colP ^= bs[(r * cols) + c];
         }
         if (colP != pType) return false;
+        colP = 0;
     }
     return true;
 }
 
-static bool EM_ByteParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
+// even parity ROW 
+static bool EM_RowParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
-
     uint8_t rowP = 0;
-    //assume last row is a parity row and do not test
-    for (uint8_t rowNum = 0; rowNum < rows - 1; rowNum++) {
-        for (uint8_t colNum = 0; colNum < cols; colNum++) {
-            rowP ^= bs[(rowNum * cols) + colNum];
+
+    for (uint8_t r = 0; r < rows - 1; r++) {
+        for (uint8_t c = 0; c < cols; c++) {
+            rowP ^= bs[(r * cols) + c];
         }
         if (rowP != pType) return false;
+        rowP = 0;
     }
     return true;
 }
 
 // EM word parity test.
 // 9*5 = 45 bits in total
+// 012345678|r0
 // 012345678|r1
 // 012345678|r2
 // 012345678|r3
-// 012345678|r4
 // ------------
 //c012345678| 0
 //            |- must be zero
@@ -795,7 +799,7 @@ static uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose
  *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
  *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
  *  XXXXXXXX [row parity bit (even)] <- 8 bits plus parity
- *  CCCCCCCC                         <- column parity bits
+ *  CCCCCCC0                         <- column parity bits
  *  0                                <- stop bit
  *  LW                               <- Listen Window
  *
@@ -809,9 +813,8 @@ static uint32_t OutputEM4x50_Block(uint8_t *BitStream, size_t size, bool verbose
  */
 //completed by Marshmellow
 int EM4x50Read(const char *Cmd, bool verbose) {
-    uint8_t fndClk[] = {8, 16, 32, 40, 50, 64, 128};
     int clk = 0, invert = 0, tol = 0, phaseoff;
-    int i = 0, j = 0, startblock, skip, block, start, end, low = 0, high = 0, minClk = 255;
+    int i = 0, j = 0, startblock, skip, block, start, end, low = 0, high = 0;
     uint32_t Code[6];
     char tmp[6];
     char tmp2[20];
@@ -833,16 +836,27 @@ int EM4x50Read(const char *Cmd, bool verbose) {
 
     computeSignalProperties(bits, size);
 
-    signal_t *sp = getSignalProperties();
-    high = sp->high;
-    low = sp->low;
+    // get fuzzed HI / LOW limits in signal
+    getHiLo( &high, &low, 75, 75);
 
     // get to first full low to prime loop and skip incomplete first pulse
-    while ((i < size) && (bits[i] < high))
-        ++i;
-    while ((i < size) && (bits[i] > low))
-        ++i;
-    skip = i;
+    size_t offset = 0;
+    getNextHigh(bits, size, high, &offset);
+    getNextLow(bits, size, low, &offset);
+
+    i = (int)offset;
+    skip = offset;
+
+    // set clock
+    if (clk == 0) {
+        DetectASKClock(bits, size, &clk, 0);
+        if (clk == 0) {
+            if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - didn't find a clock");
+                return PM3_ESOFT;
+        }
+    }
+    // tolerance
+    tol = clk / 8;
 
     // populate tmpbuff buffer with pulse lengths
     while (i < size) {
@@ -850,32 +864,18 @@ int EM4x50Read(const char *Cmd, bool verbose) {
         while ((i < size) && (bits[i] > low))
             ++i;
         start = i;
+
         while ((i < size) && (bits[i] < high))
             ++i;
+
         while ((i < size) && (bits[i] > low))
             ++i;
+
         if (j >= (MAX_GRAPH_TRACE_LEN / 64)) {
             break;
         }
         tmpbuff[j++] = i - start;
-        if (i - start < minClk && i < size) {
-            minClk = i - start;
-        }
     }
-    // set clock
-    if (!clk) {
-        for (uint8_t clkCnt = 0; clkCnt < 7; clkCnt++) {
-            tol = fndClk[clkCnt] / 8;
-            if (minClk >= fndClk[clkCnt] - tol && minClk <= fndClk[clkCnt] + 1) {
-                clk = fndClk[clkCnt];
-                break;
-            }
-        }
-        if (!clk) {
-            if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - didn't find a clock");
-            return PM3_ESOFT;
-        }
-    } else tol = clk / 8;
 
     // look for data start - should be 2 pairs of LW (pulses of clk*3,clk*2)
     start = -1;
@@ -910,6 +910,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
                     }
     }
     end = i;
+
     // report back
     if (verbose || g_debugMode) {
         if (start >= 0) {
@@ -920,16 +921,23 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             PrintAndLogEx(NORMAL, "  or after a " _YELLOW_("'data askedge'") " command to clean up the read");
             return PM3_ESOFT;
         }
-    } else if (start < 0) return PM3_ESOFT;
+    } else if (start < 0) {
+        return PM3_ESOFT;
+    }
 
     start = skip;
+
     snprintf(tmp2, sizeof(tmp2), "%d %d 1000 %d", clk, invert, clk * 47);
+
     // save GraphBuffer - to restore it later
     save_restoreGB(GRAPH_SAVE);
+
     // get rid of leading crap
     snprintf(tmp, sizeof(tmp), "%i", skip);
     CmdLtrim(tmp);
+
     bool AllPTest = true;
+
     // now work through remaining buffer printing out data blocks
     block = 0;
     i = startblock;
@@ -957,11 +965,12 @@ int EM4x50Read(const char *Cmd, bool verbose) {
             save_restoreGB(GRAPH_RESTORE);
             return PM3_ESOFT;
         }
+
         //set DemodBufferLen to just one block
         DemodBufferLen = skip / clk;
         //test parities
-        bool pTest = EM_ByteParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
-        pTest &= EM_EndParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
+        bool pTest = EM_RowParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
+        pTest &= EM_ColParityTest(DemodBuffer, DemodBufferLen, 5, 9, 0);
         AllPTest &= pTest;
         //get output
         Code[block] = OutputEM4x50_Block(DemodBuffer, DemodBufferLen, verbose, pTest);
@@ -972,6 +981,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
         block++;
         if (i >= end) break; //in case chip doesn't output 6 blocks
     }
+
     //print full code:
     if (verbose || g_debugMode || AllPTest) {
         if (!complete) {
@@ -1128,6 +1138,20 @@ static bool detectASK_BI() {
     }
     return true;
 }
+static bool detectNRZ() {
+    int ans = NRZrawDemod("0 0 1", false);
+    if (ans != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - EM: NRZ normal demod failed");
+
+        ans = NRZrawDemod("0 1 1", false);
+        if (ans != PM3_SUCCESS) {
+            PrintAndLogEx(DEBUG, "DEBUG: Error - EM: NRZ inverted demod failed");
+            return false;
+        }
+    }
+
+    return true;
+}
 
 // param: idx - start index in demoded data.
 static int setDemodBufferEM(uint32_t *word, size_t idx) {
@@ -1135,7 +1159,7 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
     //test for even parity bits.
     uint8_t parity[45] = {0};
     memcpy(parity, DemodBuffer, 45);
-    if (!EM_EndParityTest(DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
+    if (!EM_ColParityTest(DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - End Parity check failed");
         return PM3_ESOFT;
     }
@@ -1150,7 +1174,7 @@ static int setDemodBufferEM(uint32_t *word, size_t idx) {
     return PM3_SUCCESS;
 }
 
-// FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE
+// FSK, PSK, ASK/MANCHESTER, ASK/BIPHASE, ASK/DIPHASE, NRZ
 // should cover 90% of known used configs
 // the rest will need to be manually demoded for now...
 static int demodEM4x05resp(uint32_t *word) {
@@ -1160,6 +1184,9 @@ static int demodEM4x05resp(uint32_t *word) {
         return setDemodBufferEM(word, idx);
 
     if (detectASK_BI() && doPreambleSearch(&idx))
+        return setDemodBufferEM(word, idx);
+
+    if (detectNRZ() && doPreambleSearch(&idx))
         return setDemodBufferEM(word, idx);
 
     if (detectFSK() && doPreambleSearch(&idx))
@@ -1203,6 +1230,13 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
     return demodEM4x05resp(word);
 }
 
+static int CmdEM4x05Demod(const char *Cmd) {
+//    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+ //   if (ctmp == 'h') return usage_lf_em4x05_demod();
+    uint32_t word = 0;
+    return demodEM4x05resp(&word);
+}
+
 static int CmdEM4x05Dump(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
@@ -1212,7 +1246,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     uint32_t data[16];
     char preferredName[FILE_PATH_SIZE] = {0};
     char optchk[10];
-    
+
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':   return usage_lf_em4x05_dump();
@@ -1224,7 +1258,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
                             cmdp+=2;
                             break;
                         } // if not a single 'f' dont break and flow onto default as should be password
-                        
+
             default :   // for backwards-compatibility options should be > 'f' else assume its the hex password`
                         // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
                         pwd = param_get32ex(Cmd, cmdp, 1, 16);
@@ -1237,20 +1271,20 @@ static int CmdEM4x05Dump(const char *Cmd) {
     int success = PM3_SUCCESS;
     int status;
     uint32_t lock_bits = 0x00; // no blocks locked
-    
+
     uint32_t word = 0;
     PrintAndLogEx(NORMAL, "Addr | data     | ascii |lck| info");
     PrintAndLogEx(NORMAL, "-----+----------+-------+---+-----");
-    
+
     // To flag any blocks locked we need to read blocks 14 and 15 first
     // dont swap endin until we get block lock flags.
     status = EM4x05ReadWord_ext(14, pwd, usePwd, &word);
     if (status != PM3_SUCCESS)
         success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
-    if (word != 0x00) 
+    if (word != 0x00)
         lock_bits = word;
     data[14] = word;
-    
+
     status = EM4x05ReadWord_ext(15, pwd, usePwd, &word);
     if (status != PM3_SUCCESS)
         success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
@@ -1259,7 +1293,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
     data[15] = word;
 
     // Now read blocks 0 - 13 as we have 14 and 15
-    for (; addr < 14; addr++) { 
+    for (; addr < 14; addr++) {
 
         if (addr == 2) {
             if (usePwd) {
@@ -1623,10 +1657,13 @@ static command_t CommandTable[] = {
     {"410x_watch",  CmdEM410xWatch,       IfPm3Lf,         "watches for EM410x 125/134 kHz tags (option 'h' for 134)"},
     {"410x_spoof",  CmdEM410xWatchnSpoof, IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them. (option 'h' for 134)" },
     {"410x_write",  CmdEM410xWrite,       IfPm3Lf,         "write EM410x UID to T5555(Q5) or T55x7 tag"},
+
+    {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
     {"4x05_info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
     {"4x05_read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
     {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
+
     {"4x50_demod",  CmdEM4x50Demod,       AlwaysAvailable, "demodulate a EM4x50 tag from the GraphBuffer"},
     {"4x50_dump",   CmdEM4x50Dump,        IfPm3Lf,         "dump EM4x50 tag"},
     {"4x50_read",   CmdEM4x50Read,        IfPm3Lf,         "read word data from EM4x50"},
