@@ -169,4 +169,5 @@ uint8_t  tryOnePassword(uint32_t password, uint8_t downlink_mode);
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat);
 void printT5555Trace(t5555_tracedata_t data, uint8_t repeat);
 
+int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks);
 #endif

@@ -338,6 +338,59 @@ static int usage_t55xx_protect() {
 
 static int CmdHelp(const char *Cmd);
 
+int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
+    
+    if (blockdata == NULL) 
+        return PM3_EINVARG;
+    if (numblocks < 1 || numblocks > 7)
+        return PM3_EINVARG;
+
+    PacketResponseNG resp;
+
+    // fast push mode
+    conn.block_after_ACK = true;
+
+    for (int8_t i = 0; i < numblocks; i++) {
+
+        // Disable fast mode on last packet
+        if (i == numblocks - 1) {
+            conn.block_after_ACK = false;
+        }
+
+        clearCommandBuffer();
+
+        t55xx_write_block_t ng;
+        ng.data = blockdata[i];
+        ng.pwd = 0;
+        ng.blockno = i;
+        ng.flags = 0;
+
+        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
+        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
+            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
+            return PM3_ETIMEOUT;
+        }
+    }
+ 
+   uint8_t res = 0;
+    for (int8_t i = 0; i < numblocks; i++) {
+
+        if (i == 0) {
+            SetConfigWithBlock0(blockdata[0]);
+            if (t55xxAquireAndCompareBlock0(false, 0, blockdata[0], false))
+                continue;
+        }
+
+        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blockdata[i]) == false)
+            res++;
+    }
+
+    if (res == 0)
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+    
+    return PM3_SUCCESS;
+}
+
 static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t new_password) {
 
     PrintAndLogEx(INFO, "Checking current configuration");
