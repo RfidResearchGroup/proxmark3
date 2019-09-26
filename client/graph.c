@@ -139,7 +139,7 @@ void convertGraphFromBitstreamEx(int hi, int low) {
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
         free(bits);
-        return -1;
+        return;
     }
 
     // set signal properties low/high/mean/amplitude and is_noise detection
