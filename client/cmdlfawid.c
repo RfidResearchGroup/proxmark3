@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "commonutil.h"     // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "graph.h"
@@ -385,13 +386,8 @@ static int CmdAWIDSim(const char *Cmd) {
 }
 
 static int CmdAWIDClone(const char *Cmd) {
-    uint32_t blocks[4] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
     uint32_t fc = 0, cn = 0;
     uint8_t fmtlen = 0;
-    uint8_t bits[96];
-    uint8_t *bs = bits;
-    memset(bs, 0, sizeof(bits));
-
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_awid_clone();
 
@@ -401,63 +397,32 @@ static int CmdAWIDClone(const char *Cmd) {
 
     if (!fc || !cn) return usage_lf_awid_clone();
 
+    uint32_t blocks[4] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
+
     if (tolower(param_getchar(Cmd, 3)) == 'q')
         //t5555 (Q5) BITRATE = (RF-2)/2 (iceman)
         blocks[0] = T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(50) | 3 << T5555_MAXBLOCK_SHIFT;
 
     verify_values(&fmtlen, &fc, &cn);
 
-    if (getAWIDBits(fmtlen, fc, cn, bs) != PM3_SUCCESS) {
+    uint8_t *bits = calloc(96, sizeof(uint8_t));
+
+    if (getAWIDBits(fmtlen, fc, cn, bits) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+        free(bits);
         return PM3_ESOFT;
     }
 
-    blocks[1] = bytebits_to_byte(bs, 32);
-    blocks[2] = bytebits_to_byte(bs + 32, 32);
-    blocks[3] = bytebits_to_byte(bs + 64, 32);
+    blocks[1] = bytebits_to_byte(bits, 32);
+    blocks[2] = bytebits_to_byte(bits + 32, 32);
+    blocks[3] = bytebits_to_byte(bits + 64, 32);
 
+    free(bits);
+    
     PrintAndLogEx(INFO, "Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
-    print_blocks(blocks, 4);
+    print_blocks(blocks,  ARRAYLEN(blocks));
 
-    uint8_t res = 0;
-    PacketResponseNG resp;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-    for (uint8_t i = 0; i < 4; i++) {
-        if (i == 3) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-
-        t55xx_write_block_t ng;
-
-        ng.data = blocks[i];
-        ng.pwd = 0;
-        ng.blockno = i;
-        ng.flags = 0;
-
-        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
-
-        if (i == 0) {
-            SetConfigWithBlock0(blocks[0]);
-            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
-                continue;
-        }
-
-        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
-            res++;
-    }
-
-    if (res == 0)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
-
-    return PM3_SUCCESS;
+    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
 }
 
 static int CmdAWIDBrute(const char *Cmd) {
