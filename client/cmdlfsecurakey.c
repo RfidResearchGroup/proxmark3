@@ -9,17 +9,34 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfsecurakey.h"
 
-#include <string.h>
+#include <string.h>         // memcpy
+#include <ctype.h>          // tolower
 
-#include "cmdparser.h"    // command_t
+#include "commonutil.h"     // ARRAYLEN
+#include "cmdparser.h"      // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"    // preamble test
 #include "parity.h"     // for wiegand parity test
+#include "protocols.h"  // t55xx defines
+#include "cmdlft55xx.h" // clone..
 
 static int CmdHelp(const char *Cmd);
+
+static int usage_lf_securakey_clone(void) {
+    PrintAndLogEx(NORMAL, "clone a Securakey tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage: lf securakey clone [h] [b <raw hex>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h               : this help");
+    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       lf securakey clone 7FCB400001ADEA5344300000");
+    return PM3_SUCCESS;
+}
 
 //see ASKDemod for what args are accepted
 static int CmdSecurakeyDemod(const char *Cmd) {
@@ -100,6 +117,7 @@ static int CmdSecurakeyDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Securakey Tag Found--BitLen: %u, Card ID: %u, FC: 0x%X, Raw: %08X%08X%08X", bitLen, cardid, fc, raw1, raw2, raw3);
     if (bitLen <= 32)
         PrintAndLogEx(SUCCESS, "Wiegand: %08X, Parity: %s", (lWiegand << (bitLen / 2)) | rWiegand, parity ? "Passed" : "Failed");
+
     PrintAndLogEx(INFO, "\nHow the FC translates to printed FC is unknown");
     PrintAndLogEx(INFO, "How the checksum is calculated is unknown");
     PrintAndLogEx(INFO, "Help the community identify this format further\n by sharing your tag on the pm3 forum or with forum members");
@@ -112,8 +130,45 @@ static int CmdSecurakeyRead(const char *Cmd) {
 }
 
 static int CmdSecurakeyClone(const char *Cmd) {
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
-    return PM3_SUCCESS;
+    
+    uint32_t blocks[4];
+    bool errors = false;
+    uint8_t cmdp = 0;
+    int datalen = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_securakey_clone();
+            case 'b': {
+                // skip first block,  3*4 =12 bytes left
+                uint8_t rawhex[12] = {0}; 
+                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
+                if ( res != 0 )
+                    errors = true;
+                
+                for(uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+                    blocks[i] = bytes_to_num(rawhex + ( (i - 1) * 4 ), sizeof(uint32_t));
+                }
+                cmdp += 2;
+                break;
+            }
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || cmdp == 0) return usage_lf_securakey_clone();
+
+    //Securakey - compat mode, ASK/Man, data rate 40, 3 data blocks
+    blocks[0] = T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_40 | 3 << T55x7_MAXBLOCK_SHIFT;
+
+    PrintAndLogEx(INFO, "Preparing to clone Securakey to T55x7 with raw hex");
+    print_blocks(blocks,  ARRAYLEN(blocks));
+
+    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
 }
 
 static int CmdSecurakeySim(const char *Cmd) {
