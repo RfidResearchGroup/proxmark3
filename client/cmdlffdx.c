@@ -264,12 +264,7 @@ static int CmdFdxRead(const char *Cmd) {
 static int CmdFdxClone(const char *Cmd) {
 
     uint32_t countryid = 0;
-    uint64_t animalid = 0;
-    uint32_t blocks[5] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
-    uint8_t bits[128];
-    uint8_t *bs = bits;
-    memset(bs, 0, sizeof(bits));
-
+    uint64_t animalid = 0;    
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_fdx_clone();
 
@@ -278,63 +273,32 @@ static int CmdFdxClone(const char *Cmd) {
 
     verify_values(countryid, animalid);
 
-    // getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t isextended, uint32_t extended, uint8_t *bits)
-    if (getFDXBits(animalid, countryid, 1, 0, 0, bs) != PM3_SUCCESS) {
+    uint8_t *bits = calloc(128, sizeof(uint8_t));
+
+    if (getFDXBits(animalid, countryid, 1, 0, 0, bits) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+        free(bits);
         return PM3_ESOFT;
     }
 
+    uint32_t blocks[5] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
+    
     //Q5
     if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
         blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT;
 
     // convert from bit stream to block data
-    blocks[1] = bytebits_to_byte(bs, 32);
-    blocks[2] = bytebits_to_byte(bs + 32, 32);
-    blocks[3] = bytebits_to_byte(bs + 64, 32);
-    blocks[4] = bytebits_to_byte(bs + 96, 32);
+    blocks[1] = bytebits_to_byte(bits, 32);
+    blocks[2] = bytebits_to_byte(bits + 32, 32);
+    blocks[3] = bytebits_to_byte(bits + 64, 32);
+    blocks[4] = bytebits_to_byte(bits + 96, 32);
 
+    free(bits);
+    
     PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
-    print_blocks(blocks, 5);
+    print_blocks(blocks,  ARRAYLEN(blocks));
 
-    uint8_t res = 0;
-    PacketResponseNG resp;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-    for (int i = 4; i >= 0; --i) {
-        if (i == 0) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-
-        t55xx_write_block_t ng;
-        ng.data = blocks[i];
-        ng.pwd = 0;
-        ng.blockno = i;
-        ng.flags = 0;
-
-        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
-
-        if (i == 0) {
-            SetConfigWithBlock0(blocks[0]);
-            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
-                continue;
-        }
-
-        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
-            res++;
-    }
-
-    if (res == 0)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
-
-    return PM3_SUCCESS;
+    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
 }
 
 static int CmdFdxSim(const char *Cmd) {
