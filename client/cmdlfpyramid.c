@@ -8,6 +8,23 @@
 // FSK2a, rf/50, 128 bits (complete)
 //-----------------------------------------------------------------------------
 #include "cmdlfpyramid.h"
+#include "common.h"
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+
+#include "commonutil.h"   // ARRAYLEN
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+#include "crc.h"
+#include "cmdlft55xx.h" // verifywrite
 
 static int CmdHelp(const char *Cmd);
 
@@ -203,8 +220,10 @@ static int CmdPyramidClone(const char *Cmd) {
 
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
     uint32_t blocks[5];
-    uint8_t bs[128];
-    memset(bs, 0x00, sizeof(bs));
+    uint8_t *bs = calloc(128, sizeof(uint8_t));
+    if (bs == NULL) {
+        return PM3_EMALLOC;
+    }
 
     if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_clone();
 
@@ -228,47 +247,12 @@ static int CmdPyramidClone(const char *Cmd) {
     blocks[3] = bytebits_to_byte(bs + 64, 32);
     blocks[4] = bytebits_to_byte(bs + 96, 32);
 
+    free(bs);
+
     PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
-    print_blocks(blocks, 5);
+    print_blocks(blocks,  ARRAYLEN(blocks));
 
-    uint8_t res = 0;
-    PacketResponseNG resp;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-    for (int8_t i = 0; i < 5; i++) {
-        if (i == 4) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-        t55xx_write_block_t ng;
-        ng.data = blocks[i];
-        ng.pwd = 0;
-        ng.blockno = i;
-        ng.flags = 0;
-
-        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
-
-        if (i == 0) {
-            SetConfigWithBlock0(blocks[0]);
-            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
-                continue;
-        }
-
-        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
-            res++;
-
-    }
-
-    if (res == 0)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
-
-    return PM3_SUCCESS;
+    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
 }
 
 static int CmdPyramidSim(const char *Cmd) {
