@@ -10,12 +10,6 @@
 #define CMDLFPAC_H__
 
 #include "common.h"
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
 
 int CmdLFPac(const char *Cmd);
 
