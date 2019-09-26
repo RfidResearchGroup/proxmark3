@@ -65,7 +65,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_HF_MIFARE_READER, &resp, 2000)) {
-                if (resp.status == PM3_EABORTED) {
+                if (resp.status == PM3_EOPABORTED) {
                     return -1;
                 }
 
