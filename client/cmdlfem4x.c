@@ -173,8 +173,8 @@ static int usage_lf_em4x05_wipe(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_wipe [h] <pwd>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h     - this help");
-    PrintAndLogEx(NORMAL, "       c     - chip type : 0 em4305 (default)");
-    PrintAndLogEx(NORMAL, "                           1 em4205");
+    PrintAndLogEx(NORMAL, "       c     - chip type : 0 em4205");
+    PrintAndLogEx(NORMAL, "                           1 em4305 (default)");
     PrintAndLogEx(NORMAL, "       pwd   - password (hex) (optional)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf em 4x05_wipe");
@@ -1443,7 +1443,7 @@ static int CmdEM4x05Wipe(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
     uint8_t cmdp = 0;
-    uint8_t  chipType  = 0; 
+    uint8_t  chipType  = 1; // em4305 
     uint32_t chipInfo  = 0x00040072; // Chip info/User Block normal 4305 Chip Type
     uint32_t chipUID   = 0x614739AE; // UID normally readonly, but just in case
     uint32_t blockData = 0x00000000; // UserBlock/Password (set to 0x00000000 for a wiped card1
@@ -1474,8 +1474,12 @@ static int CmdEM4x05Wipe(const char *Cmd) {
     }
 
     switch (chipType) {
-        case 1 :  // 4205
+        case 0  : // em4205
                   chipInfo  = 0x00040070; 
+                  config    = 0x0001805F;
+                  break;
+        case 1  : // em4305
+                  chipInfo  = 0x00040072;
                   config    = 0x0001805F;
                   break;
         default : // Type 0/Default : EM4305
