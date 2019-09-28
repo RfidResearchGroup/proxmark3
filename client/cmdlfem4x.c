@@ -167,6 +167,20 @@ static int usage_lf_em4x05_dump(void) {
     PrintAndLogEx(NORMAL, "      lf em 4x50_dump f card1 11223344");
     return PM3_SUCCESS;
 }
+static int usage_lf_em4x05_wipe(void) {
+    PrintAndLogEx(NORMAL, "Wipe EM4x05/EM4x69.  Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf em 4x05_wipe [h] <pwd>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h     - this help");
+    PrintAndLogEx(NORMAL, "       c     - chip type : 0 em4205");
+    PrintAndLogEx(NORMAL, "                           1 em4305 (default)");
+    PrintAndLogEx(NORMAL, "       pwd   - password (hex) (optional)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf em 4x05_wipe");
+    PrintAndLogEx(NORMAL, "      lf em 4x05_wipe 11223344");
+    return PM3_SUCCESS;
+}
 static int usage_lf_em4x05_read(void) {
     PrintAndLogEx(NORMAL, "Read EM4x05/EM4x69.  Tag must be on antenna. ");
     PrintAndLogEx(NORMAL, "");
@@ -1425,6 +1439,79 @@ static int CmdEM4x05Write(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Write could " _RED_("not") "be verified");
     return status;
 }
+static int CmdEM4x05Wipe(const char *Cmd) {
+    uint8_t addr = 0;
+    uint32_t pwd = 0;
+    uint8_t cmdp = 0;
+    uint8_t  chipType  = 1; // em4305 
+    uint32_t chipInfo  = 0x00040072; // Chip info/User Block normal 4305 Chip Type
+    uint32_t chipUID   = 0x614739AE; // UID normally readonly, but just in case
+    uint32_t blockData = 0x00000000; // UserBlock/Password (set to 0x00000000 for a wiped card1
+    uint32_t config    = 0x0001805F; // Default config (no password)
+    int success = PM3_SUCCESS;
+    char cmdStr [100];
+    char optchk[10];
+
+    while (param_getchar(Cmd, cmdp) != 0x00) {
+        // check if cmd is a 1 byte option
+         param_getstr(Cmd, cmdp,optchk,sizeof(optchk));
+         if (strlen (optchk) == 1) {// Have a single character so option not part of password 
+            switch (tolower(param_getchar(Cmd, cmdp))) {
+                case 'c':   // chip type
+                            if (param_getchar(Cmd, cmdp) != 0x00) 
+                                chipType = param_get8ex (Cmd,cmdp+1,0,10); 
+                            cmdp+=2;
+                            break;
+                case 'h':   // return usage_lf_em4x05_wipe();
+                default :   // Unknown or 'h' send help
+                            return usage_lf_em4x05_wipe();
+                            break;
+            };
+         } else { // Not a single character so assume password
+            pwd = param_get32ex(Cmd, cmdp, 1, 16);
+            cmdp++;
+         }
+    }
+
+    switch (chipType) {
+        case 0  : // em4205
+                  chipInfo  = 0x00040070; 
+                  config    = 0x0001805F;
+                  break;
+        case 1  : // em4305
+                  chipInfo  = 0x00040072;
+                  config    = 0x0001805F;
+                  break;
+        default : // Type 0/Default : EM4305
+                  chipInfo  = 0x00040072;
+                  config    = 0x0001805F;
+    }
+    
+    // block 0 : User Data or Chip Info
+    sprintf (cmdStr,"%d %08X %08X",0,chipInfo,pwd);
+    CmdEM4x05Write (cmdStr);
+    // block 1 : UID - this should be read only for EM4205 and EM4305 not sure about others
+    sprintf (cmdStr,"%d %08X %08X",1,chipUID,pwd);
+    CmdEM4x05Write (cmdStr);
+    // block 2 : password
+    sprintf (cmdStr,"%d %08X %08X",2,blockData,pwd);
+    CmdEM4x05Write (cmdStr);
+    pwd = blockData; // Password should now have changed, so use new password
+    // block 3 : user data
+    sprintf (cmdStr,"%d %08X %08X",3,blockData,pwd);
+    CmdEM4x05Write (cmdStr);
+    // block 4 : config
+    sprintf (cmdStr,"%d %08X %08X",4,config,pwd);
+    CmdEM4x05Write (cmdStr);
+
+    // Remainder of user/data blocks
+    for (addr = 5; addr < 14; addr++) {// Clear user data blocks
+        sprintf (cmdStr,"%d %08X %08X",addr,blockData,pwd);
+        CmdEM4x05Write (cmdStr);
+    }
+
+    return success;
+}
 
 static void printEM4x05config(uint32_t wordData) {
     uint16_t datarate = (((wordData & 0x3F) + 1) * 2);
@@ -1660,6 +1747,7 @@ static command_t CommandTable[] = {
 
     {"4x05_demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"4x05_dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
+    {"4x05_wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "wipe EM4x05/EM4x69 tag"},
     {"4x05_info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
     {"4x05_read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
     {"4x05_write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
