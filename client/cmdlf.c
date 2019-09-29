@@ -105,14 +105,15 @@ static int usage_lf_sniff(void) {
 static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "Usage: lf config [h] [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h             This help");
-    PrintAndLogEx(NORMAL, "       L             Low frequency (125 kHz)");
-    PrintAndLogEx(NORMAL, "       H             High frequency (134 kHz)");
-    PrintAndLogEx(NORMAL, "       q <divisor>   Manually set divisor. 88-> 134 kHz, 95-> 125 kHz");
-    PrintAndLogEx(NORMAL, "       b <bps>       Sets resolution of bits per sample. Default (max): 8");
-    PrintAndLogEx(NORMAL, "       d <decim>     Sets decimation. A value of N saves only 1 in N samples. Default: 1");
-    PrintAndLogEx(NORMAL, "       a [0|1]       Averaging - if set, will average the stored sample value when decimating. Default: 1");
-    PrintAndLogEx(NORMAL, "       t <threshold> Sets trigger threshold. 0 means no threshold (range: 0-128)");
+    PrintAndLogEx(NORMAL, "       h                 This help");
+    PrintAndLogEx(NORMAL, "       L                 Low frequency (125 kHz)");
+    PrintAndLogEx(NORMAL, "       H                 High frequency (134 kHz)");
+    PrintAndLogEx(NORMAL, "       q <divisor>       Manually set divisor. 88-> 134 kHz, 95-> 125 kHz");
+    PrintAndLogEx(NORMAL, "       b <bps>           Sets resolution of bits per sample. Default (max): 8");
+    PrintAndLogEx(NORMAL, "       d <decim>         Sets decimation. A value of N saves only 1 in N samples. Default: 1");
+    PrintAndLogEx(NORMAL, "       a [0|1]           Averaging - if set, will average the stored sample value when decimating. Default: 1");
+    PrintAndLogEx(NORMAL, "       t <threshold>     Sets trigger threshold. 0 means no threshold (range: 0-128)");
+    PrintAndLogEx(NORMAL, "       s <samplestoskip> Sets a number of samples to skip before capture. Default: 0");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf config b 8 L");
     PrintAndLogEx(NORMAL, "                    Samples at 125 kHz, 8bps.");
@@ -399,6 +400,8 @@ int CmdLFSetConfig(const char *Cmd) {
     bool errors = false;
     int trigger_threshold = -1;//Means no change
     uint8_t unsigned_trigg = 0;
+    int samples_to_skip = -1;
+
 
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -437,6 +440,10 @@ int CmdLFSetConfig(const char *Cmd) {
                 averaging = param_getchar(Cmd, cmdp + 1) == '1';
                 cmdp += 2;
                 break;
+            case 's':
+                samples_to_skip = param_get32ex(Cmd,cmdp+1,0,10);
+                cmdp+=2;
+                break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = 1;
@@ -450,7 +457,7 @@ int CmdLFSetConfig(const char *Cmd) {
     //Bps is limited to 8
     if (bps >> 4) bps = 8;
 
-    sample_config config = { decimation, bps, averaging, divisor, trigger_threshold };
+    sample_config config = { decimation, bps, averaging, divisor, trigger_threshold,samples_to_skip };
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)&config, sizeof(sample_config));
