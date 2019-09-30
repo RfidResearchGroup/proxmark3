@@ -290,10 +290,12 @@ void setT55xxConfig(uint8_t arg0, t55xx_configurations_t *c) {
 #ifdef WITH_FLASH
     // shall persist to flashmem
     if (arg0 == 0) {
+        BigBuf_free();
         return;
     }
 
     if (!FlashInit()) {
+        BigBuf_free();
         return;
     }
 
@@ -390,7 +392,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     WaitMS(200);
 
     // if delay_off = 0 then just bitbang 1 = antenna on 0 = off for respective periods.
-    bool bitbang = delay_off == 0;
+    bool bitbang = (delay_off == 0);
     // now modulate the reader field
     if (bitbang) {
         // HACK it appears the loop and if statements take up about 7us so adjust waits accordingly...
@@ -399,6 +401,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
             DbpString("[!] Warning periods cannot be less than 7us in bit bang mode");
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             LED_D_OFF();
+	    reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_EINVARG, NULL, 0);
             return;
         }
 
