@@ -1694,9 +1694,8 @@ void T55xxResetRead(uint8_t flags) {
     DoPartialAcquisition(0, true, BigBuf_max_traceLen(), 0);
 
     // Turn the field off
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-    reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
-
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    reply_ng(CMD_LF_T55XX_RESET_READ, PM3_SUCCESS, NULL, 0);
     LED_A_OFF();
 }
 

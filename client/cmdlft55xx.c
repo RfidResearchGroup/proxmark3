@@ -2426,19 +2426,30 @@ static int CmdResetRead(const char *Cmd) {
 
     flags = downlink_mode << 3;
 
+    PacketResponseNG resp;
+
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
-    if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
+    if (!WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t got[BIGBUF_SIZE - 1];
-    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
-        PrintAndLogEx(WARNING, "command execution time out");
-        return PM3_ETIMEOUT;
+    if (resp.status == PM3_SUCCESS) {
+
+        uint8_t *got = calloc(BIGBUF_SIZE - 1, sizeof(uint8_t));
+        if (got == NULL) {
+            PrintAndLogEx(WARNING, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+
+        if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        setGraphBuf(got, sizeof(got));
+        free(got);
     }
-    setGraphBuf(got, sizeof(got));
     return PM3_SUCCESS;
 }
 
