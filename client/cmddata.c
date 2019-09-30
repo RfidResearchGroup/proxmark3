@@ -32,6 +32,20 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_data_scale(void) {
+    PrintAndLogEx(NORMAL, "Set cursor display scale.");
+    PrintAndLogEx(NORMAL, "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful. ");
+    PrintAndLogEx(NORMAL, "once the scale is set, the differential reading between brackets is the time duration in seconds.");
+    PrintAndLogEx(NORMAL, "For example, if acquiring in 125kHz, use scale 125.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage: data scale [h] <kHz>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       <kHz>      Sets scale of carrier frequency expressed in kHz");
+    PrintAndLogEx(NORMAL, "Samples:");
+    PrintAndLogEx(NORMAL, "       data scale 125      - if sampled in 125kHz");
+    return PM3_SUCCESS;
+}
 static int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -1865,6 +1879,9 @@ static int CmdSave(const char *Cmd) {
 }
 
 static int CmdScale(const char *Cmd) {
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_data_scale();
+
     CursorScaleFactor = atoi(Cmd);
     if (CursorScaleFactor == 0) {
         PrintAndLogEx(FAILED, "bad, can't have zero scale");
@@ -2236,7 +2253,7 @@ static command_t CommandTable[] = {
     {"samples",         CmdSamples,              IfPm3Present,    "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
     {"save",            CmdSave,                 AlwaysAvailable, "<filename> -- Save trace (from graph window)"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable, "[orange_marker] [blue_marker] (in graph window)"},
-    {"scale",           CmdScale,                AlwaysAvailable, "<int> -- Set cursor display scale"},
+    {"scale",           CmdScale,                AlwaysAvailable, "<int> -- Set cursor display scale in carrier frequency expressed in kHz"},
     {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable, "<0|1|2> -- Set Debugging Level on client side"},
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable, "<shift> -- Shift 0 for Graphed wave + or - shift value"},
     {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable, "<thres up> <thres down> -- Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
