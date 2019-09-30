@@ -2791,6 +2791,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     static uint8_t par_low = 0;
     static uint8_t mf_nr_ar3 = 0;
 
+    int return_status = PM3_SUCCESS;
+
     AddCrc14A(mf_auth, 2);
 
     if (first_try) {
@@ -2807,6 +2809,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     }
 
     LED_C_ON();
+    uint16_t checkbtn_cnt = 0;
     uint16_t i;
     for (i = 0; true; ++i) {
 
@@ -2815,10 +2818,15 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         WDT_HIT();
 
         // Test if the action was cancelled
-        if (BUTTON_PRESS()) {
-            isOK = -1;
-            break;
+        if (checkbtn_cnt == 2000) {
+            if (BUTTON_PRESS() || data_available()) {
+                isOK = -1;
+                return_status = PM3_EOPABORTED;
+                break;
+            }
+            checkbtn_cnt = 0;
         }
+        ++checkbtn_cnt;
 
         // this part is from Piwi's faster nonce collecting part in Hardnested.
         if (!have_uid) { // need a full select cycle to get the uid first
@@ -2876,8 +2884,16 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 
         // Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
-        if (ReaderReceive(receivedAnswer, receivedAnswerPar))
+        int resp_res = ReaderReceive(receivedAnswer, receivedAnswerPar);
+        if (resp_res == 1)
             received_nack = true;
+        else if (resp_res == 4) {
+            // did we get lucky and got our dummykey to be valid?
+            // however we dont feed key w uid it the prng..
+            isOK = -6;
+            break;
+        }
+
 
         // we didn't calibrate our clock yet,
         // iceman: has to be calibrated every time.
@@ -3000,26 +3016,36 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 
     if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Number of sent auth requests: %u", i);
 
-    uint8_t buf[32] = {0x00};
-    memset(buf, 0x00, sizeof(buf));
-    num_to_bytes(cuid, 4, buf);
-    num_to_bytes(nt, 4, buf + 4);
-    memcpy(buf + 8,  par_list, 8);
-    memcpy(buf + 16, ks_list, 8);
-    memcpy(buf + 24, mf_nr_ar, 8);
+    struct {
+        int32_t isOK;
+        uint8_t cuid[4];
+        uint8_t nt[4];
+        uint8_t par_list[8];
+        uint8_t ks_list[8];
+        uint8_t nr[4];
+        uint8_t ar[4];
+    } PACKED payload;
 
-    reply_mix(CMD_ACK, isOK, 0, 0, buf, sizeof(buf));
+    payload.isOK = isOK;
+    num_to_bytes(cuid, 4, payload.cuid);
+    num_to_bytes(nt, 4, payload.nt);
+    memcpy(payload.par_list, par_list, sizeof(payload.par_list));
+    memcpy(payload.ks_list, ks_list, sizeof(payload.ks_list));
+    memcpy(payload.nr, mf_nr_ar, sizeof(payload.nr));
+    memcpy(payload.ar, mf_nr_ar + 4, sizeof(payload.ar));
+
+    reply_ng(CMD_HF_MIFARE_READER, return_status, (uint8_t*)&payload, sizeof(payload));
 
     hf_field_off();
     set_tracing(false);
 }
 
 /*
-*  Mifare Classic NACK-bug detection
-*  Thanks to @doegox for the feedback and new approaches.
+ * Mifare Classic NACK-bug detection
+ * Thanks to @doegox for the feedback and new approaches.
 */
 void DetectNACKbug(void) {
-    uint8_t mf_auth[]     = {0x60, 0x00, 0xF5, 0x7B};
+    uint8_t mf_auth[] = {0x60, 0x00, 0xF5, 0x7B};
     uint8_t mf_nr_ar[]    = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t uid[10]       = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
@@ -3050,6 +3076,8 @@ void DetectNACKbug(void) {
     sync_time = GetCountSspClk() & 0xfffffff8;
 
     LED_C_ON();
+    uint16_t checkbtn_cnt = 0;
+
     uint16_t i;
     for (i = 1; true; ++i) {
 
@@ -3064,10 +3092,14 @@ void DetectNACKbug(void) {
         WDT_HIT();
 
         // Test if the action was cancelled
-        if (BUTTON_PRESS() || data_available()) {
-            status = PM3_EOPABORTED;
-            break;
+        if (checkbtn_cnt == 2000) {
+            if (BUTTON_PRESS() || data_available()) {
+                status = PM3_EOPABORTED;
+                break;
+            }
+            checkbtn_cnt = 0;
         }
+        ++checkbtn_cnt;
 
         // this part is from Piwi's faster nonce collecting part in Hardnested.
         if (!have_uid) { // need a full select cycle to get the uid first
@@ -3127,10 +3159,11 @@ void DetectNACKbug(void) {
         // Transmit reader nonce with fake par
         ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 
+        // Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
         if (ReaderReceive(receivedAnswer, receivedAnswerPar)) {
             received_nack = true;
             num_nacks++;
-            // ALWAYS leak Detection.
+            // ALWAYS leak Detection. Well, we could be lucky and get a response nack on first try.
             if (i == num_nacks) {
                 continue;
             }
@@ -3247,7 +3280,6 @@ void DetectNACKbug(void) {
     num_to_bytes(i, 2, data + 2);
     reply_ng(CMD_HF_MIFARE_NACK_DETECT, status, data, 4);
 
-    //reply_mix(CMD_ACK, isOK, num_nacks, i, 0, 0);
     BigBuf_free();
     hf_field_off();
     set_tracing(false);

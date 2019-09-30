@@ -9,15 +9,32 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfnexwatch.h"
+#include <ctype.h>          // tolower
 
+#include "commonutil.h"     // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmddata.h" // preamblesearch
 #include "cmdlf.h"
 #include "lfdemod.h"
+#include "protocols.h"  // t55xx defines
+#include "cmdlft55xx.h" // clone..
 
 static int CmdHelp(const char *Cmd);
+
+static int usage_lf_nexwatch_clone(void) {
+    PrintAndLogEx(NORMAL, "clone a Nexwatch tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage: lf nexwatch clone [h] [b <raw hex>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h               : this help");
+    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       lf nexwatch clone b 5600000000213C9F8F150C0000000000");
+    return PM3_SUCCESS;
+}
 
 static int CmdNexWatchDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -37,7 +54,7 @@ static int CmdNexWatchDemod(const char *Cmd) {
         // else if (idx == -3)
         // PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch problem during PSK demod");
         else if (idx == -4)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch preamble not found");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch preamble not found"); 
         // else if (idx == -5)
         // PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch size not correct: %d", size);
         else
@@ -47,7 +64,7 @@ static int CmdNexWatchDemod(const char *Cmd) {
     }
 
     setDemodBuff(DemodBuffer, size, idx + 4);
-    setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 4)*g_DemodClock));
+    setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 4) * g_DemodClock));
 
 //    idx = 8 + 32; // 8 = preamble, 32 = reserved bits (always 0)
 
@@ -82,10 +99,47 @@ static int CmdNexWatchRead(const char *Cmd) {
 }
 
 static int CmdNexWatchClone(const char *Cmd) {
+    
+    // 56000000 00213C9F 8F150C00 00000000
+    uint32_t blocks[5];
+    bool errors = false;
+    uint8_t cmdp = 0;
+    int datalen = 0;
 
-    // should be able to clone the raw hex.
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
-    return PM3_SUCCESS;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_nexwatch_clone();
+            case 'b': {
+                // skip first block,  4*4 = 16 bytes left
+                uint8_t rawhex[16] = {0}; 
+                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
+                if ( res != 0 )
+                    errors = true;
+                
+                for(uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+                    blocks[i] = bytes_to_num(rawhex + ( (i - 1) * 4 ), sizeof(uint32_t));
+                }
+                cmdp += 2;
+                break;
+            }
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || cmdp == 0) return usage_lf_nexwatch_clone();
+
+    //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
+    blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT;
+
+    PrintAndLogEx(INFO, "Preparing to clone NexWatch to T55x7 with raw hex");
+    print_blocks(blocks,  ARRAYLEN(blocks));
+
+    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+
 }
 
 static int CmdNexWatchSim(const char *Cmd) {

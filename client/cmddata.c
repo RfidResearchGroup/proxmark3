@@ -532,7 +532,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
         invert = 1;
         clk = 0;
     }
-    uint8_t *bits =  calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
         return PM3_EMALLOC;
     }
@@ -1119,13 +1119,13 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
     if (bits == NULL) {
         return PM3_EMALLOC;
     }
-    
+
     size_t BitLen = getFromGraphBuf(bits);
     if (BitLen == 0) {
         free(bits);
         return PM3_ESOFT;
     }
-    
+
     //get field clock lengths
     if (!fchigh || !fclow) {
         uint16_t fcs = countFC(bits, BitLen, true);
@@ -2243,7 +2243,7 @@ static command_t CommandTable[] = {
     {"tune",            CmdTuneSamples,          IfPm3Present,    "Get hw tune samples for graph window"},
     {"undec",           CmdUndec,                AlwaysAvailable, "Un-decimate samples by 2"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable, "Count time between zero-crossings"},
-    {"iir",             CmdDataIIR,              IfPm3Present,    "apply IIR buttersworth filter on plotdata"},
+    {"iir",             CmdDataIIR,              AlwaysAvailable,    "apply IIR buttersworth filter on plotdata"},
     {NULL, NULL, NULL, NULL}
 };
 

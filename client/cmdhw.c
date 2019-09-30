@@ -467,10 +467,14 @@ static int CmdSetMux(const char *Cmd) {
     str_lower((char *)Cmd);
 
     uint8_t arg = 0;
-    if (strcmp(Cmd, "lopkd") == 0)      arg = 0;
-    else if (strcmp(Cmd, "loraw") == 0) arg = 1;
-    else if (strcmp(Cmd, "hipkd") == 0) arg = 2;
-    else if (strcmp(Cmd, "hiraw") == 0) arg = 3;
+    if (strcmp(Cmd, "lopkd") == 0)
+        arg = 0;
+    else if (strcmp(Cmd, "loraw") == 0)
+        arg = 1;
+    else if (strcmp(Cmd, "hipkd") == 0)
+        arg = 2;
+    else if (strcmp(Cmd, "hiraw") == 0)
+        arg = 3;
     else {
         usage_hw_setmux();
         return PM3_EINVARG;
@@ -570,8 +574,6 @@ static int CmdConnect(const char *Cmd) {
         memcpy(port, conn.serial_port_name, sizeof(port));
     }
 
-    printf("Port:: %s  Baud:: %u\n", port, baudrate);
-
     if (session.pm3_present) {
         CloseProxmark();
     }
@@ -582,14 +584,15 @@ static int CmdConnect(const char *Cmd) {
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark3\n");
         CloseProxmark();
+        return PM3_ENOTTY;
     }
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
     {"help",          CmdHelp,        AlwaysAvailable, "This help"},
-    {"dbg",           CmdDbg,         IfPm3Present,    "Set Proxmark3 debug level"},
     {"connect",       CmdConnect,     AlwaysAvailable, "connect Proxmark3 to serial port"},
+    {"dbg",           CmdDbg,         IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
     {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
     {"lcd",           CmdLCD,         IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
@@ -690,14 +693,22 @@ void pm3_version(bool verbose, bool oneliner) {
         PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
         PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
-        PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 ]");
-        PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
-        PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-        PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 Extras ]");
-        PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
 
-        if (IfPm3FpcUsartDevFromUsb())
-            PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
+//#if PLATFORM == PM3RDV4
+        if ( IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
+            PrintAndLogEx(NORMAL, "\n [ PROXMARK3 ]");
+        } else {
+            PrintAndLogEx(NORMAL, "\n [ PROXMARK3 RDV4 ]");
+            PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "\n [ PROXMARK3 RDV4 Extras ]");
+            PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+
+            if (IfPm3FpcUsartDevFromUsb()) {
+                PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
+            }
+        }
+//#endif
 
         PrintAndLogEx(NORMAL, "");
 

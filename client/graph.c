@@ -84,6 +84,8 @@ void setGraphBuf(uint8_t *buff, size_t size) {
 
 size_t getFromGraphBuf(uint8_t *buff) {
     if (buff == NULL) return 0;
+    if (GraphTraceLen == 0) return 0;
+
     size_t i;
     for (i = 0; i < GraphTraceLen; ++i) {
         //trim
@@ -134,6 +136,11 @@ void convertGraphFromBitstreamEx(int hi, int low) {
     }
 
     size_t size = getFromGraphBuf(bits);
+    if (size == 0) {
+        PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+        free(bits);
+        return;
+    }
 
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);

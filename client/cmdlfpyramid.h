@@ -10,21 +10,6 @@
 #define CMDLFPYRAMID_H__
 
 #include "common.h"
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-
-#include "cmdparser.h"    // command_t
-#include "comms.h"
-#include "ui.h"
-#include "graph.h"
-#include "cmddata.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-#include "crc.h"
-#include "cmdlft55xx.h" // verifywrite
 
 int CmdLFPyramid(const char *Cmd);
 

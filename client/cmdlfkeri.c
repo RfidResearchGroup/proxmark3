@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include "commonutil.h"     // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
@@ -155,49 +156,12 @@ static int CmdKeriClone(const char *Cmd) {
     uint64_t data = ((uint64_t)internalid << 3) + 7;
     PrintAndLogEx(INFO, "Preparing to clone KERI to T55x7 with Internal Id: %" PRIx64, internalid);
 
-    //
     blocks[1] = data >> 32;
     blocks[2] = data & 0xFFFFFFFF;
-    print_blocks(blocks, 3);
 
-    uint8_t res = 0;
-    PacketResponseNG resp;
+    print_blocks(blocks,  ARRAYLEN(blocks));
 
-    // fast push mode
-    conn.block_after_ACK = true;
-    for (uint8_t i = 0; i < 3; i++) {
-        if (i == 2) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-
-        t55xx_write_block_t ng;
-        ng.data = blocks[i];
-        ng.pwd = 0;
-        ng.blockno = i;
-        ng.flags = 0;
-
-        SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
-
-        if (i == 0) {
-            SetConfigWithBlock0(blocks[0]);
-            if (t55xxAquireAndCompareBlock0(false, 0, blocks[0], false))
-                continue;
-        }
-
-        if (t55xxVerifyWrite(i, 0, false, false, 0, 0xFF, blocks[i]) == false)
-            res++;
-    }
-
-    if (res == 0)
-        PrintAndLogEx(SUCCESS, "Success writing to tag");
-
-    return PM3_SUCCESS;
+    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
 }
 
 static int CmdKeriSim(const char *Cmd) {

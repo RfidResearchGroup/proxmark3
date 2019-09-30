@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "commonutil.h"     // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
@@ -21,7 +22,24 @@
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
+#include "protocols.h"  // t55xx defines
+#include "cmdlft55xx.h" // clone..
+
 static int CmdHelp(const char *Cmd);
+
+static int usage_lf_paradox_clone(void) {
+    PrintAndLogEx(NORMAL, "clone a Paradox tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage: lf paradox clone [h] [b <raw hex>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h               : this help");
+    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       lf paradox clone 0f55555695596a6a9999a59a");
+    return PM3_SUCCESS;
+}
+
 /*
 static int usage_lf_paradox_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Paradox card with specified card number.");
@@ -113,8 +131,45 @@ static int CmdParadoxRead(const char *Cmd) {
 }
 
 static int CmdParadoxClone(const char *Cmd) {
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
-    return PM3_SUCCESS;
+    
+    uint32_t blocks[4];
+    bool errors = false;
+    uint8_t cmdp = 0;
+    int datalen = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_paradox_clone();
+            case 'b': {
+                // skip first block,  3*4 =12 bytes left
+                uint8_t rawhex[12] = {0}; 
+                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
+                if ( res != 0 )
+                    errors = true;
+                
+                for(uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+                    blocks[i] = bytes_to_num(rawhex + ( (i - 1) * 4 ), sizeof(uint32_t));
+                }
+                cmdp += 2;
+                break;
+            }
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || cmdp == 0) return usage_lf_paradox_clone();
+
+    //Securakey - compat mode, ASK/Man, data rate 40, 3 data blocks
+    blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT;
+
+    PrintAndLogEx(INFO, "Preparing to clone Paradox to T55x7 with raw hex");
+    print_blocks(blocks,  ARRAYLEN(blocks));
+
+    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
 }
 
 static int CmdParadoxSim(const char *Cmd) {

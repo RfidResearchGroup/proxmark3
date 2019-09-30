@@ -1032,7 +1032,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_READER: {
-            ReaderMifare(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            struct p {
+                uint8_t first_run;
+                uint8_t blockno;
+                uint8_t key_type;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            ReaderMifare(payload->first_run, payload->blockno, payload->key_type);
             break;
         }
         case CMD_HF_MIFARE_READBL: {
