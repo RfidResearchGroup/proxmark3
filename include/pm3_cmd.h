@@ -118,6 +118,7 @@ typedef struct {
     bool averaging;
     int divisor;
     int trigger_threshold;
+    uint32_t samples_to_skip;
 } PACKED sample_config;
 /*
 typedef struct {

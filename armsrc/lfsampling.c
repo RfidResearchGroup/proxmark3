@@ -24,7 +24,7 @@ Default LF config is set to:
     divisor = 95 (125kHz)
     trigger_threshold = 0
     */
-sample_config config = { 1, 8, 1, 95, 0 } ;
+sample_config config = { 1, 8, 1, 95, 0, 0 } ;
 
 void printConfig() {
     DbpString(_BLUE_("LF Sampling config"));
@@ -33,6 +33,7 @@ void printConfig() {
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
     Dbprintf("  [t] trigger threshold...%d", config.trigger_threshold);
+    Dbprintf("  [s] samples to skip.....%d ", config.samples_to_skip);
 }
 
 /**
@@ -50,7 +51,9 @@ void setSamplingConfig(sample_config *sc) {
     if (sc->divisor != 0) config.divisor = sc->divisor;
     if (sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
     if (sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
+//    if (sc->samples_to_skip == 0xffffffff) // if needed to not update if not supplied 
 
+    config.samples_to_skip = sc->samples_to_skip;
     config.decimation = (sc->decimation != 0) ? sc->decimation : 1;
     config.averaging = sc->averaging;
     if (config.bits_per_sample > 8) config.bits_per_sample = 8;
@@ -124,7 +127,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
  * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize, uint32_t cancel_after) {
+uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize, uint32_t cancel_after, uint32_t samples_to_skip) {
 
     uint8_t *dest = BigBuf_get_addr();
     bufsize = (bufsize > 0 && bufsize < BigBuf_max_traceLen()) ? bufsize : BigBuf_max_traceLen();
@@ -176,6 +179,12 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
             }
 
             trigger_threshold = 0;
+
+            if (samples_to_skip > 0) {
+                samples_to_skip--;
+                continue;
+            }
+
             sample_total_numbers++;
 
             if (averaging)
@@ -196,6 +205,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 
             // store the sample
             sample_total_saved ++;
+
             if (bits_per_sample == 8) {
                 dest[sample_total_saved - 1] = sample;
 
@@ -238,7 +248,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
  * @return number of bits sampled
  */
 uint32_t DoAcquisition_default(int trigger_threshold, bool silent) {
-    return DoAcquisition(1, 8, 0, trigger_threshold, silent, 0, 0);
+    return DoAcquisition(1, 8, 0, trigger_threshold, silent, 0, 0, 0);
 }
 uint32_t DoAcquisition_config(bool silent, int sample_size) {
     return DoAcquisition(config.decimation
@@ -247,11 +257,12 @@ uint32_t DoAcquisition_config(bool silent, int sample_size) {
                          , config.trigger_threshold
                          , silent
                          , sample_size
-                         , 0);
+                         , 0
+                         , config.samples_to_skip);
 }
 
 uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after) {
-    return DoAcquisition(1, 8, 0, trigger_threshold, silent, sample_size, cancel_after);
+    return DoAcquisition(1, 8, 0, trigger_threshold, silent, sample_size, cancel_after, 0);
 }
 
 uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
