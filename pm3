@@ -16,66 +16,46 @@ else
     CLIENT="proxmark3"
 fi
 
-function wait4proxmark_Linux {
-    echo >&2 "[=] Waiting for Proxmark3 to appear..."
-    while true; do
-        PM3=$(find /dev/pm3-* /dev/ttyACM* 2>/dev/null | head -1)
-        if [[ $PM3 != "" ]]; then
-            break
+PM3LIST=()
+
+function get_pm3_list_Linux {
+    PM3LIST=()
+    for DEV in $(find /dev/ttyACM* 2>/dev/null); do
+        if udevadm info -q property -n "$DEV" |grep -q "ID_MODEL=proxmark3"; then
+            PM3LIST+=("$DEV")
         fi
-        sleep .1
     done
-    echo "$PM3"
 }
 
-function wait4proxmark_macOS {
-    echo >&2 "[=] Waiting for Proxmark3 to appear..."
-    while true; do
-        PM3=$(find /dev/pm3-* /dev/tty.usbmodem* 2>/dev/null | head -1)
-        if [[ $PM3 != "" ]]; then
-            break
-        fi
-        sleep .1
+function get_pm3_list_macOS {
+    PM3LIST=()
+    for DEV in $(ioreg -r -n proxmark3 -l|awk -F '"' '/IODialinDevice/{print $4}'); do
+        PM3LIST+=("$DEV")
     done
-    echo "$PM3"
 }
 
-function wait4proxmark_Windows {
-    echo >&2 "[=] Waiting for Proxmark3 to appear..."
-    while true; do
-        device=$(wmic path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
-        if [[ $device != "" ]]; then
-            PM3=${device/ */}
-            break
-        fi
-        sleep .1
+function get_pm3_list_Windows {
+    PM3LIST=()
+    for DEV in $(wmic path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null|awk '/^COM/{print $1}'); do
+        DEV=${DEV/ */}
+        PM3LIST+=("$DEV")
     done
-    echo "$PM3"
 }
 
-function wait4proxmark_WSL {
-    # Test presence of wmic
-    wmic.exe computersystem get name >/dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        echo "[!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
-        exit 1
-    fi
-
-    echo >&2 "[=] Waiting for Proxmark3 to appear..."
-    while true; do
-        device=$(wmic.exe path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null | awk 'NR==2')
-        if [[ $device != "" ]]; then
-            PM3=${device/ */}
-            PM3="/dev/ttyS${PM3#COM}"
-            break
+function get_pm3_list_WSL {
+    PM3LIST=()
+    for DEV in $(wmic.exe path Win32_SerialPort where "PNPDeviceID like '%VID_9AC4&PID_4B8F%'" get DeviceID,PNPDeviceID 2>/dev/null|awk '/^COM/{print $1}'); do
+        DEV=${DEV/ */}
+        DEV="/dev/ttyS${DEV#COM}"
+        # ttyS counterpart takes some more time to appear
+        if [ -e "$DEV" ]; then
+            PM3LIST+=("$DEV")
+            if [ ! -w "$DEV" ]; then
+                echo "[!!] Let's give users read/write access to $DEV"
+                sudo chmod 666 "$DEV"
+            fi
         fi
-        sleep .1
     done
-    if [ -e "$PM3" ] && [ ! -w "$PM3" ]; then
-        echo "[!!] We need to give current user read/write access to $PM3"
-        sudo chmod 666 "$PM3"
-    fi
-    echo "$PM3"
 }
 
 SCRIPT=$(basename -- "$0")
@@ -84,23 +64,24 @@ if [ "$SCRIPT" = "pm3" ]; then
   CMD() { $CLIENT "$@"; }
   HELP() {
       cat << EOF
-Quick helper script for proxmark3 client when working with a Proxmark device connected via USB
+Quick helper script for proxmark3 client when working with a Proxmark3 device connected via USB
 
 Description:
     The usage is the same as for the proxmark3 client, with the following differences:
      * the correct port name will be automatically guessed;
      * the script will wait for a Proxmark to be connected (same as option -w of the client).
+    You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     Don't use this script if you want to work offline or with the BT addon.
 
 Usage:
-    $SCRIPT [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]
+    $SCRIPT [-n <N>] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]
 
 See "$CLIENT -h" for more details on options.
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash" ]; then
   CMD() {
-      ARGS=("$1" "--flash")
+      ARGS=("--port" "$1" "--flash")
       shift;
       while [ "$1" != "" ]; do
           if [ "$1" == "-b" ]; then
@@ -118,10 +99,11 @@ Quick helper script for flashing a Proxmark device via USB
 
 Description:
     The usage is similar to the old proxmark3-flasher binary, except that the correct port name will be automatically guessed.
+    You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
 
 Usage:
-    $SCRIPT [-b] image.elf [image.elf...]
+    $SCRIPT [-n <N>] [-b] image.elf [image.elf...]
 
 Options:
     -b         Enable flashing of bootloader area (DANGEROUS)
@@ -131,45 +113,48 @@ Example:
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-all" ]; then
-  CMD() { $CLIENT "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE" "--image" "$FULLIMAGE"; }
+  CMD() { $CLIENT "--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE" "--image" "$FULLIMAGE"; }
   HELP() {
       cat << EOF
 Quick helper script for flashing a Proxmark device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock bootloader and firmware image will be flashed.
+    You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
 
 Usage:
-    $SCRIPT
+    $SCRIPT [-n <N>]
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
-  CMD() { $CLIENT "$1" "--flash" "--image" "$FULLIMAGE"; }
+  CMD() { $CLIENT "--port" "$1" "--flash" "--image" "$FULLIMAGE"; }
   HELP() {
       cat << EOF
 Quick helper script for flashing a Proxmark device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock firmware image will be flashed.
+    You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
 
 Usage:
-    $SCRIPT
+    $SCRIPT [-n <N>]
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
-  CMD() { $CLIENT "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE"; }
+  CMD() { $CLIENT "--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE"; }
   HELP() {
       cat << EOF
 Quick helper script for flashing a Proxmark device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock bootloader will be flashed.
+    You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
 
 Usage:
-    $SCRIPT
+    $SCRIPT [-n <N>]
 EOF
   }
 else
@@ -180,25 +165,64 @@ if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     HELP
     exit 0
 fi
+
+# if a port is already provided, let's just run the command as such
+for ARG in "$@"; do
+    if [ "$ARG" == "-p" ]; then
+        CMD "$@"
+        exit $?
+    fi
+done
+
+# Number of the proxmark3 we're interested in
+N=1
+if [ "$1" == "-n" ]; then
+    shift
+    if [ "$1" -ge 1 ] && [ "$1" -lt 10 ]; then
+        N=$1
+        shift
+    else
+        echo "Option -n requires a number between 1 and 9, got \"$1\""
+        exit 1
+    fi
+fi
+
+echo >&2 "[=] Waiting for Proxmark3 to appear..."
 HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
     if uname -a|grep -q Microsoft; then
-        PORT=$(wait4proxmark_WSL)
+        # Test presence of wmic
+        wmic.exe computersystem get name >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            echo "[!] Cannot run wmic.exe, are you sure your WSL is authorized to run Windows processes? (cf WSL interop flag)"
+            exit 1
+        fi
+        GETPM3LIST=get_pm3_list_WSL
     else
-        PORT=$(wait4proxmark_Linux)
+        GETPM3LIST=get_pm3_list_Linux
     fi
 elif [ "$HOSTOS" = "DARWIN" ]; then
-    PORT=$(wait4proxmark_macOS)
+    GETPM3LIST=get_pm3_list_macOS
 elif [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
-    PORT=$(wait4proxmark_Windows)
+    GETPM3LIST=get_pm3_list_Windows
 else
     echo "[!!] Host OS not recognized, abort: $HOSTOS"
     exit 1
 fi
-if [ "$PORT" = "" ]; then
-    echo "[!!] No port, abort"
+
+# Wait till we get at least N proxmark3 devices
+while true; do
+    $GETPM3LIST $N
+    if [ ${#PM3LIST[*]} -ge $N ]; then
+        break
+    fi
+    sleep .1
+done
+
+if [ ${#PM3LIST} -lt $N ]; then
+    echo "[!!] No port found, abort"
     exit 1
 fi
 
-CMD "$PORT" "$@"
+CMD "${PM3LIST[$((N-1))]}" "$@"
 exit $?
