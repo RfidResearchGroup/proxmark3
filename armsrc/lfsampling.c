@@ -51,8 +51,9 @@ void setSamplingConfig(sample_config *sc) {
     if (sc->divisor != 0) config.divisor = sc->divisor;
     if (sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
     if (sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
-    if (sc->samples_to_skip != -1) config.samples_to_skip = sc->samples_to_skip;
+//    if (sc->samples_to_skip == 0xffffffff) // if needed to not update if not supplied 
 
+    config.samples_to_skip = sc->samples_to_skip;
     config.decimation = (sc->decimation != 0) ? sc->decimation : 1;
     config.averaging = sc->averaging;
     if (config.bits_per_sample > 8) config.bits_per_sample = 8;
@@ -126,7 +127,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
  * @param silent - is true, now outputs are made. If false, dbprints the status
  * @return the number of bits occupied by the samples.
  */
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize, uint32_t cancel_after, int samples_to_skip) {
+uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold, bool silent, int bufsize, uint32_t cancel_after, uint32_t samples_to_skip) {
 
     uint8_t *dest = BigBuf_get_addr();
     bufsize = (bufsize > 0 && bufsize < BigBuf_max_traceLen()) ? bufsize : BigBuf_max_traceLen();

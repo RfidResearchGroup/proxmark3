@@ -400,7 +400,7 @@ int CmdLFSetConfig(const char *Cmd) {
     bool errors = false;
     int trigger_threshold = -1;//Means no change
     uint8_t unsigned_trigg = 0;
-    int samples_to_skip = -1;
+    uint32_t samples_to_skip = 0; // will return offset to 0 if not supplied.  Could set to 0xffffffff if needed to not update
 
 
     uint8_t cmdp = 0;
