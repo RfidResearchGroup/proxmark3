@@ -289,6 +289,14 @@ int CmdLFCommandRead(const char *Cmd) {
         }
     }
 
+   // bitbang mode
+   if (payload.delay == 0){
+      if (payload.zeros < 7 || payload.ones < 7) {
+          PrintAndLogEx(WARNING, "Warning periods cannot be less than 7us in bit bang mode");
+          return PM3_EINVARG;
+      }
+   }
+
     //Validations
     if (errors || cmdp == 0)  return usage_lf_cmdread();
 

@@ -372,16 +372,19 @@ void loadT55xxConfig(void) {
  */
 void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command) {
 
-    // start timer
-    StartTicks();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // use lf config settings
     sample_config *sc = getSamplingConfig();
 
+
     // Make sure the tag is reset
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    WaitMS(500);
+
+    // start timer
+    StartTicks();
+
+    WaitMS(100);
 
     // clear read buffer
     BigBuf_Clear_keep_EM();
@@ -389,7 +392,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     LFSetupFPGAForADC(sc->divisor, true);
 
     // little more time for the tag to fully power up
-    WaitMS(200);
+    WaitMS(20);
 
     // if delay_off = 0 then just bitbang 1 = antenna on 0 = off for respective periods.
     bool bitbang = (delay_off == 0);
@@ -463,6 +466,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
     // tell client we are done
     reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_SUCCESS, NULL, 0);
 }
