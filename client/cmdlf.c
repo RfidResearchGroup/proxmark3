@@ -297,21 +297,29 @@ int CmdLFCommandRead(const char *Cmd) {
     SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, 8 + datalen);
 
     printf("\n");
+
+    PacketResponseNG resp;
+
     uint8_t i = 10;
-    while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, NULL, 2000) && i != 0) {
+    while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
         printf(".");
         fflush(stdout);
         i--;
     }
     printf("\n");
 
-    if (i) {
-        PrintAndLogEx(SUCCESS, "Downloading response signal data");
-        getSamples(0, true);
-        return PM3_SUCCESS;
+    if (resp.status == PM3_SUCCESS) {
+        if (i) {
+            PrintAndLogEx(SUCCESS, "Downloading response signal data");
+            getSamples(0, true);
+            return PM3_SUCCESS;
+        } else {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
     }
-    PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-    return PM3_ETIMEOUT;
+    PrintAndLogEx(WARNING, "Command failed.");
+    return PM3_ESOFT;
 }
 
 int CmdFlexdemod(const char *Cmd) {
