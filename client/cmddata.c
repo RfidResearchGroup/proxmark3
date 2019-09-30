@@ -2243,7 +2243,7 @@ static command_t CommandTable[] = {
     {"tune",            CmdTuneSamples,          IfPm3Present,    "Get hw tune samples for graph window"},
     {"undec",           CmdUndec,                AlwaysAvailable, "Un-decimate samples by 2"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable, "Count time between zero-crossings"},
-    {"iir",             CmdDataIIR,              IfPm3Present,    "apply IIR buttersworth filter on plotdata"},
+    {"iir",             CmdDataIIR,              AlwaysAvailable,    "apply IIR buttersworth filter on plotdata"},
     {NULL, NULL, NULL, NULL}
 };
 
