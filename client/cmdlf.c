@@ -441,7 +441,7 @@ int CmdLFSetConfig(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 's':
-                samples_to_skip = param_get32ex(Cmd,cmdp+1,0,10);
+                samples_to_skip = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp+=2;
                 break;
             default:
@@ -457,7 +457,7 @@ int CmdLFSetConfig(const char *Cmd) {
     //Bps is limited to 8
     if (bps >> 4) bps = 8;
 
-    sample_config config = { decimation, bps, averaging, divisor, trigger_threshold,samples_to_skip };
+    sample_config config = { decimation, bps, averaging, divisor, trigger_threshold, samples_to_skip };
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)&config, sizeof(sample_config));

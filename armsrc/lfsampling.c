@@ -147,7 +147,6 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     uint32_t sample_total_numbers = 0;
     uint32_t sample_total_saved = 0;
     uint32_t cancel_counter = 0;
-    uint32_t samples_skipped = 0;
 
     uint16_t checker = 0;
 
@@ -181,8 +180,8 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
 
             trigger_threshold = 0;
 
-            if (samples_to_skip > samples_skipped) {
-                samples_skipped++;
+            if (samples_to_skip > 0) {
+                samples_to_skip--;
                 continue;
             }
 
@@ -249,7 +248,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
  * @return number of bits sampled
  */
 uint32_t DoAcquisition_default(int trigger_threshold, bool silent) {
-    return DoAcquisition(1, 8, 0, trigger_threshold, silent, 0, 0,0);
+    return DoAcquisition(1, 8, 0, trigger_threshold, silent, 0, 0, 0);
 }
 uint32_t DoAcquisition_config(bool silent, int sample_size) {
     return DoAcquisition(config.decimation
@@ -263,7 +262,7 @@ uint32_t DoAcquisition_config(bool silent, int sample_size) {
 }
 
 uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after) {
-    return DoAcquisition(1, 8, 0, trigger_threshold, silent, sample_size, cancel_after,0);
+    return DoAcquisition(1, 8, 0, trigger_threshold, silent, sample_size, cancel_after, 0);
 }
 
 uint32_t ReadLF(bool activeField, bool silent, int sample_size) {
