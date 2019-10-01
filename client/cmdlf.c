@@ -47,6 +47,7 @@
 #include "cmdlfsecurakey.h" // for securakey menu
 #include "cmdlfpac.h"       // for pac menu
 #include "cmdlfkeri.h"      // for keri menu
+#include "cmdlfverichip.h"  // for VeriChip menu
 
 bool g_lf_threshold_set = false;
 
@@ -977,12 +978,21 @@ int CmdLFSimBidir(const char *Cmd) {
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
-    SendCommandMIX(CMD_LF_SIMULATE_BIDIR, 47, 384, 0, NULL, 0);
+//    SendCommandMIX(CMD_LF_SIMULATE_BIDIR, 47, 384, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
 // ICEMAN,  todo,   swap from Graphbuffer.
+// according to  Westhus this demod uses decimated samples / 2.
+// need to do complete rewrite.  Need access to reader / chip
+// should be extracted to seperate files aswell
 int CmdVchDemod(const char *Cmd) {
+
+    if (GraphTraceLen < 4096) {
+        PrintAndLogEx(DEBUG, "debug; VchDemod - too few samples");
+        return PM3_EINVARG;
+    }
+
     // Is this the entire sync pattern, or does this also include some
     // data bits that happen to be the same everywhere? That would be
     // lovely to know.
@@ -1154,9 +1164,10 @@ int CmdLFfind(const char *Cmd) {
     if (demodSecurakey() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") "found!"); goto out;}
     if (demodViking() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") "found!"); goto out;}
     if (demodVisa2k() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") "found!"); goto out;}
-    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") "found!"); goto out;}
+//    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") "found!"); goto out;}
+//    if (demodVerichip() == PM3_SUCCESS)        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("VeriChip ID") "found!"); goto out;}
     //if (demodFermax() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") "found!"); goto out;}
-    //if (demodFlex() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Flex ID") "found!"); goto out;}
+    //if (demodFlex() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") "found!"); goto out;}
 
     PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
 
@@ -1229,6 +1240,7 @@ static command_t CommandTable[] = {
     {"securakey",   CmdLFSecurakey,     AlwaysAvailable, "{ Securakey RFIDs...         }"},
     {"ti",          CmdLFTI,            AlwaysAvailable, "{ TI CHIPs...                }"},
     {"t55xx",       CmdLFT55XX,         AlwaysAvailable, "{ T55xx CHIPs...             }"},
+//    {"verichip",    CmdLFVerichip,      AlwaysAvailable, "{ VeriChip RFIDs...          }"},
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
     {"config",      CmdLFSetConfig,     IfPm3Lf,         "Set config for LF sampling, bit/sample, decimation, frequency"},
@@ -1243,7 +1255,7 @@ static command_t CommandTable[] = {
     {"simbidir",    CmdLFSimBidir,      IfPm3Lf,         "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},
-    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "['clone'] -- Demodulate samples for VeriChip"},
+//    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "['clone'] -- Demodulate samples for VeriChip"},
     {NULL, NULL, NULL, NULL}
 };
 
