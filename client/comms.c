@@ -733,6 +733,8 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
+        // just to avoid CPU busy loop:
+        msleep(10);
     }
     return false;
 }
