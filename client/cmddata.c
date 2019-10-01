@@ -868,7 +868,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 
     if (verbose && foo < bar) {
         distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible 4% visible correlation %4d samples", distance);
+        PrintAndLogEx(SUCCESS, "possible visible correlation %4d samples", distance);
     } else if (verbose && (correlation > 1)) {
         PrintAndLogEx(SUCCESS, "possible correlation %4d samples", correlation);
     } else {
