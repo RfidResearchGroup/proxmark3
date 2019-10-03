@@ -109,7 +109,7 @@ static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "       h                 This help");
     PrintAndLogEx(NORMAL, "       L                 Low frequency (125 kHz)");
     PrintAndLogEx(NORMAL, "       H                 High frequency (134 kHz)");
-    PrintAndLogEx(NORMAL, "       q <divisor>       Manually set divisor. 88-> 134 kHz, 95-> 125 kHz");
+    PrintAndLogEx(NORMAL, "       q <divisor>       Manually set divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
     PrintAndLogEx(NORMAL, "       b <bps>           Sets resolution of bits per sample. Default (max): 8");
     PrintAndLogEx(NORMAL, "       d <decim>         Sets decimation. A value of N saves only 1 in N samples. Default: 1");
     PrintAndLogEx(NORMAL, "       a [0|1]           Averaging - if set, will average the stored sample value when decimating. Default: 1");
@@ -193,39 +193,67 @@ static int usage_lf_find(void) {
     return PM3_SUCCESS;
 }
 static int usage_lf_tune(void) {
-    PrintAndLogEx(NORMAL, "Continuously measure LF antenna tuning at 125 kHz.");
+    PrintAndLogEx(NORMAL, "Continuously measure LF antenna tuning.");
     PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
-    PrintAndLogEx(NORMAL, "Usage:  lf tune [h] [<iter>]");
+    PrintAndLogEx(NORMAL, "Usage:  lf tune [h] [n <iter>] [q <divisor>]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             - This help");
-    PrintAndLogEx(NORMAL, "       <iter>        - number of iterations (default: 0=infinite)");
+    PrintAndLogEx(NORMAL, "       n <iter>      - number of iterations (default: 0=infinite)");
+    PrintAndLogEx(NORMAL, "       q <divisor>   - Frequency divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
     return PM3_SUCCESS;
 }
 
 int CmdLFTune(const char *Cmd) {
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_lf_tune();
-    int iter =  param_get32ex(Cmd, 0, 0, 10);
+    int iter = 0;
+    uint8_t divisor =  LF_DIVISOR_125;//Frequency divisor
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (param_getchar(Cmd, cmdp)) {
+            case 'h':
+                return usage_lf_tune();
+            case 'q':
+                errors |= param_getdec(Cmd, cmdp + 1, &divisor);
+                cmdp += 2;
+                break;
+            case 'n':
+                iter = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = 1;
+                break;
+        }
+    }
 
-    PrintAndLogEx(SUCCESS, "Measuring LF antenna at 125kHz, click button or press Enter to exit");
+    //Validations
+    if (errors || divisor < 19) return usage_lf_tune();
+    if (divisor < 19) {
+        PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+        return PM3_EINVARG;
+    }
 
-    uint8_t mode[] = {1};
+    PrintAndLogEx(SUCCESS, "Measuring LF antenna at %.2f kHz, click button or press Enter to exit", 12000.0 / (divisor + 1));
+
+    uint8_t params[] = {1, 0};
+    params[1] = divisor;
     PacketResponseNG resp;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, mode, sizeof(mode));
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF initialization, aborting");
         return PM3_ETIMEOUT;
     }
-    mode[0] = 2;
+    params[0] = 2;
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {
         if (kbd_enter_pressed()) { // abort by keyboard press
             break;
         }
-        SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, mode, sizeof(mode));
+        SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
         if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF measure, aborting");
             return PM3_ETIMEOUT;
@@ -235,8 +263,8 @@ int CmdLFTune(const char *Cmd) {
         uint32_t volt = resp.data.asDwords[0];
         PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint32_t)(volt / 1000));
     }
-    mode[0] = 3;
-    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, mode, sizeof(mode));
+    params[0] = 3;
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF shutdown, aborting");
         return PM3_ETIMEOUT;
@@ -426,11 +454,11 @@ int CmdLFSetConfig(const char *Cmd) {
             case 'h':
                 return usage_lf_config();
             case 'H':
-                divisor = 88;
+                divisor = LF_DIVISOR_134;
                 cmdp++;
                 break;
             case 'L':
-                divisor = 95;
+                divisor = LF_DIVISOR_125;
                 cmdp++;
                 break;
             case 'q':

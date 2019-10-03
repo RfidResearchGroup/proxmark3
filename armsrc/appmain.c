@@ -1473,7 +1473,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_MEASURE_ANTENNA_TUNING_LF: {
-            if (packet->length != 1)
+            if (packet->length != 2)
                 reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_EINVARG, NULL, 0);
 
             switch (packet->data.asBytes[0]) {
@@ -1481,7 +1481,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     // Let the FPGA drive the low-frequency antenna around 125kHz
                     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
-                    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95);
+                    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, packet->data.asBytes[1]);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, NULL, 0);
                     break;
                 case 2:

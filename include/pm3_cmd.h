@@ -579,10 +579,9 @@ typedef struct {
 #define PM3_EFATAL            -99
 
 // LF
-//#define LF_DIVISOR(f) ((12000 + (f)/2)/(f))
-//Note that 90 = 133.33 is closer to 134 than 89 = 134.83
-#define LF_DIVISOR_125 96
-#define LF_DIVISOR_134 89
+#define LF_DIVISOR(f) (((12000 + (f)/2)/(f))-1)
+#define LF_DIVISOR_125 LF_DIVISOR(125)
+#define LF_DIVISOR_134 LF_DIVISOR(134)
 
 // Receiving from USART need more than 30ms as we used on USB
 // else we get errors about partial packet reception
