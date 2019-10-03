@@ -104,12 +104,13 @@ static int usage_lf_sniff(void) {
     return PM3_SUCCESS;
 }
 static int usage_lf_config(void) {
-    PrintAndLogEx(NORMAL, "Usage: lf config [h] [H|<divisor>] [b <bps>] [d <decim>] [a 0|1]");
+    PrintAndLogEx(NORMAL, "Usage: lf config [h] [L | H | q <divisor> | f <freq>] [b <bps>] [d <decim>] [a 0|1]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                 This help");
     PrintAndLogEx(NORMAL, "       L                 Low frequency (125 kHz)");
     PrintAndLogEx(NORMAL, "       H                 High frequency (134 kHz)");
-    PrintAndLogEx(NORMAL, "       q <divisor>       Manually set divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
+    PrintAndLogEx(NORMAL, "       q <divisor>       Manually set freq divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
+    PrintAndLogEx(NORMAL, "       f <freq>          Manually set frequency in kHz");
     PrintAndLogEx(NORMAL, "       b <bps>           Sets resolution of bits per sample. Default (max): 8");
     PrintAndLogEx(NORMAL, "       d <decim>         Sets decimation. A value of N saves only 1 in N samples. Default: 1");
     PrintAndLogEx(NORMAL, "       a [0|1]           Averaging - if set, will average the stored sample value when decimating. Default: 1");
@@ -195,12 +196,13 @@ static int usage_lf_find(void) {
 static int usage_lf_tune(void) {
     PrintAndLogEx(NORMAL, "Continuously measure LF antenna tuning.");
     PrintAndLogEx(NORMAL, "Press button or Enter to interrupt.");
-    PrintAndLogEx(NORMAL, "Usage:  lf tune [h] [n <iter>] [q <divisor>]");
+    PrintAndLogEx(NORMAL, "Usage:  lf tune [h] [n <iter>] [q <divisor> | f <freq>]");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             - This help");
     PrintAndLogEx(NORMAL, "       n <iter>      - number of iterations (default: 0=infinite)");
     PrintAndLogEx(NORMAL, "       q <divisor>   - Frequency divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
+    PrintAndLogEx(NORMAL, "       f <freq>      - Frequency in kHz");
     return PM3_SUCCESS;
 }
 
@@ -216,7 +218,20 @@ int CmdLFTune(const char *Cmd) {
             case 'q':
                 errors |= param_getdec(Cmd, cmdp + 1, &divisor);
                 cmdp += 2;
+                if (divisor < 19) {
+                    PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+                    return PM3_EINVARG;
+                }
                 break;
+            case 'f': {
+                divisor = LF_DIVISOR(param_get32ex(Cmd, cmdp + 1, 125, 10));
+                if (divisor < 19) {
+                    PrintAndLogEx(ERR, "freq must be between 47 and 600");
+                    return PM3_EINVARG;
+                }
+                cmdp += 2;
+                break;
+            }
             case 'n':
                 iter = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
@@ -229,11 +244,7 @@ int CmdLFTune(const char *Cmd) {
     }
 
     //Validations
-    if (errors || divisor < 19) return usage_lf_tune();
-    if (divisor < 19) {
-        PrintAndLogEx(ERR, "divisor must be between 19 and 255");
-        return PM3_EINVARG;
-    }
+    if (errors) return usage_lf_tune();
 
     PrintAndLogEx(SUCCESS, "Measuring LF antenna at %.2f kHz, click button or press Enter to exit", 12000.0 / (divisor + 1));
 
@@ -463,8 +474,21 @@ int CmdLFSetConfig(const char *Cmd) {
                 break;
             case 'q':
                 errors |= param_getdec(Cmd, cmdp + 1, &divisor);
+                if (divisor < 19) {
+                    PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+                    return PM3_EINVARG;
+                }
                 cmdp += 2;
                 break;
+            case 'f': {
+                divisor = LF_DIVISOR(param_get32ex(Cmd, cmdp + 1, 125, 10));
+                if (divisor < 19) {
+                    PrintAndLogEx(ERR, "freq must be between 47 and 600");
+                    return PM3_EINVARG;
+                }
+                cmdp += 2;
+                break;
+            }
             case 't':
                 errors |= param_getdec(Cmd, cmdp + 1, &unsigned_trigg);
                 cmdp += 2;
