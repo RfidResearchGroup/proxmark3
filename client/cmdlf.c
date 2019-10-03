@@ -117,6 +117,8 @@ static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "       t <threshold>     Sets trigger threshold. 0 means no threshold (range: 0-128)");
     PrintAndLogEx(NORMAL, "       s <samplestoskip> Sets a number of samples to skip before capture. Default: 0");
     PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf config");
+    PrintAndLogEx(NORMAL, "                    Shows current config");
     PrintAndLogEx(NORMAL, "      lf config b 8 L");
     PrintAndLogEx(NORMAL, "                    Samples at 125 kHz, 8bps.");
     PrintAndLogEx(NORMAL, "      lf config H b 4 d 3");
@@ -446,7 +448,7 @@ int CmdFlexdemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdLFSetConfig(const char *Cmd) {
+int CmdLFConfig(const char *Cmd) {
 
     if (!session.pm3_present) return PM3_ENOTTY;
 
@@ -523,7 +525,12 @@ int CmdLFSetConfig(const char *Cmd) {
     }
 
     //Validations
-    if (errors || cmdp == 0) return usage_lf_config();
+    if (errors) return usage_lf_config();
+    if (cmdp == 0) {
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
+        return PM3_SUCCESS;
+    }
 
     //Bps is limited to 8
     if (bps >> 4) bps = 8;
@@ -1298,7 +1305,7 @@ static command_t CommandTable[] = {
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
     {"",            CmdHelp,            AlwaysAvailable, ""},
-    {"config",      CmdLFSetConfig,     IfPm3Lf,         "Set config for LF sampling, bit/sample, decimation, frequency"},
+    {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
     {"read",        CmdLFRead,          IfPm3Lf,         "['s' silent] Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
     {"search",      CmdLFfind,          AlwaysAvailable, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) \n\t\t-- 'u' to search for unknown tags"},

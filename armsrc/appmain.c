@@ -685,6 +685,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             setT55xxConfig(packet->oldarg[0], (t55xx_configurations_t *) packet->data.asBytes);
             break;
         }
+        case CMD_LF_SAMPLING_GET_CONFIG: {
+            printConfig();
+            break;
+        }
         case CMD_LF_SAMPLING_SET_CONFIG: {
             setSamplingConfig((sample_config *) packet->data.asBytes);
             break;
