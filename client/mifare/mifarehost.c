@@ -339,26 +339,62 @@ __attribute__((force_align_arg_pointer))
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate) {
     uint16_t i;
     uint32_t uid;
-    PacketResponseNG resp;
     StateList_t statelists[2];
     struct Crypto1State *p1, *p2, *p3, *p4;
 
+    struct {
+        uint8_t block;
+        uint8_t keytype;
+        uint8_t target_block;
+        uint8_t target_keytype;
+        bool calibrate;
+        uint8_t key[6];
+    } PACKED payload;
+    payload.block = blockNo;
+    payload.keytype = keyType;
+    payload.target_block = trgBlockNo;
+    payload.target_keytype = trgKeyType;
+    payload.calibrate = calibrate;
+    memcpy(payload.key, key, sizeof(payload.key));
+
+    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFARE_NESTED, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, calibrate, key, 6);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return PM3_ETIMEOUT;
+    SendCommandNG(CMD_HF_MIFARE_NESTED, (uint8_t*)&payload, sizeof(payload));
+
+    if (!WaitForResponseTimeout(CMD_HF_MIFARE_NESTED, &resp, 1500)) return PM3_ETIMEOUT;
+
+    if (resp.status != PM3_SUCCESS)
+        return PM3_ESOFT;
+
+    struct p {
+        int16_t isOK;
+        uint8_t block;
+        uint8_t keytype;
+        uint8_t cuid[4];
+        uint8_t nt_a[4];
+        uint8_t ks_a[4];
+        uint8_t nt_b[4];
+        uint8_t ks_b[4];
+    } PACKED;
+    struct p* package = (struct p*)resp.data.asBytes;
 
     // error during nested
-    if (resp.oldarg[0]) return resp.oldarg[0];
+    if (package->isOK) return package->isOK;
 
-    memcpy(&uid, resp.data.asBytes, 4);
+    memcpy(&uid, package->cuid, sizeof(package->cuid));
 
     for (i = 0; i < 2; i++) {
-        statelists[i].blockNo = resp.oldarg[2] & 0xff;
-        statelists[i].keyType = (resp.oldarg[2] >> 8) & 0xff;
+        statelists[i].blockNo = package->block;
+        statelists[i].keyType = package->keytype;
         statelists[i].uid = uid;
-        memcpy(&statelists[i].nt, (void *)(resp.data.asBytes + 4 + i * 8 + 0), 4);
-        memcpy(&statelists[i].ks1, (void *)(resp.data.asBytes + 4 + i * 8 + 4), 4);
     }
+
+    memcpy(&statelists[0].nt,  package->nt_a, sizeof(package->nt_a));
+    memcpy(&statelists[0].ks1, package->ks_a, sizeof(package->ks_a));
+
+    memcpy(&statelists[1].nt,  package->nt_b, sizeof(package->nt_b));
+    memcpy(&statelists[1].ks1, package->ks_b, sizeof(package->ks_b));
+
 
     // calc keys
     pthread_t thread_id[2];

@@ -143,11 +143,25 @@ uint16_t AvgAdc(int ch) {
 
 void MeasureAntennaTuning(void) {
 
-    uint8_t LF_Results[256];
-    uint32_t i, peak = 0, peakv = 0, peakf = 0;
-    uint32_t v_lf125 = 0, v_lf134 = 0, v_hf = 0; // in mV
+    uint32_t peak = 0;
 
-    memset(LF_Results, 0, sizeof(LF_Results));
+    // in mVolt
+    struct p {
+        uint32_t v_lf134;
+        uint32_t v_lf125;
+        uint32_t v_lfconf;
+        uint32_t v_hf;
+        uint32_t peak_v;
+        uint32_t peak_f;
+        int divisor;
+        uint8_t results[256];
+    } PACKED payload;
+
+    memset(payload.results, 0, sizeof(payload.results));
+
+    sample_config *sc = getSamplingConfig();
+    payload.divisor = sc->divisor;
+
     LED_B_ON();
 
     /*
@@ -163,21 +177,26 @@ void MeasureAntennaTuning(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
     SpinDelay(50);
 
-    for (i = 255; i >= 19; i--) {
+    for (uint8_t i = 255; i >= 19; i--) {
         WDT_HIT();
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
         SpinDelay(20);
         uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
-        if (i == 95)
-            v_lf125 = adcval; // voltage at 125kHz
-        if (i == 89)
-            v_lf134 = adcval; // voltage at 134kHz
+        if (i == 96)
+            payload.v_lf125 = adcval; // voltage at 125kHz
 
-        LF_Results[i] = adcval >> 9; // scale int to fit in byte for graphing purposes
-        if (LF_Results[i] > peak) {
-            peakv = adcval;
-            peakf = i;
-            peak = LF_Results[i];
+        if (i == 89)
+            payload.v_lf134 = adcval; // voltage at 134kHz
+
+        if (i == sc->divisor)
+            payload.v_lfconf = adcval; // voltage at `lf config q`
+
+        payload.results[i] = adcval >> 9; // scale int to fit in byte for graphing purposes
+
+        if (payload.results[i] > peak) {
+            payload.peak_v = adcval;
+            payload.peak_f = i;
+            peak = payload.results[i];
         }
     }
 
@@ -186,23 +205,16 @@ void MeasureAntennaTuning(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
     SpinDelay(50);
-    v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+
+    payload.v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
 
     // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-    if (v_hf > MAX_ADC_HF_VOLTAGE - 300) {
-        v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+    if (payload.v_hf > MAX_ADC_HF_VOLTAGE - 300) {
+        payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
     }
 
-    uint64_t arg0 = v_lf134;
-    arg0 <<= 32;
-    arg0 |= v_lf125;
-
-    uint64_t arg2 = peakv;
-    arg2 <<= 32;
-    arg2 |= peakf;
-
-    reply_mix(CMD_MEASURE_ANTENNA_TUNING, arg0, v_hf, arg2, LF_Results, 256);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t*)&payload, sizeof(payload));
     LEDsoff();
 }
 
@@ -1083,7 +1095,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_NESTED: {
-            MifareNested(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            struct p {
+                uint8_t block;
+                uint8_t keytype;
+                uint8_t target_block;
+                uint8_t target_keytype;
+                bool calibrate;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareNested(payload->block, payload->keytype, payload->target_block, payload->target_keytype, payload->calibrate, payload->key);
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS: {

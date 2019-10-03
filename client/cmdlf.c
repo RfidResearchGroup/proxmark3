@@ -1243,9 +1243,9 @@ static command_t CommandTable[] = {
 //    {"verichip",    CmdLFVerichip,      AlwaysAvailable, "{ VeriChip RFIDs...          }"},
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
+    {"",            CmdHelp,            AlwaysAvailable, ""},
     {"config",      CmdLFSetConfig,     IfPm3Lf,         "Set config for LF sampling, bit/sample, decimation, frequency"},
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
-    {"flexdemod",   CmdFlexdemod,       AlwaysAvailable, "Demodulate samples for FlexPass"},
     {"read",        CmdLFRead,          IfPm3Lf,         "['s' silent] Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
     {"search",      CmdLFfind,          AlwaysAvailable, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) \n\t\t-- 'u' to search for unknown tags"},
     {"sim",         CmdLFSim,           IfPm3Lf,         "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
@@ -1256,6 +1256,7 @@ static command_t CommandTable[] = {
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},
 //    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "['clone'] -- Demodulate samples for VeriChip"},
+    {"flexdemod",   CmdFlexdemod,       AlwaysAvailable, "Demodulate samples for Motorola FlexPass"},
     {NULL, NULL, NULL, NULL}
 };
 

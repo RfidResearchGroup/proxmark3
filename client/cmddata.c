@@ -1654,52 +1654,69 @@ int CmdTuneSamples(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
     }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Antenna tuning failed");
+        return PM3_ESOFT;
+    }
+
     PrintAndLogEx(NORMAL, "\n");
+    // in mVolt
+    struct p {
+        uint32_t v_lf134;
+        uint32_t v_lf125;
+        uint32_t v_lfconf;
+        uint32_t v_hf;
+        uint32_t peak_v;
+        uint32_t peak_f;
+        int divisor;
+        uint8_t results[256];
+    } PACKED;
 
-    uint32_t v_lf125 = resp.oldarg[0];
-    uint32_t v_lf134 = resp.oldarg[0] >> 32;
+    struct p* package = (struct p*)resp.data.asBytes;
 
-    uint32_t v_hf = resp.oldarg[1];
-    uint32_t peakf = resp.oldarg[2];
-    uint32_t peakv = resp.oldarg[2] >> 32;
+    if (package->v_lf125 > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 125.00 kHz", (package->v_lf125 * ANTENNA_ERROR) / 1000.0);
 
-    if (v_lf125 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 125.00 kHz", (v_lf125 * ANTENNA_ERROR) / 1000.0);
-    if (v_lf134 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 134.00 kHz", (v_lf134 * ANTENNA_ERROR) / 1000.0);
-    if (peakv > NON_VOLTAGE && peakf > 0)
-        PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (peakv * ANTENNA_ERROR) / 1000.0, 12000.0 / (peakf + 1));
+    if (package->v_lf134 > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 134.00 kHz", (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
+
+    if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0)
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %d kHz", (package->v_lfconf * ANTENNA_ERROR) / 1000.0, (12000 / package->divisor));
+
+    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
+        PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, 12000.0 / (package->peak_f + 1));
 
     char judgement[20];
     memset(judgement, 0, sizeof(judgement));
     // LF evaluation
-    if (peakv < LF_UNUSABLE_V)
+    if (package->peak_v < LF_UNUSABLE_V)
         sprintf(judgement, _RED_("UNUSABLE"));
-    else if (peakv < LF_MARGINAL_V)
+    else if (package->peak_v < LF_MARGINAL_V)
         sprintf(judgement, _YELLOW_("MARGINAL"));
     else
         sprintf(judgement, _GREEN_("OK"));
 
     PrintAndLogEx(NORMAL, "%sLF antenna is %s \n"
-                  , (peakv < LF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
+                  , (package->peak_v < LF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
                   , judgement
                  );
 
     // HF evaluation
-    if (v_hf > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "HF antenna: %5.2f V - 13.56 MHz", (v_hf * ANTENNA_ERROR) / 1000.0);
+    if (package->v_hf > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "HF antenna: %5.2f V - 13.56 MHz", (package->v_hf * ANTENNA_ERROR) / 1000.0);
 
     memset(judgement, 0, sizeof(judgement));
 
-    if (v_hf < HF_UNUSABLE_V)
+    if (package->v_hf < HF_UNUSABLE_V)
         sprintf(judgement, _RED_("UNUSABLE"));
-    else if (v_hf < HF_MARGINAL_V)
+    else if (package->v_hf < HF_MARGINAL_V)
         sprintf(judgement, _YELLOW_("MARGINAL"));
     else
         sprintf(judgement, _GREEN_("OK"));
 
     PrintAndLogEx(NORMAL, "%sHF antenna is %s"
-                  , (v_hf < HF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
+                  , (package->v_hf < HF_UNUSABLE_V) ? _CYAN_("[!]") : _GREEN_("[+]")
                   , judgement
                  );
 
@@ -1707,12 +1724,12 @@ int CmdTuneSamples(const char *Cmd) {
     // even here, these values has 3% error.
     uint16_t test1 = 0;
     for (int i = 0; i < 256; i++) {
-        GraphBuffer[i] = resp.data.asBytes[i] - 128;
-        test1 += resp.data.asBytes[i];
+        GraphBuffer[i] = package->results[i] - 128;
+        test1 += package->results[i];
     }
 
     if (test1 > 0) {
-        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134kHz, 95 is 125kHz.\n\n");
+        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134kHz, 96 is 125kHz.\n\n");
         GraphTraceLen = 256;
         ShowGraphWindow();
         RepaintGraphWindow();

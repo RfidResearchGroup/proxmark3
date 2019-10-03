@@ -866,26 +866,20 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 // MIFARE nested authentication.
 //
 //-----------------------------------------------------------------------------
-void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
-    // params
-    uint8_t blockNo = arg0 & 0xff;
-    uint8_t keyType = (arg0 >> 8) & 0xff;
-    uint8_t targetBlockNo = arg1 & 0xff;
-    uint8_t targetKeyType = (arg1 >> 8) & 0xff;
-    // calibrate = arg2
+void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, bool calibrate, uint8_t *key) {
     uint64_t ui64Key = 0;
-
-    ui64Key = bytes_to_num(datain, 6);
+    ui64Key = bytes_to_num(key, 6);
 
     // variables
     uint16_t i, j, len;
     static uint16_t dmin, dmax;
+
+    uint8_t par[1] = {0x00};
+    uint8_t par_array[4] = {0x00};
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0, nt1, nt2, nttest, ks1;
-    uint8_t par[1] = {0x00};
     uint32_t target_nt[2] = {0x00}, target_ks[2] = {0x00};
 
-    uint8_t par_array[4] = {0x00};
     uint16_t ncount = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -903,13 +897,15 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
-    if (arg2) clear_trace();
+    if (calibrate)
+        clear_trace();
+
     set_tracing(true);
 
     // statistics on nonce distance
     int16_t isOK = 0;
 #define NESTED_MAX_TRIES 12
-    if (arg2) { // calibrate: for first call only. Otherwise reuse previous calibration
+    if (calibrate) { // calibrate: for first call only. Otherwise reuse previous calibration
         LED_B_ON();
         WDT_HIT();
 
@@ -1061,15 +1057,28 @@ void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) 
 
     crypto1_destroy(pcs);
 
-    uint8_t buf[4 + 4 * 4] = {0};
-    memcpy(buf, &cuid, 4);
-    memcpy(buf + 4, &target_nt[0], 4);
-    memcpy(buf + 8, &target_ks[0], 4);
-    memcpy(buf + 12, &target_nt[1], 4);
-    memcpy(buf + 16, &target_ks[1], 4);
+    struct p {
+       int16_t isOK;
+       uint8_t block;
+       uint8_t keytype;
+       uint8_t cuid[4];
+       uint8_t nt_a[4];
+       uint8_t ks_a[4];
+       uint8_t nt_b[4];
+       uint8_t ks_b[4];
+    } PACKED payload;
+    payload.isOK = isOK;
+    payload.block = targetBlockNo;
+    payload.keytype = targetKeyType;
+
+    memcpy(payload.cuid, &cuid, 4);
+    memcpy(payload.nt_a, &target_nt[0], 4);
+    memcpy(payload.ks_a, &target_ks[0], 4);
+    memcpy(payload.nt_b, &target_nt[1], 4);
+    memcpy(payload.ks_b, &target_ks[1], 4);
 
     LED_B_ON();
-    reply_mix(CMD_ACK, isOK, 0, targetBlockNo + (targetKeyType * 0x100), buf, sizeof(buf));
+    reply_ng(CMD_HF_MIFARE_NESTED, PM3_SUCCESS, (uint8_t*)&payload, sizeof(payload));
     LED_B_OFF();
 
     if (DBGLEVEL >= 3) DbpString("NESTED FINISHED");
