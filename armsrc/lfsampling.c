@@ -24,7 +24,7 @@ Default LF config is set to:
     divisor = 95 (125kHz)
     trigger_threshold = 0
     */
-sample_config config = { 1, 8, 1, 96, 0, 0 } ;
+sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0 } ;
 
 void printConfig() {
     uint32_t d = config.divisor;

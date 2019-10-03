@@ -1676,16 +1676,16 @@ int CmdTuneSamples(const char *Cmd) {
     struct p* package = (struct p*)resp.data.asBytes;
 
     if (package->v_lf125 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 125.00 kHz", (package->v_lf125 * ANTENNA_ERROR) / 1000.0);
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lf125 * ANTENNA_ERROR) / 1000.0, 12000.0 / LF_DIVISOR_125);
 
     if (package->v_lf134 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 134.00 kHz", (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lf134 * ANTENNA_ERROR) / 1000.0, 12000.0 / LF_DIVISOR_134);
 
-    if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lfconf * ANTENNA_ERROR) / 1000.0, (12000.0 / package->divisor));
+    if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0 && package->divisor != LF_DIVISOR_125 && package->divisor != LF_DIVISOR_134)
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lfconf * ANTENNA_ERROR) / 1000.0, 12000.0 / package->divisor);
 
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
-        PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, 12000.0 / (package->peak_f + 1));
+        PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, 12000.0 / package->peak_f);
 
     char judgement[20];
     memset(judgement, 0, sizeof(judgement));
@@ -1729,7 +1729,8 @@ int CmdTuneSamples(const char *Cmd) {
     }
 
     if (test1 > 0) {
-        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor 89 is 134kHz, 96 is 125kHz.\n\n");
+        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d is %.2f kHz, %d is %.2f kHz.\n\n",
+            LF_DIVISOR_134, 12000.0 / LF_DIVISOR_134, LF_DIVISOR_125, 12000.0 / LF_DIVISOR_125);
         GraphTraceLen = 256;
         ShowGraphWindow();
         RepaintGraphWindow();

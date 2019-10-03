@@ -182,10 +182,10 @@ void MeasureAntennaTuning(void) {
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
         SpinDelay(20);
         uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
-        if (i == 96)
+        if (i == LF_DIVISOR_125)
             payload.v_lf125 = adcval; // voltage at 125kHz
 
-        if (i == 89)
+        if (i == LF_DIVISOR_134)
             payload.v_lf134 = adcval; // voltage at 134kHz
 
         if (i == sc->divisor)
