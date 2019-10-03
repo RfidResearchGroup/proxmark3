@@ -224,7 +224,8 @@ int CmdLFTune(const char *Cmd) {
                 }
                 break;
             case 'f': {
-                divisor = LF_DIVISOR(param_get32ex(Cmd, cmdp + 1, 125, 10));
+                int freq = param_get32ex(Cmd, cmdp + 1, 125, 10);
+                divisor = LF_DIVISOR(freq);
                 if (divisor < 19) {
                     PrintAndLogEx(ERR, "freq must be between 47 and 600");
                     return PM3_EINVARG;
