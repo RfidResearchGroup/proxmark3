@@ -1682,7 +1682,7 @@ int CmdTuneSamples(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - 134.00 kHz", (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
 
     if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %d kHz", (package->v_lfconf * ANTENNA_ERROR) / 1000.0, (12000 / package->divisor));
+        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lfconf * ANTENNA_ERROR) / 1000.0, (12000.0 / package->divisor));
 
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
         PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, 12000.0 / (package->peak_f + 1));

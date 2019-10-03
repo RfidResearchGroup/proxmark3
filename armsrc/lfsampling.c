@@ -27,8 +27,9 @@ Default LF config is set to:
 sample_config config = { 1, 8, 1, 96, 0, 0 } ;
 
 void printConfig() {
+    uint32_t d = config.divisor;
     DbpString(_BLUE_("LF Sampling config"));
-    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d kHz")")", config.divisor, 12000 / config.divisor);
+    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")")", d, 12000 / d, ((1200000 + d/2) / d) - ((12000 / d) * 100));
     Dbprintf("  [b] bps.................%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
