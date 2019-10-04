@@ -925,30 +925,36 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
             // prepare next select. No need to power down the card.
             if (mifare_classic_halt(pcs, cuid)) {
-                if (DBGLEVEL >= 2) Dbprintf("Nested: Halt error");
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Halt error");
                 rtr--;
                 continue;
             }
 
             if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-                if (DBGLEVEL >= 2) Dbprintf("Nested: Can't select card");
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Can't select card");
                 rtr--;
                 continue;
             };
 
             auth1_time = 0;
             if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, &auth1_time)) {
-                if (DBGLEVEL >= 2) Dbprintf("Nested: Auth1 error");
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Auth1 error");
                 rtr--;
                 continue;
             };
             auth2_time = (delta_time) ? auth1_time + delta_time : 0;
 
             if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_NESTED, &nt2, &auth2_time)) {
-                if (DBGLEVEL >= 2) Dbprintf("Nested: Auth2 error");
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Auth2 error");
                 rtr--;
                 continue;
             };
+
+            // cards with fixed nonce
+            if (nt1 == nt2) {
+               Dbprintf("Nested: %08x vs %08x", nt1, nt2);
+               break;
+            }
 
             uint32_t nttmp = prng_successor(nt1, 100); //NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
             for (i = 101; i < 1200; i++) {
@@ -964,7 +970,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                 } else {
                     delta_time = auth2_time - auth1_time + 32;  // allow some slack for proper timing
                 }
-                if (DBGLEVEL >= 3) Dbprintf("Nested: calibrating... ntdist=%d", i);
+                if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Nested: calibrating... ntdist=%d", i);
             } else {
                 unsuccessful_tries++;
                 if (unsuccessful_tries > NESTED_MAX_TRIES) { // card isn't vulnerable to nested attack (random numbers are not predictable)
@@ -975,7 +981,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
         davg = (davg + (rtr - 1) / 2) / (rtr - 1);
 
-        if (DBGLEVEL >= 3) Dbprintf("rtr=%d isOK=%d min=%d max=%d avg=%d, delta_time=%d", rtr, isOK, dmin, dmax, davg, delta_time);
+        if (DBGLEVEL >= DBG_DEBUG) Dbprintf("rtr=%d isOK=%d min=%d max=%d avg=%d, delta_time=%d", rtr, isOK, dmin, dmax, davg, delta_time);
 
         dmin = davg - 2;
         dmax = davg + 2;
@@ -994,18 +1000,18 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
             // prepare next select. No need to power down the card.
             if (mifare_classic_halt(pcs, cuid)) {
-                if (DBGLEVEL >= 2) Dbprintf("Nested: Halt error");
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Halt error");
                 continue;
             }
 
             if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-                if (DBGLEVEL >= 2) Dbprintf("Nested: Can't select card");
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Can't select card");
                 continue;
             };
 
             auth1_time = 0;
             if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, &auth1_time)) {
-                if (DBGLEVEL >= 2) Dbprintf("Nested: Auth1 error");
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Auth1 error");
                 continue;
             };
 
@@ -1014,12 +1020,12 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
             len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
             if (len != 4) {
-                if (DBGLEVEL >= 2) Dbprintf("Nested: Auth2 error len=%d", len);
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
                 continue;
             };
 
             nt2 = bytes_to_num(receivedAnswer, 4);
-            if (DBGLEVEL >= 3) Dbprintf("Nonce#%d: Testing nt1=%08x nt2enc=%08x nt2par=%02x", i + 1, nt1, nt2, par[0]);
+            if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Nonce#%d: Testing nt1=%08x nt2enc=%08x nt2par=%02x", i + 1, nt1, nt2, par[0]);
 
             // Parity validity check
             for (j = 0; j < 4; j++) {
@@ -1034,7 +1040,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
                 if (valid_nonce(nttest, nt2, ks1, par_array)) {
                     if (ncount > 0) { // we are only interested in disambiguous nonces, try again
-                        if (DBGLEVEL >= 3) Dbprintf("Nonce#%d: dismissed (ambiguous), ntdist=%d", i + 1, j);
+                        if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Nonce#%d: dismissed (ambiguous), ntdist=%d", i + 1, j);
                         target_nt[i] = 0;
                         break;
                     }
@@ -1043,10 +1049,10 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                     ncount++;
                     if (i == 1 && target_nt[1] == target_nt[0]) { // we need two different nonces
                         target_nt[i] = 0;
-                        if (DBGLEVEL >= 3) Dbprintf("Nonce#2: dismissed (= nonce#1), ntdist=%d", j);
+                        if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Nonce#2: dismissed (= nonce#1), ntdist=%d", j);
                         break;
                     }
-                    if (DBGLEVEL >= 3) Dbprintf("Nonce#%d: valid, ntdist=%d", i + 1, j);
+                    if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Nonce#%d: valid, ntdist=%d", i + 1, j);
                 }
             }
             if (target_nt[i] == 0 && j == dmax + 1 && DBGLEVEL >= 3) Dbprintf("Nonce#%d: dismissed (all invalid)", i + 1);
@@ -2013,7 +2019,7 @@ void MifareCIdent() {
 
     // reset card
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(100);
+    SpinDelay(40);
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
@@ -2041,6 +2047,7 @@ OUT:
     // turns off
     OnSuccessMagic();
     BigBuf_free();
+    BigBuf_Clear_ext(false);
 }
 
 void OnSuccessMagic() {

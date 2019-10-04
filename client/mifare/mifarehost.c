@@ -1099,19 +1099,18 @@ void detect_classic_magic(void) {
 
     switch (isGeneration) {
         case MAGIC_GEN_1A:
-            PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 1a): " _GREEN_("YES"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1a"));
             break;
         case MAGIC_GEN_1B:
-            PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 1b): " _GREEN_("YES"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1b"));
             break;
         case MAGIC_GEN_2:
-            PrintAndLogEx(SUCCESS, "Answers to magic commands (GEN 2 / CUID): "  _GREEN_("YES"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities : "  _GREEN_("Gen 2 / CUID"));
             break;
         case MAGIC_GEN_UNFUSED:
-            PrintAndLogEx(SUCCESS, "Answers to magic commands (Write Once / FUID): " _GREEN_("YES"));
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
             break;
         default:
-            PrintAndLogEx(INFO, "Answers to magic commands: " _YELLOW_("NO"));
             break;
     }
 }
