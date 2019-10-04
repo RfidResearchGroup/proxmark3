@@ -149,17 +149,16 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     uint32_t sample_total_saved = 0;
     uint32_t cancel_counter = 0;
 
-    uint16_t checker = 0;
+    uint16_t checked = 0;
 
     while (true) {
-        if (checker == 2000) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || data_available())
                 break;
             else
-                checker = 0;
-        } else {
-            ++checker;
+                checked = 0;
         }
+        ++checked;
 
         WDT_HIT();
 
