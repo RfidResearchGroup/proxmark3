@@ -479,6 +479,26 @@ Wipe a T55xx tag and set defaults
 pm3 --> lf t55xx wipe
 ```
 
+Set a T5577 tag downlink mode to fixed bit (default)
+```
+pm3 --> lf t55xx write b 3 1 d 00000000
+```
+
+Set a T5577 tag downlink mode to long leading zero
+```
+pm3 --> lf t55xx write b 3 1 d 90000400
+```
+
+Set a T5577 tag downlink mode to leading zero
+```
+pm3 --> lf t55xx write b 3 1 d 90000800
+```
+
+Set a T5577 tag downlink mode to 1 of 4
+```
+pm3 --> lf t55xx write b 3 1 d 90000C00
+```
+
 ## Data
 ^[Top](#top)
 
