@@ -83,7 +83,7 @@ static int usage_t55xx_config() {
     PrintAndLogEx(NORMAL, "     d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  - Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
     PrintAndLogEx(NORMAL, "     i [0/1]                          - Set/reset data signal inversion");
     PrintAndLogEx(NORMAL, "     o [offset]                       - Set offset, where data should start decode in bitstream");
-    PrintAndLogEx(NORMAL, "     Q5 [0/1]                         - Set/reset as Q5(T5555) chip instead of T55x7");
+    PrintAndLogEx(NORMAL, "     Q5 [0/1]                         - Set/reset as T5555 ( Q5 ) chip instead of T55x7");
     PrintAndLogEx(NORMAL, "     ST [0/1]                         - Set/reset Sequence Terminator on");
     PrintAndLogEx(NORMAL, ""); // layout is a little differnet, so seperate until a better fix
     print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
@@ -292,11 +292,11 @@ static int usage_t55xx_wipe() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h               - this help");
     PrintAndLogEx(NORMAL, "     c <block0>      - set configuration from a block0");
-    PrintAndLogEx(NORMAL, "     q               - indicates to use the T5555 (Q5) default configuration block");
+    PrintAndLogEx(NORMAL, "     q               - indicates to use T5555 ( Q5 ) default configuration block");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf t55xx wipe      -  wipes a t55x7 tag,    config block 0x000880E0");
-    PrintAndLogEx(NORMAL, "      lf t55xx wipe q    -  wipes a t5555 Q5 tag, config block 0x6001F004");
+    PrintAndLogEx(NORMAL, "      lf t55xx wipe      -  wipes a T55x7 tag,    config block 0x000880E0");
+    PrintAndLogEx(NORMAL, "      lf t55xx wipe q    -  wipes a T5555 ( Q5 ) tag, config block 0x6001F004");
     return PM3_SUCCESS;
 }
 static int usage_t55xx_deviceconfig() {
@@ -1473,7 +1473,7 @@ int special(const char *Cmd) {
 }
 
 int printConfiguration(t55xx_conf_block_t b) {
-    PrintAndLogEx(NORMAL, "    Chip Type      : %s", (b.Q5) ? "T5555(Q5)" : "T55x7");
+    PrintAndLogEx(NORMAL, "    Chip Type      : %s", (b.Q5) ? "T5555 ( Q5 )" : "T55x7");
     PrintAndLogEx(NORMAL, "    Modulation     : %s", GetSelectedModulationStr(b.modulation));
     PrintAndLogEx(NORMAL, "    Bit Rate       : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
     PrintAndLogEx(NORMAL, "    Inverted       : %s", (b.inverted) ? _GREEN_("Yes") : "No");
@@ -1682,7 +1682,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         si += 9;
 
         if (hdr != 0x1FF) {
-            PrintAndLogEx(FAILED, "Invalid Q5 Trace data header (expected 0x1FF, found %X)", hdr);
+            PrintAndLogEx(FAILED, "Invalid T555 ( Q5 ) Trace data header (expected 0x1FF, found %X)", hdr);
             return PM3_ESOFT;
         }
 
@@ -1809,7 +1809,7 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
 }
 
 void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
-    PrintAndLogEx(NORMAL, "-- T5555 (Q5) Trace Information -----------------------------");
+    PrintAndLogEx(NORMAL, "-- T5555 ( Q5 ) Trace Information ---------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, " ICR IC Revision  : %d", data.icr);
     PrintAndLogEx(NORMAL, "     Lot          : %c%d", data.lotidc, data.lotid);
@@ -2388,7 +2388,7 @@ static void t55x7_create_config_block(int tagtype) {
             snprintf(retStr, sizeof(buf), "%08X - T55X7 Raw", T55X7_RAW_CONFIG_BLOCK);
             break;
         case 2:
-            snprintf(retStr, sizeof(buf), "%08X - T5555 Q5 Default", T5555_DEFAULT_CONFIG_BLOCK);
+            snprintf(retStr, sizeof(buf), "%08X - T5555 ( Q5 ) Default", T5555_DEFAULT_CONFIG_BLOCK);
             break;
         default:
             break;
@@ -2491,7 +2491,7 @@ static int CmdT55xxWipe(const char *Cmd) {
     if (errors) return usage_t55xx_wipe();
 
 
-    PrintAndLogEx(INFO, "\nBegin wiping %s", (Q5) ? "Q5 / T5555 tag" : "T55x7 tag");
+    PrintAndLogEx(INFO, "\nBegin wiping %s", (Q5) ? "T5555 ( Q5 ) tag" : "T55x7 tag");
 
     // default config blocks.
     if (gotconf == false) {
