@@ -261,9 +261,11 @@ check_script:
         }
     } // end while
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
-    msleep(100); // Make sure command is sent before killing client
+    if (session.pm3_present) {
+        clearCommandBuffer();
+        SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
+        msleep(100); // Make sure command is sent before killing client
+    }
 
     while (current_cmdscriptfile())
         pop_cmdscriptfile();
