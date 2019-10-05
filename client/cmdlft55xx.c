@@ -103,9 +103,10 @@ static int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override safety check");
     PrintAndLogEx(NORMAL, "     1            - OPTIONAL 0|1  read Page 1 instead of Page 0");
     print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
-    PrintAndLogEx(NORMAL, "     ****WARNING****");
-    PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured for a pwd");
-    PrintAndLogEx(NORMAL, "     can damage the tag");
+    PrintAndLogEx(NORMAL, "     " _RED_("**** WARNING ****"));
+    PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured");
+    PrintAndLogEx(NORMAL, "     for a password can damage the tag");
+    PrintAndLogEx(NORMAL, "     " _RED_("*****************"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx read b 0                 - read data from block 0");
@@ -232,7 +233,7 @@ static int usage_t55xx_wakup() {
 static int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
     PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");
+    PrintAndLogEx(NORMAL,  _RED_("WARNING:") " this may brick non-password protected chips!");
     PrintAndLogEx(NORMAL, "Try to reading block 7 before\n");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx chk [h] [m] [r <mode>] [i <*.dic>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -250,7 +251,7 @@ static int usage_t55xx_chk() {
 static int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "This command uses bruteforce to scan a number range");
     PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may brick non-password protected chips!");
     PrintAndLogEx(NORMAL, "Try reading block 7 before\n");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx bruteforce [h] [r <mode>] [s <start password>] [e <end password>]");
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
@@ -268,7 +269,7 @@ static int usage_t55xx_bruteforce() {
 static int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "This command uses a few tricks to try to recover mangled password");
     PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may brick non-password protected chips!");
     PrintAndLogEx(NORMAL, "Try reading block 7 before\n");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx recoverpw [r <mode>] [p <password>]");
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
@@ -1976,7 +1977,7 @@ static int CmdT55xxInfo(const char *Cmd) {
         uint32_t inv      = (block0 >> (32 - 25)) & 0x01;
         uint32_t datamod  = (block0 >> (32 - 28)) & 0x07;
         uint32_t maxblk   = (block0 >> (32 - 31)) & 0x07;
-        uint32_t st       = (block0 >> (32 - 32)) & 0x01;
+        uint32_t st       = block0 & 0x01;
         PrintAndLogEx(NORMAL, "-- Q5 Configuration & Tag Information -----------------------");
         PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
         PrintAndLogEx(NORMAL, " Header                    : 0x%03X%s", header, (header != 0x600) ? _RED_(" - Warning") : "");
