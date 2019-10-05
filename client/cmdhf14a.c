@@ -553,7 +553,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         }
 
         if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
-            PrintAndLogEx(ERR, "Card not in iso14443-4. res=%d.", resp.oldarg[0]);
+            PrintAndLogEx(ERR, "Card not in iso14443-4. res=" PRId64 ".", resp.oldarg[0]);
             return 1;
         }
 
@@ -647,7 +647,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     }
 
     if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
-        PrintAndLogEx(ERR, "Card not in iso14443-4. res=%d.", resp.oldarg[0]);
+        PrintAndLogEx(ERR, "Card not in iso14443-4. res=%" PRId64 ".", resp.oldarg[0]);
         return 1;
     }
 
@@ -1376,7 +1376,7 @@ int infoHF14A(bool verbose, bool do_nack_test) {
             int16_t fsci = card.ats[1] & 0x0f;
 
             PrintAndLogEx(NORMAL, "       -  T0 : TA1 is%s present, TB1 is%s present, "
-                          "TC1 is%s present, FSCI is %d (FSC = %ld)",
+                          "TC1 is%s present, FSCI is %d (FSC = %d)",
                           (ta1 ? "" : " NOT"),
                           (tb1 ? "" : " NOT"),
                           (tc1 ? "" : " NOT"),
@@ -1408,7 +1408,7 @@ int infoHF14A(bool verbose, bool do_nack_test) {
         if (tb1) {
             uint32_t sfgi = card.ats[pos] & 0x0F;
             uint32_t fwi = card.ats[pos] >> 4;
-            PrintAndLogEx(NORMAL, "       - TB1 : SFGI = %d (SFGT = %s%ld/fc), FWI = %d (FWT = %ld/fc)",
+            PrintAndLogEx(NORMAL, "       - TB1 : SFGI = %d (SFGT = %s%d/fc), FWI = %d (FWT = %d/fc)",
                           (sfgi),
                           sfgi ? "" : "(not needed) ",
                           sfgi ? (1 << 12) << sfgi : 0,

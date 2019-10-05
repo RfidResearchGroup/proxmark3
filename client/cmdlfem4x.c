@@ -416,7 +416,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
     setDemodBuff(DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
     setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
 
-    PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %zu, Len: %zu, Printing Demod Buffer:", idx, size);
     if (g_debugMode)
         printDemodBuff();
 
@@ -1085,7 +1085,7 @@ static bool doPreambleSearch(size_t *startIdx) {
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 1, 0, 1, 0};
 
     if (!preambleSearchEx(DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %d", *startIdx);
+        PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
         return false;
     }
     return true;

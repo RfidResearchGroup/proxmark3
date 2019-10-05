@@ -70,7 +70,7 @@ static int CmdKeriDemod(const char *Cmd) {
         else if (idx == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: preamble not found");
         else if (idx == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: Size not correct: 64 != %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: Size not correct: 64 != %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - KERI: ans: %d", idx);
 
@@ -154,7 +154,7 @@ static int CmdKeriClone(const char *Cmd) {
 
     // 3 LSB is ONE
     uint64_t data = ((uint64_t)internalid << 3) + 7;
-    PrintAndLogEx(INFO, "Preparing to clone KERI to T55x7 with Internal Id: %" PRIx64, internalid);
+    PrintAndLogEx(INFO, "Preparing to clone KERI to T55x7 with Internal Id: %" PRIx32, internalid);
 
     blocks[1] = data >> 32;
     blocks[2] = data & 0xFFFFFFFF;
@@ -182,7 +182,7 @@ static int CmdKeriSim(const char *Cmd) {
         bs[j++] = ((internalid >> i) & 1);
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id: %u", internalid);
+    PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id: %" PRIu64, internalid);
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
     payload->carrier =  2;

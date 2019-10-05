@@ -14,6 +14,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "commonutil.h"     // ARRAYLEN
 #include "common.h"
@@ -119,7 +120,7 @@ static int CmdVisa2kDemod(const char *Cmd) {
         else if (ans == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: preamble not found");
         else if (ans == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: Size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
 
@@ -180,7 +181,7 @@ static int CmdVisa2kClone(const char *Cmd) {
     blocks[2] = id;
     blocks[3] = (visa_parity(id) << 4) | visa_chksum(id);
 
-    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
+    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %"PRIu64, id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     return clone_t55xx_tag(blocks, ARRAYLEN(blocks));

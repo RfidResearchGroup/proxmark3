@@ -72,7 +72,7 @@ static int CmdPrescoDemod(const char *Cmd) {
         else if (ans == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: preamble not found");
         else if (ans == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: Size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: ans: %d", ans);
         return PM3_ESOFT;

@@ -1296,7 +1296,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         }
 
         uint64_t t2 = msclock() - t1;
-        PrintAndLogEx(SUCCESS, "Time to check %d known keys: %.0f seconds\n", ARRAYLEN(g_mifare_default_keys), (float)t2 / 1000.0);
+        PrintAndLogEx(SUCCESS, "Time to check %zu known keys: %.0f seconds\n", ARRAYLEN(g_mifare_default_keys), (float)t2 / 1000.0);
         PrintAndLogEx(SUCCESS, "enter nested attack");
 
         // nested sectors

@@ -98,7 +98,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: preamble not found");
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: error demoding psk idx: %d", idx);
         return PM3_ESOFT;
@@ -114,7 +114,7 @@ static int CmdIndalaDemod(const char *Cmd) {
     if (DemodBufferLen == 64) {
         PrintAndLogEx(
             SUCCESS
-            , "Indala Found - bitlength %d, Raw %x%08x"
+            , "Indala Found - bitlength %zu, Raw %x%08x"
             , DemodBufferLen
             , uid1
             , uid2
@@ -161,7 +161,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         uint32_t uid7 = bytebits_to_byte(DemodBuffer + 192, 32);
         PrintAndLogEx(
             SUCCESS
-            , "Indala Found - bitlength %d, Raw 0x%x%08x%08x%08x%08x%08x%08x"
+            , "Indala Found - bitlength %zu, Raw 0x%x%08x%08x%08x%08x%08x%08x"
             , DemodBufferLen
             , uid1
             , uid2
@@ -237,7 +237,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     }
 
     if (rawbit > 0) {
-        PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %d", rawbit, GraphTraceLen / 32);
+        PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %zu", rawbit, GraphTraceLen / 32);
         PrintAndLogEx(INFO, "worst metric (0=best..7=worst): %d at pos %d", worst, worstPos);
     } else {
         return PM3_ESOFT;
@@ -629,7 +629,7 @@ out:
     //PrintAndLogEx(INFO, "DEBUG: detectindala RES = %d | %d | %d", res, found_size, idx);
 
     if (found_size != 224 && found_size != 64) {
-        PrintAndLogEx(INFO, "DEBUG: detectindala | %d", found_size);
+        PrintAndLogEx(INFO, "DEBUG: detectindala | %zu", found_size);
         return -5;
     }
 

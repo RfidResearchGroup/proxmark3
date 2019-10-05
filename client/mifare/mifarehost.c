@@ -1005,7 +1005,7 @@ int detect_classic_prng(void) {
 
     // check respA
     if (respA.oldarg[0] != 4) {
-        PrintAndLogEx(ERR, "PRNG data error: Wrong length: %d", respA.oldarg[0]);
+        PrintAndLogEx(ERR, "PRNG data error: Wrong length: %"PRIu64, respA.oldarg[0]);
         return PM3_ESOFT;
     }
 

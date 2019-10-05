@@ -53,7 +53,7 @@ static int CmdVerichipDemod(const char *Cmd) {
         else if (ans == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - VERICHIP: preamble not found");
         else if (ans == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - VERICHIP: Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - VERICHIP: Size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - VERICHIP: ans: %d", ans);
 

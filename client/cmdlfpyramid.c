@@ -87,7 +87,7 @@ static int CmdPyramidDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: preamble not found");
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: error demoding fsk idx: %d", idx);
         return PM3_ESOFT;
@@ -137,7 +137,7 @@ static int CmdPyramidDemod(const char *Cmd) {
         if (size == 0)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
         else
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %08X", size, idx, rawHi3);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %zu, IDX: %d, hi3: %08X", size, idx, rawHi3);
         return PM3_ESOFT;
     }
 

@@ -434,9 +434,9 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
     memcpy(authData, ubuf, authDataLen);
 
     if (verbose2) {
-        PrintAndLogEx(INFO, "authData[%d]: %s", n, sprint_hex_inrow(authData, authDataLen));
+        PrintAndLogEx(INFO, "authData[%zu]: %s", n, sprint_hex_inrow(authData, authDataLen));
     } else {
-        PrintAndLogEx(INFO, "authData[%d]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
+        PrintAndLogEx(INFO, "authData[%zu]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
     }
 
     PrintAndLogEx(INFO, "RP ID Hash: %s", sprint_hex(ubuf, 32));
@@ -530,9 +530,9 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
             res = CborGetBinStringValue(&mapsmt, sign, sizeof(sign), &signLen);
             cbor_check(res);
             if (verbose2) {
-                PrintAndLogEx(INFO, "signature [%d]: %s", signLen, sprint_hex_inrow(sign, signLen));
+                PrintAndLogEx(INFO, "signature [%zu]: %s", signLen, sprint_hex_inrow(sign, signLen));
             } else {
-                PrintAndLogEx(INFO, "signature [%d]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
+                PrintAndLogEx(INFO, "signature [%zu]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
             }
         }
 
@@ -540,11 +540,11 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
             res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen);
             cbor_check(res);
             if (verbose2) {
-                PrintAndLogEx(NORMAL, "DER certificate[%d]:\n------------------DER-------------------", derLen);
+                PrintAndLogEx(NORMAL, "DER certificate[%zu]:\n------------------DER-------------------", derLen);
                 dump_buffer_simple((const unsigned char *)der, derLen, NULL);
                 PrintAndLogEx(NORMAL, "\n----------------DER---------------------");
             } else {
-                PrintAndLogEx(NORMAL, "DER [%d]: %s...", derLen, sprint_hex(der, MIN(derLen, 16)));
+                PrintAndLogEx(NORMAL, "DER [%zu]: %s...", derLen, sprint_hex(der, MIN(derLen, 16)));
             }
             JsonSaveBufAsHexCompact(root, "$.AppData.DER", der, derLen);
         }
@@ -674,7 +674,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
             uint8_t cid[200] = {0};
             res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
             cbor_check(res);
-            PrintAndLogEx(SUCCESS, "credential id [%d]: %s", n, sprint_hex(cid, n));
+            PrintAndLogEx(SUCCESS, "credential id [%zu]: %s", n, sprint_hex(cid, n));
         }
     }
     res = cbor_value_leave_container(&map, &mapint);
@@ -693,9 +693,9 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
     memcpy(authData, ubuf, authDataLen);
 
     if (verbose2) {
-        PrintAndLogEx(INFO, "authData[%d]: %s", n, sprint_hex_inrow(authData, authDataLen));
+        PrintAndLogEx(INFO, "authData[%zu]: %s", n, sprint_hex_inrow(authData, authDataLen));
     } else {
-        PrintAndLogEx(INFO, "authData[%d]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
+        PrintAndLogEx(INFO, "authData[%zu]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
     }
 
     PrintAndLogEx(INFO, "RP ID Hash: %s", sprint_hex(ubuf, 32));
@@ -749,7 +749,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
                 uint8_t cid[200] = {0};
                 res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
                 cbor_check(res);
-                PrintAndLogEx(SUCCESS, "UserEntity id [%d]: %s", n, sprint_hex(cid, n));
+                PrintAndLogEx(SUCCESS, "UserEntity id [%zu]: %s", n, sprint_hex(cid, n));
 
                 // check
                 uint8_t idbuf[100] = {0};
@@ -781,9 +781,9 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 
     cbor_check(res);
     if (verbose2) {
-        PrintAndLogEx(SUCCESS, "signature [%d]: %s", signLen, sprint_hex_inrow(sign, signLen));
+        PrintAndLogEx(SUCCESS, "signature [%zu]: %s", signLen, sprint_hex_inrow(sign, signLen));
     } else {
-        PrintAndLogEx(SUCCESS, "signature [%d]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
+        PrintAndLogEx(SUCCESS, "signature [%zu]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
     }
 
     // get public key from json

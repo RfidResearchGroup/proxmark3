@@ -553,7 +553,7 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
 
     size_t BitLen = getFromGraphBuf(bits);
 
-    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) #samples from graphbuff: %d", BitLen);
+    PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) #samples from graphbuff: %zu", BitLen);
 
     if (BitLen < 255) {
         free(bits);
@@ -591,18 +591,18 @@ int ASKDemod_ext(const char *Cmd, bool verbose, bool emSearch, uint8_t askType, 
     int errCnt = askdemod_ext(bits, &BitLen, &clk, &invert, maxErr, askamp, askType, &startIdx);
 
     if (errCnt < 0 || BitLen < 16) { //if fatal error (or -1)
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%c, bitlen:%d, clock:%d", errCnt, (invert) ? 'Y' : 'N', BitLen, clk);
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, invert:%c, bitlen:%zu, clock:%d", errCnt, (invert) ? 'Y' : 'N', BitLen, clk);
         free(bits);
         return PM3_ESOFT;
     }
 
     if (errCnt > maxErr) {
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%d, clock:%d", errCnt, BitLen, clk);
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%zu, clock:%d", errCnt, BitLen, clk);
         free(bits);
         return PM3_ESOFT;
     }
 
-    if (verbose) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%d, start index %d", clk, invert, BitLen, startIdx);
+    if (verbose) PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Using clock:%d, invert:%d, bits found:%zu, start index %d", clk, invert, BitLen, startIdx);
 
     //output
     setDemodBuff(bits, BitLen, 0);
@@ -812,7 +812,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     // sanity check
     if (window > len) window = len;
 
-    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%d")" correlations", GraphTraceLen - window);
+    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%zu")" correlations", GraphTraceLen - window);
 
     //test
     double autocv = 0.0;    // Autocovariance value
@@ -870,7 +870,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         distance = idx_1 - idx;
         PrintAndLogEx(SUCCESS, "possible visible correlation %4d samples", distance);
     } else if (verbose && (correlation > 1)) {
-        PrintAndLogEx(SUCCESS, "possible correlation %4d samples", correlation);
+        PrintAndLogEx(SUCCESS, "possible correlation %4zu samples", correlation);
     } else {
         PrintAndLogEx(FAILED, "no repeating pattern found, try increasing window size");
     }
@@ -912,7 +912,7 @@ static int CmdAutoCorr(const char *Cmd) {
             case 'w':
                 window = param_get32ex(Cmd, cmdp + 1, 4000, 10);
                 if (window >= GraphTraceLen) {
-                    PrintAndLogEx(WARNING, "window must be smaller than trace (%d samples)", GraphTraceLen);
+                    PrintAndLogEx(WARNING, "window must be smaller than trace (%zu samples)", GraphTraceLen);
                     errors = true;
                 }
                 cmdp += 2;
@@ -1222,17 +1222,17 @@ int PSKDemod(const char *Cmd, bool verbose) {
     int startIdx = 0;
     int errCnt = pskRawDemod_ext(bits, &bitlen, &clk, &invert, &startIdx);
     if (errCnt > maxErr) {
-        if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, bitlen, errCnt);
+        if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Too many errors found, clk: %d, invert: %d, numbits: %zu, errCnt: %d", clk, invert, bitlen, errCnt);
         free(bits);
         return PM3_ESOFT;
     }
     if (errCnt < 0 || bitlen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
-        if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, bitlen, errCnt);
+        if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) no data found, clk: %d, invert: %d, numbits: %zu, errCnt: %d", clk, invert, bitlen, errCnt);
         free(bits);
         return PM3_ESOFT;
     }
     if (verbose || g_debugMode) {
-        PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Using Clock:%d, invert:%d, Bits Found:%d", clk, invert, bitlen);
+        PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) Using Clock:%d, invert:%d, Bits Found:%zu", clk, invert, bitlen);
         if (errCnt > 0) {
             PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) errors during Demoding (shown as 7 in bit stream): %d", errCnt);
         }
@@ -1264,7 +1264,7 @@ static int CmdIdteckDemod(const char *Cmd) {
         else if (idx == -3)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: preamble not found");
         else if (idx == -4)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d", idx);
 
@@ -1283,7 +1283,7 @@ static int CmdIdteckDemod(const char *Cmd) {
             else if (idx == -3)
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: preamble not found");
             else if (idx == -4)
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %d", size);
+                PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: size not correct: %zu", size);
             else
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck: idx: %d", idx);
 
@@ -1346,17 +1346,17 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
 
     errCnt = nrzRawDemod(bits, &BitLen, &clk, &invert, &clkStartIdx);
     if (errCnt > maxErr) {
-        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
+        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Too many errors found, clk: %d, invert: %d, numbits: %zu, errCnt: %d", clk, invert, BitLen, errCnt);
         free(bits);
         return PM3_ESOFT;
     }
     if (errCnt < 0 || BitLen < 16) { //throw away static - allow 1 and -1 (in case of threshold command first)
-        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %d, errCnt: %d", clk, invert, BitLen, errCnt);
+        PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) no data found, clk: %d, invert: %d, numbits: %zu, errCnt: %d", clk, invert, BitLen, errCnt);
         free(bits);
         return PM3_ESOFT;
     }
     
-    if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %d", clk, invert, BitLen);
+    if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %zu", clk, invert, BitLen);
     //prime demod buffer for output
     setDemodBuff(bits, BitLen, 0);
     setClockGrid(clk, clkStartIdx);
@@ -1779,7 +1779,7 @@ static int CmdLoad(const char *Cmd) {
 
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "loaded %d samples", GraphTraceLen);
+    PrintAndLogEx(SUCCESS, "loaded %zu samples", GraphTraceLen);
 
     uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);

@@ -94,7 +94,7 @@ static int CmdJablotronDemod(const char *Cmd) {
             else if (ans == -2)
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron preamble not found");
             else if (ans == -3)
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron size not correct: %d", size);
+                PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron size not correct: %zu", size);
             else if (ans == -5)
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Jablotron checksum failed");
             else

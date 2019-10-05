@@ -86,7 +86,7 @@ static int CmdParadoxDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox preamble not found");
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error in Manchester data, size %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error in Manchester data, size %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
 
@@ -117,7 +117,7 @@ static int CmdParadoxDemod(const char *Cmd) {
                   rawLo
                  );
 
-    PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %zu, Printing Demod Buffer:", idx, size);
     if (g_debugMode)
         printDemodBuff();
 

@@ -1257,7 +1257,7 @@ bool GetT55xxBlockData(uint32_t *blockdata) {
     uint8_t idx = config.offset;
 
     if (idx + 32 > DemodBufferLen) {
-        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %d)", idx, DemodBufferLen - 32);
+        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %zu)", idx, DemodBufferLen - 32);
         return false;
     }
 
@@ -2624,12 +2624,12 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         }
 
         if (resp.oldarg[0]) {
-            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08X") " ]. Trying to validate", resp.oldarg[1]);
+            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX64) " ]. Trying to validate", resp.oldarg[1]);
 
             if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.oldarg[1], downlink_mode)) {
                 found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", resp.oldarg[1]);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", resp.oldarg[1]);
 
                 } else {
                     PrintAndLogEx(WARNING, "Check pwd failed");
@@ -2672,7 +2672,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             curr_password = bytes_to_num(keyBlock + 4 * c, 4);
 
-            PrintAndLogEx(INFO, "Testing %08X", curr_password);
+            PrintAndLogEx(INFO, "Testing %08"PRIX64, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
 
                 if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
@@ -2681,7 +2681,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
                 found = tryDetectModulation(dl_mode, T55XX_PrintConfig);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr_password);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", curr_password);
                     dl_mode = 4; // Exit other downlink mode checks
                     c = keycount; // Exit loop
                 }

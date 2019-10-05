@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "cmdparser.h"    // command_t
 #include "comms.h"
@@ -71,7 +72,7 @@ static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint
             memcpy(response, resp.data.asBytes, *response_len);
         }
     } else {
-        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %d)", *response_len, resp.oldarg[0]);
+        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %" PRIu64 ")", *response_len, resp.oldarg[0]);
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;

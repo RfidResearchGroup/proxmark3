@@ -495,7 +495,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
                         if (tsfi) {
                             struct tlvdb *tsfitmp = tlvdb_find_path(tsfi, (tlv_tag_t[]) {0x70, 0x61, 0x00});
                             if (!tsfitmp) {
-                                PrintAndLogEx(FAILED, "SFI 0x%02d doesn't have any records.", sfidatalen[ui]);
+                                PrintAndLogEx(FAILED, "SFI 0x%02zu doesn't have any records.", sfidatalen[ui]);
                                 continue;
                             }
                             res = EMVCheckAID(channel, decodeTLV, tsfitmp, tlv);
@@ -863,7 +863,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
             return 5;
         }
 
-        PrintAndLogEx(NORMAL, "DDOL data[%d]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
+        PrintAndLogEx(NORMAL, "DDOL data[%zu]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
 
         PrintAndLogEx(NORMAL, "\n* Internal Authenticate");
         int res = EMVInternalAuthenticate(channel, true, (uint8_t *)ddol_data_tlv->value, ddol_data_tlv->len, buf, sizeof(buf), &len, &sw, NULL);
@@ -879,7 +879,7 @@ int trDDA(EMVCommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         struct tlvdb *dda_db = NULL;
         if (buf[0] == 0x80) {
             if (len < 3) {
-                PrintAndLogEx(WARNING, "Warning: Internal Authenticate format1 parsing error. length=%d", len);
+                PrintAndLogEx(WARNING, "Warning: Internal Authenticate format1 parsing error. length=%zu", len);
             } else {
                 // parse response 0x80
                 struct tlvdb *t80 = tlvdb_parse_multi(buf, len);

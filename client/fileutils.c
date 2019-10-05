@@ -153,7 +153,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved %u bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved %zu bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -420,14 +420,14 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     }
 
     if (bytes_read > maxdatalen) {
-        PrintAndLogEx(WARNING, "Warning, bytes read exceed calling array limit. Max bytes is %d bytes", maxdatalen);
+        PrintAndLogEx(WARNING, "Warning, bytes read exceed calling array limit. Max bytes is %zu bytes", maxdatalen);
         bytes_read = maxdatalen;
     }
 
     memcpy((data), dump, bytes_read);
     free(dump);
 
-    PrintAndLogEx(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
+    PrintAndLogEx(SUCCESS, "loaded %zu bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
 
     *datalen = bytes_read;
 
@@ -483,7 +483,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     *datalen = bytes_read;
 
-    PrintAndLogEx(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded %zu bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
     return retval;
 }
 
@@ -531,7 +531,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded %d bytes from text file " _YELLOW_("%s"), counter, fileName);
+    PrintAndLogEx(SUCCESS, "loaded %zu bytes from text file " _YELLOW_("%s"), counter, fileName);
 
     if (datalen)
         *datalen = counter;

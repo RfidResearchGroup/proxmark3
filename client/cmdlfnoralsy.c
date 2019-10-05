@@ -85,7 +85,7 @@ static int CmdNoralsyDemod(const char *Cmd) {
             else if (ans == -2)
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: preamble not found");
             else if (ans == -3)
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: Size not correct: %d", size);
+                PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: Size not correct: %zu", size);
             else
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ans: %d", ans);
         }

@@ -1036,7 +1036,7 @@ static int CmdLegicRestore(const char *Cmd) {
     fseek(f, 0, SEEK_SET); // seek back to beginning of file
 
     if (filesize != numofbytes) {
-        PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%u != %u]", filesize, numofbytes);
+        PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%zu != %u]", filesize, numofbytes);
         free(data);
         fclose(f);
         return PM3_EFILE;
@@ -1084,11 +1084,11 @@ static int CmdLegicRestore(const char *Cmd) {
 
         uint8_t isOK = resp.oldarg[0] & 0xFF;
         if (!isOK) {
-            PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.oldarg[1] & 0xFF);
+            PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", (uint8_t)(resp.oldarg[1] & 0xFF));
             free(data);
             return PM3_ERFTRANS;
         }
-        PrintAndLogEx(SUCCESS, "Wrote chunk [offset %d | len %d | total %d", i, len, i + len);
+        PrintAndLogEx(SUCCESS, "Wrote chunk [offset %zu | len %zu | total %zu", i, len, i + len);
     }
 
     free(data);
@@ -1281,7 +1281,7 @@ static int CmdLegicWipe(const char *Cmd) {
 
         uint8_t isOK = resp.oldarg[0] & 0xFF;
         if (!isOK) {
-            PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", resp.oldarg[1] & 0xFF);
+            PrintAndLogEx(WARNING, "Failed writing tag [msg = %u]", (uint8_t)(resp.oldarg[1] & 0xFF));
             free(data);
             return PM3_ERFTRANS;
         }

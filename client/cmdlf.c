@@ -651,7 +651,7 @@ int CmdLFSim(const char *Cmd) {
     // convert to bitstream if necessary
     ChkBitstream();
 
-    PrintAndLogEx(DEBUG, "DEBUG: Uploading %d bytes", GraphTraceLen);
+    PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", GraphTraceLen);
 
     struct pupload {
         uint8_t flag;
@@ -787,7 +787,7 @@ int CmdLFfskSim(const char *Cmd) {
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t))) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
         size = PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t);
     }
 
@@ -889,7 +889,7 @@ int CmdLFaskSim(const char *Cmd) {
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t))) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
         size = PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t);
     }
 
@@ -1009,7 +1009,7 @@ int CmdLFpskSim(const char *Cmd) {
     }
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t))) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %d - max: %d", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
+        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
         size = PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t);
     }
 

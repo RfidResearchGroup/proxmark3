@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "cmdparser.h"    // command_t
 #include "comms.h"
@@ -391,7 +392,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         return 1;
     }
 
-    uint64_t tracelen = resp.oldarg[1];
+    uint32_t tracelen = resp.oldarg[1];
     if (tracelen == 0)
         return 1;
 
@@ -407,7 +408,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         return 0;
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %d bytes)", tracelen);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu64" bytes)", tracelen);
 
     print_hex_break(trace, tracelen, 32);
     printSep();

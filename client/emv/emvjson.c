@@ -255,7 +255,7 @@ static bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buf
     }
 
     if (buflen > maxbufferlen) {
-        PrintAndLogEx(ERR, "%s HEX length (%d) more than %d", errormsg, (bufferlen) ? *bufferlen : -1, maxbufferlen);
+        PrintAndLogEx(ERR, "%s HEX length (%zu) more than %zu", errormsg, (bufferlen) ? *bufferlen : -1, maxbufferlen);
         return false;
     }
 
@@ -321,7 +321,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         return false;
     }
 
-    PrintAndLogEx(SUCCESS, "Load params: json(%d) " _GREEN_("OK"), json_array_size(root));
+    PrintAndLogEx(SUCCESS, "Load params: json(%zu) " _GREEN_("OK"), json_array_size(root));
 
     for (int i = 0; i < json_array_size(root); i++) {
         json_t *data, *jtag, *jlength, *jvalue;
@@ -382,7 +382,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         }
 
         if (buflen != tlvLength) {
-            PrintAndLogEx(ERR, "Load params: data [%d] length of HEX must(%d) be identical to length in TLV param(%d)", i + 1, buflen, tlvLength);
+            PrintAndLogEx(ERR, "Load params: data [%d] length of HEX must(%zu) be identical to length in TLV param(%d)", i + 1, buflen, tlvLength);
             json_decref(root);
             return false;
         }

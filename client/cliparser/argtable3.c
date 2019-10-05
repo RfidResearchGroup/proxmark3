@@ -1522,7 +1522,7 @@ struct arg_dbl *arg_dbln(
         addr = (size_t)(result + 1);
         rem  = addr % sizeof(double);
         result->dval  = (double *)(addr + sizeof(double) - rem);
-        ARG_TRACE(("addr=%p, dval=%p, sizeof(double)=%d rem=%d\n", addr, result->dval, (int)sizeof(double), (int)rem));
+        ARG_TRACE(("addr=%zu, dval=%p, sizeof(double)=%d rem=%d\n", addr, result->dval, (int)sizeof(double), (int)rem));
 
         result->count = 0;
     }

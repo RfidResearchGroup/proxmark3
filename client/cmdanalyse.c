@@ -260,7 +260,7 @@ static int CmdAnalyseLCR(const char *Cmd) {
             PrintAndLogEx(WARNING, "Invalid HEX value.");
             return 1;
         case 2:
-            PrintAndLogEx(WARNING, "Too many bytes.  Max %d bytes", sizeof(data));
+            PrintAndLogEx(WARNING, "Too many bytes.  Max %zu bytes", sizeof(data));
             return 1;
         case 3:
             PrintAndLogEx(WARNING, "Hex must have even number of digits.");

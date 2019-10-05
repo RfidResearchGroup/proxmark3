@@ -278,13 +278,13 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
 
-    PrintAndLogEx(SUCCESS, "TX (%3u):%.*s at %u 8%c1", strlen(string), strlen(string), string, baudrate, parity);
+    PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s at %u 8%c1", strlen(string), (int)strlen(string), string, baudrate, parity);
 
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000); // such large timeout needed
     if (ret == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
+        PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
         if (strcmp((char *)data, "hc01.comV2.0") == 0) {
-            PrintAndLogEx(SUCCESS, "Add-on " _GREEN_("found!"), len, len, data);
+            PrintAndLogEx(SUCCESS, "Add-on " _GREEN_("found!"));
             return PM3_SUCCESS;
         }
     }
@@ -365,11 +365,11 @@ static int CmdUsartBtFactory(const char *Cmd) {
     memset(data, 0, sizeof(data));
 
     string = "AT+NAMEPM3_RDV4.0";
-    PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+    PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 
     int ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
+        PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
         if (strcmp((char *)data, "OKsetname") == 0) {
             PrintAndLogEx(SUCCESS, "Name set to " _GREEN_("PM3_RDV4.0"));
         } else {
@@ -383,11 +383,11 @@ static int CmdUsartBtFactory(const char *Cmd) {
     memset(data, 0, sizeof(data));
     len = 0;
     string = "AT+ROLE=S";
-    PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+    PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
+        PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
         if (strcmp((char *)data, "OK+ROLE:S") == 0) {
             PrintAndLogEx(SUCCESS, "Role set to " _GREEN_("Slave"));
         } else {
@@ -401,11 +401,11 @@ static int CmdUsartBtFactory(const char *Cmd) {
     memset(data, 0, sizeof(data));
     len = 0;
     string = "AT+PIN1234";
-    PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+    PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
+        PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
         if (strcmp((char *)data, "OKsetPIN") == 0) {
             PrintAndLogEx(SUCCESS, "PIN set to " _GREEN_("1234"));
         } else {
@@ -421,11 +421,11 @@ static int CmdUsartBtFactory(const char *Cmd) {
         memset(data, 0, sizeof(data));
         len = 0;
         string = "AT+PN";
-        PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+        PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 
         ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
         if (ret == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
+            PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
             if (strcmp((char *)data, "OK None") == 0) {
                 PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None"));
             } else {
@@ -441,11 +441,11 @@ static int CmdUsartBtFactory(const char *Cmd) {
         memset(data, 0, sizeof(data));
         len = 0;
         string = BTADDON_BAUD_AT;
-        PrintAndLogEx(SUCCESS, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+        PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 
         ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
         if (ret == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "RX (%3u):%.*s", len, len, data);
+            PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
             if (strcmp((char *)data, "OK" BTADDON_BAUD_NUM) == 0) {
                 PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_(BTADDON_BAUD_NUM));
             } else {
@@ -514,7 +514,7 @@ static int CmdUsartBtPin(const char *Cmd) {
     sprintf(string, "AT+PIN%s", pin);
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
-//    PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string), strlen(string), string);
+//    PrintAndLogEx(NORMAL, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
     int ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 600);
     if (ret == PM3_ENODATA) {
         PrintAndLogEx(FAILED, "No response from add-on, is it ON and blinking?");
@@ -524,7 +524,7 @@ static int CmdUsartBtPin(const char *Cmd) {
         PrintAndLogEx(FAILED, "Command failed, ret=%i", ret);
         return ret;
     }
-//    PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+//    PrintAndLogEx(NORMAL, "RX (%3zu):%.*s", len, (int)len, data);
     if (strcmp((char *)data, "OKsetPIN") == 0) {
         PrintAndLogEx(NORMAL, "PIN changed " _GREEN_("successfully"));
     } else {
@@ -688,11 +688,11 @@ static int CmdUsartTXRX(const char *Cmd) {
     }
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
-    PrintAndLogEx(NORMAL, "TX (%3u):%.*s", strlen(string2), strlen(string2), string2);
+    PrintAndLogEx(NORMAL, "TX (%3zu):%.*s", strlen(string2), (int)strlen(string2), string2);
     int ret = usart_txrx((uint8_t *)string2, strlen(string2), data, &len, waittime);
     if (ret != PM3_SUCCESS)
         return ret;
-    PrintAndLogEx(NORMAL, "RX (%3u):%.*s", len, len, data);
+    PrintAndLogEx(NORMAL, "RX (%3zu):%.*s", len, (int)len, data);
     return PM3_SUCCESS;
 }
 

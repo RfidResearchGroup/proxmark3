@@ -65,7 +65,7 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
         } else {
             PrintAndLogEx(SUCCESS, "        Checksum : "_YELLOW_("too few data for checksum")"- " _RED_("fail"));
         }
-        PrintAndLogEx(SUCCESS, " Data len (bits) : "_YELLOW_("%i")"- %s", barcode_len * 8, (barcode_len == 16 || barcode_len == 32) ? _GREEN_("OK") : _YELLOW_("warning"));
+        PrintAndLogEx(SUCCESS, " Data len (bits) : "_YELLOW_("%zu")"- %s", barcode_len * 8, (barcode_len == 16 || barcode_len == 32) ? _GREEN_("OK") : _YELLOW_("warning"));
         PrintAndLogEx(SUCCESS, "        Raw data : "_YELLOW_("%s"), sprint_hex(barcode, barcode_len));
         if (barcode_len < 4) // too few to go to next decoding stages
             return PM3_ESOFT;

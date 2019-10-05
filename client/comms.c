@@ -123,7 +123,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         return;
     }
     if (len > PM3_CMD_DATA_SIZE) {
-        PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much, abort", len);
+        PrintAndLogEx(WARNING, "Sending %zu bytes of payload is too much, abort", len);
         return;
     }
 
@@ -183,7 +183,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > PM3_CMD_DATA_SIZE_MIX) {
-        PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much for MIX frames, abort", len);
+        PrintAndLogEx(WARNING, "Sending %zu bytes of payload is too much for MIX frames, abort", len);
         return;
     }
     uint8_t cmddata[PM3_CMD_DATA_SIZE];
@@ -434,7 +434,7 @@ __attribute__((force_align_arg_pointer))
 
                 res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
                 if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
-                    PrintAndLogEx(WARNING, "Received packet OLD frame with payload too short? %d/%d", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
+                    PrintAndLogEx(WARNING, "Received packet OLD frame with payload too short? %d/%zu", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
                     error = true;
                 }
                 if (!error) {
@@ -464,7 +464,7 @@ __attribute__((force_align_arg_pointer))
             }
         } else {
             if (rxlen > 0) {
-                PrintAndLogEx(WARNING, "Received packet frame preamble too short: %d/%d", rxlen, sizeof(PacketResponseNGPreamble));
+                PrintAndLogEx(WARNING, "Received packet frame preamble too short: %d/%zu", rxlen, sizeof(PacketResponseNGPreamble));
                 error = true;
             }
             if (res == PM3_ENOTTY) {

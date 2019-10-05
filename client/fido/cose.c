@@ -206,7 +206,7 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
         res = CborGetBinStringValue(&map, &public_key[1], 32, &len);
         cbor_check(res);
         if (verbose)
-            PrintAndLogEx(SUCCESS, "x - coordinate [%d]: %s", len, sprint_hex(&public_key[1], 32));
+            PrintAndLogEx(SUCCESS, "x - coordinate [%zu]: %s", len, sprint_hex(&public_key[1], 32));
         if (len != 32)
             PrintAndLogEx(ERR, "ERROR: x - coordinate length must be 32.");
     }
@@ -217,7 +217,7 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
         res = CborGetBinStringValue(&map, &public_key[33], 32, &len);
         cbor_check(res);
         if (verbose)
-            PrintAndLogEx(SUCCESS, "y - coordinate [%d]: %s", len, sprint_hex(&public_key[33], 32));
+            PrintAndLogEx(SUCCESS, "y - coordinate [%zu]: %s", len, sprint_hex(&public_key[33], 32));
         if (len != 32)
             PrintAndLogEx(ERR, "ERROR: y - coordinate length must be 32.");
     }
@@ -229,7 +229,7 @@ int COSEGetECDSAKey(uint8_t *data, size_t datalen, bool verbose, uint8_t *public
         res = CborGetBinStringValue(&map, private_key, sizeof(private_key), &len);
         cbor_check(res);
         if (verbose)
-            PrintAndLogEx(SUCCESS, "d - private key [%d]: %s", len, sprint_hex(private_key, len));
+            PrintAndLogEx(SUCCESS, "d - private key [%zu]: %s", len, sprint_hex(private_key, len));
     }
 
     if (verbose)

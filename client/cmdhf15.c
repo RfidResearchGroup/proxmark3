@@ -534,7 +534,7 @@ static int CmdHF15Demod(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(NORMAL, "SOF at %d, correlation %d", maxPos, max / (ARRAYLEN(FrameSOF) / skip));
+    PrintAndLogEx(NORMAL, "SOF at %d, correlation %zu", maxPos, max / (ARRAYLEN(FrameSOF) / skip));
 
     i = maxPos + ARRAYLEN(FrameSOF) / skip;
     int k = 0;
@@ -1228,7 +1228,7 @@ static int CmdHF15Restore(const char *Cmd) {
         cmdp++;
     }
 
-    PrintAndLogEx(INFO, "Blocksize: %u", blocksize);
+    PrintAndLogEx(INFO, "Blocksize: %zu", blocksize);
 
     if (!strlen(filename)) {
         PrintAndLogEx(WARNING, "Please provide a filename");
@@ -1259,7 +1259,7 @@ static int CmdHF15Restore(const char *Cmd) {
             fclose(f);
             return 0;
         } else if (bytes_read != blocksize) {
-            PrintAndLogEx(ERR, "File reading error (%s), %u bytes read instead of %u bytes.", filename, bytes_read, blocksize);
+            PrintAndLogEx(ERR, "File reading error (%s), %zu bytes read instead of %zu bytes.", filename, bytes_read, blocksize);
             fclose(f);
             return 2;
         }

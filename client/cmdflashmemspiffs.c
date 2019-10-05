@@ -413,7 +413,7 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
 
     conn.block_after_ACK = false;
     free(data);
-    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u") "bytes to file "_GREEN_("%s"), datalen, destfilename);
+    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") "bytes to file "_GREEN_("%s"), datalen, destfilename);
 
     // We want to unmount after these to set things back to normal but more than this
     // unmouting ensure that SPIFFS CACHES are all flushed so our file is actually written on memory

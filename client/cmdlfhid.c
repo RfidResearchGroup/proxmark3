@@ -123,7 +123,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "Trying FC: %u; CN: %u;  Issue level: %u; OEM: %u", card->FacilityCode, card->CardNumber, card->IssueLevel, card->OEM);
+        PrintAndLogEx(INFO, "Trying FC: %u; CN: %"PRIu64";  Issue level: %u; OEM: %u", card->FacilityCode, card->CardNumber, card->IssueLevel, card->OEM);
 
     lf_hidsim_t payload;
     payload.hi2 = packed.Top;
@@ -177,7 +177,7 @@ static int CmdHIDDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - HID preamble not found");
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - HID error in Manchester data, size %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - HID error in Manchester data, size %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - HID error demoding fsk %d", idx);
 

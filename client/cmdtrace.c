@@ -665,7 +665,7 @@ static int CmdTraceLoad(const char *Cmd) {
     size_t bytes_read = fread(trace, 1, fsize, f);
     traceLen = bytes_read;
     fclose(f);
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes) loaded from file %s", traceLen, filename);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %l bytes) loaded from file %s", traceLen, filename);
     return 0;
 }
 
@@ -815,7 +815,7 @@ int CmdTraceList(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %d bytes)", traceLen);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %l bytes)", traceLen);
     PrintAndLogEx(INFO, "");
     if (protocol == FELICA) {
         printFelica(traceLen, trace);

@@ -324,7 +324,7 @@ static int CmdAWIDDemod(const char *Cmd) {
     }
     free(bits);
 
-    PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %d Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %zu Printing Demod Buffer:", idx, size);
     if (g_debugMode)
         printDemodBuff();
 
