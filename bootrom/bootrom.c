@@ -150,15 +150,6 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         }
         break;
 
-        case CMD_SETUP_WRITE: {
-            /* The temporary write buffer of the embedded flash controller is mapped to the
-            * whole memory region, only the last 8 bits are decoded.
-            */
-            for (i = 0; i < 12; i++)
-                _flash_start[i + arg0] = c->d.asDwords[i];
-        }
-        break;
-
         case CMD_FINISH_WRITE: {
             for (int j = 0; j < 2; j++) {
                 uint32_t flash_address = arg0 + (0x100 * j);

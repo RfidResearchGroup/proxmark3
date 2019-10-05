@@ -1895,7 +1895,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
 #endif
-        case CMD_SETUP_WRITE:
         case CMD_FINISH_WRITE:
         case CMD_HARDWARE_RESET: {
             usb_disable();
