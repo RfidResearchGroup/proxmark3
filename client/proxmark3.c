@@ -386,7 +386,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
     int ret = PM3_EUNDEF;
     flash_file_t files[FLASH_MAX_FILES];
     memset(files, 0, sizeof(files));
-    char *filepaths[FLASH_MAX_FILES];
+    char *filepaths[FLASH_MAX_FILES] = {0};
 
     if (serial_port_name == NULL) {
         PrintAndLogEx(ERR, "You must specify a port.\n");

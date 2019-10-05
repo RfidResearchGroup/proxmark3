@@ -2446,6 +2446,7 @@ static int CmdResetRead(const char *Cmd) {
 
         if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
             PrintAndLogEx(WARNING, "command execution time out");
+            free(got);
             return PM3_ETIMEOUT;
         }
         setGraphBuf(got, sizeof(got));

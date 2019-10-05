@@ -577,6 +577,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_MEMSET, (uint8_t *)payload, sizeof(payload) + size);
+    free(payload);
     return PM3_SUCCESS;
 }
 

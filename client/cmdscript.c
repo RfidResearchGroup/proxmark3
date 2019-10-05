@@ -60,6 +60,7 @@ static int CmdScriptRun(const char *Cmd) {
         int error;
         if (luascriptfile_idx == MAX_NESTED_LUASCRIPT) {
             PrintAndLogEx(ERR, "Too many nested scripts, skipping %s\n", script_path);
+            free(script_path);
             return PM3_EMALLOC;
         }
         PrintAndLogEx(SUCCESS, "Executing Lua script: %s, args '%s'\n", script_path, arguments);

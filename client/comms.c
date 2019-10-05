@@ -302,7 +302,8 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
             break;
         }
         case CMD_DEBUG_PRINT_INTEGERS: {
-            PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            if (! packet->ng)
+                PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
         }
         // iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of

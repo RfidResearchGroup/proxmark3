@@ -410,7 +410,6 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     }
 
     size_t bytes_read = fread(dump, 1, fsize, f);
-    fclose(f);
 
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
@@ -432,6 +431,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     *datalen = bytes_read;
 
 out:
+    fclose(f);
     free(fileName);
     return retval;
 }
@@ -443,8 +443,6 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     if (res != PM3_SUCCESS) {
         return PM3_EFILE;
     }
-
-    int retval = PM3_SUCCESS;
 
     FILE *f = fopen(path, "rb");
     if (!f) {
@@ -478,13 +476,14 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
+        free(*pdata);
         return PM3_EFILE;
     }
 
     *datalen = bytes_read;
 
     PrintAndLogEx(SUCCESS, "loaded %zu bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
-    return retval;
+    return PM3_SUCCESS;
 }
 
 int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
@@ -782,7 +781,9 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
             *pdata = realloc(*pdata, mem_size);
 
             if (*pdata == NULL) {
-                return PM3_EFILE;
+                retval = PM3_EFILE;
+                fclose(f);
+                goto out;
             } else {
                 memset(*pdata + (mem_size - block_size), 0, block_size);
             }
@@ -1058,8 +1059,12 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
 
 
     char *filename = filenamemcopy(searchname, suffix);
-    if (filename == NULL || strlen(filename) == 0)
+    if (filename == NULL)
         return PM3_EMALLOC;
+    if (strlen(filename) == 0) {
+        free(filename);
+        return PM3_EFILE;
+    }
     int res = searchFinalFile(foundpath, pm3dir, filename, silent);
     if (res != PM3_SUCCESS) {
         if ((res == PM3_EFILE) && (!silent))

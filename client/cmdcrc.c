@@ -89,6 +89,8 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
                 memcpy(tmp, model.name, size);
                 Models[mode] = tmp;
                 width[mode] = plen(model.spoly);
+            } else {
+                free(tmp);
             }
         }
         mfree(&model);

@@ -142,7 +142,6 @@ static int CmdNoralsyClone(const char *Cmd) {
     uint16_t year = 0;
     uint32_t id = 0;
     uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0};
-    uint8_t *bits = calloc(96, sizeof(uint8_t));
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_noralsy_clone();
@@ -154,8 +153,10 @@ static int CmdNoralsyClone(const char *Cmd) {
     if (tolower(param_getchar(Cmd, 2) == 'q'))
         blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
+    uint8_t *bits = calloc(96, sizeof(uint8_t));
     if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+        free(bits);
         return PM3_ESOFT;
     }
 

@@ -2607,7 +2607,10 @@ static int CmdHF14AMfChk(const char *Cmd) {
     if (param_getchar(Cmd, 0) == '*') {
         blockNo = 3;
         SectorsCnt = NumOfSectors(param_getchar(Cmd + 1, 0));
-        if (SectorsCnt == 0) return usage_hf14_chk();
+        if (SectorsCnt == 0) {
+            free(keyBlock);
+            return usage_hf14_chk();
+        }
     } else {
         blockNo = param_get8(Cmd, 0);
     }

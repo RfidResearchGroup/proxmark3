@@ -757,6 +757,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
         }
         default:
             PrintAndLogEx(ERR, "No dictionary loaded");
+            free(dump);
             return PM3_ESOFT;
     }
 
@@ -977,6 +978,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
             return PM3_EINVARG;
 
         memcpy(key, keyptr, sizeof(key));
+        free(keyptr);
     }
 
     iClassEncryptBlkData(blk_data, key);

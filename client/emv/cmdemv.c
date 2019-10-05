@@ -752,6 +752,7 @@ static void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t
                 if (decodeTLV)
                     TLVPrintFromTLV(tlvElm);
             }
+            tlvdb_free(tlvElm);
         }
     } else {
         if (decodeTLV)

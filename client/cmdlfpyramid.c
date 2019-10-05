@@ -217,15 +217,13 @@ static int CmdPyramidClone(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pyramid_clone();
-
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
+    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_clone();
     uint32_t blocks[5];
     uint8_t *bs = calloc(128, sizeof(uint8_t));
     if (bs == NULL) {
         return PM3_EMALLOC;
     }
-
-    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_clone();
 
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
