@@ -128,3 +128,11 @@ echo "export DISPLAY=:0" >> ~/.bashrc
 Note that it may take a quite long time for a freshly plugged Proxmark3 to be visible on a WSL /dev/ttySX port.
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
+
+## Color text on windows 10
+In later versions of windows 10 you may be able to get color to work by setting this registery key
+```
+[HKEY_CURRENT_USER\Console]
+    "VirtualTerminalLevel"=dword:00000001
+```
+If after setting this key (and restarting proxmark.exe) you get extra characters and no color text, either delete the key or set the value to 0
