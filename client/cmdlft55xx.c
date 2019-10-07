@@ -343,7 +343,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
     
     if (blockdata == NULL) 
         return PM3_EINVARG;
-    if (numblocks < 1 || numblocks > 7)
+    if (numblocks < 1 || numblocks > 8)
         return PM3_EINVARG;
 
     PacketResponseNG resp;
