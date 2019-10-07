@@ -20,7 +20,7 @@
 
         place your empty tag onto the PM3 to read and display the MCD & MSN0..2
         the values will be shown below
-         confirm whnen ready [y/n] ?y
+         confirm when ready [y/n] ?y
         #db# setting up legic card
         #db# MIM 256 card found, reading card ...
         #db# Card read, use 'hf legic decode' or
@@ -88,7 +88,7 @@ copyright = ''
 author = 'Mosci'
 version = 'v1.0.1'
 desc = [[
-This is a script which create a clone-dump of a dump from a Legic Prime Tag (MIM256 or MIM1024)
+This is a script which creates a clone-dump of a dump from a Legic Prime Tag (MIM256 or MIM1024)
 (created with 'hf legic save my_dump.hex')
 ]]
 example = [[
@@ -98,13 +98,13 @@ example = [[
 usage = [[
 script run legic_clone -h -i <file> -o <file> -c <crc> -d -s -w
 
-requiered arguments:
+required arguments:
     -i <input file>     (file to read data from)
 
 optional arguments :
     -h                  - Help text
-    -o <output file>    - requieres option -c to be given
-    -c <new-tag crc>    - requieres option -o to be given
+    -o <output file>    - requires option -c to be given
+    -c <new-tag crc>    - requires option -o to be given
     -d                  - Display content of found Segments
     -s                  - Display summary at the end
     -w                  - write directly to Tag - a file myLegicClone.hex wille be generated also
@@ -472,7 +472,7 @@ function main(args)
             outfile = a
             ofs = true
             if (file_check(a)) then
-                local answer = utils.confirm('\nthe output-file '..a..' alredy exists!\nthis will delete the previous content!\ncontinue?')
+                local answer = utils.confirm('\nthe output-file '..a..' already exists!\nthis will delete the previous content!\ncontinue?')
                 if (answer==false) then return oops('quiting') end
             end
         end
