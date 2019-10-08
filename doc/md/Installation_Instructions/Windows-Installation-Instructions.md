@@ -135,4 +135,4 @@ In later versions of windows 10 you may be able to get color to work by setting 
 [HKEY_CURRENT_USER\Console]
     "VirtualTerminalLevel"=dword:00000001
 ```
-If after setting this key (and restarting proxmark.exe) you get extra characters and no color text, either delete the key or set the value to 0
+If after setting this key (and restarting proxmark3.exe) you get extra characters and no color text, either delete the key or set the value to 0

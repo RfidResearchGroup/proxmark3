@@ -360,7 +360,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added save to .eml and .bin for `em 4x05_dump` (@mwalker33)
  - Added `s` <samples to skip> to `lf config` / `lf sniff` to skip samples when sniffing based on same option in Proxmark/proxmark3 by @marshmellow42. (@mwalker33)
  - Added support for color text on windows 10 (@mwalker33)
-
+ - Added lf t55xx detected to try without password first (@mwalker33)
+ 
 ### Fixed
  - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (@pwpiwi)
  - Changed start sequence in Qt mode (fix: short commands hangs main Qt thread) (@merlokk)
