@@ -77,13 +77,15 @@ int fileExists(const char *filename) {
 bool is_regular_file(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
-    _stat(filename, &st);
-    return S_ISREG(st.st_mode) != 0;
+    if (_stat(filename, &st) == -1)
+        return false;
 #else
     struct stat st;
-    stat(filename, &st);
-    return S_ISREG(st.st_mode) != 0;
+//    stat(filename, &st);
+    if (lstat(filename, &st) == -1)
+        return false;
 #endif
+    return S_ISREG(st.st_mode) != 0;
 }
 /**
  * @brief checks if path is directory.
@@ -93,13 +95,15 @@ bool is_regular_file(const char *filename) {
 bool is_directory(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
-    _stat(filename, &st);
-    return S_ISDIR(st.st_mode) != 0;
+    if (_stat(filename, &st) == -1)
+        return false;
 #else
     struct stat st;
-    stat(filename, &st);
-    return S_ISDIR(st.st_mode) != 0;
+//    stat(filename, &st);
+    if (lstat(filename, &st) == -1)
+        return false;
 #endif
+    return S_ISDIR(st.st_mode) != 0;
 }
 
 
