@@ -1479,10 +1479,10 @@ uint16_t manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alig
 
     int errCnt = 0, bestErr = 1000;
     uint16_t bitnum = 0, maxBits = 512, bestRun = 0;
-    size_t i, k;
+    size_t i;
 
     //find correct start position [alignment]
-    for (k = 0; k < 2; k++) {
+    for (uint8_t k = 0; k < 2; k++) {
 
         for (i = k; i < *size - 1; i += 2) {
 
