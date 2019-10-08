@@ -48,6 +48,7 @@
 #include "cmdlfpac.h"       // for pac menu
 #include "cmdlfkeri.h"      // for keri menu
 #include "cmdlfverichip.h"  // for VeriChip menu
+#include "cmdlfgallagher.h" // for GALLAGHER menu
 
 bool g_lf_threshold_set = false;
 
@@ -1225,6 +1226,7 @@ int CmdLFfind(const char *Cmd) {
     if (demodSecurakey() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Securakey ID") "found!"); goto out;}
     if (demodViking() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Viking ID") "found!"); goto out;}
     if (demodVisa2k() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") "found!"); goto out;}
+    if (demodGallagher() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") "found!"); goto out;}
 //    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") "found!"); goto out;}
 //    if (demodVerichip() == PM3_SUCCESS)        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("VeriChip ID") "found!"); goto out;}
     //if (demodFermax() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") "found!"); goto out;}
@@ -1283,6 +1285,7 @@ static command_t CommandTable[] = {
     {"cotag",       CmdLFCOTAG,         AlwaysAvailable, "{ COTAG CHIPs...             }"},
     {"em",          CmdLFEM4X,          AlwaysAvailable, "{ EM4X CHIPs & RFIDs...      }"},
     {"fdx",         CmdLFFdx,           AlwaysAvailable, "{ FDX-B RFIDs...             }"},
+    {"gallagher",   CmdLFGallagher,     AlwaysAvailable, "{ GALLAGHER RFIDs...         }"},
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
     {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID RFIDs...               }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},

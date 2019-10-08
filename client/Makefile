@@ -206,6 +206,7 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdlfem4x.c \
             cmdlffdx.c \
             cmdlfguard.c \
+            cmdlfgallagher.c \
             cmdlfhid.c \
             cmdlfhitag.c \
             cmdlfio.c \
