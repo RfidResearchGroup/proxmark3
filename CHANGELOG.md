@@ -4,6 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added lf t55xx detected to try without password first (@mwalker33)
+ - Display high bit for detected Kastle HIDs to allow `lf hid clone [id]` to work properly (@swg0101)
+ - Add option `-n` to scripts pm3* (@doegox)
  - Add `wiegand list/encode/decode` - wiegand format manipulation. Adapted to fit here. (@grauerfuchs)
  - Added support for color text on windows 10 (@mwalker33)
  - Added `s` <samples to skip> to `lf config` / `lf sniff` to skip samples when sniffing based on same option in Proxmark/proxmark3 by @marshmellow42. (@mwalker33)

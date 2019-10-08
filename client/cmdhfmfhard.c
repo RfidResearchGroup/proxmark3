@@ -237,7 +237,6 @@ static void init_bitflip_bitarrays(void) {
     uint8_t line = 0;
 #endif
 
-
     z_stream compressed_stream;
 
     char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + strlen(STATE_FILE_TEMPLATE) + 1];
@@ -248,9 +247,11 @@ static void init_bitflip_bitarrays(void) {
         for (uint16_t bitflip = 0x001; bitflip < 0x400; bitflip++) {
             bitflip_bitarrays[odd_even][bitflip] = NULL;
             count_bitflip_bitarrays[odd_even][bitflip] = 1 << 24;
+
             sprintf(state_file_name, STATE_FILE_TEMPLATE, odd_even, bitflip);
             strcpy(state_files_path, STATE_FILES_DIRECTORY);
             strcat(state_files_path, state_file_name);
+
             char *path;
             if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) != PM3_SUCCESS) {
                 continue;
@@ -1637,14 +1638,17 @@ static inline bool bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_e
     return true;
 }
 
-
+/*
 static uint_fast8_t reverse(uint_fast8_t b) {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
+}	
+*/		  
+static uint_fast8_t reverse(uint_fast8_t b) {
+    return (b * 0x0202020202ULL & 0x010884422010ULL) % 1023;
 }
-
 
 static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even) {
     uint32_t masks[2][8] = {
