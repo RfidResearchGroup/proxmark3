@@ -328,6 +328,25 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             }
             break;
         }
+        case jsfT55x7: {
+            JsonSaveStr(root, "FileType", "t55x7");
+            uint8_t id[4] = {0};
+            memcpy(id, data, 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.ID", id, sizeof(id));
+
+            for (size_t i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }
+            break;
+        }
+        case jsf14b:
+        case jsf15:
+        case jsfLegic:
+        case jsfT5555:
+        default:
+            break;
     }
 
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
@@ -652,6 +671,27 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
 
             size_t len = 0;
             JsonLoadBufAsHex(root, path, &udata[sptr], 8, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+        *datalen = sptr;
+    }
+
+    if (!strcmp(ctype, "t55x7")) {
+        size_t sptr = 0;
+        for (size_t i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            char path[30] = {0};
+            sprintf(path, "$.blocks.%zu", i);
+
+            size_t len = 0;
+            JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1057,10 +1097,10 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     if (is_directory(searchname))
         return PM3_EINVARG;
 
-
     char *filename = filenamemcopy(searchname, suffix);
     if (filename == NULL)
         return PM3_EMALLOC;
+
     if (strlen(filename) == 0) {
         free(filename);
         return PM3_EFILE;

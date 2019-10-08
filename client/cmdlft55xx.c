@@ -189,6 +189,19 @@ static int usage_t55xx_dump() {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
+static int usage_t55xx_restore() {
+    PrintAndLogEx(NORMAL, "Usage:  lf t55xx restore [r <mode>] [p <password> [o]]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     p <password>   - OPTIONAL password 4bytes (8 hex symbols)");
+    PrintAndLogEx(NORMAL, "     o              - OPTIONAL override, force pwd read despite danger to card");
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      lf t55xx restore f lf-t55xx-01020304.eml");
+    PrintAndLogEx(NORMAL, "      lf t55xx restore f lf-t55xx-01020304.eml p feedbeef o");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 static int usage_t55xx_detect() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx detect [1] [r <mode>] [p <password>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -340,8 +353,8 @@ static int usage_t55xx_protect() {
 static int CmdHelp(const char *Cmd);
 
 int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
-    
-    if (blockdata == NULL) 
+
+    if (blockdata == NULL)
         return PM3_EINVARG;
     if (numblocks < 1 || numblocks > 8)
         return PM3_EINVARG;
@@ -2145,6 +2158,59 @@ static int CmdT55xxDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdT55xxRestore(const char *Cmd) {
+
+    uint32_t password = 0;
+    uint8_t override = 0;
+    uint8_t downlink_mode = config.downlink_mode;;
+    bool usepwd = false;
+    bool errors = false;
+    uint8_t cmdp = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_t55xx_restore();
+            case 'r':
+                downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                if (downlink_mode > 3)
+                    downlink_mode = 0;
+
+                cmdp += 2;
+                break;
+            case 'p':
+                password = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                usepwd = true;
+                cmdp += 2;
+                break;
+            case 'o':
+                override = 1;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    if (errors) return usage_t55xx_restore();
+
+    PrintAndLogEx(INFO,  "Work in progress.  To be implemented");
+    if (usepwd || password || override ) {
+
+    }
+    // load file name  (json/eml/bin)
+
+    // Print dump data?
+
+    uint32_t res = PM3_SUCCESS;
+
+// page0.
+//    res = clone_t55xx_tag(blockdata, numblocks);
+
+    return res;
+}
+
 bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode) {
     // arg0 bitmodes:
     //  b0 = pwdmode
@@ -3334,12 +3400,13 @@ static command_t CommandTable[] = {
     {"chk",          CmdT55xxChkPwds,         IfPm3Lf,         "Check passwords from dictionary/flash"},
     {"detect",       CmdT55xxDetect,          AlwaysAvailable, "[1] Try detecting the tag modulation from reading the configuration block."},
     {"deviceconfig", CmdT55xxSetDeviceConfig, IfPm3Lf,         "Set/Get T55XX device configuration (startgap, writegap, write0, write1, readgap"},
-    {"dump",         CmdT55xxDump,            IfPm3Lf,         "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
+    {"dump",         CmdT55xxDump,            IfPm3Lf,         "[password] [o] Dump T55xx card Page 0 block 0-7. Optional [password], [override]"},
     {"info",         CmdT55xxInfo,            AlwaysAvailable, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
     {"p1detect",     CmdT55xxDetectPage1,     IfPm3Lf,         "[1] Try detecting if this is a t55xx tag by reading page 1"},
     {"protect",      CmdT55xxProtect,         IfPm3Lf,         "Password protect tag"},
     {"read",         CmdT55xxReadBlock,       IfPm3Lf,         "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},
     {"resetread",    CmdResetRead,            IfPm3Lf,         "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
+    {"restore",      CmdT55xxRestore,         IfPm3Lf,         "[password] Restore T55xx card Page 0 / Page 1 blocks"},
     {"recoverpw",    CmdT55xxRecoverPW,       IfPm3Lf,         "[password] Try to recover from bad password write from a cloner. Only use on PW protected chips!"},
     {"special",      special,                 IfPm3Lf,         "Show block changes with 64 different offsets"},
     {"trace",        CmdT55xxReadTrace,       AlwaysAvailable, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
