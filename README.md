@@ -94,8 +94,9 @@ It's needed to have a good USB cable to connect Proxmark3 to USB. If you have st
 
 ## The end
 
-- [@herrmann1001](https://mobile.twitter.com/herrmann1001) July 2018
+- July 2018 [@herrmann1001](https://mobile.twitter.com/herrmann1001)
 - updated Feb 2019 [@5w0rdfish](https://mobile.twitter.com/5w0rdFish)
+- updated 2019 [@doegox](https://mobile.twitter.com/doegox)
 
 # Donations
 
