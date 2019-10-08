@@ -2644,7 +2644,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         }
     }
 
-    if (errors) return usage_t55xx_chk();
+    if (errors || cmdp == 0) return usage_t55xx_chk();
 
     /*
     // block 7,  page1 = false, usepwd = false, override = false, pwd = 00000000
@@ -2788,11 +2788,11 @@ static int CmdT55xxBruteForce(const char *Cmd) {
                 break;
         }
     }
-    if (start_password >= end_password) {
-        return usage_t55xx_bruteforce();
-    }
 
-    if (errors) return usage_t55xx_bruteforce();
+    if (start_password >= end_password)
+        errors = true;
+
+    if (errors || cmdp == 0) return usage_t55xx_bruteforce();
 
     uint64_t t1 = msclock();
 
@@ -2891,8 +2891,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
         }
     }
 
-    if (errors) return usage_t55xx_recoverpw();
-
+    if (errors || cmdp == 0) return usage_t55xx_recoverpw();
 
     // first try fliping each bit in the expected password
     while (bit < 32) {
