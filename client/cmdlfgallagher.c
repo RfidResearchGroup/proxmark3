@@ -42,7 +42,7 @@ static int CmdGallagherDemod(const char *Cmd) {
 
     (void)Cmd;
     bool st = true;
-    if (ASKDemod_ext("32 0 0 0 a", false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext("32 0 0 0", false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - GALLAGHER: ASKDemod failed");
         return PM3_ESOFT;
     }
@@ -69,7 +69,7 @@ static int CmdGallagherDemod(const char *Cmd) {
     uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
     uint32_t raw3 = bytebits_to_byte(DemodBuffer + 64, 32);
 
-    // preamble     then appears to have marker bits of "10"                                                                                                                                       CS?
+    // preamble                                                                                                                                       CS?
 
     PrintAndLogEx(SUCCESS, "GALLAGHER Tag Found -- Raw: %08X%08X%08X", raw1, raw2, raw3);
     PrintAndLogEx(INFO, "How the Raw ID is translated by the reader is unknown. Share your trace file on forum");
