@@ -906,11 +906,11 @@ void RAMFUNC SniffIClass(void) {
     for (;;) {
         WDT_HIT();
 
-        if (checked == 2000) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || data_available()) break;
             checked = 0;
         }
-        checked++;
+        ++checked;
 
         previous_data <<= 8;
         previous_data |= *data;
@@ -1014,11 +1014,11 @@ static bool GetIClassCommandFromReader(uint8_t *received, int *len, int maxLen) 
 
         WDT_HIT();
 
-        if (checked == 2000) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || data_available()) return false;
             checked = 0;
         }
-        checked++;
+        ++checked;
 
         // keep tx buffer in a defined state anyway.
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))
@@ -1666,11 +1666,11 @@ static int SendIClassAnswer(uint8_t *resp, int respLen, uint16_t delay) {
     uint16_t checked = 0;
     for (;;) {
 
-        if (checked == 2000) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || data_available()) return 0;
             checked = 0;
         }
-        checked++;
+        ++checked;
 
         // Prevent rx holding register from overflowing
         if ((AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)) {
@@ -1828,11 +1828,11 @@ static int GetIClassAnswer(uint8_t *receivedResponse, int maxLen, int *wait) {
     for (;;) {
         WDT_HIT();
 
-        if (checked == 2000) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || data_available()) return false;
             checked = 0;
         }
-        checked++;
+        ++checked;
 
         // Wait for byte be become available in rx holding register
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -2123,11 +2123,11 @@ void ReaderIClass(uint8_t arg0) {
         }
         LED_B_OFF();
 
-        if (checked == 2000) {
+        if (checked == 1000) {
             userCancelled = BUTTON_PRESS() || data_available();
             checked = 0;
         }
-        checked++;
+        ++checked;
     }
 
     if (userCancelled) {
@@ -2326,11 +2326,11 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     uint8_t startup_limit = 10;
     while (read_status != 2) {
 
-        if (checked == 2000) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || !data_available()) goto out;
             checked = 0;
         }
-        checked++;
+        ++checked;
 
         read_status = handshakeIclassTag_ext(card_data, use_credit_key);
         if (startup_limit-- == 0) {
@@ -2347,11 +2347,11 @@ void iClass_Authentication_fast(uint64_t arg0, uint64_t arg1, uint8_t *datain) {
     for (i = 0; i < keyCount; i++) {
 
         // Allow button press / usb cmd to interrupt device
-        if (checked == 2000) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || !data_available()) goto out;
             checked = 0;
         }
-        checked++;
+        ++checked;
 
         WDT_HIT();
         LED_B_ON();

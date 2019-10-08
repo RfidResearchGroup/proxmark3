@@ -200,7 +200,7 @@ Bootrom code will still use the old frame format to remain compatible with other
 (`bootrom/bootrom.c`)
 
     usb_read (common/usb_cdc.c) ⇒ UsbPacketReceived (bootrom.c)
-      ⇒ CMD_DEVICE_INFO / CMD_START_FLASH / CMD_FINISH_WRITE / CMD_HARDWARE_RESET / CMD_SETUP_WRITE
+      ⇒ CMD_DEVICE_INFO / CMD_START_FLASH / CMD_FINISH_WRITE / CMD_HARDWARE_RESET
 
 also `usb_enable`, `usb_disable` (`common/usb_cdc.c`)
 

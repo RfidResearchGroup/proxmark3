@@ -1074,6 +1074,7 @@ static int l_searchfile(lua_State *L) {
     }
 
     lua_pushstring(L, path);
+    free(path);
     return 1;
 }
 

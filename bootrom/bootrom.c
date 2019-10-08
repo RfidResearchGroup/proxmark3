@@ -12,7 +12,8 @@
 
 struct common_area common_area __attribute__((section(".commonarea")));
 unsigned int start_addr, end_addr, bootrom_unlocked;
-extern char _bootrom_start, _bootrom_end, _flash_start, _flash_end;
+extern char _bootrom_start, _bootrom_end, _flash_end;
+extern uint32_t _flash_start[AT91C_IFLASH_NB_OF_PAGES * AT91C_IFLASH_PAGE_SIZE / sizeof(uint32_t)];
 extern uint32_t _osimage_entry;
 
 static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
@@ -149,23 +150,12 @@ void UsbPacketReceived(uint8_t *packet, int len) {
         }
         break;
 
-        case CMD_SETUP_WRITE: {
-            /* The temporary write buffer of the embedded flash controller is mapped to the
-            * whole memory region, only the last 8 bits are decoded.
-            */
-            volatile uint32_t *p = (volatile uint32_t *)&_flash_start;
-            for (i = 0; i < 12; i++)
-                p[i + arg0] = c->d.asDwords[i];
-        }
-        break;
-
         case CMD_FINISH_WRITE: {
-            uint32_t *flash_mem = (uint32_t *)(&_flash_start);
             for (int j = 0; j < 2; j++) {
                 uint32_t flash_address = arg0 + (0x100 * j);
                 AT91PS_EFC efc_bank = AT91C_BASE_EFC0;
                 int offset = 0;
-                uint32_t page_n = (flash_address - ((uint32_t)flash_mem)) / AT91C_IFLASH_PAGE_SIZE;
+                uint32_t page_n = (flash_address - ((uint32_t)_flash_start)) / AT91C_IFLASH_PAGE_SIZE;
                 if (page_n >= AT91C_IFLASH_NB_OF_PAGES / 2) {
                     page_n -= AT91C_IFLASH_NB_OF_PAGES / 2;
                     efc_bank = AT91C_BASE_EFC1;
@@ -173,7 +163,7 @@ void UsbPacketReceived(uint8_t *packet, int len) {
                     offset = (AT91C_IFLASH_NB_OF_PAGES / 2) * AT91C_IFLASH_PAGE_SIZE / sizeof(uint32_t);
                 }
                 for (i = 0 + (64 * j); i < 64 + (64 * j); i++) {
-                    flash_mem[offset + i] = c->d.asDwords[i];
+                    _flash_start[offset + i] = c->d.asDwords[i];
                 }
 
                 /* Check that the address that we are supposed to write to is within our allowed region */

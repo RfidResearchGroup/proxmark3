@@ -757,6 +757,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
         }
         default:
             PrintAndLogEx(ERR, "No dictionary loaded");
+            free(dump);
             return PM3_ESOFT;
     }
 
@@ -977,6 +978,7 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
             return PM3_EINVARG;
 
         memcpy(key, keyptr, sizeof(key));
+        free(keyptr);
     }
 
     iClassEncryptBlkData(blk_data, key);
@@ -1332,7 +1334,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     }
 
     // save the dump to .bin file
-    PrintAndLogEx(SUCCESS, "saving dump file - %d blocks read", gotBytes / 8);
+    PrintAndLogEx(SUCCESS, "saving dump file - %zu blocks read", gotBytes / 8);
     saveFile(filename, ".bin", tag_data, gotBytes);
     saveFileEML(filename, tag_data, gotBytes, 8);
     saveFileJSON(filename, jsfIclass, tag_data, gotBytes);
@@ -2081,7 +2083,7 @@ static int loadKeys(char *filename) {
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
     if (bytes_read > ICLASS_KEYS_MAX * 8) {
-        PrintAndLogEx(WARNING, "File is too long to load - bytes: %u", bytes_read);
+        PrintAndLogEx(WARNING, "File is too long to load - bytes: %zu", bytes_read);
         free(dump);
         return 0;
     }
@@ -2502,7 +2504,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
             case 'p':
                 param_gethex_ex(Cmd, cmdp + 1, EPURSE, &len);
                 if (len >> 1 != sizeof(EPURSE)) {
-                    PrintAndLogEx(WARNING, "Wrong EPURSE length, expected %d got [%d]  ", sizeof(EPURSE), len >> 1);
+                    PrintAndLogEx(WARNING, "Wrong EPURSE length, expected %zu got [%d]  ", sizeof(EPURSE), len >> 1);
                     errors = true;
                 }
                 cmdp += 2;
@@ -2652,7 +2654,7 @@ void PrintPreCalc(iclass_prekey_t *list, int itemcnt) {
     for (int i = 0; i < itemcnt; i++) {
 
         if (i < 10) {
-            PrintAndLogEx(NORMAL, "[%2d] | %016" PRIx64 " | %08" PRIx32, i, bytes_to_num(list[i].key, 8), bytes_to_num(list[i].mac, 4));
+            PrintAndLogEx(NORMAL, "[%2d] | %016" PRIx64 " | %08" PRIx64, i, bytes_to_num(list[i].key, 8), bytes_to_num(list[i].mac, 4));
         } else if (i == 10) {
             PrintAndLogEx(SUCCESS, "... skip printing the rest");
         }

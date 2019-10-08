@@ -75,14 +75,14 @@ static int CmdHFFidoInfo(const char *cmd) {
 
     if (!strncmp((char *)buf, "U2F_V2", 7)) {
         if (!strncmp((char *)buf, "FIDO_2_0", 8)) {
-            PrintAndLogEx(INFO, "FIDO2 authenticator detected. Version: %.*s", len, buf);
+            PrintAndLogEx(INFO, "FIDO2 authenticator detected. Version: %.*s", (int)len, buf);
         } else {
             PrintAndLogEx(INFO, "FIDO authenticator detected (not standard U2F).");
             PrintAndLogEx(INFO, "Non U2F authenticator version:");
             dump_buffer((const unsigned char *)buf, len, NULL, 0);
         }
     } else {
-        PrintAndLogEx(INFO, "FIDO U2F authenticator detected. Version: %.*s", len, buf);
+        PrintAndLogEx(INFO, "FIDO U2F authenticator detected. Version: %.*s", (int)len, buf);
     }
 
     res = FIDO2GetInfo(buf, sizeof(buf), &len, &sw);
@@ -274,7 +274,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     PrintAndLogEx(NORMAL, "");
     if (APDULogging)
         PrintAndLogEx(NORMAL, "---------------------------------------------------------------");
-    PrintAndLogEx(NORMAL, "data len: %d", len);
+    PrintAndLogEx(NORMAL, "data len: %zu", len);
     if (verbose2) {
         PrintAndLogEx(NORMAL, "--------------data----------------------");
         dump_buffer((const unsigned char *)buf, len, NULL, 0);
@@ -316,7 +316,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     // get hash
     int hashp = 1 + 65 + 1 + keyHandleLen + derLen;
-    PrintAndLogEx(SUCCESS, "Hash[%d]: %s", len - hashp, sprint_hex(&buf[hashp], len - hashp));
+    PrintAndLogEx(SUCCESS, "Hash[%zu]: %s", len - hashp, sprint_hex(&buf[hashp], len - hashp));
 
     // check ANSI X9.62 format ECDSA signature (on P-256)
     uint8_t rval[300] = {0};
@@ -543,7 +543,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     PrintAndLogEx(SUCCESS, "User presence: %s", (buf[0] ? "verified" : "not verified"));
     uint32_t cntr = (uint32_t)bytes_to_num(&buf[1], 4);
     PrintAndLogEx(SUCCESS, "Counter: %d", cntr);
-    PrintAndLogEx(SUCCESS, "Hash[%d]: %s", len - 5, sprint_hex(&buf[5], len - 5));
+    PrintAndLogEx(SUCCESS, "Hash[%zu]: %s", len - 5, sprint_hex(&buf[5], len - 5));
 
     // check ANSI X9.62 format ECDSA signature (on P-256)
     uint8_t rval[300] = {0};
@@ -736,7 +736,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
         return 0;
     }
 
-    PrintAndLogEx(SUCCESS, "MakeCredential result (%d b) OK.", len);
+    PrintAndLogEx(SUCCESS, "MakeCredential result (%zu b) OK.", len);
     if (showCBOR) {
         PrintAndLogEx(SUCCESS, "CBOR make credential response:");
         PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");
@@ -862,7 +862,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
         return 0;
     }
 
-    PrintAndLogEx(SUCCESS, "GetAssertion result (%d b) OK.", len);
+    PrintAndLogEx(SUCCESS, "GetAssertion result (%zu b) OK.", len);
     if (showCBOR) {
         PrintAndLogEx(SUCCESS, "CBOR get assertion response:");
         PrintAndLogEx(NORMAL, "---------------- CBOR ------------------");

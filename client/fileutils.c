@@ -153,7 +153,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved %u bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved %zu bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -410,7 +410,6 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     }
 
     size_t bytes_read = fread(dump, 1, fsize, f);
-    fclose(f);
 
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
@@ -420,18 +419,19 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     }
 
     if (bytes_read > maxdatalen) {
-        PrintAndLogEx(WARNING, "Warning, bytes read exceed calling array limit. Max bytes is %d bytes", maxdatalen);
+        PrintAndLogEx(WARNING, "Warning, bytes read exceed calling array limit. Max bytes is %zu bytes", maxdatalen);
         bytes_read = maxdatalen;
     }
 
     memcpy((data), dump, bytes_read);
     free(dump);
 
-    PrintAndLogEx(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
+    PrintAndLogEx(SUCCESS, "loaded %zu bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
 
     *datalen = bytes_read;
 
 out:
+    fclose(f);
     free(fileName);
     return retval;
 }
@@ -443,8 +443,6 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     if (res != PM3_SUCCESS) {
         return PM3_EFILE;
     }
-
-    int retval = PM3_SUCCESS;
 
     FILE *f = fopen(path, "rb");
     if (!f) {
@@ -478,13 +476,14 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
+        free(*pdata);
         return PM3_EFILE;
     }
 
     *datalen = bytes_read;
 
-    PrintAndLogEx(SUCCESS, "loaded %d bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
-    return retval;
+    PrintAndLogEx(SUCCESS, "loaded %zu bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+    return PM3_SUCCESS;
 }
 
 int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
@@ -531,7 +530,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded %d bytes from text file " _YELLOW_("%s"), counter, fileName);
+    PrintAndLogEx(SUCCESS, "loaded %zu bytes from text file " _YELLOW_("%s"), counter, fileName);
 
     if (datalen)
         *datalen = counter;
@@ -782,7 +781,9 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
             *pdata = realloc(*pdata, mem_size);
 
             if (*pdata == NULL) {
-                return PM3_EFILE;
+                retval = PM3_EFILE;
+                fclose(f);
+                goto out;
             } else {
                 memset(*pdata + (mem_size - block_size), 0, block_size);
             }
@@ -1058,8 +1059,12 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
 
 
     char *filename = filenamemcopy(searchname, suffix);
-    if (filename == NULL || strlen(filename) == 0)
+    if (filename == NULL)
         return PM3_EMALLOC;
+    if (strlen(filename) == 0) {
+        free(filename);
+        return PM3_EFILE;
+    }
     int res = searchFinalFile(foundpath, pm3dir, filename, silent);
     if (res != PM3_SUCCESS) {
         if ((res == PM3_EFILE) && (!silent))

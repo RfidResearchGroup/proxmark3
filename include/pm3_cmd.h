@@ -253,7 +253,7 @@ typedef struct {
 
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
-#define CMD_SETUP_WRITE                                                   0x0001
+//#define CMD_SETUP_WRITE                                                   0x0001
 #define CMD_FINISH_WRITE                                                  0x0003
 #define CMD_HARDWARE_RESET                                                0x0004
 #define CMD_START_FLASH                                                   0x0005
@@ -373,6 +373,7 @@ typedef struct {
 #define CMD_LF_T55XX_WAKEUP                                               0x0224
 #define CMD_LF_COTAG_READ                                                 0x0225
 #define CMD_LF_T55XX_SET_CONFIG                                           0x0226
+#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0227
 
 #define CMD_LF_T55XX_CHK_PWDS                                             0x0230
 
@@ -578,6 +579,10 @@ typedef struct {
 // Quit program                         client:     reserved, order to quit the program
 #define PM3_EFATAL            -99
 
+// LF
+#define LF_DIVISOR(f) (((12000 + (f)/2)/(f))-1)
+#define LF_DIVISOR_125 LF_DIVISOR(125)
+#define LF_DIVISOR_134 LF_DIVISOR(134)
 
 // Receiving from USART need more than 30ms as we used on USB
 // else we get errors about partial packet reception

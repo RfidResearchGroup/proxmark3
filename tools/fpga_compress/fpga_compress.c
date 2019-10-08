@@ -275,11 +275,15 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
                 /* Four byte length field */
                 current_length += fgetc(infile) << 24;
                 current_length += fgetc(infile) << 16;
-                numbytes += 2;
+                current_length += fgetc(infile) << 8;
+                current_length += fgetc(infile) << 0;
+                numbytes += 4;
+                break;
             default: /* Fall through, two byte length field */
                 current_length += fgetc(infile) << 8;
                 current_length += fgetc(infile) << 0;
                 numbytes += 2;
+                break;
         }
 
         if (current_name != 'e' && current_length > 255) {

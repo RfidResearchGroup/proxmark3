@@ -123,7 +123,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "Trying FC: %u; CN: %u;  Issue level: %u; OEM: %u", card->FacilityCode, card->CardNumber, card->IssueLevel, card->OEM);
+        PrintAndLogEx(INFO, "Trying FC: %u; CN: %"PRIu64";  Issue level: %u; OEM: %u", card->FacilityCode, card->CardNumber, card->IssueLevel, card->OEM);
 
     lf_hidsim_t payload;
     payload.hi2 = packed.Top;
@@ -177,7 +177,7 @@ static int CmdHIDDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - HID preamble not found");
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - HID error in Manchester data, size %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - HID error in Manchester data, size %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - HID error demoding fsk %d", idx);
 
@@ -239,7 +239,7 @@ static int CmdHIDDemod(const char *Cmd) {
             fc = ((hi & 0xF) << 12) | (lo >> 20);
         }
         if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
-            PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: %08x (%u) - Format Len: 32bit - CC: %u - FC: %u - Card: %u", lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+            PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: %x%08x (%u) - Format Len: 32bit - CC: %u - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
             PrintAndLogEx(SUCCESS, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - OEM: %03u - FC: %u - Card: %u",
                           hi, lo, cardnum, fmtLen, oem, fc, cardnum);

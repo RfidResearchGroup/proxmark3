@@ -2496,7 +2496,7 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
         if ((resp.oldarg[0] & 0xff) == 1) {
             PrintAndLogEx(INFO, "Ultralight-C new password: %s", sprint_hex(pwd, 16));
         } else {
-            PrintAndLogEx(WARNING, "Failed writing at block %d", resp.oldarg[1] & 0xff);
+            PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xff));
             return 1;
         }
     } else {

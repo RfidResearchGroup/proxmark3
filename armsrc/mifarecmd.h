@@ -21,8 +21,10 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
 void MifareReadSector(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 //void MifareUWriteBlockCompat(uint8_t arg0,uint8_t *datain);
+
 void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
-void MifareNested(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
+void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, bool calibrate, uint8_t *key);
+
 void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
 void MifareAcquireNonces(uint32_t arg0, uint32_t flags);
 void MifareChkKeys(uint8_t *datain);

@@ -59,7 +59,7 @@ static int CmdSecurakeyDemod(const char *Cmd) {
         else if (ans == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: preamble not found");
         else if (ans == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: Size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Securakey: ans: %d", ans);
         return PM3_ESOFT;
@@ -90,7 +90,7 @@ static int CmdSecurakeyDemod(const char *Cmd) {
     // remove marker bits (0's every 9th digit after preamble) (pType = 3 (always 0s))
     size = removeParity(bits_no_spacer, 0, 9, 3, 85);
     if (size != 85 - 9) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error removeParity: %d", size);
+        PrintAndLogEx(DEBUG, "DEBUG: Error removeParity: %zu", size);
         return 0;
     }
 

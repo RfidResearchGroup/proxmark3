@@ -245,7 +245,7 @@ static int CmdFdxDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc_16, calcCrc, (calcCrc == crc_16) ? _GREEN_("Ok") : _RED_("Fail"));
 
     if (g_debugMode) {
-        PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);
+        PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
         char *bin = sprint_bin_break(DemodBuffer, size, 16);
         PrintAndLogEx(DEBUG, "DEBUG bin stream:\n%s", bin);
     }

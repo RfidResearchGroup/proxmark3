@@ -290,10 +290,12 @@ void setT55xxConfig(uint8_t arg0, t55xx_configurations_t *c) {
 #ifdef WITH_FLASH
     // shall persist to flashmem
     if (arg0 == 0) {
+        BigBuf_free();
         return;
     }
 
     if (!FlashInit()) {
+        BigBuf_free();
         return;
     }
 
@@ -370,16 +372,19 @@ void loadT55xxConfig(void) {
  */
 void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint32_t period_1, uint8_t *command) {
 
-    // start timer
-    StartTicks();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     // use lf config settings
     sample_config *sc = getSamplingConfig();
 
+
     // Make sure the tag is reset
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    WaitMS(500);
+
+    // start timer
+    StartTicks();
+
+    WaitMS(100);
 
     // clear read buffer
     BigBuf_Clear_keep_EM();
@@ -387,10 +392,10 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     LFSetupFPGAForADC(sc->divisor, true);
 
     // little more time for the tag to fully power up
-    WaitMS(200);
+    WaitMS(20);
 
     // if delay_off = 0 then just bitbang 1 = antenna on 0 = off for respective periods.
-    bool bitbang = delay_off == 0;
+    bool bitbang = (delay_off == 0);
     // now modulate the reader field
     if (bitbang) {
         // HACK it appears the loop and if statements take up about 7us so adjust waits accordingly...
@@ -399,6 +404,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
             DbpString("[!] Warning periods cannot be less than 7us in bit bang mode");
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             LED_D_OFF();
+	    reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_EINVARG, NULL, 0);
             return;
         }
 
@@ -460,6 +466,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
 
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
     // tell client we are done
     reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_SUCCESS, NULL, 0);
 }
@@ -1691,9 +1698,8 @@ void T55xxResetRead(uint8_t flags) {
     DoPartialAcquisition(0, true, BigBuf_max_traceLen(), 0);
 
     // Turn the field off
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-    reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
-
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    reply_ng(CMD_LF_T55XX_RESET_READ, PM3_SUCCESS, NULL, 0);
     LED_A_OFF();
 }
 

@@ -900,7 +900,7 @@ static int CmdHF14BDump(const char *Cmd) {
     //select
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         if (resp.oldarg[0]) {
-            PrintAndLogEx(INFO, "failed to select %d | %d", resp.oldarg[0], resp.oldarg[1]);
+            PrintAndLogEx(INFO, "failed to select %" PRId64 " | %" PRId64, resp.oldarg[0], resp.oldarg[1]);
             goto out;
         }
     }

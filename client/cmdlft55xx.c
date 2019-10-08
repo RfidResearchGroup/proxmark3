@@ -83,7 +83,7 @@ static int usage_t55xx_config() {
     PrintAndLogEx(NORMAL, "     d <FSK|FSK1|FSK1a|FSK2|FSK2a|ASK|PSK1|PSK2|NRZ|BI|BIa>  - Set demodulation FSK / ASK / PSK / NRZ / Biphase / Biphase A");
     PrintAndLogEx(NORMAL, "     i [0/1]                          - Set/reset data signal inversion");
     PrintAndLogEx(NORMAL, "     o [offset]                       - Set offset, where data should start decode in bitstream");
-    PrintAndLogEx(NORMAL, "     Q5 [0/1]                         - Set/reset as Q5(T5555) chip instead of T55x7");
+    PrintAndLogEx(NORMAL, "     Q5 [0/1]                         - Set/reset as T5555 ( Q5 ) chip instead of T55x7");
     PrintAndLogEx(NORMAL, "     ST [0/1]                         - Set/reset Sequence Terminator on");
     PrintAndLogEx(NORMAL, ""); // layout is a little differnet, so seperate until a better fix
     print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
@@ -103,9 +103,10 @@ static int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override safety check");
     PrintAndLogEx(NORMAL, "     1            - OPTIONAL 0|1  read Page 1 instead of Page 0");
     print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
-    PrintAndLogEx(NORMAL, "     ****WARNING****");
-    PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured for a pwd");
-    PrintAndLogEx(NORMAL, "     can damage the tag");
+    PrintAndLogEx(NORMAL, "     " _RED_("**** WARNING ****"));
+    PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured");
+    PrintAndLogEx(NORMAL, "     for a password can damage the tag");
+    PrintAndLogEx(NORMAL, "     " _RED_("*****************"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx read b 0                 - read data from block 0");
@@ -232,7 +233,7 @@ static int usage_t55xx_wakup() {
 static int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "This command uses a dictionary attack");
     PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");
+    PrintAndLogEx(NORMAL,  _RED_("WARNING:") " this may brick non-password protected chips!");
     PrintAndLogEx(NORMAL, "Try to reading block 7 before\n");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx chk [h] [m] [r <mode>] [i <*.dic>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -250,7 +251,7 @@ static int usage_t55xx_chk() {
 static int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "This command uses bruteforce to scan a number range");
     PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may brick non-password protected chips!");
     PrintAndLogEx(NORMAL, "Try reading block 7 before\n");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx bruteforce [h] [r <mode>] [s <start password>] [e <end password>]");
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
@@ -268,7 +269,7 @@ static int usage_t55xx_bruteforce() {
 static int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "This command uses a few tricks to try to recover mangled password");
     PrintAndLogEx(NORMAL, "press " _YELLOW_("'enter'") " to cancel the command");
-    PrintAndLogEx(NORMAL, "WARNING: this may brick non-password protected chips!");
+    PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may brick non-password protected chips!");
     PrintAndLogEx(NORMAL, "Try reading block 7 before\n");
     PrintAndLogEx(NORMAL, "Usage: lf t55xx recoverpw [r <mode>] [p <password>]");
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
@@ -292,11 +293,11 @@ static int usage_t55xx_wipe() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h               - this help");
     PrintAndLogEx(NORMAL, "     c <block0>      - set configuration from a block0");
-    PrintAndLogEx(NORMAL, "     q               - indicates to use the T5555 (Q5) default configuration block");
+    PrintAndLogEx(NORMAL, "     q               - indicates to use T5555 ( Q5 ) default configuration block");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf t55xx wipe      -  wipes a t55x7 tag,    config block 0x000880E0");
-    PrintAndLogEx(NORMAL, "      lf t55xx wipe q    -  wipes a t5555 Q5 tag, config block 0x6001F004");
+    PrintAndLogEx(NORMAL, "      lf t55xx wipe      -  wipes a T55x7 tag,    config block 0x000880E0");
+    PrintAndLogEx(NORMAL, "      lf t55xx wipe q    -  wipes a T5555 ( Q5 ) tag, config block 0x6001F004");
     return PM3_SUCCESS;
 }
 static int usage_t55xx_deviceconfig() {
@@ -342,7 +343,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
     
     if (blockdata == NULL) 
         return PM3_EINVARG;
-    if (numblocks < 1 || numblocks > 7)
+    if (numblocks < 1 || numblocks > 8)
         return PM3_EINVARG;
 
     PacketResponseNG resp;
@@ -1256,7 +1257,7 @@ bool GetT55xxBlockData(uint32_t *blockdata) {
     uint8_t idx = config.offset;
 
     if (idx + 32 > DemodBufferLen) {
-        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %d)", idx, DemodBufferLen - 32);
+        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %zu)", idx, DemodBufferLen - 32);
         return false;
     }
 
@@ -1473,7 +1474,7 @@ int special(const char *Cmd) {
 }
 
 int printConfiguration(t55xx_conf_block_t b) {
-    PrintAndLogEx(NORMAL, "    Chip Type      : %s", (b.Q5) ? "T5555(Q5)" : "T55x7");
+    PrintAndLogEx(NORMAL, "    Chip Type      : %s", (b.Q5) ? "T5555 ( Q5 )" : "T55x7");
     PrintAndLogEx(NORMAL, "    Modulation     : %s", GetSelectedModulationStr(b.modulation));
     PrintAndLogEx(NORMAL, "    Bit Rate       : %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
     PrintAndLogEx(NORMAL, "    Inverted       : %s", (b.inverted) ? _GREEN_("Yes") : "No");
@@ -1682,7 +1683,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         si += 9;
 
         if (hdr != 0x1FF) {
-            PrintAndLogEx(FAILED, "Invalid Q5 Trace data header (expected 0x1FF, found %X)", hdr);
+            PrintAndLogEx(FAILED, "Invalid T555 ( Q5 ) Trace data header (expected 0x1FF, found %X)", hdr);
             return PM3_ESOFT;
         }
 
@@ -1809,7 +1810,7 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
 }
 
 void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
-    PrintAndLogEx(NORMAL, "-- T5555 (Q5) Trace Information -----------------------------");
+    PrintAndLogEx(NORMAL, "-- T5555 ( Q5 ) Trace Information ---------------------------");
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
     PrintAndLogEx(NORMAL, " ICR IC Revision  : %d", data.icr);
     PrintAndLogEx(NORMAL, "     Lot          : %c%d", data.lotidc, data.lotid);
@@ -1976,7 +1977,7 @@ static int CmdT55xxInfo(const char *Cmd) {
         uint32_t inv      = (block0 >> (32 - 25)) & 0x01;
         uint32_t datamod  = (block0 >> (32 - 28)) & 0x07;
         uint32_t maxblk   = (block0 >> (32 - 31)) & 0x07;
-        uint32_t st       = (block0 >> (32 - 32)) & 0x01;
+        uint32_t st       = block0 & 0x01;
         PrintAndLogEx(NORMAL, "-- Q5 Configuration & Tag Information -----------------------");
         PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
         PrintAndLogEx(NORMAL, " Header                    : 0x%03X%s", header, (header != 0x600) ? _RED_(" - Warning") : "");
@@ -2388,7 +2389,7 @@ static void t55x7_create_config_block(int tagtype) {
             snprintf(retStr, sizeof(buf), "%08X - T55X7 Raw", T55X7_RAW_CONFIG_BLOCK);
             break;
         case 2:
-            snprintf(retStr, sizeof(buf), "%08X - T5555 Q5 Default", T5555_DEFAULT_CONFIG_BLOCK);
+            snprintf(retStr, sizeof(buf), "%08X - T5555 ( Q5 ) Default", T5555_DEFAULT_CONFIG_BLOCK);
             break;
         default:
             break;
@@ -2426,19 +2427,31 @@ static int CmdResetRead(const char *Cmd) {
 
     flags = downlink_mode << 3;
 
+    PacketResponseNG resp;
+
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
-    if (!WaitForResponseTimeout(CMD_ACK, NULL, 2500)) {
+    if (!WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t got[BIGBUF_SIZE - 1];
-    if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
-        PrintAndLogEx(WARNING, "command execution time out");
-        return PM3_ETIMEOUT;
+    if (resp.status == PM3_SUCCESS) {
+
+        uint8_t *got = calloc(BIGBUF_SIZE - 1, sizeof(uint8_t));
+        if (got == NULL) {
+            PrintAndLogEx(WARNING, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+
+        if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(got);
+            return PM3_ETIMEOUT;
+        }
+        setGraphBuf(got, sizeof(got));
+        free(got);
     }
-    setGraphBuf(got, sizeof(got));
     return PM3_SUCCESS;
 }
 
@@ -2480,7 +2493,7 @@ static int CmdT55xxWipe(const char *Cmd) {
     if (errors) return usage_t55xx_wipe();
 
 
-    PrintAndLogEx(INFO, "\nBegin wiping %s", (Q5) ? "Q5 / T5555 tag" : "T55x7 tag");
+    PrintAndLogEx(INFO, "\nBegin wiping %s", (Q5) ? "T5555 ( Q5 ) tag" : "T55x7 tag");
 
     // default config blocks.
     if (gotconf == false) {
@@ -2612,12 +2625,12 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         }
 
         if (resp.oldarg[0]) {
-            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08X") " ]. Trying to validate", resp.oldarg[1]);
+            PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX64) " ]. Trying to validate", resp.oldarg[1]);
 
             if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.oldarg[1], downlink_mode)) {
                 found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", resp.oldarg[1]);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", resp.oldarg[1]);
 
                 } else {
                     PrintAndLogEx(WARNING, "Check pwd failed");
@@ -2660,7 +2673,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
             curr_password = bytes_to_num(keyBlock + 4 * c, 4);
 
-            PrintAndLogEx(INFO, "Testing %08X", curr_password);
+            PrintAndLogEx(INFO, "Testing %08"PRIX64, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
 
                 if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
@@ -2669,7 +2682,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
                 found = tryDetectModulation(dl_mode, T55XX_PrintConfig);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") " ]", curr_password);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", curr_password);
                     dl_mode = 4; // Exit other downlink mode checks
                     c = keycount; // Exit loop
                 }

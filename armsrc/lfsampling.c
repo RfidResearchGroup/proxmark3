@@ -24,11 +24,12 @@ Default LF config is set to:
     divisor = 95 (125kHz)
     trigger_threshold = 0
     */
-sample_config config = { 1, 8, 1, 95, 0, 0 } ;
+sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0 } ;
 
 void printConfig() {
+    uint32_t d = config.divisor;
     DbpString(_BLUE_("LF Sampling config"));
-    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d kHz")")", config.divisor, 12000 / (config.divisor + 1));
+    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")")", d, 12000 / (d+1), ((1200000 + (d+1)/2) / (d+1)) - ((12000 / (d+1)) * 100));
     Dbprintf("  [b] bps.................%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
@@ -148,17 +149,16 @@ uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool averag
     uint32_t sample_total_saved = 0;
     uint32_t cancel_counter = 0;
 
-    uint16_t checker = 0;
+    uint16_t checked = 0;
 
     while (true) {
-        if (checker == 1000) {
+        if (checked == 1000) {
             if (BUTTON_PRESS() || data_available())
                 break;
             else
-                checker = 0;
-        } else {
-            ++checker;
+                checked = 0;
         }
+        ++checked;
 
         WDT_HIT();
 

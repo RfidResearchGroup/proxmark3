@@ -87,7 +87,7 @@ static int CmdPyramidDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: preamble not found");
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: error demoding fsk idx: %d", idx);
         return PM3_ESOFT;
@@ -137,7 +137,7 @@ static int CmdPyramidDemod(const char *Cmd) {
         if (size == 0)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
         else
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %d, IDX: %d, hi3: %08X", size, idx, rawHi3);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %zu, IDX: %d, hi3: %08X", size, idx, rawHi3);
         return PM3_ESOFT;
     }
 
@@ -217,15 +217,13 @@ static int CmdPyramidClone(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pyramid_clone();
-
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0;
+    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_clone();
     uint32_t blocks[5];
     uint8_t *bs = calloc(128, sizeof(uint8_t));
     if (bs == NULL) {
         return PM3_EMALLOC;
     }
-
-    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_pyramid_clone();
 
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);

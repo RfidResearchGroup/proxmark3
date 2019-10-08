@@ -84,7 +84,7 @@ static int CmdGuardDemod(const char *Cmd) {
         else if (preambleIndex == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
         else if (preambleIndex == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %zu", size);
         else if (preambleIndex == -5)
             PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
         else
@@ -103,14 +103,14 @@ static int CmdGuardDemod(const char *Cmd) {
     // remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
     size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
     if (len != 72) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
+        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %zu, start: %zu", len, startIdx);
         return PM3_ESOFT;
     }
     // get key and then get all 8 bytes of payload decoded
     xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
     for (size_t idx = 0; idx < 8; idx++) {
         ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer + 8 + (idx * 8), 8)) ^ xorKey;
-        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
+        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %zu after xor: %02x", idx, ByteStream[idx]);
     }
 
     setDemodBuff(DemodBuffer, 96, preambleIndex);

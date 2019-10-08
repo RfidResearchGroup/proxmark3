@@ -266,7 +266,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
     conn.block_after_ACK = false;
     free(data);
-    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u")"bytes to offset "_GREEN_("%u"), datalen, start_index);
+    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu")"bytes to offset "_GREEN_("%u"), datalen, start_index);
     return PM3_SUCCESS;
 }
 static int CmdFlashMemDump(const char *Cmd) {

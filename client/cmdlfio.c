@@ -109,7 +109,7 @@ static int CmdIOProxDemod(const char *Cmd) {
             } else if (idx == -4) {
                 PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox preamble not found");
             } else if (idx == -5) {
-                PrintAndLogEx(DEBUG, "DEBUG: Error - IO size not correct, size %d", size);
+                PrintAndLogEx(DEBUG, "DEBUG: Error - IO size not correct, size %zu", size);
             } else if (idx == -6) {
                 PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox separator bits not found");
             } else {
@@ -123,7 +123,7 @@ static int CmdIOProxDemod(const char *Cmd) {
 
     if (idx == 0) {
         if (g_debugMode) {
-            PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox data not found - FSK Bits: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox data not found - FSK Bits: %zu", size);
             if (size > 92) PrintAndLogEx(DEBUG, "%s", sprint_bin_break(bits, 92, 16));
         }
         return PM3_ESOFT;
@@ -176,7 +176,7 @@ static int CmdIOProxDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "IO Prox XSF(%02d)%02x:%05d (%08x%08x) [crc %s]", version, facilitycode, number, code, code2, crcStr);
 
     if (g_debugMode) {
-        PrintAndLogEx(DEBUG, "DEBUG: IO prox idx: %d, Len: %d, Printing demod buffer:", idx, size);
+        PrintAndLogEx(DEBUG, "DEBUG: IO prox idx: %d, Len: %zu, Printing demod buffer:", idx, size);
         printDemodBuff();
     }
     return retval;

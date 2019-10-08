@@ -311,7 +311,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     uint8_t calen = 2 + T1len + TD1len + TDilen + K;
 
     if (atrlen != calen && atrlen != calen + 1)  // may be CRC
-        PrintAndLogEx(WARNING, "Invalid ATR length. len: %d, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
+        PrintAndLogEx(WARNING, "Invalid ATR length. len: %zu, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
 
     if (K > 0)
         PrintAndLogEx(INFO, "\nHistorical bytes | len 0x%02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
@@ -443,7 +443,7 @@ static int CmdSmartRaw(const char *Cmd) {
                         PrintAndLogEx(WARNING, "Invalid HEX value.");
                         return 1;
                     case 2:
-                        PrintAndLogEx(WARNING, "Too many bytes.  Max %d bytes", sizeof(data));
+                        PrintAndLogEx(WARNING, "Too many bytes.  Max %zu bytes", sizeof(data));
                         return 1;
                     case 3:
                         PrintAndLogEx(WARNING, "Hex must have even number of digits.");

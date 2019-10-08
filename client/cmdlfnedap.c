@@ -124,7 +124,7 @@ static int CmdLFNedapDemod(const char *Cmd) {
 
     // sanity checks
     if ((size != 128) && (size != 64)) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - NEDAP: Size not correct: %d", size);
+        PrintAndLogEx(DEBUG, "DEBUG: Error - NEDAP: Size not correct: %zu", size);
         return PM3_ESOFT;
     }
 

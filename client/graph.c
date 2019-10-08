@@ -210,14 +210,13 @@ uint8_t GetPskCarrier(const char *str, bool printAns) {
     }
 
     uint16_t fc = countFC(bits, size, false);
+    free(bits);
     carrier = fc & 0xFF;
     if (carrier != 2 && carrier != 4 && carrier != 8) return 0;
     if ((fc >> 8) == 10 && carrier == 8) return 0;
     // Only print this message if we're not looping something
     if (printAns)
         PrintAndLogEx(SUCCESS, "Auto-detected PSK carrier rate: %d", carrier);
-
-    free(bits);
     return carrier;
 }
 

@@ -2818,7 +2818,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         WDT_HIT();
 
         // Test if the action was cancelled
-        if (checkbtn_cnt == 2000) {
+        if (checkbtn_cnt == 1000) {
             if (BUTTON_PRESS() || data_available()) {
                 isOK = -1;
                 return_status = PM3_EOPABORTED;
@@ -2832,7 +2832,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
             if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-                if (DBGLEVEL >= DBG_ERROR)    Dbprintf("Mifare: Can't select card (ALL)");
+                if (DBGLEVEL >= DBG_INFO)    Dbprintf("Mifare: Can't select card (ALL)");
                 continue;
             }
             switch (card_info.uidlen) {
@@ -2851,7 +2851,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
             if (!iso14443a_fast_select_card(uid, cascade_levels)) {
-                if (DBGLEVEL >= DBG_ERROR)    Dbprintf("Mifare: Can't select card (UID)");
+                if (DBGLEVEL >= DBG_INFO)    Dbprintf("Mifare: Can't select card (UID)");
                 continue;
             }
         }
@@ -3092,7 +3092,7 @@ void DetectNACKbug(void) {
         WDT_HIT();
 
         // Test if the action was cancelled
-        if (checkbtn_cnt == 2000) {
+        if (checkbtn_cnt == 1000) {
             if (BUTTON_PRESS() || data_available()) {
                 status = PM3_EOPABORTED;
                 break;
@@ -3105,7 +3105,7 @@ void DetectNACKbug(void) {
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
             if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
-                if (DBGLEVEL >= DBG_ERROR) Dbprintf("Mifare: Can't select card (ALL)");
+                if (DBGLEVEL >= DBG_INFO) Dbprintf("Mifare: Can't select card (ALL)");
                 i = 0;
                 continue;
             }
@@ -3127,7 +3127,7 @@ void DetectNACKbug(void) {
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
             if (!iso14443a_fast_select_card(uid, cascade_levels)) {
-                if (DBGLEVEL >= DBG_ERROR)    Dbprintf("Mifare: Can't select card (UID)");
+                if (DBGLEVEL >= DBG_INFO)    Dbprintf("Mifare: Can't select card (UID)");
                 i = 0;
                 have_uid = false;
                 continue;
