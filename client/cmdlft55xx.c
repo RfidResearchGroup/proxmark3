@@ -61,17 +61,17 @@ void Set_t55xx_Config(t55xx_conf_block_t conf) {
     config = conf;
 }
 
-static void print_usage_t55xx_downloadlink(uint8_t ShowAll) {
+static void print_usage_t55xx_downloadlink(uint8_t ShowAll, uint8_t dl_mode_default) {
     if (ShowAll == T55XX_DLMODE_ALL)
         PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3|4");
     else
         PrintAndLogEx(NORMAL, "     r <mode>     - downlink encoding 0|1|2|3");
-    PrintAndLogEx(NORMAL, "                       0 - fixed bit length"); // default will be whats in config struct
-    PrintAndLogEx(NORMAL, "                       1 - long leading reference");
-    PrintAndLogEx(NORMAL, "                       2 - leading zero");
-    PrintAndLogEx(NORMAL, "                       3 - 1 of 4 coding reference");
+    PrintAndLogEx(NORMAL, "                       0 - fixed bit length%s",(dl_mode_default == 0)? " (detected default)":""); // default will be whats in config struct
+    PrintAndLogEx(NORMAL, "                       1 - long leading reference%s",(dl_mode_default == 1)? " (detected default)":"");
+    PrintAndLogEx(NORMAL, "                       2 - leading zero%s",(dl_mode_default == 2)? " (detected default)":"");
+    PrintAndLogEx(NORMAL, "                       3 - 1 of 4 coding reference%s",(dl_mode_default == 3)? " (detected default)":"");
     if (ShowAll == T55XX_DLMODE_ALL)
-        PrintAndLogEx(NORMAL, "                       4 - Try all downlink modes");
+        PrintAndLogEx(NORMAL, "                       4 - Try all downlink modes%s",(dl_mode_default == 4)? " (default)":"");
 }
 
 static int usage_t55xx_config() {
@@ -86,7 +86,7 @@ static int usage_t55xx_config() {
     PrintAndLogEx(NORMAL, "     Q5 [0/1]                         - Set/reset as T5555 ( Q5 ) chip instead of T55x7");
     PrintAndLogEx(NORMAL, "     ST [0/1]                         - Set/reset Sequence Terminator on");
     PrintAndLogEx(NORMAL, ""); // layout is a little differnet, so seperate until a better fix
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx config d FSK          - FSK demodulation");
@@ -102,7 +102,7 @@ static int usage_t55xx_read() {
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password (8 hex characters)");
     PrintAndLogEx(NORMAL, "     o            - OPTIONAL override safety check");
     PrintAndLogEx(NORMAL, "     1            - OPTIONAL 0|1  read Page 1 instead of Page 0");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "     " _RED_("**** WARNING ****"));
     PrintAndLogEx(NORMAL, "     Use of read with password on a tag not configured");
     PrintAndLogEx(NORMAL, "     for a password can damage the tag");
@@ -119,7 +119,7 @@ static int usage_t55xx_resetread() {
     PrintAndLogEx(NORMAL, "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)");
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx resetread [r <mode>]");
     PrintAndLogEx(NORMAL, "Options:");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx resetread");
@@ -135,7 +135,7 @@ static int usage_t55xx_write() {
     PrintAndLogEx(NORMAL, "     1            - OPTIONAL write Page 1 instead of Page 0");
     PrintAndLogEx(NORMAL, "     t            - OPTIONAL test mode write - ****DANGER****");
     PrintAndLogEx(NORMAL, "     v            - OPTIONAL validate data afterwards");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx write b 3 d 11223344            - write 11223344 to block 3");
@@ -147,7 +147,7 @@ static int usage_t55xx_write() {
 static int usage_t55xx_trace() {
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx trace [1] [r mode]");
     PrintAndLogEx(NORMAL, "Options:");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -165,7 +165,7 @@ static int usage_t55xx_info() {
     PrintAndLogEx(NORMAL, "     c <block0>   - set configuration from a block0");
     PrintAndLogEx(NORMAL, "                    if set, use these data instead of reading tag.");
     PrintAndLogEx(NORMAL, "     q            - if set, provided data are interpreted as Q5 config.");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx info");
@@ -181,7 +181,7 @@ static int usage_t55xx_dump() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     p <password>   - OPTIONAL password 4bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "     o              - OPTIONAL override, force pwd read despite danger to card");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx dump");
@@ -194,7 +194,7 @@ static int usage_t55xx_detect() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "     p <password  - OPTIONAL password (8 hex characters)");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL,T55XX_DLMODE_ALL);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx detect");
@@ -209,7 +209,7 @@ static int usage_t55xx_detectP1() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     1            - if set, use Graphbuffer otherwise read data from tag.");
     PrintAndLogEx(NORMAL, "     p <password> - OPTIONAL password (8 hex characters)");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE); // Need to setup to try all modes
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode); // Need to setup to try all modes
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx p1detect");
@@ -224,7 +224,7 @@ static int usage_t55xx_wakup() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
     PrintAndLogEx(NORMAL, "     p <password> - password 4bytes (8 hex symbols)");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx wakeup p 11223344  - send wakeup password");
@@ -239,7 +239,7 @@ static int usage_t55xx_chk() {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
     PrintAndLogEx(NORMAL, "     m            - use dictionary from flashmemory\n");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL,T55XX_DLMODE_ALL);
     PrintAndLogEx(NORMAL, "     i <*.dic>    - loads a default keys dictionary file <*.dic>");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -257,7 +257,7 @@ static int usage_t55xx_bruteforce() {
     PrintAndLogEx(NORMAL, "       password must be 4 bytes (8 hex symbols)");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL,T55XX_DLMODE_ALL);
     PrintAndLogEx(NORMAL, "     s <start_pwd>  - 4 byte hex value to start pwd search at");
     PrintAndLogEx(NORMAL, "     e <end_pwd>    - 4 byte hex value to end pwd search at");
     PrintAndLogEx(NORMAL, "");
@@ -276,7 +276,7 @@ static int usage_t55xx_recoverpw() {
     PrintAndLogEx(NORMAL, "       default password is 51243648, used by many cloners");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     h            - this help");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_ALL,T55XX_DLMODE_ALL);
     PrintAndLogEx(NORMAL, "     p <password>   - 4 byte hex value of password written by cloner");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -328,7 +328,7 @@ static int usage_t55xx_protect() {
     PrintAndLogEx(NORMAL, "     p <password>        - OPTIONAL password (8 hex characters)");
     PrintAndLogEx(NORMAL, "     o                   - OPTIONAL override safety check");
     PrintAndLogEx(NORMAL, "     n <new password>    - new password");
-    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE);
+    print_usage_t55xx_downloadlink(T55XX_DLMODE_SINGLE,config.downlink_mode);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf t55xx protect n 01020304         - sets new password to 01020304");
@@ -490,6 +490,13 @@ bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0,
     if (verbose)
         PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible");
 
+    // Update flags for usepwd pwd assume its correct
+    config.usepwd = usepwd;
+    if (usepwd) 
+        config.pwd = password;
+    else 
+        config.pwd = 0x00;
+
     for (uint8_t m = 0; m < 4; m++) {
         if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false)
             continue;
@@ -500,6 +507,9 @@ bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0,
         config.downlink_mode = m;
         return true;
     }
+    config.usepwd = false; // unknown so assume no password
+    config.pwd = 0x00;
+    
     return false;
 }
 
@@ -943,6 +953,7 @@ static int CmdT55xxDetect(const char *Cmd) {
     bool errors = false;
     bool useGB = false;
     bool usepwd = false;
+    bool try_with_pwd = false;
     bool try_all_dl_modes = true;
     bool found = false;
     uint32_t password = 0;
@@ -982,33 +993,57 @@ static int CmdT55xxDetect(const char *Cmd) {
         return PM3_ESOFT;
 
     if (useGB == false) {
+        // do ... while to check without password then loop back if password supplied
+        do {
+            
+            if (try_all_dl_modes) {
+                for (uint8_t m = downlink_mode; m < 4; m++) {
+                            
+                    if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, try_with_pwd & usepwd, password, m) == false)
+                        continue;
 
-        if (try_all_dl_modes) {
+                    // pre fill to save passing in.
+                    config.usepwd = try_with_pwd;
+                    if (try_with_pwd) 
+                        config.pwd = password;
+                    else    
+                        config.pwd = 0x00;
 
-            for (uint8_t m = downlink_mode; m < 4; m++) {
-                if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false)
-                    continue;
+                    if (tryDetectModulation(m, T55XX_PrintConfig) == false)
+                        continue;
 
-                if (tryDetectModulation(m, T55XX_PrintConfig) == false)
-                    continue;
+                    found = true;
+                    break;
+                }
+            } else {
+                config.usepwd = try_with_pwd;
+                if (try_with_pwd) 
+                    config.pwd = password;
+                else    
+                    config.pwd = 0x00;
 
-                found = true;
-                break;
+                if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
+                    found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
+                }
             }
-        } else  {
 
-            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
-                found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
-            }
-        }
+            if (!found & usepwd) 
+                try_with_pwd = !try_with_pwd; // toggle so we loop back if not found and try with pwd
+            
+            if (found) 
+                try_with_pwd = false; // force exit as decect block has been found.
+        
+        } while (try_with_pwd);
 
     } else {
         found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
     }
 
-    if (found == false)
+    if (found == false) {
+        config.usepwd = false;
+        config.pwd = 0x00;
         PrintAndLogEx(WARNING, "Could not detect modulation automatically. Try setting it manually with " _YELLOW_("\'lf t55xx config\'"));
-
+    }
     return PM3_SUCCESS;
 }
 
@@ -1482,6 +1517,9 @@ int printConfiguration(t55xx_conf_block_t b) {
     PrintAndLogEx(NORMAL, "    Seq. Term.     : %s", (b.ST) ? _GREEN_("Yes") : "No");
     PrintAndLogEx(NORMAL, "    Block0         : 0x%08X", b.block0);
     PrintAndLogEx(NORMAL, "    Downlink Mode  : %s", GetDownlinkModeStr(b.downlink_mode));
+    PrintAndLogEx(NORMAL, "    Password Set   : %s", (b.usepwd) ? _RED_("Yes") : _GREEN_("No"));
+    if (b.usepwd)
+        PrintAndLogEx(NORMAL, "    Password       : %08X",b.pwd);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }

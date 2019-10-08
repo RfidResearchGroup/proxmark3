@@ -118,6 +118,7 @@ typedef struct {
     bool Q5;
     bool ST;
     bool usepwd;
+    uint32_t pwd;
     enum {
         refFixedBit = 0x00,
         refLongLeading = 0x01,

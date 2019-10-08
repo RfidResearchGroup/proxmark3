@@ -3,11 +3,20 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added lf t55xx detected to try without password first (@mwalker33)
  - Display high bit for detected Kastle HIDs to allow `lf hid clone [id]` to work properly (@swg0101)
  - Add option `-n` to scripts pm3* (@doegox)
  - Add `wiegand list/encode/decode` - wiegand format manipulation. Adapted to fit here. (@grauerfuchs)
+ - Added support for color text on windows 10 (@mwalker33)
+ - Added `s` <samples to skip> to `lf config` / `lf sniff` to skip samples when sniffing based on same option in Proxmark/proxmark3 by @marshmellow42. (@mwalker33)
+ - Added save to .eml and .bin for `em 4x05_dump` (@mwalker33)
+ - Add option `-n` to scripts pm3* (@doegox)
+ - Fix `em 4x05_dump` to print all blocks read (@mwalker33)
+ - Fix T55xx config getting displayed when using password when no password needed on read. (@mwalker33)
+ - Added T55x7 downlink mode auto usage via mode detected (lf t55 detect) (@mwalker33)
  - Add `lf t55xx protect` - sets password and enables password protection on t55x7 tag (@iceman1001)
  - Chg `lf t55xx wipe` - now accepts user provided configuration block (@iceman1001)
+ - Added T55x7 downlink mode support r <mode> 0 Default, 1 Long Leading 0, 2 Leading 0, 3 1 of 4 and 4 (in some commands) try all. (@mwalker33)
  - Chg proxmark3-flasher is now merged into proxmark3 client. Add pm3-flash (@doegox)
  - Chg `hf iclass clone\dump\rdbl\wrbl` - now uses NG (@iceman1001)
  - Fix `hf iclass clone` - last block always fails (@iceman1001)
@@ -354,13 +363,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added  `hf fido` `assert` and `make` commands from fido2 protocol (authenticatorMakeCredential and authenticatorGetAssertion) (@merlokk)
  - Added trailer block decoding to `hf mf rdbl` and `hf mf cgetbl` (@merlokk)
  - Added `hf mf mad` and `hf mfp mad` MAD decode, check and print commands (@merlokk)
- - Added T55x7 downlink mode support r <mode> 0 Default, 1 Long Leading 0, 2 Leading 0, 3 1 of 4 and 4 (in some commands) try all. (@mwalker33)
- - Added T55x7 downlink mode auto usage via mode detected (lf t55 detect) (@mwalker33)
- - Fix T55xx config getting displayed when using password when no password needed on read. (@mwalker33)
- - Fix `em 4x05_dump` to print all blocks read (@mwalker33)
- - Added save to .eml and .bin for `em 4x05_dump` (@mwalker33)
- - Added `s` <samples to skip> to `lf config` / `lf sniff` to skip samples when sniffing based on same option in Proxmark/proxmark3 by @marshmellow42. (@mwalker33)
- - Added support for color text on windows 10 (@mwalker33)
+
 
 ### Fixed
  - Changed driver file proxmark3.inf to support both old and new Product/Vendor IDs (@pwpiwi)
