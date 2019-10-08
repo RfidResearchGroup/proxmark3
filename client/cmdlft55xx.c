@@ -1792,11 +1792,17 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
 
     /*
+	Trace info.
+	  M1, M2  has the about ATMEL defintion of trace data.
+	  M3 has unique format following industry defacto standard with row/col parity
+
     TRACE - BLOCK O
         Bits    Definition                             HEX
         1-8     ACL Allocation class (ISO/IEC 15963-1) 0xE0
         9-16    MFC Manufacturer ID (ISO/IEC 7816-6)   0x15 Atmel Corporation
-        17-21   CID                                    0x1 = Atmel ATA5577M1  0x2 = Atmel ATA5577M2
+        17-21   CID                                    0x1 = Atmel ATA5577M1
+                                                       0x2 = Atmel ATA5577M2
+                                                       0x3 = Atmel ATA5577M3
         22-24   ICR IC revision
         25-28   YEAR (BCD encoded)                     9 (= 2009)
         29-30   QUARTER                                1,2,3,4
@@ -1806,6 +1812,11 @@ void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat) {
         1-12    LOT ID
         13-17   Wafer number
         18-32   DW,  die number sequential
+		
+
+    Startup times (FC)
+	  M1, M2 = 192
+	  M3     = 128
     */
 }
 
@@ -2319,6 +2330,7 @@ char *GetModelStrFromCID(uint32_t cid) {
 
     if (cid == 1) snprintf(retStr, sizeof(buf), "ATA5577M1");
     if (cid == 2) snprintf(retStr, sizeof(buf), "ATA5577M2");
+    if (cid == 3) snprintf(retStr, sizeof(buf), "ATA5577M3");
     return buf;
 }
 
