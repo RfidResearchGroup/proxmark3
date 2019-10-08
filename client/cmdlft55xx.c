@@ -2746,7 +2746,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.oldarg[1], downlink_mode)) {
                 found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", resp.oldarg[1]);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) "]", resp.oldarg[1]);
 
                 } else {
                     PrintAndLogEx(WARNING, "Check pwd failed");
@@ -2798,7 +2798,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
                 found = tryDetectModulation(dl_mode, T55XX_PrintConfig);
                 if (found) {
-                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) " ]", curr_password);
+                    PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) "]", curr_password);
                     dl_mode = 4; // Exit other downlink mode checks
                     c = keycount; // Exit loop
                 }
@@ -2889,7 +2889,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08X") "]", curr - 1);
         T55xx_Print_DownlinkMode((found >> 1) & 3);
     } else
-        PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") " ]", curr);
+        PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") "]", curr);
 
     t1 = msclock() - t1;
     PrintAndLogEx(SUCCESS, "\nTime in bruteforce: %.0f seconds\n", (float)t1 / 1000.0);
