@@ -503,7 +503,7 @@ void ReadTItag(void) {
 
     // TI tags charge at 134.2kHz
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8kHz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_134); //~134kHz
 
     // Place FPGA in passthrough mode, in this mode the CROSS_LO line
     // connects to SSP_DIN and the SSP_DOUT logic level controls
@@ -730,7 +730,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc) {
     Dbprintf("Writing to tag: %x%08x, crc=%x", idhi, idlo, crc);
 
     // TI tags charge at 134.2kHz
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8kHz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_134); //~134kHz
     // Place FPGA in passthrough mode, in this mode the CROSS_LO line
     // connects to SSP_DIN and the SSP_DOUT logic level controls
     // whether we're modulating the antenna (high)
@@ -803,9 +803,9 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
     sample_config *sc = getSamplingConfig();
 
     if ((sc->divisor == 1) || (sc->divisor < 0) || (sc->divisor > 255))
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8kHz
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_134); //~134kHz
     else if (sc->divisor == 0)
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
     else
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
 
@@ -1145,7 +1145,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
     uint32_t hi2 = 0, hi = 0, lo = 0;
     int dummyIdx = 0;
     // Configure to go in 125kHz listen mode
-    LFSetupFPGAForADC(95, true);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     //clear read buffer
     BigBuf_Clear_keep_EM();
@@ -1242,7 +1242,7 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
 
     BigBuf_Clear_keep_EM();
 
-    LFSetupFPGAForADC(95, true);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     while (!BUTTON_PRESS() && !data_available()) {
 
@@ -1334,7 +1334,7 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 
     BigBuf_Clear_keep_EM();
 
-    LFSetupFPGAForADC(95, true);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     while (!BUTTON_PRESS() && !data_available()) {
 
@@ -1400,7 +1400,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
     BigBuf_Clear_keep_EM();
 
     // Configure to go in 125kHz listen mode
-    LFSetupFPGAForADC(95, true);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
@@ -1651,7 +1651,7 @@ void T55xx_SendCMD(uint32_t data, uint32_t pwd, uint16_t arg) {
 
     // Send Bits to T55xx
     // Set up FPGA, 125kHz
-    LFSetupFPGAForADC(95, true);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     // make sure tag is fully powered up...
     WaitMS(start_wait);
@@ -2274,7 +2274,7 @@ void SendForward(uint8_t fwd_bit_count) {
     fwd_bit_sz = fwd_bit_count;
 
     // Set up FPGA, 125kHz or 95 divisor
-    LFSetupFPGAForADC(95, true);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
 
     // force 1st mod pulse (start gap must be longer for 4305)
     fwd_bit_sz--; //prepare next bit modulation
@@ -2396,7 +2396,7 @@ void Cotag(uint32_t arg0) {
 
     LED_A_ON();
 
-    LFSetupFPGAForADC(89, true);
+    LFSetupFPGAForADC(LF_DIVISOR_134, true);
 
     //clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);

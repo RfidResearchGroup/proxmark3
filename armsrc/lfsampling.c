@@ -95,9 +95,9 @@ void pushBit(BitstreamOut *stream, uint8_t bit) {
 void LFSetupFPGAForADC(int divisor, bool lf_field) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     if ((divisor == 1) || (divisor < 0) || (divisor > 255))
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 88); //134.8kHz
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_134); //~134kHz
     else if (divisor == 0)
-        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
     else
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
 
