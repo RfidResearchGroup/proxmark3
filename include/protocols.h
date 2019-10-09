@@ -133,7 +133,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ICLASS_CMD_READ_OR_IDENTIFY 0xC
 #define ICLASS_CMD_ACT              0xE
 
-#define ICLASS_CREDIT(x)            (((x) & 0x5) == 1)
+#define ICLASS_CREDIT(x)            (((x) & 0x5) == 0x5)
 #define ICLASS_DEBIT(x)             (((x) & 0x5) == 0)
 
 
