@@ -157,7 +157,7 @@ int JsonSaveTLVElm(json_t *elm, const char *path, struct tlv *tlvelm, bool saveN
                 }
             } else {
                 if (json_path_set(elm, path, obj, 0, &error)) {
-                    PrintAndLogEx(ERR, "ERROR: can't set json path: ", error.text);
+                    PrintAndLogEx(ERR, "ERROR: can't set json path: %s", error.text);
                     return 2;
                 }
             }
