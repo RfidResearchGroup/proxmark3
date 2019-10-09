@@ -198,6 +198,12 @@ typedef struct {
     uint8_t flags;
 } PACKED t55xx_write_block_t;
 
+typedef struct {
+    uint8_t data[128];
+    uint8_t bitlen;
+    uint32_t time;
+} PACKED t55xx_test_block_t;
+
 // For CMD_LF_HID_SIMULATE (FSK)
 typedef struct {
     uint32_t hi2;
@@ -376,6 +382,7 @@ typedef struct {
 #define CMD_LF_SAMPLING_GET_CONFIG                                        0x0227
 
 #define CMD_LF_T55XX_CHK_PWDS                                             0x0230
+#define CMD_LF_T55XX_DANGERRAW                                            0x0231
 
 /* CMD_SET_ADC_MUX: ext1 is 0 for lopkd, 1 for loraw, 2 for hipkd, 3 for hiraw */
 

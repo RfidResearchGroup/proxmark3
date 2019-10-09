@@ -1703,6 +1703,45 @@ void T55xxResetRead(uint8_t flags) {
     LED_A_OFF();
 }
 
+void T55xxDangerousRawTest(uint8_t *data) {
+    // supports only default downlink mode
+    t55xx_test_block_t *c = (t55xx_test_block_t *)data;
+
+    uint8_t start_wait = 4;
+    uint8_t bs[128/8];
+    memset(bs, 0x00, sizeof(bs));
+    uint8_t len = 0;
+    if (c->bitlen == 0 || c->bitlen > 128 || c->time == 0)
+        reply_ng(CMD_LF_T55XX_DANGERRAW, PM3_EINVARG, NULL, 0);
+    for (uint8_t i=0; i<c->bitlen; i++)
+        len = T55xx_SetBits(bs, len, c->data[i], 1, sizeof(bs));
+
+    if (DBGLEVEL > 1) {
+        Dbprintf("LEN %i, TIMING %i", len, c->time);
+        for (uint8_t i = 0; i < len; i++) {
+            uint8_t sendbits = (bs[BITSTREAM_BYTE(i)] >> BITSTREAM_BIT(i));
+            Dbprintf("%02i: %i", i, sendbits & 1);
+        }
+    }
+
+    LED_A_ON();
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
+    // make sure tag is fully powered up...
+    WaitMS(start_wait);
+    // Trigger T55x7 in mode.
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    WaitUS(T55xx_Timing.m[0].start_gap);
+    uint8_t sendbits;
+    for (uint8_t i = 0; i < len; i++) {
+        sendbits = (bs[BITSTREAM_BYTE(i)] >> BITSTREAM_BIT(i));
+        T55xxWriteBit(sendbits & 1, 0);
+    }
+    TurnReadLFOn(c->time);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    reply_ng(CMD_LF_T55XX_DANGERRAW, PM3_SUCCESS, NULL, 0);
+    LED_A_OFF();
+}
+
 // Write one card block in page 0, no lock
 //void T55xxWriteBlockExt(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags) {
 void T55xxWriteBlock(uint8_t *data) {

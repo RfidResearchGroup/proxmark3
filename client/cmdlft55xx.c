@@ -1672,6 +1672,69 @@ static int CmdT55xxWriteBlock(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdT55xxDangerousRaw(const char *Cmd) {
+    // supports only default downlink mode
+    t55xx_test_block_t ng;
+    ng.time = 0;
+    ng.bitlen = 0;
+    memset(ng.data, 0x00, sizeof(ng.data));
+    bool errors = false;
+    uint8_t cmdp = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 't':
+                ng.time = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                if (ng.time == 0 || ng.time > 200000) {
+                    PrintAndLogEx(ERR, "Timing off 1..200000 limits, got %i", ng.time);
+                    errors = true;
+                    break;
+                }
+                cmdp += 2;
+                break;
+            case 'b': {
+                uint32_t n = param_getlength(Cmd, cmdp + 1);
+                if (n > 128) {
+                    PrintAndLogEx(ERR, "Bitstream too long, max 128 bits, got %i", n);
+                    errors = true;
+                    break;
+                }
+                for (uint8_t i = 0; i < n; i++) {
+                    char c = param_getchar_indx(Cmd, i, cmdp + 1);
+                    if (c == '0')
+                        ng.data[i] = 0;
+                    else if (c == '1')
+                        ng.data[i] = 1;
+                    else {
+                        PrintAndLogEx(ERR, "Unknown bit char '%c'", c);
+                        errors = true;
+                        break;
+                    }
+                }
+                ng.bitlen = n;
+                cmdp += 2;
+                break;
+            }
+            default:
+                PrintAndLogEx(ERR, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    if (errors || ng.bitlen == 0 || ng.time == 0) {
+        PrintAndLogEx(ERR, "Error occurred, abort. " _RED_("DANGEROUS COMMAND, DO NOT USE!"));
+        return PM3_EINVARG;
+    }
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_T55XX_DANGERRAW, (uint8_t *)&ng, sizeof(ng));
+    if (!WaitForResponseTimeout(CMD_LF_T55XX_DANGERRAW, &resp, 2000)) {
+        PrintAndLogEx(ERR, "Error occurred, device did not ACK write operation.");
+        return PM3_ETIMEOUT;
+    }
+    return resp.status;
+}
+
 static int CmdT55xxReadTrace(const char *Cmd) {
 
     bool frombuff = false;
@@ -3400,6 +3463,7 @@ static command_t CommandTable[] = {
     {"bruteforce",   CmdT55xxBruteForce,      IfPm3Lf,         "<start password> <end password> Simple bruteforce attack to find password"},
     {"config",       CmdT55xxSetConfig,       AlwaysAvailable, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
     {"chk",          CmdT55xxChkPwds,         IfPm3Lf,         "Check passwords from dictionary/flash"},
+    {"dangerraw",    CmdT55xxDangerousRaw,    IfPm3Lf,         "Sends raw bitstream. Dangerous, do not use!! b <bitstream> t <timing>"},
     {"detect",       CmdT55xxDetect,          AlwaysAvailable, "[1] Try detecting the tag modulation from reading the configuration block."},
     {"deviceconfig", CmdT55xxSetDeviceConfig, IfPm3Lf,         "Set/Get T55XX device configuration (startgap, writegap, write0, write1, readgap"},
     {"dump",         CmdT55xxDump,            IfPm3Lf,         "[password] [o] Dump T55xx card Page 0 block 0-7. Optional [password], [override]"},

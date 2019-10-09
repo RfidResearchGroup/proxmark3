@@ -804,6 +804,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             T55xxWriteBlock(packet->data.asBytes);
             break;
         }
+        case CMD_LF_T55XX_DANGERRAW: {
+            T55xxDangerousRawTest(packet->data.asBytes);
+            break;
+        }
         case CMD_LF_T55XX_WAKEUP: {
             struct p {
                 uint32_t password;
