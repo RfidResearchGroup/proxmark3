@@ -1560,6 +1560,7 @@ s32_t spiffs_object_modify(spiffs_fd *fd, u32_t offset, u8_t *data, u32_t len) {
             res = spiffs_page_allocate_data(fs, fd->obj_id & ~SPIFFS_OBJ_ID_IX_FLAG,
                                             &p_hdr, &data[written], to_write, page_offs, 1, &data_pix);
             SPIFFS_DBG("modify: store new data page, "_SPIPRIpg":"_SPIPRIsp" offset:"_SPIPRIi", len "_SPIPRIi", written "_SPIPRIi"\n", data_pix, data_spix, page_offs, to_write, written);
+            if (res != SPIFFS_OK) break;
         } else {
             // write to existing page, allocate new and copy unmodified data
 
