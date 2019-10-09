@@ -137,16 +137,15 @@ bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys, const char *path) {
         return false;
     }
 
-    if (!fread(amiiboKeys, sizeof(*amiiboKeys), 1, f)) {
-        fclose(f);
-        return false;
-    }
+    size_t len = fread(amiiboKeys, sizeof(*amiiboKeys), 1, f);
     fclose(f);
 
-    if (
-        (amiiboKeys->data.magicBytesSize > 16) ||
-        (amiiboKeys->tag.magicBytesSize > 16)
-    ) {
+    if (len != sizeof(*amiiboKeys)) {
+        return false;
+    }
+
+    if ((amiiboKeys->data.magicBytesSize > 16) ||
+        (amiiboKeys->tag.magicBytesSize > 16)) {
         return false;
     }
 
