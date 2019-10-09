@@ -335,7 +335,8 @@ static int usage_t55xx_deviceconfig() {
     return PM3_SUCCESS;
 }
 static int usage_t55xx_protect() {
-    PrintAndLogEx(NORMAL, "This command set or unsets the pwd bit on T5577.");
+    PrintAndLogEx(NORMAL, "This command set the pwd bit on T5577. ");
+    PrintAndLogEx(NORMAL, _RED_("WARNING:") " this locks the tag!");
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx protect [r <mode>] [p <password>] [o] [n <new_password>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     p <password>        - OPTIONAL password (8 hex characters)");
@@ -385,7 +386,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
             return PM3_ETIMEOUT;
         }
     }
- 
+
    uint8_t res = 0;
     for (int8_t i = 0; i < numblocks; i++) {
 
@@ -401,7 +402,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
 
     if (res == 0)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
-    
+
     return PM3_SUCCESS;
 }
 
