@@ -2735,8 +2735,13 @@ static int CmdHF14AMfChk(const char *Cmd) {
         PrintAndLogEx(INFO, "No key specified, trying default keys");
         for (; keycnt < ARRAYLEN(g_mifare_default_keys); keycnt++)
             PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
-                          (keyBlock + 6 * keycnt)[0], (keyBlock + 6 * keycnt)[1], (keyBlock + 6 * keycnt)[2],
-                          (keyBlock + 6 * keycnt)[3], (keyBlock + 6 * keycnt)[4], (keyBlock + 6 * keycnt)[5], 6);
+                          (keyBlock + 6 * keycnt)[0],
+                          (keyBlock + 6 * keycnt)[1],
+                          (keyBlock + 6 * keycnt)[2],
+                          (keyBlock + 6 * keycnt)[3],
+                          (keyBlock + 6 * keycnt)[4],
+                          (keyBlock + 6 * keycnt)[5]
+                          );
     }
 
     // initialize storage for found keys
