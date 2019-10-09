@@ -1,5 +1,6 @@
 COVLOGIN=myemail@corp.com
 COVTOKEN=aAbBcCdDeEfFgGhHiIjJkK
+# Toolchain available at https://scan.coverity.com/download
 COVBINDIR="/opt/cov-analysis-linux64-2019.03/bin"
 # Nickname included in scan description:
 NICKNAME=myself
