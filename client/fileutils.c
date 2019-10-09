@@ -487,7 +487,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!pdata) {
+    if (!*pdata) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
         return PM3_EMALLOC;
