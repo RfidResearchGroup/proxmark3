@@ -117,8 +117,11 @@ void computeSignalProperties(uint8_t *samples, uint32_t size) {
 
         sum += samples[i];
         cnt++;
-   }
-    signalprop.mean = sum / cnt;
+    }
+    if (cnt > 0)
+        signalprop.mean = sum / cnt;
+    else
+        signalprop.mean = 0;
 #else
    for (uint32_t i =  SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++) {
         if (samples[i] < signalprop.low) signalprop.low = samples[i];
@@ -160,8 +163,11 @@ void removeSignalOffset(uint8_t *samples, uint32_t size) {
 
         acc_off += samples[i] - 128;
         cnt++;
-   }
-    acc_off /= cnt;
+    }
+    if (cnt > 0)
+        acc_off /= cnt;
+    else
+        acc_off = 0;
 #else
     for (uint32_t i = SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++)
         acc_off += samples[i] - 128;
