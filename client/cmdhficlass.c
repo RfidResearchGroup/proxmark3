@@ -870,6 +870,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             return PM3_EINVARG;
 
         memcpy(key, keyptr, sizeof(key));
+        free(keyptr);
     }
 
     // tripledes
