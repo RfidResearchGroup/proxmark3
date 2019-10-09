@@ -2975,14 +2975,14 @@ uint8_t tryOnePassword(uint32_t password, uint8_t downlink_mode) {
     // check if dl mode 4 and loop if needed
     for (dl_mode = downlink_mode; dl_mode < 4; dl_mode++) {
 
-        AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password, dl_mode);
-
-        //  if (getSignalProperties()->isnoise == false) {
-        //  } else {
-        if (tryDetectModulation(dl_mode, T55XX_PrintConfig)) {
-            return 1 + (dl_mode << 1);
+        if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password, dl_mode)) {
+            //  if (getSignalProperties()->isnoise == false) {
+            //  } else {
+            if (tryDetectModulation(dl_mode, T55XX_PrintConfig)) {
+                return 1 + (dl_mode << 1);
+            }
+            //  }
         }
-        //  }
         if (!try_all_dl_modes) dl_mode = 4;
     }
     return 0;
