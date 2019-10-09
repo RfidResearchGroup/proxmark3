@@ -408,23 +408,21 @@ static struct emv_pk *emv_pk_get_ca_pk_from_file(const char *fname,
         char buf[2048];
         if (fgets(buf, sizeof(buf), f) == NULL)
             break;
-        if (buf == NULL)
-            break;
+
         struct emv_pk *pk = emv_pk_parse_pk(buf);
         if (!pk)
             continue;
+
         if (memcmp(pk->rid, rid, 5) || pk->index != idx) {
             emv_pk_free(pk);
             continue;
         }
 
         fclose(f);
-
         return pk;
     }
 
     fclose(f);
-
     return NULL;
 }
 
