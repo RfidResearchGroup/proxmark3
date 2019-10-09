@@ -204,7 +204,7 @@ static int CmdFdxDemod(const char *Cmd) {
         else if (preambleIndex == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B preamble not found");
         else if (preambleIndex == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B Size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ans: %d", preambleIndex);
         return PM3_ESOFT;
