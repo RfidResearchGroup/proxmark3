@@ -44,7 +44,7 @@ void DbpString(char *str) {
 void DbprintfEx(uint32_t flags, const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
-    char output_string[128] = {0x00};
+    char output_string[PM3_CMD_DATA_SIZE] = {0x00};
     va_list ap;
     va_start(ap, fmt);
     kvsprintf(fmt, output_string, 10, ap);
@@ -57,7 +57,7 @@ void DbprintfEx(uint32_t flags, const char *fmt, ...) {
 void Dbprintf(const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
-    char output_string[128] = {0x00};
+    char output_string[PM3_CMD_DATA_SIZE] = {0x00};
     va_list ap;
 
     va_start(ap, fmt);
