@@ -796,12 +796,17 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                         if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Commands must be encrypted (authenticated)");
                         break;
                     }
+
+                    // iceman,   u8 can never be larger the  MIFARE_4K_MAXBLOCK (256)
                     // Check if Block num is not too far
+                    /*
                     if (receivedCmd_dec[1] > MIFARE_4K_MAXBLOCK) {
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         if (DBGLEVEL >= DBG_ERROR) Dbprintf("[MFEMUL_WORK] Reader tried to operate (0x%02x) on out of range block: %d (0x%02x), nacking", receivedCmd_dec[0], receivedCmd_dec[1], receivedCmd_dec[1]);
                         break;
                     }
+                    */
+
                     if (MifareBlockToSector(receivedCmd_dec[1]) != cardAUTHSC) {
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         if (DBGLEVEL >= DBG_ERROR) Dbprintf("[MFEMUL_WORK] Reader tried to operate (0x%02x) on block (0x%02x) not authenticated for (0x%02x), nacking", receivedCmd_dec[0], receivedCmd_dec[1], cardAUTHSC);
