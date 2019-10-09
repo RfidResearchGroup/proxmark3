@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -e
+. .coverity.conf || exit 1
+
+pre_submit_hook
+
+## delete all previous tarballs
+rm proxmark3.all.*.tgz
+
+VERSION="0.1.$(date --date now +%H%M)"
+TODAY="$(date --date now +%Y%m%d.%H%M)"
+DESCNAME="manual_by_$NICKNAME.$TODAY"
+FILENAME="proxmark3.all.$TODAY.tgz"
+LOGFILENAME="${FILENAME/.tgz/.log}"
+
+## create tarball
+tar cfz "$FILENAME" "$COVDIR" || exit $?
+echo "Coverity build file is ready"
+
+## upload tarball to Coverity.com
+curl --progress-bar --fail \
+  --form token="$COVTOKEN" \
+  --form email="$COVLOGIN" \
+  --form file="@$FILENAME" \
+  --form version="$VERSION" \
+  --form description="$DESCNAME" \
+  https://scan.coverity.com/builds?project=Proxmark3+RRG+Iceman+repo | tee -a "${LOGFILENAME}" ; test "${PIPESTATUS[0]}" -eq 0  || exit $?
+echo "tarball uploaded to Coverity for analyse"
+
+post_submit_hook

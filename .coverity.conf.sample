@@ -1,0 +1,35 @@
+COVLOGIN=myemail@corp.com
+COVTOKEN=aAbBcCdDeEfFgGhHiIjJkK
+COVBINDIR="/opt/cov-analysis-linux64-2019.03/bin"
+# Nickname included in scan description:
+NICKNAME=myself
+
+COVDIR=cov-int
+COVBUILD="cov-build --dir $COVDIR"
+
+# Depending if your kernel > 4.8.x, you might need to activate this to run Coverity executables
+# (but latest tools with kernel 5.2 run fine)
+#sysctl vsyscall=emulate
+
+export PATH="$PATH:$COVBINDIR"
+
+function pre_build_hook() {
+    # tmp dir will be /tmp/cov-$username/
+    # It's the good place if you need to redirect to elsewhere with a symlink
+    return 0
+}
+
+function post_build_hook() {
+    return 0
+}
+
+function pre_submit_hook() {
+    return 0
+}
+
+function post_submit_hook() {
+    # Clean up build folders?
+    rm -rf "$COVDIR"
+    echo "Coverity build cleaned"
+    return 0
+}
