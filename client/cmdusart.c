@@ -373,7 +373,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         if (strcmp((char *)data, "OKsetname") == 0) {
             PrintAndLogEx(SUCCESS, "Name set to " _GREEN_("PM3_RDV4.0"));
         } else {
-            PrintAndLogEx(WARNING, "Unexpected response to AT+NAME: " _YELLOW_("%.*s"), len, data);
+            PrintAndLogEx(WARNING, "Unexpected response to AT+NAME: " _YELLOW_("%.*s"), (int)len, data);
         }
     } else {
         PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
@@ -409,7 +409,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         if (strcmp((char *)data, "OKsetPIN") == 0) {
             PrintAndLogEx(SUCCESS, "PIN set to " _GREEN_("1234"));
         } else {
-            PrintAndLogEx(WARNING, "Unexpected response to AT+PIN: " _YELLOW_("%.*s"), len, data);
+            PrintAndLogEx(WARNING, "Unexpected response to AT+PIN: " _YELLOW_("%.*s"), (int)len, data);
         }
     } else {
         PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
@@ -429,7 +429,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
             if (strcmp((char *)data, "OK None") == 0) {
                 PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None"));
             } else {
-                PrintAndLogEx(WARNING, "Unexpected response to AT+P: " _YELLOW_("%.*s"), len, data);
+                PrintAndLogEx(WARNING, "Unexpected response to AT+P: " _YELLOW_("%.*s"), (int)len, data);
             }
         } else {
             PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
@@ -449,7 +449,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
             if (strcmp((char *)data, "OK" BTADDON_BAUD_NUM) == 0) {
                 PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_(BTADDON_BAUD_NUM));
             } else {
-                PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), len, data);
+                PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), (int)len, data);
             }
         } else {
             PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");

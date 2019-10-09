@@ -2487,7 +2487,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
             case 'u':
                 param_gethex_ex(Cmd, cmdp + 1, CSN, &len);
                 if (len >> 1 != sizeof(CSN)) {
-                    PrintAndLogEx(WARNING, "Wrong CSN length, expected %d got [%d]", sizeof(CSN), len >> 1);
+                    PrintAndLogEx(WARNING, "Wrong CSN length, expected %zu got [%d]", sizeof(CSN), len >> 1);
                     errors = true;
                 }
                 cmdp += 2;
@@ -2495,7 +2495,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
             case 'm':
                 param_gethex_ex(Cmd, cmdp + 1, MACS, &len);
                 if (len >> 1 != sizeof(MACS)) {
-                    PrintAndLogEx(WARNING, "Wrong MACS length, expected %d got [%d]  ", sizeof(MACS), len >> 1);
+                    PrintAndLogEx(WARNING, "Wrong MACS length, expected %zu got [%d]  ", sizeof(MACS), len >> 1);
                     errors = true;
                 } else {
                     memcpy(MAC_TAG, MACS + 4, 4);

@@ -408,7 +408,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         return 0;
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu64" bytes)", tracelen);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu32" bytes)", tracelen);
 
     print_hex_break(trace, tracelen, 32);
     printSep();
