@@ -495,10 +495,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
     //allow collecting up to 7 sets of nonces to allow recovery of up to 7 keys
 #define ATTACK_KEY_COUNT 7 // keep same as define in cmdhfmf.c -> readerAttack() (Cannot be more than 7)
-    nonces_t ar_nr_resp[ATTACK_KEY_COUNT * 2]; //*2 for 2 separate attack types (nml, moebius) 36 * 7 * 2 bytes = 504 bytes
+    nonces_t ar_nr_resp[ATTACK_KEY_COUNT * 2]; // *2 for 2 separate attack types (nml, moebius) 36 * 7 * 2 bytes = 504 bytes
     memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
 
-    uint8_t ar_nr_collected[ATTACK_KEY_COUNT * 2]; //*2 for 2nd attack type (moebius)
+    uint8_t ar_nr_collected[ATTACK_KEY_COUNT * 2]; // *2 for 2nd attack type (moebius)
     memset(ar_nr_collected, 0x00, sizeof(ar_nr_collected));
     uint8_t nonce1_count = 0;
     uint8_t nonce2_count = 0;
@@ -719,8 +719,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     // RCV: 61 XX => Using KEY B
                     // XX: Block number
 
+                    // iceman,  u8 can never be larger than 256
                     // if authenticating to a block that shouldn't exist - as long as we are not doing the reader attack
-                    if (receivedCmd_dec[1] > MIFARE_4K_MAXBLOCK && !((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
+                    if ( ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) ) {
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Reader tried to operate (0x%02x) on out of range block: %d (0x%02x), nacking", receivedCmd_dec[0], receivedCmd_dec[1], receivedCmd_dec[1]);
                         break;
