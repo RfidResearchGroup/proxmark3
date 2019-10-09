@@ -553,7 +553,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         }
 
         if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
-            PrintAndLogEx(ERR, "Card not in iso14443-4. res=" PRId64 ".", resp.oldarg[0]);
+            PrintAndLogEx(ERR, "Card not in iso14443-4. res=%" PRId64 ".", resp.oldarg[0]);
             return 1;
         }
 
