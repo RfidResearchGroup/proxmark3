@@ -692,7 +692,7 @@ static int CmdEM410xWrite(const char *Cmd) {
         //   the clock rate in bits 8-15 of the card value
         card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
     } else if (card == 0) {
-        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64, "(clock rate: %d)"; "T5555", id, clock1);
+        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64, "(clock rate: %d)", "T5555", id, clock1);
         card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
     } else {
         PrintAndLogEx(FAILED, "Error! Bad card type selected.\n");
