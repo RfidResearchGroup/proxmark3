@@ -1064,7 +1064,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         }
     }
     // try pm3 dirs in pm3 installation dir (install mode)
-    {
+    if (exec_path != NULL) {
         char *path = calloc(strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;
