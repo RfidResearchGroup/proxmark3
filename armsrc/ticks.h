@@ -38,8 +38,8 @@ uint32_t RAMFUNC GetCountSspClkDelta();
 void StartTicks(void);
 uint32_t GetTicks(void);
 void WaitTicks(uint32_t ticks);
-void WaitUS(uint16_t us);
-void WaitMS(uint16_t ms);
+void WaitUS(uint32_t us);
+void WaitMS(uint32_t ms);
 
 void StopTicks(void);
 
