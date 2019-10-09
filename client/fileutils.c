@@ -820,7 +820,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     while (fgets(line, sizeof(line), f)) {
 
         // check if we have enough space (if not allocate more)
-        if ((*keycnt * (keylen >> 1)) >= mem_size) {
+        if ((((size_t)(*keycnt)) * (keylen >> 1)) >= mem_size) {
 
             mem_size += block_size;
             *pdata = realloc(*pdata, mem_size);
