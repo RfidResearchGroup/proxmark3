@@ -2554,18 +2554,19 @@ static int CmdResetRead(const char *Cmd) {
 
     if (resp.status == PM3_SUCCESS) {
 
-        uint8_t *got = calloc(BIGBUF_SIZE - 1, sizeof(uint8_t));
+        uint16_t gotsize = BIGBUF_SIZE - 1;
+        uint8_t *got = calloc(gotsize, sizeof(uint8_t));
         if (got == NULL) {
             PrintAndLogEx(WARNING, "failed to allocate memory");
             return PM3_EMALLOC;
         }
 
-        if (!GetFromDevice(BIG_BUF, got, sizeof(got), 0, NULL, 0, NULL, 2500, false)) {
+        if (!GetFromDevice(BIG_BUF, got, gotsize, 0, NULL, 0, NULL, 2500, false)) {
             PrintAndLogEx(WARNING, "command execution time out");
             free(got);
             return PM3_ETIMEOUT;
         }
-        setGraphBuf(got, sizeof(got));
+        setGraphBuf(got, gotsize);
         free(got);
     }
     return PM3_SUCCESS;
