@@ -1967,7 +1967,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
                 // Store valid credentials for the nested / hardnested attack if none exist
                 if (know_target_key == false) {
-                    num_to_bytes(e_sector[i].Key[j], 6, key);
+                    num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
                     know_target_key = true;
                     blockNo = i;
                     keyType = j;
