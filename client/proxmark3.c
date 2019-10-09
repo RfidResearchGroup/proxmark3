@@ -160,6 +160,8 @@ check_script:
             if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile())) {
                 if (!pop_cmdscriptfile())
                     break;
+                if (script_cmd_buf == NULL)
+                    break;
                 goto check_script;
             } else {
 
