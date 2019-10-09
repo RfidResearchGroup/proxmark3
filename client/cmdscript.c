@@ -121,6 +121,7 @@ static int CmdScriptRun(const char *Cmd) {
     int ret = PM3_EUNDEF;
     if (!str_endswith(preferredName, ".cmd")) ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
     if (!str_endswith(preferredName, ".lua")) ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
+    free(script_path);
     return ret;
 }
 
