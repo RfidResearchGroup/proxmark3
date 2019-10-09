@@ -76,7 +76,7 @@ int JsonSaveJsonObject(json_t *root, const char *path, json_t *value) {
 
     if (path[0] == '$') {
         if (json_path_set(root, path, value, 0, &error)) {
-            PrintAndLogEx(ERR, "ERROR: can't set json path: ", error.text);
+            PrintAndLogEx(ERR, "ERROR: can't set json path: %s", error.text);
             return 2;
         } else {
             return 0;
