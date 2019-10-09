@@ -929,7 +929,7 @@ static int l_T55xx_readblock(lua_State *L) {
         // try reading the config block and verify that PWD bit is set before doing this!
         if (!override) {
 
-            if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, 0)) {
+            if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, 0)) {
                 return returnToLuaWithError(L, "Failed to read config block");
             }
 
@@ -946,7 +946,7 @@ static int l_T55xx_readblock(lua_State *L) {
         }
     }
 
-    if (!AquireData(usepage1, block, usepwd, password, 0)) {
+    if (!AcquireData(usepage1, block, usepwd, password, 0)) {
         return returnToLuaWithError(L, "Failed to acquire data from card");
     }
 
@@ -1003,7 +1003,7 @@ static int l_T55xx_detect(lua_State *L) {
 
     if (!useGB) {
 
-        isok = AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, 0);
+        isok = AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, 0);
         if (isok == false) {
             return returnToLuaWithError(L, "Failed to acquire LF signal data");
         }
