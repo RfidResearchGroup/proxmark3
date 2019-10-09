@@ -335,7 +335,7 @@ static int usage_t55xx_deviceconfig() {
     return PM3_SUCCESS;
 }
 static int usage_t55xx_protect() {
-    PrintAndLogEx(NORMAL, "This command set the pwd bit on T5577. ");
+    PrintAndLogEx(NORMAL, "This command sets the pwd bit on T5577.");
     PrintAndLogEx(NORMAL, _RED_("WARNING:") " this locks the tag!");
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx protect [r <mode>] [p <password>] [o] [n <new_password>]");
     PrintAndLogEx(NORMAL, "Options:");
