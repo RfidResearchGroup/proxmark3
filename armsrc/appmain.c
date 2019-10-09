@@ -1678,33 +1678,33 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SPIFFS_RENAME: {
             LED_B_ON();
-            uint8_t srcfilename[32];
-            uint8_t destfilename[32];
+            uint8_t src[32];
+            uint8_t dest[32];
             uint8_t *pfilename = packet->data.asBytes;
             char *token;
             token = strtok((char *)pfilename, ",");
-            strcpy((char *)srcfilename, token);
+            strncpy((char *)src, token, sizeof(src) - 1);
             token = strtok(NULL, ",");
-            strcpy((char *)destfilename, token);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs RENAME : %s", srcfilename);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs RENAME : %s", destfilename);
-            rdv40_spiffs_rename((char *) srcfilename, (char *)destfilename, RDV40_SPIFFS_SAFETY_SAFE);
+            strncpy((char *)dest, token, sizeof(dest) - 1);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs RENAME : %s", src);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs RENAME : %s", dest);
+            rdv40_spiffs_rename((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
             break;
         }
         case CMD_SPIFFS_COPY: {
             LED_B_ON();
-            uint8_t srcfilename[32];
-            uint8_t destfilename[32];
+            uint8_t src[32];
+            uint8_t dest[32];
             uint8_t *pfilename = packet->data.asBytes;
             char *token;
             token = strtok((char *)pfilename, ",");
-            strcpy((char *)srcfilename, token);
+            strncpy((char *)src, token, sizeof(src) - 1);
             token = strtok(NULL, ",");
-            strcpy((char *)destfilename, token);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs COPY : %s", srcfilename);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs COPY : %s", destfilename);
-            rdv40_spiffs_copy((char *) srcfilename, (char *)destfilename, RDV40_SPIFFS_SAFETY_SAFE);
+            strncpy((char *)dest, token, sizeof(dest) - 1);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs COPY : %s", src);
+            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs COPY : %s", dest);
+            rdv40_spiffs_copy((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
             break;
         }
