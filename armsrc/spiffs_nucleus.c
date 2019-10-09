@@ -944,7 +944,7 @@ s32_t spiffs_object_create(
     oix_hdr.p_hdr.flags = 0xff & ~(SPIFFS_PH_FLAG_FINAL | SPIFFS_PH_FLAG_INDEX | SPIFFS_PH_FLAG_USED);
     oix_hdr.type = type;
     oix_hdr.size = SPIFFS_UNDEFINED_LEN; // keep ones so we can update later without wasting this page
-    strncpy((char *)oix_hdr.name, (const char *)name, SPIFFS_OBJ_NAME_LEN);
+    strncpy((char *)oix_hdr.name, (const char *)name, SPIFFS_OBJ_NAME_LEN - 1);
 #if SPIFFS_OBJ_META_LEN
     if (meta) {
         _SPIFFS_MEMCPY(oix_hdr.meta, meta, SPIFFS_OBJ_META_LEN);
@@ -1007,7 +1007,7 @@ s32_t spiffs_object_update_index_hdr(
 
     // change name
     if (name) {
-        strncpy((char *)objix_hdr->name, (const char *)name, SPIFFS_OBJ_NAME_LEN);
+        strncpy((char *)objix_hdr->name, (const char *)name, SPIFFS_OBJ_NAME_LEN - 1);
     }
 #if SPIFFS_OBJ_META_LEN
     if (meta) {
