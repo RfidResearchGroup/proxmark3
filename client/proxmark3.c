@@ -157,10 +157,8 @@ check_script:
             memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
 
             // read script file
-            if (!fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile())) {
+            if (fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile()) == NULL) {
                 if (!pop_cmdscriptfile())
-                    break;
-                if (script_cmd_buf == NULL)
                     break;
                 goto check_script;
             } else {
