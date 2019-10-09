@@ -153,6 +153,8 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
         return tracepos;
     }
 
+    uint16_t ret;
+
     switch (protocol) {
         case ISO_14443A: {
             /* https://www.kaiser.cx/pcap-iso14443.html defines a pseudo header:
@@ -185,16 +187,14 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
                           temp_str1,
                           temp_str2,
                           line);
-            return tracepos;
+            ret = tracepos;
         }
         default:
             PrintAndLogEx(NORMAL, "Currently only 14a supported");
-            return traceLen;
+            ret = traceLen;
     }
 
-    if (is_last_record(tracepos, trace, traceLen)) return traceLen;
-
-    return tracepos;
+    return ret;
 }
 
 static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes) {
