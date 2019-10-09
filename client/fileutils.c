@@ -803,9 +803,10 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
     // allocate some space for the dictionary
     *pdata = calloc(block_size, sizeof(uint8_t));
-    if (*pdata == NULL)
+    if (*pdata == NULL) {
+        free(path);
         return PM3_EFILE;
-
+    }
     mem_size = block_size;
 
     FILE *f = fopen(path, "r");
@@ -910,7 +911,7 @@ static int filelist(const char *path, const char *ext, bool last, bool tentative
 
     PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
     for (uint16_t i = 0; i < n; i++) {
-        if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || ((ext != NULL) && (str_endswith(namelist[i]->d_name, ext)))) {
+        if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
             PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " " : "│", i == n - 1 ? "└" : "├", namelist[i]->d_name);
         }
         free(namelist[i]);
