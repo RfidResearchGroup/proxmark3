@@ -8,8 +8,8 @@ pre_submit_hook
 ## delete all previous tarballs
 rm proxmark3.all.*.tgz
 
-VERSION="0.1.$(date --date now +%H%M)"
 TODAY="$(date --date now +%Y%m%d.%H%M)"
+VERSION="0.1.$TODAY"
 DESCNAME="manual_by_$NICKNAME.$TODAY.$(git describe --dirty --always)"
 FILENAME="proxmark3.all.$TODAY.tgz"
 LOGFILENAME="${FILENAME/.tgz/.log}"
