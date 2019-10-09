@@ -856,10 +856,10 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
 }
 
 static int ulc_print_3deskey(uint8_t *data) {
-    PrintAndLogEx(NORMAL, "         deskey1 [44/0x2C] : %s [s]", sprint_hex(data, 4), sprint_ascii(data, 4));
-    PrintAndLogEx(NORMAL, "         deskey1 [45/0x2D] : %s [s]", sprint_hex(data + 4, 4), sprint_ascii(data + 4, 4));
-    PrintAndLogEx(NORMAL, "         deskey2 [46/0x2E] : %s [s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
-    PrintAndLogEx(NORMAL, "         deskey2 [47/0x2F] : %s [s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
+    PrintAndLogEx(NORMAL, "         deskey1 [44/0x2C] : %s [%s]", sprint_hex(data, 4), sprint_ascii(data, 4));
+    PrintAndLogEx(NORMAL, "         deskey1 [45/0x2D] : %s [%s]", sprint_hex(data + 4, 4), sprint_ascii(data + 4, 4));
+    PrintAndLogEx(NORMAL, "         deskey2 [46/0x2E] : %s [%s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
+    PrintAndLogEx(NORMAL, "         deskey2 [47/0x2F] : %s [%s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
     PrintAndLogEx(NORMAL, "\n 3des key : %s", sprint_hex(SwapEndian64(data, 16, 8), 16));
     return PM3_SUCCESS;
 }
