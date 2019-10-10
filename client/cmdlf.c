@@ -1139,18 +1139,17 @@ static bool CheckChipType(bool getDeviceData) {
     //check for em4x05/em4x69 chips first
     uint32_t word = 0;
     if (EM4x05IsBlock0(&word)) {
-        PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("EM4x05/EM4x69") "found");
-        PrintAndLogEx(SUCCESS, "Try " _YELLOW_("`lf em 4x05`") " commands");
+        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05/EM4x69"));
+        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf em 4x05`") "commands");
         retval = true;
         goto out;
     }
 
     //check for t55xx chip...
     if (tryDetectP1(true)) {
-        PrintAndLogEx(SUCCESS, "\nChipset detection : " _GREEN_("T55xx") "found");
-        PrintAndLogEx(SUCCESS, "Try " _YELLOW_("`lf t55xx`")"commands");
+        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("T55xx"));
+        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf t55xx`") "commands");
         retval = true;
-        goto out;
     }
 
 out:
@@ -1184,7 +1183,8 @@ int CmdLFfind(const char *Cmd) {
     PrintAndLogEx(INFO, "if it finds something that looks like a tag");
     PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") "possible");
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Checking for known tags...\n");
+    PrintAndLogEx(INFO, "Checking for known tags...");
+    PrintAndLogEx(INFO, "");
 
     // only run these tests if device is online
     if (isOnline) {
@@ -1197,7 +1197,8 @@ int CmdLFfind(const char *Cmd) {
             }
             if (readCOTAGUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") "found!"); return PM3_SUCCESS;}
 
-            PrintAndLogEx(FAILED, "\n" _YELLOW_("No data found!") " - Signal looks like noise. Maybe not an LF tag?");
+            PrintAndLogEx(FAILED, _RED_("No data found!"));
+            PrintAndLogEx(INFO, "Signal looks like noise. Maybe not an LF tag?");
             return PM3_ESOFT;
         }
     }
