@@ -2411,18 +2411,37 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
 }
 
 /*
-Reading a COTAG.
+Reading COTAG.
 
 COTAG needs the reader to send a startsequence and the card has an extreme slow datarate.
 because of this, we can "sample" the data signal but we interpreate it to Manchester direct.
 
-READER START SEQUENCE:
-burst 800 us,    gap   2.2 msecs
-burst 3.6 msecs  gap   2.2 msecs
-burst 800 us     gap   2.2 msecs
-pulse 3.6 msecs
+This behavior looks very similar to old ancient Motorola Flexpass
 
-This triggers a COTAG tag to response
+-----------------------------------------------------------------------
+According to patent:
+Operating freq
+  reader 132 kHz
+  tag     66 kHz
+
+Divide by 384 counter
+
+PULSE repetition 5.82ms
+LOW  2.91 ms
+HIGH  2.91 ms
+
+Also references to a half-bit format and leading zero.
+-----------------------------------------------------------------------
+
+READER START SEQUENCE:
+
+burst 800 us  gap 2.2 ms
+burst 3.6 ms  gap 2.2 ms
+burst 800 us  gap 2.2 ms
+pulse 3.6 ms
+
+This triggers COTAG tag to response
+
 */
 void Cotag(uint32_t arg0) {
 #ifndef OFF
@@ -2435,7 +2454,7 @@ void Cotag(uint32_t arg0) {
 
     LED_A_ON();
 
-    LFSetupFPGAForADC(LF_DIVISOR_134, true);
+    LFSetupFPGAForADC(LF_DIVISOR(132), true);
 
     //clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);
