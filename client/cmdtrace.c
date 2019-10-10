@@ -188,10 +188,12 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
                           temp_str2,
                           line);
             ret = tracepos;
+            break;
         }
         default:
             PrintAndLogEx(NORMAL, "Currently only 14a supported");
             ret = traceLen;
+            break;
     }
 
     return ret;
