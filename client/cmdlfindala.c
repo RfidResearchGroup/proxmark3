@@ -140,8 +140,8 @@ static int CmdIndalaDemod(const char *Cmd) {
         fc |= DemodBuffer[57] << 7; // b8
         fc |= DemodBuffer[49] << 6; // b7
         fc |= DemodBuffer[44] << 5; // b6
-        fc |= DemodBuffer[48] << 4; // b5
-        fc |= DemodBuffer[47] << 3; // b4
+        fc |= DemodBuffer[47] << 4; // b5
+        fc |= DemodBuffer[48] << 3; // b4
         fc |= DemodBuffer[53] << 2; // b3
         fc |= DemodBuffer[39] << 1; // b2
         fc |= DemodBuffer[58] << 0; // b1
