@@ -69,7 +69,7 @@ static int usage_lf_indala_sim(void) {
 }
 
 // Indala 26 bit decode
-// by marshmellow
+// by marshmellow, martinbeier
 // optional arguments - same as PSKDemod (clock & invert & maxerr)
 static int CmdIndalaDemod(const char *Cmd) {
 
@@ -136,24 +136,44 @@ static int CmdIndalaDemod(const char *Cmd) {
         p1 |= DemodBuffer[32 + 22] << 0;
         p1 |= DemodBuffer[32 + 24] << 9;
 
-        /*
-                uint16_t fc = 0;
-                fc |= DemodBuffer[32+ 1] << 0;
-                fc |= DemodBuffer[32+ 2] << 1;
-                fc |= DemodBuffer[32+ 4] << 2;
-                fc |= DemodBuffer[32+ 5] << 3;
-                fc |= DemodBuffer[32+ 7] << 4;
-                fc |= DemodBuffer[32+10] << 5;
-                fc |= DemodBuffer[32+14] << 6;
-                fc |= DemodBuffer[32+15] << 7;
-                fc |= DemodBuffer[32+17] << 8;
-        */
+        uint8_t fc = 0;
+        fc |= DemodBuffer[32+25] << 7; // b8
+        fc |= DemodBuffer[32+17] << 6; // b7
+        fc |= DemodBuffer[32+12] << 5; // b6
+        fc |= DemodBuffer[32+16] << 4; // b5
+        fc |= DemodBuffer[32+15] << 3; // b4
+        fc |= DemodBuffer[32+21] << 2; // b3
+        fc |= DemodBuffer[32+7] << 1;  // b2
+        fc |= DemodBuffer[32+26] << 0; // b1
+ 
+        uint16_t csn = 0;
+        csn |= DemodBuffer[32+10] << 15; // b16
+        csn |= DemodBuffer[32+13] << 14; // b15
+        csn |= DemodBuffer[32+11] << 13; // b14
+        csn |= DemodBuffer[32+8] << 12; // b13
+        csn |= DemodBuffer[32+20] << 11; // b12
+        csn |= DemodBuffer[32+4] << 10; // b11
+        csn |= DemodBuffer[32+3] << 9; // b10
+        csn |= DemodBuffer[32+19] << 8; // b9
+        csn |= DemodBuffer[32+14] << 7; // b8
+        csn |= DemodBuffer[32+1] << 6; // b7
+        csn |= DemodBuffer[32+5] << 5; // b6
+        csn |= DemodBuffer[32+22] << 4; // b5
+        csn |= DemodBuffer[32+24] << 3; // b4
+        csn |= DemodBuffer[32+27] << 2; // b3
+        csn |= DemodBuffer[32+18] << 1; // b2
+        csn |= DemodBuffer[32+9] << 0; // b1
+		
+		uint8_t checksum = 0;
+        checksum |= DemodBuffer[32+30] << 1; // b2
+        checksum |= DemodBuffer[92+31] << 0; // b1
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
         PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", p1, p1);
         //PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", fc, fc);
         PrintAndLogEx(SUCCESS, "\tInternal ID | %" PRIu64, foo);
+		PrintAndLogEx(SUCCESS, "\nFC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01  );
 
 
     } else {
