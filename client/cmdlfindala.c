@@ -164,7 +164,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         csn |= DemodBuffer[32+18] << 1; // b2
         csn |= DemodBuffer[32+9] << 0; // b1
 		
-		uint8_t checksum = 0;
+	uint8_t checksum = 0;
         checksum |= DemodBuffer[32+30] << 1; // b2
         checksum |= DemodBuffer[32+31] << 0; // b1
 
@@ -173,7 +173,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", p1, p1);
         //PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", fc, fc);
         PrintAndLogEx(SUCCESS, "\tInternal ID | %" PRIu64, foo);
-		PrintAndLogEx(SUCCESS, "\nFC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01  );
+	PrintAndLogEx(SUCCESS, "\nFC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01  );
 
 
     } else {
