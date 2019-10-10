@@ -108,7 +108,7 @@ void permutekey_rev(uint8_t key[8], uint8_t dest[8]) {
  * @param val
  * @return
  */
-inline uint8_t rr(uint8_t val) {
+static inline uint8_t rr(uint8_t val) {
     return val >> 1 | ((val & 1) << 7);
 }
 
@@ -118,7 +118,7 @@ inline uint8_t rr(uint8_t val) {
  * @param val
  * @return
  */
-inline uint8_t rl(uint8_t val) {
+static inline uint8_t rl(uint8_t val) {
     return val << 1 | ((val & 0x80) >> 7);
 }
 
@@ -128,7 +128,7 @@ inline uint8_t rl(uint8_t val) {
  * @param val
  * @return
  */
-inline uint8_t swap(uint8_t val) {
+static inline uint8_t swap(uint8_t val) {
     return ((val >> 4) & 0xFF) | ((val & 0xFF) << 4);
 }
 
