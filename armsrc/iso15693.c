@@ -937,10 +937,9 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
     data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
     data[1] = ISO15_CMD_INVENTORY;
-    data[2] = 0; // mask length
+    data[2] = 0; // AFI
     AddCrc15(data, 3);
-    datalen += 2;
-
+    datalen = 5;
     recvlen = SendDataTag(data, datalen, false, speed, buf);
 
     WDT_HIT();
@@ -955,10 +954,12 @@ void BruteforceIso15693Afi(uint32_t speed) {
     data[2] = 0; // AFI
     data[3] = 0; // mask length
 
+    // 4 + 2crc
+    datalen = 6;
+
     for (uint16_t i = 0; i < 256; i++) {
         data[2] = i & 0xFF;
         AddCrc15(data, 4);
-        datalen += 2;
         recvlen = SendDataTag(data, datalen, false, speed, buf);
         WDT_HIT();
         if (recvlen >= 12) {
