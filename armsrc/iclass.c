@@ -1765,7 +1765,7 @@ void CodeIClassCommand(const uint8_t *cmd, int len) {
             for (k = 0; k < 4; k++) {
 
                 if (k == (b & 3))
-                    ToSend[++ToSendMax] = 0xf0;
+                    ToSend[++ToSendMax] = 0x0f;
                 else
                     ToSend[++ToSendMax] = 0x00;
             }

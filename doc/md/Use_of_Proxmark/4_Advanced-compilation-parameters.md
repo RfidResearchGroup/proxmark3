@@ -12,6 +12,13 @@ Via some definitions, you can adjust the firmware for a given platform, but also
 The client doesn't depend on the capabilities of the Proxmark3 it's connected to.
 So you can use the same client for different Proxmark3 platforms, given that everything is running the same version.
 
+It's possible to explicitly skip the Qt support in the compilation even if Qt is present on the host, with:
+
+```
+make clean
+make SKIPQT=1
+```
+
 ## Firmware
 
 By default, the firmware is of course tuned for the Proxmark3 Rdv4.0 device, which has built-in support for 256kb onboard flash SPI memory, Sim module (smart card support), FPC connector.

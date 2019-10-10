@@ -588,9 +588,11 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             case MFEMUL_NOFIELD:
                 if (DBGLEVEL >= DBG_EXTENDED)
                     Dbprintf("MFEMUL_NOFIELD");
+                break;
             case MFEMUL_HALTED:
                 if (DBGLEVEL >= DBG_EXTENDED)
                     Dbprintf("MFEMUL_HALTED");
+                break;
             case MFEMUL_IDLE: {
                 LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                 if (DBGLEVEL >= DBG_EXTENDED)

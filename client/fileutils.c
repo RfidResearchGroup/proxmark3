@@ -487,7 +487,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!pdata) {
+    if (!*pdata) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
         return PM3_EMALLOC;
@@ -820,7 +820,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     while (fgets(line, sizeof(line), f)) {
 
         // check if we have enough space (if not allocate more)
-        if ((*keycnt * (keylen >> 1)) >= mem_size) {
+        if ((((size_t)(*keycnt)) * (keylen >> 1)) >= mem_size) {
 
             mem_size += block_size;
             *pdata = realloc(*pdata, mem_size);
@@ -1064,7 +1064,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         }
     }
     // try pm3 dirs in pm3 installation dir (install mode)
-    {
+    if (exec_path != NULL) {
         char *path = calloc(strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;

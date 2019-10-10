@@ -204,7 +204,7 @@ static int CmdFdxDemod(const char *Cmd) {
         else if (preambleIndex == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B preamble not found");
         else if (preambleIndex == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B Size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ans: %d", preambleIndex);
         return PM3_ESOFT;
@@ -216,7 +216,7 @@ static int CmdFdxDemod(const char *Cmd) {
     // remove marker bits (1's every 9th digit after preamble) (pType = 2)
     size = removeParity(DemodBuffer, 11, 9, 2, 117);
     if (size != 104) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B error removeParity: %d", size);
+        PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B error removeParity: %zu", size);
         return PM3_ESOFT;
     }
 

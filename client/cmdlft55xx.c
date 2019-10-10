@@ -335,7 +335,7 @@ static int usage_t55xx_deviceconfig() {
     return PM3_SUCCESS;
 }
 static int usage_t55xx_protect() {
-    PrintAndLogEx(NORMAL, "This command set the pwd bit on T5577. ");
+    PrintAndLogEx(NORMAL, "This command sets the pwd bit on T5577.");
     PrintAndLogEx(NORMAL, _RED_("WARNING:") " this locks the tag!");
     PrintAndLogEx(NORMAL, "Usage:  lf t55xx protect [r <mode>] [p <password>] [o] [n <new_password>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -479,7 +479,7 @@ bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_
         PrintAndLogEx(INFO, "Block0 write detected, running `detect` to see if validation is possible");
 
     for (uint8_t m = 0; m < 4; m++) {
-        if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false) {
+        if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false) {
             continue;
         }
 
@@ -512,7 +512,7 @@ bool t55xxAquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0,
         config.pwd = 0x00;
 
     for (uint8_t m = 0; m < 4; m++) {
-        if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false)
+        if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false)
             continue;
 
         if (tryDetectModulationEx(m, verbose, known_block0) == false)
@@ -776,7 +776,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
         // override = 1 (override and display)
         // override = 2 (override and no display)
         if (override == 0) {
-            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, downlink_mode) == false)
+            if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, downlink_mode) == false)
                 return PM3_ERFTRANS;
 
             if (tryDetectModulation(downlink_mode, false) == false) {
@@ -792,7 +792,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
         }
     }
 
-    if (AquireData(page1, block, usepwd, password, downlink_mode) == false)
+    if (AcquireData(page1, block, usepwd, password, downlink_mode) == false)
         return PM3_ERFTRANS;
 
     if (DecodeT55xxBlock() == false)
@@ -1013,7 +1013,7 @@ static int CmdT55xxDetect(const char *Cmd) {
             if (try_all_dl_modes) {
                 for (uint8_t m = downlink_mode; m < 4; m++) {
                             
-                    if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, try_with_pwd & usepwd, password, m) == false)
+                    if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, try_with_pwd & usepwd, password, m) == false)
                         continue;
 
                     // pre fill to save passing in.
@@ -1036,7 +1036,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                 else    
                     config.pwd = 0x00;
 
-                if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
+                if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
                     found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
                 }
             }
@@ -1774,7 +1774,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         uint32_t password = 0;
 
         // REGULAR_READ_MODE_BLOCK - yeilds correct Page 1 Block 2 data i.e. + 32 bit offset.
-        if (!AquireData(T55x7_PAGE1, REGULAR_READ_MODE_BLOCK, pwdmode, password, downlink_mode))
+        if (!AcquireData(T55x7_PAGE1, REGULAR_READ_MODE_BLOCK, pwdmode, password, downlink_mode))
             return PM3_ENODATA;
     }
 
@@ -2077,7 +2077,7 @@ static int CmdT55xxInfo(const char *Cmd) {
         // sanity check.
         if (SanityOfflineCheck(false) != PM3_SUCCESS) return PM3_ENODATA;
 
-        if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode))
+        if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode))
             return PM3_ENODATA;
     }
 
@@ -2275,7 +2275,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     return res;
 }
 
-bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode) {
+bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode) {
     // arg0 bitmodes:
     //  b0 = pwdmode
     //  b1 = page to read from
@@ -2808,7 +2808,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         if (resp.oldarg[0]) {
             PrintAndLogEx(SUCCESS, "\nFound a candidate [ " _YELLOW_("%08"PRIX64) " ]. Trying to validate", resp.oldarg[1]);
 
-            if (AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.oldarg[1], downlink_mode)) {
+            if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, resp.oldarg[1], downlink_mode)) {
                 found = tryDetectModulation(downlink_mode, T55XX_PrintConfig);
                 if (found) {
                     PrintAndLogEx(SUCCESS, "Found valid password: [ " _GREEN_("%08"PRIX64) "]", resp.oldarg[1]);
@@ -2857,7 +2857,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             PrintAndLogEx(INFO, "Testing %08"PRIX64, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
 
-                if (!AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
+                if (!AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, curr_password, dl_mode)) {
                     continue;
                 }
 
@@ -2975,14 +2975,14 @@ uint8_t tryOnePassword(uint32_t password, uint8_t downlink_mode) {
     // check if dl mode 4 and loop if needed
     for (dl_mode = downlink_mode; dl_mode < 4; dl_mode++) {
 
-        AquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password, dl_mode);
-
-        //  if (getSignalProperties()->isnoise == false) {
-        //  } else {
-        if (tryDetectModulation(dl_mode, T55XX_PrintConfig)) {
-            return 1 + (dl_mode << 1);
+        if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, true, password, dl_mode)) {
+            //  if (getSignalProperties()->isnoise == false) {
+            //  } else {
+            if (tryDetectModulation(dl_mode, T55XX_PrintConfig)) {
+                return 1 + (dl_mode << 1);
+            }
+            //  }
         }
-        //  }
         if (!try_all_dl_modes) dl_mode = 4;
     }
     return 0;
@@ -3109,7 +3109,7 @@ bool tryDetectP1(bool getData) {
     bool     st         = true;
 
     if (getData) {
-        if (!AquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, false, 0, 0))
+        if (!AcquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, false, 0, 0))
             return false;
     }
 
@@ -3259,7 +3259,7 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
 
     if (!useGB) {
         for (dl_mode = downlink_mode; dl_mode < 4; dl_mode++) {
-            found = AquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, usepwd, password, dl_mode);
+            found = AcquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, usepwd, password, dl_mode);
             //return PM3_ENODATA;
             if (tryDetectP1(false)) { //tryDetectModulation())
                 found = true;

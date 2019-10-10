@@ -532,7 +532,7 @@ static int CmdPing(const char *Cmd) {
             error = memcmp(data, resp.data.asBytes, len) != 0;
             PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
         } else {
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received"));
+            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
         }
     } else
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
