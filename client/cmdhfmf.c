@@ -2866,18 +2866,21 @@ out:
         PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
     }
 
-    // Disable fast mode and send a dummy command to make it effective
-    conn.block_after_ACK = false;
-    SendCommandNG(CMD_PING, NULL, 0);
-    WaitForResponseTimeout(CMD_PING, NULL, 1000);
-
     if (createDumpFile) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
         createMfcKeyDump(SectorsCnt, e_sector, fptr);
     }
-
     free(keyBlock);
     free(e_sector);
+
+    // Disable fast mode and send a dummy command to make it effective
+    conn.block_after_ACK = false;
+    SendCommandNG(CMD_PING, NULL, 0);
+    if (!WaitForResponseTimeout(CMD_PING, NULL, 1000)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }

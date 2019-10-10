@@ -109,7 +109,10 @@ static int CmdIndalaDemod(const char *Cmd) {
     //convert UID to HEX
     uint32_t uid1 = bytebits_to_byte(DemodBuffer, 32);
     uint32_t uid2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    uint64_t foo = (((uint64_t)uid1 << 32) & 0x1FFFFFFF) | (uid2 & 0x7FFFFFFF);
+    // To be checked, what's this internal ID ?
+    // foo is only used for 64b ids and in that case uid1 must be only preamble, plus the following code is wrong as x<<32 & 0x1FFFFFFF is always zero
+    //uint64_t foo = (((uint64_t)uid1 << 32) & 0x1FFFFFFF) | (uid2 & 0x7FFFFFFF);
+    uint64_t foo = uid2 & 0x7FFFFFFF;
 
     if (DemodBufferLen == 64) {
         PrintAndLogEx(

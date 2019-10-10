@@ -840,8 +840,6 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
         if (protocol == ISO_7816_4)
             PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
-        if (protocol == FELICA)
-            PrintAndLogEx(NORMAL, "Felica"); // Timings ?
         if (protocol == PROTO_HITAG)
             PrintAndLogEx(NORMAL, "Hitag2 / HitagS - Timings in ETU (8us)");
 
