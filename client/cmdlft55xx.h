@@ -20,6 +20,7 @@
 #define T55x7_PAGE1 0x01
 #define T55x7_PWD 0x00000010
 #define REGULAR_READ_MODE_BLOCK 0xFF
+#define T55x7_BLOCK_COUNT 12
 
 // config blocks
 #define T55X7_DEFAULT_CONFIG_BLOCK      0x000880E8  // ASK, compat mode, data rate 32, manchester, STT, 7 data blocks
@@ -125,6 +126,8 @@ typedef struct {
         refLeading0 = 0x02,
         ref1of4 = 0x03,
     } downlink_mode;
+    uint32_t blockData [T55x7_BLOCK_COUNT];  // the dump/read will save data here.
+    bool blockValid [T55x7_BLOCK_COUNT];     // this will allow easy access to the data for display etc.
 } t55xx_conf_block_t;
 
 t55xx_conf_block_t Get_t55xx_Config(void);
@@ -144,7 +147,7 @@ char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
 char *GetDownlinkModeStr(uint8_t dlmode);
 void printT5xxHeader(uint8_t page);
-void printT55xxBlock(uint8_t blockNum);
+void printT55xxBlock(uint8_t blockNum,bool page1);
 int  printConfiguration(t55xx_conf_block_t b);
 
 bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose);
