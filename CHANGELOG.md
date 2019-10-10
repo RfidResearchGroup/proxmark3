@@ -3,8 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Chg ´lf indala read´ - added indala 26bit decoding (@martinbeier)
- - Added lf t55xx detected to try without password first (@mwalker33)
+ - Chg `lf indala read` - added indala 26bit decoding (@martinbeier)
+ - Chg `lf t55xx detect` to try without password first (@mwalker33)
  - Display high bit for detected Kastle HIDs to allow `lf hid clone [id]` to work properly (@swg0101)
  - Add option `-n` to scripts pm3* (@doegox)
  - Add `wiegand list/encode/decode` - wiegand format manipulation. Adapted to fit here. (@grauerfuchs)
