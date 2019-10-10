@@ -219,7 +219,7 @@ static int CmdAWIDDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - AWID preamble not found");
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - AWID size not correct, size %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - AWID size not correct, size %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - AWID error demoding fsk %d", idx);
 

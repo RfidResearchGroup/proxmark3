@@ -32,7 +32,7 @@ size_t DemodPCF7931(uint8_t **outBlocks) {
     uint8_t dir;
 
     BigBuf_Clear_keep_EM();
-    LFSetupFPGAForADC(95, true);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
     DoAcquisition_default(0, true);
 
     /* Find first local max/min */
@@ -449,7 +449,7 @@ void SendCmdPCF7931(uint32_t *tab) {
     }
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125kHz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
     LED_A_ON();

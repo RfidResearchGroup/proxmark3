@@ -401,7 +401,7 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
         else if (ans == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
         else if (ans == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %zu", size);
         else if (ans == -6)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x parity failed");
 
@@ -692,7 +692,7 @@ static int CmdEM410xWrite(const char *Cmd) {
         //   the clock rate in bits 8-15 of the card value
         card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
     } else if (card == 0) {
-        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64, "T5555", id, clock1);
+        PrintAndLogEx(SUCCESS, "Writing %s tag with UID 0x%010" PRIx64 "(clock rate: %d)", "T5555", id, clock1);
         card = (card & 0xFF) | ((clock1 << 8) & 0xFF00);
     } else {
         PrintAndLogEx(FAILED, "Error! Bad card type selected.\n");

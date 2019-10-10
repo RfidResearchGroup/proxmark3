@@ -246,7 +246,7 @@ static int CmdHIDDemod(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %d, Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer:", idx, size);
     if (g_debugMode)
         printDemodBuff();
 

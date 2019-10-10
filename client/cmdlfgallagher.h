@@ -1,23 +1,20 @@
 //-----------------------------------------------------------------------------
-// Iceman
+// Iceman, 2019
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Low frequency COTAG commands
+// Low frequency GALLAGHER tag commands
 //-----------------------------------------------------------------------------
-
-#ifndef CMDLFCOTAG_H__
-#define CMDLFCOTAG_H__
+#ifndef CMDLFGALLAGHER_H__
+#define CMDLFGALLAGHER_H__
 
 #include "common.h"
 
-#ifndef COTAG_BITS
-#define COTAG_BITS 264
+int CmdLFGallagher(const char *Cmd);
+
+int demodGallagher(void);
+int detectGallagher(uint8_t *dest, size_t *size);
 #endif
 
-int CmdLFCOTAG(const char *Cmd);
-int demodCOTAG(void);
-int readCOTAGUid(void);
-#endif

@@ -250,11 +250,11 @@ void WaitTicks(uint32_t ticks) {
 
 // Wait / Spindelay in us (microseconds)
 // 1us = 1.5ticks.
-void WaitUS(uint16_t us) {
-    WaitTicks((uint32_t)us * 3 / 2);
+void WaitUS(uint32_t us) {
+    WaitTicks((us & 0x3FFFFFFF) * 3 / 2);
 }
-void WaitMS(uint16_t ms) {
-    WaitTicks((uint32_t)ms * 1500);
+void WaitMS(uint32_t ms) {
+    WaitTicks((ms & 0x1FFFFF) * 1500);
 }
 
 // stop clock

@@ -585,7 +585,9 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 void OnSuccess() {
     pcb_blocknum = 0;
     ReaderTransmit(deselect_cmd, 3, NULL);
-    mifare_ultra_halt();
+    if (mifare_ultra_halt()) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Halt error");
+    }
     switch_off();
 }
 

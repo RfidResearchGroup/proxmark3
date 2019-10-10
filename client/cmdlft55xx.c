@@ -3635,7 +3635,7 @@ static command_t CommandTable[] = {
     {"dangerraw",    CmdT55xxDangerousRaw,    IfPm3Lf,         "Sends raw bitstream. Dangerous, do not use!! b <bitstream> t <timing>"},
     {"detect",       CmdT55xxDetect,          AlwaysAvailable, "[1] Try detecting the tag modulation from reading the configuration block."},
     {"deviceconfig", CmdT55xxSetDeviceConfig, IfPm3Lf,         "Set/Get T55XX device configuration (startgap, writegap, write0, write1, readgap"},
-    {"dump",         CmdT55xxDump,            IfPm3Lf,         "[password] [o] Dump T55xx card block 0-7. Optional [password], [override]"},
+    {"dump",         CmdT55xxDump,            IfPm3Lf,         "[password] [o] Dump T55xx card Page 0 block 0-7. Optional [password], [override]"},
     {"restore",      CmdT55xxRestore,         IfPm3Lf,         "f <filename> [p <password>] -- Restore a dump file of a T55xx card"},
     {"info",         CmdT55xxInfo,            AlwaysAvailable, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
     {"p1detect",     CmdT55xxDetectPage1,     IfPm3Lf,         "[1] Try detecting if this is a t55xx tag by reading page 1"},

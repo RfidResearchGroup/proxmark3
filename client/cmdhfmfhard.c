@@ -282,7 +282,12 @@ static void init_bitflip_bitarrays(void) {
                 fclose(statesfile);
                 uint32_t count = 0;
                 init_inflate(&compressed_stream, input_buffer, filesize, (uint8_t *)&count, sizeof(count));
-                inflate(&compressed_stream, Z_SYNC_FLUSH);
+                int res = inflate(&compressed_stream, Z_SYNC_FLUSH);
+                if (res != Z_OK) {
+                    PrintAndLogEx(ERR, "Inflate error. Aborting...\n");
+                    inflateEnd(&compressed_stream);
+                    exit(4);
+                }
                 if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
                     uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
                     if (bitset == NULL) {
@@ -292,7 +297,12 @@ static void init_bitflip_bitarrays(void) {
                     }
                     compressed_stream.next_out = (uint8_t *)bitset;
                     compressed_stream.avail_out = sizeof(uint32_t) * (1 << 19);
-                    inflate(&compressed_stream, Z_SYNC_FLUSH);
+                    res = inflate(&compressed_stream, Z_SYNC_FLUSH);
+                    if (res != Z_OK && res != Z_STREAM_END) {
+                        PrintAndLogEx(ERR, "Inflate error. Aborting...\n");
+                        inflateEnd(&compressed_stream);
+                        exit(4);
+                    }
                     effective_bitflip[odd_even][num_effective_bitflips[odd_even]++] = bitflip;
                     bitflip_bitarrays[odd_even][bitflip] = bitset;
                     count_bitflip_bitarrays[odd_even][bitflip] = count;

@@ -77,13 +77,15 @@ int fileExists(const char *filename) {
 bool is_regular_file(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
-    _stat(filename, &st);
-    return S_ISREG(st.st_mode) != 0;
+    if (_stat(filename, &st) == -1)
+        return false;
 #else
     struct stat st;
-    stat(filename, &st);
-    return S_ISREG(st.st_mode) != 0;
+//    stat(filename, &st);
+    if (lstat(filename, &st) == -1)
+        return false;
 #endif
+    return S_ISREG(st.st_mode) != 0;
 }
 /**
  * @brief checks if path is directory.
@@ -93,13 +95,15 @@ bool is_regular_file(const char *filename) {
 bool is_directory(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
-    _stat(filename, &st);
-    return S_ISDIR(st.st_mode) != 0;
+    if (_stat(filename, &st) == -1)
+        return false;
 #else
     struct stat st;
-    stat(filename, &st);
-    return S_ISDIR(st.st_mode) != 0;
+//    stat(filename, &st);
+    if (lstat(filename, &st) == -1)
+        return false;
 #endif
+    return S_ISDIR(st.st_mode) != 0;
 }
 
 
@@ -328,6 +332,25 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             }
             break;
         }
+        case jsfT55x7: {
+            JsonSaveStr(root, "FileType", "t55x7");
+            uint8_t id[4] = {0};
+            memcpy(id, data, 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.ID", id, sizeof(id));
+
+            for (size_t i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }
+            break;
+        }
+        case jsf14b:
+        case jsf15:
+        case jsfLegic:
+        case jsfT5555:
+        default:
+            break;
     }
 
     int res = json_dump_file(root, fileName, JSON_INDENT(2));
@@ -464,7 +487,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!pdata) {
+    if (!*pdata) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
         return PM3_EMALLOC;
@@ -660,6 +683,27 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         *datalen = sptr;
     }
 
+    if (!strcmp(ctype, "t55x7")) {
+        size_t sptr = 0;
+        for (size_t i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            char path[30] = {0};
+            sprintf(path, "$.blocks.%zu", i);
+
+            size_t len = 0;
+            JsonLoadBufAsHex(root, path, &udata[sptr], 4, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+        *datalen = sptr;
+    }
+
     PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
     json_decref(root);
@@ -759,9 +803,10 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
     // allocate some space for the dictionary
     *pdata = calloc(block_size, sizeof(uint8_t));
-    if (*pdata == NULL)
+    if (*pdata == NULL) {
+        free(path);
         return PM3_EFILE;
-
+    }
     mem_size = block_size;
 
     FILE *f = fopen(path, "r");
@@ -775,7 +820,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     while (fgets(line, sizeof(line), f)) {
 
         // check if we have enough space (if not allocate more)
-        if ((*keycnt * (keylen >> 1)) >= mem_size) {
+        if ((((size_t)(*keycnt)) * (keylen >> 1)) >= mem_size) {
 
             mem_size += block_size;
             *pdata = realloc(*pdata, mem_size);
@@ -866,7 +911,7 @@ static int filelist(const char *path, const char *ext, bool last, bool tentative
 
     PrintAndLogEx(NORMAL, "%s── %s", last ? "└" : "├", path);
     for (uint16_t i = 0; i < n; i++) {
-        if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || (str_endswith(namelist[i]->d_name, ext))) {
+        if (((ext == NULL) && (namelist[i]->d_name[0] != '.')) || (ext && (str_endswith(namelist[i]->d_name, ext)))) {
             PrintAndLogEx(NORMAL, "%s   %s── %-21s", last ? " " : "│", i == n - 1 ? "└" : "├", namelist[i]->d_name);
         }
         free(namelist[i]);
@@ -1019,7 +1064,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
         }
     }
     // try pm3 dirs in pm3 installation dir (install mode)
-    {
+    if (exec_path != NULL) {
         char *path = calloc(strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
         if (path == NULL)
             goto out;
@@ -1057,10 +1102,10 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     if (is_directory(searchname))
         return PM3_EINVARG;
 
-
     char *filename = filenamemcopy(searchname, suffix);
     if (filename == NULL)
         return PM3_EMALLOC;
+
     if (strlen(filename) == 0) {
         free(filename);
         return PM3_EFILE;

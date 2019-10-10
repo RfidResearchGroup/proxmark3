@@ -41,7 +41,7 @@ static int usage_lf_nedap_gen(void) {
     PrintAndLogEx(NORMAL, "      l               : optional - long (128), default to short (64)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nedap generate s 1 c 123 i 112233");
+    PrintAndLogEx(NORMAL, "       lf nedap generate s 1 c 123 i 12345");
     return PM3_SUCCESS;
 }
 
@@ -58,7 +58,7 @@ static int usage_lf_nedap_clone(void) {
 //  PrintAndLogEx(NORMAL, "      Q5              : optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf nedap clone s 1 c 123 i 112233");
+    PrintAndLogEx(NORMAL, "       lf nedap clone s 1 c 123 i 12345");
     return PM3_SUCCESS;
 }
 

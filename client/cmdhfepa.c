@@ -50,7 +50,7 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
 
         // check if command failed
         if (resp.oldarg[0] != 0) {
-            PrintAndLogEx(FAILED, "Error in step %" PRId64 ", Return code: %" PRId64, resp.oldarg[0], (int)resp.oldarg[1]);
+            PrintAndLogEx(FAILED, "Error in step %" PRId64 ", Return code: %" PRId64, resp.oldarg[0], resp.oldarg[1]);
         } else {
             size_t nonce_length = resp.oldarg[1];
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
