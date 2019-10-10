@@ -150,6 +150,8 @@ void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
 }
 
 void printarr(const char *name, uint8_t *arr, int len) {
+    if (name == NULL || arr == NULL) return;
+
     int cx, i;
     size_t outsize = 40 + strlen(name) + len * 5;
     char *output = calloc(outsize, sizeof(char));
