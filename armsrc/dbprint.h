@@ -43,7 +43,7 @@
 
 
 void DbpString(char *str);
-void DbpStringEx(uint32_t flags, char *str);
+void DbpStringEx(uint32_t flags, char *src, size_t srclen);
 void Dbprintf(const char *fmt, ...);
 void DbprintfEx(uint32_t flags, const char *fmt, ...);
 void Dbhexdump(int len, uint8_t *d, bool bAsci);

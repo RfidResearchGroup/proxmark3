@@ -56,10 +56,11 @@ typedef enum {
     jsfMfuMemory,
     jsfHitag,
     jsfIclass,
-//    jsf14b,
-//    jsf15,
-//    jsfLegic,
-//    jsfT55xx,
+    jsf14b,
+    jsf15,
+    jsfLegic,
+    jsfT55x7,
+    jsfT5555,
 } JSONFileType;
 
 typedef enum {

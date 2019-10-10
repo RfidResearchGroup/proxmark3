@@ -22,42 +22,42 @@
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
 
-void DbpStringEx(uint32_t flags, char *str) {
+void DbpStringEx(uint32_t flags, char *src, size_t srclen) {
 #if DEBUG
     struct {
         uint16_t flag;
         uint8_t buf[PM3_CMD_DATA_SIZE - sizeof(uint16_t)];
     } PACKED data;
     data.flag = flags;
-    uint16_t len = MIN(strlen(str), sizeof(data.buf));
-    memcpy(data.buf, str, len);
+    uint16_t len = MIN(srclen, sizeof(data.buf));
+    memcpy(data.buf, src, len);
     reply_ng(CMD_DEBUG_PRINT_STRING, PM3_SUCCESS, (uint8_t *)&data, sizeof(data.flag) + len);
 #endif
 }
 
 void DbpString(char *str) {
 #if DEBUG
-    DbpStringEx(FLAG_LOG, str);
+    DbpStringEx(FLAG_LOG, str, strlen(str));
 #endif
 }
 
 void DbprintfEx(uint32_t flags, const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
-    char output_string[128] = {0x00};
+    char s[PM3_CMD_DATA_SIZE] = {0x00};
     va_list ap;
     va_start(ap, fmt);
-    kvsprintf(fmt, output_string, 10, ap);
+    kvsprintf(fmt, s, 10, ap);
     va_end(ap);
 
-    DbpStringEx(flags, output_string);
+    DbpStringEx(flags, s, strlen(s));
 #endif
 }
 
 void Dbprintf(const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
-    char output_string[128] = {0x00};
+    char output_string[PM3_CMD_DATA_SIZE] = {0x00};
     va_list ap;
 
     va_start(ap, fmt);

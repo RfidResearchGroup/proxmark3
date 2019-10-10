@@ -186,7 +186,7 @@ static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
     if (sigURI) {
         size_t intsigurilen = (sig[indx] << 8) + sig[indx + 1];
         indx += 2;
-        PrintAndLogEx(NORMAL, "\tsignature uri [%zu]: %.*s", intsigurilen, intsigurilen, &sig[indx]);
+        PrintAndLogEx(NORMAL, "\tsignature uri [%zu]: %.*s", intsigurilen, (int)intsigurilen, &sig[indx]);
         indx += intsigurilen;
     }
 
@@ -211,7 +211,7 @@ static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
     if ((indx <= siglen) && certURI) {
         size_t inturilen = (sig[indx] << 8) + sig[indx + 1];
         indx += 2;
-        PrintAndLogEx(NORMAL, "\tcertificate uri [%zu]: %.*s", inturilen, inturilen, &sig[indx]);
+        PrintAndLogEx(NORMAL, "\tcertificate uri [%zu]: %.*s", inturilen, (int)inturilen, &sig[indx]);
     }
 
     return 0;

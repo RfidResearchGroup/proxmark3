@@ -664,10 +664,12 @@ static bool readKeyFile(uint8_t *key, size_t keylen) {
     }
 
     if (keylen != len) {
+        free(keyptr);
         return false;
     }
 
     memcpy(key, keyptr, keylen);
+    free(keyptr);
     return true;
 }
 

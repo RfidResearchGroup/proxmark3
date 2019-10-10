@@ -55,7 +55,7 @@ static int CmdScriptRun(const char *Cmd) {
     static uint8_t luascriptfile_idx = 0;
     sscanf(Cmd, "%127s%n %255[^\n\r]%n", preferredName, &name_len, arguments, &arg_len);
 
-    char *script_path;
+    char *script_path = NULL;
     if ((!str_endswith(preferredName, ".cmd")) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
         int error;
         if (luascriptfile_idx == MAX_NESTED_LUASCRIPT) {
@@ -121,6 +121,7 @@ static int CmdScriptRun(const char *Cmd) {
     int ret = PM3_EUNDEF;
     if (!str_endswith(preferredName, ".cmd")) ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
     if (!str_endswith(preferredName, ".lua")) ret = searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", false);
+    free(script_path);
     return ret;
 }
 

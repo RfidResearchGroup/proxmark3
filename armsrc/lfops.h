@@ -52,6 +52,7 @@ void T55xxWriteBlock(uint8_t *data);
 void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, uint32_t pwd, uint8_t downlink_mode);
 void T55xxWakeUp(uint32_t pwd, uint8_t flags);
 void T55xx_ChkPwds(uint8_t flags);
+void T55xxDangerousRawTest(uint8_t *data);
 
 void TurnReadLFOn(uint32_t delay);
 

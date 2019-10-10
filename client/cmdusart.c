@@ -373,7 +373,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         if (strcmp((char *)data, "OKsetname") == 0) {
             PrintAndLogEx(SUCCESS, "Name set to " _GREEN_("PM3_RDV4.0"));
         } else {
-            PrintAndLogEx(WARNING, "Unexpected response to AT+NAME: " _YELLOW_("%.*s"), len, data);
+            PrintAndLogEx(WARNING, "Unexpected response to AT+NAME: " _YELLOW_("%.*s"), (int)len, data);
         }
     } else {
         PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
@@ -391,7 +391,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         if (strcmp((char *)data, "OK+ROLE:S") == 0) {
             PrintAndLogEx(SUCCESS, "Role set to " _GREEN_("Slave"));
         } else {
-            PrintAndLogEx(WARNING, "Unexpected response to AT+ROLE=S: " _YELLOW_("%.*s"), len, data);
+            PrintAndLogEx(WARNING, "Unexpected response to AT+ROLE=S: " _YELLOW_("%.*s"), (int)len, data);
         }
     } else {
         PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
@@ -409,7 +409,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         if (strcmp((char *)data, "OKsetPIN") == 0) {
             PrintAndLogEx(SUCCESS, "PIN set to " _GREEN_("1234"));
         } else {
-            PrintAndLogEx(WARNING, "Unexpected response to AT+PIN: " _YELLOW_("%.*s"), len, data);
+            PrintAndLogEx(WARNING, "Unexpected response to AT+PIN: " _YELLOW_("%.*s"), (int)len, data);
         }
     } else {
         PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
@@ -429,7 +429,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
             if (strcmp((char *)data, "OK None") == 0) {
                 PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None"));
             } else {
-                PrintAndLogEx(WARNING, "Unexpected response to AT+P: " _YELLOW_("%.*s"), len, data);
+                PrintAndLogEx(WARNING, "Unexpected response to AT+P: " _YELLOW_("%.*s"), (int)len, data);
             }
         } else {
             PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
@@ -449,7 +449,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
             if (strcmp((char *)data, "OK" BTADDON_BAUD_NUM) == 0) {
                 PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_(BTADDON_BAUD_NUM));
             } else {
-                PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), len, data);
+                PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), (int)len, data);
             }
         } else {
             PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
@@ -505,30 +505,33 @@ static int CmdUsartBtPin(const char *Cmd) {
                 break;
         }
     }
+
     //Validations
     if (errors || cmdp == 0) {
         usage_usart_bt_pin();
         return PM3_EINVARG;
     }
+
     char string[6 + sizeof(pin)] = {0};
     sprintf(string, "AT+PIN%s", pin);
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
-//    PrintAndLogEx(NORMAL, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
     int ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 600);
+
     if (ret == PM3_ENODATA) {
         PrintAndLogEx(FAILED, "No response from add-on, is it ON and blinking?");
         return ret;
     }
+
     if (ret != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Command failed, ret=%i", ret);
         return ret;
     }
-//    PrintAndLogEx(NORMAL, "RX (%3zu):%.*s", len, (int)len, data);
+
     if (strcmp((char *)data, "OKsetPIN") == 0) {
         PrintAndLogEx(NORMAL, "PIN changed " _GREEN_("successfully"));
     } else {
-        PrintAndLogEx(WARNING, "Unexpected answer: %.*s", len, data);
+        PrintAndLogEx(WARNING, "Unexpected answer: %.*s", (int)len, data);
     }
     return PM3_SUCCESS;
 }
@@ -621,7 +624,7 @@ static int CmdUsartRX(const char *Cmd) {
     int ret = usart_rx(data, &len, waittime);
     if (ret != PM3_SUCCESS)
         return ret;
-    PrintAndLogEx(NORMAL, "RX:%.*s", len, data);
+    PrintAndLogEx(NORMAL, "RX:%.*s", (int)len, data);
     return PM3_SUCCESS;
 }
 

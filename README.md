@@ -5,10 +5,9 @@ This repo is based on iceman fork for Proxmark3.  It supports other Proxmark3 pl
 It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.0 new hardware and design.
 
 
-| Releases     | Linux & OSX CI       | Windows CI |
-| ------------------- |:-------------------:| -------------------:|
-| [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Build status](https://travis-ci.org/RfidResearchGroup/proxmark3.svg?branch=master)](https://travis-ci.org/RfidResearchGroup/proxmark3) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) |
-
+| Releases     | Linux & OSX CI       | Windows CI | Coverity    |
+| ------------------- |:-------------------:| -------------------:| -------------------:|
+| [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Build status](https://travis-ci.org/RfidResearchGroup/proxmark3.svg?branch=master)](https://travis-ci.org/RfidResearchGroup/proxmark3) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) | [![Coverity Status](https://scan.coverity.com/projects/19334/badge.svg)](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo)|
 ---
 
 # PROXMARK INSTALLATION AND OVERVIEW
@@ -94,8 +93,9 @@ It's needed to have a good USB cable to connect Proxmark3 to USB. If you have st
 
 ## The end
 
-- [@herrmann1001](https://mobile.twitter.com/herrmann1001) July 2018
+- July 2018 [@herrmann1001](https://mobile.twitter.com/herrmann1001)
 - updated Feb 2019 [@5w0rdfish](https://mobile.twitter.com/5w0rdFish)
+- updated 2019 [@doegox](https://mobile.twitter.com/doegox)
 
 # Donations
 

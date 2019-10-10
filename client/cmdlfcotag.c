@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Authored by Iceman
+// Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -17,6 +17,7 @@
 #include "lfdemod.h"
 #include "cmddata.h"    // getSamples
 #include "ui.h"         // PrintAndLog
+#include "ctype.h"      // tolower
 
 static int CmdHelp(const char *Cmd);
 
@@ -78,7 +79,7 @@ static int CmdCOTAGDemod(const char *Cmd) {
 // 2 = raw signal -  maxlength bigbuff
 static int CmdCOTAGRead(const char *Cmd) {
 
-    if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_cotag_read();
+    if ( tolower(Cmd[0]) == 'h') return usage_lf_cotag_read();
 
     uint32_t rawsignal = 1;
     sscanf(Cmd, "%u", &rawsignal);

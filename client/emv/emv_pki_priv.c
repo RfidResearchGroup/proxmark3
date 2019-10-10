@@ -196,7 +196,6 @@ static struct tlvdb *emv_pki_sign_key(const struct crypto_pk *cp,
     struct tlvdb *exp_db = tlvdb_fixed(exp_tag, ipk->elen, ipk->exp);
     if (!exp_db) {
         free(msg);
-
         return NULL;
     }
 
@@ -207,8 +206,10 @@ static struct tlvdb *emv_pki_sign_key(const struct crypto_pk *cp,
                                             add_tlv,
                                             NULL);
     free(msg);
-    if (!db)
+    if (!db) {
+        free(exp_db);
         return NULL;
+   }
 
     tlvdb_add(db, exp_db);
 

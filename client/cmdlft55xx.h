@@ -38,11 +38,11 @@
 #define T55X7_INDALA_224_CONFIG_BLOCK   0x000810E0  // emulate indala 224 bit - compat mode, PSK1, psk carrier FC * 2, data rate 32, maxblock 7
 #define T55X7_GUARDPROXII_CONFIG_BLOCK  0x00150060  // bitrate 64pcb, Direct modulation, Biphase, 3 data blocks
 #define T55X7_VIKING_CONFIG_BLOCK       0x00088040  // ASK, compat mode, data rate 32, Manchester, 2 data blocks
-#define T55X7_NORALYS_CONFIG_BLOCK      0x00088C6A  // ASK, compat mode,   (NORALYS - KCP3000)
+#define T55X7_NORALYS_CONFIG_BLOCK      0x00088C6A  // ASK, compat mode,   (NORALYS - KCP3000), 3 data blocks
 #define T55X7_IOPROX_CONFIG_BLOCK       0x00147040  // ioprox - FSK2a, data rate 64, 2 data blocks
-#define T55X7_PRESCO_CONFIG_BLOCK       0x00088088  // ASK, data rate 32, Manchester, 5 data blocks, STT
-#define T55X7_NEDAP_64_CONFIG_BLOCK     0x907f0042  // BiPhase,  data rate 64, 3 data blocks
-#define T55X7_NEDAP_128_CONFIG_BLOCK    0x907f0082  // BiPhase,  data rate 64, 5 data blocks
+#define T55X7_PRESCO_CONFIG_BLOCK       0x00088088  // ASK, data rate 32, Manchester, 4 data blocks, STT
+#define T55X7_NEDAP_64_CONFIG_BLOCK     0x907f0042  // BiPhase,  data rate 64, 2 data blocks
+#define T55X7_NEDAP_128_CONFIG_BLOCK    0x907f0082  // BiPhase,  data rate 64, 4 data blocks
 
 #define T55X7_bin 0b0010
 
@@ -167,7 +167,7 @@ bool testKnownConfigBlock(uint32_t block0);
 bool tryDetectP1(bool getData);
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5);
 int  special(const char *Cmd);
-bool AquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode);
+bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode);
 uint8_t  tryOnePassword(uint32_t password, uint8_t downlink_mode);
 
 void printT55x7Trace(t55x7_tracedata_t data, uint8_t repeat);
