@@ -1568,9 +1568,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 BigBuf_Clear_ext(false);
                 BigBuf_free();
             }
+            uint16_t offset = MIN(BIGBUF_SIZE - PM3_CMD_DATA_SIZE - 3, payload->offset);
 
             uint8_t *mem = BigBuf_get_addr();
-            memcpy(mem + payload->offset, &payload->data, PM3_CMD_DATA_SIZE - 3);
+            memcpy(mem + offset, &payload->data, PM3_CMD_DATA_SIZE - 3);
             reply_ng(CMD_LF_UPLOAD_SIM_SAMPLES, PM3_SUCCESS, NULL, 0);
             break;
         }
