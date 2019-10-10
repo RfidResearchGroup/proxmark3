@@ -166,7 +166,7 @@ static int CmdIndalaDemod(const char *Cmd) {
 		
 		uint8_t checksum = 0;
         checksum |= DemodBuffer[32+30] << 1; // b2
-        checksum |= DemodBuffer[92+31] << 0; // b1
+        checksum |= DemodBuffer[32+31] << 0; // b1
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
