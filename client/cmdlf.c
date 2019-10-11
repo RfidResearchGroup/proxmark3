@@ -1,5 +1,9 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
+// Modified by
+//    Marshellow
+//    Iceman
+//    Doegox
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -47,7 +51,7 @@
 #include "cmdlfsecurakey.h" // for securakey menu
 #include "cmdlfpac.h"       // for pac menu
 #include "cmdlfkeri.h"      // for keri menu
-#include "cmdlfverichip.h"  // for VeriChip menu
+#include "cmdlfmotorola.h"  // for Motorola menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
 
 bool g_lf_threshold_set = false;
@@ -449,6 +453,14 @@ int CmdFlexdemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int lf_config(sample_config *config) {
+    if (!session.pm3_present) return PM3_ENOTTY;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)config, sizeof(sample_config));
+    return PM3_SUCCESS;
+}
+
 int CmdLFConfig(const char *Cmd) {
 
     if (!session.pm3_present) return PM3_ENOTTY;
@@ -525,22 +537,19 @@ int CmdLFConfig(const char *Cmd) {
         }
     }
 
-    //Validations
+    // validations
     if (errors) return usage_lf_config();
-    if (cmdp == 0) {
-        clearCommandBuffer();
-        SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
-        return PM3_SUCCESS;
-    }
 
-    //Bps is limited to 8
+    // print current settings.
+    if (cmdp == 0)
+        return lf_config(NULL);
+
+    // bps is limited to 8
     if (bps >> 4) bps = 8;
 
-    sample_config config = { decimation, bps, averaging, divisor, trigger_threshold, samples_to_skip };
+    sample_config config = { decimation, bps, averaging, divisor, trigger_threshold, samples_to_skip, true };
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)&config, sizeof(sample_config));
-    return PM3_SUCCESS;
+    return lf_config(&config);
 }
 
 int lf_read(bool silent, uint32_t samples) {
@@ -632,6 +641,7 @@ static void ChkBitstream() {
         }
     }
 }
+
 //Attempt to simulate any wave in buffer (one bit per output sample)
 // converts GraphBuffer to bitstream (based on zero crossings) if needed.
 int CmdLFSim(const char *Cmd) {
@@ -711,7 +721,7 @@ int CmdLFSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// by marshmellow - sim fsk data given clock, fcHigh, fcLow, invert
+// sim fsk data given clock, fcHigh, fcLow, invert
 // - allow pull data from DemodBuffer
 int CmdLFfskSim(const char *Cmd) {
     //might be able to autodetect FCs and clock from Graphbuffer if using demod buffer
@@ -815,7 +825,7 @@ int CmdLFfskSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// by marshmellow - sim ask data given clock, invert, manchester or raw, separator
+// sim ask data given clock, invert, manchester or raw, separator
 // - allow pull data from DemodBuffer
 int CmdLFaskSim(const char *Cmd) {
     // autodetect clock from Graphbuffer if using demod buffer
@@ -916,7 +926,7 @@ int CmdLFaskSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// by marshmellow - sim psk data given carrier, clock, invert
+// sim psk data given carrier, clock, invert
 // - allow pull data from DemodBuffer or parameters
 int CmdLFpskSim(const char *Cmd) {
     //might be able to autodetect FC and clock from Graphbuffer if using demod buffer
@@ -1126,7 +1136,6 @@ int CmdVchDemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-//by marshmellow
 static bool CheckChipType(bool getDeviceData) {
 
     bool retval = false;
@@ -1158,7 +1167,6 @@ out:
     return retval;
 }
 
-//by marshmellow
 int CmdLFfind(const char *Cmd) {
     int ans = 0;
     size_t minLength = 2000;
@@ -1193,9 +1201,18 @@ int CmdLFfind(const char *Cmd) {
         if (getSignalProperties()->isnoise) {
 
             if (IfPm3Hitag()) {
-                if (readHitagUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!"); return PM3_SUCCESS;}
+                if (readHitagUid()) {
+                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!"); return PM3_SUCCESS;
+                }
             }
-            if (readCOTAGUid()) { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") "found!"); return PM3_SUCCESS;}
+
+            if (readMotorolaUid()) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola ID") "found!"); return PM3_SUCCESS;
+            }
+
+            if (readCOTAGUid()) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") "found!"); return PM3_SUCCESS;
+            }
 
             PrintAndLogEx(FAILED, _RED_("No data found!"));
             PrintAndLogEx(INFO, "Signal looks like noise. Maybe not an LF tag?");
@@ -1229,7 +1246,6 @@ int CmdLFfind(const char *Cmd) {
     if (demodVisa2k() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Visa2000 ID") "found!"); goto out;}
     if (demodGallagher() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") "found!"); goto out;}
 //    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") "found!"); goto out;}
-//    if (demodVerichip() == PM3_SUCCESS)        { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("VeriChip ID") "found!"); goto out;}
     //if (demodFermax() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") "found!"); goto out;}
     //if (demodFlex() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") "found!"); goto out;}
 
@@ -1297,6 +1313,7 @@ static command_t CommandTable[] = {
     {"nedap",       CmdLFNedap,         AlwaysAvailable, "{ Nedap RFIDs...             }"},
     {"nexwatch",    CmdLFNEXWATCH,      AlwaysAvailable, "{ NexWatch RFIDs...          }"},
     {"noralsy",     CmdLFNoralsy,       AlwaysAvailable, "{ Noralsy RFIDs...           }"},
+    {"motorola",    CmdLFMotorola,      AlwaysAvailable, "{ Motorola RFIDs...          }"},
     {"pac",         CmdLFPac,           AlwaysAvailable, "{ PAC/Stanley RFIDs...       }"},
     {"paradox",     CmdLFParadox,       AlwaysAvailable, "{ Paradox RFIDs...           }"},
     {"pcf7931",     CmdLFPCF7931,       AlwaysAvailable, "{ PCF7931 CHIPs...           }"},
@@ -1305,7 +1322,6 @@ static command_t CommandTable[] = {
     {"securakey",   CmdLFSecurakey,     AlwaysAvailable, "{ Securakey RFIDs...         }"},
     {"ti",          CmdLFTI,            AlwaysAvailable, "{ TI CHIPs...                }"},
     {"t55xx",       CmdLFT55XX,         AlwaysAvailable, "{ T55xx CHIPs...             }"},
-//    {"verichip",    CmdLFVerichip,      AlwaysAvailable, "{ VeriChip RFIDs...          }"},
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
     {"",            CmdHelp,            AlwaysAvailable, ""},
