@@ -23,8 +23,10 @@ Default LF config is set to:
     averaging = YES
     divisor = 95 (125kHz)
     trigger_threshold = 0
+    samples_to_skip = 0
+    verbose = YES
     */
-sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0 } ;
+sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
 
 void printConfig() {
     uint32_t d = config.divisor;
@@ -59,7 +61,8 @@ void setSamplingConfig(sample_config *sc) {
     config.averaging = sc->averaging;
     if (config.bits_per_sample > 8) config.bits_per_sample = 8;
 
-    printConfig();
+    if (sc->verbose)
+        printConfig();
 }
 
 sample_config *getSamplingConfig() {
