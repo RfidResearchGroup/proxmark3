@@ -126,9 +126,12 @@ typedef struct {
         refLeading0 = 0x02,
         ref1of4 = 0x03,
     } downlink_mode;
-    uint32_t blockData [T55x7_BLOCK_COUNT];  // the dump/read will save data here.
-    bool blockValid [T55x7_BLOCK_COUNT];     // this will allow easy access to the data for display etc.
 } t55xx_conf_block_t;
+
+typedef struct {
+   uint32_t blockdata;
+   bool valid;
+}  t55xx_memory_item_t ;
 
 t55xx_conf_block_t Get_t55xx_Config(void);
 void Set_t55xx_Config(t55xx_conf_block_t conf);

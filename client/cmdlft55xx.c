@@ -52,9 +52,9 @@ t55xx_conf_block_t config = {
     .Q5 = false,
     .usepwd = false,
     .downlink_mode = refFixedBit,
-    .blockData = {0}, // array to hold data blocks
-    .blockValid = {0} // array to hold data valid status
 };
+
+t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {0};
 
 t55xx_conf_block_t Get_t55xx_Config() {
     return config;
@@ -360,14 +360,14 @@ static int CmdHelp(const char *Cmd);
 
 void T55x7_SaveBlockData (uint8_t idx,uint32_t data) {
     if (idx < T55x7_BLOCK_COUNT) {
-        config.blockValid[idx] = true;
-        config.blockData[idx]  = data;
+        cardmem[idx].valid      = true; 
+        cardmem[idx].blockdata  = data;
     }
 }
 void T55x7_ClearAllBlockData (void) {
     for (uint8_t idx = 0; idx < T55x7_BLOCK_COUNT; idx++) {
-        config.blockValid[idx] = false;
-        config.blockData[idx]  = 0x00;
+        cardmem[idx].valid      = false; 
+        cardmem[idx].blockdata  = 0x00;
     }
 }
 
@@ -2261,8 +2261,8 @@ static int CmdT55xxDump(const char *Cmd) {
         if (strcmp (preferredName,"") == 0) { // Set default filename, if not set by user
             strcpy (preferredName,"lf-t55xx");
             for (uint8_t i = 1; i <= 7; i++) {
-                if ((config.blockData[i] != 0x00) && (config.blockData[i] != 0xFFFFFFFF))
-                    sprintf (preferredName,"%s-%08X",preferredName,config.blockData[i]);
+                if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF))
+                    sprintf (preferredName,"%s-%08X",preferredName,cardmem[i].blockdata);
                 else
                     break;
             }
@@ -2273,7 +2273,7 @@ static int CmdT55xxDump(const char *Cmd) {
         uint32_t data[T55x7_BLOCK_COUNT];
         
         for (int i = 0; i < T55x7_BLOCK_COUNT; i++)
-            data[i] = BSWAP_32(config.blockData[i]);
+            data[i] = BSWAP_32(cardmem[i].blockdata);
 
         saveFileEML(preferredName, (uint8_t *)data, T55x7_BLOCK_COUNT*sizeof(uint32_t), sizeof(uint32_t));
         saveFile   (preferredName, ".bin", data, sizeof(data));
@@ -2327,19 +2327,24 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     fnLength = strlen (preferredName);
     
-    if (fnLength > 4) { // Holds .EXT [.bin|.eml]
+    success = PM3_ESOFT;
+    if (fnLength > 4) { // Holds extension [.bin|.eml]
         memcpy (ext,&preferredName[fnLength - 4],4);
         ext[5] = 0x00;
-        
+
+        //  check if valid file extension and attempt to load data
+
         if (memcmp (ext,".bin",4) == 0) {
             preferredName[fnLength-4] = 0x00;
             success = loadFile (preferredName, ".bin", data, sizeof(data),&datalen);
-        }
-        if (memcmp (ext,".eml",4) == 0) {
+        
+        } else if (memcmp (ext,".eml",4) == 0) {
             preferredName[fnLength-4] = 0x00;
             datalen = 12;
             success = loadFileEML(preferredName, (uint8_t *)data, &datalen);
-        }
+
+        } else 
+            PrintAndLogEx(WARNING,"\nWarning: invalid dump filename "_YELLOW_("%s")"to restore!\n",preferredName);
     }
 
     if (success == PM3_SUCCESS) { // Got data, so write to cards
@@ -2390,7 +2395,7 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
+/*
 static int CmdT55xxRestore(const char *Cmd) {
 
     uint32_t password = 0;
@@ -2443,7 +2448,7 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     return res;
 }
-
+*/
 bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode) {
     // arg0 bitmodes:
     //  b0 = pwdmode
@@ -3494,7 +3499,6 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
                 downlink_mode = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 if (downlink_mode > 3)
                     downlink_mode = 0;
-
                 cmdp += 2;
                 break;
             case 'p':
@@ -3636,13 +3640,13 @@ static command_t CommandTable[] = {
     {"detect",       CmdT55xxDetect,          AlwaysAvailable, "[1] Try detecting the tag modulation from reading the configuration block."},
     {"deviceconfig", CmdT55xxSetDeviceConfig, IfPm3Lf,         "Set/Get T55XX device configuration (startgap, writegap, write0, write1, readgap"},
     {"dump",         CmdT55xxDump,            IfPm3Lf,         "[password] [o] Dump T55xx card Page 0 block 0-7. Optional [password], [override]"},
-    {"restore",      CmdT55xxRestore,         IfPm3Lf,         "f <filename> [p <password>] -- Restore a dump file of a T55xx card"},
+    {"restore",      CmdT55xxRestore,         IfPm3Lf,         "f <filename> [p <password>] Restore T55xx card Page 0 / Page 1 blocks"},
     {"info",         CmdT55xxInfo,            AlwaysAvailable, "[1] Show T55x7 configuration data (page 0/ blk 0)"},
     {"p1detect",     CmdT55xxDetectPage1,     IfPm3Lf,         "[1] Try detecting if this is a t55xx tag by reading page 1"},
     {"protect",      CmdT55xxProtect,         IfPm3Lf,         "Password protect tag"},
     {"read",         CmdT55xxReadBlock,       IfPm3Lf,         "b <block> p [password] [o] [1] -- Read T55xx block data. Optional [p password], [override], [page1]"},
     {"resetread",    CmdResetRead,            IfPm3Lf,         "Send Reset Cmd then lf read the stream to attempt to identify the start of it (needs a demod and/or plot after)"},
-    {"restore",      CmdT55xxRestore,         IfPm3Lf,         "[password] Restore T55xx card Page 0 / Page 1 blocks"},
+//    {"restore",      CmdT55xxRestore,         IfPm3Lf,         "[password] Restore T55xx card Page 0 / Page 1 blocks"},
     {"recoverpw",    CmdT55xxRecoverPW,       IfPm3Lf,         "[password] Try to recover from bad password write from a cloner. Only use on PW protected chips!"},
     {"special",      special,                 IfPm3Lf,         "Show block changes with 64 different offsets"},
     {"trace",        CmdT55xxReadTrace,       AlwaysAvailable, "[1] Show T55x7 traceability data (page 1/ blk 0-1)"},
