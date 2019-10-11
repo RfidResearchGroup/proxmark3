@@ -137,44 +137,42 @@ static int CmdIndalaDemod(const char *Cmd) {
         p1 |= DemodBuffer[32 + 24] << 9;
 
         uint8_t fc = 0;
-        fc |= DemodBuffer[32+25] << 7; // b8
-        fc |= DemodBuffer[32+17] << 6; // b7
-        fc |= DemodBuffer[32+12] << 5; // b6
-        fc |= DemodBuffer[32+16] << 4; // b5
-        fc |= DemodBuffer[32+15] << 3; // b4
-        fc |= DemodBuffer[32+21] << 2; // b3
-        fc |= DemodBuffer[32+7] << 1;  // b2
-        fc |= DemodBuffer[32+26] << 0; // b1
- 
+        fc |= DemodBuffer[57] << 7; // b8
+        fc |= DemodBuffer[49] << 6; // b7
+        fc |= DemodBuffer[44] << 5; // b6
+        fc |= DemodBuffer[47] << 4; // b5
+        fc |= DemodBuffer[48] << 3; // b4
+        fc |= DemodBuffer[53] << 2; // b3
+        fc |= DemodBuffer[39] << 1; // b2
+        fc |= DemodBuffer[58] << 0; // b1
+
         uint16_t csn = 0;
-        csn |= DemodBuffer[32+10] << 15; // b16
-        csn |= DemodBuffer[32+13] << 14; // b15
-        csn |= DemodBuffer[32+11] << 13; // b14
-        csn |= DemodBuffer[32+8] << 12; // b13
-        csn |= DemodBuffer[32+20] << 11; // b12
-        csn |= DemodBuffer[32+4] << 10; // b11
-        csn |= DemodBuffer[32+3] << 9; // b10
-        csn |= DemodBuffer[32+19] << 8; // b9
-        csn |= DemodBuffer[32+14] << 7; // b8
-        csn |= DemodBuffer[32+1] << 6; // b7
-        csn |= DemodBuffer[32+5] << 5; // b6
-        csn |= DemodBuffer[32+22] << 4; // b5
-        csn |= DemodBuffer[32+24] << 3; // b4
-        csn |= DemodBuffer[32+27] << 2; // b3
-        csn |= DemodBuffer[32+18] << 1; // b2
-        csn |= DemodBuffer[32+9] << 0; // b1
-		
-		uint8_t checksum = 0;
-        checksum |= DemodBuffer[32+30] << 1; // b2
-        checksum |= DemodBuffer[92+31] << 0; // b1
+        csn |= DemodBuffer[42] << 15; // b16
+        csn |= DemodBuffer[45] << 14; // b15
+        csn |= DemodBuffer[43] << 13; // b14
+        csn |= DemodBuffer[40] << 12; // b13
+        csn |= DemodBuffer[52] << 11; // b12
+        csn |= DemodBuffer[36] << 10; // b11
+        csn |= DemodBuffer[35] << 9; // b10
+        csn |= DemodBuffer[51] << 8; // b9
+        csn |= DemodBuffer[46] << 7; // b8
+        csn |= DemodBuffer[33] << 6; // b7
+        csn |= DemodBuffer[37] << 5; // b6
+        csn |= DemodBuffer[54] << 4; // b5
+        csn |= DemodBuffer[56] << 3; // b4
+        csn |= DemodBuffer[59] << 2; // b3
+        csn |= DemodBuffer[50] << 1; // b2
+        csn |= DemodBuffer[41] << 0; // b1
+
+	uint8_t checksum = 0;
+        checksum |= DemodBuffer[62] << 1; // b2
+        checksum |= DemodBuffer[63] << 0; // b1
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
         PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", p1, p1);
-        //PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", fc, fc);
         PrintAndLogEx(SUCCESS, "\tInternal ID | %" PRIu64, foo);
-		PrintAndLogEx(SUCCESS, "\nFC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01  );
-
+        PrintAndLogEx(SUCCESS, "Fmt 26 bit  FC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01  );
 
     } else {
         uint32_t uid3 = bytebits_to_byte(DemodBuffer + 64, 32);

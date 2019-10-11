@@ -4,9 +4,13 @@ COVTOKEN=aAbBcCdDeEfFgGhHiIjJkK
 COVBINDIR="/opt/cov-analysis-linux64-2019.03/bin"
 # Nickname included in scan description:
 NICKNAME=myself
+# cov can't read gcov from gcc > 7
+HOSTCC=gcc-7
+HOSTCXX=g++-7
+HOSTLD=g++-7
 
+# Do not change it:
 COVDIR=cov-int
-COVBUILD="cov-build --dir $COVDIR"
 
 # Depending if your kernel > 4.8.x, you might need to activate this to run Coverity executables
 # (but latest tools with kernel 5.2 run fine)
