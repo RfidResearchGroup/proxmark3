@@ -12,7 +12,7 @@
 #include <stdlib.h>       // size_t
 #include <string.h>
 #include <ctype.h>        // tolower
-
+#include <stdio.h>        // printf
 #include "commonutil.h"   // reflect...
 #include "comms.h"        // clearCommandBuffer
 #include "cmdparser.h"    // command_t
@@ -21,6 +21,7 @@
 #include "crc16.h"        // crc16 ccitt
 #include "tea.h"
 #include "legic_prng.h"
+#include "cmddata.h"      // demodbuffer
 
 static int CmdHelp(const char *Cmd);
 
@@ -36,7 +37,7 @@ static int usage_analyse_lcr(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      analyse lcr 04008064BA");
     PrintAndLogEx(NORMAL, "expected output: Target (BA) requires final LRC XOR byte value: 5A");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_analyse_checksum(void) {
     PrintAndLogEx(NORMAL, "The bytes will be added with eachother and than limited with the applied mask");
@@ -52,7 +53,7 @@ static int usage_analyse_checksum(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      analyse chksum b 137AF00A0A0D m FF");
     PrintAndLogEx(NORMAL, "expected output: 0x61");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_analyse_crc(void) {
     PrintAndLogEx(NORMAL, "A stub method to test different crc implementations inside the PM3 sourcecode. Just because you figured out the poly, doesn't mean you get the desired output");
@@ -64,7 +65,7 @@ static int usage_analyse_crc(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      analyse crc 137AF00A0A0D");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_analyse_nuid(void) {
     PrintAndLogEx(NORMAL, "Generate 4byte NUID from 7byte UID");
@@ -76,7 +77,7 @@ static int usage_analyse_nuid(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      analyse nuid 11223344556677");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_analyse_a(void) {
     PrintAndLogEx(NORMAL, "Iceman's personal garbage test command");
@@ -88,7 +89,19 @@ static int usage_analyse_a(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      analyse a d 137AF00A0A0D");
-    return 0;
+    return PM3_SUCCESS;
+}
+static int usage_analyse_demodbuffer(void) {
+    PrintAndLogEx(NORMAL, "loads a binary string into demod buffer");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  analyse demodbuff [h] <binarystring>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h                This help");
+    PrintAndLogEx(NORMAL, "           <binarystring>   Binary string to load");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      analyse demodbuff 0011101001001011");
+    return PM3_SUCCESS;
 }
 
 static uint8_t calculateLRC(uint8_t *bytes, uint8_t len) {
@@ -878,6 +891,39 @@ static int CmdAnalyseNuid(const char *Cmd) {
     PrintAndLogEx(NORMAL, "NUID | %s \n", sprint_hex(nuid, 4));
     return 0;
 }
+
+static int CmdAnalyseDemodBuffer(const char *Cmd) {
+
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_analyse_demodbuffer();
+
+    int bg = 0, en = 0;
+    if (param_getptr(Cmd, &bg, &en, 0))
+       return usage_analyse_demodbuffer();
+
+    int len = MIN( (en- bg + 1), MAX_DEMOD_BUF_LEN);
+
+    // add 1 for null terminator.
+    uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
+    if (!data) return PM3_EMALLOC;
+
+    for(int i = 0; bg <= en; bg++ , i++) {
+        char c = Cmd[bg];
+        if (c == '1')
+             DemodBuffer[i] = 1;
+        if (c == '0')
+             DemodBuffer[i] = 0;
+
+        printf("%c", c);
+    }
+
+    printf("\n");
+
+    DemodBufferLen = len;
+    free(data);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
     {"lcr",     CmdAnalyseLCR,      AlwaysAvailable, "Generate final byte for XOR LRC"},
@@ -888,6 +934,7 @@ static command_t CommandTable[] = {
     {"lfsr",    CmdAnalyseLfsr,     AlwaysAvailable, "LFSR tests"},
     {"a",       CmdAnalyseA,        AlwaysAvailable, "num bits test"},
     {"nuid",    CmdAnalyseNuid,     AlwaysAvailable, "create NUID from 7byte UID"},
+    {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to demodbuffer"},
     {NULL, NULL, NULL, NULL}
 };
 
