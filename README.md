@@ -45,7 +45,10 @@ On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 
 ## Development
 
-This repo now compiles just fine on 
+⚠ **Note**: This is a bleeding edge repository. The maintainers actively is working out of this repository and will be periodically re-structuring the code to make it easier to comprehend, navigate, build, test, and contribute to, so **DO expect significant changes to code layout on a regular basis**.
+
+
+This repo compiles nicely on 
    - Proxspace v3.2
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
    - Ubuntu 1404, 1510, 1604, 1804, 1904
@@ -54,8 +57,9 @@ This repo now compiles just fine on
    - WSL, WSL2  (Windows subsystem linux) on Windows 10
    - Docker container
 
-If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
+👉 **Remember** If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
 
+## Notes / helpful documents
 - Internal notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
 - Internal notes on [UART](/doc/uart_notes.md)
 - Internal notes on [Frame format](/doc/new_frame_format.md)
