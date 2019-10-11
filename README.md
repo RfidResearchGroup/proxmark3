@@ -57,7 +57,8 @@ This repo compiles nicely on
    - WSL, WSL2  (Windows subsystem linux) on Windows 10
    - Docker container
 
-👉 **Remember** If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
+👉 **Remember!** If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
+We usually merge your contributions fast since we do like the idea of getting a functionality in the Proxmark3 and weed out the bugs afterwards.
 
 ## Notes / helpful documents
 - Internal notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
