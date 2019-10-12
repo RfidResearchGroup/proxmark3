@@ -32,7 +32,7 @@ cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-
 #########################################
 # Run tests                             #
 #########################################
-cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --test-capture ./pm3test.sh
+cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --test-capture ./pm3test.sh long
 #cov-manage-emit --dir "$COVDIR" list-coverage-known
 
 #########################################
