@@ -2262,11 +2262,11 @@ static int CmdT55xxDump(const char *Cmd) {
             strcpy (preferredName,"lf-t55xx");
             for (uint8_t i = 1; i <= 7; i++) {
                 if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF))
-                    sprintf (preferredName,"%s-%08X",preferredName,cardmem[i].blockdata);
+                    sprintf (preferredName + strlen(preferredName),"-%08X",cardmem[i].blockdata);
                 else
                     break;
             }
-            sprintf (preferredName,"%s-data",preferredName);
+            strcat (preferredName,"-data");
         }
 
         // Swap endian so the files match the txt display
