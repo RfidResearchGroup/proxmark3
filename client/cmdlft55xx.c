@@ -355,6 +355,21 @@ static int usage_t55xx_protect() {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
+static int usage_t55xx_dangerraw() {
+    PrintAndLogEx(NORMAL, "This command allows to emit arbitrary raw commands on T5577 and cut the field after arbitrary duration.");
+    PrintAndLogEx(NORMAL, _RED_("WARNING:") " this may lock definitively the tag in an unusable state!");
+    PrintAndLogEx(NORMAL, "Uncontrolled usage can easily write an invalid configuration, activate lock bits,");
+    PrintAndLogEx(NORMAL, "OTP bit, password protection bit, deactivate test-mode, lock your card forever.");
+    PrintAndLogEx(NORMAL, "Uncontrolled usage is known to the State of California to cause cancer.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf t55xx dangerraw [h] [b <bitstream> t <timing>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     h                 - This help");
+    PrintAndLogEx(NORMAL, "     b <bitstream>     - raw bitstream");
+    PrintAndLogEx(NORMAL, "     t <timing>        - time in microseconds before dropping the field");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 
 static int CmdHelp(const char *Cmd);
 
@@ -1706,6 +1721,8 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_t55xx_dangerraw();
             case 't':
                 ng.time = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 if (ng.time == 0 || ng.time > 200000) {
@@ -1745,8 +1762,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
         }
     }
     if (errors || ng.bitlen == 0 || ng.time == 0) {
-        PrintAndLogEx(ERR, "Error occurred, abort. " _RED_("DANGEROUS COMMAND, DO NOT USE!"));
-        return PM3_EINVARG;
+        return usage_t55xx_dangerraw();
     }
     PacketResponseNG resp;
     clearCommandBuffer();
