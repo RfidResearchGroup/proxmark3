@@ -51,7 +51,7 @@ t55xx_conf_block_t config = {
     .block0 = 0x00,
     .Q5 = false,
     .usepwd = false,
-    .downlink_mode = refFixedBit,
+    .downlink_mode = refFixedBit
 };
 
 t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
