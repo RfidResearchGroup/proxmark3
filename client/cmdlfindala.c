@@ -647,8 +647,6 @@ out:
 
     *size = found_size;
 
-    //PrintAndLogEx(INFO, "DEBUG: detectindala RES = %d | %d | %d", res, found_size, idx);
-
     if (found_size != 224 && found_size != 64) {
         PrintAndLogEx(INFO, "DEBUG: detectindala | %zu", found_size);
         return -5;
