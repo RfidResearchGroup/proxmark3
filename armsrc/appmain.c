@@ -214,7 +214,7 @@ void MeasureAntennaTuning(void) {
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t*)&payload, sizeof(payload));
+    reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
     LEDsoff();
 }
 
@@ -234,7 +234,7 @@ uint16_t MeasureAntennaTuningHfData(void) {
 
 // Measure LF in milliVolt
 uint32_t MeasureAntennaTuningLfData(void) {
-    return  (MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10;
+    return (MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10;
 }
 
 void ReadMem(int addr) {

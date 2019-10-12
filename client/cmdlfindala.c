@@ -164,7 +164,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         csn |= DemodBuffer[50] << 1; // b2
         csn |= DemodBuffer[41] << 0; // b1
 
-	uint8_t checksum = 0;
+        uint8_t checksum = 0;
         checksum |= DemodBuffer[62] << 1; // b2
         checksum |= DemodBuffer[63] << 0; // b1
 
@@ -172,7 +172,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
         PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", p1, p1);
         PrintAndLogEx(SUCCESS, "\tInternal ID | %" PRIu64, foo);
-        PrintAndLogEx(SUCCESS, "Fmt 26 bit  FC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01  );
+        PrintAndLogEx(SUCCESS, "Fmt 26 bit  FC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01);
 
     } else {
         uint32_t uid3 = bytebits_to_byte(DemodBuffer + 64, 32);

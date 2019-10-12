@@ -720,7 +720,7 @@ static bool EM_ColParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t col
     return true;
 }
 
-// even parity ROW 
+// even parity ROW
 static bool EM_RowParityTest(uint8_t *bs, size_t size, uint8_t rows, uint8_t cols, uint8_t pType) {
     if (rows * cols > size) return false;
     uint8_t rowP = 0;
@@ -844,14 +844,14 @@ int EM4x50Read(const char *Cmd, bool verbose) {
     size_t size = getFromGraphBuf(bits);
 
     if (size < 4000) {
-       if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - Too little data in Graphbuffer");
-       return PM3_ESOFT;
+        if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - Too little data in Graphbuffer");
+        return PM3_ESOFT;
     }
 
     computeSignalProperties(bits, size);
 
     // get fuzzed HI / LOW limits in signal
-    getHiLo( &high, &low, 75, 75);
+    getHiLo(&high, &low, 75, 75);
 
     // get to first full low to prime loop and skip incomplete first pulse
     size_t offset = 0;
@@ -866,7 +866,7 @@ int EM4x50Read(const char *Cmd, bool verbose) {
         DetectASKClock(bits, size, &clk, 0);
         if (clk == 0) {
             if (verbose || g_debugMode) PrintAndLogEx(ERR, "Error: EM4x50 - didn't find a clock");
-                return PM3_ESOFT;
+            return PM3_ESOFT;
         }
     }
     // tolerance
@@ -1246,7 +1246,7 @@ static int EM4x05ReadWord_ext(uint8_t addr, uint32_t pwd, bool usePwd, uint32_t 
 
 static int CmdEM4x05Demod(const char *Cmd) {
 //    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
- //   if (ctmp == 'h') return usage_lf_em4x05_demod();
+//   if (ctmp == 'h') return usage_lf_em4x05_demod();
     uint32_t word = 0;
     return demodEM4x05resp(&word);
 }
@@ -1263,22 +1263,23 @@ static int CmdEM4x05Dump(const char *Cmd) {
 
     while (param_getchar(Cmd, cmdp) != 0x00) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':   return usage_lf_em4x05_dump();
-                        break;
+            case 'h':
+                return usage_lf_em4x05_dump();
+                break;
             case 'f':   // since f could match in password, lets confirm it is 1 character only for an option
-                        param_getstr(Cmd, cmdp,optchk,sizeof(optchk));
-                        if (strlen (optchk) == 1) {// Have a single character f so filename no password
-                            param_getstr(Cmd, cmdp + 1, preferredName, FILE_PATH_SIZE);
-                            cmdp+=2;
-                            break;
-                        } // if not a single 'f' dont break and flow onto default as should be password
+                param_getstr(Cmd, cmdp, optchk, sizeof(optchk));
+                if (strlen(optchk) == 1) { // Have a single character f so filename no password
+                    param_getstr(Cmd, cmdp + 1, preferredName, FILE_PATH_SIZE);
+                    cmdp += 2;
+                    break;
+                } // if not a single 'f' dont break and flow onto default as should be password
 
             default :   // for backwards-compatibility options should be > 'f' else assume its the hex password`
-                        // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
-                        pwd = param_get32ex(Cmd, cmdp, 1, 16);
-                        if (pwd != 1)
-                            usePwd = true;
-                        cmdp++;
+                // for now use default input of 1 as invalid (unlikely 1 will be a valid password...)
+                pwd = param_get32ex(Cmd, cmdp, 1, 16);
+                if (pwd != 1)
+                    usePwd = true;
+                cmdp++;
         };
     }
 
@@ -1313,7 +1314,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
             if (usePwd) {
                 data[addr] = BSWAP_32(pwd);
                 num_to_bytes(pwd, 4, bytes);
-                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %c | password", addr, pwd, sprint_ascii(bytes, 4),((lock_bits >> addr) & 1) ? 'x' : ' ');
+                PrintAndLogEx(NORMAL, "  %02u | %08X | %s  | %c | password", addr, pwd, sprint_ascii(bytes, 4), ((lock_bits >> addr) & 1) ? 'x' : ' ');
             } else {
                 data[addr] = 0x00; // Unknown password, but not used to set to zeros
                 PrintAndLogEx(NORMAL, "  02 |          |       |   | " _RED_("cannot read"));
@@ -1326,16 +1327,15 @@ static int CmdEM4x05Dump(const char *Cmd) {
             data[addr] = BSWAP_32(word);
             if (status == PM3_SUCCESS) {
                 num_to_bytes(word, 4, bytes);
-                PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c |", addr, word, sprint_ascii(bytes, 4),((lock_bits >> addr) & 1) ? 'x' : ' ');
-            }
-            else
+                PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c |", addr, word, sprint_ascii(bytes, 4), ((lock_bits >> addr) & 1) ? 'x' : ' ');
+            } else
                 PrintAndLogEx(NORMAL, "  %02d |          |       |   | " _RED_("Fail"), addr);
         }
     }
-    // Print blocks 14 and 15 
+    // Print blocks 14 and 15
     // Both lock bits are protected with bit idx 14 (special case)
-    PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c | Lock", 14, data[14], sprint_ascii(bytes, 4),((lock_bits >> 14) & 1) ? 'x' : ' ');
-    PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c | Lock", 15, data[15], sprint_ascii(bytes, 4),((lock_bits >> 14) & 1) ? 'x' : ' ');
+    PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c | Lock", 14, data[14], sprint_ascii(bytes, 4), ((lock_bits >> 14) & 1) ? 'x' : ' ');
+    PrintAndLogEx(NORMAL, "  %02d | %08X | %s  | %c | Lock", 15, data[15], sprint_ascii(bytes, 4), ((lock_bits >> 14) & 1) ? 'x' : ' ');
     // Update endian for files
     data[14] = BSWAP_32(data[14]);
     data[15] = BSWAP_32(data[15]);
@@ -1343,13 +1343,13 @@ static int CmdEM4x05Dump(const char *Cmd) {
     if (success == PM3_SUCCESS) { // all ok save dump to file
         // saveFileEML will add .eml extension to filename
         // saveFile (binary) passes in the .bin extension.
-        if (strcmp (preferredName,"") == 0) // Set default filename, if not set by user
-            sprintf (preferredName,"lf-4x05-%08X-data",BSWAP_32(data[1]));
+        if (strcmp(preferredName, "") == 0) // Set default filename, if not set by user
+            sprintf(preferredName, "lf-4x05-%08X-data", BSWAP_32(data[1]));
 
-        saveFileEML(preferredName, (uint8_t *)data, 16*sizeof(uint32_t), sizeof(uint32_t));
-        saveFile   (preferredName, ".bin", data, sizeof(data));
+        saveFileEML(preferredName, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
+        saveFile(preferredName, ".bin", data, sizeof(data));
     }
-    
+
     return success;
 }
 
@@ -1443,7 +1443,7 @@ static int CmdEM4x05Wipe(const char *Cmd) {
     uint8_t addr = 0;
     uint32_t pwd = 0;
     uint8_t cmdp = 0;
-    uint8_t  chipType  = 1; // em4305 
+    uint8_t  chipType  = 1; // em4305
     uint32_t chipInfo  = 0x00040072; // Chip info/User Block normal 4305 Chip Type
     uint32_t chipUID   = 0x614739AE; // UID normally readonly, but just in case
     uint32_t blockData = 0x00000000; // UserBlock/Password (set to 0x00000000 for a wiped card1
@@ -1454,60 +1454,60 @@ static int CmdEM4x05Wipe(const char *Cmd) {
 
     while (param_getchar(Cmd, cmdp) != 0x00) {
         // check if cmd is a 1 byte option
-         param_getstr(Cmd, cmdp,optchk,sizeof(optchk));
-         if (strlen (optchk) == 1) {// Have a single character so option not part of password 
+        param_getstr(Cmd, cmdp, optchk, sizeof(optchk));
+        if (strlen(optchk) == 1) { // Have a single character so option not part of password
             switch (tolower(param_getchar(Cmd, cmdp))) {
                 case 'c':   // chip type
-                            if (param_getchar(Cmd, cmdp) != 0x00) 
-                                chipType = param_get8ex (Cmd,cmdp+1,0,10); 
-                            cmdp+=2;
-                            break;
+                    if (param_getchar(Cmd, cmdp) != 0x00)
+                        chipType = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                    cmdp += 2;
+                    break;
                 case 'h':   // return usage_lf_em4x05_wipe();
                 default :   // Unknown or 'h' send help
-                            return usage_lf_em4x05_wipe();
-                            break;
+                    return usage_lf_em4x05_wipe();
+                    break;
             };
-         } else { // Not a single character so assume password
+        } else { // Not a single character so assume password
             pwd = param_get32ex(Cmd, cmdp, 1, 16);
             cmdp++;
-         }
+        }
     }
 
     switch (chipType) {
         case 0  : // em4205
-                  chipInfo  = 0x00040070; 
-                  config    = 0x0001805F;
-                  break;
+            chipInfo  = 0x00040070;
+            config    = 0x0001805F;
+            break;
         case 1  : // em4305
-                  chipInfo  = 0x00040072;
-                  config    = 0x0001805F;
-                  break;
+            chipInfo  = 0x00040072;
+            config    = 0x0001805F;
+            break;
         default : // Type 0/Default : EM4305
-                  chipInfo  = 0x00040072;
-                  config    = 0x0001805F;
+            chipInfo  = 0x00040072;
+            config    = 0x0001805F;
     }
-    
+
     // block 0 : User Data or Chip Info
-    sprintf (cmdStr,"%d %08X %08X",0,chipInfo,pwd);
-    CmdEM4x05Write (cmdStr);
+    sprintf(cmdStr, "%d %08X %08X", 0, chipInfo, pwd);
+    CmdEM4x05Write(cmdStr);
     // block 1 : UID - this should be read only for EM4205 and EM4305 not sure about others
-    sprintf (cmdStr,"%d %08X %08X",1,chipUID,pwd);
-    CmdEM4x05Write (cmdStr);
+    sprintf(cmdStr, "%d %08X %08X", 1, chipUID, pwd);
+    CmdEM4x05Write(cmdStr);
     // block 2 : password
-    sprintf (cmdStr,"%d %08X %08X",2,blockData,pwd);
-    CmdEM4x05Write (cmdStr);
+    sprintf(cmdStr, "%d %08X %08X", 2, blockData, pwd);
+    CmdEM4x05Write(cmdStr);
     pwd = blockData; // Password should now have changed, so use new password
     // block 3 : user data
-    sprintf (cmdStr,"%d %08X %08X",3,blockData,pwd);
-    CmdEM4x05Write (cmdStr);
+    sprintf(cmdStr, "%d %08X %08X", 3, blockData, pwd);
+    CmdEM4x05Write(cmdStr);
     // block 4 : config
-    sprintf (cmdStr,"%d %08X %08X",4,config,pwd);
-    CmdEM4x05Write (cmdStr);
+    sprintf(cmdStr, "%d %08X %08X", 4, config, pwd);
+    CmdEM4x05Write(cmdStr);
 
     // Remainder of user/data blocks
     for (addr = 5; addr < 14; addr++) {// Clear user data blocks
-        sprintf (cmdStr,"%d %08X %08X",addr,blockData,pwd);
-        CmdEM4x05Write (cmdStr);
+        sprintf(cmdStr, "%d %08X %08X", addr, blockData, pwd);
+        CmdEM4x05Write(cmdStr);
     }
 
     return success;

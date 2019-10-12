@@ -1866,7 +1866,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
         if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP   KNOWN KEY ATTACK ======================="));
         if (num_found_keys == sectors_cnt * 2)
-           goto all_found;
+            goto all_found;
     }
 
     bool load_success = true;
@@ -2741,7 +2741,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
                           (keyBlock + 6 * keycnt)[3],
                           (keyBlock + 6 * keycnt)[4],
                           (keyBlock + 6 * keycnt)[5]
-                          );
+                         );
     }
 
     // initialize storage for found keys

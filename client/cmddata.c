@@ -1174,7 +1174,7 @@ int FSKrawDemod(const char *Cmd, bool verbose) {
         PrintAndLogEx(DEBUG, "no FSK data found");
     }
 
-out:    
+out:
     free(bits);
     return PM3_SUCCESS;
 }
@@ -1218,7 +1218,7 @@ int PSKDemod(const char *Cmd, bool verbose) {
         free(bits);
         return PM3_ESOFT;
     }
-    
+
     int startIdx = 0;
     int errCnt = pskRawDemod_ext(bits, &bitlen, &clk, &invert, &startIdx);
     if (errCnt > maxErr) {
@@ -1336,7 +1336,7 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
     if (bits == NULL) {
         return PM3_EMALLOC;
     }
-            
+
     size_t BitLen = getFromGraphBuf(bits);
 
     if (BitLen == 0) {
@@ -1355,7 +1355,7 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
         free(bits);
         return PM3_ESOFT;
     }
-    
+
     if (verbose || g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Tried NRZ Demod using Clock: %d - invert: %d - Bits Found: %zu", clk, invert, BitLen);
     //prime demod buffer for output
     setDemodBuff(bits, BitLen, 0);
@@ -1368,7 +1368,7 @@ int NRZrawDemod(const char *Cmd, bool verbose) {
         // Now output the bitstream to the scrollback by line of 16 bits
         printDemodBuff();
     }
-    
+
     free(bits);
     return PM3_SUCCESS;
 }
@@ -1673,7 +1673,7 @@ int CmdTuneSamples(const char *Cmd) {
         uint8_t results[256];
     } PACKED;
 
-    struct p* package = (struct p*)resp.data.asBytes;
+    struct p *package = (struct p *)resp.data.asBytes;
 
     if (package->v_lf125 > NON_VOLTAGE)
         PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lf125 * ANTENNA_ERROR) / 1000.0, 12000.0 / (LF_DIVISOR_125 + 1));
@@ -1730,7 +1730,7 @@ int CmdTuneSamples(const char *Cmd) {
 
     if (test1 > 0) {
         PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d is %.2f kHz, %d is %.2f kHz.\n\n",
-            LF_DIVISOR_134, 12000.0 / (LF_DIVISOR_134 + 1), LF_DIVISOR_125, 12000.0 / (LF_DIVISOR_125 + 1));
+                      LF_DIVISOR_134, 12000.0 / (LF_DIVISOR_134 + 1), LF_DIVISOR_125, 12000.0 / (LF_DIVISOR_125 + 1));
         GraphTraceLen = 256;
         ShowGraphWindow();
         RepaintGraphWindow();

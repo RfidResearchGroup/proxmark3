@@ -337,13 +337,13 @@ int CmdLFCommandRead(const char *Cmd) {
         }
     }
 
-   // bitbang mode
-   if (payload.delay == 0){
-      if (payload.zeros < 7 || payload.ones < 7) {
-          PrintAndLogEx(WARNING, "Warning periods cannot be less than 7us in bit bang mode");
-          return PM3_EINVARG;
-      }
-   }
+    // bitbang mode
+    if (payload.delay == 0) {
+        if (payload.zeros < 7 || payload.ones < 7) {
+            PrintAndLogEx(WARNING, "Warning periods cannot be less than 7us in bit bang mode");
+            return PM3_EINVARG;
+        }
+    }
 
     //Validations
     if (errors || cmdp == 0)  return usage_lf_cmdread();
@@ -528,7 +528,7 @@ int CmdLFConfig(const char *Cmd) {
                 break;
             case 's':
                 samples_to_skip = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp+=2;
+                cmdp += 2;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -1202,16 +1202,19 @@ int CmdLFfind(const char *Cmd) {
 
             if (IfPm3Hitag()) {
                 if (readHitagUid()) {
-                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!"); return PM3_SUCCESS;
+                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!");
+                    return PM3_SUCCESS;
                 }
             }
 
             if (readMotorolaUid()) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola ID") "found!"); return PM3_SUCCESS;
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola ID") "found!");
+                return PM3_SUCCESS;
             }
 
             if (readCOTAGUid()) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") "found!"); return PM3_SUCCESS;
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") "found!");
+                return PM3_SUCCESS;
             }
 
             PrintAndLogEx(FAILED, _RED_("No data found!"));

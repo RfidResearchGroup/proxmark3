@@ -145,7 +145,7 @@ bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys, const char *path) {
     }
 
     if ((amiiboKeys->data.magicBytesSize > 16) ||
-        (amiiboKeys->tag.magicBytesSize > 16)) {
+            (amiiboKeys->tag.magicBytesSize > 16)) {
         return false;
     }
 

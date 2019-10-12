@@ -149,7 +149,7 @@ uint8_t get_length_from_header(wiegand_message_t *data) {
         hfmt >>= 1;
         len++;
     }
-    if (len < 26 )
+    if (len < 26)
         len = 26;
     return len;
 }

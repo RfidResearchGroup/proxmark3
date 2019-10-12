@@ -404,7 +404,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
             DbpString("[!] Warning periods cannot be less than 7us in bit bang mode");
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             LED_D_OFF();
-	    reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_EINVARG, NULL, 0);
+            reply_ng(CMD_LF_MOD_THEN_ACQ_RAW_ADC, PM3_EINVARG, NULL, 0);
             return;
         }
 
@@ -1708,12 +1708,12 @@ void T55xxDangerousRawTest(uint8_t *data) {
     t55xx_test_block_t *c = (t55xx_test_block_t *)data;
 
     uint8_t start_wait = 4;
-    uint8_t bs[128/8];
+    uint8_t bs[128 / 8];
     memset(bs, 0x00, sizeof(bs));
     uint8_t len = 0;
     if (c->bitlen == 0 || c->bitlen > 128 || c->time == 0)
         reply_ng(CMD_LF_T55XX_DANGERRAW, PM3_EINVARG, NULL, 0);
-    for (uint8_t i=0; i<c->bitlen; i++)
+    for (uint8_t i = 0; i < c->bitlen; i++)
         len = T55xx_SetBits(bs, len, c->data[i], 1, sizeof(bs));
 
     if (DBGLEVEL > 1) {

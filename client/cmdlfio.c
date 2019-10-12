@@ -284,7 +284,7 @@ static command_t CommandTable[] = {
     {"read",    CmdIOProxRead,  IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",   CmdIOProxClone, IfPm3Lf,         "clone IOProx to T55x7"},
     {"sim",     CmdIOProxSim,   IfPm3Lf,         "simulate IOProx tag"},
-    {"watch",   CmdIOProxWatch, IfPm3Lf,         "continuously watch for cards. Reader mode"}, 
+    {"watch",   CmdIOProxWatch, IfPm3Lf,         "continuously watch for cards. Reader mode"},
     {NULL, NULL, NULL, NULL}
 };
 

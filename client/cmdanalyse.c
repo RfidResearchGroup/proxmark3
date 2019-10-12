@@ -899,20 +899,20 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
 
     int bg = 0, en = 0;
     if (param_getptr(Cmd, &bg, &en, 0))
-       return usage_analyse_demodbuffer();
+        return usage_analyse_demodbuffer();
 
-    int len = MIN( (en- bg + 1), MAX_DEMOD_BUF_LEN);
+    int len = MIN((en - bg + 1), MAX_DEMOD_BUF_LEN);
 
     // add 1 for null terminator.
     uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
     if (!data) return PM3_EMALLOC;
 
-    for(int i = 0; bg <= en; bg++ , i++) {
+    for (int i = 0; bg <= en; bg++, i++) {
         char c = Cmd[bg];
         if (c == '1')
-             DemodBuffer[i] = 1;
+            DemodBuffer[i] = 1;
         if (c == '0')
-             DemodBuffer[i] = 0;
+            DemodBuffer[i] = 0;
 
         printf("%c", c);
     }

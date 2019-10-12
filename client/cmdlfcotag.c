@@ -79,7 +79,7 @@ static int CmdCOTAGDemod(const char *Cmd) {
 // 2 = raw signal -  maxlength bigbuff
 static int CmdCOTAGRead(const char *Cmd) {
 
-    if ( tolower(Cmd[0]) == 'h') return usage_lf_cotag_read();
+    if (tolower(Cmd[0]) == 'h') return usage_lf_cotag_read();
 
     uint32_t rawsignal = 1;
     sscanf(Cmd, "%u", &rawsignal);

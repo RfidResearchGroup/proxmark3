@@ -3034,7 +3034,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     memcpy(payload.nr, mf_nr_ar, sizeof(payload.nr));
     memcpy(payload.ar, mf_nr_ar + 4, sizeof(payload.ar));
 
-    reply_ng(CMD_HF_MIFARE_READER, return_status, (uint8_t*)&payload, sizeof(payload));
+    reply_ng(CMD_HF_MIFARE_READER, return_status, (uint8_t *)&payload, sizeof(payload));
 
     hf_field_off();
     set_tracing(false);

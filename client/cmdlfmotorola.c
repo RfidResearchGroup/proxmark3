@@ -56,7 +56,7 @@ static int CmdMotorolaDemod(const char *Cmd) {
     //got a good demod
     uint32_t raw1 = bytebits_to_byte(DemodBuffer, 32);
     uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
-    
+
 // A0000000E308C0C1
 // 10100000000000000000000000000000 1110 0011 0000 1000 1100 0000 1100 0001
 
@@ -74,13 +74,13 @@ static int CmdMotorolaDemod(const char *Cmd) {
 
     uint16_t fc = 0;
 
-// FC seems to be guess work.  Need more samples  
+// FC seems to be guess work.  Need more samples
 // guessing  printed FC is 4 digits.  1024? 10bit?
 //    fc |= DemodBuffer[38] << 9; // b10
     fc |= DemodBuffer[34] << 8; // b9
 
     fc |= DemodBuffer[44] << 7; // b8
-    fc |= DemodBuffer[47] << 6; // b7   
+    fc |= DemodBuffer[47] << 6; // b7
     fc |= DemodBuffer[57] << 5; // b6
     fc |= DemodBuffer[49] << 4; // b5
 
@@ -89,7 +89,7 @@ static int CmdMotorolaDemod(const char *Cmd) {
     fc |= DemodBuffer[48] << 2; // b3
     fc |= DemodBuffer[58] << 1; // b2
     fc |= DemodBuffer[39] << 0; // b1
-   
+
 // CSN was same as Indala CSN descramble.
     uint16_t csn = 0;
     csn |= DemodBuffer[42] << 15; // b16
@@ -109,14 +109,14 @@ static int CmdMotorolaDemod(const char *Cmd) {
     csn |= DemodBuffer[50] << 1; // b2
     csn |= DemodBuffer[41] << 0; // b1
 
-	uint8_t checksum = 0;
+    uint8_t checksum = 0;
     checksum |= DemodBuffer[62] << 1; // b2
     checksum |= DemodBuffer[63] << 0; // b1
 
     PrintAndLogEx(SUCCESS, "Motorola Tag Found -- Raw: %08X%08X", raw1, raw2);
-    PrintAndLogEx(SUCCESS, "Fmt 26 bit  FC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01  );
+    PrintAndLogEx(SUCCESS, "Fmt 26 bit  FC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01);
     PrintAndLogEx(NORMAL, "");
-    
+
     return PM3_SUCCESS;
 }
 
@@ -124,13 +124,13 @@ static int CmdMotorolaRead(const char *Cmd) {
     // Motorola Flexpass seem to work at 74 kHz
     // and take about 4400 samples to befor modulating
     sample_config sc = {
-          .decimation = 0,
-          .bits_per_sample = 0,
-          .averaging= false,
-          .divisor = LF_DIVISOR(74),
-          .trigger_threshold = -1,
-          .samples_to_skip = 4500,
-          .verbose = false
+        .decimation = 0,
+        .bits_per_sample = 0,
+        .averaging = false,
+        .divisor = LF_DIVISOR(74),
+        .trigger_threshold = -1,
+        .samples_to_skip = 4500,
+        .verbose = false
     };
     lf_config(&sc);
 
@@ -156,7 +156,7 @@ static int CmdMotorolaClone(const char *Cmd) {
                   "\n"
                   "Samples:\n"
                   "\tlf motorola clone a0000000a0002021\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -175,7 +175,7 @@ static int CmdMotorolaClone(const char *Cmd) {
     blocks[0] =  T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
     blocks[1] = bytes_to_num(data, 4);
     blocks[2] = bytes_to_num(data + 4, 4);
-    
+
     print_blocks(blocks, ARRAYLEN(blocks));
     return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
 }
@@ -241,7 +241,7 @@ int detectMotorola(uint8_t *dest, size_t *size) {
         return -3;
 
     if (inverted && start_idx > 0) {
-        for(size_t i= start_idx -1 ; i < *size + start_idx + 2; i++) {
+        for (size_t i = start_idx - 1 ; i < *size + start_idx + 2; i++) {
             dest[i] ^= 1;
         }
     }
@@ -254,5 +254,5 @@ int demodMotorola(void) {
 }
 
 int readMotorolaUid(void) {
-    return ( CmdMotorolaRead("") == PM3_SUCCESS);
+    return (CmdMotorolaRead("") == PM3_SUCCESS);
 }

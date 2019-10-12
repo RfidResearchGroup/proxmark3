@@ -84,10 +84,10 @@ static void printSignal(void) {
 
 #ifndef ON_DEVICE
 static int cmp_uint8(const void *a, const void *b) {
-   if (*(const uint8_t *)a < * (const uint8_t *)b)
-       return -1;
-   else
-       return *(const uint8_t *)a > *(const uint8_t *)b;
+    if (*(const uint8_t *)a < * (const uint8_t *)b)
+        return -1;
+    else
+        return *(const uint8_t *)a > *(const uint8_t *)b;
 }
 #endif
 
@@ -123,7 +123,7 @@ void computeSignalProperties(uint8_t *samples, uint32_t size) {
     else
         signalprop.mean = 0;
 #else
-   for (uint32_t i =  SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++) {
+    for (uint32_t i =  SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++) {
         if (samples[i] < signalprop.low) signalprop.low = samples[i];
         if (samples[i] > signalprop.high) signalprop.high = samples[i];
         sum += samples[i];

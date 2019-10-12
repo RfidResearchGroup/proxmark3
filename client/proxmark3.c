@@ -689,22 +689,22 @@ int main(int argc, char *argv[]) {
     // Check if windows AnsiColor Support is enabled in the registery
     // [HKEY_CURRENT_USER\Console]
     //     "VirtualTerminalLevel"=dword:00000001
-    
+
     HKEY hKey = NULL;
 
-    if(RegOpenKeyA (HKEY_CURRENT_USER,"Console",&hKey) == ERROR_SUCCESS) {
+    if (RegOpenKeyA(HKEY_CURRENT_USER, "Console", &hKey) == ERROR_SUCCESS) {
         DWORD dwType = REG_SZ;
         BYTE KeyValue[sizeof(dwType)];
         DWORD len = sizeof(KeyValue);
 
-        if (RegQueryValueEx(hKey,"VirtualTerminalLevel", NULL, &dwType,KeyValue, &len) != ERROR_FILE_NOT_FOUND) {
+        if (RegQueryValueEx(hKey, "VirtualTerminalLevel", NULL, &dwType, KeyValue, &len) != ERROR_FILE_NOT_FOUND) {
             uint8_t i;
             uint32_t Data = 0;
             for (i = 0; i < 4; i++)
                 Data += KeyValue[i] << (8 * i);
 
             if (Data == 1) { // Reg key is set to 1, Ansi Color Enabled
-                 session.supports_colors = true;
+                session.supports_colors = true;
             }
         }
         RegCloseKey(hKey);

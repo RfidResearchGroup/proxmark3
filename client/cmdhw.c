@@ -695,7 +695,7 @@ void pm3_version(bool verbose, bool oneliner) {
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
 //#if PLATFORM == PM3RDV4
-        if ( IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
+        if (IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
             PrintAndLogEx(NORMAL, "\n [ PROXMARK3 ]");
         } else {
             PrintAndLogEx(NORMAL, "\n [ PROXMARK3 RDV4 ]");
