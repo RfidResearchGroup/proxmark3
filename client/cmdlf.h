@@ -12,12 +12,13 @@
 #define CMDLF_H__
 
 #include "common.h"
+#include "pm3_cmd.h" // sample_config_t
 
 #define T55XX_WRITE_TIMEOUT 1500
 
 int CmdLF(const char *Cmd);
 
-int CmdLFSetConfig(const char *Cmd);
+int CmdLFConfig(const char *Cmd);
 
 int CmdLFCommandRead(const char *Cmd);
 int CmdFlexdemod(const char *Cmd);
@@ -32,5 +33,6 @@ int CmdVchDemod(const char *Cmd);
 int CmdLFfind(const char *Cmd);
 
 int lf_read(bool silent, uint32_t samples);
+int lf_config(sample_config *config);
 
 #endif

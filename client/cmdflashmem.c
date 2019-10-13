@@ -117,7 +117,7 @@ static int CmdFlashmemSpiBaudrate(const char *Cmd) {
         usage_flashmem_spibaud();
         return PM3_EINVARG;
     }
-    SendCommandNG(CMD_FLASHMEM_SET_SPIBAUDRATE, (uint8_t*)&baudrate, sizeof(uint32_t));
+    SendCommandNG(CMD_FLASHMEM_SET_SPIBAUDRATE, (uint8_t *)&baudrate, sizeof(uint32_t));
     return PM3_SUCCESS;
 }
 

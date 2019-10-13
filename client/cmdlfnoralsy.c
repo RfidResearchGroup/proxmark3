@@ -165,11 +165,12 @@ static int CmdNoralsyClone(const char *Cmd) {
     blocks[3] = bytebits_to_byte(bits + 64, 32);
 
     free(bits);
-    
+
     PrintAndLogEx(INFO, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));}
+    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+}
 
 static int CmdNoralsySim(const char *Cmd) {
 

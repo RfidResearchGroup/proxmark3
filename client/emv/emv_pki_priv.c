@@ -209,7 +209,7 @@ static struct tlvdb *emv_pki_sign_key(const struct crypto_pk *cp,
     if (!db) {
         free(exp_db);
         return NULL;
-   }
+    }
 
     tlvdb_add(db, exp_db);
 

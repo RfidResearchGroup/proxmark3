@@ -1839,7 +1839,7 @@ static int CmdHFiClass_loclass(const char *Cmd) {
         int errors = testCipherUtils();
         errors += testMAC();
         errors += doKeyTests(0);
-        errors += testElite(opt2=='l');
+        errors += testElite(opt2 == 'l');
         if (errors) PrintAndLogEx(ERR, "There were errors!!!");
         return PM3_ESOFT;
     }

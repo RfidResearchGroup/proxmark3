@@ -952,8 +952,8 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
             // cards with fixed nonce
             if (nt1 == nt2) {
-               Dbprintf("Nested: %08x vs %08x", nt1, nt2);
-               break;
+                Dbprintf("Nested: %08x vs %08x", nt1, nt2);
+                break;
             }
 
             uint32_t nttmp = prng_successor(nt1, 100); //NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
@@ -1064,14 +1064,14 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     crypto1_destroy(pcs);
 
     struct p {
-       int16_t isOK;
-       uint8_t block;
-       uint8_t keytype;
-       uint8_t cuid[4];
-       uint8_t nt_a[4];
-       uint8_t ks_a[4];
-       uint8_t nt_b[4];
-       uint8_t ks_b[4];
+        int16_t isOK;
+        uint8_t block;
+        uint8_t keytype;
+        uint8_t cuid[4];
+        uint8_t nt_a[4];
+        uint8_t ks_a[4];
+        uint8_t nt_b[4];
+        uint8_t ks_b[4];
     } PACKED payload;
     payload.isOK = isOK;
     payload.block = targetBlockNo;
@@ -1084,7 +1084,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     memcpy(payload.ks_b, &target_ks[1], 4);
 
     LED_B_ON();
-    reply_ng(CMD_HF_MIFARE_NESTED, PM3_SUCCESS, (uint8_t*)&payload, sizeof(payload));
+    reply_ng(CMD_HF_MIFARE_NESTED, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
     LED_B_OFF();
 
     if (DBGLEVEL >= 3) DbpString("NESTED FINISHED");

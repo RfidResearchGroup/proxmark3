@@ -119,6 +119,7 @@ typedef struct {
     int divisor;
     int trigger_threshold;
     uint32_t samples_to_skip;
+    bool verbose;
 } PACKED sample_config;
 /*
 typedef struct {
@@ -488,6 +489,7 @@ typedef struct {
 #define CMD_HF_MIFARE_CHKKEYS_FAST                                        0x0625
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
+#define CMD_HF_MIFARE_MFKEY                                               0x0631
 //ultralightC
 #define CMD_HF_MIFAREUC_AUTH                                              0x0724
 //0x0725 and 0x0726 no longer used

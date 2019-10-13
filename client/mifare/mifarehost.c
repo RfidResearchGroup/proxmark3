@@ -48,7 +48,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         payload.first_run = first_run;
         payload.blockno = blockno;
         payload.key_type = key_type;
-        SendCommandNG(CMD_HF_MIFARE_READER, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MIFARE_READER, (uint8_t *)&payload, sizeof(payload));
 
         //flush queue
         while (kbd_enter_pressed()) {
@@ -79,11 +79,11 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
                     uint8_t ar[4];
                 } PACKED;
 
-               struct p* package = (struct p*) resp.data.asBytes;
+                struct p *package = (struct p *) resp.data.asBytes;
 
                 if (package->isOK == -6) {
-                     *key = 0101;
-                      return 1;
+                    *key = 0101;
+                    return 1;
                 }
 
                 if (package->isOK < 0)
@@ -359,7 +359,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_NESTED, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFARE_NESTED, (uint8_t *)&payload, sizeof(payload));
 
     if (!WaitForResponseTimeout(CMD_HF_MIFARE_NESTED, &resp, 1500)) return PM3_ETIMEOUT;
 
@@ -376,7 +376,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
         uint8_t nt_b[4];
         uint8_t ks_b[4];
     } PACKED;
-    struct p* package = (struct p*)resp.data.asBytes;
+    struct p *package = (struct p *)resp.data.asBytes;
 
     // error during nested
     if (package->isOK) return package->isOK;

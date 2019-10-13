@@ -129,8 +129,8 @@ typedef struct {
 } t55xx_conf_block_t;
 
 typedef struct {
-   uint32_t blockdata;
-   bool valid;
+    uint32_t blockdata;
+    bool valid;
 }  t55xx_memory_item_t ;
 
 t55xx_conf_block_t Get_t55xx_Config(void);
@@ -150,7 +150,7 @@ char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
 char *GetDownlinkModeStr(uint8_t dlmode);
 void printT5xxHeader(uint8_t page);
-void printT55xxBlock(uint8_t blockNum,bool page1);
+void printT55xxBlock(uint8_t blockNum, bool page1);
 int  printConfiguration(t55xx_conf_block_t b);
 
 bool t55xxAquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known_block0, bool verbose);

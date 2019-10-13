@@ -264,7 +264,7 @@ static int CmdFdxRead(const char *Cmd) {
 static int CmdFdxClone(const char *Cmd) {
 
     uint32_t countryid = 0;
-    uint64_t animalid = 0;    
+    uint64_t animalid = 0;
     char cmdp = param_getchar(Cmd, 0);
     if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_fdx_clone();
 
@@ -282,7 +282,7 @@ static int CmdFdxClone(const char *Cmd) {
     }
 
     uint32_t blocks[5] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0, 0};
-    
+
     //Q5
     if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
         blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(32) | 4 << T5555_MAXBLOCK_SHIFT;
@@ -294,7 +294,7 @@ static int CmdFdxClone(const char *Cmd) {
     blocks[4] = bytebits_to_byte(bits + 96, 32);
 
     free(bits);
-    
+
     PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
     print_blocks(blocks,  ARRAYLEN(blocks));
 

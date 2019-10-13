@@ -159,7 +159,7 @@ static int CmdGuardClone(const char *Cmd) {
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
 
     if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_clone();
-    
+
     fmtlen &= 0x7f;
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
@@ -167,7 +167,7 @@ static int CmdGuardClone(const char *Cmd) {
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
     uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
     uint8_t *bs = calloc(96, sizeof(uint8_t));
-    
+
     if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
@@ -183,7 +183,7 @@ static int CmdGuardClone(const char *Cmd) {
     blocks[3] = bytebits_to_byte(bs + 64, 32);
 
     free(bs);
-    
+
     PrintAndLogEx(INFO, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
     print_blocks(blocks,  ARRAYLEN(blocks));
 

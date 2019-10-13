@@ -131,7 +131,7 @@ static int CmdParadoxRead(const char *Cmd) {
 }
 
 static int CmdParadoxClone(const char *Cmd) {
-    
+
     uint32_t blocks[4];
     bool errors = false;
     uint8_t cmdp = 0;
@@ -143,13 +143,13 @@ static int CmdParadoxClone(const char *Cmd) {
                 return usage_lf_paradox_clone();
             case 'b': {
                 // skip first block,  3*4 =12 bytes left
-                uint8_t rawhex[12] = {0}; 
+                uint8_t rawhex[12] = {0};
                 int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
-                if ( res != 0 )
+                if (res != 0)
                     errors = true;
-                
-                for(uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ( (i - 1) * 4 ), sizeof(uint32_t));
+
+                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
                 }
                 cmdp += 2;
                 break;

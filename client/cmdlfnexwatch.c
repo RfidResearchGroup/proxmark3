@@ -54,7 +54,7 @@ static int CmdNexWatchDemod(const char *Cmd) {
         // else if (idx == -3)
         // PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch problem during PSK demod");
         else if (idx == -4)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch preamble not found"); 
+            PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch preamble not found");
         // else if (idx == -5)
         // PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch size not correct: %d", size);
         else
@@ -99,7 +99,7 @@ static int CmdNexWatchRead(const char *Cmd) {
 }
 
 static int CmdNexWatchClone(const char *Cmd) {
-    
+
     // 56000000 00213C9F 8F150C00 00000000
     uint32_t blocks[5];
     bool errors = false;
@@ -112,13 +112,13 @@ static int CmdNexWatchClone(const char *Cmd) {
                 return usage_lf_nexwatch_clone();
             case 'b': {
                 // skip first block,  4*4 = 16 bytes left
-                uint8_t rawhex[16] = {0}; 
+                uint8_t rawhex[16] = {0};
                 int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
-                if ( res != 0 )
+                if (res != 0)
                     errors = true;
-                
-                for(uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                    blocks[i] = bytes_to_num(rawhex + ( (i - 1) * 4 ), sizeof(uint32_t));
+
+                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
                 }
                 cmdp += 2;
                 break;

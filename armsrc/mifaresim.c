@@ -723,7 +723,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
                     // iceman,  u8 can never be larger than 256
                     // if authenticating to a block that shouldn't exist - as long as we are not doing the reader attack
-                    if ( ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) ) {
+                    if (((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)) {
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Reader tried to operate (0x%02x) on out of range block: %d (0x%02x), nacking", receivedCmd_dec[0], receivedCmd_dec[1], receivedCmd_dec[1]);
                         break;

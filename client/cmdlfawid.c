@@ -418,7 +418,7 @@ static int CmdAWIDClone(const char *Cmd) {
     blocks[3] = bytebits_to_byte(bits + 64, 32);
 
     free(bits);
-    
+
     PrintAndLogEx(INFO, "Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
     print_blocks(blocks,  ARRAYLEN(blocks));
 

@@ -23,13 +23,15 @@ Default LF config is set to:
     averaging = YES
     divisor = 95 (125kHz)
     trigger_threshold = 0
+    samples_to_skip = 0
+    verbose = YES
     */
-sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0 } ;
+sample_config config = { 1, 8, 1, LF_DIVISOR_125, 0, 0, 1} ;
 
 void printConfig() {
     uint32_t d = config.divisor;
     DbpString(_BLUE_("LF Sampling config"));
-    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")")", d, 12000 / (d+1), ((1200000 + (d+1)/2) / (d+1)) - ((12000 / (d+1)) * 100));
+    Dbprintf("  [q] divisor.............%d ( "_GREEN_("%d.%02d kHz")")", d, 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
     Dbprintf("  [b] bps.................%d", config.bits_per_sample);
     Dbprintf("  [d] decimation..........%d", config.decimation);
     Dbprintf("  [a] averaging...........%s", (config.averaging) ? "Yes" : "No");
@@ -52,14 +54,15 @@ void setSamplingConfig(sample_config *sc) {
     if (sc->divisor != 0) config.divisor = sc->divisor;
     if (sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
     if (sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
-//    if (sc->samples_to_skip == 0xffffffff) // if needed to not update if not supplied 
+//    if (sc->samples_to_skip == 0xffffffff) // if needed to not update if not supplied
 
     config.samples_to_skip = sc->samples_to_skip;
     config.decimation = (sc->decimation != 0) ? sc->decimation : 1;
     config.averaging = sc->averaging;
     if (config.bits_per_sample > 8) config.bits_per_sample = 8;
 
-    printConfig();
+    if (sc->verbose)
+        printConfig();
 }
 
 sample_config *getSamplingConfig() {

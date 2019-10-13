@@ -35,7 +35,7 @@
 #include "cmdlf.h"    // lf_read
 #include "util_posix.h"
 #include "lfdemod.h"
-#include "wiegand_formats.h" 
+#include "wiegand_formats.h"
 
 #ifndef BITS
 # define BITS 96
@@ -133,12 +133,12 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
     clearCommandBuffer();
 
     SendCommandNG(CMD_LF_HID_SIMULATE, (uint8_t *)&payload,  sizeof(payload));
-/*
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_HID_SIMULATE, &resp);
-    if (resp.status == PM3_EOPABORTED)
-        return resp.status;
-*/
+    /*
+        PacketResponseNG resp;
+        WaitForResponse(CMD_LF_HID_SIMULATE, &resp);
+        if (resp.status == PM3_EOPABORTED)
+            return resp.status;
+    */
     msleep(delay);
     return sendPing();
 }
@@ -443,7 +443,7 @@ static int CmdHIDBrute(const char *Cmd) {
         if (data.CardNumber > 1) {
             data.CardNumber--;
             if (sendTry(format_idx, &data, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
-       }
+        }
     }
     return PM3_SUCCESS;
 }
