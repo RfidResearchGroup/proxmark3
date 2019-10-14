@@ -201,7 +201,7 @@ void getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
     }
 
     // if fuzzing to great and overlap
-    if (*high < *low) {
+    if (*high <= *low) {
         *high = signalprop.high;
         *low =  signalprop.low;
     }
@@ -1723,7 +1723,6 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, int *invert, int *startId
     size_t i;
     int high, low;
 
-    getHiLo(&high, &low, 75, 75);
     getHiLo(&high, &low, 75, 75);
 
     uint8_t bit = 0;
