@@ -150,7 +150,7 @@ static int usage_hf_iclass_writeblock(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readblock(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass readblk b <block> k <key> [c|e|r|v]\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass rdbl b <block> k <key> [c|e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  b <block> : The block number as 2 hex symbols");
     PrintAndLogEx(NORMAL, "  k <key>   : Access Key as 16 hex symbols or 1 hex to select key from memory");
@@ -159,9 +159,9 @@ static int usage_hf_iclass_readblock(void) {
     PrintAndLogEx(NORMAL, "  r         : raw, no computations applied to key");
     PrintAndLogEx(NORMAL, "  v         : verbose output");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass readblk b 06 k 0011223344556677");
-    PrintAndLogEx(NORMAL, "        hf iclass readblk b 1B k 0011223344556677 c");
-    PrintAndLogEx(NORMAL, "        hf iclass readblk b 0A k 0");
+    PrintAndLogEx(NORMAL, "        hf iclass rdbl b 06 k 0011223344556677");
+    PrintAndLogEx(NORMAL, "        hf iclass rdbl b 1B k 0011223344556677 c");
+    PrintAndLogEx(NORMAL, "        hf iclass rdbl b 0A k 0");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readtagfile() {
