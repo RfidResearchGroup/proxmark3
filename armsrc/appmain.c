@@ -366,7 +366,7 @@ void SendStatus(void) {
     uint32_t delta_time = 0;
     uint32_t start_time = GetTickCount();
     #define SLCK_CHECK_MS 50
-    WaitMS(SLCK_CHECK_MS);
+    SpinDelay(SLCK_CHECK_MS);
     delta_time = GetTickCountDelta(start_time);
     if ((delta_time < SLCK_CHECK_MS - 1) || (delta_time > SLCK_CHECK_MS + 1)) {
         // error > 2% with SLCK_CHECK_MS=50
