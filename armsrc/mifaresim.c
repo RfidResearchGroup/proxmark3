@@ -1106,7 +1106,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     Dbprintf("[MFEMUL_AUTH1] AUTH COMPLETED for sector %d with key %c. time=%d",
                              cardAUTHSC,
                              cardAUTHKEY == 0 ? 'A' : 'B',
-                             GetTickCount() - authTimer
+                             GetTickCountDelta(authTimer)
                             );
                 }
                 LED_C_ON();

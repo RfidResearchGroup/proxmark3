@@ -2044,7 +2044,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
             }
         }
 
-        if (GetTickCount() - receive_timer >  100)
+        if (GetTickCountDelta(receive_timer) >  100)
             break;
     }
     *received_len = Demod.len;
@@ -2094,7 +2094,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
         }
 
         // timeout already in ms + 100ms guard time
-        if (GetTickCount() - receive_timer > timeout + 100)
+        if (GetTickCountDelta(receive_timer) > timeout + 100)
             break;
     }
     return false;
