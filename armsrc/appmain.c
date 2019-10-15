@@ -354,6 +354,17 @@ void SendStatus(void) {
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
     Dbprintf("  Slow clock..............%d Hz", (16 * MAINCK) / mainf);
+    uint32_t delta_time = 0;
+    uint32_t start_time = GetTickCount();
+    #define SLCK_CHECK_MS 50
+    WaitMS(SLCK_CHECK_MS);
+    delta_time = GetTickCountDelta(start_time);
+    if ((delta_time < SLCK_CHECK_MS - 1) || (delta_time > SLCK_CHECK_MS + 1)) {
+        // error > 2% with SLCK_CHECK_MS=50
+        Dbprintf(_RED_("  Slow Clock speed change detected, TIA needed"));
+        Dbprintf(_YELLOW_("  Slow Clock actual speed seems closer to %d kHz"),
+            (16 * MAINCK / 1000) / mainf * delta_time / SLCK_CHECK_MS);
+    }
     DbpString(_BLUE_("Installed StandAlone Mode"));
     ModInfo();
 
