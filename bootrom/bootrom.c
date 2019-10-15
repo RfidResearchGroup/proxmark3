@@ -69,7 +69,7 @@ static void ConfigClocks(void) {
         (1 << AT91C_ID_PWMC)   |
         (1 << AT91C_ID_UDP);
 
-    mck_from_slck_to_pll(true);
+    mck_from_slck_to_pll();
 }
 
 static void Fatal(void) {

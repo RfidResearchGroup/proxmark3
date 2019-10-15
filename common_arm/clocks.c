@@ -15,7 +15,7 @@ void mck_from_pll_to_slck(void) {
     AT91C_BASE_PMC->PMC_MOR = 0;
 }
 
-void mck_from_slck_to_pll(bool cold) {
+void mck_from_slck_to_pll(void) {
     // worst case scenario, with MAINCK = 16MHz xtal, startup delay is 1.4ms
     // if SLCK slow clock runs at its worst case (max) frequency of 42kHz
     // max startup delay = (1.4ms*42k)/8 = 7.356 so round up to 8
@@ -23,14 +23,10 @@ void mck_from_slck_to_pll(bool cold) {
     // we observed on 10% of the devices very wrong initial slow clock RC TIA measures.
     // Bumping delay to 16 helps fixing the issue even on the most screwed RC.
 
-    // enable main oscillator and set startup delay if cold boot
-    if (cold) {
-        AT91C_BASE_PMC->PMC_MOR =
-            AT91C_CKGR_MOSCEN |
-            PMC_MAIN_OSC_STARTUP_DELAY(16);
-    } else {
-        AT91C_BASE_PMC->PMC_MOR = AT91C_CKGR_MOSCEN;
-    }
+    // enable main oscillator and set startup delay
+    AT91C_BASE_PMC->PMC_MOR =
+        AT91C_CKGR_MOSCEN |
+        PMC_MAIN_OSC_STARTUP_DELAY(16);
 
     // wait for main oscillator to stabilize
     while (!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MOSCS)) {};

@@ -307,7 +307,7 @@ void SendVersion(void) {
 void TimingIntervalAcquisition(void) {
     // trigger new acquisition by turning main oscillator off and on
     mck_from_pll_to_slck();
-    mck_from_slck_to_pll(false);
+    mck_from_slck_to_pll();
     // wait for MCFR and recompute RTMR scaler
     StartTickCount();
 }
