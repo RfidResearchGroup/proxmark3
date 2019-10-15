@@ -9,6 +9,7 @@
 # DO NOT use thumb mode in the phase 1 bootloader since that generates a section with glue code
 ARMSRC =
 THUMBSRC = usb_cdc.c \
+           clocks.c \
            bootrom.c
 
 ASMSRC = ram-reset.s flash-reset.s

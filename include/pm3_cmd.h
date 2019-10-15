@@ -287,6 +287,7 @@ typedef struct {
 #define CMD_SET_DBGMODE                                                   0x0114
 #define CMD_STANDALONE                                                    0x0115
 #define CMD_WTX                                                           0x0116
+#define CMD_TIA                                                           0x0117
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_WRITE                                                0x0121

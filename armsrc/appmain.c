@@ -11,6 +11,7 @@
 //-----------------------------------------------------------------------------
 #include "appmain.h"
 
+#include "clocks.h"
 #include "usb_cdc.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
@@ -301,6 +302,14 @@ void SendVersion(void) {
     memcpy(payload.versionstr, VersionString, payload.versionstr_len);
 
     reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + payload.versionstr_len);
+}
+
+void TimingIntervalAcquisition(void) {
+    // trigger new acquisition by turning main oscillator off and on
+    mck_from_pll_to_slck();
+    mck_from_slck_to_pll(false);
+    // wait for MCFR and recompute RTMR scaler
+    StartTickCount();
 }
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
@@ -1887,6 +1896,16 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_STATUS: {
             SendStatus();
+            break;
+        }
+        case CMD_TIA: {
+            uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;
+            Dbprintf("  Slow clock old measured value:.........%d Hz", (16 * MAINCK) / mainf);
+            TimingIntervalAcquisition();
+            mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;
+            Dbprintf(""); // first message gets lost
+            Dbprintf("  Slow clock new measured value:.........%d Hz", (16 * MAINCK) / mainf);
+            reply_ng(CMD_TIA, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_STANDALONE: {
