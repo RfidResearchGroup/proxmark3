@@ -684,6 +684,8 @@ int main(int argc, char *argv[]) {
     }
 
     session.supports_colors = false;
+/*
+    // Removed color on windows until a better option can be implemented.
 
 #if defined(_WIN32)
     // Check if windows AnsiColor Support is enabled in the registery
@@ -711,6 +713,7 @@ int main(int argc, char *argv[]) {
     }
 
 #endif
+*/
 
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
