@@ -16,7 +16,8 @@ Always use the latest repository commits from *master* branch. There are always 
   * [Troubles with SIM card reader](#troubles-with-sim-card-reader)
   * [Troubles with t5577 commands or MFC/iClass/T55x7 dictionaries](#troubles-with-t5577-commands-or-mfciclasst55x7-dictionaries)
   * [File not found](#file-not-found)
-  * [pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
+  * [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
+  * [Usb cable](#usb-cable)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -154,6 +155,12 @@ pm3 --> sc upgrade f ../tools/simmodule/sim011.bin
 
 etc.
 
-## pixmap / pixbuf warnings
+## Pixmap / pixbuf warnings
 
 If you get warnings related to pixmap or pixbuf such as *Pixbuf theme: Cannot load pixmap file* or *Invalid borders specified for theme pixmap*, it's a problem of your Theme, try another one and the problem should vanish. See e.g. [#354](https://github.com/RfidResearchGroup/proxmark3/issues/354) (Yaru theme on Ubuntu) and [#386](https://github.com/RfidResearchGroup/proxmark3/issues/386) (Kali-X theme on Kali).
+
+## Usb cable
+
+It's needed to have a good USB cable to connect Proxmark3 to USB. If you have stability problems (Proxmark3 resets, firmware hangs, especially firmware hangs just after start, etc.) 
+
+- check your cable with a USB tester (or try to change it). It needs to have a resistance smaller or equal to 0.3 Ohm.
