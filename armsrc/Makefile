@@ -109,6 +109,7 @@ THUMBSRC = start.c \
     string.c \
     BigBuf.c \
     ticks.c \
+    clocks.c \
     hfsnoop.c
 
 

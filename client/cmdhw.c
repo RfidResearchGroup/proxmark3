@@ -511,6 +511,18 @@ static int CmdStatus(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdTia(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition...");
+    PacketResponseNG resp;
+    SendCommandNG(CMD_TIA, NULL, 0);
+    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false)
+        PrintAndLogEx(WARNING, "Tia command failed. You probably need to unplug the Proxmark3.");
+    PrintAndLogEx(INFO, "TIA done.");
+    return PM3_SUCCESS;
+}
+
 static int CmdPing(const char *Cmd) {
     uint32_t len = strtol(Cmd, NULL, 0);
     if (len > PM3_CMD_DATA_SIZE)
@@ -604,6 +616,7 @@ static command_t CommandTable[] = {
     {"setmux",        CmdSetMux,      IfPm3Present,    "Set the ADC mux to a specific value"},
     {"standalone",    CmdStandalone,  IfPm3Present,    "Jump to the standalone mode"},
     {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
+    {"tia",           CmdTia,         IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"tune",          CmdTune,        IfPm3Present,    "Measure antenna tuning"},
     {"version",       CmdVersion,     IfPm3Present,    "Show version information about the connected Proxmark3"},
     {NULL, NULL, NULL, NULL}

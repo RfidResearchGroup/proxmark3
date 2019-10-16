@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cd $(dirname "$0")
 . openocd_configuration || exit 1
 
 if [ -e "$DUMP" ]; then
