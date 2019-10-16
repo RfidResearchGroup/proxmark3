@@ -536,21 +536,28 @@ int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, R
 ////////////////////////////////////////////////////////////////////////////////
 
 ///////// MISC HIGH LEVEL FUNCTIONS ////////////////////////////////////////////
+#define SPIFFS_BANNER  DbpString(_BLUE_("Flash Memory FileSystem tree (SPIFFS)"));
 
 void rdv40_spiffs_safe_print_fsinfo() {
     rdv40_spiffs_fsinfo fsinfo;
     rdv40_spiffs_getfsinfo(&fsinfo, RDV40_SPIFFS_SAFETY_SAFE);
+
     DbpString(_BLUE_("Flash Memory FileSystem Info (SPIFFS)"));
-    Dbprintf("-------------------------------------");
-    Dbprintf("* Filesystem Logical Block Size.........%d bytes", fsinfo.blockSize);
-    Dbprintf("* Filesystem Logical Page Size..........%d bytes", fsinfo.pageSize);
-    Dbprintf("--");
-    Dbprintf("* Filesystem Max Open Files.............%d file descriptors", fsinfo.maxOpenFiles);
-    Dbprintf("* Filesystem Max Path Length............%d chars", fsinfo.maxPathLength);
-    Dbprintf("--");
-    Dbprintf("Filesystem\tSize\tUsed\tAvailable\tUse%\tMounted on");
-    Dbprintf("spiffs\t%dB\t%dB\t%dB\t\t%d%\t/", fsinfo.totalBytes, fsinfo.usedBytes, fsinfo.freeBytes,
-             fsinfo.usedPercent);
+    
+
+    Dbprintf("  Logical Block Size........." _YELLOW_("%d")"bytes", fsinfo.blockSize);
+    Dbprintf("  Logical Page Size.........." _YELLOW_("%d")"bytes", fsinfo.pageSize);
+    Dbprintf("");
+    Dbprintf("  Max Open Files............." _YELLOW_("%d")"file descriptors", fsinfo.maxOpenFiles);
+    Dbprintf("  Max Path Length............" _YELLOW_("%d")"chars", fsinfo.maxPathLength);
+    DbpString("");
+    Dbprintf("  filesystem    size      used        available    use%    mounted");
+    Dbprintf("  spiffs        %6d B      %6d B    %6d B"_YELLOW_("%2d%")"   /"
+             , fsinfo.totalBytes
+             , fsinfo.usedBytes
+             , fsinfo.freeBytes
+             , fsinfo.usedPercent
+            );
 }
 
 // this function is safe and WILL rollback since it is only a PRINTING function,
@@ -562,14 +569,16 @@ void rdv40_spiffs_safe_print_fsinfo() {
 // dont want, as prefix are way easier and lighter in every aspect.
 void rdv40_spiffs_safe_print_tree(uint8_t banner) {
 
-    int changed = rdv40_spiffs_lazy_mount();
-    spiffs_DIR d;
-    struct spiffs_dirent e;
-    struct spiffs_dirent *pe = &e;
     if (banner) {
         DbpString(_BLUE_("Flash Memory FileSystem tree (SPIFFS)"));
         Dbprintf("-------------------------------------");
     }
+    
+    int changed = rdv40_spiffs_lazy_mount();
+    spiffs_DIR d;
+    struct spiffs_dirent e;
+    struct spiffs_dirent *pe = &e;
+
     SPIFFS_opendir(&fs, "/", &d);
     Dbprintf("    \t         \t/");
     while ((pe = SPIFFS_readdir(&d, pe))) {
@@ -592,29 +601,40 @@ void rdv40_spiffs_safe_print_tree(uint8_t banner) {
     rdv40_spiffs_lazy_mount_rollback(changed);
 }
 
+
+// Selftest function
 void test_spiffs() {
-    Dbprintf("---------------------------");
+    Dbprintf("----------------------------------------------");
     Dbprintf("Testing SPIFFS operations");
-    Dbprintf("---------------------------");
-    Dbprintf("(all test are made using lazy safetylevel)");
-    Dbprintf("* Mounting filesystem (lazy).......");
+    Dbprintf("----------------------------------------------");
+    Dbprintf("--  all test are made using lazy safetylevel");
+
+    Dbprintf("  Mounting filesystem (lazy).......");
     int changed = rdv40_spiffs_lazy_mount();
-    Dbprintf("* Printing tree..............");
+
+    Dbprintf("  Printing tree..............");
     rdv40_spiffs_safe_print_tree(false);
-    Dbprintf("* Writing 'I love Proxmark' in a testspiffs.txt");
+    
+    Dbprintf("  Writing 'I love Proxmark3 RDV4' in a testspiffs.txt");
+
     // Since We lazy_mounted manually before hand, the wrte safety level will
     // just imply noops
-    rdv40_spiffs_write((char *)"testspiffs.txt", (uint8_t *)"I love Proxmark", 15, RDV40_SPIFFS_SAFETY_SAFE);
-    Dbprintf("* Printing tree again.......");
+    rdv40_spiffs_write((char *)"testspiffs.txt", (uint8_t *)"I love Proxmark3 RDV4", 21, RDV40_SPIFFS_SAFETY_SAFE);
+
+    Dbprintf("  Printing tree again.......");
     rdv40_spiffs_safe_print_tree(false);
-    Dbprintf("* Making a symlink to testspiffs.txt");
+
+    Dbprintf("  Making a symlink to testspiffs.txt");
     rdv40_spiffs_make_symlink((char *)"testspiffs.txt", (char *)"linktotestspiffs.txt", RDV40_SPIFFS_SAFETY_SAFE);
-    Dbprintf("* Printing tree again.......");
+
+    Dbprintf("  Printing tree again.......");
     rdv40_spiffs_safe_print_tree(false);
+
     // TODO READBACK, rename,print tree read back, remove, print tree;
-    Dbprintf("* Rollbacking The mount status IF things have changed");
+    Dbprintf("  Rollbacking The mount status IF things have changed");
     rdv40_spiffs_lazy_mount_rollback(changed);
-    Dbprintf("All done");
+
+    Dbprintf(_GREEN_("All done"));
     return;
 }
 
