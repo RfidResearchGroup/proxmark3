@@ -371,13 +371,14 @@ static int usage_t55xx_dangerraw() {
     return PM3_SUCCESS;
 }
 
-static int CmdHelp(const char *Cmd);
-
-static int CmdT55xxCloneHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+static int usage_t55xx_clonehelp(){
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
     PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
+// todo:  rename to clone
     PrintAndLogEx(NORMAL, _GREEN_("lf em 410x_write"));
+// todo:  implement restore
+//    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x05_write"));
+//    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x50_write"));
     PrintAndLogEx(NORMAL, _GREEN_("lf fdx clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gallagher clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gproxii clone"));
@@ -397,6 +398,13 @@ static int CmdT55xxCloneHelp(const char *Cmd) {
     PrintAndLogEx(NORMAL, _GREEN_("lf viking clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf visa2000 clone"));
     return PM3_SUCCESS;
+}
+
+static int CmdHelp(const char *Cmd);
+
+static int CmdT55xxCloneHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return usage_t55xx_clonehelp();
 }
 
 void T55x7_SaveBlockData(uint8_t idx, uint32_t data) {
