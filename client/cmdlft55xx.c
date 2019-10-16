@@ -373,6 +373,32 @@ static int usage_t55xx_dangerraw() {
 
 static int CmdHelp(const char *Cmd);
 
+static int CmdT55xxCloneHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
+    PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf em 410x_write"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf fdx clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf gallagher clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf gproxii clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf hid clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf indala clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf io clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf jablotron clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf keri clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf nedap clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf noralsy clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf motorola clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf pac clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf paradox clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf presco clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf pyramid clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf securakey clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf viking clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf visa2000 clone"));
+    return PM3_SUCCESS;
+}
+
 void T55x7_SaveBlockData(uint8_t idx, uint32_t data) {
     if (idx < T55x7_BLOCK_COUNT) {
         cardmem[idx].valid      = true;
@@ -3652,6 +3678,7 @@ static command_t CommandTable[] = {
     {"bruteforce",   CmdT55xxBruteForce,      IfPm3Lf,         "<start password> <end password> Simple bruteforce attack to find password"},
     {"config",       CmdT55xxSetConfig,       AlwaysAvailable, "Set/Get T55XX configuration (modulation, inverted, offset, rate)"},
     {"chk",          CmdT55xxChkPwds,         IfPm3Lf,         "Check passwords from dictionary/flash"},
+    {"clonehelp",    CmdT55xxCloneHelp,       IfPm3Lf,         "Shows the available clone commands"},
     {"dangerraw",    CmdT55xxDangerousRaw,    IfPm3Lf,         "Sends raw bitstream. Dangerous, do not use!! b <bitstream> t <timing>"},
     {"detect",       CmdT55xxDetect,          AlwaysAvailable, "[1] Try detecting the tag modulation from reading the configuration block."},
     {"deviceconfig", CmdT55xxSetDeviceConfig, IfPm3Lf,         "Set/Get T55XX device configuration (startgap, writegap, write0, write1, readgap"},
