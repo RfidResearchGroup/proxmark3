@@ -238,7 +238,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdGuardDemod,  AlwaysAvailable, "demodulate a G Prox II tag from the GraphBuffer"},
     {"read",    CmdGuardRead,   IfPm3Lf,         "attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdGuardClone,  IfPm3Lf,         "clone Guardall tag"},
+    {"clone",   CmdGuardClone,  IfPm3Lf,         "clone Guardall tag to T55x7"},
     {"sim",     CmdGuardSim,    IfPm3Lf,         "simulate Guardall tag"},
     {NULL, NULL, NULL, NULL}
 };
