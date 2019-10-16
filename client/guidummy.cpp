@@ -9,12 +9,13 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
+#include "ui.h"
 
 extern "C" void ShowGraphWindow(void) {
     static int warned = 0;
 
     if (!warned) {
-        printf("No GUI in this build!\n");
+        PrintAndLogEx(INFO, "No GUI in this build!");
         warned = 1;
     }
 }
