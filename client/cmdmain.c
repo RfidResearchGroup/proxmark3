@@ -38,7 +38,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int CmdRem(const char *Cmd) {
+int CmdRem(const char *Cmd) {
     char buf[22] = {0};
     struct tm *ct, tm_buf;
     time_t now = time(NULL);
