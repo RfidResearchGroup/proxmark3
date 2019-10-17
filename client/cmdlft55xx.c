@@ -371,7 +371,7 @@ static int usage_t55xx_dangerraw() {
     return PM3_SUCCESS;
 }
 
-static int usage_t55xx_clonehelp(){
+static int usage_t55xx_clonehelp() {
     PrintAndLogEx(NORMAL, "For cloning specific techs on T55xx tags, see commands available in corresponding LF sub-menus, e.g.:");
     PrintAndLogEx(NORMAL, _GREEN_("lf awid clone"));
 // todo:  rename to clone
