@@ -95,7 +95,7 @@ static int CmdHFFelicaList(const char *Cmd) {
 }
 
 static int CmdHFFelicaReader(const char *Cmd) {
-    bool verbose = !(Cmd[0] == 's' || Cmd[0] ==  'S');
+    bool verbose = !(tolower(Cmd[0]) == 's');
     return readFelicaUid(verbose);
 }
 
