@@ -36,7 +36,7 @@ static int usage_hf_felica_sim(void) {
     PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "          hf felica sim t 1 ");
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 
@@ -48,7 +48,7 @@ static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "      t       triggers to skip (decimal)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "          hf felica sniff s 1000");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_felica_simlite(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa Lite tag \n");
@@ -58,7 +58,7 @@ static int usage_hf_felica_simlite(void) {
     PrintAndLogEx(NORMAL, "    uid   : UID in hexsymbol");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "          hf felica litesim 11223344556677");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_felica_dumplite(void) {
     PrintAndLogEx(NORMAL, "\n Dump ISO/18092 FeliCa Lite tag \n");
@@ -68,7 +68,7 @@ static int usage_hf_felica_dumplite(void) {
     PrintAndLogEx(NORMAL, "    h     : This help");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "          hf felica litedump");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_felica_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
@@ -78,32 +78,30 @@ static int usage_hf_felica_raw(void) {
     PrintAndLogEx(NORMAL, "       -p    leave the signal field ON after receive");
     PrintAndLogEx(NORMAL, "       -a    active signal field ON without select");
     PrintAndLogEx(NORMAL, "       -s    active signal field ON with select");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_hf_felica_dump(void) {
     PrintAndLogEx(NORMAL, "Usage: hf felica dump [-h] <outputfile>");
     PrintAndLogEx(NORMAL, "       -h    this help");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFFelicaList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list felica' instead");
     CmdTraceList("felica");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFFelicaReader(const char *Cmd) {
     bool verbose = !(Cmd[0] == 's' || Cmd[0] ==  'S');
-    readFelicaUid(verbose);
-    return 0;
+    return readFelicaUid(verbose);
 }
 
 static int CmdHFFelicaDump(const char *Cmd) {
     if (strlen(Cmd) < 1) return usage_hf_felica_dump();
-    dump(*Cmd);
-    return 0;
+    return dump(*Cmd);
 }
 
 // simulate iso18092 / FeliCa tag
@@ -169,7 +167,7 @@ static int CmdHFFelicaSim(const char *Cmd) {
     while (!kbd_enter_pressed()) {
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 
@@ -206,7 +204,7 @@ static int CmdHFFelicaSniff(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_FELICA_SNIFF, samples2skip, triggers2skip, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // uid  hex
@@ -219,7 +217,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_FELICALITE_SIMULATE, uid, 0, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void printSep() {
@@ -392,35 +390,35 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             DropField();
-            return 1;
+            return PM3_EOPABORTED;
         }
         if (timeout > 100) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             DropField();
-            return 1;
+            return PM3_ETIMEOUT;
         }
     }
     if (resp.oldarg[0] == 0) {
         PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
-        return 1;
+        return PM3_EOPABORTED;
     }
 
     uint32_t tracelen = resp.oldarg[1];
     if (tracelen == 0) {
         PrintAndLogEx(WARNING, "\nNo trace data! Maybe not a FeliCa Lite card?");
-        return 1;
+        return PM3_ESOFT;
     }
 
     uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
     if (trace == NULL) {
         PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
-        return 1;
+        return PM3_EMALLOC;
     }
 
     if (!GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(trace);
-        return 0;
+        return PM3_ETIMEOUT;
     }
 
     PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu64" bytes)", tracelen);
@@ -435,7 +433,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     printSep();
 
     free(trace);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void waitCmdFelica(uint8_t iSelect) {
@@ -524,7 +522,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
             continue;
         }
         PrintAndLogEx(WARNING, "Invalid char on input");
-        return 0;
+        return PM3_EINVARG;
     }
 
     if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
@@ -565,7 +563,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
             waitCmdFelica(0);
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int readFelicaUid(bool verbose) {
@@ -576,7 +574,7 @@ int readFelicaUid(bool verbose) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
         //SendCommandMIX(CMD_HF_FELICA_COMMAND, 0, 0, 0, NULL, 0);
-        return 0;
+        return PM3_ESOFT;
     }
 
     felica_card_select_t card;
@@ -587,19 +585,20 @@ int readFelicaUid(bool verbose) {
         case 1: {
             if (verbose)
                 PrintAndLogEx(WARNING, "card timeout");
-            break;
+            return PM3_ETIMEOUT;
         }
         case 2: {
             if (verbose)
                 PrintAndLogEx(WARNING, "card answered wrong");
-            break;
+            return PM3_ESOFT;
         }
         case 3: {
             if (verbose)
                 PrintAndLogEx(WARNING, "CRC check failed");
-            break;
+            return PM3_ESOFT;
         }
         case 0: {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "FeliCa tag info");
 
             PrintAndLogEx(NORMAL, "IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
@@ -614,18 +613,18 @@ int readFelicaUid(bool verbose) {
             break;
         }
     }
-    return status;
+    return PM3_SUCCESS;
 }
-
 
 int dump(const char *Cmd) {
     clearCommandBuffer();
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hf_felica_dumplite();
+    
     // TODO FINISH THIS METHOD
     PrintAndLogEx(SUCCESS, "NOT IMPLEMENTED YET!");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -644,7 +643,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHFFelica(const char *Cmd) {
