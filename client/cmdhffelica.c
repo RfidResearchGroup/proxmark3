@@ -406,7 +406,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     }
 
     uint32_t tracelen = resp.oldarg[1];
-    if (tracelen == 0){
+    if (tracelen == 0) {
         PrintAndLogEx(WARNING, "\nNo trace data! Maybe not a FeliCa Lite card?");
         return 1;
     }
@@ -557,11 +557,11 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 
     if (reply) {
-        if (active_select){
+        if (active_select) {
             PrintAndLogEx(NORMAL, "Active select wait for FeliCa.");
             waitCmdFelica(1);
         }
-        if (datalen > 0){
+        if (datalen > 0) {
             waitCmdFelica(0);
         }
     }
@@ -618,7 +618,7 @@ int readFelicaUid(bool verbose) {
 }
 
 
-int dump(const char *Cmd){
+int dump(const char *Cmd) {
     clearCommandBuffer();
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hf_felica_dumplite();
@@ -629,16 +629,16 @@ int dump(const char *Cmd){
 }
 
 static command_t CommandTable[] = {
-        {"help",      CmdHelp,              AlwaysAvailable, "This help"},
-        {"list",      CmdHFFelicaList,      AlwaysAvailable,     "List ISO 18092/FeliCa history"},
-        {"reader",    CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
+    {"help",      CmdHelp,              AlwaysAvailable, "This help"},
+    {"list",      CmdHFFelicaList,      AlwaysAvailable,     "List ISO 18092/FeliCa history"},
+    {"reader",    CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
 //    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
-        {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "sniff ISO 18092/Felica traffic"},
-        {"raw",       CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
-        {"dump",    CmdHFFelicaDump,    IfPm3Felica,     "Wait for and try dumping Felica"},
-        {"litesim",   CmdHFFelicaSimLite,   IfPm3Felica,     "<NDEF2> - only reply to poll request"},
-        {"litedump",  CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
-        {NULL, NULL, NULL, NULL}
+    {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "sniff ISO 18092/Felica traffic"},
+    {"raw",       CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
+    {"dump",    CmdHFFelicaDump,    IfPm3Felica,     "Wait for and try dumping Felica"},
+    {"litesim",   CmdHFFelicaSimLite,   IfPm3Felica,     "<NDEF2> - only reply to poll request"},
+    {"litedump",  CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {

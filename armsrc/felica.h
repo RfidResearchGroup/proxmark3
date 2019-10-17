@@ -24,6 +24,6 @@ void felica_create_authentication1_frame();
 void felica_create_authentication2_frame();
 void felica_send_request_service(uint8_t *request_service);
 void felica_reset_frame_mode();
-uint8_t * felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm);
+uint8_t *felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm);
 
 #endif

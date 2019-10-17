@@ -365,14 +365,14 @@ void SendStatus(void) {
     Dbprintf("  Slow clock..............%d Hz", (16 * MAINCK) / mainf);
     uint32_t delta_time = 0;
     uint32_t start_time = GetTickCount();
-    #define SLCK_CHECK_MS 50
+#define SLCK_CHECK_MS 50
     SpinDelay(SLCK_CHECK_MS);
     delta_time = GetTickCountDelta(start_time);
     if ((delta_time < SLCK_CHECK_MS - 1) || (delta_time > SLCK_CHECK_MS + 1)) {
         // error > 2% with SLCK_CHECK_MS=50
         Dbprintf(_RED_("  Slow Clock speed change detected, TIA needed"));
         Dbprintf(_YELLOW_("  Slow Clock actual speed seems closer to %d kHz"),
-            (16 * MAINCK / 1000) / mainf * delta_time / SLCK_CHECK_MS);
+                 (16 * MAINCK / 1000) / mainf * delta_time / SLCK_CHECK_MS);
     }
     DbpString(_BLUE_("Installed StandAlone Mode"));
     ModInfo();
