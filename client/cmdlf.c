@@ -63,12 +63,12 @@ static int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             This help");
     PrintAndLogEx(NORMAL, "       d <delay>     delay OFF period, (0 for bitbang mode) (decimal)");
-    PrintAndLogEx(NORMAL, "       z <zero>      time period ZERO, (decimal)");
-    PrintAndLogEx(NORMAL, "       o <one>       time period ONE, (decimal)");
-    PrintAndLogEx(NORMAL, "       c <cmd>       Command bytes  (in ones and zeros)");
+    PrintAndLogEx(NORMAL, "       z <zero>      ZERO time period (decimal)");
+    PrintAndLogEx(NORMAL, "       o <one>       ONE time period (decimal)");
+    PrintAndLogEx(NORMAL, "       c <cmd>       Command bytes (in ones and zeros)");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "       ************* All periods in microseconds (ms)");
-    PrintAndLogEx(NORMAL, "       ************* Use lf config to configure options.");
+    PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in microseconds (us)"));
+    PrintAndLogEx(NORMAL, "       ************* Use " _YELLOW_("'lf config'") "to configure options.");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf cmdread d 80 z 100 o 200 c 11000");
     return PM3_SUCCESS;
@@ -77,7 +77,7 @@ static int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       s            silent run no printout");
+    PrintAndLogEx(NORMAL, "       s            silent run, no printout");
     PrintAndLogEx(NORMAL, "       d #samples   # samples to collect (optional)");
     PrintAndLogEx(NORMAL, "Use 'lf config' to set parameters.");
     PrintAndLogEx(NORMAL, "");

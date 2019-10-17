@@ -109,9 +109,11 @@ ifneq ($(SKIPQT),1)
 endif
 
 ifneq ($(QTLDLIBS),)
+    QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp
     QTGUIOBJS = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
     PM3CFLAGS += -DHAVE_GUI
 else
+    QTGUISRCS = guidummy.cpp
     QTGUIOBJS = $(OBJDIR)/guidummy.o
 endif
 
@@ -257,7 +259,6 @@ ifeq ($(MULTIARCHSRCS), )
     CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
 endif
 
-QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp guidummy.cpp
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)

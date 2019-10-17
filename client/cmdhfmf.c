@@ -2920,7 +2920,7 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
     if (k_sector == NULL)
         emptySectorTable();
 
-    success = mfkey32_moebius(data, &key);
+    success = mfkey32_moebius(&data, &key);
     if (success) {
         uint8_t sector = data.sector;
         uint8_t keytype = data.keytype;

@@ -160,8 +160,8 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"demod",   CmdVikingDemod, AlwaysAvailable, "Demodulate a Viking tag from the GraphBuffer"},
     {"read",    CmdVikingRead,  IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
-    {"clone",   CmdVikingClone, IfPm3Lf,         "<8 digit ID number> clone viking tag"},
-    {"sim",     CmdVikingSim,   IfPm3Lf,         "<8 digit ID number> simulate viking tag"},
+    {"clone",   CmdVikingClone, IfPm3Lf,         "clone Viking tag to T55x7 (or to q5/T5555)"},
+    {"sim",     CmdVikingSim,   IfPm3Lf,         "simulate Viking tag"},
     {NULL, NULL, NULL, NULL}
 };
 

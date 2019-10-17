@@ -534,7 +534,7 @@ static command_t CommandTable[] = {
     {"demod",    CmdIndalaDemod,     AlwaysAvailable, "demodulate an indala tag (PSK1) from GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "alternative method to Demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
     {"read",     CmdIndalaRead,      IfPm3Lf,         "read an Indala Prox tag from the antenna"},
-    {"clone",    CmdIndalaClone,     IfPm3Lf,         "clone Indala to T55x7"},
+    {"clone",    CmdIndalaClone,     IfPm3Lf,         "clone Indala tag to T55x7"},
     {"sim",      CmdIndalaSim,       IfPm3Lf,         "simulate Indala tag"},
     {NULL, NULL, NULL, NULL}
 };

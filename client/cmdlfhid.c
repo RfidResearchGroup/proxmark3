@@ -452,7 +452,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdHIDDemod,    AlwaysAvailable, "demodulate HID Prox tag from the GraphBuffer"},
     {"read",    CmdHIDRead,     IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdHIDClone,    IfPm3Lf,         "clone HID to T55x7"},
+    {"clone",   CmdHIDClone,    IfPm3Lf,         "clone HID tag to T55x7"},
     {"sim",     CmdHIDSim,      IfPm3Lf,         "simulate HID tag"},
     {"brute",   CmdHIDBrute,    IfPm3Lf,         "bruteforce card number against reader"},
     {"watch",   CmdHIDWatch,    IfPm3Lf,         "continuously watch for cards.  Reader mode"},

@@ -219,7 +219,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
     {"demod",   CmdNoralsyDemod, AlwaysAvailable, "Demodulate an Noralsy tag from the GraphBuffer"},
     {"read",    CmdNoralsyRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdNoralsyClone, IfPm3Lf,         "clone Noralsy to T55x7"},
+    {"clone",   CmdNoralsyClone, IfPm3Lf,         "clone Noralsy tag to T55x7 (or to q5/T5555)"},
     {"sim",     CmdNoralsySim,   IfPm3Lf,         "simulate Noralsy tag"},
     {NULL, NULL, NULL, NULL}
 };
