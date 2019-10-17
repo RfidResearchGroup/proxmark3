@@ -1899,9 +1899,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_TIA: {
+
+            while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
             uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;
             Dbprintf("  Slow clock old measured value:.........%d Hz", (16 * MAINCK) / mainf);
             TimingIntervalAcquisition();
+
+            while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
             mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;
             Dbprintf(""); // first message gets lost
             Dbprintf("  Slow clock new measured value:.........%d Hz", (16 * MAINCK) / mainf);
