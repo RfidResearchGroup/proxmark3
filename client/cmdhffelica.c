@@ -581,7 +581,6 @@ int readFelicaUid(bool verbose) {
 
     felica_card_select_t card;
     memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
-    PrintAndLogEx(NORMAL, "Received bytes:  \n%s", sprint_hex(resp.data.asBytes, sizeof(resp.data.asBytes)));
     uint64_t status = resp.oldarg[0];
 
     switch (status) {
