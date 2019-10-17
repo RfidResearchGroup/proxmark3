@@ -417,6 +417,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
     if (DBGLEVEL > 3)
         Dbprintf("timeout set: %i", timeout);
     //TODO FIX THIS METHOD - Race Condition or something: TIMING/MEMORY ISSUES
+    // If you add content here (dbprintf), timing problems appear?! Last Bytes (CRC) of frame will be cutoff.
     for (;;) {
         WDT_HIT();
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -442,7 +443,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
             } else if (c++ > timeout && FelicaFrame.state == STATE_UNSYNCD) {
                 if (DBGLEVEL > 3) Dbprintf("Error: Timeout! STATE_UNSYNCD");
                 return false;
-            } // If you add content here, timing problems appear?!
+            }
         }
     }
 }
@@ -488,6 +489,14 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
 
     LED_D_ON();
 }
+
+void felica_reset_frame_mode(){
+    switch_off();
+    //Resetting Frame mode (First set in fpgaloader.c)
+    AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+}
+
+
 //-----------------------------------------------------------------------------
 // RAW FeliCa commands. Send out commands and store answers.
 //-----------------------------------------------------------------------------
@@ -516,11 +525,12 @@ void felica_sendraw(PacketCommandNG *c) {
         // if failed selecting, turn off antenna and quite.
         if (!(param & FELICA_NO_SELECT)) {
             arg0 = felica_select_card(&card);
-            reply_old(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
+            reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
             if (arg0 > 0){
                 Dbprintf("Error: Failed selecting card! ");
+                felica_reset_frame_mode();
+                return;
             }
-            goto OUT;
         }
     }else{
         if (DBGLEVEL > 3) Dbprintf("No card selection");
@@ -552,24 +562,21 @@ void felica_sendraw(PacketCommandNG *c) {
         TransmitFor18092_AsReader(buf, buf[2] + 4, NULL, 1, 0);
         arg0 = WaitForFelicaReply(1024);
         if (DBGLEVEL > 3) {
-            Dbprintf("Received Frame: %d", arg0);
+            Dbprintf("Received Frame Code: %d", arg0);
             Dbhexdump(FelicaFrame.len, FelicaFrame.framebytes, 0);
         };
-        reply_old(CMD_ACK, arg0, 0, 0, FelicaFrame.framebytes + 2, FelicaFrame.len - 2);
-        FelicaFrameReset();
+        uint32_t result = reply_mix(CMD_ACK, FelicaFrame.len, arg0, 0, FelicaFrame.framebytes, FelicaFrame.len);
+        if(result){
+            Dbprintf("Reply to Client Error Code: %i", result);
+        }
     }
-
-    if ((param & FELICA_NO_DISCONNECT))
+    if ((param & FELICA_NO_DISCONNECT)){
         Dbprintf("Disconnect");
-        return;
-
-    OUT:
-        switch_off();
-
-        //Resetting Frame mode (First set in fpgaloader.c)
-        AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
-
-        if (DBGLEVEL > 3) Dbprintf("FeliCa_sendraw Exit");
+    }
+    if (DBGLEVEL > 3)
+        Dbprintf("FeliCa_sendraw Exit");
+    felica_reset_frame_mode();
+    return;
 }
 
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {

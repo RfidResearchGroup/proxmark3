@@ -440,17 +440,15 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 
 static void waitCmdFelica(uint8_t iSelect) {
     PacketResponseNG resp;
-
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         uint16_t len = iSelect ? (resp.oldarg[1] & 0xffff) : (resp.oldarg[0] & 0xffff);
-        PrintAndLogEx(NORMAL, "received %i octets", len);
+        PrintAndLogEx(NORMAL, "Client Received %i octets", len);
         if (!len)
             return;
         PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
     } else {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
     }
-
 }
 
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
@@ -532,6 +530,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
         uint8_t b1, b2;
         compute_crc(CRC_FELICA, data, datalen, &b1, &b2);
+        // TODO FIND OUT IF FeliCa Light has another CRC order - Order changed for FeliCa Standard cards
         data[datalen++] = b2;
         data[datalen++] = b1;
     }
@@ -555,14 +554,16 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
+    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 
     if (reply) {
-        if (active_select)
+        if (active_select){
             PrintAndLogEx(NORMAL, "Active select wait for FeliCa.");
             waitCmdFelica(1);
-        if (datalen > 0)
+        }
+        if (datalen > 0){
             waitCmdFelica(0);
+        }
     }
     return 0;
 }
@@ -617,37 +618,14 @@ int readFelicaUid(bool verbose) {
     return status;
 }
 
-// TODO FINISH THIS METHOD
+
 int dump(const char *Cmd){
     clearCommandBuffer();
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hf_felica_dumplite();
+    // TODO FINISH THIS METHOD
+    PrintAndLogEx(SUCCESS, "NOT IMPLEMENTED YET!");
 
-    PrintAndLogEx(SUCCESS, "FeliCa - dump started");
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_FELICALITE_DUMP, NULL, 0);
-    PacketResponseNG resp;
-
-    uint8_t timeout = 0;
-    while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        timeout++;
-        printf(".");
-        fflush(stdout);
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
-            DropField();
-            return 1;
-        }
-        if (timeout > 100) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            DropField();
-            return 1;
-        }
-    }
-    if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
-        return 1;
-    }
     return 0;
 }
 
