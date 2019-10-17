@@ -16,4 +16,6 @@
 int CmdHFFelica(const char *Cmd);
 
 int readFelicaUid(bool verbose);
+
+int dump();
 #endif
