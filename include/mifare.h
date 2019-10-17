@@ -34,7 +34,7 @@ typedef struct {
     uint8_t signature[32];
     uint8_t counter_tearing[3][4];  // 3 bytes counter, 1 byte tearing flag
     uint8_t data[1024];
-} mfu_dump_t;
+} PACKED mfu_dump_t;
 
 //-----------------------------------------------------------------------------
 // ISO 14443A
@@ -69,7 +69,7 @@ typedef struct {
     uint16_t modulation_n;
     uint32_t ProxToAirDuration;
     uint8_t  par; // enough for precalculated parity of 8 Byte responses
-} tag_response_info_t;
+} PACKED tag_response_info_t;
 //-----------------------------------------------------------------------------
 // ISO 14443B
 //-----------------------------------------------------------------------------
@@ -79,7 +79,7 @@ typedef struct {
     uint8_t atqb[7];
     uint8_t chipid;
     uint8_t cid;
-} __attribute__((__packed__)) iso14b_card_select_t;
+} PACKED iso14b_card_select_t;
 
 typedef enum ISO14B_COMMAND {
     ISO14B_CONNECT = (1 << 0),
@@ -121,7 +121,7 @@ typedef struct {
         FIRST,
         SECOND,
     } state;
-} nonces_t;
+} PACKED nonces_t;
 
 //-----------------------------------------------------------------------------
 // ISO 7618  Smart Card
