@@ -756,6 +756,8 @@ void felica_sim_lite(uint64_t uid) {
     DbpString("Felica Lite-S sim end");
 }
 
+#define RES_SVC_LEN 11
+
 void felica_dump() {
     uint8_t ndef[8];
     uint8_t poll[10] = { 0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21}; // B24D0600FFFF00000921
@@ -774,9 +776,8 @@ void felica_dump() {
 }
 
 void felica_send_request_service(uint8_t *request_service) {
-    uint8_t len = sizeof(request_service) / sizeof((request_service)[0]);
-    Dbprintf("Send Service Request - len: d%", len);
-    TransmitFor18092_AsReader(request_service, len, NULL, 1, 0);
+    Dbprintf("Send Service Request - len: d%", RES_SVC_LEN);
+    TransmitFor18092_AsReader(request_service, RES_SVC_LEN, NULL, 1, 0);
     if (WaitForFelicaReply(512) && FelicaFrame.framebytes[3] == FELICA_REQSRV_ACK) {
         Dbprintf("Got Service Response!");
     }
@@ -793,7 +794,7 @@ uint8_t *felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm) {
         nodeNumber = 1;
     }
     // Sync 2-Byte, Length 1-Byte, CMD 1-Byte, IDm 8-Byte, nodeNumber 1 <= n <= 32 1-Byte, Node Code List <Little Endian>
-    uint8_t *request_service = BigBuf_malloc(sizeof(uint8_t) * 11);
+    uint8_t *request_service = BigBuf_malloc(sizeof(uint8_t) * RES_SVC_LEN);
     //{ 0xb2, 0x4d, 0x06, FELICA_REQSRV_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21};
     request_service[0] = 0xb2; //Sync
     request_service[1] = 0x4d; //Sync
