@@ -149,10 +149,10 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 
     //  ----------------------------- crypto1 create
     if (isNested)
-        crypto1_destroy(pcs);
+        crypto1_deinit(pcs);
 
     // Init cipher with key
-    crypto1_create(pcs, ui64Key);
+    crypto1_init(pcs, ui64Key);
 
     if (isNested == AUTH_NESTED) {
         // decrypt nt with help of new key
