@@ -1872,7 +1872,7 @@ int CmdPlot(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdSave(const char *Cmd) {
+int CmdSave(const char *Cmd) {
 
     int len = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
