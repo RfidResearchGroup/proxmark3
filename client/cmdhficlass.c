@@ -2330,7 +2330,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     uint8_t found_offset = 0;
     uint32_t key_offset = 0;
     // main keychunk loop
-    for (uint32_t key_offset = 0; key_offset < keycount; key_offset += chunksize) {
+    for (key_offset = 0; key_offset < keycount; key_offset += chunksize) {
 
         uint64_t t2 = msclock();
         uint8_t timeout = 0;
@@ -2849,11 +2849,13 @@ int readIclass(bool loop, bool verbose) {
 
                 PrintAndLogEx(NORMAL, " App IA: %s", sprint_hex(data + 8 * 5, 8));
 
-                if (legacy && isHidRange)
-                    PrintAndLogEx(SUCCESS, "      : Possible iClass - legacy credential tag");
+                if (isHidRange) {
+                    if (legacy)
+                        PrintAndLogEx(SUCCESS, "      : Possible iClass - legacy credential tag");
 
-                if (se_enabled & isHidRange)
-                    PrintAndLogEx(SUCCESS, "      : Possible iClass - SE credential tag");
+                    if (se_enabled)
+                        PrintAndLogEx(SUCCESS, "      : Possible iClass - SE credential tag");
+                }
 
                 if (isHidRange) {
                     PrintAndLogEx(SUCCESS, "      : Tag is "_YELLOW_("iClass")", CSN is in HID range");
