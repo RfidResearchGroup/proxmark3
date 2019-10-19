@@ -1711,8 +1711,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             strncpy((char *)src, token, sizeof(src) - 1);
             token = strtok(NULL, ",");
             strncpy((char *)dest, token, sizeof(dest) - 1);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs RENAME : %s", src);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs RENAME : %s", dest);
+            if (DBGLEVEL > 1) {
+                Dbprintf("> Filename received as source for spiffs RENAME : %s", src);
+                Dbprintf("> Filename received as destination for spiffs RENAME : %s", dest);
+            }
             rdv40_spiffs_rename((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
             break;
@@ -1727,8 +1729,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             strncpy((char *)src, token, sizeof(src) - 1);
             token = strtok(NULL, ",");
             strncpy((char *)dest, token, sizeof(dest) - 1);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as source for spiffs COPY : %s", src);
-            if (DBGLEVEL > 1) Dbprintf("> Filename received as destination for spiffs COPY : %s", dest);
+            if (DBGLEVEL > 1) {
+                Dbprintf("> Filename received as source for spiffs COPY : %s", src);
+                Dbprintf("> Filename received as destination for spiffs COPY : %s", dest);
+            }
             rdv40_spiffs_copy((char *) src, (char *)dest, RDV40_SPIFFS_SAFETY_SAFE);
             LED_B_OFF();
             break;
