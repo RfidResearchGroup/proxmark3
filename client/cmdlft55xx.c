@@ -1083,7 +1083,7 @@ static int CmdT55xxDetect(const char *Cmd) {
             if (try_all_dl_modes) {
                 for (uint8_t m = downlink_mode; m < 4; m++) {
 
-                    if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, try_with_pwd & usepwd, password, m) == false)
+                    if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, try_with_pwd && usepwd, password, m) == false)
                         continue;
 
                     // pre fill to save passing in.
@@ -1111,7 +1111,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                 }
             }
 
-            if (!found & usepwd)
+            if (!found && usepwd)
                 try_with_pwd = !try_with_pwd; // toggle so we loop back if not found and try with pwd
 
             if (found)
