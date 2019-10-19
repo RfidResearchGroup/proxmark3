@@ -527,7 +527,7 @@ void felica_sendraw(PacketCommandNG *c) {
             arg0 = felica_select_card(&card);
             reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
             if (arg0 > 0) {
-                Dbprintf("Error: Failed selecting card! ");
+                if (DBGLEVEL >=  DBG_DEBUG) Dbprintf("Error: Failed selecting card! ");
                 felica_reset_frame_mode();
                 return;
             }
@@ -764,6 +764,8 @@ void felica_dump() {
     iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
 
     TransmitFor18092_AsReader(poll, 10, NULL, 1, 0);
+
+    // iceman, no exit path in this loop
     while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
         TransmitFor18092_AsReader(poll, 10, NULL, 1, 0);
@@ -773,6 +775,7 @@ void felica_dump() {
             felica_send_request_service(request_service);
         }
     }
+
 }
 
 void felica_send_request_service(uint8_t *request_service) {
