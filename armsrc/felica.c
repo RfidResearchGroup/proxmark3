@@ -615,7 +615,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
             //crc NOT checked
             if (FelicaFrame.state == STATE_FULL) {
                 endframe = GetCountSspClk();
-                //*dest = FelicaFrame.crc_ok; //kind of wasteful
+                // *dest = FelicaFrame.crc_ok; //kind of wasteful
                 dest++;
                 for (int i = 0; i < FelicaFrame.len; i++) {
                     *dest = FelicaFrame.framebytes[i];
@@ -756,7 +756,7 @@ void felica_sim_lite(uint64_t uid) {
     DbpString("Felica Lite-S sim end");
 }
 
-#define RES_SVC_LEN 11
+#define RES_SVC_LEN 11 + 3
 
 void felica_dump() {
     uint8_t ndef[8];
@@ -806,10 +806,10 @@ uint8_t *felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm) {
     request_service[7] = idm[3];
     request_service[8] = idm[4];
     request_service[9] = idm[5];
-    request_service[9] = idm[6];
-    request_service[9] = idm[7];
-    request_service[10] = nodeNumber; // Node we like to ask for services
-    request_service[11] = 0x00; // Node Code List // TODO FIND OUT WHAT NEEDS TO BE IN HERE
+    request_service[10] = idm[6];
+    request_service[11] = idm[7];
+    request_service[12] = nodeNumber; // Node we like to ask for services
+    request_service[13] = 0x00; // Node Code List // TODO FIND OUT WHAT NEEDS TO BE IN HERE
     return request_service;
 }
 
