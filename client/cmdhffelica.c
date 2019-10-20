@@ -88,8 +88,50 @@ static int usage_hf_felica_request_service(void) {
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rqservice [-h] <0A 0B 0C ... IDm hex> <01 Number of Node hex> <0A 0B Node Code List hex (Little Endian)> <0A 0B CRC hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
-    PrintAndLogEx(NORMAL, "Example: rqservice 01100910c11bc407 01 FFFF 2837");
+    PrintAndLogEx(NORMAL, "\nExample: hf felica rqservice 01100910c11bc407 01 FFFF 2837\n\n");
     return PM3_SUCCESS;
+}
+
+/*
+ * Parses line spacing and tabs.
+ * Returns 1 if the given char is a space or tab
+ */
+static int parse_cmd_parameter_separator(const char *Cmd, int i){
+    return Cmd[i] == ' ' || Cmd[i] == '\t' ? 1 : 0;
+}
+
+/*
+ * Counts and sets the number of commands.
+ */
+static void strip_cmds(const char *Cmd){
+    PrintAndLogEx(NORMAL, "CMD count: %i", strlen(Cmd));
+    while (*Cmd == ' ' || *Cmd == '\t'){
+        PrintAndLogEx(NORMAL, "CMD: %s", Cmd);
+        Cmd++;
+    }
+    PrintAndLogEx(NORMAL, "CMD string: %s", Cmd);
+}
+
+/**
+ * Checks if a char is a hex value.
+ * @param Cmd
+ * @return one if it is a valid hex char. Zero if not a valid hex char.
+ */
+static bool is_hex_input(const char *Cmd, int i){
+    return (Cmd[i] >= '0' && Cmd[i] <= '9') || (Cmd[i] >= 'a' && Cmd[i] <= 'f') || (Cmd[i] >= 'A' && Cmd[i] <= 'F') ? 1 : 0;
+}
+
+/**
+ *
+ * @param Extracts the data from the cmd and puts it into the data array.
+ */
+static void get_cmd_data(const char *Cmd, int i, uint16_t datalen, uint8_t *data, char buf[]){
+    uint32_t temp;
+    if (strlen(buf) >= 2) {
+        sscanf(buf, "%x", &temp);
+        data[datalen] = (uint8_t)(temp & 0xff);
+        *buf = 0;
+    }
 }
 
 static int usage_hf_felica_dump(void) {
@@ -120,15 +162,24 @@ static int CmdHFFelicaDump(const char *Cmd) {
     return 0;
 }
 
+/**
+ * Command parser for rqservice.
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
 static int CmdHFFelicaRequestService(const char *Cmd) {
     if (strlen(Cmd) < 2) return usage_hf_felica_request_service();
-    char buf[5] = "";
     int i = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
+    bool crc = false;
+    bool length = false;
     uint16_t datalen = 0;
-    set_number_of_cmds();
+    char buf[5] = "";
+
+    strip_cmds(Cmd);
     while (Cmd[i] != '\0') {
-        PrintAndLogEx(NORMAL, "String %s: ", Cmd[i]);
+        PrintAndLogEx(NORMAL, "Parse String %s: ", Cmd);
+        PrintAndLogEx(NORMAL, "i = %i: ", i);
         if (Cmd[i] == '-') {
             switch (Cmd[i + 1]) {
                 case 'H':
@@ -137,72 +188,36 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
                 case 'c':
                     crc = true;
                     break;
+                case 'l':
+                    length = true;
+                    break;
                 default:
                     return usage_hf_felica_raw();
             }
             i += 2;
         }
-        i = i + parse_cmd_parameter(i);
-        if(is_hex_input()){
+        PrintAndLogEx(NORMAL, "i after single params = %i: ", i);
+        i = i + parse_cmd_parameter_separator(Cmd, i);
+        PrintAndLogEx(NORMAL, "i after cnd separator: %i", i);
+        if (is_hex_input(Cmd, i)){
             buf[strlen(buf) + 1] = 0;
             buf[strlen(buf)] = Cmd[i];
             i++;
-            i = i + get_cmd_data(i);
-        }else{
+            PrintAndLogEx(NORMAL, "i after is hex input: %i", i);
+            get_cmd_data(Cmd, i, datalen, data, buf);
+
+        }else {
           i++;
         }
     }
     request_service();
     clearCommandBuffer();
-    return 0;
-}
-
-/*
- * Parses line spacing and tabs.
- * Returns 1 if the given char is a space or tab
- */
-static int parse_cmd_parameter_separator(const char *Cmd, int i){
-    PrintAndLogEx(NORMAL, "parse_cmd_parameter_separator String %s: ", Cmd[i]);
-    return Cmd[i] == ' ' || Cmd[i] == '\t' ? 1 : 0;
-}
-
-/*
- * Counts and sets the number of commands.
- */
-static void set_number_of_cmds(const char *Cmd){
-    while (*Cmd == ' ' || *Cmd == '\t'){
-        Cmd++;
-    }
-}
-
-/**
- * Checks if a char is a hex value.
- * @param Cmd
- * @return one if it is a valid hex char. Zero if not a valid hex char.
- */
-static bool is_hex_input(const char *Cmd, int i){
-    PrintAndLogEx(NORMAL, "is_hex_input String %s: ", Cmd[i]);
-    return (Cmd[i] >= '0' && Cmd[i] <= '9') || (Cmd[i] >= 'a' && Cmd[i] <= 'f') || (Cmd[i] >= 'A' && Cmd[i] <= 'F') ? 1 : 0;
-}
-
-/**
- *
- * @param Cmd the chars from which the data will be extracted.
- * @return a buffer with the data from the command
- */
-static int get_cmd_data(const char *Cmd, int i){
-    int char_counter = 0;
-    if (strlen(buf) >= 2) {
-        sscanf(buf, "%x", &temp);
-        data[datalen] = (uint8_t)(temp & 0xff);
-        *buf = 0;
-    }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
     PrintAndLogEx(NORMAL, "Feature not implemented Yet!");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // simulate iso18092 / FeliCa tag
@@ -717,20 +732,9 @@ int readFelicaUid(bool verbose) {
     return PM3_SUCCESS;
 }
 
-int dump(const char *Cmd) {
-    clearCommandBuffer();
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf_felica_dumplite();
-
-    // TODO FINISH THIS METHOD
-    PrintAndLogEx(SUCCESS, "NOT IMPLEMENTED YET!");
-    return PM3_SUCCESS;
-}
-
 int request_service() {
     return PM3_SUCCESS;
 }
-
 
 static command_t CommandTable[] = {
     {"----------- General -----------", CmdHelp,                IfPm3Iso14443a,  ""},
@@ -740,7 +744,7 @@ static command_t CommandTable[] = {
     {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"raw",       CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
     {"----------- FeliCa Standard (support in progress) -----------", CmdHelp,                IfPm3Iso14443a,  ""},
-    {"dump",    CmdHFFelicaDump,    IfPm3Felica,     "Wait for and try dumping FeliCa"},
+    //{"dump",    CmdHFFelicaDump,    IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",    CmdHFFelicaRequestService,    IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "verify the existence of a card and its Mode."},
     //{"rdNoEncryption",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-not-required Service."},
