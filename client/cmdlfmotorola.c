@@ -192,7 +192,7 @@ static command_t CommandTable[] = {
     {"help",  CmdHelp,           AlwaysAvailable, "This help"},
     {"demod", CmdMotorolaDemod,  AlwaysAvailable, "Demodulate an MOTOROLA tag from the GraphBuffer"},
     {"read",  CmdMotorolaRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdMotorolaClone,  IfPm3Lf,         "clone MOTOROLA to T55x7"},
+    {"clone", CmdMotorolaClone,  IfPm3Lf,         "clone MOTOROLA tag to T55x7"},
     {"sim",   CmdMotorolaSim,    IfPm3Lf,         "simulate MOTOROLA tag"},
     {NULL, NULL, NULL, NULL}
 };

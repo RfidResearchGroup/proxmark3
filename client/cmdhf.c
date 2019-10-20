@@ -70,6 +70,8 @@ static int usage_hf_tune() {
     return PM3_SUCCESS;
 }
 
+#define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          ")
+
 int CmdHFSearch(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -77,6 +79,7 @@ int CmdHFSearch(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Checking for known tags...\n");
 
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
@@ -85,6 +88,7 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false) > 0) {
@@ -92,7 +96,8 @@ int CmdHFSearch(const char *Cmd) {
             return PM3_SUCCESS;
         }
     }
-
+    
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false) == 1) {
@@ -104,6 +109,7 @@ int CmdHFSearch(const char *Cmd) {
         DropField();
     }
 
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
@@ -112,6 +118,7 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
         if (readTopazUid() == PM3_SUCCESS) {
@@ -120,7 +127,17 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
+    if (IfPm3Felica()) {
+        if (readFelicaUid(false) == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+            return PM3_SUCCESS;
+        }
+    }
+
     // 14b and iclass is the longest test (put last)
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
     if (IfPm3Iso14443a()) {
         if (readHF14B(false) == 1) {
@@ -129,6 +146,7 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for iClass / PicoPass tag...");
     if (IfPm3Iclass()) {
         if (readIclass(false, false) == 1) {
@@ -136,17 +154,6 @@ int CmdHFSearch(const char *Cmd) {
             return PM3_SUCCESS;
         }
     }
-
-
-//    PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
-    //if (IfPm3Felica()) {
-    //    ans = CmdHFFelicaReader("s");
-    //    if (ans) {
-    //        PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
-    //        return ans;
-    //    }
-    //}
-
 
     PrintAndLogEx(INPLACE, "No known/supported 13.56 MHz tags found");
     PrintAndLogEx(NORMAL, "");

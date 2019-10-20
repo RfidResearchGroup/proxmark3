@@ -164,7 +164,7 @@ crack_states_thread(void *x) {
         statelist_t *bucket = buckets[current_bucket];
         if (bucket) {
 #if defined (DEBUG_BRUTE_FORCE)
-            printf("Thread %u starts working on bucket %u\n", thread_id, current_bucket);
+            PrintAndLogEx(INFO, "Thread %u starts working on bucket %u\n", thread_id, current_bucket);
 #endif
             const uint64_t key = crack_states_bitsliced(thread_arg->cuid, thread_arg->best_first_bytes, bucket, &keys_found, &num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, thread_arg->nonces);
             if (key != -1) {
@@ -250,16 +250,16 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte) {
     uint32_t bf_test_nonce_temp[4];
     uint8_t bf_test_nonce_par_temp[4];
     uint8_t bf_test_nonce_2nd_byte_temp[4];
-    for (uint8_t i = 0; i < 4 && i < nonces_to_bruteforce; i++) {
-        bf_test_nonce_temp[i] = bf_test_nonce[best_4[i]];
+    for (uint8_t j = 0; j < 4 && j < nonces_to_bruteforce; j++) {
+        bf_test_nonce_temp[j] = bf_test_nonce[best_4[j]];
 
-        bf_test_nonce_par_temp[i] = bf_test_nonce_par[best_4[i]];
-        bf_test_nonce_2nd_byte_temp[i] = bf_test_nonce_2nd_byte[best_4[i]];
+        bf_test_nonce_par_temp[j] = bf_test_nonce_par[best_4[j]];
+        bf_test_nonce_2nd_byte_temp[j] = bf_test_nonce_2nd_byte[best_4[j]];
     }
-    for (uint8_t i = 0; i < 4 && i < nonces_to_bruteforce; i++) {
-        bf_test_nonce[i] = bf_test_nonce_temp[i];
-        bf_test_nonce_par[i] = bf_test_nonce_par_temp[i];
-        bf_test_nonce_2nd_byte[i] = bf_test_nonce_2nd_byte_temp[i];
+    for (uint8_t j = 0; j < 4 && j < nonces_to_bruteforce; j++) {
+        bf_test_nonce[j] = bf_test_nonce_temp[j];
+        bf_test_nonce_par[j] = bf_test_nonce_par_temp[j];
+        bf_test_nonce_2nd_byte[j] = bf_test_nonce_2nd_byte_temp[j];
     }
 }
 

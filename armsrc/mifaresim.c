@@ -571,7 +571,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             EmSendPrecompiledCmd(&responses[ATQA]);
 
             // init crypto block
-            crypto1_destroy(pcs);
+            crypto1_deinit(pcs);
             cardAUTHKEY = AUTHKEYNONE;
             nonce = prng_successor(selTimer, 32);
             // prepare NT for nested authentication
@@ -743,10 +743,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] KEY %c: %012" PRIx64, (cardAUTHKEY == 0) ? 'A' : 'B', emlGetKey(cardAUTHSC, cardAUTHKEY));
 
                     // first authentication
-                    crypto1_destroy(pcs);
+                    crypto1_deinit(pcs);
 
                     // Load key into crypto
-                    crypto1_create(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
+                    crypto1_init(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
 
                     if (!encrypted_data) {
                         // Receive Cmd in clear txt

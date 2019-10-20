@@ -149,10 +149,10 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
 
     //  ----------------------------- crypto1 create
     if (isNested)
-        crypto1_destroy(pcs);
+        crypto1_deinit(pcs);
 
     // Init cipher with key
-    crypto1_create(pcs, ui64Key);
+    crypto1_init(pcs, ui64Key);
 
     if (isNested == AUTH_NESTED) {
         // decrypt nt with help of new key
@@ -276,7 +276,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     uint8_t respPar[3] = {0, 0, 0};
 
     // REQUEST AUTHENTICATION
-    len = mifare_sendcmd_short(NULL, 1, MIFARE_ULC_AUTH_1, 0x00, resp, respPar, NULL);
+    len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULC_AUTH_1, 0x00, resp, respPar, NULL);
     if (len != 11) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
         return 0;
@@ -351,7 +351,7 @@ int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_PARITY_SIZE] = {0x00};
 
-    len = mifare_sendcmd_short(NULL, 1, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+    len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
         return 1;
@@ -444,7 +444,7 @@ int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     uint8_t receivedAnswer[MAX_FRAME_SIZE];
     uint8_t receivedAnswerPar[MAX_PARITY_SIZE];
 
-    len = mifare_sendcmd_short(NULL, true, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+    len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
     if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
         if (DBGLEVEL >= DBG_ERROR)

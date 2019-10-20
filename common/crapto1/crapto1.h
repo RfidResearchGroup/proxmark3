@@ -25,23 +25,25 @@
 #include <stdbool.h>
 
 struct Crypto1State {uint32_t odd, even;};
-#if defined(__arm__) && !defined(__linux__) && !defined(_WIN32) && !defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
-void crypto1_create(struct Crypto1State *s, uint64_t key);
-#else
+void crypto1_init(struct Crypto1State *s, uint64_t key);
+void crypto1_deinit(struct Crypto1State *);
+#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 struct Crypto1State *crypto1_create(uint64_t key);
-#endif
 void crypto1_destroy(struct Crypto1State *);
+#endif
 void crypto1_get_lfsr(struct Crypto1State *, uint64_t *);
 uint8_t crypto1_bit(struct Crypto1State *, uint8_t, int);
 uint8_t crypto1_byte(struct Crypto1State *, uint8_t, int);
 uint32_t crypto1_word(struct Crypto1State *, uint32_t, int);
 uint32_t prng_successor(uint32_t x, uint32_t n);
 
+#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in);
 struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3);
-uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd);
 struct Crypto1State *
 lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], uint32_t no_par);
+#endif
+uint32_t *lfsr_prefix_ks(uint8_t ks[8], int isodd);
 
 
 uint8_t lfsr_rollback_bit(struct Crypto1State *s, uint32_t in, int fb);

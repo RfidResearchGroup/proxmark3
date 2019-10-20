@@ -1235,8 +1235,8 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
 
     uint8_t *dest = BigBuf_get_addr();
 
-    //big enough to catch 2 sequences of largest format
-    size_t size = 12800; //50 * 128 * 2;
+    //big enough to catch 2 sequences of largest format but don't exeed whats available in bigbuff.
+    size_t size = MIN(12800, BigBuf_max_traceLen()); //50 * 128 * 2;
 
     int dummyIdx = 0;
 
@@ -1544,13 +1544,12 @@ void T55xxWriteBit(uint8_t bit, uint8_t downlink_idx) {
 // max_len      - how many bytes can the bit_array hold (ensure no buffer overflow)
 // returns "Next" bit offset / bits stored (for next store)
 uint8_t T55xx_SetBits(uint8_t *bs, uint8_t start_offset, uint32_t data, uint8_t num_bits, uint8_t max_len) {
-    int8_t offset;
     int8_t next_offset = start_offset;
 
     // Check if data will fit.
     if ((start_offset + num_bits) <= (max_len * 8)) {
         // Loop through the data and store
-        for (offset = (num_bits - 1); offset >= 0; offset--) {
+        for (int8_t offset = (num_bits - 1); offset >= 0; offset--) {
 
             if ((data >> offset) & 1)
                 bs[BITSTREAM_BYTE(next_offset)] |= (1 << BITSTREAM_BIT(next_offset));  // Set 1

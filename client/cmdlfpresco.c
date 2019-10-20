@@ -176,7 +176,7 @@ static int CmdPrescoSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"read",    CmdPrescoRead,  IfPm3Lf,         "Attempt to read and Extract tag data"},
-    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag"},
+    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag to T55x7 (or to q5/T5555)"},
     {"sim",     CmdPrescoSim,   IfPm3Lf,         "simulate presco tag"},
     {NULL, NULL, NULL, NULL}
 };

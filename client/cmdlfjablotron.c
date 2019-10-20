@@ -217,7 +217,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
     {"demod",   CmdJablotronDemod,  AlwaysAvailable, "Demodulate an Jablotron tag from the GraphBuffer"},
     {"read",    CmdJablotronRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdJablotronClone,  IfPm3Lf,         "clone jablotron tag"},
+    {"clone",   CmdJablotronClone,  IfPm3Lf,         "clone jablotron tag to T55x7 (or to q5/T5555)"},
     {"sim",     CmdJablotronSim,    IfPm3Lf,         "simulate jablotron tag"},
     {NULL, NULL, NULL, NULL}
 };

@@ -1052,6 +1052,11 @@ static void estimate_sum_a8(void) {
 
 
 static int read_nonce_file(char *filename) {
+
+    if (filename == NULL) {
+        PrintAndLogEx(WARNING, "Filename is NULL");
+        return 1;
+    }
     FILE *fnonces = NULL;
     char progress_text[80] = "";
     uint8_t read_buf[9];
@@ -1061,6 +1066,7 @@ static int read_nonce_file(char *filename) {
         PrintAndLogEx(WARNING, "Could not open file %s", filename);
         return 1;
     }
+
     snprintf(progress_text, 80, "Reading nonces from file %s...", filename);
     hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
     size_t bytes_read = fread(read_buf, 1, 6, fnonces);
@@ -1766,7 +1772,7 @@ static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, ui
 }
 
 static statelist_t *add_more_candidates(void) {
-    statelist_t *new_candidates = candidates;
+    statelist_t *new_candidates;
     if (candidates == NULL) {
         candidates = (statelist_t *)malloc(sizeof(statelist_t));
         new_candidates = candidates;

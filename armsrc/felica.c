@@ -524,7 +524,7 @@ void felica_sendraw(PacketCommandNG *c) {
             arg0 = felica_select_card(&card);
             reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
             if (arg0 > 0) {
-                Dbprintf("Error: Failed selecting card!");
+                if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Error: Failed selecting card! ");
                 felica_reset_frame_mode();
                 return;
             }
@@ -613,7 +613,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
             //crc NOT checked
             if (FelicaFrame.state == STATE_FULL) {
                 endframe = GetCountSspClk();
-                //*dest = FelicaFrame.crc_ok; //kind of wasteful
+                // *dest = FelicaFrame.crc_ok; //kind of wasteful
                 dest++;
                 for (int i = 0; i < FelicaFrame.len; i++) {
                     *dest = FelicaFrame.framebytes[i];
@@ -754,12 +754,16 @@ void felica_sim_lite(uint64_t uid) {
     DbpString("Felica Lite-S sim end");
 }
 
+#define RES_SVC_LEN 11 + 3
+
 void felica_dump() {
     uint8_t ndef[8];
     uint8_t poll[10] = { 0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21}; // B24D0600FFFF00000921
     iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
 
     TransmitFor18092_AsReader(poll, 10, NULL, 1, 0);
+
+    // iceman, no exit path in this loop
     while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
         TransmitFor18092_AsReader(poll, 10, NULL, 1, 0);
@@ -769,12 +773,12 @@ void felica_dump() {
             felica_send_request_service(request_service);
         }
     }
+
 }
 
 void felica_send_request_service(uint8_t *request_service) {
-    uint8_t len = sizeof(request_service) / sizeof((request_service)[0]);
-    Dbprintf("Send Service Request - len: d%", len);
-    TransmitFor18092_AsReader(request_service, len, NULL, 1, 0);
+    Dbprintf("Send Service Request - len: d%", RES_SVC_LEN);
+    TransmitFor18092_AsReader(request_service, RES_SVC_LEN, NULL, 1, 0);
     if (WaitForFelicaReply(512) && FelicaFrame.framebytes[3] == FELICA_REQSRV_ACK) {
         Dbprintf("Got Service Response!");
     }
@@ -791,7 +795,7 @@ uint8_t *felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm) {
         nodeNumber = 1;
     }
     // Sync 2-Byte, Length 1-Byte, CMD 1-Byte, IDm 8-Byte, nodeNumber 1 <= n <= 32 1-Byte, Node Code List <Little Endian>
-    uint8_t *request_service = BigBuf_malloc(sizeof(uint8_t) * 11);
+    uint8_t *request_service = BigBuf_malloc(sizeof(uint8_t) * RES_SVC_LEN);
     //{ 0xb2, 0x4d, 0x06, FELICA_REQSRV_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21};
     request_service[0] = 0xb2; //Sync
     request_service[1] = 0x4d; //Sync
@@ -803,10 +807,10 @@ uint8_t *felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm) {
     request_service[7] = idm[3];
     request_service[8] = idm[4];
     request_service[9] = idm[5];
-    request_service[9] = idm[6];
-    request_service[9] = idm[7];
-    request_service[10] = nodeNumber; // Node we like to ask for services
-    request_service[11] = 0x00; // Node Code List // TODO FIND OUT WHAT NEEDS TO BE IN HERE
+    request_service[10] = idm[6];
+    request_service[11] = idm[7];
+    request_service[12] = nodeNumber; // Node we like to ask for services
+    request_service[13] = 0x00; // Node Code List // TODO FIND OUT WHAT NEEDS TO BE IN HERE
     return request_service;
 }
 

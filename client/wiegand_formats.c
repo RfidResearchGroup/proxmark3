@@ -672,16 +672,16 @@ void HIDDisplayUnpackedCard(wiegand_card_t *card, const cardformat_t format) {
 
     char s[80] = {0};
     if (format.Fields.hasFacilityCode)
-        snprintf(s, sizeof(s), "FC: %d", card->FacilityCode);
+        snprintf(s, sizeof(s), "FC: %u", card->FacilityCode);
 
     if (format.Fields.hasCardNumber)
         snprintf(s + strlen(s), sizeof(s) - strlen(s), "  CN: %" PRIu64, card->CardNumber);
 
     if (format.Fields.hasIssueLevel)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  Issue %d", card->IssueLevel);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  Issue %u", card->IssueLevel);
 
     if (format.Fields.hasOEMCode)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  OEM: %d", card->OEM);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  OEM: %u", card->OEM);
 
     if (format.Fields.hasParity)
         snprintf(s + strlen(s), sizeof(s) - strlen(s), "    parity: %s", card->ParityValid ? "valid" : "invalid");

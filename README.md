@@ -1,8 +1,8 @@
 # RRG / Iceman repo - Proxmark3
 
-This repo is based on iceman fork for Proxmark3.  It supports other Proxmark3 platforms as well.
+This repo is based on iceman fork for Proxmark3.
 
-It is dedicated to bringing the most out of the new features for Proxmark3 RDV4.0 new hardware and design.
+It supports RDV4.0 and other Proxmark3 platforms as well.
 
 
 | Releases     | Linux & OSX CI       | Windows CI | Coverity    |
@@ -56,6 +56,8 @@ This repo compiles nicely on
    - WSL, WSL2  (Windows subsystem linux) on Windows 10
    - Docker container
 
+The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-Roadmap) is an excellent start to read if you are interesting in contributing.
+
 > 👉 **Remember!** If you intend to contribute to the code, please read the [coding style notes](HACKING.md) first.
 We usually merge your contributions fast since we do like the idea of getting a functionality in the Proxmark3 and weed out the bugs afterwards.
 
@@ -93,7 +95,8 @@ The new universal GUI will work. [Proxmark3 Universal GUI](https://github.com/bu
 
 Please see the [Proxmark Forum](http://www.proxmark.org/forum/index.php) and see if your issue is listed in the first instance Google is your friend :) Questions will be answered via the forum by Iceman and the team. 
 
-It's needed to have a good USB cable to connect Proxmark3 to USB. If you have stability problems (Proxmark3 resets, firmware hangs, especially firmware hangs just after start, etc.) - check your cable with a USB tester (or try to change it). It needs to have a resistance smaller or equal to 0.3 Ohm.
+Read the [Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md) guide to weed out most known problems.
+
 
 ## The end
 

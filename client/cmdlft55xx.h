@@ -148,7 +148,7 @@ char *GetQ5ModulationStr(uint32_t id);
 char *GetModulationStr(uint32_t id, bool xmode);
 char *GetModelStrFromCID(uint32_t cid);
 char *GetSelectedModulationStr(uint8_t id);
-char *GetDownlinkModeStr(uint8_t dlmode);
+char *GetDownlinkModeStr(uint8_t downlink_mode);
 void printT5xxHeader(uint8_t page);
 void printT55xxBlock(uint8_t blockNum, bool page1);
 int  printConfiguration(t55xx_conf_block_t b);

@@ -18,6 +18,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h> // MingW
+#include <stdlib.h>  // calloc
 
 #include "comms.h"
 #include "cmdhf.h"
@@ -38,20 +39,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int CmdRem(const char *Cmd) {
-    char buf[22] = {0};
-    struct tm *ct, tm_buf;
-    time_t now = time(NULL);
-#if defined(_WIN32)
-    ct = gmtime_s(&tm_buf, &now) == 0 ? &tm_buf : NULL;
-#else
-    ct = gmtime_r(&now, &tm_buf);
-#endif
-    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", ct);  // ISO8601
-    PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
-    return PM3_SUCCESS;
-}
-
 static int usage_msleep(void) {
     PrintAndLogEx(NORMAL, "Sleep for given amount of milliseconds");
     PrintAndLogEx(NORMAL, "");
@@ -62,6 +49,63 @@ static int usage_msleep(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       msleep 100");
+    return PM3_SUCCESS;
+}
+
+static int usage_auto(void) {
+    PrintAndLogEx(NORMAL, "Run LF SEARCH / HF SEARCH / DATA PLOT / DATA SAVE ");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  auto <ms>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       auto");
+    return PM3_SUCCESS;
+}
+
+static void AppendDate(char *s, size_t slen, char *fmt) {
+    struct tm *ct, tm_buf;
+    time_t now = time(NULL);
+#if defined(_WIN32)
+    ct = gmtime_s(&tm_buf, &now) == 0 ? &tm_buf : NULL;
+#else
+    ct = gmtime_r(&now, &tm_buf);
+#endif
+    if (fmt == NULL)
+        strftime(s, slen, "%Y-%m-%dT%H:%M:%SZ", ct);  // ISO8601
+    else
+        strftime(s, slen, fmt, ct);
+}
+
+static int CmdAuto(const char *Cmd) {
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_auto();
+
+    int ret = CmdLFfind("");
+    if (ret == PM3_SUCCESS)
+        return ret;
+
+    ret = CmdHFSearch("");
+    if (ret == PM3_SUCCESS)
+        return ret;
+
+    PrintAndLogEx(INFO, "Failed both LF / HF SEARCH,");
+    PrintAndLogEx(INFO, "Trying 'lf read' and save a trace for you...");
+
+    CmdPlot("");
+    lf_read(true, 40000);
+    char *fname = calloc(100, sizeof(uint8_t));
+    AppendDate(fname, 100, "lf_unknown_%Y-%m-%d_%H:%M.pm3");
+    CmdSave(fname);
+    free(fname);
+    return PM3_SUCCESS;
+}
+
+int CmdRem(const char *Cmd) {
+    char buf[22] = {0};
+    AppendDate(buf, sizeof(buf), NULL);
+    PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
     return PM3_SUCCESS;
 }
 
@@ -90,6 +134,7 @@ static int CmdRev(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use '<command> help' for details of a particular command."},
+    {"auto",    CmdAuto,      IfPm3Present,           "Automated detection process for unknown tags"},
     {"analyse", CmdAnalyse,   AlwaysAvailable,         "{ Analyse utils... }"},
     {"data",    CmdData,      AlwaysAvailable,         "{ Plot window / data buffer manipulation... }"},
     {"emv",     CmdEMV,       AlwaysAvailable,         "{ EMV ISO-14443 / ISO-7816... }"},

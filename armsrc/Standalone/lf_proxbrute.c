@@ -96,7 +96,7 @@ void RunMod() {
                 if (data_available()) break;
 
                 // Was our button held down or pressed?
-                int button_pressed = BUTTON_HELD(280);
+                button_pressed = BUTTON_HELD(280);
                 if (button_pressed != BUTTON_HOLD) break;
 
                 Dbprintf("[=] trying Facility = %08x ID %08x", high, i);

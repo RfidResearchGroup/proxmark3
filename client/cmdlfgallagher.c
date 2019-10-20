@@ -135,7 +135,7 @@ static command_t CommandTable[] = {
     {"help",  CmdHelp,            AlwaysAvailable, "This help"},
     {"demod", CmdGallagherDemod,  AlwaysAvailable, "Demodulate an GALLAGHER tag from the GraphBuffer"},
     {"read",  CmdGallagherRead,   IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone", CmdGallagherClone,  IfPm3Lf,         "clone GALLAGHER tag"},
+    {"clone", CmdGallagherClone,  IfPm3Lf,         "clone GALLAGHER tag to T55x7"},
     {"sim",   CmdGallagherSim,    IfPm3Lf,         "simulate GALLAGHER tag"},
     {NULL, NULL, NULL, NULL}
 };
