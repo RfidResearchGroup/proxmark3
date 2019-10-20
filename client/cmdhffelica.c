@@ -43,7 +43,7 @@ static int usage_hf_felica_sim(void) {
 static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list felica'");
-    PrintAndLogEx(NORMAL, "Usage:  hf felica sniff <s > <t>");
+    PrintAndLogEx(NORMAL, "Usage:  hf felica sniff <s> <t>");
     PrintAndLogEx(NORMAL, "      s       samples to skip (decimal)");
     PrintAndLogEx(NORMAL, "      t       triggers to skip (decimal)");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -81,6 +81,17 @@ static int usage_hf_felica_raw(void) {
     return 0;
 }
 
+static int usage_hf_felica_request_service(void) {
+    PrintAndLogEx(NORMAL, "\nInfo: Use this command to verify the existence of Area and Service, and to acquire Key Version:");
+    PrintAndLogEx(NORMAL, "       - When the specified Area or Service exists, the card returns Key Version.");
+    PrintAndLogEx(NORMAL, "       - When the specified Area or Service does not exist, the card returns FFFFh as Key Version.");
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica rqservice [-h] <0A 0B 0C ... IDm hex> <01 Number of Node hex> <0A 0B Node Code List hex (Little Endian)> <0A 0B CRC hex>");
+    PrintAndLogEx(NORMAL, "       -h    this help");
+    PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
+    PrintAndLogEx(NORMAL, "Example: rqservice 01100910c11bc407 01 FFFF 2837");
+    return 0;
+}
+
 static int usage_hf_felica_dump(void) {
     PrintAndLogEx(NORMAL, "Usage: hf felica dump [-h] <outputfile>");
     PrintAndLogEx(NORMAL, "       -h    this help");
@@ -102,7 +113,95 @@ static int CmdHFFelicaReader(const char *Cmd) {
 
 static int CmdHFFelicaDump(const char *Cmd) {
     if (strlen(Cmd) < 1) return usage_hf_felica_dump();
-    dump(*Cmd);
+    clearCommandBuffer();
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_hf_felica_dumplite();
+    dump();
+    return 0;
+}
+
+static int CmdHFFelicaRequestService(const char *Cmd) {
+    if (strlen(Cmd) < 2) return usage_hf_felica_request_service();
+    char buf[5] = "";
+    int i = 0;
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    uint16_t datalen = 0;
+    set_number_of_cmds();
+    while (Cmd[i] != '\0') {
+        PrintAndLogEx(NORMAL, "String %s: ", Cmd[i]);
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
+                case 'H':
+                case 'h':
+                    return usage_hf_felica_raw();
+                case 'c':
+                    crc = true;
+                    break;
+                default:
+                    return usage_hf_felica_raw();
+            }
+            i += 2;
+        }
+        i = i + parse_cmd_parameter(i);
+        if(is_hex_input()){
+            buf[strlen(buf) + 1] = 0;
+            buf[strlen(buf)] = Cmd[i];
+            i++;
+            i = i + get_cmd_data(i);
+        }else{
+          i++;
+        }
+    }
+    request_service();
+    clearCommandBuffer();
+    return 0;
+}
+
+/*
+ * Parses line spacing and tabs.
+ * Returns 1 if the given char is a space or tab
+ */
+static int parse_cmd_parameter_separator(const char *Cmd, int i){
+    PrintAndLogEx(NORMAL, "parse_cmd_parameter_separator String %s: ", Cmd[i]);
+    return Cmd[i] == ' ' || Cmd[i] == '\t' ? 1 : 0;
+}
+
+/*
+ * Counts and sets the number of commands.
+ */
+static void set_number_of_cmds(const char *Cmd){
+    while (*Cmd == ' ' || *Cmd == '\t'){
+        Cmd++;
+    }
+}
+
+/**
+ * Checks if a char is a hex value.
+ * @param Cmd
+ * @return one if it is a valid hex char. Zero if not a valid hex char.
+ */
+static bool is_hex_input(const char *Cmd, int i){
+    PrintAndLogEx(NORMAL, "is_hex_input String %s: ", Cmd[i]);
+    return (Cmd[i] >= '0' && Cmd[i] <= '9') || (Cmd[i] >= 'a' && Cmd[i] <= 'f') || (Cmd[i] >= 'A' && Cmd[i] <= 'F') ? 1 : 0;
+}
+
+/**
+ *
+ * @param Cmd the chars from which the data will be extracted.
+ * @return a buffer with the data from the command
+ */
+static int get_cmd_data(const char *Cmd, int i){
+    int char_counter = 0;
+    if (strlen(buf) >= 2) {
+        sscanf(buf, "%x", &temp);
+        data[datalen] = (uint8_t)(temp & 0xff);
+        *buf = 0;
+    }
+    return 0;
+}
+
+static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
+    PrintAndLogEx(NORMAL, "Feature not implemented Yet!");
     return 0;
 }
 
@@ -174,7 +273,6 @@ static int CmdHFFelicaSim(const char *Cmd) {
 */
 
 static int CmdHFFelicaSniff(const char *Cmd) {
-
     uint8_t cmdp = 0;
     uint64_t samples2skip = 0;
     uint64_t triggers2skip = 0;
@@ -211,7 +309,6 @@ static int CmdHFFelicaSniff(const char *Cmd) {
 
 // uid  hex
 static int CmdHFFelicaSimLite(const char *Cmd) {
-
     uint64_t uid = param_get64ex(Cmd, 0, 0, 16);
 
     if (!uid)
@@ -446,6 +543,9 @@ static void waitCmdFelica(uint8_t iSelect) {
         if (!len)
             return;
         PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
+        if(!check_crc(CRC_FELICA, resp.data.asBytes + 2, len - 2)){
+            PrintAndLogEx(ERR, "Error: CRC of received bytes are incorrect!");
+        }
     } else {
         PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
     }
@@ -530,7 +630,6 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
         uint8_t b1, b2;
         compute_crc(CRC_FELICA, data, datalen, &b1, &b2);
-        // TODO FIND OUT IF FeliCa Light has another CRC order - Order changed for FeliCa Standard cards
         data[datalen++] = b2;
         data[datalen++] = b1;
     }
@@ -617,27 +716,53 @@ int readFelicaUid(bool verbose) {
     return status;
 }
 
+int dump() {
 
-int dump(const char *Cmd) {
-    clearCommandBuffer();
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf_felica_dumplite();
     // TODO FINISH THIS METHOD
     PrintAndLogEx(SUCCESS, "NOT IMPLEMENTED YET!");
+    return 0;
+}
+
+int request_service() {
+
+
+
 
     return 0;
 }
 
 static command_t CommandTable[] = {
+    {"----------- General -----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"help",      CmdHelp,              AlwaysAvailable, "This help"},
     {"list",      CmdHFFelicaList,      AlwaysAvailable,     "List ISO 18092/FeliCa history"},
     {"reader",    CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
-//    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
-    {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "sniff ISO 18092/Felica traffic"},
+    {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"raw",       CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
-    {"dump",    CmdHFFelicaDump,    IfPm3Felica,     "Wait for and try dumping Felica"},
+    {"----------- FeliCa Standard (support in progress) -----------", CmdHelp,                IfPm3Iso14443a,  ""},
+    {"dump",    CmdHFFelicaDump,    IfPm3Felica,     "Wait for and try dumping FeliCa"},
+    {"rqservice",    CmdHFFelicaRequestService,    IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
+    {"rqresponse",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "verify the existence of a card and its Mode."},
+    //{"rdNoEncryption",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-not-required Service."},
+    //{"wrNoEncryption",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-required Service."},
+    //{"searchSvCode",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire Area Code and Service Code."},
+    //{"rqSysCode",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire System Code registered to the card."},
+    //{"auth1",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "authenticate a card."},
+    //{"auth2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
+    //{"read",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-required Service."},
+    //{"write",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-required Service."},
+    //{"searchSvCodeV2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "verify the existence of Area or Service, and to acquire Key Version."},
+    //{"getSysStatus",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire the setup information in System."},
+    //{"rqSpecVer",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire the version of card OS."},
+    //{"resetMode",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "reset Mode to Mode 0."},
+    //{"auth1V2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "authenticate a card."},
+    //{"auth2V2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
+    //{"readV2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-required Service."},
+    //{"writeV2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to authentication-required Service."},
+    //{"upRandomID",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "update Random ID (IDr)."},
+    {"----------- FeliCa Light -----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"litesim",   CmdHFFelicaSimLite,   IfPm3Felica,     "<NDEF2> - only reply to poll request"},
     {"litedump",  CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
+    //    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}
     {NULL, NULL, NULL, NULL}
 };
 

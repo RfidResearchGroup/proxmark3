@@ -14,17 +14,17 @@
 // FeliCa timings
 // minimum time between the start bits of consecutive transfers from reader to tag: 6800 carrier (13.56MHz) cycles
 #ifndef FELICA_REQUEST_GUARD_TIME
-# define FELICA_REQUEST_GUARD_TIME (6800/16 + 1)
+# define FELICA_REQUEST_GUARD_TIME (6800/16 + 1) // 426
 #endif
 // FRAME DELAY TIME 2672 carrier cycles
 #ifndef FELICA_FRAME_DELAY_TIME
-# define FELICA_FRAME_DELAY_TIME  (2672/16 + 1)
+# define FELICA_FRAME_DELAY_TIME (2672/16 + 1) // 168
 #endif
 #ifndef DELAY_AIR2ARM_AS_READER
-#define DELAY_AIR2ARM_AS_READER (3 + 16 + 8 + 8*16 + 4*16 - 8*16)
+#define DELAY_AIR2ARM_AS_READER (3 + 16 + 8 + 8*16 + 4*16 - 8*16) // 91
 #endif
 #ifndef DELAY_ARM2AIR_AS_READER
-#define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1)
+#define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1) // 209
 #endif
 
 // CRC skips two first sync bits in data buffer
@@ -357,7 +357,6 @@ static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing,
     // sending 0x00 0x00 0x00 0x00 0x00 0x00
     uint16_t c = 0;
     while (c < 6) {
-
         // keep tx buffer in a defined state anyway.
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = 0x00;
@@ -416,8 +415,6 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
     uint32_t timeout = iso18092_get_timeout();
     if (DBGLEVEL > 3)
         Dbprintf("timeout set: %i", timeout);
-    //TODO FIX THIS METHOD - Race Condition or something: TIMING/MEMORY ISSUES
-    // If you add content here (dbprintf), timing problems appear?! Last Bytes (CRC) of frame will be cutoff.
     for (;;) {
         WDT_HIT();
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -527,7 +524,7 @@ void felica_sendraw(PacketCommandNG *c) {
             arg0 = felica_select_card(&card);
             reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
             if (arg0 > 0) {
-                Dbprintf("Error: Failed selecting card! ");
+                Dbprintf("Error: Failed selecting card!");
                 felica_reset_frame_mode();
                 return;
             }
@@ -565,6 +562,7 @@ void felica_sendraw(PacketCommandNG *c) {
             Dbprintf("Received Frame Code: %d", arg0);
             Dbhexdump(FelicaFrame.len, FelicaFrame.framebytes, 0);
         };
+
         uint32_t result = reply_mix(CMD_ACK, FelicaFrame.len, arg0, 0, FelicaFrame.framebytes, FelicaFrame.len);
         if (result) {
             Dbprintf("Reply to Client Error Code: %i", result);
