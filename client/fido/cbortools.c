@@ -75,9 +75,9 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
         }
 
         case CborSimpleType: {
-            uint8_t type;
-            cbor_value_get_simple_type(it, &type);
-            printf("simple(%u)", type);
+            uint8_t t;
+            cbor_value_get_simple_type(it, &t);
+            printf("simple(%u)", t);
             break;
         }
 
@@ -206,7 +206,7 @@ int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, si
 
     if (err) {
         fprintf(stderr,
-                "CBOR parsing failure at offset %" PRId32 " : %s\n",
+                "CBOR parsing failure at offset %" PRIu32 " : %s\n",
                 (uint32_t)(cb.ptr - data),
                 cbor_error_string(err)
                );
