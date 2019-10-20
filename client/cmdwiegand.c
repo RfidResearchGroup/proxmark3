@@ -150,11 +150,11 @@ int CmdWiegandDecode(const char *Cmd) {
     bool errors = false;
     char cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        uint32_t strlen = param_getlength(Cmd, cmdp);
-        strlen++; // null termin
-        if (strlen > 2) {
-            char *s = calloc(strlen, sizeof(uint8_t));
-            param_getstr(Cmd, cmdp, s, strlen);
+        uint32_t slen = param_getlength(Cmd, cmdp);
+        slen++; // null termin
+        if (slen > 2) {
+            char *s = calloc(slen, sizeof(uint8_t));
+            param_getstr(Cmd, cmdp, s, slen);
             hexstring_to_u96(&top, &mid, &bot, s);
             free(s);
             gothex = true;
