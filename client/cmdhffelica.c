@@ -134,11 +134,13 @@ static void get_cmd_data(const char *Cmd, int i, uint16_t datalen, uint8_t *data
     }
 }
 
+/*
 static int usage_hf_felica_dump(void) {
+    // TODO IMPLEMENT
     PrintAndLogEx(NORMAL, "Usage: hf felica dump [-h] <outputfile>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     return PM3_SUCCESS;
-}
+}*/
 
 static int CmdHFFelicaList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -152,14 +154,19 @@ static int CmdHFFelicaReader(const char *Cmd) {
     return readFelicaUid(verbose);
 }
 
+/*
 static int CmdHFFelicaDump(const char *Cmd) {
     if (strlen(Cmd) < 1) return usage_hf_felica_dump();
-    return dump(*Cmd);
-    clearCommandBuffer();
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf_felica_dumplite();
-    dump();
-    return 0;
+    // TODO IMPLEMENT
+    return PM3_SUCCESS;
+}*/
+
+/**
+ * Sends a request service frame
+ * @return
+ */
+static int request_service() {
+    return PM3_SUCCESS;
 }
 
 /**
@@ -729,10 +736,6 @@ int readFelicaUid(bool verbose) {
             break;
         }
     }
-    return PM3_SUCCESS;
-}
-
-int request_service() {
     return PM3_SUCCESS;
 }
 
