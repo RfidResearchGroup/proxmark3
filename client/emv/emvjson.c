@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+://-----------------------------------------------------------------------------
 // Copyright (C) 2018 Merlok
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -372,8 +372,8 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
             return false;
         }
         tlv_tag_t tag = 0;
-        for (int i = 0; i < buflen; i++) {
-            tag = (tag << 8) | buf[i];
+        for (int j = 0; j < buflen; j++) {
+            tag = (tag << 8) | buf[j];
         }
 
         if (!HexToBuffer("TLV Error value:", tlvValue, buf, sizeof(buf) - 1, &buflen)) {
