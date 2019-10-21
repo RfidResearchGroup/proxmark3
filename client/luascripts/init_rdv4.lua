@@ -88,7 +88,7 @@ function main(args)
     print('')
     core.console('hw status')
     print(dash)
-    
+
     print('all done!')
 
 end

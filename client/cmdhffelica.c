@@ -620,7 +620,7 @@ int dump(const char *Cmd) {
     clearCommandBuffer();
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hf_felica_dumplite();
-    
+
     // TODO FINISH THIS METHOD
     PrintAndLogEx(SUCCESS, "NOT IMPLEMENTED YET!");
 
