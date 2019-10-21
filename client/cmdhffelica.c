@@ -85,27 +85,47 @@ static int usage_hf_felica_request_service(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to verify the existence of Area and Service, and to acquire Key Version:");
     PrintAndLogEx(NORMAL, "       - When the specified Area or Service exists, the card returns Key Version.");
     PrintAndLogEx(NORMAL, "       - When the specified Area or Service does not exist, the card returns FFFFh as Key Version.");
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica rqservice [-h] <0A 0B 0C ... IDm hex> <01 Number of Node hex> <0A 0B Node Code List hex (Little Endian)> <0A 0B CRC hex>");
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica rqservice [-h] [-i] <01 Number of Node hex> <0A 0B Node Code List hex (Little Endian)>");
     PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -c    calculate and append CRC");
+    PrintAndLogEx(NORMAL, "       -i    <0A 0B 0C ... hex> set IDm");
     PrintAndLogEx(NORMAL, "\nExample: hf felica rqservice 01100910c11bc407 01 FFFF 2837\n\n");
     return PM3_SUCCESS;
+}
+
+/**
+ * Wait for response from pm3 or timeout.
+ * Checks if receveid bytes have a valid CRC.
+ */
+static void waitCmdFelica(uint8_t iSelect) {
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        uint16_t len = iSelect ? (resp.oldarg[1] & 0xffff) : (resp.oldarg[0] & 0xffff);
+        PrintAndLogEx(NORMAL, "Client Received %i octets", len);
+        if (!len)
+            return;
+        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
+        if (!check_crc(CRC_FELICA, resp.data.asBytes + 2, len - 2)) {
+            PrintAndLogEx(ERR, "Error: CRC of received bytes are incorrect!");
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+    }
 }
 
 /*
  * Parses line spacing and tabs.
  * Returns 1 if the given char is a space or tab
  */
-static int parse_cmd_parameter_separator(const char *Cmd, int i){
+static int parse_cmd_parameter_separator(const char *Cmd, int i) {
     return Cmd[i] == ' ' || Cmd[i] == '\t' ? 1 : 0;
 }
 
 /*
  * Counts and sets the number of commands.
  */
-static void strip_cmds(const char *Cmd){
+static void strip_cmds(const char *Cmd) {
     PrintAndLogEx(NORMAL, "CMD count: %i", strlen(Cmd));
-    while (*Cmd == ' ' || *Cmd == '\t'){
+    while (*Cmd == ' ' || *Cmd == '\t') {
         PrintAndLogEx(NORMAL, "CMD: %s", Cmd);
         Cmd++;
     }
@@ -117,15 +137,36 @@ static void strip_cmds(const char *Cmd){
  * @param Cmd
  * @return one if it is a valid hex char. Zero if not a valid hex char.
  */
-static bool is_hex_input(const char *Cmd, int i){
+static bool is_hex_input(const char *Cmd, int i) {
     return (Cmd[i] >= '0' && Cmd[i] <= '9') || (Cmd[i] >= 'a' && Cmd[i] <= 'f') || (Cmd[i] >= 'A' && Cmd[i] <= 'F') ? 1 : 0;
 }
 
 /**
- *
- * @param Extracts the data from the cmd and puts it into the data array.
+ * Add crc bytes to the end of the given data.
+ * @param datalen length of the data frame.
+ * @param data frame on which the crc is calculated.
+ * @param size of the data.
+ * @return true if the crc was added.
  */
-static void get_cmd_data(const char *Cmd, int i, uint16_t datalen, uint8_t *data, char buf[]){
+static bool add_crc_bytes(uint16_t *datalen, uint8_t *data, size_t dataSize) {
+    if (*datalen > 0 && *datalen < dataSize - 2) {
+        uint8_t b1, b2;
+        compute_crc(CRC_FELICA, data, *datalen, &b1, &b2);
+        data[(*datalen)++] = b2;
+        data[(*datalen)++] = b1;
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * Extracts the data from the cmd and puts it into the data array.
+ * @param Cmd input string of the user with the data
+ * @param datalen length of the data frame.
+ * @param data the array in which the data gets stored.
+ * @param buf temporary buffer.
+ */
+static void get_cmd_data(const char *Cmd, uint16_t datalen, uint8_t *data, char buf[]) {
     uint32_t temp;
     if (strlen(buf) >= 2) {
         sscanf(buf, "%x", &temp);
@@ -162,14 +203,6 @@ static int CmdHFFelicaDump(const char *Cmd) {
 }*/
 
 /**
- * Sends a request service frame
- * @return
- */
-static int request_service() {
-    return PM3_SUCCESS;
-}
-
-/**
  * Command parser for rqservice.
  * @param Cmd input data of the user.
  * @return client result code.
@@ -178,9 +211,10 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (strlen(Cmd) < 2) return usage_hf_felica_request_service();
     int i = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
-    bool crc = false;
-    bool length = false;
+    bool custom_IDm = false;
     uint16_t datalen = 0;
+    uint16_t numbits = 0;
+    uint8_t flags = 0;
     char buf[5] = "";
 
     strip_cmds(Cmd);
@@ -192,11 +226,8 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
                 case 'H':
                 case 'h':
                     return usage_hf_felica_raw();
-                case 'c':
-                    crc = true;
-                    break;
-                case 'l':
-                    length = true;
+                case 'i':
+                    custom_IDm = true;
                     break;
                 default:
                     return usage_hf_felica_raw();
@@ -206,19 +237,33 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         PrintAndLogEx(NORMAL, "i after single params = %i: ", i);
         i = i + parse_cmd_parameter_separator(Cmd, i);
         PrintAndLogEx(NORMAL, "i after cnd separator: %i", i);
-        if (is_hex_input(Cmd, i)){
+        if (is_hex_input(Cmd, i)) {
             buf[strlen(buf) + 1] = 0;
             buf[strlen(buf)] = Cmd[i];
             i++;
             PrintAndLogEx(NORMAL, "i after is hex input: %i", i);
-            get_cmd_data(Cmd, i, datalen, data, buf);
-
-        }else {
-          i++;
+            get_cmd_data(Cmd, datalen, data, buf);
+        } else {
+            i++;
         }
     }
-    request_service();
+    flags |= FELICA_APPEND_CRC;
+    if (custom_IDm) {
+        flags |= FELICA_NO_SELECT;
+    }
+    if (datalen > 0) {
+        flags |= FELICA_RAW;
+    }
+    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
     clearCommandBuffer();
+    PrintAndLogEx(NORMAL, "Data: %s", data);
+    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
+    if (custom_IDm) {
+        waitCmdFelica(1);
+    }
+    if (datalen > 0) {
+        waitCmdFelica(0);
+    }
     return PM3_SUCCESS;
 }
 
@@ -557,21 +602,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void waitCmdFelica(uint8_t iSelect) {
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        uint16_t len = iSelect ? (resp.oldarg[1] & 0xffff) : (resp.oldarg[0] & 0xffff);
-        PrintAndLogEx(NORMAL, "Client Received %i octets", len);
-        if (!len)
-            return;
-        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
-        if(!check_crc(CRC_FELICA, resp.data.asBytes + 2, len - 2)){
-            PrintAndLogEx(ERR, "Error: CRC of received bytes are incorrect!");
-        }
-    } else {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-    }
-}
+
 
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
     bool reply = 1;
@@ -649,11 +680,8 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
-        uint8_t b1, b2;
-        compute_crc(CRC_FELICA, data, datalen, &b1, &b2);
-        data[datalen++] = b2;
-        data[datalen++] = b1;
+    if (crc) {
+        add_crc_bytes(&datalen, data, sizeof(data));
     }
 
     uint8_t flags = 0;
