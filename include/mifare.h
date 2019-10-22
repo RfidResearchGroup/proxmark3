@@ -170,7 +170,7 @@ typedef struct {
 } PACKED felica_card_select_t;
 
 typedef struct {
-    uint8_t sync[4];
+    uint8_t sync[2];
     uint8_t length[1];
     uint8_t cmd_code[1];
     uint8_t IDm[8];

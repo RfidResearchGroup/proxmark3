@@ -15,4 +15,5 @@
 
 int CmdHFFelica(const char *Cmd);
 int readFelicaUid(bool verbose);
+void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data);
 #endif

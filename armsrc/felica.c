@@ -420,8 +420,8 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
             Process18092Byte(b);
             if (FelicaFrame.state == STATE_FULL) {
                 felica_nexttransfertime = MAX(felica_nexttransfertime,
-                        (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME
-                        );
+                                              (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME
+                                             );
                 LogTrace(
                     FelicaFrame.framebytes,
                     FelicaFrame.len,

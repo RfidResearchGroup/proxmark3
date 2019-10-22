@@ -26,7 +26,7 @@
 static int CmdHelp(const char *Cmd);
 static felica_card_select_t last_known_card;
 
-static void set_last_known_card(felica_card_select_t card){
+static void set_last_known_card(felica_card_select_t card) {
     last_known_card = card;
 }
 
@@ -91,13 +91,16 @@ static int usage_hf_felica_request_service(void) {
     PrintAndLogEx(NORMAL, "       - When the specified Area or Service exists, the card returns Key Version.");
     PrintAndLogEx(NORMAL, "       - When the specified Area or Service does not exist, the card returns FFFFh as Key Version.");
     PrintAndLogEx(NORMAL, "For Node Code List of a command packet, Area Code or Service Code of the target "
-                          "of acquisition of Key Version shall be enumerated in Little Endian format."
-                          "If Key Version of System is the target of acquisition, FFFFh shall be specified "
-                          "in the command packet.");
+                  "of acquisition of Key Version shall be enumerated in Little Endian format."
+                  "If Key Version of System is the target of acquisition, FFFFh shall be specified "
+                  "in the command packet.");
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rqservice [-h] [-i] <01 Number of Node hex> <0A 0B Node Code List hex (Little Endian)>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A 0B 0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, "\nExample: hf felica rqservice 01 FFFF \n\n");
+    PrintAndLogEx(NORMAL, "\nExamples: hf felica rqservice 01 FF FF");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice 01 FF FF");
+    PrintAndLogEx(NORMAL, "  hf felica rqs -a FF FF");
+    PrintAndLogEx(NORMAL, "  hf felica rqs -i 01 10 09 10 c1 1b c4 07 01 FF FF \n\n");
     return PM3_SUCCESS;
 }
 
@@ -109,7 +112,7 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp) {
     if (WaitForResponseTimeout(CMD_ACK, resp, 2000)) {
         uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
         PrintAndLogEx(NORMAL, "Client Received %i octets", len);
-        if (!len || len < 2){
+        if (!len || len < 2) {
             PrintAndLogEx(ERR, "Could not receive data correctly!");
         }
         PrintAndLogEx(NORMAL, "%s", sprint_hex(resp->data.asBytes, len));
@@ -120,7 +123,7 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp) {
     } else {
         PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
     }
-   return false;
+    return false;
 }
 
 /*
@@ -150,7 +153,7 @@ static bool is_hex_input(const char *Cmd, int i) {
 }
 
 /**
- * Add crc bytes to the end of the given data.
+ * Add crc bytes to the end of the given data and increments datalen.
  * @param datalen length of the data frame.
  * @param data frame on which the crc is calculated.
  * @param size of the data.
@@ -189,7 +192,7 @@ static void get_cmd_data(const char *Cmd, uint16_t *datalen, uint8_t *data, char
  * @param number number of hex bytes.
  * @return number as hex value.
  */
-static uint8_t int_to_hex(uint16_t *number){
+static uint8_t int_to_hex(uint16_t *number) {
     uint32_t hex;
     char dataLengthChar[5];
     sprintf(dataLengthChar, "%x", *number);
@@ -203,14 +206,14 @@ static uint8_t int_to_hex(uint16_t *number){
  * @param data frame in where the IDM is added.
  * @return true if IDm was added;
  */
-static bool add_last_IDm(uint8_t position, uint8_t *data){
-    if(last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0){
-        for(int i = 0; i < 8; i++){
+static bool add_last_IDm(uint8_t position, uint8_t *data) {
+    if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
+        for (int i = 0; i < 8; i++) {
             uint16_t number = (uint16_t)last_known_card.IDm[i];
-            data[position+i] = int_to_hex(&number);
+            data[position + i] = int_to_hex(&number);
         }
         return true;
-    }else{
+    } else {
         return false;
     }
 }
@@ -243,6 +246,32 @@ static int CmdHFFelicaDump(const char *Cmd) {
 }*/
 
 /**
+ * Sends a request service frame to the pm3.
+ */
+void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data) {
+    uint16_t numbits = 0;
+    clearCommandBuffer();
+    PrintAndLogEx(NORMAL, "Send Service Request Frame: %s", sprint_hex(data, datalen));
+    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
+    PacketResponseNG resp;
+    if (datalen > 0) {
+        if (!waitCmdFelica(0, &resp)) {
+            PrintAndLogEx(ERR, "\nGot no Response from card");
+            return;
+        }
+        felica_request_service_response_t rqs_response;
+        memcpy(&rqs_response, (felica_request_service_response_t *)resp.data.asBytes, sizeof(felica_request_service_response_t));
+
+        if (rqs_response.IDm[0] != 0) {
+            PrintAndLogEx(SUCCESS, "\nGot Service Response:");
+            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rqs_response.IDm, sizeof(rqs_response.IDm)));
+            PrintAndLogEx(NORMAL, "  -Node Number: %s", sprint_hex(rqs_response.node_number, sizeof(rqs_response.node_number)));
+            PrintAndLogEx(NORMAL, "  -Node Key Version List: %s\n", sprint_hex(rqs_response.node_key_versions, sizeof(rqs_response.node_key_versions)));
+        }
+    }
+}
+
+/**
  * Command parser for rqservice.
  * @param Cmd input data of the user.
  * @return client result code.
@@ -252,23 +281,29 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     int i = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
     bool custom_IDm = false;
+    bool all_nodes = false;
     uint16_t datalen = 0;
     uint8_t flags = 0;
-    uint16_t numbits = 0;
+
     char buf[5] = "";
-    datalen += 10; // length (1) + CMD (1) + IDm (8)
+    datalen += 10; // length (1) + CMD (1) + IDm(8)
     strip_cmds(Cmd);
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
             switch (Cmd[i + 1]) {
                 case 'H':
                 case 'h':
-                    return usage_hf_felica_raw();
+                    return usage_hf_felica_request_service();
                 case 'i':
                     custom_IDm = true;
+                    datalen -= 8;
+                    break;
+                case 'a':
+                    all_nodes = true;
+                    datalen += 1;
                     break;
                 default:
-                    return usage_hf_felica_raw();
+                    return usage_hf_felica_request_service();
             }
             i += 2;
         }
@@ -290,38 +325,28 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         flags |= FELICA_RAW;
     }
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
-    if(!custom_IDm){
-        if(!add_last_IDm(2, data)){
+    if (!custom_IDm) {
+        if (!add_last_IDm(2, data)) {
             PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
             return PM3_EINVARG;
-        }else{
+        } else {
             PrintAndLogEx(INFO, "Used last known IDm.", sprint_hex(data, datalen));
         }
     }
     data[0] = int_to_hex(&datalen);
     data[1] = 0x02; // Request Command ID
-    add_crc_bytes(&datalen, data, sizeof(data));
-    PrintAndLogEx(NORMAL, "Send Service Request Frame: %s", sprint_hex(data, datalen));
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
-    PacketResponseNG resp;
-    if (custom_IDm) {
-        waitCmdFelica(1, &resp);
-    }
-    if (datalen > 0) {
-        if(!waitCmdFelica(0, &resp)){
-            return PM3_ESOFT;
+    if (all_nodes) {
+        for (uint16_t y = 1; y < 32; y++) {
+            data[10] = int_to_hex(&y);
+            add_crc_bytes(&datalen, data, sizeof(data));
+            send_request_service(flags, datalen, data);
+            datalen -= 2; // Remove CRC bytes before adding new ones
         }
-        felica_request_service_response_t rqs_response;
-        memcpy(&rqs_response, (felica_request_service_response_t *)resp.data.asBytes, sizeof(felica_request_service_response_t));
-
-        PrintAndLogEx(SUCCESS, "\nGot Service Response:");
-        PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rqs_response.IDm, sizeof(rqs_response.IDm)));
-        PrintAndLogEx(NORMAL, "  -Node Number: %s", sprint_hex(rqs_response.node_number, sizeof(rqs_response.node_number)));
-        PrintAndLogEx(NORMAL, "  -Node Key Version List: %s\n", sprint_hex(rqs_response.node_key_versions, sizeof(rqs_response.node_key_versions)));
-    }else{
-        return PM3_ESOFT;
+    } else {
+        add_crc_bytes(&datalen, data, sizeof(data));
+        send_request_service(flags, datalen, data);
     }
+
     return PM3_SUCCESS;
 }
 
