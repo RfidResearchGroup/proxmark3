@@ -337,9 +337,7 @@ static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks) {
 }
 
 static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
-
     uint8_t flags = FPGA_MAJOR_MODE_ISO18092;
-
     if (power)
         flags |= FPGA_HF_ISO18092_FLAG_READER;
     if (highspeed)
@@ -371,7 +369,6 @@ static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing,
     }
 
     while (c < len) {
-
         // Put byte into tx holding register as soon as it is ready
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = frame[c++];
@@ -415,18 +412,16 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
     uint32_t timeout = iso18092_get_timeout();
     if (DBGLEVEL >= DBG_DEBUG)
         Dbprintf("timeout set: %i", timeout);
+
     for (;;) {
         WDT_HIT();
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
             Process18092Byte(b);
             if (FelicaFrame.state == STATE_FULL) {
-                felica_nexttransfertime =
-                    MAX(
-                        felica_nexttransfertime,
+                felica_nexttransfertime = MAX(felica_nexttransfertime,
                         (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME
-                    );
-
+                        );
                 LogTrace(
                     FelicaFrame.framebytes,
                     FelicaFrame.len,
@@ -773,79 +768,6 @@ void felica_dump() {
             felica_send_request_service(request_service);
         }
     }
-
-}
-
-void felica_send_request_service(uint8_t *request_service) {
-    Dbprintf("Send Service Request - len: d%", RES_SVC_LEN);
-    TransmitFor18092_AsReader(request_service, RES_SVC_LEN, NULL, 1, 0);
-    if (WaitForFelicaReply(512) && FelicaFrame.framebytes[3] == FELICA_REQSRV_ACK) {
-        Dbprintf("Got Service Response!");
-    }
-}
-
-/* Create Request Service Frame
-// Use this command to verify the existence of Area and Service, and to acquire Key Version.
-// When the specified Area or Service exists, the card returns Key Version.
-// When the specified Area or Service does not exist, the card returns FFFFh as Key Version.
-*/
-uint8_t *felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm) {
-    if (nodeNumber < 1 && nodeNumber > 32) {
-        Dbprintf("Node number out of range: 1 <= %d <= 32 - set node number to 1");
-        nodeNumber = 1;
-    }
-    // Sync 2-Byte, Length 1-Byte, CMD 1-Byte, IDm 8-Byte, nodeNumber 1 <= n <= 32 1-Byte, Node Code List <Little Endian>
-    uint8_t *request_service = BigBuf_malloc(sizeof(uint8_t) * RES_SVC_LEN);
-    //{ 0xb2, 0x4d, 0x06, FELICA_REQSRV_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21};
-    request_service[0] = 0xb2; //Sync
-    request_service[1] = 0x4d; //Sync
-    request_service[2] = 0x0B; // Length
-    request_service[3] = FELICA_REQSRV_REQ; // CMD
-    request_service[4] = idm[0];
-    request_service[5] = idm[1];
-    request_service[6] = idm[2];
-    request_service[7] = idm[3];
-    request_service[8] = idm[4];
-    request_service[9] = idm[5];
-    request_service[10] = idm[6];
-    request_service[11] = idm[7];
-    request_service[12] = nodeNumber; // Node we like to ask for services
-    request_service[13] = 0x00; // Node Code List // TODO FIND OUT WHAT NEEDS TO BE IN HERE
-    return request_service;
-}
-
-// Create Frame for authentication1 CMD
-void felica_create_authentication1_frame() {
-
-}
-
-// Create Frame for authentication2 CMD
-void felica_create_authentication2_frame() {
-
-}
-
-// Create a Frame for Read without encryption CMD as Payload
-void felica_create_read_block_frame(uint16_t blockNr) {
-    if (blockNr < 1 || blockNr > 567) {
-        Dbprintf("Block number out of range!");
-        return;
-    }
-    uint8_t c = 0;
-    // First Byte of SYNC
-    frameSpace[c++] = 0xb2;
-    frameSpace[c++] = 0x4d;
-    // skip Length of Frame
-    c++;
-    // Payload
-    frameSpace[c++] = FELICA_RDBLK_REQ; //command number
-
-    // Set frame length
-
-    // CRC
-}
-
-void felica_read_block(uint8_t *idm, uint16_t blockNr) {
-
 
 }
 
