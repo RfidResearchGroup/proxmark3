@@ -8,6 +8,7 @@
 // HID card format packing/unpacking routines
 //-----------------------------------------------------------------------------
 #include "wiegand_formats.h"
+#include "commonutil.h"
 
 bool Pack_H10301(wiegand_card_t *card, wiegand_message_t *packed) {
     memset(packed, 0, sizeof(wiegand_message_t));
@@ -643,7 +644,7 @@ int HIDFindCardFormat(const char *format) {
 bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (format_idx < 0 || format_idx >= (sizeof(FormatTable) / sizeof(FormatTable[0])))
+    if (format_idx < 0 || format_idx >= ARRAYLEN(FormatTable))
         return false;
 
     return FormatTable[format_idx].Pack(card, packed);
