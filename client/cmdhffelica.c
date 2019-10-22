@@ -91,13 +91,14 @@ static int usage_hf_felica_request_service(void) {
     PrintAndLogEx(NORMAL, "       - When the specified Area or Service exists, the card returns Key Version.");
     PrintAndLogEx(NORMAL, "       - When the specified Area or Service does not exist, the card returns FFFFh as Key Version.");
     PrintAndLogEx(NORMAL, "For Node Code List of a command packet, Area Code or Service Code of the target "
-                  "of acquisition of Key Version shall be enumerated in Little Endian format."
+                  "of acquisition of Key Version shall be enumerated in Little Endian format. "
                   "If Key Version of System is the target of acquisition, FFFFh shall be specified "
                   "in the command packet.");
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rqservice [-h] [-i] <01 Number of Node hex> <0A 0B Node Code List hex (Little Endian)>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A 0B 0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, "\nExamples: hf felica rqservice 01 FF FF");
+    PrintAndLogEx(NORMAL, "       -a    auto node number mode - iterates through all possible node 1 < n < 32");
+    PrintAndLogEx(NORMAL, "\nExamples: ");
     PrintAndLogEx(NORMAL, "  hf felica rqservice 01 FF FF");
     PrintAndLogEx(NORMAL, "  hf felica rqs -a FF FF");
     PrintAndLogEx(NORMAL, "  hf felica rqs -i 01 10 09 10 c1 1b c4 07 01 FF FF \n\n");
