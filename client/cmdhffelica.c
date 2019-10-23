@@ -22,6 +22,7 @@
 
 #include "ui.h"
 #include "mifare.h"     // felica_card_select_t struct
+#define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
 static int CmdHelp(const char *Cmd);
 static felica_card_select_t last_known_card;
@@ -100,8 +101,8 @@ static int usage_hf_felica_request_service(void) {
     PrintAndLogEx(NORMAL, "       -a    auto node number mode - iterates through all possible node 1 < n < 32");
     PrintAndLogEx(NORMAL, "\nExamples: ");
     PrintAndLogEx(NORMAL, "  hf felica rqservice 01 FF FF");
-    PrintAndLogEx(NORMAL, "  hf felica rqs -a FF FF");
-    PrintAndLogEx(NORMAL, "  hf felica rqs -i 01 10 09 10 c1 1b c4 07 01 FF FF \n\n");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice -a FF FF");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice -i 01 10 09 10 c1 1b c4 07 01 FF FF \n\n");
     return PM3_SUCCESS;
 }
 
@@ -154,24 +155,6 @@ static bool is_hex_input(const char *Cmd, int i) {
 }
 
 /**
- * Add crc bytes to the end of the given data and increments datalen.
- * @param datalen length of the data frame.
- * @param data frame on which the crc is calculated.
- * @param size of the data.
- * @return true if the crc was added.
- */
-static bool add_crc_bytes(uint16_t *datalen, uint8_t *data, size_t dataSize) {
-    if (*datalen > 0 && *datalen < dataSize - 2) {
-        uint8_t b1, b2;
-        compute_crc(CRC_FELICA, data, *datalen, &b1, &b2);
-        data[(*datalen)++] = b2;
-        data[(*datalen)++] = b1;
-        return 1;
-    }
-    return 0;
-}
-
-/**
  * Extracts the hex data from the cmd and puts it into the data array.
  * @param Cmd input string of the user with the data
  * @param datalen length of the data frame.
@@ -219,17 +202,8 @@ static bool add_last_IDm(uint8_t position, uint8_t *data) {
     }
 }
 
-/*
-static int usage_hf_felica_dump(void) {
-    // TODO IMPLEMENT
-    PrintAndLogEx(NORMAL, "Usage: hf felica dump [-h] <outputfile>");
-    PrintAndLogEx(NORMAL, "       -h    this help");
-    return PM3_SUCCESS;
-}*/
-
 static int CmdHFFelicaList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list felica' instead");
+    (void)Cmd;
     CmdTraceList("felica");
     return PM3_SUCCESS;
 }
@@ -238,13 +212,6 @@ static int CmdHFFelicaReader(const char *Cmd) {
     bool verbose = !(tolower(Cmd[0]) == 's');
     return readFelicaUid(verbose);
 }
-
-/*
-static int CmdHFFelicaDump(const char *Cmd) {
-    if (strlen(Cmd) < 1) return usage_hf_felica_dump();
-    // TODO IMPLEMENT
-    return PM3_SUCCESS;
-}*/
 
 /**
  * Sends a request service frame to the pm3.
@@ -314,7 +281,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
             buf[strlen(buf)] = Cmd[i];
             i++;
             get_cmd_data(Cmd, &datalen, data, buf);
-        } else {
+         } else {
             i++;
         }
     }
@@ -339,12 +306,14 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (all_nodes) {
         for (uint16_t y = 1; y < 32; y++) {
             data[10] = int_to_hex(&y);
-            add_crc_bytes(&datalen, data, sizeof(data));
+            AddCrc(data, datalen);
             send_request_service(flags, datalen, data);
             datalen -= 2; // Remove CRC bytes before adding new ones
         }
     } else {
-        add_crc_bytes(&datalen, data, sizeof(data));
+        PrintAndLogEx(INFO, "Datalen %i", datalen);
+        AddCrc(data, datalen);
+        datalen += 2;
         send_request_service(flags, datalen, data);
     }
 
@@ -763,7 +732,8 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     }
 
     if (crc) {
-        add_crc_bytes(&datalen, data, sizeof(data));
+        AddCrc(data, datalen);
+        datalen += 2;
     }
 
     uint8_t flags = 0;

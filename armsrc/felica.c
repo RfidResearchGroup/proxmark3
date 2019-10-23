@@ -3,7 +3,7 @@
 #include "BigBuf.h"
 #include "util.h"
 #include "protocols.h"
-#include "crc16.h"   // crc16 ccitt
+#include "crc16.h"
 #include "fpgaloader.h"
 #include "string.h"
 #include "commonutil.h"
