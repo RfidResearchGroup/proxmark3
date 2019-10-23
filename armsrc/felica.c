@@ -792,7 +792,7 @@ void felica_send_request_service(uint8_t *request_service) {
 // When the specified Area or Service does not exist, the card returns FFFFh as Key Version.
 */
 uint8_t *felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm) {
-    if (nodeNumber < 1 && nodeNumber > 32) {
+    if (nodeNumber < 1 || nodeNumber > 32) {
         Dbprintf("Node number out of range: 1 <= %d <= 32 - set node number to 1");
         nodeNumber = 1;
     }
