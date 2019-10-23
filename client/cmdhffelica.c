@@ -281,7 +281,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
             buf[strlen(buf)] = Cmd[i];
             i++;
             get_cmd_data(Cmd, &datalen, data, buf);
-         } else {
+        } else {
             i++;
         }
     }
