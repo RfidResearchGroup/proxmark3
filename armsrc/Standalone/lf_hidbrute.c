@@ -65,7 +65,7 @@ void RunMod() {
             continue;
 
         // Button was held for a second, begin recording
-        if (button_pressed > 0 && cardRead == 0) {
+        if (cardRead == 0) {
             LEDsoff();
             LED(selected + 1, 0);
             LED(LED_D, 0);

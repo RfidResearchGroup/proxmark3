@@ -195,12 +195,12 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
             SpinDelayUs(AUTHENTICATION_TIMEOUT);
             continue;
         }
-        crypto1_destroy(pcs);
+        crypto1_deinit(pcs);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         *key = ui64Key;
         return i;
     }
-    crypto1_destroy(pcs);
+    crypto1_deinit(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     return -1;

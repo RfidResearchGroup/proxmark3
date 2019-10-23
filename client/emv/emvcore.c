@@ -1089,7 +1089,7 @@ int RecoveryCertificates(struct tlvdb *tlvRoot, json_t *root) {
     char *icc_pk_c = emv_pk_dump_pk(icc_pk);
     JsonSaveStr(root, "$.ApplicationData.ICCPublicKeyDec", icc_pk_c);
     JsonSaveBufAsHex(root, "$.ApplicationData.ICCPublicKeyModulus", icc_pk->modulus, icc_pk->mlen);
-    free(issuer_pk_c);
+    free(icc_pk_c);
 
     return 0;
 }

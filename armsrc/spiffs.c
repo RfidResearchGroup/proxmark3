@@ -543,7 +543,7 @@ void rdv40_spiffs_safe_print_fsinfo() {
     rdv40_spiffs_getfsinfo(&fsinfo, RDV40_SPIFFS_SAFETY_SAFE);
 
     DbpString(_BLUE_("Flash Memory FileSystem Info (SPIFFS)"));
-    
+
 
     Dbprintf("  Logical Block Size........." _YELLOW_("%d")"bytes", fsinfo.blockSize);
     Dbprintf("  Logical Page Size.........." _YELLOW_("%d")"bytes", fsinfo.pageSize);
@@ -573,7 +573,7 @@ void rdv40_spiffs_safe_print_tree(uint8_t banner) {
         DbpString(_BLUE_("Flash Memory FileSystem tree (SPIFFS)"));
         Dbprintf("-------------------------------------");
     }
-    
+
     int changed = rdv40_spiffs_lazy_mount();
     spiffs_DIR d;
     struct spiffs_dirent e;
@@ -614,7 +614,7 @@ void test_spiffs() {
 
     Dbprintf("  Printing tree..............");
     rdv40_spiffs_safe_print_tree(false);
-    
+
     Dbprintf("  Writing 'I love Proxmark3 RDV4' in a testspiffs.txt");
 
     // Since We lazy_mounted manually before hand, the wrte safety level will

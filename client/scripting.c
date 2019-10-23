@@ -32,6 +32,7 @@
 #include "crc16.h"
 #include "protocols.h"
 #include "fileutils.h"    // searchfile
+#include "cmdlf.h"        // lf_config
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
@@ -1056,6 +1057,22 @@ static int l_ndefparse(lua_State *L) {
     return 1;
 }
 
+static int l_remark(lua_State *L) {
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if (n != 1)  {
+        return returnToLuaWithError(L, "Only one string allowed");
+    }
+
+    size_t size;
+    // data
+    const char *s = luaL_checklstring(L, 1, &size);
+
+    int res = CmdRem(s);
+    lua_pushinteger(L, res);
+    return 1;
+}
+
 static int l_searchfile(lua_State *L) {
     //Check number of arguments
     int n = lua_gettop(L);
@@ -1141,6 +1158,7 @@ int set_pm3_libraries(lua_State *L) {
         {"ndefparse",                   l_ndefparse},
         {"fast_push_mode",              l_fast_push_mode},
         {"search_file",                 l_searchfile},
+        {"rem",                         l_remark},
         {NULL, NULL}
     };
 

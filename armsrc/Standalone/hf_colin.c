@@ -857,7 +857,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
             DbprintfEx(FLAG_NEWLINE, "Halt error");
     };
 
-    crypto1_destroy(pcs);
+    crypto1_deinit(pcs);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
@@ -894,12 +894,12 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
             SpinDelayUs(AUTHENTICATION_TIMEOUT);
             continue;
         }
-        crypto1_destroy(pcs);
+        crypto1_deinit(pcs);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         *key = ui64Key;
         return i;
     }
-    crypto1_destroy(pcs);
+    crypto1_deinit(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     return -1;

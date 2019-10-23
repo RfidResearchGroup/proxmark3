@@ -63,7 +63,7 @@ static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
     for (uint16_t i = 0; i < len; i++) {
         uint8_t b = cmd[i];
         for (uint8_t j = 0; j < 8; j++) {
-            ToSend[++ToSendMax] = b & 0x80 ? SEC_D : SEC_E;
+            ToSend[++ToSendMax] = (b & 0x80) ? SEC_D : SEC_E;
             b <<= 1;
         }
     }

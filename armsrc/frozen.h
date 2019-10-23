@@ -201,8 +201,8 @@ int json_printf_array(struct json_out *, va_list *ap);
  * Return number of elements successfully scanned & converted.
  * Negative number means scan error.
  */
-int json_scanf(const char *str, int str_len, const char *fmt, ...);
-int json_vscanf(const char *str, int str_len, const char *fmt, va_list ap);
+int json_scanf(const char *str, int len, const char *fmt, ...);
+int json_vscanf(const char *str, int len, const char *fmt, va_list ap);
 
 /* json_scanf's %M handler  */
 typedef void (*json_scanner_t)(const char *str, int len, void *user_data);
@@ -234,7 +234,7 @@ int json_escape(struct json_out *out, const char *str, size_t str_len);
  * Read the whole file in memory.
  * Return malloc-ed file content, or NULL on error. The caller must free().
  */
-char *json_fread(const char *file_name);
+char *json_fread(const char *path);
 
 /*
  * Update given JSON string `s,len` by changing the value at given `json_path`.

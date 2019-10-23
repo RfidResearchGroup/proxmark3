@@ -53,6 +53,7 @@ int CmdHpf(const char *Cmd);                                                    
 int CmdLtrim(const char *Cmd);                                                                  // used by cmd lf em4x, lf t55xx
 int CmdNorm(const char *Cmd);                                                                   // used by cmd lf data (!)
 int CmdPlot(const char *Cmd);                                                                   // used by cmd lf cotag
+int CmdSave(const char *Cmd);                                                                   // used by cmd auto
 int CmdTuneSamples(const char *Cmd);                                                            // used by cmd lf hw
 int ASKbiphaseDemod(const char *Cmd, bool verbose);                                             // used by cmd lf em4x, lf fdx, lf guard, lf jablotron, lf nedap, lf t55xx
 int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType);                    // used by cmd lf em4x, lf t55xx, lf viking

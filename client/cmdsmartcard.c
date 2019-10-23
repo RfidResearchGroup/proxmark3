@@ -548,7 +548,6 @@ static int CmdSmartUpgrade(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_upgrade();
 
-
     char sha512filename[FILE_PATH_SIZE] = {'\0'};
     char *bin_extension = filename;
     char *dot_position = NULL;
@@ -556,11 +555,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
         bin_extension = dot_position + 1;
     }
 
-    if (!strcmp(bin_extension, "BIN")
-#ifdef _WIN32
-            || !strcmp(bin_extension, "bin")
-#endif
-       ) {
+    if (!strcmp(bin_extension, "BIN") || !strcmp(bin_extension, "bin")) {
         memcpy(sha512filename, filename, strlen(filename) - strlen("bin"));
         strcat(sha512filename, "sha512.txt");
     } else {

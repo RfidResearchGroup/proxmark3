@@ -1991,7 +1991,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (!(tagtype & UL_C || tagtype & UL)) {
         //attempt to read pack
         uint8_t get_pack[] = {0, 0};
-        if (!ul_auth_select(&card, tagtype, true, authKeyPtr, get_pack, sizeof(get_pack))) {
+        if (ul_auth_select(&card, tagtype, true, authKeyPtr, get_pack, sizeof(get_pack)) != PM3_SUCCESS) {
             //reset pack
             get_pack[0] = 0;
             get_pack[1] = 0;

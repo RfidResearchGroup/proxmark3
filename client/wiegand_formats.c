@@ -8,6 +8,7 @@
 // HID card format packing/unpacking routines
 //-----------------------------------------------------------------------------
 #include "wiegand_formats.h"
+#include "commonutil.h"
 
 bool Pack_H10301(wiegand_card_t *card, wiegand_message_t *packed) {
     memset(packed, 0, sizeof(wiegand_message_t));
@@ -643,7 +644,7 @@ int HIDFindCardFormat(const char *format) {
 bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (format_idx < 0 || format_idx >= (sizeof(FormatTable) / sizeof(FormatTable[0])))
+    if (format_idx < 0 || format_idx >= ARRAYLEN(FormatTable))
         return false;
 
     return FormatTable[format_idx].Pack(card, packed);
@@ -672,16 +673,16 @@ void HIDDisplayUnpackedCard(wiegand_card_t *card, const cardformat_t format) {
 
     char s[80] = {0};
     if (format.Fields.hasFacilityCode)
-        snprintf(s, sizeof(s), "FC: %d", card->FacilityCode);
+        snprintf(s, sizeof(s), "FC: %u", card->FacilityCode);
 
     if (format.Fields.hasCardNumber)
         snprintf(s + strlen(s), sizeof(s) - strlen(s), "  CN: %" PRIu64, card->CardNumber);
 
     if (format.Fields.hasIssueLevel)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  Issue %d", card->IssueLevel);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  Issue %u", card->IssueLevel);
 
     if (format.Fields.hasOEMCode)
-        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  OEM: %d", card->OEM);
+        snprintf(s + strlen(s), sizeof(s) - strlen(s), "  OEM: %u", card->OEM);
 
     if (format.Fields.hasParity)
         snprintf(s + strlen(s), sizeof(s) - strlen(s), "    parity: %s", card->ParityValid ? "valid" : "invalid");
