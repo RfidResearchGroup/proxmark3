@@ -19,7 +19,7 @@
 #include "comms.h"
 #include "cmdtrace.h"
 #include "crc16.h"
-
+#include "util.h"
 #include "ui.h"
 #include "mifare.h"     // felica_card_select_t struct
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
@@ -98,11 +98,11 @@ static int usage_hf_felica_request_service(void) {
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rqservice [-h] [-i] <01 Number of Node hex> <0A 0B Node Code List hex (Little Endian)>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A 0B 0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, "       -a    auto node number mode - iterates through all possible node 1 < n < 32");
+    PrintAndLogEx(NORMAL, "       -a    auto node number mode - iterates through all possible nodes 1 < n < 32");
     PrintAndLogEx(NORMAL, "\nExamples: ");
-    PrintAndLogEx(NORMAL, "  hf felica rqservice 01 FF FF");
-    PrintAndLogEx(NORMAL, "  hf felica rqservice -a FF FF");
-    PrintAndLogEx(NORMAL, "  hf felica rqservice -i 01 10 09 10 c1 1b c4 07 01 FF FF \n\n");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice 01 FFFF");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice -a FFFF");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice -i 01100910c11bc407 01 FFFF \n\n");
     return PM3_SUCCESS;
 }
 
@@ -129,15 +129,7 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp) {
 }
 
 /*
- * Parses line spacing and tabs.
- * Returns 1 if the given char is a space or tab
- */
-static int parse_cmd_parameter_separator(const char *Cmd, int i) {
-    return Cmd[i] == ' ' || Cmd[i] == '\t' ? 1 : 0;
-}
-
-/*
- * Counts and sets the number of commands.
+ * Counts and sets the number of parameters.
  */
 static void strip_cmds(const char *Cmd) {
     while (*Cmd == ' ' || *Cmd == '\t') {
@@ -146,33 +138,8 @@ static void strip_cmds(const char *Cmd) {
 }
 
 /**
- * Checks if a char is a hex value.
- * @param Cmd
- * @return one if it is a valid hex char. Zero if not a valid hex char.
- */
-static bool is_hex_input(const char *Cmd, int i) {
-    return (Cmd[i] >= '0' && Cmd[i] <= '9') || (Cmd[i] >= 'a' && Cmd[i] <= 'f') || (Cmd[i] >= 'A' && Cmd[i] <= 'F') ? 1 : 0;
-}
-
-/**
- * Extracts the hex data from the cmd and puts it into the data array.
- * @param Cmd input string of the user with the data
- * @param datalen length of the data frame.
- * @param data the array in which the data gets stored.
- * @param buf buffer with hex data.
- */
-static void get_cmd_data(const char *Cmd, uint16_t *datalen, uint8_t *data, char buf[]) {
-    uint32_t hex;
-    if (strlen(buf) >= 2) {
-        sscanf(buf, "%x", &hex);
-        data[*datalen] = (uint8_t)(hex & 0xff);
-        (*datalen)++;
-        *buf = 0;
-    }
-}
-
-/**
  * Converts integer value to equivalent hex value.
+ * Examples: 1 = 1, 11 = B
  * @param number number of hex bytes.
  * @return number as hex value.
  */
@@ -250,11 +217,9 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE];
     bool custom_IDm = false;
     bool all_nodes = false;
-    uint16_t datalen = 0;
+    uint16_t datalen = 13; // length (1) + CMD (1) + IDm(8) + Node Number (1) + Node Code List (2)
     uint8_t flags = 0;
-
-    char buf[5] = "";
-    datalen += 10; // length (1) + CMD (1) + IDm(8)
+    uint8_t paramCount = 0;
     strip_cmds(Cmd);
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
@@ -263,28 +228,45 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
                 case 'h':
                     return usage_hf_felica_request_service();
                 case 'i':
+                    paramCount++;
                     custom_IDm = true;
-                    datalen -= 8;
+                    if (param_getlength(Cmd, paramCount) == 16) {
+                        param_gethex(Cmd, paramCount++, data + 2, 16);
+                    } else {
+                        PrintAndLogEx(ERR, "Incorrect IDm length! IDm must be 8-Byte.");
+                        return PM3_EINVARG;
+                    }
+                    i += 8;
                     break;
                 case 'a':
+                    paramCount++;
                     all_nodes = true;
-                    datalen += 1;
                     break;
                 default:
                     return usage_hf_felica_request_service();
             }
             i += 2;
         }
-        i = i + parse_cmd_parameter_separator(Cmd, i);
-        if (is_hex_input(Cmd, i)) {
-            buf[strlen(buf) + 1] = 0;
-            buf[strlen(buf)] = Cmd[i];
-            i++;
-            get_cmd_data(Cmd, &datalen, data, buf);
+        i++;
+    }
+    if (!all_nodes) {
+        // Node Number
+        if (param_getlength(Cmd, paramCount) == 2) {
+            param_gethex(Cmd, paramCount++, data + 10, 2);
         } else {
-            i++;
+            PrintAndLogEx(ERR, "Incorrect Node number length!");
+            return PM3_EINVARG;
         }
     }
+
+    // Node Code List
+    if (param_getlength(Cmd, paramCount) == 4) {
+        param_gethex(Cmd, paramCount++, data + 11, 4);
+    } else {
+        PrintAndLogEx(ERR, "Incorrect Node Code List length!");
+        return PM3_EINVARG;
+    }
+
     flags |= FELICA_APPEND_CRC;
     if (custom_IDm) {
         flags |= FELICA_NO_SELECT;
@@ -302,16 +284,16 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         }
     }
     data[0] = int_to_hex(&datalen);
-    data[1] = 0x02; // Request Command ID
+    data[1] = 0x02; // Service Request Command ID
     if (all_nodes) {
         for (uint16_t y = 1; y < 32; y++) {
             data[10] = int_to_hex(&y);
             AddCrc(data, datalen);
+            datalen += 2;
             send_request_service(flags, datalen, data);
             datalen -= 2; // Remove CRC bytes before adding new ones
         }
     } else {
-        PrintAndLogEx(INFO, "Datalen %i", datalen);
         AddCrc(data, datalen);
         datalen += 2;
         send_request_service(flags, datalen, data);
