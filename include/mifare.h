@@ -178,6 +178,14 @@ typedef struct {
     uint8_t node_key_versions[2];
 } PACKED felica_request_service_response_t;
 
+typedef struct {
+    uint8_t sync[2];
+    uint8_t length[1];
+    uint8_t cmd_code[1];
+    uint8_t IDm[8];
+    uint8_t mode[1];
+} PACKED felica_request_request_response_t;
+
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),
     FELICA_NO_DISCONNECT = (1 << 1),
