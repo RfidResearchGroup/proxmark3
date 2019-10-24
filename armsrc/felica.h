@@ -18,12 +18,7 @@ void felica_sendraw(PacketCommandNG *c);
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip);
 void felica_sim_lite(uint64_t uid);
 void felica_dump_lite_s();
-void felica_dump();
 void felica_create_read_block_frame(uint16_t blockNr);
-void felica_create_authentication1_frame();
-void felica_create_authentication2_frame();
 void felica_send_request_service(uint8_t *request_service);
-void felica_reset_frame_mode();
-uint8_t *felica_create_request_service_frame(uint8_t nodeNumber, uint8_t *idm);
 
 #endif
