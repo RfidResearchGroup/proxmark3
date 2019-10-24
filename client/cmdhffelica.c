@@ -115,35 +115,35 @@ static int usage_hf_felica_request_response(void) {
     return PM3_SUCCESS;
 }
 
-static void print_status_flag1_interpretation(){
-    PrintAndLogEx(NORMAL, "Status Flag1:");
+static void print_status_flag1_interpretation() {
+    PrintAndLogEx(NORMAL, "\nStatus Flag1:");
     PrintAndLogEx(NORMAL, "  - 00h : Indicates the successful completion of a command.");
     PrintAndLogEx(NORMAL, "  - FFh : If an error occurs during the processing of a command that includes no list in the command packet, or if "
-                          "an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
+                  "an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
     PrintAndLogEx(NORMAL, "  - XXh : If an error occurs while processing a command that includes Service Code List or Block List "
-                          "in the command packet, the card returns a response by setting a number in the list to Status Flag1, "
-                          "indicating the location of the error. Have a look at the FeliCa User Manual for more information.");
+                  "in the command packet, the card returns a response by setting a number in the list to Status Flag1, "
+                  "indicating the location of the error.");
 }
 
-static void print_status_flag2_interpration(){
-    PrintAndLogEx(NORMAL, "Status Flag2:");
+static void print_status_flag2_interpration() {
+    PrintAndLogEx(NORMAL, "\nStatus Flag2:");
     PrintAndLogEx(NORMAL, "  - 00h : Indicates the successful completion of a command.");
     PrintAndLogEx(NORMAL, "  - 01h : The calculated result is either less than zero when the purse data is decremented, or exceeds 4"
-                          "Bytes when the purse data is incremented.");
+                  "Bytes when the purse data is incremented.");
     PrintAndLogEx(NORMAL, "  - 02h : The specified data exceeds the value of cashback data at cashback of purse.");
     PrintAndLogEx(NORMAL, "  - 70h : Memory error (fatal error).");
     PrintAndLogEx(NORMAL, "  - 71h : The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is "
-                          "performed as normal). The maximum number of rewrites can differ, depending on the product being used."
-                          " In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
+                  "performed as normal). The maximum number of rewrites can differ, depending on the product being used.");
+    PrintAndLogEx(NORMAL, "          In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
     PrintAndLogEx(NORMAL, "  - A1h : Illegal Number of Service: Number of Service or Number of Node specified by the command falls outside the range of the prescribed value.");
     PrintAndLogEx(NORMAL, "  - A2h : Illegal command packet (specified Number of Block): Number of Block specified by the command falls outside the range of the prescribed values for the product.");
     PrintAndLogEx(NORMAL, "  - A3h : Illegal Block List (specified order of Service): Service Code List Order specified by Block List Element falls outside the Number of Service specified by the "
-                          "command (or the Number of Service specified at the times of mutual authentication).");
+                  "command (or the Number of Service specified at the times of mutual authentication).");
     PrintAndLogEx(NORMAL, "  - A4h : Illegal Service type: Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
     PrintAndLogEx(NORMAL, "  - A5h : Access is not allowed: Area or Service specified by the command cannot be accessed. "
-                          "The parameter specified by the command does not satisfy the conditions for success.");
+                  "The parameter specified by the command does not satisfy the conditions for success.");
     PrintAndLogEx(NORMAL, "  - A6h : Illegal Service Code List: Target to be accessed, identified by Service Code List Order, specified by Block "
-                          "List Element does not exist. Or, Node specified by Node Code List does not exist.");
+                  "List Element does not exist. Or, Node specified by Node Code List does not exist.");
     PrintAndLogEx(NORMAL, "  - A7h : Illegal Block List (Access Mode): Access Mode specified by Block List Element is incorrect.");
     PrintAndLogEx(NORMAL, "  - A8h : Illegal Block Number Block Number (access to the specified data is inhibited): specified by Block List Element exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(NORMAL, "  - A9h : Data write failure: This is the error that occurs in issuance commands.");
@@ -153,7 +153,7 @@ static void print_status_flag2_interpration(){
     PrintAndLogEx(NORMAL, "  - ADh : Service exists already: This is the error that occurs in issuance commands.");
     PrintAndLogEx(NORMAL, "  - AEh : Illegal System Code: This is the error that occurs in issuance commands.");
     PrintAndLogEx(NORMAL, "  - AFh : Too many simultaneous cyclic write operations: Number of simultaneous write Blocks specified by the command to Cyclic Service "
-                          "exceeds the number of Blocks assigned to Service.");
+                  "exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(NORMAL, "  - C0h : Illegal Package Identifier: This is the error that occurs in issuance commands.");
     PrintAndLogEx(NORMAL, "  - C1h : Discrepancy of parameters inside and outside Package: This is the error that occurs in issuance commands.");
     PrintAndLogEx(NORMAL, "  - C2h : Command is disabled already: This is the error that occurs in issuance commands.");
@@ -162,9 +162,12 @@ static void print_status_flag2_interpration(){
 static int usage_hf_felica_read_without_encryption() {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to read Block Data from authentication-not-required Service.");
     PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
-    PrintAndLogEx(NORMAL, "       - Number of Service shall be a positive integer in the range of 1 to 16, inclusive.");
-    PrintAndLogEx(NORMAL, "       - Number of Block shall be less than or equal to the maximum number of Blocks that can be read simultaneously. "
-                          "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.");
+    PrintAndLogEx(NORMAL, "       - Number of Service: shall be a positive integer in the range of 1 to 16, inclusive.");
+    PrintAndLogEx(NORMAL, "       - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously. "
+                  "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used. Use as default 01");
+    PrintAndLogEx(NORMAL, "       - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
+    PrintAndLogEx(NORMAL, "              - Even when Service Code exists in the product, Service Code not referenced from Block List shall not be specified to Service Code List.");
+    PrintAndLogEx(NORMAL, "              - For existence or nonexistence of Service in a product, please check using the Request Service (or Request Service v2) command.");
     PrintAndLogEx(NORMAL, "       - Each Block List Element shall satisfy the following conditions:");
     PrintAndLogEx(NORMAL, "              - The value of Service Code List Order shall not exceed Number of Service.");
     PrintAndLogEx(NORMAL, "              - Access Mode shall be 000b.");
@@ -179,10 +182,12 @@ static int usage_hf_felica_read_without_encryption() {
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rdunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List (Little Endian) hex> <01 Number of Block hex> <0A0B Block List Element hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-    PrintAndLogEx(NORMAL, "       -b    get all Block List Elements of service");
+    PrintAndLogEx(NORMAL, "       -b    get all Block List Elements starting from 00 to FF - stops when a block return an error status flags");
+    PrintAndLogEx(NORMAL, "       -l    use 3-byte block list element block number");
     PrintAndLogEx(NORMAL, "\nExamples: ");
     PrintAndLogEx(NORMAL, "  hf felica rdunencrypted 01 8B00 01 8000");
-    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -i 01100910c11bc407 01 8B00 01 8000\n\n");
+    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -i 01100910c11bc407 01 8B00 01 8000");
+    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -b 01 8B00 01 8000\n\n");
     return PM3_SUCCESS;
 }
 
@@ -194,7 +199,7 @@ static int usage_hf_felica_read_without_encryption() {
 static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose) {
     if (WaitForResponseTimeout(CMD_ACK, resp, 2000)) {
         uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
-        if(verbose){
+        if (verbose) {
             PrintAndLogEx(NORMAL, "Client Received %i octets", len);
             if (!len || len < 2) {
                 PrintAndLogEx(ERR, "Could not receive data correctly!");
@@ -269,7 +274,7 @@ static int CmdHFFelicaReader(const char *Cmd) {
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
     uint16_t numbits = 0;
     clearCommandBuffer();
-    if(verbose){
+    if (verbose) {
         PrintAndLogEx(NORMAL, "Send Service Request Frame: %s", sprint_hex(data, datalen));
     }
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
@@ -284,7 +289,7 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
  * @param length which the parameter should have and will be tested against.
  * @return true if parameters was added.
  */
-static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_t dataPosition, uint8_t length){
+static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_t dataPosition, uint8_t length) {
     if (param_getlength(Cmd, paramCount) == length) {
         param_gethex(Cmd, paramCount, data + dataPosition, length);
         return true;
@@ -298,22 +303,17 @@ static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_
  * Prints read-without-encryption response.
  * @param rd_noCry_resp Response frame.
  */
-static void print_rd_noEncrpytion_response(felica_read_without_encryption_response_t *rd_noCry_resp){
-    if(rd_noCry_resp->status_flag1[0] == 00 && rd_noCry_resp->status_flag2[0] == 00){
-        char bl_number[4];
-        char *temp = sprint_hex(rd_noCry_resp->number_of_block, sizeof(rd_noCry_resp->number_of_block));
-        strcpy(bl_number, temp);
-
-        temp = sprint_hex(rd_noCry_resp->block_data, sizeof(rd_noCry_resp->block_data));
+static void print_rd_noEncrpytion_response(felica_read_without_encryption_response_t *rd_noCry_resp) {
+    if (rd_noCry_resp->status_flag1[0] == 00 && rd_noCry_resp->status_flag2[0] == 00) {
+        char *temp = sprint_hex(rd_noCry_resp->block_data, sizeof(rd_noCry_resp->block_data));
         char bl_data[256];
         strcpy(bl_data, temp);
 
         char bl_element_number[4];
         temp = sprint_hex(rd_noCry_resp->block_element_number, sizeof(rd_noCry_resp->block_element_number));
         strcpy(bl_element_number, temp);
-
-        PrintAndLogEx(NORMAL, "%s: %s: %s", bl_number, bl_element_number, bl_data);
-    }else{
+        PrintAndLogEx(NORMAL, "\t%s\t|  %s  ", bl_element_number, bl_data);
+    } else {
         PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rd_noCry_resp->IDm, sizeof(rd_noCry_resp->IDm)));
         PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(rd_noCry_resp->status_flag1, sizeof(rd_noCry_resp->status_flag1)));
         PrintAndLogEx(NORMAL, "Status Flag2: %s", sprint_hex(rd_noCry_resp->status_flag1, sizeof(rd_noCry_resp->status_flag1)));
@@ -354,7 +354,7 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
  * @param rd_noCry_resp frame in which the response will be saved
  * @return success if response was received.
  */
-int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp){
+int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp) {
     clear_and_send_command(flags, datalen, data, verbose);
     PacketResponseNG resp;
     if (!waitCmdFelica(0, &resp, verbose)) {
@@ -393,7 +393,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
                 case 'i':
                     paramCount++;
                     custom_IDm = true;
-                    if(!add_param(Cmd, paramCount, data, 3, 8)){
+                    if (!add_param(Cmd, paramCount, data, 3, 8)) {
                         return PM3_EINVARG;
                     }
                     break;
@@ -422,46 +422,48 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
     // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4
     uint8_t lengths[] = {2, 4, 2, 4};
     uint8_t dataPositions[] = {10, 11, 13, 14};
-    if(long_block_numbers){
+    if (long_block_numbers) {
         datalen += 1;
         lengths[3] = 6;
     }
-    for(int i=0; i < 4; i++){
-        if(add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])){
+    for (int i = 0; i < 4; i++) {
+        if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
             paramCount++;
-        }else{
+        } else {
             return PM3_EINVARG;
         }
     }
 
     flags |= FELICA_APPEND_CRC;
     flags |= FELICA_RAW;
-    if(all_block_list_elements){
+    if (all_block_list_elements) {
         uint16_t last_block_number = 0xFF;
-        if(long_block_numbers){
+        if (long_block_numbers) {
             last_block_number = 0xFFFF;
         }
-        for(int i=0x00; i < last_block_number; i++){
+        PrintAndLogEx(NORMAL, "Block Element\t|  Data  ");
+        for (int i = 0x00; i < last_block_number; i++) {
             data[15] = i;
             AddCrc(data, datalen);
             datalen += 2;
             felica_read_without_encryption_response_t rd_noCry_resp;
-            if((send_rd_unencrypted(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)){
-                if(rd_noCry_resp.status_flag1[0] == 00 && rd_noCry_resp.status_flag2[0] == 00){
+            if ((send_rd_unencrypted(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
+                if (rd_noCry_resp.status_flag1[0] == 00 && rd_noCry_resp.status_flag2[0] == 00) {
                     print_rd_noEncrpytion_response(&rd_noCry_resp);
-                }else{
+                } else {
                     break;
                 }
-            }else{
+            } else {
                 break;
             }
             datalen -= 2;
         }
-    }else{
+    } else {
         AddCrc(data, datalen);
         datalen += 2;
         felica_read_without_encryption_response_t rd_noCry_resp;
         send_rd_unencrypted(flags, datalen, data, 1, &rd_noCry_resp);
+        PrintAndLogEx(NORMAL, "Block Element\t|  Data  ");
         print_rd_noEncrpytion_response(&rd_noCry_resp);
     }
     return PM3_SUCCESS;
