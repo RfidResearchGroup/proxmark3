@@ -231,12 +231,12 @@ int CmdLFTune(const char *Cmd) {
                 }
                 break;
             case 'f': {
-                int freq = param_get32ex(Cmd, cmdp + 1, 125, 10);
-                divisor = LF_FREQ2DIV(freq);
-                if (divisor < 19) {
+                float freq = param_getfloat(Cmd, cmdp + 1, 125);
+                if ((freq < 47) || (freq > 600)) {
                     PrintAndLogEx(ERR, "freq must be between 47 and 600");
                     return PM3_EINVARG;
                 }
+                divisor = LF_FREQ2DIV(freq);
                 cmdp += 2;
                 break;
             }

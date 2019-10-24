@@ -551,6 +551,14 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base) {
         return deflt;
 }
 
+float param_getfloat(const char *line, int paramnum, float deflt) {
+    int bg, en;
+    if (!param_getptr(line, &bg, &en, paramnum))
+        return strtof(&line[bg], NULL);
+    else
+        return deflt;
+}
+
 int param_gethex(const char *line, int paramnum, uint8_t *data, int hexcnt) {
     int bg, en, i;
     uint32_t temp;
