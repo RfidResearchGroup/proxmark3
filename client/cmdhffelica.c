@@ -115,11 +115,58 @@ static int usage_hf_felica_request_response(void) {
     return PM3_SUCCESS;
 }
 
+static void print_status_flag1_interpretation(){
+    PrintAndLogEx(NORMAL, "Status Flag1:");
+    PrintAndLogEx(NORMAL, "  - 00h : Indicates the successful completion of a command.");
+    PrintAndLogEx(NORMAL, "  - FFh : If an error occurs during the processing of a command that includes no list in the command packet, or if "
+                          "an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
+    PrintAndLogEx(NORMAL, "  - XXh : If an error occurs while processing a command that includes Service Code List or Block List "
+                          "in the command packet, the card returns a response by setting a number in the list to Status Flag1, "
+                          "indicating the location of the error. Have a look at the FeliCa User Manual for more information.");
+}
+
+static void print_status_flag2_interpration(){
+    PrintAndLogEx(NORMAL, "Status Flag2:");
+    PrintAndLogEx(NORMAL, "  - 00h : Indicates the successful completion of a command.");
+    PrintAndLogEx(NORMAL, "  - 01h : The calculated result is either less than zero when the purse data is decremented, or exceeds 4"
+                          "Bytes when the purse data is incremented.");
+    PrintAndLogEx(NORMAL, "  - 02h : The specified data exceeds the value of cashback data at cashback of purse.");
+    PrintAndLogEx(NORMAL, "  - 70h : Memory error (fatal error).");
+    PrintAndLogEx(NORMAL, "  - 71h : The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is "
+                          "performed as normal). The maximum number of rewrites can differ, depending on the product being used."
+                          " In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
+    PrintAndLogEx(NORMAL, "  - A1h : Illegal Number of Service: Number of Service or Number of Node specified by the command falls outside the range of the prescribed value.");
+    PrintAndLogEx(NORMAL, "  - A2h : Illegal command packet (specified Number of Block): Number of Block specified by the command falls outside the range of the prescribed values for the product.");
+    PrintAndLogEx(NORMAL, "  - A3h : Illegal Block List (specified order of Service): Service Code List Order specified by Block List Element falls outside the Number of Service specified by the "
+                          "command (or the Number of Service specified at the times of mutual authentication).");
+    PrintAndLogEx(NORMAL, "  - A4h : Illegal Service type: Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
+    PrintAndLogEx(NORMAL, "  - A5h : Access is not allowed: Area or Service specified by the command cannot be accessed. "
+                          "The parameter specified by the command does not satisfy the conditions for success.");
+    PrintAndLogEx(NORMAL, "  - A6h : Illegal Service Code List: Target to be accessed, identified by Service Code List Order, specified by Block "
+                          "List Element does not exist. Or, Node specified by Node Code List does not exist.");
+    PrintAndLogEx(NORMAL, "  - A7h : Illegal Block List (Access Mode): Access Mode specified by Block List Element is incorrect.");
+    PrintAndLogEx(NORMAL, "  - A8h : Illegal Block Number Block Number (access to the specified data is inhibited): specified by Block List Element exceeds the number of Blocks assigned to Service.");
+    PrintAndLogEx(NORMAL, "  - A9h : Data write failure: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(NORMAL, "  - AAh : Key-change failure: Key change failed.");
+    PrintAndLogEx(NORMAL, "  - ABh : Illegal Package Parity or illegal Package MAC: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(NORMAL, "  - ACh : Illegal parameter: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(NORMAL, "  - ADh : Service exists already: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(NORMAL, "  - AEh : Illegal System Code: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(NORMAL, "  - AFh : Too many simultaneous cyclic write operations: Number of simultaneous write Blocks specified by the command to Cyclic Service "
+                          "exceeds the number of Blocks assigned to Service.");
+    PrintAndLogEx(NORMAL, "  - C0h : Illegal Package Identifier: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(NORMAL, "  - C1h : Discrepancy of parameters inside and outside Package: This is the error that occurs in issuance commands.");
+    PrintAndLogEx(NORMAL, "  - C2h : Command is disabled already: This is the error that occurs in issuance commands.");
+}
+
 static int usage_hf_felica_read_without_encryption(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to read Block Data from authentication-not-required Service.");
     PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
-
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica rdunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List hex> <01 Number of Block hex> <0A0B or 0A0B0C Block List Element hex>");
+    PrintAndLogEx(NORMAL, "       - Successful read: Card responses the block data");
+    PrintAndLogEx(NORMAL, "       - Unsuccessful read: Card responses with Status Flag1 and Flag2");
+    print_status_flag1_interpretation();
+    print_status_flag2_interpration();
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica rdunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List (Little Endian) hex> <01 Number of Block hex> <0A0B Block List Element hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
     PrintAndLogEx(NORMAL, "\nExamples: ");
@@ -330,7 +377,14 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         memcpy(&rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
 
         if (rd_noCry_resp.IDm[0] != 0) {
-            print_block_data(rd_noCry_resp.number_of_block, rd_noCry_resp.block_data, sizeof(rd_noCry_resp.block_data));
+            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rd_noCry_resp.IDm, sizeof(rd_noCry_resp.IDm)));
+            PrintAndLogEx(NORMAL, "  -Status Flag1: %s", sprint_hex(rd_noCry_resp.status_flag1, sizeof(rd_noCry_resp.status_flag1)));
+            PrintAndLogEx(NORMAL, "  -Status Flag2: %s", sprint_hex(rd_noCry_resp.status_flag2, sizeof(rd_noCry_resp.status_flag2)));
+            if(rd_noCry_resp.status_flag1[0] == 00 && rd_noCry_resp.status_flag2[0] == 00){
+                print_block_data(rd_noCry_resp.number_of_block, rd_noCry_resp.block_data, sizeof(rd_noCry_resp.block_data));
+            }else{
+                PrintAndLogEx(ERR, "Could not read data! See -h for more information about the status flags.");
+            }
         }
     }
     return PM3_SUCCESS;
