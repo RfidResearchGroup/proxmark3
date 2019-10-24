@@ -2418,7 +2418,7 @@ because of this, we can "sample" the data signal but we interpreate it to Manche
 This behavior looks very similar to old ancient Motorola Flexpass
 
 -----------------------------------------------------------------------
-According to patent:
+According to patent EP0040544B1:
 Operating freq
   reader 132 kHz
   tag     66 kHz
@@ -2453,7 +2453,7 @@ void Cotag(uint32_t arg0) {
 
     LED_A_ON();
 
-    LFSetupFPGAForADC(LF_DIVISOR(132), true);
+    LFSetupFPGAForADC(LF_FREQ2DIV(132), true);
 
     //clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);
