@@ -112,17 +112,19 @@ static int usage_hf_felica_request_response(void) {
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rqresponse [-h]");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-
     return PM3_SUCCESS;
 }
 
 static int usage_hf_felica_read_without_encryption(void) {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to read Block Data from authentication-not-required Service.");
     PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica rdNoEncryption [-h]");
+
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica rdunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List hex> <01 Number of Block hex> <0A0B or 0A0B0C Block List Element hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-
+    PrintAndLogEx(NORMAL, "\nExamples: ");
+    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted 01 8B00 01 8000");
+    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -i 01100910c11bc407 01 8B00 01 8000\n\n");
     return PM3_SUCCESS;
 }
 
@@ -211,7 +213,35 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
 }
 
 /**
- * Sends a request service frame to the pm3.
+ * Prints the given block data.
+ */
+static void print_block_data(uint8_t *number_of_block, uint8_t *block_data, size_t block_size){
+    PrintAndLogEx(NORMAL, "Block Nr.: %i", *number_of_block);
+    PrintAndLogEx(NORMAL, "Data: %s", sprint_hex(block_data, block_size));
+};
+
+
+/**
+ * Adds a parameter to the frame and checks if the parameter has the specific length.
+ * @param Cmd User input with the parameter.
+ * @param paramCount number of the parameter within the user input.
+ * @param data frame in which the data is stored.
+ * @param dataPosition position within frame where the data will be stored.
+ * @param length which the parameter should have and will be tested against.
+ * @return
+ */
+static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_t dataPosition, uint8_t length){
+    if (param_getlength(Cmd, paramCount) == length) {
+        param_gethex(Cmd, paramCount, data + dataPosition, length);
+        return true;
+    } else {
+        PrintAndLogEx(ERR, "Incorrect Parameter length! Param %i", paramCount);
+        return false;
+    }
+}
+
+/**
+ * Sends a request service frame to the pm3 and prints response.
  */
 void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data) {
     clear_and_send_command(flags, datalen, data);
@@ -234,17 +264,17 @@ void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data) {
 }
 
 /**
- * Command parser for rdNoEncryption.
+ * Command parser for rdunencrypted.
  * @param Cmd input data of the user.
  * @return client result code.
  */
 static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
     if (strlen(Cmd) < 4)
-        return usage_hf_felica_read_without_encryption;
+        return usage_hf_felica_read_without_encryption();
     uint8_t data[PM3_CMD_DATA_SIZE];
     bool custom_IDm = false;
     strip_cmds(Cmd);
-    uint16_t datalen = 17; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
+    uint16_t datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
     uint8_t paramCount = 0;
     uint8_t flags = 0;
     int i = 0;
@@ -257,10 +287,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
                 case 'i':
                     paramCount++;
                     custom_IDm = true;
-                    if (param_getlength(Cmd, paramCount) == 16) {
-                        param_gethex(Cmd, paramCount++, data + 2, 16);
-                    } else {
-                        PrintAndLogEx(ERR, "Incorrect IDm length! IDm must be 8-Byte.");
+                    if(!add_param(Cmd, paramCount, data, 3, 8)){
                         return PM3_EINVARG;
                     }
                     break;
@@ -268,8 +295,44 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         }
         i++;
     }
+    data[0] = 0x10; // Static length
+    data[1] = 0x06; // Command ID
+    if (!custom_IDm) {
+        if (!add_last_IDm(2, data)) {
+            PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
+            return PM3_EINVARG;
+        } else {
+            PrintAndLogEx(INFO, "Used last known IDm.", sprint_hex(data, datalen));
+        }
+    }
+    // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4
+    uint8_t lengths[] = {2, 4, 2, 4};
+    uint8_t dataPositions[] = {10, 11, 13, 14};
+    for(int i=0; i < 4; i++){
+        if(add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])){
+            paramCount++;
+        }else{
+            return PM3_EINVARG;
+        }
+    }
+    AddCrc(data, datalen);
+    datalen += 2;
+    flags |= FELICA_APPEND_CRC;
+    flags |= FELICA_RAW;
+    clear_and_send_command(flags, datalen, data);
+    PacketResponseNG resp;
+    if (!waitCmdFelica(0, &resp)) {
+        PrintAndLogEx(ERR, "\nGot no Response from card");
+        return PM3_ERFTRANS;
+    } else {
+        PrintAndLogEx(SUCCESS, "\nGot Response from card");
+        felica_read_without_encryption_response_t rd_noCry_resp;
+        memcpy(&rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
 
-
+        if (rd_noCry_resp.IDm[0] != 0) {
+            print_block_data(rd_noCry_resp.number_of_block, rd_noCry_resp.block_data, sizeof(rd_noCry_resp.block_data));
+        }
+    }
     return PM3_SUCCESS;
 }
 
@@ -947,23 +1010,23 @@ static command_t CommandTable[] = {
     //{"dump",              CmdHFFelicaDump,                 IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",           CmdHFFelicaRequestService,       IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",          CmdHFFelicaRequestResponse,      IfPm3Felica,     "verify the existence of a card and its Mode."},
-    {"rdNoEncryption",      CmdHFFelicaReadWithoutEncryption,    IfPm3Felica,     "read Block Data from authentication-not-required Service."},
-    {"wrNoEncryption",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-required Service."},
-    //{"searchSvCode",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire Area Code and Service Code."},
-    //{"rqSysCode",         CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire System Code registered to the card."},
+    {"rdunencrypted",      CmdHFFelicaReadWithoutEncryption,    IfPm3Felica,     "read Block Data from authentication-not-required Service."},
+    {"wrunencrypted",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-not-required Service."},
+    //{"scsvcode",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire Area Code and Service Code."},
+    //{"rqsyscode",         CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire System Code registered to the card."},
     //{"auth1",             CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "authenticate a card."},
     //{"auth2",             CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
     //{"read",              CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-required Service."},
     //{"write",             CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-required Service."},
-    //{"searchSvCodeV2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "verify the existence of Area or Service, and to acquire Key Version."},
-    //{"getSysStatus",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire the setup information in System."},
-    //{"rqSpecVer",         CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire the version of card OS."},
-    //{"resetMode",         CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "reset Mode to Mode 0."},
-    //{"auth1V2",           CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "authenticate a card."},
-    //{"auth2V2",           CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
-    //{"readV2",            CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-required Service."},
-    //{"writeV2",           CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to authentication-required Service."},
-    //{"upRandomID",        CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "update Random ID (IDr)."},
+    //{"scsvcodev2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "verify the existence of Area or Service, and to acquire Key Version."},
+    //{"getsysstatus",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire the setup information in System."},
+    //{"rqspecver",         CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire the version of card OS."},
+    //{"resetmode",         CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "reset Mode to Mode 0."},
+    //{"auth1v2",           CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "authenticate a card."},
+    //{"auth2v2",           CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
+    //{"readv2",            CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-required Service."},
+    //{"writev2",           CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to authentication-required Service."},
+    //{"uprandomid",        CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "update Random ID (IDr)."},
     {"----------- FeliCa Light -----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"litesim",             CmdHFFelicaSimLite,   IfPm3Felica,     "<NDEF2> - only reply to poll request"},
     {"litedump",            CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
