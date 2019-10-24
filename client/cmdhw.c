@@ -366,7 +366,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Type: %s", asBuff);
 }
 
-int CmdDbg(const char *Cmd) {
+static int CmdDbg(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_dbg();

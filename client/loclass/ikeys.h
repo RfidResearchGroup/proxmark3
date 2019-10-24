@@ -38,6 +38,7 @@
 #ifndef IKEYS_H
 #define IKEYS_H
 
+#include <inttypes.h>
 
 /**
  * @brief

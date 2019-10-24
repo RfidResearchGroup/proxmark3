@@ -426,7 +426,7 @@ static int CmdLfNedapGen(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdLFNedapClone(const char *Cmd) {
+static int CmdLFNedapClone(const char *Cmd) {
     uint8_t max;
     uint32_t blocks[5] = {0};
 

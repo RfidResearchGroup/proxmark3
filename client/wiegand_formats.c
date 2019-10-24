@@ -650,7 +650,7 @@ bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed) {
     return FormatTable[format_idx].Pack(card, packed);
 }
 
-void HIDDisplayUnpackedCard(wiegand_card_t *card, const cardformat_t format) {
+static void HIDDisplayUnpackedCard(wiegand_card_t *card, const cardformat_t format) {
 
     /*
         PrintAndLogEx(SUCCESS, "       Format: %s (%s)", format.Name, format.Descrp);

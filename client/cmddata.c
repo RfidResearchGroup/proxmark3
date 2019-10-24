@@ -508,7 +508,7 @@ int CmdGetBitStream(const char *Cmd) {
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
-int CmdConvertBitStream(const char *Cmd) {
+static int CmdConvertBitStream(const char *Cmd) {
 
     if (isGraphBitstream()) {
         convertGraphFromBitstream();

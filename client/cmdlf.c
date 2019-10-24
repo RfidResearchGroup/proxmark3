@@ -213,7 +213,7 @@ static int usage_lf_tune(void) {
     return PM3_SUCCESS;
 }
 
-int CmdLFTune(const char *Cmd) {
+static int CmdLFTune(const char *Cmd) {
     int iter = 0;
     uint8_t divisor =  LF_DIVISOR_125;//Frequency divisor
     bool errors = false;
