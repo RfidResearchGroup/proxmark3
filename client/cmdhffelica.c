@@ -19,11 +19,17 @@
 #include "comms.h"
 #include "cmdtrace.h"
 #include "crc16.h"
-
+#include "util.h"
 #include "ui.h"
 #include "mifare.h"     // felica_card_select_t struct
+#define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
 static int CmdHelp(const char *Cmd);
+static felica_card_select_t last_known_card;
+
+static void set_last_known_card(felica_card_select_t card) {
+    last_known_card = card;
+}
 
 /*
 static int usage_hf_felica_sim(void) {
@@ -43,7 +49,7 @@ static int usage_hf_felica_sim(void) {
 static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
     PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list felica'");
-    PrintAndLogEx(NORMAL, "Usage:  hf felica sniff <s > <t>");
+    PrintAndLogEx(NORMAL, "Usage:  hf felica sniff <s> <t>");
     PrintAndLogEx(NORMAL, "      s       samples to skip (decimal)");
     PrintAndLogEx(NORMAL, "      t       triggers to skip (decimal)");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -81,15 +87,90 @@ static int usage_hf_felica_raw(void) {
     return PM3_SUCCESS;
 }
 
-static int usage_hf_felica_dump(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf felica dump [-h] <outputfile>");
+static int usage_hf_felica_request_service(void) {
+    PrintAndLogEx(NORMAL, "\nInfo: Use this command to verify the existence of Area and Service, and to acquire Key Version:");
+    PrintAndLogEx(NORMAL, "       - When the specified Area or Service exists, the card returns Key Version.");
+    PrintAndLogEx(NORMAL, "       - When the specified Area or Service does not exist, the card returns FFFFh as Key Version.");
+    PrintAndLogEx(NORMAL, "For Node Code List of a command packet, Area Code or Service Code of the target "
+                  "of acquisition of Key Version shall be enumerated in Little Endian format. "
+                  "If Key Version of System is the target of acquisition, FFFFh shall be specified "
+                  "in the command packet.");
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica rqservice [-h] [-i] <01 Number of Node hex> <0A 0B Node Code List hex (Little Endian)>");
     PrintAndLogEx(NORMAL, "       -h    this help");
+    PrintAndLogEx(NORMAL, "       -i    <0A 0B 0C ... hex> set custom IDm to use");
+    PrintAndLogEx(NORMAL, "       -a    auto node number mode - iterates through all possible nodes 1 < n < 32");
+    PrintAndLogEx(NORMAL, "\nExamples: ");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice 01 FFFF");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice -a FFFF");
+    PrintAndLogEx(NORMAL, "  hf felica rqservice -i 01100910c11bc407 01 FFFF \n\n");
     return PM3_SUCCESS;
 }
 
+/**
+ * Wait for response from pm3 or timeout.
+ * Checks if receveid bytes have a valid CRC.
+ */
+static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp) {
+    if (WaitForResponseTimeout(CMD_ACK, resp, 2000)) {
+        uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
+        PrintAndLogEx(NORMAL, "Client Received %i octets", len);
+        if (!len || len < 2) {
+            PrintAndLogEx(ERR, "Could not receive data correctly!");
+        }
+        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp->data.asBytes, len));
+        if (!check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2)) {
+            PrintAndLogEx(WARNING, "Wrong or no CRC bytes");
+        }
+        return true;
+    } else {
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+    }
+    return false;
+}
+
+/*
+ * Counts and sets the number of parameters.
+ */
+static void strip_cmds(const char *Cmd) {
+    while (*Cmd == ' ' || *Cmd == '\t') {
+        Cmd++;
+    }
+}
+
+/**
+ * Converts integer value to equivalent hex value.
+ * Examples: 1 = 1, 11 = B
+ * @param number number of hex bytes.
+ * @return number as hex value.
+ */
+static uint8_t int_to_hex(uint16_t *number) {
+    uint32_t hex;
+    char dataLengthChar[5];
+    sprintf(dataLengthChar, "%x", *number);
+    sscanf(dataLengthChar, "%x", &hex);
+    return (uint8_t)(hex & 0xff);
+}
+
+/**
+ * Adds the last known IDm (8-Byte) to the data frame.
+ * @param position start of where the IDm is added within the frame.
+ * @param data frame in where the IDM is added.
+ * @return true if IDm was added;
+ */
+static bool add_last_IDm(uint8_t position, uint8_t *data) {
+    if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
+        for (int i = 0; i < 8; i++) {
+            uint16_t number = (uint16_t)last_known_card.IDm[i];
+            data[position + i] = int_to_hex(&number);
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
 static int CmdHFFelicaList(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list felica' instead");
+    (void)Cmd;
     CmdTraceList("felica");
     return PM3_SUCCESS;
 }
@@ -99,9 +180,131 @@ static int CmdHFFelicaReader(const char *Cmd) {
     return readFelicaUid(verbose);
 }
 
-static int CmdHFFelicaDump(const char *Cmd) {
-    if (strlen(Cmd) < 1) return usage_hf_felica_dump();
-    return dump(*Cmd);
+/**
+ * Sends a request service frame to the pm3.
+ */
+void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data) {
+    uint16_t numbits = 0;
+    clearCommandBuffer();
+    PrintAndLogEx(NORMAL, "Send Service Request Frame: %s", sprint_hex(data, datalen));
+    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
+    PacketResponseNG resp;
+    if (datalen > 0) {
+        if (!waitCmdFelica(0, &resp)) {
+            PrintAndLogEx(ERR, "\nGot no Response from card");
+            return;
+        }
+        felica_request_service_response_t rqs_response;
+        memcpy(&rqs_response, (felica_request_service_response_t *)resp.data.asBytes, sizeof(felica_request_service_response_t));
+
+        if (rqs_response.IDm[0] != 0) {
+            PrintAndLogEx(SUCCESS, "\nGot Service Response:");
+            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rqs_response.IDm, sizeof(rqs_response.IDm)));
+            PrintAndLogEx(NORMAL, "  -Node Number: %s", sprint_hex(rqs_response.node_number, sizeof(rqs_response.node_number)));
+            PrintAndLogEx(NORMAL, "  -Node Key Version List: %s\n", sprint_hex(rqs_response.node_key_versions, sizeof(rqs_response.node_key_versions)));
+        }
+    }
+}
+
+/**
+ * Command parser for rqservice.
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaRequestService(const char *Cmd) {
+    if (strlen(Cmd) < 2) return usage_hf_felica_request_service();
+    int i = 0;
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    bool custom_IDm = false;
+    bool all_nodes = false;
+    uint16_t datalen = 13; // length (1) + CMD (1) + IDm(8) + Node Number (1) + Node Code List (2)
+    uint8_t flags = 0;
+    uint8_t paramCount = 0;
+    strip_cmds(Cmd);
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
+                case 'H':
+                case 'h':
+                    return usage_hf_felica_request_service();
+                case 'i':
+                    paramCount++;
+                    custom_IDm = true;
+                    if (param_getlength(Cmd, paramCount) == 16) {
+                        param_gethex(Cmd, paramCount++, data + 2, 16);
+                    } else {
+                        PrintAndLogEx(ERR, "Incorrect IDm length! IDm must be 8-Byte.");
+                        return PM3_EINVARG;
+                    }
+                    i += 8;
+                    break;
+                case 'a':
+                    paramCount++;
+                    all_nodes = true;
+                    break;
+                default:
+                    return usage_hf_felica_request_service();
+            }
+            i += 2;
+        }
+        i++;
+    }
+    if (!all_nodes) {
+        // Node Number
+        if (param_getlength(Cmd, paramCount) == 2) {
+            param_gethex(Cmd, paramCount++, data + 10, 2);
+        } else {
+            PrintAndLogEx(ERR, "Incorrect Node number length!");
+            return PM3_EINVARG;
+        }
+    }
+
+    // Node Code List
+    if (param_getlength(Cmd, paramCount) == 4) {
+        param_gethex(Cmd, paramCount++, data + 11, 4);
+    } else {
+        PrintAndLogEx(ERR, "Incorrect Node Code List length!");
+        return PM3_EINVARG;
+    }
+
+    flags |= FELICA_APPEND_CRC;
+    if (custom_IDm) {
+        flags |= FELICA_NO_SELECT;
+    }
+    if (datalen > 0) {
+        flags |= FELICA_RAW;
+    }
+    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
+    if (!custom_IDm) {
+        if (!add_last_IDm(2, data)) {
+            PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
+            return PM3_EINVARG;
+        } else {
+            PrintAndLogEx(INFO, "Used last known IDm.", sprint_hex(data, datalen));
+        }
+    }
+    data[0] = int_to_hex(&datalen);
+    data[1] = 0x02; // Service Request Command ID
+    if (all_nodes) {
+        for (uint16_t y = 1; y < 32; y++) {
+            data[10] = int_to_hex(&y);
+            AddCrc(data, datalen);
+            datalen += 2;
+            send_request_service(flags, datalen, data);
+            datalen -= 2; // Remove CRC bytes before adding new ones
+        }
+    } else {
+        AddCrc(data, datalen);
+        datalen += 2;
+        send_request_service(flags, datalen, data);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
+    PrintAndLogEx(NORMAL, "Feature not implemented Yet!");
+    return PM3_SUCCESS;
 }
 
 // simulate iso18092 / FeliCa tag
@@ -172,7 +375,6 @@ static int CmdHFFelicaSim(const char *Cmd) {
 */
 
 static int CmdHFFelicaSniff(const char *Cmd) {
-
     uint8_t cmdp = 0;
     uint64_t samples2skip = 0;
     uint64_t triggers2skip = 0;
@@ -209,7 +411,6 @@ static int CmdHFFelicaSniff(const char *Cmd) {
 
 // uid  hex
 static int CmdHFFelicaSimLite(const char *Cmd) {
-
     uint64_t uid = param_get64ex(Cmd, 0, 0, 16);
 
     if (!uid)
@@ -436,19 +637,6 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void waitCmdFelica(uint8_t iSelect) {
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        uint16_t len = iSelect ? (resp.oldarg[1] & 0xffff) : (resp.oldarg[0] & 0xffff);
-        PrintAndLogEx(NORMAL, "Client Received %i octets", len);
-        if (!len)
-            return;
-        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
-    } else {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-    }
-}
-
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
     bool reply = 1;
     bool crc = false;
@@ -525,12 +713,9 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
-        uint8_t b1, b2;
-        compute_crc(CRC_FELICA, data, datalen, &b1, &b2);
-        // TODO FIND OUT IF FeliCa Light has another CRC order - Order changed for FeliCa Standard cards
-        data[datalen++] = b2;
-        data[datalen++] = b1;
+    if (crc) {
+        AddCrc(data, datalen);
+        datalen += 2;
     }
 
     uint8_t flags = 0;
@@ -552,15 +737,18 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
+    PrintAndLogEx(NORMAL, "Data: %s", sprint_hex(data, datalen));
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 
     if (reply) {
         if (active_select) {
             PrintAndLogEx(NORMAL, "Active select wait for FeliCa.");
-            waitCmdFelica(1);
+            PacketResponseNG resp_IDm;
+            waitCmdFelica(1, &resp_IDm);
         }
         if (datalen > 0) {
-            waitCmdFelica(0);
+            PacketResponseNG resp_frame;
+            waitCmdFelica(0, &resp_frame);
         }
     }
     return PM3_SUCCESS;
@@ -573,7 +761,6 @@ int readFelicaUid(bool verbose) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
-        //SendCommandMIX(CMD_HF_FELICA_COMMAND, 0, 0, 0, NULL, 0);
         return PM3_ESOFT;
     }
 
@@ -610,33 +797,45 @@ int readFelicaUid(bool verbose) {
             PrintAndLogEx(NORMAL, "  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
 
             PrintAndLogEx(NORMAL, "SERVICE CODE %s", sprint_hex(card.servicecode, sizeof(card.servicecode)));
+            set_last_known_card(card);
             break;
         }
     }
     return PM3_SUCCESS;
 }
 
-int dump(const char *Cmd) {
-    clearCommandBuffer();
-    char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hf_felica_dumplite();
-
-    // TODO FINISH THIS METHOD
-    PrintAndLogEx(SUCCESS, "NOT IMPLEMENTED YET!");
-
-    return PM3_SUCCESS;
-}
-
 static command_t CommandTable[] = {
+    {"----------- General -----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"help",      CmdHelp,              AlwaysAvailable, "This help"},
     {"list",      CmdHFFelicaList,      AlwaysAvailable,     "List ISO 18092/FeliCa history"},
     {"reader",    CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
-//    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"},
-    {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "sniff ISO 18092/Felica traffic"},
+    {"sniff",     CmdHFFelicaSniff,     IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"raw",       CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
-    {"dump",    CmdHFFelicaDump,    IfPm3Felica,     "Wait for and try dumping Felica"},
+    {"----------- FeliCa Standard (support in progress) -----------", CmdHelp,                IfPm3Iso14443a,  ""},
+    //{"dump",    CmdHFFelicaDump,    IfPm3Felica,     "Wait for and try dumping FeliCa"},
+    {"rqservice",    CmdHFFelicaRequestService,    IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
+    {"rqresponse",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "verify the existence of a card and its Mode."},
+    //{"rdNoEncryption",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-not-required Service."},
+    //{"wrNoEncryption",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-required Service."},
+    //{"searchSvCode",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire Area Code and Service Code."},
+    //{"rqSysCode",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire System Code registered to the card."},
+    //{"auth1",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "authenticate a card."},
+    //{"auth2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
+    //{"read",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-required Service."},
+    //{"write",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-required Service."},
+    //{"searchSvCodeV2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "verify the existence of Area or Service, and to acquire Key Version."},
+    //{"getSysStatus",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire the setup information in System."},
+    //{"rqSpecVer",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire the version of card OS."},
+    //{"resetMode",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "reset Mode to Mode 0."},
+    //{"auth1V2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "authenticate a card."},
+    //{"auth2V2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
+    //{"readV2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-required Service."},
+    //{"writeV2",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to authentication-required Service."},
+    //{"upRandomID",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "update Random ID (IDr)."},
+    {"----------- FeliCa Light -----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"litesim",   CmdHFFelicaSimLite,   IfPm3Felica,     "<NDEF2> - only reply to poll request"},
     {"litedump",  CmdHFFelicaDumpLite,  IfPm3Felica,     "Wait for and try dumping FelicaLite"},
+    //    {"sim",       CmdHFFelicaSim,       IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}
     {NULL, NULL, NULL, NULL}
 };
 

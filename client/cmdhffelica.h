@@ -14,8 +14,6 @@
 #include "common.h"
 
 int CmdHFFelica(const char *Cmd);
-
 int readFelicaUid(bool verbose);
-
-int dump();
+void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data);
 #endif
