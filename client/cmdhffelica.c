@@ -116,6 +116,16 @@ static int usage_hf_felica_request_response(void) {
     return PM3_SUCCESS;
 }
 
+static int usage_hf_felica_read_without_encryption(void) {
+    PrintAndLogEx(NORMAL, "\nInfo: Use this command to read Block Data from authentication-not-required Service.");
+    PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica rdNoEncryption [-h]");
+    PrintAndLogEx(NORMAL, "       -h    this help");
+    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
+
+    return PM3_SUCCESS;
+}
+
 /**
  * Wait for response from pm3 or timeout.
  * Checks if receveid bytes have a valid CRC.
@@ -221,6 +231,46 @@ void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data) {
             PrintAndLogEx(NORMAL, "  -Node Key Version List: %s\n", sprint_hex(rqs_response.node_key_versions, sizeof(rqs_response.node_key_versions)));
         }
     }
+}
+
+/**
+ * Command parser for rdNoEncryption.
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
+    if (strlen(Cmd) < 4)
+        return usage_hf_felica_read_without_encryption;
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    bool custom_IDm = false;
+    strip_cmds(Cmd);
+    uint16_t datalen = 17; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
+    uint8_t paramCount = 0;
+    uint8_t flags = 0;
+    int i = 0;
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
+                case 'H':
+                case 'h':
+                    return usage_hf_felica_request_response();
+                case 'i':
+                    paramCount++;
+                    custom_IDm = true;
+                    if (param_getlength(Cmd, paramCount) == 16) {
+                        param_gethex(Cmd, paramCount++, data + 2, 16);
+                    } else {
+                        PrintAndLogEx(ERR, "Incorrect IDm length! IDm must be 8-Byte.");
+                        return PM3_EINVARG;
+                    }
+                    break;
+            }
+        }
+        i++;
+    }
+
+
+    return PM3_SUCCESS;
 }
 
 /**
@@ -897,8 +947,8 @@ static command_t CommandTable[] = {
     //{"dump",              CmdHFFelicaDump,                 IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",           CmdHFFelicaRequestService,       IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",          CmdHFFelicaRequestResponse,      IfPm3Felica,     "verify the existence of a card and its Mode."},
-    {"rdNoEncryption",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "read Block Data from authentication-not-required Service."},
-    //{"wrNoEncryption",    CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-required Service."},
+    {"rdNoEncryption",      CmdHFFelicaReadWithoutEncryption,    IfPm3Felica,     "read Block Data from authentication-not-required Service."},
+    {"wrNoEncryption",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "write Block Data to an authentication-required Service."},
     //{"searchSvCode",      CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire Area Code and Service Code."},
     //{"rqSysCode",         CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "acquire System Code registered to the card."},
     //{"auth1",             CmdHFFelicaNotImplementedYet,    IfPm3Felica,     "authenticate a card."},
