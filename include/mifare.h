@@ -195,6 +195,7 @@ typedef struct {
     uint8_t status_flag2[1];
     uint8_t number_of_block[1];
     uint8_t block_data[16];
+    uint8_t block_element_number[1];
 } PACKED felica_read_without_encryption_response_t;
 
 typedef enum FELICA_COMMAND {

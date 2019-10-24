@@ -159,9 +159,19 @@ static void print_status_flag2_interpration(){
     PrintAndLogEx(NORMAL, "  - C2h : Command is disabled already: This is the error that occurs in issuance commands.");
 }
 
-static int usage_hf_felica_read_without_encryption(void) {
+static int usage_hf_felica_read_without_encryption() {
     PrintAndLogEx(NORMAL, "\nInfo: Use this command to read Block Data from authentication-not-required Service.");
     PrintAndLogEx(NORMAL, "       - Mode shall be Mode0.");
+    PrintAndLogEx(NORMAL, "       - Number of Service shall be a positive integer in the range of 1 to 16, inclusive.");
+    PrintAndLogEx(NORMAL, "       - Number of Block shall be less than or equal to the maximum number of Blocks that can be read simultaneously. "
+                          "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.");
+    PrintAndLogEx(NORMAL, "       - Each Block List Element shall satisfy the following conditions:");
+    PrintAndLogEx(NORMAL, "              - The value of Service Code List Order shall not exceed Number of Service.");
+    PrintAndLogEx(NORMAL, "              - Access Mode shall be 000b.");
+    PrintAndLogEx(NORMAL, "              - The target specified by Service Code shall not be Area or System.");
+    PrintAndLogEx(NORMAL, "              - Service specified in Service Code List shall exist in System.");
+    PrintAndLogEx(NORMAL, "              - Service Attribute of Service specified in Service Code List shall be authentication-not-required Service.");
+    PrintAndLogEx(NORMAL, "              - Block Number shall be in the range of the number of Blocks assigned to the specified Service.");
     PrintAndLogEx(NORMAL, "       - Successful read: Card responses the block data");
     PrintAndLogEx(NORMAL, "       - Unsuccessful read: Card responses with Status Flag1 and Flag2");
     print_status_flag1_interpretation();
@@ -169,6 +179,7 @@ static int usage_hf_felica_read_without_encryption(void) {
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rdunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List (Little Endian) hex> <01 Number of Block hex> <0A0B Block List Element hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
+    PrintAndLogEx(NORMAL, "       -b    get all Block List Elements of service");
     PrintAndLogEx(NORMAL, "\nExamples: ");
     PrintAndLogEx(NORMAL, "  hf felica rdunencrypted 01 8B00 01 8000");
     PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -i 01100910c11bc407 01 8B00 01 8000\n\n");
@@ -178,17 +189,20 @@ static int usage_hf_felica_read_without_encryption(void) {
 /**
  * Wait for response from pm3 or timeout.
  * Checks if receveid bytes have a valid CRC.
+ * @param verbose prints out the response received.
  */
-static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp) {
+static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose) {
     if (WaitForResponseTimeout(CMD_ACK, resp, 2000)) {
         uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
-        PrintAndLogEx(NORMAL, "Client Received %i octets", len);
-        if (!len || len < 2) {
-            PrintAndLogEx(ERR, "Could not receive data correctly!");
-        }
-        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp->data.asBytes, len));
-        if (!check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2)) {
-            PrintAndLogEx(WARNING, "Wrong or no CRC bytes");
+        if(verbose){
+            PrintAndLogEx(NORMAL, "Client Received %i octets", len);
+            if (!len || len < 2) {
+                PrintAndLogEx(ERR, "Could not receive data correctly!");
+            }
+            PrintAndLogEx(NORMAL, "%s", sprint_hex(resp->data.asBytes, len));
+            if (!check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2)) {
+                PrintAndLogEx(WARNING, "Wrong or no CRC bytes");
+            }
         }
         return true;
     } else {
@@ -252,21 +266,14 @@ static int CmdHFFelicaReader(const char *Cmd) {
 /**
  * Clears command buffer and sends the given data to pm3 with mix mode.
  */
-static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data) {
+static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
     uint16_t numbits = 0;
     clearCommandBuffer();
-    PrintAndLogEx(NORMAL, "Send Service Request Frame: %s", sprint_hex(data, datalen));
+    if(verbose){
+        PrintAndLogEx(NORMAL, "Send Service Request Frame: %s", sprint_hex(data, datalen));
+    }
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 }
-
-/**
- * Prints the given block data.
- */
-static void print_block_data(uint8_t *number_of_block, uint8_t *block_data, size_t block_size){
-    PrintAndLogEx(NORMAL, "Block Nr.: %i", *number_of_block);
-    PrintAndLogEx(NORMAL, "Data: %s", sprint_hex(block_data, block_size));
-};
-
 
 /**
  * Adds a parameter to the frame and checks if the parameter has the specific length.
@@ -275,7 +282,7 @@ static void print_block_data(uint8_t *number_of_block, uint8_t *block_data, size
  * @param data frame in which the data is stored.
  * @param dataPosition position within frame where the data will be stored.
  * @param length which the parameter should have and will be tested against.
- * @return
+ * @return true if parameters was added.
  */
 static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_t dataPosition, uint8_t length){
     if (param_getlength(Cmd, paramCount) == length) {
@@ -288,15 +295,41 @@ static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_
 }
 
 /**
+ * Prints read-without-encryption response.
+ * @param rd_noCry_resp Response frame.
+ */
+static void print_rd_noEncrpytion_response(felica_read_without_encryption_response_t *rd_noCry_resp){
+    if(rd_noCry_resp->status_flag1[0] == 00 && rd_noCry_resp->status_flag2[0] == 00){
+        char bl_number[4];
+        char *temp = sprint_hex(rd_noCry_resp->number_of_block, sizeof(rd_noCry_resp->number_of_block));
+        strcpy(bl_number, temp);
+
+        temp = sprint_hex(rd_noCry_resp->block_data, sizeof(rd_noCry_resp->block_data));
+        char bl_data[256];
+        strcpy(bl_data, temp);
+
+        char bl_element_number[4];
+        temp = sprint_hex(rd_noCry_resp->block_element_number, sizeof(rd_noCry_resp->block_element_number));
+        strcpy(bl_element_number, temp);
+
+        PrintAndLogEx(NORMAL, "%s: %s: %s", bl_number, bl_element_number, bl_data);
+    }else{
+        PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rd_noCry_resp->IDm, sizeof(rd_noCry_resp->IDm)));
+        PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(rd_noCry_resp->status_flag1, sizeof(rd_noCry_resp->status_flag1)));
+        PrintAndLogEx(NORMAL, "Status Flag2: %s", sprint_hex(rd_noCry_resp->status_flag1, sizeof(rd_noCry_resp->status_flag1)));
+    }
+}
+
+/**
  * Sends a request service frame to the pm3 and prints response.
  */
-void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data) {
-    clear_and_send_command(flags, datalen, data);
+int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
+    clear_and_send_command(flags, datalen, data, verbose);
     PacketResponseNG resp;
     if (datalen > 0) {
-        if (!waitCmdFelica(0, &resp)) {
+        if (!waitCmdFelica(0, &resp, 1)) {
             PrintAndLogEx(ERR, "\nGot no Response from card");
-            return;
+            return PM3_ERFTRANS;
         }
         felica_request_service_response_t rqs_response;
         memcpy(&rqs_response, (felica_request_service_response_t *)resp.data.asBytes, sizeof(felica_request_service_response_t));
@@ -307,6 +340,30 @@ void send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data) {
             PrintAndLogEx(NORMAL, "  -Node Number: %s", sprint_hex(rqs_response.node_number, sizeof(rqs_response.node_number)));
             PrintAndLogEx(NORMAL, "  -Node Key Version List: %s\n", sprint_hex(rqs_response.node_key_versions, sizeof(rqs_response.node_key_versions)));
         }
+        return PM3_SUCCESS;
+    }
+    return PM3_ERFTRANS;
+}
+
+/**
+ * Sends a read_without_encryption frame to the pm3 and prints response.
+ * @param flags to use for pm3 communication.
+ * @param datalen frame length.
+ * @param data frame to be send.
+ * @param verbose display additional output.
+ * @param rd_noCry_resp frame in which the response will be saved
+ * @return success if response was received.
+ */
+int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp){
+    clear_and_send_command(flags, datalen, data, verbose);
+    PacketResponseNG resp;
+    if (!waitCmdFelica(0, &resp, verbose)) {
+        PrintAndLogEx(ERR, "\nGot no Response from card");
+        return PM3_ERFTRANS;
+    } else {
+        memcpy(rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
+        rd_noCry_resp->block_element_number[0] = data[15];
+        return PM3_SUCCESS;
     }
 }
 
@@ -324,6 +381,8 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
     uint16_t datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
     uint8_t paramCount = 0;
     uint8_t flags = 0;
+    uint8_t all_block_list_elements = false;
+    uint8_t long_block_numbers = false;
     int i = 0;
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
@@ -337,6 +396,14 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
                     if(!add_param(Cmd, paramCount, data, 3, 8)){
                         return PM3_EINVARG;
                     }
+                    break;
+                case 'b':
+                    paramCount++;
+                    all_block_list_elements = true;
+                    break;
+                case 'l':
+                    paramCount++;
+                    long_block_numbers = true;
                     break;
             }
         }
@@ -355,6 +422,10 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
     // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4
     uint8_t lengths[] = {2, 4, 2, 4};
     uint8_t dataPositions[] = {10, 11, 13, 14};
+    if(long_block_numbers){
+        datalen += 1;
+        lengths[3] = 6;
+    }
     for(int i=0; i < 4; i++){
         if(add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])){
             paramCount++;
@@ -362,30 +433,36 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
             return PM3_EINVARG;
         }
     }
-    AddCrc(data, datalen);
-    datalen += 2;
+
     flags |= FELICA_APPEND_CRC;
     flags |= FELICA_RAW;
-    clear_and_send_command(flags, datalen, data);
-    PacketResponseNG resp;
-    if (!waitCmdFelica(0, &resp)) {
-        PrintAndLogEx(ERR, "\nGot no Response from card");
-        return PM3_ERFTRANS;
-    } else {
-        PrintAndLogEx(SUCCESS, "\nGot Response from card");
-        felica_read_without_encryption_response_t rd_noCry_resp;
-        memcpy(&rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
-
-        if (rd_noCry_resp.IDm[0] != 0) {
-            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rd_noCry_resp.IDm, sizeof(rd_noCry_resp.IDm)));
-            PrintAndLogEx(NORMAL, "  -Status Flag1: %s", sprint_hex(rd_noCry_resp.status_flag1, sizeof(rd_noCry_resp.status_flag1)));
-            PrintAndLogEx(NORMAL, "  -Status Flag2: %s", sprint_hex(rd_noCry_resp.status_flag2, sizeof(rd_noCry_resp.status_flag2)));
-            if(rd_noCry_resp.status_flag1[0] == 00 && rd_noCry_resp.status_flag2[0] == 00){
-                print_block_data(rd_noCry_resp.number_of_block, rd_noCry_resp.block_data, sizeof(rd_noCry_resp.block_data));
-            }else{
-                PrintAndLogEx(ERR, "Could not read data! See -h for more information about the status flags.");
-            }
+    if(all_block_list_elements){
+        uint16_t last_block_number = 0xFF;
+        if(long_block_numbers){
+            last_block_number = 0xFFFF;
         }
+        for(int i=0x00; i < last_block_number; i++){
+            data[15] = i;
+            AddCrc(data, datalen);
+            datalen += 2;
+            felica_read_without_encryption_response_t rd_noCry_resp;
+            if((send_rd_unencrypted(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)){
+                if(rd_noCry_resp.status_flag1[0] == 00 && rd_noCry_resp.status_flag2[0] == 00){
+                    print_rd_noEncrpytion_response(&rd_noCry_resp);
+                }else{
+                    break;
+                }
+            }else{
+                break;
+            }
+            datalen -= 2;
+        }
+    }else{
+        AddCrc(data, datalen);
+        datalen += 2;
+        felica_read_without_encryption_response_t rd_noCry_resp;
+        send_rd_unencrypted(flags, datalen, data, 1, &rd_noCry_resp);
+        print_rd_noEncrpytion_response(&rd_noCry_resp);
     }
     return PM3_SUCCESS;
 }
@@ -437,9 +514,9 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     datalen += 2;
     flags |= FELICA_APPEND_CRC;
     flags |= FELICA_RAW;
-    clear_and_send_command(flags, datalen, data);
+    clear_and_send_command(flags, datalen, data, 0);
     PacketResponseNG resp;
-    if (!waitCmdFelica(0, &resp)) {
+    if (!waitCmdFelica(0, &resp, 1)) {
         PrintAndLogEx(ERR, "\nGot no Response from card");
         return PM3_ERFTRANS;
     } else {
@@ -539,13 +616,13 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
             data[10] = int_to_hex(&y);
             AddCrc(data, datalen);
             datalen += 2;
-            send_request_service(flags, datalen, data);
+            send_request_service(flags, datalen, data, 1);
             datalen -= 2; // Remove CRC bytes before adding new ones
         }
     } else {
         AddCrc(data, datalen);
         datalen += 2;
-        send_request_service(flags, datalen, data);
+        send_request_service(flags, datalen, data, 1);
     }
 
     return PM3_SUCCESS;
@@ -993,11 +1070,11 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
         if (active_select) {
             PrintAndLogEx(NORMAL, "Active select wait for FeliCa.");
             PacketResponseNG resp_IDm;
-            waitCmdFelica(1, &resp_IDm);
+            waitCmdFelica(1, &resp_IDm, 1);
         }
         if (datalen > 0) {
             PacketResponseNG resp_frame;
-            waitCmdFelica(0, &resp_frame);
+            waitCmdFelica(0, &resp_frame, 1);
         }
     }
     return PM3_SUCCESS;

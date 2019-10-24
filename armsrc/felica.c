@@ -751,26 +751,6 @@ void felica_sim_lite(uint64_t uid) {
 
 #define RES_SVC_LEN 11 + 3
 
-void felica_dump() {
-    uint8_t ndef[8];
-    uint8_t poll[10] = { 0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21}; // B24D0600FFFF00000921
-    iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
-
-    TransmitFor18092_AsReader(poll, 10, NULL, 1, 0);
-
-    // iceman, no exit path in this loop
-    while (!BUTTON_PRESS() && !data_available()) {
-        WDT_HIT();
-        TransmitFor18092_AsReader(poll, 10, NULL, 1, 0);
-        if (WaitForFelicaReply(512) && FelicaFrame.framebytes[3] == FELICA_POLL_ACK) {
-            memcpy(ndef, FelicaFrame.framebytes + 4, 8);
-            uint8_t *request_service = felica_create_request_service_frame(0x01, ndef);
-            felica_send_request_service(request_service);
-        }
-    }
-
-}
-
 void felica_dump_lite_s() {
     uint8_t ndef[8];
     uint8_t poll[10] = { 0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21};
