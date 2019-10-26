@@ -151,7 +151,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        char *prompt = PROXPROMPT;
+        const char *prompt = PROXPROMPT;
 
 check_script:
         // If there is a script file
@@ -321,7 +321,7 @@ static void set_my_executable_path(void) {
     }
 }
 
-static char *my_user_directory = NULL;
+static const char *my_user_directory = NULL;
 
 const char *get_my_user_directory(void) {
     return my_user_directory;
