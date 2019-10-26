@@ -53,11 +53,13 @@ static void usage(void) {
 
 
 static voidpf fpga_deflate_malloc(voidpf opaque, uInt items, uInt size) {
+    (void) opaque;
     return calloc(items * size, sizeof(uint8_t));
 }
 
 
 static void fpga_deflate_free(voidpf opaque, voidpf address) {
+    (void) opaque;
     free(address);
 }
 
