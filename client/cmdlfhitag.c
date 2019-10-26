@@ -8,6 +8,8 @@
 // Low frequency Hitag support
 //-----------------------------------------------------------------------------
 
+#include "cmdlfhitag.h"
+
 #include <ctype.h>
 
 #include "cmdparser.h"    // command_t

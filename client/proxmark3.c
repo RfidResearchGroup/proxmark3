@@ -56,7 +56,7 @@ static void showBanner(void) {
     g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 }
 
-int check_comm(void) {
+static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
         rl_set_prompt(PROXPROMPT_OFFLINE);
@@ -86,7 +86,7 @@ int push_cmdscriptfile(char *path, bool stayafter) {
     return PM3_SUCCESS;
 }
 
-FILE *current_cmdscriptfile() {
+static FILE *current_cmdscriptfile() {
     return cmdscriptfile[cmdscriptfile_idx];
 }
 

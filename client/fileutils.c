@@ -74,7 +74,8 @@ int fileExists(const char *filename) {
  * @param filename
  * @return
  */
-bool is_regular_file(const char *filename) {
+/*
+static bool is_regular_file(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
     if (_stat(filename, &st) == -1)
@@ -87,12 +88,14 @@ bool is_regular_file(const char *filename) {
 #endif
     return S_ISREG(st.st_mode) != 0;
 }
+*/
+
 /**
  * @brief checks if path is directory.
  * @param filename
  * @return
  */
-bool is_directory(const char *filename) {
+static bool is_directory(const char *filename) {
 #ifdef _WIN32
     struct _stat st;
     if (_stat(filename, &st) == -1)

@@ -26,12 +26,11 @@
     (x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
 
 void crypto1_init(struct Crypto1State *state, uint64_t key) {
+    if (state == NULL)
+        return;
     state->odd = 0;
     state->even = 0;
-
-    int i;
-
-    for (i = 47; state && i > 0; i -= 2) {
+    for (int i = 47; i > 0; i -= 2) {
         state->odd  = state->odd  << 1 | BIT(key, (i - 1) ^ 7);
         state->even = state->even << 1 | BIT(key, i ^ 7);
     }

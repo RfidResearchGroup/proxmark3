@@ -58,6 +58,8 @@ From "Dismantling iclass":
     output of hash0 is the diversified card key k = k [0] , . . . , k [7] ∈ (F 82 ) 8 .
 
 **/
+#include "ikeys.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>

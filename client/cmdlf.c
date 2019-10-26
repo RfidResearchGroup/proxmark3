@@ -213,7 +213,7 @@ static int usage_lf_tune(void) {
     return PM3_SUCCESS;
 }
 
-int CmdLFTune(const char *Cmd) {
+static int CmdLFTune(const char *Cmd) {
     int iter = 0;
     uint8_t divisor =  LF_DIVISOR_125;//Frequency divisor
     bool errors = false;
@@ -231,12 +231,12 @@ int CmdLFTune(const char *Cmd) {
                 }
                 break;
             case 'f': {
-                int freq = param_get32ex(Cmd, cmdp + 1, 125, 10);
-                divisor = LF_DIVISOR(freq);
-                if (divisor < 19) {
+                float freq = param_getfloat(Cmd, cmdp + 1, 125);
+                if ((freq < 47) || (freq > 600)) {
                     PrintAndLogEx(ERR, "freq must be between 47 and 600");
                     return PM3_EINVARG;
                 }
+                divisor = LF_FREQ2DIV(freq);
                 cmdp += 2;
                 break;
             }
@@ -254,7 +254,7 @@ int CmdLFTune(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_tune();
 
-    PrintAndLogEx(SUCCESS, "Measuring LF antenna at %.2f kHz, click button or press Enter to exit", 12000.0 / (divisor + 1));
+    PrintAndLogEx(SUCCESS, "Measuring LF antenna at %.2f kHz, click button or press Enter to exit", LF_DIV2FREQ(divisor));
 
     uint8_t params[] = {1, 0};
     params[1] = divisor;
@@ -498,7 +498,7 @@ int CmdLFConfig(const char *Cmd) {
                 break;
             case 'f': {
                 int freq = param_get32ex(Cmd, cmdp + 1, 125, 10);
-                divisor = LF_DIVISOR(freq);
+                divisor = LF_FREQ2DIV(freq);
                 if (divisor < 19) {
                     PrintAndLogEx(ERR, "freq must be between 47 and 600");
                     return PM3_EINVARG;

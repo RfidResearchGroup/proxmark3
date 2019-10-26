@@ -127,7 +127,7 @@ static int CmdMotorolaRead(const char *Cmd) {
         .decimation = 0,
         .bits_per_sample = 0,
         .averaging = false,
-        .divisor = LF_DIVISOR(74),
+        .divisor = LF_FREQ2DIV(74),
         .trigger_threshold = -1,
         .samples_to_skip = 4500,
         .verbose = false

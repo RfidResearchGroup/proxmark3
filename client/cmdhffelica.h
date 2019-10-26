@@ -12,10 +12,10 @@
 #define CMDHFFELICA_H__
 
 #include "common.h"
+#include "mifare.h"
 
 int CmdHFFelica(const char *Cmd);
-
 int readFelicaUid(bool verbose);
-
-int dump();
+int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
+int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp);
 #endif
