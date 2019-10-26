@@ -218,6 +218,7 @@ uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_LEGIC:
             // TODO
             return 0;
+        case CRC_NONE:
         default:
             break;
     }
@@ -259,6 +260,7 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_LEGIC:
             // TODO
             return false;
+        case CRC_NONE:
         default:
             break;
     }
