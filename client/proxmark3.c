@@ -90,7 +90,7 @@ static FILE *current_cmdscriptfile() {
     return cmdscriptfile[cmdscriptfile_idx];
 }
 
-bool pop_cmdscriptfile() {
+static bool pop_cmdscriptfile() {
     fclose(cmdscriptfile[cmdscriptfile_idx]);
     cmdscriptfile[cmdscriptfile_idx--] = NULL;
     if (cmdscriptfile_idx == 0)
