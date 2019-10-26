@@ -473,11 +473,16 @@ finish2:
 // Check if windows AnsiColor Support is enabled in the registery
 // [HKEY_CURRENT_USER\Console]
 //     "VirtualTerminalLevel"=dword:00000001
+// 2nd Key needs to be enabled...  This key takes the console out of legacy mode.
+// [HKEY_CURRENT_USER\Console]
+//     "ForceV2"=dword:00000001
 static bool DetectWindowsAnsiSupport(void) {
     bool ret = false;
 #if defined(_WIN32)
     HKEY hKey = NULL;
-
+    bool virtualTerminalLevelSet = false;
+    bool forceV2Set = false;
+    
     if (RegOpenKeyA(HKEY_CURRENT_USER, "Console", &hKey) == ERROR_SUCCESS) {
         DWORD dwType = REG_SZ;
         BYTE KeyValue[sizeof(dwType)];
@@ -490,11 +495,31 @@ static bool DetectWindowsAnsiSupport(void) {
                 Data += KeyValue[i] << (8 * i);
 
             if (Data == 1) { // Reg key is set to 1, Ansi Color Enabled
-                ret = true;
+                virtualTerminalLevelSet = true;
             }
         }
         RegCloseKey(hKey);
     }
+
+    if (RegOpenKeyA(HKEY_CURRENT_USER, "Console", &hKey) == ERROR_SUCCESS) {
+        DWORD dwType = REG_SZ;
+        BYTE KeyValue[sizeof(dwType)];
+        DWORD len = sizeof(KeyValue);
+
+        if (RegQueryValueEx(hKey, "ForceV2", NULL, &dwType, KeyValue, &len) != ERROR_FILE_NOT_FOUND) {
+            uint8_t i;
+            uint32_t Data = 0;
+            for (i = 0; i < 4; i++)
+                Data += KeyValue[i] << (8 * i);
+
+            if (Data == 1) { // Reg key is set to 1, Not using legacy Mode.
+                forceV2Set = true;
+            }
+        }
+        RegCloseKey(hKey);
+    }
+    // If both VirtualTerminalLevel and ForceV2 is set, AnsiColor should work
+    ret = virtualTerminalLevelSet && forceV2Set;
 #endif
     return ret;
 }
