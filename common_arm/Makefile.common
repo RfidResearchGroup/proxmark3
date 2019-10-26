@@ -39,8 +39,10 @@ VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/
 
 INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
 
-CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -Wunused -std=c99 $(APP_CFLAGS) -Os
-LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
+CFLAGS ?= -Wall -Werror -pedantic -Wunused -Os
+CFLAGS += -c $(INCLUDE) -std=c99 $(APP_CFLAGS)
+
+LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
 LIBS = -lgcc
 
 # Flags to generate temporary dependency files
