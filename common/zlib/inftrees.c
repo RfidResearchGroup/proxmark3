@@ -191,7 +191,8 @@ int ZLIB_INTERNAL inflate_table(codetype type, unsigned short FAR *lens,
             extra = lext;
             match = 257;
             break;
-        default:    /* DISTS */
+        case DISTS:
+        default:
             base = dbase;
             extra = dext;
             match = 0;
