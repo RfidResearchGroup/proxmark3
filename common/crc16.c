@@ -230,7 +230,7 @@ uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
 // n    length (including crc)
 //
 //  This function uses the message + crc bytes in order to compare the "residue" afterwards.
-// crc16 algos like CRC-A become 0x000
+// crc16 algos like CRC-A become 0x0000
 // while CRC-15693 become 0x0F47
 // If calculated with crc bytes,  the residue should be 0xF0B8
 bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
@@ -254,6 +254,8 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
             return (crc16_xmodem(d, n) == 0);
         case CRC_CCITT:
             return (crc16_ccitt(d, n) == 0);
+        case CRC_KERMIT:
+            return (crc16_kermit(d, n) == 0);
         case CRC_LEGIC:
             // TODO
             return false;
