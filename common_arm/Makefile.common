@@ -39,8 +39,10 @@ VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/
 
 INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
 
-CFLAGS =  -c $(INCLUDE) -Wall -Werror -pedantic -Wunused -std=c99 $(APP_CFLAGS) -Os
-LDFLAGS = -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
+CFLAGS ?= -Wall -Werror -pedantic -Wunused -Os -mthumb-interwork
+CFLAGS += -c $(INCLUDE) -std=c99 $(APP_CFLAGS)
+
+LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
 LIBS = -lgcc
 
 # Flags to generate temporary dependency files
@@ -55,21 +57,21 @@ VERSIONOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(VERSIONSRC)))
 
 $(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -mthumb -mthumb-interwork -o $@ $< 
+	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -mthumb -o $@ $< 
 	$(Q)$(POSTCOMPILE)
 
 $(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -mthumb-interwork -o $@ $< 
+	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -o $@ $< 
 	$(Q)$(POSTCOMPILE)
 
 $(ASMOBJ): $(OBJDIR)/%.o: %.s
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) -mthumb-interwork -o $@ $<
+	$(Q)$(CC) $(CFLAGS) -o $@ $<
 
 $(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
 	$(info [-] CC $<)
-	$(Q)$(CC) $(CFLAGS) -mthumb -mthumb-interwork -o $@ $< 
+	$(Q)$(CC) $(CFLAGS) -mthumb -o $@ $< 
 
 # This objcopy call translates physical flash addresses to logical addresses
 # without touching start address or RAM addresses (.bss and .data sections)

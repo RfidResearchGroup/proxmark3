@@ -134,7 +134,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     char *token = NULL;
     char *tmp_ptr = NULL;
     FILE *stream = stdout;
-    char *spinner[] = {_YELLOW_("[\\]"), _YELLOW_("[|]"), _YELLOW_("[/]"), _YELLOW_("[-]")};
+    const char *spinner[] = {_YELLOW_("[\\]"), _YELLOW_("[|]"), _YELLOW_("[/]"), _YELLOW_("[-]")};
     switch (level) {
         case ERR:
             strncpy(prefix, _RED_("[!!]"), sizeof(prefix) - 1);

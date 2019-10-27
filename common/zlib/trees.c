@@ -923,6 +923,10 @@ charf *buf;       /* input block, or NULL if too old */
 ulg stored_len;   /* length of input block */
 int last;         /* one if this is the last block for a file */
 {
+#ifdef ZLIB_PM3_TUNED
+    (void) buf;
+    (void) stored_len;
+#endif
     int max_blindex = 0;  /* index of last bit length code of non zero freq */
 #ifndef ZLIB_PM3_TUNED
     ulg opt_lenb, static_lenb; /* opt_len and static_len in bytes */

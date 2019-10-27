@@ -6,6 +6,8 @@
 // Fonts for the LCD
 //-----------------------------------------------------------------------------
 
+#include "fonts.h"
+
 const char FONT6x8[97][8] = {
     {0x06, 0x08, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00}, // columns, rows, bytes per char
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // space

@@ -1,3 +1,4 @@
+#include "hfsnoop.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
 #include "fpgaloader.h"

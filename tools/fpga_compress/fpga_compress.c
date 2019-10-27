@@ -53,11 +53,13 @@ static void usage(void) {
 
 
 static voidpf fpga_deflate_malloc(voidpf opaque, uInt items, uInt size) {
+    (void) opaque;
     return calloc(items * size, sizeof(uint8_t));
 }
 
 
 static void fpga_deflate_free(voidpf opaque, voidpf address) {
+    (void) opaque;
     free(address);
 }
 
@@ -72,7 +74,7 @@ static bool all_feof(FILE *infile[], uint8_t num_infiles) {
 }
 
 
-int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardnested_mode) {
+static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardnested_mode) {
     uint8_t *fpga_config;
     uint32_t i;
     int32_t ret;
@@ -182,7 +184,7 @@ int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool hardn
 }
 
 
-int zlib_decompress(FILE *infile, FILE *outfile) {
+static int zlib_decompress(FILE *infile, FILE *outfile) {
 #define DECOMPRESS_BUF_SIZE 1024
     uint8_t outbuf[DECOMPRESS_BUF_SIZE];
     uint8_t inbuf[DECOMPRESS_BUF_SIZE];
