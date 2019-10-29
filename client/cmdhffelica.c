@@ -112,6 +112,7 @@ static int usage_hf_felica_request_response(void) {
     PrintAndLogEx(NORMAL, "\nUsage: hf felica rqresponse [-h]");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
+    PrintAndLogEx(NORMAL, " hf felica rqresponse -i 01100910c11bc407");
     return PM3_SUCCESS;
 }
 
@@ -334,7 +335,8 @@ static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_
         param_gethex(Cmd, paramCount, data + dataPosition, length);
         return true;
     } else {
-        PrintAndLogEx(ERR, "Incorrect Parameter length! Param %i", paramCount);
+        PrintAndLogEx(ERR, "Param %s", Cmd);
+        PrintAndLogEx(ERR, "Incorrect Parameter length! Param %i should be %i", paramCount, length);
         return false;
     }
 }
@@ -468,9 +470,11 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
                 case 'i':
                     paramCount++;
                     custom_IDm = true;
-                    if (!add_param(Cmd, paramCount, data, 3, 8)) {
+                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
                         return PM3_EINVARG;
                     }
+                    paramCount++;
+                    i += 16;
                     break;
             }
         }
@@ -530,9 +534,11 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
                 case 'i':
                     paramCount++;
                     custom_IDm = true;
-                    if (!add_param(Cmd, paramCount, data, 3, 8)) {
+                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
                         return PM3_EINVARG;
                     }
+                    paramCount++;
+                    i += 16;
                     break;
                 case 'b':
                     paramCount++;
@@ -624,12 +630,11 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
                 case 'i':
                     paramCount++;
                     custom_IDm = true;
-                    if (param_getlength(Cmd, paramCount) == 16) {
-                        param_gethex(Cmd, paramCount++, data + 2, 16);
-                    } else {
-                        PrintAndLogEx(ERR, "Incorrect IDm length! IDm must be 8-Byte.");
+                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
                         return PM3_EINVARG;
                     }
+                    paramCount++;
+                    i+=16;
                     break;
             }
         }
@@ -686,13 +691,11 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
                 case 'i':
                     paramCount++;
                     custom_IDm = true;
-                    if (param_getlength(Cmd, paramCount) == 16) {
-                        param_gethex(Cmd, paramCount++, data + 2, 16);
-                    } else {
-                        PrintAndLogEx(ERR, "Incorrect IDm length! IDm must be 8-Byte.");
+                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
                         return PM3_EINVARG;
                     }
-                    i += 8;
+                    paramCount++;
+                    i += 16;
                     break;
                 case 'a':
                     paramCount++;
