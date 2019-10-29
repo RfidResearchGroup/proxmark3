@@ -408,14 +408,60 @@ int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
 }
 
 /**
+ * Checks if last known card can be added to data and adds it if possible.
+ * @param custom_IDm
+ * @param data
+ * @return
+ */
+static bool check_last_idm(uint8_t *data, uint16_t datalen){
+    if (!add_last_IDm(2, data)) {
+        PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
+        return 0;
+    } else {
+        PrintAndLogEx(INFO, "Used last known IDm.", sprint_hex(data, datalen));
+        return 1;
+    }
+}
+
+/**
  * Command parser for wrunencrypted.
  * @param Cmd input data of the user.
  * @return client result code.
  */
 static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
-    if (strlen(Cmd) < 4)
+    if (strlen(Cmd) < 5)
         return usage_hf_felica_write_without_encryption();
-    //uint8_t data[PM3_CMD_DATA_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    bool custom_IDm = false;
+    strip_cmds(Cmd);
+    uint16_t datalen = 32; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3), Block Data(16)
+    uint8_t paramCount = 0;
+    uint8_t flags = 0;
+    int i = 0;
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
+                case 'H':
+                case 'h':
+                    return usage_hf_felica_request_response();
+                case 'i':
+                    paramCount++;
+                    custom_IDm = true;
+                    if (!add_param(Cmd, paramCount, data, 3, 8)) {
+                        return PM3_EINVARG;
+                    }
+                    break;
+            }
+        }
+        i++;
+    }
+    data[0] = 0x20; // Static length
+    data[1] = 0x08; // Command ID
+    if (!custom_IDm && !check_last_idm(data, datalen)) {
+        return PM3_EINVARG;
+    }
+    flags |= FELICA_APPEND_CRC;
+    flags |= FELICA_RAW;
 
     return PM3_SUCCESS;
 }
@@ -464,13 +510,8 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
     }
     data[0] = 0x10; // Static length
     data[1] = 0x06; // Command ID
-    if (!custom_IDm) {
-        if (!add_last_IDm(2, data)) {
-            PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
-            return PM3_EINVARG;
-        } else {
-            PrintAndLogEx(INFO, "Used last known IDm.", sprint_hex(data, datalen));
-        }
+    if (!custom_IDm && !check_last_idm(data, datalen)) {
+        return PM3_EINVARG;
     }
     // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4
     uint8_t lengths[] = {2, 4, 2, 4};
@@ -559,13 +600,8 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     }
     data[0] = 0x0A; // Static length
     data[1] = 0x04; // Command ID
-    if (!custom_IDm) {
-        if (!add_last_IDm(2, data)) {
-            PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
-            return PM3_EINVARG;
-        } else {
-            PrintAndLogEx(INFO, "Used last known IDm.", sprint_hex(data, datalen));
-        }
+    if (!custom_IDm && !check_last_idm(data, datalen)) {
+        return PM3_EINVARG;
     }
     AddCrc(data, datalen);
     datalen += 2;
@@ -658,13 +694,8 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         flags |= FELICA_RAW;
     }
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
-    if (!custom_IDm) {
-        if (!add_last_IDm(2, data)) {
-            PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
-            return PM3_EINVARG;
-        } else {
-            PrintAndLogEx(INFO, "Used last known IDm.", sprint_hex(data, datalen));
-        }
+    if (!custom_IDm && !check_last_idm(data, datalen)) {
+        return PM3_EINVARG;
     }
     data[0] = int_to_hex(&datalen);
     data[1] = 0x02; // Service Request Command ID
