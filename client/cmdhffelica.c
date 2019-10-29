@@ -160,7 +160,7 @@ static void print_status_flag2_interpration() {
     PrintAndLogEx(NORMAL, "  - C2h : Command is disabled already: This is the error that occurs in issuance commands.");
 }
 
-static void print_block_list_element_constraints(){
+static void print_block_list_element_constraints() {
     PrintAndLogEx(NORMAL, "       - Each Block List Element shall satisfy the following conditions:");
     PrintAndLogEx(NORMAL, "              - The value of Service Code List Order shall not exceed Number of Service.");
     PrintAndLogEx(NORMAL, "              - Access Mode shall be 000b.");
@@ -170,16 +170,16 @@ static void print_block_list_element_constraints(){
     PrintAndLogEx(NORMAL, "              - Block Number shall be in the range of the number of Blocks assigned to the specified Service.");
 }
 
-static void print_number_of_service_constraints(){
+static void print_number_of_service_constraints() {
     PrintAndLogEx(NORMAL, "       - Number of Service: shall be a positive integer in the range of 1 to 16, inclusive.");
 }
 
-static void print_number_of_block_constraints(){
+static void print_number_of_block_constraints() {
     PrintAndLogEx(NORMAL, "       - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously. "
-                          "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used. Use as default 01");
+                  "The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used. Use as default 01");
 }
 
-static void print_service_code_list_constraints(){
+static void print_service_code_list_constraints() {
     PrintAndLogEx(NORMAL, "       - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
     PrintAndLogEx(NORMAL, "              - Even when Service Code exists in the product, Service Code not referenced from Block List shall not be specified to Service Code List.");
     PrintAndLogEx(NORMAL, "              - For existence or nonexistence of Service in a product, please check using the Request Service (or Request Service v2) command.");
@@ -245,7 +245,7 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose)
             if (!check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2)) {
                 PrintAndLogEx(WARNING, "Wrong or no CRC bytes");
             }
-            if(resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D){
+            if (resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D) {
                 PrintAndLogEx(ERR, "Received incorrect Frame Format!");
                 return false;
             }
@@ -415,7 +415,7 @@ int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
  * @param data
  * @return
  */
-static bool check_last_idm(uint8_t *data, uint16_t datalen){
+static bool check_last_idm(uint8_t *data, uint16_t datalen) {
     if (!add_last_IDm(2, data)) {
         PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
         return 0;
@@ -500,10 +500,15 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
     AddCrc(data, datalen);
     datalen += 2;
     felica_status_response_t wr_noCry_resp;
-    if(send_wr_unencrypted(flags, datalen, data, 1, &wr_noCry_resp) == PM3_SUCCESS){
+    if (send_wr_unencrypted(flags, datalen, data, 1, &wr_noCry_resp) == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "\nIDm: %s", sprint_hex(wr_noCry_resp.frame_response.IDm, sizeof(wr_noCry_resp.frame_response.IDm)));
         PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(wr_noCry_resp.status_flags.status_flag1, sizeof(wr_noCry_resp.status_flags.status_flag1)));
-        PrintAndLogEx(NORMAL, "Status Flag2: %s\n\n", sprint_hex(wr_noCry_resp.status_flags.status_flag2, sizeof(wr_noCry_resp.status_flags.status_flag2)));
+        PrintAndLogEx(NORMAL, "Status Flag2: %s\n", sprint_hex(wr_noCry_resp.status_flags.status_flag2, sizeof(wr_noCry_resp.status_flags.status_flag2)));
+        if (wr_noCry_resp.status_flags.status_flag1[0] == 0x00 && wr_noCry_resp.status_flags.status_flag2[0] == 0x00) {
+            PrintAndLogEx(SUCCESS, "Writing data successful!\n");
+        } else {
+            PrintAndLogEx(ERR, "Something went wrong! Check status flags.\n");
+        }
     }
     return PM3_SUCCESS;
 }
@@ -600,7 +605,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         AddCrc(data, datalen);
         datalen += 2;
         felica_read_without_encryption_response_t rd_noCry_resp;
-        if(send_rd_unencrypted(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS){
+        if (send_rd_unencrypted(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "Block Element\t|  Data  ");
             print_rd_noEncrpytion_response(&rd_noCry_resp);
         }
@@ -634,7 +639,7 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
                         return PM3_EINVARG;
                     }
                     paramCount++;
-                    i+=16;
+                    i += 16;
                     break;
             }
         }

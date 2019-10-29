@@ -482,7 +482,7 @@ static bool DetectWindowsAnsiSupport(void) {
     HKEY hKey = NULL;
     bool virtualTerminalLevelSet = false;
     bool forceV2Set = false;
-    
+
     if (RegOpenKeyA(HKEY_CURRENT_USER, "Console", &hKey) == ERROR_SUCCESS) {
         DWORD dwType = REG_SZ;
         BYTE KeyValue[sizeof(dwType)];
