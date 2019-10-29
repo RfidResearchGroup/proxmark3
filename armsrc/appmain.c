@@ -1589,10 +1589,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 BigBuf_free();
             }
             uint16_t offset = MIN(BIGBUF_SIZE - PM3_CMD_DATA_SIZE - 3, payload->offset);
-            
+
             // need to copy len bytes of data, not PM3_CMD_DATA_SIZE - 3 - offset
             // ensure len bytes copied wont go past end of bigbuf
-            uint16_t len = MIN(BIGBUF_SIZE - offset,PM3_CMD_DATA_SIZE - 3);
+            uint16_t len = MIN(BIGBUF_SIZE - offset, PM3_CMD_DATA_SIZE - 3);
 
             uint8_t *mem = BigBuf_get_addr();
             memcpy(mem + offset, &payload->data, len);
