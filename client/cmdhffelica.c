@@ -203,7 +203,7 @@ static int usage_hf_felica_read_without_encryption() {
     PrintAndLogEx(NORMAL, "\nExamples: ");
     PrintAndLogEx(NORMAL, "  hf felica rdunencrypted 01 8B00 01 8000");
     PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -i 01100910c11bc407 01 8B00 01 8000");
-    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -b 01 8B00 01 8000\n\n");
+    PrintAndLogEx(NORMAL, "  hf felica rdunencrypted -b 01 4B18 01 8000\n\n");
     return PM3_SUCCESS;
 }
 
@@ -219,11 +219,11 @@ static int usage_hf_felica_write_without_encryption() {
     print_status_flag2_interpration();
     PrintAndLogEx(NORMAL, "\nUsage: hf felica wrunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List (Little Endian) hex> <01 Number of Block hex> <0A0B Block List Element hex> <0A0B0C0D0E0F... Data hex (16-Byte)>");
     PrintAndLogEx(NORMAL, "       -h    this help");
-    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
-
+    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use\n");
+    PrintAndLogEx(NORMAL, "  hf felica wrunencrypted 01 CB10 01 8001 0102030405060708090A0B0C0D0E0F10\n\n");
 
     PrintAndLogEx(NORMAL, "\nExamples: ");
-    PrintAndLogEx(NORMAL, "  hf felica wrunencrypted");
+    PrintAndLogEx(NORMAL, "  hf felica wrunencrypted ");
     return PM3_SUCCESS;
 }
 
@@ -423,9 +423,26 @@ static bool check_last_idm(uint8_t *data, uint16_t datalen){
     }
 }
 
-
-
-
+/**
+ * Sends a read_without_encryption frame to the pm3 and prints response.
+ * @param flags to use for pm3 communication.
+ * @param datalen frame length.
+ * @param data frame to be send.
+ * @param verbose display additional output.
+ * @param wr_noCry_resp frame in which the response will be saved.
+ * @return success if response was received.
+ */
+int send_wr_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_status_response_t *wr_noCry_resp) {
+    clear_and_send_command(flags, datalen, data, verbose);
+    PacketResponseNG resp;
+    if (!waitCmdFelica(0, &resp, verbose)) {
+        PrintAndLogEx(ERR, "\nGot no Response from card");
+        return PM3_ERFTRANS;
+    } else {
+        memcpy(wr_noCry_resp, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
+        return PM3_SUCCESS;
+    }
+}
 
 /**
  * Command parser for wrunencrypted.
@@ -464,10 +481,10 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
-    // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4
-    uint8_t lengths[] = {2, 4, 2, 4};
-    uint8_t dataPositions[] = {10, 11, 13, 14};
-    for (int i = 0; i < 4; i++) {
+    // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4, Data 16
+    uint8_t lengths[] = {2, 4, 2, 4, 32};
+    uint8_t dataPositions[] = {10, 11, 13, 14, 16};
+    for (int i = 0; i < 5; i++) {
         if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
             paramCount++;
         } else {
@@ -476,8 +493,14 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
     }
     flags |= FELICA_APPEND_CRC;
     flags |= FELICA_RAW;
-
-
+    AddCrc(data, datalen);
+    datalen += 2;
+    felica_status_response_t wr_noCry_resp;
+    if(send_wr_unencrypted(flags, datalen, data, 1, &wr_noCry_resp) == PM3_SUCCESS){
+        PrintAndLogEx(NORMAL, "\nIDm: %s", sprint_hex(wr_noCry_resp.frame_response.IDm, sizeof(wr_noCry_resp.frame_response.IDm)));
+        PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(wr_noCry_resp.status_flags.status_flag1, sizeof(wr_noCry_resp.status_flags.status_flag1)));
+        PrintAndLogEx(NORMAL, "Status Flag2: %s\n\n", sprint_hex(wr_noCry_resp.status_flags.status_flag2, sizeof(wr_noCry_resp.status_flags.status_flag2)));
+    }
     return PM3_SUCCESS;
 }
 
@@ -576,7 +599,6 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
             print_rd_noEncrpytion_response(&rd_noCry_resp);
         }
     }
-
     return PM3_SUCCESS;
 }
 

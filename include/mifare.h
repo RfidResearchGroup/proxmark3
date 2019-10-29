@@ -179,7 +179,7 @@ typedef struct {
 typedef struct {
     uint8_t status_flag1[1];
     uint8_t status_flag2[1];
-} PACKED felica_status_flag_response_t;
+} PACKED felica_status_flags_t;
 
 typedef struct {
     felica_frame_response_t frame_response;
@@ -194,11 +194,16 @@ typedef struct {
 
 typedef struct {
     felica_frame_response_t frame_response;
-    felica_status_flag_response_t status_flags;
+    felica_status_flags_t status_flags;
     uint8_t number_of_block[1];
     uint8_t block_data[16];
     uint8_t block_element_number[1];
 } PACKED felica_read_without_encryption_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    felica_status_flags_t status_flags;
+} PACKED felica_status_response_t;
 
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),
