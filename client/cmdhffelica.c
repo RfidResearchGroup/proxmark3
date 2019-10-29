@@ -344,7 +344,7 @@ static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_
  * @param rd_noCry_resp Response frame.
  */
 static void print_rd_noEncrpytion_response(felica_read_without_encryption_response_t *rd_noCry_resp) {
-    if (rd_noCry_resp->status_flag1[0] == 00 && rd_noCry_resp->status_flag2[0] == 00) {
+    if (rd_noCry_resp->status_flags.status_flag1[0] == 00 && rd_noCry_resp->status_flags.status_flag2[0] == 00) {
         char *temp = sprint_hex(rd_noCry_resp->block_data, sizeof(rd_noCry_resp->block_data));
         char bl_data[256];
         strcpy(bl_data, temp);
@@ -354,9 +354,9 @@ static void print_rd_noEncrpytion_response(felica_read_without_encryption_respon
         strcpy(bl_element_number, temp);
         PrintAndLogEx(NORMAL, "\t%s\t|  %s  ", bl_element_number, bl_data);
     } else {
-        PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rd_noCry_resp->IDm, sizeof(rd_noCry_resp->IDm)));
-        PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(rd_noCry_resp->status_flag1, sizeof(rd_noCry_resp->status_flag1)));
-        PrintAndLogEx(NORMAL, "Status Flag2: %s", sprint_hex(rd_noCry_resp->status_flag1, sizeof(rd_noCry_resp->status_flag1)));
+        PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rd_noCry_resp->frame_response.IDm, sizeof(rd_noCry_resp->frame_response.IDm)));
+        PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
+        PrintAndLogEx(NORMAL, "Status Flag2: %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
     }
 }
 
@@ -374,9 +374,9 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
         felica_request_service_response_t rqs_response;
         memcpy(&rqs_response, (felica_request_service_response_t *)resp.data.asBytes, sizeof(felica_request_service_response_t));
 
-        if (rqs_response.IDm[0] != 0) {
+        if (rqs_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Service Response:");
-            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rqs_response.IDm, sizeof(rqs_response.IDm)));
+            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rqs_response.frame_response.IDm, sizeof(rqs_response.frame_response.IDm)));
             PrintAndLogEx(NORMAL, "  -Node Number: %s", sprint_hex(rqs_response.node_number, sizeof(rqs_response.node_number)));
             PrintAndLogEx(NORMAL, "  -Node Key Version List: %s\n", sprint_hex(rqs_response.node_key_versions, sizeof(rqs_response.node_key_versions)));
         }
@@ -423,6 +423,10 @@ static bool check_last_idm(uint8_t *data, uint16_t datalen){
     }
 }
 
+
+
+
+
 /**
  * Command parser for wrunencrypted.
  * @param Cmd input data of the user.
@@ -460,8 +464,19 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
+    // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4
+    uint8_t lengths[] = {2, 4, 2, 4};
+    uint8_t dataPositions[] = {10, 11, 13, 14};
+    for (int i = 0; i < 4; i++) {
+        if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
+            paramCount++;
+        } else {
+            return PM3_EINVARG;
+        }
+    }
     flags |= FELICA_APPEND_CRC;
     flags |= FELICA_RAW;
+
 
     return PM3_SUCCESS;
 }
@@ -542,7 +557,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
             datalen += 2;
             felica_read_without_encryption_response_t rd_noCry_resp;
             if ((send_rd_unencrypted(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
-                if (rd_noCry_resp.status_flag1[0] == 00 && rd_noCry_resp.status_flag2[0] == 00) {
+                if (rd_noCry_resp.status_flags.status_flag1[0] == 00 && rd_noCry_resp.status_flags.status_flag2[0] == 00) {
                     print_rd_noEncrpytion_response(&rd_noCry_resp);
                 } else {
                     break;
@@ -615,9 +630,9 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     } else {
         felica_request_request_response_t rq_response;
         memcpy(&rq_response, (felica_request_request_response_t *)resp.data.asBytes, sizeof(felica_request_request_response_t));
-        if (rq_response.IDm[0] != 0) {
+        if (rq_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Request Response:");
-            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rq_response.IDm, sizeof(rq_response.IDm)));
+            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rq_response.frame_response.IDm, sizeof(rq_response.frame_response.IDm)));
             PrintAndLogEx(NORMAL, "  -Mode: %s\n\n", sprint_hex(rq_response.mode, sizeof(rq_response.mode)));
         }
     }
