@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>       // tolower
 
 #include "cmdparser.h"    // command_t
 #include "comms.h"
@@ -226,14 +227,11 @@ static int CmdFdxDemod(const char *Cmd) {
     uint8_t dataBlockBit = DemodBuffer[48];
     uint32_t reservedCode = bytebits_to_byteLSBF(DemodBuffer + 49, 14);
     uint8_t animalBit = DemodBuffer[63];
-    uint32_t crc_16 = bytebits_to_byteLSBF(DemodBuffer + 64, 16);
+    uint16_t crc = bytebits_to_byteLSBF(DemodBuffer + 64, 16);
     uint32_t extended = bytebits_to_byteLSBF(DemodBuffer + 80, 24);
     uint64_t rawid = (uint64_t)(bytebits_to_byte(DemodBuffer, 32)) << 32 | bytebits_to_byte(DemodBuffer + 32, 32);
     uint8_t raw[8];
     num_to_bytes(rawid, 8, raw);
-
-
-    uint16_t calcCrc = crc16_kermit(raw, 8);
 
     PrintAndLogEx(SUCCESS, "\nFDX-B / ISO 11784/5 Animal Tag ID Found:  Raw : %s", sprint_hex(raw, 8));
     PrintAndLogEx(SUCCESS, "Animal ID          %04u-%012" PRIu64, countryCode, NationalCode);
@@ -242,7 +240,10 @@ static int CmdFdxDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reserved/RFU       %u (0x04%X)", reservedCode,  reservedCode);
     PrintAndLogEx(SUCCESS, "Animal Tag         %s", animalBit ? _YELLOW_("True") : "False");
     PrintAndLogEx(SUCCESS, "Has extended data  %s [0x%X]", dataBlockBit ? _YELLOW_("True") : "False", extended);
-    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X - 0x%04X [%s]", crc_16, calcCrc, (calcCrc == crc_16) ? _GREEN_("Ok") : _RED_("Fail"));
+
+    uint8_t c[] = {0, 0};
+    compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
+    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X  [ %s] ", crc, (crc ==  (c[1] << 8 | c[0]) ) ? _GREEN_("OK") : _RED_("Fail"));
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
@@ -265,8 +266,8 @@ static int CmdFdxClone(const char *Cmd) {
 
     uint32_t countryid = 0;
     uint64_t animalid = 0;
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_fdx_clone();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_fdx_clone();
 
     countryid = param_get32ex(Cmd, 0, 0, 10);
     animalid = param_get64ex(Cmd, 1, 0, 10);
@@ -305,8 +306,8 @@ static int CmdFdxSim(const char *Cmd) {
     uint32_t countryid = 0;
     uint64_t animalid = 0;
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_fdx_sim();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_fdx_sim();
 
     countryid = param_get32ex(Cmd, 0, 0, 10);
     animalid = param_get64ex(Cmd, 1, 0, 10);
@@ -417,7 +418,8 @@ int getFDXBits(uint64_t national_id, uint16_t country, uint8_t isanimal, uint8_t
     for (uint8_t i = 0; i < 8; ++i)
         raw[i] = bytebits_to_byte(bits + 11 + i * 9, 8);
 
-    uint16_t crc = crc16_kermit(raw, 8);
+    init_table(CRC_11784);
+    uint16_t crc = crc16_fdx(raw, 8);
     num_to_bytebitsLSBF(crc >> 0, 8, bits + 83);
     num_to_bytebitsLSBF(crc >> 8, 8, bits + 92);
 
