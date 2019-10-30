@@ -301,6 +301,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != ISO_7816_4
                 && protocol != PROTO_HITAG
                 && protocol != THINFILM
+                && protocol != FELICA
                 && (isResponse || protocol == ISO_14443A)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 

@@ -845,7 +845,6 @@ static int CmdHFFelicaSim(const char *Cmd) {
 */
 
 static int CmdHFFelicaSniff(const char *Cmd) {
-    if (strlen(Cmd) < 2) return usage_hf_felica_sniff();
     uint8_t paramCount = 0;
     uint64_t samples2skip = 0;
     uint64_t triggers2skip = 0;
