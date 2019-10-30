@@ -573,25 +573,26 @@ void felica_sendraw(PacketCommandNG *c) {
 }
 
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
-
     int remFrames = (samplesToSkip) ? samplesToSkip : 0;
-
     Dbprintf("Sniff FelicaLiteS: Getting first %d frames, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
-
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
-
+    LED_D_ON();
+    BigBuf_free();
+    BigBuf_Clear();
     //the frame bits are slow enough.
     int n = BigBuf_max_traceLen() / sizeof(uint8_t); // take all memory
     int numbts = 0;
     uint8_t *dest = (uint8_t *)BigBuf_get_addr();
     uint8_t *destend = dest + n - 2;
-
     uint32_t endframe = GetCountSspClk();
 
-    while (dest <= destend) {
-        WDT_HIT();
-        if (BUTTON_PRESS()) break;
+    // Set up the synchronous serial port
+    FpgaSetupSsc();
+    //FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNOOP);
+    SpinDelay(100);
 
+    while (dest <= destend && !BUTTON_PRESS()) {
+        WDT_HIT();
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
             Process18092Byte(dist);
@@ -636,6 +637,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 
     Dbprintf("Felica sniffing done, tracelen: %i, use hf list felica for annotations", BigBuf_get_traceLen());
     reply_old(CMD_ACK, 1, numbts, 0, 0, 0);
+    LED_D_OFF();
 }
 
 #define R_POLL0_LEN    0x16

@@ -257,7 +257,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_14443B:
             case TOPAZ:
             case FELICA:
-                crcStatus = iso14443B_CRC_check(frame, data_len);
+                crcStatus = !felica_CRC_check(frame+2, data_len-4);
                 break;
             case PROTO_MIFARE:
                 crcStatus = mifare_CRC_check(isResponse, frame, data_len);
@@ -349,6 +349,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (protocol == PROTO_MIFARE)
         annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, parity_len, isResponse);
 
+    if(protocol == FELICA)
+        annotateFelica(explanation, sizeof(explanation), frame, data_len);
+
     if (!isResponse) {
         switch (protocol) {
             case ICLASS:
@@ -408,7 +411,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                       sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
                       (crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
                       explanation);
-    };
+    }
 
     if (is_last_record(tracepos, trace, traceLen)) return traceLen;
 
@@ -423,18 +426,21 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     return tracepos;
 }
-
+/*
 static void printFelica(uint16_t traceLen, uint8_t *trace) {
 
     PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");
-    PrintAndLogEx(NORMAL, "    Gap | Src | Data                            | CRC      | Annotation        |");
-    PrintAndLogEx(NORMAL, "--------|-----|---------------------------------|----------|-------------------|");
+    PrintAndLogEx(NORMAL, "    Gap | Src | Data                                                                    | CRC      | Annotation        |");
+    PrintAndLogEx(NORMAL, "--------|-----|-------------------------------------------------------------------------|----------|-------------------|");
     uint16_t tracepos = 0;
 
+    PrintAndLogEx(NORMAL, "traceLen: %i", traceLen);
+    PrintAndLogEx(NORMAL, "Raw trace: %s", sprint_hex(trace, traceLen));
     while (tracepos < traceLen) {
+        PrintAndLogEx(NORMAL, "tracepos: %i", tracepos);
+        PrintAndLogEx(NORMAL, "traceLen: %i", traceLen);
 
         if (tracepos + 3 >= traceLen) break;
-
 
         uint16_t gap = *((uint16_t *)(trace + tracepos));
         uint8_t crc_ok = trace[tracepos + 2];
@@ -443,6 +449,7 @@ static void printFelica(uint16_t traceLen, uint8_t *trace) {
         if (tracepos + 3 >= traceLen) break;
 
         uint16_t len = trace[tracepos + 2];
+        PrintAndLogEx(NORMAL, "LEN: %i", len);
 
         //I am stripping SYNC
         tracepos += 3; //skip SYNC
@@ -611,7 +618,7 @@ static void printFelica(uint16_t traceLen, uint8_t *trace) {
         tracepos += len + 1;
     }
     PrintAndLogEx(NORMAL, "");
-}
+}*/
 
 // sanity check. Don't use proxmark if it is offline and you didn't specify useTraceBuffer
 /*
@@ -819,9 +826,13 @@ int CmdTraceList(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %lu bytes)", traceLen);
     PrintAndLogEx(INFO, "");
+
+    /*
     if (protocol == FELICA) {
         printFelica(traceLen, trace);
-    } else if (showHex) {
+    } */
+
+    if (showHex) {
         while (tracepos < traceLen) {
             tracepos = printHexLine(tracepos, traceLen, trace, protocol);
         }
@@ -844,6 +855,7 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
         if (protocol == PROTO_HITAG)
             PrintAndLogEx(NORMAL, "Hitag2 / HitagS - Timings in ETU (8us)");
+        if (protocol == FELICA)
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
