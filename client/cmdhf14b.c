@@ -147,15 +147,15 @@ static bool waitCmd14b(bool verbose) {
             if (len >= 3) {
                 bool crc = check_crc(CRC_14443_B, data, len);
 
-                PrintAndLogEx(NORMAL, "[LEN %u] %s[%02X %02X] %s",
+                PrintAndLogEx(SUCCESS, "[LEN %u] %s[%02X %02X] %s",
                               len,
                               sprint_hex(data, len - 2),
                               data[len - 2],
                               data[len - 1],
-                              (crc) ? "OK" : "FAIL"
+                              (crc) ? _GREEN_("OK") : _RED_("FAIL")
                              );
             } else {
-                PrintAndLogEx(NORMAL, "[LEN %u] %s", len, sprint_hex(data, len));
+                PrintAndLogEx(SUCCESS, "[LEN %u] %s", len, sprint_hex(data, len));
             }
         }
         return true;
@@ -182,7 +182,7 @@ static int CmdHF14BSim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443B_SIMULATE, pupi, 0, 0, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14BSniff(const char *Cmd) {
@@ -192,7 +192,7 @@ static int CmdHF14BSniff(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14BCmdRaw(const char *Cmd) {
@@ -262,15 +262,16 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
             continue;
         }
         PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, i));
-        return 0;
+        return PM3_EINVARG;
     }
 
     if (hasTimeout) {
-#define MAX_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
+
+#define MAX_14B_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         flags |= ISO14B_SET_TIMEOUT;
-        if (user_timeout > MAX_TIMEOUT) {
-            user_timeout = MAX_TIMEOUT;
-            PrintAndLogEx(NORMAL, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
+        if (user_timeout > MAX_14B_TIMEOUT) {
+            user_timeout = MAX_14B_TIMEOUT;
+            PrintAndLogEx(INFO, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
         time_wait = 13560000 / 1000 / (8 * 16) * user_timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
@@ -287,7 +288,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
 
-    if (!reply) return 1;
+    if (!reply) return PM3_SUCCESS;
 
     bool success = true;
     // get back iso14b_card_select_t, don't print it.
@@ -297,7 +298,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     // get back response from the raw bytes you sent.
     if (success && datalen > 0) waitCmd14b(true);
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static bool get_14b_UID(iso14b_card_select_t *card) {
@@ -484,7 +485,6 @@ static void print_st_general_info(uint8_t *data, uint8_t len) {
     PrintAndLogEx(NORMAL, " UID: %s", sprint_hex(SwapEndian64(data, 8, 8), len));
     PrintAndLogEx(NORMAL, " MFG: %02X, %s", data[6], getTagInfo(data[6]));
     PrintAndLogEx(NORMAL, "Chip: %02X, %s", data[5] >> 2, get_ST_Chip_Model(data[5] >> 2));
-    return;
 }
 
 //05 00 00 = find one tag in field
@@ -793,18 +793,18 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     if (isSrix4k) {
         if (blockno > 0x7f && blockno != 0xff) {
             PrintAndLogEx(FAILED, "block number out of range");
-            return 0;
+            return PM3_ESOFT;
         }
     } else {
         if (blockno > 0x0f && blockno != 0xff) {
             PrintAndLogEx(FAILED, "block number out of range");
-            return 0;
+            return PM3_ESOFT;
         }
     }
 
     if (param_gethex(Cmd, 2, data, 8)) {
         PrintAndLogEx(WARNING, "data must include 8 HEX symbols");
-        return 0;
+        return PM3_ESOFT;
     }
 
     if (blockno == 0xff) {
@@ -822,8 +822,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     }
 
     sprintf(str, "-ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
-    CmdHF14BCmdRaw(str);
-    return 0;
+    return CmdHF14BCmdRaw(str);
 }
 
 // need to write to file
@@ -875,7 +874,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
     if (!get_14b_UID(&card)) {
         PrintAndLogEx(WARNING, "No tag found.");
-        return 1;
+        return PM3_SUCCESS;
     }
 
     if (fileNameLen < 1) {
@@ -1102,7 +1101,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHF14B(const char *Cmd) {
