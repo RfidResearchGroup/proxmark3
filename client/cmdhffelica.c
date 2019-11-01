@@ -55,7 +55,8 @@ static int usage_hf_felica_sniff(void) {
     PrintAndLogEx(NORMAL, "       -t    triggers to skip (decimal) max 9999");
 
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "          hf felica sniff 10 10");
+    PrintAndLogEx(NORMAL, "          hf felica sniff");
+    PrintAndLogEx(NORMAL, "          hf felica sniff -s 10 -t 10");
     return PM3_SUCCESS;
 }
 
@@ -817,16 +818,17 @@ static int CmdHFFelicaSniff(const char *Cmd) {
         }
         i++;
     }
-    if(samples2skip == 0){
+    if(samples2skip <= 0){
         samples2skip = 10;
         PrintAndLogEx(INFO, "Set default samples2skip: %i", samples2skip);
     }
-    if(triggers2skip == 0){
-        triggers2skip = 10;
+    if(triggers2skip <= 0){
+        triggers2skip = 5000;
         PrintAndLogEx(INFO, "Set default triggers2skip: %i", triggers2skip);
     }
 
     PrintAndLogEx(INFO, "Start Sniffing now. You can stop sniffing with clicking the PM3 Button");
+    PrintAndLogEx(INFO, "During sniffing, other pm3 commands may not response.");
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_FELICA_SNIFF, samples2skip, triggers2skip, 0, NULL, 0);
     return PM3_SUCCESS;

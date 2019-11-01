@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix hf list felica and hf felica sniff (@7homasSutter)
+ - Added hf felica wrunencrypted (@7homasSutter)
  - Added hf felica rdunencrypted (@7homasSutter)
  - Added hf felica rqresponse (@7homasSutter)
  - Added hf felica rqservice (@7homasSutter)
