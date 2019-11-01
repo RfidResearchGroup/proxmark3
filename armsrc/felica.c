@@ -580,7 +580,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
     uint16_t numbts = 0;
     int trigger_cnt = 0;
     uint32_t timeout = iso18092_get_timeout();
-    bool isTagFrame = true;
+    bool isReaderFrame = true;
     while (!BUTTON_PRESS()) {
         WDT_HIT();
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
@@ -591,23 +591,22 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
                 break;
             }
             if (FelicaFrame.state == STATE_FULL) {
-                //Dbprintf("Sniffing - Got Felica Frame! Sample remaining %i", remFrames);
+                if ((FelicaFrame.framebytes[3] % 2) == 0) {
+                    isReaderFrame = true; // All Reader Frames are even and all Tag frames are odd
+                } else {
+                    isReaderFrame = false;
+                }
                 remFrames--;
                 if (remFrames <= 0) {
                     Dbprintf("Stop Sniffing - samplesToSkip reached!");
                     break;
-                }
-                if ((FelicaFrame.framebytes[3] % 2) == 0) {
-                    isTagFrame = false; // All Reader Frames are even and all Tag frames are odd
-                } else {
-                    isTagFrame = true;
                 }
                 LogTrace(FelicaFrame.framebytes,
                          FelicaFrame.len,
                          ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER - timeout,
                          ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER,
                          NULL,
-                         isTagFrame
+                         isReaderFrame
                         );
                 numbts += FelicaFrame.len;
                 FelicaFrameReset();
