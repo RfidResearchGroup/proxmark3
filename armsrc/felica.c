@@ -418,7 +418,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
             Process18092Byte(b);
             if (FelicaFrame.state == STATE_FULL) {
                 felica_nexttransfertime = MAX(felica_nexttransfertime,
-                        (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME);
+                                              (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME);
 
                 LogTrace(
                     FelicaFrame.framebytes,
@@ -593,13 +593,13 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
             if (FelicaFrame.state == STATE_FULL) {
                 //Dbprintf("Sniffing - Got Felica Frame! Sample remaining %i", remFrames);
                 remFrames--;
-                if (remFrames <= 0){
+                if (remFrames <= 0) {
                     Dbprintf("Stop Sniffing - samplesToSkip reached!");
                     break;
                 }
-                if((FelicaFrame.framebytes[3] % 2) == 0){
+                if ((FelicaFrame.framebytes[3] % 2) == 0) {
                     isTagFrame = false; // All Reader Frames are even and all Tag frames are odd
-                } else{
+                } else {
                     isTagFrame = true;
                 }
                 LogTrace(FelicaFrame.framebytes,
@@ -608,7 +608,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
                          ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER,
                          NULL,
                          isTagFrame
-                );
+                        );
                 numbts += FelicaFrame.len;
                 FelicaFrameReset();
             }

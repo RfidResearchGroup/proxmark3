@@ -257,7 +257,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_14443B:
             case TOPAZ:
             case FELICA:
-                crcStatus = !felica_CRC_check(frame+2, data_len-4);
+                crcStatus = !felica_CRC_check(frame + 2, data_len - 4);
                 break;
             case PROTO_MIFARE:
                 crcStatus = mifare_CRC_check(isResponse, frame, data_len);
@@ -350,7 +350,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (protocol == PROTO_MIFARE)
         annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, parity_len, isResponse);
 
-    if(protocol == FELICA)
+    if (protocol == FELICA)
         annotateFelica(explanation, sizeof(explanation), frame, data_len);
 
     if (!isResponse) {

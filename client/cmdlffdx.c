@@ -243,7 +243,7 @@ static int CmdFdxDemod(const char *Cmd) {
 
     uint8_t c[] = {0, 0};
     compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
-    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X  [ %s] ", crc, (crc ==  (c[1] << 8 | c[0]) ) ? _GREEN_("OK") : _RED_("Fail"));
+    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X  [ %s] ", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("OK") : _RED_("Fail"));
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
@@ -313,7 +313,7 @@ static int CmdFdxSim(const char *Cmd) {
 
     countryid = param_get32ex(Cmd, 0, 0, 10);
     animalid = param_get64ex(Cmd, 1, 0, 10);
-    extended = param_get32ex(Cmd, 2, 0 , 10);
+    extended = param_get32ex(Cmd, 2, 0, 10);
 
     verify_values(&animalid, &countryid);
 
