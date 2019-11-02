@@ -47,15 +47,19 @@ static int usage_hf_felica_sim(void) {
 */
 
 static int usage_hf_felica_sniff(void) {
-    PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
-    PrintAndLogEx(NORMAL, "Buffer accessible from command 'hf list felica'");
-    PrintAndLogEx(NORMAL, "Usage:  hf felica sniff <s> <t>");
-    PrintAndLogEx(NORMAL, "      s       samples to skip (decimal)");
-    PrintAndLogEx(NORMAL, "      t       triggers to skip (decimal)");
+    PrintAndLogEx(NORMAL, "\nInfo: It get data from the field and saves it into command buffer. ");
+    PrintAndLogEx(NORMAL, "        Buffer accessible from command 'hf list felica'");
+    PrintAndLogEx(NORMAL, "\nUsage:  hf felica sniff [-h] [-s] [-t]");
+    PrintAndLogEx(NORMAL, "       -h    this help");
+    PrintAndLogEx(NORMAL, "       -s    samples to skip (decimal) max 9999");
+    PrintAndLogEx(NORMAL, "       -t    triggers to skip (decimal) max 9999");
+
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "          hf felica sniff s 1000");
+    PrintAndLogEx(NORMAL, "          hf felica sniff");
+    PrintAndLogEx(NORMAL, "          hf felica sniff -s 10 -t 10");
     return PM3_SUCCESS;
 }
+
 static int usage_hf_felica_simlite(void) {
     PrintAndLogEx(NORMAL, "\n Emulating ISO/18092 FeliCa Lite tag \n");
     PrintAndLogEx(NORMAL, "Usage: hf felica litesim [h] u <uid>");
@@ -66,6 +70,7 @@ static int usage_hf_felica_simlite(void) {
     PrintAndLogEx(NORMAL, "          hf felica litesim 11223344556677");
     return PM3_SUCCESS;
 }
+
 static int usage_hf_felica_dumplite(void) {
     PrintAndLogEx(NORMAL, "\n Dump ISO/18092 FeliCa Lite tag \n");
     PrintAndLogEx(NORMAL, "press button to abort run, otherwise it will loop for 200sec.");
@@ -76,6 +81,7 @@ static int usage_hf_felica_dumplite(void) {
     PrintAndLogEx(NORMAL, "          hf felica litedump");
     return PM3_SUCCESS;
 }
+
 static int usage_hf_felica_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf felica raw [-h] [-r] [-c] [-p] [-a] <0A 0B 0C ... hex>");
     PrintAndLogEx(NORMAL, "       -h    this help");
@@ -221,8 +227,8 @@ static int usage_hf_felica_write_without_encryption() {
     PrintAndLogEx(NORMAL, "\nUsage: hf felica wrunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List (Little Endian) hex> <01 Number of Block hex> <0A0B Block List Element hex> <0A0B0C0D0E0F... Data hex (16-Byte)>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use\n");
-    PrintAndLogEx(NORMAL, "  hf felica wrunencrypted 01 CB10 01 8001 0102030405060708090A0B0C0D0E0F10\n\n");
-
+    PrintAndLogEx(NORMAL, "  hf felica wrunencrypted 01 CB10 01 8001 0102030405060708090A0B0C0D0E0F10");
+    PrintAndLogEx(NORMAL, "  hf felica wrunencrypted -i 11100910C11BC407 01 CB10 01 8001 0102030405060708090A0B0C0D0E0F10\n\n");
     PrintAndLogEx(NORMAL, "\nExamples: ");
     PrintAndLogEx(NORMAL, "  hf felica wrunencrypted ");
     return PM3_SUCCESS;
@@ -466,7 +472,7 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
             switch (Cmd[i + 1]) {
                 case 'H':
                 case 'h':
-                    return usage_hf_felica_request_response();
+                    return usage_hf_felica_write_without_encryption();
                 case 'i':
                     paramCount++;
                     custom_IDm = true;
@@ -476,6 +482,8 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
                     paramCount++;
                     i += 16;
                     break;
+                default:
+                    return usage_hf_felica_write_without_encryption();
             }
         }
         i++;
@@ -535,7 +543,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
             switch (Cmd[i + 1]) {
                 case 'H':
                 case 'h':
-                    return usage_hf_felica_request_response();
+                    return usage_hf_felica_read_without_encryption();
                 case 'i':
                     paramCount++;
                     custom_IDm = true;
@@ -553,6 +561,8 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
                     paramCount++;
                     long_block_numbers = true;
                     break;
+                default:
+                    return usage_hf_felica_read_without_encryption();
             }
         }
         i++;
@@ -641,6 +651,8 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
                     paramCount++;
                     i += 16;
                     break;
+                default:
+                    return usage_hf_felica_request_response();
             }
         }
         i++;
@@ -766,103 +778,57 @@ static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// simulate iso18092 / FeliCa tag
-// Commented, there is no counterpart in ARM at the moment
-/*
-static int CmdHFFelicaSim(const char *Cmd) {
-    bool errors = false;
-    uint8_t flags = 0;
-    uint8_t tagtype = 1;
-    uint8_t cmdp = 0;
-    uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    int uidlen = 0;
-    bool verbose =  false;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'h':
-            case 'H':
-                return usage_hf_felica_sim();
-            case 't':
-            case 'T':
-                // Retrieve the tag type
-                tagtype = param_get8ex(Cmd, cmdp + 1, 0, 10);
-                if (tagtype == 0)
-                    errors = true;
-                cmdp += 2;
-                break;
-            case 'u':
-            case 'U':
-                // Retrieve the full 4,7,10 byte long uid
-                param_gethex_ex(Cmd, cmdp + 1, uid, &uidlen);
-                if (!errors) {
-                    PrintAndLogEx(NORMAL, "Emulating ISO18092/FeliCa tag with %d byte UID (%s)", uidlen >> 1, sprint_hex(uid, uidlen >> 1));
-                }
-                cmdp += 2;
-                break;
-            case 'v':
-            case 'V':
-                verbose = true;
-                cmdp++;
-                break;
-            case 'e':
-            case 'E':
-                cmdp++;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors || cmdp == 0) return usage_hf_felica_sim();
-
-    clearCommandBuffer();
-    SendCommandOLD(CMD_HF_FELICA_SIMULATE,  tagtype, flags, 0, uid, uidlen >> 1);
-    PacketResponseNG resp;
-
-    if (verbose)
-        PrintAndLogEx(NORMAL, "Press pm3-button to abort simulation");
-
-    while (!kbd_enter_pressed()) {
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
-    }
-    return PM3_SUCCESS;
-}
-*/
-
 static int CmdHFFelicaSniff(const char *Cmd) {
-    uint8_t cmdp = 0;
+    uint8_t paramCount = 0;
     uint64_t samples2skip = 0;
     uint64_t triggers2skip = 0;
-    bool errors = false;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (param_getchar(Cmd, cmdp)) {
-            case 'h':
-            case 'H':
-                return usage_hf_felica_sniff();
-            case 's':
-            case 'S':
-                samples2skip = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 't':
-            case 'T':
-                triggers2skip = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
+    strip_cmds(Cmd);
+    int i = 0;
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
+                case 'h':
+                case 'H':
+                    return usage_hf_felica_sniff();
+                case 's':
+                case 'S':
+                    paramCount++;
+                    if (param_getlength(Cmd, paramCount) < 5) {
+                        samples2skip = param_get32ex(Cmd, paramCount++, 0, 10);
+                    } else {
+                        PrintAndLogEx(ERR, "Invalid samples number!");
+                        return PM3_EINVARG;
+                    }
+                    break;
+                case 't':
+                case 'T':
+                    paramCount++;
+                    if (param_getlength(Cmd, paramCount) < 5) {
+                        triggers2skip = param_get32ex(Cmd, paramCount++, 0, 10);
+                    } else {
+                        PrintAndLogEx(ERR, "Invalid triggers number!");
+                        return PM3_EINVARG;
+                    }
+                    break;
+                default:
+                    PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, paramCount));
+                    return usage_hf_felica_sniff();
+            }
+            i += 2;
         }
+        i++;
     }
-    //Validations
-    if (errors || cmdp == 0) return usage_hf_felica_sniff();
+    if (samples2skip <= 0) {
+        samples2skip = 10;
+        PrintAndLogEx(INFO, "Set default samples2skip: %i", samples2skip);
+    }
+    if (triggers2skip <= 0) {
+        triggers2skip = 5000;
+        PrintAndLogEx(INFO, "Set default triggers2skip: %i", triggers2skip);
+    }
 
+    PrintAndLogEx(INFO, "Start Sniffing now. You can stop sniffing with clicking the PM3 Button");
+    PrintAndLogEx(INFO, "During sniffing, other pm3 commands may not response.");
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_FELICA_SNIFF, samples2skip, triggers2skip, 0, NULL, 0);
     return PM3_SUCCESS;

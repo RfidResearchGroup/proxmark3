@@ -31,6 +31,7 @@ void ClearAuthData(void);
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
 uint8_t iso14443B_CRC_check(uint8_t *d, uint8_t n);
+uint8_t felica_CRC_check(uint8_t *d, uint8_t n);
 uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len);
 uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n);
 uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
