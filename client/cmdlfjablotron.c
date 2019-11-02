@@ -117,9 +117,12 @@ static int CmdJablotronDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Jablotron Tag Found: Card ID: %"PRIx64" :: Raw: %08X%08X", id, raw1, raw2);
 
     uint8_t chksum = raw2 & 0xFF;
-    PrintAndLogEx(INFO, "Checksum: %02X [%s]",
+	bool isok = (chksum == jablontron_chksum(DemodBuffer));
+	
+    PrintAndLogEx( isok ? SUCCESS : INFO,
+                  "Checksum: %02X [ %s]",
                   chksum,
-                  (chksum == jablontron_chksum(DemodBuffer)) ? _GREEN_("OK") : _RED_("Fail")
+                  isok ? _GREEN_("OK") : _RED_("Fail")
                  );
 
     id = DEC2BCD(id);
@@ -142,9 +145,6 @@ static int CmdJablotronClone(const char *Cmd) {
     uint64_t fullcode = 0;
     uint32_t blocks[3] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 
-    uint8_t bits[64];
-    memset(bits, 0, sizeof(bits));
-
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_jablotron_clone();
 
@@ -159,6 +159,12 @@ static int CmdJablotronClone(const char *Cmd) {
         fullcode &= 0x7FFFFFFFFF;
         PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
     }
+
+    uint8_t *bits = calloc(64, sizeof(uint8_t));
+	if (bits == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+		return PM3_EMALLOC;
+	}
 
     if (getJablotronBits(fullcode, bits) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
