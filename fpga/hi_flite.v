@@ -1,9 +1,9 @@
 
 //this code demodulates and modulates signal as described in ISO/IEC 18092.  That includes packets used for Felica, NFC Tag 3, etc. (which do overlap)
-//simple envelope following algorithm is used (modification of fail0verflow LF one) is used to combat some nasty aliasing effect with testing phone (envelope looked like sine wave) 
+//simple envelope following algorithm is used (modification of fail0verflow LF one) is used to combat some nasty aliasing effect with testing phone (envelope looked like sine wave)
 // only 212 kbps (fc/64) for now 414 is relatively straightforward... though for reader, the selection has to come from ARM
-// modulation waits for 
-//market sprocket -doesn't really mean anything ;) 
+// modulation waits for
+//market sprocket -doesn't really mean anything ;)
 //redefining mod_type: bits 210: bit 2 - reader drive/power on/off,  bit 1 -  speed bit, 0:212, 1 -424   bit 0: listen or modulate
 
 
@@ -15,7 +15,7 @@ module hi_flite(
     cross_hi, cross_lo,
     dbg,
     mod_type //  used
-    
+
 );
     input pck0, ck_1356meg, ck_1356megb;
     output pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4;
@@ -33,7 +33,7 @@ wire  speed= mod_type[1];
 wire  disabl= mod_type[0];
 
 // Most off, oe4 for modulation;
-// Trying reader emulation (would presumably just require switching power on, but I am not sure) 
+// Trying reader emulation (would presumably just require switching power on, but I am not sure)
  //;// 1'b0;
 assign pwr_lo  = 1'b0;
 
@@ -55,7 +55,7 @@ assign adc_clk = ck_1356meg;
 //minimum values and corresponding thresholds
 reg  [8:0] curmin=`imin;
 
-reg [8:0] curminthres=`ithrmin; 
+reg [8:0] curminthres=`ithrmin;
 
 reg [8:0] curmaxthres=`ithrmax;
 reg [8:0] curmax=`imax;
@@ -103,37 +103,37 @@ always @(posedge adc_clk)
      ssp_cnt <= (ssp_cnt + 1);
 
 //maybe change it so that ARM sends preamble as well.
-//then: ready bits sent to ARM, 8 bits sent from ARM (all ones), then preamble (all zeros, presumably) - which starts modulation    
-  
+//then: ready bits sent to ARM, 8 bits sent from ARM (all ones), then preamble (all zeros, presumably) - which starts modulation
+
 always @(negedge adc_clk)
 begin
      //count fc/64 - transfer bits to ARM at the rate they are received
      if( ((~speed) && (ssp_cnt[5:0] == 6'b000000)) || (speed &&(ssp_cnt[4:0] == 5'b00000)))
         begin
-			ssp_clk <= 1'b1;
+            ssp_clk <= 1'b1;
            // if(mod_type[2])
           //  begin
          //    ssp_din<=outp[0];//after_hysteresis;
-           
-               //outp<={1'b0,outp[7:1]};             
+
+               //outp<={1'b0,outp[7:1]};
            //  end
            // else
-            ssp_din <= curbit;  
-            
+            ssp_din <= curbit;
+
             //sample ssp_dout
-                           
+
         end
-		if( ( (~speed) && (ssp_cnt[5:0] == 6'b100000)) ||(speed && ssp_cnt[4:0] == 5'b10000))
-			ssp_clk <= 1'b0;
+        if( ( (~speed) && (ssp_cnt[5:0] == 6'b100000)) ||(speed && ssp_cnt[4:0] == 5'b10000))
+            ssp_clk <= 1'b0;
     //create frame pulses. TBH, I still don't know what they do exactly, but they are crucial for ARM->FPGA transfer. If the frame is in the beginning of the byte, transfer slows to a crawl for some reason
-    // took me a day to figure THAT out.         
+    // took me a day to figure THAT out.
        if(( (~speed) && (ssp_cnt[8:0] == 9'd31))||(speed && ssp_cnt[7:0] == 8'd15))
         begin
-			ssp_frame <= 1'b1;    
+            ssp_frame <= 1'b1;
         end
          if(( (~speed) &&  (ssp_cnt[8:0] == 9'b1011111))||(speed &&ssp_cnt[7:0] == 8'b101111) )
         begin
-			ssp_frame <= 1'b0;    
+            ssp_frame <= 1'b0;
         end
 end
 
@@ -141,23 +141,23 @@ end
 
 
 //send current bit (detected in SNIFF mode or the one being modulated in MOD mode, 0 otherwise)
-reg ssp_din;//= outp[0];    
-  
-  
+reg ssp_din;//= outp[0];
+
+
 
 //previous signal value, mostly to detect SYNC
 reg prv =1'b1;
 
 
-reg[7:0] mid=8'd128; //for simple error correction in mod/demod detection, use maximum of modded/demodded in given interval. Maybe 1 bit is extra? but better safe than sorry. 
+reg[7:0] mid=8'd128; //for simple error correction in mod/demod detection, use maximum of modded/demodded in given interval. Maybe 1 bit is extra? but better safe than sorry.
 
 
 // set TAGSIM__MODULATE on ARM if we want to write... (frame would get lost if done mid-frame...)
 // start sending over 1s on ssp->arm when we start sending preamble
 
-reg counting_desync=1'b0; // are we counting bits since last frame? 
-reg sending=1'b0;  // are we actively modulating? 
-reg [11:0] bit_counts=12'd0;///for timeslots... only support ts=0 for now, at 212 speed  -512 fullbits from end of frame. One hopes.   might remove those?                 
+reg counting_desync=1'b0; // are we counting bits since last frame?
+reg sending=1'b0;  // are we actively modulating?
+reg [11:0] bit_counts=12'd0;///for timeslots... only support ts=0 for now, at 212 speed  -512 fullbits from end of frame. One hopes.   might remove those?
 
 
 //reg [2:0]old_mod;
@@ -166,19 +166,19 @@ reg [11:0] bit_counts=12'd0;///for timeslots... only support ts=0 for now, at 21
 //begin
 //if (mod_type[2]==1&&old_mod[2]==0)
 // bit_counts=0;
-//old_mod=mod_type; 
+//old_mod=mod_type;
 //end
 //we need some way to flush bit_counts triggers on mod_type changes don't compile
 reg dlay;
-always @(negedge adc_clk) //every data ping? 
+always @(negedge adc_clk) //every data ping?
 begin
-  //envelope follow code...          
-  ////////////   
+  //envelope follow code...
+  ////////////
 
            //move the counter to the outside...
-       // if (adc_d>=curminthres||try_sync) 
+       // if (adc_d>=curminthres||try_sync)
         if(fccount==bitmlen)
-  begin     
+  begin
         if((~try_sync)&&(adc_d<curminthres)&&disabl )
         begin
          fccount<=1;
@@ -186,12 +186,12 @@ begin
          else
          begin
           fccount<=0;
-         end 
+         end
         // if (counting_desync)
         //  begin
            dlay<=ssp_dout;
            if(bit_counts>768) // should be over ts0 now, without ARM interference... stop counting...
-              begin 
+              begin
                bit_counts<=0;
               // counting_desync<=0;
                end
@@ -199,11 +199,11 @@ begin
              if((power))
              bit_counts<=0;
              else
-               bit_counts<=bit_counts+1; 
-         // end 
+               bit_counts<=bit_counts+1;
+         // end
         end
         else
-        begin 
+        begin
         if((~try_sync)&&(adc_d<curminthres) &&disabl)
         begin
          fccount<=1;
@@ -211,9 +211,9 @@ begin
          else
          begin
           fccount<=fccount+1;
-         end 
+         end
         end
-  
+
       if (adc_d>curmaxthres) //rising edge
        begin
         case (state)
@@ -230,38 +230,38 @@ begin
          2: begin
             if (adc_d>curmax)
                curmax <= adc_d;
-            end  
+            end
          default:
             begin
-            end        
+            end
         endcase
         after_hysteresis <=1'b1;
         if(try_sync)
           tsinceedge<=0;
        end
       else if (adc_d<curminthres) //falling edge
-        begin 
+        begin
           case (state)
             0: begin
-               curmin <=adc_d<`imin? adc_d :`imin; 
+               curmin <=adc_d<`imin? adc_d :`imin;
                state <=1;
                end
             1: begin
                if (adc_d<curmin)
-                 curmin <= adc_d; 
+                 curmin <= adc_d;
                end
             2: begin
                 curminthres <= ( (curmin>>1)+(curmin>>2)+(curmin>>4)+(curmax>>3)+(curmax>>4));
                 curmaxthres <= ( (curmax>>1)+(curmax>>2)+(curmax>>4)+(curmin>>3)+(curmin>>4));
                 curmin <=adc_d<`imin? adc_d :`imin;
-                state <=1;       
-               end 
+                state <=1;
+               end
             default:
               begin
-              end              
-          endcase   
+              end
+          endcase
               after_hysteresis <=0;
-          if (~try_sync ) //begin modulation, lower edge... 
+          if (~try_sync ) //begin modulation, lower edge...
              begin
              try_sync <=1;
              //counting_desync<=1'b0;
@@ -271,7 +271,7 @@ begin
              mid <=8'd127;
              tsinceedge<=0;
              prv <=1;
-             end  
+             end
            else
            begin
            tsinceedge<=0;
@@ -282,12 +282,12 @@ begin
             curminthres <= ( (curmin>>1)+(curmin>>2)+(curmin>>4)+(curmax>>3)+(curmax>>4));
             curmaxthres <= ( (curmax>>1)+(curmax>>2)+(curmax>>4)+(curmin>>3)+(curmin>>4));
             state <=0;
-            
+
              if (try_sync )
               begin
                if (tsinceedge>=(128))
                   begin
-                  //we might need to start counting... assuming ARM wants to reply to the frame. 
+                  //we might need to start counting... assuming ARM wants to reply to the frame.
                  // counting_desync<=1'b1;
                   bit_counts<=1;// i think? 128 is about 2 bits passed... but 1 also works
                   try_sync<=0;
@@ -295,7 +295,7 @@ begin
                   curmin <=`imin; //reset envelope
                   curmax <=`imax;
                   curminthres <=`ithrmin;
-                  curmaxthres <=`ithrmax; 
+                  curmaxthres <=`ithrmax;
                   prv <=1;
                   tsinceedge <=0;
                   after_hysteresis <=1'b1;
@@ -305,33 +305,33 @@ begin
                else
                 tsinceedge<=(tsinceedge+1);
               end
-         end 
-        
-    
-   
-        
+         end
+
+
+
+
         if (try_sync && tsinceedge<128)
             begin
             //detect bits in their middle ssp sampling is in sync, so it would sample all bits in order
             if (fccount==bithalf)
               begin
                 if ((~did_sync) && ((prv==1&&(mid>128))||(prv==0&&(mid<=128))))
-                  begin 
+                  begin
                         //sync the Zero, and set curbit roperly
                         did_sync <=1'b1;
                         zero <= ~prv;// 1-prv
                         curbit <=1;
-                  end   
-                else 
+                  end
+                else
                     curbit <= (mid>128) ? (~zero):zero;
-                    
-                 prv <=(mid>128) ?1:0;  
-                  
-                 if(adc_d>curmaxthres)   
+
+                 prv <=(mid>128) ?1:0;
+
+                 if(adc_d>curmaxthres)
                   mid <=8'd129;
-                 else if (adc_d<curminthres) 
+                 else if (adc_d<curminthres)
                     mid <=8'd127;
-                 else 
+                 else
                   begin
                    if (after_hysteresis)
                    begin
@@ -342,24 +342,24 @@ begin
                    mid<=8'd127;
                    end
                   end
-                    
+
                end
-             else  
-              begin  
+             else
+              begin
                 if (fccount==bitmlen)
                   begin
                   // fccount <=0;
-                   prv <=(mid>128)?1:0; 
+                   prv <=(mid>128)?1:0;
                    mid <=128;
                   end
                 else
                  begin
                 // minimum-maximum calc
-                  if(adc_d>curmaxthres)   
+                  if(adc_d>curmaxthres)
                      mid <=mid+1;
-                   else if (adc_d<curminthres) 
+                   else if (adc_d<curminthres)
                     mid <=mid-1;
-                   else 
+                   else
                     begin
                      if (after_hysteresis)
                        begin
@@ -369,14 +369,14 @@ begin
                        begin
                        mid<=mid-1;
                        end
-                    end 
+                    end
                  end
-              end  
-            end 
+              end
+            end
            else
            begin
-            end       
-       sending <=0;     
+            end
+       sending <=0;
 end
 //put modulation here to maintain the correct clock. Seems that some readers are sensitive to that
 reg pwr_hi;
@@ -398,7 +398,7 @@ if (power)
         pwr_oe4 <= mod;//1'b0;
            end
 else
-          begin          
+          begin
        pwr_hi <= 1'b0;
         pwr_oe1 <= 1'b0;
         pwr_oe2 <= 1'b0;

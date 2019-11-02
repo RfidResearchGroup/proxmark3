@@ -13,6 +13,9 @@
  * Lesser General Public License for more details.
  */
 
- #include <stdbool.h>
+#ifndef __CRYPTO_TEST_H
+#define __CRYPTO_TEST_H
+#include <stdbool.h>
 
-extern int exec_crypto_test(bool verbose);
+int exec_crypto_test(bool verbose, bool include_slow_tests);
+#endif

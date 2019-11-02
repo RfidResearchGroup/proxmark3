@@ -11,7 +11,7 @@
 #ifndef PROXENDIAN_H__
 #define PROXENDIAN_H__
 
-#include <stdint.h>
+#include "common.h"
 
 #ifdef _WIN32
 # define HOST_LITTLE_ENDIAN
@@ -35,14 +35,12 @@
 # define le32(x) (x)
 #else
 
-static inline uint16_t le16(uint16_t v)
-{
-	return (v>>8) | (v<<8);
+static inline uint16_t le16(uint16_t v) {
+    return (v >> 8) | (v << 8);
 }
 
-static inline uint32_t le32(uint32_t v)
-{
-	return (le16(v)<<16) | (le16(v>>16));
+static inline uint32_t le32(uint32_t v) {
+    return (le16(v) << 16) | (le16(v >> 16));
 }
 #endif // HOST_LITTLE_ENDIAN
 

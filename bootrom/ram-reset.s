@@ -14,7 +14,7 @@
 
 .global ram_start
 ram_start:
-	ldr	sp,     =_stack_end
-	bl	BootROM
+    ldr sp,     =_stack_end
+    bl  BootROM
 
-	.ltorg
+    .ltorg

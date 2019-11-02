@@ -11,35 +11,7 @@
 #ifndef CMDANALYSE_H__
 #define CMDANALYSE_H__
 
-#include <stdlib.h>  //size_t
-#include <string.h>
-#include <unistd.h>
-#include "cmdmain.h"
-#include "proxmark3.h"
-#include "ui.h"		// PrintAndLog
-#include "util.h"
-#include "crc.h"
-#include "crc16.h"			// crc16 ccitt
-#include "tea.h"
-#include "legic_prng.h"
-#include "loclass/elite_crack.h"
-#include "mfkey.h"  //nonce2key 
-#include "util_posix.h" // msclock
-
-
-int usage_analyse_lcr(void);
-int usage_analyse_checksum(void);
-int usage_analyse_crc(void);
-int usage_analyse_hid(void);
-int usage_analyse_nuid(void);
+#include "common.h"
 
 int CmdAnalyse(const char *Cmd);
-int CmdAnalyseLCR(const char *Cmd);
-int CmdAnalyseCHKSUM(const char *Cmd);
-int CmdAnalyseDates(const char *Cmd);
-int CmdAnalyseCRC(const char *Cmd);
-int CmdAnalyseTEASelfTest(const char *Cmd);
-int CmdAnalyseLfsr(const char *Cmd);
-int CmdAnalyseHid(const char *Cmd);
-int CmdAnalyseNuid(const char *Cmd);
 #endif

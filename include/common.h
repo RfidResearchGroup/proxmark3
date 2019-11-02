@@ -12,26 +12,37 @@
 #ifndef __COMMON_H
 #define __COMMON_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <stddef.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
-#include <at91sam7s512.h>
-typedef unsigned char byte_t;
+
+#define PATHSEP "/"
+// PM3 share path relative to executable when installed
+#define PM3_SHARE_RELPATH    ".." PATHSEP "share" PATHSEP "proxmark3" PATHSEP
+
+// PM3_USER_DIRECTORY will be expanded from $HOME, e.g. ~/.proxmark3/
+#define PM3_USER_DIRECTORY   PATHSEP ".proxmark3" PATHSEP
+
+// PM3 subdirectories:
+#define CMD_SCRIPTS_SUBDIR   "cmdscripts" PATHSEP
+#define DICTIONARIES_SUBDIR  "dictionaries" PATHSEP
+#define LUA_LIBRARIES_SUBDIR "lualibs" PATHSEP
+#define LUA_SCRIPTS_SUBDIR   "luascripts" PATHSEP
+#define RESOURCES_SUBDIR     "resources" PATHSEP
+#define TRACES_SUBDIR        "traces" PATHSEP
+#define FIRMWARES_SUBDIR     "firmware" PATHSEP
+#define BOOTROM_SUBDIR       "bootrom/obj" PATHSEP
+#define FULLIMAGE_SUBDIR     "armsrc/obj" PATHSEP
+
+#define PACKED __attribute__((packed))
 
 // debug
-// 0 - no debug messages 1 - error messages 2 - all messages 4 - extended debug mode
-#define MF_DBG_NONE          0		
-#define MF_DBG_ERROR         1
-#define MF_DBG_ALL           2
-#define MF_DBG_EXTENDED      4
-extern int MF_DBGLEVEL;
-
-// Flashmem spi baudrate
-extern uint32_t FLASHMEM_SPIBAUDRATE;
+#define DBG_NONE          0 // no messages
+#define DBG_ERROR         1 // errors only
+#define DBG_INFO          2 // errors + info messages
+#define DBG_DEBUG         3 // errors + info + debug messages
+#define DBG_EXTENDED      4 // errors + info + debug + breaking debug messages
+extern int DBGLEVEL;
 
 // reader voltage field detector
 #define MF_MINFIELDV      4000
@@ -49,70 +60,85 @@ extern uint32_t FLASHMEM_SPIBAUDRATE;
 #endif
 #define RAMFUNC __attribute((long_call, section(".ramfunc")))
 
-// RDV40 Section
-// 256kb divided into 4k sectors.
-// 
-// last 4k sector = signature
-// second last 4k sector = settings
-// third last 4k sector = default MF keys dictionary
-// forth last 4k sector = default LF keys dictionary
-
-#ifndef FLASH_MEM_BLOCK_SIZE
-# define FLASH_MEM_BLOCK_SIZE   256
+#ifndef ROTR
+# define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
 #endif
 
-#ifndef FLASH_MEM_MAX_SIZE
-# define FLASH_MEM_MAX_SIZE     0x3FFFF  // (262143)
+#ifndef ROTL
+# define ROTL(x,n) (((uintmax_t)(x) << (n)) | ((uintmax_t)(x) >> ((sizeof(x) * 8) - (n))))
 #endif
 
-#ifndef FLASH_MEM_MAX_4K_SECTOR
-# define FLASH_MEM_MAX_4K_SECTOR   0x3F000
+// endian change for 64bit
+#ifdef __GNUC__
+#ifndef BSWAP_64
+#define BSWAP_64(x) __builtin_bswap64(x)
+#endif
+#else
+#ifdef _MSC_VER
+#ifndef BSWAP_64
+#define BSWAP_64(x) _byteswap_uint64(x)
+#endif
+#else
+#ifndef BSWAP_64
+#define BSWAP_64(x) \
+    (((uint64_t)(x) << 56) | \
+     (((uint64_t)(x) << 40) & 0xff000000000000ULL) | \
+     (((uint64_t)(x) << 24) & 0xff0000000000ULL) | \
+     (((uint64_t)(x) << 8)  & 0xff00000000ULL) | \
+     (((uint64_t)(x) >> 8)  & 0xff000000ULL) | \
+     (((uint64_t)(x) >> 24) & 0xff0000ULL) | \
+     (((uint64_t)(x) >> 40) & 0xff00ULL) | \
+     ((uint64_t)(x)  >> 56))
+#endif
+#endif
 #endif
 
-
-#ifndef FLASH_MEM_ID_LEN
-# define FLASH_MEM_ID_LEN			8
+// endian change for 32bit
+#ifdef __GNUC__
+#ifndef BSWAP_32
+#define BSWAP_32(x) __builtin_bswap32(x)
+#endif
+#else
+#ifdef _MSC_VER
+#ifndef BSWAP_32
+#define BSWAP_32(x) _byteswap_ulong(x)
+#endif
+#else
+#ifndef BSWAP_32
+# define BSWAP_32(x) \
+    ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
+     (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
+#endif
+#endif
 #endif
 
-#ifndef FLASH_MEM_SIGNATURE_LEN
-# define FLASH_MEM_SIGNATURE_LEN	128
+#define EVEN                        0
+#define ODD                         1
+
+// Nibble logic
+#ifndef NIBBLE_HIGH
+# define NIBBLE_HIGH(b) ( (b & 0xF0) >> 4 )
 #endif
 
-#ifndef FLASH_MEM_SIGNATURE_OFFSET
-# define FLASH_MEM_SIGNATURE_OFFSET	(FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN)
+#ifndef NIBBLE_LOW
+# define NIBBLE_LOW(b)  ( b & 0x0F )
 #endif
 
-#if WITH_FLASH
-	#ifndef T55XX_CONFIG_LEN
-	# define T55XX_CONFIG_LEN	sizeof( t55xx_config )
-	#endif
-
-	#ifndef T55XX_CONFIG_OFFSET
-	# define T55XX_CONFIG_OFFSET	(FLASH_MEM_MAX_4K_SECTOR - 0x2000)
-	#endif
-
-	#ifndef DEFAULT_T55XX_KEYS_OFFSET
-	# define DEFAULT_T55XX_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x3000)
-	#endif
-	
-	#ifndef DEFAULT_MF_KEYS_OFFSET
-	# define DEFAULT_MF_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x4000)
-	#endif
-	
-	#ifndef DEFAULT_ICLASS_KEYS_OFFSET
-	# define DEFAULT_ICLASS_KEYS_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x5000)
-	#endif
+#ifndef CRUMB
+# define CRUMB(b,p)    (((b & (0x3 << p) ) >> p ) & 0xF)
 #endif
 
-// RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
-typedef struct {
-	uint8_t magic[4];
-	uint8_t flashid[FLASH_MEM_ID_LEN];
-	uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
-} __attribute__((__packed__)) rdv40_validation_t;
+#ifndef SWAP_NIBBLE
+# define SWAP_NIBBLE(b)  ( (NIBBLE_LOW(b)<< 4) | NIBBLE_HIGH(b))
+#endif
 
+// Binary Encoded Digit
+#ifndef BCD2DEC
+# define BCD2DEC(bcd) HornerScheme(bcd, 0x10, 10)
+#endif
 
-#ifdef __cplusplus
-}
-#endif				
+#ifndef DEC2BCD
+# define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
+#endif
+
 #endif

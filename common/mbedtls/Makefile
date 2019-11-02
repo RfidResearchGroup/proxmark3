@@ -1,6 +1,8 @@
-
-LIB_A = libmbedtls.a
-mbedtls_SOURCES = \
+MYSRCPATHS =
+MYINCLUDES = -I. -I..
+MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYDEFS =
+MYSRCS = \
 	aes.c \
 	asn1parse.c \
 	asn1write.c \
@@ -44,44 +46,7 @@ mbedtls_SOURCES = \
 	x509.c \
 	x509_crl.c \
 	x509_crt.c
-mbedtls_LDFLAGS = \
-	-no-undefined \
-	-export-symbols-regex '^mbedtls_' \
-	-version-info 15:0:11
 
-	
-CFILES = $(filter %.c, $(mbedtls_SOURCES))
-CMDOBJS = $(CFILES:%.c=%.o)
-CLEAN = $(CMDOBJS)
-	
-CC= gcc
-CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function
-LDFLAGS= $(SYSLDFLAGS) $(mbedtls_LDFLAGS)
-LIBS=  $(SYSLIBS) $(MYLIBS)
-DEFAULT_INCLUDES = -I. -I..
-DEFS = -DHAVE_STDINT_H
+LIB_A = libmbedtls.a
 
-AR= ar rcs
-RANLIB= ranlib
-RM= rm -f
-TST= echo
-
-SYSLDFLAGS=
-SYSLIBS=
-
-MYLIBS=
-MYOBJS=
-
-all: $(CMDOBJS)
-	$(AR) $(LIB_A) $(CMDOBJS)
-	$(RANLIB) $(LIB_A)
-	
-clean:
-	$(RM) $(CLEAN)
-	$(RM) $(LIB_A)
-	
-%.o: %.c
-	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(CFLAGS) -c -o $@ $< $(LIBS)
-	
-.PHONY: all clean
-
+include ../../Makefile.host

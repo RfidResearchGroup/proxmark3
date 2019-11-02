@@ -6,25 +6,28 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Code for communicating with the proxmark3 hardware.
+// Code for communicating with the Proxmark3 hardware.
 //-----------------------------------------------------------------------------
 
 #ifndef COMMS_H_
 #define COMMS_H_
 
-#include <stdbool.h>
-#include <pthread.h>
-
-#include "usb_cmd.h"
-#include "uart.h"
-#include "ui.h"
 #include "common.h"
-#include "util_posix.h"
-#include "util.h" 
-#include "util_darwin.h"
+#include "pm3_cmd.h"    // Packet structs
+#include "util.h"       // FILE_PATH_SIZE
 
-#if defined(__linux__) && !defined(NO_UNLINK)
-#include <unistd.h>		// for unlink()
+#ifndef DropField
+#define DropField() { \
+        clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
+    }
+#endif
+
+#ifndef DropFieldEx
+#define DropFieldEx(x) { \
+        if ( (x) == ECC_CONTACTLESS) { \
+            DropField(); \
+        } \
+    }
 #endif
 
 //For storing command that are received from the device
@@ -33,35 +36,48 @@
 #endif
 
 typedef enum {
-	BIG_BUF,
-	BIG_BUF_EML,
-	FLASH_MEM,
-	SIM_MEM,
-	} DeviceMemType_t;
+    BIG_BUF,
+    BIG_BUF_EML,
+    FLASH_MEM,
+    SIM_MEM,
+    SPIFFS
+} DeviceMemType_t;
 
 typedef struct {
-	bool run; // If TRUE, continue running the uart_communication thread
-	bool block_after_ACK; // if true, block after receiving an ACK package
+    bool run; // If TRUE, continue running the uart_communication thread
+    bool block_after_ACK; // if true, block after receiving an ACK package
+    // Flags to tell where to add CRC on sent replies
+    bool send_with_crc_on_usb;
+    bool send_with_crc_on_fpc;
+    // "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
+    bool send_via_fpc_usart;
+    // To memorise baudrate
+    uint32_t uart_speed;
+    uint16_t last_command;
+    uint8_t serial_port_name[FILE_PATH_SIZE];
 } communication_arg_t;
-	
 
-bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
-
-void SetOffline(bool value);
-bool IsOffline();
+extern communication_arg_t conn;
 
 void *uart_receiver(void *targ);
-void SendCommand(UsbCommand *c);
-void clearCommandBuffer();
+void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
+void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+void clearCommandBuffer(void);
 
-bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode);
+#define FLASHMODE_SPEED 460800
+bool IsCommunicationThreadDead(void);
+bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
+int TestProxmark(void);
 void CloseProxmark(void);
-	
-bool WaitForResponseTimeoutW(uint32_t cmd, UsbCommand* response, size_t ms_timeout, bool show_warning);
-bool WaitForResponseTimeout(uint32_t cmd, UsbCommand* response, size_t ms_timeout);
-bool WaitForResponse(uint32_t cmd, UsbCommand* response);
 
-extern bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, UsbCommand *response, size_t ms_timeout, bool show_warning);
+bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
+bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);
+bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
+
+//bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 
 #endif
 

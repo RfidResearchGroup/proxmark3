@@ -11,9 +11,7 @@
 #ifndef __STANDALONE_H
 #define __STANDALONE_H
 
-#include <stdbool.h> // for bool
-#include <inttypes.h> // PRIu64
-
-extern void RunMod();
+void RunMod();
+void ModInfo();
 
 #endif /* __STANDALONE_H */

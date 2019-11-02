@@ -27,7 +27,7 @@ module hi_read_tx(
 // low frequency outputs, not relevant
 assign pwr_lo = 1'b0;
 assign pwr_oe2 = 1'b0;
-	
+
 // The high-frequency stuff. For now, for testing, just bring out the carrier,
 // and allow the ARM to modulate it over the SSP.
 reg pwr_hi;

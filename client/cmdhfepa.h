@@ -11,22 +11,8 @@
 #ifndef CMDHFEPA_H__
 #define CMDHFEPA_H__
 
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdio.h>
-#include "util.h"
-#include "proxmark3.h"
 #include "common.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "cmdmain.h"
-#include "util_posix.h"
 
-
-extern int CmdHFEPA(const char *Cmd);
-extern int CmdHFEPACollectPACENonces(const char *Cmd);
-extern int CmdHFEPAPACEReplay(const char *Cmd);
+int CmdHFEPA(const char *Cmd);
 
 #endif // CMDHFEPA_H__

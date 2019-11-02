@@ -6,138 +6,139 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// main code for LF aka SamyRun by Samy Kamkar 
+// main code for LF aka SamyRun by Samy Kamkar
 //-----------------------------------------------------------------------------
-#include "lf_samyrun.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "lfops.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+
+#define OPTS 2
+
+void ModInfo(void) {
+    DbpString("  LF HID26 standalone - aka SamyRun (Samy Kamkar)");
+}
 
 // samy's sniff and repeat routine for LF
+
+//  LEDS.
+//  A  ,  B  == which bank (recording)
+//  FLASHING A, B =  clone bank
+//  C = playing bank A
+//  D = playing bank B
+
 void RunMod() {
-	StandAloneMode();
-	Dbprintf(">>  LF HID Read/Clone/Sim a.k.a SamyRun Started  <<");		
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    StandAloneMode();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    Dbprintf(">>  LF HID Read/Clone/Sim a.k.a SamyRun Started  <<");
 
-	uint32_t high[OPTS], low[OPTS];
-	int selected = 0;
-	int playing = 0;
-	int cardRead = 0;
-	bool gotCard;
-	// Turn on selected LED
-	LED(selected + 1, 0);
+    uint32_t high[OPTS], low[OPTS];
+    int selected = 0;
 
-	for (;;) {		
-		WDT_HIT();
-		
-		// exit from SamyRun,   send a usbcommand.
-		if (usb_poll_validate_length()) break;
+#define STATE_READ 0
+#define STATE_SIM 1
+#define STATE_CLONE 2
 
-		// Was our button held down or pressed?
-		int button_pressed = BUTTON_HELD(1000);
-		
-		Dbprintf("button %d", button_pressed);
-		SpinDelay(300);
+    uint8_t state = STATE_READ;
 
-		// Button was held for a second, begin recording
-		if (button_pressed > 0 && cardRead == 0) {
-			LEDsoff();
-			LED(selected + 1, 0);
-			LED(LED_RED2, 0);
+    for (;;) {
 
-			// record
-			DbpString("[=] starting recording");
+        WDT_HIT();
 
-			// wait for button to be released
-			while (BUTTON_PRESS())
-				WDT_HIT();
+        // exit from SamyRun,   send a usbcommand.
+        if (data_available()) break;
 
-			/* need this delay to prevent catching some weird data */
-			SpinDelay(500);
+        // Was our button held down or pressed?
+        int button_pressed = BUTTON_HELD(280);
+        if (button_pressed != BUTTON_HOLD)
+            continue;
+        /*
+        #define BUTTON_NO_CLICK 0
+        #define BUTTON_SINGLE_CLICK -1
+        #define BUTTON_DOUBLE_CLICK -2
+        */
 
-			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
-			Dbprintf("[=] recorded bank %x | %x %08x", selected, high[selected], low[selected]);
+        if (state == STATE_READ) {
 
-			LEDsoff();
-			LED(selected + 1, 0);
-			// Finished recording
-			// If we were previously playing, set playing off
-			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 1;
+            if (selected == 0) {
+                LED_A_ON();
+                LED_B_OFF();
+            } else {
+                LED_B_ON();
+                LED_A_OFF();
+            }
 
-			gotCard	= true;
-		}
-		else if (button_pressed > 0 && cardRead == 1) {
-			LEDsoff();
-			LED(selected + 1, 0);
-			LED(LED_ORANGE, 0);
+            LED_C_OFF();
+            LED_D_OFF();
 
-			// record
-			Dbprintf("[=] cloning %x %x %08x", selected, high[selected], low[selected]);
+            WAIT_BUTTON_RELEASED();
 
-			// wait for button to be released
-			while (BUTTON_PRESS())
-				WDT_HIT();
+            // record
+            DbpString("[=] start recording");
 
-			/* need this delay to prevent catching some weird data */
-			SpinDelay(500);
+            // findone, high, low, no ledcontrol (A)
+            uint32_t hi = 0, lo = 0;
+            CmdHIDdemodFSK(1, &hi, &lo, 0);
+            high[selected] = hi;
+            low[selected] = lo;
 
-			CopyHIDtoT55x7(0, high[selected], low[selected], 0);
-			Dbprintf("[=] cloned %x %x %08x", selected, high[selected], low[selected]);
+            Dbprintf("[=]   recorded %x | %x%08x", selected, high[selected], low[selected]);
 
-			LEDsoff();
-			LED(selected + 1, 0);
-			// Finished recording
+            // got nothing. blink and loop.
+            if (hi == 0 && lo == 0) {
+                SpinErr((selected == 0) ? LED_A : LED_B, 100, 12);
+                DbpString("[=] only got zeros, retry recording after click");
+                continue;
+            }
 
-			// If we were previously playing, set playing off
-			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 0;			
-		}
+            SpinErr((selected == 0) ? LED_A : LED_B, 250, 2);
+            state = STATE_SIM;
+            continue;
 
-		// Change where to record (or begin playing)
-		else if (button_pressed && gotCard) {
-			// Next option if we were previously playing
-			if (playing)
-				selected = (selected + 1) % OPTS;
-			
-			playing = !playing;
+        } else if (state == STATE_SIM) {
 
-			LEDsoff();
-			LED(selected + 1, 0);
+            LED_C_ON();   // Simulate
+            LED_D_OFF();
+            WAIT_BUTTON_RELEASED();
 
-			// Begin transmitting
-			if (playing) {
-				
-				LED(LED_GREEN, 0);
-				DbpString("[=] playing");
-				
-				// wait for button to be released
-				while (BUTTON_PRESS())
-					WDT_HIT();
-				
-				Dbprintf("[=] %x %x %08x", selected, high[selected], low[selected]);
-				CmdHIDsimTAG(high[selected], low[selected], false);		
-				DbpString("[=] done playing");
-				
-				if (BUTTON_HELD(1000) > 0)
-					goto out;
+            Dbprintf("[=] simulating %x | %x%08x", selected, high[selected], low[selected]);
 
-				/* We pressed a button so ignore it here with a delay */
-				SpinDelay(300);
+            // high, low, no led control(A)  no time limit
+            CmdHIDsimTAGEx(0, high[selected], low[selected], 0, false, -1);
 
-				// when done, we're done playing, move to next option
-				selected = (selected + 1) % OPTS;
-				playing = !playing;
-				LEDsoff();
-				LED(selected + 1, 0);
-			}
-			else {
-				while (BUTTON_PRESS())
-					WDT_HIT();
-			}
-		}
-	}
+            DbpString("[=] simulating done");
 
-out:	
-	DbpString("[=] exiting");
-	LEDsoff();
+            uint8_t leds = ((selected == 0) ? LED_A : LED_B) | LED_C;
+            SpinErr(leds, 250, 2);
+            state = STATE_CLONE;
+            continue;
+
+        } else if (state == STATE_CLONE) {
+
+            LED_C_OFF();
+            LED_D_ON();   // clone
+            WAIT_BUTTON_RELEASED();
+
+            Dbprintf("[=]    cloning %x | %x%08x", selected, high[selected], low[selected]);
+
+            // high2, high, low,  no longFMT
+            CopyHIDtoT55x7(0, high[selected], low[selected], 0);
+
+            DbpString("[=] cloned done");
+
+            state = STATE_READ;
+            uint8_t leds = ((selected == 0) ? LED_A : LED_B) | LED_D;
+            SpinErr(leds, 250, 2);
+            selected = (selected + 1) % OPTS;
+            LEDsoff();
+        }
+    }
+
+    SpinErr((LED_A | LED_B | LED_C | LED_D), 250, 5);
+    DbpString("[=] You can take shell back :) ...");
+    LEDsoff();
 }

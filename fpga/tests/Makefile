@@ -5,7 +5,7 @@
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
 #-----------------------------------------------------------------------------
-
+MKDIR = mkdir -p
 TEST_OUTDIR = tb_tmp
 
 TB_SOURCES = \
@@ -62,9 +62,9 @@ tb_lf_edge_detect: tb_lf_edge_detect.vvp | test_dir
 	rm -f $(TEST_OUTDIR)/data.*
 
 test_dir:
-	@if [ ! -d $(TEST_OUTDIR) ] ; then mkdir $(TEST_OUTDIR) ; fi
+	@if [ ! -d $(TEST_OUTDIR) ] ; then $(MKDIR) $(TEST_OUTDIR) ; fi
 
-.PHONY: all clean 
+.PHONY: all clean
 
 # $(1) = basename
 # $(2) = extension to check

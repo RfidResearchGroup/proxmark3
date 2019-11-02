@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // (c) 2009 Henryk Plötz <henryk@ploetzli.ch>
 //     2018 AntiCat
 //
@@ -12,8 +12,8 @@
 #ifndef __LEGICRFSIM_H
 #define __LEGICRFSIM_H
 
-#include "proxmark3.h"
+#include "common.h"
 
-extern void LegicRfSimulate(uint8_t tagtype);
+void LegicRfSimulate(uint8_t tagtype);
 
 #endif /* __LEGICRFSIM_H */

@@ -33,6 +33,8 @@
 #ifndef VTSEND_H
 #define VTSEND_H
 
+#include "common.h"
+
 #define VTSEND_COLOR_BLACK      (0)
 #define VTSEND_COLOR_RED        (1)
 #define VTSEND_COLOR_GREEN      (2)
@@ -56,10 +58,6 @@ typedef struct {
     void *extobj;
 } vtsend_t;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 int vtsend_init(vtsend_t *p, VTSEND_SERIAL_WRITE uart_write, void *extobj);
 int vtsend_cursor_position(vtsend_t *p, const int column, const int line);
 int vtsend_cursor_up(vtsend_t *p, const int n);
@@ -78,16 +76,10 @@ int vtsend_set_cursor(vtsend_t *p, const int visible);
 int vtsend_reset(vtsend_t *p);
 
 int vtsend_draw_box(
-        vtsend_t *p,
-        const int x1, const int y1, const int x2, const int y2);
+    vtsend_t *p,
+    const int x1, const int y1, const int x2, const int y2);
 int vtsend_fill_box(
-        vtsend_t *p,
-        const int x1, const int y1, const int x2, const int y2);
-
-#ifdef __cplusplus
-}
-#endif
+    vtsend_t *p,
+    const int x1, const int y1, const int x2, const int y2);
 
 #endif
-
-

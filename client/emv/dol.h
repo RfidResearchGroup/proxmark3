@@ -17,9 +17,8 @@
 #define DOL_H
 
 #include "emv/tlv.h"
-#include <stddef.h>
 
 struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_tag_t tag);
-struct tlvdb *dol_parse(const struct tlv *tlv, const unsigned char *buf, size_t len);
+struct tlvdb *dol_parse(const struct tlv *tlv, const unsigned char *data, size_t data_len);
 
 #endif

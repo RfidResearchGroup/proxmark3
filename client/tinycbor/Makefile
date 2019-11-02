@@ -1,6 +1,10 @@
-
-LIB_A = tinycbor.a
-tinycbor_SOURCES = \
+MYSRCPATHS =
+MYINCLUDES =
+# Strange errors on Mingw when compiling with C99
+#MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYCFLAGS =
+MYDEFS =
+MYSRCS = \
     cborencoder.c \
     cborencoder_close_container_checked.c \
     cborerrorstrings.c \
@@ -9,38 +13,10 @@ tinycbor_SOURCES = \
     cborpretty.c \
     cbortojson.c \
     cborvalidation.c \
-	
-CFILES = $(filter %.c, $(tinycbor_SOURCES))
-CMDOBJS = $(CFILES:%.c=%.o)
-CLEAN = $(CMDOBJS)
-	
-CC= gcc
-CFLAGS= -O2 -Wall -Wno-unused-variable -Wno-unused-function
-LIBS=  $(SYSLIBS) $(MYLIBS)
-DEFAULT_INCLUDES = -I. -I..
-DEFS = -DHAVE_STDINT_H
 
-AR= ar rcs
-RANLIB= ranlib
-RM= rm -f
-TST= echo
+LIB_A = tinycbor.a
 
-SYSLDFLAGS=
-SYSLIBS=
+# Strange errors on Mingw when compiling with -O3
+CFLAGS ?= -Wall -Werror -O2
 
-MYLIBS=
-MYOBJS=
-
-all: $(CMDOBJS)
-	$(AR) $(LIB_A) $(CMDOBJS)
-	$(RANLIB) $(LIB_A)
-	
-clean:
-	$(RM) $(CLEAN)
-	$(RM) $(LIB_A)
-	
-%.o: %.c
-	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(CFLAGS) -c -o $@ $< $(LIBS)
-	
-.PHONY: all clean
-
+include ../../Makefile.host

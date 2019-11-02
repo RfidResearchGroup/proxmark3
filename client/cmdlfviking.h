@@ -8,29 +8,14 @@
 //-----------------------------------------------------------------------------
 #ifndef CMDLFVIKING_H__
 #define CMDLFVIKING_H__
-#include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "lfdemod.h"
 
-extern int CmdLFViking(const char *Cmd);
+#include "common.h"
 
-extern int CmdVikingDemod(const char *Cmd);
-extern int CmdVikingRead(const char *Cmd);
-extern int CmdVikingClone(const char *Cmd);
-extern int CmdVikingSim(const char *Cmd);
+int CmdLFViking(const char *Cmd);
 
-extern int detectViking(uint8_t *dest, size_t *size);
+int demodViking(void);
+int detectViking(uint8_t *src, size_t *size);
+uint64_t getVikingBits(uint32_t id);
 
-extern int usage_lf_viking_clone(void);
-extern int usage_lf_viking_sim(void);
 #endif
 

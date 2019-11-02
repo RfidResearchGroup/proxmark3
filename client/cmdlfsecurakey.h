@@ -9,26 +9,12 @@
 #ifndef CMDLFSECURAKEY_H__
 #define CMDLFSECURAKEY_H__
 
-#include <string.h>
-#include <inttypes.h>
-#include <math.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // preamble test
-#include "parity.h"     // for wiegand parity test
+#include "common.h"
 
-extern int CmdLFSecurakey(const char *Cmd);
-//extern int CmdSecurakeyClone(const char *Cmd);
-//extern int CmdSecurakeySim(const char *Cmd);
-extern int CmdSecurakeyRead(const char *Cmd);
-extern int CmdSecurakeyDemod(const char *Cmd);
+int CmdLFSecurakey(const char *Cmd);
+
+int demodSecurakey(void);
+int detectSecurakey(uint8_t *dest, size_t *size);
 
 #endif
 

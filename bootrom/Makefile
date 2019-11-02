@@ -3,14 +3,14 @@
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
 #-----------------------------------------------------------------------------
-# Makefile for bootrom, see ../common/Makefile.common for common settings
+# Makefile for bootrom, see ../common_arm/Makefile.common for common settings
 #-----------------------------------------------------------------------------
 
 # DO NOT use thumb mode in the phase 1 bootloader since that generates a section with glue code
-ARMSRC = 
-THUMBSRC = cmd.c \
-	usb_cdc.c \
-	bootrom.c
+ARMSRC =
+THUMBSRC = usb_cdc.c \
+           clocks.c \
+           bootrom.c
 
 ASMSRC = ram-reset.s flash-reset.s
 VERSIONSRC = version.c
@@ -20,7 +20,7 @@ VERSIONSRC = version.c
 ## zeroes. As a temporary workaround, do not use thumb for the phase 2 bootloader
 ## -- Henryk Plötz <henryk@ploetzli.ch> 2009-09-01
 # ARMSRC := $(ARMSRC) $(THUMBSRC)
-# THUMBSRC := 
+# THUMBSRC :=
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
 APP_CFLAGS = -I. -fno-strict-aliasing -ffunction-sections -fdata-sections
@@ -30,31 +30,45 @@ APP_CFLAGS += -fno-stack-protector -fno-pie
 
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
-include ../common/Makefile.common
+include ../common_arm/Makefile.common
+
+INSTALLFW = $(OBJDIR)/bootrom.elf
 
 OBJS = $(OBJDIR)/bootrom.s19
 
 # version.c should be remade on every compilation
 version.c: default_version.c
-	perl ../tools/mkversion.pl .. > $@ || $(COPY) $^ $@ 
+	$(info [=] GEN $@)
+	$(Q)sh ../tools/mkversion.sh > $@ || perl ../tools/mkversion.pl > $@ || $(CP) $^ $@
 
 all: $(OBJS)
 
 tarbin: $(OBJS)
-	$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=bootrom/%) $(OBJS:%.s19=bootrom/%.elf)
+	$(info [=] GEN $@)
+	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=bootrom/%) $(OBJS:%.s19=bootrom/%.elf)
 
 $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
-	$(CC) $(LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+	$(info [=] LD $@)
+	$(Q)$(CC) $(LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 clean:
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.o
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.elf
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.s19
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.map
-	$(DELETE) $(OBJDIR)$(PATHSEP)*.d
-	$(DELETE) version.c
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.d
+	$(Q)$(RM) version.c
 
-.PHONY: all clean help 
+install: all
+	$(info [@] Installing bootrom to $(DESTDIR)$(PREFIX)...)
+	$(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+	$(Q)$(CP) $(INSTALLFW) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+
+uninstall:
+	$(info [@] Uninstalling bootrom from $(DESTDIR)$(PREFIX)...)
+	$(Q)$(RM) $(foreach fw,$(INSTALLFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
+
+.PHONY: all clean help install
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

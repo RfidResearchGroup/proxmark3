@@ -8,31 +8,14 @@
 //-----------------------------------------------------------------------------
 #ifndef CMDLFNEDAP_H__
 #define CMDLFNEDAP_H__
-#include <string.h>
-#include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "protocols.h"  // for T55xx config register definitions
-#include "lfdemod.h"    // parityTest
-#include "crc.h"
 
-extern int CmdLFNedap(const char *Cmd);
-extern int CmdLFNedapDemod(const char *Cmd);
-extern int CmdLFNedapRead(const char *Cmd);
-//extern int CmdLFNedapClone(const char *Cmd);
-extern int CmdLFNedapSim(const char *Cmd);
-extern int CmdLFNedapChk(const char *Cmd);
+#include "common.h"
 
-extern int detectNedap(uint8_t *dest, size_t *size);
+int CmdLFNedap(const char *Cmd);
 
-extern int usage_lf_nedap_read(void);
-//extern int usage_lf_nedap_clone(void);
-extern int usage_lf_nedap_sim(void);
+int demodNedap(void);
+int detectNedap(uint8_t *dest, size_t *size);
+int getNedapBits(uint32_t cn, uint8_t *nedapBits);
+
 #endif
 

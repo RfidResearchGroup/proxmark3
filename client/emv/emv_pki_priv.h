@@ -16,15 +16,15 @@
 #ifndef EMV_PKI_PRIV_H
 #define EMV_PKI_PRIV_H
 
+#include "common.h"
+
 #include "crypto.h"
 #include "emv_pk.h"
 #include "tlv.h"
 
-#include <stddef.h>
-
 struct emv_pk *emv_pki_make_ca(const struct crypto_pk *cp,
-		const unsigned char *rid, unsigned char index,
-		unsigned int expire, enum crypto_algo_hash hash_algo);
+                               const unsigned char *rid, unsigned char index,
+                               unsigned int expire, enum crypto_algo_hash hash_algo);
 struct tlvdb *emv_pki_sign_issuer_cert(const struct crypto_pk *cp, struct emv_pk *issuer_pk);
 struct tlvdb *emv_pki_sign_icc_cert(const struct crypto_pk *cp, struct emv_pk *icc_pk, const struct tlv *sda_tlv);
 struct tlvdb *emv_pki_sign_icc_pe_cert(const struct crypto_pk *cp, struct emv_pk *icc_pe_pk);

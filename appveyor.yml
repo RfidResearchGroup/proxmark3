@@ -73,14 +73,77 @@ clone_script:
     Write-Host "[ OK ]" -ForegroundColor Green
 
 
-    Write-Host "Update msys2 packages..." -NoNewLine
+    Write-Host "Update msys2 packages..."
 
     $env:Path = "C:\ProxSpace\msys2\usr\bin;C:\ProxSpace\msys2\mingw32\bin;C:\ProxSpace\gcc-arm-none-eabi\bin;$env:Path"
+    
+    Function ExecUpdate($Name, $Cmd, $ErrorLine) {
 
-    C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null 1> msys1.txt 2>&1
+        Write-Host "Exec [$Name]...  " -NoNewLine 
+        #--- begin Job
+        
+        $Job = Start-Job -Name "$Name" -ScriptBlock {
+          $env:Path = "C:\ProxSpace\msys\bin;$env:Path"
+          Set-Location $using:PWD
 
-    C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null 1> msys1.txt 2>&1
+          $sb=[scriptblock]::Create("$using:Cmd")
+          #execute scriptblock
+          $Cond=&$sb
 
+          return $Cond
+        }
+
+        #--- end Job
+
+        $JobTime=[System.Environment]::TickCount
+        while($true) {
+          Try {
+            $Res = Receive-Job -Job $Job -Keep 2>&1 6>&1
+          }
+          Catch {
+            $Res = ""
+            Write-host "error in Receive-Job"
+          }
+          
+          if ($Res -is "String" -and $Res -like "*$ErrorLine*"){
+            Write-host "Exit by stop phrase" -ForegroundColor Green
+            break
+          }
+
+          if ($Res -is [Object]){
+            [bool]$needexit = $false
+            ForEach($line in $Res){
+              if ($line -like "*$ErrorLine*"){
+                Write-host "Exit by stop phrase [obj]" -ForegroundColor Green
+                $needexit = $true
+                break
+              }
+            }
+            if ($needexit) {
+              break
+            }
+          }
+
+          if(Wait-Job $Job -Timeout 5){
+            Write-host "Exit by end job" -ForegroundColor Green
+            break
+          }
+
+          if ([System.Environment]::TickCount-$JobTime -gt 1000000) {
+            Write-host "Exit by timeout" -ForegroundColor Yellow
+            break
+          }
+        }
+
+        Remove-Job -Force $Job
+    }
+
+    ExecUpdate "update1"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
+ 
+    ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
+
+    Write-Host "Update " -NoNewLine
+    
     Write-Host "[ OK ]" -ForegroundColor Green
 install:
 - ps: >-
@@ -130,36 +193,38 @@ build_script:
 
     }
 
-    if(!(Test-Path C:\ProxSpace\pm3\client\hardnested\tables\*.bin.z)){
+    if(!(Test-Path C:\ProxSpace\pm3\client\resources\hardnested_tables\*.bin.z)){
 
-    throw "Files in hardnested\tables not exists."
+    throw "Files in client\resources\hardnested_tables is not exists."
 
     }
 
 
-    #copy
+    #install
 
-    Write-Host "Copy release files..." -NoNewLine -ForegroundColor Yellow
+    Write-Host "Installing..." -NoNewLine -ForegroundColor Yellow
 
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release
+    New-Item -ItemType Directory -Force -Path C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\pm3\client\*.exe C:\ProxSpace\Release
+    bash -c -i 'make install DESTDIR=Release PREFIX='
 
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\arm
+    # dll files
 
-    Copy-Item C:\ProxSpace\pm3\armsrc\obj\*.elf C:\ProxSpace\Release\arm
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libgcc_s_dw2-1.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\pm3\bootrom\obj\*.elf C:\ProxSpace\Release\arm
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libstdc++-6.dll C:\ProxSpace\pm3\Release\bin
 
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\scripts
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libwinpthread-1.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\pm3\client\scripts\*.lua C:\ProxSpace\Release\scripts
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Core.dll C:\ProxSpace\pm3\Release\bin
 
-    New-Item -ItemType Directory -Force -Path C:\ProxSpace\Release\hardnested\tables
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Gui.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\pm3\client\hardnested\*.bin C:\ProxSpace\Release\hardnested
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\Qt5Widgets.dll C:\ProxSpace\pm3\Release\bin
 
-    Copy-Item C:\ProxSpace\pm3\client\hardnested\tables\*.bin.z C:\ProxSpace\Release\hardnested\tables
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libreadline*.dll C:\ProxSpace\pm3\Release\bin
+
+    Copy-Item C:\ProxSpace\msys2\mingw32\bin\libtermcap-0.dll C:\ProxSpace\pm3\Release\bin
 
     Write-Host "[ OK ]" -ForegroundColor Green
 
@@ -181,7 +246,7 @@ build_script:
 
     cd C:\ProxSpace
 
-    7z a release.zip C:\ProxSpace\Release
+    7z a release.zip C:\ProxSpace\pm3\Release
 
     Push-AppveyorArtifact release.zip -DeploymentName "$releasename"
 
@@ -200,7 +265,7 @@ test_script:
 
 
     Function ExecTest($Name, $File, $Cmd, $CheckResult) {
-
+    
     #--- begin Job
 
     $Job = Start-Job -ScriptBlock {
@@ -238,6 +303,13 @@ test_script:
             if ($Cond -is "String" -and $Cond -like "*true*"){
               $res= $true
             }
+            ForEach($line in $Cond){
+              if ($line -like "*passed*"){
+                $res = $true
+                $Cond = $line
+                break
+              }
+            }
         } Else {
           $res=$Cond
         }
@@ -256,8 +328,8 @@ test_script:
     #--- end Job
 
       [bool]$res=$false
-      # Wait 120 sec timeout for Job
-      if(Wait-Job $Job -Timeout 150){
+      # Wait 180 sec timeout for Job
+      if(Wait-Job $Job -Timeout 180){
         $Results = $Job | Receive-Job
         if($Results -like "true"){
           $res=$true
@@ -269,6 +341,7 @@ test_script:
       Remove-Job -Force $Job
 
       if(!$res){
+      Write-host "--------------------- tests fail" -ForegroundColor Red
         $global:TestsPassed=$false
       }
     }
@@ -279,32 +352,39 @@ test_script:
 
     #file test
 
-    ExecTest "proxmark3 exists" "proxmark3.exe" {Test-Path C:\ProxSpace\Release\proxmark3.exe}
+    ExecTest "proxmark3 exists" "proxmark3.exe" {Test-Path C:\ProxSpace\pm3\Release\bin\proxmark3.exe}
 
-    ExecTest "arm image exists" "\arm\fullimage1.elf" {Test-Path C:\ProxSpace\Release\arm\fullimage.elf}
+    ExecTest "arm bootrom exists" "bootrom.elf" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\firmware\bootrom.elf}
 
-    ExecTest "bootrom exists" "bootrom.elf" {Test-Path C:\ProxSpace\Release\arm\bootrom.elf}
+    ExecTest "arm image exists" "fullimage.elf" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\firmware\fullimage.elf}
 
-    ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\Release\hardnested\tables\*.z}
+    ExecTest "arm recovery image exists" "proxmark3_recovery.bin" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\firmware\proxmark3_recovery.bin}
+
+    ExecTest "hardnested tables exists" "hardnested" {Test-Path C:\ProxSpace\pm3\Release\share\proxmark3\resources\hardnested_tables\*.z}
 
     ExecTest "release exists" "release.zip" {Test-Path C:\ProxSpace\release.zip}
 
 
     #proxmark logic tests
 
-    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q Execute && echo Passed || echo Failed'}
+    ExecTest "proxmark help" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h 2>&1 | grep -q wait && echo passed || echo failed'}
 
-    ExecTest "proxmark help hardnested" "proxmark3 -h" {bash -lc 'cd ~/client;./proxmark3 -h | grep -q hardnested && echo Passed || echo Failed'}
+    ExecTest "proxmark help text ISO7816" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q ISO7816 && echo passed || echo failed'}
+
+    ExecTest "proxmark help text hardnested" "proxmark3 -t" {bash -lc 'cd ~/client;./proxmark3 -t 2>&1 | grep -q hardnested && echo passed || echo failed'}
 
 
-    ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 comx -c 'hf mf'"} "at_enc"
-
-    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;./proxmark3 comx -c 'hf mf hardnested t 1 000000000000'"} "found:"
-
+    ExecTest "hf mf offline text" "hf mf" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf'"} "at_enc"
 
     #proxmark crypto tests
 
-    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 comx -c 'emv test'"} "Tests ?OK"
+    # Long tests:
+    #    ExecTest "hf mf hardnested" "hf mf hardnested" {bash -lc "cd ~/client;./proxmark3 -c 'hf mf hardnested t 1 000000000000'"} "found:"
+    #    ExecTest "hf mf iclass" "hf mf iclass" {bash -lc "cd ~/client;./proxmark3 -c 'hf iclass loclass t l'"} "verified ok"
+    #    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test -i -l'"} "Test?s? ? OK"
+    # Short tests:
+    ExecTest "hf mf iclass" "hf mf iclass" {bash -lc "cd ~/client;./proxmark3 -c 'hf iclass loclass t'"} "OK!"
+    ExecTest "emv test" "emv test" {bash -lc "cd ~/client;./proxmark3 -c 'emv test -i'"} "Test?s? ? OK"
 
 
     if ($global:TestsPassed) {

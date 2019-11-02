@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-extern int asn1_print(uint8_t *asn1buf, size_t asn1buflen, char *indent);
-extern int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval);
+int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent);
+int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval);
 
 #endif /* asn1utils.h */

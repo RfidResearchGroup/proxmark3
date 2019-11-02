@@ -7,163 +7,113 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// main code for LF aka Proxbrute by Brad antoniewicz 
+// main code for LF aka Proxbrute by Brad antoniewicz
 //-----------------------------------------------------------------------------
-#include "lf_proxbrute.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "lfops.h"
+
+void ModInfo(void) {
+    DbpString("  LF HID ProxII bruteforce - aka Proxbrute (Brad Antoniewicz)");
+}
 
 // samy's sniff and repeat routine for LF
 void RunMod() {
-	StandAloneMode();
-	Dbprintf(">>  LF HID proxII bruteforce a.k.a ProxBrute Started (Brad Antoniewicz) <<");		
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    StandAloneMode();
+    Dbprintf(">>  LF HID proxII bruteforce a.k.a ProxBrute Started (Brad Antoniewicz) <<");
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-	uint32_t high[OPTS], low[OPTS];
-	int selected = 0;
-	int playing = 0;
-	int cardRead = 0;
+    uint32_t high, low;
 
-	// Turn on selected LED
-	LED(selected + 1, 0);
+#define STATE_READ  0
+#define STATE_BRUTE 1
 
-	for (;;) {		
-		WDT_HIT();
-		
-		// exit from SamyRun,   send a usbcommand.
-		if (usb_poll_validate_length()) break;
+    uint8_t state = STATE_READ;
 
-		// Was our button held down or pressed?
-		int button_pressed = BUTTON_HELD(1000);
-		SpinDelay(300);
+    for (;;) {
 
-		// Button was held for a second, begin recording
-		if (button_pressed > 0 && cardRead == 0) {
-			LEDsoff();
-			LED(selected + 1, 0);
-			LED(LED_RED2, 0);
+        WDT_HIT();
 
-			// record
-			DbpString("[=] starting recording");
+        // exit from SamyRun,   send a usbcommand.
+        if (data_available()) break;
 
-			// wait for button to be released
-			while (BUTTON_PRESS())
-				WDT_HIT();
+        // Was our button held down or pressed?
+        int button_pressed = BUTTON_HELD(280);
+        if (button_pressed != BUTTON_HOLD)
+            continue;
 
-			/* need this delay to prevent catching some weird data */
-			SpinDelay(500);
+        // Button was held for a second, begin recording
+        if (state == STATE_READ) {
 
-			CmdHIDdemodFSK(1, &high[selected], &low[selected], 0);
-			Dbprintf("[=] recorded %x %x %08x", selected, high[selected], low[selected]);
+            LEDsoff();
+            LED_A_ON();
+            WAIT_BUTTON_RELEASED();
 
-			LEDsoff();
-			LED(selected + 1, 0);
-			// Finished recording
-			// If we were previously playing, set playing off
-			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 1;	
-		}
-		else if (button_pressed > 0 && cardRead == 1) {
-			LEDsoff();
-			LED(selected + 1, 0);
-			LED(LED_ORANGE, 0);
+            DbpString("[=] starting recording");
 
-			// record
-			Dbprintf("[=] cloning %x %x %08x", selected, high[selected], low[selected]);
 
-			// wait for button to be released
-			while (BUTTON_PRESS())
-				WDT_HIT();
+            // findone, high, low, no ledcontrol (A)
+            CmdHIDdemodFSK(1, &high, &low, 0);
 
-			/* need this delay to prevent catching some weird data */
-			SpinDelay(500);
+            Dbprintf("[=]   recorded | %x%08x", high, low);
 
-			CopyHIDtoT55x7(0, high[selected], low[selected], 0);
-			Dbprintf("[=] cloned %x %x %08x", selected, high[selected], low[selected]);
+            // got nothing. blink and loop.
+            if (high == 0 && low == 0) {
+                SpinErr(LED_A, 100, 12);
+                DbpString("[=] only got zeros, retry recording after click");
+                continue;
+            }
 
-			LEDsoff();
-			LED(selected + 1, 0);
-			// Finished recording
+            SpinErr(LED_A, 250, 2);
+            state = STATE_BRUTE;
+            continue;
 
-			// If we were previously playing, set playing off
-			// so next button push begins playing what we recorded
-			playing = 0;			
-			cardRead = 0;			
-		}
+        } else if (state == STATE_BRUTE) {
 
-		// Change where to record (or begin playing)
-		else if (button_pressed) {
-			// Next option if we were previously playing
-			if (playing)
-				selected = (selected + 1) % OPTS;
-			playing = !playing;
+            LED_C_ON();   // Simulate
+            WAIT_BUTTON_RELEASED();
 
-			LEDsoff();
-			LED(selected + 1, 0);
 
-			// Begin transmitting
-			if (playing) {
-				LED(LED_GREEN, 0);
-				DbpString("[=] playing");
-				// wait for button to be released
-				while (BUTTON_PRESS())
-					WDT_HIT();
-				
-				/* START PROXBRUTE */
+            /*
+              ProxBrute - brad a. - foundstone
 
-				/*
-				ProxBrute - brad a. - foundstone
+              Following code is a trivial brute forcer once you read a valid tag
+              the idea is you get a valid tag, then just try and brute force to
+              another priv level. The problem is that it has no idea if the code
+              worked or not, so its a crap shoot. One option is to time how long
+              it takes to get a valid ID then start from scratch every time.
+            */
+            DbpString("[=] entering ProxBrute mode");
+            Dbprintf("[=] simulating | %08x%08x", high, low);
 
-				Following code is a trivial brute forcer once you read a valid tag
-				the idea is you get a valid tag, then just try and brute force to
-				another priv level. The problem is that it has no idea if the code
-				worked or not, so its a crap shoot. One option is to time how long
-				it takes to get a valid ID then start from scratch every time.
-				*/
-				if ( selected == 1 ) {
-					DbpString("[=] entering ProxBrute Mode");
-					Dbprintf("[=] current Tag: Selected = %x Facility = %08x ID = %08x", selected, high[selected], low[selected]);
-					LED(LED_ORANGE, 0);
-					LED(LED_RED, 0);
-					for (uint16_t i = low[selected]-1; i > 0; i--) {
-						if (BUTTON_PRESS()) {
-							DbpString("[-] told to stop");
-							break;
-						}
+            for (uint16_t i = low - 1; i > 0; i--) {
 
-						Dbprintf("[=] trying Facility = %08x ID %08x", high[selected], i);
-						CmdHIDsimTAGEx(high[selected], i, 0, 20000);
-						SpinDelay(500);
-					}
+                if (data_available()) break;
 
-				} else {
-					DbpString("[=] RED is lit, not entering ProxBrute Mode");
-					Dbprintf("[=] %x %x %x", selected, high[selected], low[selected]);
-					CmdHIDsimTAGEx(high[selected], low[selected], 0, 20000);
-					DbpString("[=] done playing");
-				}
+                // Was our button held down or pressed?
+                button_pressed = BUTTON_HELD(280);
+                if (button_pressed != BUTTON_HOLD) break;
 
-				/*   END PROXBRUTE */
+                Dbprintf("[=] trying Facility = %08x ID %08x", high, i);
 
-				
-				if (BUTTON_HELD(1000) > 0)
-					goto out;
+                // high, i, ledcontrol,  timelimit 20000
+                CmdHIDsimTAGEx(0, high, i, 0, false, 20000);
 
-				/* We pressed a button so ignore it here with a delay */
-				SpinDelay(300);
+                SpinDelay(100);
+            }
 
-				// when done, we're done playing, move to next option
-				selected = (selected + 1) % OPTS;
-				playing = !playing;
-				LEDsoff();
-				LED(selected + 1, 0);
-			}
-			else {
-				while (BUTTON_PRESS())
-					WDT_HIT();
-			}
-		}
-	}
-out:	
-	DbpString("[=] exiting");
-	LEDsoff();	
+            state = STATE_READ;
+            SpinErr((LED_A | LED_C), 250, 2);
+            LEDsoff();
+        }
+    }
+
+    SpinErr((LED_A | LED_B | LED_C | LED_D), 250, 5);
+    DbpString("[=] You can take the shell back :) ...");
+    LEDsoff();
 }

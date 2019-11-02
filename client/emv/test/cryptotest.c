@@ -33,74 +33,80 @@
 #include "crypto/libpcrypto.h"
 #include "emv/emv_roca.h"
 
-int ExecuteCryptoTests(bool verbose) {
-	int res;
-	bool TestFail = false;
-	
-	res = mbedtls_mpi_self_test(verbose);
-	if (res) TestFail = true;
-	
-	res = mbedtls_aes_self_test(verbose);
-	if (res) TestFail = true;
+int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) {
+    int res;
+    bool TestFail = false;
 
-	res = mbedtls_des_self_test(verbose);
-	if (res) TestFail = true;
-	
-	res = mbedtls_sha1_self_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_mpi_self_test(verbose);
+    if (res) TestFail = true;
 
-	res = mbedtls_md5_self_test(verbose);
-	if (res) TestFail = true;
-	
-	res = mbedtls_rsa_self_test(verbose);
-	if (res) TestFail = true;
-	
-	res = mbedtls_entropy_self_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_aes_self_test(verbose);
+    if (res) TestFail = true;
 
-	res = mbedtls_timing_self_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_des_self_test(verbose);
+    if (res) TestFail = true;
 
-	res = mbedtls_ctr_drbg_self_test(verbose);
-	if (res) TestFail = true;
-	
-	res = mbedtls_base64_self_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_sha1_self_test(verbose);
+    if (res) TestFail = true;
 
-	res = mbedtls_cmac_self_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_md5_self_test(verbose);
+    if (res) TestFail = true;
 
-	res = ecdsa_nist_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_rsa_self_test(verbose);
+    if (res) TestFail = true;
 
-	res = mbedtls_ecp_self_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_entropy_self_test(verbose);
+    if (res && !ignore_time) TestFail = true;
 
-	res = mbedtls_x509_self_test(verbose);
-	if (res) TestFail = true;
-	
-	res = exec_sda_test(verbose);
-	if (res) TestFail = true;
+    // retry for CI (when resources too low)
+    for (int i = 0; i < 3; i++) {
+        res = mbedtls_timing_self_test(verbose);
+        if (!res)
+            break;
+        PrintAndLogEx(WARNING, "Repeat timing test %d", i + 1);
+    }
+    if (res && !ignore_time) TestFail = true;
 
-	res = exec_dda_test(verbose);
-	if (res) TestFail = true;
-	
-	res = exec_cda_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_ctr_drbg_self_test(verbose);
+    if (res) TestFail = true;
 
-	res = exec_crypto_test(verbose);
-	if (res) TestFail = true;
+    res = mbedtls_base64_self_test(verbose);
+    if (res) TestFail = true;
 
-	res = roca_self_test();
-	if (res) TestFail = true;
+    res = mbedtls_cmac_self_test(verbose);
+    if (res) TestFail = true;
 
-	PrintAndLog("\n--------------------------");
-	
-	if (TestFail)
-		PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_(FAIL) );
-	else
-		PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_(OK) );
-	
-	return TestFail;
+    res = ecdsa_nist_test(verbose);
+    if (res) TestFail = true;
+
+    res = mbedtls_ecp_self_test(verbose);
+    if (res) TestFail = true;
+
+    res = mbedtls_x509_self_test(verbose);
+    if (res) TestFail = true;
+
+    res = exec_sda_test(verbose);
+    if (res) TestFail = true;
+
+    res = exec_dda_test(verbose);
+    if (res) TestFail = true;
+
+    res = exec_cda_test(verbose);
+    if (res) TestFail = true;
+
+    res = exec_crypto_test(verbose, include_slow_tests);
+    if (res) TestFail = true;
+
+    res = roca_self_test();
+    if (res) TestFail = true;
+
+    PrintAndLogEx(NORMAL, "\n--------------------------");
+
+    if (TestFail)
+        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_("Fail"));
+    else
+        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_("OK"));
+
+    return TestFail;
 }
 

@@ -9,6 +9,10 @@
 // StandAlone Mod
 //-----------------------------------------------------------------------------
 
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+
 #ifndef FALSE
 #define FALSE 0
 #endif
@@ -16,33 +20,20 @@
 #ifndef __HF_COLIN_H
 #define __HF_COLIN_H
 
-#include "proxmark3.h"
-#include "mifareutil.h"
-#include "iso14443a.h"
-#include "protocols.h"
-#include "util.h"
-#include "standalone.h" // standalone definitions
-#include <stdbool.h>    // for bool
-#include <stdio.h>
-#include <string.h>
-#include "vtsend.h"
-#include "apps.h"
-#include "printf.h"
-
-#define _RED_ "\x1b[31m"
-#define _GREEN_ "\x1b[32m"
-#define _YELLOW_ "\x1b[33m"
-#define _BLUE_ "\x1b[34m"
-#define _MAGENTA_ "\x1b[35m"
-#define _CYAN_ "\x1b[36m"
-#define _WHITE_ "\x1b[0m"
-#define _ORANGE_ _YELLOW_
+#define _XRED_ "\x1b[31m"
+#define _XGREEN_ "\x1b[32m"
+#define _XYELLOW_ "\x1b[33m"
+#define _XBLUE_ "\x1b[34m"
+#define _XMAGENTA_ "\x1b[35m"
+#define _XCYAN_ "\x1b[36m"
+#define _XWHITE_ "\x1b[0m"
+#define _XORANGE_ _XYELLOW_
 
 int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key);
-void e_MifareECardLoad(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
+int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype);
 void saMifareMakeTag(void);
 int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void WriteTagToFlash(uint8_t index, size_t size);
+void WriteTagToFlash(uint32_t uid, size_t size);
 
 const char clearTerm[8] = {0x1b, 0x5b, 0x48, 0x1b, 0x5b, 0x32, 0x4a, '\0'};
 

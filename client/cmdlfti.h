@@ -11,10 +11,9 @@
 #ifndef CMDLFTI_H__
 #define CMDLFTI_H__
 
+#include "common.h"
+
 int CmdLFTI(const char *Cmd);
 
-int CmdTIDemod(const char *Cmd);
-int CmdTIRead(const char *Cmd);
-int CmdTIWrite(const char *Cmd);
-
+int demodTI(void);
 #endif

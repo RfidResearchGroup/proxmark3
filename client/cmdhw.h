@@ -11,17 +11,10 @@
 #ifndef CMDHW_H__
 #define CMDHW_H__
 
+#include "common.h"
+
 int CmdHW(const char *Cmd);
 
-int CmdDetectReader(const char *Cmd);
-int CmdFPGAOff(const char *Cmd);
-int CmdLCD(const char *Cmd);
-int CmdLCDReset(const char *Cmd);
-int CmdReadmem(const char *Cmd);
-int CmdReset(const char *Cmd);
-int CmdSetDivisor(const char *Cmd);
-int CmdSetMux(const char *Cmd);
-int CmdTune(const char *Cmd);
-int CmdVersion(const char *Cmd);
-int CmdPing(const char *Cmd);
+void pm3_version(bool verbose, bool oneliner);
+
 #endif

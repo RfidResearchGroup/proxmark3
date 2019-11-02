@@ -9,22 +9,11 @@
 #ifndef CMDLFPAC_H__
 #define CMDLFPAC_H__
 
-#include <string.h>
-#include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "cmdmain.h"
-#include "cmdlf.h"
-#include "lfdemod.h"    // preamble test
+#include "common.h"
 
-extern int CmdLFPac(const char *Cmd);
-extern int CmdPacRead(const char *Cmd);
-extern int CmdPacDemod(const char *Cmd);
+int CmdLFPac(const char *Cmd);
 
-extern int detectPac(uint8_t *dest, size_t *size);
+int demodPac(void);
+int detectPac(uint8_t *dest, size_t *size);
 #endif
 

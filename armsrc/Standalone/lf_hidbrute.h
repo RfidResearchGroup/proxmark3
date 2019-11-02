@@ -14,11 +14,8 @@
 #ifndef __LF_HIDBRUTE_H
 #define __LF_HIDBRUTE_H
 
-#include "standalone.h" // standalone definitions
-#include "apps.h" // debugstatements, lfops?
+#include <stdint.h>
 
-#define OPTS 3
-
-void hid_corporate_1000_calculate_checksum_and_set( uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc);
+void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc);
 
 #endif /* __LF_HIDBRUTE_H */

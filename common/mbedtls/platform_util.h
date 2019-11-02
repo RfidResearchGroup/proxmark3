@@ -55,7 +55,7 @@ extern "C" {
  * \param len   Length of the buffer in bytes
  *
  */
-void mbedtls_platform_zeroize( void *buf, size_t len );
+void mbedtls_platform_zeroize(void *buf, size_t len);
 
 #ifdef __cplusplus
 }

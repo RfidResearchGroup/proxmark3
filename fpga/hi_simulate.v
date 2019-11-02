@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Pretend to be an ISO 14443 tag. We will do this by alternately short-
 // circuiting and open-circuiting the antenna coil, with the tri-state
-// pins. 
+// pins.
 //
 // We communicate over the SSP, as a bitstream (i.e., might as well be
 // unframed, though we still generate the word sync signal). The output
@@ -63,13 +63,13 @@ reg ssp_clk;
 always @(negedge adc_clk)
 begin
     if(mod_type == 3'b101)
-      // Get bit every at 53KHz (every 8th carrier bit of 424kHz)
+      // Get bit every at 53kHz (every 8th carrier bit of 424kHz)
       ssp_clk <= ssp_clk_divider[7];
     else if(mod_type == 3'b010)
       // Get next bit at 212kHz
       ssp_clk <= ssp_clk_divider[5];
     else
-      // Get next bit at 424Khz
+      // Get next bit at 424kHz
       ssp_clk <= ssp_clk_divider[4];
 end
 

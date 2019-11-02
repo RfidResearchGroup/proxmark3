@@ -1,20 +1,12 @@
-CC = gcc
-LD = gcc
-CFLAGS = -std=c99 -Wall -O3 -c
-LDFLAGS =
+MYSRCPATHS = ../../common ../../common/crapto1
+MYSRCS = crypto1.c crapto1.c bucketsort.c
+MYINCLUDES = -I../../include -I../../common
+MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYDEFS =
 
-OBJS = crypto1.o crapto1.o
-HEADERS = crapto1.h
-EXES = nonce2key
-WINEXES = $(patsubst %, %.exe, $(EXES))
+BINS = nonce2key
+INSTALLTOOLS = $(BINS)
 
-all: $(OBJS) $(EXES)
+include ../../Makefile.host
 
-%.o : %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-% : %.c
-	$(LD) $(LDFLAGS) -o $@ $(OBJS) $<
-
-clean: 
-	rm -f $(OBJS) $(EXES) $(WINEXES)
+nonce2key : $(OBJDIR)/nonce2key.o $(MYOBJS)

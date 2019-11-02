@@ -21,7 +21,8 @@
 #ifndef CMDHFFIDO_H__
 #define CMDHFFIDO_H__
 
-extern int CmdHFFido(const char *Cmd);
+#include "common.h"
 
+int CmdHFFido(const char *Cmd);
 
 #endif

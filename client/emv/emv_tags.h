@@ -17,7 +17,7 @@
 #define TAGS_H
 
 #include "tlv.h"
-#include <stdio.h>
+#include <stdio.h> // FILE
 
 // AC
 # define EMVAC_AC_MASK   0xC0
@@ -25,12 +25,16 @@
 # define EMVAC_TC        0x40
 # define EMVAC_ARQC      0x80
 # define EMVAC_CDAREQ    0x10
+# define EMVAC_AC2_MASK  0x30
+# define EMVAC_AAC2      0x00
+# define EMVAC_TC2       0x10
+# define EMVAC_ARQC2     0x20
 
 // CID
 # define EMVCID_ADVICE       0x08
 # define EMVCID_REASON_MASK  0x07
 
 bool emv_tag_dump(const struct tlv *tlv, FILE *f, int level);
-char *emv_get_tag_name(const struct tlv *tlv);
+const char *emv_get_tag_name(const struct tlv *tlv);
 
 #endif

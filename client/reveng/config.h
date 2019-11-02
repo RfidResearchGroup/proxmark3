@@ -1,10 +1,10 @@
 /* config.h
- * Greg Cook, 26/Jul/2018
+ * Greg Cook, 23/Feb/2019
  */
 
 /* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
- * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
- * Gregory Cook
+ * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+ * 2019  Gregory Cook
  *
  * This file is part of CRC RevEng.
  *
@@ -26,9 +26,9 @@
 #define CONFIG_H 1
 
 /*****************************************
- *					 *
+ *                                       *
  *  Start of user configuration options  *
- *					 *
+ *                                       *
  *****************************************/
 
 /* A type to contain polynomial coefficient bitmaps.
@@ -57,37 +57,48 @@
 
 /* #define ALWPCK   1 */
 
-/* Define PRESETS to compile CRC RevEng with the preset models from the
+/* #define PRESETS  1
+ * Define PRESETS to compile CRC RevEng with the preset models from the
  * CRC Catalogue.  This implies BMPMACRO and so makes the code platform-
  * specific.
  */
 
-#ifdef _WIN32
- #define PRESETS  1 //
-#endif
-
-
-/* Macros defining the size of a bmp_t.
+/* #define BMP_BIT   32
+ * Macros defining the size of a bmp_t.
  * Their values only matter if PRESETS and/or BMPMACRO are defined, in
  * which case edit the macros below to suit your architecture.
  * Otherwise, BMP_BIT and BMP_SUB will be redefined as aliases of bmpbit
  * and bmpsub, global objects initialised at run time.
  */
 
-/* Size in bits of a bmp_t.  Not necessarily a power of two. */
-
-#define BMP_BIT   32
-
-/* The highest power of two that is strictly less than BMP_BIT.
+/* #define BMP_SUB   16
+ * The highest power of two that is strictly less than BMP_BIT.
  * Initialises the index of a binary search for set bits in a bmp_t.
  */
 
+
+#include <stdint.h>
+#include <limits.h>
+#if ULONG_MAX == UINT64_MAX
+// most 64-bit platforms
+#define PRESETS  1
+#define BMP_BIT   64
+#define BMP_SUB   32
+
+#elif ULONG_MAX == UINT32_MAX
+// 32-bit platforms and Mingw64
+#define PRESETS  1
+#define BMP_BIT   32
 #define BMP_SUB   16
 
+#else
+#error Cannot determine automatically REVENG PRESETS Macros for your platform, you need to set them manually
+#endif
+
 /*****************************************
- *					 *
+ *                                       *
  *   End of user configuration options   *
- *					 *
+ *                                       *
  *****************************************/
 
 #endif /* CONFIG_H */

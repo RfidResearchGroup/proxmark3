@@ -1,0 +1,98 @@
+#-----------------------------------------------------------------------------
+# This code is licensed to you under the terms of the GNU GPL, version 2 or,
+# at your option, any later version. See the LICENSE.txt file for the text of
+# the license.
+#-----------------------------------------------------------------------------
+# Common makefile functions for all platforms
+#-----------------------------------------------------------------------------
+
+# Make sure that all is the default target
+# (The including Makefile still needs to define what 'all' is)
+
+all:
+
+# This Makefile might have been called from various subdirs, trying to find our Makefile.defs
+ifeq ($(DEFSBEENHERE),)
+    -include Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    $(error Can't find Makefile.defs)
+endif
+
+CC = $(CROSS)gcc
+AS = $(CROSS)as
+LD = $(CROSS)ld
+OBJCOPY = $(CROSS)objcopy
+
+OBJDIR = obj
+
+INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
+
+# Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the zlib directory
+VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/zlib ../fpga ../armsrc/Standalone
+
+INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
+
+CFLAGS ?= -Wall -Werror -pedantic -Wunused -Os -mthumb-interwork
+CFLAGS += -c $(INCLUDE) -std=c99 $(APP_CFLAGS)
+
+LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
+LIBS = -lgcc
+
+# Flags to generate temporary dependency files
+DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
+# make temporary to final dependency files after successful compilation
+POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d
+
+THUMBOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(THUMBSRC)))
+ARMOBJ   = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(ARMSRC)))
+ASMOBJ   = $(patsubst %.s,$(OBJDIR)/%.o,$(notdir $(ASMSRC)))
+VERSIONOBJ = $(patsubst %.c,$(OBJDIR)/%.o,$(notdir $(VERSIONSRC)))
+
+$(THUMBOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -mthumb -o $@ $< 
+	$(Q)$(POSTCOMPILE)
+
+$(ARMOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) $(DEPFLAGS) -o $@ $< 
+	$(Q)$(POSTCOMPILE)
+
+$(ASMOBJ): $(OBJDIR)/%.o: %.s
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) -o $@ $<
+
+$(VERSIONOBJ): $(OBJDIR)/%.o: %.c $(INCLUDES)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(CFLAGS) -mthumb -o $@ $< 
+
+# This objcopy call translates physical flash addresses to logical addresses
+# without touching start address or RAM addresses (.bss and .data sections)
+# See ldscript.common. -- Henryk Plötz <henryk@ploetzli.ch> 2009-08-27
+OBJCOPY_TRANSLATIONS = --no-change-warnings \
+    --change-addresses -0x100000 --change-start 0 \
+    --change-section-address .bss+0 --change-section-address .data-0x100000 \
+    --change-section-address .commonarea+0
+$(OBJDIR)/%.s19: $(OBJDIR)/%.elf
+	$(info [=] GEN $@)
+	$(Q)$(OBJCOPY) -Osrec --srec-forceS3 --strip-debug $(OBJCOPY_TRANSLATIONS) $^ $@
+
+# easy printing of MAKE VARIABLES
+print-%: ; @echo $* = $($*) 
+
+# Automatic dependency generation
+DEPENDENCY_FILES = $(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(THUMBSRC))) \
+	$(patsubst %.c,$(OBJDIR)/%.d,$(notdir $(ARMSRC))) \
+	$(patsubst %.s,$(OBJDIR)/%.d,$(notdir $(ASMSRC)))
+
+$(DEPENDENCY_FILES): Makefile ../common_arm/Makefile.common
+.PRECIOUS: $(DEPENDENCY_FILES)
+
+-include $(DEPENDENCY_FILES)

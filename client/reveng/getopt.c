@@ -31,51 +31,50 @@
 char *optarg;
 int optind = 1, opterr, optopt;
 int pos = 0;
-int getopt(int argc, char *argv[], const char *optstring)
-{
+int getopt(int argc, char *argv[], const char *optstring) {
     //static int pos = 0;
     char *str;
-    
+
     if (pos == 0) {
-	if ((optind >= argc) || (*argv[optind] != '-'))
-	    return EOF;
-	pos = 1;
-	if (argv[optind][pos] == '\0')
-	    return EOF;
+        if ((optind >= argc) || (*argv[optind] != '-'))
+            return EOF;
+        pos = 1;
+        if (argv[optind][pos] == '\0')
+            return EOF;
     }
-    
+
     str = strchr(optstring, argv[optind][pos]);
     if (str == NULL) {
-	optopt = argv[optind][pos];
-	if (opterr)
-	    fprintf(stderr, "%s: illegal option -- %c\n", argv[0],
-		    optopt);
-	return '?';
+        optopt = argv[optind][pos];
+        if (opterr)
+            fprintf(stderr, "%s: illegal option -- %c\n", argv[0],
+                    optopt);
+        return '?';
     }
-    
+
     if (str[1] == ':') {
-	if (argv[optind][pos+1] != '\0') {
-	    optarg = &argv[optind][pos+1];
-	    return *str;
-	}
-	optind++;
-	if (optind >= argc) {
-	    optopt = *str;
-	    if (opterr)
-		fprintf(stderr, "%s: option requires an argument -- %c\n",
-			argv[0], optopt);
-	    return '?';
-	}
-	optarg = argv[optind];
-	optind++; pos = 0;
-	return *str;
-    }
-    else {
-	pos++;
-	if (argv[optind][pos] == '\0') {
-	    optind++;
-	    pos = 0;
-	}
-	return *str;
+        if (argv[optind][pos + 1] != '\0') {
+            optarg = &argv[optind][pos + 1];
+            return *str;
+        }
+        optind++;
+        if (optind >= argc) {
+            optopt = *str;
+            if (opterr)
+                fprintf(stderr, "%s: option requires an argument -- %c\n",
+                        argv[0], optopt);
+            return '?';
+        }
+        optarg = argv[optind];
+        optind++;
+        pos = 0;
+        return *str;
+    } else {
+        pos++;
+        if (argv[optind][pos] == '\0') {
+            optind++;
+            pos = 0;
+        }
+        return *str;
     }
 }

@@ -3,7 +3,7 @@
  * Copyright (C) 2017-2018 Sectigo Limited
  * modified 2018 iceman  (dropped openssl bignum,  now use mbedtls lib)
  * modified 2018 merlok
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2 of the License, or
@@ -24,15 +24,12 @@
 #ifndef EMV_ROCA_H__
 #define EMV_ROCA_H__
 
-#include <stdbool.h>
-#include <string.h>
-#include "mbedtls/bignum.h"
-#include "util.h"
+#include "common.h"
 
-#define ROCA_PRINTS_LENGTH	17
+#define ROCA_PRINTS_LENGTH 17
 
-extern bool emv_rocacheck( const unsigned char *buf, size_t buflen, bool verbose );
-extern int roca_self_test( void );
+bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose);
+int roca_self_test(void);
 
 #endif
 

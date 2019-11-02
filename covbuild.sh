@@ -1,36 +1,43 @@
 #!/bin/bash
 
-## 2016-01-16,  Iceman
-## build script for Coverity Scan of the proxmark3 source code
+set -e
+. .coverity.conf || exit 1
 
-## clean up pre-compiled objects.
+pre_build_hook
+
+mkdir -p "$COVDIR"
 make clean
+cov-build --dir "$COVDIR" --initialize
 
-## coverity build
-/home/user/cov-analysis-linux-2017.07/bin/cov-build --dir cov-int make all
+#########################################
+# Build Host prerequisites              #
+#########################################
+cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD fpga_compress
 
-## delete all previous tarballs
-rm proxmark3.all.*.tgz
+#########################################
+# Build ARM, no test coverage           #
+#########################################
+cov-build --dir "$COVDIR" --no-generate-build-id --force make bootrom
+cov-build --dir "$COVDIR" --no-generate-build-id --force make fullimage
 
-##
-VERSION="0.1.`date --date now +%H%M`"
-TODAY="`date --date now +%Y%m%d.%H%M`"
-DESCNAME="autoMango.$TODAY"
-FILENAME=proxmark3.all.$TODAY.tgz
+#########################################
+# Build client                          #
+#########################################
+# make sure to do client after ARM because Coverity retains one build info per file
+# and we want the client-side of the common/ analysis
+cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfkey
+cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD nonce2key
+cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD client
 
-## create tarball
-tar cfz $FILENAME cov-int
-echo "Coverity build file is ready"
+#########################################
+# Run tests                             #
+#########################################
+cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --test-capture ./pm3test.sh long
+#cov-manage-emit --dir "$COVDIR" list-coverage-known
 
-## clean up build folders
-rm -rf cov-int
-echo "Coverity build cleaned"
+#########################################
+# Import Git annotations (~ git blame)  #
+#########################################
+cov-import-scm --dir "$COVDIR" --scm git --filename-regex "$PWD" --log ""$COVDIR"/cov-import-scm-log.txt"
 
-## upload tarball to Coverity.com
-curl --form token=dY262wIFmfkcRkA5Pyw0eA \
- --form email=herrmann1001@gmail.com \
-  --form file=@$FILENAME \
-  --form version="$VERSION" \
-  --form description="$DESCNAME" \
-  https://scan.coverity.com/builds?project=proxmark3_iceman_fork
-echo "tarball uploaded to Coverity for analyse"
+post_build_hook

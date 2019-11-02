@@ -39,26 +39,26 @@ extern const size_t mbedtls_test_cas_pem_len;
 #endif
 
 /* List of all CA certificates, terminated by NULL */
-extern const char * mbedtls_test_cas[];
+extern const char *mbedtls_test_cas[];
 extern const size_t mbedtls_test_cas_len[];
 
 /*
  * Convenience for users who just want a certificate:
  * RSA by default, or ECDSA if RSA is not available
  */
-extern const char * mbedtls_test_ca_crt;
+extern const char *mbedtls_test_ca_crt;
 extern const size_t mbedtls_test_ca_crt_len;
-extern const char * mbedtls_test_ca_key;
+extern const char *mbedtls_test_ca_key;
 extern const size_t mbedtls_test_ca_key_len;
-extern const char * mbedtls_test_ca_pwd;
+extern const char *mbedtls_test_ca_pwd;
 extern const size_t mbedtls_test_ca_pwd_len;
-extern const char * mbedtls_test_srv_crt;
+extern const char *mbedtls_test_srv_crt;
 extern const size_t mbedtls_test_srv_crt_len;
-extern const char * mbedtls_test_srv_key;
+extern const char *mbedtls_test_srv_key;
 extern const size_t mbedtls_test_srv_key_len;
-extern const char * mbedtls_test_cli_crt;
+extern const char *mbedtls_test_cli_crt;
 extern const size_t mbedtls_test_cli_crt_len;
-extern const char * mbedtls_test_cli_key;
+extern const char *mbedtls_test_cli_key;
 extern const size_t mbedtls_test_cli_key_len;
 
 #if defined(MBEDTLS_ECDSA_C)

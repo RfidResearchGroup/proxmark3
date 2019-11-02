@@ -5,16 +5,16 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// CA PEM certificates 
+// CA PEM certificates
 //-----------------------------------------------------------------------------
 //
 
 #ifndef __ADDITIONAL_CA_H__
 #define __ADDITIONAL_CA_H__
 
-#include <stddef.h>
+#include "common.h"
 
-// Concatenation of all CA certificates in PEM format if available 
+// Concatenation of all CA certificates in PEM format if available
 extern const char   additional_ca_pem[];
 extern const size_t additional_ca_pem_len;
 
