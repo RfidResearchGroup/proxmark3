@@ -1045,6 +1045,16 @@ static void leadingZeroAskSimBits(int *n, uint8_t clock) {
     memset(dest + (*n), 0, clock * 8);
     *n += clock * 8;
 }
+/*
+static void leadingZeroBiphaseSimBits(int *n, uint8_t clock, uint8_t *phase) {
+    uint8_t *dest = BigBuf_get_addr();
+    for (uint8_t i = 0; i < 8; i++) {
+        memset(dest + (*n), 0 ^ *phase, clock);
+        *phase ^= 1;
+        *n += clock;
+    }
+}
+*/
 
 
 // args clock, ask/man or askraw, invert, transmission separator
@@ -1054,10 +1064,14 @@ void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t c
 
     int n = 0, i = 0;
 
-    leadingZeroAskSimBits(&n, clk);
-
     if (encoding == 2) { //biphase
         uint8_t phase = 0;
+
+// iceman,  if I add this,  the demod includes these extra zero and detection fails.
+// now, I only need to figure out just to add carrier without modulation
+// the old bug, with adding ask zeros messed up the phase variable and deteion failed because of it in LF FDX
+//        leadingZeroBiphaseSimBits(&n, clk, &phase);
+
         for (i = 0; i < size; i++) {
             biphaseSimBit(bits[i] ^ invert, &n, clk, &phase);
         }
@@ -1067,6 +1081,9 @@ void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t c
             }
         }
     } else {  // ask/manchester || ask/raw
+
+        leadingZeroAskSimBits(&n, clk);
+
         for (i = 0; i < size; i++) {
             askSimBit(bits[i] ^ invert, &n, clk, encoding);
         }
@@ -1083,7 +1100,14 @@ void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t c
 
     WDT_HIT();
 
-    Dbprintf("Simulating with clk: %d, invert: %d, encoding: %d, separator: %d, n: %d", clk, invert, encoding, separator, n);
+    Dbprintf("Simulating with clk: %d, invert: %d, encoding: %s (%d), separator: %d, n: %d"
+        , clk
+        , invert
+        , (encoding == 2) ? "BI" : (encoding == 1) ? "ASK" : "RAW"
+        , encoding
+        , separator
+        , n
+    );
 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);
