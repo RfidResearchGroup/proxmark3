@@ -246,6 +246,7 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose)
             PrintAndLogEx(NORMAL, "Client Received %i octets", len);
             if (!len || len < 2) {
                 PrintAndLogEx(ERR, "Could not receive data correctly!");
+                return false;
             }
             PrintAndLogEx(NORMAL, "%s", sprint_hex(resp->data.asBytes, len));
             if (!check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2)) {
