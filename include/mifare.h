@@ -174,29 +174,36 @@ typedef struct {
     uint8_t length[1];
     uint8_t cmd_code[1];
     uint8_t IDm[8];
+} PACKED felica_frame_response_t;
+
+typedef struct {
+    uint8_t status_flag1[1];
+    uint8_t status_flag2[1];
+} PACKED felica_status_flags_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
     uint8_t node_number[1];
     uint8_t node_key_versions[2];
 } PACKED felica_request_service_response_t;
 
 typedef struct {
-    uint8_t sync[2];
-    uint8_t length[1];
-    uint8_t cmd_code[1];
-    uint8_t IDm[8];
+    felica_frame_response_t frame_response;
     uint8_t mode[1];
 } PACKED felica_request_request_response_t;
 
 typedef struct {
-    uint8_t sync[2];
-    uint8_t length[1];
-    uint8_t cmd_code[1];
-    uint8_t IDm[8];
-    uint8_t status_flag1[1];
-    uint8_t status_flag2[1];
+    felica_frame_response_t frame_response;
+    felica_status_flags_t status_flags;
     uint8_t number_of_block[1];
     uint8_t block_data[16];
     uint8_t block_element_number[1];
 } PACKED felica_read_without_encryption_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    felica_status_flags_t status_flags;
+} PACKED felica_status_response_t;
 
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),

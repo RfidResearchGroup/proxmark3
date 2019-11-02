@@ -10,14 +10,16 @@
 
 #include "common.h"
 
-#define CRC16_POLY_CCITT  0x1021
-#define CRC16_POLY_LEGIC  0xc6c6 //0x6363
-#define CRC16_POLY_DNP    0x3d65
+#define CRC16_POLY_CCITT   0x1021
+#define CRC16_POLY_KERMIT  0x8408
+#define CRC16_POLY_LEGIC   0xc6c6 //0x6363
+#define CRC16_POLY_DNP     0x3d65
 
 #define X25_CRC_CHECK     ((uint16_t)(~0xF0B8 & 0xFFFF)) // use this for checking of a correct crc
 
 typedef enum {
     CRC_NONE,
+    CRC_11784,
     CRC_14443_A,
     CRC_14443_B,
     CRC_15693,
@@ -41,6 +43,9 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n);
 uint16_t crc16_ccitt(uint8_t const *d, size_t n);
 
 // Calculate CRC-16/KERMIT (FDX-B ISO11784/85)  LF
+uint16_t crc16_fdx(uint8_t const *d, size_t n);
+
+// Calculate CRC-16/KERMIT
 uint16_t crc16_kermit(uint8_t const *d, size_t n);
 
 // Calculate CRC-16/XMODEM (FeliCa)

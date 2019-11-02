@@ -542,7 +542,7 @@ static int CmdPing(const char *Cmd) {
         bool error = false;
         if (len) {
             error = memcmp(data, resp.data.asBytes, len) != 0;
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("OK"));
         } else {
             PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
         }
