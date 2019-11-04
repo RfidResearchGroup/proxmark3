@@ -374,8 +374,8 @@ void doT55x7Acquisition(size_t sample_size) {
 
 #define COTAG_T1 384
 #define COTAG_T2 (COTAG_T1>>1)
-#define COTAG_ONE_THRESHOLD 128+30
-#define COTAG_ZERO_THRESHOLD 128-30
+#define COTAG_ONE_THRESHOLD 128+10
+#define COTAG_ZERO_THRESHOLD 128-10
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
 #endif
@@ -437,6 +437,11 @@ void doCotagAcquisition(size_t sample_size) {
                 dest[i] = dest[i - 1];
         }
     }
+
+    // Ensure that DC offset removal and noise check is performed for any device-side processing
+    removeSignalOffset(dest, bufsize);
+    computeSignalProperties(dest, bufsize);
+
 }
 
 uint32_t doCotagAcquisitionManchester() {
