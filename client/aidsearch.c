@@ -39,7 +39,7 @@ int openAIDFile(json_t **root) {
         goto out;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK.", path);
+    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %d records.", path, json_array_size(*root));
 out:
     free(path);
     return retval;
@@ -133,6 +133,7 @@ int PrintAIDDescription(char *aid, bool verbose) {
         PrintAndLogEx(SUCCESS, "AID %s | %s | %s", vaid, vendor, name);
     } else {
         PrintAndLogEx(NORMAL, "----------------------------------------");
+        PrintAndLogEx(SUCCESS, "Input AID: %s", aid);
         if (aid)
             PrintAndLogEx(SUCCESS, "Found AID: %s", vaid);
         if (vendor)
