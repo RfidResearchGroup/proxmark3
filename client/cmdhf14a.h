@@ -26,7 +26,7 @@ int CmdHF14A(const char *Cmd);
 int CmdHF14ASniff(const char *Cmd); // used by hf topaz sniff
 int CmdHF14ASim(const char *Cmd);   // used by hf mfu sim
 
-int infoHF14A(bool verbose, bool do_nack_test);
+int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search);
 const char *getTagInfo(uint8_t uid);
 int Hf14443_4aGetCardData(iso14a_card_select_t *card);
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);

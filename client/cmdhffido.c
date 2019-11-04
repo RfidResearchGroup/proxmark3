@@ -47,7 +47,7 @@ static int CmdHFFidoInfo(const char *cmd) {
         PrintAndLogEx(WARNING, "WARNING: command doesn't have any parameters.\n");
 
     // info about 14a part
-    infoHF14A(false, false);
+    infoHF14A(false, false, false);
 
     // FIDO info
     PrintAndLogEx(NORMAL, "--------------------------------------------");

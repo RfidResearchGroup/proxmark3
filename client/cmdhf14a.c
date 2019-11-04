@@ -26,6 +26,7 @@
 #include "ui.h"
 #include "crc16.h"
 #include "util_posix.h"  // msclock
+#include "aidsearch.h"
 
 bool APDUInFramingEnable = true;
 
@@ -372,7 +373,7 @@ static int CmdHF14AInfo(const char *Cmd) {
 
     bool verbose = !(Cmd[0] == 's' || Cmd[0] ==  'S');
     bool do_nack_test = (Cmd[0] == 'n' || Cmd[0] ==  'N');
-    infoHF14A(verbose, do_nack_test);
+    infoHF14A(verbose, do_nack_test, true);
     return 0;
 }
 
@@ -1225,7 +1226,7 @@ int CmdHF14A(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-int infoHF14A(bool verbose, bool do_nack_test) {
+int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -1492,6 +1493,10 @@ int infoHF14A(bool verbose, bool do_nack_test) {
                         break;
                 }
             }
+        }
+        
+        if (do_aid_search) {
+            PrintAIDDescription("315041592E5359532E4444463031", true);
         }
     } else {
         PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
