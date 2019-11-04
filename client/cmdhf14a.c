@@ -1526,15 +1526,45 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     if (res)
                         continue;
                     
-                    if (sw == 0x9000) {
-                        if (verbose) PrintAndLogEx(NORMAL, "------------- Application OK -----------");
-                        PrintAndLogEx(NORMAL, "res: %s", sprint_hex(result, resultlen));
-                        PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
+                    uint8_t dfname[200] = {0};
+                    size_t dfnamelen = 0;
+                    if (resultlen > 3) {
+                        struct tlvdb *tlv = tlvdb_parse_multi(result, resultlen);
+                        if (tlv) {
+                            // 0x84 Dedicated File (DF) Name
+                            const struct tlv *dfnametlv = tlvdb_get_tlv(tlvdb_find_full(tlv, 0x84));
+                            if (dfnametlv) {
+                                dfnamelen = dfnametlv->len;
+                                memcpy(dfname, dfnametlv->value, dfnamelen);
+                            }
+                            tlvdb_free(tlv);
+                        }
                     }
                     
-                    if (sw == 0x6283 || sw == 0x6285) {
-                        if (verbose) PrintAndLogEx(NORMAL, "----------- Application blocked --------");
+                    if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+                        if (sw == 0x9000) {
+                            if (verbose) PrintAndLogEx(NORMAL, "------------- Application OK -----------");
+                        } else {
+                            if (verbose) PrintAndLogEx(NORMAL, "----------- Application blocked --------");
+                        }
+
                         PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
+
+                        if (dfnamelen) {
+                            if (dfnamelen == vaidlen) {
+                                if (memcmp(dfname, vaid, vaidlen) == 0) {
+                                    if (verbose) PrintAndLogEx(INFO, "(DF) Name found and equal to AID");
+                                } else {
+                                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: %s :", sprint_hex(dfname, dfnamelen));
+                                    PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                                }
+                            } else {
+                                PrintAndLogEx(INFO, "(DF) Name not equal to AID: %s :", sprint_hex(dfname, dfnamelen));
+                                PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                            }
+                        } else {
+                            if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
+                        }
                     }
                     
                 }
