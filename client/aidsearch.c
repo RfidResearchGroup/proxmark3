@@ -16,7 +16,7 @@
 #include "pm3_cmd.h"
 
 
-int openAIDFile(json_t *root) {
+int openAIDFile(json_t **root) {
     json_error_t error;
 
     char *path;
@@ -26,14 +26,14 @@ int openAIDFile(json_t *root) {
     }
 
     int retval = PM3_SUCCESS;
-    root = json_load_file(path, 0, &error);
-    if (!root) {
+    *root = json_load_file(path, 0, &error);
+    if (!*root) {
         PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
         retval = PM3_ESOFT;
         goto out;
     }
 
-    if (!json_is_array(root)) {
+    if (!json_is_array(*root)) {
         PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
         retval = PM3_ESOFT;
         goto out;
@@ -51,12 +51,13 @@ int closeAIDFile(json_t *root) {
     return PM3_SUCCESS;
 }
 
-json_t *AIDSearchInit(json_t *root) {
-    int res = openAIDFile(root);
+json_t *AIDSearchInit() {
+    json_t *root = NULL;
+    int res = openAIDFile(&root);
     if (res != PM3_SUCCESS)
         return NULL;
 
-    return AIDSearchGetElm(root, 0);
+    return root;
 }
 
 json_t *AIDSearchGetElm(json_t *root, int elmindx) {
@@ -77,6 +78,8 @@ const char * jsonStrGet(json_t *data, char *name) {
     json_t *jstr;
     
     jstr = json_object_get(data, name);
+    if (jstr == NULL)
+        return NULL;
     if (!json_is_string(jstr)) {
         PrintAndLogEx(ERR, "`%s` is not a string", name);
         return NULL;
@@ -100,11 +103,11 @@ bool aidCompare(const char *aidlarge, const char *aidsmall) {
 }
 
 int PrintAIDDescription(char *aid, bool verbose) {
-    json_t *root = NULL;
     int retval = PM3_SUCCESS;
     
     int elmindx = 0;
-    json_t *data = AIDSearchInit(root);
+    json_t *root = AIDSearchInit();
+    json_t *data = AIDSearchGetElm(root, elmindx);
     if (data == NULL)
         goto out;
         
@@ -129,18 +132,19 @@ int PrintAIDDescription(char *aid, bool verbose) {
     if (!verbose) {
         PrintAndLogEx(SUCCESS, "AID %s | %s | %s", vaid, vendor, name);
     } else {
+        PrintAndLogEx(NORMAL, "----------------------------------------");
         if (aid)
-            PrintAndLogEx(SUCCESS, "AID: %s\n", vaid);
+            PrintAndLogEx(SUCCESS, "Found AID: %s", vaid);
         if (vendor)
-            PrintAndLogEx(SUCCESS, "Vendor: %s\n", vendor);
+            PrintAndLogEx(SUCCESS, "Vendor: %s", vendor);
         if (type)
-            PrintAndLogEx(SUCCESS, "Type: %s\n", type);
+            PrintAndLogEx(SUCCESS, "Type: %s", type);
         if (name)
-            PrintAndLogEx(SUCCESS, "Name: %s\n", name);
+            PrintAndLogEx(SUCCESS, "Name: %s", name);
         if (country)
-            PrintAndLogEx(SUCCESS, "Country: %s\n", country);
+            PrintAndLogEx(SUCCESS, "Country: %s", country);
         if (description)
-            PrintAndLogEx(SUCCESS, "Description: %s\n", description);
+            PrintAndLogEx(SUCCESS, "Description: %s", description);
     }
         
 out:

@@ -19,7 +19,7 @@
 #include <jansson.h>
 
 int PrintAIDDescription(char *aid, bool verbose);
-json_t *AIDSearchInit(json_t *root);
+json_t *AIDSearchInit();
 json_t *AIDSearchGetElm(json_t *root, int elmindx);
 int AIDSearchFree();
 
