@@ -205,6 +205,21 @@ typedef struct {
     felica_status_flags_t status_flags;
 } PACKED felica_status_response_t;
 
+typedef struct {
+    felica_frame_response_t frame_response;
+    uint8_t number_of_systems[1];
+    uint8_t system_code_list[32];
+} PACKED felica_syscode_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    felica_status_flags_t status_flags;
+    uint8_t format_version[1];
+    uint8_t basic_version[2];
+    uint8_t number_of_option[1];
+    uint8_t option_version_list[4];
+} PACKED felica_request_spec_response_t;
+
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),
     FELICA_NO_DISCONNECT = (1 << 1),

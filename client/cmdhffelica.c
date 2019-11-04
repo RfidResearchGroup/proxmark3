@@ -224,13 +224,61 @@ static int usage_hf_felica_write_without_encryption() {
     PrintAndLogEx(NORMAL, "       - Un-/Successful read: Card responses with Status Flag1 and Flag2");
     print_status_flag1_interpretation();
     print_status_flag2_interpration();
-    PrintAndLogEx(NORMAL, "\nUsage: hf felica wrunencrypted [-h] <01 Number of Service hex> <0A0B Service Code List (Little Endian) hex> <01 Number of Block hex> <0A0B Block List Element hex> <0A0B0C0D0E0F... Data hex (16-Byte)>");
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica wrunencrypted [-h][-i] <01 Number of Service hex> <0A0B Service Code List (Little Endian) hex> <01 Number of Block hex> <0A0B Block List Element hex> <0A0B0C0D0E0F... Data hex (16-Byte)>");
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use\n");
+    PrintAndLogEx(NORMAL, "\nExamples: ");
     PrintAndLogEx(NORMAL, "  hf felica wrunencrypted 01 CB10 01 8001 0102030405060708090A0B0C0D0E0F10");
     PrintAndLogEx(NORMAL, "  hf felica wrunencrypted -i 11100910C11BC407 01 CB10 01 8001 0102030405060708090A0B0C0D0E0F10\n\n");
+    return PM3_SUCCESS;
+}
+
+static int usage_hf_felica_request_system_code() {
+    PrintAndLogEx(NORMAL, "\nInfo: Use this command to acquire System Code registered to the card.");
+    PrintAndLogEx(NORMAL, "       - If a card is divided into more than one System, this command acquires System Code of each System existing in the card.");
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica rqsyscode [-h] [-i]");
+    PrintAndLogEx(NORMAL, "       -h    this help");
+    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
     PrintAndLogEx(NORMAL, "\nExamples: ");
-    PrintAndLogEx(NORMAL, "  hf felica wrunencrypted ");
+    PrintAndLogEx(NORMAL, "  hf felica rqsyscode ");
+    PrintAndLogEx(NORMAL, "  hf felica rqsyscode -i 11100910C11BC407\n\n");
+    return PM3_SUCCESS;
+}
+
+static int usage_hf_felica_reset_mode() {
+    PrintAndLogEx(NORMAL, "\nInfo: Use this command to reset Mode to Mode 0.");
+    print_status_flag1_interpretation();
+    print_status_flag2_interpration();
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica resetmode [-h][-i][-r]");
+    PrintAndLogEx(NORMAL, "       -h    this help");
+    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
+    PrintAndLogEx(NORMAL, "       -r    <0A0B hex> set custom reserve to use");
+    PrintAndLogEx(NORMAL, "\nExamples: ");
+    PrintAndLogEx(NORMAL, "  hf felica resetmode ");
+    PrintAndLogEx(NORMAL, "  hf felica resetmode -r 0001");
+    PrintAndLogEx(NORMAL, "  hf felica resetmode -i 11100910C11BC407\n\n");
+    return PM3_SUCCESS;
+}
+
+static int usage_hf_felica_request_specification_version() {
+    PrintAndLogEx(NORMAL, "\nInfo: Use this command to acquire the version of card OS.");
+    PrintAndLogEx(NORMAL, "  - Response:");
+    PrintAndLogEx(NORMAL, "    - Format Version: Fixed value 00h. Provided only if Status Flag1 = 00h.");
+    PrintAndLogEx(NORMAL, "    - Basic Version: Each value of version is expressed in BCD notation <Little Endian>. Provided only if Status Flag1 = 00h.");
+    PrintAndLogEx(NORMAL, "    - Number of Option: value = 0: AES card, value = 1: AES/DES card. Provided only if Status Flag1 = 00h.");
+    PrintAndLogEx(NORMAL, "    - Option Version List: Provided only if Status Flag1 = 00h.");
+    PrintAndLogEx(NORMAL, "       - For AES card: not added.");
+    PrintAndLogEx(NORMAL, "       - For AES/DES card: DES option version is added - BCD notation <Little Endian>.");
+    print_status_flag1_interpretation();
+    print_status_flag2_interpration();
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica rqspecver [-h][-i][-r]");
+    PrintAndLogEx(NORMAL, "       -h    this help");
+    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
+    PrintAndLogEx(NORMAL, "       -r    <0A0B hex> set custom reserve to use");
+    PrintAndLogEx(NORMAL, "\nExamples: ");
+    PrintAndLogEx(NORMAL, "  hf felica rqspecver ");
+    PrintAndLogEx(NORMAL, "  hf felica rqspecver -r 0001");
+    PrintAndLogEx(NORMAL, "  hf felica rqspecver -i 11100910C11BC407\n\n");
     return PM3_SUCCESS;
 }
 
@@ -684,6 +732,234 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
+/**
+ * Command parser for rqspecver
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    bool custom_IDm = false;
+    bool custom_reserve = false;
+    strip_cmds(Cmd);
+    uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Reserved (2)
+    uint8_t paramCount = 0;
+    uint8_t flags = 0;
+    int i = 0;
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
+                case 'H':
+                case 'h':
+                    return usage_hf_felica_request_specification_version();
+                case 'i':
+                    paramCount++;
+                    custom_IDm = true;
+                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
+                        return PM3_EINVARG;
+                    }
+                    paramCount++;
+                    i += 16;
+                    break;
+                case 'r':
+                    paramCount++;
+                    custom_reserve = true;
+                    if (!add_param(Cmd, paramCount, data, 10, 4)) {
+                        return PM3_EINVARG;
+                    }
+                    paramCount++;
+                    i += 4;
+                    break;
+                default:
+                    return usage_hf_felica_request_specification_version();
+            }
+        }
+        i++;
+    }
+    data[0] = 0x0C; // Static length
+    data[1] = 0x3C; // Command ID
+    if (!custom_reserve) {
+        data[10] = 0x00; // Reserved Value
+        data[11] = 0x00; // Reserved Value
+    }
+    if (!custom_IDm && !check_last_idm(data, datalen)) {
+        return PM3_EINVARG;
+    }
+    AddCrc(data, datalen);
+    datalen += 2;
+    flags |= FELICA_APPEND_CRC;
+    flags |= FELICA_RAW;
+    clear_and_send_command(flags, datalen, data, 0);
+    PacketResponseNG resp;
+    if (!waitCmdFelica(0, &resp, 1)) {
+        PrintAndLogEx(ERR, "\nGot no Response from card");
+        return PM3_ERFTRANS;
+    } else {
+        felica_request_spec_response_t spec_response;
+        memcpy(&spec_response, (felica_request_spec_response_t *)resp.data.asBytes, sizeof(felica_request_spec_response_t));
+        if (spec_response.frame_response.IDm[0] != 0) {
+            PrintAndLogEx(SUCCESS, "\nGot Request Response:");
+            PrintAndLogEx(NORMAL, "\nIDm: %s", sprint_hex(spec_response.frame_response.IDm, sizeof(spec_response.frame_response.IDm)));
+            PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(spec_response.status_flags.status_flag1, sizeof(spec_response.status_flags.status_flag1)));
+            PrintAndLogEx(NORMAL, "Status Flag2: %s", sprint_hex(spec_response.status_flags.status_flag2, sizeof(spec_response.status_flags.status_flag2)));
+            if (spec_response.status_flags.status_flag1[0] == 0x00) {
+                PrintAndLogEx(NORMAL, "Format Version: %s", sprint_hex(spec_response.format_version, sizeof(spec_response.format_version)));
+                PrintAndLogEx(NORMAL, "Basic Version: %s", sprint_hex(spec_response.basic_version, sizeof(spec_response.basic_version)));
+                PrintAndLogEx(NORMAL, "Number of Option: %s", sprint_hex(spec_response.number_of_option, sizeof(spec_response.number_of_option)));
+                if (spec_response.number_of_option[0] == 0x01) {
+                    PrintAndLogEx(NORMAL, "Option Version List:");
+                    for (uint8_t i = 0; i < spec_response.number_of_option[0]; i++) {
+                        PrintAndLogEx(NORMAL, "  - %s", sprint_hex(spec_response.option_version_list + i * 2, sizeof(uint8_t) * 2));
+                    }
+                }
+            }
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+
+/**
+ * Command parser for resetmode
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaResetMode(const char *Cmd) {
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    bool custom_IDm = false;
+    bool custom_reserve = false;
+    strip_cmds(Cmd);
+    uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Reserved (2)
+    uint8_t paramCount = 0;
+    uint8_t flags = 0;
+    int i = 0;
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
+                case 'H':
+                case 'h':
+                    return usage_hf_felica_reset_mode();
+                case 'i':
+                    paramCount++;
+                    custom_IDm = true;
+                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
+                        return PM3_EINVARG;
+                    }
+                    paramCount++;
+                    i += 16;
+                    break;
+                case 'r':
+                    paramCount++;
+                    custom_reserve = true;
+                    if (!add_param(Cmd, paramCount, data, 10, 4)) {
+                        return PM3_EINVARG;
+                    }
+                    paramCount++;
+                    i += 4;
+                    break;
+                default:
+                    return usage_hf_felica_reset_mode();
+            }
+        }
+        i++;
+    }
+    data[0] = 0x0C; // Static length
+    data[1] = 0x3E; // Command ID
+    if (!custom_reserve) {
+        data[10] = 0x00; // Reserved Value
+        data[11] = 0x00; // Reserved Value
+    }
+    if (!custom_IDm && !check_last_idm(data, datalen)) {
+        return PM3_EINVARG;
+    }
+    AddCrc(data, datalen);
+    datalen += 2;
+    flags |= FELICA_APPEND_CRC;
+    flags |= FELICA_RAW;
+    clear_and_send_command(flags, datalen, data, 0);
+    PacketResponseNG resp;
+    if (!waitCmdFelica(0, &resp, 1)) {
+        PrintAndLogEx(ERR, "\nGot no Response from card");
+        return PM3_ERFTRANS;
+    } else {
+        felica_status_response_t reset_mode_response;
+        memcpy(&reset_mode_response, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
+        if (reset_mode_response.frame_response.IDm[0] != 0) {
+            PrintAndLogEx(SUCCESS, "\nGot Request Response:");
+            PrintAndLogEx(NORMAL, "\nIDm: %s", sprint_hex(reset_mode_response.frame_response.IDm, sizeof(reset_mode_response.frame_response.IDm)));
+            PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(reset_mode_response.status_flags.status_flag1, sizeof(reset_mode_response.status_flags.status_flag1)));
+            PrintAndLogEx(NORMAL, "Status Flag2: %s\n", sprint_hex(reset_mode_response.status_flags.status_flag2, sizeof(reset_mode_response.status_flags.status_flag2)));
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+
+
+/**
+ * Command parser for rqsyscode
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    bool custom_IDm = false;
+    strip_cmds(Cmd);
+    uint16_t datalen = 10; // Length (1), Command ID (1), IDm (8)
+    uint8_t paramCount = 0;
+    uint8_t flags = 0;
+    int i = 0;
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == '-') {
+            switch (Cmd[i + 1]) {
+                case 'H':
+                case 'h':
+                    return usage_hf_felica_request_system_code();
+                case 'i':
+                    paramCount++;
+                    custom_IDm = true;
+                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
+                        return PM3_EINVARG;
+                    }
+                    paramCount++;
+                    i += 16;
+                    break;
+                default:
+                    return usage_hf_felica_request_system_code();
+            }
+        }
+        i++;
+    }
+    data[0] = 0x0A; // Static length
+    data[1] = 0x0C; // Command ID
+    if (!custom_IDm && !check_last_idm(data, datalen)) {
+        return PM3_EINVARG;
+    }
+    AddCrc(data, datalen);
+    datalen += 2;
+    flags |= FELICA_APPEND_CRC;
+    flags |= FELICA_RAW;
+    clear_and_send_command(flags, datalen, data, 0);
+    PacketResponseNG resp;
+    if (!waitCmdFelica(0, &resp, 1)) {
+        PrintAndLogEx(ERR, "\nGot no Response from card");
+        return PM3_ERFTRANS;
+    } else {
+        felica_syscode_response_t rq_syscode_response;
+        memcpy(&rq_syscode_response, (felica_syscode_response_t *)resp.data.asBytes, sizeof(felica_syscode_response_t));
+        if (rq_syscode_response.frame_response.IDm[0] != 0) {
+            PrintAndLogEx(SUCCESS, "\nGot Request Response:");
+            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rq_syscode_response.frame_response.IDm, sizeof(rq_syscode_response.frame_response.IDm)));
+            PrintAndLogEx(NORMAL, "  - Number of Systems: %s", sprint_hex(rq_syscode_response.number_of_systems, sizeof(rq_syscode_response.number_of_systems)));
+            PrintAndLogEx(NORMAL, "  - System Codes: enumerated in ascending order starting from System 0.");
+            for (uint8_t i = 0; i < rq_syscode_response.number_of_systems[0]; i++) {
+                PrintAndLogEx(NORMAL, "    - %s", sprint_hex(rq_syscode_response.system_code_list + i * 2, sizeof(uint8_t) * 2));
+            }
+        }
+    }
+    return PM3_SUCCESS;
+}
 
 /**
  * Command parser for rqservice.
@@ -1244,15 +1520,15 @@ static command_t CommandTable[] = {
     {"rdunencrypted",       CmdHFFelicaReadWithoutEncryption,       IfPm3Felica,     "read Block Data from authentication-not-required Service."},
     {"wrunencrypted",       CmdHFFelicaWriteWithoutEncryption,      IfPm3Felica,     "write Block Data to an authentication-not-required Service."},
     {"scsvcode",            CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "acquire Area Code and Service Code."},
-    //{"rqsyscode",         CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "acquire System Code registered to the card."},
+    {"rqsyscode",           CmdHFFelicaRequestSystemCode,           IfPm3Felica,     "acquire System Code registered to the card."},
     //{"auth1",             CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "authenticate a card."},
     //{"auth2",             CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
     //{"read",              CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "read Block Data from authentication-required Service."},
     //{"write",             CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "write Block Data to an authentication-required Service."},
     //{"scsvcodev2",        CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "verify the existence of Area or Service, and to acquire Key Version."},
     //{"getsysstatus",      CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "acquire the setup information in System."},
-    //{"rqspecver",         CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "acquire the version of card OS."},
-    //{"resetmode",         CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "reset Mode to Mode 0."},
+    {"rqspecver",           CmdHFFelicaRequestSpecificationVersion, IfPm3Felica,     "acquire the version of card OS."},
+    {"resetmode",           CmdHFFelicaResetMode,                   IfPm3Felica,     "reset Mode to Mode 0."},
     //{"auth1v2",           CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "authenticate a card."},
     //{"auth2v2",           CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
     //{"readv2",            CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "read Block Data from authentication-required Service."},
