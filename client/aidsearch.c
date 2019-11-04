@@ -16,7 +16,7 @@
 #include "pm3_cmd.h"
 
 
-int openAIDFile(json_t **root) {
+int openAIDFile(json_t **root, bool verbose) {
     json_error_t error;
 
     char *path;
@@ -39,7 +39,7 @@ int openAIDFile(json_t **root) {
         goto out;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %d records.", path, json_array_size(*root));
+    if (verbose) PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %d records.", path, json_array_size(*root));
 out:
     free(path);
     return retval;
@@ -51,9 +51,9 @@ int closeAIDFile(json_t *root) {
     return PM3_SUCCESS;
 }
 
-json_t *AIDSearchInit() {
+json_t *AIDSearchInit(bool verbose) {
     json_t *root = NULL;
-    int res = openAIDFile(&root);
+    int res = openAIDFile(&root, verbose);
     if (res != PM3_SUCCESS)
         return NULL;
 
@@ -115,10 +115,12 @@ bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen) {
     return true;
 }
 
-int PrintAIDDescription(char *aid, bool verbose) {
+int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
     int retval = PM3_SUCCESS;
     
-    json_t *root = AIDSearchInit();
+    json_t *root = xroot;
+    if (root == NULL)
+        root = AIDSearchInit(verbose);
     if (root == NULL)
         goto out;
         
@@ -167,11 +169,12 @@ int PrintAIDDescription(char *aid, bool verbose) {
     }
         
 out:
-    AIDSearchFree(root);
+    if (xroot == NULL)
+        AIDSearchFree(root);
     return retval;
 }
 
-int PrintAIDDescriptionBuf(uint8_t *aid, size_t aidlen, bool verbose) {
-    return PrintAIDDescription(sprint_hex_inrow(aid, aidlen), verbose);
+int PrintAIDDescriptionBuf(json_t *root, uint8_t *aid, size_t aidlen, bool verbose) {
+    return PrintAIDDescription(root, sprint_hex_inrow(aid, aidlen), verbose);
 }
 

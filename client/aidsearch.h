@@ -18,9 +18,9 @@
 
 #include <jansson.h>
 
-int PrintAIDDescription(char *aid, bool verbose);
-int PrintAIDDescriptionBuf(uint8_t *aid, size_t aidlen, bool verbose);
-json_t *AIDSearchInit();
+int PrintAIDDescription(json_t *root, char *aid, bool verbose);
+int PrintAIDDescriptionBuf(json_t *root, uint8_t *aid, size_t aidlen, bool verbose);
+json_t *AIDSearchInit(bool verbose);
 json_t *AIDSearchGetElm(json_t *root, int elmindx);
 bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen);
 int AIDSearchFree();
