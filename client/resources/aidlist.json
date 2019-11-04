@@ -1,17 +1,17 @@
 [
     {
         "AID": "315041592E5359532E4444463031",
-        "Vendor": "Visa International",
+        "Vendor": "EMV",
         "Country": "United States",
-        "Name": "Visa Payment System Environment - PSE (1PAY.SYS.DDF01)",
+        "Name": "EMV Payment System Environment - PSE (1PAY.SYS.DDF01)",
         "Description": "",
         "Type": ""
     },
     {
         "AID": "325041592E5359532E4444463031",
-        "Vendor": "Visa International",
+        "Vendor": "EMV",
         "Country": "United States",
-        "Name": "Visa Proximity Payment System Environment - PPSE (2PAY.SYS.DDF01)",
+        "Name": "EMV Proximity Payment System Environment - PPSE (2PAY.SYS.DDF01)",
         "Description": "Visa payWave for Mobile",
         "Type": ""
     },
