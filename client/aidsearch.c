@@ -102,37 +102,51 @@ bool aidCompare(const char *aidlarge, const char *aidsmall) {
     return false;
 }
 
+bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen) {
+    *aidlen = 0;
+    const char *hexaid = jsonStrGet(data, "AID");
+    if (hexaid == NULL || strlen(hexaid) == 0)
+        return false;
+    
+    int res = param_gethex_to_eol(hexaid, 0, aid, aidmaxlen, aidlen);
+    if (res)
+        return false;
+
+    return true;
+}
+
 int PrintAIDDescription(char *aid, bool verbose) {
     int retval = PM3_SUCCESS;
     
-    int elmindx = 0;
     json_t *root = AIDSearchInit();
-    json_t *data = AIDSearchGetElm(root, elmindx);
-    if (data == NULL)
+    if (root == NULL)
         goto out;
         
-    while (aidCompare(jsonStrGet(data, "AID"), aid)) {
-        elmindx++;
-        if (elmindx > json_array_size(root))
-            goto out;
-        data = AIDSearchGetElm(root, elmindx);
-        
+    json_t *elm = NULL;
+    for (int elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+        json_t *data = AIDSearchGetElm(root, elmindx);
         if (data == NULL)
-            goto out;
+            continue;
+        if (aidCompare(jsonStrGet(data, "AID"), aid)) {
+            elm = data;
+            break;
+        }
     }
     
+    if (elm == NULL)
+        goto out;
+    
     // print here
-    const char *vaid = jsonStrGet(data, "AID");
-    const char *vendor = jsonStrGet(data, "Vendor");
-    const char *name = jsonStrGet(data, "Name");
-    const char *country = jsonStrGet(data, "Country");
-    const char *description = jsonStrGet(data, "Description");
-    const char *type = jsonStrGet(data, "Type");
+    const char *vaid = jsonStrGet(elm, "AID");
+    const char *vendor = jsonStrGet(elm, "Vendor");
+    const char *name = jsonStrGet(elm, "Name");
+    const char *country = jsonStrGet(elm, "Country");
+    const char *description = jsonStrGet(elm, "Description");
+    const char *type = jsonStrGet(elm, "Type");
 
     if (!verbose) {
         PrintAndLogEx(SUCCESS, "AID %s | %s | %s", vaid, vendor, name);
     } else {
-        PrintAndLogEx(NORMAL, "----------------------------------------");
         PrintAndLogEx(SUCCESS, "Input AID: %s", aid);
         if (aid)
             PrintAndLogEx(SUCCESS, "Found AID: %s", vaid);
@@ -153,4 +167,7 @@ out:
     return retval;
 }
 
+int PrintAIDDescriptionBuf(uint8_t *aid, size_t aidlen, bool verbose) {
+    return PrintAIDDescription(sprint_hex_inrow(aid, aidlen), verbose);
+}
 

@@ -1496,7 +1496,39 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
         
         if (do_aid_search) {
-            PrintAIDDescription("315041592E5359532E4444463031", true);
+            int elmindx = 0;
+            json_t *root = AIDSearchInit();
+            if (root != NULL) {
+                bool ActivateField = true;
+                for (elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+                    json_t *data = AIDSearchGetElm(root, elmindx);
+                    uint8_t vaid[200] = {0};
+                    int vaidlen = 0;
+                    if (!AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) || !vaidlen)
+                        continue;
+                    
+                    uint16_t sw = 0;
+                    uint8_t result[1024] = {0};
+                    size_t resultlen = 0;
+                    int res = EMVSelect(ECC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw, NULL);
+                    ActivateField = false;
+                    if (res)
+                        continue;
+                    
+                    if (sw == 0x9000) {
+                        PrintAndLogEx(NORMAL, "------------- Application OK -----------");
+                        PrintAndLogEx(NORMAL, "res: %s", sprint_hex(result, resultlen));
+                        PrintAIDDescriptionBuf(vaid, vaidlen, true);
+                    }
+                    
+                    if (sw == 0x6283 || sw == 0x6285) {
+                        PrintAndLogEx(NORMAL, "----------- Application blocked --------");
+                        PrintAIDDescriptionBuf(vaid, vaidlen, true);
+                    }
+                    
+                }
+                DropField();
+            }
         }
     } else {
         PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
