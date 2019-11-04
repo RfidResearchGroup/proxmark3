@@ -123,13 +123,17 @@ int PrintAIDDescription(char *aid, bool verbose) {
         goto out;
         
     json_t *elm = NULL;
+    int maxaidlen = 0;
     for (int elmindx = 0; elmindx < json_array_size(root); elmindx++) {
         json_t *data = AIDSearchGetElm(root, elmindx);
         if (data == NULL)
             continue;
-        if (aidCompare(jsonStrGet(data, "AID"), aid)) {
-            elm = data;
-            break;
+        const char *dictaid = jsonStrGet(data, "AID");
+        if (aidCompare(aid, dictaid)) {  // dictaid may be less length than requested aid
+            if (maxaidlen < strlen(dictaid) && strlen(dictaid) <= strlen(aid)) {
+                maxaidlen = strlen(dictaid);
+                elm = data;
+            }
         }
     }
     
