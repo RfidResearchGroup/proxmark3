@@ -86,7 +86,7 @@ static int CmdCOTAGRead(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_COTAG_READ, rawsignal, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, NULL, 7000)) {
+    if (!WaitForResponseTimeout(CMD_LF_COTAG_READ, NULL, 7000)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }

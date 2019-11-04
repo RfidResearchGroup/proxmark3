@@ -2490,7 +2490,7 @@ void Cotag(uint32_t arg0) {
 
     switch (rawsignal) {
         case 0:
-            doCotagAcquisition(50000);
+            doCotagAcquisition(40000);
             break;
         case 1:
             doCotagAcquisitionManchester();
@@ -2502,7 +2502,7 @@ void Cotag(uint32_t arg0) {
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // field off
-    reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, NULL, 0);
     LEDsoff();
 }
 
