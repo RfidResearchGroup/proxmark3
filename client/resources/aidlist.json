@@ -2142,5 +2142,13 @@
         "Name": "teslaLogic002",
         "Description": "Tesla car key",
         "Type": "Tesla"
+    },
+    {
+        "AID": "7465736C61",
+        "Vendor": "Tesla",
+        "Country": "",
+        "Name": "tesla",
+        "Description": "Tesla car key generic AID",
+        "Type": "Tesla"
     }
 ]
