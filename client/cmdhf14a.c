@@ -372,7 +372,7 @@ static int CmdHF14AInfo(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("vV",  "verbose",   "adds some information to results"),
-        arg_lit0("nN",  "naktest",   "test for nack bug"),
+        arg_lit0("nN",  "nacktest",   "test for nack bug"),
         arg_lit0("sS",  "aidsearch", "checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"),
         arg_param_end
     };
@@ -382,8 +382,8 @@ static int CmdHF14AInfo(const char *Cmd) {
     do_nack_test = arg_get_lit(2);
     do_aid_search = arg_get_lit(3);
 
-    CLIParserFree();    
-    
+    CLIParserFree();
+
     infoHF14A(verbose, do_nack_test, do_aid_search);
     return 0;
 }
