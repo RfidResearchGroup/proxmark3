@@ -533,7 +533,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     if (strlen(Cmd) < 3) {
         PrintAndLogEx(NORMAL, "Usage:  hf mf wrbl    <block number> <key A/B> <key (12 hex symbols)> <block data (32 hex symbols)>");
         PrintAndLogEx(NORMAL, "Examples:");
-        PrintAndLogEx(NORMAL, "        hf mf wrbl 0 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
+        PrintAndLogEx(NORMAL, "        hf mf wrbl 1 A FFFFFFFFFFFF 000102030405060708090A0B0C0D0E0F");
         return 0;
     }
 
