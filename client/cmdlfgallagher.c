@@ -6,7 +6,8 @@
 // the license.
 //-----------------------------------------------------------------------------
 // Low frequency GALLAGHER tag commands
-// NRZ, RF/32, 128 bits long (unknown cs)
+// ASK/MAN, RF/32, 96 bits long (unknown cs) (0x00088060)
+// sample Q5 ,  ASK RF/32, STT,  96 bits  (3blocks)   ( 0x9000F006)
 //-----------------------------------------------------------------------------
 #include "cmdlfgallagher.h"
 
@@ -157,10 +158,11 @@ int detectGallagher(uint8_t *dest, size_t *size) {
     if (*size < 96) return -1; //make sure buffer has data
     size_t startIdx = 0;
     uint8_t preamble[] = {
-        0, 0, 0, 0, 1, 1, 1, 1,
+        //0, 0, 0, 0,
+        1, 1, 1, 1,
         1, 1, 1, 1, 1, 1, 0, 1,
         0, 1, 0, 1, 0, 1, 0, 0,
-        0, 1, 1, 0, 0, 0, 0, 1
+        0, 1, 1, 0, 0, 0
     };
     if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
         return -2; //preamble not found
