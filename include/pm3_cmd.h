@@ -507,6 +507,9 @@ typedef struct {
 
 #define CMD_HF_MIFARE_NACK_DETECT                                         0x0730
 
+// MFU OTP TearOff
+#define CMD_HF_MFU_OTP_TEAROFF                                            0x0740
+
 #define CMD_HF_SNIFF                                                      0x0800
 
 // For ThinFilm Kovio

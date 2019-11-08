@@ -52,4 +52,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain);
 void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);
 
+// Tear-off test for MFU
+void MifareU_Otp_Tearoff();
+
 #endif
