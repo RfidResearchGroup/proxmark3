@@ -249,5 +249,5 @@ void RunMod() {
     LEDsoff();
     SpinDelay(300);
     Dbprintf("- [ End ] -> You can take shell back ...");
-    Dbprintf("- [  !  ] -> use 'script run read_pwd_mem' to print passwords");
+    Dbprintf("- [  !  ] -> use 'script run read_pwd_mem_spiffs' to print passwords");
 }

@@ -3,11 +3,13 @@ local bin = require('bin')
 
 copyright = 'Copyright (c) 2018 Bogito. All rights reserved.'
 author = 'Bogito'
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc =
 [[
-This script will read the flash memory of RDV4 and print the stored passwords.
-It was meant to be used as a help tool after using the BogRun standalone mode.
+This script will read the flash memory of RDV4 and print the stored passwords/keys.
+
+It was meant to be used as a help tool after using the BogRun standalone mode before SPIFFS.
+You should now use read_pwd_mem_spiffs instead after the updated BogRun standalone mode.
 
 (Iceman) script adapted to read and print keys in the default dictionary flashmemory sections.
 ]]
@@ -22,8 +24,14 @@ example =
     -- This will scan 32 bytes of flash memory at offset 64 for stored passwords
     script run read_pwd_mem -o 64 -l 32
 
-    -- This will print found
-    script run read_pwd_mem -o 241664 -k 6
+    -- This will print the stored Mifare dictionary keys
+    script run read_pwd_mem -m
+	
+    -- This will print the stored t55xx dictionary passwords
+    script run read_pwd_mem -t
+	
+    -- This will print the stored iClass dictionary keys
+    script run read_pwd_mem -i
 ]]
 usage =
 [[
@@ -66,7 +74,6 @@ local function main(args)
     print()
 
     local data, err, quadlet
-    local cnt = 0
     local offset = 0
     local length = 256
     local keylength = 4
