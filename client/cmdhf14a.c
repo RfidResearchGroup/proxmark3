@@ -1505,7 +1505,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 }
             }
         }
-        
+
         if (do_aid_search) {
             int elmindx = 0;
             json_t *root = AIDSearchInit(verbose);
@@ -1517,7 +1517,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     int vaidlen = 0;
                     if (!AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) || !vaidlen)
                         continue;
-                    
+
                     uint16_t sw = 0;
                     uint8_t result[1024] = {0};
                     size_t resultlen = 0;
@@ -1525,7 +1525,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     ActivateField = false;
                     if (res)
                         continue;
-                    
+
                     uint8_t dfname[200] = {0};
                     size_t dfnamelen = 0;
                     if (resultlen > 3) {
@@ -1540,7 +1540,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                             tlvdb_free(tlv);
                         }
                     }
-                    
+
                     if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
                         if (sw == 0x9000) {
                             if (verbose) PrintAndLogEx(NORMAL, "------------- Application OK -----------");
@@ -1566,7 +1566,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                             if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
                         }
                     }
-                    
+
                 }
                 DropField();
             }

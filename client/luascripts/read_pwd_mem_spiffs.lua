@@ -59,21 +59,21 @@ local function main(args)
 	local keylength = 4
 
     for o, a in getopt.getopt(args, 'f:h') do
-	
+
         -- help
         if o == 'h' then return help() end
 
         -- offset
         if o == 'f' then filename = a end
-		
+
 	end
-	
+
     data, length, err = core.GetFromFlashMemSpiffs(filename)
     if data == nil then return oops('Problem while reading file from SPIFFS') end
 
-    --print('Filename', filename)	
+    --print('Filename', filename)
 	--print('Filesize (B)', length)
-	
+
 	_, s = bin.unpack('H'..length, data)
 
 	local cnt = 0, i
