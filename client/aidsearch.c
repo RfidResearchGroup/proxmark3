@@ -70,13 +70,13 @@ json_t *AIDSearchGetElm(json_t *root, int elmindx) {
 }
 
 int AIDSearchFree(json_t *root) {
-    
+
     return closeAIDFile(root);
 }
 
-const char * jsonStrGet(json_t *data, char *name) {
+const char *jsonStrGet(json_t *data, char *name) {
     json_t *jstr;
-    
+
     jstr = json_object_get(data, name);
     if (jstr == NULL)
         return NULL;
@@ -94,11 +94,11 @@ const char * jsonStrGet(json_t *data, char *name) {
 bool aidCompare(const char *aidlarge, const char *aidsmall) {
     if (strcmp(aidlarge, aidsmall) == 0)
         return true;
-    
+
     if (strlen(aidlarge) > strlen(aidsmall))
         if (strncmp(aidlarge, aidsmall, strlen(aidsmall)) == 0)
             return true;
-    
+
     return false;
 }
 
@@ -107,7 +107,7 @@ bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen) {
     const char *hexaid = jsonStrGet(data, "AID");
     if (hexaid == NULL || strlen(hexaid) == 0)
         return false;
-    
+
     int res = param_gethex_to_eol(hexaid, 0, aid, aidmaxlen, aidlen);
     if (res)
         return false;
@@ -117,13 +117,13 @@ bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen) {
 
 int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
     int retval = PM3_SUCCESS;
-    
+
     json_t *root = xroot;
     if (root == NULL)
         root = AIDSearchInit(verbose);
     if (root == NULL)
         goto out;
-        
+
     json_t *elm = NULL;
     int maxaidlen = 0;
     for (int elmindx = 0; elmindx < json_array_size(root); elmindx++) {
@@ -138,10 +138,10 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
             }
         }
     }
-    
+
     if (elm == NULL)
         goto out;
-    
+
     // print here
     const char *vaid = jsonStrGet(elm, "AID");
     const char *vendor = jsonStrGet(elm, "Vendor");
@@ -167,7 +167,7 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
         if (description)
             PrintAndLogEx(SUCCESS, "Description: %s", description);
     }
-        
+
 out:
     if (xroot == NULL)
         AIDSearchFree(root);

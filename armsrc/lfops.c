@@ -1101,13 +1101,13 @@ void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t c
     WDT_HIT();
 
     Dbprintf("Simulating with clk: %d, invert: %d, encoding: %s (%d), separator: %d, n: %d"
-        , clk
-        , invert
-        , (encoding == 2) ? "BI" : (encoding == 1) ? "ASK" : "RAW"
-        , encoding
-        , separator
-        , n
-    );
+             , clk
+             , invert
+             , (encoding == 2) ? "BI" : (encoding == 1) ? "ASK" : "RAW"
+             , encoding
+             , separator
+             , n
+            );
 
     if (ledcontrol) LED_A_ON();
     SimulateTagLowFrequency(n, 0, ledcontrol);

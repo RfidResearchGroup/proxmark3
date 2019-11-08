@@ -2753,33 +2753,33 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 
 //
 // MFU TearOff against OTP
-// Mobeius et al
+// Moebius et al
 //
-static int CmdHF14AMfuOtpTearoff(const char *Cmd){
-	uint8_t cmdp = 0;
-	bool errors = 0;
-	uint32_t len = strtol(Cmd, NULL, 0);
-	uint8_t data[PM3_CMD_DATA_SIZE] = {0};
-    
-	while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		switch (tolower(param_getchar(Cmd, cmdp))) {
-		case 'h': 
-			return usage_hf_mfu_otp_tearoff();
-		default:
-		   break;
-		}
-	}
+static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = 0;
+    uint32_t len = strtol(Cmd, NULL, 0);
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
 
-    if (errors) return usage_hf_mfu_otp_tearoff();	
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_mfu_otp_tearoff();
+            default:
+                break;
+        }
+    }
 
-	clearCommandBuffer();
-	SendCommandNG(CMD_HF_MFU_OTP_TEAROFF, data, len);
-	PacketResponseNG resp;
-	if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
-		PrintAndLogEx(WARNING, "Failed");
-		return PM3_ESOFT;
-	}
-	return PM3_SUCCESS;
+    if (errors) return usage_hf_mfu_otp_tearoff();
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MFU_OTP_TEAROFF, data, len);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
+        PrintAndLogEx(WARNING, "Failed");
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
 }
 
 //------------------------------------

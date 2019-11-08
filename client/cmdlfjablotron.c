@@ -121,7 +121,7 @@ static int CmdJablotronDemod(const char *Cmd) {
     uint8_t chksum = raw2 & 0xFF;
     bool isok = (chksum == jablontron_chksum(DemodBuffer));
 
-    PrintAndLogEx( isok ? SUCCESS : INFO,
+    PrintAndLogEx(isok ? SUCCESS : INFO,
                   "Checksum: %02X [ %s]",
                   chksum,
                   isok ? _GREEN_("OK") : _RED_("Fail")

@@ -1374,7 +1374,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
         // Use application data from block 5
         memcpy(aia_data, emulator + (8 * 5), 8);
 
-       // older 2K / 16K tags has its application issuer data on block 2
+        // older 2K / 16K tags has its application issuer data on block 2
     }
     AddCrc(aia_data, 8);
 

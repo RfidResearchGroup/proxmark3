@@ -2176,7 +2176,7 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
 
 //
 // Tear-off attack against MFU.
-// - Mobius et al
+// - Moebius et al
 void MifareU_Otp_Tearoff() {
 
 // should the
@@ -2184,8 +2184,8 @@ void MifareU_Otp_Tearoff() {
 // optional authentication before?
 // optional data to be written?
 
-	if (DBGLEVEL >= DBG_ERROR) DbpString("Preparing OTP tear-off");
-	
+    if (DBGLEVEL >= DBG_ERROR) DbpString("Preparing OTP tear-off");
+
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
@@ -2197,17 +2197,17 @@ void MifareU_Otp_Tearoff() {
 #define OTP_BLK_NO 3
 
     // write cmd to send, include CRC
-	// 1b write, 1b block, 4b data, 2 crc
+    // 1b write, 1b block, 4b data, 2 crc
     uint8_t cmd[] = {MIFARE_ULC_WRITE, OTP_BLK_NO, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0};
 
-// User specific data to write? 
+// User specific data to write?
 //    memcpy(block + 2, blockData, 4);
 
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     if (DBGLEVEL >= DBG_ERROR) DbpString("Transmitting");
 
-    // anticollision / select card     
+    // anticollision / select card
     if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(1);
@@ -2225,18 +2225,18 @@ void MifareU_Otp_Tearoff() {
             return;
         }
     }
-	*/
+    */
 
-    // send 
+    // send
     ReaderTransmit(cmd, sizeof(cmd), NULL);
-	
+
     // Wait before cutting power.  aka tear-off
-	LED_D_ON();
-	WaitUS(OTP_TEAR_OFF_TIME);
+    LED_D_ON();
+    WaitUS(OTP_TEAR_OFF_TIME);
     switch_off();
-    
+
     reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_SUCCESS, NULL, 0);
-	StopTicks();
-	
-	if (DBGLEVEL >= DBG_ERROR) DbpString("Done");
+    StopTicks();
+
+    if (DBGLEVEL >= DBG_ERROR) DbpString("Done");
 }
