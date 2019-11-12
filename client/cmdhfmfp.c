@@ -36,7 +36,7 @@ static int CmdHFMFPInfo(const char *cmd) {
         PrintAndLogEx(WARNING, "command don't have any parameters.\n");
 
     // info about 14a part
-    infoHF14A(false, false);
+    infoHF14A(false, false, false);
 
     // Mifare Plus info
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);

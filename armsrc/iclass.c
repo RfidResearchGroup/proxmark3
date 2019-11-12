@@ -1306,6 +1306,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     AddCrc(csn_data, 8);
 
     uint8_t diversified_key[8] = { 0 };
+
     // e-Purse
     uint8_t card_challenge_data[8] = { 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
     //uint8_t card_challenge_data[8] = { 0 };
@@ -1316,6 +1317,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
 
         //Card challenge, a.k.a e-purse is on block 2
         memcpy(card_challenge_data, emulator + (8 * 2), 8);
+
         //Precalculate the cipher state, feeding it the CC
         cipher_state = opt_doTagMAC_1(card_challenge_data, diversified_key);
     }
@@ -1351,7 +1353,7 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     uint8_t *resp_csn = BigBuf_malloc(28);
     int resp_csn_len;
 
-    // configuration  picopass 2ks
+    // configuration Picopass 2ks
     uint8_t *resp_conf = BigBuf_malloc(28);
     int resp_conf_len;
     uint8_t conf_data[10] = {0x12, 0xFF, 0xFF, 0xFF, 0x7F, 0x1F, 0xFF, 0x3C, 0x00, 0x00};
@@ -1366,6 +1368,14 @@ int doIClassSimulation(int simulationMode, uint8_t *reader_mac_buf) {
     uint8_t *resp_aia = BigBuf_malloc(28);
     int resp_aia_len;
     uint8_t aia_data[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00};
+    if (simulationMode == MODE_FULLSIM) {
+
+        // (iceman) this only works for 2KS / 16KS tags.
+        // Use application data from block 5
+        memcpy(aia_data, emulator + (8 * 5), 8);
+
+        // older 2K / 16K tags has its application issuer data on block 2
+    }
     AddCrc(aia_data, 8);
 
     // receive command

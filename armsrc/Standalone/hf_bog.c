@@ -216,13 +216,11 @@ void RAMFUNC SniffAndStore(uint8_t param) {
     if (auth_attempts > 0) {
         if (DBGLEVEL > 1)
             Dbprintf("[!] Authentication attempts = %u", auth_attempts);
-        size_t size = 4 * auth_attempts;
-        uint8_t *buf = BigBuf_malloc(size);
 
         if (!exists_in_spiffs((char *)HF_BOG_LOGFILE)) {
-            rdv40_spiffs_write((char *)HF_BOG_LOGFILE, buf, size, RDV40_SPIFFS_SAFETY_SAFE);
+            rdv40_spiffs_write((char *)HF_BOG_LOGFILE, capturedPwds, 4 * auth_attempts, RDV40_SPIFFS_SAFETY_SAFE);
         } else {
-            rdv40_spiffs_append((char *)HF_BOG_LOGFILE, buf, size, RDV40_SPIFFS_SAFETY_SAFE);
+            rdv40_spiffs_append((char *)HF_BOG_LOGFILE, capturedPwds, 4 * auth_attempts, RDV40_SPIFFS_SAFETY_SAFE);
         }
     }
 
@@ -251,5 +249,5 @@ void RunMod() {
     LEDsoff();
     SpinDelay(300);
     Dbprintf("- [ End ] -> You can take shell back ...");
-    Dbprintf("- [  !  ] -> use 'script run read_pwd_mem' to print passwords");
+    Dbprintf("- [  !  ] -> use 'script run read_pwd_mem_spiffs' to print passwords");
 }

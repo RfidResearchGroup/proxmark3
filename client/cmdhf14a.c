@@ -26,6 +26,7 @@
 #include "ui.h"
 #include "crc16.h"
 #include "util_posix.h"  // msclock
+#include "aidsearch.h"
 
 bool APDUInFramingEnable = true;
 
@@ -226,13 +227,6 @@ static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
     return 0;
 }
-static int usage_hf_14a_info(void) {
-    PrintAndLogEx(NORMAL, "This command makes more extensive tests against a ISO14443a tag in order to collect information");
-    PrintAndLogEx(NORMAL, "Usage: hf 14a info [h|s]");
-    PrintAndLogEx(NORMAL, "       s    silent (no messages)");
-    PrintAndLogEx(NORMAL, "       n    test for nack bug");
-    return 0;
-}
 
 static int CmdHF14AList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -367,12 +361,30 @@ static int CmdHF14AReader(const char *Cmd) {
 }
 
 static int CmdHF14AInfo(const char *Cmd) {
+    bool verbose = false;
+    bool do_nack_test = false;
+    bool do_aid_search = false;
 
-    if (Cmd[0] == 'h' || Cmd[0] ==  'H') return usage_hf_14a_info();
+    CLIParserInit("hf 14a info",
+                  "This command makes more extensive tests against a ISO14443a tag in order to collect information",
+                  "Sample:\n\thf 14a info -nsv - shows full information about the card\n");
 
-    bool verbose = !(Cmd[0] == 's' || Cmd[0] ==  'S');
-    bool do_nack_test = (Cmd[0] == 'n' || Cmd[0] ==  'N');
-    infoHF14A(verbose, do_nack_test);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("vV",  "verbose",   "adds some information to results"),
+        arg_lit0("nN",  "nacktest",   "test for nack bug"),
+        arg_lit0("sS",  "aidsearch", "checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+
+    verbose = arg_get_lit(1);
+    do_nack_test = arg_get_lit(2);
+    do_aid_search = arg_get_lit(3);
+
+    CLIParserFree();
+
+    infoHF14A(verbose, do_nack_test, do_aid_search);
     return 0;
 }
 
@@ -1225,7 +1237,7 @@ int CmdHF14A(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-int infoHF14A(bool verbose, bool do_nack_test) {
+int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -1491,6 +1503,72 @@ int infoHF14A(bool verbose, bool do_nack_test) {
                         PrintAndLogEx(NORMAL, "                           xE -> no VCS command supported");
                         break;
                 }
+            }
+        }
+
+        if (do_aid_search) {
+            int elmindx = 0;
+            json_t *root = AIDSearchInit(verbose);
+            if (root != NULL) {
+                bool ActivateField = true;
+                for (elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+                    json_t *data = AIDSearchGetElm(root, elmindx);
+                    uint8_t vaid[200] = {0};
+                    int vaidlen = 0;
+                    if (!AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) || !vaidlen)
+                        continue;
+
+                    uint16_t sw = 0;
+                    uint8_t result[1024] = {0};
+                    size_t resultlen = 0;
+                    int res = EMVSelect(ECC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw, NULL);
+                    ActivateField = false;
+                    if (res)
+                        continue;
+
+                    uint8_t dfname[200] = {0};
+                    size_t dfnamelen = 0;
+                    if (resultlen > 3) {
+                        struct tlvdb *tlv = tlvdb_parse_multi(result, resultlen);
+                        if (tlv) {
+                            // 0x84 Dedicated File (DF) Name
+                            const struct tlv *dfnametlv = tlvdb_get_tlv(tlvdb_find_full(tlv, 0x84));
+                            if (dfnametlv) {
+                                dfnamelen = dfnametlv->len;
+                                memcpy(dfname, dfnametlv->value, dfnamelen);
+                            }
+                            tlvdb_free(tlv);
+                        }
+                    }
+
+                    if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+                        if (sw == 0x9000) {
+                            if (verbose) PrintAndLogEx(NORMAL, "------------- Application OK -----------");
+                        } else {
+                            if (verbose) PrintAndLogEx(NORMAL, "----------- Application blocked --------");
+                        }
+
+                        PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
+
+                        if (dfnamelen) {
+                            if (dfnamelen == vaidlen) {
+                                if (memcmp(dfname, vaid, vaidlen) == 0) {
+                                    if (verbose) PrintAndLogEx(INFO, "(DF) Name found and equal to AID");
+                                } else {
+                                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: %s :", sprint_hex(dfname, dfnamelen));
+                                    PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                                }
+                            } else {
+                                PrintAndLogEx(INFO, "(DF) Name not equal to AID: %s :", sprint_hex(dfname, dfnamelen));
+                                PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                            }
+                        } else {
+                            if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
+                        }
+                    }
+
+                }
+                DropField();
             }
         }
     } else {

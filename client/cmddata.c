@@ -812,7 +812,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     // sanity check
     if (window > len) window = len;
 
-    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%zu")" correlations", GraphTraceLen - window);
+    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%zu") "correlations", GraphTraceLen - window);
 
     //test
     double autocv = 0.0;    // Autocovariance value
@@ -868,9 +868,9 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 
     if (verbose && foo < bar) {
         distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible visible correlation %4d samples", distance);
+        PrintAndLogEx(SUCCESS, "possible visible correlation "_YELLOW_("%4d") "samples", distance);
     } else if (verbose && (correlation > 1)) {
-        PrintAndLogEx(SUCCESS, "possible correlation %4zu samples", correlation);
+        PrintAndLogEx(SUCCESS, "possible correlation " _YELLOW_("%4zu") "samples", correlation);
     } else {
         PrintAndLogEx(FAILED, "no repeating pattern found, try increasing window size");
     }

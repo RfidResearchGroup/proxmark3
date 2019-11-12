@@ -221,6 +221,16 @@ static int usage_hf_mfu_pwdgen(void) {
     return PM3_SUCCESS;
 }
 
+static int usage_hf_mfu_otp_tearoff(void) {
+    PrintAndLogEx(NORMAL, "Tear-off test against OTP block on MFU tags - More help sooner or later\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear [h]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "    h       : this help");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear");
+    return PM3_SUCCESS;
+}
+
 
 uint8_t default_3des_keys[][16] = {
     { 0x42, 0x52, 0x45, 0x41, 0x4b, 0x4d, 0x45, 0x49, 0x46, 0x59, 0x4f, 0x55, 0x43, 0x41, 0x4e, 0x21 }, // 3des std key
@@ -2740,6 +2750,38 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(NORMAL, "--------------------");
     return PM3_SUCCESS;
 }
+
+//
+// MFU TearOff against OTP
+// Moebius et al
+//
+static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = 0;
+    uint32_t len = strtol(Cmd, NULL, 0);
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_mfu_otp_tearoff();
+            default:
+                break;
+        }
+    }
+
+    if (errors) return usage_hf_mfu_otp_tearoff();
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MFU_OTP_TEAROFF, data, len);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
+        PrintAndLogEx(WARNING, "Failed");
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
+}
+
 //------------------------------------
 // Menu Stuff
 //------------------------------------
@@ -2757,6 +2799,7 @@ static command_t CommandTable[] = {
     {"sim",     CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate Ultralight from emulator memory"},
     {"gen",     CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3des mifare diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
+    {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -306,6 +306,61 @@ static int l_GetFromFlashMem(lua_State *L) {
 
 /**
  * @brief The following params expected:
+ * uint8_t *destfilename
+ * @param L
+ * @return
+ */
+static int l_GetFromFlashMemSpiffs(lua_State *L) {
+
+    if (IfPm3Flash()) {
+        uint32_t start_index = 0, len = 0x40000; //FLASH_MEM_MAX_SIZE
+        char destfilename[32] = {0};
+        size_t size;
+
+        int n = lua_gettop(L);
+        if (n == 0)
+            return returnToLuaWithError(L, "You need to supply the destination filename");
+
+        if (n >= 1) {
+            const char *p_filename = luaL_checklstring(L, 1, &size);
+            if (size != 0)
+                memcpy(destfilename, p_filename, 31);
+        }
+
+        if (destfilename[0] == '\0')
+            return returnToLuaWithError(L, "Filename missing or invalid");
+
+        // get size from spiffs itself !
+        SendCommandMIX(CMD_SPIFFS_STAT, 0, 0, 0, (uint8_t *)destfilename, 32);
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
+            return returnToLuaWithError(L, "No response from the device");
+
+        len = resp.oldarg[0];
+
+        if (len <= 0)
+            return returnToLuaWithError(L, "Filename invalid or empty");
+
+        uint8_t *data = calloc(len, sizeof(uint8_t));
+        if (!data)
+            return returnToLuaWithError(L, "Allocating memory failed");
+
+        if (!GetFromDevice(SPIFFS, data, len, start_index, (uint8_t *)destfilename, 32, NULL, -1, true)) {
+            free(data);
+            return returnToLuaWithError(L, "ERROR; downloading from spiffs(flashmemory)");
+        }
+
+        lua_pushlstring(L, (const char *)data, len);
+        lua_pushunsigned(L, len);
+        free(data);
+        return 2;
+    } else {
+        return returnToLuaWithError(L, "No FLASH MEM support");
+    }
+}
+
+/**
+ * @brief The following params expected:
  * uint32_t cmd
  * size_t ms_timeout
  * @param L
@@ -1128,6 +1183,7 @@ int set_pm3_libraries(lua_State *L) {
         {"SendCommandNG",               l_SendCommandNG},
         {"GetFromBigBuf",               l_GetFromBigBuf},
         {"GetFromFlashMem",             l_GetFromFlashMem},
+        {"GetFromFlashMemSpiffs",       l_GetFromFlashMemSpiffs},
         {"WaitForResponseTimeout",      l_WaitForResponseTimeout},
         {"mfDarkside",                  l_mfDarkside},
         {"foobar",                      l_foobar},

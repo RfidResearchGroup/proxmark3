@@ -52,11 +52,7 @@ pacman -S mingw-w64-x86_64-astyle
 
 ## Compile and use the project
 
-To use the compiled client, the only differences are that executables end with `.exe` (e.g. `proxmark3.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows, so commands become:
-
-```sh
-proxmark3 /dev/ttyACM0  =>  proxmark3.exe comX
-```
+To use the compiled client, the only differences are that executables end with `.exe` (e.g. `proxmark3.exe`) and that the Proxmark3 port is one of your `comX` ports where "X" is the com port number assigned to proxmark3 under Windows, so commands like `proxmark3 /dev/ttyACMX` become `proxmark3.exe comX`.
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 

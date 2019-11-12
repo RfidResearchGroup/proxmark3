@@ -26,6 +26,8 @@
 #include "lfdemod.h"    // parityTest
 #include "cmdlft55xx.h" // verifywrite
 
+#define JABLOTRON_ARR_LEN 64
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_jablotron_clone(void) {
@@ -103,7 +105,7 @@ static int CmdJablotronDemod(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    setDemodBuff(DemodBuffer, 64, ans);
+    setDemodBuff(DemodBuffer, JABLOTRON_ARR_LEN, ans);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (ans * g_DemodClock));
 
     //got a good demod
@@ -117,9 +119,12 @@ static int CmdJablotronDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Jablotron Tag Found: Card ID: %"PRIx64" :: Raw: %08X%08X", id, raw1, raw2);
 
     uint8_t chksum = raw2 & 0xFF;
-    PrintAndLogEx(INFO, "Checksum: %02X [%s]",
+    bool isok = (chksum == jablontron_chksum(DemodBuffer));
+
+    PrintAndLogEx(isok ? SUCCESS : INFO,
+                  "Checksum: %02X [ %s]",
                   chksum,
-                  (chksum == jablontron_chksum(DemodBuffer)) ? _GREEN_("OK") : _RED_("Fail")
+                  isok ? _GREEN_("OK") : _RED_("Fail")
                  );
 
     id = DEC2BCD(id);
@@ -142,22 +147,25 @@ static int CmdJablotronClone(const char *Cmd) {
     uint64_t fullcode = 0;
     uint32_t blocks[3] = {T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
 
-    uint8_t bits[64];
-    memset(bits, 0, sizeof(bits));
-
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_jablotron_clone();
 
     fullcode = param_get64ex(Cmd, 0, 0, 16);
 
     //Q5
-    if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q')
+    if (tolower(param_getchar(Cmd, 1)) == 'q')
         blocks[0] = T5555_MODULATION_BIPHASE | T5555_INVERT_OUTPUT | T5555_SET_BITRATE(64) | 2 << T5555_MAXBLOCK_SHIFT;
 
     // clearing the topbit needed for the preambl detection.
     if ((fullcode & 0x7FFFFFFFFF) != fullcode) {
         fullcode &= 0x7FFFFFFFFF;
         PrintAndLogEx(INFO, "Card Number Truncated to 39bits: %"PRIx64, fullcode);
+    }
+
+    uint8_t *bits = calloc(JABLOTRON_ARR_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
     }
 
     if (getJablotronBits(fullcode, bits) != PM3_SUCCESS) {
@@ -167,6 +175,8 @@ static int CmdJablotronClone(const char *Cmd) {
 
     blocks[1] = bytebits_to_byte(bits, 32);
     blocks[2] = bytebits_to_byte(bits + 32, 32);
+
+    free(bits);
 
     PrintAndLogEx(INFO, "Preparing to clone Jablotron to T55x7 with FullCode: %"PRIx64, fullcode);
     print_blocks(blocks,  ARRAYLEN(blocks));
@@ -190,18 +200,25 @@ static int CmdJablotronSim(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Simulating Jablotron - FullCode: %"PRIx64, fullcode);
 
-    uint8_t bs[64];
+    uint8_t *bs = calloc(JABLOTRON_ARR_LEN, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     getJablotronBits(fullcode, bs);
 
-    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + JABLOTRON_ARR_LEN);
     payload->encoding =  2;
     payload->invert = 1;
     payload->separator = 0;
     payload->clock = 64;
-    memcpy(payload->data, bs, sizeof(bs));
+    memcpy(payload->data, bs, JABLOTRON_ARR_LEN);
+
+    free(bs);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + JABLOTRON_ARR_LEN);
     free(payload);
 
     PacketResponseNG resp;
@@ -251,12 +268,12 @@ int getJablotronBits(uint64_t fullcode, uint8_t *bits) {
 // the parameter *bits needs to be demoded before call
 // 0xFFFF preamble, 64bits
 int detectJablotron(uint8_t *bits, size_t *size) {
-    if (*size < 64 * 2) return -1; //make sure buffer has enough data
+    if (*size < JABLOTRON_ARR_LEN * 2) return -1; //make sure buffer has enough data
     size_t startIdx = 0;
     uint8_t preamble[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
     if (preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx) == 0)
         return -2; //preamble not found
-    if (*size != 64) return -3; // wrong demoded size
+    if (*size != JABLOTRON_ARR_LEN) return -3; // wrong demoded size
 
     uint8_t checkchksum = jablontron_chksum(bits + startIdx);
     uint8_t crc = bytebits_to_byte(bits + startIdx + 56, 8);

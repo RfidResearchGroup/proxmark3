@@ -410,8 +410,6 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     uint32_t timeout = iso18092_get_timeout();
-    if (DBGLEVEL >= DBG_DEBUG)
-        Dbprintf("timeout set: %i", timeout);
 
     for (;;) {
         WDT_HIT();
@@ -420,8 +418,8 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
             Process18092Byte(b);
             if (FelicaFrame.state == STATE_FULL) {
                 felica_nexttransfertime = MAX(felica_nexttransfertime,
-                                              (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME
-                                             );
+                                              (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME);
+
                 LogTrace(
                     FelicaFrame.framebytes,
                     FelicaFrame.len,
@@ -453,7 +451,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     BigBuf_Clear_ext(false);
 
     // Initialize Demod and Uart structs
-    //DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    // DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
     FelicaFrameinit(BigBuf_malloc(FELICA_MAX_FRAME_SIZE));
 
     felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;
@@ -573,69 +571,57 @@ void felica_sendraw(PacketCommandNG *c) {
 }
 
 void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
-
     int remFrames = (samplesToSkip) ? samplesToSkip : 0;
-
-    Dbprintf("Sniff FelicaLiteS: Getting first %d frames, Skipping %d triggers.\n", samplesToSkip, triggersToSkip);
-
+    Dbprintf("Sniff Felica: Getting first %d frames, Skipping after %d triggers.\n", samplesToSkip, triggersToSkip);
+    clear_trace();
+    set_tracing(true);
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
-
-    //the frame bits are slow enough.
-    int n = BigBuf_max_traceLen() / sizeof(uint8_t); // take all memory
-    int numbts = 0;
-    uint8_t *dest = (uint8_t *)BigBuf_get_addr();
-    uint8_t *destend = dest + n - 2;
-
-    uint32_t endframe = GetCountSspClk();
-
-    while (dest <= destend) {
+    LED_D_ON();
+    uint16_t numbts = 0;
+    int trigger_cnt = 0;
+    uint32_t timeout = iso18092_get_timeout();
+    bool isReaderFrame = true;
+    while (!BUTTON_PRESS()) {
         WDT_HIT();
-        if (BUTTON_PRESS()) break;
-
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
             Process18092Byte(dist);
-
-            //to be sure we are in frame
-            if (FelicaFrame.state == STATE_GET_LENGTH) {
-                //length is after 48 (PRE)+16 (SYNC) - 64 ticks +maybe offset? not 100%
-                uint16_t distance = GetCountSspClk() - endframe - 64 + (FelicaFrame.byte_offset > 0 ? (8 - FelicaFrame.byte_offset) : 0);
-                *dest = distance >> 8;
-                dest++;
-                *dest = (distance & 0xff);
-                dest++;
+            if ((MAX(dist & 0xff, dist >> 8) >= 178) && (++trigger_cnt > triggersToSkip)) {
+                Dbprintf("triggersToSkip kicked %d", dist);
+                break;
             }
-            //crc NOT checked
             if (FelicaFrame.state == STATE_FULL) {
-                endframe = GetCountSspClk();
-                // *dest = FelicaFrame.crc_ok; //kind of wasteful
-                dest++;
-                for (int i = 0; i < FelicaFrame.len; i++) {
-                    *dest = FelicaFrame.framebytes[i];
-                    dest++;
-                    if (dest >= destend) break;
-
+                if ((FelicaFrame.framebytes[3] % 2) == 0) {
+                    isReaderFrame = true; // All Reader Frames are even and all Tag frames are odd
+                } else {
+                    isReaderFrame = false;
                 }
-
                 remFrames--;
-                if (remFrames <= 0) break;
-                if (dest >= destend) break;
-
+                if (remFrames <= 0) {
+                    Dbprintf("Stop Sniffing - samplesToSkip reached!");
+                    break;
+                }
+                LogTrace(FelicaFrame.framebytes,
+                         FelicaFrame.len,
+                         ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER - timeout,
+                         ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER,
+                         NULL,
+                         isReaderFrame
+                        );
                 numbts += FelicaFrame.len;
-
                 FelicaFrameReset();
             }
         }
     }
-
     switch_off();
-
     //reset framing
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
     set_tracelen(numbts);
+    set_tracelen(BigBuf_max_traceLen());
 
     Dbprintf("Felica sniffing done, tracelen: %i, use hf list felica for annotations", BigBuf_get_traceLen());
     reply_old(CMD_ACK, 1, numbts, 0, 0, 0);
+    LED_D_OFF();
 }
 
 #define R_POLL0_LEN    0x16

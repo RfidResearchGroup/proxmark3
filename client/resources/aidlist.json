@@ -1,1 +1,2154 @@
-[{"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "315041592E5359532E4444463031", "Type": "", "Name": "Visa Payment System Environment - PSE (1PAY.SYS.DDF01)"}, {"Vendor": "Visa International", "Description": "Visa payWave for Mobile", "Country": "United States", "AID": "325041592E5359532E4444463031", "Type": "", "Name": "Visa Proximity Payment System Environment - PPSE (2PAY.SYS.DDF01)"}, {"Vendor": "DeviceFidelity", "Description": "http://www.nfcworld.com/2010/11/24/35207/devicefidelity-adds-nfc-support-for-android-and-mifare/", "Country": "United States", "AID": "44464D46412E44466172653234313031", "Type": "", "Name": "DeviceFidelity In2Pay DFare applet"}, {"Vendor": "PBS Danmnt A/S", "Description": "(Unlicensed use of this RID. Proposal to use A000000323 instead)", "Country": "Denmark", "AID": "A00000000101", "Type": "", "Name": "MUSCLE Card Applet"}, {"Vendor": "Visa International", "Description": "Used by most GP2.1.1 cards / Oberthur OP201 cards. Visa Proprietary Card Manager AID for OpenPlatform cards (visa.openplatform).", "Country": "United States", "AID": "A000000003000000", "Type": "GP", "Name": "(VISA) Card Manager"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A00000000300037561", "Type": "", "Name": "Bonuscard"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A00000000305076010", "Type": "EMV", "Name": "VISA ELO Credit"}, {"Vendor": "Visa International", "Description": "Standard/Gold VISA credit card", "Country": "United States", "AID": "A0000000031010", "Type": "EMV", "Name": "VISA Debit/Credit (Classic)"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A000000003101001", "Type": "EMV", "Name": "VISA Credit"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A000000003101002", "Type": "EMV", "Name": "VISA Debit"}, {"Vendor": "Visa International", "Description": "VISA Electron (Debit)", "Country": "United States", "AID": "A0000000032010", "Type": "EMV", "Name": "VISA Electron"}, {"Vendor": "Visa International", "Description": "V PAY", "Country": "United States", "AID": "A0000000032020", "Type": "EMV", "Name": "VISA"}, {"Vendor": "Visa International", "Description": "VISA Interlink", "Country": "United States", "AID": "A0000000033010", "Type": "EMV", "Name": "VISA Interlink"}, {"Vendor": "Visa International", "Description": "Visa Specific", "Country": "United States", "AID": "A0000000034010", "Type": "EMV", "Name": "VISA Specific"}, {"Vendor": "Visa International", "Description": "Visa Specific", "Country": "United States", "AID": "A0000000035010", "Type": "EMV", "Name": "VISA Specific"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A000000003534441", "Type": "GP", "Name": "Schlumberger Security Domain"}, {"Vendor": "Visa International", "Description": "OCS Oberthur Card System Security Domain Package AID / VGP Card Manager (for ISD and ASD)", "Country": "United States", "AID": "A0000000035350", "Type": "GP", "Name": "Security Domain"}, {"Vendor": "Visa International", "Description": "OCS Oberthur Card System Security Domain Applet AID / VGP Card Manager (for ISD and ASD)", "Country": "United States", "AID": "A000000003535041", "Type": "GP", "Name": "Security Domain"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A0000000036010", "Type": "EMV", "Name": "Domestic Visa Cash Stored Value"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A0000000036020", "Type": "EMV", "Name": "International Visa Cash Stored Value"}, {"Vendor": "Visa International", "Description": "VISA Auth dynamic passcode authentication (DPA). Used by Barclays/HBOS", "Country": "United States", "AID": "A0000000038002", "Type": "EMV", "Name": "VISA Auth, VisaRemAuthen EMV-CAP (DPA)"}, {"Vendor": "Visa International", "Description": "VISA plus", "Country": "United States", "AID": "A0000000038010", "Type": "EMV", "Name": "VISA Plus"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A0000000039010", "Type": "EMV", "Name": "VISA Loyalty"}, {"Vendor": "Visa International", "Description": "", "Country": "United States", "AID": "A000000003999910", "Type": "EMV", "Name": "VISA Proprietary ATM"}, {"Vendor": "Mastercard International", "Description": "Security Domain", "Country": "United States", "AID": "A0000000040000", "Type": "GP", "Name": "MasterCard Card Manager"}, {"Vendor": "Mastercard International", "Description": "AEPM (Association Europenne Payez Mobile)", "Country": "United States", "AID": "A00000000401", "Type": "EMV", "Name": "MasterCard PayPass"}, {"Vendor": "Mastercard International", "Description": "Standard MasterCard", "Country": "United States", "AID": "A0000000041010", "Type": "EMV", "Name": "MasterCard Credit"}, {"Vendor": "Mastercard International", "Description": "Standard MasterCard", "Country": "United States", "AID": "A00000000410101213", "Type": "EMV", "Name": "MasterCard Credit"}, {"Vendor": "Mastercard International", "Description": "Standard MasterCard", "Country": "United States", "AID": "A00000000410101215", "Type": "EMV", "Name": "MasterCard Credit"}, {"Vendor": "Mastercard International", "Description": "Some co-branded card?", "Country": "United States", "AID": "A0000000041010BB5449435301", "Type": "", "Name": "[UNKNOWN]"}, {"Vendor": "Mastercard International", "Description": "MasterCard Specific", "Country": "United States", "AID": "A0000000042010", "Type": "EMV", "Name": "MasterCard Specific"}, {"Vendor": "Mastercard International", "Description": "MasterCard U.S. Maestro", "Country": "United States", "AID": "A0000000042203", "Type": "", "Name": "MasterCard Specific"}, {"Vendor": "Mastercard International", "Description": "MasterCard Specific", "Country": "United States", "AID": "A0000000043010", "Type": "EMV", "Name": "MasterCard Specific"}, {"Vendor": "Mastercard International", "Description": "Maestro (Debit) Card", "Country": "United States", "AID": "A0000000043060", "Type": "EMV", "Name": "Maestro (Debit)"}, {"Vendor": "Mastercard International", "Description": "Maestro (Debit) Card", "Country": "United States", "AID": "A000000004306001", "Type": "EMV", "Name": "Maestro (Debit)"}, {"Vendor": "Mastercard International", "Description": "MasterCard Specific", "Country": "United States", "AID": "A0000000044010", "Type": "EMV", "Name": "MasterCard Specific"}, {"Vendor": "Mastercard International", "Description": "MasterCard Specific", "Country": "United States", "AID": "A0000000045010", "Type": "EMV", "Name": "MasterCard Specific"}, {"Vendor": "Mastercard International", "Description": "AID on Cirrus Test Card", "Country": "United States", "AID": "A0000000045555", "Type": "", "Name": "APDULogger"}, {"Vendor": "Mastercard International", "Description": "Mastercard Cirrus (Interbank Network) ATM card only", "Country": "United States", "AID": "A0000000046000", "Type": "EMV", "Name": "Cirrus"}, {"Vendor": "Mastercard International", "Description": "Chip Authentication Protocol (CAP). Works with NatWest or SecureCode Aut", "Country": "United States", "AID": "A0000000048002", "Type": "EMV", "Name": "SecureCode Auth EMV-CAP"}, {"Vendor": "Mastercard International", "Description": "", "Country": "United States", "AID": "A0000000049999", "Type": "EMV", "Name": "MasterCard PayPass??"}, {"Vendor": "Switch Card Services Ltd.", "Description": "UK Domestic Maestro - Switch (debit card)", "Country": "United Kingdom", "AID": "A0000000050001", "Type": "EMV", "Name": "Maestro UK"}, {"Vendor": "Switch Card Services Ltd.", "Description": "UK Domestic Maestro - Switch (debit card)", "Country": "United Kingdom", "AID": "A0000000050002", "Type": "EMV", "Name": "Solo"}, {"Vendor": "ETSI", "Description": "Orange UK", "Country": "France", "AID": "A0000000090001FF44FF1289", "Type": "", "Name": "Orange"}, {"Vendor": "Europay International", "Description": "", "Country": "Belgium", "AID": "A0000000101030", "Type": "", "Name": "Maestro-CH"}, {"Vendor": "GEMPLUS", "Description": "", "Country": "France", "AID": "A00000001800", "Type": "", "Name": "Gemplus ?"}, {"Vendor": "GEMPLUS", "Description": "", "Country": "France", "AID": "A0000000181001", "Type": "", "Name": "com.gemplus.javacard.util packages"}, {"Vendor": "GEMPLUS", "Description": "434D = CM (ascii). Security domain for some GCX/GXP cards (GemXpresso Pro) (Gemalto)", "Country": "France", "AID": "A000000018434D", "Type": "GP", "Name": "Gemplus card manager"}, {"Vendor": "GEMPLUS", "Description": "(Gemalto)", "Country": "France", "AID": "A000000018434D00", "Type": "GP", "Name": "Gemplus Security Domain"}, {"Vendor": "Midland Bank Plc", "Description": "", "Country": "United Kingdom", "AID": "A00000002401", "Type": "EMV", "Name": "Self Service"}, {"Vendor": "American Express", "Description": "", "Country": "United Kingdom", "AID": "A000000025", "Type": "EMV", "Name": "American Express"}, {"Vendor": "American Express", "Description": "American Express (Credit/Debit)", "Country": "United Kingdom", "AID": "A0000000250000", "Type": "EMV", "Name": "American Express"}, {"Vendor": "American Express", "Description": "AEIPS-compliant (A-E contact EMV) payment application", "Country": "United Kingdom", "AID": "A00000002501", "Type": "EMV", "Name": "American Express"}, {"Vendor": "American Express", "Description": "", "Country": "United Kingdom", "AID": "A000000025010104", "Type": "", "Name": "American Express"}, {"Vendor": "American Express", "Description": "", "Country": "United Kingdom", "AID": "A000000025010402", "Type": "EMV", "Name": "American Express"}, {"Vendor": "American Express", "Description": "", "Country": "United Kingdom", "AID": "A000000025010701", "Type": "EMV", "Name": "ExpressPay"}, {"Vendor": "American Express", "Description": "", "Country": "United Kingdom", "AID": "A000000025010801", "Type": "EMV", "Name": "American Express"}, {"Vendor": "LINK Interchange Network Ltd", "Description": "Link (UK) ATM Network, or AMEX (Portugal?)", "Country": "United Kingdom", "AID": "A0000000291010", "Type": "EMV", "Name": "Link / American Express"}, {"Vendor": "LINK Interchange Network Ltd", "Description": "", "Country": "United Kingdom", "AID": "A00000002945087510100000", "Type": "", "Name": "CO-OP"}, {"Vendor": "LINK Interchange Network Ltd", "Description": "", "Country": "United Kingdom", "AID": "A00000002949034010100001", "Type": "", "Name": "HSBC"}, {"Vendor": "LINK Interchange Network Ltd", "Description": "", "Country": "United Kingdom", "AID": "A00000002949282010100000", "Type": "", "Name": "Barclay"}, {"Vendor": "LINK Interchange Network Ltd", "Description": "", "Country": "United Kingdom", "AID": "A000000029564182", "Type": "", "Name": "HAFX"}, {"Vendor": "Schlumberger Industries Identif d'Encarteur PR050", "Description": "Schlumberger (Gemalto) RID", "Country": "France", "AID": "A00000003029057000AD13100101FF", "Type": "", "Name": "BelPIC (Belgian Personal Identity Card) JavaCard Applet"}, {"Vendor": "Schlumberger Industries Identif d'Encarteur PR050", "Description": "", "Country": "France", "AID": "A0000000308000000000280101", "Type": "", "Name": "Gemalto .NET Card AID"}, {"Vendor": "Groupement des Cartes Bancaires \"CB\"", "Description": "Groupement des Cartes Bancaires (France)", "Country": "France", "AID": "A0000000421010", "Type": "EMV", "Name": "Cartes Bancaire EMV Card"}, {"Vendor": "Groupement des Cartes Bancaires \"CB\"", "Description": "", "Country": "France", "AID": "A0000000422010", "Type": "EMV", "Name": ""}, {"Vendor": "Groupement des Cartes Bancaires \"CB\"", "Description": "", "Country": "France", "AID": "A0000000423010", "Type": "EMV", "Name": ""}, {"Vendor": "Groupement des Cartes Bancaires \"CB\"", "Description": "", "Country": "France", "AID": "A0000000424010", "Type": "EMV", "Name": ""}, {"Vendor": "Groupement des Cartes Bancaires \"CB\"", "Description": "", "Country": "France", "AID": "A0000000425010", "Type": "EMV", "Name": ""}, {"Vendor": "Zentraler Kreditausschuss (ZKA)", "Description": "", "Country": "Germany", "AID": "A00000005945430100", "Type": "", "Name": "Girocard Electronic Cash"}, {"Vendor": "RSA Laboratories", "Description": "RSA PKCS-15 PKI application (Predecessor to ISO7816-15) / ID-card in Finland", "Country": "United States", "AID": "A000000063504B43532D3135", "Type": "", "Name": "PKCS-15"}, {"Vendor": "RSA Laboratories", "Description": "WAP (Wireless Application Protocol) Identity Module / Wireless Identification Module", "Country": "United States", "AID": "A0000000635741502D57494D", "Type": "", "Name": "WAP-WIM"}, {"Vendor": "JCB CO., LTD.", "Description": "Japan Credit Bureau", "Country": "Japan", "AID": "A00000006510", "Type": "EMV", "Name": "JCB"}, {"Vendor": "JCB CO., LTD.", "Description": "Japan Credit Bureau", "Country": "Japan", "AID": "A0000000651010", "Type": "EMV", "Name": "JCB J Smart Credit"}, {"Vendor": "Socit Europenne de Monnaie Electronique SEME", "Description": "", "Country": "France", "AID": "A00000006900", "Type": "EMV", "Name": "Moneo"}, {"Vendor": "Oberthur Technologies", "Description": "", "Country": "France", "AID": "A000000077010000021000000000003B", "Type": "EMV", "Name": "Visa AEPN"}, {"Vendor": "Activcard Europe S.A.", "Description": "Identity Key", "Country": "France", "AID": "A0000000790100", "Type": "", "Name": "CACv2 PKI ID"}, {"Vendor": "Activcard Europe S.A.", "Description": "Digital Signature Key", "Country": "France", "AID": "A0000000790101", "Type": "", "Name": "CACv2 PKI Sign"}, {"Vendor": "Activcard Europe S.A.", "Description": "Key Management Key", "Country": "France", "AID": "A0000000790102", "Type": "", "Name": "CACv2 PKI Enc"}, {"Vendor": "Activcard Europe S.A.", "Description": "Re-directs to CACv2 PKI Identity key", "Country": "France", "AID": "A00000007901F0", "Type": "", "Name": "CACv1 PKI Identity Key"}, {"Vendor": "Activcard Europe S.A.", "Description": "Re-directs to CACv2 Digital Signature key", "Country": "France", "AID": "A00000007901F1", "Type": "", "Name": "CACv1 PKI Digital Signature Key"}, {"Vendor": "Activcard Europe S.A.", "Description": "Re-directs to CACv2 Key Management key", "Country": "France", "AID": "A00000007901F2", "Type": "", "Name": "CACv1 PKI Key Management Key"}, {"Vendor": "Activcard Europe S.A.", "Description": "DoD Demographic", "Country": "France", "AID": "A0000000790200", "Type": "", "Name": "CACv2 DoD Person"}, {"Vendor": "Activcard Europe S.A.", "Description": "DoD Demographic", "Country": "France", "AID": "A0000000790201", "Type": "", "Name": "CACv2 DoD Personnel"}, {"Vendor": "Activcard Europe S.A.", "Description": "General Configuration", "Country": "France", "AID": "A00000007902FB", "Type": "", "Name": "CACv1 BC"}, {"Vendor": "Activcard Europe S.A.", "Description": "PKI Certificate Attributes", "Country": "France", "AID": "A00000007902FD", "Type": "", "Name": "CACv1 BC"}, {"Vendor": "Activcard Europe S.A.", "Description": "PKI Cert", "Country": "France", "AID": "A00000007902FE", "Type": "", "Name": "CACv1 BC"}, {"Vendor": "Activcard Europe S.A.", "Description": "CAC PIN / ID PIN Management Applet", "Country": "France", "AID": "A0000000790300", "Type": "", "Name": "CACv2 Access Control Applet"}, {"Vendor": "Activcard Europe S.A.", "Description": "Joint Data Model. BCAdmin", "Country": "France", "AID": "A0000000791201", "Type": "", "Name": "CAC JDM"}, {"Vendor": "Activcard Europe S.A.", "Description": "Joint Data Model. BCMedical", "Country": "France", "AID": "A0000000791202", "Type": "", "Name": "CAC JDM"}, {"Vendor": "Third Generation Partnership Project (3GPP)", "Description": "", "Country": "France", "AID": "A0000000871002FF49FF0589", "Type": "USIM", "Name": "Telenor USIM"}, {"Vendor": "Buypass AS", "Description": "Used by norwegian public betting company Norsk-Tipping?", "Country": "Norway", "AID": "A00000008810200105C100", "Type": "BuyPass", "Name": "BuyPass BIDA"}, {"Vendor": "Buypass AS", "Description": "", "Country": "Norway", "AID": "A000000088102201034221", "Type": "BuyPass", "Name": "BuyPass BEID (BuyPass Electronic ID?)"}, {"Vendor": "Buypass AS", "Description": "", "Country": "Norway", "AID": "A000000088102201034321", "Type": "BuyPass", "Name": "BuyPass BEID (BuyPass Electronic ID?)"}, {"Vendor": "Sa Proton World International N.V.", "Description": "Proton, which is owned in part by Visa International and American Express Co., is in three other European countries: the original Proton program in Belgium, Chipknip in the Netherlands, and Cash in Switzerland", "Country": "Belgium", "AID": "A0000000960200", "Type": "GP", "Name": "Proton World International Security Domain"}, {"Vendor": "Visa USA", "Description": "Bank of America Debit Card", "Country": "United States", "AID": "A000000098", "Type": "EMV", "Name": "Debit Card"}, {"Vendor": "Visa USA", "Description": "", "Country": "United States", "AID": "A0000000980840", "Type": "", "Name": "Visa Common Debit"}, {"Vendor": "Visa USA", "Description": "Schwab Bank Debit Card", "Country": "United States", "AID": "A0000000980848", "Type": "EMV", "Name": "Debit Card"}, {"Vendor": "Die Post Postfinance", "Description": "", "Country": "Switzerland", "AID": "A0000001110101", "Type": "", "Name": "Postcard"}, {"Vendor": "GSA - TFCS", "Description": "CHUID", "Country": "United States", "AID": "A0000001160300", "Type": "", "Name": "PIV CHUID"}, {"Vendor": "GSA - TFCS", "Description": "Fingerprints", "Country": "United States", "AID": "A0000001166010", "Type": "", "Name": "PIV Fingerprints"}, {"Vendor": "GSA - TFCS", "Description": "Facial Image", "Country": "United States", "AID": "A0000001166030", "Type": "", "Name": "PIV Facial Image"}, {"Vendor": "GSA - TFCS", "Description": "Security Object", "Country": "United States", "AID": "A0000001169000", "Type": "", "Name": "PIV Security Object"}, {"Vendor": "GSA - TFCS", "Description": "PIV Authentication Key", "Country": "United States", "AID": "A000000116A001", "Type": "", "Name": "PIV Authentication Key"}, {"Vendor": "GSA - TFCS", "Description": "Card Capability Container", "Country": "United States", "AID": "A000000116DB00", "Type": "", "Name": "CCC"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 1.3)", "Country": "Austria", "AID": "A000000118010000", "Type": "", "Name": "DF_Verkehr"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 1.3)", "Country": "Austria", "AID": "A000000118020000", "Type": "", "Name": "DF_Partner"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 1.3)", "Country": "Austria", "AID": "A000000118030000", "Type": "", "Name": "DF_Schlerdaten"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 1.32)", "Country": "Austria", "AID": "A000000118040000", "Type": "", "Name": "DF_KEP_SIG"}, {"Vendor": "Austria Card", "Description": "Digital Signature Application", "Country": "Austria", "AID": "A0000001184543", "Type": "", "Name": "Digital Signature (SSCA)"}, {"Vendor": "Austria Card", "Description": "Encryption Application (Version 1.10)", "Country": "Austria", "AID": "A000000118454E", "Type": "", "Name": "Encryption Application"}, {"Vendor": "PBS Danmark A/S", "Description": "Danish domestic debit card", "Country": "Denmark", "AID": "A0000001211010", "Type": "EMV", "Name": "Dankort (VISA GEM Vision)"}, {"Vendor": "Java Card Forum", "Description": "", "Country": "United States", "AID": "A0000001320001", "Type": "", "Name": "org.javacardforum.javacard.biometry"}, {"Vendor": "TDS TODOS DATA SYSTEM AB", "Description": "", "Country": "Sweden", "AID": "A0000001408001", "Type": "", "Name": "eCode"}, {"Vendor": "Associazione Bancaria Italiana", "Description": "CoGeBan Consorzio BANCOMAT (Italian domestic debit card)", "Country": "Italy", "AID": "A0000001410001", "Type": "EMV", "Name": "PagoBANCOMAT"}, {"Vendor": "GlobalPlatform, Inc.", "Description": "GP Card Manager", "Country": "United States", "AID": "A0000001510000", "Type": "GP", "Name": "Global Platform Security Domain AID"}, {"Vendor": "GlobalPlatform, Inc.", "Description": "SPCASD", "Country": "United States", "AID": "A00000015153504341534400", "Type": "GP", "Name": "CASD_AID"}, {"Vendor": "Diners Club International Ltd.", "Description": "Discover Card", "Country": "United States", "AID": "A0000001523010", "Type": "EMV", "Name": "Discover, Pulse D Pas"}, {"Vendor": "Diners Club International Ltd.", "Description": "Discover Debit Common Card", "Country": "United States", "AID": "A0000001524010", "Type": "EMV", "Name": "Discover"}, {"Vendor": "Banrisul - Banco do Estado do Rio Grande do SUL - S.A.", "Description": "Banrisul (Brazil)", "Country": "Brazil", "AID": "A0000001544442", "Type": "EMV", "Name": "Banricompras Debito"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570010", "Type": "", "Name": "AMEX"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570020", "Type": "", "Name": "MasterCard"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570021", "Type": "", "Name": "Maestro"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570022", "Type": "", "Name": "Maestro"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570023", "Type": "", "Name": "CASH"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570030", "Type": "", "Name": "VISA"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570031", "Type": "", "Name": "VISA"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570040", "Type": "", "Name": "JCB"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570050", "Type": "", "Name": "Postcard"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570051", "Type": "", "Name": "Postcard"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570100", "Type": "", "Name": "MCard"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570104", "Type": "", "Name": "MyOne"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001570109", "Type": "", "Name": "Mediamarkt Card"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A000000157010A", "Type": "", "Name": "Gift Card"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A000000157010B", "Type": "", "Name": "Bonuscard"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A000000157010C", "Type": "", "Name": "WIRCard"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A000000157010D", "Type": "", "Name": "Power Card"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001574443", "Type": "", "Name": "DINERS CLUB"}, {"Vendor": "Zhlke Engineering AG", "Description": "", "Country": "Switzerland", "AID": "A0000001574444", "Type": "", "Name": "Supercard Plus"}, {"Vendor": "IBM", "Description": "identify in JCOP-tools returns eg 27 34 01 2E 00 00 00 00 4E 58 37 35 31 41 00 03 28 62 B3 6A 82", "Country": "Germany", "AID": "A000000167413000FF", "Type": "JCOP", "Name": "JCOP Identify Applet"}, {"Vendor": "IBM", "Description": "?", "Country": "Germany", "AID": "A000000167413001", "Type": "", "Name": "FIPS 140-2"}, {"Vendor": "Financial Information Service Co. Ltd.", "Description": "The Bankers Association of the Republic of China", "Country": "Taiwan", "AID": "A000000172950001", "Type": "EMV", "Name": "BAROC Financial Application Taiwan"}, {"Vendor": "Ministre de L'Intrieur", "Description": "", "Country": "Belgium", "AID": "A000000177504B43532D3135", "Type": "", "Name": "BelPIC (Belgian Personal Identity Card)"}, {"Vendor": "Post Office Limited", "Description": "", "Country": "United Kingdom", "AID": "A0000001850002", "Type": "EMV", "Name": "UK Post Office Account card"}, {"Vendor": "Diners Club Switzerland Ltd", "Description": "", "Country": "Switzerland", "AID": "A0000001884443", "Type": "", "Name": "DINERS CLUB"}, {"Vendor": "Association for Payment Clearing Services", "Description": "", "Country": "United Kingdom", "AID": "A0000002040000", "Type": "", "Name": "?"}, {"Vendor": "Saudi Arabian Monetary Agency (SAMA)", "Description": "SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)", "Country": "Kingdom of Saudi Arabia", "AID": "A0000002281010", "Type": "EMV", "Name": "SPAN (M/Chip)"}, {"Vendor": "Saudi Arabian Monetary Agency (SAMA)", "Description": "SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)", "Country": "Kingdom of Saudi Arabia", "AID": "A0000002282010", "Type": "EMV", "Name": "SPAN (VIS)"}, {"Vendor": "Saudi Arabian Monetary Agency (SAMA)", "Description": "SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)", "Country": "Kingdom of Saudi Arabia", "AID": "A00000022820101010", "Type": "", "Name": "SPAN"}, {"Vendor": "ISO JTC1/SC17/WG3", "Description": "Electronic (Biometric) Passport. Issuer stored data application (The last three digits of the PIX shall be used to denote future version levels.)", "Country": "United Kingdom", "AID": "A0000002471001", "Type": "MRTD", "Name": "Machine Readable Travel Documents (MRTD)"}, {"Vendor": "ISO JTC1/SC17/WG3", "Description": "Electronic (Biometric) Passport. Application for hashes, digital signature, and certificate (The last three digits of the PIX shall be used to denote future version levels.)", "Country": "United Kingdom", "AID": "A0000002472001", "Type": "MRTD", "Name": "Machine Readable Travel Documents (MRTD)"}, {"Vendor": "Interac Association", "Description": "Canadian domestic credit/debit card", "Country": "Canada", "AID": "A0000002771010", "Type": "EMV", "Name": "INTERAC"}, {"Vendor": "PS/SC Workgroup", "Description": "Possibly not an application...", "Country": "United States", "AID": "A00000030600000000000000", "Type": "", "Name": "PC/SC Initial access data AID"}, {"Vendor": "National Institute of Standards and Technology", "Description": "PIV End Point Applet. Last 2 bytes designate version?", "Country": "United States", "AID": "A000000308000010000100", "Type": "", "Name": "Personal Identity Verification (PIV) / ID-ONE PIV BIO"}, {"Vendor": "Currence Holding/PIN BV", "Description": "", "Country": "The Netherlands", "AID": "A00000031510100528", "Type": "EMV", "Name": "Currence PuC"}, {"Vendor": "Currence Holding/PIN BV", "Description": "", "Country": "The Netherlands", "AID": "A0000003156020", "Type": "EMV", "Name": "Chipknip"}, {"Vendor": "Identity Alliance", "Description": "http://osdir.com/ml/lib.muscle/2005-12/msg00066.html", "Country": "United States", "AID": "A00000032301", "Type": "", "Name": "MUSCLE Applet Package"}, {"Vendor": "Identity Alliance", "Description": "http://osdir.com/ml/lib.muscle/2005-12/msg00066.html", "Country": "United States", "AID": "A0000003230101", "Type": "", "Name": "MUSCLE Applet Instance"}, {"Vendor": "Discover Financial Services LLC", "Description": "", "Country": "United States", "AID": "A0000003241010", "Type": "", "Name": "Discover Expresspay (ZIP)"}, {"Vendor": "China Unionpay Co. Ltd", "Description": "", "Country": "China", "AID": "A000000333010101", "Type": "", "Name": "UnionPay Debit"}, {"Vendor": "China Unionpay Co. Ltd", "Description": "", "Country": "China", "AID": "A000000333010102", "Type": "", "Name": "UnionPay Credit"}, {"Vendor": "China Unionpay Co. Ltd", "Description": "", "Country": "China", "AID": "A000000333010103", "Type": "", "Name": "UnionPay Quasi Credit"}, {"Vendor": "China Unionpay Co. Ltd", "Description": "", "Country": "China", "AID": "A000000333010106", "Type": "", "Name": "UnionPay Electronic Cash"}, {"Vendor": "China Unionpay Co. Ltd", "Description": "", "Country": "China", "AID": "A000000333010108", "Type": "", "Name": "U.S. UnionPay Common Debit AID"}, {"Vendor": "Euro Alliance of Payment Schemes s.c.r.l. - EAPS", "Description": "Unknown", "Country": "Belgium", "AID": "A0000003591010", "Type": "", "Name": ""}, {"Vendor": "Euro Alliance of Payment Schemes s.c.r.l. - EAPS", "Description": "ZKA (Germany)", "Country": "Belgium", "AID": "A0000003591010028001", "Type": "EMV", "Name": "Girocard EAPS"}, {"Vendor": "Euro Alliance of Payment Schemes s.c.r.l. - EAPS", "Description": "PagoBANCOMAT", "Country": "Belgium", "AID": "A00000035910100380", "Type": "", "Name": ""}, {"Vendor": "Poste Italiane S.P.A", "Description": "", "Country": "Italy", "AID": "A0000003660001", "Type": "", "Name": "Postamat"}, {"Vendor": "Poste Italiane S.P.A", "Description": "", "Country": "Italy", "AID": "A0000003660002", "Type": "", "Name": "Postamat VISA"}, {"Vendor": "Interswitch Limited", "Description": "Nigerian local switch company", "Country": "Nigeria", "AID": "A0000003710001", "Type": "EMV", "Name": "InterSwitch Verve Card"}, {"Vendor": "NXP Semiconductors Germany GmbH", "Description": "NXP Mf4M", "Country": "Germany", "AID": "A0000003964D66344D0002", "Type": "", "Name": "MIFARE4MOBILE"}, {"Vendor": "Microsoft Corporation", "Description": "Identity Device With Microsoft Generic Profile application. 2 bytes can be added at the end. This byte must be set to the IDMP specification revision number which is currently 0x01. The second byte (yy) is reserved for use by the card application.", "Country": "United States", "AID": "A00000039742544659", "Type": "", "Name": "Microsoft IDMP AID"}, {"Vendor": "Microsoft Corporation", "Description": "MS Plug and Play", "Country": "United States", "AID": "A0000003974349445F0100", "Type": "", "Name": "Microsoft PNP AID"}, {"Vendor": "Unibanco (Hipercard)", "Description": "", "Country": "Brazil", "AID": "A0000004271010", "Type": "", "Name": "Hiperchip"}, {"Vendor": "100", "Description": "", "Country": "Russia", "AID": "A0000004320001", "Type": "", "Name": "Universal Electronic Card"}, {"Vendor": "Edenred", "Description": "", "Country": "Belgium", "AID": "A0000004360100", "Type": "", "Name": "Ticket Restaurant"}, {"Vendor": "ACCEL/Exchange", "Description": "The Exchange Network ATM Network", "Country": "United States", "AID": "A0000004391010", "Type": "", "Name": "Exchange ATM card"}, {"Vendor": "eTranzact", "Description": "Nigerian local switch company", "Country": "Nigeria", "AID": "A0000004540010", "Type": "EMV", "Name": "Etranzact Genesis Card"}, {"Vendor": "eTranzact", "Description": "Nigerian local switch company", "Country": "Nigeria", "AID": "A0000004540011", "Type": "EMV", "Name": "Etranzact Genesis Card 2"}, {"Vendor": "Google", "Description": "GOOGLE_LOCKET_AID", "Country": "United States", "AID": "A0000004762010", "Type": "", "Name": "GOOGLE_CONTROLLER_AID"}, {"Vendor": "Google", "Description": "", "Country": "United States", "AID": "A0000004763030", "Type": "", "Name": "GOOGLE_MIFARE_MANAGER_AID"}, {"Vendor": "Google", "Description": "", "Country": "United States", "AID": "A0000004766C", "Type": "EMV", "Name": "GOOGLE_PAYMENT_AID"}, {"Vendor": "Google", "Description": "", "Country": "United States", "AID": "A000000476A010", "Type": "GP", "Name": "GSD_MANAGER_AID"}, {"Vendor": "Google", "Description": "", "Country": "United States", "AID": "A000000476A110", "Type": "GP", "Name": "GSD_MANAGER_AID"}, {"Vendor": "JVL Ventures, LLC (Softcard)", "Description": "", "Country": "United States", "AID": "A000000485", "Type": "", "Name": "Softcard SmartTap"}, {"Vendor": "RuPay", "Description": "RuPay (India)", "Country": "India", "AID": "A0000005241010", "Type": "EMV", "Name": "RuPay"}, {"Vendor": "Yubico", "Description": "Universal 2-Factor Proof-of-concept/Demo", "Country": "Sweden", "AID": "A0000005271002", "Type": "YKNEO", "Name": "Yubikey NEO U2F Demo applet"}, {"Vendor": "Yubico", "Description": "Javacard Applet AID", "Country": "Sweden", "AID": "A000000527200101", "Type": "YKNEO", "Name": "Yubikey NEO Yubikey2 applet interface"}, {"Vendor": "Yubico", "Description": "Javacard Applet AID", "Country": "Sweden", "AID": "A000000527210101", "Type": "YKNEO", "Name": "Yubikey NEO OATH Applet"}, {"Vendor": "GSMA (GSM Association)", "Description": "", "Country": "United Kingdom", "AID": "A0000005591010FFFFFFFF8900000100", "Type": "", "Name": "ISD-R Application. Used as TAR."}, {"Vendor": "GSMA (GSM Association)", "Description": "", "Country": "United Kingdom", "AID": "A0000005591010FFFFFFFF8900000200", "Type": "", "Name": "ECASD Application. Used as TAR."}, {"Vendor": "GSMA (GSM Association)", "Description": "", "Country": "United Kingdom", "AID": "A0000005591010FFFFFFFF8900000D00", "Type": "", "Name": "ISD-P Executable Load File."}, {"Vendor": "GSMA (GSM Association)", "Description": "", "Country": "United Kingdom", "AID": "A0000005591010FFFFFFFF8900000E00", "Type": "", "Name": "ISD-P Executable Module."}, {"Vendor": "GSMA (GSM Association)", "Description": "", "Country": "United Kingdom", "AID": "A0000005591010FFFFFFFF8900000F00", "Type": "", "Name": "Reserved value for the Profile's ISD-P"}, {"Vendor": "GSMA (GSM Association)", "Description": "", "Country": "United Kingdom", "AID": "A0000005591010FFFFFFFF8900001000", "Type": "", "Name": "ISD-P Application ('1010FFFFFFFF89000010' to '1010FFFFFFFF8900FFFF'. Used as TAR. The value is allocated during the 'Profile Download and Installation procedure'"}, {"Vendor": "Fidesmo", "Description": "", "Country": "Sweden", "AID": "A00000061700", "Type": "", "Name": "Fidesmo javacard"}, {"Vendor": "Debit Network Alliance (DNA)", "Description": "Common U.S. Debit", "Country": "United States", "AID": "A0000006200620", "Type": "", "Name": "Debit Network Alliance (DNA)"}, {"Vendor": "MIR", "Description": "", "Country": "Russia", "AID": "A0000006581010", "Type": "", "Name": "MIR Credit"}, {"Vendor": "MIR", "Description": "", "Country": "Russia", "AID": "A0000006582010", "Type": "", "Name": "MIR Debit"}, {"Vendor": "TROY", "Description": "Turkey's Payment Method", "Country": "Turkey", "AID": "A0000006723010", "Type": "EMV", "Name": "TROY chip credit card"}, {"Vendor": "TROY", "Description": "Turkey's Payment Method", "Country": "Turkey", "AID": "A0000006723020", "Type": "EMV", "Name": "TROY chip debit card"}, {"Vendor": "Indian Oil Corporation Limited", "Description": "Indian Oils Pre Paid Program", "Country": "India", "AID": "A0000007705850", "Type": "EMV", "Name": "XTRAPOWER Fleet Card Program"}, {"Vendor": "MasterCard International", "Description": "Used for development", "Country": "United States", "AID": "B012345678", "Type": "EMV", "Name": "Maestro TEST"}, {"Vendor": "Paylife", "Description": "Domestic Payment System (Version 2.1)", "Country": "Austria", "AID": "D040000001000002", "Type": "", "Name": "Paylife Quick (IEP). Preloaded Electronic Purse"}, {"Vendor": "Austria Card", "Description": "Domestic Payment System (Version 2.1)", "Country": "Austria", "AID": "D040000002000002", "Type": "", "Name": "RFU"}, {"Vendor": "Austria Card", "Description": "Domestic Payment System (Version 2.1)", "Country": "Austria", "AID": "D040000003000002", "Type": "", "Name": "POS"}, {"Vendor": "Austria Card", "Description": "Domestic Payment System (Version 2.1)", "Country": "Austria", "AID": "D040000004000002", "Type": "", "Name": "ATM"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 2.1)", "Country": "Austria", "AID": "D04000000B000002", "Type": "", "Name": "Retail"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 2.1)", "Country": "Austria", "AID": "D04000000C000002", "Type": "", "Name": "Bank_Data"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 2.1)", "Country": "Austria", "AID": "D04000000D000002", "Type": "", "Name": "Shopping"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 2.0)", "Country": "Austria", "AID": "D040000013000001", "Type": "", "Name": "DF_UNI_Kepler1"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 1.3)", "Country": "Austria", "AID": "D040000013000001", "Type": "", "Name": "DF_Schler1"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 2.0)", "Country": "Austria", "AID": "D040000013000002", "Type": "", "Name": "DF_UNI_Kepler2"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 1.3)", "Country": "Austria", "AID": "D040000013000002", "Type": "", "Name": "DF_Schler2"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 2.0)", "Country": "Austria", "AID": "D040000014000001", "Type": "", "Name": "DF_Mensa"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 2.0)", "Country": "Austria", "AID": "D040000015000001", "Type": "", "Name": "DF_UNI_Ausweis"}, {"Vendor": "Austria Card", "Description": "Domestic Loyalty Program (Version 1.3)", "Country": "Austria", "AID": "D040000015000001", "Type": "", "Name": "DF_Ausweis"}, {"Vendor": "Austria Card", "Description": "Domestic EMV Application (Version 2.1)", "Country": "Austria", "AID": "D0400000190001", "Type": "", "Name": "EMV ATM Maestro"}, {"Vendor": "Austria Card", "Description": "Domestic EMV Application (Version 2.1)", "Country": "Austria", "AID": "D0400000190002", "Type": "", "Name": "EMV POS Maestro"}, {"Vendor": "Austria Card", "Description": "Domestic EMV Application (Version 2.1)", "Country": "Austria", "AID": "D0400000190003", "Type": "", "Name": "EMV ATM MasterCard"}, {"Vendor": "Austria Card", "Description": "Domestic EMV Application (Version 2.1)", "Country": "Austria", "AID": "D0400000190004", "Type": "", "Name": "EMV POS MasterCard"}, {"Vendor": "Austria Card", "Description": "Domestic Payment System (Version 2.1)", "Country": "Austria", "AID": "D0400000190010", "Type": "", "Name": "Digital ID"}, {"Vendor": "Ministry of Finance of Georgia", "Description": "Georgia Revenue Service application for fiscal cash registers", "Country": "Georgia", "AID": "D268000001", "Type": "", "Name": "Fiscal module application"}, {"Vendor": "Giesecke&Devrient", "Description": "Giesecke & Devrient", "Country": "Germany", "AID": "D276000005", "Type": "", "Name": ""}, {"Vendor": "Giesecke&Devrient", "Description": "", "Country": "Germany", "AID": "D276000005AA040360010410", "Type": "", "Name": "G D App Nokia 6212"}, {"Vendor": "Giesecke&Devrient", "Description": "", "Country": "Germany", "AID": "D276000005AA0503E00401", "Type": "", "Name": "G D App Nokia 6212"}, {"Vendor": "Giesecke&Devrient", "Description": "", "Country": "Germany", "AID": "D276000005AA0503E00501", "Type": "", "Name": "G D App Nokia 6212"}, {"Vendor": "Giesecke&Devrient", "Description": "", "Country": "Germany", "AID": "D276000005AA0503E0050101", "Type": "", "Name": "G D App Nokia 6212"}, {"Vendor": "Giesecke&Devrient", "Description": "", "Country": "Germany", "AID": "D276000005AB0503E0040101", "Type": "", "Name": "G D App Nokia 6212"}, {"Vendor": "IBM Laboratories", "Description": "IBM Test card from the book 'Smart Card Application Development Using Java'", "Country": "Germany", "AID": "D27600002200000001", "Type": "", "Name": "SCT LOYALTY"}, {"Vendor": "IBM Laboratories", "Description": "IBM Test card from the book 'Smart Card Application Development Using Java'", "Country": "Germany", "AID": "D27600002200000002", "Type": "", "Name": "BUSINESS CARD"}, {"Vendor": "IBM Laboratories", "Description": "IBM Test card from the book 'Smart Card Application Development Using Java'", "Country": "Germany", "AID": "D27600002200000060", "Type": "", "Name": "PKCS#11 Token"}, {"Vendor": "ZKA", "Description": "Girocard (Geldkarte) in Germany", "Country": "Germany", "AID": "D276000025", "Type": "", "Name": "Girocard"}, {"Vendor": "ZKA", "Description": "Unknown", "Country": "Germany", "AID": "D27600002545410100", "Type": "", "Name": ""}, {"Vendor": "ZKA", "Description": "ZKA Girocard (Geldkarte) (Germany)", "Country": "Germany", "AID": "D27600002545500100", "Type": "EMV", "Name": "Girocard"}, {"Vendor": "ZKA", "Description": "", "Country": "Germany", "AID": "D27600002547410100", "Type": "", "Name": "Girocard ATM"}, {"Vendor": "Wolfgang Rankl", "Description": "", "Country": "Germany", "AID": "D276000060", "Type": "", "Name": ""}, {"Vendor": "NXP Semiconductors / NFC Forum", "Description": "NFC Forum Type 4 Tag", "Country": "Germany", "AID": "D2760000850100", "Type": "", "Name": "NDEF Tag Application / Mifare DESFire Tag Application"}, {"Vendor": "NXP Semiconductors / NFC Forum", "Description": "NFC Tag type 4 tag", "Country": "Germany", "AID": "D2760000850101", "Type": "", "Name": "NDEF Tag Application"}, {"Vendor": "Giesecke&Devrient Java Card Telecommunikation", "Description": "", "Country": "Germany", "AID": "D276000118", "Type": "", "Name": ""}, {"Vendor": "Giesecke&Devrient Java Card Telecommunikation", "Description": "Devrient Test Applet?", "Country": "Germany", "AID": "D2760001180101", "Type": "", "Name": "Giesecke &amp"}, {"Vendor": "fsfEurope", "Description": "For selection when not knowing the exact full AID", "Country": "Germany", "AID": "D27600012401", "Type": "OpenPGP", "Name": "OpenPGP Card"}, {"Vendor": "fsfEurope", "Description": "Version 1", "Country": "Germany", "AID": "D276000124010101FFFF000000010000", "Type": "OpenPGP", "Name": "OpenPGP Card"}, {"Vendor": "fsfEurope", "Description": "Version 2", "Country": "Germany", "AID": "D2760001240102000000000000010000", "Type": "OpenPGP", "Name": "OpenPGP Card"}, {"Vendor": "fsfEurope", "Description": "http://smartchess.de/englisch/SmartChess_1.0.pdf", "Country": "Germany", "AID": "D27600012402", "Type": "SmartChess", "Name": "SmartChess"}, {"Vendor": "fsfEurope", "Description": "http://smartchess.de/englisch/SmartChess_1.0.pdf", "Country": "Germany", "AID": "D2760001240200010000000000000000", "Type": "SmartChess", "Name": "SmartChess"}, {"Vendor": "", "Description": "", "Country": "Republic of Korea", "AID": "D4100000011010", "Type": "", "Name": ""}, {"Vendor": "", "Description": "(Netherlands)", "Country": "The Netherlands", "AID": "D5280050218002", "Type": "EMV", "Name": "?"}, {"Vendor": "Bankaxept", "Description": "Norwegian domestic debit card", "Country": "Norway", "AID": "D5780000021010", "Type": "EMV", "Name": "Bankaxept"}, {"Vendor": "Swiss Travel Fund (Reka)", "Description": "prepaid functional debit card", "Country": "Switzerland", "AID": "D7560000010101", "Type": "", "Name": "Reka Card"}, {"Vendor": "Migros (FCM, GE Money Bank and MasterCard)", "Description": "", "Country": "Switzerland", "AID": "D7560000300101", "Type": "", "Name": "M Budget"}, {"Vendor": "", "Description": "German eID", "Country": "", "AID": "E80704007F00070302", "Type": "", "Name": "nPA"}, {"Vendor": "", "Description": "", "Country": "", "AID": "E82881C11702", "Type": "", "Name": "AlphaCard application"}, {"Vendor": "", "Description": "Iso adoption of PKCS-15", "Country": "", "AID": "E828BD080F", "Type": "", "Name": "ISO-7816-15 EF.DIR"}, {"Vendor": "", "Description": "Brazilian Bank Banco Bradesco", "Country": "", "AID": "F0000000030001", "Type": "EMV", "Name": "BRADESCO"}]
+[
+    {
+        "AID": "315041592E5359532E4444463031",
+        "Vendor": "EMV",
+        "Country": "United States",
+        "Name": "EMV Payment System Environment - PSE (1PAY.SYS.DDF01)",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "325041592E5359532E4444463031",
+        "Vendor": "EMV",
+        "Country": "United States",
+        "Name": "EMV Proximity Payment System Environment - PPSE (2PAY.SYS.DDF01)",
+        "Description": "Visa payWave for Mobile",
+        "Type": ""
+    },
+    {
+        "AID": "44464D46412E44466172653234313031",
+        "Vendor": "DeviceFidelity",
+        "Country": "United States",
+        "Name": "DeviceFidelity In2Pay DFare applet",
+        "Description": "http://www.nfcworld.com/2010/11/24/35207/devicefidelity-adds-nfc-support-for-android-and-mifare/",
+        "Type": ""
+    },
+    {
+        "AID": "A00000000101",
+        "Vendor": "PBS Danmnt A/S",
+        "Country": "Denmark",
+        "Name": "MUSCLE Card Applet",
+        "Description": "(Unlicensed use of this RID. Proposal to use A000000323 instead)",
+        "Type": ""
+    },
+    {
+        "AID": "A000000003000000",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "(VISA) Card Manager",
+        "Description": "Used by most GP2.1.1 cards / Oberthur OP201 cards. Visa Proprietary Card Manager AID for OpenPlatform cards (visa.openplatform).",
+        "Type": "GP"
+    },
+    {
+        "AID": "A00000000300037561",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "Bonuscard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A00000000305076010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA ELO Credit",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000031010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Debit/Credit (Classic)",
+        "Description": "Standard/Gold VISA credit card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000003101001",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Credit",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000003101002",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Debit",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000032010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Electron",
+        "Description": "VISA Electron (Debit)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000032020",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA",
+        "Description": "V PAY",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000033010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Interlink",
+        "Description": "VISA Interlink",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000034010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Specific",
+        "Description": "Visa Specific",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000035010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Specific",
+        "Description": "Visa Specific",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000003534441",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "Schlumberger Security Domain",
+        "Description": "",
+        "Type": "GP"
+    },
+    {
+        "AID": "A0000000035350",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "Security Domain",
+        "Description": "OCS Oberthur Card System Security Domain Package AID / VGP Card Manager (for ISD and ASD)",
+        "Type": "GP"
+    },
+    {
+        "AID": "A000000003535041",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "Security Domain",
+        "Description": "OCS Oberthur Card System Security Domain Applet AID / VGP Card Manager (for ISD and ASD)",
+        "Type": "GP"
+    },
+    {
+        "AID": "A0000000036010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "Domestic Visa Cash Stored Value",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000036020",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "International Visa Cash Stored Value",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000038002",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Auth, VisaRemAuthen EMV-CAP (DPA)",
+        "Description": "VISA Auth dynamic passcode authentication (DPA). Used by Barclays/HBOS",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000038010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Plus",
+        "Description": "VISA plus",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000039010",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Loyalty",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000003999910",
+        "Vendor": "Visa International",
+        "Country": "United States",
+        "Name": "VISA Proprietary ATM",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000040000",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Card Manager",
+        "Description": "Security Domain",
+        "Type": "GP"
+    },
+    {
+        "AID": "A00000000401",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard PayPass",
+        "Description": "AEPM (Association Europenne Payez Mobile)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000041010",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Credit/Debit (Global)",
+        "Description": "Standard MasterCard",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000000410101213",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Credit",
+        "Description": "Standard MasterCard",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000000410101215",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Credit",
+        "Description": "Standard MasterCard",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000041010BB5449435301",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "[UNKNOWN]",
+        "Description": "Some co-branded card",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000042010",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Specific",
+        "Description": "MasterCard Specific",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000042203",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Specific",
+        "Description": "MasterCard U.S. Maestro",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000043010",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Specific",
+        "Description": "MasterCard Specific",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000043060",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "Maestro (Debit)",
+        "Description": "Maestro (Debit) Card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000004306001",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "Maestro (Debit)",
+        "Description": "Maestro (Debit) Card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000044010",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Specific",
+        "Description": "MasterCard Specific",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000045010",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard Specific",
+        "Description": "MasterCard Specific",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000045555",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "APDULogger",
+        "Description": "AID on Cirrus Test Card",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000046000",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "Cirrus",
+        "Description": "Mastercard Cirrus (Interbank Network) ATM card only",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000048002",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "SecureCode Auth EMV-CAP",
+        "Description": "Chip Authentication Protocol (CAP). Works with NatWest or SecureCode Aut",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000049999",
+        "Vendor": "Mastercard International",
+        "Country": "United States",
+        "Name": "MasterCard PayPass",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000050001",
+        "Vendor": "Switch Card Services Ltd.",
+        "Country": "United Kingdom",
+        "Name": "Maestro UK",
+        "Description": "UK Domestic Maestro - Switch (debit card)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000050002",
+        "Vendor": "Switch Card Services Ltd.",
+        "Country": "United Kingdom",
+        "Name": "Solo",
+        "Description": "UK Domestic Maestro - Switch (debit card)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000090001FF44FF1289",
+        "Vendor": "ETSI",
+        "Country": "France",
+        "Name": "Orange",
+        "Description": "Orange UK",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000101030",
+        "Vendor": "Europay International",
+        "Country": "Belgium",
+        "Name": "Maestro-CH",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A00000001800",
+        "Vendor": "GEMPLUS",
+        "Country": "France",
+        "Name": "Gemplus ",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000181001",
+        "Vendor": "GEMPLUS",
+        "Country": "France",
+        "Name": "com.gemplus.javacard.util packages",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000018434D",
+        "Vendor": "GEMPLUS",
+        "Country": "France",
+        "Name": "Gemplus card manager",
+        "Description": "434D = CM (ascii). Security domain for some GCX/GXP cards (GemXpresso Pro) (Gemalto)",
+        "Type": "GP"
+    },
+    {
+        "AID": "A000000018434D00",
+        "Vendor": "GEMPLUS",
+        "Country": "France",
+        "Name": "Gemplus Security Domain",
+        "Description": "(Gemalto)",
+        "Type": "GP"
+    },
+    {
+        "AID": "A00000002401",
+        "Vendor": "Midland Bank Plc",
+        "Country": "United Kingdom",
+        "Name": "Self Service",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000025",
+        "Vendor": "American Express",
+        "Country": "United Kingdom",
+        "Name": "American Express",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000250000",
+        "Vendor": "American Express",
+        "Country": "United Kingdom",
+        "Name": "American Express",
+        "Description": "American Express (Credit/Debit)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000002501",
+        "Vendor": "American Express",
+        "Country": "United Kingdom",
+        "Name": "American Express",
+        "Description": "AEIPS-compliant (A-E contact EMV) payment application",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000025010104",
+        "Vendor": "American Express",
+        "Country": "United Kingdom",
+        "Name": "American Express",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000025010402",
+        "Vendor": "American Express",
+        "Country": "United Kingdom",
+        "Name": "American Express",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000025010701",
+        "Vendor": "American Express",
+        "Country": "United Kingdom",
+        "Name": "ExpressPay",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000025010801",
+        "Vendor": "American Express",
+        "Country": "United Kingdom",
+        "Name": "American Express",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000291010",
+        "Vendor": "LINK Interchange Network Ltd",
+        "Country": "United Kingdom",
+        "Name": "Link / American Express",
+        "Description": "Link (UK) ATM Network, or AMEX (Portugal)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000002945087510100000",
+        "Vendor": "LINK Interchange Network Ltd",
+        "Country": "United Kingdom",
+        "Name": "CO-OP",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A00000002949034010100001",
+        "Vendor": "LINK Interchange Network Ltd",
+        "Country": "United Kingdom",
+        "Name": "HSBC",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A00000002949282010100000",
+        "Vendor": "LINK Interchange Network Ltd",
+        "Country": "United Kingdom",
+        "Name": "Barclay",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000029564182",
+        "Vendor": "LINK Interchange Network Ltd",
+        "Country": "United Kingdom",
+        "Name": "HAFX",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A00000003029057000AD13100101FF",
+        "Vendor": "Schlumberger Industries Identif d'Encarteur PR050",
+        "Country": "France",
+        "Name": "BelPIC (Belgian Personal Identity Card) JavaCard Applet",
+        "Description": "Schlumberger (Gemalto) RID",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000308000000000280101",
+        "Vendor": "Schlumberger Industries Identif d'Encarteur PR050",
+        "Country": "France",
+        "Name": "Gemalto .NET Card AID",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000421010",
+        "Vendor": "Groupement des Cartes Bancaires 'CB'",
+        "Country": "France",
+        "Name": "Cartes Bancaire EMV Card",
+        "Description": "Groupement des Cartes Bancaires (France)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000422010",
+        "Vendor": "Groupement des Cartes Bancaires 'CB'",
+        "Country": "France",
+        "Name": "",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000423010",
+        "Vendor": "Groupement des Cartes Bancaires 'CB'",
+        "Country": "France",
+        "Name": "",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000424010",
+        "Vendor": "Groupement des Cartes Bancaires 'CB'",
+        "Country": "France",
+        "Name": "",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000425010",
+        "Vendor": "Groupement des Cartes Bancaires 'CB'",
+        "Country": "France",
+        "Name": "",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000426010",
+        "Vendor": "Groupement des Cartes Bancaires 'CB'",
+        "Country": "France",
+        "Name": "Contactless payment using Apple Pay",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000005945430100",
+        "Vendor": "Zentraler Kreditausschuss (ZKA)",
+        "Country": "Germany",
+        "Name": "Girocard Electronic Cash",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000063504B43532D3135",
+        "Vendor": "RSA Laboratories",
+        "Country": "United States",
+        "Name": "PKCS-15",
+        "Description": "RSA PKCS-15 PKI application (Predecessor to ISO7816-15) / ID-card in Finland",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000635741502D57494D",
+        "Vendor": "RSA Laboratories",
+        "Country": "United States",
+        "Name": "WAP-WIM",
+        "Description": "WAP (Wireless Application Protocol) Identity Module / Wireless Identification Module",
+        "Type": ""
+    },
+    {
+        "AID": "A00000006510",
+        "Vendor": "JCB CO., LTD.",
+        "Country": "Japan",
+        "Name": "JCB",
+        "Description": "Japan Credit Bureau",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000651010",
+        "Vendor": "JCB CO., LTD.",
+        "Country": "Japan",
+        "Name": "JCB J Smart Credit",
+        "Description": "Japan Credit Bureau",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000006900",
+        "Vendor": "Socit Europenne de Monnaie Electronique SEME",
+        "Country": "France",
+        "Name": "Moneo",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000077010000021000000000003B",
+        "Vendor": "Oberthur Technologies",
+        "Country": "France",
+        "Name": "Visa AEPN",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000790100",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv2 PKI ID",
+        "Description": "Identity Key",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000790101",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv2 PKI Sign",
+        "Description": "Digital Signature Key",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000790102",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv2 PKI Enc",
+        "Description": "Key Management Key",
+        "Type": ""
+    },
+    {
+        "AID": "A00000007901F0",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv1 PKI Identity Key",
+        "Description": "Re-directs to CACv2 PKI Identity key",
+        "Type": ""
+    },
+    {
+        "AID": "A00000007901F1",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv1 PKI Digital Signature Key",
+        "Description": "Re-directs to CACv2 Digital Signature key",
+        "Type": ""
+    },
+    {
+        "AID": "A00000007901F2",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv1 PKI Key Management Key",
+        "Description": "Re-directs to CACv2 Key Management key",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000790200",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv2 DoD Person",
+        "Description": "DoD Demographic",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000790201",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv2 DoD Personnel",
+        "Description": "DoD Demographic",
+        "Type": ""
+    },
+    {
+        "AID": "A00000007902FB",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv1 BC",
+        "Description": "General Configuration",
+        "Type": ""
+    },
+    {
+        "AID": "A00000007902FD",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv1 BC",
+        "Description": "PKI Certificate Attributes",
+        "Type": ""
+    },
+    {
+        "AID": "A00000007902FE",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv1 BC",
+        "Description": "PKI Cert",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000790300",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CACv2 Access Control Applet",
+        "Description": "CAC PIN / ID PIN Management Applet",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000791201",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CAC JDM",
+        "Description": "Joint Data Model. BCAdmin",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000791202",
+        "Vendor": "Activcard Europe S.A.",
+        "Country": "France",
+        "Name": "CAC JDM",
+        "Description": "Joint Data Model. BCMedical",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000871002FF49FF0589",
+        "Vendor": "Third Generation Partnership Project (3GPP)",
+        "Country": "France",
+        "Name": "Telenor USIM",
+        "Description": "",
+        "Type": "USIM"
+    },
+    {
+        "AID": "A00000008810200105C100",
+        "Vendor": "Buypass AS",
+        "Country": "Norway",
+        "Name": "BuyPass BIDA",
+        "Description": "Used by norwegian public betting company Norsk-Tipping",
+        "Type": "BuyPass"
+    },
+    {
+        "AID": "A000000088102201034221",
+        "Vendor": "Buypass AS",
+        "Country": "Norway",
+        "Name": "BuyPass BEID (BuyPass Electronic ID)",
+        "Description": "",
+        "Type": "BuyPass"
+    },
+    {
+        "AID": "A000000088102201034321",
+        "Vendor": "Buypass AS",
+        "Country": "Norway",
+        "Name": "BuyPass BEID (BuyPass Electronic ID)",
+        "Description": "",
+        "Type": "BuyPass"
+    },
+    {
+        "AID": "A0000000960200",
+        "Vendor": "Sa Proton World International N.V.",
+        "Country": "Belgium",
+        "Name": "Proton World International Security Domain",
+        "Description": "Proton, which is owned in part by Visa International and American Express Co., is in three other European countries: the original Proton program in Belgium, Chipknip in the Netherlands, and Cash in Switzerland",
+        "Type": "GP"
+    },
+    {
+        "AID": "A000000098",
+        "Vendor": "Visa USA",
+        "Country": "United States",
+        "Name": "Debit Card",
+        "Description": "Bank of America Debit Card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000000980840",
+        "Vendor": "Visa USA",
+        "Country": "United States",
+        "Name": "Visa Common Debit",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000000980848",
+        "Vendor": "Visa USA",
+        "Country": "United States",
+        "Name": "Debit Card",
+        "Description": "Schwab Bank Debit Card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000001110101",
+        "Vendor": "Die Post Postfinance",
+        "Country": "Switzerland",
+        "Name": "Postcard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001160300",
+        "Vendor": "GSA - TFCS",
+        "Country": "United States",
+        "Name": "PIV CHUID",
+        "Description": "CHUID",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001166010",
+        "Vendor": "GSA - TFCS",
+        "Country": "United States",
+        "Name": "PIV Fingerprints",
+        "Description": "Fingerprints",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001166030",
+        "Vendor": "GSA - TFCS",
+        "Country": "United States",
+        "Name": "PIV Facial Image",
+        "Description": "Facial Image",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001169000",
+        "Vendor": "GSA - TFCS",
+        "Country": "United States",
+        "Name": "PIV Security Object",
+        "Description": "Security Object",
+        "Type": ""
+    },
+    {
+        "AID": "A000000116A001",
+        "Vendor": "GSA - TFCS",
+        "Country": "United States",
+        "Name": "PIV Authentication Key",
+        "Description": "PIV Authentication Key",
+        "Type": ""
+    },
+    {
+        "AID": "A000000116DB00",
+        "Vendor": "GSA - TFCS",
+        "Country": "United States",
+        "Name": "CCC",
+        "Description": "Card Capability Container",
+        "Type": ""
+    },
+    {
+        "AID": "A000000118010000",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_Verkehr",
+        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Type": ""
+    },
+    {
+        "AID": "A000000118020000",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_Partner",
+        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Type": ""
+    },
+    {
+        "AID": "A000000118030000",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_Schlerdaten",
+        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Type": ""
+    },
+    {
+        "AID": "A000000118040000",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_KEP_SIG",
+        "Description": "Domestic Loyalty Program (Version 1.32)",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001184543",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "Digital Signature (SSCA)",
+        "Description": "Digital Signature Application",
+        "Type": ""
+    },
+    {
+        "AID": "A000000118454E",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "Encryption Application",
+        "Description": "Encryption Application (Version 1.10)",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001211010",
+        "Vendor": "PBS Danmark A/S",
+        "Country": "Denmark",
+        "Name": "Dankort (VISA GEM Vision)",
+        "Description": "Danish domestic debit card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000001320001",
+        "Vendor": "Java Card Forum",
+        "Country": "United States",
+        "Name": "org.javacardforum.javacard.biometry",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001408001",
+        "Vendor": "TDS TODOS DATA SYSTEM AB",
+        "Country": "Sweden",
+        "Name": "eCode",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001410001",
+        "Vendor": "Associazione Bancaria Italiana",
+        "Country": "Italy",
+        "Name": "PagoBANCOMAT",
+        "Description": "CoGeBan Consorzio BANCOMAT (Italian domestic debit card)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000001510000",
+        "Vendor": "GlobalPlatform, Inc.",
+        "Country": "United States",
+        "Name": "Global Platform Security Domain AID",
+        "Description": "GP Card Manager",
+        "Type": "GP"
+    },
+    {
+        "AID": "A00000015153504341534400",
+        "Vendor": "GlobalPlatform, Inc.",
+        "Country": "United States",
+        "Name": "CASD_AID",
+        "Description": "SPCASD",
+        "Type": "GP"
+    },
+    {
+        "AID": "A0000001523010",
+        "Vendor": "Diners Club International Ltd.",
+        "Country": "United States",
+        "Name": "Discover, Pulse D Pas",
+        "Description": "Discover Card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000001524010",
+        "Vendor": "Diners Club International Ltd.",
+        "Country": "United States",
+        "Name": "Discover",
+        "Description": "Discover Debit Common Card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000001544442",
+        "Vendor": "Banrisul - Banco do Estado do Rio Grande do SUL - S.A.",
+        "Country": "Brazil",
+        "Name": "Banricompras Debito",
+        "Description": "Banrisul (Brazil)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000001570010",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "AMEX",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570020",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "MasterCard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570021",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Maestro",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570022",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Maestro",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570023",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "CASH",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570030",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "VISA",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570031",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "VISA",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570040",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "JCB",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570050",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Postcard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570051",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Postcard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570100",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "MCard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570104",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "MyOne",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001570109",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Mediamarkt Card",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000157010A",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Gift Card",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000157010B",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Bonuscard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000157010C",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "WIRCard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000157010D",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Power Card",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001574443",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "DINERS CLUB",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001574444",
+        "Vendor": "Zhlke Engineering AG",
+        "Country": "Switzerland",
+        "Name": "Supercard Plus",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000167413000FF",
+        "Vendor": "IBM",
+        "Country": "Germany",
+        "Name": "JCOP Identify Applet",
+        "Description": "identify in JCOP-tools returns eg 27 34 01 2E 00 00 00 00 4E 58 37 35 31 41 00 03 28 62 B3 6A 82",
+        "Type": "JCOP"
+    },
+    {
+        "AID": "A000000167413001",
+        "Vendor": "IBM",
+        "Country": "Germany",
+        "Name": "FIPS 140-2",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000172950001",
+        "Vendor": "Financial Information Service Co. Ltd.",
+        "Country": "Taiwan",
+        "Name": "BAROC Financial Application Taiwan",
+        "Description": "The Bankers Association of the Republic of China",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000177504B43532D3135",
+        "Vendor": "Ministre de L'Intrieur",
+        "Country": "Belgium",
+        "Name": "BelPIC (Belgian Personal Identity Card)",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000001850002",
+        "Vendor": "Post Office Limited",
+        "Country": "United Kingdom",
+        "Name": "UK Post Office Account card",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000001884443",
+        "Vendor": "Diners Club Switzerland Ltd",
+        "Country": "Switzerland",
+        "Name": "DINERS CLUB",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000002040000",
+        "Vendor": "Association for Payment Clearing Services",
+        "Country": "United Kingdom",
+        "Name": "",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000002281010",
+        "Vendor": "Saudi Arabian Monetary Agency (SAMA)",
+        "Country": "Kingdom of Saudi Arabia",
+        "Name": "SPAN (M/Chip)",
+        "Description": "SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000002282010",
+        "Vendor": "Saudi Arabian Monetary Agency (SAMA)",
+        "Country": "Kingdom of Saudi Arabia",
+        "Name": "SPAN (VIS)",
+        "Description": "SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000022820101010",
+        "Vendor": "Saudi Arabian Monetary Agency (SAMA)",
+        "Country": "Kingdom of Saudi Arabia",
+        "Name": "SPAN",
+        "Description": "SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)",
+        "Type": ""
+    },
+    {
+        "AID": "A0000002471001",
+        "Vendor": "ISO JTC1/SC17/WG3",
+        "Country": "United Kingdom",
+        "Name": "Machine Readable Travel Documents (MRTD)",
+        "Description": "Electronic (Biometric) Passport. Issuer stored data application (The last three digits of the PIX shall be used to denote future version levels.)",
+        "Type": "MRTD"
+    },
+    {
+        "AID": "A0000002472001",
+        "Vendor": "ISO JTC1/SC17/WG3",
+        "Country": "United Kingdom",
+        "Name": "Machine Readable Travel Documents (MRTD)",
+        "Description": "Electronic (Biometric) Passport. Application for hashes, digital signature, and certificate (The last three digits of the PIX shall be used to denote future version levels.)",
+        "Type": "MRTD"
+    },
+    {
+        "AID": "A0000002771010",
+        "Vendor": "Interac Association",
+        "Country": "Canada",
+        "Name": "INTERAC",
+        "Description": "Canadian domestic credit/debit card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000030600000000000000",
+        "Vendor": "PS/SC Workgroup",
+        "Country": "United States",
+        "Name": "PC/SC Initial access data AID",
+        "Description": "Possibly not an application...",
+        "Type": ""
+    },
+    {
+        "AID": "A000000308000010000100",
+        "Vendor": "National Institute of Standards and Technology",
+        "Country": "United States",
+        "Name": "Personal Identity Verification (PIV) / ID-ONE PIV BIO",
+        "Description": "PIV End Point Applet. Last 2 bytes designate version",
+        "Type": ""
+    },
+    {
+        "AID": "A00000031510100528",
+        "Vendor": "Currence Holding/PIN BV",
+        "Country": "The Netherlands",
+        "Name": "Currence PuC",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000003156020",
+        "Vendor": "Currence Holding/PIN BV",
+        "Country": "The Netherlands",
+        "Name": "Chipknip",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000032301",
+        "Vendor": "Identity Alliance",
+        "Country": "United States",
+        "Name": "MUSCLE Applet Package",
+        "Description": "http://osdir.com/ml/lib.muscle/2005-12/msg00066.html",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003230101",
+        "Vendor": "Identity Alliance",
+        "Country": "United States",
+        "Name": "MUSCLE Applet Instance",
+        "Description": "http://osdir.com/ml/lib.muscle/2005-12/msg00066.html",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003241010",
+        "Vendor": "Discover Financial Services LLC",
+        "Country": "United States",
+        "Name": "Discover Expresspay (ZIP)",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000333010101",
+        "Vendor": "China Unionpay Co. Ltd",
+        "Country": "China",
+        "Name": "UnionPay Debit",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000333010102",
+        "Vendor": "China Unionpay Co. Ltd",
+        "Country": "China",
+        "Name": "UnionPay Credit",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000333010103",
+        "Vendor": "China Unionpay Co. Ltd",
+        "Country": "China",
+        "Name": "UnionPay Quasi Credit",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000333010106",
+        "Vendor": "China Unionpay Co. Ltd",
+        "Country": "China",
+        "Name": "UnionPay Electronic Cash",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000333010108",
+        "Vendor": "China Unionpay Co. Ltd",
+        "Country": "China",
+        "Name": "U.S. UnionPay Common Debit AID",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000337301000",
+        "Vendor": "Groupment Interbancaire Montique de l' UEMOA",
+        "Country": "Senegal",
+        "Name": "Retrait",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000337101000",
+        "Vendor": "Groupment Interbancaire Montique de l' UEMOA",
+        "Country": "Senegal",
+        "Name": "Standard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000337102000",
+        "Vendor": "Groupment Interbancaire Montique de l' UEMOA",
+        "Country": "Senegal",
+        "Name": "Classic",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000337101001",
+        "Vendor": "Groupment Interbancaire Montique de l' UEMOA",
+        "Country": "Senegal",
+        "Name": "Prepaye Online",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000337102001",
+        "Vendor": "Groupment Interbancaire Montique de l' UEMOA",
+        "Country": "Senegal",
+        "Name": "Prepaye Possibile Offiline",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A000000337601001",
+        "Vendor": "Groupment Interbancaire Montique de l' UEMOA",
+        "Country": "Senegal",
+        "Name": "Porte Monnaie Electronique",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003591010",
+        "Vendor": "Euro Alliance of Payment Schemes s.c.r.l. - EAPS",
+        "Country": "Belgium",
+        "Name": "",
+        "Description": "Unknown",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003591010028001",
+        "Vendor": "Euro Alliance of Payment Schemes s.c.r.l. - EAPS",
+        "Country": "Belgium",
+        "Name": "Girocard EAPS",
+        "Description": "ZKA (Germany)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000035910100380",
+        "Vendor": "Euro Alliance of Payment Schemes s.c.r.l. - EAPS",
+        "Country": "Belgium",
+        "Name": "",
+        "Description": "PagoBANCOMAT",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003660001",
+        "Vendor": "Poste Italiane S.P.A",
+        "Country": "Italy",
+        "Name": "Postamat",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003660002",
+        "Vendor": "Poste Italiane S.P.A",
+        "Country": "Italy",
+        "Name": "Postamat VISA",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003710001",
+        "Vendor": "Verve",
+        "Country": "Nigeria",
+        "Name": "InterSwitch Verve Card",
+        "Description": "Nigerian local switch company",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A00000038410",
+        "Vendor": "eftpos, Australian Payments Clearing Association Ltd",
+        "Country": "Australia",
+        "Name": "Savings (debit card)",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A00000038420",
+        "Vendor": "eftpos, Australian Payments Clearing Association Ltd",
+        "Country": "Australia",
+        "Name": "Cheque (debit card)",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003964D66344D0002",
+        "Vendor": "NXP Semiconductors Germany GmbH",
+        "Country": "Germany",
+        "Name": "MIFARE4MOBILE",
+        "Description": "NXP Mf4M",
+        "Type": ""
+    },
+    {
+        "AID": "A00000039742544659",
+        "Vendor": "Microsoft Corporation",
+        "Country": "United States",
+        "Name": "Microsoft IDMP AID",
+        "Description": "Identity Device With Microsoft Generic Profile application. 2 bytes can be added at the end. This byte must be set to the IDMP specification revision number which is currently 0x01. The second byte (yy) is reserved for use by the card application.",
+        "Type": ""
+    },
+    {
+        "AID": "A0000003974349445F0100",
+        "Vendor": "Microsoft Corporation",
+        "Country": "United States",
+        "Name": "Microsoft PNP AID",
+        "Description": "MS Plug and Play",
+        "Type": ""
+    },
+    {
+        "AID": "A0000004271010",
+        "Vendor": "Unibanco (Hipercard)",
+        "Country": "Brazil",
+        "Name": "Hiperchip",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000004320001",
+        "Vendor": "PRO100",
+        "Country": "Russia",
+        "Name": "Universal Electronic Card",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000004360100",
+        "Vendor": "Edenred",
+        "Country": "Belgium",
+        "Name": "Ticket Restaurant",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000004391010",
+        "Vendor": "ACCEL/Exchange",
+        "Country": "United States",
+        "Name": "Exchange ATM card",
+        "Description": "The Exchange Network ATM Network",
+        "Type": ""
+    },
+    {
+        "AID": "A0000004540010",
+        "Vendor": "eTranzact",
+        "Country": "Nigeria",
+        "Name": "Etranzact Genesis Card",
+        "Description": "Nigerian local switch company",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000004540011",
+        "Vendor": "eTranzact",
+        "Country": "Nigeria",
+        "Name": "Etranzact Genesis Card 2",
+        "Description": "Nigerian local switch company",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000004762010",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "GOOGLE_CONTROLLER_AID",
+        "Description": "GOOGLE_LOCKET_AID",
+        "Type": ""
+    },
+    {
+        "AID": "A0000004763030",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "GOOGLE_MIFARE_MANAGER_AID",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000004766C",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "GOOGLE_PAYMENT_AID",
+        "Description": "",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A000000476A010",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "GSD_MANAGER_AID",
+        "Description": "",
+        "Type": "GP"
+    },
+    {
+        "AID": "A000000476A110",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "GSD_MANAGER_AID",
+        "Description": "",
+        "Type": "GP"
+    },
+    {
+        "AID": "A000000485",
+        "Vendor": "JVL Ventures, LLC (Softcard)",
+        "Country": "United States",
+        "Name": "Softcard SmartTap",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000005241010",
+        "Vendor": "RuPay",
+        "Country": "India",
+        "Name": "RuPay",
+        "Description": "RuPay (India)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000005271002",
+        "Vendor": "Yubico",
+        "Country": "Sweden",
+        "Name": "Yubikey NEO U2F Demo applet",
+        "Description": "Universal 2-Factor Proof-of-concept/Demo",
+        "Type": "YKNEO"
+    },
+    {
+        "AID": "A000000527200101",
+        "Vendor": "Yubico",
+        "Country": "Sweden",
+        "Name": "Yubikey NEO Yubikey2 applet interface",
+        "Description": "Javacard Applet AID",
+        "Type": "YKNEO"
+    },
+    {
+        "AID": "A000000527210101",
+        "Vendor": "Yubico",
+        "Country": "Sweden",
+        "Name": "Yubikey NEO OATH Applet",
+        "Description": "Javacard Applet AID",
+        "Type": "YKNEO"
+    },
+    {
+        "AID": "A0000005591010FFFFFFFF8900000100",
+        "Vendor": "GSMA (GSM Association)",
+        "Country": "United Kingdom",
+        "Name": "ISD-R Application. Used as TAR.",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000005591010FFFFFFFF8900000200",
+        "Vendor": "GSMA (GSM Association)",
+        "Country": "United Kingdom",
+        "Name": "ECASD Application. Used as TAR.",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000005591010FFFFFFFF8900000D00",
+        "Vendor": "GSMA (GSM Association)",
+        "Country": "United Kingdom",
+        "Name": "ISD-P Executable Load File.",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000005591010FFFFFFFF8900000E00",
+        "Vendor": "GSMA (GSM Association)",
+        "Country": "United Kingdom",
+        "Name": "ISD-P Executable Module.",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000005591010FFFFFFFF8900000F00",
+        "Vendor": "GSMA (GSM Association)",
+        "Country": "United Kingdom",
+        "Name": "Reserved value for the Profile's ISD-P",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000005591010FFFFFFFF8900001000",
+        "Vendor": "GSMA (GSM Association)",
+        "Country": "United Kingdom",
+        "Name": "ISD-P Application ('1010FFFFFFFF89000010' to '1010FFFFFFFF8900FFFF'. Used as TAR. The value is allocated during the 'Profile Download and Installation procedure'",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A00000061700",
+        "Vendor": "Fidesmo",
+        "Country": "Sweden",
+        "Name": "Fidesmo javacard",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000006200620",
+        "Vendor": "Debit Network Alliance (DNA)",
+        "Country": "United States",
+        "Name": "Debit Network Alliance (DNA)",
+        "Description": "Common U.S. Debit",
+        "Type": ""
+    },
+    {
+        "AID": "A0000006581010",
+        "Vendor": "MIR",
+        "Country": "Russia",
+        "Name": "MIR Credit",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000006581011",
+        "Vendor": "MIR",
+        "Country": "Russia",
+        "Name": "MIR Credit",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000006582010",
+        "Vendor": "MIR",
+        "Country": "Russia",
+        "Name": "MIR Debit",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "A0000006723010",
+        "Vendor": "TROY",
+        "Country": "Turkey",
+        "Name": "TROY chip credit card",
+        "Description": "Turkey's Payment Method",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000006723020",
+        "Vendor": "TROY",
+        "Country": "Turkey",
+        "Name": "TROY chip debit card",
+        "Description": "Turkey's Payment Method",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000007705850",
+        "Vendor": "Indian Oil Corporation Limited",
+        "Country": "India",
+        "Name": "XTRAPOWER Fleet Card Program",
+        "Description": "Indian Oil's Pre Paid Program",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000007790000",
+        "Vendor": "Zimswitch",
+        "Country": "Zimbabwe",
+        "Name": "",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "B012345678",
+        "Vendor": "MasterCard International",
+        "Country": "United States",
+        "Name": "Maestro TEST",
+        "Description": "Used for development",
+        "Type": "EMV"
+    },
+    {
+        "AID": "D040000001000002",
+        "Vendor": "Paylife",
+        "Country": "Austria",
+        "Name": "Paylife Quick (IEP). Preloaded Electronic Purse",
+        "Description": "Domestic Payment System (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000002000002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "RFU",
+        "Description": "Domestic Payment System (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000003000002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "POS",
+        "Description": "Domestic Payment System (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000004000002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "ATM",
+        "Description": "Domestic Payment System (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D04000000B000002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "Retail",
+        "Description": "Domestic Loyalty Program (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D04000000C000002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "Bank_Data",
+        "Description": "Domestic Loyalty Program (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D04000000D000002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "Shopping",
+        "Description": "Domestic Loyalty Program (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000013000001",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_UNI_Kepler1",
+        "Description": "Domestic Loyalty Program (Version 2.0)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000013000001",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_Schler1",
+        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000013000002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_UNI_Kepler2",
+        "Description": "Domestic Loyalty Program (Version 2.0)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000013000002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_Schler2",
+        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000014000001",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_Mensa",
+        "Description": "Domestic Loyalty Program (Version 2.0)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000015000001",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_UNI_Ausweis",
+        "Description": "Domestic Loyalty Program (Version 2.0)",
+        "Type": ""
+    },
+    {
+        "AID": "D040000015000001",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "DF_Ausweis",
+        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Type": ""
+    },
+    {
+        "AID": "D0400000190001",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "EMV ATM Maestro",
+        "Description": "Domestic EMV Application (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D0400000190002",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "EMV POS Maestro",
+        "Description": "Domestic EMV Application (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D0400000190003",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "EMV ATM MasterCard",
+        "Description": "Domestic EMV Application (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D0400000190004",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "EMV POS MasterCard",
+        "Description": "Domestic EMV Application (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D0400000190010",
+        "Vendor": "Austria Card",
+        "Country": "Austria",
+        "Name": "Digital ID",
+        "Description": "Domestic Payment System (Version 2.1)",
+        "Type": ""
+    },
+    {
+        "AID": "D268000001",
+        "Vendor": "Ministry of Finance of Georgia",
+        "Country": "Georgia",
+        "Name": "Fiscal module application",
+        "Description": "Georgia Revenue Service application for fiscal cash registers",
+        "Type": ""
+    },
+    {
+        "AID": "D276000005",
+        "Vendor": "Giesecke&Devrient",
+        "Country": "Germany",
+        "Name": "",
+        "Description": "Giesecke & Devrient",
+        "Type": ""
+    },
+    {
+        "AID": "D276000005AA040360010410",
+        "Vendor": "Giesecke&Devrient",
+        "Country": "Germany",
+        "Name": "G D App Nokia 6212",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D276000005AA0503E00401",
+        "Vendor": "Giesecke&Devrient",
+        "Country": "Germany",
+        "Name": "G D App Nokia 6212",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D276000005AA0503E00501",
+        "Vendor": "Giesecke&Devrient",
+        "Country": "Germany",
+        "Name": "G D App Nokia 6212",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D276000005AA0503E0050101",
+        "Vendor": "Giesecke&Devrient",
+        "Country": "Germany",
+        "Name": "G D App Nokia 6212",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D276000005AB0503E0040101",
+        "Vendor": "Giesecke&Devrient",
+        "Country": "Germany",
+        "Name": "G D App Nokia 6212",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D27600002200000001",
+        "Vendor": "IBM Laboratories",
+        "Country": "Germany",
+        "Name": "SCT LOYALTY",
+        "Description": "IBM Test card from the book 'Smart Card Application Development Using Java'",
+        "Type": ""
+    },
+    {
+        "AID": "D27600002200000002",
+        "Vendor": "IBM Laboratories",
+        "Country": "Germany",
+        "Name": "BUSINESS CARD",
+        "Description": "IBM Test card from the book 'Smart Card Application Development Using Java'",
+        "Type": ""
+    },
+    {
+        "AID": "D27600002200000060",
+        "Vendor": "IBM Laboratories",
+        "Country": "Germany",
+        "Name": "PKCS#11 Token",
+        "Description": "IBM Test card from the book 'Smart Card Application Development Using Java'",
+        "Type": ""
+    },
+    {
+        "AID": "D276000025",
+        "Vendor": "ZKA",
+        "Country": "Germany",
+        "Name": "Girocard",
+        "Description": "Girocard (Geldkarte) in Germany",
+        "Type": ""
+    },
+    {
+        "AID": "D27600002545410100",
+        "Vendor": "ZKA",
+        "Country": "Germany",
+        "Name": "",
+        "Description": "Unknown",
+        "Type": ""
+    },
+    {
+        "AID": "D27600002545500100",
+        "Vendor": "ZKA",
+        "Country": "Germany",
+        "Name": "Girocard",
+        "Description": "ZKA Girocard (Geldkarte) (Germany)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "D27600002547410100",
+        "Vendor": "ZKA",
+        "Country": "Germany",
+        "Name": "Girocard ATM",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D276000060",
+        "Vendor": "Wolfgang Rankl",
+        "Country": "Germany",
+        "Name": "",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D2760000850100",
+        "Vendor": "NXP Semiconductors / NFC Forum",
+        "Country": "Germany",
+        "Name": "NDEF Tag Application / Mifare DESFire Tag Application",
+        "Description": "NFC Forum Type 4 Tag",
+        "Type": ""
+    },
+    {
+        "AID": "D2760000850101",
+        "Vendor": "NXP Semiconductors / NFC Forum",
+        "Country": "Germany",
+        "Name": "NDEF Tag Application",
+        "Description": "NFC Tag type 4 tag",
+        "Type": ""
+    },
+    {
+        "AID": "D276000118",
+        "Vendor": "Giesecke&Devrient Java Card Telecommunikation",
+        "Country": "Germany",
+        "Name": "",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D2760001180101",
+        "Vendor": "Giesecke&Devrient Java Card Telecommunikation",
+        "Country": "Germany",
+        "Name": "Giesecke &amp",
+        "Description": "Devrient Test Applet",
+        "Type": ""
+    },
+    {
+        "AID": "D27600012401",
+        "Vendor": "fsfEurope",
+        "Country": "Germany",
+        "Name": "OpenPGP Card",
+        "Description": "For selection when not knowing the exact full AID",
+        "Type": "OpenPGP"
+    },
+    {
+        "AID": "D276000124010101FFFF000000010000",
+        "Vendor": "fsfEurope",
+        "Country": "Germany",
+        "Name": "OpenPGP Card",
+        "Description": "Version 1",
+        "Type": "OpenPGP"
+    },
+    {
+        "AID": "D2760001240102000000000000010000",
+        "Vendor": "fsfEurope",
+        "Country": "Germany",
+        "Name": "OpenPGP Card",
+        "Description": "Version 2",
+        "Type": "OpenPGP"
+    },
+    {
+        "AID": "D27600012402",
+        "Vendor": "fsfEurope",
+        "Country": "Germany",
+        "Name": "SmartChess",
+        "Description": "http://smartchess.de/englisch/SmartChess_1.0.pdf",
+        "Type": "SmartChess"
+    },
+    {
+        "AID": "D2760001240200010000000000000000",
+        "Vendor": "fsfEurope",
+        "Country": "Germany",
+        "Name": "SmartChess",
+        "Description": "http://smartchess.de/englisch/SmartChess_1.0.pdf",
+        "Type": "SmartChess"
+    },
+    {
+        "AID": "D4100000011010",
+        "Vendor": "",
+        "Country": "Republic of Korea",
+        "Name": "",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "D5280050218002",
+        "Vendor": "",
+        "Country": "The Netherlands",
+        "Name": "",
+        "Description": "(Netherlands)",
+        "Type": "EMV"
+    },
+    {
+        "AID": "D5780000021010",
+        "Vendor": "Bankaxept",
+        "Country": "Norway",
+        "Name": "Bankaxept",
+        "Description": "Norwegian domestic debit card",
+        "Type": "EMV"
+    },
+    {
+        "AID": "D7560000010101",
+        "Vendor": "Swiss Travel Fund (Reka)",
+        "Country": "Switzerland",
+        "Name": "Reka Card",
+        "Description": "prepaid functional debit card",
+        "Type": ""
+    },
+    {
+        "AID": "D7560000300101",
+        "Vendor": "Migros (FCM, GE Money Bank and MasterCard)",
+        "Country": "Switzerland",
+        "Name": "M Budget",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "E80704007F00070302",
+        "Vendor": "",
+        "Country": "",
+        "Name": "nPA",
+        "Description": "German eID",
+        "Type": ""
+    },
+    {
+        "AID": "E82881C11702",
+        "Vendor": "",
+        "Country": "",
+        "Name": "AlphaCard application",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "E828BD080F",
+        "Vendor": "",
+        "Country": "",
+        "Name": "ISO-7816-15 EF.DIR",
+        "Description": "Iso adoption of PKCS-15",
+        "Type": ""
+    },
+    {
+        "AID": "F0000000030001",
+        "Vendor": "",
+        "Country": "",
+        "Name": "BRADESCO",
+        "Description": "Brazilian Bank Banco Bradesco",
+        "Type": "EMV"
+    },
+    {
+        "AID": "7465736C6153746F7265303032",
+        "Vendor": "Tesla",
+        "Country": "",
+        "Name": "teslaStore002",
+        "Description": "Tesla car key",
+        "Type": "Tesla"
+    },
+    {
+        "AID": "7465736C614C6F67696330303201",
+        "Vendor": "Tesla",
+        "Country": "",
+        "Name": "teslaLogic002",
+        "Description": "Tesla car key",
+        "Type": "Tesla"
+    },
+    {
+        "AID": "7465736C61",
+        "Vendor": "Tesla",
+        "Country": "",
+        "Name": "tesla",
+        "Description": "Tesla car key generic AID",
+        "Type": "Tesla"
+    }
+]
