@@ -48,6 +48,7 @@ Known issues:
 
 * 256kb Arm chip devices: The compiled firmware image from this repo may/will be too large for your device. 
 * PM3 Evo: it has a different led/button pin assignment.  It tends to be messed up.
+* Proxmark Pro:  it has different fpga and unknown pin assignments.  Will most certainly mess up
 
 ## PLATFORM_EXTRAS
 
