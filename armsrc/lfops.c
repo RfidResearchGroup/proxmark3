@@ -52,11 +52,11 @@ SAM7S has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS
  TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 
 New timer implemenation in ticks.c, which is used in LFOPS.c
-       1us = 1.5ticks
- 1fc = 8us = 12ticks
+       1 μs = 1.5 ticks
+ 1 fc = 8 μs = 12 ticks
 
 Terms you find in different datasheets and how they match.
-1 Cycle = 8 microseconds(us)  == 1 field clock (fc)
+1 Cycle = 8 microseconds (μs)  == 1 field clock (fc)
 
 Note about HITAG timing
 Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
@@ -135,19 +135,30 @@ Initial values if not in flash
    RG = Read gap
 
  Explainations for array T55xx_Timing below
-         SG     WG    Bit 0/00 Bit 1/01  Bit 10  Bit 11  RG
+
+                           0        1       2       3
+         SG     WG    Bit 00   Bit 01  Bit 10  Bit 11   RG
    --------------------------------------------------------------------
         { 29    , 17    , 15    , 47    , 0     , 0     , 15     }, // Default Fixed
-        { 31    , 20    , 18    , 50    , 0     , 0     , 15     }, // Long Leading Ref.
-        { 31    , 20    , 18    , 40    , 0     , 0     , 15     }, // Leading 0
+        { 29    , 17    , 15    , 50    , 0     , 0     , 15     }, // Long Leading Ref.
+        { 29    , 17    , 15    , 40    , 0     , 0     , 15     }, // Leading 0
         { 29    , 17    , 15    , 31    , 47    , 63    , 15     }  // 1 of 4
 */
 t55xx_configurations_t T55xx_Timing  = {
     {
+#ifdef WITH_FLASH
+// PM3RDV4
         { 29 * 8, 17 * 8, 15 * 8, 47 * 8, 15 * 8, 0, 0 },           // Default Fixed
+        { 29 * 8, 17 * 8, 15 * 8, 47 * 8, 15 * 8, 0, 0 },           // Long Leading Ref.
+        { 29 * 8, 17 * 8, 15 * 8, 40 * 8, 15 * 8, 0, 0 },           // Leading 0
+        { 29 * 8, 17 * 8, 15 * 8, 31 * 8, 15 * 8, 47 * 8, 63 * 8 }  // 1 of 4
+#else
+// PM3OTHER or like offical repo
+        { 31 * 8, 20 * 8, 18 * 8, 50 * 8, 15 * 8, 0, 0 },           // Default Fixed
         { 31 * 8, 20 * 8, 18 * 8, 50 * 8, 15 * 8, 0, 0 },           // Long Leading Ref.
         { 31 * 8, 20 * 8, 18 * 8, 40 * 8, 15 * 8, 0, 0 },           // Leading 0
-        { 29 * 8, 17 * 8, 15 * 8, 31 * 8, 15 * 8, 47 * 8, 63 * 8 }  // 1 of 4
+        { 31 * 8, 20 * 8, 18 * 8, 34 * 8, 15 * 8, 50 * 8, 66 * 8 }  // 1 of 4
+#endif
     }
 };
 
