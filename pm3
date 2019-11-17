@@ -21,7 +21,7 @@ PM3LIST=()
 function get_pm3_list_Linux {
     PM3LIST=()
     for DEV in $(find /dev/ttyACM* 2>/dev/null); do
-        if udevadm info -q property -n "$DEV" |grep -q "ID_MODEL=proxmark3"; then
+        if udevadm info -q property -n "$DEV" |grep -q "ID_VENDOR=proxmark.org"; then
             PM3LIST+=("$DEV")
         fi
     done
