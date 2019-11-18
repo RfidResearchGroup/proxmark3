@@ -21,7 +21,7 @@ PM3LIST=()
 function get_pm3_list_Linux {
     PM3LIST=()
     for DEV in $(find /dev/ttyACM* 2>/dev/null); do
-        if udevadm info -q property -n "$DEV" |grep -q "ID_MODEL=proxmark3"; then
+        if udevadm info -q property -n "$DEV" |grep -q "ID_VENDOR=proxmark.org"; then
             PM3LIST+=("$DEV")
         fi
     done
@@ -29,7 +29,9 @@ function get_pm3_list_Linux {
 
 function get_pm3_list_macOS {
     PM3LIST=()
-    for DEV in $(ioreg -r -n proxmark3 -l|awk -F '"' '/IODialinDevice/{print $4}'); do
+    for DEV in $(ioreg -r -c "IOUSBHostDevice" -l|awk -F '"' '
+        $2=="USB Vendor Name"{b=($4=="proxmark.org")}
+        b==1 && $2=="IODialinDevice"{print $4}'); do
         PM3LIST+=("$DEV")
     done
 }
