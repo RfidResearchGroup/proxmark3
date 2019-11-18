@@ -696,6 +696,8 @@ static void PacketReceived(PacketCommandNG *packet) {
     */
 
     switch (packet->cmd) {
+        case CMD_BREAK_LOOP:
+            break;
         case CMD_QUIT_SESSION: {
             reply_via_fpc = false;
             reply_via_usb = false;

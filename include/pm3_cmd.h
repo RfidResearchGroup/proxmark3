@@ -288,6 +288,7 @@ typedef struct {
 #define CMD_STANDALONE                                                    0x0115
 #define CMD_WTX                                                           0x0116
 #define CMD_TIA                                                           0x0117
+#define CMD_BREAK_LOOP                                                    0x0118
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_WRITE                                                0x0121
@@ -550,6 +551,8 @@ typedef struct {
 
 // Error codes                          Usages:
 
+// Success, transfer nonces            pm3:        Sending nonces back to client
+#define PM3_SNONCES             1
 // Success (no error)
 #define PM3_SUCCESS             0
 
