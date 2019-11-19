@@ -372,6 +372,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added  `hf fido` `assert` and `make` commands from fido2 protocol (authenticatorMakeCredential and authenticatorGetAssertion) (@merlokk)
  - Added trailer block decoding to `hf mf rdbl` and `hf mf cgetbl` (@merlokk)
  - Added `hf mf mad` and `hf mfp mad` MAD decode, check and print commands (@merlokk)
+ - Add `script run luxeodump` (@0xdrrb)
 
 
 ### Fixed
