@@ -121,38 +121,6 @@ local function createxteakey(mfuid)
 	return xteakey
 end
 
--- CRC16/ARC from core.reveng_runmodel() does not seem to return the right values.
--- So here is an implementation in Lua.
-local function bitreflect(data, nbits)
-	local output = 0
-	for i = 0, nbits-1 do
-		if bit.band(data,1) ~= 0 then
-			output = bit32.bor(output, bit32.lshift(1,((nbits - 1) - i)))
-		else
-		end
-		data = bit32.rshift(data,1)
-	end
-	return output
-end
-
-local function crc16arc(s)
-    assert(type(s) == 'string')
-    local crc = 0x0000
-    for i = 1, #s do
-		local c = s:byte(i)
-		dbyte = bitreflect(c, 8)
-		crc = bit32.bxor(crc, bit32.lshift(dbyte,8))
-		for j = 0, 7 do
-			local mix = bit32.band(crc, 0x8000)
-			crc = bit32.lshift(crc,1)
-			if mix ~= 0 then
-				crc = bit32.bxor(crc, 0x8005)
-			end
-		end
-	end
-	return bitreflect(crc, 16)
-end
-
 local function getblockdata(response)
     if not response then
         return nil, 'No response from device'
@@ -253,9 +221,9 @@ local function main(args)
 	end
 
 	-- compute CRC for each segment
-	crcH = crc16arc(utils.ConvertHexToAscii(cdata[1]..cdata[2]..cdata[3]:sub(1,28)))
-	crcA = crc16arc(utils.ConvertHexToAscii(cdata[4]..cdata[5]..cdata[6]..cdata[7]:sub(1,28)))
-	crcB = crc16arc(utils.ConvertHexToAscii(cdata[8]..cdata[9]..cdata[10]..cdata[11]:sub(1,28)))
+    crcH = utils.SwapEndianness(core.reveng_runmodel("CRC-16/ARC", cdata[1]..cdata[2]..cdata[3]:sub(1,28), false, '0'),16)
+    crcA = utils.SwapEndianness(core.reveng_runmodel("CRC-16/ARC", cdata[4]..cdata[5]..cdata[6]..cdata[7]:sub(1,28), false, '0'),16)
+    crcB = utils.SwapEndianness(core.reveng_runmodel("CRC-16/ARC", cdata[8]..cdata[9]..cdata[10]..cdata[11]:sub(1,28), false, '0'),16)
 
 	print("\nHeader:")
 	for key,value in ipairs(cdata) do
