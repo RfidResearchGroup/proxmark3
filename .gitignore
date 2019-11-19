@@ -26,6 +26,8 @@
 *.dsym
 version.c
 *.json
+*.old
+*.swp
 
 # new build file for add-ons.
 Makefile.platform
