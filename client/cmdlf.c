@@ -1054,10 +1054,9 @@ int CmdLFSimBidir(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// ICEMAN,  todo,   swap from Graphbuffer.
-// according to  Westhus this demod uses decimated samples / 2.
-// need to do complete rewrite.  Need access to reader / chip
-// should be extracted to seperate files aswell
+// ICEMAN,  Verichip is Animal tag.  Tested against correct reader
+/*
+
 int CmdVchDemod(const char *Cmd) {
 
     if (GraphTraceLen < 4096) {
@@ -1080,6 +1079,8 @@ int CmdVchDemod(const char *Cmd) {
         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
         1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     };
+
+    // iceman, using correlate as preamble detect seems way better than our current memcompare
 
     // So first, we correlate for the sync pattern, and mark that.
     int bestCorrel = 0, bestPos = 0;
@@ -1135,6 +1136,7 @@ int CmdVchDemod(const char *Cmd) {
     }
     return PM3_SUCCESS;
 }
+*/
 
 static bool CheckChipType(bool getDeviceData) {
 
@@ -1168,6 +1170,7 @@ out:
 }
 
 int CmdLFfind(const char *Cmd) {
+    int retval = PM3_SUCCESS;
     int ans = 0;
     size_t minLength = 2000;
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -1208,7 +1211,7 @@ int CmdLFfind(const char *Cmd) {
             }
 
             if (readMotorolaUid()) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola ID") "found!");
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") "found!");
                 return PM3_SUCCESS;
             }
 
@@ -1250,7 +1253,6 @@ int CmdLFfind(const char *Cmd) {
     if (demodGallagher() == PM3_SUCCESS)       { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("GALLAGHER ID") "found!"); goto out;}
 //    if (demodTI() == PM3_SUCCESS)              { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Texas Instrument ID") "found!"); goto out;}
     //if (demodFermax() == PM3_SUCCESS)          { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fermax ID") "found!"); goto out;}
-    //if (demodFlex() == PM3_SUCCESS)            { PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") "found!"); goto out;}
 
     PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
 
@@ -1291,12 +1293,15 @@ int CmdLFfind(const char *Cmd) {
 
         PrintAndLogEx(FAILED, _RED_("\nNo data found!"));
     }
+
+    retval = PM3_ESOFT;
+
 out:
     // identify chipset
     if (CheckChipType(isOnline) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
     }
-    return PM3_SUCCESS;
+    return retval;
 }
 
 static command_t CommandTable[] = {
@@ -1340,7 +1345,7 @@ static command_t CommandTable[] = {
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},
 //    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "['clone'] -- Demodulate samples for VeriChip"},
-    {"flexdemod",   CmdFlexdemod,       AlwaysAvailable, "Demodulate samples for Motorola FlexPass"},
+//    {"flexdemod",   CmdFlexdemod,       AlwaysAvailable, "Demodulate samples for Motorola FlexPass"},
     {NULL, NULL, NULL, NULL}
 };
 
