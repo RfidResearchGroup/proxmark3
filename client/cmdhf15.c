@@ -85,10 +85,11 @@ const productName uidmapping[] = {
     //I-Code SLI-S         [IC id = 02]
     //I-Code SLI-L         [IC id = 03]
     //I-Code SLIX          [IC id = 01 + bit36 set to 1 (starting from bit0 - different from normal SLI)]
+    //I-Code SLIX2         [IC id = 01 + bit35 set to 1 + bit36 set to 0]
     //I-Code SLIX-S        [IC id = 02 + bit36 set to 1]
     //I-Code SLIX-L        [IC id = 03 + bit36 set to 1]
     { 0xE004000000000000LL, 16, "NXP Semiconductors Germany (Philips)" },
-    { 0xE004010000000000LL, 24, "NXP(Philips); IC SL2 ICS20/ICS21(SLI) ICS2002/ICS2102(SLIX)" },
+    { 0xE004010000000000LL, 24, "NXP(Philips); IC SL2 ICS20/ICS21(SLI) ICS2002/ICS2102(SLIX) ICS2602(SLIX2)" },
     { 0xE004020000000000LL, 24, "NXP(Philips); IC SL2 ICS53/ICS54(SLI-S) ICS5302/ICS5402(SLIX-S)" },
     { 0xE004030000000000LL, 24, "NXP(Philips); IC SL2 ICS50/ICS51(SLI-L) ICS5002/ICS5102(SLIX-L)" },
 
@@ -237,7 +238,7 @@ static int getUID(uint8_t *buf) {
         }
     } // retry
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // get a product description based on the UID
@@ -297,12 +298,12 @@ static int CmdHF15Help(const char *Cmd);
 static int usage_15_demod(void) {
     PrintAndLogEx(NORMAL, "Tries to demodulate / decode ISO15693, from downloaded samples.\n"
                   "Gather samples with 'hf 15 read' / 'hf 15 record'");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_samples(void) {
     PrintAndLogEx(NORMAL, "Acquire samples as Reader (enables carrier, send inquiry\n"
                   "and download it to graphbuffer.  Try 'hf 15 demod'  to try to demodulate/decode signal");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_info(void) {
     PrintAndLogEx(NORMAL, "Uses the optional command 'get_systeminfo' 0x2B to try and extract information\n"
@@ -318,11 +319,11 @@ static int usage_15_info(void) {
                   "\t  *         scan for tag\n"
                   "Examples:\n"
                   "\thf 15 info u");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_record(void) {
-    PrintAndLogEx(NORMAL, "Record activity without enableing carrier");
-    return 0;
+    PrintAndLogEx(NORMAL, "Record activity without enabling carrier");
+    return PM3_SUCCESS;
 }
 static int usage_15_reader(void) {
     PrintAndLogEx(NORMAL, "This command identifies a ISO 15693 tag\n"
@@ -333,23 +334,25 @@ static int usage_15_reader(void) {
                   "\n"
                   "Example:\n"
                   "\thf 15 reader");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_sim(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 sim <UID>\n"
                   "\n"
                   "Example:\n"
                   "\thf 15 sim E016240000000000");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_findafi(void) {
-    PrintAndLogEx(NORMAL, "'hf 15 finafi' This command needs a helptext. Feel free to add one!");
-    return 0;
+    PrintAndLogEx(NORMAL, "This command attempts to brute force AFI of an ISO15693 tag\n"
+                  "\n"
+                  "Usage: hf 15 findafi");
+    return PM3_SUCCESS;
 }
 static int usage_15_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-15693 tag and save it to file\n"
                   "\n"
-                  "Usage: hf 15 dump [h] <f filname> \n"
+                  "Usage: hf 15 dump [h] <f filename> \n"
                   "Options:\n"
                   "\th             this help\n"
                   "\tf <name>      filename,  if no <name> UID will be used as filename\n"
@@ -357,7 +360,7 @@ static int usage_15_dump(void) {
                   "Example:\n"
                   "\thf 15 dump f\n"
                   "\thf 15 dump f mydump");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_restore(void) {
     const char *options[][2] = {
@@ -371,7 +374,7 @@ static int usage_15_restore(void) {
     };
     PrintAndLogEx(NORMAL, "Usage: hf 15 restore [-2] [-o] [h] [r <NUM>] [u <UID>] [f <filename>] [b <block size>]");
     PrintAndLogOptions(options, 7, 3);
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_raw(void) {
     const char *options[][2] = {
@@ -382,7 +385,7 @@ static int usage_15_raw(void) {
     };
     PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>\n");
     PrintAndLogOptions(options, 4, 3);
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_read(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 read    [options] <uid|s|u|*> <page#>\n"
@@ -393,7 +396,7 @@ static int usage_15_read(void) {
                   "\t   u         unaddressed mode\n"
                   "\t   *         scan for tag\n"
                   "\tpage#:        page number 0-255");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_write(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 write    [options] <uid|s|u|*> <page#> <hexdata>\n"
@@ -406,7 +409,7 @@ static int usage_15_write(void) {
                   "\t   *         scan for tag\n"
                   "\tpage#:        page number 0-255\n"
                   "\thexdata:      data to be written eg AA BB CC DD");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_readmulti(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf 15 readmulti  [options] <uid|s|u|*> <start#> <count#>\n"
@@ -418,7 +421,7 @@ static int usage_15_readmulti(void) {
                   "\t   *         scan for tag\n"
                   "\tstart#:       page number to start 0-255\n"
                   "\tcount#:       number of pages");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_15_csetuid(void) {
     PrintAndLogEx(NORMAL, "Set UID for magic Chinese card (only works with such cards)\n"
@@ -429,7 +432,7 @@ static int usage_15_csetuid(void) {
                   "\n"
                   "Example:\n"
                   "\thf 15 csetuid E011223344556677");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /**
@@ -686,7 +689,7 @@ static int CmdHF15Info(const char *Cmd) {
     return 0;
 }
 
-// Record Activity without enabeling carrier
+// Record Activity without enabling carrier
 //helptext
 static int CmdHF15Record(const char *Cmd) {
     char cmdp =  tolower(param_getchar(Cmd, 0));
@@ -724,8 +727,8 @@ static int CmdHF15Sim(const char *Cmd) {
     return 0;
 }
 
-// finds the AFI (Application Family Idendifier) of a card, by trying all values
-// (There is no standard way of reading the AFI, allthough some tags support this)
+// finds the AFI (Application Family Identifier) of a card, by trying all values
+// (There is no standard way of reading the AFI, although some tags support this)
 // helptext
 static int CmdHF15Afi(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
@@ -856,15 +859,25 @@ static int CmdHF15Dump(const char *Cmd) {
     size_t datalen = blocknum * 4;
     saveFileEML(filename, data, datalen, 4);
     saveFile(filename, ".bin", data, datalen);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF15List(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     //PrintAndLogEx(WARNING, "Deprecated command, use 'hf list 15' instead");
     CmdTraceList("15");
-    return 0;
+    return PM3_SUCCESS;
 }
+
+/*
+// Record Activity without enabling carrier
+static int CmdHF15Sniff(const char *Cmd)
+{
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_SNIFF, NULL, 0);
+    return PM3_SUCCESS;
+}
+*/
 
 static int CmdHF15Raw(const char *Cmd) {
 
@@ -939,7 +952,7 @@ static int CmdHF15Raw(const char *Cmd) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /**
@@ -1020,7 +1033,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
         currblock++;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /**
@@ -1092,7 +1105,7 @@ static int CmdHF15Read(const char *Cmd) {
     PrintAndLogEx(NORMAL, "------------+---+------");
     PrintAndLogEx(NORMAL, "%s| %d | %s", sprint_hex(recv + 2, status - 4), recv[1], sprint_ascii(recv + 2, status - 4));
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /**
@@ -1170,7 +1183,7 @@ static int CmdHF15Write(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "OK");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF15Restore(const char *Cmd) {
@@ -1257,7 +1270,7 @@ static int CmdHF15Restore(const char *Cmd) {
         if (bytes_read == 0) {
             PrintAndLogEx(SUCCESS, "File reading done `%s`", filename);
             fclose(f);
-            return 0;
+            return PM3_SUCCESS;
         } else if (bytes_read != blocksize) {
             PrintAndLogEx(ERR, "File reading error (%s), %zu bytes read instead of %zu bytes.", filename, bytes_read, blocksize);
             fclose(f);
@@ -1290,7 +1303,7 @@ static int CmdHF15Restore(const char *Cmd) {
     }
     fclose(f);
     PrintAndLogEx(INFO, "Finish restore");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /**
@@ -1396,7 +1409,8 @@ static command_t CommandTable[] = {
     {"dump",        CmdHF15Dump,        IfPm3Iso15693,   "Read all memory pages of an ISO15693 tag, save to file"},
     {"findafi",     CmdHF15Afi,         IfPm3Iso15693,   "Brute force AFI of an ISO15693 tag"},
     {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
-    {"list",        CmdHF15List,        AlwaysAvailable,   "List ISO15693 history"},
+//    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
+    {"list",        CmdHF15List,        AlwaysAvailable, "List ISO15693 history"},
     {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
     {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
     {"record",      CmdHF15Record,      IfPm3Iso15693,   "Record Samples (ISO15693)"},
@@ -1406,14 +1420,14 @@ static command_t CommandTable[] = {
     {"read",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
     {"write",       CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
     {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
-    {"csetuid",   CmdHF15CSetUID,   IfPm3Iso15693,   "Set UID for magic Chinese card"},
+    {"csetuid",     CmdHF15CSetUID,     IfPm3Iso15693,   "Set UID for magic Chinese card"},
     {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHF15Help(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHF15(const char *Cmd) {

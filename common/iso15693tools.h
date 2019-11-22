@@ -51,21 +51,45 @@
 #define ISO15_ERROR_BLOCL_WRITELOCK      0x14 // Locking was unsuccessful
 
 // COMMAND CODES
-#define ISO15_CMD_INVENTORY              0x01
-#define ISO15_CMD_STAYQUIET              0x02
-#define ISO15_CMD_READ                   0x20
-#define ISO15_CMD_WRITE                  0x21
-#define ISO15_CMD_LOCK                   0x22
-#define ISO15_CMD_READMULTI              0x23
-#define ISO15_CMD_WRITEMULTI             0x24
-#define ISO15_CMD_SELECT                 0x25
-#define ISO15_CMD_RESET                  0x26
-#define ISO15_CMD_WRITEAFI               0x27
-#define ISO15_CMD_LOCKAFI                0x28
-#define ISO15_CMD_WRITEDSFID             0x29
-#define ISO15_CMD_LOCKDSFID              0x2A
-#define ISO15_CMD_SYSINFO                0x2B
-#define ISO15_CMD_SECSTATUS              0x2C
+#define ISO15_CMD_INVENTORY               0x01
+#define ISO15_CMD_STAYQUIET               0x02
+#define ISO15_CMD_READ                    0x20
+#define ISO15_CMD_WRITE                   0x21
+#define ISO15_CMD_LOCK                    0x22
+#define ISO15_CMD_READMULTI               0x23
+#define ISO15_CMD_WRITEMULTI              0x24
+#define ISO15_CMD_SELECT                  0x25
+#define ISO15_CMD_RESET                   0x26
+#define ISO15_CMD_WRITEAFI                0x27
+#define ISO15_CMD_LOCKAFI                 0x28
+#define ISO15_CMD_WRITEDSFID              0x29
+#define ISO15_CMD_LOCKDSFID               0x2A
+#define ISO15_CMD_SYSINFO                 0x2B
+#define ISO15_CMD_SECSTATUS               0x2C
+#define ISO15_CMD_INVENTORYREAD           0xA0
+#define ISO15_CMD_FASTINVENTORYREAD       0xA1
+#define ISO15_CMD_SETEAS                  0xA2
+#define ISO15_CMD_RESETEAS                0xA3
+#define ISO15_CMD_LOCKEAS                 0xA4
+#define ISO15_CMD_EASALARM                0xA5
+#define ISO15_CMD_PASSWORDPROTECTEAS      0xA6
+#define ISO15_CMD_WRITEEASID              0xA7
+#define ISO15_CMD_READEPC                 0xA8
+#define ISO15_CMD_GETNXPSYSTEMINFO        0xAB
+#define ISO15_CMD_INVENTORYPAGEREAD       0xB0
+#define ISO15_CMD_FASTINVENTORYPAGEREAD   0xB1
+#define ISO15_CMD_GETRANDOMNUMBER         0xB2
+#define ISO15_CMD_SETPASSWORD             0xB3
+#define ISO15_CMD_WRITEPASSWORD           0xB4
+#define ISO15_CMD_LOCKPASSWORD            0xB5
+#define ISO15_CMD_PROTECTPAGE             0xB6
+#define ISO15_CMD_LOCKPAGEPROTECTION      0xB7
+#define ISO15_CMD_GETMULTIBLOCKPROTECTION 0xB8
+#define ISO15_CMD_DESTROY                 0xB9
+#define ISO15_CMD_ENABLEPRIVACY           0xBA
+#define ISO15_CMD_64BITPASSWORDPROTECTION 0xBB
+#define ISO15_CMD_STAYQUIETPERSISTENT     0xBC
+#define ISO15_CMD_READSIGNATURE           0xBD
 
 //-----------------------------------------------------------------------------
 // Map a sequence of octets (~layer 2 command) into the set of bits to feed
