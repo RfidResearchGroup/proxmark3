@@ -428,6 +428,78 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case ISO15693_READ_MULTI_SECSTATUS:
             snprintf(exp, size, "READ_MULTI_SECSTATUS");
             return;
+        case ISO15693_INVENTORY_READ:
+            snprintf(exp, size, "INVENTORY_READ");
+            return;
+        case ISO15693_FAST_INVENTORY_READ:
+            snprintf(exp, size, "FAST_INVENTORY_READ");
+            return;
+        case ISO15693_SET_EAS:
+            snprintf(exp, size, "SET_EAS");
+            return;
+        case ISO15693_RESET_EAS:
+            snprintf(exp, size, "RESET_EAS");
+            return;
+        case ISO15693_LOCK_EAS:
+            snprintf(exp, size, "LOCK_EAS");
+            return;
+        case ISO15693_EAS_ALARM:
+            snprintf(exp, size, "EAS_ALARM");
+            return;
+        case ISO15693_PASSWORD_PROTECT_EAS:
+            snprintf(exp, size, "PASSWORD_PROTECT_EAS");
+            return;
+        case ISO15693_WRITE_EAS_ID:
+            snprintf(exp, size, "WRITE_EAS_ID");
+            return;
+        case ISO15693_READ_EPC:
+            snprintf(exp, size, "READ_EPC");
+            return;
+        case ISO15693_GET_NXP_SYSTEM_INFO:
+            snprintf(exp, size, "GET_NXP_SYSTEM_INFO");
+            return;
+        case ISO15693_INVENTORY_PAGE_READ:
+            snprintf(exp, size, "INVENTORY_PAGE_READ");
+            return;
+        case ISO15693_FAST_INVENTORY_PAGE_READ:
+            snprintf(exp, size, "FAST_INVENTORY_PAGE_READ");
+            return;
+        case ISO15693_GET_RANDOM_NUMBER:
+            snprintf(exp, size, "GET_RANDOM_NUMBER");
+            return;
+        case ISO15693_SET_PASSWORD:
+            snprintf(exp, size, "SET_PASSWORD");
+            return;
+        case ISO15693_WRITE_PASSWORD:
+            snprintf(exp, size, "WRITE_PASSWORD");
+            return;
+        case ISO15693_LOCK_PASSWORD:
+            snprintf(exp, size, "LOCK_PASSWORD");
+            return;
+        case ISO15693_PROTECT_PAGE:
+            snprintf(exp, size, "PROTECT_PAGE");
+            return;
+        case ISO15693_LOCK_PAGE_PROTECTION:
+            snprintf(exp, size, "LOCK_PAGE_PROTECTION");
+            return;
+        case ISO15693_GET_MULTI_BLOCK_PROTECTION:
+            snprintf(exp, size, "GET_MULTI_BLOCK_PROTECTION");
+            return;
+        case ISO15693_DESTROY:
+            snprintf(exp, size, "DESTROY");
+            return;
+        case ISO15693_ENABLE_PRIVACY:
+            snprintf(exp, size, "ENABLE_PRIVACY");
+            return;
+        case ISO15693_64BIT_PASSWORD_PROTECTION:
+            snprintf(exp, size, "64BIT_PASSWORD_PROTECTION");
+            return;
+        case ISO15693_STAYQUIET_PERSISTENT:
+            snprintf(exp, size, "STAYQUIET_PERSISTENT");
+            return;
+        case ISO15693_READ_SIGNATURE:
+            snprintf(exp, size, "READ_SIGNATURE");
+            return;
         default:
             break;
     }

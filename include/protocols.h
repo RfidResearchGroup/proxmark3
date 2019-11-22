@@ -239,19 +239,43 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO15693_INVENTORY     0x01
 #define ISO15693_STAYQUIET     0x02
 //First byte is 02
-#define ISO15693_READBLOCK            0x20
-#define ISO15693_WRITEBLOCK           0x21
-#define ISO15693_LOCKBLOCK            0x22
-#define ISO15693_READ_MULTI_BLOCK     0x23
-#define ISO15693_SELECT               0x25
-#define ISO15693_RESET_TO_READY       0x26
-#define ISO15693_WRITE_AFI            0x27
-#define ISO15693_LOCK_AFI             0x28
-#define ISO15693_WRITE_DSFID          0x29
-#define ISO15693_LOCK_DSFID           0x2A
-#define ISO15693_GET_SYSTEM_INFO      0x2B
-#define ISO15693_READ_MULTI_SECSTATUS 0x2C
-
+#define ISO15693_READBLOCK                   0x20
+#define ISO15693_WRITEBLOCK                  0x21
+#define ISO15693_LOCKBLOCK                   0x22
+#define ISO15693_READ_MULTI_BLOCK            0x23
+#define ISO15693_SELECT                      0x25
+#define ISO15693_RESET_TO_READY              0x26
+#define ISO15693_WRITE_AFI                   0x27
+#define ISO15693_LOCK_AFI                    0x28
+#define ISO15693_WRITE_DSFID                 0x29
+#define ISO15693_LOCK_DSFID                  0x2A
+#define ISO15693_GET_SYSTEM_INFO             0x2B
+#define ISO15693_READ_MULTI_SECSTATUS        0x2C
+// NXP/Philips custom commands
+#define ISO15693_INVENTORY_READ              0xA0
+#define ISO15693_FAST_INVENTORY_READ         0xA1
+#define ISO15693_SET_EAS                     0xA2
+#define ISO15693_RESET_EAS                   0xA3
+#define ISO15693_LOCK_EAS                    0xA4
+#define ISO15693_EAS_ALARM                   0xA5
+#define ISO15693_PASSWORD_PROTECT_EAS        0xA6
+#define ISO15693_WRITE_EAS_ID                0xA7
+#define ISO15693_READ_EPC                    0xA8
+#define ISO15693_GET_NXP_SYSTEM_INFO         0xAB
+#define ISO15693_INVENTORY_PAGE_READ         0xB0
+#define ISO15693_FAST_INVENTORY_PAGE_READ    0xB1
+#define ISO15693_GET_RANDOM_NUMBER           0xB2
+#define ISO15693_SET_PASSWORD                0xB3
+#define ISO15693_WRITE_PASSWORD              0xB4
+#define ISO15693_LOCK_PASSWORD               0xB5
+#define ISO15693_PROTECT_PAGE                0xB6
+#define ISO15693_LOCK_PAGE_PROTECTION        0xB7
+#define ISO15693_GET_MULTI_BLOCK_PROTECTION  0xB8
+#define ISO15693_DESTROY                     0xB9
+#define ISO15693_ENABLE_PRIVACY              0xBA
+#define ISO15693_64BIT_PASSWORD_PROTECTION   0xBB
+#define ISO15693_STAYQUIET_PERSISTENT        0xBC
+#define ISO15693_READ_SIGNATURE              0xBD
 
 // Topaz command set:
 #define TOPAZ_REQA                    0x26 // Request
