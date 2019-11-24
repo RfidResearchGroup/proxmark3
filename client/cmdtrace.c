@@ -50,21 +50,21 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        trace list 14a f");
     PrintAndLogEx(NORMAL, "        trace list iclass");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_trace_load() {
     PrintAndLogEx(NORMAL, "Load protocol data from file to trace buffer.");
     PrintAndLogEx(NORMAL, "Usage:  trace load <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        trace load mytracefile.bin");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_trace_save() {
     PrintAndLogEx(NORMAL, "Save protocol data from trace buffer to file.");
     PrintAndLogEx(NORMAL, "Usage:  trace save <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        trace save mytracefile.bin");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static bool is_last_record(uint16_t tracepos, uint8_t *trace, uint16_t traceLen) {
@@ -450,7 +450,7 @@ static int CmdTraceLoad(const char *Cmd) {
 
     if ((f = fopen(filename, "rb")) == NULL) {
         PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
-        return 0;
+        return PM3_EIO;
     }
 
     // get filesize in order to malloc memory
@@ -461,12 +461,12 @@ static int CmdTraceLoad(const char *Cmd) {
     if (fsize < 0) {
         PrintAndLogEx(FAILED, "error, when getting filesize");
         fclose(f);
-        return 3;
+        return PM3_EIO;
     }
     if (fsize < 4) {
         PrintAndLogEx(FAILED, "error, file is too small");
         fclose(f);
-        return 4;
+        return PM3_ESOFT;
     }
 
     if (trace)
@@ -476,21 +476,21 @@ static int CmdTraceLoad(const char *Cmd) {
     if (!trace) {
         PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
         fclose(f);
-        return 2;
+        return PM3_EMALLOC;
     }
 
     size_t bytes_read = fread(trace, 1, fsize, f);
     traceLen = bytes_read;
     fclose(f);
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %lu bytes) loaded from file %s", traceLen, filename);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdTraceSave(const char *Cmd) {
 
     if (traceLen == 0) {
         PrintAndLogEx(WARNING, "trace is empty, nothing to save");
-        return 0;
+        return PM3_SUCCESS;
     }
 
     char filename[FILE_PATH_SIZE];
@@ -499,7 +499,7 @@ static int CmdTraceSave(const char *Cmd) {
 
     param_getstr(Cmd, 0, filename, sizeof(filename));
     saveFile(filename, ".bin", trace, traceLen);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -513,7 +513,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdTrace(const char *Cmd) {
@@ -604,15 +604,20 @@ int CmdTraceList(const char *Cmd) {
     uint16_t tracepos = 0;
 
     // reserv some space.
-    if (!trace)
+    if (!trace) {
         trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
+        if (trace == NULL) {
+            PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+            return PM3_EMALLOC;
+        }
+    }
 
     if (isOnline) {
         // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
         PacketResponseNG response;
         if (!GetFromDevice(BIG_BUF, trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            return 1;
+            return PM3_ETIMEOUT;
         }
 
         traceLen = response.oldarg[2];
@@ -621,13 +626,13 @@ int CmdTraceList(const char *Cmd) {
             if (p == NULL) {
                 PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
                 free(trace);
-                return 2;
+                return PM3_EMALLOC;
             }
             trace = p;
             if (!GetFromDevice(BIG_BUF, trace, traceLen, 0, NULL, 0, NULL, 2500, false)) {
                 PrintAndLogEx(WARNING, "command execution time out");
                 free(trace);
-                return 3;
+                return PM3_ETIMEOUT;
             }
         }
     }
@@ -678,6 +683,6 @@ int CmdTraceList(const char *Cmd) {
                 break;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
