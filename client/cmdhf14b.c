@@ -808,13 +808,13 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     }
 
     if (blockno == 0xff) {
-        PrintAndLogEx(SUCCESS, "[%s] Write special block %02X [ %s ]",
+        PrintAndLogEx(SUCCESS, "[%s] Write special block %02X [ " _YELLOW_("%s")" ]",
                       (isSrix4k) ? "SRIX4K" : "SRI512",
                       blockno,
                       sprint_hex(data, 4)
                      );
     } else {
-        PrintAndLogEx(SUCCESS, "[%s] Write block %02X [ %s ]",
+        PrintAndLogEx(SUCCESS, "[%s] Write block %02X [ " _YELLOW_("%s")" ]",
                       (isSrix4k) ? "SRIX4K" : "SRI512",
                       blockno,
                       sprint_hex(data, 4)
