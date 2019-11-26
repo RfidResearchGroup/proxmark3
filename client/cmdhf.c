@@ -100,13 +100,10 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
-        if (readHF15Uid(false) == 1) {
+        if (readHF15Uid(false)) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
-            DropField();
             return PM3_SUCCESS;
         }
-        // until refactoring of ISO15693 cmds,  this is needed.
-        DropField();
     }
 
     PROMPT_CLEARLINE;
