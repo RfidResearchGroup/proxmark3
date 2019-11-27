@@ -551,30 +551,29 @@ int CmdHF14ASniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode) {
     static uint8_t responseNum = 0;
     uint16_t cmdc = 0;
     *dataoutlen = 0;
 
     if (activateField) {
-        responseNum = 1;
         PacketResponseNG resp;
 
         // Anticollision + SELECT card
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
+            if (!silentMode) PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
             return 1;
         }
 
         // check result
         if (resp.oldarg[0] == 0) {
-            PrintAndLogEx(ERR, "No card in field.");
+            if (!silentMode) PrintAndLogEx(ERR, "No card in field.");
             return 1;
         }
 
         if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
-            PrintAndLogEx(ERR, "Card not in iso14443-4. res=%" PRId64 ".", resp.oldarg[0]);
+            if (!silentMode) PrintAndLogEx(ERR, "Card not in iso14443-4. res=%" PRId64 ".", resp.oldarg[0]);
             return 1;
         }
 
@@ -583,12 +582,12 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
             SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, 2);
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
+                if (!silentMode) PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
                 return 1;
             }
 
             if (resp.oldarg[0] == 0) { // ats_len
-                PrintAndLogEx(ERR, "Can't get ATS.");
+                if (!silentMode) PrintAndLogEx(ERR, "Can't get ATS.");
                 return 1;
             }
         }
@@ -610,7 +609,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         int iLen = resp.oldarg[0];
 
         if (!iLen) {
-            PrintAndLogEx(ERR, "No card response.");
+            if (!silentMode) PrintAndLogEx(ERR, "No card response.");
             return 1;
         }
 
@@ -619,12 +618,12 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
             *dataoutlen = 0;
 
         if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-            PrintAndLogEx(ERR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
+            if (!silentMode) PrintAndLogEx(ERR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
             return 2;
         }
 
         if (recv[0] != data[0]) {
-            PrintAndLogEx(ERR, "iso14443-4 framing error. Card send %2x must be %2x", dataout[0], data[0]);
+            if (!silentMode) PrintAndLogEx(ERR, "iso14443-4 framing error. Card send %2x must be %2x", dataout[0], data[0]);
             return 2;
         }
 
@@ -632,12 +631,12 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
         // CRC Check
         if (iLen == -1) {
-            PrintAndLogEx(ERR, "ISO 14443A CRC error.");
+            if (!silentMode) PrintAndLogEx(ERR, "ISO 14443A CRC error.");
             return 3;
         }
 
     } else {
-        PrintAndLogEx(ERR, "Reply timeout.");
+        if (!silentMode) PrintAndLogEx(ERR, "Reply timeout.");
         return 4;
     }
 

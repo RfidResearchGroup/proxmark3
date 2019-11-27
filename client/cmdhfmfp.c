@@ -88,7 +88,7 @@ static int CmdHFMFPInfo(const char *cmd) {
                 int datalen = 0;
                 // https://github.com/Proxmark/proxmark3/blob/master/client/luascripts/mifarePlus.lua#L161
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
-                int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen);
+                int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen, false);
                 if (!res && datalen > 1 && data[0] == 0x09) {
                     SLmode = 0;
                 }
@@ -105,7 +105,7 @@ static int CmdHFMFPInfo(const char *cmd) {
 
     DropField();
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFMFPWritePerso(const char *cmd) {
@@ -169,7 +169,7 @@ static int CmdHFMFPWritePerso(const char *cmd) {
     }
     PrintAndLogEx(INFO, "Write OK.");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
@@ -245,7 +245,7 @@ static int CmdHFMFPInitPerso(const char *cmd) {
 
     PrintAndLogEx(INFO, "Done.");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFMFPCommitPerso(const char *cmd) {
@@ -286,7 +286,7 @@ static int CmdHFMFPCommitPerso(const char *cmd) {
     }
     PrintAndLogEx(INFO, "Switch level OK.");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFMFPAuth(const char *cmd) {
@@ -324,7 +324,7 @@ static int CmdHFMFPAuth(const char *cmd) {
         return 1;
     }
 
-    return MifareAuth4(NULL, keyn, key, true, false, verbose);
+    return MifareAuth4(NULL, keyn, key, true, false, true, verbose, false);
 }
 
 static int CmdHFMFPRdbl(const char *cmd) {
@@ -392,7 +392,7 @@ static int CmdHFMFPRdbl(const char *cmd) {
         PrintAndLogEx(INFO, "--block:%d sector[%d]:%02x key:%04x", blockn, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
     mf4Session mf4session;
-    int res = MifareAuth4(&mf4session, keyn, key, true, true, verbose);
+    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
@@ -491,7 +491,7 @@ static int CmdHFMFPRdsc(const char *cmd) {
         PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
     mf4Session mf4session;
-    int res = MifareAuth4(&mf4session, keyn, key, true, true, verbose);
+    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
@@ -532,7 +532,7 @@ static int CmdHFMFPRdsc(const char *cmd) {
     }
     DropField();
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFMFPWrbl(const char *cmd) {
@@ -595,7 +595,7 @@ static int CmdHFMFPWrbl(const char *cmd) {
         PrintAndLogEx(INFO, "--block:%d sector[%d]:%02x key:%04x", blockNum & 0xff, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
     mf4Session mf4session;
-    int res = MifareAuth4(&mf4session, keyn, key, true, true, verbose);
+    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
@@ -634,7 +634,40 @@ static int CmdHFMFPWrbl(const char *cmd) {
 
     DropField();
     PrintAndLogEx(INFO, "Write OK.");
-    return 0;
+    return PM3_SUCCESS;
+}
+
+static int CmdHFMFPChk() {
+    int res;
+    bool selectCard = true;
+    
+    uint8_t startSector = 0;
+    uint8_t endSector = 0;
+    uint8_t startKeyAB = 0;
+    uint8_t endKeyAB = 0;
+    
+    
+    uint8_t keyn[2] = {0};
+    uint8_t key[16] = {0}; 
+    // sector number from 0
+    for (uint8_t sector = startSector; sector <= endSector; sector++) {
+        // 0-keyA 1-keyB
+        for(uint8_t keyAB = startKeyAB; keyAB <= endKeyAB; keyAB++) {
+            // main cycle with key check
+            for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+                uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
+                keyn[0] = uKeyNum >> 8;
+                keyn[1] = uKeyNum & 0xff;
+                res =  MifareAuth4(NULL, keyn, key, selectCard, true, false, false, true);
+                selectCard = false;
+                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, key, g_mifare_plus_default_keys[i], res);
+            }
+        }
+    }
+    
+    DropField();
+    
+    return PM3_SUCCESS;
 }
 
 static int CmdHFMFPMAD(const char *cmd) {
@@ -728,7 +761,7 @@ static int CmdHFMFPMAD(const char *cmd) {
         }
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFMFPNDEF(const char *cmd) {
@@ -832,7 +865,7 @@ static int CmdHFMFPNDEF(const char *cmd) {
 
     NDEFDecodeAndPrint(data, datalen, verbose);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -845,6 +878,7 @@ static command_t CommandTable[] = {
     {"rdbl",             CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks"},
     {"rdsc",             CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors"},
     {"wrbl",             CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write blocks"},
+    {"chk",              CmdHFMFPChk,             IfPm3Iso14443a,  "Check keys"},
     {"mad",              CmdHFMFPMAD,             IfPm3Iso14443a,  "Checks and prints MAD"},
     {"ndef",             CmdHFMFPNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL,               NULL,                    0, NULL}
@@ -853,7 +887,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHFMFP(const char *Cmd) {
