@@ -412,6 +412,7 @@ static int usage_15_raw(void) {
         {"-r", "do not read response" },
         {"-2", "use slower '1 out of 256' mode" },
         {"-c", "calculate and append CRC" },
+        {"-p", "leave the signal field ON" },
         {"", "Tip: turn on debugging for verbose output"},
     };
     PrintAndLogEx(NORMAL, "Usage: hf 15 raw  [-r] [-2] [-c] <0A 0B 0C ... hex>\n");
@@ -949,6 +950,7 @@ static int CmdHF15Sim(const char *Cmd) {
 // (There is no standard way of reading the AFI, although some tags support this)
 // helptext
 static int CmdHF15FindAfi(const char *Cmd) {
+    PacketResponseNG resp;
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_findafi();
 
@@ -956,8 +958,14 @@ static int CmdHF15FindAfi(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO15693_FINDAFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
+
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 120000)) { // 2 minutes should be enough
+        DropField();
+        return resp.status; // PM3_EOPABORTED or PM3_SUCCESS
+    }
+
     DropField();
-    return PM3_SUCCESS;
+    return PM3_ETIMEOUT;
 }
 
 // Writes the AFI (Application Family Identifier) of a card
@@ -1225,7 +1233,7 @@ static int CmdHF15Raw(const char *Cmd) {
 
     PacketResponseNG resp;
     int reply = 1, fast = 1, i = 0;
-    bool crc = false;
+    bool crc = false, leaveSignalON = false;
     char buf[5] = "";
     uint8_t data[100];
     uint32_t datalen = 0, temp;
@@ -1247,6 +1255,10 @@ static int CmdHF15Raw(const char *Cmd) {
                 case 'c':
                 case 'C':
                     crc = true;
+                    break;
+                case 'p':
+                case 'P':
+                    leaveSignalON = true;
                     break;
                 default:
                     PrintAndLogEx(WARNING, "Invalid option");
@@ -1292,7 +1304,9 @@ static int CmdHF15Raw(const char *Cmd) {
         }
     }
 
-    DropField();
+    if (!leaveSignalON)
+        DropField();
+
     return PM3_SUCCESS;
 }
 

@@ -929,6 +929,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
     uint8_t buf[ISO15_MAX_FRAME];
     memset(buf, 0x00, sizeof(buf));
     int datalen = 0, recvlen = 0;
+    bool aborted = false;
 
     Iso15693InitReader();
 
@@ -968,12 +969,19 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
         if (BUTTON_PRESS()) {
             DbpString("button pressed, aborting..");
+            aborted = true;
             break;
         }
     }
 
     DbpString("AFI Bruteforcing done.");
     switch_off();
+
+    if (aborted) {
+        reply_ng(CMD_ACK, PM3_EOPABORTED, NULL, 0);
+    } else {
+        reply_ng(CMD_ACK, PM3_SUCCESS, NULL, 0);
+    }
 }
 
 // Allows to directly send commands to the tag via the client
