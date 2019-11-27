@@ -15,6 +15,6 @@
 
 int CmdHF15(const char *Cmd);
 
-int readHF15Uid(bool verbose);
+bool readHF15Uid(bool verbose);
 
 #endif
