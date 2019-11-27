@@ -951,6 +951,8 @@ static int CmdHF15Sim(const char *Cmd) {
 // helptext
 static int CmdHF15FindAfi(const char *Cmd) {
     PacketResponseNG resp;
+    uint32_t timeout = 0;
+
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_15_findafi();
 
@@ -959,13 +961,19 @@ static int CmdHF15FindAfi(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO15693_FINDAFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 120000)) { // 2 minutes should be enough
-        DropField();
-        return resp.status; // PM3_EOPABORTED or PM3_SUCCESS
+    while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        timeout++;
+
+        // should be done in about 2 minutes
+        if (timeout > 180) {
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+            DropField();
+            return PM3_ETIMEOUT;
+        }
     }
 
     DropField();
-    return PM3_ETIMEOUT;
+    return resp.status; // PM3_EOPABORTED or PM3_SUCCESS
 }
 
 // Writes the AFI (Application Family Identifier) of a card

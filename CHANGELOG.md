@@ -3,7 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Added `hf 15 writeafi`, `hf 15 writedsfid` and detailed info for SLIX2 tags in `hf 15 info`. Also did some refactoring in HF15 commands. (@grspy)
+ - Change `hf 15` - some refactoring (@grspy)
+ - Added `hf 15 writeafi` and `hf 15 writedsfid` (@grspy)
+ - Added detailed info for SLIX2 tags in `hf 15 info` (@grspy)
  - Fix hf list felica and hf felica sniff (@7homasSutter)
  - Added hf felica wrunencrypted (@7homasSutter)
  - Added hf felica rdunencrypted (@7homasSutter)

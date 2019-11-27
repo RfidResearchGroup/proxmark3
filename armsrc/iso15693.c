@@ -967,9 +967,10 @@ void BruteforceIso15693Afi(uint32_t speed) {
             Dbprintf("AFI = %i  UID = %s", i, sprintUID(NULL, buf + 2));
         }
 
-        if (BUTTON_PRESS()) {
+        aborted = BUTTON_PRESS();
+
+        if (aborted) {
             DbpString("button pressed, aborting..");
-            aborted = true;
             break;
         }
     }
