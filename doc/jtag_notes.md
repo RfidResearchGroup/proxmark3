@@ -75,8 +75,6 @@ GND | 6
 
 * http://www.lucasoldi.com/2017/01/17/unbrick-proxmark3-with-a-raspberry-pi-and-openocd/
 
-# Windows
-
 ## Third party notes on using a J-Link on Windows
 
 * https://github.com/Proxmark/proxmark3/wiki/De-Bricking-Segger
