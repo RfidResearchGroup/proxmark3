@@ -638,10 +638,15 @@ static int CmdHFMFPWrbl(const char *cmd) {
     return PM3_SUCCESS;
 }
 
+#define AES_KEY_LEN        16
+#define MAX_KEYS_LIST_LEN  1024
+
 static int CmdHFMFPChk(const char *cmd) {
     int res;
     bool selectCard = true;
-    char* foundKeys[2][64] = {NULL};
+    uint8_t keysList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {0};
+    size_t keysListLen = 0;
+    uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {0};
     
     CLIParserInit("hf mfp check",
                   "Checks keys with Mifare Plus card.",
@@ -682,30 +687,49 @@ static int CmdHFMFPChk(const char *cmd) {
     
     if (endSector < startSector)
         endSector = startSector;
+    
+    if (pattern1b || pattern2b) {
+        for (int i = 0; i < 0x100; i++)
+            memset(keysList[i], i, 16);
+        
+        keysListLen = 0x100;
+    }
+
+    if (keysListLen == 0) {
+        for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+            int datalen = 0;
+            if (param_gethex_to_eol(g_mifare_plus_default_keys[i], 0, keysList[keysListLen], 16, &datalen) > 0)
+                break;
+            if (datalen != 16)
+                break;
+            
+            keysListLen++;
+        }
+    }
+
+    if (keysListLen == 0) {
+        PrintAndLogEx(ERROR, "Key list is empty. Nothing to check.");
+        return 1;
+    }
+
 
     uint8_t keyn[2] = {0};
-    uint8_t key[16] = {0}; 
     // sector number from 0
     for (uint8_t sector = startSector; sector <= endSector; sector++) {
         // 0-keyA 1-keyB
         for(uint8_t keyAB = startKeyAB; keyAB <= endKeyAB; keyAB++) {
             // main cycle with key check
-            for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
-                int datalen = 0;
-                if (param_gethex_to_eol((char *)g_mifare_plus_default_keys[i], 0, (uint8_t *)key, 16, &datalen) > 0)
-                    break;
-                if (datalen != 16)
-                    break;
-
+            for (int i = 0; i < keysListLen; i++) {
                 uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
                 keyn[0] = uKeyNum >> 8;
                 keyn[1] = uKeyNum & 0xff;
                 
-                res =  MifareAuth4(NULL, keyn, key, selectCard, true, false, false, true);
-                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(key, 16), res);
+                res =  MifareAuth4(NULL, keyn, keysList[i], selectCard, true, false, false, true);
+                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keysList[i], 16), res);
                 if (res == 0) {
-                    PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(key, 16));
-                    foundKeys[keyAB][sector] = (char*)g_mifare_plus_default_keys[i];
+                    PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keysList[i], 16));
+                    foundKeys[keyAB][sector][0] = 0x01;
+                    memcpy(&foundKeys[keyAB][sector][1], keysList[i], AES_KEY_LEN);
                     DropField();
                     selectCard = true;
                     msleep(50);
@@ -725,23 +749,23 @@ static int CmdHFMFPChk(const char *cmd) {
     // print result
     bool printedHeader = false;
     for (uint8_t sector = startSector; sector <= endSector; sector++) {
-        if (foundKeys[0][sector] != NULL || foundKeys[1][sector] != NULL) {
+        if (foundKeys[0][sector][0] || foundKeys[1][sector][0]) {
             if (!printedHeader) {
-                PrintAndLogEx(INFO, ".------.--------------------------------.--------------------------------.");
+                PrintAndLogEx(INFO, "\n.------.--------------------------------.--------------------------------.");
                 PrintAndLogEx(INFO, "|sector|            key A               |            key B               |");
                 PrintAndLogEx(INFO, "|------|--------------------------------|--------------------------------|");
                 printedHeader = true;
             }
             PrintAndLogEx(INFO, "|  %02d  |%32s|%32s|", 
                 sector, 
-                (foundKeys[0][sector] == NULL) ? "------              " : foundKeys[0][sector], 
-                (foundKeys[1][sector] == NULL) ? "------              " : foundKeys[1][sector]);
+                (foundKeys[0][sector][0] == 0) ? "------              " : sprint_hex_inrow(&foundKeys[0][sector][1], AES_KEY_LEN), 
+                (foundKeys[1][sector][0] == 0) ? "------              " : sprint_hex_inrow(&foundKeys[1][sector][1], AES_KEY_LEN));
         }
     }
     if (!printedHeader)
         PrintAndLogEx(INFO, "No keys found(");
     else
-        PrintAndLogEx(INFO, "'------'--------------------------------'--------------------------------'");
+        PrintAndLogEx(INFO, "'------'--------------------------------'--------------------------------'\n");
     
     return PM3_SUCCESS;
 }
