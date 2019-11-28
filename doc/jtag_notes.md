@@ -63,6 +63,9 @@ GND | 6
 ## Third party notes on using a BusPirate
 
 * https://github.com/Proxmark/proxmark3/wiki/Debricking-Proxmark3-with-buspirate
+* https://b4cktr4ck2.github.io/De-Brickify-Pm3-RDV2/
+* https://scund00r.com/all/rfid/2018/05/18/debrick-proxmark.html
+* https://joanbono.github.io/PoC/Flashing_Proxmark3.html
 
 ## Third party notes on using a J-Link
 
