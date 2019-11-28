@@ -25,6 +25,7 @@
 #include "cliparser/cliparser.h"
 #include "emv/dump.h"
 #include "mifare/mifaredefault.h"
+#include "util_posix.h"
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
@@ -645,7 +646,7 @@ static int CmdHFMFPChk(const char *cmd) {
     CLIParserInit("hf mfp check",
                   "Checks keys with Mifare Plus card.",
                   "Usage:\n\thf mfp check -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B\n"
-                  "\thf mfp check -s 2 -a -> check default key list \n");
+                  "\thf mfp check -s 2 -a -> check default key list on sector 2, key A\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -655,6 +656,8 @@ static int CmdHFMFPChk(const char *cmd) {
         arg_int0("eE",  "endsec",    "End sector Num (0..255)", NULL),
         arg_str0("kK",  "key",       "<Key (HEX 16 bytes)>", NULL),
         arg_str0(NULL,  NULL,        "<file with keys dictionary>", NULL),
+        arg_lit0(NULL,  "pattern1b", "check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
+        arg_lit0(NULL,  "pattern2b", "check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_param_end
     };
     CLIExecWithReturn(cmd, argtable, true);
@@ -666,6 +669,8 @@ static int CmdHFMFPChk(const char *cmd) {
     uint8_t vkey[16] = {0}; 
     int vkeylen = 0;
     CLIGetHexWithReturn(5, vkey, &vkeylen);
+    bool pattern1b = arg_get_lit(7);
+    bool pattern2b = arg_get_lit(8);
     CLIParserFree();
 
     uint8_t startKeyAB = 0;
@@ -695,10 +700,15 @@ static int CmdHFMFPChk(const char *cmd) {
                 uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
                 keyn[0] = uKeyNum >> 8;
                 keyn[1] = uKeyNum & 0xff;
+                
                 res =  MifareAuth4(NULL, keyn, key, selectCard, true, false, false, true);
+                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(key, 16), res);
                 if (res == 0) {
                     PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(key, 16));
                     foundKeys[keyAB][sector] = (char*)g_mifare_plus_default_keys[i];
+                    DropField();
+                    selectCard = true;
+                    msleep(50);
                     break;
                 }
                 
@@ -706,7 +716,6 @@ static int CmdHFMFPChk(const char *cmd) {
                     break;
                 
                 selectCard = false;
-                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(key, 16), res);
             }
         }
     }
@@ -725,8 +734,8 @@ static int CmdHFMFPChk(const char *cmd) {
             }
             PrintAndLogEx(INFO, "|  %02d  |%32s|%32s|", 
                 sector, 
-                (foundKeys[0][sector] == NULL) ? "-----          " : foundKeys[0][sector], 
-                (foundKeys[1][sector] == NULL) ? "-----          " : foundKeys[1][sector]);
+                (foundKeys[0][sector] == NULL) ? "------              " : foundKeys[0][sector], 
+                (foundKeys[1][sector] == NULL) ? "------              " : foundKeys[1][sector]);
         }
     }
     if (!printedHeader)
