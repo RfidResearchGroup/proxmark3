@@ -637,16 +637,47 @@ static int CmdHFMFPWrbl(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPChk() {
+static int CmdHFMFPChk(const char *cmd) {
     int res;
     bool selectCard = true;
+    char* foundKeys[2][64] = {NULL};
     
-    uint8_t startSector = 0;
-    uint8_t endSector = 0;
+    CLIParserInit("hf mfp check",
+                  "Checks keys with Mifare Plus card.",
+                  "Usage:\n\thf mfp check -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B\n"
+                  "\thf mfp check -s 2 -a -> check default key list \n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("aA",  "keya",      "check only key A (by default check all keys)."),
+        arg_lit0("bB",  "keyb",      "check only key B (by default check all keys)."),
+        arg_int0("sS",  "startsec",  "Start sector Num (0..255)", NULL),
+        arg_int0("eE",  "endsec",    "End sector Num (0..255)", NULL),
+        arg_str0("kK",  "key",       "<Key (HEX 16 bytes)>", NULL),
+        arg_str0(NULL,  NULL,        "<file with keys dictionary>", NULL),
+        arg_param_end
+    };
+    CLIExecWithReturn(cmd, argtable, true);
+
+    bool keyA = arg_get_lit(1);
+    bool keyB = arg_get_lit(2);
+    uint8_t startSector = arg_get_int_def(3, 0);
+    uint8_t endSector = arg_get_int_def(4, 0);
+    uint8_t vkey[16] = {0}; 
+    int vkeylen = 0;
+    CLIGetHexWithReturn(5, vkey, &vkeylen);
+    CLIParserFree();
+
     uint8_t startKeyAB = 0;
-    uint8_t endKeyAB = 0;
+    uint8_t endKeyAB = 1;
+    if (keyA && !keyB)
+        endKeyAB = 0;
+    if (!keyA && keyB)
+        startKeyAB = 1;
     
-    
+    if (endSector < startSector)
+        endSector = startSector;
+
     uint8_t keyn[2] = {0};
     uint8_t key[16] = {0}; 
     // sector number from 0
@@ -655,17 +686,53 @@ static int CmdHFMFPChk() {
         for(uint8_t keyAB = startKeyAB; keyAB <= endKeyAB; keyAB++) {
             // main cycle with key check
             for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+                int datalen = 0;
+                if (param_gethex_to_eol((char *)g_mifare_plus_default_keys[i], 0, (uint8_t *)key, 16, &datalen) > 0)
+                    break;
+                if (datalen != 16)
+                    break;
+
                 uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
                 keyn[0] = uKeyNum >> 8;
                 keyn[1] = uKeyNum & 0xff;
                 res =  MifareAuth4(NULL, keyn, key, selectCard, true, false, false, true);
+                if (res == 0) {
+                    PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(key, 16));
+                    foundKeys[keyAB][sector] = (char*)g_mifare_plus_default_keys[i];
+                    break;
+                }
+                
+                if (res != 5)
+                    break;
+                
                 selectCard = false;
-                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, key, g_mifare_plus_default_keys[i], res);
+                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(key, 16), res);
             }
         }
     }
     
     DropField();
+
+    // print result
+    bool printedHeader = false;
+    for (uint8_t sector = startSector; sector <= endSector; sector++) {
+        if (foundKeys[0][sector] != NULL || foundKeys[1][sector] != NULL) {
+            if (!printedHeader) {
+                PrintAndLogEx(INFO, ".------.--------------------------------.--------------------------------.");
+                PrintAndLogEx(INFO, "|sector|            key A               |            key B               |");
+                PrintAndLogEx(INFO, "|------|--------------------------------|--------------------------------|");
+                printedHeader = true;
+            }
+            PrintAndLogEx(INFO, "|  %02d  |%32s|%32s|", 
+                sector, 
+                (foundKeys[0][sector] == NULL) ? "-----          " : foundKeys[0][sector], 
+                (foundKeys[1][sector] == NULL) ? "-----          " : foundKeys[1][sector]);
+        }
+    }
+    if (!printedHeader)
+        PrintAndLogEx(INFO, "No keys found(");
+    else
+        PrintAndLogEx(INFO, "'------'--------------------------------'--------------------------------'");
     
     return PM3_SUCCESS;
 }
