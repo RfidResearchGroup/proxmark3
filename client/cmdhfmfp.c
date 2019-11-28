@@ -644,8 +644,8 @@ static int CmdHFMFPWrbl(const char *cmd) {
 static int CmdHFMFPChk(const char *cmd) {
     int res;
     bool selectCard = true;
-    uint8_t keysList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {0};
-    size_t keysListLen = 0;
+    uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {0};
+    size_t keyListLen = 0;
     uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {0};
     
     CLIParserInit("hf mfp check",
@@ -663,6 +663,7 @@ static int CmdHFMFPChk(const char *cmd) {
         arg_str0(NULL,  NULL,        "<file with keys dictionary>", NULL),
         arg_lit0(NULL,  "pattern1b", "check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL,  "pattern2b", "check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
+        arg_str0(NULL,  "startp2b",  "<HEX 0000-ffff> start pattern for 2-byte search key", NULL),
         arg_param_end
     };
     CLIExecWithReturn(cmd, argtable, true);
@@ -676,6 +677,12 @@ static int CmdHFMFPChk(const char *cmd) {
     CLIGetHexWithReturn(5, vkey, &vkeylen);
     bool pattern1b = arg_get_lit(7);
     bool pattern2b = arg_get_lit(8);
+    uint16_t startPattern = 0x0000;
+    uint8_t vpattern[2];
+    int vpatternlen = 0;
+    CLIGetHexWithReturn(9, vpattern, &vpatternlen);
+    if (vpatternlen > 0 && vpatternlen <= 2)
+        startPattern = (vpattern[0] << 8) + vpattern[1];
     CLIParserFree();
 
     uint8_t startKeyAB = 0;
@@ -688,30 +695,43 @@ static int CmdHFMFPChk(const char *cmd) {
     if (endSector < startSector)
         endSector = startSector;
     
-    if (pattern1b || pattern2b) {
+    if (pattern1b) {
         for (int i = 0; i < 0x100; i++)
-            memset(keysList[i], i, 16);
+            memset(keyList[i], i, 16);
         
-        keysListLen = 0x100;
+        keyListLen = 0x100;
+    }
+    
+    if (pattern2b) {
+        for (uint32_t i = startPattern; i < 0x10000; i++) {
+            keyList[keyListLen][0] = (i >> 8) & 0xff;
+            keyList[keyListLen][1] = i & 0xff;
+            memcpy(&keyList[keyListLen][2], &keyList[keyListLen][0], 2);
+            memcpy(&keyList[keyListLen][4], &keyList[keyListLen][0], 4);
+            memcpy(&keyList[keyListLen][8], &keyList[keyListLen][0], 8);
+            keyListLen++;
+            if (keyListLen == MAX_KEYS_LIST_LEN)
+                break;
+        }
+        startPattern = (keyList[keyListLen - 1][0] << 8) + keyList[keyListLen - 1][1];
     }
 
-    if (keysListLen == 0) {
+    if (keyListLen == 0) {
         for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
             int datalen = 0;
-            if (param_gethex_to_eol(g_mifare_plus_default_keys[i], 0, keysList[keysListLen], 16, &datalen) > 0)
+            if (param_gethex_to_eol(g_mifare_plus_default_keys[i], 0, keyList[keyListLen], 16, &datalen) > 0)
                 break;
             if (datalen != 16)
                 break;
             
-            keysListLen++;
+            keyListLen++;
         }
     }
 
-    if (keysListLen == 0) {
+    if (keyListLen == 0) {
         PrintAndLogEx(ERROR, "Key list is empty. Nothing to check.");
         return 1;
     }
-
 
     uint8_t keyn[2] = {0};
     // sector number from 0
@@ -719,17 +739,17 @@ static int CmdHFMFPChk(const char *cmd) {
         // 0-keyA 1-keyB
         for(uint8_t keyAB = startKeyAB; keyAB <= endKeyAB; keyAB++) {
             // main cycle with key check
-            for (int i = 0; i < keysListLen; i++) {
+            for (int i = 0; i < keyListLen; i++) {
                 uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
                 keyn[0] = uKeyNum >> 8;
                 keyn[1] = uKeyNum & 0xff;
                 
-                res =  MifareAuth4(NULL, keyn, keysList[i], selectCard, true, false, false, true);
-                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keysList[i], 16), res);
+                res =  MifareAuth4(NULL, keyn, keyList[i], selectCard, true, false, false, true);
+                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
                 if (res == 0) {
-                    PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keysList[i], 16));
+                    PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keyList[i], 16));
                     foundKeys[keyAB][sector][0] = 0x01;
-                    memcpy(&foundKeys[keyAB][sector][1], keysList[i], AES_KEY_LEN);
+                    memcpy(&foundKeys[keyAB][sector][1], keyList[i], AES_KEY_LEN);
                     DropField();
                     selectCard = true;
                     msleep(50);
