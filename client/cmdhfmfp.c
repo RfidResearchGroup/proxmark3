@@ -735,17 +735,30 @@ static int CmdHFMFPChk(const char *cmd) {
     bool keyB = arg_get_lit(2);
     uint8_t startSector = arg_get_int_def(3, 0);
     uint8_t endSector = arg_get_int_def(4, 0);
+    
     uint8_t vkey[16] = {0}; 
     int vkeylen = 0;
     CLIGetHexWithReturn(5, vkey, &vkeylen);
+    if (vkeylen > 0) {
+        if (vkeylen == 16) {
+            memcpy(&keyList[keyListLen], vkey, 16);
+            keyListLen++;
+        } else {
+            PrintAndLogEx(ERROR, "Specified key must have 16 bytes length.");
+            return PM3_EINVARG;
+        }
+    }
+    
     bool pattern1b = arg_get_lit(7);
     bool pattern2b = arg_get_lit(8);
+    
     uint16_t startPattern = 0x0000;
     uint8_t vpattern[2];
     int vpatternlen = 0;
     CLIGetHexWithReturn(9, vpattern, &vpatternlen);
     if (vpatternlen > 0 && vpatternlen <= 2)
         startPattern = (vpattern[0] << 8) + vpattern[1];
+    
     CLIParserFree();
 
     uint8_t startKeyAB = 0;
@@ -793,7 +806,7 @@ static int CmdHFMFPChk(const char *cmd) {
 
     if (keyListLen == 0) {
         PrintAndLogEx(ERROR, "Key list is empty. Nothing to check.");
-        return 1;
+        return PM3_EINVARG;
     }
 
 
