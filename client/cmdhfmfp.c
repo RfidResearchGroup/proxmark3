@@ -641,9 +641,72 @@ static int CmdHFMFPWrbl(const char *cmd) {
 #define AES_KEY_LEN        16
 #define MAX_KEYS_LIST_LEN  1024
 
-static int CmdHFMFPChk(const char *cmd) {
+ int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB, 
+                 uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
     int res;
     bool selectCard = true;
+    uint8_t keyn[2] = {0};
+
+    // sector number from 0
+    for (uint8_t sector = startSector; sector <= endSector; sector++) {
+        // 0-keyA 1-keyB
+        for(uint8_t keyAB = startKeyAB; keyAB <= endKeyAB; keyAB++) {
+            // main cycle with key check
+            for (int i = 0; i < keyListLen; i++) {
+                if (i % 10 == 0) {
+                    if (kbd_enter_pressed()) {
+                        PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
+                        DropField();
+                        return PM3_EOPABORTED;
+                    }
+                }
+
+                uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
+                keyn[0] = uKeyNum >> 8;
+                keyn[1] = uKeyNum & 0xff;
+                
+                for (int retry = 0; retry < 4; retry++) {
+                    res =  MifareAuth4(NULL, keyn, keyList[i], selectCard, true, false, false, true);
+                    if (res != 2)
+                        break;
+                    
+                    printf("retried[%d]...\n", retry);
+                    
+                    DropField();
+                    selectCard = true;
+                    msleep(100);
+                }
+                
+                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
+                
+                // key for [sector,keyAB] found
+                if (res == 0) {
+                    PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keyList[i], 16));
+                    foundKeys[keyAB][sector][0] = 0x01;
+                    memcpy(&foundKeys[keyAB][sector][1], keyList[i], AES_KEY_LEN);
+                    DropField();
+                    selectCard = true;
+                    msleep(50);
+                    break;
+                }
+                
+                // 5 - auth error (rnd not equal)
+                if (res != 5) {
+                    DropField();
+                    return PM3_ECARDEXCHANGE;
+                }
+                
+                selectCard = false;
+            }
+        }
+    }
+    
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHFMFPChk(const char *cmd) {
+    int res;
     uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {0};
     size_t keyListLen = 0;
     uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {0};
@@ -733,45 +796,17 @@ static int CmdHFMFPChk(const char *cmd) {
         return 1;
     }
 
-    uint8_t keyn[2] = {0};
-    // sector number from 0
-    for (uint8_t sector = startSector; sector <= endSector; sector++) {
-        // 0-keyA 1-keyB
-        for(uint8_t keyAB = startKeyAB; keyAB <= endKeyAB; keyAB++) {
-            // main cycle with key check
-            for (int i = 0; i < keyListLen; i++) {
-                uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
-                keyn[0] = uKeyNum >> 8;
-                keyn[1] = uKeyNum & 0xff;
-                
-                res =  MifareAuth4(NULL, keyn, keyList[i], selectCard, true, false, false, true);
-                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
-                if (res == 0) {
-                    PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keyList[i], 16));
-                    foundKeys[keyAB][sector][0] = 0x01;
-                    memcpy(&foundKeys[keyAB][sector][1], keyList[i], AES_KEY_LEN);
-                    DropField();
-                    selectCard = true;
-                    msleep(50);
-                    break;
-                }
-                
-                if (res != 5)
-                    break;
-                
-                selectCard = false;
-            }
-        }
-    }
-    
-    DropField();
+
+    res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys);
+    printf("--- res: %d\n", res);
 
     // print result
     bool printedHeader = false;
     for (uint8_t sector = startSector; sector <= endSector; sector++) {
         if (foundKeys[0][sector][0] || foundKeys[1][sector][0]) {
             if (!printedHeader) {
-                PrintAndLogEx(INFO, "\n.------.--------------------------------.--------------------------------.");
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, ".------.--------------------------------.--------------------------------.");
                 PrintAndLogEx(INFO, "|sector|            key A               |            key B               |");
                 PrintAndLogEx(INFO, "|------|--------------------------------|--------------------------------|");
                 printedHeader = true;
