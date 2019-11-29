@@ -751,13 +751,26 @@ static int CmdHFMFPChk(const char *cmd) {
     
     bool pattern1b = arg_get_lit(7);
     bool pattern2b = arg_get_lit(8);
+
+    if (pattern1b && pattern2b) {
+        PrintAndLogEx(ERROR, "Pattern search mode must be 2-byte or 1-byte only.");
+        return PM3_EINVARG;
+    }
     
     uint16_t startPattern = 0x0000;
     uint8_t vpattern[2];
     int vpatternlen = 0;
     CLIGetHexWithReturn(9, vpattern, &vpatternlen);
-    if (vpatternlen > 0 && vpatternlen <= 2)
-        startPattern = (vpattern[0] << 8) + vpattern[1];
+    if (vpatternlen > 0) {
+        if (vpatternlen > 0 && vpatternlen <= 2) {
+            startPattern = (vpattern[0] << 8) + vpattern[1];
+        } else {
+            PrintAndLogEx(ERROR, "Pattern must be 2-byte length.");
+            return PM3_EINVARG;
+        }
+        if (!pattern2b)
+            PrintAndLogEx(WARNING, "Pattern entered, but search mode not is 2-byte search.");
+    }
     
     CLIParserFree();
 
@@ -808,7 +821,6 @@ static int CmdHFMFPChk(const char *cmd) {
         PrintAndLogEx(ERROR, "Key list is empty. Nothing to check.");
         return PM3_EINVARG;
     }
-
 
     res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys);
     printf("--- res: %d\n", res);
