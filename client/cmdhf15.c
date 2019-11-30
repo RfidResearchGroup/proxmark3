@@ -1203,8 +1203,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
     DropField();
 
-    PrintAndLogEx(NORMAL, "\n");
-
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "block#   | data         |lck| ascii");
     PrintAndLogEx(NORMAL, "---------+--------------+---+----------");
     for (int i = 0; i < blocknum; i++) {
@@ -1305,8 +1304,8 @@ static int CmdHF15Raw(const char *Cmd) {
     if (reply) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             uint8_t len = resp.oldarg[0];
-            PrintAndLogEx(NORMAL, "received %i octets", len);
-            PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
+            PrintAndLogEx(INFO, "received %i octets", len);
+            PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, len));
         } else {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         }
@@ -1443,7 +1442,7 @@ static int CmdHF15Read(const char *Cmd) {
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        PrintAndLogEx(NORMAL, "iso15693 card select failed");
+        PrintAndLogEx(ERR, "iso15693 card select failed");
         DropField();
         return PM3_ETIMEOUT;
     }
@@ -1452,14 +1451,14 @@ static int CmdHF15Read(const char *Cmd) {
 
     uint32_t status = resp.oldarg[0];
     if (status < 2) {
-        PrintAndLogEx(NORMAL, "iso15693 card select failed");
+        PrintAndLogEx(ERR, "iso15693 card select failed");
         return PM3_EWRONGANSVER;
     }
 
     recv = resp.data.asBytes;
 
     if (!CheckCrc15(recv, status)) {
-        PrintAndLogEx(NORMAL, "CRC failed");
+        PrintAndLogEx(ERR, "CRC failed");
         return PM3_ESOFT;
     }
 
@@ -1817,7 +1816,7 @@ bool readHF15Uid(bool verbose) {
         return false;
     }
 
-    PrintAndLogEx(NORMAL, " UID  : %s", sprintUID(NULL, uid));
-    PrintAndLogEx(NORMAL, " TYPE : %s", getTagInfo_15(uid));
+    PrintAndLogEx(SUCCESS, " UID  : %s", sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, " TYPE : %s", getTagInfo_15(uid));
     return true;
 }
