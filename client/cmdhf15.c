@@ -517,7 +517,7 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
                 return false;
             }
             memcpy(&req[tmpreqlen], uid, sizeof(uid));
-            PrintAndLogEx(NORMAL, "Detected UID %s", sprintUID(NULL, uid));
+            PrintAndLogEx(SUCCESS, "Detected UID %s", sprintUID(NULL, uid));
             tmpreqlen += sizeof(uid);
             break;
         default:
@@ -530,7 +530,7 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
                 uid[7 - i] = temp & 0xff;
             }
 
-            PrintAndLogEx(NORMAL, "Using UID %s", sprintUID(NULL, uid));
+            PrintAndLogEx(SUCCESS, "Using UID %s", sprintUID(NULL, uid));
             memcpy(&req[tmpreqlen], uid, sizeof(uid));
             tmpreqlen +=  sizeof(uid);
             break;
@@ -569,7 +569,7 @@ static int CmdHF15Demod(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(NORMAL, "SOF at %d, correlation %zu", maxPos, max / (ARRAYLEN(FrameSOF) / skip));
+    PrintAndLogEx(INFO, "SOF at %d, correlation %zu", maxPos, max / (ARRAYLEN(FrameSOF) / skip));
 
     i = maxPos + ARRAYLEN(FrameSOF) / skip;
     int k = 0;
@@ -592,7 +592,7 @@ static int CmdHF15Demod(const char *Cmd) {
         corr1 *= 4;
 
         if (corrEOF > corr1 && corrEOF > corr0) {
-            PrintAndLogEx(NORMAL, "EOF at %d", i);
+            PrintAndLogEx(INFO, "EOF at %d", i);
             break;
         } else if (corr1 > corr0) {
             i += ARRAYLEN(Logic1) / skip;
@@ -606,21 +606,21 @@ static int CmdHF15Demod(const char *Cmd) {
             mask = 0x01;
         }
         if ((i + (int)ARRAYLEN(FrameEOF)) >= GraphTraceLen) {
-            PrintAndLogEx(NORMAL, "ran off end!");
+            PrintAndLogEx(INFO, "ran off end!");
             break;
         }
     }
 
     if (mask != 0x01) {
         PrintAndLogEx(WARNING, "Warning, uneven octet! (discard extra bits!)");
-        PrintAndLogEx(NORMAL, "   mask = %02x", mask);
+        PrintAndLogEx(INFO, "   mask = %02x", mask);
     }
-    PrintAndLogEx(NORMAL, "%d octets", k);
+    PrintAndLogEx(INFO, "%d octets", k);
 
     for (i = 0; i < k; i++)
-        PrintAndLogEx(NORMAL, "# %2d: %02x ", i, outBuf[i]);
+        PrintAndLogEx(SUCCESS, "# %2d: %02x ", i, outBuf[i]);
 
-    PrintAndLogEx(NORMAL, "CRC %04x", Crc15(outBuf, k - 2));
+    PrintAndLogEx(SUCCESS, "CRC %04x", Crc15(outBuf, k - 2));
     return PM3_SUCCESS;
 }
 
@@ -741,13 +741,13 @@ static int NxpSysInfo(uint8_t *uid) {
                 PrintAndLogEx(NORMAL, "");
 
                 if (status < 2) {
-                    PrintAndLogEx(NORMAL, "  EAS (Electronic Article Surveillance) is not active");
+                    PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is not active");
                 } else {
                     recv = resp.data.asBytes;
 
                     if (!(recv[0] & ISO15_RES_ERROR)) {
-                        PrintAndLogEx(NORMAL, "  EAS (Electronic Article Surveillance) is active.");
-                        PrintAndLogEx(NORMAL, "  EAS sequence: %s", sprint_hex(recv + 1, 32));
+                        PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
+                        PrintAndLogEx(INFO, "  EAS sequence: %s", sprint_hex(recv + 1, 32));
                     }
                 }
             }
@@ -866,36 +866,36 @@ static int CmdHF15Info(const char *Cmd) {
 
     memcpy(uid, recv + 2, sizeof(uid));
 
-    PrintAndLogEx(NORMAL, "  UID  : %s", sprintUID(NULL, uid));
-    PrintAndLogEx(NORMAL, "  TYPE : %s", getTagInfo_15(recv + 2));
-    PrintAndLogEx(NORMAL, "  SYSINFO : %s", sprint_hex(recv, status - 2));
+    PrintAndLogEx(SUCCESS, "  UID  : %s", sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, "  TYPE : %s", getTagInfo_15(recv + 2));
+    PrintAndLogEx(SUCCESS, "  SYSINFO : %s", sprint_hex(recv, status - 2));
 
     // DSFID
     if (recv[1] & 0x01)
-        PrintAndLogEx(NORMAL, "     - DSFID supported        [0x%02X]", recv[10]);
+        PrintAndLogEx(SUCCESS, "     - DSFID supported        [0x%02X]", recv[10]);
     else
-        PrintAndLogEx(NORMAL, "     - DSFID not supported");
+        PrintAndLogEx(SUCCESS, "     - DSFID not supported");
 
     // AFI
     if (recv[1] & 0x02)
-        PrintAndLogEx(NORMAL, "     - AFI   supported        [0x%02X]", recv[11]);
+        PrintAndLogEx(SUCCESS, "     - AFI   supported        [0x%02X]", recv[11]);
     else
-        PrintAndLogEx(NORMAL, "     - AFI   not supported");
+        PrintAndLogEx(SUCCESS, "     - AFI   not supported");
 
     // IC reference
     if (recv[1] & 0x08)
-        PrintAndLogEx(NORMAL, "     - IC reference supported [0x%02X]", recv[14]);
+        PrintAndLogEx(SUCCESS, "     - IC reference supported [0x%02X]", recv[14]);
     else
-        PrintAndLogEx(NORMAL, "     - IC reference not supported");
+        PrintAndLogEx(SUCCESS, "     - IC reference not supported");
 
     // memory
     if (recv[1] & 0x04) {
-        PrintAndLogEx(NORMAL, "     - Tag provides info on memory layout (vendor dependent)");
+        PrintAndLogEx(SUCCESS, "     - Tag provides info on memory layout (vendor dependent)");
         uint8_t blocks = recv[12] + 1;
         uint8_t size = (recv[13] & 0x1F);
-        PrintAndLogEx(NORMAL, "           %u (or %u) bytes/blocks x %u blocks", size + 1, size, blocks);
+        PrintAndLogEx(SUCCESS, "           %u (or %u) bytes/blocks x %u blocks", size + 1, size, blocks);
     } else {
-        PrintAndLogEx(NORMAL, "     - Tag does not provide information on memory layout");
+        PrintAndLogEx(SUCCESS, "     - Tag does not provide information on memory layout");
     }
 
     // Check if SLIX2 and attempt to get NXP System Information
@@ -1015,7 +1015,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        PrintAndLogEx(NORMAL, "iso15693 card select failed");
+        PrintAndLogEx(ERR, "iso15693 card select failed");
         DropField();
         return PM3_ETIMEOUT;
     }
@@ -1074,7 +1074,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-        PrintAndLogEx(NORMAL, "iso15693 card select failed");
+        PrintAndLogEx(ERR, "iso15693 card select failed");
         DropField();
         return PM3_ETIMEOUT;
     }
@@ -1142,7 +1142,7 @@ static int CmdHF15Dump(const char *Cmd) {
     }
     // detect blocksize from card :)
 
-    PrintAndLogEx(NORMAL, "Reading memory from tag UID " _YELLOW_("%s"), sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, "Reading memory from tag UID " _YELLOW_("%s"), sprintUID(NULL, uid));
 
     int blocknum = 0;
     uint8_t *recv = NULL;
@@ -1523,7 +1523,7 @@ static int CmdHF15Write(const char *Cmd) {
     AddCrc15(req, reqlen);
     reqlen += 2;
 
-    PrintAndLogEx(NORMAL, "iso15693 writing to page %02d (0x%02X) | data ", pagenum, pagenum);
+    PrintAndLogEx(INFO, "iso15693 writing to page %02d (0x%02X) | data ", pagenum, pagenum);
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
@@ -1550,7 +1550,7 @@ static int CmdHF15Write(const char *Cmd) {
     }
 
     if (recv[0] & ISO15_RES_ERROR) {
-        PrintAndLogEx(NORMAL, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
         return PM3_EWRONGANSVER;
     }
 
@@ -1703,7 +1703,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "new UID | %s", sprint_hex(uid, sizeof(uid)));
-    PrintAndLogEx(NORMAL, "Using backdoor Magic tag function");
+    PrintAndLogEx(INFO, "Using backdoor Magic tag function");
 
     if (!getUID(oldUid)) {
         PrintAndLogEx(FAILED, "Can't get old UID.");
@@ -1755,8 +1755,8 @@ static int CmdHF15CSetUID(const char *Cmd) {
         if (reply) {
             if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 uint8_t len = resp.oldarg[0];
-                PrintAndLogEx(NORMAL, "received %i octets", len);
-                PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
+                PrintAndLogEx(INFO, "received %i octets", len);
+                PrintAndLogEx(INFO, "%s", sprint_hex(resp.data.asBytes, len));
             } else {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             }
