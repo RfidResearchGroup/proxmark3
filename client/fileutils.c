@@ -753,9 +753,10 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 
     // t5577 == 4bytes
     // mifare == 6 bytes
+    // mf plus == 16 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8) {
+    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16) {
         keylen = 6;
     }
 
@@ -820,9 +821,10 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
     // t5577 == 4bytes
     // mifare == 6 bytes
+    // mf plus == 16 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8) {
+    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16) {
         keylen = 6;
     }
 
