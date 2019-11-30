@@ -1815,7 +1815,7 @@ bool readHF15Uid(bool verbose) {
         if (verbose) PrintAndLogEx(WARNING, "No tag found.");
         return false;
     }
-
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " UID  : %s", sprintUID(NULL, uid));
     PrintAndLogEx(SUCCESS, " TYPE : %s", getTagInfo_15(uid));
     return true;
