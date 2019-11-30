@@ -256,20 +256,20 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     }
 
     if (select_status == 3) {
-        PrintAndLogEx(NORMAL, "E->Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLogEx(NORMAL, "\tATQA : %02x %02x", card->atqa[1], card->atqa[0]);
+        PrintAndLogEx(INFO, "E->Card doesn't support standard iso14443-3 anticollision");
+        PrintAndLogEx(SUCCESS, "\tATQA : %02x %02x", card->atqa[1], card->atqa[0]);
         return 1;
     }
 
-    PrintAndLogEx(NORMAL, " UID: %s", sprint_hex(card->uid, card->uidlen));
-    PrintAndLogEx(NORMAL, "ATQA: %02x %02x", card->atqa[1], card->atqa[0]);
-    PrintAndLogEx(NORMAL, " SAK: %02x [%" PRIu64 "]", card->sak, resp.oldarg[0]);
+    PrintAndLogEx(SUCCESS, " UID: %s", sprint_hex(card->uid, card->uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card->atqa[1], card->atqa[0]);
+    PrintAndLogEx(SUCCESS, " SAK: %02x [%" PRIu64 "]", card->sak, resp.oldarg[0]);
     if (card->ats_len < 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-        PrintAndLogEx(NORMAL, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
+        PrintAndLogEx(INFO, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
         return 1;
     }
 
-    PrintAndLogEx(NORMAL, " ATS: %s", sprint_hex(card->ats, card->ats_len));
+    PrintAndLogEx(SUCCESS, " ATS: %s", sprint_hex(card->ats, card->ats_len));
     return 0;
 }
 
@@ -334,18 +334,18 @@ static int CmdHF14AReader(const char *Cmd) {
         }
 
         if (select_status == 3) {
-            PrintAndLogEx(NORMAL, "Card doesn't support standard iso14443-3 anticollision");
-            PrintAndLogEx(NORMAL, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+            PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+            PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
             DropField();
             return 1;
         }
 
-        PrintAndLogEx(NORMAL, " UID : %s", sprint_hex(card.uid, card.uidlen));
-        PrintAndLogEx(NORMAL, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-        PrintAndLogEx(NORMAL, " SAK : %02x [%" PRIu64 "]", card.sak, resp.oldarg[0]);
+        PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, card.uidlen));
+        PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+        PrintAndLogEx(SUCCESS, " SAK : %02x [%" PRIu64 "]", card.sak, resp.oldarg[0]);
 
         if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-            PrintAndLogEx(NORMAL, " ATS : %s", sprint_hex(card.ats, card.ats_len));
+            PrintAndLogEx(SUCCESS, " ATS : %s", sprint_hex(card.ats, card.ats_len));
         }
 
         if (!disconnectAfter) {
@@ -422,7 +422,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
             for (uint16_t m = 0; m < card->uidlen; m++) {
                 sprintf(&uid_string[2 * m], "%02X", card->uid[m]);
             }
-            PrintAndLogEx(NORMAL, "%s", uid_string);
+            PrintAndLogEx(SUCCESS, "%s", uid_string);
         }
     }
     PrintAndLogEx(SUCCESS, "end: %" PRIu64 " seconds", (msclock() - t1) / 1000);
@@ -528,9 +528,9 @@ int CmdHF14ASim(const char *Cmd) {
 
     if (keypress && (flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
         // inform device to break the sim loop since client has exited
-        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);    
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
     }
-    
+
     if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK))
         showSectorTable();
 
