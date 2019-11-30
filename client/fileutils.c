@@ -789,10 +789,17 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         if (line[0] == '#')
             continue;
 
-        if (!isxdigit(line[0])) {
-            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_("%2d") "HEX symbols", line, keylen);
-            continue;
+        bool searchFail = false;
+        for (int i = 0; i < keylen; i++) {
+            if (!isxdigit(line[i])) {
+                PrintAndLogEx(FAILED, "file content error (pos %d). '%s' must include " _BLUE_("%2d") "HEX symbols", i + 1, line, keylen);
+                searchFail = true;
+                break;
+            }
         }
+        if (searchFail)
+            continue;
+
 
         uint64_t key = strtoull(line, NULL, 16);
 
@@ -880,10 +887,16 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         if (line[0] == '#')
             continue;
 
-        if (!isxdigit(line[0])) {
-            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_("%2d") "HEX symbols", line, keylen);
-            continue;
+        bool searchFail = false;
+        for (int i = 0; i < keylen; i++) {
+            if (!isxdigit(line[i])) {
+                PrintAndLogEx(FAILED, "file content error (pos %d). '%s' must include " _BLUE_("%2d") "HEX symbols", i + 1, line, keylen);
+                searchFail = true;
+                break;
+            }
         }
+        if (searchFail)
+            continue;
 
         uint64_t key = strtoull(line, NULL, 16);
 
