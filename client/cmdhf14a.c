@@ -1274,15 +1274,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (select_status == 3) {
-        PrintAndLogEx(NORMAL, "Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLogEx(NORMAL, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+        PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+        PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
         DropField();
         return select_status;
     }
 
-    PrintAndLogEx(NORMAL, " UID : %s", sprint_hex(card.uid, card.uidlen));
-    PrintAndLogEx(NORMAL, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(NORMAL, " SAK : %02x [%" PRIu64 "]", card.sak, resp.oldarg[0]);
+    PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+    PrintAndLogEx(SUCCESS, " SAK : %02x [%" PRIu64 "]", card.sak, resp.oldarg[0]);
 
     bool isMifareClassic = true;
     switch (card.sak) {
@@ -1296,7 +1296,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             if (tagT != UL_ERROR)
                 ul_print_type(tagT, 0);
             else
-                PrintAndLogEx(NORMAL, "TYPE: Possible AZTEK (iso14443a compliant)");
+                PrintAndLogEx(SUCCESS, "TYPE: Possible AZTEK (iso14443a compliant)");
 
             // reconnect for further tests
             clearCommandBuffer();
@@ -1313,49 +1313,49 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             }
             break;
         case 0x01:
-            PrintAndLogEx(NORMAL, "TYPE : NXP TNP3xxx Activision Game Appliance");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP TNP3xxx Activision Game Appliance");
             break;
         case 0x04:
-            PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE (various !DESFire !DESFire EV1)");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE (various !DESFire !DESFire EV1)");
             isMifareClassic = false;
             break;
         case 0x08:
-            PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1");
             break;
         case 0x09:
-            PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE Mini 0.3k");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Mini 0.3k");
             break;
         case 0x0A:
-            PrintAndLogEx(NORMAL, "TYPE : FM11RF005SH (Shanghai Metro)");
+            PrintAndLogEx(SUCCESS, "TYPE : FM11RF005SH (Shanghai Metro)");
             break;
         case 0x10:
-            PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE Plus 2k SL2");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Plus 2k SL2");
             break;
         case 0x11:
-            PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE Plus 4k SL2");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Plus 4k SL2");
             break;
         case 0x18:
-            PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1");
             break;
         case 0x20:
-            PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41");
             isMifareClassic = false;
             break;
         case 0x24:
-            PrintAndLogEx(NORMAL, "TYPE : NXP MIFARE DESFire | DESFire EV1");
+            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE DESFire | DESFire EV1");
             isMifareClassic = false;
             break;
         case 0x28:
-            PrintAndLogEx(NORMAL, "TYPE : JCOP31 or JCOP41 v2.3.1");
+            PrintAndLogEx(SUCCESS, "TYPE : JCOP31 or JCOP41 v2.3.1");
             break;
         case 0x38:
-            PrintAndLogEx(NORMAL, "TYPE : Nokia 6212 or 6131 MIFARE CLASSIC 4K");
+            PrintAndLogEx(SUCCESS, "TYPE : Nokia 6212 or 6131 MIFARE CLASSIC 4K");
             break;
         case 0x88:
-            PrintAndLogEx(NORMAL, "TYPE : Infineon MIFARE CLASSIC 1K");
+            PrintAndLogEx(SUCCESS, "TYPE : Infineon MIFARE CLASSIC 1K");
             break;
         case 0x98:
-            PrintAndLogEx(NORMAL, "TYPE : Gemplus MPCOS");
+            PrintAndLogEx(SUCCESS, "TYPE : Gemplus MPCOS");
             break;
         default:
             ;
@@ -1363,7 +1363,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     // Double & triple sized UID, can be mapped to a manufacturer.
     if (card.uidlen > 4) {
-        PrintAndLogEx(NORMAL, "MANUFACTURER : %s", getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "MANUFACTURER : %s", getTagInfo(card.uid[0]));
     }
 
     // try to request ATS even if tag claims not to support it
@@ -1382,12 +1382,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         int pos;
 
         if (select_status == 2) {
-            PrintAndLogEx(NORMAL, "SAK incorrectly claims that card doesn't support RATS");
+            PrintAndLogEx(INFO, "SAK incorrectly claims that card doesn't support RATS");
         }
-        PrintAndLogEx(NORMAL, " ATS : %s", sprint_hex(card.ats, card.ats_len));
-        PrintAndLogEx(NORMAL, "       -  TL : length is %d bytes", card.ats[0]);
+        PrintAndLogEx(SUCCESS, " ATS : %s", sprint_hex(card.ats, card.ats_len));
+        PrintAndLogEx(SUCCESS, "       -  TL : length is %d bytes", card.ats[0]);
         if (card.ats[0] != card.ats_len - 2) {
-            PrintAndLogEx(NORMAL, "ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
+            PrintAndLogEx(SUCCESS, "ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
         }
 
         if (card.ats[0] > 1) { // there is a format byte (T0)
@@ -1396,7 +1396,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             tc1 = (card.ats[1] & 0x40) == 0x40;
             int16_t fsci = card.ats[1] & 0x0f;
 
-            PrintAndLogEx(NORMAL, "       -  T0 : TA1 is%s present, TB1 is%s present, "
+            PrintAndLogEx(SUCCESS, "       -  T0 : TA1 is%s present, TB1 is%s present, "
                           "TC1 is%s present, FSCI is %d (FSC = %d)",
                           (ta1 ? "" : " NOT"),
                           (tb1 ? "" : " NOT"),
@@ -1417,7 +1417,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             if (card.ats[pos] & 0x04) strcat(dr, "8, ");
             if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
             if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
-            PrintAndLogEx(NORMAL, "       - TA1 : different divisors are%s supported, "
+            PrintAndLogEx(SUCCESS, "       - TA1 : different divisors are%s supported, "
                           "DR: [%s], DS: [%s]",
                           ((card.ats[pos] & 0x80) ? " NOT" : ""),
                           dr,
@@ -1429,7 +1429,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (tb1) {
             uint32_t sfgi = card.ats[pos] & 0x0F;
             uint32_t fwi = card.ats[pos] >> 4;
-            PrintAndLogEx(NORMAL, "       - TB1 : SFGI = %d (SFGT = %s%d/fc), FWI = %d (FWT = %d/fc)",
+            PrintAndLogEx(SUCCESS, "       - TB1 : SFGI = %d (SFGT = %s%d/fc), FWI = %d (FWT = %d/fc)",
                           (sfgi),
                           sfgi ? "" : "(not needed) ",
                           sfgi ? (1 << 12) << sfgi : 0,
@@ -1439,7 +1439,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             pos++;
         }
         if (tc1) {
-            PrintAndLogEx(NORMAL, "       - TC1 : NAD is%s supported, CID is%s supported",
+            PrintAndLogEx(SUCCESS, "       - TC1 : NAD is%s supported, CID is%s supported",
                           (card.ats[pos] & 0x01) ? "" : " NOT",
                           (card.ats[pos] & 0x02) ? "" : " NOT");
             pos++;
@@ -1453,63 +1453,63 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     tip = "-> MIFARE Plus S 2K or 4K";
                 }
             }
-            PrintAndLogEx(NORMAL, "       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats[0] - pos), tip);
+            PrintAndLogEx(SUCCESS, "       -  HB : %s%s", sprint_hex(card.ats + pos, card.ats[0] - pos), tip);
             if (card.ats[pos] == 0xC1) {
-                PrintAndLogEx(NORMAL, "               c1 -> Mifare or (multiple) virtual cards of various type");
-                PrintAndLogEx(NORMAL, "                  %02x -> Length is %d bytes", card.ats[pos + 1], card.ats[pos + 1]);
+                PrintAndLogEx(SUCCESS, "               c1 -> Mifare or (multiple) virtual cards of various type");
+                PrintAndLogEx(SUCCESS, "                  %02x -> Length is %d bytes", card.ats[pos + 1], card.ats[pos + 1]);
                 switch (card.ats[pos + 2] & 0xf0) {
                     case 0x10:
-                        PrintAndLogEx(NORMAL, "                     1x -> MIFARE DESFire");
+                        PrintAndLogEx(SUCCESS, "                     1x -> MIFARE DESFire");
                         break;
                     case 0x20:
-                        PrintAndLogEx(NORMAL, "                     2x -> MIFARE Plus");
+                        PrintAndLogEx(SUCCESS, "                     2x -> MIFARE Plus");
                         break;
                 }
                 switch (card.ats[pos + 2] & 0x0f) {
                     case 0x00:
-                        PrintAndLogEx(NORMAL, "                     x0 -> <1 kByte");
+                        PrintAndLogEx(SUCCESS, "                     x0 -> <1 kByte");
                         break;
                     case 0x01:
-                        PrintAndLogEx(NORMAL, "                     x1 -> 1 kByte");
+                        PrintAndLogEx(SUCCESS, "                     x1 -> 1 kByte");
                         break;
                     case 0x02:
-                        PrintAndLogEx(NORMAL, "                     x2 -> 2 kByte");
+                        PrintAndLogEx(SUCCESS, "                     x2 -> 2 kByte");
                         break;
                     case 0x03:
-                        PrintAndLogEx(NORMAL, "                     x3 -> 4 kByte");
+                        PrintAndLogEx(SUCCESS, "                     x3 -> 4 kByte");
                         break;
                     case 0x04:
-                        PrintAndLogEx(NORMAL, "                     x4 -> 8 kByte");
+                        PrintAndLogEx(SUCCESS, "                     x4 -> 8 kByte");
                         break;
                 }
                 switch (card.ats[pos + 3] & 0xf0) {
                     case 0x00:
-                        PrintAndLogEx(NORMAL, "                        0x -> Engineering sample");
+                        PrintAndLogEx(SUCCESS, "                        0x -> Engineering sample");
                         break;
                     case 0x20:
-                        PrintAndLogEx(NORMAL, "                        2x -> Released");
+                        PrintAndLogEx(SUCCESS, "                        2x -> Released");
                         break;
                 }
                 switch (card.ats[pos + 3] & 0x0f) {
                     case 0x00:
-                        PrintAndLogEx(NORMAL, "                        x0 -> Generation 1");
+                        PrintAndLogEx(SUCCESS, "                        x0 -> Generation 1");
                         break;
                     case 0x01:
-                        PrintAndLogEx(NORMAL, "                        x1 -> Generation 2");
+                        PrintAndLogEx(SUCCESS, "                        x1 -> Generation 2");
                         break;
                     case 0x02:
-                        PrintAndLogEx(NORMAL, "                        x2 -> Generation 3");
+                        PrintAndLogEx(SUCCESS, "                        x2 -> Generation 3");
                         break;
                 }
                 switch (card.ats[pos + 4] & 0x0f) {
                     case 0x00:
-                        PrintAndLogEx(NORMAL, "                           x0 -> Only VCSL supported");
+                        PrintAndLogEx(SUCCESS, "                           x0 -> Only VCSL supported");
                         break;
                     case 0x01:
-                        PrintAndLogEx(NORMAL, "                           x1 -> VCS, VCSL, and SVC supported");
+                        PrintAndLogEx(SUCCESS, "                           x1 -> VCS, VCSL, and SVC supported");
                         break;
                     case 0x0E:
-                        PrintAndLogEx(NORMAL, "                           xE -> no VCS command supported");
+                        PrintAndLogEx(SUCCESS, "                           xE -> no VCS command supported");
                         break;
                 }
             }
@@ -1552,9 +1552,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                     if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
                         if (sw == 0x9000) {
-                            if (verbose) PrintAndLogEx(NORMAL, "------------- Application OK -----------");
+                            if (verbose) PrintAndLogEx(SUCCESS, "------------- Application OK -----------");
                         } else {
-                            if (verbose) PrintAndLogEx(NORMAL, "----------- Application blocked --------");
+                            if (verbose) PrintAndLogEx(WARNING, "----------- Application blocked --------");
                         }
 
                         PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
