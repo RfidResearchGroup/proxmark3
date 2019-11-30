@@ -61,6 +61,7 @@ typedef enum {
     jsfLegic,
     jsfT55x7,
     jsfT5555,
+    jsfMfPlusKeys,
 } JSONFileType;
 
 typedef enum {

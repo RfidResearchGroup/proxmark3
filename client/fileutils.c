@@ -352,6 +352,36 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
         case jsf15:
         case jsfLegic:
         case jsfT5555:
+        case jsfMfPlusKeys:
+            JsonSaveStr(root, "FileType", "mfp");
+            
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[11], 2);
+            uint8_t atslen = data[13];
+            if (atslen > 0)
+                JsonSaveBufAsHexCompact(root, "$.Card.ATS", &data[14], atslen);
+            
+            uint8_t vdata[2][64][16 + 1] = {0};
+            memcpy(vdata, &data[14 + atslen], 2 * 64 * 17);
+            
+            for (size_t i = 0; i < datalen; i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+
+                if (vdata[0][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.SectorKeys.%d.KeyA", mfSectorNum(i));
+                    JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], 16);
+                }
+
+                if (vdata[1][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.SectorKeys.%d.KeyB", mfSectorNum(i));
+                    JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], 16);
+                }
+           
+            }
+            break;
         default:
             break;
     }
