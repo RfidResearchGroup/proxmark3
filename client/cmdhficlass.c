@@ -334,15 +334,15 @@ static void fuse_config(const picopass_hdr *hdr) {
     if (isset(fuses, FUSE_FPERS))
         PrintAndLogEx(SUCCESS, "    Mode: Personalization [Programmable]");
     else
-        PrintAndLogEx(NORMAL, "    Mode: Application [Locked]");
+        PrintAndLogEx(SUCCESS, "    Mode: Application [Locked]");
 
     if (isset(fuses, FUSE_CODING1)) {
-        PrintAndLogEx(NORMAL, "    Coding: RFU");
+        PrintAndLogEx(SUCCESS, "    Coding: RFU");
     } else {
         if (isset(fuses, FUSE_CODING0))
-            PrintAndLogEx(NORMAL, "    Coding: ISO 14443-2 B/ISO 15693");
+            PrintAndLogEx(SUCCESS, "    Coding: ISO 14443-2 B/ISO 15693");
         else
-            PrintAndLogEx(NORMAL, "    Coding: ISO 14443B only");
+            PrintAndLogEx(SUCCESS, "    Coding: ISO 14443B only");
     }
     // 1 1
     if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "    Crypt: Secured page, keys not locked");
@@ -354,7 +354,7 @@ static void fuse_config(const picopass_hdr *hdr) {
     if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "    Crypt: No auth possible. Read only if RA is enabled");
 
     if (isset(fuses, FUSE_RA))
-        PrintAndLogEx(NORMAL, "    RA: Read access enabled");
+        PrintAndLogEx(SUCCESS, "    RA: Read access enabled");
     else
         PrintAndLogEx(WARNING, "    RA: Read access not enabled");
 }
@@ -2827,12 +2827,13 @@ int readIclass(bool loop, bool verbose) {
             }
 
             if (readStatus & FLAG_ICLASS_READER_CSN) {
-                PrintAndLogEx(NORMAL, "   CSN: %s", sprint_hex(data, 8));
+                PrintAndLogEx(NORMAL, "\n");
+                PrintAndLogEx(SUCCESS, "   CSN: %s", sprint_hex(data, 8));
                 tagFound = true;
             }
 
             if (readStatus & FLAG_ICLASS_READER_CC) {
-                PrintAndLogEx(NORMAL, "    CC: %s", sprint_hex(data + 16, 8));
+                PrintAndLogEx(SUCCESS, "    CC: %s", sprint_hex(data + 16, 8));
             }
 
             if (readStatus & FLAG_ICLASS_READER_CONF) {
@@ -2847,7 +2848,7 @@ int readIclass(bool loop, bool verbose) {
 
                 bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
 
-                PrintAndLogEx(NORMAL, " App IA: %s", sprint_hex(data + 8 * 5, 8));
+                PrintAndLogEx(SUCCESS, " App IA: %s", sprint_hex(data + 8 * 5, 8));
 
                 if (isHidRange) {
                     if (legacy)
