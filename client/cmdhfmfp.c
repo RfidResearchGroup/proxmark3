@@ -26,6 +26,7 @@
 #include "emv/dump.h"
 #include "mifare/mifaredefault.h"
 #include "util_posix.h"
+#include "fileutils.h"
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
@@ -705,6 +706,21 @@ static int CmdHFMFPWrbl(const char *cmd) {
     return PM3_SUCCESS;
 }
 
+void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyListLen, uint32_t *startPattern) {
+    for (uint32_t pt = *startPattern; pt < 0x10000; pt++) {
+        keyList[*keyListLen][0] = (pt >> 8) & 0xff;
+        keyList[*keyListLen][1] = pt & 0xff;
+        memcpy(&keyList[*keyListLen][2], &keyList[*keyListLen][0], 2);
+        memcpy(&keyList[*keyListLen][4], &keyList[*keyListLen][0], 4);
+        memcpy(&keyList[*keyListLen][8], &keyList[*keyListLen][0], 8);
+        (*keyListLen)++;
+        *startPattern = pt;
+        if (*keyListLen == MAX_KEYS_LIST_LEN)
+            break;
+    }
+    (*startPattern)++;
+}
+
 static int CmdHFMFPChk(const char *cmd) {
     int res;
     uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {0};
@@ -722,11 +738,12 @@ static int CmdHFMFPChk(const char *cmd) {
         arg_lit0("bB",  "keyb",      "check only key B (by default check all keys)."),
         arg_int0("sS",  "startsec",  "Start sector Num (0..255)", NULL),
         arg_int0("eE",  "endsec",    "End sector Num (0..255)", NULL),
-        arg_str0("kK",  "key",       "<Key (HEX 16 bytes)>", NULL),
-        arg_str0(NULL,  NULL,        "<file with keys dictionary>", NULL),
+        arg_str0("kK",  "key",       "<Key>", "Key for checking (HEX 16 bytes)"),
+        arg_str0("dD",  "dict",      "<file>", "file with keys dictionary"),
         arg_lit0(NULL,  "pattern1b", "check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL,  "pattern2b", "check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
-        arg_str0(NULL,  "startp2b",  "<HEX 0000-ffff> start pattern for 2-byte search key", NULL),
+        arg_str0(NULL,  "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
+        arg_str0("jJ",  "json",      "<file>",  "json file to save keys"),
         arg_param_end
     };
     CLIExecWithReturn(cmd, argtable, true);
@@ -745,19 +762,47 @@ static int CmdHFMFPChk(const char *cmd) {
             keyListLen++;
         } else {
             PrintAndLogEx(ERROR, "Specified key must have 16 bytes length.");
+            CLIParserFree();
             return PM3_EINVARG;
         }
     }
+    
+    uint8_t dict_filename[FILE_PATH_SIZE + 2] = {0};
+    int dict_filenamelen = 0;
+    if (CLIParamStrToBuf(arg_get_str(6), dict_filename, FILE_PATH_SIZE, &dict_filenamelen)) {
+        PrintAndLogEx(FAILED, "File name too long or invalid.");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+
+/*    char *dict_path;
+    int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
+    if (res != PM3_SUCCESS) {
+        CLIParserFree();
+        return PM3_EFILE;
+    }
+    f = fopen(dict_path, "r");
+    if (!f) {
+        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
+        free(dict_path);
+        CLIParserFree();
+        return PM3_EFILE;
+    }
+    free(dict_path);    
+    
+    
+ */   
     
     bool pattern1b = arg_get_lit(7);
     bool pattern2b = arg_get_lit(8);
 
     if (pattern1b && pattern2b) {
         PrintAndLogEx(ERROR, "Pattern search mode must be 2-byte or 1-byte only.");
+        CLIParserFree();
         return PM3_EINVARG;
     }
     
-    uint16_t startPattern = 0x0000;
+    uint32_t startPattern = 0x0000;
     uint8_t vpattern[2];
     int vpatternlen = 0;
     CLIGetHexWithReturn(9, vpattern, &vpatternlen);
@@ -766,11 +811,21 @@ static int CmdHFMFPChk(const char *cmd) {
             startPattern = (vpattern[0] << 8) + vpattern[1];
         } else {
             PrintAndLogEx(ERROR, "Pattern must be 2-byte length.");
+            CLIParserFree();
             return PM3_EINVARG;
         }
         if (!pattern2b)
             PrintAndLogEx(WARNING, "Pattern entered, but search mode not is 2-byte search.");
     }
+    
+    uint8_t jsonname[250] = {0};
+    int jsonnamelen = 0;
+    if (CLIParamStrToBuf(arg_get_str(10), jsonname, sizeof(jsonname), &jsonnamelen)) {
+        PrintAndLogEx(ERROR, "Invalid json name.");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+    jsonname[jsonnamelen] = 0;
     
     CLIParserFree();
 
@@ -791,19 +846,8 @@ static int CmdHFMFPChk(const char *cmd) {
         keyListLen = 0x100;
     }
     
-    if (pattern2b) {
-        for (uint32_t i = startPattern; i < 0x10000; i++) {
-            keyList[keyListLen][0] = (i >> 8) & 0xff;
-            keyList[keyListLen][1] = i & 0xff;
-            memcpy(&keyList[keyListLen][2], &keyList[keyListLen][0], 2);
-            memcpy(&keyList[keyListLen][4], &keyList[keyListLen][0], 4);
-            memcpy(&keyList[keyListLen][8], &keyList[keyListLen][0], 8);
-            keyListLen++;
-            if (keyListLen == MAX_KEYS_LIST_LEN)
-                break;
-        }
-        startPattern = (keyList[keyListLen - 1][0] << 8) + keyList[keyListLen - 1][1];
-    }
+    if (pattern2b)
+        Fill2bPattern(keyList, &keyListLen, &startPattern);
 
     if (keyListLen == 0) {
         for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
@@ -822,8 +866,18 @@ static int CmdHFMFPChk(const char *cmd) {
         return PM3_EINVARG;
     }
 
-    res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys);
-    printf("--- res: %d\n", res);
+    while (true) {
+        res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys);
+        printf("--- res: %d\n", res);
+        if (res == PM3_EOPABORTED)
+            break;
+        if (pattern2b && startPattern < 0x10000) {
+            keyListLen = 0;
+            Fill2bPattern(keyList, &keyListLen, &startPattern);
+            continue;
+        }
+        break;
+    }
 
     // print result
     bool printedHeader = false;
@@ -846,6 +900,36 @@ static int CmdHFMFPChk(const char *cmd) {
         PrintAndLogEx(INFO, "No keys found(");
     else
         PrintAndLogEx(INFO, "'------'--------------------------------'--------------------------------'\n");
+    
+    // save keys to json
+    if ((jsonnamelen > 0) && printedHeader) {
+        // Mifare Plus info
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+
+        PacketResponseNG resp;
+        WaitForResponse(CMD_ACK, &resp);
+
+        iso14a_card_select_t card;
+        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+        uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+
+        uint8_t data[10 + 1 + 2 + 1 + 256 + 2 * 64 * (AES_KEY_LEN + 1)] = {0};
+        uint8_t atslen = 0;
+        if (select_status == 1 || select_status == 2) {
+            memcpy(data, card.uid, card.uidlen);
+            data[10] = card.sak;
+            data[11] = card.atqa[1];
+            data[12] = card.atqa[0];
+            atslen = card.ats_len;
+            data[13] = atslen;
+            memcpy(&data[14], card.ats, atslen);
+        }            
+        
+        // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
+        memcpy(&data[14 + atslen], foundKeys, 2 * 64 * (AES_KEY_LEN + 1));
+        saveFileJSON((char *)jsonname, jsfMfPlusKeys, data, 64);
+    }
     
     return PM3_SUCCESS;
 }
