@@ -842,8 +842,10 @@ static int CmdHFMFPChk(const char *cmd) {
     // dictionary mode
     if (dict_filenamelen) {
         size_t endFilePosition = 0;
-        res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), &keyListLen, 16, NULL, 0, &endFilePosition);
-        printf("---endFilePosition %d", endFilePosition);
+        uint16_t keycnt = 0;
+        res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition);
+        keyListLen = keycnt;
+        printf("---endFilePosition %d\n", endFilePosition);
     }
 
     if (keyListLen == 0) {
@@ -869,6 +871,8 @@ static int CmdHFMFPChk(const char *cmd) {
             keyListLen = 0;
             Fill2bPattern(keyList, &keyListLen, &startPattern);
             continue;
+        }
+        if (dict_filenamelen) {
         }
         break;
     }

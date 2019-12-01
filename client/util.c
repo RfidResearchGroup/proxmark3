@@ -395,7 +395,7 @@ void print_blocks(uint32_t *data, size_t len) {
 }
 
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen) {
-    char buf[3];
+    char buf[4] = {0};
     int indx = 0;
     int bytesValueLen = 0;
     while (hexValue[indx]) {
@@ -405,7 +405,6 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
         }
 
         if (isxdigit(hexValue[indx])) {
-            buf[strlen(buf) + 1] = 0x00;
             buf[strlen(buf)] = hexValue[indx];
         } else {
             // if we have symbols other than spaces and hex
@@ -421,7 +420,7 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
             uint32_t temp = 0;
             sscanf(buf, "%x", &temp);
             bytesValue[bytesValueLen] = (uint8_t)(temp & 0xff);
-            buf[0] = 0;
+            memset(buf, 0, sizeof(buf));
             bytesValueLen++;
         }
 

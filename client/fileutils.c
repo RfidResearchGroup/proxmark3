@@ -785,10 +785,10 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     
     if (startFilePosition)
         fseek(f, startFilePosition, SEEK_SET);
-    
+      
     // read file
-    while (fgets(line, sizeof(line), f)) {
-
+    while (!feof(f) && fgets(line, sizeof(line), f)) {
+  
         // add null terminator
         line[keylen] = 0;
 
@@ -800,7 +800,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
         if (line[0] == '#')
             continue;
 
-        if (CheckStringIsHEXValue(line))
+        if (!CheckStringIsHEXValue(line))
             continue;
 
         // cant store more data
@@ -811,10 +811,10 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
                 *endFilePosition = pos;
             break;
         }
-
+        
         if (hex_to_bytes(line, data + counter, keylen >> 1) != (keylen >> 1))
             continue;
-        
+          
         vkeycnt++;
         memset(line, 0, sizeof(line));
         counter += (keylen >> 1);
