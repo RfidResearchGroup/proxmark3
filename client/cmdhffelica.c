@@ -291,12 +291,12 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose)
     if (WaitForResponseTimeout(CMD_ACK, resp, 2000)) {
         uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
         if (verbose) {
-            PrintAndLogEx(NORMAL, "Client Received %i octets", len);
+            PrintAndLogEx(SUCCESS, "Client Received %i octets", len);
             if (!len || len < 2) {
                 PrintAndLogEx(ERR, "Could not receive data correctly!");
                 return false;
             }
-            PrintAndLogEx(NORMAL, "%s", sprint_hex(resp->data.asBytes, len));
+            PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp->data.asBytes, len));
             if (!check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2)) {
                 PrintAndLogEx(WARNING, "Wrong or no CRC bytes");
             }
@@ -371,7 +371,7 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
     uint16_t numbits = 0;
     clearCommandBuffer();
     if (verbose) {
-        PrintAndLogEx(NORMAL, "Send Service Request Frame: %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Send Service Request Frame: %s", sprint_hex(data, datalen));
     }
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 }
@@ -409,11 +409,11 @@ static void print_rd_noEncrpytion_response(felica_read_without_encryption_respon
         char bl_element_number[4];
         temp = sprint_hex(rd_noCry_resp->block_element_number, sizeof(rd_noCry_resp->block_element_number));
         strcpy(bl_element_number, temp);
-        PrintAndLogEx(NORMAL, "\t%s\t|  %s  ", bl_element_number, bl_data);
+        PrintAndLogEx(INFO, "\t%s\t|  %s  ", bl_element_number, bl_data);
     } else {
-        PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rd_noCry_resp->frame_response.IDm, sizeof(rd_noCry_resp->frame_response.IDm)));
-        PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
-        PrintAndLogEx(NORMAL, "Status Flag2: %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
+        PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rd_noCry_resp->frame_response.IDm, sizeof(rd_noCry_resp->frame_response.IDm)));
+        PrintAndLogEx(SUCCESS, "Status Flag1: %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
+        PrintAndLogEx(SUCCESS, "Status Flag2: %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
     }
 }
 
@@ -425,7 +425,7 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
     PacketResponseNG resp;
     if (datalen > 0) {
         if (!waitCmdFelica(0, &resp, 1)) {
-            PrintAndLogEx(ERR, "\nGot no Response from card");
+            PrintAndLogEx(ERR, "\nGot no response from card");
             return PM3_ERFTRANS;
         }
         felica_request_service_response_t rqs_response;
@@ -433,9 +433,9 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
 
         if (rqs_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Service Response:");
-            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rqs_response.frame_response.IDm, sizeof(rqs_response.frame_response.IDm)));
-            PrintAndLogEx(NORMAL, "  -Node Number: %s", sprint_hex(rqs_response.node_number, sizeof(rqs_response.node_number)));
-            PrintAndLogEx(NORMAL, "  -Node Key Version List: %s\n", sprint_hex(rqs_response.node_key_versions, sizeof(rqs_response.node_key_versions)));
+            PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rqs_response.frame_response.IDm, sizeof(rqs_response.frame_response.IDm)));
+            PrintAndLogEx(SUCCESS, "  -Node Number: %s", sprint_hex(rqs_response.node_number, sizeof(rqs_response.node_number)));
+            PrintAndLogEx(SUCCESS, "  -Node Key Version List: %s\n", sprint_hex(rqs_response.node_key_versions, sizeof(rqs_response.node_key_versions)));
         }
         return PM3_SUCCESS;
     }
@@ -455,7 +455,7 @@ int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
     clear_and_send_command(flags, datalen, data, verbose);
     PacketResponseNG resp;
     if (!waitCmdFelica(0, &resp, verbose)) {
-        PrintAndLogEx(ERR, "\nGot no Response from card");
+        PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     } else {
         memcpy(rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
@@ -493,7 +493,7 @@ int send_wr_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
     clear_and_send_command(flags, datalen, data, verbose);
     PacketResponseNG resp;
     if (!waitCmdFelica(0, &resp, verbose)) {
-        PrintAndLogEx(ERR, "\nGot no Response from card");
+        PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     } else {
         memcpy(wr_noCry_resp, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
@@ -518,8 +518,7 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
     int i = 0;
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
+            switch (tolower(Cmd[i + 1])) {
                 case 'h':
                     return usage_hf_felica_write_without_encryption();
                 case 'i':
@@ -558,9 +557,9 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
     datalen += 2;
     felica_status_response_t wr_noCry_resp;
     if (send_wr_unencrypted(flags, datalen, data, 1, &wr_noCry_resp) == PM3_SUCCESS) {
-        PrintAndLogEx(NORMAL, "\nIDm: %s", sprint_hex(wr_noCry_resp.frame_response.IDm, sizeof(wr_noCry_resp.frame_response.IDm)));
-        PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(wr_noCry_resp.status_flags.status_flag1, sizeof(wr_noCry_resp.status_flags.status_flag1)));
-        PrintAndLogEx(NORMAL, "Status Flag2: %s\n", sprint_hex(wr_noCry_resp.status_flags.status_flag2, sizeof(wr_noCry_resp.status_flags.status_flag2)));
+        PrintAndLogEx(SUCCESS, "\nIDm: %s", sprint_hex(wr_noCry_resp.frame_response.IDm, sizeof(wr_noCry_resp.frame_response.IDm)));
+        PrintAndLogEx(SUCCESS, "Status Flag1: %s", sprint_hex(wr_noCry_resp.status_flags.status_flag1, sizeof(wr_noCry_resp.status_flags.status_flag1)));
+        PrintAndLogEx(SUCCESS, "Status Flag2: %s\n", sprint_hex(wr_noCry_resp.status_flags.status_flag2, sizeof(wr_noCry_resp.status_flags.status_flag2)));
         if (wr_noCry_resp.status_flags.status_flag1[0] == 0x00 && wr_noCry_resp.status_flags.status_flag2[0] == 0x00) {
             PrintAndLogEx(SUCCESS, "Writing data successful!\n");
         } else {
@@ -589,8 +588,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
     int i = 0;
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
+            switch (tolower(Cmd[i + 1])) {
                 case 'h':
                     return usage_hf_felica_read_without_encryption();
                 case 'i':
@@ -643,7 +641,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         if (long_block_numbers) {
             last_block_number = 0xFFFF;
         }
-        PrintAndLogEx(NORMAL, "Block Element\t|  Data  ");
+        PrintAndLogEx(INFO, "Block Element\t|  Data  ");
         for (int i = 0x00; i < last_block_number; i++) {
             data[15] = i;
             AddCrc(data, datalen);
@@ -665,7 +663,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         datalen += 2;
         felica_read_without_encryption_response_t rd_noCry_resp;
         if (send_rd_unencrypted(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "Block Element\t|  Data  ");
+            PrintAndLogEx(INFO, "Block Element\t|  Data  ");
             print_rd_noEncrpytion_response(&rd_noCry_resp);
         }
     }
@@ -687,8 +685,7 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     int i = 0;
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
+            switch (tolower(Cmd[i + 1])) {
                 case 'h':
                     return usage_hf_felica_request_response();
                 case 'i':
@@ -718,15 +715,15 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
     PacketResponseNG resp;
     if (!waitCmdFelica(0, &resp, 1)) {
-        PrintAndLogEx(ERR, "\nGot no Response from card");
+        PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     } else {
         felica_request_request_response_t rq_response;
         memcpy(&rq_response, (felica_request_request_response_t *)resp.data.asBytes, sizeof(felica_request_request_response_t));
         if (rq_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Request Response:");
-            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rq_response.frame_response.IDm, sizeof(rq_response.frame_response.IDm)));
-            PrintAndLogEx(NORMAL, "  -Mode: %s\n\n", sprint_hex(rq_response.mode, sizeof(rq_response.mode)));
+            PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rq_response.frame_response.IDm, sizeof(rq_response.frame_response.IDm)));
+            PrintAndLogEx(SUCCESS, "  -Mode: %s\n\n", sprint_hex(rq_response.mode, sizeof(rq_response.mode)));
         }
     }
     return PM3_SUCCESS;
@@ -749,8 +746,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     int i = 0;
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
+            switch (tolower(Cmd[i + 1])) {
                 case 'h':
                     return usage_hf_felica_request_specification_version();
                 case 'i':
@@ -793,24 +789,24 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
     PacketResponseNG resp;
     if (!waitCmdFelica(0, &resp, 1)) {
-        PrintAndLogEx(ERR, "\nGot no Response from card");
+        PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     } else {
         felica_request_spec_response_t spec_response;
         memcpy(&spec_response, (felica_request_spec_response_t *)resp.data.asBytes, sizeof(felica_request_spec_response_t));
         if (spec_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Request Response:");
-            PrintAndLogEx(NORMAL, "\nIDm: %s", sprint_hex(spec_response.frame_response.IDm, sizeof(spec_response.frame_response.IDm)));
-            PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(spec_response.status_flags.status_flag1, sizeof(spec_response.status_flags.status_flag1)));
-            PrintAndLogEx(NORMAL, "Status Flag2: %s", sprint_hex(spec_response.status_flags.status_flag2, sizeof(spec_response.status_flags.status_flag2)));
+            PrintAndLogEx(SUCCESS, "\nIDm: %s", sprint_hex(spec_response.frame_response.IDm, sizeof(spec_response.frame_response.IDm)));
+            PrintAndLogEx(SUCCESS, "Status Flag1: %s", sprint_hex(spec_response.status_flags.status_flag1, sizeof(spec_response.status_flags.status_flag1)));
+            PrintAndLogEx(SUCCESS, "Status Flag2: %s", sprint_hex(spec_response.status_flags.status_flag2, sizeof(spec_response.status_flags.status_flag2)));
             if (spec_response.status_flags.status_flag1[0] == 0x00) {
-                PrintAndLogEx(NORMAL, "Format Version: %s", sprint_hex(spec_response.format_version, sizeof(spec_response.format_version)));
-                PrintAndLogEx(NORMAL, "Basic Version: %s", sprint_hex(spec_response.basic_version, sizeof(spec_response.basic_version)));
-                PrintAndLogEx(NORMAL, "Number of Option: %s", sprint_hex(spec_response.number_of_option, sizeof(spec_response.number_of_option)));
+                PrintAndLogEx(SUCCESS, "Format Version: %s", sprint_hex(spec_response.format_version, sizeof(spec_response.format_version)));
+                PrintAndLogEx(SUCCESS, "Basic Version: %s", sprint_hex(spec_response.basic_version, sizeof(spec_response.basic_version)));
+                PrintAndLogEx(SUCCESS, "Number of Option: %s", sprint_hex(spec_response.number_of_option, sizeof(spec_response.number_of_option)));
                 if (spec_response.number_of_option[0] == 0x01) {
-                    PrintAndLogEx(NORMAL, "Option Version List:");
+                    PrintAndLogEx(SUCCESS, "Option Version List:");
                     for (uint8_t i = 0; i < spec_response.number_of_option[0]; i++) {
-                        PrintAndLogEx(NORMAL, "  - %s", sprint_hex(spec_response.option_version_list + i * 2, sizeof(uint8_t) * 2));
+                        PrintAndLogEx(SUCCESS, "  - %s", sprint_hex(spec_response.option_version_list + i * 2, sizeof(uint8_t) * 2));
                     }
                 }
             }
@@ -836,8 +832,7 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     int i = 0;
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
+            switch (tolower(Cmd[i + 1])) {
                 case 'h':
                     return usage_hf_felica_reset_mode();
                 case 'i':
@@ -880,16 +875,16 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
     PacketResponseNG resp;
     if (!waitCmdFelica(0, &resp, 1)) {
-        PrintAndLogEx(ERR, "\nGot no Response from card");
+        PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     } else {
         felica_status_response_t reset_mode_response;
         memcpy(&reset_mode_response, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
         if (reset_mode_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Request Response:");
-            PrintAndLogEx(NORMAL, "\nIDm: %s", sprint_hex(reset_mode_response.frame_response.IDm, sizeof(reset_mode_response.frame_response.IDm)));
-            PrintAndLogEx(NORMAL, "Status Flag1: %s", sprint_hex(reset_mode_response.status_flags.status_flag1, sizeof(reset_mode_response.status_flags.status_flag1)));
-            PrintAndLogEx(NORMAL, "Status Flag2: %s\n", sprint_hex(reset_mode_response.status_flags.status_flag2, sizeof(reset_mode_response.status_flags.status_flag2)));
+            PrintAndLogEx(SUCCESS, "\nIDm: %s", sprint_hex(reset_mode_response.frame_response.IDm, sizeof(reset_mode_response.frame_response.IDm)));
+            PrintAndLogEx(SUCCESS, "Status Flag1: %s", sprint_hex(reset_mode_response.status_flags.status_flag1, sizeof(reset_mode_response.status_flags.status_flag1)));
+            PrintAndLogEx(SUCCESS, "Status Flag2: %s\n", sprint_hex(reset_mode_response.status_flags.status_flag2, sizeof(reset_mode_response.status_flags.status_flag2)));
         }
     }
     return PM3_SUCCESS;
@@ -912,8 +907,7 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
     int i = 0;
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
+            switch (tolower(Cmd[i + 1])) {
                 case 'h':
                     return usage_hf_felica_request_system_code();
                 case 'i':
@@ -943,18 +937,18 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
     PacketResponseNG resp;
     if (!waitCmdFelica(0, &resp, 1)) {
-        PrintAndLogEx(ERR, "\nGot no Response from card");
+        PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     } else {
         felica_syscode_response_t rq_syscode_response;
         memcpy(&rq_syscode_response, (felica_syscode_response_t *)resp.data.asBytes, sizeof(felica_syscode_response_t));
         if (rq_syscode_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Request Response:");
-            PrintAndLogEx(NORMAL, "IDm: %s", sprint_hex(rq_syscode_response.frame_response.IDm, sizeof(rq_syscode_response.frame_response.IDm)));
-            PrintAndLogEx(NORMAL, "  - Number of Systems: %s", sprint_hex(rq_syscode_response.number_of_systems, sizeof(rq_syscode_response.number_of_systems)));
-            PrintAndLogEx(NORMAL, "  - System Codes: enumerated in ascending order starting from System 0.");
+            PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rq_syscode_response.frame_response.IDm, sizeof(rq_syscode_response.frame_response.IDm)));
+            PrintAndLogEx(SUCCESS, "  - Number of Systems: %s", sprint_hex(rq_syscode_response.number_of_systems, sizeof(rq_syscode_response.number_of_systems)));
+            PrintAndLogEx(SUCCESS, "  - System Codes: enumerated in ascending order starting from System 0.");
             for (uint8_t i = 0; i < rq_syscode_response.number_of_systems[0]; i++) {
-                PrintAndLogEx(NORMAL, "    - %s", sprint_hex(rq_syscode_response.system_code_list + i * 2, sizeof(uint8_t) * 2));
+                PrintAndLogEx(SUCCESS, "    - %s", sprint_hex(rq_syscode_response.system_code_list + i * 2, sizeof(uint8_t) * 2));
             }
         }
     }
@@ -978,8 +972,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     strip_cmds(Cmd);
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
+            switch (tolower(Cmd[i + 1])) {
                 case 'h':
                     return usage_hf_felica_request_service();
                 case 'i':
@@ -1051,7 +1044,8 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
 }
 
 static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
-    PrintAndLogEx(NORMAL, "Feature not implemented Yet!");
+    PrintAndLogEx(INFO, "Feature not implemented yet.");
+    PrintAndLogEx(INFO, "Feel free to contribute!");
     return PM3_SUCCESS;
 }
 
@@ -1063,12 +1057,10 @@ static int CmdHFFelicaSniff(const char *Cmd) {
     int i = 0;
     while (Cmd[i] != '\0') {
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'h':
+            switch (tolower(Cmd[i + 1])) {
                 case 'H':
                     return usage_hf_felica_sniff();
                 case 's':
-                case 'S':
                     paramCount++;
                     if (param_getlength(Cmd, paramCount) < 5) {
                         samples2skip = param_get32ex(Cmd, paramCount++, 0, 10);
@@ -1078,7 +1070,6 @@ static int CmdHFFelicaSniff(const char *Cmd) {
                     }
                     break;
                 case 't':
-                case 'T':
                     paramCount++;
                     if (param_getlength(Cmd, paramCount) < 5) {
                         triggers2skip = param_get32ex(Cmd, paramCount++, 0, 10);
@@ -1124,7 +1115,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
 }
 
 static void printSep() {
-    PrintAndLogEx(NORMAL, "------------------------------------------------------------------------------------");
+    PrintAndLogEx(INFO, "------------------------------------------------------------------------------------");
 }
 
 static uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
@@ -1360,8 +1351,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     while (Cmd[i] != '\0') {
         if (Cmd[i] == ' ' || Cmd[i] == '\t') { i++; continue; }
         if (Cmd[i] == '-') {
-            switch (Cmd[i + 1]) {
-                case 'H':
+            switch (tolower(Cmd[i + 1])) {
                 case 'h':
                     return usage_hf_felica_raw();
                 case 'r':
@@ -1405,7 +1395,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
                 *buf = 0;
                 if (++datalen >= sizeof(data)) {
                     if (crc)
-                        PrintAndLogEx(NORMAL, "Buffer is full, we can't add CRC to your data");
+                        PrintAndLogEx(WARNING, "Buffer is full, we can't add CRC to your data");
                     break;
                 }
             }
@@ -1439,12 +1429,12 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
-    PrintAndLogEx(NORMAL, "Data: %s", sprint_hex(data, datalen));
+    PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(data, datalen));
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 
     if (reply) {
         if (active_select) {
-            PrintAndLogEx(NORMAL, "Active select wait for FeliCa.");
+            PrintAndLogEx(SUCCESS, "Active select wait for FeliCa.");
             PacketResponseNG resp_IDm;
             waitCmdFelica(1, &resp_IDm, 1);
         }
@@ -1490,15 +1480,15 @@ int readFelicaUid(bool verbose) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "FeliCa tag info");
 
-            PrintAndLogEx(NORMAL, "IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
-            PrintAndLogEx(NORMAL, "  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
-            PrintAndLogEx(NORMAL, "  - NFCID2  %s", sprint_hex(card.uid, sizeof(card.uid)));
+            PrintAndLogEx(SUCCESS, "IDm  %s", sprint_hex(card.IDm, sizeof(card.IDm)));
+            PrintAndLogEx(SUCCESS, "  - CODE    %s", sprint_hex(card.code, sizeof(card.code)));
+            PrintAndLogEx(SUCCESS, "  - NFCID2  %s", sprint_hex(card.uid, sizeof(card.uid)));
 
-            PrintAndLogEx(NORMAL, "Parameter (PAD) | %s", sprint_hex(card.PMm, sizeof(card.PMm)));
-            PrintAndLogEx(NORMAL, "  - IC CODE %s", sprint_hex(card.iccode, sizeof(card.iccode)));
-            PrintAndLogEx(NORMAL, "  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
+            PrintAndLogEx(SUCCESS, "Parameter (PAD) | %s", sprint_hex(card.PMm, sizeof(card.PMm)));
+            PrintAndLogEx(SUCCESS, "  - IC CODE %s", sprint_hex(card.iccode, sizeof(card.iccode)));
+            PrintAndLogEx(SUCCESS, "  - MRT     %s", sprint_hex(card.mrt, sizeof(card.mrt)));
 
-            PrintAndLogEx(NORMAL, "SERVICE CODE %s", sprint_hex(card.servicecode, sizeof(card.servicecode)));
+            PrintAndLogEx(SUCCESS, "SERVICE CODE %s", sprint_hex(card.servicecode, sizeof(card.servicecode)));
             set_last_known_card(card);
             break;
         }
