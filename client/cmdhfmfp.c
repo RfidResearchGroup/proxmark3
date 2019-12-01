@@ -723,7 +723,6 @@ void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyL
 
 static int CmdHFMFPChk(const char *cmd) {
     int res;
-    FILE *dictionary_file = NULL;
     uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {0};
     size_t keyListLen = 0;
     uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {0};
@@ -775,21 +774,6 @@ static int CmdHFMFPChk(const char *cmd) {
         CLIParserFree();
         return PM3_EINVARG;
     }
-
-    char *dict_path;
-    res = searchFile(&dict_path, DICTIONARIES_SUBDIR, (char *)dict_filename, ".dic", false);
-    if (res != PM3_SUCCESS) {
-        CLIParserFree();
-        return PM3_EFILE;
-    }
-    dictionary_file = fopen(dict_path, "r");
-    if (!dictionary_file) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
-        free(dict_path);
-        CLIParserFree();
-        return PM3_EFILE;
-    }
-    free(dict_path);
     
     bool pattern1b = arg_get_lit(7);
     bool pattern2b = arg_get_lit(8);
@@ -800,7 +784,7 @@ static int CmdHFMFPChk(const char *cmd) {
         return PM3_EINVARG;
     }
 
-    if (dictionary_file && (pattern1b || pattern2b)) {
+    if (dict_filenamelen && (pattern1b || pattern2b)) {
         PrintAndLogEx(ERROR, "Pattern search mode and dictionary mode can't be used in one command.");
         CLIParserFree();
         return PM3_EINVARG;
@@ -856,7 +840,7 @@ static int CmdHFMFPChk(const char *cmd) {
         Fill2bPattern(keyList, &keyListLen, &startPattern);
     
     // dictionary mode
-    if (dictionary_file) {
+    if (dict_filenamelen) {
         size_t endFilePosition = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), &keyListLen, 16, NULL, 0, &endFilePosition);
         printf("---endFilePosition %d", endFilePosition);
@@ -864,10 +848,7 @@ static int CmdHFMFPChk(const char *cmd) {
 
     if (keyListLen == 0) {
         for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
-            int datalen = 0;
-            if (param_gethex_to_eol(g_mifare_plus_default_keys[i], 0, keyList[keyListLen], 16, &datalen) > 0)
-                break;
-            if (datalen != 16)
+            if (hex_to_bytes(g_mifare_plus_default_keys[i], keyList[keyListLen], 16) != 16)
                 break;
             
             keyListLen++;
