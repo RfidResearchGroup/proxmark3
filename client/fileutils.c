@@ -754,11 +754,11 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         keylen = 6;
     }
     
-    return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL);
+    return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL, true);
 }
 
 int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt, 
-                        size_t startFilePosition, size_t *endFilePosition) {
+                        size_t startFilePosition, size_t *endFilePosition, bool verbose) {
     if (endFilePosition)
         *endFilePosition = 0;
     if (data == NULL) return PM3_EINVARG;
@@ -787,7 +787,13 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
         fseek(f, startFilePosition, SEEK_SET);
       
     // read file
-    while (!feof(f) && fgets(line, sizeof(line), f)) {
+    while (!feof(f)) {
+        size_t filepos = ftell(f);
+        if (!fgets(line, sizeof(line), f)) {
+            if (endFilePosition)
+                *endFilePosition = 0;
+            break;
+        }  
   
         // add null terminator
         line[keylen] = 0;
@@ -804,11 +810,10 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
             continue;
 
         // cant store more data
-        if (maxdatalen && (counter + keylen > maxdatalen)) {
+        if (maxdatalen && (counter + (keylen >> 1) > maxdatalen)) {
             retval = 1;
-            int pos = ftell(f) - strlen(line) - 2; // 2 - `\r\n`
-            if (endFilePosition && (pos > 0))
-                *endFilePosition = pos;
+            if (endFilePosition)
+                *endFilePosition = filepos;
             break;
         }
         
@@ -820,7 +825,8 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
         counter += (keylen >> 1);
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
 
     if (datalen)
         *datalen = counter;

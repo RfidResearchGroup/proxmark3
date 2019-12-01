@@ -196,10 +196,11 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
  * @param keycnt key count that lays in data. may be NULL
  * @param startFilePosition  start position in dictionary file. used for big dictionaries.
  * @param endFilePosition in case we have keys in file and maxdatalen reached it returns current key position in file. may be NULL
+ * @param verbose print messages if true
  * @return 0 for ok, 1 for failz
 */
 int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt, 
-                        size_t startFilePosition, size_t *endFilePosition);
+                        size_t startFilePosition, size_t *endFilePosition, bool verbose);
 
 /**
  * @brief  Utility function to load data safely from a DICTIONARY textfile. This method takes a preferred name.

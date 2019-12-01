@@ -643,7 +643,8 @@ static int CmdHFMFPWrbl(const char *cmd) {
 #define MAX_KEYS_LIST_LEN  1024
 
  int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB, 
-                 uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
+                 uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
+                 bool verbose) {
     int res;
     bool selectCard = true;
     uint8_t keyn[2] = {0};
@@ -655,6 +656,8 @@ static int CmdHFMFPWrbl(const char *cmd) {
             // main cycle with key check
             for (int i = 0; i < keyListLen; i++) {
                 if (i % 10 == 0) {
+                    if (!verbose)
+                        printf(".");
                     if (kbd_enter_pressed()) {
                         PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
                         DropField();
@@ -671,18 +674,25 @@ static int CmdHFMFPWrbl(const char *cmd) {
                     if (res != 2)
                         break;
                     
-                    printf("retried[%d]...\n", retry);
+                    if (verbose)
+                        PrintAndLogEx(WARNING, "retried[%d]...", retry);
+                    else
+                        printf("R");
                     
                     DropField();
                     selectCard = true;
                     msleep(100);
                 }
                 
-                PrintAndLogEx(WARNING, "sector %d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
+                if (verbose)
+                    PrintAndLogEx(WARNING, "sector %02d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
                 
                 // key for [sector,keyAB] found
                 if (res == 0) {
-                    PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keyList[i], 16));
+                    if (verbose)
+                        PrintAndLogEx(INFO, "Found key for sector %d key %s [%s]", sector, keyAB == 0 ? "A" : "B", sprint_hex_inrow(keyList[i], 16));
+                    else
+                        printf("+");
                     foundKeys[keyAB][sector][0] = 0x01;
                     memcpy(&foundKeys[keyAB][sector][1], keyList[i], AES_KEY_LEN);
                     DropField();
@@ -693,6 +703,10 @@ static int CmdHFMFPWrbl(const char *cmd) {
                 
                 // 5 - auth error (rnd not equal)
                 if (res != 5) {
+                    if (verbose)
+                        PrintAndLogEx(ERR, "Exchange error. Aborted.");
+                    else
+                        printf("E");
                     DropField();
                     return PM3_ECARDEXCHANGE;
                 }
@@ -744,6 +758,7 @@ static int CmdHFMFPChk(const char *cmd) {
         arg_lit0(NULL,  "pattern2b", "check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL,  "startp2b",  "<Pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
         arg_str0("jJ",  "json",      "<file>",  "json file to save keys"),
+        arg_lit0("vV",  "verbose",   "verbose mode."),
         arg_param_end
     };
     CLIExecWithReturn(cmd, argtable, true);
@@ -815,6 +830,8 @@ static int CmdHFMFPChk(const char *cmd) {
     }
     jsonname[jsonnamelen] = 0;
     
+    bool verbose = arg_get_lit(11);
+    
     CLIParserFree();
 
     uint8_t startKeyAB = 0;
@@ -840,12 +857,13 @@ static int CmdHFMFPChk(const char *cmd) {
         Fill2bPattern(keyList, &keyListLen, &startPattern);
     
     // dictionary mode
+    size_t endFilePosition = 0;
     if (dict_filenamelen) {
-        size_t endFilePosition = 0;
         uint16_t keycnt = 0;
-        res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition);
+        res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition, true);
         keyListLen = keycnt;
-        printf("---endFilePosition %d\n", endFilePosition);
+        if (endFilePosition)
+            PrintAndLogEx(SUCCESS, "First part of dictionary successfully loaded.");
     }
 
     if (keyListLen == 0) {
@@ -862,20 +880,31 @@ static int CmdHFMFPChk(const char *cmd) {
         return PM3_EINVARG;
     }
 
+    if (!verbose)
+        printf("Search keys:");
     while (true) {
-        res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys);
-        printf("--- res: %d\n", res);
+        res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
         if (res == PM3_EOPABORTED)
             break;
         if (pattern2b && startPattern < 0x10000) {
+            if (!verbose)
+                printf("p");
             keyListLen = 0;
             Fill2bPattern(keyList, &keyListLen, &startPattern);
             continue;
         }
-        if (dict_filenamelen) {
+        if (dict_filenamelen && endFilePosition) {
+            if (!verbose)
+                printf("d");
+            uint16_t keycnt = 0;
+            res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
+            keyListLen = keycnt;
+            continue;
         }
         break;
     }
+    if (!verbose)
+        printf("\n");
 
     // print result
     bool printedHeader = false;
