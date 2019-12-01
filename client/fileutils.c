@@ -745,12 +745,6 @@ out:
 }
 
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
-
-    if (data == NULL) return PM3_EINVARG;
-    char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
-        return PM3_EFILE;
-
     // t5577 == 4bytes
     // mifare == 6 bytes
     // mf plus == 16 bytes
@@ -759,6 +753,20 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16) {
         keylen = 6;
     }
+    
+    return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL);
+}
+
+int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt, 
+                        size_t startFilePosition, size_t *endFilePosition) {
+    if (endFilePosition)
+        *endFilePosition = 0;
+    if (data == NULL) return PM3_EINVARG;
+    uint16_t vkeycnt = 0;
+    
+    char *path;
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
+        return PM3_EFILE;
 
     // double up since its chars
     keylen <<= 1;
@@ -774,7 +782,10 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         retval = PM3_EFILE;
         goto out;
     }
-
+    
+    if (startFilePosition)
+        fseek(f, startFilePosition, SEEK_SET);
+    
     // read file
     while (fgets(line, sizeof(line), f)) {
 
@@ -789,30 +800,32 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         if (line[0] == '#')
             continue;
 
-        bool searchFail = false;
-        for (int i = 0; i < keylen; i++) {
-            if (!isxdigit(line[i])) {
-                PrintAndLogEx(FAILED, "file content error (pos %d). '%s' must include " _BLUE_("%2d") "HEX symbols", i + 1, line, keylen);
-                searchFail = true;
-                break;
-            }
-        }
-        if (searchFail)
+        if (CheckStringIsHEXValue(line))
             continue;
 
+        // cant store more data
+        if (maxdatalen && (counter + keylen > maxdatalen)) {
+            retval = 1;
+            int pos = ftell(f) - strlen(line) - 2; // 2 - `\r\n`
+            if (endFilePosition && (pos > 0))
+                *endFilePosition = pos;
+            break;
+        }
 
-        uint64_t key = strtoull(line, NULL, 16);
-
-        num_to_bytes(key, keylen >> 1, data + counter);
-        (*keycnt)++;
+        if (hex_to_bytes(line, data + counter, keylen >> 1) != (keylen >> 1))
+            continue;
+        
+        vkeycnt++;
         memset(line, 0, sizeof(line));
         counter += (keylen >> 1);
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
 
     if (datalen)
         *datalen = counter;
+    if (keycnt)
+        *keycnt = vkeycnt;
 out:
     free(path);
     return retval;
@@ -887,15 +900,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         if (line[0] == '#')
             continue;
 
-        bool searchFail = false;
-        for (int i = 0; i < keylen; i++) {
-            if (!isxdigit(line[i])) {
-                PrintAndLogEx(FAILED, "file content error (pos %d). '%s' must include " _BLUE_("%2d") "HEX symbols", i + 1, line, keylen);
-                searchFail = true;
-                break;
-            }
-        }
-        if (searchFail)
+        if (CheckStringIsHEXValue(line))
             continue;
 
         uint64_t key = strtoull(line, NULL, 16);
