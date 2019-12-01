@@ -741,10 +741,14 @@ static int CmdHFMFPChk(const char *cmd) {
     size_t keyListLen = 0;
     uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {0};
     
-    CLIParserInit("hf mfp check",
+    CLIParserInit("hf mfp chk",
                   "Checks keys with Mifare Plus card.",
-                  "Usage:\n\thf mfp check -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B\n"
-                  "\thf mfp check -s 2 -a -> check default key list on sector 2, key A\n");
+                  "Usage:\n"
+                  "    hf mfp chk -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B\n"
+                  "    hf mfp chk -s 2 -a -> check default key list on sector 2, key A\n"
+                  "    hf mfp chk -d mfp_default_keys -s0 -e6 -> check keys from dictionary against sectors 0-6\n"
+                  "    hf mfp chk --pattern1b -j keys -> check all 1-byte keys pattern and save found keys to json\n"
+                  "    hf mfp chk --pattern2b --startp2b FA00 -> check all 2-byte keys pattern. Start from key FA00FA00...FA00\n");
 
     void *argtable[] = {
         arg_param_begin,
