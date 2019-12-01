@@ -176,8 +176,9 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
  *
  * @param preferredName
  * @param data The data array to store the loaded bytes from file
- * @param datalen the number of bytes loaded from file
+ * @param datalen the number of bytes loaded from file. may be NULL
  * @param keylen  the number of bytes a key per row is
+ * @param keycnt key count that lays in data. may be NULL
  * @return 0 for ok, 1 for failz
 */
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
@@ -190,10 +191,11 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
  * @param preferredName
  * @param data The data array to store the loaded bytes from file
  * @param maxdatalen maximum size of data array in bytes
- * @param datalen the number of bytes loaded from file
+ * @param datalen the number of bytes loaded from file. may be NULL
  * @param keylen  the number of bytes a key per row is
- * @param startFilePosition  
- * @param endFilePosition 
+ * @param keycnt key count that lays in data. may be NULL
+ * @param startFilePosition  start position in dictionary file. used for big dictionaries.
+ * @param endFilePosition in case we have keys in file and maxdatalen reached it returns current key position in file. may be NULL
  * @return 0 for ok, 1 for failz
 */
 int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt, 
