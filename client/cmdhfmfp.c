@@ -780,7 +780,7 @@ static int CmdHFMFPChk(const char *cmd) {
             memcpy(&keyList[keyListLen], vkey, 16);
             keyListLen++;
         } else {
-            PrintAndLogEx(ERROR, "Specified key must have 16 bytes length.");
+            PrintAndLogEx(ERR, "Specified key must have 16 bytes length.");
             CLIParserFree();
             return PM3_EINVARG;
         }
@@ -798,13 +798,13 @@ static int CmdHFMFPChk(const char *cmd) {
     bool pattern2b = arg_get_lit(8);
 
     if (pattern1b && pattern2b) {
-        PrintAndLogEx(ERROR, "Pattern search mode must be 2-byte or 1-byte only.");
+        PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
         CLIParserFree();
         return PM3_EINVARG;
     }
 
     if (dict_filenamelen && (pattern1b || pattern2b)) {
-        PrintAndLogEx(ERROR, "Pattern search mode and dictionary mode can't be used in one command.");
+        PrintAndLogEx(ERR, "Pattern search mode and dictionary mode can't be used in one command.");
         CLIParserFree();
         return PM3_EINVARG;
     }
@@ -817,7 +817,7 @@ static int CmdHFMFPChk(const char *cmd) {
         if (vpatternlen > 0 && vpatternlen <= 2) {
             startPattern = (vpattern[0] << 8) + vpattern[1];
         } else {
-            PrintAndLogEx(ERROR, "Pattern must be 2-byte length.");
+            PrintAndLogEx(ERR, "Pattern must be 2-byte length.");
             CLIParserFree();
             return PM3_EINVARG;
         }
@@ -828,7 +828,7 @@ static int CmdHFMFPChk(const char *cmd) {
     uint8_t jsonname[250] = {0};
     int jsonnamelen = 0;
     if (CLIParamStrToBuf(arg_get_str(10), jsonname, sizeof(jsonname), &jsonnamelen)) {
-        PrintAndLogEx(ERROR, "Invalid json name.");
+        PrintAndLogEx(ERR, "Invalid json name.");
         CLIParserFree();
         return PM3_EINVARG;
     }
@@ -880,7 +880,7 @@ static int CmdHFMFPChk(const char *cmd) {
     }
 
     if (keyListLen == 0) {
-        PrintAndLogEx(ERROR, "Key list is empty. Nothing to check.");
+        PrintAndLogEx(ERR, "Key list is empty. Nothing to check.");
         return PM3_EINVARG;
     }
 
