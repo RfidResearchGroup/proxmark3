@@ -737,9 +737,9 @@ void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyL
 
 static int CmdHFMFPChk(const char *cmd) {
     int res;
-    uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {0};
+    uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {{0}};
     size_t keyListLen = 0;
-    uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {0};
+    uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {{{0}}};
     
     CLIParserInit("hf mfp chk",
                   "Checks keys with Mifare Plus card.",
