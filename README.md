@@ -1,10 +1,5 @@
 # RRG / Iceman repo - Proxmark3
 
-This repo is based on iceman fork for Proxmark3.
-
-It supports RDV4.0 and other Proxmark3 platforms as well.
-
-
 | Releases     | Linux & OSX CI       | Windows CI | Coverity    |
 | ------------------- |:-------------------:| -------------------:| -------------------:|
 | [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Build status](https://travis-ci.org/RfidResearchGroup/proxmark3.svg?branch=master)](https://travis-ci.org/RfidResearchGroup/proxmark3) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) | [![Coverity Status](https://scan.coverity.com/projects/19334/badge.svg)](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo)|
@@ -110,4 +105,3 @@ Nothing says thank you as much as a donation. So if you feel the love, do feel f
 
 https://www.patreon.com/iceman1001
 
-All support is welcome!
