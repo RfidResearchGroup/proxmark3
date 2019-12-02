@@ -1,9 +1,11 @@
 # RRG / Iceman repo - Proxmark3
 
+
 | Releases     | Linux & OSX CI       | Windows CI | Coverity    |
 | ------------------- |:-------------------:| -------------------:| -------------------:|
 | [![Latest release](https://img.shields.io/github/release/RfidResearchGroup/proxmark3.svg)](https://github.com/RfidResearchGroup/proxmark3/releases/latest) | [![Build status](https://travis-ci.org/RfidResearchGroup/proxmark3.svg?branch=master)](https://travis-ci.org/RfidResearchGroup/proxmark3) | [![Build status](https://ci.appveyor.com/api/projects/status/b4gwrhq3nc876cuu/branch/master?svg=true)](https://ci.appveyor.com/project/RfidResearchGroup/proxmark3/branch/master) | [![Coverity Status](https://scan.coverity.com/projects/19334/badge.svg)](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo)|
----
+
+
 
 # PROXMARK INSTALLATION AND OVERVIEW
 
@@ -24,9 +26,11 @@
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
 
-## Support on other Proxmark3 platforms
+
+## Build for non-RDV4 Proxmark3 platforms
 
 In order to build this repo for other Proxmark3 platforms we urge you to read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
+
 
 ## What has changed?
 
