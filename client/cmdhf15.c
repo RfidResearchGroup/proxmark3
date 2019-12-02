@@ -1701,13 +1701,14 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "new UID | %s", sprint_hex(uid, sizeof(uid)));
-    PrintAndLogEx(INFO, "Using backdoor Magic tag function");
+    PrintAndLogEx(SUCCESS, "Input new UID | %s", sprint_hex(uid, sizeof(uid)));
 
     if (!getUID(oldUid)) {
-        PrintAndLogEx(FAILED, "Can't get old UID.");
+        PrintAndLogEx(FAILED, "Can't get old/current UID.");
         return PM3_ESOFT;
     }
+
+    PrintAndLogEx(INFO, "Using backdoor magic tag function");
 
     // Command 1 : 02213E00000000
     data[0][0] = 0x02;
@@ -1767,11 +1768,14 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "old UID : %02X %02X %02X %02X %02X %02X %02X %02X", oldUid[7], oldUid[6], oldUid[5], oldUid[4], oldUid[3], oldUid[2], oldUid[1], oldUid[0]);
-    PrintAndLogEx(SUCCESS, "new UID : %02X %02X %02X %02X %02X %02X %02X %02X", newUid[7], newUid[6], newUid[5], newUid[4], newUid[3], newUid[2], newUid[1], newUid[0]);
-
-    return PM3_SUCCESS;
+    if (memcmp(newUid, uid, 8) != 0) {
+        PrintAndLogEx(FAILED, "Setting UID on tag failed.");
+        return PM3_ESOFT;
+    } else {
+        PrintAndLogEx(SUCCESS, "old UID : %02X %02X %02X %02X %02X %02X %02X %02X", oldUid[7], oldUid[6], oldUid[5], oldUid[4], oldUid[3], oldUid[2], oldUid[1], oldUid[0]);
+        PrintAndLogEx(SUCCESS, "new UID : %02X %02X %02X %02X %02X %02X %02X %02X", newUid[7], newUid[6], newUid[5], newUid[4], newUid[3], newUid[2], newUid[1], newUid[0]);
+        return PM3_SUCCESS;
+    }
 }
 
 static command_t CommandTable[] = {
