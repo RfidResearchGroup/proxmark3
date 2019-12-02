@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added mf plus command `hf mfp chk` for check keys from public keys list, from dictionary or 1 and 2-byte bruteforce (@merlokk)
  - Change `hf 15` - some refactoring (@grspy)
  - Added `hf 15 writeafi` and `hf 15 writedsfid` (@grspy)
  - Added detailed info for SLIX2 tags in `hf 15 info` (@grspy)
