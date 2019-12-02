@@ -55,6 +55,7 @@ char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_st
 
 void print_blocks(uint32_t *data, size_t len);
 
+int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);

@@ -13,7 +13,7 @@
 #include <ctype.h>
 
 #include "cmdparser.h"    // command_t
-#include "commonutil.h"  // ARRAYLEN
+#include "commonutil.h"   // ARRAYLEN
 #include "comms.h"        // clearCommandBuffer
 #include "fileutils.h"
 #include "cmdtrace.h"
@@ -4211,7 +4211,7 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return MifareAuth4(NULL, keyn, key, true, false, true);
+    return MifareAuth4(NULL, keyn, key, true, false, true, true, false);
 }
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
