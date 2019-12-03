@@ -11,7 +11,7 @@
 #include "mifaredefault.h"
 #include "commonutil.h"  // ARRAYLEN
 
-const char* g_mifare_plus_default_keys[] = {
+const char *g_mifare_plus_default_keys[] = {
     "ffffffffffffffffffffffffffffffff",  // default key
     "00000000000000000000000000000000",
     "a0a1a2a3a4a5a6a7a0a1a2a3a4a5a6a7",  // MAD key
