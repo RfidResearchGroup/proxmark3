@@ -26,10 +26,10 @@ example =
 
     -- This will print the stored Mifare dictionary keys
     script run read_pwd_mem -m
-	
+
     -- This will print the stored t55xx dictionary passwords
     script run read_pwd_mem -t
-	
+
     -- This will print the stored iClass dictionary keys
     script run read_pwd_mem -i
 ]]
