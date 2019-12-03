@@ -431,7 +431,7 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
         //error when not completed hex bytes
         return -3;
 
-    return bytesValueLen; 
+    return bytesValueLen;
 }
 
 // takes a number (uint64_t) and creates a binarray in dest.
