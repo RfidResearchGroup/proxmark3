@@ -751,17 +751,17 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16) {
         keylen = 6;
     }
-    
+
     return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL, true);
 }
 
-int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt, 
-                        size_t startFilePosition, size_t *endFilePosition, bool verbose) {
+int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt,
+                         size_t startFilePosition, size_t *endFilePosition, bool verbose) {
     if (endFilePosition)
         *endFilePosition = 0;
     if (data == NULL) return PM3_EINVARG;
     uint16_t vkeycnt = 0;
-    
+
     char *path;
     if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
         return PM3_EFILE;
@@ -780,10 +780,10 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
         retval = PM3_EFILE;
         goto out;
     }
-    
+
     if (startFilePosition)
         fseek(f, startFilePosition, SEEK_SET);
-      
+
     // read file
     while (!feof(f)) {
         size_t filepos = ftell(f);
@@ -791,8 +791,8 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
             if (endFilePosition)
                 *endFilePosition = 0;
             break;
-        }  
-  
+        }
+
         // add null terminator
         line[keylen] = 0;
 
@@ -814,10 +814,10 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
                 *endFilePosition = filepos;
             break;
         }
-        
+
         if (hex_to_bytes(line, data + counter, keylen >> 1) != (keylen >> 1))
             continue;
-          
+
         vkeycnt++;
         memset(line, 0, sizeof(line));
         counter += (keylen >> 1);

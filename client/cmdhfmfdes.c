@@ -325,10 +325,10 @@ void getKeySettings(uint8_t *aid) {
         // LOOP over numOfKeys that we got before.
         // From 0x01 to numOfKeys.  We already got 0x00. (AMK)
         // TODO (iceman)
-/*
-        for (int i = 0x01; i <= 0x0f; ++i) {
-        }
-*/
+        /*
+                for (int i = 0x01; i <= 0x0f; ++i) {
+                }
+        */
     }
 }
 

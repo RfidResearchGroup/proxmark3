@@ -175,7 +175,7 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
     uint8_t RndA[17] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
     uint8_t RndB[17] = {0};
 
-    if (silentMode) 
+    if (silentMode)
         verbose = false;
 
     if (session)
