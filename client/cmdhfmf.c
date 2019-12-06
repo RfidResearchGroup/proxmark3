@@ -3691,7 +3691,7 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     CLIGetHexWithReturn(2, atqa, &atqaLen);
     CLIGetHexWithReturn(3, sak, &sakLen);
     CLIParserFree();
-    
+
     if (uidLen && uidLen != 4) {
         PrintAndLogEx(ERR, "UID length must be 4 bytes instead of: %d", uidLen);
         return PM3_EINVARG;
@@ -3705,7 +3705,7 @@ static int CmdHF14AMfCWipe(const char *cmd) {
         return PM3_EINVARG;
     }
 
-    int res = mfCWipe((uidLen)? uid : NULL, (atqaLen) ? atqa : NULL, (sakLen) ? sak : NULL);
+    int res = mfCWipe((uidLen) ? uid : NULL, (atqaLen) ? atqa : NULL, (sakLen) ? sak : NULL);
     if (res) {
         PrintAndLogEx(ERR, "Can't wipe card. error=%d", res);
         return PM3_ESOFT;

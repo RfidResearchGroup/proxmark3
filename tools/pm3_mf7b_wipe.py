@@ -71,7 +71,7 @@
 #
 # Thats it! Your S50 7byte UID card is wiped back. Now you can return back to Step 1 of this manual.
 #
-# 
+#
 
 
 
