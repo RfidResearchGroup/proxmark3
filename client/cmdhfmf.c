@@ -3674,7 +3674,7 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     int sakLen = 0;
 
     CLIParserInit("hf mf cwipe",
-                  "Wipe Gen1 magic cheneese card. Set UID/ATQA/SAK/Data/Keys/Access to default values.",
+                  "Wipe gen1 magic chinese card. Set UID/ATQA/SAK/Data/Keys/Access to default values.",
                   "Usage:\n\thf mf cwipe -> wipe card.\n"
                   "\thf mfp mf cwipe  -u 09080706 -a 0004 -s 18 -> set UID, ATQA and SAK and wipe card.");
 
