@@ -3665,6 +3665,56 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfCWipe(const char *cmd) {
+    uint8_t uid[8] = {0x00};
+    int uidLen = 0;
+    uint8_t atqa[2] = {0x00};
+    int atqaLen = 0;
+    uint8_t sak[1] = {0x00};
+    int sakLen = 0;
+
+    CLIParserInit("hf mf cwipe",
+                  "Wipe Gen1 magic cheneese card. Set UID/ATQA/SAK/Data/Keys/Access to default values.",
+                  "Usage:\n\thf mf cwipe -> wipe card.\n"
+                  "\thf mfp mf cwipe  -u 09080706 -a 0004 -s 18 -> set UID, ATQA and SAK and wipe card.");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("uU",  "uid",     "<HEX UID (4b)>",  "UID for card"),
+        arg_str0("aA",  "atqa",    "<HEX ATQA (2b)>", "ATQA for card"),
+        arg_str0("sS",  "sak",     "<HEX SAK (1b)>",  "SAK for card"),
+        arg_param_end
+    };
+    CLIExecWithReturn(cmd, argtable, true);
+
+    CLIGetHexWithReturn(1, uid, &uidLen);
+    CLIGetHexWithReturn(2, atqa, &atqaLen);
+    CLIGetHexWithReturn(3, sak, &sakLen);
+    CLIParserFree();
+
+    if (uidLen && uidLen != 4) {
+        PrintAndLogEx(ERR, "UID length must be 4 bytes instead of: %d", uidLen);
+        return PM3_EINVARG;
+    }
+    if (atqaLen && atqaLen != 2) {
+        PrintAndLogEx(ERR, "UID length must be 2 bytes instead of: %d", atqaLen);
+        return PM3_EINVARG;
+    }
+    if (sakLen && sakLen != 1) {
+        PrintAndLogEx(ERR, "UID length must be 1 byte instead of: %d", sakLen);
+        return PM3_EINVARG;
+    }
+
+    int res = mfCWipe((uidLen) ? uid : NULL, (atqaLen) ? atqa : NULL, (sakLen) ? sak : NULL);
+    if (res) {
+        PrintAndLogEx(ERR, "Can't wipe card. error=%d", res);
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "Card wiped successfully");
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AMfCSetBlk(const char *Cmd) {
     uint8_t block[16] = {0x00};
     uint8_t blockNo = 0;
@@ -4446,6 +4496,7 @@ static command_t CommandTable[] = {
     {"ekeyprn",     CmdHF14AMfEKeyPrn,      IfPm3Iso14443a,  "Print keys from simulator memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"csetuid",     CmdHF14AMfCSetUID,      IfPm3Iso14443a,  "Set UID     (magic chinese card)"},
+    {"cwipe",       CmdHF14AMfCWipe,        IfPm3Iso14443a,  "Wipe card to default UID/Sectors/Keys"},
     {"csetblk",     CmdHF14AMfCSetBlk,      IfPm3Iso14443a,  "Write block (magic chinese card)"},
     {"cgetblk",     CmdHF14AMfCGetBlk,      IfPm3Iso14443a,  "Read block  (magic chinese card)"},
     {"cgetsc",      CmdHF14AMfCGetSc,       IfPm3Iso14443a,  "Read sector (magic chinese card)"},

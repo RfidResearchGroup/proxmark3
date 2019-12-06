@@ -615,6 +615,50 @@ int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_
     return mfCSetBlock(0, block0, oldUID, params);
 }
 
+int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak) {
+    uint8_t block0[16] = {0x01, 0x02, 0x03, 0x04, 0x04, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBE, 0xAF};
+    uint8_t blockD[16] = {0x00};
+    uint8_t blockK[16] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x08, 0x77, 0x8F, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t params = MAGIC_SINGLE;
+
+    if (uid != NULL) {
+        memcpy(block0, uid, 4);
+        block0[4] = block0[0] ^ block0[1] ^ block0[2] ^ block0[3];
+    }
+    if (sak != NULL)
+        block0[5] = sak[0];
+
+    if (atqa != NULL) {
+        block0[6] = atqa[1];
+        block0[7] = atqa[0];
+    }
+    int res;
+    for (int blockNo = 0; blockNo < 4 * 16; blockNo++) {
+        for (int retry = 0; retry < 3; retry++) {
+            if (blockNo == 0) {
+                res = mfCSetBlock(blockNo, block0, NULL, params);
+            } else {
+                if (mfIsSectorTrailer(blockNo))
+                    res = mfCSetBlock(blockNo, blockK, NULL, params);
+                else
+                    res = mfCSetBlock(blockNo, blockD, NULL, params);
+            }
+
+            if (res == PM3_SUCCESS)
+                break;
+            PrintAndLogEx(WARNING, "Retry block[%d]...", blockNo);
+        }
+
+        if (res) {
+            PrintAndLogEx(ERR, "Error setting block[%d]: %d", blockNo, res);
+            return res;
+        }
+    }
+    DropField();
+
+    return PM3_SUCCESS;
+}
+
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
     clearCommandBuffer();

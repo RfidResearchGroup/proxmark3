@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf cwipe` magic chinese card (gen1a) wipe to default state (@merlokk)
  - Added 'pm3_mf7b_wipe.py' python script. Wipes magic S70 7B Gen2 card. (@vulnersCom)
  - Added `hf mfp chk` Mifare plus command for check keys from public keys list, from dictionary or 1 and 2-byte bruteforce (@merlokk)
  - Change `hf 15` - some refactoring (@grspy)
