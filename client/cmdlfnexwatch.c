@@ -9,6 +9,7 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfnexwatch.h"
+#include <inttypes.h>       // PRIu
 #include <ctype.h>          // tolower
 
 #include "commonutil.h"     // ARRAYLEN
@@ -80,9 +81,9 @@ static int CmdNexWatchDemod(const char *Cmd) {
     //checksum check (TBD)
 
     //output
-    PrintAndLogEx(NORMAL, "NexWatch ID: %d", ID);
+    PrintAndLogEx(SUCCESS, "NexWatch ID: " _YELLOW_("%"PRIu32) , ID);
     if (invert) {
-        PrintAndLogEx(NORMAL, "Had to Invert - probably NexKey");
+        PrintAndLogEx(INFO, "Had to Invert - probably NexKey");
         for (size_t i = 0; i < size; i++)
             DemodBuffer[i] ^= 1;
     }
