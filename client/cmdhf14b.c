@@ -528,9 +528,10 @@ static bool HF14B_Std_Info(bool verbose) {
 
     switch (status) {
         case 0:
-            PrintAndLogEx(NORMAL, " UID    : %s", sprint_hex(card.uid, card.uidlen));
-            PrintAndLogEx(NORMAL, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
-            PrintAndLogEx(NORMAL, " CHIPID : %02X", card.chipid);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+            PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+            PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
             isSuccess = true;
             break;
@@ -662,9 +663,10 @@ static bool HF14B_Std_Reader(bool verbose) {
 
     switch (status) {
         case 0:
-            PrintAndLogEx(NORMAL, " UID    : %s", sprint_hex(card.uid, card.uidlen));
-            PrintAndLogEx(NORMAL, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
-            PrintAndLogEx(NORMAL, " CHIPID : %02X", card.chipid);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+            PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+            PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
             isSuccess = true;
             break;
