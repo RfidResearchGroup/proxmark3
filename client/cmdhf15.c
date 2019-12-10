@@ -866,6 +866,7 @@ static int CmdHF15Info(const char *Cmd) {
 
     memcpy(uid, recv + 2, sizeof(uid));
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "  UID  : %s", sprintUID(NULL, uid));
     PrintAndLogEx(SUCCESS, "  TYPE : %s", getTagInfo_15(recv + 2));
     PrintAndLogEx(SUCCESS, "  SYSINFO : %s", sprint_hex(recv, status - 2));
