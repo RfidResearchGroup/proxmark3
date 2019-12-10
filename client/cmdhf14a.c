@@ -1272,6 +1272,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         return select_status;
     }
 
+    PrintAndLogEx(NORMAL, "");
+
     if (select_status == 3) {
         PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
         PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
