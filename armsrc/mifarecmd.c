@@ -32,6 +32,7 @@
 #include "crc16.h"
 #include "dbprint.h"
 #include "ticks.h"
+#include "usb_cdc.h"  // usb_poll_validate_length
 
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
 # define HARDNESTED_AUTHENTICATION_TIMEOUT  848     // card times out 1ms after wrong authentication (according to NXP documentation)
@@ -918,7 +919,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
         for (rtr = 0; rtr < 17; rtr++) {
 
             // Test if the action was cancelled
-            if (BUTTON_PRESS()) {
+            if (BUTTON_PRESS() || usb_poll_validate_length()) {
                 isOK = -2;
                 break;
             }
@@ -997,6 +998,12 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
         target_nt[i] = 0;
         while (target_nt[i] == 0) { // continue until we have an unambiguous nonce
+
+            // Test if the action was cancelled
+            if (BUTTON_PRESS() || usb_poll_validate_length()) {
+                isOK = -2;
+                break;
+            }
 
             // prepare next select. No need to power down the card.
             if (mifare_classic_halt(pcs, cuid)) {

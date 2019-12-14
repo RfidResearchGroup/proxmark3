@@ -24,7 +24,6 @@
 #include "mfkey.h"
 #include "util_posix.h"  // msclock
 
-
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
     uint32_t nt = 0, nr = 0, ar = 0;
@@ -361,7 +360,10 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_NESTED, (uint8_t *)&payload, sizeof(payload));
 
-    if (!WaitForResponseTimeout(CMD_HF_MIFARE_NESTED, &resp, 1500)) return PM3_ETIMEOUT;
+    if (!WaitForResponseTimeout(CMD_HF_MIFARE_NESTED, &resp, 2000)) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        return PM3_ETIMEOUT;
+    }
 
     if (resp.status != PM3_SUCCESS)
         return PM3_ESOFT;
