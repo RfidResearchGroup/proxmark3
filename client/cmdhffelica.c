@@ -285,7 +285,7 @@ static int usage_hf_felica_request_specification_version() {
 
 static int usage_hf_felica_authentication1() {
     PrintAndLogEx(NORMAL, "\nInfo: Initiate mutual authentication. This command must always be executed before Authentication2 command"
-                          ", and mutual authentication is achieve only after Authentication2 command has succeeded.");
+                  ", and mutual authentication is achieve only after Authentication2 command has succeeded.");
     PrintAndLogEx(NORMAL, "  - Auth1 Parameters:");
     PrintAndLogEx(NORMAL, "    - Number of Areas n: 1-byte (1 <= n <= 8)");
     PrintAndLogEx(NORMAL, "    - Area Code List: 2n byte");
@@ -536,7 +536,7 @@ int send_wr_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
  * @return client result code.
  */
 static int CmdHFFelicaAuthentication1(const char *Cmd) {
-    if (strlen(Cmd) < 4){
+    if (strlen(Cmd) < 4) {
         return usage_hf_felica_authentication1();
     }
     uint8_t data[PM3_CMD_DATA_SIZE];
@@ -597,25 +597,24 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     uint8_t master_key[PM3_CMD_DATA_SIZE];
     mbedtls_des3_context des3_ctx;
     mbedtls_des3_init(&des3_ctx);
-    if(param_getlength(Cmd, paramCount) == 24){
+    if (param_getlength(Cmd, paramCount) == 24) {
         param_gethex(Cmd, paramCount, master_key, 24);
         mbedtls_des3_set3key_enc(&des3_ctx, master_key);
-        PrintAndLogEx(NORMAL, "3DES Master Secret: %s", sprint_hex(master_key, 12));
-    }
-    else if (param_getlength(Cmd, paramCount) == 16) {
+        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 12));
+    } else if (param_getlength(Cmd, paramCount) == 16) {
         param_gethex(Cmd, paramCount, master_key, 16);
         mbedtls_des3_set2key_enc(&des3_ctx, master_key);
-        PrintAndLogEx(NORMAL, "3DES Master Secret: %s", sprint_hex(master_key, 8));
-    }else{
-        PrintAndLogEx(ERR, "Invalid Key length");
+        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 8));
+    } else {
+        PrintAndLogEx(ERR, "Invalid key length");
         return PM3_EINVARG;
     }
 
     mbedtls_des3_crypt_ecb(&des3_ctx, input, output);
-    PrintAndLogEx(NORMAL, "3DES ENCRYPTED M1c: %s", sprint_hex(output, 8));
+    PrintAndLogEx(INFO, "3DES ENCRYPTED M1c: %s", sprint_hex(output, 8));
     // Add M1c Challenge to frame
     int frame_position = 16;
-    for(int i=0; i < 8; i++){
+    for (int i = 0; i < 8; i++) {
         data[frame_position++] = output[i];
     }
 
@@ -624,7 +623,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     flags |= FELICA_APPEND_CRC;
     flags |= FELICA_RAW;
 
-    PrintAndLogEx(NORMAL, "Client Send AUTH1 Frame: %s", sprint_hex(data, datalen));
+    PrintAndLogEx(INFO, "Client Send AUTH1 Frame: %s", sprint_hex(data, datalen));
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;

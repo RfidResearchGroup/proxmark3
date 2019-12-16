@@ -447,7 +447,7 @@ static int CmdSetDivisor(const char *Cmd) {
     uint8_t arg = param_get8ex(Cmd, 0, 95, 10);
 
     if (arg < 19) {
-        PrintAndLogEx(ERR, "divisor must be between" _YELLOW_("19") " and " _YELLOW_("255") );
+        PrintAndLogEx(ERR, "divisor must be between" _YELLOW_("19") " and " _YELLOW_("255"));
         return PM3_EINVARG;
     }
     // 12 000 000 (12MHz)
