@@ -352,6 +352,34 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
         case jsf15:
         case jsfLegic:
         case jsfT5555:
+        case jsfMfPlusKeys:
+            JsonSaveStr(root, "FileType", "mfp");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[11], 2);
+            uint8_t atslen = data[13];
+            if (atslen > 0)
+                JsonSaveBufAsHexCompact(root, "$.Card.ATS", &data[14], atslen);
+
+            uint8_t vdata[2][64][16 + 1] = {{{0}}};
+            memcpy(vdata, &data[14 + atslen], 2 * 64 * 17);
+
+            for (size_t i = 0; i < datalen; i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+
+                if (vdata[0][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.SectorKeys.%d.KeyA", mfSectorNum(i));
+                    JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], 16);
+                }
+
+                if (vdata[1][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.SectorKeys.%d.KeyB", mfSectorNum(i));
+                    JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], 16);
+                }
+            }
+            break;
         default:
             break;
     }
@@ -715,19 +743,28 @@ out:
 }
 
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
+    // t5577 == 4bytes
+    // mifare == 6 bytes
+    // mf plus == 16 bytes
+    // iclass == 8 bytes
+    // default to 6 bytes.
+    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16) {
+        keylen = 6;
+    }
 
+    return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL, true);
+}
+
+int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt,
+                         size_t startFilePosition, size_t *endFilePosition, bool verbose) {
+    if (endFilePosition)
+        *endFilePosition = 0;
     if (data == NULL) return PM3_EINVARG;
+    uint16_t vkeycnt = 0;
+
     char *path;
     if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
         return PM3_EFILE;
-
-    // t5577 == 4bytes
-    // mifare == 6 bytes
-    // iclass == 8 bytes
-    // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8) {
-        keylen = 6;
-    }
 
     // double up since its chars
     keylen <<= 1;
@@ -744,8 +781,17 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         goto out;
     }
 
+    if (startFilePosition)
+        fseek(f, startFilePosition, SEEK_SET);
+
     // read file
-    while (fgets(line, sizeof(line), f)) {
+    while (!feof(f)) {
+        size_t filepos = ftell(f);
+        if (!fgets(line, sizeof(line), f)) {
+            if (endFilePosition)
+                *endFilePosition = 0;
+            break;
+        }
 
         // add null terminator
         line[keylen] = 0;
@@ -758,23 +804,32 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         if (line[0] == '#')
             continue;
 
-        if (!isxdigit(line[0])) {
-            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_("%2d") "HEX symbols", line, keylen);
+        if (!CheckStringIsHEXValue(line))
             continue;
+
+        // cant store more data
+        if (maxdatalen && (counter + (keylen >> 1) > maxdatalen)) {
+            retval = 1;
+            if (endFilePosition)
+                *endFilePosition = filepos;
+            break;
         }
 
-        uint64_t key = strtoull(line, NULL, 16);
+        if (hex_to_bytes(line, data + counter, keylen >> 1) != (keylen >> 1))
+            continue;
 
-        num_to_bytes(key, keylen >> 1, data + counter);
-        (*keycnt)++;
+        vkeycnt++;
         memset(line, 0, sizeof(line));
         counter += (keylen >> 1);
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
 
     if (datalen)
         *datalen = counter;
+    if (keycnt)
+        *keycnt = vkeycnt;
 out:
     free(path);
     return retval;
@@ -790,9 +845,10 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
     // t5577 == 4bytes
     // mifare == 6 bytes
+    // mf plus == 16 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8) {
+    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16) {
         keylen = 6;
     }
 
@@ -848,10 +904,8 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         if (line[0] == '#')
             continue;
 
-        if (!isxdigit(line[0])) {
-            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_("%2d") "HEX symbols", line, keylen);
+        if (CheckStringIsHEXValue(line))
             continue;
-        }
 
         uint64_t key = strtoull(line, NULL, 16);
 

@@ -33,7 +33,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
-        return 0;
+        return PM3_ETIMEOUT;
     }
     uint8_t isOK  = resp.oldarg[0] & 0xff;
     if (!isOK) {
@@ -49,7 +49,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
                 PrintAndLogEx(WARNING, "Command unsuccessful");
                 break;
         }
-        return 0;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "-- Desfire Information --------------------------------------");
@@ -82,7 +82,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     uint8_t data[1] = {GET_FREE_MEMORY};
     SendCommandOLD(CMD_HF_DESFIRE_COMMAND, (INIT | DISCONNECT), 0x01, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
-        return 0;
+        return PM3_ETIMEOUT;
 
     uint8_t tmp[3];
     memcpy(tmp, resp.data.asBytes + 3, 3);
@@ -105,7 +105,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     */
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 /*
@@ -189,10 +189,12 @@ void getKeySettings(uint8_t *aid) {
         PrintAndLogEx(NORMAL, "   [0x02] Directory list access with CMK : %s", str);
         str = (resp.data.asBytes[3] & (1 << 0)) ? "YES" : "NO";
         PrintAndLogEx(NORMAL, "   [0x01] CMK is changeable              : %s", str);
+
         {
             uint8_t data[2] = {GET_KEY_VERSION, 0};  // 0x64
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
+
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) { return; }
         isOK  = resp.oldarg[0] & 0xff;
         if (!isOK) {
@@ -206,24 +208,27 @@ void getKeySettings(uint8_t *aid) {
 
         {
             uint8_t data[2] = {AUTHENTICATE, 0};  // 0x0A, KEY 0
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
+
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0x0A] Authenticate      : %s", (isOK == 0xAE) ? "NO" : "YES");
 
         {
             uint8_t data[2] = {AUTHENTICATE_ISO, 0};  // 0x1A, KEY 0
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
+
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0x1A] Authenticate ISO  : %s", (isOK == 0xAE) ? "NO" : "YES");
 
         {
             uint8_t data[2] = {AUTHENTICATE_AES, 0};  // 0xAA, KEY 0
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
+
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
         PrintAndLogEx(NORMAL, "   [0xAA] Authenticate AES  : %s", (isOK == 0xAE) ? "NO" : "YES");
@@ -237,7 +242,7 @@ void getKeySettings(uint8_t *aid) {
         {
             uint8_t data[4] = {SELECT_APPLICATION};  // 0x5a
             memcpy(data + 1, aid, 3);
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | CLEARTRACE, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | CLEARTRACE, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
@@ -252,8 +257,9 @@ void getKeySettings(uint8_t *aid) {
         // KEY SETTINGS
         {
             uint8_t data[1] = {GET_KEY_SETTINGS};  // 0x45
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
+
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             return;
         }
@@ -294,8 +300,9 @@ void getKeySettings(uint8_t *aid) {
         // KEY VERSION  - AMK
         {
             uint8_t data[2] = {GET_KEY_VERSION, 0};  // 0x64
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
+
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(WARNING, "   Timed-out");
             return;
@@ -318,11 +325,10 @@ void getKeySettings(uint8_t *aid) {
         // LOOP over numOfKeys that we got before.
         // From 0x01 to numOfKeys.  We already got 0x00. (AMK)
         // TODO (iceman)
-        for (int i = 0x01; i <= 0x0f; ++i) {
-
-        }
-
-
+        /*
+                for (int i = 0x01; i <= 0x0f; ++i) {
+                }
+        */
     }
 }
 
@@ -333,17 +339,18 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t aid[3];
     {
         uint8_t data[1] = {GET_APPLICATION_IDS}; //0x6a
-        SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
     }
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        return 0;
+        return PM3_ETIMEOUT;
     }
+
     isOK  = resp.oldarg[0] & 0xff;
     if (!isOK) {
         PrintAndLogEx(NORMAL, "Command unsuccessful");
-        return 0;
+        return PM3_ESOFT;
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "-- Desfire Enumerate Applications ---------------------------");
@@ -368,7 +375,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         {
             uint8_t data[4] = {SELECT_APPLICATION};  // 0x5a
             memcpy(data + 1, &resp.data.asBytes[i], 3);
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, INIT, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respAid, 1500)) {
@@ -384,7 +391,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         // Get File IDs
         {
             uint8_t data[1] = {GET_FILE_IDS};  // 0x6f
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
@@ -405,7 +412,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         // Get ISO File IDs
         {
             uint8_t data[1] = {GET_ISOFILE_IDS};  // 0x61
-            SendCommandOLD(CMD_HF_DESFIRE_COMMAND, DISCONNECT, sizeof(data), 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
@@ -422,13 +429,9 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
                 }
             }
         }
-
-
     }
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-
-
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // MIAFRE DesFire Authentication
@@ -456,7 +459,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Examples:");
         PrintAndLogEx(NORMAL, "         hf mfdes auth 1 1 0 11223344");
         PrintAndLogEx(NORMAL, "         hf mfdes auth 3 4 0 404142434445464748494a4b4c4d4e4f");
-        return 0;
+        return PM3_SUCCESS;
     }
     uint8_t cmdAuthMode = param_get8(Cmd, 0);
     uint8_t cmdAuthAlgo = param_get8(Cmd, 1);
@@ -466,25 +469,24 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         case 1:
             if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                return 1;
+                return PM3_EINVARG;
             }
             break;
         case 2:
             if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2 && cmdAuthAlgo != 3) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                return 1;
+                return PM3_EINVARG;
             }
             break;
         case 3:
             if (cmdAuthAlgo != 4) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                return 1;
+                return PM3_EINVARG;
             }
             break;
         default:
             PrintAndLogEx(WARNING, "Wrong Auth mode");
-            return 1;
-            break;
+            return PM3_EINVARG;
     }
 
     switch (cmdAuthAlgo) {
@@ -510,8 +512,9 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     // key
     if (param_gethex(Cmd, 3, key, keylength * 2)) {
         PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
-        return 1;
+        return PM3_EINVARG;
     }
+
     // algo, keylength,
     uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
     memcpy(data + 1, key, keylength);
@@ -521,7 +524,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
         PrintAndLogEx(WARNING, "Client command execute timeout");
-        return 0;
+        return PM3_ETIMEOUT;
     }
 
     uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -536,7 +539,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         PrintAndLogEx(NORMAL, "Client command failed.");
     }
     PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
-    return 1;
+    return PM3_SUCCESS;
 }
 
 
@@ -553,7 +556,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHFMFDes(const char *Cmd) {

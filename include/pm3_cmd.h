@@ -590,6 +590,8 @@ typedef struct {
 #define PM3_EWRONGANSVER      -16
 // Memory out-of-bounds error           client/pm3: error when a read/write is outside the expected array
 #define PM3_EOUTOFBOUND       -17
+// exchange with card error             client/pm3: error when cant get answer from card or got an incorrect answer
+#define PM3_ECARDEXCHANGE     -18
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

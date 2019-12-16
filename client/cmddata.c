@@ -406,7 +406,7 @@ static int CmdSetDebugMode(const char *Cmd) {
 void printDemodBuff(void) {
     int len = DemodBufferLen;
     if (len < 1) {
-        PrintAndLogEx(NORMAL, "(printDemodBuff) no bits found in demod buffer");
+        PrintAndLogEx(INFO, "(printDemodBuff) no bits found in demod buffer");
         return;
     }
     if (len > 512) len = 512;
@@ -458,7 +458,7 @@ int CmdPrintDemodBuff(const char *Cmd) {
     if (errors) return usage_data_printdemodbuf();
 
     if (DemodBufferLen == 0) {
-        PrintAndLogEx(NORMAL, "Demodbuffer is empty");
+        PrintAndLogEx(WARNING, "Demodbuffer is empty");
         return PM3_ESOFT;
     }
     if (lstrip) {
@@ -491,9 +491,9 @@ int CmdPrintDemodBuff(const char *Cmd) {
         if (numBits == 0) {
             return PM3_ESOFT;
         }
-        PrintAndLogEx(NORMAL, "DemodBuffer: %s", hex);
+        PrintAndLogEx(SUCCESS, "DemodBuffer: %s", hex);
     } else {
-        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 32));
+        PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 32));
     }
     return PM3_SUCCESS;
 }

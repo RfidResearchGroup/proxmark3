@@ -77,7 +77,7 @@ int CmdHFSearch(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_search();
 
-    PrintAndLogEx(INFO, "Checking for known tags...\n");
+    PrintAndLogEx(INFO, "Checking for known tags...");
 
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
@@ -100,13 +100,10 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
-        if (readHF15Uid(false) == 1) {
+        if (readHF15Uid(false)) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
-            DropField();
             return PM3_SUCCESS;
         }
-        // until refactoring of ISO15693 cmds,  this is needed.
-        DropField();
     }
 
     PROMPT_CLEARLINE;
@@ -155,8 +152,10 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INPLACE, "No known/supported 13.56 MHz tags found");
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, "done");
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(FAILED, _RED_("No known/supported 13.56 MHz tags found"));
     return PM3_ESOFT;
 }
 
@@ -166,7 +165,7 @@ int CmdHFTune(const char *Cmd) {
     int iter =  param_get32ex(Cmd, 0, 0, 10);
 
     PacketResponseNG resp;
-    PrintAndLogEx(SUCCESS, "Measuring HF antenna, click button or press Enter to exit");
+    PrintAndLogEx(SUCCESS, "Measuring HF antenna," _YELLOW_("click button") " or press" _YELLOW_("Enter") "to exit");
     clearCommandBuffer();
     uint8_t mode[] = {1};
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));

@@ -33,26 +33,25 @@ static void showBanner(void) {
 
     PrintAndLogEx(NORMAL, "\n");
 #if defined(__linux__) || (__APPLE__) || (_WIN32)
-    PrintAndLogEx(NORMAL, _BLUE_("██████╗ ███╗   ███╗ ████╗ ") "    ...iceman fork");
-    PrintAndLogEx(NORMAL, _BLUE_("██╔══██╗████╗ ████║   ══█║") "      ...dedicated to " _BLUE_("RDV40"));
-    PrintAndLogEx(NORMAL, _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
-    PrintAndLogEx(NORMAL, _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net");
-    PrintAndLogEx(NORMAL, _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0");
 #else
-    PrintAndLogEx(NORMAL, "======. ===.   ===. ====.     ...iceman fork");
-    PrintAndLogEx(NORMAL, "==...==.====. ====.   ..=.      ...dedicated to RDV40");
-    PrintAndLogEx(NORMAL, "======..==.====.==. ====..");
-    PrintAndLogEx(NORMAL, "==..... ==..==..==.   ..=.    iceman@icesql.net");
-    PrintAndLogEx(NORMAL, "==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, "...     ...     ... .....  pre-release v4.0");
+    PrintAndLogEx(NORMAL, "  ======. ===.   ===. ====.");
+    PrintAndLogEx(NORMAL, "  ==...==.====. ====.   ..=.");
+    PrintAndLogEx(NORMAL, "  ======..==.====.==. ====..");
+    PrintAndLogEx(NORMAL, "  ==..... ==..==..==.   ..=.    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, "  ==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
+    PrintAndLogEx(NORMAL, "  ...     ...     ... .....  pre-release v4.0");
 #endif
-    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
-    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
+//    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
+//    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
 //    printf("\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     fflush(stdout);
-
     g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 }
 
@@ -807,7 +806,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
 
     if (!session.pm3_present)
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
 
 #ifdef HAVE_GUI
 

@@ -134,6 +134,7 @@ CORESRCS =  uart_posix.c \
 
 CMDSRCS =   crapto1/crapto1.c \
             crapto1/crypto1.c \
+            mifare/mifaredefault.c \
             mifare/mfkey.c \
             tea.c \
             fido/additional_ca.c \

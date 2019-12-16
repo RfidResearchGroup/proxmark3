@@ -168,21 +168,24 @@ int CalculateMAC(mf4Session *session, MACType_t mtype, uint8_t blockNum, uint8_t
     return aes_cmac8(NULL, session->Kmac, macdata, mac, macdatalen);
 }
 
-int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool verbose) {
+int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
     uint8_t data[257] = {0};
     int datalen = 0;
 
     uint8_t RndA[17] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
     uint8_t RndB[17] = {0};
 
+    if (silentMode)
+        verbose = false;
+
     if (session)
         session->Authenticated = false;
 
     uint8_t cmd1[] = {0x70, keyn[1], keyn[0], 0x00};
-    int res = ExchangeRAW14a(cmd1, sizeof(cmd1), activateField, true, data, sizeof(data), &datalen);
+    int res = ExchangeRAW14a(cmd1, sizeof(cmd1), activateField, true, data, sizeof(data), &datalen, silentMode);
     if (res) {
-        PrintAndLogEx(ERR, "Exchande raw error: %d", res);
-        DropField();
+        if (!silentMode) PrintAndLogEx(ERR, "Exchande raw error: %d", res);
+        if (dropFieldIfError) DropField();
         return 2;
     }
 
@@ -190,20 +193,20 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
         PrintAndLogEx(INFO, "<phase1: %s", sprint_hex(data, datalen));
 
     if (datalen < 1) {
-        PrintAndLogEx(ERR, "Card response wrong length: %d", datalen);
-        DropField();
+        if (!silentMode) PrintAndLogEx(ERR, "Card response wrong length: %d", datalen);
+        if (dropFieldIfError) DropField();
         return 3;
     }
 
     if (data[0] != 0x90) {
-        PrintAndLogEx(ERR, "Card response error: %02x", data[2]);
-        DropField();
+        if (!silentMode) PrintAndLogEx(ERR, "Card response error: %02x", data[2]);
+        if (dropFieldIfError) DropField();
         return 3;
     }
 
     if (datalen != 19) { // code 1b + 16b + crc 2b
-        PrintAndLogEx(ERR, "Card response must be 19 bytes long instead of: %d", datalen);
-        DropField();
+        if (!silentMode) PrintAndLogEx(ERR, "Card response must be 19 bytes long instead of: %d", datalen);
+        if (dropFieldIfError) DropField();
         return 3;
     }
 
@@ -223,10 +226,10 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
     if (verbose)
         PrintAndLogEx(INFO, ">phase2: %s", sprint_hex(cmd2, 33));
 
-    res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, true, data, sizeof(data), &datalen);
+    res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, true, data, sizeof(data), &datalen, silentMode);
     if (res) {
-        PrintAndLogEx(ERR, "Exchande raw error: %d", res);
-        DropField();
+        if (!silentMode) PrintAndLogEx(ERR, "Exchande raw error: %d", res);
+        if (dropFieldIfError) DropField();
         return 4;
     }
 
@@ -241,12 +244,12 @@ int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateF
     }
 
     if (memcmp(&raw[4], &RndA[1], 16)) {
-        PrintAndLogEx(ERR, "\nAuthentication FAILED. rnd not equal");
+        if (!silentMode) PrintAndLogEx(ERR, "\nAuthentication FAILED. rnd is not equal");
         if (verbose) {
             PrintAndLogEx(ERR, "RndA reader: %s", sprint_hex(&RndA[1], 16));
             PrintAndLogEx(ERR, "RndA   card: %s", sprint_hex(&raw[4], 16));
         }
-        DropField();
+        if (dropFieldIfError) DropField();
         return 5;
     }
 
@@ -311,7 +314,7 @@ static int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateFi
     if (VerboseMode)
         PrintAndLogEx(INFO, ">>> %s", sprint_hex(datain, datainlen));
 
-    int res = ExchangeRAW14a(datain, datainlen, activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+    int res = ExchangeRAW14a(datain, datainlen, activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen, false);
 
     if (VerboseMode)
         PrintAndLogEx(INFO, "<<< %s", sprint_hex(dataout, *dataoutlen));
@@ -380,7 +383,7 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
         PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
 
     mf4Session session;
-    int res = MifareAuth4(&session, keyn, key, true, true, verbose);
+    int res = MifareAuth4(&session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Sector %d authentication error: %d", sectorNo, res);
         return res;

@@ -798,7 +798,7 @@ int CmdLFfskSim(const char *Cmd) {
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t))) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
+        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
         size = PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t);
     }
 
@@ -900,7 +900,7 @@ int CmdLFaskSim(const char *Cmd) {
 
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t))) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
+        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
         size = PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t);
     }
 
@@ -993,13 +993,13 @@ int CmdLFpskSim(const char *Cmd) {
     if (errors) return usage_lf_simpsk();
 
     if (dataLen == 0) { //using DemodBuffer
-        PrintAndLogEx(NORMAL, "Getting Clocks");
+        PrintAndLogEx(INFO, "Getting Clocks");
 
         if (clk == 0) clk = GetPskClock("", false);
-        PrintAndLogEx(NORMAL, "clk: %d", clk);
+        PrintAndLogEx(INFO, "clk: %d", clk);
 
         if (!carrier) carrier = GetPskCarrier("", false);
-        PrintAndLogEx(NORMAL, "carrier: %d", carrier);
+        PrintAndLogEx(INFO, "carrier: %d", carrier);
 
     } else {
         setDemodBuff(data, dataLen, 0);
@@ -1015,12 +1015,12 @@ int CmdLFpskSim(const char *Cmd) {
             //need to convert psk2 to psk1 data before sim
             psk2TOpsk1(DemodBuffer, DemodBufferLen);
         } else {
-            PrintAndLogEx(NORMAL, "Sorry, PSK3 not yet available");
+            PrintAndLogEx(WARNING, "Sorry, PSK3 not yet available");
         }
     }
     size_t size = DemodBufferLen;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t))) {
-        PrintAndLogEx(NORMAL, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
+        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
         size = PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t);
     }
 
