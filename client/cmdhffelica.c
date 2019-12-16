@@ -22,6 +22,7 @@
 #include "util.h"
 #include "ui.h"
 #include "mifare.h"     // felica_card_select_t struct
+#include "mbedtls/des.h"
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
 static int CmdHelp(const char *Cmd);
@@ -282,6 +283,34 @@ static int usage_hf_felica_request_specification_version() {
     return PM3_SUCCESS;
 }
 
+static int usage_hf_felica_authentication1() {
+    PrintAndLogEx(NORMAL, "\nInfo: Initiate mutual authentication. This command must always be executed before Authentication2 command"
+                  ", and mutual authentication is achieve only after Authentication2 command has succeeded.");
+    PrintAndLogEx(NORMAL, "  - Auth1 Parameters:");
+    PrintAndLogEx(NORMAL, "    - Number of Areas n: 1-byte (1 <= n <= 8)");
+    PrintAndLogEx(NORMAL, "    - Area Code List: 2n byte");
+    PrintAndLogEx(NORMAL, "    - Number of Services m: 1-byte (1 <= n <= 8)");
+    PrintAndLogEx(NORMAL, "    - Service Code List: 2n byte");
+    PrintAndLogEx(NORMAL, "    - 3DES-Key: 128-bit master secret used for the encryption");
+    PrintAndLogEx(NORMAL, "    - M1c: Encrypted random number (challenge for tag authentication) 8-byte");
+    PrintAndLogEx(NORMAL, "  - Response:");
+    PrintAndLogEx(NORMAL, "    - Response Code: 11h 1-byte");
+    PrintAndLogEx(NORMAL, "    - Manufacture ID(IDm): 8-byte");
+    PrintAndLogEx(NORMAL, "    - M2c: 8-byte");
+    PrintAndLogEx(NORMAL, "    - M3c: 8-byte");
+    PrintAndLogEx(NORMAL, "  - Success: Card Mode switches to Mode1. You can check this with the request response command.");
+    PrintAndLogEx(NORMAL, "  - Unsuccessful: Card should not respond at all.");
+
+    PrintAndLogEx(NORMAL, "\nUsage: hf felica auth1 [-h][-i] <01 Number of Areas hex> <0A0B... Area Code List hex> <01 Number of Services hex> <0A0B... Service Code List hex> <0x0102030405060809 3DES-key hex (128bit)>");
+    PrintAndLogEx(NORMAL, "       -h    this help");
+    PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
+    PrintAndLogEx(NORMAL, "\nExamples: ");
+    PrintAndLogEx(NORMAL, "  hf felica auth1 01 0000 01 8B00 FFFFFFFFFFFFFFFF ");
+    PrintAndLogEx(NORMAL, "  hf felica auth1 01 0000 01 8B00 FFFFFFFFAAAAAAAAFFFFFFFF ");
+    PrintAndLogEx(NORMAL, "  hf felica auth1 -i 11100910C11BC407 01 0000 01 8B00 FFFFFFFFFFFFFFFF\n\n");
+    return PM3_SUCCESS;
+}
+
 /**
  * Wait for response from pm3 or timeout.
  * Checks if receveid bytes have a valid CRC.
@@ -371,7 +400,7 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
     uint16_t numbits = 0;
     clearCommandBuffer();
     if (verbose) {
-        PrintAndLogEx(INFO, "Send Service Request Frame: %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Send raw command - Frame: %s", sprint_hex(data, datalen));
     }
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 }
@@ -499,6 +528,113 @@ int send_wr_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
         memcpy(wr_noCry_resp, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
         return PM3_SUCCESS;
     }
+}
+
+/**
+ * Command parser for auth1
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaAuthentication1(const char *Cmd) {
+    if (strlen(Cmd) < 4) {
+        return usage_hf_felica_authentication1();
+    }
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    bool custom_IDm = false;
+    strip_cmds(Cmd);
+    uint16_t datalen = 24; // Length (1), Command ID (1), IDm (8), Number of Area (1), Area Code List (2), Number of Service (1), Service Code List (2), M1c (8)
+    uint8_t paramCount = 0;
+    uint8_t flags = 0;
+    int i = 0;
+    while (Cmd[i] != '\0') {
+        if (Cmd[i] == '-') {
+            switch (tolower(Cmd[i + 1])) {
+                case 'h':
+                    return usage_hf_felica_authentication1();
+                case 'i':
+                    paramCount++;
+                    custom_IDm = true;
+                    if (!add_param(Cmd, paramCount, data, 2, 16)) {
+                        return PM3_EINVARG;
+                    }
+                    paramCount++;
+                    i += 16;
+                    break;
+                default:
+                    return usage_hf_felica_authentication1();
+            }
+        }
+        i++;
+    }
+    data[0] = int_to_hex(&datalen);
+    data[1] = 0x10; // Command ID
+    if (!custom_IDm && !check_last_idm(data, datalen)) {
+        return PM3_EINVARG;
+    }
+    // Number of Area (1), Area Code List (2), Number of Service (1), Service Code List (2), M1c (8)
+    uint8_t lengths[] = {2, 4, 2, 4};
+    uint8_t dataPositions[] = {10, 11, 13, 14};
+    for (int i = 0; i < 4; i++) {
+        if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
+            paramCount++;
+        } else {
+            return PM3_EINVARG;
+        }
+    }
+
+    // READER CHALLENGE - (RANDOM To Encrypt)
+    unsigned char input[8];
+    input[0] = 0x1;
+    input[1] = 0x2;
+    input[2] = 0x3;
+    input[3] = 0x4;
+    input[4] = 0x5;
+    input[5] = 0x6;
+    input[6] = 0x7;
+    input[7] = 0x8;
+    unsigned char output[8];
+    // Create M1c Challenge with 3DES (3 Keys = 24, 2 Keys = 16)
+    uint8_t master_key[PM3_CMD_DATA_SIZE];
+    mbedtls_des3_context des3_ctx;
+    mbedtls_des3_init(&des3_ctx);
+    if (param_getlength(Cmd, paramCount) == 24) {
+        param_gethex(Cmd, paramCount, master_key, 24);
+        mbedtls_des3_set3key_enc(&des3_ctx, master_key);
+        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 12));
+    } else if (param_getlength(Cmd, paramCount) == 16) {
+        param_gethex(Cmd, paramCount, master_key, 16);
+        mbedtls_des3_set2key_enc(&des3_ctx, master_key);
+        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 8));
+    } else {
+        PrintAndLogEx(ERR, "Invalid key length");
+        return PM3_EINVARG;
+    }
+
+    mbedtls_des3_crypt_ecb(&des3_ctx, input, output);
+    PrintAndLogEx(INFO, "3DES ENCRYPTED M1c: %s", sprint_hex(output, 8));
+    // Add M1c Challenge to frame
+    int frame_position = 16;
+    for (int i = 0; i < 8; i++) {
+        data[frame_position++] = output[i];
+    }
+
+    AddCrc(data, datalen);
+    datalen += 2;
+    flags |= FELICA_APPEND_CRC;
+    flags |= FELICA_RAW;
+
+    PrintAndLogEx(INFO, "Client Send AUTH1 Frame: %s", sprint_hex(data, datalen));
+    clear_and_send_command(flags, datalen, data, 0);
+
+    PacketResponseNG resp;
+    if (!waitCmdFelica(0, &resp, 1)) {
+        PrintAndLogEx(ERR, "\nGot no Response from card");
+        return PM3_ERFTRANS;
+    } else {
+        PrintAndLogEx(NORMAL, "AUTH1 SUCCESS!");
+        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, 256));
+    }
+    return PM3_SUCCESS;
 }
 
 /**
@@ -890,8 +1026,6 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-
-
 /**
  * Command parser for rqsyscode
  * @param Cmd input data of the user.
@@ -1005,11 +1139,10 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         }
     }
 
-    // Node Code List
     if (param_getlength(Cmd, paramCount) == 4) {
         param_gethex(Cmd, paramCount++, data + 11, 4);
     } else {
-        PrintAndLogEx(ERR, "Incorrect Node Code List length!");
+        PrintAndLogEx(ERR, "Incorrect parameter length!");
         return PM3_EINVARG;
     }
 
@@ -1511,9 +1644,9 @@ static command_t CommandTable[] = {
     {"wrunencrypted",       CmdHFFelicaWriteWithoutEncryption,      IfPm3Felica,     "write Block Data to an authentication-not-required Service."},
     {"scsvcode",            CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "acquire Area Code and Service Code."},
     {"rqsyscode",           CmdHFFelicaRequestSystemCode,           IfPm3Felica,     "acquire System Code registered to the card."},
-    //{"auth1",             CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "authenticate a card."},
-    //{"auth2",             CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "allow a card to authenticate a Reader/Writer."},
-    //{"read",              CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "read Block Data from authentication-required Service."},
+    {"auth1",               CmdHFFelicaAuthentication1,             IfPm3Felica,     "authenticate a card. Start mutual authentication with Auth1 (v1)"},
+    {"auth2",               CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "allow a card to authenticate a Reader/Writer. Auth2 (v1)"},
+    {"read",                CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "read Block Data from authentication-required Service."},
     //{"write",             CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "write Block Data to an authentication-required Service."},
     //{"scsvcodev2",        CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "verify the existence of Area or Service, and to acquire Key Version."},
     //{"getsysstatus",      CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "acquire the setup information in System."},

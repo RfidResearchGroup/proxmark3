@@ -81,7 +81,7 @@ static int CmdNexWatchDemod(const char *Cmd) {
     //checksum check (TBD)
 
     //output
-    PrintAndLogEx(SUCCESS, "NexWatch ID: " _YELLOW_("%"PRIu32) , ID);
+    PrintAndLogEx(SUCCESS, "NexWatch ID: " _YELLOW_("%"PRIu32), ID);
     if (invert) {
         PrintAndLogEx(INFO, "Had to Invert - probably NexKey");
         for (size_t i = 0; i < size; i++)
