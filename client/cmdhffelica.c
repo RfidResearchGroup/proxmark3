@@ -305,9 +305,9 @@ static int usage_hf_felica_authentication1() {
     PrintAndLogEx(NORMAL, "       -h    this help");
     PrintAndLogEx(NORMAL, "       -i    <0A0B0C ... hex> set custom IDm to use");
     PrintAndLogEx(NORMAL, "\nExamples: ");
-    PrintAndLogEx(NORMAL, "  hf felica auth1 01 0000 01 8B00 FFFFFFFFFFFFFFFF ");
-    PrintAndLogEx(NORMAL, "  hf felica auth1 01 0000 01 8B00 FFFFFFFFAAAAAAAAFFFFFFFF ");
-    PrintAndLogEx(NORMAL, "  hf felica auth1 -i 11100910C11BC407 01 0000 01 8B00 FFFFFFFFFFFFFFFF\n\n");
+    PrintAndLogEx(NORMAL, "  hf felica auth1 01 0000 01 8B00 AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB ");
+    PrintAndLogEx(NORMAL, "  hf felica auth1 01 0000 01 8B00 AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAA ");
+    PrintAndLogEx(NORMAL, "  hf felica auth1 -i 11100910C11BC407 01 0000 01 8B00 AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n\n");
     return PM3_SUCCESS;
 }
 
@@ -597,14 +597,14 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     uint8_t master_key[PM3_CMD_DATA_SIZE];
     mbedtls_des3_context des3_ctx;
     mbedtls_des3_init(&des3_ctx);
-    if (param_getlength(Cmd, paramCount) == 24) {
-        param_gethex(Cmd, paramCount, master_key, 24);
+    if (param_getlength(Cmd, paramCount) == 48) {
+        param_gethex(Cmd, paramCount, master_key, 48);
         mbedtls_des3_set3key_enc(&des3_ctx, master_key);
-        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 12));
-    } else if (param_getlength(Cmd, paramCount) == 16) {
-        param_gethex(Cmd, paramCount, master_key, 16);
+        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 24));
+    } else if (param_getlength(Cmd, paramCount) == 32) {
+        param_gethex(Cmd, paramCount, master_key, 32);
         mbedtls_des3_set2key_enc(&des3_ctx, master_key);
-        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 8));
+        PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 16));
     } else {
         PrintAndLogEx(ERR, "Invalid key length");
         return PM3_EINVARG;
