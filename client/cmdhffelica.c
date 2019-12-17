@@ -313,7 +313,7 @@ static int usage_hf_felica_authentication1() {
 
 static int usage_hf_felica_authentication2() {
     PrintAndLogEx(NORMAL, "\nInfo: Complete mutual authentication. This command can only be executed subsquent to Authentication1"
-                          " command.");
+                  " command.");
     PrintAndLogEx(NORMAL, "  - Auth2 Parameters:");
     PrintAndLogEx(NORMAL, "    - Manufacturer IDm: (8-byte)");
     PrintAndLogEx(NORMAL, "    - M3c: card challenge (8-byte)");
@@ -554,9 +554,9 @@ int send_wr_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
     }
 }
 
-static void reverse_3des_key(uint8_t *master_key, int length, uint8_t *reverse_master_key){
-    for(int i=0; i<length; i++){
-        reverse_master_key[i] = master_key[(length+1)-i];
+static void reverse_3des_key(uint8_t *master_key, int length, uint8_t *reverse_master_key) {
+    for (int i = 0; i < length; i++) {
+        reverse_master_key[i] = master_key[(length + 1) - i];
     }
 };
 
@@ -678,17 +678,17 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
             bool isKeyCorrect = false;
             unsigned char p2c[8];
             mbedtls_des3_crypt_ecb(&des3_ctx, auth1_response.m2c, p2c);
-            for(int i=0; i < 8; i++){
-                if(p2c[i] != input[i]){
+            for (int i = 0; i < 8; i++) {
+                if (p2c[i] != input[i]) {
                     isKeyCorrect = false;
-                   break;
-                }else{
+                    break;
+                } else {
                     isKeyCorrect = true;
                 }
             }
-            if(isKeyCorrect){
+            if (isKeyCorrect) {
                 PrintAndLogEx(SUCCESS, "\nAuth1 done with correct key material! Use Auth2 now with M3C and same key");
-            }else{
+            } else {
                 PrintAndLogEx(INFO, "\n\nP2c: %s", sprint_hex(p2c, 8));
                 PrintAndLogEx(ERR, "Can't decrypt M2C with master secret (P1c != P2c)! Probably wrong keys or wrong decryption method");
             }
@@ -798,7 +798,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "IDtc: %s", sprint_hex(auth2_response.IDtc, sizeof(auth2_response.IDtc)));
             PrintAndLogEx(SUCCESS, "IDi (encrypted): %s", sprint_hex(auth2_response.IDi, sizeof(auth2_response.IDi)));
             PrintAndLogEx(SUCCESS, "PMi (encrypted): %s", sprint_hex(auth2_response.PMi, sizeof(auth2_response.PMi)));
-        }else{
+        } else {
             PrintAndLogEx(ERR, "\nGot wrong frame format.");
         }
     }
