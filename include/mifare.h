@@ -226,6 +226,14 @@ typedef struct {
     uint8_t m3c[8];
 } PACKED felica_auth1_response_t;
 
+typedef struct {
+    uint8_t code[1];
+    uint8_t IDtc[8];
+    uint8_t IDi[8];
+    uint8_t PMi[8];
+} PACKED felica_auth2_response_t;
+
+
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),
     FELICA_NO_DISCONNECT = (1 << 1),
