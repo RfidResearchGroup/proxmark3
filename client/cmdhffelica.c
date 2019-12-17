@@ -554,9 +554,15 @@ int send_wr_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool ver
     }
 }
 
+/**
+ * Reverses the master secret. Example: AA AA AA AA AA AA AA BB to BB AA AA AA AA AA AA AA
+ * @param master_key the secret which order will be reversed.
+ * @param length in bytes of the master secret.
+ * @param reverse_master_key output in which the reversed secret is stored.
+ */
 static void reverse_3des_key(uint8_t *master_key, int length, uint8_t *reverse_master_key) {
     for (int i = 0; i < length; i++) {
-        reverse_master_key[i] = master_key[(length + 1) - i];
+        reverse_master_key[i] = master_key[(length - 1) - i];
     }
 };
 
@@ -689,7 +695,8 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
             if (isKeyCorrect) {
                 PrintAndLogEx(SUCCESS, "\nAuth1 done with correct key material! Use Auth2 now with M3C and same key");
             } else {
-                PrintAndLogEx(INFO, "\n\nP2c: %s", sprint_hex(p2c, 8));
+                PrintAndLogEx(INFO, "3DES secret (swapped decryption): %s", sprint_hex(reverse_master_key, 16));
+                PrintAndLogEx(INFO, "P2c: %s", sprint_hex(p2c, 8));
                 PrintAndLogEx(ERR, "Can't decrypt M2C with master secret (P1c != P2c)! Probably wrong keys or wrong decryption method");
             }
         }
