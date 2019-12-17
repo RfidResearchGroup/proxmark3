@@ -631,8 +631,14 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
         PrintAndLogEx(ERR, "\nGot no Response from card");
         return PM3_ERFTRANS;
     } else {
-        PrintAndLogEx(NORMAL, "AUTH1 SUCCESS!");
-        PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, 256));
+        felica_auth1_response_t auth1_response;
+        memcpy(&auth1_response, (felica_auth1_response_t *)resp.data.asBytes, sizeof(felica_auth1_response_t));
+        if (auth1_response.frame_response.IDm[0] != 0) {
+            PrintAndLogEx(SUCCESS, "\nGot auth1 response:");
+            PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(auth1_response.frame_response.IDm, sizeof(auth1_response.frame_response.IDm)));
+            PrintAndLogEx(SUCCESS, "M2C: %s", sprint_hex(auth1_response.m2c, sizeof(auth1_response.m2c)));
+            PrintAndLogEx(SUCCESS, "M3C: %s", sprint_hex(auth1_response.m3c, sizeof(auth1_response.m3c)));
+        }
     }
     return PM3_SUCCESS;
 }
