@@ -7,8 +7,8 @@ copyright = ''
 author = 'Iceman'
 version = 'v1.0.1'
 desc = [[
-This is a script that reads AZTEK iso14443a tags.
-It starts from block 0,  and ends at default block 20.  Use 'b' to say different endblock.
+This is a script that reads AZTEK ISO14443a tags.
+It starts from block 0 and ends at default block 20.  Use 'b' to say different endblock.
 xor:  the first three block (0,1,2) is not XORED.  The rest seems to be xored.
 ]]
 example = [[
