@@ -172,10 +172,14 @@ function main(args)
         local d0_d15 = getdata(res)
         
         payload = "80"
-        res, err = send(payload, {ignore_response = false, append_crc = false})
+        res, err = send(payload, {ignore_response = false, append_crc = true})
         if err then return end
 
         local d16_d31 = getdata(res)
+
+        -- remove crc bytes
+        d0_d15 = string.sub(d0_d15, 0, #d0_d15 - 4)
+        d16_d31 = string.sub(d16_d31, 0, #d16_d31 - 4)
 
         print(block, d0_d15, d16_d31)
         table.insert(block_data, d0_d15..d16_31)
