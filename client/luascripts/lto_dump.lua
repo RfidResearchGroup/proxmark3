@@ -169,14 +169,16 @@ function main(args)
         res, err = send(payload , {ignore_response = false, append_crc = true})
         if err then return end
 
-        local data = getdata(res)
+        local d0_d15 = getdata(res)
         
         payload = "80"
-        res, err = send(payload, {ignore_response = true, append_crc = false})
+        res, err = send(payload, {ignore_response = false, append_crc = false})
         if err then return end
 
-        print(block, data)
-        table.insert(block_data, data)
+        local d16_d31 = getdata(res)
+
+        print(block, d0_d15, d16_d31)
+        table.insert(block_data, d0_d15..d16_31)
     end
     print("----+------------------")
     lib14a.disconnect()
