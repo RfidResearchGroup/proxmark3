@@ -8,7 +8,7 @@ author = 'Kevin'
 version = 'v1.0.1'
 desc = [[
 This is a script that reads LTO-CM  ISO14443a tags.
-It starts from block 0 and ends at default block 20.
+It starts from block 0 and ends at default block 254.
 ]]
 example = [[
     -- default
@@ -82,7 +82,6 @@ local function sendRaw(rawdata, options)
     local arg2 = #rawdata / 2
     if options.bits7 then
        arg2 = arg2 + tonumber(lshift(7, 16))
-       print('bit 7:', ("%08x  %08x"):format(flags, arg2))
     end
 
     local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
@@ -145,7 +144,7 @@ function main(args)
     -- Wakeup
     local payload = "45"
     local res, err = send(payload,{connect = true, no_select = true, ignore_response = false, append_crc = false, bits7 = true})
-    if not err then return end
+    if err then return end
 
     -- start selecting
     payload = "9320"
@@ -169,12 +168,13 @@ function main(args)
         payload = string.format('30%02x', block)
         res, err = send(payload , {ignore_response = false, append_crc = true})
         if err then return end
+
+        local data = getdata(res)
         
         payload = "80"
         res, err = send(payload, {ignore_response = true, append_crc = false})
         if err then return end
 
-        local data = getdata(res)
         print(block, data)
         table.insert(block_data, data)
     end
