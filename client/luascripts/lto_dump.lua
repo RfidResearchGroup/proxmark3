@@ -5,7 +5,7 @@ local utils = require('utils')
 
 copyright = ''
 author = 'Kevin'
-version = 'v1.0'
+version = 'v1.0.1'
 desc = [[
 This is a script that reads LTO-CM  ISO14443a tags.
 It starts from block 0 and ends at default block 20.
@@ -29,7 +29,7 @@ Arguments:
 -- Some globals
 local DEBUG = false -- the debug flag
 local lshift = bit32.lshift
-
+local band = bit32.band
 ---
 -- A debug printout-function
 local function dbg(args)
@@ -63,24 +63,24 @@ local function help()
     print(usage)
 end
 
-function sendRaw(rawdata, options)
+local function sendRaw(rawdata, options)
     local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT + lib14a.ISO14A_COMMAND.ISO14A_RAW
 
     if options.append_crc then
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
     end
-
-    print ('flags:', string:format("%08x",flags))    
+  
+    local arg2 = #rawdata / 2
     if options.bits7 then
-       flags =  lshift(7, 16) + flags
-       print ('bit 7:', string:format("%08x",flags))
+       arg2 = arg2 + tonumber(lshift(7, 16))
+--       print('bit 7:', ("%08x"):format(arg2))
     end
 
     local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
                                 arg1 = flags, -- Send raw
                                 -- arg2 contains the length, which is half the length
                                 -- of the ASCII-string rawdata
-                                arg2 = string.len(rawdata)/2,
+                                arg2 = arg2,
                                 data = rawdata}
     return command:sendMIX(options.ignore_response)
 end
@@ -102,7 +102,7 @@ local function send(payload, options)
         return oops(err)
     end
     core.clearCommandBuffer()
-    if (options.ignore_response)
+    if options.ignore_response then
         return "ok", nil
     else
         return res, err
@@ -115,7 +115,6 @@ function main(args)
 
     local startblock = 0
     local endblock = 254
-
     -- Read the parameters
     for o, a in getopt.getopt(args, 'hs:e:') do
         if o == 'h' then return help() end
@@ -163,7 +162,7 @@ function main(args)
         if err then return end
         
         payload = "80"
-        res, err = send(cmd , {ignore_response = true, append_crc = false})
+        res, err = send(payload, {ignore_response = true, append_crc = false})
         if err then return end
 
         local data = getdata(res)
