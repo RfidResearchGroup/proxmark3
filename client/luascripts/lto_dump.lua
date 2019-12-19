@@ -64,7 +64,16 @@ local function help()
 end
 
 local function sendRaw(rawdata, options)
+
     local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT + lib14a.ISO14A_COMMAND.ISO14A_RAW
+
+    if options.connect then
+        flags = flags + lib14a.ISO14A_COMMAND.ISO14A_CONNECT
+    end
+
+    if options.no_select then
+        flags = flags + lib14a.ISO14A_COMMAND.ISO14A_NO_SELECT
+    end
 
     if options.append_crc then
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
@@ -73,7 +82,7 @@ local function sendRaw(rawdata, options)
     local arg2 = #rawdata / 2
     if options.bits7 then
        arg2 = arg2 + tonumber(lshift(7, 16))
---       print('bit 7:', ("%08x"):format(arg2))
+       print('bit 7:', ("%08x  %08x"):format(flags, arg2))
     end
 
     local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
@@ -135,8 +144,8 @@ function main(args)
 
     -- Wakeup
     local payload = "45"
-    local res, err = send(payload,{ignore_response = false, append_crc = false, bits7 = true})
-    if err then return end
+    local res, err = send(payload,{connect = true, no_select = true, ignore_response = false, append_crc = false, bits7 = true})
+    if not err then return end
 
     -- start selecting
     payload = "9320"
