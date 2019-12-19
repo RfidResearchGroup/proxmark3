@@ -181,7 +181,7 @@ function main(args)
         d0_d15 = string.sub(d0_d15, 0, #d0_d15 - 4)
         d16_d31 = string.sub(d16_d31, 0, #d16_d31 - 4)
 
-        print(block, d0_d15, d16_d31)
+        print(block, d0_d15..d16_d31)
         table.insert(block_data, d0_d15..d16_d31)
     end
     print("----+------------------")
