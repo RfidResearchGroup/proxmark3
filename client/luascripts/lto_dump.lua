@@ -172,7 +172,7 @@ function main(args)
         local d0_d15 = getdata(res)
         
         payload = "80"
-        res, err = send(payload, {ignore_response = false, append_crc = true})
+        res, err = send(payload, {ignore_response = false, append_crc = false})
         if err then return end
 
         local d16_d31 = getdata(res)
