@@ -56,6 +56,7 @@ ISO15693
         21 = Write Block (usage: 0221+1byte block number+4bytes data+2bytes ISO15693-CRC - answer: 4bytes)
         22 = Lock Block
         23 = Read Multiple Blocks (usage: 0223+1byte 1st block to read+1byte last block to read+2bytes ISO15693-CRC)
+        24 = Write Multiple Blocks
         25 = Select
         26 = Reset to Ready
         27 = Write AFI
@@ -243,6 +244,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO15693_WRITEBLOCK                  0x21
 #define ISO15693_LOCKBLOCK                   0x22
 #define ISO15693_READ_MULTI_BLOCK            0x23
+#define ISO15693_WRITE_MULTI_BLOCK           0x24
 #define ISO15693_SELECT                      0x25
 #define ISO15693_RESET_TO_READY              0x26
 #define ISO15693_WRITE_AFI                   0x27
