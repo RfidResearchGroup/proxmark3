@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 // Merlok - 2017
+// Doegox - 2019
+// Iceman - 2019
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -29,6 +31,7 @@
 #include "cmdhffelica.h"    // ISO18092 / FeliCa
 #include "cmdhffido.h"      // FIDO authenticators
 #include "cmdhfthinfilm.h"  // Thinfilm
+#include "cmdhflto.h"       // LTO-CM
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
 
@@ -84,6 +87,15 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
+            return PM3_SUCCESS;
+        }
+    }
+
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, "Searching for LTO-CM tag...");
+    if (IfPm3Iso14443a()) {
+        if (infoLTO(false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") " found\n");
             return PM3_SUCCESS;
         }
     }

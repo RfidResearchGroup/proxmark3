@@ -22,7 +22,7 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 LDLIBS ?= -L/usr/local/lib
-LDLIBS += -lreadline -lpthread -lm
+LDLIBS += -lreadline -lsndfile -lpthread -lm 
 
 # RPi Zero gcc requires -latomic
 # but MacOSX /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
@@ -204,6 +204,7 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdhffido.c \
             cmdhffelica.c \
             cmdhfthinfilm.c \
+            cmdhflto.c \
             cmdhw.c \
             cmdlf.c \
             cmdlfawid.c \
