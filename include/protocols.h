@@ -593,5 +593,23 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define HITAG2_WRITE_PAGE               0x82    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
 #define HITAG2_HALT                     0x00    // left 5 bits only
 
+
+// LTO-CM commands
+#define LTO_REQ_STANDARD                0x45
+#define LTO_REQ_ALL                     0x4A
+#define LTO_READWORD                    0x40   // read 2 bytes (word)
+#define LTO_READBLOCK                   0x30
+#define LTO_READBLOCK_CONT              0x80
+#define LTO_SELECT                      0x93
+#define LTO_SELECT_1                    0x97
+#define LTO_WRITEWORD                   0xB0   // write 2 bytes (word)
+#define LTO_WRITEBLOCK                  0xA0
+#define LTO_HALT                        0x50
+#define LTO_TEST_CMD_1                  0x0E
+#define LTO_TEST_CMD_2                  0x6C
+
+// 0x0A = ACK
+// 0x05 = NACK
+
 #endif
 // PROTOCOLS_H
