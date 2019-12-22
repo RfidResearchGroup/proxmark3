@@ -41,6 +41,7 @@
 
 #include <dirent.h>
 #include <ctype.h>
+#include <sndfile.h>
 
 #include "pm3_cmd.h"
 #include "commonutil.h"
@@ -393,6 +394,69 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
     }
     PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
     json_decref(root);
+
+out:
+    free(fileName);
+    return retval;
+}
+
+int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
+   
+    if (data == NULL) return PM3_EINVARG;
+    char *fileName = newfilenamemcopy(preferredName, ".wav");
+    if (fileName == NULL) return PM3_EMALLOC;
+
+    int retval = PM3_SUCCESS;
+    
+    SF_INFO wave_info;
+
+    // TODO update for other tag types
+    wave_info.samplerate = 125000;
+    wave_info.channels = 1;
+    wave_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_U8;
+    SNDFILE* wave_file = sf_open(fileName, SFM_WRITE, &wave_info);
+
+    if (!wave_file) {
+        PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
+        retval = PM3_EFILE;
+        goto out;
+    }
+
+    // unfortunately need to upconvert to 16-bit samples because libsndfile doesn't do 8-bit(?)
+    for (int i = 0; i < datalen; i++) {
+        short sample = data[i] * 256;
+        sf_write_short(wave_file, &sample, 1);
+    }
+
+    sf_close(wave_file);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%d")" bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
+
+out:
+    free(fileName);
+    return retval;
+}
+
+int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
+   
+    if (data == NULL) return PM3_EINVARG;
+    char *fileName = newfilenamemcopy(preferredName, ".pm3");
+    if (fileName == NULL) return PM3_EMALLOC;
+
+    int retval = PM3_SUCCESS;
+
+    FILE *f = fopen(fileName, "w");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
+        retval = PM3_EFILE;
+        goto out;
+    }
+
+    for (uint32_t i = 0; i < datalen; i++)
+        fprintf(f, "%d\n", data[i]);
+
+    fflush(f);
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%d")" bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
 
 out:
     free(fileName);

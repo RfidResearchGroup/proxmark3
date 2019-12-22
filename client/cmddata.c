@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
+// iceman 2019
+//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -32,6 +34,21 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_data_save(void) {
+    PrintAndLogEx(NORMAL, "Save trace from graph window , i.e. the GraphBuffer");
+    PrintAndLogEx(NORMAL, "This is a text file with number -127 to 127.  With the option `w` you can save it as wave file");
+    PrintAndLogEx(NORMAL, "Filename should be without file extension");    
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage: data save [h] [w] [f <filename w/o ext>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h              this help");
+    PrintAndLogEx(NORMAL, "       w              save as wave format (.wav)");
+    PrintAndLogEx(NORMAL, "       f <filename>   save file name");    
+    PrintAndLogEx(NORMAL, "Samples:");
+    PrintAndLogEx(NORMAL, "       data save f mytrace      - save graphbuffer to file");
+    PrintAndLogEx(NORMAL, "       data save f mytrace w    - save graphbuffer to wave file");
+    return PM3_SUCCESS;
+}
 static int usage_data_scale(void) {
     PrintAndLogEx(NORMAL, "Set cursor display scale.");
     PrintAndLogEx(NORMAL, "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful. ");
@@ -40,8 +57,8 @@ static int usage_data_scale(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: data scale [h] <kHz>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
-    PrintAndLogEx(NORMAL, "       <kHz>      Sets scale of carrier frequency expressed in kHz");
+    PrintAndLogEx(NORMAL, "       h          this help");
+    PrintAndLogEx(NORMAL, "       <kHz>      sets scale of carrier frequency expressed in kHz");
     PrintAndLogEx(NORMAL, "Samples:");
     PrintAndLogEx(NORMAL, "       data scale 125      - if sampled in 125kHz");
     return PM3_SUCCESS;
@@ -49,7 +66,7 @@ static int usage_data_scale(void) {
 static int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       h          this help");
     PrintAndLogEx(NORMAL, "       i          invert Demodbuffer before printing");
     PrintAndLogEx(NORMAL, "       x          output in hex (omit for binary output)");
     PrintAndLogEx(NORMAL, "       o <offset> enter offset in # of bits");
@@ -1876,24 +1893,42 @@ int CmdSave(const char *Cmd) {
 
     int len = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
+    uint8_t cmdp = 0;
+    bool errors = false, as_wave = false, has_name = false;
 
-    len = strlen(Cmd);
-    if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-    memcpy(filename, Cmd, len);
-
-    FILE *f = fopen(filename, "w");
-    if (!f) {
-        PrintAndLogEx(WARNING, "couldn't open '%s'", filename);
-        return PM3_EFILE;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        char ctmp = tolower(param_getchar(Cmd, cmdp));
+        switch (ctmp) {
+            case 'h':
+                return usage_data_save();
+            case 'f':
+                len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (len < 1) {
+                    errors = true;
+                    break;
+                }
+                has_name = true;
+                cmdp += 2;
+                break;
+            case 'w':
+                as_wave = true;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
     }
 
-    for (uint32_t i = 0; i < GraphTraceLen; i++)
-        fprintf(f, "%d\n", GraphBuffer[i]);
+    if (!has_name) errors = true;
 
-    fclose(f);
+    if (errors || cmdp == 0) return usage_data_save();
 
-    PrintAndLogEx(SUCCESS, "saved to " _YELLOW_("'%s'"), Cmd);
-    return PM3_SUCCESS;
+    if ( as_wave )
+       return saveFileWAVE(filename, GraphBuffer, GraphTraceLen);
+    else
+       return saveFilePM3(filename, GraphBuffer, GraphTraceLen);
 }
 
 static int CmdScale(const char *Cmd) {
@@ -2269,7 +2304,7 @@ static command_t CommandTable[] = {
     {"printdemodbuffer", CmdPrintDemodBuff,      AlwaysAvailable, "[x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output"},
     {"rawdemod",        CmdRawDemod,             AlwaysAvailable, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},
     {"samples",         CmdSamples,              IfPm3Present,    "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
-    {"save",            CmdSave,                 AlwaysAvailable, "<filename> -- Save trace (from graph window)"},
+    {"save",            CmdSave,                 AlwaysAvailable, "Save trace (from graph window)"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable, "[orange_marker] [blue_marker] (in graph window)"},
     {"scale",           CmdScale,                AlwaysAvailable, "<int> -- Set cursor display scale in carrier frequency expressed in kHz"},
     {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable, "<0|1|2> -- Set Debugging Level on client side"},

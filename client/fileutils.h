@@ -112,6 +112,30 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
  */
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
 
+/** STUB
+ * @brief Utility function to save WAVE data to a file. This method takes a preferred name, but if that
+ * file already exists, it tries with another name until it finds something suitable.
+ * E.g. dumpdata-15.wav
+ *
+ * @param preferredName
+ * @param data The binary data to write to the file
+ * @param datalen the length of the data
+ * @return 0 for ok
+ */
+int saveFileWAVE(const char *preferredName, int *data, size_t datalen);
+
+/** STUB
+ * @brief Utility function to save PM3 data to a file. This method takes a preferred name, but if that
+ * file already exists, it tries with another name until it finds something suitable.
+ * E.g. dump_trace.pm3
+ *
+ * @param preferredName
+ * @param data The binary data to write to the file
+ * @param datalen the length of the data
+ * @return 0 for ok
+ */
+int saveFilePM3(const char *preferredName, int *data, size_t datalen);
+
 /**
  * @brief Utility function to save a keydump.
  *
