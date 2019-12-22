@@ -33,9 +33,11 @@ addons:
     packages:
       - gcc-arm-none-eabi
       - libnewlib-dev
+      - libsndfile1-dev
   homebrew:
     packages:
       - readline
+      - libsndfile
       - qt5
       - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     taps: RfidResearchGroup/proxmark3
