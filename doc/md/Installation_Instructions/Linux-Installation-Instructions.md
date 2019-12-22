@@ -25,7 +25,7 @@ Install the requirements
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libsndfile1-dev
 ```
 
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.
