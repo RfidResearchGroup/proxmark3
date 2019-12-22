@@ -78,7 +78,7 @@ local function sendRaw(rawdata, options)
     if options.append_crc then
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
     end
-  
+
     local arg2 = #rawdata / 2
     if options.bits7 then
        arg2 = arg2 + tonumber(lshift(7, 16))
@@ -170,7 +170,7 @@ function main(args)
         if err then return end
 
         local d0_d15 = getdata(res)
-        
+
         payload = "80"
         res, err = send(payload, {ignore_response = false, append_crc = false})
         if err then return end

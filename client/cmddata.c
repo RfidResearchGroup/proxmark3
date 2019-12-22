@@ -37,13 +37,13 @@ static int CmdHelp(const char *Cmd);
 static int usage_data_save(void) {
     PrintAndLogEx(NORMAL, "Save trace from graph window , i.e. the GraphBuffer");
     PrintAndLogEx(NORMAL, "This is a text file with number -127 to 127.  With the option `w` you can save it as wave file");
-    PrintAndLogEx(NORMAL, "Filename should be without file extension");    
+    PrintAndLogEx(NORMAL, "Filename should be without file extension");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: data save [h] [w] [f <filename w/o ext>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h              this help");
     PrintAndLogEx(NORMAL, "       w              save as wave format (.wav)");
-    PrintAndLogEx(NORMAL, "       f <filename>   save file name");    
+    PrintAndLogEx(NORMAL, "       f <filename>   save file name");
     PrintAndLogEx(NORMAL, "Samples:");
     PrintAndLogEx(NORMAL, "       data save f mytrace      - save graphbuffer to file");
     PrintAndLogEx(NORMAL, "       data save f mytrace w    - save graphbuffer to wave file");
@@ -1925,10 +1925,10 @@ int CmdSave(const char *Cmd) {
 
     if (errors || cmdp == 0) return usage_data_save();
 
-    if ( as_wave )
-       return saveFileWAVE(filename, GraphBuffer, GraphTraceLen);
+    if (as_wave)
+        return saveFileWAVE(filename, GraphBuffer, GraphTraceLen);
     else
-       return saveFilePM3(filename, GraphBuffer, GraphTraceLen);
+        return saveFilePM3(filename, GraphBuffer, GraphTraceLen);
 }
 
 static int CmdScale(const char *Cmd) {

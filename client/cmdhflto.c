@@ -19,7 +19,7 @@
 #include "crc16.h"
 #include "ui.h"
 #include "cmdhf14a.h"
-#include "protocols.h" 
+#include "protocols.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -43,8 +43,8 @@ static void lto_switch_on_field(void) {
 
 // send a raw LTO-CM command, returns the length of the response (0 in case of error)
 static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len, bool verbose) {
-    
-	SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, len, 0, cmd, len);
+
+    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, len, 0, cmd, len);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -71,7 +71,7 @@ static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16
 static int topaz_select(uint8_t *id_response, uint8_t id_len, bool verbose) {
     // Todo: implement anticollision
 
-    uint8_t resp[] = {0,0};
+    uint8_t resp[] = {0, 0};
     uint16_t resp_len;
     uint8_t wupa_cmd[] = {LTO_REQ_STANDARD};
     uint8_t select_cmd[] = {LTO_SELECT, 0x20};
@@ -132,41 +132,41 @@ static int CmdHfLTOInfo(const char *Cmd) {
 int infoLTO(bool verbose) {
 
     clearCommandBuffer();
-    
+
     uint8_t serial_number[5];
     uint8_t serial_len = 0;
 
     topaz_select(serial_number, serial_len, verbose);
 
-    lto_switch_off_field();    
-/*
+    lto_switch_off_field();
+    /*
 
---    "hf 14a raw -a -p -b 7 45"
---    "hf 14a raw -c -p 9320"
---    "hf 14a raw -c -p 9370%s", serial_number
---    "disconnect"
+    --    "hf 14a raw -a -p -b 7 45"
+    --    "hf 14a raw -c -p 9320"
+    --    "hf 14a raw -c -p 9370%s", serial_number
+    --    "disconnect"
 
 
-    SendCommandNG(CMD_HF_THINFILM_READ, NULL, 0);
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_THINFILM_READ, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-        return PM3_ETIMEOUT;
-    }
-
-    if (resp.status == PM3_SUCCESS) {
-        if (resp.length == 16 || resp.length == 32)  {
-            print_barcode(resp.data.asBytes, resp.length, verbose);
-        } else {
-            if (verbose)
-                PrintAndLogEx(WARNING, "Response is wrong length. (%d)", resp.length);
-
-            return PM3_ESOFT;
+        SendCommandNG(CMD_HF_THINFILM_READ, NULL, 0);
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_HF_THINFILM_READ, &resp, 1500)) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
         }
-    }
 
-    return resp.status;
-*/
+        if (resp.status == PM3_SUCCESS) {
+            if (resp.length == 16 || resp.length == 32)  {
+                print_barcode(resp.data.asBytes, resp.length, verbose);
+            } else {
+                if (verbose)
+                    PrintAndLogEx(WARNING, "Response is wrong length. (%d)", resp.length);
+
+                return PM3_ESOFT;
+            }
+        }
+
+        return resp.status;
+    */
     return PM3_SUCCESS;
 }
 

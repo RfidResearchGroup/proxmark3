@@ -401,20 +401,20 @@ out:
 }
 
 int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
-   
+
     if (data == NULL) return PM3_EINVARG;
     char *fileName = newfilenamemcopy(preferredName, ".wav");
     if (fileName == NULL) return PM3_EMALLOC;
 
     int retval = PM3_SUCCESS;
-    
+
     SF_INFO wave_info;
 
     // TODO update for other tag types
     wave_info.samplerate = 125000;
     wave_info.channels = 1;
     wave_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_U8;
-    SNDFILE* wave_file = sf_open(fileName, SFM_WRITE, &wave_info);
+    SNDFILE *wave_file = sf_open(fileName, SFM_WRITE, &wave_info);
 
     if (!wave_file) {
         PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
@@ -437,7 +437,7 @@ out:
 }
 
 int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
-   
+
     if (data == NULL) return PM3_EINVARG;
     char *fileName = newfilenamemcopy(preferredName, ".pm3");
     if (fileName == NULL) return PM3_EMALLOC;
