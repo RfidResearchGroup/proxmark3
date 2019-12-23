@@ -1132,6 +1132,34 @@ int detect_classic_nackbug(bool verbose) {
     }
     return PM3_SUCCESS;
 }
+
+/* Detect Mifare Classic Static / Fixed nonce
+detects special magic cards that has a static / fixed nonce
+returns:
+0  = has normal nonce
+1  = has static/fixed nonce
+2  = cmd failed
+*/
+int detect_classic_static_nonce(void) {
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_STATIC_NONCE, NULL, 0);
+    PacketResponseNG resp;
+
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NONCE, &resp, 500)) {
+
+        if (resp.status == PM3_ESOFT)
+            return 2;
+
+        if (resp.data.asBytes[0] == 0)
+            return 0;
+
+        if (resp.data.asBytes[0] != 0)
+            return 1;
+    }
+    return 2;
+}
+
 /* try to see if card responses to "chinese magic backdoor" commands. */
 void detect_classic_magic(void) {
 

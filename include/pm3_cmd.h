@@ -507,6 +507,7 @@ typedef struct {
 #define CMD_HF_DESFIRE_COMMAND                                            0x072e
 
 #define CMD_HF_MIFARE_NACK_DETECT                                         0x0730
+#define CMD_HF_MIFARE_STATIC_NONCE                                        0x0731
 
 // MFU OTP TearOff
 #define CMD_HF_MFU_OTP_TEAROFF                                            0x0740

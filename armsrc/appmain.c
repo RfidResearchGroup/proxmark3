@@ -1251,6 +1251,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareU_Otp_Tearoff();
             break;
         }
+        case CMD_HF_MIFARE_STATIC_NONCE: {
+            MifareHasStaticNonce();
+            break;
+        }
 #endif
 
 #ifdef WITH_NFCBARCODE

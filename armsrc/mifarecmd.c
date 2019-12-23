@@ -2057,6 +2057,57 @@ OUT:
     BigBuf_Clear_ext(false);
 }
 
+void MifareHasStaticNonce() {
+
+    // variables
+    int retval = PM3_SUCCESS, len;
+
+    uint32_t nt = 0 ;
+    uint8_t rec[1] = {0x00};
+    uint8_t recpar[1] = {0x00};
+    uint8_t *uid = BigBuf_malloc(10);
+    uint8_t data[1] = {0x00};
+
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+    iso14a_card_select_t card_info;
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    for (int i = 0; i < 3; i++) {
+        if (!iso14443a_select_card(uid, &card_info, NULL, true, 0, true)) {
+            retval = PM3_ESOFT;
+            goto OUT;
+        }
+
+        // Transmit MIFARE_CLASSIC_AUTH
+        len = mifare_sendcmd_short(pcs, false, 0x60, 0, rec, recpar, NULL);
+        if (len != 4) {
+            retval = PM3_ESOFT;
+            goto OUT;
+        }
+
+        // Save the tag nonce (nt)
+        if (nt == bytes_to_num(rec, 4)) {
+            data[0]++;
+        }
+
+        nt = bytes_to_num(rec, 4);
+
+        CHK_TIMEOUT();
+    }
+
+OUT:
+    reply_ng(CMD_HF_MIFARE_STATIC_NONCE, retval, data, sizeof(data));
+    // turns off
+    OnSuccessMagic();
+    BigBuf_free();
+    BigBuf_Clear_ext(false);
+
+    crypto1_deinit(pcs);
+}
+
 void OnSuccessMagic() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
