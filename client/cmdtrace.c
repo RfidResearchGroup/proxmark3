@@ -46,6 +46,7 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "    legic    - interpret data as LEGIC communications");
     PrintAndLogEx(NORMAL, "    felica   - interpret data as ISO18092 / FeliCa communications");
     PrintAndLogEx(NORMAL, "    hitag    - interpret data as Hitag2 / HitagS communications");
+    PrintAndLogEx(NORMAL, "    lto      - interpret data as LTO-CM communications");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        trace list 14a f");
@@ -264,6 +265,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case ISO_14443A:
             case MFDES:
+            case LTO:
                 crcStatus = iso14443A_CRC_check(isResponse, frame, data_len);
                 break;
             case THINFILM:
@@ -302,6 +304,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != PROTO_HITAG
                 && protocol != THINFILM
                 && protocol != FELICA
+                && protocol != LTO
                 && (isResponse || protocol == ISO_14443A)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
@@ -378,6 +381,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case FELICA:
                 annotateFelica(explanation, sizeof(explanation), frame, data_len);
+            case LTO:
+                annotateLTO(explanation, sizeof(explanation), frame, data_len);
                 break;
             default:
                 break;
@@ -589,6 +594,7 @@ int CmdTraceList(const char *Cmd) {
             else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
             else if (strcmp(type, "hitag") == 0)    protocol = PROTO_HITAG;
             else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
+            else if (strcmp(type, "lto") == 0)      protocol = LTO;
             else if (strcmp(type, "raw") == 0)      protocol = -1; //No crc, no annotations
             else errors = true;
 
@@ -651,7 +657,7 @@ int CmdTraceList(const char *Cmd) {
         }
     } else {
         PrintAndLogEx(NORMAL, "Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
-        if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ)
+        if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ || protocol == LTO)
             PrintAndLogEx(NORMAL, "ISO14443A - All times are in carrier periods (1/13.56MHz)");
         if (protocol == THINFILM)
             PrintAndLogEx(NORMAL, "Thinfilm - All times are in carrier periods (1/13.56MHz)");
