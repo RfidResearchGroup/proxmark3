@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add `tools\pm3_cs8.pl` - convert .pm3 files to wave format (@samyk)
+ - Add `tools\pm3_amii_bin2eml.pl` - amiibo convering script (@samyk)
+ - Chg `hf 14a info` - now detects "static / fixed" nonce tags (@iceman1001)
  - Chg `data save f <filename> w` - params reworked.  (@iceman1001)
  - Chg `hf search` - now should detect LTO-CM tags (@iceman1001)
  - Added `hf lto info` - skeleton support for LTO Cartridge memory (@iceman1001)
