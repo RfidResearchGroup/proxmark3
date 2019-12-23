@@ -61,17 +61,17 @@ The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-
 We usually merge your contributions fast since we do like the idea of getting a functionality in the Proxmark3 and weed out the bugs afterwards.
 
 ## Notes / helpful documents
-- Internal notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
-- Internal notes on [UART](/doc/uart_notes.md)
-- Internal notes on [Frame format](/doc/new_frame_format.md)
-- Internal notes on [external flash](/doc/ext_flash_notes.md)
-- Internal notes on [standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)
-- Internal notes on [Termux / Android](/doc/termux_notes.md)
-- Internal notes on [Wireshark / tracedata](/doc/trace_wireshark_notes.md)
-- Internal notes on [loclass](/doc/loclass_notes.md)
-- Internal notes on [EMV](/doc/emv_notes.md)
-- Internal notes on [Paths](/doc/path_notes.md)
-
+- notes on [Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-%26-Run.md).
+- notes on [UART](/doc/uart_notes.md)
+- notes on [Frame format](/doc/new_frame_format.md)
+- notes on [external flash](/doc/ext_flash_notes.md)
+- notes on [standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)
+- notes on [Termux / Android](/doc/termux_notes.md)
+- notes on [Wireshark / tracedata](/doc/trace_wireshark_notes.md)
+- notes on [loclass](/doc/loclass_notes.md)
+- notes on [EMV](/doc/emv_notes.md)
+- notes on [Paths](/doc/path_notes.md)
+- notes on [file formats used with Proxmark3](/doc/extensions_notes.md)
 ## Cheat sheet
 
 Thanks to Alex Dibs, you can enjoy a [command cheat sheet](/doc/cheatsheet.md)
