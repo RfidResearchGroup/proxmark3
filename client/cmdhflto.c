@@ -68,7 +68,7 @@ static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16
 
 
 // select a LTO-CM tag. Send WUPA and RID.
-static int topaz_select(uint8_t *id_response, uint8_t id_len, bool verbose) {
+static int lto_select(uint8_t *id_response, uint8_t id_len, bool verbose) {
     // Todo: implement anticollision
 
     uint8_t resp[] = {0, 0};
@@ -136,7 +136,7 @@ int infoLTO(bool verbose) {
     uint8_t serial_number[5];
     uint8_t serial_len = 0;
 
-    topaz_select(serial_number, serial_len, verbose);
+    int ret_val = lto_select(serial_number, serial_len, verbose);
 
     lto_switch_off_field();
     /*
@@ -167,7 +167,7 @@ int infoLTO(bool verbose) {
 
         return resp.status;
     */
-    return PM3_SUCCESS;
+    return ret_val;
 }
 
 static int CmdHfLTOList(const char *Cmd) {
@@ -197,3 +197,4 @@ int CmdHFLTO(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
+
