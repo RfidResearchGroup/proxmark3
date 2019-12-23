@@ -478,7 +478,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [%012" PRIx64 "]",
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ %012" PRIx64 " ]",
                           (uint16_t)resp.oldarg[2] & 0xff,
                           (resp.oldarg[2] >> 8) ? 'B' : 'A',
                           key64
