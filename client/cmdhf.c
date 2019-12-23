@@ -86,7 +86,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") "found\n");
             return PM3_SUCCESS;
         }
     }
@@ -95,7 +95,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for LTO-CM tag...");
     if (IfPm3Iso14443a()) {
         if (infoLTO(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") "found\n");
             return PM3_SUCCESS;
         }
     }
@@ -104,7 +104,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false, false) > 0) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") "found\n");
             return PM3_SUCCESS;
         }
     }
@@ -113,7 +113,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false)) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") "found\n");
             return PM3_SUCCESS;
         }
     }
@@ -122,7 +122,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") "found\n");
             return PM3_SUCCESS;
         }
     }
@@ -131,7 +131,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
         if (readTopazUid() == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") "found\n");
             return PM3_SUCCESS;
         }
     }
@@ -140,7 +140,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
     if (IfPm3Felica()) {
         if (readFelicaUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") " found\n");
+            PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") "found\n");
             return PM3_SUCCESS;
         }
     }
@@ -150,7 +150,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
     if (IfPm3Iso14443a()) {
         if (readHF14B(false) == 1) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") "found\n");
             return PM3_SUCCESS;
         }
     }
@@ -159,7 +159,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for iClass / PicoPass tag...");
     if (IfPm3Iclass()) {
         if (readIclass(false, false) == 1) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") " found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") "found\n");
             return PM3_SUCCESS;
         }
     }
