@@ -1598,6 +1598,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         if (do_nack_test)
             detect_classic_nackbug(!verbose);
+
+        res = detect_classic_static_nonce();
+        if (res == 1)
+            PrintAndLogEx(SUCCESS, "Static/Fixed nonce detected");
+        if (res == 2 && verbose)
+            PrintAndLogEx(SUCCESS, "Static/Fixed nonce detection failed");
     }
 
     return select_status;
