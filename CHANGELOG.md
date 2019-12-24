@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add `hf_bruteforce.lua` - script bruteforces uid for 14a using hf 14a sim (@keld)
  - Add `tools\pm3_cs8.pl` - convert .pm3 files to wave format (@samyk)
  - Add `tools\pm3_amii_bin2eml.pl` - amiibo convering script (@samyk)
  - Chg `hf 14a info` - now detects "static / fixed" nonce tags (@iceman1001)
