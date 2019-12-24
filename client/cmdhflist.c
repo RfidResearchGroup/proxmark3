@@ -1096,7 +1096,7 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 }
 
 void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
-   switch (cmd[0]) {
+    switch (cmd[0]) {
         case LTO_REQ_STANDARD:
             snprintf(exp, size, "REQ Standard");
             break;
@@ -1111,7 +1111,7 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         case LTO_TEST_CMD_1:
             snprintf(exp, size, "TEST CMD 1");
-            break;        
+            break;
         case LTO_TEST_CMD_2:
             snprintf(exp, size, "TEST CMD 2");
             break;
@@ -1120,10 +1120,10 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         case (LTO_READBLOCK & 0xF0):
             snprintf(exp, size, "READBLOCK");
-            break; 
+            break;
         case LTO_READBLOCK_CONT:
             snprintf(exp, size, "READBLOCK CONT");
-            break; 
+            break;
         case LTO_WRITEWORD:
             snprintf(exp, size, "WRITEWORD");
             break;
