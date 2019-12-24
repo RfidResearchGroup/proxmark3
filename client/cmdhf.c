@@ -158,7 +158,7 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for iClass / PicoPass tag...");
     if (IfPm3Iclass()) {
-        if (readIclass(false, false) == 1) {
+        if (readIclass(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") "found\n");
             return PM3_SUCCESS;
         }
