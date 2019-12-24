@@ -141,4 +141,10 @@ extern int DBGLEVEL;
 # define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
 #endif
 
+// bit stream operations
+#define TEST_BIT(data, i) (*(data + (i / 8)) >> (7 - (i % 8))) & 1
+#define SET_BIT(data, i)   *(data + (i / 8)) |= (1 << (7 - (i % 8)))
+#define CLEAR_BIT(data, i) *(data + (i / 8)) &= ~(1 << (7 - (i % 8)))
+#define FLIP_BIT(data, i)  *(data + (i / 8)) ^= (1 << (7 - (i % 8)))
+
 #endif
