@@ -466,10 +466,10 @@ out:
 int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector) {
 
     if (e_sector == NULL) return PM3_EINVARG;
-	
+
     char *fileName = newfilenamemcopy(preferredName, ".bin");
     if (fileName == NULL) return PM3_EMALLOC;
-	
+
     FILE *f = fopen(fileName, "wb");
     if (f == NULL) {
         PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fileName);
@@ -479,20 +479,20 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
 
     uint8_t empty[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t tmp[6] = {0, 0, 0, 0, 0, 0};
-	
+
     for (int i = 0; i < sectorsCnt; i++) {
-		if (e_sector[i].foundKey[0])
+        if (e_sector[i].foundKey[0])
             num_to_bytes(e_sector[i].Key[0], sizeof(tmp), tmp);
-		else
-			memcpy(tmp, empty, sizeof(tmp));
+        else
+            memcpy(tmp, empty, sizeof(tmp));
         fwrite(tmp, 1, sizeof(tmp), f);
     }
 
     for (int i = 0; i < sectorsCnt; i++) {
-		if (e_sector[i].foundKey[0])
+        if (e_sector[i].foundKey[0])
             num_to_bytes(e_sector[i].Key[1], sizeof(tmp), tmp);
-		else
-			memcpy(tmp, empty, sizeof(tmp));
+        else
+            memcpy(tmp, empty, sizeof(tmp));
         fwrite(tmp, 1, sizeof(tmp), f);
     }
 
