@@ -137,14 +137,14 @@ int saveFileWAVE(const char *preferredName, int *data, size_t datalen);
 int saveFilePM3(const char *preferredName, int *data, size_t datalen);
 
 /**
- * @brief Utility function to save a keydump.
+ * @brief Utility function to save a keydump into a binary file.
  *
+ * @param preferredName
  * @param sectorsCnt the used sectors
  * @param e_sector the keys in question
- * @param fptr string pointer to the filename
  * @return 0 for ok, 1 for failz
  */
-int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr);
+int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector);
 
 /**
  * @brief Utility function to load data from a binary file. This method takes a preferred name.

@@ -463,33 +463,43 @@ out:
     return retval;
 }
 
-int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr) {
-    uint8_t tmpKey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    int i;
+int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector) {
 
-    if (fptr == NULL) {
-        return PM3_EINVARG;
-    }
-
-    FILE *fkeys = fopen(fptr, "wb");
-    if (fkeys == NULL) {
-        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
+    if (e_sector == NULL) return PM3_EINVARG;
+	
+    char *fileName = newfilenamemcopy(preferredName, ".bin");
+    if (fileName == NULL) return PM3_EMALLOC;
+	
+    FILE *f = fopen(fileName, "wb");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fileName);
         return PM3_EFILE;
     }
-    PrintAndLogEx(SUCCESS, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
+    PrintAndLogEx(SUCCESS, "Generating binary key file");
 
-    for (i = 0; i < sectorsCnt; i++) {
-        num_to_bytes(e_sector[i].Key[0], 6, tmpKey);
-        fwrite(tmpKey, 1, 6, fkeys);
+    uint8_t empty[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t tmp[6] = {0, 0, 0, 0, 0, 0};
+	
+    for (int i = 0; i < sectorsCnt; i++) {
+		if (e_sector[i].foundKey[0])
+            num_to_bytes(e_sector[i].Key[0], sizeof(tmp), tmp);
+		else
+			memcpy(tmp, empty, sizeof(tmp));
+        fwrite(tmp, 1, sizeof(tmp), f);
     }
 
-    for (i = 0; i < sectorsCnt; i++) {
-        num_to_bytes(e_sector[i].Key[1], 6, tmpKey);
-        fwrite(tmpKey, 1, 6, fkeys);
+    for (int i = 0; i < sectorsCnt; i++) {
+		if (e_sector[i].foundKey[0])
+            num_to_bytes(e_sector[i].Key[1], sizeof(tmp), tmp);
+		else
+			memcpy(tmp, empty, sizeof(tmp));
+        fwrite(tmp, 1, sizeof(tmp), f);
     }
 
-    fclose(fkeys);
-    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
+    fflush(f);
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")"--> 0xffffffffffff has been inserted for unknown keys.", fileName);
+    free(fileName);
     return PM3_SUCCESS;
 }
 

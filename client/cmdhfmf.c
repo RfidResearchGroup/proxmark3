@@ -483,6 +483,24 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     return fptr;
 }
 
+static int32_t initSectorTable(sector_t **src, int32_t items) {
+
+    // initialize storage
+    (*src) = calloc(items, sizeof(sector_t));
+
+    if (*src == NULL)
+        return -1;
+
+    // empty e_sector
+    for (int i = 0; i < items; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            (*src)[i].Key[j] = 0xffffffffffff;
+            (*src)[i].foundKey[j] = false;
+        }
+    }
+    return items;
+}
+
 static int CmdHF14AMfDarkside(const char *Cmd) {
     uint8_t blockno = 0, key_type = MIFARE_AUTH_KEYA;
     uint64_t key = 0;
@@ -1223,10 +1241,16 @@ static int CmdHF14AMfNested(const char *Cmd) {
         j++;
     }
 
+    // check if tag doesn't have static/fixed nonce
+    if (detect_classic_static_nonce() != 0) {
+        PrintAndLogEx(WARNING, "Static/fixed nonce detected. Quitting...");
+        return PM3_EOPABORTED;
+    }
+
     // check if we can authenticate to sector
     if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
-        return 3;
+        return PM3_EOPABORTED;
     }
 
     if (cmdp == 'o') {
@@ -1767,16 +1791,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         return usage_hf14_autopwn();
     }
 
-    // Create the key storage stucture
-    e_sector = calloc(sectors_cnt, sizeof(sector_t));
-    if (e_sector == NULL) return PM3_EMALLOC;
-
-    // clear the key storage
-    for (int i = 0; i < sectors_cnt; i++) {
-        for (int j = 0; j < 2; j++) {
-            e_sector[i].Key[j] = 0;
-            e_sector[i].foundKey[j] = 0;
-        }
+    // create/initialize key storage structure
+    int32_t res = initSectorTable(&e_sector, sectors_cnt);
+    if (res != sectors_cnt) {
+        return PM3_EMALLOC;
     }
 
     // card prng type (weak=1 / hard=0 / select/card comm error = negative value)
@@ -2252,11 +2270,10 @@ all_found:
                   _YELLOW_("A") ":keyA "
                   ")"
                  );
-
+ 
     // Dump the keys
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "saving keys");
-    createMfcKeyDump(sectors_cnt, e_sector, GenerateFilename("hf-mf-", "-key.bin"));
+    createMfcKeyDump(GenerateFilename("hf-mf-", "-key"), sectors_cnt, e_sector);
 
     PrintAndLogEx(SUCCESS, "transferring keys to simulator memory (Cmd Error: 04 can occur)");
 
@@ -2343,7 +2360,6 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     FILE *f;
     char filename[FILE_PATH_SIZE] = {0};
     char buf[13];
-    char *fptr;
     uint8_t *keyBlock, *p;
     uint8_t sectorsCnt = 1;
     int i, keycnt = 0;
@@ -2472,9 +2488,9 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                           (keyBlock + 6 * keycnt)[3], (keyBlock + 6 * keycnt)[4], (keyBlock + 6 * keycnt)[5]);
     }
 
-    // // initialize storage for found keys
-    e_sector = calloc(sectorsCnt, sizeof(sector_t));
-    if (e_sector == NULL) {
+    // create/initialize key storage structure
+    int32_t res = initSectorTable(&e_sector, sectorsCnt);
+    if (res != sectorsCnt) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
@@ -2573,10 +2589,8 @@ out:
             }
         }
 
-        if (createDumpFile) {
-            fptr = GenerateFilename("hf-mf-", "-key.bin");
-            createMfcKeyDump(sectorsCnt, e_sector, fptr);
-        }
+        if (createDumpFile)
+            createMfcKeyDump(GenerateFilename("hf-mf-", "-key"), sectorsCnt, e_sector);
     }
 
     free(keyBlock);
@@ -2601,7 +2615,6 @@ static int CmdHF14AMfChk(const char *Cmd) {
     uint8_t keyType = 0;
     uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
     uint64_t key64 = 0;
-    char *fptr;
     int clen = 0;
     int transferToEml = 0;
     int createDumpFile = 0;
@@ -2744,21 +2757,12 @@ static int CmdHF14AMfChk(const char *Cmd) {
                          );
     }
 
-    // initialize storage for found keys
-    e_sector = calloc(SectorsCnt, sizeof(sector_t));
-    if (e_sector == NULL) {
+    // create/initialize key storage structure
+    int32_t res = initSectorTable(&e_sector, SectorsCnt);
+    if (res != SectorsCnt) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
-
-    // empty e_sector
-    for (i = 0; i < SectorsCnt; ++i) {
-        e_sector[i].Key[0] = 0xffffffffffff;
-        e_sector[i].Key[1] = 0xffffffffffff;
-        e_sector[i].foundKey[0] = false;
-        e_sector[i].foundKey[1] = false;
-    }
-
 
     uint8_t trgKeyType = 0;
     uint16_t max_keys = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
@@ -2866,10 +2870,9 @@ out:
         PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
     }
 
-    if (createDumpFile) {
-        fptr = GenerateFilename("hf-mf-", "-key.bin");
-        createMfcKeyDump(SectorsCnt, e_sector, fptr);
-    }
+    if (createDumpFile)
+        createMfcKeyDump(GenerateFilename("hf-mf-", "-key"), SectorsCnt, e_sector);
+
     free(keyBlock);
     free(e_sector);
 
@@ -2887,22 +2890,6 @@ out:
 
 sector_t *k_sector = NULL;
 uint8_t k_sectorsCount = 16;
-static void emptySectorTable() {
-
-    // initialize storage for found keys
-    if (k_sector == NULL)
-        k_sector = calloc(k_sectorsCount, sizeof(sector_t));
-    if (k_sector == NULL)
-        return;
-
-    // empty e_sector
-    for (int i = 0; i < k_sectorsCount; ++i) {
-        k_sector[i].Key[0] = 0xffffffffffff;
-        k_sector[i].Key[1] = 0xffffffffffff;
-        k_sector[i].foundKey[0] = false;
-        k_sector[i].foundKey[1] = false;
-    }
-}
 
 void showSectorTable() {
     if (k_sector != NULL) {
@@ -2917,8 +2904,12 @@ void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose) {
     uint64_t key = 0;
     bool success = false;
 
-    if (k_sector == NULL)
-        emptySectorTable();
+    if (k_sector == NULL) {
+        int32_t res = initSectorTable(&k_sector, k_sectorsCount);
+        if (res != k_sectorsCount) {
+            return;
+        }
+    }
 
     success = mfkey32_moebius(&data, &key);
     if (success) {
