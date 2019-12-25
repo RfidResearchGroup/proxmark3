@@ -2325,6 +2325,7 @@ static int CmdT55xxDump(const char *Cmd) {
         for (int i = 0; i < T55x7_BLOCK_COUNT; i++)
             data[i] = BSWAP_32(cardmem[i].blockdata);
 
+        saveFileJSON(preferredName, jsfT55x7, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t));
         saveFileEML(preferredName, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(preferredName, ".bin", data, sizeof(data));
     }
