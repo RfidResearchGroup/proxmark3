@@ -6,7 +6,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Chg `hf mf hardnested` - now detects "static / fixed" nonce tags and exits (@iceman1001)
  - Chg `hf mf csave` - now uses UID in filename (@iceman1001)
  - Fix `hf mf chk` - read block B logical error. #489 (@iceman1001)
- - Add `hf mf ekeyprn d` - new parameter to save keys to file (@iceman100)
+ - Add `hf mf ekeyprn d` - new parameter to save keys to file (@iceman1001)
  - Add `mfu_magic.lua` - script to interact with your magic NTAG tag. (@iceman1001)
  - Add `hf_bruteforce.lua` - script bruteforces uid for 14a using hf 14a sim (@keld)
  - Add `tools\pm3_cs8.pl` - convert .pm3 files to wave format (@samyk)
