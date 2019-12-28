@@ -338,9 +338,9 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
         }
         case jsfT55x7: {
             JsonSaveStr(root, "FileType", "t55x7");
-            uint8_t id[4] = {0};
-            memcpy(id, data, 4);
-            JsonSaveBufAsHexCompact(root, "$.Card.ID", id, sizeof(id));
+            uint8_t conf[4] = {0};
+            memcpy(conf, data, 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.ConfigBlock", conf, sizeof(conf));
 
             for (size_t i = 0; i < (datalen / 4); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
