@@ -126,10 +126,10 @@ static int usage_hf14_nested(void) {
     PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF        -- nested attack against 1K, block 0, Key A using key FFFFFFFFFFFF");
+    PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF        -- key recovery against 1K, block 0, Key A using key FFFFFFFFFFFF");
     PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF t      -- and transfer keys into emulator memory");
     PrintAndLogEx(NORMAL, "      hf mf nested 1 0 A FFFFFFFFFFFF d      -- or write keys to binary file ");
-    PrintAndLogEx(NORMAL, "      hf mf nested o 0 A FFFFFFFFFFFF 4 A    -- nested attack against ONE sector. Use block 0 Key A to find block 4 Key A");
+    PrintAndLogEx(NORMAL, "      hf mf nested o 0 A FFFFFFFFFFFF 4 A    -- one sector key recovery. Use block 0 Key A to find block 4 Key A");
     return PM3_SUCCESS;
 }
 static int usage_hf14_hardnested(void) {
@@ -165,6 +165,25 @@ static int usage_hf14_hardnested(void) {
     PrintAndLogEx(NORMAL, "      hf mf hardnested 0 A A0A1A2A3A4A5 4 A FFFFFFFFFFFF");
     return PM3_SUCCESS;
 }
+/*
+static int usage_hf14_fixednested(void) {
+    PrintAndLogEx(NORMAL, "Usage:");
+    PrintAndLogEx(NORMAL, " all sectors:  hf mf fixed  <card memory> <block> <key A/B> <key (12 hex symbols)> [t,d]");
+    PrintAndLogEx(NORMAL, " one sector:   hf mf fixed  o <block> <key A/B> <key (12 hex symbols)> <target block> <target key A/B> [t]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "      h    this help");
+    PrintAndLogEx(NORMAL, "      card memory - 0 - MINI(320 bytes), 1 - 1K, 2 - 2K, 4 - 4K, <other> - 1K");
+    PrintAndLogEx(NORMAL, "      t    transfer keys into emulator memory");
+    PrintAndLogEx(NORMAL, "      d    write keys to binary file `hf-mf-<UID>-key.bin`");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "      hf mf fixed 1 0 A FFFFFFFFFFFF        -- key recovery against 1K, block 0, Key A using key FFFFFFFFFFFF");
+    PrintAndLogEx(NORMAL, "      hf mf fixed 1 0 A FFFFFFFFFFFF t      -- and transfer keys into emulator memory");
+    PrintAndLogEx(NORMAL, "      hf mf fixed 1 0 A FFFFFFFFFFFF d      -- or write keys to binary file ");
+    PrintAndLogEx(NORMAL, "      hf mf fixed o 0 A FFFFFFFFFFFF 4 A    -- one sector key recovery. Use block 0 Key A to find block 4 Key A");
+    return PM3_SUCCESS;
+}
+*/
 static int usage_hf14_autopwn(void) {
     PrintAndLogEx(NORMAL, "Usage:");
     PrintAndLogEx(NORMAL, "      hf mf autopwn [k] <sector number> <key A|B> <key (12 hex symbols)>");
@@ -342,7 +361,7 @@ static int usage_hf14_ecfill(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf14_ekeyprn(void) {
-    PrintAndLogEx(NORMAL, "It prints the keys loaded in the emulator memory");
+    PrintAndLogEx(NORMAL, "Download and print the keys from emulator memory");
     PrintAndLogEx(NORMAL, "Usage:  hf mf ekeyprn [card memory] [d]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h    this help");
@@ -1379,9 +1398,6 @@ static int CmdHF14AMfNested(const char *Cmd) {
             // KEY A but not KEY B
             if (e_sector[i].foundKey[0] && !e_sector[i].foundKey[1]) {
 
-// 0 - n  
-//GetSectorFromBlockNo(blockNo)
-
                 uint8_t sectrail = (FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
 
                 PrintAndLogEx(SUCCESS, "reading block %d", sectrail);
@@ -1412,6 +1428,9 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
 jumptoend:
 
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "found keys:");
+    
         //print them
         printKeyTable(SectorsCnt, e_sector);
 
@@ -1440,38 +1459,11 @@ jumptoend:
         // Create dump file
         if (createDumpFile) {
             char *fptr = GenerateFilename("hf-mf-", "-key.bin");
-            if (fptr == NULL) {
+            if (createMfcKeyDump(fptr, SectorsCnt, e_sector) != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to save keys to file");
                 free(e_sector);
                 return PM3_ESOFT;
             }
-            FILE *fkeys;
-            if ((fkeys = fopen(fptr, "wb")) == NULL) {
-                PrintAndLogEx(WARNING, "could not create file " _YELLOW_("%s"), fptr);
-                free(e_sector);
-                return PM3_EFILE;
-            }
-
-            PrintAndLogEx(SUCCESS, "saving keys to binary file " _YELLOW_("%s"), fptr);
-            uint8_t standard[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-            uint8_t tempkey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-            for (int i = 0; i < SectorsCnt; i++) {
-                if (e_sector[i].foundKey[0]) {
-                    num_to_bytes(e_sector[i].Key[0], 6, tempkey);
-                    fwrite(tempkey, 1, 6, fkeys);
-                } else {
-                    fwrite(&standard, 1, 6, fkeys);
-                }
-            }
-            for (int i = 0; i < SectorsCnt; i++) {
-                if (e_sector[i].foundKey[1]) {
-                    num_to_bytes(e_sector[i].Key[1], 6, tempkey);
-                    fwrite(tempkey, 1, 6, fkeys);
-                } else {
-                    fwrite(&standard, 1, 6, fkeys);
-                }
-            }
-            fflush(fkeys);
-            fclose(fkeys);
         }
         free(e_sector);
     }
@@ -2247,46 +2239,17 @@ all_found:
 
     // Show the results to the user
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "found Keys:");
+    PrintAndLogEx(INFO, "found keys:");
 
-    char strA[12 + 1] = {0};
-    char strB[12 + 1] = {0};
-    PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
-    PrintAndLogEx(NORMAL, "|sec|key A           |res|key B           |res|");
-    PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
-    for (uint8_t i = 0; i < sectors_cnt; ++i) {
-
-        snprintf(strA, sizeof(strA), "------------");
-        snprintf(strB, sizeof(strB), "------------");
-
-        if (e_sector[i].foundKey[0])
-            snprintf(strA, sizeof(strA), "%012" PRIx64, e_sector[i].Key[0]);
-
-        if (e_sector[i].foundKey[1])
-            snprintf(strB, sizeof(strB), "%012" PRIx64, e_sector[i].Key[1]);
-
-
-        PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%c")"|  %s  | " _YELLOW_("%c")"|"
-                      , i
-                      , strA, e_sector[i].foundKey[0]
-                      , strB, e_sector[i].foundKey[1]
-                     );
-    }
-    PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
-    PrintAndLogEx(NORMAL, "( "
-                  _YELLOW_("D") ":Dictionary / "
-                  _YELLOW_("S") ":darkSide / "
-                  _YELLOW_("U") ":User / "
-                  _YELLOW_("R") ":Reused / "
-                  _YELLOW_("N") ":Nested / "
-                  _YELLOW_("H") ":Hardnested / "
-                  _YELLOW_("A") ":keyA "
-                  ")"
-                 );
+    printKeyTable(sectors_cnt, e_sector);
 
     // Dump the keys
     PrintAndLogEx(NORMAL, "");
-    createMfcKeyDump(GenerateFilename("hf-mf-", "-key"), sectors_cnt, e_sector);
+    
+    char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+    if (createMfcKeyDump(fptr, sectors_cnt, e_sector) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to save keys to file");
+    }
 
     PrintAndLogEx(SUCCESS, "transferring keys to simulator memory (Cmd Error: 04 can occur)");
 
@@ -2334,13 +2297,20 @@ all_found:
 
     // Generate and show statistics
     t1 = msclock() - t1;
-    PrintAndLogEx(INFO, "autopwn execution time: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(INFO, "autopwn execution time: " _YELLOW_("%.0f") "seconds", (float)t1 / 1000.0);
 
     free(dump);
     free(e_sector);
     return PM3_SUCCESS;
 }
+/*
+static int CmdHF14AMfNestedFixed(const char *Cmd){
+    
+	if (strlen(Cmd) < 3) return usage_hf14_fixednested();
 
+	return PM3_SUCCESS;
+}
+*/
 /*
 static int randInRange(int min, int max) {
     return min + (int)(rand() / (double)(RAND_MAX) * (max - min + 1));
@@ -2569,6 +2539,9 @@ out:
         PrintAndLogEx(WARNING, "No keys found");
     } else {
 
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "found keys:");
+        
         printKeyTable(sectorsCnt, e_sector);
 
         if (use_flashmemory && found_keys == (sectorsCnt << 1)) {
@@ -2585,10 +2558,13 @@ out:
             for (i = 0; i < sectorsCnt; ++i) {
                 uint8_t blockno = FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1;
                 mfEmlGetMem(block, blockno, 1);
+                
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, block);
+                
                 if (e_sector[i].foundKey[1])
                     num_to_bytes(e_sector[i].Key[1], 6, block + 10);
+                
                 if (i == sectorsCnt - 1) {
                     // Disable fast mode on last packet
                     conn.block_after_ACK = false;
@@ -2602,8 +2578,13 @@ out:
             }
         }
 
-        if (createDumpFile)
-            createMfcKeyDump(GenerateFilename("hf-mf-", "-key"), sectorsCnt, e_sector);
+        if (createDumpFile) {
+			
+			char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+			if (createMfcKeyDump(fptr, sectorsCnt, e_sector) != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to save keys to file");
+            }
+		}
     }
 
     free(keyBlock);
@@ -2788,6 +2769,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
     // clear trace log by first check keys call only
     bool clearLog = true;
+
     // check keys.
     for (trgKeyType = (keyType == 2) ? 0 : keyType; trgKeyType < 2; (keyType == 2) ? (++trgKeyType) : (trgKeyType = 2)) {
 
@@ -2868,6 +2850,9 @@ static int CmdHF14AMfChk(const char *Cmd) {
     }
 
 out:
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "found keys:");
+    
     //print keys
 	if ( SectorsCnt == 1)
 		printKeyTableEx(SectorsCnt, e_sector, GetSectorFromBlockNo(blockNo));
@@ -2897,8 +2882,12 @@ out:
         PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
     }
 
-    if (createDumpFile)
-        createMfcKeyDump(GenerateFilename("hf-mf-", "-key"), SectorsCnt, e_sector);
+    if (createDumpFile) {
+        char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+        if (createMfcKeyDump(fptr, SectorsCnt, e_sector) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to save keys to file");
+        }
+	}
 
     free(keyBlock);
     free(e_sector);
@@ -3331,7 +3320,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     char strA[12 + 1] = {0};
     char strB[12 + 1] = {0};
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
-    PrintAndLogEx(NORMAL, "|sec|key A           |res|key B           |res|");
+    PrintAndLogEx(NORMAL, "|sec| key A          |res| key B          |res|");
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
     for (uint8_t i = 0; i < sectorscnt; ++i) {
 
@@ -3344,14 +3333,36 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
         if (e_sector[i].foundKey[1])
             snprintf(strB, sizeof(strB), "%012" PRIx64, e_sector[i].Key[1]);
 
-
-        PrintAndLogEx(NORMAL, "|%03d|  %s  | %d |  %s  | %d |"
+        if (e_sector[i].foundKey[0] > 1) {
+            PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%c")"|  %s  | " _YELLOW_("%c")"|"
+                      , i
+                      , strA, e_sector[i].foundKey[0]
+                      , strB, e_sector[i].foundKey[1]
+                     );
+        } else {
+            PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%d")"|  %s  | " _YELLOW_("%d")"|"
                       , start_sector
                       , strA, e_sector[i].foundKey[0]
                       , strB, e_sector[i].foundKey[1]
                      );
+        }
     }
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
+
+    if (e_sector[0].foundKey[0] > 1) {
+        PrintAndLogEx(NORMAL, "( "
+                  _YELLOW_("D") ":Dictionary / "
+                  _YELLOW_("S") ":darkSide / "
+                  _YELLOW_("U") ":User / "
+                  _YELLOW_("R") ":Reused / "
+                  _YELLOW_("N") ":Nested / "
+                  _YELLOW_("H") ":Hardnested / "
+                  _YELLOW_("A") ":keyA "
+                  ")"
+                 );
+    } else {
+        PrintAndLogEx(NORMAL, "(" _YELLOW_("0") ": Failed / " _YELLOW_("1") ": Success)");
+    }
 }
 
 
@@ -4567,6 +4578,7 @@ static command_t CommandTable[] = {
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack"},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},
+//    {"fixednested", CmdHF14AMfNestedFixed, IfPm3Iso14443a,  "Nested attack against static/fixed nonce Mifare Classic cards"},
     {"autopwn",     CmdHF14AMfAutoPWN,      IfPm3Iso14443a,  "Automatic key recovery tool for MIFARE Classic"},
 //    {"keybrute",    CmdHF14AMfKeyBrute,     IfPm3Iso14443a,  "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
     {"nack",        CmdHf14AMfNack,         IfPm3Iso14443a,  "Test for MIFARE NACK bug"},
