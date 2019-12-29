@@ -478,10 +478,10 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ %012" PRIx64 " ]",
-                          (uint16_t)resp.oldarg[2] & 0xff,
-                          (resp.oldarg[2] >> 8) ? 'B' : 'A',
-                          key64
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [  " _YELLOW_("%s") "]",
+                          package->block,
+                          package->keytype ? 'B' : 'A',
+                           sprint_hex(resultKey, 6)
                          );
             return -5;
         }
@@ -489,14 +489,15 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
 out:
     PrintAndLogEx(SUCCESS, "target block:%3u key type: %c",
-                  (uint16_t)resp.oldarg[2] & 0xff,
-                  (resp.oldarg[2] >> 8) ? 'B' : 'A'
+                  package->block,
+                  package->keytype ? 'B' : 'A'
                  );
 
     free(statelists[0].head.slhead);
     free(statelists[1].head.slhead);
     return -4;
 }
+
 
 // MIFARE
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
