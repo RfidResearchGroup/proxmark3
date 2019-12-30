@@ -74,7 +74,7 @@ bool tailBit(BitstreamIn *stream) {
 void pushBit(BitstreamOut *stream, bool bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
-    *(stream->buffer + bytepos) |= (bit & 1) << (7 - bitpos);
+    *(stream->buffer + bytepos) |= (bit) << (7 - bitpos);
     stream->position++;
     stream->numbits++;
 }
