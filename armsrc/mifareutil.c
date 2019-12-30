@@ -92,7 +92,7 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
     AddCrc14A(dcmd, 2);
     memcpy(ecmd, dcmd, sizeof(dcmd));
 
-    if (crypted) {
+    if (pcs && crypted) {
         par[0] = 0;
         for (pos = 0; pos < 4; pos++) {
             ecmd[pos] = crypto1_byte(pcs, 0x00, 0) ^ dcmd[pos];
