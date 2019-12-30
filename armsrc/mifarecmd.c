@@ -1727,13 +1727,13 @@ void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
 // Load a card into the emulator memory
 //
 //-----------------------------------------------------------------------------
-int MifareECardLoadExt(uint8_t numSectors, uint8_t keyType) {
-    int retval = MifareECardLoad(numSectors, keyType);
+int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keyType) {
+    int retval = MifareECardLoad(sectorcnt, keyType);
     reply_ng(CMD_HF_MIFARE_EML_LOAD, retval, NULL, 0);
     return retval;
 }
 
-int MifareECardLoad(uint8_t numSectors, uint8_t keyType) {
+int MifareECardLoad(uint8_t sectorcnt, uint8_t keyType) {
 
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -1759,7 +1759,7 @@ int MifareECardLoad(uint8_t numSectors, uint8_t keyType) {
         goto out;
     }
 
-    for (uint8_t sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+    for (uint8_t sectorNo = 0; sectorNo < sectorcnt; sectorNo++) {
         uint64_t ui64Key = emlGetKey(sectorNo, keyType);
         if (sectorNo == 0) {
             if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
