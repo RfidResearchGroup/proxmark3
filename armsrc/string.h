@@ -24,7 +24,7 @@ char *strcat(char *dest, const char *src);
 void strreverse(char s[]);
 void itoa(int n, char s[]);
 char *strcpy(char *dst, const char *src);
-char *strncpy(char *destination, const char *source, size_t num);
+char *strncpy(char *dst, const char *src, size_t n);
 int strcmp(const char *s1, const char *s2);
 char *strtok(char *s, const char *delim);
 char *strchr(const char *s, int c);
