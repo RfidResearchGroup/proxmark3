@@ -919,7 +919,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
         for (rtr = 0; rtr < 17; rtr++) {
 
             // Test if the action was cancelled
-            if (BUTTON_PRESS() || usb_poll_validate_length()) {
+            if (BUTTON_PRESS() || data_available()) {
                 isOK = -2;
                 break;
             }
@@ -1000,7 +1000,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
         while (target_nt[i] == 0) { // continue until we have an unambiguous nonce
 
             // Test if the action was cancelled
-            if (BUTTON_PRESS() || usb_poll_validate_length()) {
+            if (BUTTON_PRESS() || data_available()) {
                 isOK = -2;
                 break;
             }
@@ -1274,6 +1274,8 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
     static uint8_t found[80];
     static uint8_t *uid;
 
+    int oldbg = DBGLEVEL;
+	
 #ifdef WITH_FLASH
     if (use_flashmem) {
         BigBuf_free();
@@ -1341,6 +1343,9 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         CHK_TIMEOUT();
     }
 
+    // clear debug level. We are expecting lots of authentication failures...
+    DBGLEVEL = DBG_NONE;
+    
     // set check struct.
     chk_data.uid = uid;
     chk_data.cuid = cuid;
@@ -1365,7 +1370,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
             for (uint16_t i = s_point; i < keyCount; ++i) {
 
                 // Allow button press / usb cmd to interrupt device
-                if (BUTTON_PRESS() && !data_available()) {
+                if (BUTTON_PRESS() && data_available()) {
                     goto OUT;
                 }
 
@@ -1457,7 +1462,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         for (uint16_t i = 0; i < keyCount; i++) {
 
             // Allow button press / usb cmd to interrupt device
-            if (BUTTON_PRESS() && !data_available()) break;
+            if (BUTTON_PRESS() && data_available()) break;
 
             // found all keys?
             if (foundkeys == allkeys)
@@ -1566,16 +1571,16 @@ OUT:
 
                 emlSetMem_xt(block, blockno, 1, sizeof(block));
             }
-            int oldbg = DBGLEVEL;
-            DBGLEVEL = DBG_NONE;
+
             MifareECardLoad(sectorcnt, 0);
             MifareECardLoad(sectorcnt, 1);
-            DBGLEVEL = oldbg;
         }
     } else {
         // partial/none keys found
         reply_mix(CMD_ACK, foundkeys, 0, 0, 0, 0);
     }
+
+    DBGLEVEL = oldbg;
 }
 
 void MifareChkKeys(uint8_t *datain) {
@@ -1614,7 +1619,10 @@ void MifareChkKeys(uint8_t *datain) {
     if (clearTrace)
         clear_trace();
 
-    set_tracing(true);
+    int oldbg = DBGLEVEL;
+    DBGLEVEL = DBG_NONE;
+
+    set_tracing(false);
 
     for (i = 0; i < keyCount; i++) {
 
@@ -1655,6 +1663,7 @@ void MifareChkKeys(uint8_t *datain) {
 
         if (res)
             continue;
+
         memcpy(keyresult.key, datain + i * 6, 6);
         keyresult.found = true;
         break;
@@ -1668,6 +1677,8 @@ void MifareChkKeys(uint8_t *datain) {
 
     set_tracing(false);
     crypto1_deinit(pcs);
+
+    DBGLEVEL = oldbg;
 }
 
 //-----------------------------------------------------------------------------
