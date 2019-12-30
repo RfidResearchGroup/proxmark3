@@ -1727,13 +1727,13 @@ void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
 // Load a card into the emulator memory
 //
 //-----------------------------------------------------------------------------
-int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keyType) {
-    int retval = MifareECardLoad(sectorcnt, keyType);
+int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype) {
+    int retval = MifareECardLoad(sectorcnt, keytype);
     reply_ng(CMD_HF_MIFARE_EML_LOAD, retval, NULL, 0);
     return retval;
 }
 
-int MifareECardLoad(uint8_t sectorcnt, uint8_t keyType) {
+int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -1760,14 +1760,14 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keyType) {
     }
 
     for (uint8_t sectorNo = 0; sectorNo < sectorcnt; sectorNo++) {
-        uint64_t ui64Key = emlGetKey(sectorNo, keyType);
+        uint64_t ui64Key = emlGetKey(sectorNo, keytype);
         if (sectorNo == 0) {
-            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_FIRST)) {
+            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_FIRST)) {
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Sector[%2d]. Auth error", sectorNo);
                 break;
             }
         } else {
-            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keyType, ui64Key, AUTH_NESTED)) {
+            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_NESTED)) {
                 retval = PM3_ESOFT;
                 if (DBGLEVEL > DBG_ERROR) Dbprintf("Sector[%2d]. Auth nested error", sectorNo);
                 goto out;
