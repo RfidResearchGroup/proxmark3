@@ -393,7 +393,7 @@ static int CmdHFMFPRdbl(const char *cmd) {
     if (verbose)
         PrintAndLogEx(INFO, "--block:%d sector[%d]:%02x key:%04x", blockn, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
-    mf4Session mf4session;
+    mf4Session_t mf4session;
     int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
@@ -492,7 +492,7 @@ static int CmdHFMFPRdsc(const char *cmd) {
     if (verbose)
         PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
-    mf4Session mf4session;
+    mf4Session_t mf4session;
     int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
@@ -596,7 +596,7 @@ static int CmdHFMFPWrbl(const char *cmd) {
     if (verbose)
         PrintAndLogEx(INFO, "--block:%d sector[%d]:%02x key:%04x", blockNum & 0xff, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
-    mf4Session mf4session;
+    mf4Session_t mf4session;
     int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);

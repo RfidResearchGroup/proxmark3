@@ -95,7 +95,7 @@ const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
     return StaticNone;
 };
 /*
-static int CalculateEncIVCommand(mf4Session *session, uint8_t *iv, bool verbose) {
+static int CalculateEncIVCommand(mf4Session_t *session, uint8_t *iv, bool verbose) {
     memcpy(&iv[0], session->TI, 4);
     memcpy(&iv[4], &session->R_Ctr, 2);
     memcpy(&iv[6], &session->W_Ctr, 2);
@@ -120,8 +120,8 @@ static int CalculateEncIVResponse(mf4Session *session, uint8_t *iv, bool verbose
 }
 */
 
-int CalculateMAC(mf4Session *session, MACType_t mtype, uint8_t blockNum, uint8_t blockCount, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
-    if (!session || !session->Authenticated || !mac || !data || !datalen || datalen < 1)
+int CalculateMAC(mf4Session_t *session, MACType_t mtype, uint8_t blockNum, uint8_t blockCount, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
+    if (!session || !session->Authenticated || !mac || !data || !datalen)
         return 1;
 
     memset(mac, 0x00, 8);
@@ -168,7 +168,7 @@ int CalculateMAC(mf4Session *session, MACType_t mtype, uint8_t blockNum, uint8_t
     return aes_cmac8(NULL, session->Kmac, macdata, mac, macdatalen);
 }
 
-int MifareAuth4(mf4Session *session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
+int MifareAuth4(mf4Session_t *session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
     uint8_t data[257] = {0};
     int datalen = 0;
 
@@ -335,7 +335,7 @@ int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int
     return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 }
 
-int MFPReadBlock(mf4Session *session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+int MFPReadBlock(mf4Session_t *session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
     uint8_t rcmd[4 + 8] = {(plain ? (0x37) : (0x33)), blockNum, 0x00, blockCount};
     if (!plain && session)
         CalculateMAC(session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], VerboseMode);
@@ -353,7 +353,7 @@ int MFPReadBlock(mf4Session *session, bool plain, uint8_t blockNum, uint8_t bloc
     return 0;
 }
 
-int MFPWriteBlock(mf4Session *session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+int MFPWriteBlock(mf4Session_t *session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
     uint8_t rcmd[1 + 2 + 16 + 8] = {0xA3, blockNum, 0x00};
     memmove(&rcmd[3], data, 16);
     if (session)
@@ -382,7 +382,7 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     if (verbose)
         PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
 
-    mf4Session session;
+    mf4Session_t session;
     int res = MifareAuth4(&session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Sector %d authentication error: %d", sectorNo, res);
