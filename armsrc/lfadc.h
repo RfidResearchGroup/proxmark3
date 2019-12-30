@@ -27,6 +27,6 @@ void lf_init(bool reader);
 void lf_finalize();
 size_t lf_detect_field_drop(size_t max);
 bool lf_manchester_send_bytes(const uint8_t *frame, size_t frame_len);
-void lf_modulation(bool mod);
+void lf_modulation(bool modulation);
 
 #endif // __LFADC_H__
