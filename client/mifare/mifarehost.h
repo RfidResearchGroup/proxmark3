@@ -39,7 +39,7 @@ typedef struct {
     uint32_t uid;
     uint32_t blockNo;
     uint32_t keyType;
-    uint32_t nt;
+    uint32_t nt_enc;
     uint32_t ks1;
 } StateList_t;
 

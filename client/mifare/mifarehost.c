@@ -324,7 +324,7 @@ __attribute__((force_align_arg_pointer))
 *nested_worker_thread(void *arg) {
     struct Crypto1State *p1;
     StateList_t *statelist = arg;
-    statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt ^ statelist->uid);
+    statelist->head.slhead = lfsr_recovery32(statelist->ks1, statelist->nt_enc ^ statelist->uid);
 
     for (p1 = statelist->head.slhead; * (uint64_t *)p1 != 0; p1++) {};
 
@@ -391,10 +391,10 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
         statelists[i].uid = uid;
     }
 
-    memcpy(&statelists[0].nt,  package->nt_a, sizeof(package->nt_a));
+    memcpy(&statelists[0].nt_enc,  package->nt_a, sizeof(package->nt_a));
     memcpy(&statelists[0].ks1, package->ks_a, sizeof(package->ks_a));
 
-    memcpy(&statelists[1].nt,  package->nt_b, sizeof(package->nt_b));
+    memcpy(&statelists[1].nt_enc,  package->nt_b, sizeof(package->nt_b));
     memcpy(&statelists[1].ks1, package->ks_b, sizeof(package->ks_b));
 
 
@@ -422,14 +422,14 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             savestate = *p1;
             while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
                 *p3 = *p1;
-                lfsr_rollback_word(p3, statelists[0].nt ^ statelists[0].uid, 0);
+                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
                 p3++;
                 p1++;
             }
             savestate = *p2;
             while (Compare16Bits(p2, &savestate) == 0 && p2 <= statelists[1].tail.sltail) {
                 *p4 = *p2;
-                lfsr_rollback_word(p4, statelists[1].nt ^ statelists[1].uid, 0);
+                lfsr_rollback_word(p4, statelists[1].nt_enc ^ statelists[1].uid, 0);
                 p4++;
                 p2++;
             }
@@ -481,7 +481,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [  " _YELLOW_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
-                           sprint_hex(resultKey, 6)
+                          sprint_hex(resultKey, 6)
                          );
             return -5;
         }

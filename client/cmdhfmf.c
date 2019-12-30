@@ -370,7 +370,7 @@ static int usage_hf14_ekeyprn(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf mf ekeyprn 1");
-	PrintAndLogEx(NORMAL, "      hf mf ekeyprn d");
+    PrintAndLogEx(NORMAL, "      hf mf ekeyprn d");
     return PM3_SUCCESS;
 }
 
@@ -1430,7 +1430,7 @@ jumptoend:
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "found keys:");
-    
+
         //print them
         printKeyTable(SectorsCnt, e_sector);
 
@@ -1615,12 +1615,12 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
     if (!know_target_key && nonce_file_read == false) {
 
-		// check if tag doesn't have static/fixed nonce
-		if (detect_classic_static_nonce() != 0) {
-			PrintAndLogEx(WARNING, "Static/fixed nonce detected. Quitting...");
-			return PM3_EOPABORTED;
-		}
-		
+        // check if tag doesn't have static/fixed nonce
+        if (detect_classic_static_nonce() != 0) {
+            PrintAndLogEx(WARNING, "Static/fixed nonce detected. Quitting...");
+            return PM3_EOPABORTED;
+        }
+
         uint64_t key64 = 0;
         // check if we can authenticate to sector
         if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
@@ -2245,7 +2245,7 @@ all_found:
 
     // Dump the keys
     PrintAndLogEx(NORMAL, "");
-    
+
     char *fptr = GenerateFilename("hf-mf-", "-key.bin");
     if (createMfcKeyDump(fptr, sectors_cnt, e_sector) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to save keys to file");
@@ -2305,7 +2305,7 @@ all_found:
 }
 /*
 static int CmdHF14AMfNestedFixed(const char *Cmd){
-    
+
 	if (strlen(Cmd) < 3) return usage_hf14_fixednested();
 
 	return PM3_SUCCESS;
@@ -2541,7 +2541,7 @@ out:
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "found keys:");
-        
+
         printKeyTable(sectorsCnt, e_sector);
 
         if (use_flashmemory && found_keys == (sectorsCnt << 1)) {
@@ -2558,13 +2558,13 @@ out:
             for (i = 0; i < sectorsCnt; ++i) {
                 uint8_t blockno = FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1;
                 mfEmlGetMem(block, blockno, 1);
-                
+
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, block);
-                
+
                 if (e_sector[i].foundKey[1])
                     num_to_bytes(e_sector[i].Key[1], 6, block + 10);
-                
+
                 if (i == sectorsCnt - 1) {
                     // Disable fast mode on last packet
                     conn.block_after_ACK = false;
@@ -2579,12 +2579,12 @@ out:
         }
 
         if (createDumpFile) {
-			
-			char *fptr = GenerateFilename("hf-mf-", "-key.bin");
-			if (createMfcKeyDump(fptr, sectorsCnt, e_sector) != PM3_SUCCESS) {
+
+            char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+            if (createMfcKeyDump(fptr, sectorsCnt, e_sector) != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Failed to save keys to file");
             }
-		}
+        }
     }
 
     free(keyBlock);
@@ -2813,7 +2813,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         // loop sectors but block is used as to keep track of from which blocks to test
         int b = blockNo;
         for (i = 0; i < SectorsCnt; i++) {
-			
+
             // KEY A but not KEY B
             if (e_sector[i].foundKey[0] && !e_sector[i].foundKey[1]) {
 
@@ -2852,12 +2852,12 @@ static int CmdHF14AMfChk(const char *Cmd) {
 out:
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "found keys:");
-    
+
     //print keys
-	if ( SectorsCnt == 1)
-		printKeyTableEx(SectorsCnt, e_sector, GetSectorFromBlockNo(blockNo));
+    if (SectorsCnt == 1)
+        printKeyTableEx(SectorsCnt, e_sector, GetSectorFromBlockNo(blockNo));
     else
-		printKeyTable(SectorsCnt, e_sector);
+        printKeyTable(SectorsCnt, e_sector);
 
     if (transferToEml) {
         // fast push mode
@@ -2866,14 +2866,14 @@ out:
         for (i = 0; i < SectorsCnt; ++i) {
             uint8_t blockno = FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1;
             mfEmlGetMem(block, blockno, 1);
-            
-			if (e_sector[i].foundKey[0])
+
+            if (e_sector[i].foundKey[0])
                 num_to_bytes(e_sector[i].Key[0], 6, block);
-			
+
             if (e_sector[i].foundKey[1])
                 num_to_bytes(e_sector[i].Key[1], 6, block + 10);
-            
-			if (i == SectorsCnt - 1) {
+
+            if (i == SectorsCnt - 1) {
                 // Disable fast mode on last packet
                 conn.block_after_ACK = false;
             }
@@ -2887,7 +2887,7 @@ out:
         if (createMfcKeyDump(fptr, SectorsCnt, e_sector) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Failed to save keys to file");
         }
-	}
+    }
 
     free(keyBlock);
     free(e_sector);
@@ -3314,7 +3314,7 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
 */
 
 void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
-	return printKeyTableEx(sectorscnt, e_sector, 0);
+    return printKeyTableEx(sectorscnt, e_sector, 0);
 }
 void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
     char strA[12 + 1] = {0};
@@ -3335,31 +3335,31 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
 
         if (e_sector[i].foundKey[0] > 1) {
             PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%c")"|  %s  | " _YELLOW_("%c")"|"
-                      , i
-                      , strA, e_sector[i].foundKey[0]
-                      , strB, e_sector[i].foundKey[1]
-                     );
+                          , i
+                          , strA, e_sector[i].foundKey[0]
+                          , strB, e_sector[i].foundKey[1]
+                         );
         } else {
             PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%d")"|  %s  | " _YELLOW_("%d")"|"
-                      , start_sector
-                      , strA, e_sector[i].foundKey[0]
-                      , strB, e_sector[i].foundKey[1]
-                     );
+                          , start_sector
+                          , strA, e_sector[i].foundKey[0]
+                          , strB, e_sector[i].foundKey[1]
+                         );
         }
     }
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
 
     if (e_sector[0].foundKey[0] > 1) {
         PrintAndLogEx(NORMAL, "( "
-                  _YELLOW_("D") ":Dictionary / "
-                  _YELLOW_("S") ":darkSide / "
-                  _YELLOW_("U") ":User / "
-                  _YELLOW_("R") ":Reused / "
-                  _YELLOW_("N") ":Nested / "
-                  _YELLOW_("H") ":Hardnested / "
-                  _YELLOW_("A") ":keyA "
-                  ")"
-                 );
+                      _YELLOW_("D") ":Dictionary / "
+                      _YELLOW_("S") ":darkSide / "
+                      _YELLOW_("U") ":User / "
+                      _YELLOW_("R") ":Reused / "
+                      _YELLOW_("N") ":Nested / "
+                      _YELLOW_("H") ":Hardnested / "
+                      _YELLOW_("A") ":keyA "
+                      ")"
+                     );
     } else {
         PrintAndLogEx(NORMAL, "(" _YELLOW_("0") ": Failed / " _YELLOW_("1") ": Success)");
     }
@@ -3615,7 +3615,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     bool errors = false, createDumpFile = false;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-		char ctmp = tolower(param_getchar(Cmd, cmdp));
+        char ctmp = tolower(param_getchar(Cmd, cmdp));
         switch (ctmp) {
             case 'd':
                 createDumpFile = true;
@@ -3623,18 +3623,18 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
                 break;
             case 'h':
                 return usage_hf14_ekeyprn();
-		    case '0':
-			case '1':
-			case '2':
-			case '4':
-				sectors_cnt = NumOfSectors(ctmp);
-				if (sectors_cnt == 0) return usage_hf14_ekeyprn();
-				cmdp++;
-				break;
+            case '0':
+            case '1':
+            case '2':
+            case '4':
+                sectors_cnt = NumOfSectors(ctmp);
+                if (sectors_cnt == 0) return usage_hf14_ekeyprn();
+                cmdp++;
+                break;
             default:
-				PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-				errors = true;
-				break;
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
         }
     }
     // validations
@@ -3646,15 +3646,15 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     int32_t res = initSectorTable(&e_sector, sectors_cnt);
     if (res != sectors_cnt)
         return PM3_EMALLOC;
-	
-	// read UID from EMUL
+
+    // read UID from EMUL
     if (mfEmlGetMem(data, 0, 1) != PM3_SUCCESS) {
-		PrintAndLogEx(WARNING, "error get block %d", 0);
-		free(e_sector);
-		return PM3_ESOFT;
+        PrintAndLogEx(WARNING, "error get block %d", 0);
+        free(e_sector);
+        return PM3_ESOFT;
     }
-	
-	memcpy(uid, data, sizeof(uid));
+
+    memcpy(uid, data, sizeof(uid));
 
     // download keys from EMUL
     for (int i = 0; i < sectors_cnt; i++) {
@@ -3662,26 +3662,26 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
         if (mfEmlGetMem(data, FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1, 1) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "error get block %d", FirstBlockOfSector(i) + NumBlocksPerSector(i) - 1);
             e_sector[i].foundKey[0] = false;
-			e_sector[i].foundKey[1] = false;
+            e_sector[i].foundKey[1] = false;
         } else {
-			e_sector[i].foundKey[0] = true;
-			e_sector[i].Key[0] = bytes_to_num(data, 6);
-			e_sector[i].foundKey[1] = true;
-			e_sector[i].Key[1] = bytes_to_num(data + 10, 6);
-		}
+            e_sector[i].foundKey[0] = true;
+            e_sector[i].Key[0] = bytes_to_num(data, 6);
+            e_sector[i].foundKey[1] = true;
+            e_sector[i].Key[1] = bytes_to_num(data + 10, 6);
+        }
     }
 
     // print keys
     printKeyTable(sectors_cnt, e_sector);
 
-	// dump the keys
+    // dump the keys
     if (createDumpFile) {
-		
-		fptr += sprintf(fptr, "hf-mf-");
-		FillFileNameByUID(fptr + strlen(fptr), uid, "-key", sizeof(uid));
 
-		createMfcKeyDump(filename, sectors_cnt, e_sector);
-	}
+        fptr += sprintf(fptr, "hf-mf-");
+        FillFileNameByUID(fptr + strlen(fptr), uid, "-key", sizeof(uid));
+
+        createMfcKeyDump(filename, sectors_cnt, e_sector);
+    }
 
     free(e_sector);
     return PM3_SUCCESS;

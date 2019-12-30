@@ -1275,7 +1275,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
     static uint8_t *uid;
 
     int oldbg = DBGLEVEL;
-	
+
 #ifdef WITH_FLASH
     if (use_flashmem) {
         BigBuf_free();
@@ -1345,7 +1345,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
     // clear debug level. We are expecting lots of authentication failures...
     DBGLEVEL = DBG_NONE;
-    
+
     // set check struct.
     chk_data.uid = uid;
     chk_data.cuid = cuid;
