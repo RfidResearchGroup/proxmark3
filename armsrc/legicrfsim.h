@@ -14,6 +14,6 @@
 
 #include "common.h"
 
-void LegicRfSimulate(uint8_t tagtype);
+void LegicRfSimulate(uint8_t cardtype);
 
 #endif /* __LEGICRFSIM_H */
