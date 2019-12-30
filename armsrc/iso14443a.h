@@ -96,6 +96,9 @@ typedef struct {
 # define CheckCrc14A(data, len) check_crc(CRC_14443_A, (data), (len))
 #endif
 
+void iso14a_set_timeout(uint32_t timeout);
+uint32_t iso14a_get_timeout(void);
+
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
 tDemod14a *GetDemod14a(void);

@@ -1669,9 +1669,6 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
         LastTimeProxToAirStart = ThisTransferTime;
     }
 
-    // clear TXRDY
-    AT91C_BASE_SSC->SSC_THR = SEC_Y;
-
     uint16_t c = 0;
     while (c < len) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
