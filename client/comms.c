@@ -725,7 +725,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
         }
 
         uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
-        if ((ms_timeout != (size_t) -1) && (msclock() - tmp_clk > ms_timeout))
+        if ((ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout))
             break;
 
         if (msclock() - tmp_clk > 3000 && show_warning) {
@@ -807,7 +807,7 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
     // Add delay depending on the communication channel & speed
-    if (ms_timeout != (size_t) -1)
+    if (ms_timeout != (size_t) - 1)
         ms_timeout += communication_delay();
 
     while (true) {
