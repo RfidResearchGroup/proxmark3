@@ -1,7 +1,15 @@
+#
+# FPGA Makefile
+#
+RMDIR = rm -rf
+# rmdir only if dir is empty, tolerate failure
+RMDIR_SOFT = -rmdir
+#
 all: fpga_lf.bit fpga_hf.bit
 clean:
 	$(Q)$(RM) *.bgn *.drc *.ncd *.ngd *_par.xrpt *-placed.* *-placed_pad.* *_usage.xml xst_hf.srp xst_lf.srp
-	$(Q)$(RM) *.map *.ngc *.xrpt *.pcf *.rbt *_auto_* *.bld *.mrp *.ngm *.unroutes *_summary.xml netlist.lst xst
+	$(Q)$(RM) *.map *.ngc *.xrpt *.pcf *.rbt *.bld *.mrp *.ngm *.unroutes *_summary.xml netlist.lst
+	$(Q)$(RMDIR) *_auto_* xst
 
 fpga_hf.ngc: fpga_hf.v fpga.ucf xst_hf.scr util.v hi_simulate.v hi_read_tx.v hi_read_rx_xcorr.v hi_iso14443a.v hi_sniffer.v hi_flite.v
 	$(Q)$(RM) $@
