@@ -128,8 +128,8 @@ static int CmdKeriClone(const char *Cmd) {
         T55x7_MODULATION_PSK1 |
         T55x7_PSKCF_RF_2 |
         2 << T55x7_MAXBLOCK_SHIFT,
-          0,
-          0
+        0,
+        0
     };
 
     // dynamic bitrate used
