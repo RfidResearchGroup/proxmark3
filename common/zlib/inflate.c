@@ -1060,7 +1060,7 @@ int flush;
                     last = here;
                     for (;;) {
                         here = state->lencode[last.val +
-                                                       (BITS(last.bits + last.op) >> last.bits)];
+                                              (BITS(last.bits + last.op) >> last.bits)];
                         if ((unsigned)(last.bits + here.bits) <= bits) break;
                         PULLBYTE();
                     }
@@ -1110,7 +1110,7 @@ int flush;
                     last = here;
                     for (;;) {
                         here = state->distcode[last.val +
-                                                        (BITS(last.bits + last.op) >> last.bits)];
+                                               (BITS(last.bits + last.op) >> last.bits)];
                         if ((unsigned)(last.bits + here.bits) <= bits) break;
                         PULLBYTE();
                     }
@@ -1555,7 +1555,7 @@ unsigned long ZEXPORT inflateCodesUsed(strm)
 z_streamp strm;
 {
     struct inflate_state FAR *state;
-    if (inflateStateCheck(strm)) return (unsigned long) -1;
+    if (inflateStateCheck(strm)) return (unsigned long) - 1;
     state = (struct inflate_state FAR *)strm->state;
     return (unsigned long)(state->next - state->codes);
 }
