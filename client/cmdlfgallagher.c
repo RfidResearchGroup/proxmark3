@@ -40,7 +40,7 @@ static int usage_lf_gallagher_clone(void) {
     return PM3_SUCCESS;
 }
 
-static void descramble( uint8_t *arr, uint8_t len) {
+static void descramble(uint8_t *arr, uint8_t len) {
 
     uint8_t lut[] = {
         0xa3, 0xb0, 0x80, 0xc6, 0xb2, 0xf4, 0x5c, 0x6c, 0x81, 0xf1, 0xbb, 0xeb, 0x55, 0x67, 0x3c, 0x05,
@@ -100,16 +100,16 @@ static int CmdGallagherDemod(const char *Cmd) {
 
     // bytes
     uint8_t arr[8] = {0};
-    for(int i = 0, pos = 0; i < ARRAYLEN(arr); i++) {
-        pos =  (i * 8) + i;
+    for (int i = 0, pos = 0; i < ARRAYLEN(arr); i++) {
+        pos = (i * 8) + i;
         arr[i] = bytebits_to_byte(DemodBuffer + pos, 8);
-        printf("%d -", pos );
+        printf("%d -", pos);
     }
     printf("\n");
 
     // crc
     uint8_t crc = bytebits_to_byte(DemodBuffer + 72, 8);
-    uint8_t calc_crc =  CRC8Cardx(arr, ARRAYLEN(arr) );
+    uint8_t calc_crc =  CRC8Cardx(arr, ARRAYLEN(arr));
 
     PrintAndLogEx(INFO, " Before:  %s", sprint_hex(arr, 8));
     descramble(arr, ARRAYLEN(arr));
@@ -130,7 +130,7 @@ static int CmdGallagherDemod(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "GALLAGHER Tag Found -- Region: %u  FC: %u  CN: %u  Issue Level: %u", rc, fc, cn, il);
     PrintAndLogEx(SUCCESS, "   Printed: %C%u", rc + 0x40, fc);
     PrintAndLogEx(SUCCESS, "   Raw: %08X%08X%08X", raw1, raw2, raw3);
-    PrintAndLogEx(SUCCESS, "   CRC: %02X - %02X (%s)", crc, calc_crc,  (crc == calc_crc) ? "OK":"Failed");
+    PrintAndLogEx(SUCCESS, "   CRC: %02X - %02X (%s)", crc, calc_crc, (crc == calc_crc) ? "OK" : "Failed");
     return PM3_SUCCESS;
 }
 
@@ -214,7 +214,7 @@ int detectGallagher(uint8_t *dest, size_t *size) {
     uint8_t preamble[] = { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0 };
     if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
         return -2; //preamble not found
-    
+
     if (*size != 96) return -3; //wrong demoded size
     //return start position
     return (int)startIdx;
