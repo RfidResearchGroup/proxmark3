@@ -17,22 +17,22 @@ example =
 [[
 	-- wipe tag
 	script run mfu_magic -w
-	
+
 	-- wipe a locked down tag by giving the password
 	script run mfu_magic -k ffffffff -w
-	
+
 	--read magic tag configuration
-	script run mfu_magic -c 
-	
+	script run mfu_magic -c
+
 	-- set uid
 	script run mfu_magic -u 04112233445566
-	
+
 	-- set pwd / pack
 	script run mfu_magic -p 11223344 -a 8080
-	
+
 	-- set version to NTAG213
 	script run mfu_magic -v 0004040201000f03
-	
+
 	-- set signature
 	script run mfu_magic -s 1122334455667788990011223344556677889900112233445566778899001122
 ]]
@@ -40,7 +40,7 @@ usage =
 [[
 Usage:
 script run mfu_magic -h -k <passwd> -c -w -u <uid> -t <type> -p <passwd> -a <pack> -s <signature> -o <otp> -v <version>
-   
+
 Arguments:
 	-h		this help
 	-c		read magic configuration
@@ -64,10 +64,10 @@ Arguments:
 	-s		signature data (64 hexsymbols), set signature data on tag.
 	-o		OTP data (8 hexsymbols), set one-time-pad data on tag.
 	-v		version data (16 hexsymbols), set version data on tag.
-	-w		wipe tag. You can specify password if the tag has been locked down. Fills tag with zeros and put default values for NTAG213 (like -t 5) 
+	-w		wipe tag. You can specify password if the tag has been locked down. Fills tag with zeros and put default values for NTAG213 (like -t 5)
 	-k		pwd to use with the wipe option
 ]]
---- 
+---
 -- A debug printout-function
 local function dbg(args)
 	if not DEBUG then return end
@@ -80,14 +80,14 @@ local function dbg(args)
 	else
 		print('###', args)
 	end
-end 
+end
 -- This is only meant to be used when errors occur
 local function oops(err)
 	print("ERROR: ",err)
     core.clearCommandBuffer()
 	return nil, err
 end
---- 
+---
 -- Usage help
 local function help()
     print(copyright)
@@ -109,7 +109,7 @@ local function set_password(pwd)
 end
 --- Picks out and displays the data read from a tag
 -- Specifically, takes a usb packet, converts to a Command
--- (as in commands.lua), takes the data-array and 
+-- (as in commands.lua), takes the data-array and
 -- reads the number of bytes specified in arg1 (arg0 in c-struct)
 -- @param usbpacket the data received from the device
 local function getResponseData(usbpacket)
@@ -122,15 +122,15 @@ end
 local function sendRaw(rawdata, options)
 
 	local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT
-				+ lib14a.ISO14A_COMMAND.ISO14A_RAW 
+				+ lib14a.ISO14A_COMMAND.ISO14A_RAW
 				+ lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
 
-	local c = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a, 
+	local c = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a,
 				arg1 = flags,
 		 		-- arg2 contains the length, which is half the length of the ASCII-string rawdata
-				arg2 = string.len(rawdata)/2, 
+				arg2 = string.len(rawdata)/2,
 				data = rawdata}
-                
+
     return c:sendMIX(options.ignore_response)
 end
 ---
@@ -138,7 +138,7 @@ end
 local function send(payload)
 	local usb, err = sendRaw(payload,{ignore_response = false})
 	if err then return oops(err) end
-	return getResponseData(usb)	
+	return getResponseData(usb)
 end
 ---
 -- select tag and if password is set, authenticate
@@ -152,7 +152,7 @@ local function connect()
         return oops(err)
     end
     core.clearCommandBuffer()
-	
+
 	--authenticate if needed using global variable
 	if _password then
 		send('1B'.._password)
@@ -170,7 +170,7 @@ local function read_config()
 
 	-- 04 response indicates that blocks has been locked down.
 	if pwd == '04' then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
-	
+
 	-- read PACK
 	local pack = send("30F1"):sub(1,4)
 
@@ -188,13 +188,13 @@ local function read_config()
 	elseif cardtype == '01' then typestr = 'NTAG 215'
 	elseif cardtype == '02' then typestr = 'NTAG 216'
 	end
-	
+
 	print('Magic NTAG 21* Configuration')
 	print(' - Type    ', typestr, '(geniune cardtype)')
 	print(' - Password', pwd)
 	print(' - Pack    ', pack)
 	print(' - Version ', version)
-	print(' - Signature', signature1..signature2)	
+	print(' - Signature', signature1..signature2)
 
 	lib14a.disconnect()
 	return true, 'Ok'
@@ -212,13 +212,13 @@ local function write_signature(data)
     if not info then return false, "Can't select card" end
 
 	print('Writing new signature')
-	
+
 	local b,c
 	local cmd = 'A2F%d%s'
 	local j = 2
 	for i = 1, #data, 8 do
 		b = data:sub(i,i+7)
-		c = cmd:format(j,b)			
+		c = cmd:format(j,b)
 		local resp = send(c)
 		if resp == '04' then lib14a.disconnect(); return nil, 'Failed to write signature' end
 		j = j + 1
@@ -228,20 +228,20 @@ local function write_signature(data)
 end
 ---
 -- Write PWD
-local function write_pwd(pwd)	
+local function write_pwd(pwd)
 	-- PWD string checks
 	if pwd == nil then return nil, 'empty PWD string' end
 	if #pwd == 0 then return nil, 'empty PWD string' end
 	if #pwd ~= 8 then return nil, 'PWD wrong length. Should be 4 hex bytes' end
-    
+
 	local info = connect()
     if not info then return false, "Can't select card" end
-    
+
 	print('Writing new PWD ', pwd)
-		
+
 	local resp = send('A2F0'..pwd)
 	lib14a.disconnect()
-	if resp == '04' then 
+	if resp == '04' then
 		return nil, 'Failed to write password'
 	else
 		return true, 'Ok'
@@ -249,7 +249,7 @@ local function write_pwd(pwd)
 end
 ---
 -- Write PACK
-local function write_pack(pack)	
+local function write_pack(pack)
 	-- PACK string checks
 	if pack == nil then return nil, 'empty PACK string' end
 	if #pack == 0 then return nil, 'empty PACK string' end
@@ -257,16 +257,16 @@ local function write_pack(pack)
 
 	local info = connect()
     if not info then return false, "Can't select card" end
-    
+
 	print('Writing new PACK', pack)
-		
+
 	local resp = send('A2F1'..pack..'0000')
 	lib14a.disconnect()
-	if resp == '04' then 
+	if resp == '04' then
 		return nil, 'Failed to write pack'
 	else
 		return true, 'Ok'
-	end	
+	end
 end
 --
 -- Write OTP block
@@ -279,16 +279,16 @@ local function write_otp(block3)
 
 	local info = connect()
     if not info then return false, "Can't select card" end
-    
+
 	print('Writing new OTP ', block3)
 
 	local resp = send('A203'..block3)
 	lib14a.disconnect()
-	if resp == '04' then 
+	if resp == '04' then
 		return nil, 'Failed to write OTP'
 	else
 		return true, 'Ok'
-	end	
+	end
 end
 --
 -- Writes a UID with bcc1, bcc2.  Needs a magic tag.
@@ -300,8 +300,8 @@ local function write_uid(uid)
 
 	local info = connect()
     if not info then return false, "Can't select card" end
-    
-	print('Writing new UID ', uid)	
+
+	print('Writing new UID ', uid)
 
 	local uidbytes = utils.ConvertHexToBytes(uid)
 	local bcc1 = bxor(bxor(bxor(uidbytes[1], uidbytes[2]), uidbytes[3]), 0x88)
@@ -313,14 +313,14 @@ local function write_uid(uid)
 
 	resp = send('A200'..block0)
 	resp = send('A201'..block1)
-	resp = send('A202'..block2)	
+	resp = send('A202'..block2)
 	lib14a.disconnect()
-	
-	if resp == '04' then 
+
+	if resp == '04' then
 		return nil, 'Failed to write new uid'
 	else
 		return true, 'Ok'
-	end	
+	end
 end
 ---
 -- Write VERSION data,
@@ -333,54 +333,54 @@ local function write_version(data)
 
 	local info = connect()
     if not info then return false, "Can't select card" end
-    
+
 	print('Writing new version', data)
-	
+
 	local b1 = data:sub(1,8)
 	local b2 = data:sub(9,16)
 	local resp
 	resp = send('A2FA'..b1)
 	resp = send('A2FB'..b2)
 	lib14a.disconnect()
-	if resp == '04' then 
+	if resp == '04' then
 		return nil, 'Failed to write version'
 	else
 		return true, 'Ok'
-	end	
+	end
 end
 ---
--- writen TYPE which card is based on.  
+-- writen TYPE which card is based on.
 -- 00 = 213,  01 = 215, 02 = 216
-local function write_type(data) 
+local function write_type(data)
 	-- type string checks
 	if data == nil then return nil, 'empty type string' end
 	if #data == 0 then return nil, 'empty type string' end
 	if #data ~= 2 then return nil, 'type wrong length. Should be 1 hex byte' end
-	
+
     local info = connect()
     if not info then return false, "Can't select card" end
 	print('Writing new type', data)
 
 	local resp = send('A2FC'..data..'000000')
 	lib14a.disconnect()
-	if resp == '04' then 
+	if resp == '04' then
 		return nil, 'Failed to write type'
 	else
 		return true, 'Ok'
-	end	
+	end
 end
 ---
 -- Set tag type.  Predefinde version data together with magic type set.
 -- Since cmd always gives 10 bytes len (data+crc) we can impersonate the following types
--- we only truely be three types NTAG 213,215 and 216 
+-- we only truely be three types NTAG 213,215 and 216
 local function set_type(tagtype)
 
 	-- tagtype checks
-	if type(tagtype) == 'string' then tagtype = tonumber(tagtype, 10) end	
-	if tagtype == nil then return nil, 'empty tagtype' end	
-	
-	if tagtype == 1 then 
-		print('Setting: UL-EV1 48')		
+	if type(tagtype) == 'string' then tagtype = tonumber(tagtype, 10) end
+	if tagtype == nil then return nil, 'empty tagtype' end
+
+	if tagtype == 1 then
+		print('Setting: UL-EV1 48')
 		write_otp('00000000')				-- Setting OTP to default 00 00 00 00
 		write_version('0004030101000b03')	-- UL-EV1 (48) 00 04 03 01 01 00 0b 03
 		write_type('00') 					-- based on NTAG213..
@@ -389,9 +389,9 @@ local function set_type(tagtype)
 		connect()
 		send('a210000000FF')
 		send('a21100050000')
-		
-	elseif tagtype == 2 then 
-		print('Setting: UL-EV1 128')		
+
+	elseif tagtype == 2 then
+		print('Setting: UL-EV1 128')
 		write_otp('00000000')				-- Setting OTP to default 00 00 00 00
 		write_version('0004030101000e03')	-- UL-EV1 (128) 00 04 03 01 01 00 0e 03
 		write_type('01')
@@ -399,146 +399,146 @@ local function set_type(tagtype)
 		-- Setting UL-Ev1 default config bl 37,38
 		connect()
 		send('a225000000FF')
-		send('a22600050000')		
-	elseif tagtype == 3 then 	
+		send('a22600050000')
+	elseif tagtype == 3 then
 		print('Setting: NTAG 210')
-		write_version('0004040101000b03')	-- NTAG210 00 04 04 01 01 00 0b 03 
+		write_version('0004040101000b03')	-- NTAG210 00 04 04 01 01 00 0b 03
 		write_type('00')
-		
+
 		-- Setting NTAG210 default CC block456
-		connect()		
+		connect()
 		send('a203e1100600')
 		send('a2040300fe00')
 		send('a20500000000')
 		-- Setting  cfg1/cfg2
 		send('a210000000FF')
-		send('a21100050000')		
-	elseif tagtype == 4 then 
+		send('a21100050000')
+	elseif tagtype == 4 then
 		print('Setting: NTAG 212')
-		write_version('0004040101000E03')	-- NTAG212 00 04 04 01 01 00 0E 03 
+		write_version('0004040101000E03')	-- NTAG212 00 04 04 01 01 00 0E 03
 		write_type('00')
 
 		-- Setting NTAG212 default CC block456
-		connect()		
+		connect()
 		send('a203e1101000')
 		send('a2040103900a')
 		send('a205340300fe')
 		-- Setting  cfg1/cfg2
 		send('a225000000FF')
-		send('a22600050000')			
-	elseif tagtype == 5 then 	
+		send('a22600050000')
+	elseif tagtype == 5 then
 		print('Setting: NTAG 213')
-		write_version('0004040201000F03')		-- NTAG213 00 04 04 02 01 00 0f 03 
+		write_version('0004040201000F03')		-- NTAG213 00 04 04 02 01 00 0f 03
 		write_type('00')
-		
+
 		-- Setting NTAG213 default CC block456
 		connect()
 		send('a203e1101200')
 		send('a2040103a00c')
 		send('a205340300fe')
-		-- setting cfg1/cfg2 
+		-- setting cfg1/cfg2
 		send('a229000000ff')
-		send('a22a00050000')		
+		send('a22a00050000')
 	elseif tagtype == 6 then
-		print('Setting: NTAG 215')	
+		print('Setting: NTAG 215')
 		write_version('0004040201001103')		-- NTAG215 00 04 04 02 01 00 11 03
 		write_type('01')
 
 		-- Setting NTAG215 default CC block456
-		connect()		
+		connect()
 		send('a203e1103e00')
 		send('a2040300fe00')
 		send('a20500000000')
-		-- setting cfg1/cfg2 
+		-- setting cfg1/cfg2
 		send('a283000000ff')
 		send('a28400050000')
 	elseif tagtype == 7 then
-		print('Setting: NTAG 216')			
+		print('Setting: NTAG 216')
 		write_version('0004040201001303')		-- NTAG216 00 04 04 02 01 00 13 03
 		write_type('02')
-		
+
 		-- Setting NTAG216 default CC block456
-		connect()		
+		connect()
 		send('a203e1106d00')
 		send('a2040300fe00')
 		send('a20500000000')
-		-- setting cfg1/cfg2 
+		-- setting cfg1/cfg2
 		send('a2e3000000ff')
 		send('a2e400050000')
 	elseif tagtype == 8 then
-		print('Setting: NTAG I2C 1K')			
+		print('Setting: NTAG I2C 1K')
 		write_version('0004040502011303')		-- NTAG_I2C_1K 00 04 04 05 02 01 13 03
 		write_type('02')
-		
+
 		-- Setting NTAG I2C 1K default CC block456
-		connect()		
+		connect()
 		send('a203e1106D00')
 		send('a2040300fe00')
-		send('a20500000000')		
-	elseif tagtype == 9 then 
-		print('Setting: NTAG I2C 2K')	
+		send('a20500000000')
+	elseif tagtype == 9 then
+		print('Setting: NTAG I2C 2K')
 		write_version('0004040502011503')		-- NTAG_I2C_2K 00 04 04 05 02 01 15 03
 		write_type('02')
-		
+
 		-- Setting NTAG I2C 2K default CC block456
-		connect()		
+		connect()
 		send('a203e110EA00')
 		send('a2040300fe00')
 		send('a20500000000')
 	elseif tagtype == 10 then
-		print('Setting: NTAG I2C plus 1K')	
+		print('Setting: NTAG I2C plus 1K')
 		write_version('0004040502021303')		-- NTAG_I2C_1K 00 04 04 05 02 02 13 03
-		write_type('02')		
+		write_type('02')
 
 		-- Setting NTAG I2C 1K default CC block456
-		connect()		
+		connect()
 		send('a203e1106D00')
 		send('a2040300fe00')
-		send('a20500000000')		
-	elseif tagtype == 11 then 
-		print('Setting: NTAG I2C plus 2K')	
+		send('a20500000000')
+	elseif tagtype == 11 then
+		print('Setting: NTAG I2C plus 2K')
 		write_version('0004040502021503')		-- NTAG_I2C_2K 00 04 04 05 02 02 15 03
 		write_type('02')
-		
+
 		-- Setting NTAG I2C 2K default CC block456
-		connect()		
+		connect()
 		send('a203e1106D00')
 		send('a2040300fe00')
-		send('a20500000000')		
-	elseif tagtype == 12 then 	
+		send('a20500000000')
+	elseif tagtype == 12 then
 		print('Setting: NTAG 213F')
 		write_version('0004040401000F03')		-- NTAG213F 00 04 04 04 01 00 0f 03
 		write_type('00')
-		
+
 		-- Setting NTAG213 default CC block456
-		connect()		
+		connect()
 		send('a203e1101200')
 		send('a2040103a00c')
 		send('a205340300fe')
-		-- setting cfg1/cfg2 
+		-- setting cfg1/cfg2
 		send('a229000000ff')
 		send('a22a00050000')
 	elseif tagtype == 13 then
-		print('Setting: NTAG 216F')	
+		print('Setting: NTAG 216F')
 		write_version('0004040401001303')		-- NTAG216F 00 04 04 04 01 00 13 03
-		write_type('02')		
-	
+		write_type('02')
+
 		-- Setting NTAG216 default CC block456
-		connect()		
+		connect()
 		send('a203e1106d00')
 		send('a2040300fe00')
 		send('a20500000000')
-		-- setting cfg1/cfg2 
+		-- setting cfg1/cfg2
 		send('a2e3000000ff')
 		send('a2e400050000')
 	end
 
 	lib14a.disconnect()
-	if resp == '04' then 
+	if resp == '04' then
 		return nil, 'Failed to set type'
 	else
 		return true, 'Ok'
-	end	
+	end
 end
 ---
 -- wipe tag
@@ -546,15 +546,15 @@ local function wipe()
 
 	local info = connect()
     if not info then return false, "Can't select card" end
-	
+
 	local err, msg, resp
 	local cmd_empty = 'A2%02X00000000'
 	local cmd_cfg1  = 'A2%02X000000FF'
 	local cmd_cfg2  = 'A2%02X00050000'
 
 	print('Wiping tag')
-	
-	for b = 3, 0xFB do					
+
+	for b = 3, 0xFB do
 		--configuration block 0
 		if b == 0x29 or b == 0x83 or b == 0xe3 then
 			local cmd = (cmd_cfg1):format(b)
@@ -563,7 +563,7 @@ local function wipe()
 		elseif b == 0x2a or b == 0x84 or b == 0xe4 then
 			local cmd = (cmd_cfg2):format(b)
 			resp = send(cmd)
-		else	
+		else
 			resp = send(cmd_empty:format(b))
 		end
 		if resp == '04' or #resp == 0 then
@@ -575,72 +575,72 @@ local function wipe()
 		io.flush()
 	end
 	io.write('\r\n')
-	
+
 	lib14a.disconnect()
-	
+
 	if err then return nil, "Tag locked down, "..err_lock end
-	
+
 	print('setting default values...')
-	
+
 	set_password(nil)
-	
+
 	-- set NTAG213 default values
 	err, msg = set_type(5)
 	if err == nil then return err, msg end
-	
+
 	--set UID
 	err, msg = write_uid('04112233445566')
 	if err == nil then return err, msg end
-	
+
 	--set pwd
 	err, msg = write_pwd('FFFFFFFF')
 	if err == nil then return err, msg end
-	
+
 	--set pack
-	err, msg = write_pack('0000')	
-	if err == nil then return err, msg end	
+	err, msg = write_pack('0000')
+	if err == nil then return err, msg end
 
 	return true, 'Ok'
 end
---- 
+---
 -- The main entry point
 function main(args)
 
 	print( string.rep('--',20) )
-	print( string.rep('--',20) )	
+	print( string.rep('--',20) )
 	print()
 
 	local err, msg
-	
+
 	if #args == 0 then return help() end
-		
+
 	-- Read the parameters
 	for o, a in getopt.getopt(args, 'hck:u:t:p:a:s:o:v:w') do
 
 		-- help
 		if o == "h" then return help() end
 
-		--key 
+		--key
 		if o == 'k' then err, msg = set_password(a) end
-		
+
 		-- configuration
 		if o == "c" then err, msg = read_config() end
-	
+
 		--wipe tag
 		if o == "w" then err, msg = wipe() end
-		
+
 		-- write uid
 		if o == "u" then err, msg = write_uid(a) end
 
-		-- write type/version	
+		-- write type/version
 		if o == "t" then err, msg = set_type(a) end
-		
+
 		-- write pwd
 		if o == "p" then err, msg = write_pwd(a) end
-		
+
 		-- write pack
 		if o == "a" then err, msg = write_pack(a) end
-		
+
 		-- write signature
 		if o == "s" then err, msg = write_signature(a) end
 
@@ -649,10 +649,10 @@ function main(args)
 
 		-- write version
 		if o == "v" then err, msg = write_version(a) end
-		
+
 		if err == nil then return oops(msg) end
-	end	
-	
+	end
+
 end
 
 main(args)
