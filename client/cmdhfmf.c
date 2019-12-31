@@ -3350,7 +3350,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
 
     if (e_sector[0].foundKey[0] > 1) {
-        PrintAndLogEx(NORMAL, "( "
+        PrintAndLogEx(INFO, "( "
                       _YELLOW_("D") ":Dictionary / "
                       _YELLOW_("S") ":darkSide / "
                       _YELLOW_("U") ":User / "
@@ -3361,7 +3361,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
                       ")"
                      );
     } else {
-        PrintAndLogEx(NORMAL, "(" _YELLOW_("0") ": Failed / " _YELLOW_("1") ": Success)");
+        PrintAndLogEx(INFO, "( " _YELLOW_("0") ":Failed / " _YELLOW_("1") ":Success)");
     }
 }
 
