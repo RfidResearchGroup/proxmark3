@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Chg `lf t55xx dump` - now supports saving to JSON (@iceman1001)
  - Chg `hf mf chk | fchk`  faster authentication by lower timeout limit. (@pwpiwi)
  - Chg `hf mf hardnested` - now detects "static / fixed" nonce tags and exits (@iceman1001)
  - Chg `hf mf csave` - now uses UID in filename (@iceman1001)
