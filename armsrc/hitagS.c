@@ -1273,7 +1273,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
         } else if (tag.pstate == HT_SELECTED
                    && tag.tstate == HT_READING_PAGE
                    && rxlen > 0) {
-            //save received data
+            //save received data - 40 bits
             z = 0;
             for (i = 0; i < 5; i++) {
                 for (j = 0; j < 8; j++) {
@@ -1284,33 +1284,33 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
                 }
             }
             k = 0;
-            for (i = 4; i < 36; i++) {
+            for (i = 4; i < 36; i++) { // ignore first 4 bits: SOF
                 pageData[k] = response_bit[i];
                 k++;
             }
-            for (i = 0; i < 4; i++)
-                tag.pages[sendNum / 4][sendNum % 4] = 0x0;
-            for (i = 0; i < 4; i++) {
-                tag.pages[sendNum / 4][sendNum % 4] += ((pageData[i * 8] << 7)
-                                                        | (pageData[1 + (i * 8)] << 6)
-                                                        | (pageData[2 + (i * 8)] << 5)
-                                                        | (pageData[3 + (i * 8)] << 4)
-                                                        | (pageData[4 + (i * 8)] << 3)
-                                                        | (pageData[5 + (i * 8)] << 2)
-                                                        | (pageData[6 + (i * 8)] << 1) | pageData[7 + (i * 8)])
-                                                       << (i * 8);
+            for (i = 0; i < 4; i++)     // set page bytes to 0
+                tag.pages[sendNum][i] = 0x0;
+            for (i = 0; i < 4; i++) {   // set page bytes from recieved bits
+                tag.pages[sendNum][i] += ((pageData[i * 8] << 7)
+                                        | (pageData[1 + (i * 8)] << 6)
+                                        | (pageData[2 + (i * 8)] << 5)
+                                        | (pageData[3 + (i * 8)] << 4)
+                                        | (pageData[4 + (i * 8)] << 3)
+                                        | (pageData[5 + (i * 8)] << 2)
+                                        | (pageData[6 + (i * 8)] << 1) 
+                                        | pageData[7 + (i * 8)]);
             }
             if (tag.auth && tag.LKP && sendNum == 1) {
                 Dbprintf("Page[%2d]: %02X %02X %02X %02X", sendNum, pwdh0,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 16) & 0xff,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 8) & 0xff,
-                         tag.pages[sendNum / 4][sendNum % 4] & 0xff);
+                         (tag.pages[sendNum][2]) & 0xff,
+                         (tag.pages[sendNum][1]) & 0xff,
+                         tag.pages[sendNum][0] & 0xff);
             } else {
                 Dbprintf("Page[%2d]: %02X %02X %02X %02X", sendNum,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 24) & 0xff,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 16) & 0xff,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 8) & 0xff,
-                         tag.pages[sendNum / 4][sendNum % 4] & 0xff);
+                         (tag.pages[sendNum][3]) & 0xff,
+                         (tag.pages[sendNum][2]) & 0xff,
+                         (tag.pages[sendNum][1]) & 0xff,
+                         tag.pages[sendNum][0] & 0xff);
             }
 
             sendNum++;
