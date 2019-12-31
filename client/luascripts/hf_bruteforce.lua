@@ -1,4 +1,4 @@
--- Run me like this: proxmark3 /dev/rfcomm0 -l ./hf_bruteforce.lua 
+-- Run me like this: proxmark3 /dev/rfcomm0 -l ./hf_bruteforce.lua
 
 local getopt = require('getopt')
 
@@ -19,7 +19,7 @@ script run hf_bruteforce -s start_id -e end_id -t timeout -d direction
 
 Arguments:
     -h       this help
-    -s       0-0xFFFFFFFF         start id 
+    -s       0-0xFFFFFFFF         start id
     -e       0-0xFFFFFFFF         end id
     -t       0-99999, pause      timeout (ms) between cards (use the word 'pause' to wait for user input)
 ]]
@@ -77,21 +77,21 @@ local function main(args)
     local timeout = 0
     local start_id = 0
     local end_id = 0xFFFFFFFF
-	
-    for o, a in getopt.getopt(args, 'e:s:t:h') do 
+
+    for o, a in getopt.getopt(args, 'e:s:t:h') do
         if o == 's' then start_id = a end
         if o == 'e' then end_id = a end
         if o == 't' then timeout = a end
         if o == 'h' then return print(usage) end
     end
-	
+
     -- template
 	local command = 'hf 14a sim t 1 u %08X'
-    
+
 	print(' Bruteforcing MFC card numbers from 00000000 to FFFFFFFF using delay: '..timeout)
     print('')
     print( string.rep('--',20) )
-	
+
     for n = start_id, end_id do
         local c = string.format( command, n )
         print(' Running: "'..c..'"')
