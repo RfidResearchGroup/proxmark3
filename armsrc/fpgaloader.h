@@ -20,12 +20,12 @@
 // definitions for multiple FPGA config files support
 #define FPGA_BITSTREAM_LF 1
 #define FPGA_BITSTREAM_HF 2
-//#define FPGA_BITSTREAM_FELICA 3
 
 // Definitions for the FPGA commands.
 #define FPGA_CMD_SET_CONFREG                        (1<<12)
 #define FPGA_CMD_SET_DIVISOR                        (2<<12)
 #define FPGA_CMD_SET_USER_BYTE1                     (3<<12)
+
 // Definitions for the FPGA configuration word.
 // LF
 #define FPGA_MAJOR_MODE_LF_READER                   (0<<5)
@@ -43,18 +43,22 @@
 #define FPGA_MAJOR_MODE_OFF_LF                      (6<<5)
 #define FPGA_MAJOR_MODE_OFF                         (7<<5)
 
-// Options for LF_ADC
+// Options for LF_READER
 #define FPGA_LF_ADC_READER_FIELD                    (1<<0)
+
 // Options for LF_EDGE_DETECT
 #define FPGA_CMD_SET_EDGE_DETECT_THRESHOLD          FPGA_CMD_SET_USER_BYTE1
 #define FPGA_LF_EDGE_DETECT_READER_FIELD            (1<<0)
 #define FPGA_LF_EDGE_DETECT_TOGGLE_MODE             (1<<1)
+
 // Options for the HF reader, tx to tag
 #define FPGA_HF_READER_TX_SHALLOW_MOD               (1<<0)
+
 // Options for the HF reader, correlating against rx from tag
 #define FPGA_HF_READER_RX_XCORR_848_KHZ             (1<<0)
 #define FPGA_HF_READER_RX_XCORR_SNOOP               (1<<1)
 #define FPGA_HF_READER_RX_XCORR_QUARTER             (1<<2)
+
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION             0x0 // 0000
 #define FPGA_HF_SIMULATOR_MODULATE_BPSK             0x1 // 0001
