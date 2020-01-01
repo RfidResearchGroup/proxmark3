@@ -953,6 +953,13 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
         tag.max_page = 8;
     if ((tag.pages[1][3] & 0x2) == 0 && (tag.pages[1][3] & 0x1) == 0)
         tag.max_page = 0;
+    if (DBGLEVEL >= DBG_EXTENDED)
+        for (i = 0; i < tag.max_page; i++)
+            Dbprintf("Page[%2d]: %02X %02X %02X %02X", i,
+                     (tag.pages[i][3]) & 0xff,
+                     (tag.pages[i][2]) & 0xff,
+                     (tag.pages[i][1]) & 0xff,
+                     tag.pages[i][0] & 0xff);
     //con1
     tag.auth = 0;
     if ((tag.pages[1][2] & 0x80) == 0x80)
@@ -1145,7 +1152,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
     int reset_sof = 1;
     int t_wait = HITAG_T_WAIT_MAX;
     bool bStop = false;
-    int sendNum = 0;
+    int pageNum = 0;
     unsigned char mask = 1;
     unsigned char crc;
     unsigned char pageData[32];
@@ -1265,15 +1272,15 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
             tag.tstate = HT_READING_PAGE;
             txlen = 20;
             crc = CRC_PRESET;
-            tx[0] = 0xc0 + (sendNum / 16);
+            tx[0] = 0xc0 + (pageNum / 16);
             calc_crc(&crc, tx[0], 8);
-            calc_crc(&crc, 0x00 + ((sendNum % 16) * 16), 4);
-            tx[1] = 0x00 + ((sendNum % 16) * 16) + (crc / 16);
+            calc_crc(&crc, 0x00 + ((pageNum % 16) * 16), 4);
+            tx[1] = 0x00 + ((pageNum % 16) * 16) + (crc / 16);
             tx[2] = 0x00 + (crc % 16) * 16;
         } else if (tag.pstate == HT_SELECTED
                    && tag.tstate == HT_READING_PAGE
                    && rxlen > 0) {
-            //save received data
+            //save received data - 40 bits
             z = 0;
             for (i = 0; i < 5; i++) {
                 for (j = 0; j < 8; j++) {
@@ -1284,38 +1291,38 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
                 }
             }
             k = 0;
-            for (i = 4; i < 36; i++) {
+            for (i = 4; i < 36; i++) { // ignore first 4 bits: SOF (actualy 1 or 6 depending on response protocol)
                 pageData[k] = response_bit[i];
                 k++;
             }
-            for (i = 0; i < 4; i++)
-                tag.pages[sendNum / 4][sendNum % 4] = 0x0;
-            for (i = 0; i < 4; i++) {
-                tag.pages[sendNum / 4][sendNum % 4] += ((pageData[i * 8] << 7)
-                                                        | (pageData[1 + (i * 8)] << 6)
-                                                        | (pageData[2 + (i * 8)] << 5)
-                                                        | (pageData[3 + (i * 8)] << 4)
-                                                        | (pageData[4 + (i * 8)] << 3)
-                                                        | (pageData[5 + (i * 8)] << 2)
-                                                        | (pageData[6 + (i * 8)] << 1) | pageData[7 + (i * 8)])
-                                                       << (i * 8);
+            for (i = 0; i < 4; i++)     // set page bytes to 0
+                tag.pages[pageNum][i] = 0x0;
+            for (i = 0; i < 4; i++) {   // set page bytes from recieved bits
+                tag.pages[pageNum][i] += ((pageData[i * 8] << 7)
+                                        | (pageData[1 + (i * 8)] << 6)
+                                        | (pageData[2 + (i * 8)] << 5)
+                                        | (pageData[3 + (i * 8)] << 4)
+                                        | (pageData[4 + (i * 8)] << 3)
+                                        | (pageData[5 + (i * 8)] << 2)
+                                        | (pageData[6 + (i * 8)] << 1) 
+                                        | pageData[7 + (i * 8)]);
             }
-            if (tag.auth && tag.LKP && sendNum == 1) {
-                Dbprintf("Page[%2d]: %02X %02X %02X %02X", sendNum, pwdh0,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 16) & 0xff,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 8) & 0xff,
-                         tag.pages[sendNum / 4][sendNum % 4] & 0xff);
+            if (tag.auth && tag.LKP && pageNum == 1) {
+                Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum, pwdh0,
+                         (tag.pages[pageNum][2]) & 0xff,
+                         (tag.pages[pageNum][1]) & 0xff,
+                         tag.pages[pageNum][0] & 0xff);
             } else {
-                Dbprintf("Page[%2d]: %02X %02X %02X %02X", sendNum,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 24) & 0xff,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 16) & 0xff,
-                         (tag.pages[sendNum / 4][sendNum % 4] >> 8) & 0xff,
-                         tag.pages[sendNum / 4][sendNum % 4] & 0xff);
+                Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum,
+                         (tag.pages[pageNum][3]) & 0xff,
+                         (tag.pages[pageNum][2]) & 0xff,
+                         (tag.pages[pageNum][1]) & 0xff,
+                         tag.pages[pageNum][0] & 0xff);
             }
 
-            sendNum++;
+            pageNum++;
             //display key and password if possible
-            if (sendNum == 2 && tag.auth == 1 && tag.LKP) {
+            if (pageNum == 2 && tag.auth == 1 && tag.LKP) {
                 if (htf == RHTSF_KEY) {
                     Dbprintf("Page[ 2]: %02X %02X %02X %02X",
                              (uint8_t)(key >> 8) & 0xff,
@@ -1338,12 +1345,12 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
 
             txlen = 20;
             crc = CRC_PRESET;
-            tx[0] = 0xc0 + (sendNum / 16);
+            tx[0] = 0xc0 + (pageNum / 16);
             calc_crc(&crc, tx[0], 8);
-            calc_crc(&crc, 0x00 + ((sendNum % 16) * 16), 4);
-            tx[1] = 0x00 + ((sendNum % 16) * 16) + (crc / 16);
+            calc_crc(&crc, 0x00 + ((pageNum % 16) * 16), 4);
+            tx[1] = 0x00 + ((pageNum % 16) * 16) + (crc / 16);
             tx[2] = 0x00 + (crc % 16) * 16;
-            if (sendNum >= tag.max_page) {
+            if (pageNum >= tag.max_page) {
                 bStop = !false;
             }
         }
