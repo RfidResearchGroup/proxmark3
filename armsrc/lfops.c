@@ -1269,10 +1269,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
 void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 
     uint8_t *dest = BigBuf_get_addr();
-
-    //big enough to catch 2 sequences of largest format but don't exeed whats available in bigbuff.
-    size_t size = MIN(12800, BigBuf_max_traceLen()); //50 * 128 * 2;
-
+    size_t size;
     int dummyIdx = 0;
 
     BigBuf_Clear_keep_EM();
@@ -1287,10 +1284,9 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
         DoAcquisition_default(-1, true);
         // FSK demodulator
 
-        size  = BigBuf_max_traceLen();
-        //askdemod and manchester decode
-        if (size > 12800) size = 12800; //big enough to catch 2 sequences of largest format
+        size = MIN(12800, BigBuf_max_traceLen());
 
+        //askdemod and manchester decode
         int idx = detectAWID(dest, &size, &dummyIdx);
 
         if (idx <= 0 || size != 96) continue;
@@ -1378,9 +1374,9 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
 
         DoAcquisition_default(-1, true);
 
-        size  = BigBuf_max_traceLen();
-        //askdemod and manchester decode
-        if (size > 16385) size = 16385; //big enough to catch 2 sequences of largest format
+        size = MIN(16385, BigBuf_max_traceLen());
+        
+        //askdemod and manchester decode        
         int errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
         WDT_HIT();
 
@@ -1443,11 +1439,9 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 
         DoAcquisition_default(-1, true);
 
+        size = MIN(12000, BigBuf_max_traceLen());
+        
         //fskdemod and get start index
-        size  = BigBuf_max_traceLen();
-        //askdemod and manchester decode
-        if (size > 12000) size = 12000; //big enough to catch 2 sequences of largest format
-
         int idx = detectIOProx(dest, &size, &dummyIdx);
         if (idx < 0) continue;
         //valid tag found
