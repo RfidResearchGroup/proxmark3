@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `c <card id>` option to `lf pac clone` to allow cloning PAC/Stanley tag from card ID (@danshuk)
+ - Added decoded PAC/Stanley card ID to `lf pac read` (@danshuk)
  - Chg mifare classic keytable output refactored and uses colors (@iceman1001) 
  - Fix `hf mf nested` - now writes the correct blockno (@iceman1001)
  - Chg `lf t55xx dump` - now supports saving to JSON (@iceman1001)
