@@ -75,7 +75,7 @@ begin
     endcase
 end
 
-// 
+//
 always @(posedge spck)
 begin
     if (~ncs)
