@@ -175,7 +175,7 @@ void MeasureAntennaTuning(void) {
      */
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
     SpinDelay(50);
 
     for (uint8_t i = 255; i >= 19; i--) {
@@ -1518,7 +1518,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 case 1: // MEASURE_ANTENNA_TUNING_LF_START
                     // Let the FPGA drive the low-frequency antenna around 125kHz
                     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
                     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, packet->data.asBytes[1]);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, NULL, 0);
                     break;

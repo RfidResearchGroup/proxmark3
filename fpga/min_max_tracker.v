@@ -25,7 +25,7 @@ module min_max_tracker(input clk, input [7:0] adc_d, input [7:0] threshold,
     always @(posedge clk)
     begin
         case (state)
-        0:
+        0: // initialize
             begin
                 if (cur_max_val >= ({1'b0, adc_d} + threshold))
                     state <= 2;
@@ -36,7 +36,7 @@ module min_max_tracker(input clk, input [7:0] adc_d, input [7:0] threshold,
                 else if (adc_d <= cur_min_val)
                     cur_min_val <= adc_d;
             end
-        1:
+        1: // high phase
             begin
                 if (cur_max_val <= adc_d)
                     cur_max_val <= adc_d;
@@ -46,7 +46,7 @@ module min_max_tracker(input clk, input [7:0] adc_d, input [7:0] threshold,
                     max_val <= cur_max_val;
                 end
             end
-        2:
+        2: // low phase
             begin
                 if (adc_d <= cur_min_val)
                     cur_min_val <= adc_d;

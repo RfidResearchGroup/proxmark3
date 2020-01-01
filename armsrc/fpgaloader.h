@@ -28,9 +28,10 @@
 #define FPGA_CMD_SET_USER_BYTE1                     (3<<12)
 // Definitions for the FPGA configuration word.
 // LF
-#define FPGA_MAJOR_MODE_LF_ADC                      (0<<5)
+#define FPGA_MAJOR_MODE_LF_READER                   (0<<5)
 #define FPGA_MAJOR_MODE_LF_EDGE_DETECT              (1<<5)
 #define FPGA_MAJOR_MODE_LF_PASSTHRU                 (2<<5)
+#define FPGA_MAJOR_MODE_LF_ADC                      (3<<5)
 // HF
 #define FPGA_MAJOR_MODE_HF_READER_TX                (0<<5)
 #define FPGA_MAJOR_MODE_HF_READER_RX_XCORR          (1<<5)

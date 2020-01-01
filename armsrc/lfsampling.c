@@ -104,7 +104,7 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
     else
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | (lf_field ? FPGA_LF_ADC_READER_FIELD : 0));
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | (lf_field ? FPGA_LF_ADC_READER_FIELD : 0));
 
     // Connect the A/D to the peak-detected low-frequency path.
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
