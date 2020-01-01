@@ -90,15 +90,15 @@ static void pacRawToCardId(uint8_t* outCardId, const uint8_t* rawBytes) {
 */
 
 // convert 8 bytes of PAC_8byte ID to 16 byte array of raw data (FF204990XX...)
-static void pacCardIdToRaw(uint8_t* outRawBytes, const char* cardId) {
+static void pacCardIdToRaw(uint8_t *outRawBytes, const char *cardId) {
     uint8_t idbytes[10];
-    
+
     // prepend PAC_8byte card type "20"
     idbytes[0] = '2';
     idbytes[1] = '0';
     for (size_t i = 0; i < 8; i++)
         idbytes[i + 2] = toupper(cardId[i]);
-    
+
     // initialise array with start and stop bits
     for (size_t i = 0; i < 16; i++)
         outRawBytes[i] = 0x40 >> (i + 3) % 5 * 2;
@@ -116,8 +116,7 @@ static void pacCardIdToRaw(uint8_t* outRawBytes, const char* cardId) {
             pattern = reflect8(idbytes[i - 2]);
             pattern |= oddparity8(pattern);
             if (i > 3) checksum ^= idbytes[i - 2];
-        }
-        else
+        } else
             pattern = (reflect8(checksum) & 0xFE) | oddparity8(checksum);
         pattern <<= shift;
 
@@ -160,7 +159,7 @@ static int CmdPacDemod(const char *Cmd) {
     const size_t idLen = 9; // 8 bytes + null terminator
     uint8_t cardid[idLen];
     int retval = demodbuf_to_pacid(DemodBuffer, DemodBufferLen, cardid, sizeof(cardid));
-    
+
     if (retval == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "PAC/Stanley Tag Found -- Card ID: %s, Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
 
@@ -190,7 +189,7 @@ static int CmdPacClone(const char *Cmd) {
                 int res = param_getstr(Cmd, cmdp + 1, cardid, sizeof(cardid));
                 if (res < 8)
                     errors = true;
-                
+
                 pacCardIdToRaw(rawhex, cardid);
                 for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
                     blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
