@@ -1,3 +1,4 @@
+pac-8E4C058E.pm3: PAC/Stanley 20204/21020 PAC8 tag (ID: 8E4C058E)
 em4102-clamshell.pm3: Samy's clamshell EM4102 tag (ID: 1f00d9b3a5)
 em4102-thin.pm3: Samy's thin credit-card style EM4102 tag (ID: 1a0041375d)
 EM4102-1.pm3: credit card style card EM4102 tag (ID: 010872e77c)
