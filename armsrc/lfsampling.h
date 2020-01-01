@@ -53,6 +53,13 @@ uint32_t DoAcquisition_default(int trigger_threshold, bool silent);
 uint32_t DoAcquisition_config(bool silent, int sample_size);
 
 /**
+ * Refactoring of lf sampling buffer
+ */
+void initSamplingBuffer(void);
+void logSample(uint8_t sample, uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold);
+uint32_t getSampleCounter();
+
+/**
 * Setup the FPGA to listen for samples. This method downloads the FPGA bitstream
 * if not already loaded, sets divisor and starts up the antenna.
 * @param divisor : 1, 88> 255 or negative ==> 134.8 kHz
