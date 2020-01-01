@@ -953,12 +953,13 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
         tag.max_page = 8;
     if ((tag.pages[1][3] & 0x2) == 0 && (tag.pages[1][3] & 0x1) == 0)
         tag.max_page = 0;
-    for (i = 0; i < tag.max_page; i++)
-        Dbprintf("Page[%2d]: %02X %02X %02X %02X", i,
-                 (tag.pages[i][3]) & 0xff,
-                 (tag.pages[i][2]) & 0xff,
-                 (tag.pages[i][1]) & 0xff,
-                 tag.pages[i][0] & 0xff);
+    if (DBGLEVEL >= DBG_EXTENDED)
+        for (i = 0; i < tag.max_page; i++)
+            Dbprintf("Page[%2d]: %02X %02X %02X %02X", i,
+                     (tag.pages[i][3]) & 0xff,
+                     (tag.pages[i][2]) & 0xff,
+                     (tag.pages[i][1]) & 0xff,
+                     tag.pages[i][0] & 0xff);
     //con1
     tag.auth = 0;
     if ((tag.pages[1][2] & 0x80) == 0x80)
