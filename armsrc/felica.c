@@ -409,6 +409,8 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    (void)b;
+
     uint32_t timeout = iso18092_get_timeout();
 
     for (;;) {
