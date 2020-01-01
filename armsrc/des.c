@@ -272,7 +272,7 @@ uint8_t substitute(uint8_t a, uint8_t *sbp) {
 uint32_t des_f(uint32_t r, uint8_t *kr) {
     uint8_t i;
     uint32_t t = 0, ret;
-    uint64_t data;
+    uint64_t data = 0;
     uint8_t *sbp; /* sboxpointer */
     permute((uint8_t *)e_permtab, (uint8_t *)&r, (uint8_t *)&data);
     for (i = 0; i < 6; ++i)
