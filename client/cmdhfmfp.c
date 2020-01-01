@@ -30,11 +30,13 @@
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
+uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
+
 static int CmdHelp(const char *Cmd);
 
-static int CmdHFMFPInfo(const char *cmd) {
+static int CmdHFMFPInfo(const char *Cmd) {
 
-    if (cmd && strlen(cmd) > 0)
+    if (Cmd && strlen(Cmd) > 0)
         PrintAndLogEx(WARNING, "command don't have any parameters.\n");
 
     // info about 14a part
@@ -110,7 +112,7 @@ static int CmdHFMFPInfo(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPWritePerso(const char *cmd) {
+static int CmdHFMFPWritePerso(const char *Cmd) {
     uint8_t keyNum[64] = {0};
     int keyNumLen = 0;
     uint8_t key[64] = {0};
@@ -128,7 +130,7 @@ static int CmdHFMFPWritePerso(const char *cmd) {
         arg_strx0(NULL,  NULL,     "<HEX key (16b)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     CLIGetHexWithReturn(2, keyNum, &keyNumLen);
@@ -174,9 +176,7 @@ static int CmdHFMFPWritePerso(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
-
-static int CmdHFMFPInitPerso(const char *cmd) {
+static int CmdHFMFPInitPerso(const char *Cmd) {
     int res;
     uint8_t key[256] = {0};
     int keyLen = 0;
@@ -195,7 +195,7 @@ static int CmdHFMFPInitPerso(const char *cmd) {
         arg_strx0(NULL,  NULL,      "<HEX key (16b)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     bool verbose2 = arg_get_lit(1) > 1;
@@ -250,7 +250,7 @@ static int CmdHFMFPInitPerso(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPCommitPerso(const char *cmd) {
+static int CmdHFMFPCommitPerso(const char *Cmd) {
     CLIParserInit("hf mfp commitp",
                   "Executes Commit Perso command. Can be used in SL0 mode only.",
                   "Usage:\n\thf mfp commitp ->  \n");
@@ -261,7 +261,7 @@ static int CmdHFMFPCommitPerso(const char *cmd) {
         arg_int0(NULL,  NULL,      "SL mode", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     CLIParserFree();
@@ -291,7 +291,7 @@ static int CmdHFMFPCommitPerso(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPAuth(const char *cmd) {
+static int CmdHFMFPAuth(const char *Cmd) {
     uint8_t keyn[250] = {0};
     int keynlen = 0;
     uint8_t key[250] = {0};
@@ -309,7 +309,7 @@ static int CmdHFMFPAuth(const char *cmd) {
         arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     CLIGetHexWithReturn(2, keyn, &keynlen);
@@ -329,7 +329,7 @@ static int CmdHFMFPAuth(const char *cmd) {
     return MifareAuth4(NULL, keyn, key, true, false, true, verbose, false);
 }
 
-static int CmdHFMFPRdbl(const char *cmd) {
+static int CmdHFMFPRdbl(const char *Cmd) {
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
@@ -349,7 +349,7 @@ static int CmdHFMFPRdbl(const char *cmd) {
         arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, false);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     bool verbose = arg_get_lit(1);
     int blocksCount = arg_get_int_def(2, 1);
@@ -441,7 +441,7 @@ static int CmdHFMFPRdbl(const char *cmd) {
     return 0;
 }
 
-static int CmdHFMFPRdsc(const char *cmd) {
+static int CmdHFMFPRdsc(const char *Cmd) {
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
@@ -460,7 +460,7 @@ static int CmdHFMFPRdsc(const char *cmd) {
         arg_str0(NULL,  NULL,      "<Key Value (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, false);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     bool verbose = arg_get_lit(1);
     bool keyB = arg_get_lit(2);
@@ -537,7 +537,7 @@ static int CmdHFMFPRdsc(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPWrbl(const char *cmd) {
+static int CmdHFMFPWrbl(const char *Cmd) {
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
@@ -558,7 +558,7 @@ static int CmdHFMFPWrbl(const char *cmd) {
         arg_str0(NULL,  NULL,      "<Key (HEX 16 bytes)>", NULL),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, false);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     bool verbose = arg_get_lit(1);
     bool keyB = arg_get_lit(2);
@@ -735,7 +735,7 @@ void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t *keyL
     (*startPattern)++;
 }
 
-static int CmdHFMFPChk(const char *cmd) {
+static int CmdHFMFPChk(const char *Cmd) {
     int res;
     uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {{0}};
     size_t keyListLen = 0;
@@ -765,7 +765,7 @@ static int CmdHFMFPChk(const char *cmd) {
         arg_lit0("vV",  "verbose",   "verbose mode."),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool keyA = arg_get_lit(1);
     bool keyB = arg_get_lit(2);
@@ -965,7 +965,7 @@ static int CmdHFMFPChk(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPMAD(const char *cmd) {
+static int CmdHFMFPMAD(const char *Cmd) {
 
     CLIParserInit("hf mfp mad",
                   "Checks and prints Mifare Application Directory (MAD)",
@@ -980,7 +980,7 @@ static int CmdHFMFPMAD(const char *cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     uint8_t aid[2] = {0};
@@ -1059,7 +1059,7 @@ static int CmdHFMFPMAD(const char *cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPNDEF(const char *cmd) {
+static int CmdHFMFPNDEF(const char *Cmd) {
 
     CLIParserInit("hf mfp ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
@@ -1074,7 +1074,7 @@ static int CmdHFMFPNDEF(const char *cmd) {
         arg_lit0("bB",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_param_end
     };
-    CLIExecWithReturn(cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, true);
 
     bool verbose = arg_get_lit(1);
     bool verbose2 = arg_get_lit(1) > 1;
