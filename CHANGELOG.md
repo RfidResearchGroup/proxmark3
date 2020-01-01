@@ -398,6 +398,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added trailer block decoding to `hf mf rdbl` and `hf mf cgetbl` (@merlokk)
  - Added `hf mf mad` and `hf mfp mad` MAD decode, check and print commands (@merlokk)
  - Add `script run luxeodump` (@0xdrrb)
+ - Fix `lf hitag reader 02` - print all bytes (@bosb)
 
 
 ### Fixed
