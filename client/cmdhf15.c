@@ -218,6 +218,8 @@ uint8_t nxp_public_keys[][33] = {
     },
 };
 
+static int CmdHF15Help(const char *Cmd);
+
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
 // returns 1 if succeeded
@@ -305,8 +307,6 @@ static const char *TagErrorStr(uint8_t error) {
             return "Reserved for Future Use or Custom command error.";
     }
 }
-
-static int CmdHF15Help(const char *Cmd);
 
 static int usage_15_demod(void) {
     PrintAndLogEx(NORMAL, "Tries to demodulate / decode ISO15693, from downloaded samples.\n"
@@ -683,41 +683,41 @@ static int NxpSysInfo(uint8_t *uid) {
             return PM3_EWRONGANSVER;
         }
 
-        bool signature = false;
-        bool easmode = false;
-
+        bool support_signature = (recv[5] & 0x01);               
+        bool support_easmode = (recv[4] & 0x03);
+        
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "  NXP SYSINFO : %s", sprint_hex(recv, 8));
         PrintAndLogEx(NORMAL, "    Password protection configuration:");
-        PrintAndLogEx(NORMAL, "      * Page L read%s password protected", (recv[2] & 0x01 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * Page L write%s password protected", (recv[2] & 0x02 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * Page H read%s password protected", (recv[2] & 0x08 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * Page H write%s password protected", (recv[2] & 0x20 ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * Page L read%s password protected", ((recv[2] & 0x01) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * Page L write%s password protected", ((recv[2] & 0x02) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * Page H read%s password protected", ((recv[2] & 0x08) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * Page H write%s password protected", ((recv[2] & 0x20) ? "" : " not"));
 
         PrintAndLogEx(NORMAL, "    Lock bits:");
-        PrintAndLogEx(NORMAL, "      * AFI%s locked", (recv[3] & 0x01 ? "" : " not")); // AFI lock bit
-        PrintAndLogEx(NORMAL, "      * EAS%s locked", (recv[3] & 0x02 ? "" : " not")); // EAS lock bit
-        PrintAndLogEx(NORMAL, "      * DSFID%s locked", (recv[3] & 0x03 ? "" : " not")); // DSFID lock bit
-        PrintAndLogEx(NORMAL, "      * Password protection configuration%s locked", (recv[3] & 0x04 ? "" : " not")); // Password protection pointer address and access conditions lock bit
+        PrintAndLogEx(NORMAL, "      * AFI%s locked", ((recv[3] & 0x01) ? "" : " not")); // AFI lock bit
+        PrintAndLogEx(NORMAL, "      * EAS%s locked", ((recv[3] & 0x02) ? "" : " not")); // EAS lock bit
+        PrintAndLogEx(NORMAL, "      * DSFID%s locked", ((recv[3] & 0x03) ? "" : " not")); // DSFID lock bit
+        PrintAndLogEx(NORMAL, "      * Password protection configuration%s locked", ((recv[3] & 0x04) ? "" : " not")); // Password protection pointer address and access conditions lock bit
 
         PrintAndLogEx(NORMAL, "    Features:");
-        PrintAndLogEx(NORMAL, "      * User memory password protection%s supported", (recv[4] & 0x01 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * Counter feature%s supported", (recv[4] & 0x02 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * EAS ID%s supported by EAS ALARM command", (recv[4] & 0x03 ? "" : " not"));
-        easmode = (recv[4] & 0x03 ? true : false);
-        PrintAndLogEx(NORMAL, "      * EAS password protection%s supported", (recv[4] & 0x04 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * AFI password protection%s supported", (recv[4] & 0x10 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * Extended mode%s supported by INVENTORY READ command", (recv[4] & 0x20 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * EAS selection%s supported by extended mode in INVENTORY READ command", (recv[4] & 0x40 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * READ SIGNATURE command%s supported", (recv[5] & 0x01 ? "" : " not"));
-        signature = (recv[5] & 0x01 ? true : false);
-        PrintAndLogEx(NORMAL, "      * Password protection for READ SIGNATURE command%s supported", (recv[5] & 0x02 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * STAY QUIET PERSISTENT command%s supported", (recv[5] & 0x03 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * ENABLE PRIVACY command%s supported", (recv[5] & 0x10 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * DESTROY command%s supported", (recv[5] & 0x20 ? "" : " not"));
-        PrintAndLogEx(NORMAL, "      * Additional 32 bits feature flags are%s transmitted", (recv[5] & 0x80 ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * User memory password protection%s supported", ((recv[4] & 0x01) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * Counter feature%s supported", ((recv[4] & 0x02) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * EAS ID%s supported by EAS ALARM command", support_easmode ? "" : " not");
 
-        if (easmode) {
+        PrintAndLogEx(NORMAL, "      * EAS password protection%s supported", ((recv[4] & 0x04) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * AFI password protection%s supported", ((recv[4] & 0x10) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * Extended mode%s supported by INVENTORY READ command", ((recv[4] & 0x20) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * EAS selection%s supported by extended mode in INVENTORY READ command", ((recv[4] & 0x40) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * READ SIGNATURE command%s supported", support_signature ? "" : " not");
+
+        PrintAndLogEx(NORMAL, "      * Password protection for READ SIGNATURE command%s supported", ((recv[5] & 0x02) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * STAY QUIET PERSISTENT command%s supported", ((recv[5] & 0x03) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * ENABLE PRIVACY command%s supported", ((recv[5] & 0x10) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * DESTROY command%s supported", ((recv[5] & 0x20) ? "" : " not"));
+        PrintAndLogEx(NORMAL, "      * Additional 32 bits feature flags are%s transmitted", ((recv[5] & 0x80) ? "" : " not"));
+
+        if (support_easmode) {
             reqlen = 0;
             req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
             req[reqlen++] = ISO15_CMD_EASALARM;
@@ -753,7 +753,7 @@ static int NxpSysInfo(uint8_t *uid) {
             }
         }
 
-        if (signature) {
+        if (support_signature) {
             // Check if we can also read the signature
             reqlen = 0;
             req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
