@@ -643,6 +643,7 @@ static int NxpSysInfo(uint8_t *uid) {
     uint8_t *recv;
     uint8_t req[PM3_CMD_DATA_SIZE] = {0};
     uint16_t reqlen;
+    uint32_t status;
     uint8_t arg1 = 1;
 
     if (uid != NULL) {
@@ -669,7 +670,7 @@ static int NxpSysInfo(uint8_t *uid) {
 
         DropField();
 
-        uint32_t status = resp.oldarg[0];
+        status = resp.oldarg[0];
 
         if (status < 2) {
             PrintAndLogEx(WARNING, "iso15693 card doesn't answer to NXP systeminfo command");
@@ -736,7 +737,7 @@ static int NxpSysInfo(uint8_t *uid) {
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 PrintAndLogEx(WARNING, "iso15693 card select failed");
             } else {
-                uint32_t status = resp.oldarg[0];
+                status = resp.oldarg[0];
 
                 PrintAndLogEx(NORMAL, "");
 
@@ -778,7 +779,7 @@ static int NxpSysInfo(uint8_t *uid) {
 
             DropField();
 
-            uint32_t status = resp.oldarg[0];
+            status = resp.oldarg[0];
 
             if (status < 2) {
                 PrintAndLogEx(WARNING, "iso15693 card doesn't answer to READ SIGNATURE command");
