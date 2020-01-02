@@ -345,7 +345,7 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose)
         uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
         if (verbose) {
             PrintAndLogEx(SUCCESS, "Client Received %i octets", len);
-            if (!len || len < 2) {
+            if (len == 0 || len == 1) {
                 PrintAndLogEx(ERR, "Could not receive data correctly!");
                 return false;
             }
@@ -575,6 +575,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     if (strlen(Cmd) < 4) {
         return usage_hf_felica_authentication1();
     }
+
     PrintAndLogEx(INFO, "EXPERIMENTAL COMMAND");
     uint8_t data[PM3_CMD_DATA_SIZE];
     bool custom_IDm = false;
@@ -611,7 +612,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     // Number of Area (1), Area Code List (2), Number of Service (1), Service Code List (2), M1c (8)
     uint8_t lengths[] = {2, 4, 2, 4};
     uint8_t dataPositions[] = {10, 11, 13, 14};
-    for (int i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
         if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
             paramCount++;
         } else {
@@ -653,7 +654,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     PrintAndLogEx(INFO, "3DES ENCRYPTED M1c: %s", sprint_hex(output, 8));
     // Add M1c Challenge to frame
     int frame_position = 16;
-    for (int i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) {
         data[frame_position++] = output[i];
     }
 
@@ -684,7 +685,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
             bool isKeyCorrect = false;
             unsigned char p2c[8];
             mbedtls_des3_crypt_ecb(&des3_ctx, auth1_response.m2c, p2c);
-            for (int i = 0; i < 8; i++) {
+            for (i = 0; i < 8; i++) {
                 if (p2c[i] != input[i]) {
                     isKeyCorrect = false;
                     break;
@@ -781,7 +782,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
 
     // Add M4c Challenge to frame
     int frame_position = 10;
-    for (int i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) {
         data[frame_position++] = m4c[i];
     }
 
@@ -856,7 +857,7 @@ static int CmdHFFelicaWriteWithoutEncryption(const char *Cmd) {
     // Number of Service 2, Service Code List 4, Number of Block 2, Block List Element 4, Data 16
     uint8_t lengths[] = {2, 4, 2, 4, 32};
     uint8_t dataPositions[] = {10, 11, 13, 14, 16};
-    for (int i = 0; i < 5; i++) {
+    for (i = 0; i < 5; i++) {
         if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
             paramCount++;
         } else {
@@ -938,7 +939,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         datalen += 1;
         lengths[3] = 6;
     }
-    for (int i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
         if (add_param(Cmd, paramCount, data, dataPositions[i], lengths[i])) {
             paramCount++;
         } else {
@@ -954,7 +955,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
             last_block_number = 0xFFFF;
         }
         PrintAndLogEx(INFO, "Block Element\t|  Data  ");
-        for (int i = 0x00; i < last_block_number; i++) {
+        for (i = 0x00; i < last_block_number; i++) {
             data[15] = i;
             AddCrc(data, datalen);
             datalen += 2;
@@ -1106,6 +1107,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     } else {
         felica_request_spec_response_t spec_response;
         memcpy(&spec_response, (felica_request_spec_response_t *)resp.data.asBytes, sizeof(felica_request_spec_response_t));
+        
         if (spec_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Request Response:");
             PrintAndLogEx(SUCCESS, "\nIDm: %s", sprint_hex(spec_response.frame_response.IDm, sizeof(spec_response.frame_response.IDm)));
@@ -1117,7 +1119,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Number of Option: %s", sprint_hex(spec_response.number_of_option, sizeof(spec_response.number_of_option)));
                 if (spec_response.number_of_option[0] == 0x01) {
                     PrintAndLogEx(SUCCESS, "Option Version List:");
-                    for (uint8_t i = 0; i < spec_response.number_of_option[0]; i++) {
+                    for (i = 0; i < spec_response.number_of_option[0]; i++) {
                         PrintAndLogEx(SUCCESS, "  - %s", sprint_hex(spec_response.option_version_list + i * 2, sizeof(uint8_t) * 2));
                     }
                 }
@@ -1252,12 +1254,13 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
     } else {
         felica_syscode_response_t rq_syscode_response;
         memcpy(&rq_syscode_response, (felica_syscode_response_t *)resp.data.asBytes, sizeof(felica_syscode_response_t));
+
         if (rq_syscode_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Request Response:");
             PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rq_syscode_response.frame_response.IDm, sizeof(rq_syscode_response.frame_response.IDm)));
             PrintAndLogEx(SUCCESS, "  - Number of Systems: %s", sprint_hex(rq_syscode_response.number_of_systems, sizeof(rq_syscode_response.number_of_systems)));
             PrintAndLogEx(SUCCESS, "  - System Codes: enumerated in ascending order starting from System 0.");
-            for (uint8_t i = 0; i < rq_syscode_response.number_of_systems[0]; i++) {
+            for (i = 0; i < rq_syscode_response.number_of_systems[0]; i++) {
                 PrintAndLogEx(SUCCESS, "    - %s", sprint_hex(rq_syscode_response.system_code_list + i * 2, sizeof(uint8_t) * 2));
             }
         }
