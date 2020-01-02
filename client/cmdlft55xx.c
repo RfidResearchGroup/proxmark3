@@ -3062,8 +3062,6 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        // loop
-        uint64_t curr_password = 0x00;
         for (uint16_t c = 0; c < keycount; ++c) {
 
             if (!session.pm3_present) {
@@ -3077,7 +3075,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 return PM3_EOPABORTED;
             }
 
-            curr_password = bytes_to_num(keyBlock + 4 * c, 4);
+            uint64_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
 
             PrintAndLogEx(INFO, "Testing %08"PRIX64, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
@@ -3485,14 +3483,20 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
     if (!useGB) {
         for (dl_mode = downlink_mode; dl_mode < 4; dl_mode++) {
             found = AcquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, usepwd, password, dl_mode);
-            //return PM3_ENODATA;
-            if (tryDetectP1(false)) { //tryDetectModulation())
+            if (found == false)
+                continue;
+            
+            if (tryDetectP1(false)) {
                 found = true;
                 found_mode = dl_mode;
                 dl_mode = 4;
-            } else found = false;
+            } else {
+                found = false;
+            }
 
-            if (!try_all_dl_modes) dl_mode = 4;
+            if (!try_all_dl_modes) {
+                dl_mode = 4;
+            }
         }
 
     } else {
