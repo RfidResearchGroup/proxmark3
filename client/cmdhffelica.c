@@ -1395,11 +1395,11 @@ static int CmdHFFelicaSniff(const char *Cmd) {
         }
         i++;
     }
-    if (samples2skip <= 0) {
+    if (samples2skip == 0) {
         samples2skip = 10;
         PrintAndLogEx(INFO, "Set default samples2skip: %i", samples2skip);
     }
-    if (triggers2skip <= 0) {
+    if (triggers2skip == 0) {
         triggers2skip = 5000;
         PrintAndLogEx(INFO, "Set default triggers2skip: %i", triggers2skip);
     }
