@@ -185,32 +185,49 @@ uint16_t ul_ev1_packgenD(uint8_t *uid) {
 // MFC keyfile generation stuff
 //------------------------------------
 // Vinglock
-void mfc_algo_ving_one(uint8_t *uid, uint8_t sector) {
-    return 0;
+int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+    if (sector > 15) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
 }
-void mfc_algo_ving_all(uint8_t *uid, uint8_t *keys) {}
+int mfc_algo_ving_all(uint8_t *uid, uint8_t *keys) {
+    if (keys == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
+}
 
 // Yale Doorman
-void mfc_algo_yale_one(uint8_t *uid, uint8_t sector) {
-    return 0;
+int mfc_algo_yale_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+    if (sector > 15) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
 }
-void mfc_algo_yale_all(uint8_t *uid, uint8_t *keys) {}
+int mfc_algo_yale_all(uint8_t *uid, uint8_t *keys) {
+    if (keys == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
+}
 
 // Saflok / Maid UID to key.
-uint64_t mfc_algo_saflok_one(uint8_t *uid, uint8_t sector) {
-    return 0;
+int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+    if (sector > 15) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
 }
-void mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
+int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
+    if (keys == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
 }
 
 // MIZIP algo
-void mfc_algo_mizip_one(uint8_t *uid, uint8_t sector) {
-    return 0;
+int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+    if (sector > 4) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
 }
 // returns all Mifare Mini (MFM) 10 keys.
 // keys must have 5*2*6 = 60bytes space
-void mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys) {
-
+int mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys) {  
+    if (keys == NULL) return PM3_EINVARG;
+    
     uint64_t xor_tbl[] = {
         0x09125a2589e5ULL, 0xF12C8453D821ULL,
         0xAB75C937922FULL, 0x73E799FE3241ULL,
@@ -245,19 +262,30 @@ void mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys) {
             ;
         num_to_bytes(b, 6, keys + 30 + (1 * i * 6));
     }
+    return PM3_SUCCESS;
 }
 
 // Disney Infinity algo
-void mfc_algo_di_one(uint8_t *uid, uint8_t sector) {
-    return 0;
+int mfc_algo_di_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+    if (sector > 15) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
 }
-void mfc_algo_di_all(uint8_t *uid, uint8_t *keys) {}
+int mfc_algo_di_all(uint8_t *uid, uint8_t *keys) {
+    if (keys == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
+}
 
 // Skylanders
-void mfc_algo_sky_one(uint8_t *uid, uint8_t sector) {
-    return 0;
+int mfc_algo_sky_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+    if (sector > 15) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
 }
-void mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {}
+int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {
+    if (keys == NULL) return PM3_EINVARG;
+    return PM3_SUCCESS;
+}
 
 
 //------------------------------------
@@ -290,10 +318,10 @@ int generator_selftest() {
     success = (pwd4 == 0x72B1EC61);
     PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X | %s", sprint_hex(uid4, 7), pwd4, success ? "OK" : "->72B1EC61<--");
 
-    uint8_t uid5[] = {0x11, 0x22, 0x33, 0x44};
-    uint64_t key1 = mfc_algo_a(uid5);
-    success = (key1 == 0xD1E2AA68E39A);
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" | %s", sprint_hex(uid5, 4), key1, success ? "OK" : "->D1E2AA68E39A<--");
+//    uint8_t uid5[] = {0x11, 0x22, 0x33, 0x44};
+//    uint64_t key1 = mfc_algo_a(uid5);
+//    success = (key1 == 0xD1E2AA68E39A);
+//    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" | %s", sprint_hex(uid5, 4), key1, success ? "OK" : "->D1E2AA68E39A<--");
 
     PrintAndLogEx(SUCCESS, "-------------------");
     return PM3_SUCCESS;
