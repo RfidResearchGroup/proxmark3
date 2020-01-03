@@ -1332,6 +1332,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         }
         i++;
     }
+
     if (!all_nodes) {
         // Node Number
         if (param_getlength(Cmd, paramCount) == 2) {
@@ -1366,11 +1367,12 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (datalen > 0) {
         flags |= FELICA_RAW;
     }
-    
+
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
+    
     data[0] = int_to_hex(&datalen);
     data[1] = 0x02; // Service Request Command ID
     if (all_nodes) {
@@ -1742,7 +1744,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
                 sscanf(buf, "%x", &temp);
                 data[datalen] = (uint8_t)(temp & 0xff);
                 *buf = 0;
-                if (++datalen >= sizeof(data)) {
+                if (++datalen >= (sizeof(data) - 2)) {
                     if (crc)
                         PrintAndLogEx(WARNING, "Buffer is full, we can't add CRC to your data");
                     break;
