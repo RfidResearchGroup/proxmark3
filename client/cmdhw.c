@@ -539,9 +539,8 @@ static int CmdPing(const char *Cmd) {
         data[i] = i & 0xFF;
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
-        bool error = false;
         if (len) {
-            error = memcmp(data, resp.data.asBytes, len) != 0;
+            bool error = (memcmp(data, resp.data.asBytes, len) != 0);
             PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("OK"));
         } else {
             PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
