@@ -528,7 +528,7 @@ static bool check_last_idm(uint8_t *data, uint16_t datalen) {
         PrintAndLogEx(ERR, "No last known card! Use reader first or set a custom IDm!");
         return 0;
     } else {
-        PrintAndLogEx(INFO, "Used last known IDm.", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Used last known IDm. %s", sprint_hex(data, datalen));
         return 1;
     }
 }
