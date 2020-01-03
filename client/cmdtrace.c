@@ -381,6 +381,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case FELICA:
                 annotateFelica(explanation, sizeof(explanation), frame, data_len);
+                break;
             case LTO:
                 annotateLTO(explanation, sizeof(explanation), frame, data_len);
                 break;
