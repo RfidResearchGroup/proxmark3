@@ -856,9 +856,13 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
         goto out;
     }
 
-    if (startFilePosition)
-        fseek(f, startFilePosition, SEEK_SET);
-
+    if (startFilePosition) {
+        if (fseek(f, startFilePosition, SEEK_SET) < 0){
+            retval = PM3_EFILE;
+            goto out;
+        }
+    }
+    
     // read file
     while (!feof(f)) {
         size_t filepos = ftell(f);
