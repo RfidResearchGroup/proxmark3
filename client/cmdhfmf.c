@@ -1799,6 +1799,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // create/initialize key storage structure
     int32_t res = initSectorTable(&e_sector, sectors_cnt);
     if (res != sectors_cnt) {
+        free(e_sector);
         return PM3_EMALLOC;
     }
 
@@ -3644,8 +3645,10 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
     // create/initialize key storage structure
     int32_t res = initSectorTable(&e_sector, sectors_cnt);
-    if (res != sectors_cnt)
+    if (res != sectors_cnt) {
+        free(e_sector);
         return PM3_EMALLOC;
+    }
 
     // read UID from EMUL
     if (mfEmlGetMem(data, 0, 1) != PM3_SUCCESS) {
@@ -4083,6 +4086,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
+        free(dump);
         return PM3_ESOFT;
     }
 
