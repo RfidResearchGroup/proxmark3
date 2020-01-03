@@ -169,6 +169,9 @@ void printvar(const char *name, uint8_t *arr, int len) {
 }
 
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {
+
+    if (arr == NULL) return;
+
     int cx = 0, i;
     size_t outsize = 100 + strlen(title) + len * 4;
     char *output = calloc(outsize, sizeof(char));
