@@ -458,14 +458,19 @@ static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_
  * @param rd_noCry_resp Response frame.
  */
 static void print_rd_noEncrpytion_response(felica_read_without_encryption_response_t *rd_noCry_resp) {
-    if (rd_noCry_resp->status_flags.status_flag1[0] == 00 && rd_noCry_resp->status_flags.status_flag2[0] == 00) {
+
+    if (rd_noCry_resp->status_flags.status_flag1[0] == 00 &&
+        rd_noCry_resp->status_flags.status_flag2[0] == 00) {
+
         char *temp = sprint_hex(rd_noCry_resp->block_data, sizeof(rd_noCry_resp->block_data));
+
         char bl_data[256];
         strcpy(bl_data, temp);
 
         char bl_element_number[4];
         temp = sprint_hex(rd_noCry_resp->block_element_number, sizeof(rd_noCry_resp->block_element_number));
         strcpy(bl_element_number, temp);
+
         PrintAndLogEx(INFO, "\t%s\t|  %s  ", bl_element_number, bl_data);
     } else {
         PrintAndLogEx(SUCCESS, "IDm: %s", sprint_hex(rd_noCry_resp->frame_response.IDm, sizeof(rd_noCry_resp->frame_response.IDm)));
@@ -754,11 +759,13 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
         }
         i++;
     }
+
     data[0] = int_to_hex(&datalen);
     data[1] = 0x12; // Command ID
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
+
     // M3c (8)
     unsigned char m3c[8];
     if (add_param(Cmd, paramCount, m3c, 0, 16)) {
@@ -766,6 +773,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     } else {
         return PM3_EINVARG;
     }
+
     // Create M4c challenge response with 3DES
     uint8_t master_key[PM3_CMD_DATA_SIZE];
     uint8_t reverse_master_key[PM3_CMD_DATA_SIZE];
@@ -774,7 +782,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     unsigned char p3c[8];
     if (param_getlength(Cmd, paramCount) == 32) {
         
-        if (param_gethex(Cmd, paramCount, master_key, 32)) == 1) {
+        if (param_gethex(Cmd, paramCount, master_key, 32) == 1) {
             PrintAndLogEx(ERR, "Failed param key");
             return PM3_EINVARG;
         }
@@ -1354,9 +1362,11 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (custom_IDm) {
         flags |= FELICA_NO_SELECT;
     }
+
     if (datalen > 0) {
         flags |= FELICA_RAW;
     }
+    
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
@@ -1423,13 +1433,15 @@ static int CmdHFFelicaSniff(const char *Cmd) {
         }
         i++;
     }
+    
     if (samples2skip == 0) {
         samples2skip = 10;
-        PrintAndLogEx(INFO, "Set default samples2skip: %i", samples2skip);
+        PrintAndLogEx(INFO, "Set default samples2skip: %" PRIu64, samples2skip);
     }
+    
     if (triggers2skip == 0) {
         triggers2skip = 5000;
-        PrintAndLogEx(INFO, "Set default triggers2skip: %i", triggers2skip);
+        PrintAndLogEx(INFO, "Set default triggers2skip: %" PRIu64, triggers2skip);
     }
 
     PrintAndLogEx(INFO, "Start Sniffing now. You can stop sniffing with clicking the PM3 Button");
