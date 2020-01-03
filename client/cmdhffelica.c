@@ -440,8 +440,12 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
  */
 static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_t dataPosition, uint8_t length) {
     if (param_getlength(Cmd, paramCount) == length) {
-        param_gethex(Cmd, paramCount, data + dataPosition, length);
-        return true;
+        
+        if (param_gethex(Cmd, paramCount, data + dataPosition, length) == 1)
+            return false;    
+        else 
+            return true;
+
     } else {
         PrintAndLogEx(ERR, "Param %s", Cmd);
         PrintAndLogEx(ERR, "Incorrect Parameter length! Param %i should be %i", paramCount, length);
@@ -637,11 +641,19 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     mbedtls_des3_context des3_ctx;
     mbedtls_des3_init(&des3_ctx);
     if (param_getlength(Cmd, paramCount) == 48) {
-        param_gethex(Cmd, paramCount, master_key, 48);
+        if (param_gethex(Cmd, paramCount, master_key, 48) == 1) {
+            PrintAndLogEx(ERR, "Failed param key");
+            return PM3_EINVARG;
+        }
         mbedtls_des3_set3key_enc(&des3_ctx, master_key);
         PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 24));
     } else if (param_getlength(Cmd, paramCount) == 32) {
-        param_gethex(Cmd, paramCount, master_key, 32);
+        
+        if (param_gethex(Cmd, paramCount, master_key, 32) == 1) {
+            PrintAndLogEx(ERR, "Failed param key");
+            return PM3_EINVARG;
+        }
+
         // Assumption: Master secret split in half for Kac, Kbc
         mbedtls_des3_set2key_enc(&des3_ctx, master_key);
         PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 16));
@@ -761,7 +773,11 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     mbedtls_des3_init(&des3_ctx);
     unsigned char p3c[8];
     if (param_getlength(Cmd, paramCount) == 32) {
-        param_gethex(Cmd, paramCount, master_key, 32);
+        
+        if (param_gethex(Cmd, paramCount, master_key, 32)) == 1) {
+            PrintAndLogEx(ERR, "Failed param key");
+            return PM3_EINVARG;
+        }
         reverse_3des_key(master_key, 16, reverse_master_key);
         mbedtls_des3_set2key_dec(&des3_ctx, reverse_master_key);
         mbedtls_des3_set2key_enc(&des3_ctx, master_key);
@@ -1311,7 +1327,12 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (!all_nodes) {
         // Node Number
         if (param_getlength(Cmd, paramCount) == 2) {
-            param_gethex(Cmd, paramCount++, data + 10, 2);
+            
+            if (param_gethex(Cmd, paramCount++, data + 10, 2) == 1) {
+                PrintAndLogEx(ERR, "Failed param key");
+                return PM3_EINVARG;
+            }
+            
         } else {
             PrintAndLogEx(ERR, "Incorrect Node number length!");
             return PM3_EINVARG;
@@ -1319,7 +1340,11 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     }
 
     if (param_getlength(Cmd, paramCount) == 4) {
-        param_gethex(Cmd, paramCount++, data + 11, 4);
+        
+        if (param_gethex(Cmd, paramCount++, data + 11, 4) == 1) {
+            PrintAndLogEx(ERR, "Failed param key");
+            return PM3_EINVARG;
+        }
     } else {
         PrintAndLogEx(ERR, "Incorrect parameter length!");
         return PM3_EINVARG;
