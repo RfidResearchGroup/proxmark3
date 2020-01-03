@@ -473,6 +473,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
     FILE *f = fopen(fileName, "wb");
     if (f == NULL) {
         PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fileName);
+        free(fileName);
         return PM3_EFILE;
     }
     PrintAndLogEx(SUCCESS, "Generating binary key file");
