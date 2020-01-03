@@ -161,7 +161,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRIu32 )" bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -429,7 +429,7 @@ int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
     }
 
     sf_close(wave_file);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRIu32 )" bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
 
 out:
     free(fileName);
@@ -456,7 +456,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRIu16 )" bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
 
 out:
     free(fileName);
