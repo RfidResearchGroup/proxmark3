@@ -588,7 +588,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
             Process18092Byte(dist);
-            if ((MAX(dist & 0xff, dist >> 8) >= 178) && (++trigger_cnt > triggersToSkip)) {
+            if ((dist >= 178) && (++trigger_cnt > triggersToSkip)) {
                 Dbprintf("triggersToSkip kicked %d", dist);
                 break;
             }
