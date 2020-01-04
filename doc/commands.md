@@ -3,7 +3,6 @@
 |-------                  |------- |-----------          
 |`help                   `|Y       |`This help. Use '<command> help' for details of a particular command.`          
 |`auto                   `|Y       |`Automated detection process for unknown tags`          
-|`                       `|Y       |``          
 |`msleep                 `|Y       |`Add a pause in milliseconds`          
 |`rem                    `|Y       |`Add a text line in log file`          
 |`quit                   `|Y       |``          
@@ -188,13 +187,11 @@
           
 |command                  |offline |description          
 |-------                  |------- |-----------          
-|`hf felica ----------- General -----------`|Y       |``          
 |`hf felica help         `|Y       |`This help`          
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`          
 |`hf felica reader       `|Y       |`Act like an ISO18092/FeliCa reader`          
 |`hf felica sniff        `|Y       |`Sniff ISO 18092/FeliCa traffic`          
 |`hf felica raw          `|Y       |`Send raw hex data to tag`          
-|`hf felica ----------- FeliCa Standard (support in progress) -----------`|Y       |``          
 |`hf felica rqservice    `|Y       |`verify the existence of Area and Service, and to acquire Key Version.`          
 |`hf felica rqresponse   `|Y       |`verify the existence of a card and its Mode.`          
 |`hf felica rdunencrypted`|Y       |`read Block Data from authentication-not-required Service.`          
@@ -206,7 +203,6 @@
 |`hf felica read         `|Y       |`read Block Data from authentication-required Service.`          
 |`hf felica rqspecver    `|Y       |`acquire the version of card OS.`          
 |`hf felica resetmode    `|Y       |`reset Mode to Mode 0.`          
-|`hf felica ----------- FeliCa Light -----------`|Y       |``          
 |`hf felica litesim      `|Y       |`<NDEF2> - only reply to poll request`          
 |`hf felica litedump     `|Y       |`Wait for and try dumping FelicaLite`          
 
@@ -277,7 +273,6 @@
 |`hf mf chk              `|Y       |`Check keys`          
 |`hf mf fchk             `|Y       |`Check keys fast, targets all keys on card`          
 |`hf mf decrypt          `|Y       |`[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace`          
-|`hf mf -----------      `|Y       |``          
 |`hf mf rdbl             `|Y       |`Read MIFARE classic block`          
 |`hf mf rdsc             `|Y       |`Read MIFARE classic sector`          
 |`hf mf dump             `|Y       |`Dump MIFARE classic tag to binary file`          
@@ -285,7 +280,6 @@
 |`hf mf wrbl             `|Y       |`Write MIFARE classic block`          
 |`hf mf setmod           `|Y       |`Set MIFARE Classic EV1 load modulation strength`          
 |`hf mf auth4            `|Y       |`ISO14443-4 AES authentication`          
-|`hf mf -----------      `|Y       |``          
 |`hf mf sim              `|Y       |`Simulate MIFARE card`          
 |`hf mf eclr             `|Y       |`Clear simulator memory`          
 |`hf mf eget             `|Y       |`Get simulator memory block`          
@@ -294,7 +288,6 @@
 |`hf mf esave            `|Y       |`Save to file emul dump`          
 |`hf mf ecfill           `|Y       |`Fill simulator memory with help of keys from simulator`          
 |`hf mf ekeyprn          `|Y       |`Print keys from simulator memory`          
-|`hf mf -----------      `|Y       |``          
 |`hf mf csetuid          `|Y       |`Set UID     (magic chinese card)`          
 |`hf mf cwipe            `|Y       |`Wipe card to default UID/Sectors/Keys`          
 |`hf mf csetblk          `|Y       |`Write block (magic chinese card)`          
@@ -302,7 +295,6 @@
 |`hf mf cgetsc           `|Y       |`Read sector (magic chinese card)`          
 |`hf mf cload            `|Y       |`Load dump   (magic chinese card)`          
 |`hf mf csave            `|Y       |`Save dump from magic chinese card into file or emulator`          
-|`hf mf -----------      `|Y       |``          
 |`hf mf mad              `|Y       |`Checks and prints MAD`          
 |`hf mf ndef             `|Y       |`Prints NDEF records from card`          
 |`hf mf ice              `|Y       |`collect MIFARE Classic nonces to file`          
@@ -434,7 +426,6 @@
 |command                  |offline |description          
 |-------                  |------- |-----------          
 |`lf help                `|Y       |`This help`          
-|`lf                     `|Y       |``          
 |`lf config              `|Y       |`Get/Set config for LF sampling, bit/sample, decimation, frequency`          
 |`lf cmdread             `|Y       |`<off period> <'0' period> <'1' period> <command> ['h' 134] 
 		-- Modulate LF reader field to send command before read (all periods in microseconds)`          
