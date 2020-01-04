@@ -775,7 +775,12 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_PSK_SIMULATE: {
             lf_psksim_t *payload = (lf_psksim_t *)packet->data.asBytes;
-            CmdPSKsimTag(payload->carrier, payload->invert, payload->clock, packet->length - sizeof(lf_psksim_t), payload->data, true);
+            CmdPSKsimTAG(payload->carrier, payload->invert, payload->clock, packet->length - sizeof(lf_psksim_t), payload->data, true);
+            break;
+        }
+        case CMD_LF_NRZ_SIMULATE: {
+            lf_nrzsim_t *payload = (lf_nrzsim_t *)packet->data.asBytes;
+            CmdNRZsimTAG(payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_asksim_t), payload->data, true);
             break;
         }
         case CMD_LF_HID_CLONE: {
@@ -1598,6 +1603,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 BigBuf_Clear_ext(false);
                 BigBuf_free();
             }
+            
+            // 40 000 - (512-3) 509 = 39491
             uint16_t offset = MIN(BIGBUF_SIZE - PM3_CMD_DATA_SIZE - 3, payload->offset);
 
             // need to copy len bytes of data, not PM3_CMD_DATA_SIZE - 3 - offset
@@ -1605,6 +1612,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t len = MIN(BIGBUF_SIZE - offset, PM3_CMD_DATA_SIZE - 3);
 
             uint8_t *mem = BigBuf_get_addr();
+
+            // x + 394
             memcpy(mem + offset, &payload->data, len);
             // memcpy(mem + offset, &payload->data, PM3_CMD_DATA_SIZE - 3 - offset);
             reply_ng(CMD_LF_UPLOAD_SIM_SAMPLES, PM3_SUCCESS, NULL, 0);
