@@ -174,14 +174,21 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         dumpCommandsRecursive(Commands, 1);
         return PM3_SUCCESS;
     }
+
     char cmd_name[128];
-    int len = 0;
     memset(cmd_name, 0, sizeof(cmd_name));
+
+    int len = 0;    
+    // %n == receives an integer of value equal to the number of chars read so far.
+    // len = max 127
     sscanf(Cmd, "%127s%n", cmd_name, &len);
+
     str_lower(cmd_name);
+
     // Comment
     if (cmd_name[0] == '#')
         return PM3_SUCCESS;
+
     int i = 0;
     while (Commands[i].Name) {
         if (0 == strcmp(Commands[i].Name, cmd_name)) {
@@ -241,8 +248,11 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     }
 
     while (cmds[i].Name) {
-        const char *cmd_offline = "N";
+        
+        if ((cmds[i].Name[0] == '-' || strlen(cmds[i].Name) == 0) && ++i) continue;
         if (cmds[i].Help[0] == '{' && ++i) continue;
+        
+        const char *cmd_offline = "N";
 
         if (cmds[i].IsAvailable())
             cmd_offline = "Y";
@@ -257,6 +267,8 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
 
     // Then, print the categories. These will go into subsections with their own tables
     while (cmds[i].Name) {
+
+        if ((cmds[i].Name[0] == '-' || strlen(cmds[i].Name) == 0) && ++i) continue;
         if (cmds[i].Help[0] != '{' && ++i)  continue;
 
         PrintAndLogEx(NORMAL, "### %s%s\n\n %s\n", parent, cmds[i].Name, cmds[i].Help);
