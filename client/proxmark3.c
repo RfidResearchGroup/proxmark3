@@ -177,10 +177,13 @@ check_script:
             if (execCommand) {
                 if ((cmd = strmcopy(script_cmd)) != NULL)
                     printprompt = true;
+
                 uint16_t len = strlen(script_cmd) + 1;
                 script_cmd += len;
+
                 if (script_cmd_len == len - 1)
                     execCommand = false;
+
                 script_cmd_len -= len;
             } else {
                 // exit after exec command
@@ -210,8 +213,9 @@ check_script:
                             prompt = PROXPROMPT_USB;
                         else
                             prompt = PROXPROMPT_FPC;
-                    } else
+                    } else {
                         prompt = PROXPROMPT_OFFLINE;
+                    }
                     cmd = readline(prompt);
                     fflush(NULL);
                 }
@@ -228,15 +232,20 @@ check_script:
             }
             // ltrim
             size_t off = 0;
-            while ((cmd[off] != '\0') && isspace(cmd[off]))
+            while ((cmd[off] != '\0') && isspace(cmd[off])) {
                 off++;
-            for (size_t i = 0; i < strlen(cmd) - off; i++)
+            }
+
+            for (size_t i = 0; i < strlen(cmd) - off; i++) {
                 cmd[i] = cmd[i + off];
+            }
+
             cmd[strlen(cmd) - off] = '\0';
 
             if (cmd[0] != '\0') {
-                if (!printprompt)
+                if (!printprompt) {
                     g_printAndLog = PRINTANDLOG_LOG;
+                }
                 PrintAndLogEx(NORMAL, "%s%s", prompt, cmd);
                 g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
@@ -244,8 +253,9 @@ check_script:
                 if (!current_cmdscriptfile()) {
                     HIST_ENTRY *entry = history_get(history_length);
                     // add if not identical to latest recorded cmd
-                    if ((!entry) || (strcmp(entry->line, cmd) != 0))
+                    if ((!entry) || (strcmp(entry->line, cmd) != 0)) {
                         add_history(cmd);
+                    }
                 }
                 // process cmd
                 int ret = CommandReceived(cmd);
@@ -277,6 +287,7 @@ check_script:
         write_history(my_history_path);
         free(my_history_path);
     }
+
     if (cmd) {
         free(cmd);
         cmd = NULL;
