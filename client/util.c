@@ -922,7 +922,7 @@ char *strmcopy(const char *src) {
     char *dest = (char *) calloc(strlen(src) + 1, sizeof(uint8_t));
     if (dest != NULL) {
         memset(dest, 0, strlen(src) + 1);
-        strncat(dest, src, strlen(src));
+        strncat(dest, src, strlen(dest));
     }
     return dest;
 }
