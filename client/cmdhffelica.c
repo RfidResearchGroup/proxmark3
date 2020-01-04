@@ -465,11 +465,11 @@ static void print_rd_noEncrpytion_response(felica_read_without_encryption_respon
         char *temp = sprint_hex(rd_noCry_resp->block_data, sizeof(rd_noCry_resp->block_data));
 
         char bl_data[256];
-        strcpy(bl_data, temp);
+        strncpy(bl_data, temp, sizeof(bl_data) - 1);
 
         char bl_element_number[4];
         temp = sprint_hex(rd_noCry_resp->block_element_number, sizeof(rd_noCry_resp->block_element_number));
-        strcpy(bl_element_number, temp);
+        strncpy(bl_element_number, temp, sizeof(bl_element_number) - 1);
 
         PrintAndLogEx(INFO, "\t%s\t|  %s  ", bl_element_number, bl_data);
     } else {
