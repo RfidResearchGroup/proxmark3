@@ -1,9 +1,4 @@
-[=] Session log /home/iceman/.proxmark3/log_20200104.txt
-[+] execute command from commandline: XX_internal_command_dump_markdown_XX 
-          
-[=] Using UART port /dev/ttyS7           
-[=] Communicating with PM3 over USB-CDC           
-pm3 --> XX_internal_command_dump_markdown_XX          
+    
 |command                  |offline |description          
 |-------                  |------- |-----------          
 |`help                   `|Y       |`This help. Use '<command> help' for details of a particular command.`          
