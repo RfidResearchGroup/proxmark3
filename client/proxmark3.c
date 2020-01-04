@@ -150,7 +150,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        const char *prompt = PROXPROMPT;
+        const char *prompt = PROXPROMPT_CON;
 
 check_script:
         // If there is a script file
@@ -765,10 +765,6 @@ int main(int argc, char *argv[]) {
     if (session.stdinOnTTY && session.stdoutOnTTY)
         session.supports_colors = true;
 #endif
-    // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
-        showBanner();
-
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
         speed = USART_BAUD_RATE;
@@ -818,6 +814,10 @@ int main(int argc, char *argv[]) {
 
     if (!session.pm3_present)
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
+
+    // ascii art only in interactive client
+    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
+        showBanner();
 
 #ifdef HAVE_GUI
 
