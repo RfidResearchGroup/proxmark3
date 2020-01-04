@@ -239,6 +239,14 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_psksim_t;
 
+// For CMD_LF_NRZ_SIMULATE (NRZ)
+typedef struct {
+    uint8_t invert;
+    uint8_t separator;
+    uint8_t clock;
+    uint8_t data[];
+} PACKED lf_nrzsim_t;
+
 typedef struct {
     uint8_t blockno;
     uint8_t keytype;
@@ -371,12 +379,13 @@ typedef struct {
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
 #define CMD_LF_IO_DEMOD                                                   0x021A
-#define CMD_LF_EM410X_DEMOD                                               0x021c
+#define CMD_LF_EM410X_DEMOD                                               0x021C
 // Sampling configuration for LF reader/sniffer
-#define CMD_LF_SAMPLING_SET_CONFIG                                        0x021d
+#define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
 #define CMD_LF_ASK_SIMULATE                                               0x021F
 #define CMD_LF_PSK_SIMULATE                                               0x0220
+#define CMD_LF_NRZ_SIMULATE                                               0x0232
 #define CMD_LF_AWID_DEMOD                                                 0x0221
 #define CMD_LF_VIKING_CLONE                                               0x0222
 #define CMD_LF_T55XX_WAKEUP                                               0x0224

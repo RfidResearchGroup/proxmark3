@@ -1149,7 +1149,7 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 }
 
 // args clock, carrier, invert,
-void CmdPSKsimTag(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
+void CmdPSKsimTAG(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
@@ -1171,6 +1171,55 @@ void CmdPSKsimTag(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, u
     SimulateTagLowFrequency(n, 0, ledcontrol);
     if (ledcontrol) LED_A_OFF();
     reply_ng(CMD_LF_PSK_SIMULATE, PM3_EOPABORTED, NULL, 0);
+}
+
+// compose nrz waveform for one bit(NRZ)
+static void nrzSimBit(uint8_t c, int *n, uint8_t clock) {
+    uint8_t *dest = BigBuf_get_addr();
+//    uint8_t halfClk = clock / 2;
+    // c = current bit 1 or 0
+    memset(dest + (*n), c, clock);
+    *n += clock;
+}
+
+// args clock, 
+void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    set_tracing(false);
+
+    int n = 0, i = 0;
+
+    // NRZ
+
+    leadingZeroAskSimBits(&n, clk);
+
+    for (i = 0; i < size; i++) {
+        nrzSimBit(bits[i] ^ invert, &n, clk);
+    }
+
+    if (bits[0] == bits[size - 1]) { //run a second set inverted (for ask/raw || biphase phase)
+        for (i = 0; i < size; i++) {
+            nrzSimBit(bits[i] ^ invert ^ 1, &n, clk);
+        }
+    }
+
+    if (separator == 1)
+        Dbprintf("sorry but separator option not yet available");
+
+    WDT_HIT();
+
+    Dbprintf("Simulating with clk: %d, invert: %d, separator: %d, n: %d"
+             , clk
+             , invert
+             , separator
+             , n
+            );
+
+    if (ledcontrol) LED_A_ON();
+    SimulateTagLowFrequency(n, 0, ledcontrol);
+    if (ledcontrol) LED_A_OFF();
+    reply_ng(CMD_LF_NRZ_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
 
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
