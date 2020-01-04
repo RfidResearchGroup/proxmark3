@@ -618,6 +618,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
     if (data == NULL) return PM3_EINVARG;
+    
     char *fileName = filenamemcopy(preferredName, ".eml");
     if (fileName == NULL) return PM3_EMALLOC;
 
@@ -635,6 +636,8 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
     char line[131];
     memset(line, 0, sizeof(line));
     uint8_t buf[64] = {0x00};
+
+    uint8_t *udata = (uint8_t*)data;
 
     while (!feof(f)) {
 
@@ -654,7 +657,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
         int res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
         if (res == 0 || res == 1) {
-            memcpy(data + counter, buf, hexlen);
+            memcpy(udata + counter, buf, hexlen);
             counter += hexlen;
         }
     }
@@ -832,10 +835,11 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 
 int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt,
                          size_t startFilePosition, size_t *endFilePosition, bool verbose) {
+
+    if (data == NULL) return PM3_EINVARG;
+
     if (endFilePosition)
         *endFilePosition = 0;
-    if (data == NULL) return PM3_EINVARG;
-    uint16_t vkeycnt = 0;
 
     char *path;
     if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
@@ -845,7 +849,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     keylen <<= 1;
 
     char line[255];
-
+    uint16_t vkeycnt = 0;
     size_t counter = 0;
     int retval = PM3_SUCCESS;
 
@@ -863,6 +867,8 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
             goto out;
         }
     }
+
+    uint8_t *udata = (uint8_t*)data;
     
     // read file
     while (!feof(f)) {
@@ -895,7 +901,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
             break;
         }
 
-        if (hex_to_bytes(line, data + counter, keylen >> 1) != (keylen >> 1))
+        if (hex_to_bytes(line, udata + counter, keylen >> 1) != (keylen >> 1))
             continue;
 
         vkeycnt++;
