@@ -10,6 +10,8 @@
 #include "cmdlfpac.h"
 
 #include <ctype.h>          //tolower
+#include <string.h>
+#include <stdlib.h>
 
 #include "commonutil.h"     // ARRAYLEN
 #include "common.h"
@@ -39,7 +41,19 @@ static int usage_lf_pac_clone(void) {
     PrintAndLogEx(NORMAL, "       lf pac clone b FF2049906D8511C593155B56D5B2649F ");
     return PM3_SUCCESS;
 }
-
+static int usage_lf_pac_sim(void) {
+    PrintAndLogEx(NORMAL, "Enables simulation of PAC/Stanley card with specified card number.");
+    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+    PrintAndLogEx(NORMAL, "The card ID is 8 byte number. Larger values are truncated.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf pac sim <Card-ID>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  <Card ID>       : 8 byte PAC/Stanley card id");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       lf pac sim 1A337");
+    return PM3_SUCCESS;
+}
 // by danshuk
 // PAC_8byte format: preamble (8 mark/idle bits), ascii STX (02), ascii '2' (32), ascii '0' (30), ascii bytes 0..7 (cardid), then xor checksum of cardid bytes
 // all bytes following 8 bit preamble are one start bit (0), 7 data bits (lsb first), odd parity bit, and one stop bit (1)
@@ -231,7 +245,38 @@ static int CmdPacClone(const char *Cmd) {
 static int CmdPacSim(const char *Cmd) {
 
     // NRZ sim.
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    uint32_t id = 0;
+    uint64_t rawID = 0;
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pac_sim();
+
+    id = param_get32ex(Cmd, 0, 0, 16);
+    if (id == 0) return usage_lf_pac_sim();
+
+    //rawID = pacCardIdToRaw(id);
+
+    PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%08X")" raw "_YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
+
+    uint8_t bs[128];
+    num_to_bytebits(rawID, sizeof(bs), bs);
+
+    lf_nrzsim_t *payload = calloc(1, sizeof(lf_nrzsim_t) + sizeof(bs));
+    payload->invert = 0;
+    payload->separator = 0;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_NRZ_SIMULATE, (uint8_t *)payload,  sizeof(lf_nrzsim_t) + sizeof(bs));
+    free(payload);
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_NRZ_SIMULATE, &resp);
+
+    PrintAndLogEx(INFO, "Done");
+    if (resp.status != PM3_EOPABORTED)
+        return resp.status;
+
     return PM3_SUCCESS;
 }
 
