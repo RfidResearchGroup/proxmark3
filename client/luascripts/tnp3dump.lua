@@ -109,7 +109,6 @@ local function main(args)
     local useNested = false
     local usePreCalc = false
     local cmdReadBlockString = 'hf mf rdbl %d A %s'
-    local input = "dumpkeys.bin"
     local outputTemplate = os.date("toydump_%Y-%m-%d_%H%M%S");
 
     -- Arguments for the script
@@ -132,13 +131,13 @@ local function main(args)
     core.console( cmdSetDbgOff)
     utils.Sleep(0.5)
 
-    result, err = lib14a.read(false, true)
-    if not result then return oops(err) end
+    tag, err = lib14a.read(false, true)
+    if not tag then return oops(err) end
 
     core.clearCommandBuffer()
 
     -- Show tag info
-    print((' Found tag %s'):format(result.name))
+    print((' Found tag %s'):format(tag.name))
 
     dbg(('Using keyA : %s'):format(keyA))
 
@@ -152,13 +151,18 @@ local function main(args)
     local akeys = ''
     if usePreCalc then
         local pre = require('precalc')
-        akeys = pre.GetAll(result.uid)
+        akeys = pre.GetAll(tag.uid)
         dbg(akeys)
     else
-        print('Loading dumpkeys.bin')
-        local hex, err = utils.ReadDumpFile(input)
+        local filename = ('hf-mf-%s-key.bin'):format(tag.uid);
+        print('loading '..filename)
+        local hex, err = utils.ReadDumpFile(filename)
         if not hex then
-            return oops(err)
+            print('loading dumpkeys.bin')
+            hex, err = utils.ReadDumpFile('dumpkeys.bin')
+            if not hex then
+                return oops(err)
+            end
         end
         akeys = hex:sub(0,12*16)
     end

@@ -71,11 +71,14 @@ local function exitMsg(msg)
 end
 ---
 -- dumps all keys to file
-local function dumptofile(keys)
+local function dumptofile(uid, keys)
     dbg('dumping keys to file')
 
     if utils.confirm('Do you wish to save the keys to dumpfile?') then
-        local destination = utils.input('Select a filename to store to', 'dumpkeys.bin')
+    
+        local filename = ('hf-mf-%s-key.bin'):format(uid);
+    
+        local destination = utils.input('Select a filename to store to', filename)
         local file = io.open(destination, 'wb')
         if file == nil then
             print('Could not write to file ', destination)
@@ -172,7 +175,7 @@ local function main(args)
 
     local keys, err = createKeys( uid )
     printKeys( keys )
-    dumptofile( keys )
+    dumptofile( uid, keys )
 end
 
 main(args)
