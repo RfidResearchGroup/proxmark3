@@ -21,7 +21,7 @@
 |[Notes on external flash](/doc/ext_flash_notes.md)||[EMV](/doc/emv_notes.md)|
 |[Notes on Termux / Android](/doc/termux_notes.md)||[Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md)|
 |[Notes on wireshark / tracedata](/doc/trace_wireshark_notes.md)||[JTAG](/doc/jtag_notes.md)|
-|[Notes on loclass](/doc/loclass_notes.md)|||
+|[Notes on loclass](/doc/loclass_notes.md)||[Complete client command set](/doc/commands.md)|
 |[Notes on paths](/doc/path_notes.md)|||
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode) ||
 |[Donations](#Donations)|||
