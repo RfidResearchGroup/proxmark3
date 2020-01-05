@@ -99,6 +99,7 @@ bool str_endswith(const char *s,  const char *suffix);    // check for suffix in
 void clean_ascii(unsigned char *buf, size_t len);
 void strcleanrn(char *buf, size_t len);
 void strcreplace(char *buf, size_t len, char from, char to);
-char *strmcopy(const char *src);
+char *strdup(const char *src);
+char *strndup(const char *src, size_t len);
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 #endif

@@ -10,9 +10,10 @@
 //-----------------------------------------------------------------------------
 
 #include "proxmark3.h"
-#include <limits.h>
-#include <stdio.h> // for Mingw readline
+
 #include <stdlib.h>
+#include <stdio.h>         // for Mingw readline
+#include <limits.h>
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -26,7 +27,6 @@
 #include "comms.h"
 #include "fileutils.h"
 #include "flash.h"
-
 
 static void showBanner(void) {
     g_printAndLog = PRINTANDLOG_PRINT;
@@ -169,13 +169,16 @@ check_script:
                 // remove linebreaks
                 strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
-                if ((cmd = strmcopy(script_cmd_buf)) != NULL)
+                cmd = strdup(script_cmd_buf);
+                if (cmd != NULL)
                     printprompt = true;
             }
         } else {
             // If there is a script command
             if (execCommand) {
-                if ((cmd = strmcopy(script_cmd)) != NULL)
+
+                cmd = strdup(script_cmd);
+                if (cmd != NULL)
                     printprompt = true;
 
                 uint16_t len = strlen(script_cmd) + 1;
@@ -203,7 +206,8 @@ check_script:
                     // remove linebreaks
                     strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
-                    if ((cmd = strmcopy(script_cmd_buf)) != NULL)
+                    cmd = strdup(script_cmd_buf);
+                    if (cmd != NULL)
                         printprompt = true;
 
                 } else {
