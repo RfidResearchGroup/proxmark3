@@ -1750,7 +1750,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 if (param_gethex(Cmd, cmdp + 3, key, 12)) {
                     PrintAndLogEx(WARNING, "Key must include 12 HEX symbols");
                     errors = true;
-                    return PM3_EINVARG;
                 }
                 know_target_key = true;
                 cmdp += 3;
@@ -1896,7 +1895,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool load_success = true;
     // Load the dictionary
     if (has_filename) {
-        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 6, &key_cnt);
+        res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 6, &key_cnt);
         if (res != PM3_SUCCESS || key_cnt == 0 || keyBlock == NULL) {
             PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
             if (keyBlock != NULL)
@@ -1965,7 +1964,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 if (size == key_cnt - i)
                     lastChunk = true;
 
-                int res = mfCheckKeys_fast(sectors_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
+                res = mfCheckKeys_fast(sectors_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
                 if (firstChunk)
                     firstChunk = false;
                 // all keys,  aborted
@@ -2016,7 +2015,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         // Check if the darkside attack can be used
         if (prng_type) {
             if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= START  DARKSIDE  ATTACK ======================="));
-            int isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType, &key64);
+            isOK = mfDarkside(FirstBlockOfSector(blockNo), keyType, &key64);
             if (verbose) PrintAndLogEx(INFO, _YELLOW_("======================= STOP   DARKSIDE  ATTACK ======================="));
             switch (isOK) {
                 case -1 :
@@ -2508,7 +2507,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 if (size == keycnt - i)
                     lastChunk = true;
 
-                int res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
+                res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
 
                 if (firstChunk)
                     firstChunk = false;
@@ -4310,10 +4309,8 @@ static int CmdHF14AMfice(const char *Cmd) {
         if (resp.oldarg[0])  goto out;
 
         uint32_t items = resp.oldarg[2];
-        if (fnonces) {
-            fwrite(resp.data.asBytes, 1, items * 4, fnonces);
-            fflush(fnonces);
-        }
+        fwrite(resp.data.asBytes, 1, items * 4, fnonces);
+        fflush(fnonces);
 
         total_num_nonces += items;
         if (total_num_nonces > part_limit) {
