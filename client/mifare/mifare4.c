@@ -22,12 +22,7 @@ void mfpSetVerboseMode(bool verbose) {
     VerboseMode = verbose;
 }
 
-typedef struct {
-    uint8_t Code;
-    const char *Description;
-} PlusErrorsElm;
-
-static const PlusErrorsElm PlusErrors[] = {
+static const PlusErrorsElm_t PlusErrors[] = {
     {0xFF, ""},
     {0x00, "Transfer cannot be granted within the current authentication."},
     {0x06, "Access Conditions not fulfilled. Block does not exist, block is not a value block."},
@@ -96,7 +91,7 @@ const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
 };
 /*
 static int CalculateEncIVCommand(mf4Session_t *session, uint8_t *iv, bool verbose) {
-    memcpy(&iv[0], session->TI, 4);
+    memcpy(&iv[0], &session->TI, 4);
     memcpy(&iv[4], &session->R_Ctr, 2);
     memcpy(&iv[6], &session->W_Ctr, 2);
     memcpy(&iv[8], &session->R_Ctr, 2);
@@ -114,7 +109,7 @@ static int CalculateEncIVResponse(mf4Session *session, uint8_t *iv, bool verbose
     memcpy(&iv[6], &session->W_Ctr, 2);
     memcpy(&iv[8], &session->R_Ctr, 2);
     memcpy(&iv[10], &session->W_Ctr, 2);
-    memcpy(&iv[12], session->TI, 4);
+    memcpy(&iv[12], &session->TI, 4);
 
     return 0;
 }
@@ -382,8 +377,8 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     if (verbose)
         PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
 
-    mf4Session_t session;
-    int res = MifareAuth4(&session, keyn, key, true, true, true, verbose, false);
+    mf4Session_t _session;
+    int res = MifareAuth4(&_session, keyn, key, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Sector %d authentication error: %d", sectorNo, res);
         return res;
@@ -394,7 +389,7 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     uint8_t mac[8] = {0};
     uint8_t firstBlockNo = mfFirstBlockOfSector(sectorNo);
     for (int n = firstBlockNo; n < firstBlockNo + mfNumBlocksPerSector(sectorNo); n++) {
-        res = MFPReadBlock(&session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
+        res = MFPReadBlock(&_session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
         if (res) {
             PrintAndLogEx(ERR, "Sector %d read error: %d", sectorNo, res);
             DropField();
