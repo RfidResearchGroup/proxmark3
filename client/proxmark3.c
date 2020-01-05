@@ -169,7 +169,7 @@ check_script:
                 // remove linebreaks
                 strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
-                cmd = strdup(script_cmd_buf);
+                cmd = str_dup(script_cmd_buf);
                 if (cmd != NULL)
                     printprompt = true;
             }
@@ -177,7 +177,7 @@ check_script:
             // If there is a script command
             if (execCommand) {
 
-                cmd = strdup(script_cmd);
+                cmd = str_dup(script_cmd);
                 if (cmd != NULL)
                     printprompt = true;
 
@@ -206,7 +206,7 @@ check_script:
                     // remove linebreaks
                     strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
-                    cmd = strdup(script_cmd_buf);
+                    cmd = str_dup(script_cmd_buf);
                     if (cmd != NULL)
                         printprompt = true;
 

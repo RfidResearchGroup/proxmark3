@@ -919,10 +919,10 @@ void strcreplace(char *buf, size_t len, char from, char to) {
 }
 
 
-char *strdup(const char *src) {
-    return strndup(src, strlen(src));
+char *str_dup(const char *src) {
+    return str_ndup(src, strlen(src));
 }
-char *strndup(const char *src, size_t len) {
+char *str_ndup(const char *src, size_t len) {
 
     char *dest = (char *) calloc(len + 1, sizeof(uint8_t));
     if (dest != NULL) {
