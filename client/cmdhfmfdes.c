@@ -529,10 +529,10 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     uint8_t isOK  = resp.oldarg[0] & 0xff;
     if (isOK) {
-        uint8_t *session = resp.data.asBytes;
+        uint8_t *session_key = resp.data.asBytes;
 
         PrintAndLogEx(NORMAL, "  Key        :%s", sprint_hex(key, keylength));
-        PrintAndLogEx(NORMAL, "  SESSION    :%s", sprint_hex(session, keylength));
+        PrintAndLogEx(NORMAL, "  SESSION    :%s", sprint_hex(session_key, keylength));
         PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
         //PrintAndLogEx(NORMAL, "  Expected   :B5 21 9E E8 1A A7 49 9D 21 96 68 7E 13 97 38 56");
     } else {
