@@ -41,6 +41,12 @@ typedef struct {
     const char *description;
 } AccessConditions_t;
 
+
+typedef struct {
+    uint8_t Code;
+    const char *Description;
+} PlusErrorsElm_t;
+
 void mfpSetVerboseMode(bool verbose);
 const char *mfpGetErrorDescription(uint8_t errorCode);
 
