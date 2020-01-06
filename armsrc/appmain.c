@@ -780,7 +780,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_NRZ_SIMULATE: {
             lf_nrzsim_t *payload = (lf_nrzsim_t *)packet->data.asBytes;
-            CmdNRZsimTAG(payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_asksim_t), payload->data, true);
+            CmdNRZsimTAG(payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_nrzsim_t), payload->data, true);
             break;
         }
         case CMD_LF_HID_CLONE: {
