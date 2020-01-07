@@ -440,10 +440,10 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
  */
 static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_t dataPosition, uint8_t length) {
     if (param_getlength(Cmd, paramCount) == length) {
-        
+
         if (param_gethex(Cmd, paramCount, data + dataPosition, length) == 1)
-            return false;    
-        else 
+            return false;
+        else
             return true;
 
     } else {
@@ -460,7 +460,7 @@ static bool add_param(const char *Cmd, uint8_t paramCount, uint8_t *data, uint8_
 static void print_rd_noEncrpytion_response(felica_read_without_encryption_response_t *rd_noCry_resp) {
 
     if (rd_noCry_resp->status_flags.status_flag1[0] == 00 &&
-        rd_noCry_resp->status_flags.status_flag2[0] == 00) {
+            rd_noCry_resp->status_flags.status_flag2[0] == 00) {
 
         char *temp = sprint_hex(rd_noCry_resp->block_data, sizeof(rd_noCry_resp->block_data));
 
@@ -653,7 +653,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
         mbedtls_des3_set3key_enc(&des3_ctx, master_key);
         PrintAndLogEx(INFO, "3DES Master Secret: %s", sprint_hex(master_key, 24));
     } else if (param_getlength(Cmd, paramCount) == 32) {
-        
+
         if (param_gethex(Cmd, paramCount, master_key, 32) == 1) {
             PrintAndLogEx(ERR, "Failed param key");
             return PM3_EINVARG;
@@ -781,7 +781,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     mbedtls_des3_init(&des3_ctx);
     unsigned char p3c[8];
     if (param_getlength(Cmd, paramCount) == 32) {
-        
+
         if (param_gethex(Cmd, paramCount, master_key, 32) == 1) {
             PrintAndLogEx(ERR, "Failed param key");
             return PM3_EINVARG;
@@ -1131,7 +1131,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     } else {
         felica_request_spec_response_t spec_response;
         memcpy(&spec_response, (felica_request_spec_response_t *)resp.data.asBytes, sizeof(felica_request_spec_response_t));
-        
+
         if (spec_response.frame_response.IDm[0] != 0) {
             PrintAndLogEx(SUCCESS, "\nGot Request Response:");
             PrintAndLogEx(SUCCESS, "\nIDm: %s", sprint_hex(spec_response.frame_response.IDm, sizeof(spec_response.frame_response.IDm)));
@@ -1336,12 +1336,12 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (!all_nodes) {
         // Node Number
         if (param_getlength(Cmd, paramCount) == 2) {
-            
+
             if (param_gethex(Cmd, paramCount++, data + 10, 2) == 1) {
                 PrintAndLogEx(ERR, "Failed param key");
                 return PM3_EINVARG;
             }
-            
+
         } else {
             PrintAndLogEx(ERR, "Incorrect Node number length!");
             return PM3_EINVARG;
@@ -1349,7 +1349,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     }
 
     if (param_getlength(Cmd, paramCount) == 4) {
-        
+
         if (param_gethex(Cmd, paramCount++, data + 11, 4) == 1) {
             PrintAndLogEx(ERR, "Failed param key");
             return PM3_EINVARG;
@@ -1372,7 +1372,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
-    
+
     data[0] = int_to_hex(&datalen);
     data[1] = 0x02; // Service Request Command ID
     if (all_nodes) {
@@ -1435,12 +1435,12 @@ static int CmdHFFelicaSniff(const char *Cmd) {
         }
         i++;
     }
-    
+
     if (samples2skip == 0) {
         samples2skip = 10;
         PrintAndLogEx(INFO, "Set default samples2skip: %" PRIu64, samples2skip);
     }
-    
+
     if (triggers2skip == 0) {
         triggers2skip = 5000;
         PrintAndLogEx(INFO, "Set default triggers2skip: %" PRIu64, triggers2skip);
