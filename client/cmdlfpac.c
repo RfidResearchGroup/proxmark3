@@ -51,7 +51,7 @@ static int usage_lf_pac_sim(void) {
     PrintAndLogEx(NORMAL, "  <Card ID>       : 8 byte PAC/Stanley card id");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf pac sim 1A337");
+    PrintAndLogEx(NORMAL, "       lf pac sim 12345678");
     return PM3_SUCCESS;
 }
 // by danshuk
@@ -245,20 +245,23 @@ static int CmdPacClone(const char *Cmd) {
 static int CmdPacSim(const char *Cmd) {
 
     // NRZ sim.
-    uint32_t id = 0;
-    uint64_t rawID = 0;
+    char cardid[9] = { 0 };
+    uint8_t rawBytes[16] = { 0 };
+    uint32_t rawBlocks[4];
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_pac_sim();
 
-    id = param_get32ex(Cmd, 0, 0, 16);
-    if (id == 0) return usage_lf_pac_sim();
-
-    //rawID = pacCardIdToRaw(id);
-
-    PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%08X")" raw "_YELLOW_("%08X%08X"), id, (uint32_t)(rawID >> 32), (uint32_t)(rawID & 0xFFFFFFFF));
+    int res = param_getstr(Cmd, 0, cardid, sizeof(cardid));
+    if (res < 8) return usage_lf_pac_sim();
 
     uint8_t bs[128];
-    num_to_bytebits(rawID, sizeof(bs), bs);
+    pacCardIdToRaw(rawBytes, cardid);
+    for (size_t i = 0; i < ARRAYLEN(rawBlocks); i++) {
+        rawBlocks[i] = bytes_to_num(rawBytes + (i * sizeof(uint32_t)), sizeof(uint32_t));
+        num_to_bytebits(rawBlocks[i], sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
+    }
+    
+    PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%s")" raw "_YELLOW_("%08X%08X%08X%08X"), cardid, rawBlocks[0], rawBlocks[1], rawBlocks[2], rawBlocks[3]);
 
     lf_nrzsim_t *payload = calloc(1, sizeof(lf_nrzsim_t) + sizeof(bs));
     payload->invert = 0;

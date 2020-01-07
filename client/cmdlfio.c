@@ -47,9 +47,9 @@ static int usage_lf_io_sim(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf io sim [h] <version> <facility-code> <card-number>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "                h :  This help");
-    PrintAndLogEx(NORMAL, "        <version> :  8bit version");
-    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code");
-    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number");
+    PrintAndLogEx(NORMAL, "        <version> :  8bit version (decimal)");
+    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (hex)");
+    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (decimal)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf io sim 26 101 1337");
@@ -63,9 +63,9 @@ static int usage_lf_io_clone(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf io clone [h] <version> <facility-code> <card-number> [Q5]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "                h :  This help");
-    PrintAndLogEx(NORMAL, "        <version> :  8bit version");
-    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code");
-    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number");
+    PrintAndLogEx(NORMAL, "        <version> :  8bit version (decimal)");
+    PrintAndLogEx(NORMAL, "  <facility-code> :  8bit value facility code (hex)");
+    PrintAndLogEx(NORMAL, "    <card number> :  16bit value card number (decimal)");
     PrintAndLogEx(NORMAL, "               Q5 :  optional - clone to Q5 (T5555) instead of T55x7 chip");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -197,7 +197,7 @@ static int CmdIOProxSim(const char *Cmd) {
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_sim();
 
     version = param_get8(Cmd, 0);
-    fc = param_get8(Cmd, 1);
+    fc = param_get8ex(Cmd, 1, 0, 16);
     cn = param_get32ex(Cmd, 2, 0, 10);
 
     if (!version || !fc || !cn) return usage_lf_io_sim();
@@ -249,7 +249,7 @@ static int CmdIOProxClone(const char *Cmd) {
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_io_clone();
 
     version = param_get8(Cmd, 0);
-    fc = param_get8(Cmd, 1);
+    fc = param_get8ex(Cmd, 1, 0, 16);
     cn = param_get32ex(Cmd, 2, 0, 10);
 
     if (!version || !fc || !cn) return usage_lf_io_clone();
