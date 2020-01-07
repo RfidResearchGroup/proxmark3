@@ -75,9 +75,9 @@ local function dumptofile(uid, keys)
     dbg('dumping keys to file')
 
     if utils.confirm('Do you wish to save the keys to dumpfile?') then
-    
+
         local filename = ('hf-mf-%s-key.bin'):format(uid);
-    
+
         local destination = utils.input('Select a filename to store to', filename)
         local file = io.open(destination, 'wb')
         if file == nil then
