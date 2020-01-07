@@ -473,7 +473,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // now do the read
-    DoAcquisition_config(false, 0);
+    DoAcquisition_config(true, 0);
 
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1182,7 +1182,7 @@ static void nrzSimBit(uint8_t c, int *n, uint8_t clock) {
     *n += clock;
 }
 
-// args clock, 
+// args clock,
 void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -1198,7 +1198,7 @@ void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size,
         nrzSimBit(bits[i] ^ invert, &n, clk);
     }
 
-    if (bits[0] == bits[size - 1]) { //run a second set inverted (for ask/raw || biphase phase)
+    if (bits[0] == bits[size - 1]) {
         for (i = 0; i < size; i++) {
             nrzSimBit(bits[i] ^ invert ^ 1, &n, clk);
         }
@@ -1239,7 +1239,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition_default(-1, true);
+        DoAcquisition_default(-1, false);
         // FSK demodulator
         size = 50 * 128 * 2; //big enough to catch 2 sequences of largest format
         int idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
@@ -1330,7 +1330,7 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition_default(-1, true);
+        DoAcquisition_default(-1, false);
         // FSK demodulator
 
         size = MIN(12800, BigBuf_max_traceLen());
@@ -1421,11 +1421,11 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition_default(-1, true);
+        DoAcquisition_default(-1, false);
 
         size = MIN(16385, BigBuf_max_traceLen());
-        
-        //askdemod and manchester decode        
+
+        //askdemod and manchester decode
         int errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
         WDT_HIT();
 
@@ -1486,10 +1486,10 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition_default(-1, true);
+        DoAcquisition_default(-1, false);
 
         size = MIN(12000, BigBuf_max_traceLen());
-        
+
         //fskdemod and get start index
         int idx = detectIOProx(dest, &size, &dummyIdx);
         if (idx < 0) continue;
@@ -1772,7 +1772,7 @@ void T55xxResetRead(uint8_t flags) {
     TurnReadLFOn(T55xx_Timing.m[downlink_mode].read_gap);
 
     // Acquisition
-    DoPartialAcquisition(0, true, BigBuf_max_traceLen(), 0);
+    DoPartialAcquisition(0, false, BigBuf_max_traceLen(), 0);
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1869,7 +1869,7 @@ void T55xxWriteBlock(uint8_t *data) {
         // response should be (for t55x7) a 0 bit then (ST if on)
         // block data written in on repeat until reset.
 
-        //DoPartialAcquisition(20, true, 12000);
+        //DoPartialAcquisition(20, false, 12000);
     }
     // turn field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1930,7 +1930,7 @@ bool brute_mem = (flags & 0x0100) >> 8;
 
     // Acquisition
     // Now do the acquisition
-    DoPartialAcquisition(0, true, samples, 0);
+    DoPartialAcquisition(0, false, samples, 0);
 
     // Turn the field off
     if (!brute_mem) {
@@ -1990,7 +1990,7 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
 
     // Acquisition
     // Now do the acquisition
-    DoPartialAcquisition(0, true, samples, 0);
+    DoPartialAcquisition(0, false, samples, 0);
 
     // Turn the field off
     if (!brute_mem) {
@@ -2447,7 +2447,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
     WaitUS(400);
 
-    DoPartialAcquisition(20, true, 6000, 1000);
+    DoPartialAcquisition(20, false, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_EM4X_READWORD, PM3_SUCCESS, NULL, 0);
@@ -2480,7 +2480,7 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
     //Wait 20ms for write to complete?
     WaitMS(7);
 
-    DoPartialAcquisition(20, true, 6000, 1000);
+    DoPartialAcquisition(20, false, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
@@ -2550,7 +2550,7 @@ void Cotag(uint32_t arg0) {
             doCotagAcquisitionManchester();
             break;
         case 2:
-            DoAcquisition_config(true, 0);
+            DoAcquisition_config(true, true);
             break;
     }
 

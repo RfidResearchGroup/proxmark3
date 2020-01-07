@@ -77,13 +77,13 @@ static int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       s            silent run, no printout");
     PrintAndLogEx(NORMAL, "       d #samples   # samples to collect (optional)");
+    PrintAndLogEx(NORMAL, "       s            silent");
     PrintAndLogEx(NORMAL, "Use 'lf config' to set parameters.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         lf read s d 12000     - collects 12000samples silent");
-    PrintAndLogEx(NORMAL, "         lf read s");
+    PrintAndLogEx(NORMAL, "         lf read s d 12000     - collects 12000 samples silent");
+    PrintAndLogEx(NORMAL, "         lf read");
     return PM3_SUCCESS;
 }
 static int usage_lf_sim(void) {
@@ -367,7 +367,7 @@ int CmdLFCommandRead(const char *Cmd) {
     if (resp.status == PM3_SUCCESS) {
         if (i) {
             PrintAndLogEx(SUCCESS, "Downloading response signal data");
-            getSamples(0, true);
+            getSamples(0, false);
             return PM3_SUCCESS;
         } else {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -552,16 +552,16 @@ int CmdLFConfig(const char *Cmd) {
     return lf_config(&config);
 }
 
-int lf_read(bool silent, uint32_t samples) {
+int lf_read(bool verbose, uint32_t samples) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     struct p {
-        uint8_t silent;
+        uint8_t verbose;
         uint32_t samples;
     } PACKED;
 
     struct p payload;
-    payload.silent = silent;
+    payload.verbose = verbose;
     payload.samples = samples;
 
     clearCommandBuffer();
@@ -579,7 +579,7 @@ int lf_read(bool silent, uint32_t samples) {
 
     // resp.oldarg[0] is bits read not bytes read.
     uint32_t bits = (resp.data.asDwords[0] / 8);
-    getSamples(bits, silent);
+    getSamples(bits, verbose);
 
     return PM3_SUCCESS;
 }
@@ -589,20 +589,20 @@ int CmdLFRead(const char *Cmd) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     bool errors = false;
-    bool silent = false;
+    bool verbose = true;
     uint32_t samples = 0;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_lf_read();
-            case 's':
-                silent = true;
-                cmdp++;
-                break;
             case 'd':
                 samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
+                break;
+            case 's':
+                verbose = false;
+                cmdp++;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -614,7 +614,7 @@ int CmdLFRead(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_read();
 
-    return lf_read(silent, samples);
+    return lf_read(verbose, samples);
 }
 
 int CmdLFSniff(const char *Cmd) {
@@ -627,7 +627,7 @@ int CmdLFSniff(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SNIFF_RAW_ADC, NULL, 0);
     WaitForResponse(CMD_ACK, NULL);
-    getSamples(0, false);
+    getSamples(0, true);
     return PM3_SUCCESS;
 }
 
@@ -1183,7 +1183,7 @@ int CmdLFfind(const char *Cmd) {
     bool isOnline = (session.pm3_present && (cmdp != '1'));
 
     if (isOnline)
-        lf_read(true, 30000);
+        lf_read(false, 30000);
 
     if (GraphTraceLen < minLength) {
         PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");

@@ -1589,7 +1589,7 @@ static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b) {
     return val;
 }
 
-int getSamples(uint32_t n, bool silent) {
+int getSamples(uint32_t n, bool verbose) {
     //If we get all but the last byte in bigbuf,
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
@@ -1599,7 +1599,7 @@ int getSamples(uint32_t n, bool silent) {
     if (n == 0 || n > sizeof(got))
         n = sizeof(got);
 
-    if (!silent) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
+    if (verbose) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
 
     PacketResponseNG response;
     if (!GetFromDevice(BIG_BUF, got, n, 0, NULL, 0, &response, 10000, true)) {
@@ -1607,20 +1607,20 @@ int getSamples(uint32_t n, bool silent) {
         return PM3_ETIMEOUT;
     }
 
-    if (!silent) PrintAndLogEx(NORMAL, "Data fetched");
+    if (verbose) PrintAndLogEx(NORMAL, "Data fetched");
 
     uint8_t bits_per_sample = 8;
 
     //Old devices without this feature would send 0 at arg[0]
     if (response.oldarg[0] > 0) {
         sample_config *sc = (sample_config *) response.data.asBytes;
-        if (!silent) PrintAndLogEx(NORMAL, "Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+        if (verbose) PrintAndLogEx(NORMAL, "Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
         bits_per_sample = sc->bits_per_sample;
     }
 
     if (bits_per_sample < 8) {
 
-        if (!silent) PrintAndLogEx(NORMAL, "Unpacking...");
+        if (verbose) PrintAndLogEx(NORMAL, "Unpacking...");
 
         BitstreamOut bout = { got, bits_per_sample * n,  0};
         int j = 0;
@@ -1630,7 +1630,7 @@ int getSamples(uint32_t n, bool silent) {
         }
         GraphTraceLen = j;
 
-        if (!silent) PrintAndLogEx(NORMAL, "Unpacked %d samples", j);
+        if (verbose) PrintAndLogEx(NORMAL, "Unpacked %d samples", j);
 
     } else {
         for (int j = 0; j < n; j++) {
