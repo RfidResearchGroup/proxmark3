@@ -26,7 +26,7 @@
 
 //------------------------------------
 // MFU/NTAG PWD/PACK generation stuff
-// Italian transport system 
+// Italian transport system
 // Amiibo
 // Lego Dimension
 // XYZ 3D printing
@@ -225,9 +225,9 @@ int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
 }
 // returns all Mifare Mini (MFM) 10 keys.
 // keys must have 5*2*6 = 60bytes space
-int mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys) {  
+int mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
-    
+
     uint64_t xor_tbl[] = {
         0x09125a2589e5ULL, 0xF12C8453D821ULL,
         0xAB75C937922FULL, 0x73E799FE3241ULL,
