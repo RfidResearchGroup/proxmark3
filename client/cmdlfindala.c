@@ -68,6 +68,36 @@ static int usage_lf_indala_sim(void) {
     return PM3_SUCCESS;
 }
 
+/*
+static void encodeHeden2L(uint8_t *bits) {
+
+}
+*/
+static void decodeHeden2L(uint8_t *bits) {
+
+    uint32_t cardnumber = 0;
+    uint8_t offset = 31;
+
+    if ( bits[offset +  8] ) cardnumber += 1;
+    if ( bits[offset + 10] ) cardnumber += 2;
+    if ( bits[offset + 14] ) cardnumber += 4;
+    if ( bits[offset + 15] ) cardnumber += 8;
+    if ( bits[offset + 12] ) cardnumber += 16;
+    if ( bits[offset + 28] ) cardnumber += 32;
+    if ( bits[offset +  3] ) cardnumber += 64;
+    if ( bits[offset + 11] ) cardnumber += 128;
+    if ( bits[offset + 19] ) cardnumber += 256;
+    if ( bits[offset + 26] ) cardnumber += 512;
+    if ( bits[offset + 17] ) cardnumber += 1024;
+    if ( bits[offset + 18] ) cardnumber += 2048;
+    if ( bits[offset + 20] ) cardnumber += 4096;
+    if ( bits[offset + 13] ) cardnumber += 8192;
+    if ( bits[offset +  7] ) cardnumber += 16384;
+    if ( bits[offset + 23] ) cardnumber += 32768;
+
+    PrintAndLogEx(SUCCESS, "\tHeden-2L    | %u", cardnumber);
+}
+
 // Indala 26 bit decode
 // by marshmellow, martinbeier
 // optional arguments - same as PSKDemod (clock & invert & maxerr)
@@ -172,7 +202,10 @@ static int CmdIndalaDemod(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
         PrintAndLogEx(SUCCESS, "\tPrinted     | __%04d__ [0x%X]", p1, p1);
         PrintAndLogEx(SUCCESS, "\tInternal ID | %" PRIu64, foo);
+        decodeHeden2L(DemodBuffer);
+
         PrintAndLogEx(SUCCESS, "Fmt 26 bit  FC %u , CSN %u , checksum %1d%1d", fc, csn, checksum >> 1 & 0x01, checksum & 0x01);
+
 
     } else {
         uint32_t uid3 = bytebits_to_byte(DemodBuffer + 64, 32);
