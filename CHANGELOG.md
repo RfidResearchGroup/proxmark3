@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `lf indala demod` - added @randomdude42's decode Heden 2L/Hedengren format (@iceman)  Thanks to @randomdude42
  - Add `commands.md` - document with all proxmark client commands. Generated with XX_internal_command_dump_markdown_XX. (@iceman1001)
  - Change `lf pac clone` - new option `c <card id>` to allow cloning PAC/Stanley tag from card ID (@danshuk)
  - Change `lf pac read` - decoded PAC/Stanley card ID (@danshuk)
