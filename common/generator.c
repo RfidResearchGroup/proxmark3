@@ -22,13 +22,6 @@
 #include "ui.h"
 #include "mbedtls/sha1.h"
 
-#if defined(__APPLE__)
-#include <libkern/OSByteOrder.h>
-#define BSWAP_16(x) OSSwapInt16(x)
-#define BSWAP_32(x) OSSwapInt32(x)
-#define BSWAP_64(x) OSSwapInt64(x)
-#endif
-
 // Implemetation tips:
 // For each implementation of the algos, I recommend adding a self test for easy "simple unit" tests when Travic CI / Appveyour runs.
 // See special note for MFC based algos.
@@ -241,6 +234,7 @@ int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t 
 }
 int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
+
     for (int keytype = 0; keytype < 2; keytype++) {
         for (int sector = 0; sector < 16; sector++){
             uint64_t key = 0;
