@@ -42,8 +42,8 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size);
 **/
 uint32_t SniffLF();
 
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool avg, int trigger_threshold,
-                       bool verbose, uint32_t sample_size, uint32_t cancel_after, uint32_t samples_to_skip);
+uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
+                       bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip);
 
 // adds sample size to default options
 uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t sample_size, uint32_t cancel_after);
@@ -69,8 +69,8 @@ uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size);
 /**
  * Refactoring of lf sampling buffer
  */
-void initSamplingBuffer(uint32_t *sample_size);
-void logSample(uint8_t sample, uint8_t decimation, uint32_t bits_per_sample, bool avg);
+void initSampleBuffer(uint32_t *sample_size);
+void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg);
 uint32_t getSampleCounter();
 
 /**

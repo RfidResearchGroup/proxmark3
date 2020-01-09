@@ -150,12 +150,12 @@ void lf_init(bool reader) {
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     LOW(GPIO_SSC_DOUT);
 
-    // Enable peripheral Clock for TIMER_CLOCK0
+    // Enable peripheral Clock for TIMER_CLOCK 0
     AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
 
-    // Enable peripheral Clock for TIMER_CLOCK0
+    // Enable peripheral Clock for TIMER_CLOCK 1
     AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
@@ -168,7 +168,7 @@ void lf_init(bool reader) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // Prepare data trace
-    if (logging) initSamplingBuffer(NULL);
+    if (logging) initSampleBuffer(NULL);
 
 }
 

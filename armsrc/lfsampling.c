@@ -42,25 +42,40 @@ void printConfig() {
 
 /**
  * Called from the USB-handler to set the sampling configuration
- * The sampling config is used for std reading and sniffing.
+ * The sampling config is used for standard reading and sniffing.
  *
  * Other functions may read samples and ignore the sampling config,
  * such as functions to read the UID from a prox tag or similar.
  *
- * Values set to '0' implies no change (except for averaging)
+ * Values set to '-1' implies no change
  * @brief setSamplingConfig
  * @param sc
  */
 void setSamplingConfig(sample_config *sc) {
-    if (sc->divisor != 0) config.divisor = sc->divisor;
-    if (sc->bits_per_sample != 0) config.bits_per_sample = sc->bits_per_sample;
-    if (sc->trigger_threshold != -1) config.trigger_threshold = sc->trigger_threshold;
-//    if (sc->samples_to_skip == 0xffffffff) // if needed to not update if not supplied
 
-    config.samples_to_skip = sc->samples_to_skip;
-    config.decimation = (sc->decimation != 0) ? sc->decimation : 1;
-    config.averaging = sc->averaging;
-    if (config.bits_per_sample > 8) config.bits_per_sample = 8;
+    // decimation (1-8) how many bits of adc sample value to save
+    if (sc->decimation > 0 && sc->decimation < 8) 
+        config.decimation = sc->decimation;
+
+    // bits per sample (1-8)
+    if (sc->bits_per_sample > 0 && sc->bits_per_sample < 8) 
+        config.bits_per_sample = sc->bits_per_sample;
+
+    //
+    if (sc->averaging > -1)
+        config.averaging = (sc->averaging > 0) ? 1 : 0;
+    
+    // Frequency divisor (19 - 255)
+    if (sc->divisor > 18 && sc->divisor < 256)
+        config.divisor = sc->divisor;
+    
+    // Start saving samples when adc value larger than trigger_threshold
+    if (sc->trigger_threshold > -1) 
+        config.trigger_threshold = sc->trigger_threshold;
+
+    // Skip n adc samples before saving 
+    if (sc->samples_to_skip > -1)
+        config.samples_to_skip = sc->samples_to_skip;
 
     if (sc->verbose)
         printConfig();
@@ -113,7 +128,7 @@ uint32_t getSampleCounter() {
     return samples.total_saved;
 }
 
-void logSample(uint8_t sample, uint8_t decimation, uint32_t bits_per_sample, bool avg) {
+void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg) {
 
     if (!data.buffer) return;
 
@@ -207,8 +222,8 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
  * @param verbose - is true, dbprints the status,  else no outputs
  * @return the number of bits occupied by the samples.
  */
-uint32_t DoAcquisition(uint8_t decimation, uint32_t bits_per_sample, bool avg, int trigger_threshold,
-                       bool verbose, uint32_t sample_size, uint32_t cancel_after, uint32_t samples_to_skip) {
+uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
+                       bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip) {
 
     initSampleBuffer(&sample_size);
 

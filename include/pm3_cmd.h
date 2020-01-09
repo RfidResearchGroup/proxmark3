@@ -113,12 +113,12 @@ typedef struct {
 
 // A struct used to send sample-configs over USB
 typedef struct {
-    uint8_t decimation;
-    uint8_t bits_per_sample;
-    bool averaging;
-    int divisor;
-    int trigger_threshold;
-    uint32_t samples_to_skip;
+    int8_t decimation;
+    int8_t bits_per_sample;
+    int8_t averaging;
+    int16_t divisor;
+    int16_t trigger_threshold;
+    int32_t samples_to_skip;
     bool verbose;
 } PACKED sample_config;
 /*
