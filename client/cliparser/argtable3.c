@@ -3421,7 +3421,7 @@ TRexBool trex_searchrange(TRex *exp, const TRexChar *text_begin, const TRexChar 
             if (!cur)
                 break;
             node = exp->_nodes[node].next;
-        }
+       }
         text_begin++;
     } while (cur == NULL && text_begin != text_end);
 
@@ -3484,8 +3484,12 @@ TRexBool trex_getsubexp(TRex *exp, int n, TRexMatch *subexp) {
 
 
 static void arg_str_resetfn(struct arg_str *parent) {
+    int i;
     ARG_TRACE(("%s:resetfn(%p)\n", __FILE__, parent));
     parent->count = 0;
+    for (i = 0; i < parent->count; i++) {
+        parent->sval[i] = "";
+    }
 }
 
 
@@ -3671,8 +3675,7 @@ void arg_register_error(struct arg_end *end,
  * Return index of first table entry with a matching short option
  * or -1 if no match was found.
  */
-static
-int find_shortoption(struct arg_hdr * *table, char shortopt) {
+static int find_shortoption(struct arg_hdr** table, char shortopt) {
     int tabindex;
     for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++) {
         if (table[tabindex]->shortopts &&
@@ -3681,7 +3684,6 @@ int find_shortoption(struct arg_hdr * *table, char shortopt) {
     }
     return -1;
 }
-
 
 struct longoptions {
     int getoptval;
@@ -3706,8 +3708,7 @@ void dump_longoptions(struct longoptions *longoptions) {
 }
 #endif
 
-static
-struct longoptions *alloc_longoptions(struct arg_hdr * *table) {
+static struct longoptions* alloc_longoptions(struct arg_hdr** table) {
     struct longoptions *result;
     size_t nbytes;
     int noptions = 1;
@@ -3789,8 +3790,7 @@ struct longoptions *alloc_longoptions(struct arg_hdr * *table) {
     return result;
 }
 
-static
-char *alloc_shortoptions(struct arg_hdr * *table) {
+static char* alloc_shortoptions(struct arg_hdr** table) {
     char *result;
     size_t len = 2;
     int tabindex;
@@ -3830,8 +3830,7 @@ char *alloc_shortoptions(struct arg_hdr * *table) {
 
 
 /* return index of the table terminator entry */
-static
-int arg_endindex(struct arg_hdr * *table) {
+static int arg_endindex(struct arg_hdr** table) {
     int tabindex = 0;
     while (!(table[tabindex]->flag & ARG_TERMINATOR))
         tabindex++;
@@ -3839,10 +3838,9 @@ int arg_endindex(struct arg_hdr * *table) {
 }
 
 
-static
-void arg_parse_tagged(int argc,
-                      char * *argv,
-                      struct arg_hdr * *table,
+static void arg_parse_tagged(int argc,
+                      char **argv,
+                      struct arg_hdr **table,
                       struct arg_end *endtable) {
     struct longoptions *longoptions;
     char *shortoptions;
@@ -3953,10 +3951,9 @@ void arg_parse_tagged(int argc,
 }
 
 
-static
-void arg_parse_untagged(int argc,
-                        char * *argv,
-                        struct arg_hdr * *table,
+static void arg_parse_untagged(int argc,
+                        char **argv,
+                        struct arg_hdr **table,
                         struct arg_end *endtable) {
     int tabindex = 0;
     int errorlast = 0;
@@ -4010,7 +4007,6 @@ void arg_parse_untagged(int argc,
             optarglast = argv[optind];
             parentlast = parent;
         }
-
     }
 
     /* if a tenative error still remains at this point then register it as a proper error */
@@ -4030,8 +4026,7 @@ void arg_parse_untagged(int argc,
 }
 
 
-static
-void arg_parse_check(struct arg_hdr * *table, struct arg_end *endtable) {
+static void arg_parse_check(struct arg_hdr **table, struct arg_end *endtable) {
     int tabindex = 0;
     /* printf("arg_parse_check()\n"); */
     do {
@@ -4045,8 +4040,7 @@ void arg_parse_check(struct arg_hdr * *table, struct arg_end *endtable) {
 }
 
 
-static
-void arg_reset(void * *argtable) {
+static void arg_reset(void **argtable) {
     struct arg_hdr * *table = (struct arg_hdr * *)argtable;
     int tabindex = 0;
     /*printf("arg_reset(%p)\n",argtable);*/
@@ -4138,8 +4132,7 @@ int arg_parse(int argc, char * *argv, void * *argtable) {
  *   dest[] == "goodbye cruel world!"
  *   ndest  == 10
  */
-static
-void arg_cat(char * *pdest, const char *src, size_t *pndest) {
+static void arg_cat(char **pdest, const char *src, size_t *pndest) {
     char *dest = *pdest;
     char *end  = dest + *pndest;
 
@@ -4160,8 +4153,7 @@ void arg_cat(char * *pdest, const char *src, size_t *pndest) {
 }
 
 
-static
-void arg_cat_option(char *dest,
+static void arg_cat_option(char *dest,
                     size_t ndest,
                     const char *shortopts,
                     const char *longopts,
@@ -4219,8 +4211,7 @@ void arg_cat_option(char *dest,
     }
 }
 
-static
-void arg_cat_optionv(char *dest,
+static void arg_cat_optionv(char *dest,
                      size_t ndest,
                      const char *shortopts,
                      const char *longopts,
@@ -4665,7 +4656,6 @@ int arg_nullcheck(void * *argtable) {
 
     return 0;
 }
-
 
 /*
  * arg_free() is deprecated in favour of arg_freetable() due to a flaw in its design.
