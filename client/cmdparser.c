@@ -178,7 +178,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     char cmd_name[128];
     memset(cmd_name, 0, sizeof(cmd_name));
 
-    int len = 0;    
+    int len = 0;
     // %n == receives an integer of value equal to the number of chars read so far.
     // len = max 127
     sscanf(Cmd, "%127s%n", cmd_name, &len);
@@ -248,10 +248,10 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     }
 
     while (cmds[i].Name) {
-        
+
         if ((cmds[i].Name[0] == '-' || strlen(cmds[i].Name) == 0) && ++i) continue;
         if (cmds[i].Help[0] == '{' && ++i) continue;
-        
+
         const char *cmd_offline = "N";
 
         if (cmds[i].IsAvailable())

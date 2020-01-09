@@ -1060,7 +1060,7 @@ int flush;
                     last = here;
                     for (;;) {
                         here = state->lencode[last.val +
-                                              (BITS(last.bits + last.op) >> last.bits)];
+                                                       (BITS(last.bits + last.op) >> last.bits)];
                         if ((unsigned)(last.bits + here.bits) <= bits) break;
                         PULLBYTE();
                     }
@@ -1110,7 +1110,7 @@ int flush;
                     last = here;
                     for (;;) {
                         here = state->distcode[last.val +
-                                               (BITS(last.bits + last.op) >> last.bits)];
+                                                        (BITS(last.bits + last.op) >> last.bits)];
                         if ((unsigned)(last.bits + here.bits) <= bits) break;
                         PULLBYTE();
                     }

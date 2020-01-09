@@ -79,7 +79,7 @@ static int CmdVikingDemod(const char *Cmd) {
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdVikingRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 10000);
     return CmdVikingDemod(Cmd);
 }
 

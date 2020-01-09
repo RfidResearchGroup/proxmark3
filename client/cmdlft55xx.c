@@ -2528,7 +2528,7 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
         return false;
     }
 
-    getSamples(12000, true);
+    getSamples(12000, false);
 
     return !getSignalProperties()->isnoise;
 }
@@ -3485,7 +3485,7 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
             found = AcquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, usepwd, password, dl_mode);
             if (found == false)
                 continue;
-            
+
             if (tryDetectP1(false)) {
                 found = true;
                 found_mode = dl_mode;

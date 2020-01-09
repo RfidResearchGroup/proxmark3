@@ -204,7 +204,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     }
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32 )" blocks to text file " _YELLOW_("%s"), blocks, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32)" blocks to text file " _YELLOW_("%s"), blocks, fileName);
 
 out:
     free(fileName);
@@ -618,7 +618,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
     if (data == NULL) return PM3_EINVARG;
-    
+
     char *fileName = filenamemcopy(preferredName, ".eml");
     if (fileName == NULL) return PM3_EMALLOC;
 
@@ -637,7 +637,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
     memset(line, 0, sizeof(line));
     uint8_t buf[64] = {0x00};
 
-    uint8_t *udata = (uint8_t*)data;
+    uint8_t *udata = (uint8_t *)data;
 
     while (!feof(f)) {
 
@@ -861,15 +861,15 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     }
 
     if (startFilePosition) {
-        if (fseek(f, startFilePosition, SEEK_SET) < 0){
+        if (fseek(f, startFilePosition, SEEK_SET) < 0) {
             fclose(f);
             retval = PM3_EFILE;
             goto out;
         }
     }
 
-    uint8_t *udata = (uint8_t*)data;
-    
+    uint8_t *udata = (uint8_t *)data;
+
     // read file
     while (!feof(f)) {
         size_t filepos = ftell(f);

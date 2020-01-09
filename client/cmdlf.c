@@ -68,27 +68,28 @@ static int usage_lf_cmdread(void) {
     PrintAndLogEx(NORMAL, "       c <cmd>       Command bytes (in ones and zeros)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "       ************* " _YELLOW_("All periods in microseconds (us)"));
-    PrintAndLogEx(NORMAL, "       ************* Use " _YELLOW_("'lf config'") "to configure options.");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf cmdread d 80 z 100 o 200 c 11000");
+    PrintAndLogEx(NORMAL, "Extras:");
+    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")"to set parameters.");
     return PM3_SUCCESS;
 }
 static int usage_lf_read(void) {
     PrintAndLogEx(NORMAL, "Usage: lf read [h] [s] [d numofsamples]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h            This help");
-    PrintAndLogEx(NORMAL, "       s            silent run, no printout");
     PrintAndLogEx(NORMAL, "       d #samples   # samples to collect (optional)");
-    PrintAndLogEx(NORMAL, "Use 'lf config' to set parameters.");
+    PrintAndLogEx(NORMAL, "       s            silent");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         lf read s d 12000     - collects 12000samples silent");
-    PrintAndLogEx(NORMAL, "         lf read s");
+    PrintAndLogEx(NORMAL, "         lf read s d 12000     - collects 12000 samples silent");
+    PrintAndLogEx(NORMAL, "         lf read");
+    PrintAndLogEx(NORMAL, "Extras:");
+    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")"to set parameters.");
     return PM3_SUCCESS;
 }
 static int usage_lf_sim(void) {
     PrintAndLogEx(NORMAL, "Simulate low frequence tag from graphbuffer.");
-    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'lf config'")" to set parameters.");
     PrintAndLogEx(NORMAL, "Usage: lf sim [h] <gap>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         This help");
@@ -96,16 +97,19 @@ static int usage_lf_sim(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf sim 240     - start simulating with 240ms gap");
     PrintAndLogEx(NORMAL, "         lf sim");
+    PrintAndLogEx(NORMAL, "Extras:");
+    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")"to set parameters.");
     return PM3_SUCCESS;
 }
 static int usage_lf_sniff(void) {
     PrintAndLogEx(NORMAL, "Sniff low frequence signal.");
-    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'lf config'")" to set parameters.");
-    PrintAndLogEx(NORMAL, "Use " _YELLOW_("'data samples'")" command to download from device,  and " _YELLOW_("'data plot'")" to look at it");
-
     PrintAndLogEx(NORMAL, "Usage: lf sniff [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h         This help");
+    PrintAndLogEx(NORMAL, "Extras:");
+    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'lf config'")"to set parameters.");
+    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data samples'")"command to download from device");
+    PrintAndLogEx(NORMAL, "  use " _YELLOW_("'data plot'")"to look at it");
     return PM3_SUCCESS;
 }
 static int usage_lf_config(void) {
@@ -117,22 +121,17 @@ static int usage_lf_config(void) {
     PrintAndLogEx(NORMAL, "       q <divisor>       Manually set freq divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
     PrintAndLogEx(NORMAL, "       f <freq>          Manually set frequency in kHz");
     PrintAndLogEx(NORMAL, "       b <bps>           Sets resolution of bits per sample. Default (max): 8");
-    PrintAndLogEx(NORMAL, "       d <decim>         Sets decimation. A value of N saves only 1 in N samples. Default: 1");
+    PrintAndLogEx(NORMAL, "       d <decimate>      Sets decimation. A value of N saves only 1 in N samples. Default: 1");
     PrintAndLogEx(NORMAL, "       a [0|1]           Averaging - if set, will average the stored sample value when decimating. Default: 1");
     PrintAndLogEx(NORMAL, "       t <threshold>     Sets trigger threshold. 0 means no threshold (range: 0-128)");
     PrintAndLogEx(NORMAL, "       s <samplestoskip> Sets a number of samples to skip before capture. Default: 0");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf config");
-    PrintAndLogEx(NORMAL, "                    Shows current config");
-    PrintAndLogEx(NORMAL, "      lf config b 8 L");
-    PrintAndLogEx(NORMAL, "                    Samples at 125 kHz, 8bps.");
-    PrintAndLogEx(NORMAL, "      lf config H b 4 d 3");
-    PrintAndLogEx(NORMAL, "                    Samples at 134 kHz, averages three samples into one, stored with ");
-    PrintAndLogEx(NORMAL, "                    a resolution of 4 bits per sample.");
-    PrintAndLogEx(NORMAL, "      lf read");
-    PrintAndLogEx(NORMAL, "                    Performs a read (active field)");
-    PrintAndLogEx(NORMAL, "      lf sniff");
-    PrintAndLogEx(NORMAL, "                    Performs a sniff (no active field)");
+    PrintAndLogEx(NORMAL, "      lf config              - shows current config");
+    PrintAndLogEx(NORMAL, "      lf config b 8 L        - samples at 125 kHz, 8bps.");
+    PrintAndLogEx(NORMAL, "      lf config H b 4 d 3    - samples at 134 kHz, averages three samples into one, stored with ");
+    PrintAndLogEx(NORMAL, "                                a resolution of 4 bits per sample.");
+    PrintAndLogEx(NORMAL, "      lf read                - performs a read (active field)");
+    PrintAndLogEx(NORMAL, "      lf sniff               - performs a sniff (no active field)");
     return PM3_SUCCESS;
 }
 static int usage_lf_simfsk(void) {
@@ -367,7 +366,7 @@ int CmdLFCommandRead(const char *Cmd) {
     if (resp.status == PM3_SUCCESS) {
         if (i) {
             PrintAndLogEx(SUCCESS, "Downloading response signal data");
-            getSamples(0, true);
+            getSamples(0, false);
             return PM3_SUCCESS;
         } else {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -457,7 +456,11 @@ int lf_config(sample_config *config) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)config, sizeof(sample_config));
+    if (config != NULL)
+        SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)config, sizeof(sample_config));
+    else 
+        SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
+    
     return PM3_SUCCESS;
 }
 
@@ -465,15 +468,22 @@ int CmdLFConfig(const char *Cmd) {
 
     if (!session.pm3_present) return PM3_ENOTTY;
 
-    uint8_t divisor =  0;//Frequency divisor
-    uint8_t bps = 0; // Bits per sample
-    uint8_t decimation = 0; //How many to keep
-    bool averaging = 1; // Defaults to true
-    bool errors = false;
-    int trigger_threshold = -1;//Means no change
-    uint8_t unsigned_trigg = 0;
-    uint32_t samples_to_skip = 0; // will return offset to 0 if not supplied.  Could set to 0xffffffff if needed to not update
+    // if called with no params, just print the device config
+    if (strlen(Cmd) == 0) {
+        return lf_config(NULL);
+    }
 
+    sample_config config = {
+       .decimation = -1,
+       .bits_per_sample = -1,
+       .averaging = -1,
+       .divisor = -1,
+       .trigger_threshold = -1,
+       .samples_to_skip = -1,
+       .verbose = true
+    };
+   
+    bool errors = false;
 
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -481,16 +491,16 @@ int CmdLFConfig(const char *Cmd) {
             case 'h':
                 return usage_lf_config();
             case 'H':
-                divisor = LF_DIVISOR_134;
+                config.divisor = LF_DIVISOR_134;
                 cmdp++;
                 break;
             case 'L':
-                divisor = LF_DIVISOR_125;
+                config.divisor = LF_DIVISOR_125;
                 cmdp++;
                 break;
             case 'q':
-                errors |= param_getdec(Cmd, cmdp + 1, &divisor);
-                if (divisor < 19) {
+                config.divisor = param_get8ex(Cmd, cmdp + 1, 95, 10);
+                if (config.divisor < 19) {
                     PrintAndLogEx(ERR, "divisor must be between 19 and 255");
                     return PM3_EINVARG;
                 }
@@ -498,36 +508,50 @@ int CmdLFConfig(const char *Cmd) {
                 break;
             case 'f': {
                 int freq = param_get32ex(Cmd, cmdp + 1, 125, 10);
-                divisor = LF_FREQ2DIV(freq);
-                if (divisor < 19) {
+                config.divisor = LF_FREQ2DIV(freq);
+                if (config.divisor < 19) {
                     PrintAndLogEx(ERR, "freq must be between 47 and 600");
                     return PM3_EINVARG;
                 }
                 cmdp += 2;
                 break;
             }
-            case 't':
-                errors |= param_getdec(Cmd, cmdp + 1, &unsigned_trigg);
+            case 't': {
+                uint8_t trigg = 0;
+                errors |= param_getdec(Cmd, cmdp + 1, &trigg);
                 cmdp += 2;
                 if (!errors) {
-                    trigger_threshold = unsigned_trigg;
-                    g_lf_threshold_set = (trigger_threshold > 0);
+                    config.trigger_threshold = trigg;
+                    g_lf_threshold_set = (config.trigger_threshold > 0);
                 }
                 break;
-            case 'b':
-                errors |= param_getdec(Cmd, cmdp + 1, &bps);
+            }
+            case 'b': {
+                config.bits_per_sample = param_get8ex(Cmd, cmdp + 1, 8, 10); 
+
+                // bps is limited to 8
+                if (config.bits_per_sample >> 4) 
+                    config.bits_per_sample = 8;
+
                 cmdp += 2;
                 break;
-            case 'd':
-                errors |= param_getdec(Cmd, cmdp + 1, &decimation);
+            }
+            case 'd': {
+                config.decimation = param_get8ex(Cmd, cmdp + 1, 1, 10);             
+
+                // decimation is limited to 255
+                if (config.decimation >> 4) 
+                    config.decimation = 8;
+
                 cmdp += 2;
                 break;
+            }
             case 'a':
-                averaging = param_getchar(Cmd, cmdp + 1) == '1';
+                config.averaging = (param_getchar(Cmd, cmdp + 1) == '1');
                 cmdp += 2;
                 break;
             case 's':
-                samples_to_skip = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                config.samples_to_skip = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             default:
@@ -540,28 +564,19 @@ int CmdLFConfig(const char *Cmd) {
     // validations
     if (errors) return usage_lf_config();
 
-    // print current settings.
-    if (cmdp == 0)
-        return lf_config(NULL);
-
-    // bps is limited to 8
-    if (bps >> 4) bps = 8;
-
-    sample_config config = { decimation, bps, averaging, divisor, trigger_threshold, samples_to_skip, true };
-
     return lf_config(&config);
 }
 
-int lf_read(bool silent, uint32_t samples) {
+int lf_read(bool verbose, uint32_t samples) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     struct p {
-        uint8_t silent;
+        uint8_t verbose;
         uint32_t samples;
     } PACKED;
 
     struct p payload;
-    payload.silent = silent;
+    payload.verbose = verbose;
     payload.samples = samples;
 
     clearCommandBuffer();
@@ -579,7 +594,7 @@ int lf_read(bool silent, uint32_t samples) {
 
     // resp.oldarg[0] is bits read not bytes read.
     uint32_t bits = (resp.data.asDwords[0] / 8);
-    getSamples(bits, silent);
+    getSamples(bits, verbose);
 
     return PM3_SUCCESS;
 }
@@ -589,20 +604,20 @@ int CmdLFRead(const char *Cmd) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
     bool errors = false;
-    bool silent = false;
+    bool verbose = true;
     uint32_t samples = 0;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_lf_read();
-            case 's':
-                silent = true;
-                cmdp++;
-                break;
             case 'd':
                 samples = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
+                break;
+            case 's':
+                verbose = false;
+                cmdp++;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -614,7 +629,7 @@ int CmdLFRead(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_read();
 
-    return lf_read(silent, samples);
+    return lf_read(verbose, samples);
 }
 
 int CmdLFSniff(const char *Cmd) {
@@ -627,7 +642,7 @@ int CmdLFSniff(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SNIFF_RAW_ADC, NULL, 0);
     WaitForResponse(CMD_ACK, NULL);
-    getSamples(0, false);
+    getSamples(0, true);
     return PM3_SUCCESS;
 }
 
@@ -1183,7 +1198,7 @@ int CmdLFfind(const char *Cmd) {
     bool isOnline = (session.pm3_present && (cmdp != '1'));
 
     if (isOnline)
-        lf_read(true, 30000);
+        lf_read(false, 30000);
 
     if (GraphTraceLen < minLength) {
         PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
@@ -1334,13 +1349,14 @@ static command_t CommandTable[] = {
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
     {"",            CmdHelp,            AlwaysAvailable, ""},
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
-    {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "<off period> <'0' period> <'1' period> <command> ['h' 134] \n\t\t-- Modulate LF reader field to send command before read (all periods in microseconds)"},
-    {"read",        CmdLFRead,          IfPm3Lf,         "['s' silent] Read 125/134 kHz LF ID-only tag. Do 'lf read h' for help"},
-    {"search",      CmdLFfind,          AlwaysAvailable, "[offline] ['u'] Read and Search for valid known tag (in offline mode it you can load first then search) \n\t\t-- 'u' to search for unknown tags"},
-    {"sim",         CmdLFSim,           IfPm3Lf,         "[GAP] -- Simulate LF tag from buffer with optional GAP (in microseconds)"},
-    {"simask",      CmdLFaskSim,        IfPm3Lf,         "[clock] [invert <1|0>] [biphase/manchester/raw <'b'|'m'|'r'>] [msg separator 's'] [d <hexdata>] \n\t\t-- Simulate LF ASK tag from demodbuffer or input"},
-    {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "[c <clock>] [i] [H <fcHigh>] [L <fcLow>] [d <hexdata>] \n\t\t-- Simulate LF FSK tag from demodbuffer or input"},
-    {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "[1|2|3] [c <clock>] [i] [r <carrier>] [d <raw hex to sim>] \n\t\t-- Simulate LF PSK tag from demodbuffer or input"},
+    {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read (all periods in microseconds)"},
+    {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
+    {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag (in offline mode it you can load first then search)"},
+    {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer with optional GAP (in microseconds)"},
+    {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate LF ASK tag from demodbuffer or input"},
+    {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate LF FSK tag from demodbuffer or input"},
+    {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate LF PSK tag from demodbuffer or input"},
+//    {"simpsk",      CmdLFnrzSim,        IfPm3Lf,         "Simulate LF NRZ tag from demodbuffer or input"},
     {"simbidir",    CmdLFSimBidir,      IfPm3Lf,         "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},

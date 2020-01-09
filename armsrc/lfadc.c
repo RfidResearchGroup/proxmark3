@@ -61,7 +61,7 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             adc_val = AT91C_BASE_SSC->SSC_RHR;
             periods++;
 
-            if (logging) logSample(adc_val, 1, 8, 0, 0);
+            if (logging) logSample(adc_val, 1, 8, 0);
 
             // Only test field changes if state of adc values matter
             if (!wait) {
@@ -91,7 +91,7 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             if (periods == max) return 0;
         }
     }
-    if (logging) logSample(255, 1, 8, 0, 0);
+    if (logging) logSample(255, 1, 8, 0);
     return 0;
 }
 
@@ -150,12 +150,12 @@ void lf_init(bool reader) {
     AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
     LOW(GPIO_SSC_DOUT);
 
-    // Enable peripheral Clock for TIMER_CLOCK0
+    // Enable peripheral Clock for TIMER_CLOCK 0
     AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
 
-    // Enable peripheral Clock for TIMER_CLOCK0
+    // Enable peripheral Clock for TIMER_CLOCK 1
     AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
@@ -168,7 +168,7 @@ void lf_init(bool reader) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // Prepare data trace
-    if (logging) initSamplingBuffer();
+    if (logging) initSampleBuffer(NULL);
 
 }
 
@@ -189,9 +189,21 @@ void lf_finalize() {
 size_t lf_detect_field_drop(size_t max) {
     size_t periods = 0;
     volatile uint8_t adc_val;
+    int16_t checked = 0;
 
-    // usb check?
-    while (!BUTTON_PRESS()) {
+    while (true) {
+
+        // only every 1000th times, in order to save time when collecting samples.
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) {
+                checked = -1;
+                break;
+            } else {
+                checked = 0;
+            }
+        }
+        ++checked;
+
         // Watchdog hit
         WDT_HIT();
 
@@ -199,7 +211,7 @@ size_t lf_detect_field_drop(size_t max) {
             periods++;
             adc_val = AT91C_BASE_SSC->SSC_RHR;
 
-            if (logging) logSample(adc_val, 1, 8, 0, 0);
+            if (logging) logSample(adc_val, 1, 8, 0);
 
             if (adc_val == 0) {
                 rising_edge = false;

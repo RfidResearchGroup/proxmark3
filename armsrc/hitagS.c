@@ -1299,13 +1299,13 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
                 tag.pages[pageNum][i] = 0x0;
             for (i = 0; i < 4; i++) {   // set page bytes from recieved bits
                 tag.pages[pageNum][i] += ((pageData[i * 8] << 7)
-                                        | (pageData[1 + (i * 8)] << 6)
-                                        | (pageData[2 + (i * 8)] << 5)
-                                        | (pageData[3 + (i * 8)] << 4)
-                                        | (pageData[4 + (i * 8)] << 3)
-                                        | (pageData[5 + (i * 8)] << 2)
-                                        | (pageData[6 + (i * 8)] << 1) 
-                                        | pageData[7 + (i * 8)]);
+                                          | (pageData[1 + (i * 8)] << 6)
+                                          | (pageData[2 + (i * 8)] << 5)
+                                          | (pageData[3 + (i * 8)] << 4)
+                                          | (pageData[4 + (i * 8)] << 3)
+                                          | (pageData[5 + (i * 8)] << 2)
+                                          | (pageData[6 + (i * 8)] << 1)
+                                          | pageData[7 + (i * 8)]);
             }
             if (tag.auth && tag.LKP && pageNum == 1) {
                 Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum, pwdh0,

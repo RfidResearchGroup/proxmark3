@@ -633,7 +633,7 @@ static int CmdHF15Samples(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_ACQ_RAW_ADC, NULL, 0);
 
-    getSamples(0, false);
+    getSamples(0, true);
     return PM3_SUCCESS;
 }
 
@@ -684,9 +684,9 @@ static int NxpSysInfo(uint8_t *uid) {
             return PM3_EWRONGANSVER;
         }
 
-        bool support_signature = (recv[5] & 0x01);               
+        bool support_signature = (recv[5] & 0x01);
         bool support_easmode = (recv[4] & 0x03);
-        
+
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "  NXP SYSINFO : %s", sprint_hex(recv, 8));
         PrintAndLogEx(NORMAL, "    Password protection configuration:");

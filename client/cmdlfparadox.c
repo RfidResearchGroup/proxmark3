@@ -126,7 +126,7 @@ static int CmdParadoxDemod(const char *Cmd) {
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdParadoxRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 10000);
     return CmdParadoxDemod(Cmd);
 }
 

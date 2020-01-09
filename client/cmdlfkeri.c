@@ -115,7 +115,7 @@ static int CmdKeriDemod(const char *Cmd) {
 }
 
 static int CmdKeriRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 10000);
     return CmdKeriDemod(Cmd);
 }
 

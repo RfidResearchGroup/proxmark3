@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix `lf config` - when called with no params, it no longer mess up all device lf config settings. (@iceman1001)
+ - Change `lf indala clone` - new option `--Q5` writes to q5/T5555 tags. (@iceman1001)
+ - Change `lf indala clone` - new option `-c <card id>` allows cloning INDALA tag from Heden2L/Hedengren ID format (@iceman1001) - Thanks to @randomdude42 for solution
+ - Change `lf indala demod` - added decode Heden2L/Hedengren format (@iceman1001) - Thanks to @randomdude42 for solution
  - Add `commands.md` - document with all proxmark client commands. Generated with XX_internal_command_dump_markdown_XX. (@iceman1001)
  - Change `lf pac clone` - new option `c <card id>` to allow cloning PAC/Stanley tag from card ID (@danshuk)
  - Change `lf pac read` - decoded PAC/Stanley card ID (@danshuk)

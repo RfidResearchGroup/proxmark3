@@ -730,11 +730,11 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_ACQ_RAW_ADC: {
             struct p {
-                uint8_t silent;
+                uint8_t verbose;
                 uint32_t samples;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            uint32_t bits = SampleLF(payload->silent, payload->samples);
+            uint32_t bits = SampleLF(payload->verbose, payload->samples);
             reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
@@ -780,7 +780,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_NRZ_SIMULATE: {
             lf_nrzsim_t *payload = (lf_nrzsim_t *)packet->data.asBytes;
-            CmdNRZsimTAG(payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_asksim_t), payload->data, true);
+            CmdNRZsimTAG(payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_nrzsim_t), payload->data, true);
             break;
         }
         case CMD_LF_HID_CLONE: {
@@ -1603,7 +1603,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 BigBuf_Clear_ext(false);
                 BigBuf_free();
             }
-            
+
             // 40 000 - (512-3) 509 = 39491
             uint16_t offset = MIN(BIGBUF_SIZE - PM3_CMD_DATA_SIZE - 3, payload->offset);
 

@@ -4,7 +4,18 @@
 #include "common.h"
 #include "pm3_cmd.h"
 
-typedef struct BitstreamOut BitstreamOut;
+typedef struct {
+    uint8_t *buffer;
+    uint32_t numbits;
+    uint32_t position;
+} BitstreamOut;
+
+typedef struct {
+    int dec_counter;
+    uint32_t sum;
+    uint32_t counter;
+    uint32_t total_saved;
+} sampling_t;
 
 /**
 * acquisition of Cotag LF signal. Similar to other LF,  since the Cotag has such long datarate RF/384
@@ -23,7 +34,7 @@ void doT55x7Acquisition(size_t sample_size);
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool silent, int sample_size);
+uint32_t SampleLF(bool verbose, uint32_t sample_size);
 
 /**
 * Initializes the FPGA for sniff-mode (field off), and acquires the samples.
@@ -31,32 +42,35 @@ uint32_t SampleLF(bool silent, int sample_size);
 **/
 uint32_t SniffLF();
 
+uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
+                       bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip);
+
 // adds sample size to default options
-uint32_t DoPartialAcquisition(int trigger_threshold, bool silent, int sample_size, uint32_t cancel_after);
+uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t sample_size, uint32_t cancel_after);
 
 /**
  * @brief Does sample acquisition, ignoring the config values set in the sample_config.
  * This method is typically used by tag-specific readers who just wants to read the samples
  * the normal way
  * @param trigger_threshold
- * @param silent
+ * @param verbose
  * @return number of bits sampled
  */
-uint32_t DoAcquisition_default(int trigger_threshold, bool silent);
+uint32_t DoAcquisition_default(int trigger_threshold, bool verbose);
 /**
  * @brief Does sample acquisition, using the config values set in the sample_config.
  * @param trigger_threshold
- * @param silent
+ * @param verbose
  * @return number of bits sampled
  */
 
-uint32_t DoAcquisition_config(bool silent, int sample_size);
+uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size);
 
 /**
  * Refactoring of lf sampling buffer
  */
-void initSamplingBuffer(void);
-void logSample(uint8_t sample, uint8_t decimation, uint32_t bits_per_sample, bool averaging, int trigger_threshold);
+void initSampleBuffer(uint32_t *sample_size);
+void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg);
 uint32_t getSampleCounter();
 
 /**

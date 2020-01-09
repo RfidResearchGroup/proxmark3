@@ -137,19 +137,19 @@ static const bmp_t b40c[] = {
 #    else /* BMP_BIT */
 static const bmp_t b40[] = {
     BMP_C(0x00048200) << (BMP_BIT - 32) | BMP_C(0x04) >> (39 - BMP_BIT),
-    BMP_C(0x09) << (BMP_BIT * 2 - 40),
+                      BMP_C(0x09) << (BMP_BIT * 2 - 40),
 };
 static const bmp_t b40a[] = {
     BMP_C(0xffffffff) << (BMP_BIT - 32) | BMP_C(0x7f) >> (39 - BMP_BIT),
-    BMP_C(0xff) << (BMP_BIT * 2 - 40),
+                      BMP_C(0xff) << (BMP_BIT * 2 - 40),
 };
 static const bmp_t b40b[] = {
     BMP_C(0xd4164fc6) << (BMP_BIT - 32) | BMP_C(0x23) >> (39 - BMP_BIT),
-    BMP_C(0x46) << (BMP_BIT * 2 - 40),
+                      BMP_C(0x46) << (BMP_BIT * 2 - 40),
 };
 static const bmp_t b40c[] = {
     BMP_C(0xc4ff8071) << (BMP_BIT - 32) | BMP_C(0x7f) >> (39 - BMP_BIT),
-    BMP_C(0xff) << (BMP_BIT * 2 - 40),
+                      BMP_C(0xff) << (BMP_BIT * 2 - 40),
 };
 #    endif /* BMP_BIT */
 
@@ -187,43 +187,43 @@ static const bmp_t b64i[] = {
 #    else /* BMP_BIT */
 static const bmp_t b64[] = {
     BMP_C(0x00000000) << (BMP_BIT - 32) | BMP_C(0x0000000d) >> (63 - BMP_BIT),
-    BMP_C(0x0000001b) << (BMP_BIT * 2 - 64),
+                      BMP_C(0x0000001b) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64a[] = {
     BMP_C(0xffffffff) << (BMP_BIT - 32) | BMP_C(0x7fffffff) >> (63 - BMP_BIT),
-    BMP_C(0xffffffff) << (BMP_BIT * 2 - 64),
+                      BMP_C(0xffffffff) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64b[] = {
     BMP_C(0xb90956c7) << (BMP_BIT - 32) | BMP_C(0x3ad20800) >> (63 - BMP_BIT),
-    BMP_C(0x75a41001) << (BMP_BIT * 2 - 64),
+                      BMP_C(0x75a41001) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64c[] = {
     BMP_C(0x53000000) << (BMP_BIT - 32) | BMP_C(0x00000000) >> (63 - BMP_BIT),
-    BMP_C(0x00000000) << (BMP_BIT * 2 - 64),
+                      BMP_C(0x00000000) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64d[] = {
     BMP_C(0x42f0e1eb) << (BMP_BIT - 32) | BMP_C(0x54f51b49) >> (63 - BMP_BIT),
-    BMP_C(0xa9ea3693) << (BMP_BIT * 2 - 64),
+                      BMP_C(0xa9ea3693) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64e[] = {
     BMP_C(0x6c40df5f) << (BMP_BIT - 32) | BMP_C(0x05a4b9a3) >> (63 - BMP_BIT),
-    BMP_C(0x0b497347) << (BMP_BIT * 2 - 64),
+                      BMP_C(0x0b497347) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64f[] = {
     BMP_C(0x62ec59e3) << (BMP_BIT - 32) | BMP_C(0x78d27805) >> (63 - BMP_BIT),
-    BMP_C(0xf1a4f00a) << (BMP_BIT * 2 - 64),
+                      BMP_C(0xf1a4f00a) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64g[] = {
     BMP_C(0xfcacbebd) << (BMP_BIT - 32) | BMP_C(0x2c98d4c9) >> (63 - BMP_BIT),
-    BMP_C(0x5931a992) << (BMP_BIT * 2 - 64),
+                      BMP_C(0x5931a992) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64h[] = {
     BMP_C(0x995dc9bb) << (BMP_BIT - 32) | BMP_C(0x6f8c9cfd) >> (63 - BMP_BIT),
-    BMP_C(0xdf1939fa) << (BMP_BIT * 2 - 64),
+                      BMP_C(0xdf1939fa) << (BMP_BIT * 2 - 64),
 };
 static const bmp_t b64i[] = {
     BMP_C(0x49958c9a) << (BMP_BIT - 32) | BMP_C(0x5ebe9a9f) >> (63 - BMP_BIT),
-    BMP_C(0xbd7d353f) << (BMP_BIT * 2 - 64),
+                      BMP_C(0xbd7d353f) << (BMP_BIT * 2 - 64),
 };
 #    endif /* BMP_BIT */
 
@@ -237,22 +237,22 @@ static const bmp_t b82a[] = {
 #    elif BMP_BIT >= 41
 static const bmp_t b82[] = {
     BMP_C(0x01846008880) << (BMP_BIT - 41) | BMP_C(0x08a00a20208) >> (81 - BMP_BIT),
-    BMP_C(0x11401440411) << (BMP_BIT * 2 - 82),
+                         BMP_C(0x11401440411) << (BMP_BIT * 2 - 82),
 };
 static const bmp_t b82a[] = {
     BMP_C(0x04f541fb128) << (BMP_BIT - 41) | BMP_C(0x011c00feb09) >> (81 - BMP_BIT),
-    BMP_C(0x023801fd612) << (BMP_BIT * 2 - 82),
+                         BMP_C(0x023801fd612) << (BMP_BIT * 2 - 82),
 };
 #    else /* BMP_BIT */
 static const bmp_t b82[] = {
     BMP_C(0x0c230044) << (BMP_BIT - 32) | BMP_C(0x040) >> (40 - BMP_BIT),
-    BMP_C(0x40450051) << (BMP_BIT * 2 - 64) | BMP_C(0x00104) >> (80 - BMP_BIT * 2),
-    BMP_C(0x00411) << (BMP_BIT * 3 - 82),
+                      BMP_C(0x40450051) << (BMP_BIT * 2 - 64) | BMP_C(0x00104) >> (80 - BMP_BIT * 2),
+                      BMP_C(0x00411) << (BMP_BIT * 3 - 82),
 };
 static const bmp_t b82a[] = {
     BMP_C(0x27aa0fd8) << (BMP_BIT - 32) | BMP_C(0x094) >> (40 - BMP_BIT),
-    BMP_C(0x9408e007) << (BMP_BIT * 2 - 64) | BMP_C(0x0f584) >> (80 - BMP_BIT * 2),
-    BMP_C(0x3d612) << (BMP_BIT * 3 - 82),
+                      BMP_C(0x9408e007) << (BMP_BIT * 2 - 64) | BMP_C(0x0f584) >> (80 - BMP_BIT * 2),
+                      BMP_C(0x3d612) << (BMP_BIT * 3 - 82),
 };
 #    endif /* BMP_BIT */
 
@@ -262,215 +262,215 @@ static const bmp_t b82a[] = {
 /* Array of the polynomial bitmaps used in the model table. */
 static const bmp_t b32[] = {
     BMP_C(0x000000af) << (BMP_BIT - 32),    /*   0 -- 32,000000af */
-    BMP_C(0x00010000) << (BMP_BIT - 32),    /*   1 -- 16,    0001 */
-    BMP_C(0x00020000) << (BMP_BIT - 32),    /*   2 -- 15,    0001 */
-    BMP_C(0x00065b00) << (BMP_BIT - 32),    /*   3 -- 24,  00065b */
-    BMP_C(0x007e0000) << (BMP_BIT - 32),    /*   4 -- 16,    007e */
-    BMP_C(0x007f0000) << (BMP_BIT - 32),    /*   5 -- 16,    007f */
-    BMP_C(0x03400000) << (BMP_BIT - 32),    /*   6 -- 11,     01a */
-    BMP_C(0x0376e6e7) << (BMP_BIT - 32),    /*   7 -- 32,0376e6e7 */
-    BMP_C(0x04c11db7) << (BMP_BIT - 32),    /*   8 -- 32,04c11db7 */
-    BMP_C(0x05890000) << (BMP_BIT - 32),    /*   9 -- 16,    0589 */
-    BMP_C(0x07000000) << (BMP_BIT - 32),    /*  10 --  8,      07 */
-    BMP_C(0x080b0000) << (BMP_BIT - 32),    /*  11 -- 16,    080b */
-    BMP_C(0x09823b6e) << (BMP_BIT - 32),    /*  12 -- 31,04c11db7 */
-    BMP_C(0x0b3c0000) << (BMP_BIT - 32),    /*  13 -- 15,    059e */
-    BMP_C(0x0c000000) << (BMP_BIT - 32),    /*  14 --  6,      03 */
-    BMP_C(0x0c200000) << (BMP_BIT - 32),    /*  15 -- 11,     061 */
-    BMP_C(0x0c780000) << (BMP_BIT - 32),    /*  16 -- 14,    031e */
-    BMP_C(0x0fb30000) << (BMP_BIT - 32),    /*  17 -- 16,    0fb3 */
-    BMP_C(0x10210000) << (BMP_BIT - 32),    /*  18 -- 16,    1021 */
-    BMP_C(0x12000000) << (BMP_BIT - 32),    /*  19 --  7,      09 */
-    BMP_C(0x130d2afc) << (BMP_BIT - 32),    /*  20 -- 30,04c34abf */
-    BMP_C(0x144e6300) << (BMP_BIT - 32),    /*  21 -- 24,  144e63 */
-    BMP_C(0x15000000) << (BMP_BIT - 32),    /*  22 --  8,      15 */
-    BMP_C(0x1697d06a) << (BMP_BIT - 32),    /*  23 -- 32,1697d06a */
-    BMP_C(0x17800000) << (BMP_BIT - 32),    /*  24 -- 12,     178 */
-    BMP_C(0x18000000) << (BMP_BIT - 32),    /*  25 --  6,      06 */
-    BMP_C(0x19d3c8d8) << (BMP_BIT - 32),    /*  26 -- 31,0ce9e46c */
-    BMP_C(0x1c000000) << (BMP_BIT - 32),    /*  27 --  6,      07 */
-    BMP_C(0x1d000000) << (BMP_BIT - 32),    /*  28 --  8,      1d */
-    BMP_C(0x1d0f0000) << (BMP_BIT - 32),    /*  29 -- 16,    1d0f */
-    BMP_C(0x1dcf0000) << (BMP_BIT - 32),    /*  30 -- 16,    1dcf */
-    BMP_C(0x1edc6f41) << (BMP_BIT - 32),    /*  31 -- 32,1edc6f41 */
-    BMP_C(0x1f23b800) << (BMP_BIT - 32),    /*  32 -- 24,  1f23b8 */
-    BMP_C(0x20000000) << (BMP_BIT - 32),    /*  33 --  4,       2 */
-    BMP_C(0x200fa500) << (BMP_BIT - 32),    /*  34 -- 24,  200fa5 */
-    BMP_C(0x20140000) << (BMP_BIT - 32),    /*  35 -- 14,    0805 */
-    BMP_C(0x20b40000) << (BMP_BIT - 32),    /*  36 -- 14,    082d */
-    BMP_C(0x20fe0000) << (BMP_BIT - 32),    /*  37 -- 16,    20fe */
-    BMP_C(0x21890000) << (BMP_BIT - 32),    /*  38 -- 16,    2189 */
-    BMP_C(0x21cf0200) << (BMP_BIT - 32),    /*  39 -- 24,  21cf02 */
-    BMP_C(0x23ef5200) << (BMP_BIT - 32),    /*  40 -- 24,  23ef52 */
-    BMP_C(0x25000000) << (BMP_BIT - 32),    /*  41 --  8,      25 */
-    BMP_C(0x26000000) << (BMP_BIT - 32),    /*  42 --  8,      26 */
-    BMP_C(0x26b10000) << (BMP_BIT - 32),    /*  43 -- 16,    26b1 */
-    BMP_C(0x27818000) << (BMP_BIT - 32),    /*  44 -- 17,   04f03 */
-    BMP_C(0x27d00000) << (BMP_BIT - 32),    /*  45 -- 13,    04fa */
-    BMP_C(0x28000000) << (BMP_BIT - 32),    /*  46 --  5,      05 */
-    BMP_C(0x29b10000) << (BMP_BIT - 32),    /*  47 -- 16,    29b1 */
-    BMP_C(0x2f000000) << (BMP_BIT - 32),    /*  48 --  8,      2f */
-    BMP_C(0x30000000) << (BMP_BIT - 32),    /*  49 --  4, 3/ 5, 6 */
-    BMP_C(0x3010bf7f) << (BMP_BIT - 32),    /*  50 -- 32,3010bf7f */
-    BMP_C(0x31000000) << (BMP_BIT - 32),    /*  51 --  8,      31 */
-    BMP_C(0x31800000) << (BMP_BIT - 32),    /*  52 -- 10,     0c6 */
-    BMP_C(0x31c30000) << (BMP_BIT - 32),    /*  53 -- 16,    31c3 */
-    BMP_C(0x328b6300) << (BMP_BIT - 32),    /*  54 -- 24,  328b63 */
-    BMP_C(0x34000000) << (BMP_BIT - 32),    /*  55 --  6,      0d */
-    BMP_C(0x340bc6d9) << (BMP_BIT - 32),    /*  56 -- 32,340bc6d9 */
-    BMP_C(0x37000000) << (BMP_BIT - 32),    /*  57 --  8,      37 */
-    BMP_C(0x38000000) << (BMP_BIT - 32),    /*  58 --  5,      07 */
-    BMP_C(0x39000000) << (BMP_BIT - 32),    /*  59 --  8,      39 */
-    BMP_C(0x3d650000) << (BMP_BIT - 32),    /*  60 -- 16,    3d65 */
-    BMP_C(0x3e000000) << (BMP_BIT - 32),    /*  61 --  8,      3e */
-    BMP_C(0x40000000) << (BMP_BIT - 32),    /*  62 --  3,       2 */
-    BMP_C(0x42000000) << (BMP_BIT - 32),    /*  63 --  8,      42 */
-    BMP_C(0x44c20000) << (BMP_BIT - 32),    /*  64 -- 16,    44c2 */
-    BMP_C(0x45270551) << (BMP_BIT - 32),    /*  65 -- 32,45270551 */
-    BMP_C(0x48000000) << (BMP_BIT - 32),    /*  66 --  5,      09 */
-    BMP_C(0x49000000) << (BMP_BIT - 32),    /*  67 --  8,      49 */
-    BMP_C(0x4a800000) << (BMP_BIT - 32),    /*  68 -- 10,     12a */
-    BMP_C(0x4acc0000) << (BMP_BIT - 32),    /*  69 -- 15,    2566 */
-    BMP_C(0x4b000000) << (BMP_BIT - 32),    /*  70 --  8,      4b */
-    BMP_C(0x4b370000) << (BMP_BIT - 32),    /*  71 -- 16,    4b37 */
-    BMP_C(0x4c000000) << (BMP_BIT - 32),    /*  72 --  6,      13 */
-    BMP_C(0x4c060000) << (BMP_BIT - 32),    /*  73 -- 16,    4c06 */
-    BMP_C(0x53000000) << (BMP_BIT - 32),    /*  74 --  8,      53 */
-    BMP_C(0x55000000) << (BMP_BIT - 32),    /*  75 --  8,      55 */
-    BMP_C(0x55555500) << (BMP_BIT - 32),    /*  76 -- 24,  555555 */
-    BMP_C(0x59350000) << (BMP_BIT - 32),    /*  77 -- 16,    5935 */
-    BMP_C(0x5d380000) << (BMP_BIT - 32),    /*  78 -- 16,    5d38 */
-    BMP_C(0x5d400000) << (BMP_BIT - 32),    /*  79 -- 10,     175 */
-    BMP_C(0x5d6dcb00) << (BMP_BIT - 32),    /*  80 -- 24,  5d6dcb */
-    BMP_C(0x60000000) << (BMP_BIT - 32),    /*  81 --  3,       3 */
-    BMP_C(0x60e00000) << (BMP_BIT - 32),    /*  82 -- 11,     307 */
-    BMP_C(0x63d00000) << (BMP_BIT - 32),    /*  83 -- 16,    63d0 */
-    BMP_C(0x64000000) << (BMP_BIT - 32),    /*  84 --  6,      19 */
-    BMP_C(0x66400000) << (BMP_BIT - 32),    /*  85 -- 10,     199 */
-    BMP_C(0x66c50000) << (BMP_BIT - 32),    /*  86 -- 16,    66c5 */
-    BMP_C(0x6f630000) << (BMP_BIT - 32),    /*  87 -- 16,    6f63 */
-    BMP_C(0x6f910000) << (BMP_BIT - 32),    /*  88 -- 16,    6f91 */
-    BMP_C(0x70000000) << (BMP_BIT - 32),    /*  89 --  4,       7 */
-    BMP_C(0x70a00000) << (BMP_BIT - 32),    /*  90 -- 11,     385 */
-    BMP_C(0x755b0000) << (BMP_BIT - 32),    /*  91 -- 16,    755b */
-    BMP_C(0x765e7680) << (BMP_BIT - 32),    /*  92 -- 32,765e7680 */
-    BMP_C(0x76c20800) << (BMP_BIT - 32),    /*  93 -- 32,  0ed841 */
-    BMP_C(0x7979bd00) << (BMP_BIT - 32),    /*  94 -- 24,  7979bd */
-    BMP_C(0x7e000000) << (BMP_BIT - 32),    /*  95 --  8,      7e */
-    BMP_C(0x80000000) << (BMP_BIT - 32),    /*  96 --  3,       4 */
-    BMP_C(0x80006300) << (BMP_BIT - 32),    /*  97 -- 24,  800063 */
-    BMP_C(0x80050000) << (BMP_BIT - 32),    /*  98 -- 16,    8005 */
-    BMP_C(0x800d0000) << (BMP_BIT - 32),    /*  99 -- 16,    800d */
-    BMP_C(0x800fe300) << (BMP_BIT - 32),    /* 100 -- 24,  800fe3 */
-    BMP_C(0x80b40000) << (BMP_BIT - 32),    /* 101 -- 14,    202d */
-    BMP_C(0x80c2e71c) << (BMP_BIT - 32),    /* 102 -- 30,2030b9c7 */
-    BMP_C(0x80f00000) << (BMP_BIT - 32),    /* 103 -- 12,     80f */
-    BMP_C(0x814141ab) << (BMP_BIT - 32),    /* 104 -- 32,814141ab */
-    BMP_C(0x8144c800) << (BMP_BIT - 32),    /* 105 -- 21,  102899 */
-    BMP_C(0x864cfb00) << (BMP_BIT - 32),    /* 106 -- 24,  864cfb */
-    BMP_C(0x87315576) << (BMP_BIT - 32),    /* 107 -- 32,87315576 */
-    BMP_C(0x89ec0000) << (BMP_BIT - 32),    /* 108 -- 16,    89ec */
-    BMP_C(0x8a000000) << (BMP_BIT - 32),    /* 109 --  7,      45 */
-    BMP_C(0x8b320000) << (BMP_BIT - 32),    /* 110 -- 15,    4599 */
-    BMP_C(0x8bb70000) << (BMP_BIT - 32),    /* 111 -- 16,    8bb7 */
-    BMP_C(0x8cc00000) << (BMP_BIT - 32),    /* 112 -- 10,     233 */
-    BMP_C(0x904cddbf) << (BMP_BIT - 32),    /* 113 -- 32,904cddbf */
-    BMP_C(0x906e0000) << (BMP_BIT - 32),    /* 114 -- 16,    906e */
-    BMP_C(0x94000000) << (BMP_BIT - 32),    /* 115 --  8,      94 */
-    BMP_C(0x97000000) << (BMP_BIT - 32),    /* 116 --  8,      97 */
-    BMP_C(0x98000000) << (BMP_BIT - 32),    /* 117 --  6,      26 */
-    BMP_C(0x99000000) << (BMP_BIT - 32),    /* 118 --  8,      99 */
-    BMP_C(0x9b000000) << (BMP_BIT - 32),    /* 119 --  8,      9b */
-    BMP_C(0x9c000000) << (BMP_BIT - 32),    /* 120 --  6,      27 */
-    BMP_C(0x9d5e4de2) << (BMP_BIT - 32),    /* 121 -- 31,4eaf26f1 */
-    BMP_C(0x9e000000) << (BMP_BIT - 32),    /* 122 --  7,      4f */
-    BMP_C(0x9ecf0000) << (BMP_BIT - 32),    /* 123 -- 16,    9ecf */
-    BMP_C(0xa0660000) << (BMP_BIT - 32),    /* 124 -- 16,    a066 */
-    BMP_C(0xa0970000) << (BMP_BIT - 32),    /* 125 -- 16,    a097 */
-    BMP_C(0xa1000000) << (BMP_BIT - 32),    /* 126 --  8,      a1 */
-    BMP_C(0xa3660000) << (BMP_BIT - 32),    /* 127 -- 16,    a366 */
-    BMP_C(0xa6000000) << (BMP_BIT - 32),    /* 128 --  7,      53 */
-    BMP_C(0xa7000000) << (BMP_BIT - 32),    /* 129 --  8,      a7 */
-    BMP_C(0xa8000000) << (BMP_BIT - 32),    /* 130 --  5,      15 */
-    BMP_C(0xa8190000) << (BMP_BIT - 32),    /* 131 -- 16,    a819 */
-    BMP_C(0xa833982b) << (BMP_BIT - 32),    /* 132 -- 32,a833982b */
-    BMP_C(0xabcdef00) << (BMP_BIT - 32),    /* 133 -- 24,  abcdef */
-    BMP_C(0xac000000) << (BMP_BIT - 32),    /* 134 --  8,      ac */
-    BMP_C(0xaee70000) << (BMP_BIT - 32),    /* 135 -- 16,    aee7 */
-    BMP_C(0xb0000000) << (BMP_BIT - 32),    /* 136 --  4,       b */
-    BMP_C(0xb0010000) << (BMP_BIT - 32),    /* 137 -- 16,    b001 */
-    BMP_C(0xb2aa0000) << (BMP_BIT - 32),    /* 138 -- 16,    b2aa */
-    BMP_C(0xb3400000) << (BMP_BIT - 32),    /* 139 -- 12,     b34 */
-    BMP_C(0xb42d8000) << (BMP_BIT - 32),    /* 140 -- 17,   1685b */
-    BMP_C(0xb4600000) << (BMP_BIT - 32),    /* 141 -- 11,     5a3 */
-    BMP_C(0xb4c80000) << (BMP_BIT - 32),    /* 142 -- 16,    b4c8 */
-    BMP_C(0xb4f3e600) << (BMP_BIT - 32),    /* 143 -- 24,  b4f3e6 */
-    BMP_C(0xb704ce00) << (BMP_BIT - 32),    /* 144 -- 24,  b704ce */
-    BMP_C(0xb798b438) << (BMP_BIT - 32),    /* 145 -- 32,b798b438 */
-    BMP_C(0xbb3d0000) << (BMP_BIT - 32),    /* 146 -- 16,    bb3d */
-    BMP_C(0xbc000000) << (BMP_BIT - 32),    /* 147 --  6,2f/ 8,bc */
-    BMP_C(0xbd0be338) << (BMP_BIT - 32),    /* 148 -- 32,bd0be338 */
-    BMP_C(0xbdf40000) << (BMP_BIT - 32),    /* 149 -- 16,    bdf4 */
-    BMP_C(0xbf050000) << (BMP_BIT - 32),    /* 150 -- 16,    bf05 */
-    BMP_C(0xc0000000) << (BMP_BIT - 32),    /* 151 --  3,       6 */
-    BMP_C(0xc2000000) << (BMP_BIT - 32),    /* 152 --  7,      61 */
-    BMP_C(0xc25a5600) << (BMP_BIT - 32),    /* 153 -- 24,  c25a56 */
-    BMP_C(0xc2b70000) << (BMP_BIT - 32),    /* 154 -- 16,    c2b7 */
-    BMP_C(0xc2b80000) << (BMP_BIT - 32),    /* 155 -- 14,    30ae */
-    BMP_C(0xc4000000) << (BMP_BIT - 32),    /* 156 --  8,      c4 */
-    BMP_C(0xc6c60000) << (BMP_BIT - 32),    /* 157 -- 16,    c6c6 */
-    BMP_C(0xc7000000) << (BMP_BIT - 32),    /* 158 --  8,      c7 */
-    BMP_C(0xc704dd7b) << (BMP_BIT - 32),    /* 159 -- 32,c704dd7b */
-    BMP_C(0xc8000000) << (BMP_BIT - 32),    /* 160 --  5,      19 */
-    BMP_C(0xc8670000) << (BMP_BIT - 32),    /* 161 -- 16,    c867 */
-    BMP_C(0xcbf43926) << (BMP_BIT - 32),    /* 162 -- 32,cbf43926 */
-    BMP_C(0xcde70300) << (BMP_BIT - 32),    /* 163 -- 24,  cde703 */
-    BMP_C(0xce3c0000) << (BMP_BIT - 32),    /* 164 -- 16,    ce3c */
-    BMP_C(0xd0000000) << (BMP_BIT - 32),    /* 165 --  8,      d0 */
-    BMP_C(0xd02a0000) << (BMP_BIT - 32),    /* 166 -- 15,    6815 */
-    BMP_C(0xd0db0000) << (BMP_BIT - 32),    /* 167 -- 16,    d0db */
-    BMP_C(0xd3100000) << (BMP_BIT - 32),    /* 168 -- 12,     d31 */
-    BMP_C(0xd3be9568) << (BMP_BIT - 32),    /* 169 -- 30,34efa55a */
-    BMP_C(0xd4d00000) << (BMP_BIT - 32),    /* 170 -- 12,     d4d */
-    BMP_C(0xd5000000) << (BMP_BIT - 32),    /* 171 --  8,      d5 */
-    BMP_C(0xd64e0000) << (BMP_BIT - 32),    /* 172 -- 16,    d64e */
-    BMP_C(0xda000000) << (BMP_BIT - 32),    /* 173 --  8,      da */
-    BMP_C(0xdaf00000) << (BMP_BIT - 32),    /* 174 -- 12,     daf */
-    BMP_C(0xdebb20e3) << (BMP_BIT - 32),    /* 175 -- 32,debb20e3 */
-    BMP_C(0xdf000000) << (BMP_BIT - 32),    /* 176 --  8,      df */
-    BMP_C(0xe0000000) << (BMP_BIT - 32),    /* 177 --  3,       7 */
-    BMP_C(0xe3069283) << (BMP_BIT - 32),    /* 178 -- 32,e3069283 */
-    BMP_C(0xe3940000) << (BMP_BIT - 32),    /* 179 -- 16,    e394 */
-    BMP_C(0xe5cc0000) << (BMP_BIT - 32),    /* 180 -- 16,    e5cc */
-    BMP_C(0xe7a80000) << (BMP_BIT - 32),    /* 181 -- 13,    1cf5 */
-    BMP_C(0xe8000000) << (BMP_BIT - 32),    /* 182 --  6,      3a */
-    BMP_C(0xea000000) << (BMP_BIT - 32),    /* 183 --  7,      75 */
-    BMP_C(0xea820000) << (BMP_BIT - 32),    /* 184 -- 16,    ea82 */
-    BMP_C(0xec000000) << (BMP_BIT - 32),    /* 185 --  6,      3b */
-    BMP_C(0xf0000000) << (BMP_BIT - 32),    /* 186 --  4,       f */
-    BMP_C(0xf0b80000) << (BMP_BIT - 32),    /* 187 -- 16,    f0b8 */
-    BMP_C(0xf1300000) << (BMP_BIT - 32),    /* 188 -- 12,     f13 */
-    BMP_C(0xf4000000) << (BMP_BIT - 32),    /* 189 --  8,      f4 */
-    BMP_C(0xf4acfb13) << (BMP_BIT - 32),    /* 190 -- 32,f4acfb13 */
-    BMP_C(0xf5b00000) << (BMP_BIT - 32),    /* 191 -- 12,     f5b */
-    BMP_C(0xf6400000) << (BMP_BIT - 32),    /* 192 -- 10,     3d9 */
-    BMP_C(0xf7000000) << (BMP_BIT - 32),    /* 193 --  8,      f7 */
-    BMP_C(0xf8000000) << (BMP_BIT - 32),    /* 194 --  5,      1f */
-    BMP_C(0xfc000000) << (BMP_BIT - 32),    /* 195 --  6,      3f */
-    BMP_C(0xfc891918) << (BMP_BIT - 32),    /* 196 -- 32,fc891918 */
-    BMP_C(0xfd000000) << (BMP_BIT - 32),    /* 197 --  8,      fd */
-    BMP_C(0xfe000000) << (BMP_BIT - 32),    /* 198 --  7,      7f */
-    BMP_C(0xfedcba00) << (BMP_BIT - 32),    /* 199 -- 24,  fedcba */
-    BMP_C(0xfee80000) << (BMP_BIT - 32),    /* 200 -- 16,    fee8 */
-    BMP_C(0xff000000) << (BMP_BIT - 32),    /* 201 --  8,      ff */
-    BMP_C(0xffc00000) << (BMP_BIT - 32),    /* 202 -- 10,     3ff */
-    BMP_C(0xfff00000) << (BMP_BIT - 32),    /* 203 -- 12,     fff */
-    BMP_C(0xfffc0000) << (BMP_BIT - 32),    /* 204 -- 14,    3fff */
-    BMP_C(0xffff0000) << (BMP_BIT - 32),    /* 205 -- 16,    ffff */
-    BMP_C(0xffffff00) << (BMP_BIT - 32),    /* 206 -- 24,  ffffff */
-    BMP_C(0xfffffffc) << (BMP_BIT - 32),    /* 207 -- 30,3fffffff */
-    BMP_C(0xfffffffe) << (BMP_BIT - 32),    /* 208 -- 31,7fffffff */
-    BMP_C(0xffffffff) << (BMP_BIT - 32),    /* 209 -- 32,ffffffff */
+                      BMP_C(0x00010000) << (BMP_BIT - 32),    /*   1 -- 16,    0001 */
+                      BMP_C(0x00020000) << (BMP_BIT - 32),    /*   2 -- 15,    0001 */
+                      BMP_C(0x00065b00) << (BMP_BIT - 32),    /*   3 -- 24,  00065b */
+                      BMP_C(0x007e0000) << (BMP_BIT - 32),    /*   4 -- 16,    007e */
+                      BMP_C(0x007f0000) << (BMP_BIT - 32),    /*   5 -- 16,    007f */
+                      BMP_C(0x03400000) << (BMP_BIT - 32),    /*   6 -- 11,     01a */
+                      BMP_C(0x0376e6e7) << (BMP_BIT - 32),    /*   7 -- 32,0376e6e7 */
+                      BMP_C(0x04c11db7) << (BMP_BIT - 32),    /*   8 -- 32,04c11db7 */
+                      BMP_C(0x05890000) << (BMP_BIT - 32),    /*   9 -- 16,    0589 */
+                      BMP_C(0x07000000) << (BMP_BIT - 32),    /*  10 --  8,      07 */
+                      BMP_C(0x080b0000) << (BMP_BIT - 32),    /*  11 -- 16,    080b */
+                      BMP_C(0x09823b6e) << (BMP_BIT - 32),    /*  12 -- 31,04c11db7 */
+                      BMP_C(0x0b3c0000) << (BMP_BIT - 32),    /*  13 -- 15,    059e */
+                      BMP_C(0x0c000000) << (BMP_BIT - 32),    /*  14 --  6,      03 */
+                      BMP_C(0x0c200000) << (BMP_BIT - 32),    /*  15 -- 11,     061 */
+                      BMP_C(0x0c780000) << (BMP_BIT - 32),    /*  16 -- 14,    031e */
+                      BMP_C(0x0fb30000) << (BMP_BIT - 32),    /*  17 -- 16,    0fb3 */
+                      BMP_C(0x10210000) << (BMP_BIT - 32),    /*  18 -- 16,    1021 */
+                      BMP_C(0x12000000) << (BMP_BIT - 32),    /*  19 --  7,      09 */
+                      BMP_C(0x130d2afc) << (BMP_BIT - 32),    /*  20 -- 30,04c34abf */
+                      BMP_C(0x144e6300) << (BMP_BIT - 32),    /*  21 -- 24,  144e63 */
+                      BMP_C(0x15000000) << (BMP_BIT - 32),    /*  22 --  8,      15 */
+                      BMP_C(0x1697d06a) << (BMP_BIT - 32),    /*  23 -- 32,1697d06a */
+                      BMP_C(0x17800000) << (BMP_BIT - 32),    /*  24 -- 12,     178 */
+                      BMP_C(0x18000000) << (BMP_BIT - 32),    /*  25 --  6,      06 */
+                      BMP_C(0x19d3c8d8) << (BMP_BIT - 32),    /*  26 -- 31,0ce9e46c */
+                      BMP_C(0x1c000000) << (BMP_BIT - 32),    /*  27 --  6,      07 */
+                      BMP_C(0x1d000000) << (BMP_BIT - 32),    /*  28 --  8,      1d */
+                      BMP_C(0x1d0f0000) << (BMP_BIT - 32),    /*  29 -- 16,    1d0f */
+                      BMP_C(0x1dcf0000) << (BMP_BIT - 32),    /*  30 -- 16,    1dcf */
+                      BMP_C(0x1edc6f41) << (BMP_BIT - 32),    /*  31 -- 32,1edc6f41 */
+                      BMP_C(0x1f23b800) << (BMP_BIT - 32),    /*  32 -- 24,  1f23b8 */
+                      BMP_C(0x20000000) << (BMP_BIT - 32),    /*  33 --  4,       2 */
+                      BMP_C(0x200fa500) << (BMP_BIT - 32),    /*  34 -- 24,  200fa5 */
+                      BMP_C(0x20140000) << (BMP_BIT - 32),    /*  35 -- 14,    0805 */
+                      BMP_C(0x20b40000) << (BMP_BIT - 32),    /*  36 -- 14,    082d */
+                      BMP_C(0x20fe0000) << (BMP_BIT - 32),    /*  37 -- 16,    20fe */
+                      BMP_C(0x21890000) << (BMP_BIT - 32),    /*  38 -- 16,    2189 */
+                      BMP_C(0x21cf0200) << (BMP_BIT - 32),    /*  39 -- 24,  21cf02 */
+                      BMP_C(0x23ef5200) << (BMP_BIT - 32),    /*  40 -- 24,  23ef52 */
+                      BMP_C(0x25000000) << (BMP_BIT - 32),    /*  41 --  8,      25 */
+                      BMP_C(0x26000000) << (BMP_BIT - 32),    /*  42 --  8,      26 */
+                      BMP_C(0x26b10000) << (BMP_BIT - 32),    /*  43 -- 16,    26b1 */
+                      BMP_C(0x27818000) << (BMP_BIT - 32),    /*  44 -- 17,   04f03 */
+                      BMP_C(0x27d00000) << (BMP_BIT - 32),    /*  45 -- 13,    04fa */
+                      BMP_C(0x28000000) << (BMP_BIT - 32),    /*  46 --  5,      05 */
+                      BMP_C(0x29b10000) << (BMP_BIT - 32),    /*  47 -- 16,    29b1 */
+                      BMP_C(0x2f000000) << (BMP_BIT - 32),    /*  48 --  8,      2f */
+                      BMP_C(0x30000000) << (BMP_BIT - 32),    /*  49 --  4, 3/ 5, 6 */
+                      BMP_C(0x3010bf7f) << (BMP_BIT - 32),    /*  50 -- 32,3010bf7f */
+                      BMP_C(0x31000000) << (BMP_BIT - 32),    /*  51 --  8,      31 */
+                      BMP_C(0x31800000) << (BMP_BIT - 32),    /*  52 -- 10,     0c6 */
+                      BMP_C(0x31c30000) << (BMP_BIT - 32),    /*  53 -- 16,    31c3 */
+                      BMP_C(0x328b6300) << (BMP_BIT - 32),    /*  54 -- 24,  328b63 */
+                      BMP_C(0x34000000) << (BMP_BIT - 32),    /*  55 --  6,      0d */
+                      BMP_C(0x340bc6d9) << (BMP_BIT - 32),    /*  56 -- 32,340bc6d9 */
+                      BMP_C(0x37000000) << (BMP_BIT - 32),    /*  57 --  8,      37 */
+                      BMP_C(0x38000000) << (BMP_BIT - 32),    /*  58 --  5,      07 */
+                      BMP_C(0x39000000) << (BMP_BIT - 32),    /*  59 --  8,      39 */
+                      BMP_C(0x3d650000) << (BMP_BIT - 32),    /*  60 -- 16,    3d65 */
+                      BMP_C(0x3e000000) << (BMP_BIT - 32),    /*  61 --  8,      3e */
+                      BMP_C(0x40000000) << (BMP_BIT - 32),    /*  62 --  3,       2 */
+                      BMP_C(0x42000000) << (BMP_BIT - 32),    /*  63 --  8,      42 */
+                      BMP_C(0x44c20000) << (BMP_BIT - 32),    /*  64 -- 16,    44c2 */
+                      BMP_C(0x45270551) << (BMP_BIT - 32),    /*  65 -- 32,45270551 */
+                      BMP_C(0x48000000) << (BMP_BIT - 32),    /*  66 --  5,      09 */
+                      BMP_C(0x49000000) << (BMP_BIT - 32),    /*  67 --  8,      49 */
+                      BMP_C(0x4a800000) << (BMP_BIT - 32),    /*  68 -- 10,     12a */
+                      BMP_C(0x4acc0000) << (BMP_BIT - 32),    /*  69 -- 15,    2566 */
+                      BMP_C(0x4b000000) << (BMP_BIT - 32),    /*  70 --  8,      4b */
+                      BMP_C(0x4b370000) << (BMP_BIT - 32),    /*  71 -- 16,    4b37 */
+                      BMP_C(0x4c000000) << (BMP_BIT - 32),    /*  72 --  6,      13 */
+                      BMP_C(0x4c060000) << (BMP_BIT - 32),    /*  73 -- 16,    4c06 */
+                      BMP_C(0x53000000) << (BMP_BIT - 32),    /*  74 --  8,      53 */
+                      BMP_C(0x55000000) << (BMP_BIT - 32),    /*  75 --  8,      55 */
+                      BMP_C(0x55555500) << (BMP_BIT - 32),    /*  76 -- 24,  555555 */
+                      BMP_C(0x59350000) << (BMP_BIT - 32),    /*  77 -- 16,    5935 */
+                      BMP_C(0x5d380000) << (BMP_BIT - 32),    /*  78 -- 16,    5d38 */
+                      BMP_C(0x5d400000) << (BMP_BIT - 32),    /*  79 -- 10,     175 */
+                      BMP_C(0x5d6dcb00) << (BMP_BIT - 32),    /*  80 -- 24,  5d6dcb */
+                      BMP_C(0x60000000) << (BMP_BIT - 32),    /*  81 --  3,       3 */
+                      BMP_C(0x60e00000) << (BMP_BIT - 32),    /*  82 -- 11,     307 */
+                      BMP_C(0x63d00000) << (BMP_BIT - 32),    /*  83 -- 16,    63d0 */
+                      BMP_C(0x64000000) << (BMP_BIT - 32),    /*  84 --  6,      19 */
+                      BMP_C(0x66400000) << (BMP_BIT - 32),    /*  85 -- 10,     199 */
+                      BMP_C(0x66c50000) << (BMP_BIT - 32),    /*  86 -- 16,    66c5 */
+                      BMP_C(0x6f630000) << (BMP_BIT - 32),    /*  87 -- 16,    6f63 */
+                      BMP_C(0x6f910000) << (BMP_BIT - 32),    /*  88 -- 16,    6f91 */
+                      BMP_C(0x70000000) << (BMP_BIT - 32),    /*  89 --  4,       7 */
+                      BMP_C(0x70a00000) << (BMP_BIT - 32),    /*  90 -- 11,     385 */
+                      BMP_C(0x755b0000) << (BMP_BIT - 32),    /*  91 -- 16,    755b */
+                      BMP_C(0x765e7680) << (BMP_BIT - 32),    /*  92 -- 32,765e7680 */
+                      BMP_C(0x76c20800) << (BMP_BIT - 32),    /*  93 -- 32,  0ed841 */
+                      BMP_C(0x7979bd00) << (BMP_BIT - 32),    /*  94 -- 24,  7979bd */
+                      BMP_C(0x7e000000) << (BMP_BIT - 32),    /*  95 --  8,      7e */
+                      BMP_C(0x80000000) << (BMP_BIT - 32),    /*  96 --  3,       4 */
+                      BMP_C(0x80006300) << (BMP_BIT - 32),    /*  97 -- 24,  800063 */
+                      BMP_C(0x80050000) << (BMP_BIT - 32),    /*  98 -- 16,    8005 */
+                      BMP_C(0x800d0000) << (BMP_BIT - 32),    /*  99 -- 16,    800d */
+                      BMP_C(0x800fe300) << (BMP_BIT - 32),    /* 100 -- 24,  800fe3 */
+                      BMP_C(0x80b40000) << (BMP_BIT - 32),    /* 101 -- 14,    202d */
+                      BMP_C(0x80c2e71c) << (BMP_BIT - 32),    /* 102 -- 30,2030b9c7 */
+                      BMP_C(0x80f00000) << (BMP_BIT - 32),    /* 103 -- 12,     80f */
+                      BMP_C(0x814141ab) << (BMP_BIT - 32),    /* 104 -- 32,814141ab */
+                      BMP_C(0x8144c800) << (BMP_BIT - 32),    /* 105 -- 21,  102899 */
+                      BMP_C(0x864cfb00) << (BMP_BIT - 32),    /* 106 -- 24,  864cfb */
+                      BMP_C(0x87315576) << (BMP_BIT - 32),    /* 107 -- 32,87315576 */
+                      BMP_C(0x89ec0000) << (BMP_BIT - 32),    /* 108 -- 16,    89ec */
+                      BMP_C(0x8a000000) << (BMP_BIT - 32),    /* 109 --  7,      45 */
+                      BMP_C(0x8b320000) << (BMP_BIT - 32),    /* 110 -- 15,    4599 */
+                      BMP_C(0x8bb70000) << (BMP_BIT - 32),    /* 111 -- 16,    8bb7 */
+                      BMP_C(0x8cc00000) << (BMP_BIT - 32),    /* 112 -- 10,     233 */
+                      BMP_C(0x904cddbf) << (BMP_BIT - 32),    /* 113 -- 32,904cddbf */
+                      BMP_C(0x906e0000) << (BMP_BIT - 32),    /* 114 -- 16,    906e */
+                      BMP_C(0x94000000) << (BMP_BIT - 32),    /* 115 --  8,      94 */
+                      BMP_C(0x97000000) << (BMP_BIT - 32),    /* 116 --  8,      97 */
+                      BMP_C(0x98000000) << (BMP_BIT - 32),    /* 117 --  6,      26 */
+                      BMP_C(0x99000000) << (BMP_BIT - 32),    /* 118 --  8,      99 */
+                      BMP_C(0x9b000000) << (BMP_BIT - 32),    /* 119 --  8,      9b */
+                      BMP_C(0x9c000000) << (BMP_BIT - 32),    /* 120 --  6,      27 */
+                      BMP_C(0x9d5e4de2) << (BMP_BIT - 32),    /* 121 -- 31,4eaf26f1 */
+                      BMP_C(0x9e000000) << (BMP_BIT - 32),    /* 122 --  7,      4f */
+                      BMP_C(0x9ecf0000) << (BMP_BIT - 32),    /* 123 -- 16,    9ecf */
+                      BMP_C(0xa0660000) << (BMP_BIT - 32),    /* 124 -- 16,    a066 */
+                      BMP_C(0xa0970000) << (BMP_BIT - 32),    /* 125 -- 16,    a097 */
+                      BMP_C(0xa1000000) << (BMP_BIT - 32),    /* 126 --  8,      a1 */
+                      BMP_C(0xa3660000) << (BMP_BIT - 32),    /* 127 -- 16,    a366 */
+                      BMP_C(0xa6000000) << (BMP_BIT - 32),    /* 128 --  7,      53 */
+                      BMP_C(0xa7000000) << (BMP_BIT - 32),    /* 129 --  8,      a7 */
+                      BMP_C(0xa8000000) << (BMP_BIT - 32),    /* 130 --  5,      15 */
+                      BMP_C(0xa8190000) << (BMP_BIT - 32),    /* 131 -- 16,    a819 */
+                      BMP_C(0xa833982b) << (BMP_BIT - 32),    /* 132 -- 32,a833982b */
+                      BMP_C(0xabcdef00) << (BMP_BIT - 32),    /* 133 -- 24,  abcdef */
+                      BMP_C(0xac000000) << (BMP_BIT - 32),    /* 134 --  8,      ac */
+                      BMP_C(0xaee70000) << (BMP_BIT - 32),    /* 135 -- 16,    aee7 */
+                      BMP_C(0xb0000000) << (BMP_BIT - 32),    /* 136 --  4,       b */
+                      BMP_C(0xb0010000) << (BMP_BIT - 32),    /* 137 -- 16,    b001 */
+                      BMP_C(0xb2aa0000) << (BMP_BIT - 32),    /* 138 -- 16,    b2aa */
+                      BMP_C(0xb3400000) << (BMP_BIT - 32),    /* 139 -- 12,     b34 */
+                      BMP_C(0xb42d8000) << (BMP_BIT - 32),    /* 140 -- 17,   1685b */
+                      BMP_C(0xb4600000) << (BMP_BIT - 32),    /* 141 -- 11,     5a3 */
+                      BMP_C(0xb4c80000) << (BMP_BIT - 32),    /* 142 -- 16,    b4c8 */
+                      BMP_C(0xb4f3e600) << (BMP_BIT - 32),    /* 143 -- 24,  b4f3e6 */
+                      BMP_C(0xb704ce00) << (BMP_BIT - 32),    /* 144 -- 24,  b704ce */
+                      BMP_C(0xb798b438) << (BMP_BIT - 32),    /* 145 -- 32,b798b438 */
+                      BMP_C(0xbb3d0000) << (BMP_BIT - 32),    /* 146 -- 16,    bb3d */
+                      BMP_C(0xbc000000) << (BMP_BIT - 32),    /* 147 --  6,2f/ 8,bc */
+                      BMP_C(0xbd0be338) << (BMP_BIT - 32),    /* 148 -- 32,bd0be338 */
+                      BMP_C(0xbdf40000) << (BMP_BIT - 32),    /* 149 -- 16,    bdf4 */
+                      BMP_C(0xbf050000) << (BMP_BIT - 32),    /* 150 -- 16,    bf05 */
+                      BMP_C(0xc0000000) << (BMP_BIT - 32),    /* 151 --  3,       6 */
+                      BMP_C(0xc2000000) << (BMP_BIT - 32),    /* 152 --  7,      61 */
+                      BMP_C(0xc25a5600) << (BMP_BIT - 32),    /* 153 -- 24,  c25a56 */
+                      BMP_C(0xc2b70000) << (BMP_BIT - 32),    /* 154 -- 16,    c2b7 */
+                      BMP_C(0xc2b80000) << (BMP_BIT - 32),    /* 155 -- 14,    30ae */
+                      BMP_C(0xc4000000) << (BMP_BIT - 32),    /* 156 --  8,      c4 */
+                      BMP_C(0xc6c60000) << (BMP_BIT - 32),    /* 157 -- 16,    c6c6 */
+                      BMP_C(0xc7000000) << (BMP_BIT - 32),    /* 158 --  8,      c7 */
+                      BMP_C(0xc704dd7b) << (BMP_BIT - 32),    /* 159 -- 32,c704dd7b */
+                      BMP_C(0xc8000000) << (BMP_BIT - 32),    /* 160 --  5,      19 */
+                      BMP_C(0xc8670000) << (BMP_BIT - 32),    /* 161 -- 16,    c867 */
+                      BMP_C(0xcbf43926) << (BMP_BIT - 32),    /* 162 -- 32,cbf43926 */
+                      BMP_C(0xcde70300) << (BMP_BIT - 32),    /* 163 -- 24,  cde703 */
+                      BMP_C(0xce3c0000) << (BMP_BIT - 32),    /* 164 -- 16,    ce3c */
+                      BMP_C(0xd0000000) << (BMP_BIT - 32),    /* 165 --  8,      d0 */
+                      BMP_C(0xd02a0000) << (BMP_BIT - 32),    /* 166 -- 15,    6815 */
+                      BMP_C(0xd0db0000) << (BMP_BIT - 32),    /* 167 -- 16,    d0db */
+                      BMP_C(0xd3100000) << (BMP_BIT - 32),    /* 168 -- 12,     d31 */
+                      BMP_C(0xd3be9568) << (BMP_BIT - 32),    /* 169 -- 30,34efa55a */
+                      BMP_C(0xd4d00000) << (BMP_BIT - 32),    /* 170 -- 12,     d4d */
+                      BMP_C(0xd5000000) << (BMP_BIT - 32),    /* 171 --  8,      d5 */
+                      BMP_C(0xd64e0000) << (BMP_BIT - 32),    /* 172 -- 16,    d64e */
+                      BMP_C(0xda000000) << (BMP_BIT - 32),    /* 173 --  8,      da */
+                      BMP_C(0xdaf00000) << (BMP_BIT - 32),    /* 174 -- 12,     daf */
+                      BMP_C(0xdebb20e3) << (BMP_BIT - 32),    /* 175 -- 32,debb20e3 */
+                      BMP_C(0xdf000000) << (BMP_BIT - 32),    /* 176 --  8,      df */
+                      BMP_C(0xe0000000) << (BMP_BIT - 32),    /* 177 --  3,       7 */
+                      BMP_C(0xe3069283) << (BMP_BIT - 32),    /* 178 -- 32,e3069283 */
+                      BMP_C(0xe3940000) << (BMP_BIT - 32),    /* 179 -- 16,    e394 */
+                      BMP_C(0xe5cc0000) << (BMP_BIT - 32),    /* 180 -- 16,    e5cc */
+                      BMP_C(0xe7a80000) << (BMP_BIT - 32),    /* 181 -- 13,    1cf5 */
+                      BMP_C(0xe8000000) << (BMP_BIT - 32),    /* 182 --  6,      3a */
+                      BMP_C(0xea000000) << (BMP_BIT - 32),    /* 183 --  7,      75 */
+                      BMP_C(0xea820000) << (BMP_BIT - 32),    /* 184 -- 16,    ea82 */
+                      BMP_C(0xec000000) << (BMP_BIT - 32),    /* 185 --  6,      3b */
+                      BMP_C(0xf0000000) << (BMP_BIT - 32),    /* 186 --  4,       f */
+                      BMP_C(0xf0b80000) << (BMP_BIT - 32),    /* 187 -- 16,    f0b8 */
+                      BMP_C(0xf1300000) << (BMP_BIT - 32),    /* 188 -- 12,     f13 */
+                      BMP_C(0xf4000000) << (BMP_BIT - 32),    /* 189 --  8,      f4 */
+                      BMP_C(0xf4acfb13) << (BMP_BIT - 32),    /* 190 -- 32,f4acfb13 */
+                      BMP_C(0xf5b00000) << (BMP_BIT - 32),    /* 191 -- 12,     f5b */
+                      BMP_C(0xf6400000) << (BMP_BIT - 32),    /* 192 -- 10,     3d9 */
+                      BMP_C(0xf7000000) << (BMP_BIT - 32),    /* 193 --  8,      f7 */
+                      BMP_C(0xf8000000) << (BMP_BIT - 32),    /* 194 --  5,      1f */
+                      BMP_C(0xfc000000) << (BMP_BIT - 32),    /* 195 --  6,      3f */
+                      BMP_C(0xfc891918) << (BMP_BIT - 32),    /* 196 -- 32,fc891918 */
+                      BMP_C(0xfd000000) << (BMP_BIT - 32),    /* 197 --  8,      fd */
+                      BMP_C(0xfe000000) << (BMP_BIT - 32),    /* 198 --  7,      7f */
+                      BMP_C(0xfedcba00) << (BMP_BIT - 32),    /* 199 -- 24,  fedcba */
+                      BMP_C(0xfee80000) << (BMP_BIT - 32),    /* 200 -- 16,    fee8 */
+                      BMP_C(0xff000000) << (BMP_BIT - 32),    /* 201 --  8,      ff */
+                      BMP_C(0xffc00000) << (BMP_BIT - 32),    /* 202 -- 10,     3ff */
+                      BMP_C(0xfff00000) << (BMP_BIT - 32),    /* 203 -- 12,     fff */
+                      BMP_C(0xfffc0000) << (BMP_BIT - 32),    /* 204 -- 14,    3fff */
+                      BMP_C(0xffff0000) << (BMP_BIT - 32),    /* 205 -- 16,    ffff */
+                      BMP_C(0xffffff00) << (BMP_BIT - 32),    /* 206 -- 24,  ffffff */
+                      BMP_C(0xfffffffc) << (BMP_BIT - 32),    /* 207 -- 30,3fffffff */
+                      BMP_C(0xfffffffe) << (BMP_BIT - 32),    /* 208 -- 31,7fffffff */
+                      BMP_C(0xffffffff) << (BMP_BIT - 32),    /* 209 -- 32,ffffffff */
 };
 
 static const struct malias aliases[];
