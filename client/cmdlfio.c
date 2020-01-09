@@ -184,7 +184,7 @@ static int CmdIOProxDemod(const char *Cmd) {
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdIOProxRead(const char *Cmd) {
-    lf_read(true, 12000);
+    lf_read(false, 12000);
     return CmdIOProxDemod(Cmd);
 }
 static int CmdIOProxSim(const char *Cmd) {

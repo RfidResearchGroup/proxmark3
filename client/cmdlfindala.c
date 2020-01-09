@@ -115,7 +115,7 @@ static void encodeHeden2L(uint8_t *dest, uint32_t cardnumber) {
         dest[i/8] = bytebits_to_byte(template + i, 8);
     }
 
-    PrintAndLogEx(INFO, "Heden2L Cardnumber %u ; RawID %s", cardnumber, sprint_hex(dest, 8));
+    PrintAndLogEx(INFO, "Heden-2L card number %u", cardnumber);
 }
 
 static void decodeHeden2L(uint8_t *bits) {
@@ -483,7 +483,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdIndalaRead(const char *Cmd) {
-    lf_read(true, 30000);
+    lf_read(false, 30000);
     return CmdIndalaDemod(Cmd);
 }
 
@@ -601,8 +601,10 @@ static int CmdIndalaClone(const char *Cmd) {
         max = 8;
     } else {
         // 64 BIT UID
-        if (got_cn)
+        if (got_cn) {
             encodeHeden2L(data, cardnumber);
+            datalen = 8;
+        }
 
         // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with RawID %s", sprint_hex(data, datalen));

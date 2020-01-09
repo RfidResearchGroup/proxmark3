@@ -100,7 +100,7 @@ static int CmdPrescoDemod(const char *Cmd) {
 //see ASKDemod for what args are accepted
 static int CmdPrescoRead(const char *Cmd) {
     // Presco Number: 123456789 --> Sitecode 30 | usercode 8665
-    lf_read(true, 12000);
+    lf_read(false, 12000);
     return CmdPrescoDemod(Cmd);
 }
 

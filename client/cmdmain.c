@@ -94,7 +94,7 @@ static int CmdAuto(const char *Cmd) {
     PrintAndLogEx(INFO, "Trying 'lf read' and save a trace for you...");
 
     CmdPlot("");
-    lf_read(true, 40000);
+    lf_read(false, 40000);
     char *fname = calloc(100, sizeof(uint8_t));
     AppendDate(fname, 100, "f lf_unknown_%Y-%m-%d_%H:%M");
     CmdSave(fname);

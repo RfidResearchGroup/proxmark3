@@ -181,7 +181,7 @@ static int CmdPacDemod(const char *Cmd) {
 }
 
 static int CmdPacRead(const char *Cmd) {
-    lf_read(true, 4096 * 2 + 20);
+    lf_read(false, 4096 * 2 + 20);
     return CmdPacDemod(Cmd);
 }
 

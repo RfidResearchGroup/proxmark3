@@ -209,7 +209,7 @@ static int CmdPyramidDemod(const char *Cmd) {
 }
 
 static int CmdPyramidRead(const char *Cmd) {
-    lf_read(true, 15000);
+    lf_read(false, 15000);
     return CmdPyramidDemod(Cmd);
 }
 

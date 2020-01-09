@@ -135,7 +135,7 @@ static int CmdGallagherDemod(const char *Cmd) {
 }
 
 static int CmdGallagherRead(const char *Cmd) {
-    lf_read(true, 4096 * 2 + 20);
+    lf_read(false, 4096 * 2 + 20);
     return CmdGallagherDemod(Cmd);
 }
 
