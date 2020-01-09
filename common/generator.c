@@ -15,10 +15,19 @@
 #include <sys/types.h>
 #include <inttypes.h>
 #include <string.h>
-#include "commonutil.h"
+#include "commonutil.h"   //BSWAP_16
+#include "common.h"       //BSWAP_32/64
 #include "util.h"
 #include "pm3_cmd.h"
 #include "ui.h"
+#include "mbedtls/sha1.h"
+
+#if defined(__APPLE__)
+#include <libkern/OSByteOrder.h>
+#define BSWAP_16(x) OSSwapInt16(x)
+#define BSWAP_32(x) OSSwapInt32(x)
+#define BSWAP_64(x) OSSwapInt64(x)
+#endif
 
 // Implemetation tips:
 // For each implementation of the algos, I recommend adding a self test for easy "simple unit" tests when Travic CI / Appveyour runs.
@@ -32,6 +41,8 @@
 // XYZ 3D printing
 // Vinglock
 //------------------------------------
+static void transform_D(uint8_t *ru) {
+
 const uint32_t c_D[] = {
     0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
     0xD1CC8B4E, 0xE8873E6F, 0x61399BBB, 0xF1B91926, 0xAC661520, 0xA21A31C9,
@@ -40,7 +51,6 @@ const uint32_t c_D[] = {
     0x5728B869, 0x30726D5A
 };
 
-static void transform_D(uint8_t *ru) {
     //Transform
     uint8_t i;
     uint8_t p = 0;
@@ -185,42 +195,120 @@ uint16_t ul_ev1_packgenD(uint8_t *uid) {
 // MFC keyfile generation stuff
 //------------------------------------
 // Vinglock
-int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    *key = 0;
     return PM3_SUCCESS;
 }
 int mfc_algo_ving_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
+    for (int keytype = 0; keytype < 2; keytype++) {
+        for (int sector = 0; sector < 16; sector++){
+            uint64_t key = 0;
+            mfc_algo_ving_one(uid, sector, keytype, &key );
+            num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
+        }
+    }
     return PM3_SUCCESS;
 }
 
 // Yale Doorman
-int mfc_algo_yale_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+int mfc_algo_yale_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    *key = 0;
     return PM3_SUCCESS;
 }
 int mfc_algo_yale_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
+    for (int keytype = 0; keytype < 2; keytype++) {
+        for (int sector = 0; sector < 16; sector++){
+            uint64_t key = 0;
+            mfc_algo_yale_one(uid, sector, keytype, &key );
+            num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
+        }
+    }
     return PM3_SUCCESS;
 }
 
 // Saflok / Maid UID to key.
-int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    *key = 0;
     return PM3_SUCCESS;
 }
 int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
+    for (int keytype = 0; keytype < 2; keytype++) {
+        for (int sector = 0; sector < 16; sector++){
+            uint64_t key = 0;
+            mfc_algo_saflok_one(uid, sector, keytype, &key );
+            num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
+        }
+    }
     return PM3_SUCCESS;
 }
 
 // MIZIP algo
-int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 4) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+
+    if (sector == 0) {
+        // A
+        if (keytype == 0)
+	    *key = 0xA0A1A2A3A4A5U;
+	else    // B
+	    *key = 0xB4C132439eef;
+
+    } else {
+
+       uint8_t xor[6];
+
+        if ( keytype == 0 ) {
+
+            uint64_t xor_tbl_a[] = {
+                0x09125a2589e5,
+                0xAB75C937922F,
+                0xE27241AF2C09,
+                0x317AB72F4490,
+            };
+
+            num_to_bytes(xor_tbl_a[sector - 1], 6, xor);
+
+            *key =
+                (uint64_t)(uid[0] ^ xor[0] ) << 40 |
+                (uint64_t)(uid[1] ^ xor[1]) << 32 |
+                (uint64_t)(uid[2] ^ xor[2]) << 24 |
+                (uint64_t)(uid[3] ^ xor[3]) << 16 |
+                (uint64_t)(uid[0] ^ xor[4]) <<  8 |
+                (uint64_t)(uid[1] ^ xor[5])
+                ;
+
+        } else {
+            uint64_t xor_tbl_b[] = {
+                0xF12C8453D821,
+                0x73E799FE3241,
+                0xAA4D137656AE,
+                0xB01327272DFD
+            };
+
+            // B
+            num_to_bytes(xor_tbl_b[sector - 1], 6, xor);
+
+            *key =
+                (uint64_t)(uid[2] ^ xor[0]) << 40 |
+                (uint64_t)(uid[3] ^ xor[1]) << 32 |
+                (uint64_t)(uid[0] ^ xor[2]) << 24 |
+                (uint64_t)(uid[1] ^ xor[3]) << 16 |
+                (uint64_t)(uid[2] ^ xor[4]) <<  8 |
+                (uint64_t)(uid[3] ^ xor[5])
+                ;
+
+        }
+    }
     return PM3_SUCCESS;
 }
 // returns all Mifare Mini (MFM) 10 keys.
@@ -228,65 +316,102 @@ int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
 int mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
 
-    uint64_t xor_tbl[] = {
-        0x09125a2589e5ULL, 0xF12C8453D821ULL,
-        0xAB75C937922FULL, 0x73E799FE3241ULL,
-        0xE27241AF2C09ULL, 0xAA4D137656AEULL,
-        0x317AB72F4490ULL, 0xB01327272DFDULL
-    };
-
-    // A
-    num_to_bytes(0xA0A1A2A3A4A5ULL, 6, keys);
-    for (uint8_t i = 0; i < 4; i++) {
-        uint64_t a =
-            (uint64_t)(uid[0] ^ xor_tbl[i]) << 40 |
-            (uint64_t)(uid[1] ^ xor_tbl[i]) << 32 |
-            (uint64_t)(uid[2] ^ xor_tbl[i]) << 24 |
-            (uint64_t)(uid[3] ^ xor_tbl[i]) << 16 |
-            (uint64_t)(uid[1] ^ xor_tbl[i]) <<  8 |
-            (uint64_t)(uid[2] ^ xor_tbl[i])
-            ;
-        num_to_bytes(a, 6, keys + (1 * i * 6));
+    for (int keytype = 0; keytype < 2; keytype++) {
+        for (int sector = 0; sector < 5; sector++){
+            uint64_t key = 0;
+            mfc_algo_mizip_one(uid, sector, keytype, &key);
+            num_to_bytes(key, 6, keys + (keytype * 5 * 6) + (sector * 6));
     }
-
-    // B
-    num_to_bytes(0xB4C132439eefULL, 6, keys + (5 * 6));
-    for (uint8_t i = 0; i < 4; i++) {
-        uint64_t b =
-            (uint64_t)(uid[2] ^ xor_tbl[i + 1]) << 40 |
-            (uint64_t)(uid[3] ^ xor_tbl[i + 1]) << 32 |
-            (uint64_t)(uid[0] ^ xor_tbl[i + 1]) << 24 |
-            (uint64_t)(uid[1] ^ xor_tbl[i + 1]) << 16 |
-            (uint64_t)(uid[2] ^ xor_tbl[i + 1]) <<  8 |
-            (uint64_t)(uid[3] ^ xor_tbl[i + 1])
-            ;
-        num_to_bytes(b, 6, keys + 30 + (1 * i * 6));
     }
     return PM3_SUCCESS;
 }
 
 // Disney Infinity algo
-int mfc_algo_di_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
-    if (sector > 15) return PM3_EINVARG;
+int mfc_algo_di_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
+    if (sector > 4) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+
+    uint8_t hash[64];
+    uint8_t input[] = {
+        0x0A, 0x14, 0xFD, 0x05, 0x07, 0xFF, 0x4B, 0xCD,
+        0x02, 0x6B, 0xA8, 0x3F, 0x0A, 0x3B, 0x89, 0xA9,
+        uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6],
+        0x28, 0x63, 0x29, 0x20, 0x44, 0x69, 0x73, 0x6E,
+        0x65, 0x79, 0x20, 0x32, 0x30, 0x31, 0x33
+    };
+
+    mbedtls_sha1(input, sizeof(input), hash);
+
+    *key = (
+        (uint64_t)hash[3] << 40 |
+        (uint64_t)hash[2] << 32 |
+        (uint64_t)hash[1] << 24 |
+        (uint64_t)hash[0] << 16 |
+        (uint64_t)hash[7] << 8 |
+        hash[6]
+        );
+
     return PM3_SUCCESS;
 }
 int mfc_algo_di_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
+    for (int keytype = 0; keytype < 2; keytype++) {
+        for (int sector = 0; sector < 5; sector++){
+            uint64_t key = 0;
+            mfc_algo_di_one(uid, sector, keytype, &key);
+            num_to_bytes(key, 6, keys + (keytype * 5 * 6) + (sector * 6));
+        }
+    }
     return PM3_SUCCESS;
 }
 
 // Skylanders
-int mfc_algo_sky_one(uint8_t *uid, uint8_t sector, uint64_t *key) {
+static uint64_t sky_crc64_like(uint64_t result, uint8_t sector) {
+    #define SKY_POLY UINT64_C(0x42f0e1eba9ea3693)
+    #define SKY_TOP UINT64_C(0x800000000000)
+    result ^= (uint64_t)sector << 40;
+    for(int i = 0; i < 8; i++) {
+        result = (result & SKY_TOP) ? (result << 1) ^ SKY_POLY : result << 1;
+    }
+    return result;
+}
+int mfc_algo_sky_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
+
+#define SKY_KEY_MASK 0xFFFFFFFFFFFF
+
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
+    
+    if (sector == 0 && keytype == 0) {
+        *key = 0x4B0B20107CCB;
+        return PM3_SUCCESS;
+    }
+    if (keytype == 1) {
+        *key = 0x000000000000;
+        return PM3_SUCCESS;
+    }
+    
+    // hash UID
+    uint64_t hash = 0x9AE903260CC4;
+    for(int i = 0; i < 4; i++) {
+        hash = sky_crc64_like(hash, uid[i]);
+    }
+
+    uint64_t sectorhash = sky_crc64_like(hash, sector);   
+    *key = BSWAP_64(sectorhash & SKY_KEY_MASK) >> 16;
     return PM3_SUCCESS;
 }
 int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
+    for (int keytype = 0; keytype < 2; keytype++) {
+        for (int sector = 0; sector < 16; sector++){
+            uint64_t key = 0;
+            mfc_algo_sky_one(uid, sector, keytype, &key);
+            num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
+        }
+    }
     return PM3_SUCCESS;
 }
-
 
 //------------------------------------
 // Self tests
@@ -322,6 +447,12 @@ int generator_selftest() {
 //    uint64_t key1 = mfc_algo_a(uid5);
 //    success = (key1 == 0xD1E2AA68E39A);
 //    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" | %s", sprint_hex(uid5, 4), key1, success ? "OK" : "->D1E2AA68E39A<--");
+
+    uint8_t uid6[] = {0x74, 0x57, 0xCA, 0xA9};
+    uint64_t key6 = 0;
+    mfc_algo_sky_one(uid6, 15, 0, &key6);
+    success = (key6 == 0x82c7e64bc565);
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" | %s", sprint_hex(uid6, 4), key6, success ? "OK" : "->82C7E64BC565<--");
 
     PrintAndLogEx(SUCCESS, "-------------------");
     return PM3_SUCCESS;

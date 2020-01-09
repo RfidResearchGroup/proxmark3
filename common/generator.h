@@ -23,25 +23,25 @@ uint16_t ul_ev1_packgenB(uint8_t *uid);
 uint16_t ul_ev1_packgenC(uint8_t *uid);
 uint16_t ul_ev1_packgenD(uint8_t *uid);
 
-int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint64_t *key);
+int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_ving_all(uint8_t *uid, uint8_t *keys);
 
-int mfc_algo_yale_one(uint8_t *uid, uint8_t sector, uint64_t *key);
+int mfc_algo_yale_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_yale_all(uint8_t *uid, uint8_t *keys);
 
-int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint64_t *key);
+int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys);
 
-int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint64_t *key);
+int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys);
 
-int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint64_t *key);
+int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys);
 
-int mfc_algo_di_one(uint8_t *uid, uint8_t sector, uint64_t *key);
+int mfc_algo_di_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_di_all(uint8_t *uid, uint8_t *keys);
 
-int mfc_algo_sky_one(uint8_t *uid, uint8_t sector, uint64_t *key);
+int mfc_algo_sky_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys);
 
 int generator_selftest();
