@@ -78,7 +78,7 @@ static int CmdVerichipDemod(const char *Cmd) {
 }
 
 static int CmdVerichipRead(const char *Cmd) {
-    lf_read(true, 4096 * 2 + 20);
+    lf_read(false, 4096 * 2 + 20);
     return CmdVerichipDemod(Cmd);
 }
 
