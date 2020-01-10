@@ -445,7 +445,7 @@ static int usage_hf14_csave(void) {
     PrintAndLogEx(NORMAL, "It saves `magic Chinese` card dump into the file `filename.eml` or `cardID.eml`");
     PrintAndLogEx(NORMAL, "or into emulator memory");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf mf csave [h] [e] [u] [card memory] i <file name w/o `.eml`>");
+    PrintAndLogEx(NORMAL, "Usage:  hf mf csave [h] [e] [u] [card memory] o <file name w/o `.eml`>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h             this help");
     PrintAndLogEx(NORMAL, "       e             save data to emulator memory");
