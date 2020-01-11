@@ -77,7 +77,9 @@ begin
 					write_enable2 <= 1'b0;
 				end
 				else
+                                begin
 					addr <= addr + 1;
+                                end
 			end
 		end
 		else
@@ -92,15 +94,17 @@ begin
 		write_enable1 <= 1'b0;
 		write_enable2 <= 1'b0;
 		if (previous_major_mode != `FPGA_MAJOR_MODE_OFF && previous_major_mode != `FPGA_MAJOR_MODE_HF_GET_TRACE) // just switched off
+                begin
 			start_addr <= addr;
+                end
 	end
 end
 
 
 // (2+1)k RAM
 reg [7:0] D_out1, D_out2;
-reg [7:0] ram1 [2047:0];
-reg [7:0] ram2 [1023:0];
+reg [7:0] ram1 [2047:0]; // 2048  u8
+reg [7:0] ram2 [1023:0]; // 1024  u8
 
 always @(negedge ck_1356megb)
 begin
@@ -112,7 +116,7 @@ begin
 	else
 		D_out1 <= ram1[addr[10:0]];
 	if (write_enable2)
-	begin
+begin
 		ram2[addr[9:0]] <= adc_d;
 		D_out2 <= adc_d;
 	end
@@ -128,22 +132,25 @@ reg [7:0] shift_out;
 
 always @(negedge ck_1356megb)
 begin
-    if(clock_cnt[3:0] == 4'd0)        // update shift register every 16 clock cycles
+    if (clock_cnt[3:0] == 4'd0)        // update shift register every 16 clock cycles
 	begin
-		if(clock_cnt[6:4] == 3'd0)    // either load new value
+		if (clock_cnt[6:4] == 3'd0)    // either load new value
 		begin
-			if (addr[11] == 1'b0)
-				shift_out <= D_out1;
-			else
-				shift_out <= D_out2;
+                    if (addr[11] == 1'b0)
+                        shift_out <= D_out1;
+                    else
+                        shift_out <= D_out2;
 		end
-		else                          // or shift left
-            shift_out[7:1] <= shift_out[6:0];
+		else
+                begin
+                          // or shift left
+                    shift_out[7:1] <= shift_out[6:0];
+                end
 	end
 
 	ssp_clk <= ~clock_cnt[3];       // ssp_clk frequency = 13,56MHz / 16 = 847,5 kHz
 
-	if(clock_cnt[6:4] == 3'b000)    // set ssp_frame for 0...31
+	if (clock_cnt[6:4] == 3'b000)    // set ssp_frame for 0...31
 		ssp_frame <= 1'b1;
 	else
 		ssp_frame <= 1'b0;
