@@ -18,7 +18,7 @@
 `define FPGA_MAJOR_MODE_LF_PASSTHRU                 2
 `define FPGA_MAJOR_MODE_LF_ADC                      3
 
-// Options for LF_ADC
+// Options for LF_READER
 `define FPGA_LF_ADC_READER_FIELD                    1
 
 // Options for LF_EDGE_DETECT
@@ -50,32 +50,106 @@ module fpga_lf(
 // to the configuration bits, for use below.
 //-----------------------------------------------------------------------------
 
+/*
+ Attempt to write up how its hooked up. Iceman 2020.
+
+ Communication between ARM / FPGA is done inside armsrc/fpgaloader.c see: function FpgaSendCommand()
+ Send 16 bit command / data pair to FPGA
+ The bit format is: C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
+ where 
+   C is 4bit command
+   D is 12bit data
+
+  shift_reg receive this 16bit frame
+
+  LF command
+  ----------
+  shift_reg[15:12] == 4bit command
+  LF has three commands (FPGA_CMD_SET_CONFREG, FPGA_CMD_SET_DIVISOR, FPGA_CMD_SET_EDGE_DETECT_THRESHOLD)
+  Current commands uses only 2bits. We have room for up to 4bits of commands total (7).
+
+  LF data
+  -------
+  shift_reg[11:0] == 12bit data
+  lf data is divided into MAJOR MODES and configuration values.
+
+  The major modes uses 3bits (0,1,2,3,7 | 000, 001, 010, 011, 111)
+    000 FPGA_MAJOR_MODE_LF_READER        = Act as LF reader (modulate)
+    001 FPGA_MAJOR_MODE_LF_EDGE_DETECT   = Simulate LF
+    010 FPGA_MAJOR_MODE_LF_PASSTHRU      = Passthrough mode, CROSS_LO line connected to SSP_DIN. SSP_DOUT logic level controls if we modulate / listening
+    011 FPGA_MAJOR_MODE_LF_ADC           = refactor hitag2, clear ADC sampling
+    111 FPGA_MAJOR_MODE_OFF              = turn off sampling.
+
+  Each one of this major modes can have options. Currently these two major modes uses options.
+   - FPGA_MAJOR_MODE_LF_READER
+   - FPGA_MAJOR_MODE_LF_EDGE_DETECT
+  
+   FPGA_MAJOR_MODE_LF_READER
+   -------------------------------------
+    lf_field = 1bit  (FPGA_LF_ADC_READER_FIELD)
+   
+    You can send FPGA_CMD_SET_DIVISOR to set with FREQUENCY the fpga should sample at
+    divisor = 8bits shift_reg[7:0]
+
+   FPGA_MAJOR_MODE_LF_EDGE_DETECT
+   ------------------------------------------
+    lf_ed_toggle_mode = 1bits
+    lf_ed_threshold = 8bits threshold defaults to 127
+
+    You can send FPGA_CMD_SET_EDGE_DETECT_THRESHOLD to set a custom threshold
+    lf_ed_threshold = 8bits threshold value.
+
+  conf_word 12bits
+    conf_word[7:5] = 3bit major mode.
+    conf_word[0]    = 1bit lf_field 
+    conf_word[1]    = 1bit lf_ed_toggle_mode
+    conf_word[7:0]  = 8bit divisor
+    conf_word[7:0]  = 8bit threshold
+
+-----+--------- frame layout --------------------
+bit  |    15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+-----+-------------------------------------------
+cmd  |     x  x  x  x
+major|                          x x x              
+opt  |                                      x x
+divi |                          x x x x x x x x
+thres|                          x x x x x x x x
+-----+-------------------------------------------
+*/
+
 reg [15:0] shift_reg;
 reg [7:0] divisor;
-reg [8:0] conf_word;
-
-// threshold edge detect
 reg [7:0] lf_ed_threshold;
+reg [11:0] conf_word;
 
+wire [2:0] major_mode = conf_word[7:5];
+wire lf_field = conf_word[0];
+wire lf_ed_toggle_mode = conf_word[1];
+
+// Handles cmd / data frame from ARM
 always @(posedge ncs)
 begin
+    // 4 bit command
     case (shift_reg[15:12])
         `FPGA_CMD_SET_CONFREG:
         begin
-            conf_word <= shift_reg[8:0];
-            if (shift_reg[8:6] == `FPGA_MAJOR_MODE_LF_EDGE_DETECT)
+            // 12 bit data
+            conf_word <= shift_reg[11:0];
+            if (shift_reg[7:5] == `FPGA_MAJOR_MODE_LF_EDGE_DETECT)
             begin
-                lf_ed_threshold <= 127;              // default threshold
+                lf_ed_threshold <= 127;  // default threshold
             end
         end
+
         `FPGA_CMD_SET_DIVISOR:
-             divisor <= shift_reg[7:0];
+             divisor <= shift_reg[7:0]; // 8bits
+
         `FPGA_CMD_SET_EDGE_DETECT_THRESHOLD:
-             lf_ed_threshold <= shift_reg[7:0];
+             lf_ed_threshold <= shift_reg[7:0];  // 8 bits
     endcase
 end
 
-//
+// Receive 16bits of data from ARM here.
 always @(posedge spck)
 begin
     if (~ncs)
@@ -84,12 +158,6 @@ begin
         shift_reg[0] <= mosi;
     end
 end
-
-wire [2:0] major_mode = conf_word[8:6];
-
-// For the low-frequency configuration:
-wire lf_field = conf_word[0];
-wire lf_ed_toggle_mode = conf_word[1]; // for lo_edge_detect
 
 //-----------------------------------------------------------------------------
 // And then we instantiate the modules corresponding to each of the FPGA's
@@ -142,7 +210,9 @@ lo_adc la(
 //   001 --  LF edge detect (generic)
 //   010 --  LF passthrough
 //   011 --  LF ADC (read/write)
-//   110 --  FPGA_MAJOR_MODE_OFF_LF (rdv40 specific)
+//   100 --  unused
+//   101 --  unused
+//   110 --  unused
 //   111 --  FPGA_MAJOR_MODE_OFF
 //                                           000           001           010          011           100   101   110   111
 mux8 mux_ssp_clk     (major_mode, ssp_clk,   lr_ssp_clk,   le_ssp_clk,   1'b0,        la_ssp_clk,   1'b0, 1'b0, 1'b0, 1'b0);

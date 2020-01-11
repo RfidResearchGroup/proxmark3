@@ -337,7 +337,7 @@ static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks) {
 }
 
 static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
-    uint8_t flags = FPGA_MAJOR_MODE_ISO18092;
+    uint8_t flags = FPGA_MAJOR_MODE_HF_ISO18092;
     if (power)
         flags |= FPGA_HF_ISO18092_FLAG_READER;
     if (highspeed)
@@ -404,7 +404,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
         Dbprintf("WaitForFelicaReply Start");
     uint32_t c = 0;
     // power, no modulation
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_ISO18092 | FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
     FelicaFrameReset();
 
     // clear RXRDY:
@@ -471,7 +471,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
     // Signal field is on with the appropriate LED
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_ISO18092 | fpga_minor_mode);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | fpga_minor_mode);
 
     //20.4 ms generate field,  start sending polling command afterwars.
     SpinDelay(100);
@@ -720,7 +720,7 @@ void felica_sim_lite(uint64_t uid) {
             TransmitFor18092_AsReader(curresp, curlen, NULL, 0, 0);
 
             //switch back
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_ISO18092 | FPGA_HF_ISO18092_FLAG_NOMOD);
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | FPGA_HF_ISO18092_FLAG_NOMOD);
 
             FelicaFrameReset();
             listenmode = true;
