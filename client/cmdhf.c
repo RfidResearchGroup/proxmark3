@@ -18,6 +18,7 @@
 #include "cmdparser.h"      // command_t
 #include "cliparser/cliparser.h"  // parse
 #include "comms.h"          // clearCommandBuffer
+#include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
 #include "cmdhf14b.h"       // ISO14443-B
 #include "cmdhf15.h"        // ISO15693
@@ -248,11 +249,18 @@ int CmdHFPlot(const char *Cmd) {
     }
 
     for (size_t i = 0; i < FPGA_TRACE_SIZE; i++) {
-        GraphBuffer[i] = (int)buf[i] - 128;
+        GraphBuffer[i] = ((int)buf[i]) - 127;
     }
 
     GraphTraceLen = FPGA_TRACE_SIZE;
+
     ShowGraphWindow();
+
+    // remove signal offset
+    CmdHpf("");
+
+    setClockGrid(0, 0);
+    DemodBufferLen = 0;
     RepaintGraphWindow();
 	return PM3_SUCCESS;
 }
