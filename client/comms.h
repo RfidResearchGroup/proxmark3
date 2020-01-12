@@ -40,7 +40,8 @@ typedef enum {
     BIG_BUF_EML,
     FLASH_MEM,
     SIM_MEM,
-    SPIFFS
+    SPIFFS,
+    FPGA_MEM,
 } DeviceMemType_t;
 
 typedef struct {

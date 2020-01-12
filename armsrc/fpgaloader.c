@@ -124,8 +124,8 @@ void SetupSpi(int mode) {
 }
 
 //-----------------------------------------------------------------------------
-// Set up the synchronous serial port, with the one set of options that we
-// always use when we are talking to the FPGA. Both RX and TX are enabled.
+// Set up the synchronous serial port with the set of options that fits
+// the FPGA mode. Both RX and TX are always enabled.
 //-----------------------------------------------------------------------------
 void FpgaSetupSsc(void) {
     // First configure the GPIOs, and get ourselves a clock.
@@ -141,16 +141,16 @@ void FpgaSetupSsc(void) {
     // Now set up the SSC proper, starting from a known state.
     AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
-    // RX clock comes from TX clock, RX starts when TX starts, data changes
-    // on RX clock rising edge, sampled on falling edge
+	// RX clock comes from TX clock, RX starts on Transmit Start,
+	// data and frame signal is sampled on falling edge of RK
     AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
 
     // 8 bits per transfer, no loopback, MSB first, 1 transfer per sync
     // pulse, no output sync
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
-    // clock comes from TK pin, no clock output, outputs change on falling
-    // edge of TK, sample on rising edge of TK, start on positive-going edge of sync
+	// TX clock comes from TK pin, no clock output, outputs change on falling
+	// edge of TK, frame sync is sampled on rising edge of TK, start TX on rising edge of TF
     AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) | SSC_CLOCK_MODE_START(5);
 
     // tx framing is the same as the rx framing

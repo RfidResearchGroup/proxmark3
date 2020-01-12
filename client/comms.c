@@ -797,6 +797,10 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
             //return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
             return false;
         }
+        case FPGA_MEM: {
+            SendCommandMIX(CMD_FPGAMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FPGAMEM_DOWNLOADED);
+        }
     }
     return false;
 }

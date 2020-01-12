@@ -3,6 +3,7 @@
 // Merlok - 2017
 // Doegox - 2019
 // Iceman - 2019
+// Piwi - 2019
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -12,11 +13,11 @@
 //-----------------------------------------------------------------------------
 #include "cmdhf.h"
 
-#include <ctype.h>        // tolower
+#include <ctype.h>          // tolower
 
-#include "cmdparser.h"    // command_t
-#include "comms.h"        // clearCommandBuffer
-
+#include "cmdparser.h"      // command_t
+#include "cliparser/cliparser.h"  // parse
+#include "comms.h"          // clearCommandBuffer
 #include "cmdhf14a.h"       // ISO14443-A
 #include "cmdhf14b.h"       // ISO14443-B
 #include "cmdhf15.h"        // ISO15693
@@ -34,6 +35,9 @@
 #include "cmdhflto.h"       // LTO-CM
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
+#include "cmddata.h"
+#include "graph.h"
+#include "../common_fpga/fpga.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -224,6 +228,35 @@ int CmdHFSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int CmdHFPlot(const char *Cmd) {
+	CLIParserInit("hf plot",
+		"Plots HF signal after RF signal path and A/D conversion.",
+		"This can be used after any hf command and will show the last few milliseconds of the HF signal.\n"
+		"Note: If the last hf command terminated because of a timeout you will most probably see nothing.\n");
+	void* argtable[] = {
+		arg_param_begin,
+		arg_param_end
+	};
+	CLIExecWithReturn(Cmd, argtable, true);
+
+	uint8_t buf[FPGA_TRACE_SIZE];
+   
+    PacketResponseNG response;
+    if (!GetFromDevice(FPGA_MEM, buf, FPGA_TRACE_SIZE, 0, NULL, 0, &response, 4000, true)) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    for (size_t i = 0; i < FPGA_TRACE_SIZE; i++) {
+        GraphBuffer[i] = (int)buf[i] - 128;
+    }
+
+    GraphTraceLen = FPGA_TRACE_SIZE;
+    ShowGraphWindow();
+    RepaintGraphWindow();
+	return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...               }"},
@@ -241,6 +274,7 @@ static command_t CommandTable[] = {
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
     {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
+    {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},
     {"search",      CmdHFSearch,      AlwaysAvailable, "Search for known HF tags"},
     {"sniff",       CmdHFSniff,       IfPm3Hfsniff,    "<samples to skip (10000)> <triggers to skip (1)> Generic HF Sniff"},

@@ -174,6 +174,7 @@ typedef struct {
     bool compiled_with_hitag           : 1;
     // hf
     bool compiled_with_hfsniff         : 1;
+    bool compiled_with_hfplot          : 1;
     bool compiled_with_iso14443a       : 1;
     bool compiled_with_iso14443b       : 1;
     bool compiled_with_iso15693        : 1;
@@ -188,7 +189,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 3
+#define CAPABILITIES_VERSION 4
 extern capabilities_t pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL
@@ -522,6 +523,11 @@ typedef struct {
 #define CMD_HF_MFU_OTP_TEAROFF                                            0x0740
 
 #define CMD_HF_SNIFF                                                      0x0800
+#define CMD_HF_PLOT                                                       0x0801
+
+// Fpga plot download
+#define CMD_FPGAMEM_DOWNLOAD                                              0x0802
+#define CMD_FPGAMEM_DOWNLOADED                                            0x0803
 
 // For ThinFilm Kovio
 #define CMD_HF_THINFILM_READ                                              0x0810

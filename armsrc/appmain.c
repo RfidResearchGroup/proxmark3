@@ -17,6 +17,7 @@
 #include "dbprint.h"
 #include "pmflash.h"
 #include "fpga.h"
+#include "fpga.h"
 #include "fpgaloader.h"
 #include "string.h"
 #include "legicrf.h"
@@ -439,6 +440,11 @@ void SendCapabilities(void) {
     capabilities.compiled_with_hfsniff = true;
 #else
     capabilities.compiled_with_hfsniff = false;
+#endif
+#ifdef WITH_HFPLOT
+    capabilities.compiled_with_hfplot = true;
+#else
+    capabilities.compiled_with_hfplot = false;
 #endif
 #ifdef WITH_ISO14443a
     capabilities.compiled_with_iso14443a = true;
@@ -924,7 +930,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_HITAG
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
-            SniffHitag();
+            SniffHitag(packet->oldarg[0]);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
@@ -1358,6 +1364,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #endif
 
+#ifdef WITH_HFPLOT
+        case CMD_FPGAMEM_DOWNLOAD: {
+            HfPlotDownload();
+            break;
+        }
+#endif
+
 #ifdef WITH_SMARTCARD
         case CMD_SMART_ATR: {
             SmartCardAtr();
@@ -1637,7 +1650,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1698,7 +1711,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1780,7 +1793,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } else {
                 rdv40_spiffs_append((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
             }
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1822,7 +1835,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             res = Flash_Write(startidx, data, len);
             isok = (res == len) ? 1 : 0;
 
-            reply_old(CMD_ACK, isok, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1833,14 +1846,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             bool isok = false;
             if (initalwipe) {
                 isok = Flash_WipeMemory();
-                reply_old(CMD_ACK, isok, 0, 0, 0, 0);
+                reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
                 LED_B_OFF();
                 break;
             }
             if (page < 3)
                 isok = Flash_WipeMemoryPage(page);
 
-            reply_old(CMD_ACK, isok, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1871,7 +1884,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
             FlashStop();
 
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             BigBuf_free();
             LED_B_OFF();
             break;

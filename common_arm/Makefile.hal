@@ -92,7 +92,8 @@ PLATFORM_DEFS += \
     -DWITH_ICLASS \
     -DWITH_FELICA \
     -DWITH_NFCBARCODE \
-    -DWITH_HFSNIFF
+    -DWITH_HFSNIFF \
+    -DWITH_HFPLOT
 
 
 # Standalone mode

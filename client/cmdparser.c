@@ -95,6 +95,12 @@ bool IfPm3Hfsniff(void) {
     return pm3_capabilities.compiled_with_hfsniff;
 }
 
+bool IfPm3Hfplot(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_hfplot;
+}
+
 bool IfPm3Iso14443a(void) {
     if (!IfPm3Present())
         return false;
