@@ -458,9 +458,9 @@ int lf_config(sample_config *config) {
     clearCommandBuffer();
     if (config != NULL)
         SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)config, sizeof(sample_config));
-    else 
+    else
         SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
-    
+
     return PM3_SUCCESS;
 }
 
@@ -474,15 +474,15 @@ int CmdLFConfig(const char *Cmd) {
     }
 
     sample_config config = {
-       .decimation = -1,
-       .bits_per_sample = -1,
-       .averaging = -1,
-       .divisor = -1,
-       .trigger_threshold = -1,
-       .samples_to_skip = -1,
-       .verbose = true
+        .decimation = -1,
+        .bits_per_sample = -1,
+        .averaging = -1,
+        .divisor = -1,
+        .trigger_threshold = -1,
+        .samples_to_skip = -1,
+        .verbose = true
     };
-   
+
     bool errors = false;
 
     uint8_t cmdp = 0;
@@ -527,20 +527,20 @@ int CmdLFConfig(const char *Cmd) {
                 break;
             }
             case 'b': {
-                config.bits_per_sample = param_get8ex(Cmd, cmdp + 1, 8, 10); 
+                config.bits_per_sample = param_get8ex(Cmd, cmdp + 1, 8, 10);
 
                 // bps is limited to 8
-                if (config.bits_per_sample >> 4) 
+                if (config.bits_per_sample >> 4)
                     config.bits_per_sample = 8;
 
                 cmdp += 2;
                 break;
             }
             case 'd': {
-                config.decimation = param_get8ex(Cmd, cmdp + 1, 1, 10);             
+                config.decimation = param_get8ex(Cmd, cmdp + 1, 1, 10);
 
                 // decimation is limited to 255
-                if (config.decimation >> 4) 
+                if (config.decimation >> 4)
                     config.decimation = 8;
 
                 cmdp += 2;

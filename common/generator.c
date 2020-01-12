@@ -36,13 +36,13 @@
 //------------------------------------
 static void transform_D(uint8_t *ru) {
 
-const uint32_t c_D[] = {
-    0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
-    0xD1CC8B4E, 0xE8873E6F, 0x61399BBB, 0xF1B91926, 0xAC661520, 0xA21A31C9,
-    0xD424808D, 0xFE118E07, 0xD18E728D, 0xABAC9E17, 0x18066433, 0x00E18E79,
-    0x65A77305, 0x5AE9E297, 0x11FC628C, 0x7BB3431F, 0x942A8308, 0xB2F8FD20,
-    0x5728B869, 0x30726D5A
-};
+    const uint32_t c_D[] = {
+        0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
+        0xD1CC8B4E, 0xE8873E6F, 0x61399BBB, 0xF1B91926, 0xAC661520, 0xA21A31C9,
+        0xD424808D, 0xFE118E07, 0xD18E728D, 0xABAC9E17, 0x18066433, 0x00E18E79,
+        0x65A77305, 0x5AE9E297, 0x11FC628C, 0x7BB3431F, 0x942A8308, 0xB2F8FD20,
+        0x5728B869, 0x30726D5A
+    };
 
     //Transform
     uint8_t i;
@@ -197,9 +197,9 @@ int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *k
 int mfc_algo_ving_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
     for (int keytype = 0; keytype < 2; keytype++) {
-        for (int sector = 0; sector < 16; sector++){
+        for (int sector = 0; sector < 16; sector++) {
             uint64_t key = 0;
-            mfc_algo_ving_one(uid, sector, keytype, &key );
+            mfc_algo_ving_one(uid, sector, keytype, &key);
             num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
         }
     }
@@ -216,9 +216,9 @@ int mfc_algo_yale_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *k
 int mfc_algo_yale_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
     for (int keytype = 0; keytype < 2; keytype++) {
-        for (int sector = 0; sector < 16; sector++){
+        for (int sector = 0; sector < 16; sector++) {
             uint64_t key = 0;
-            mfc_algo_yale_one(uid, sector, keytype, &key );
+            mfc_algo_yale_one(uid, sector, keytype, &key);
             num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
         }
     }
@@ -236,9 +236,9 @@ int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
 
     for (int keytype = 0; keytype < 2; keytype++) {
-        for (int sector = 0; sector < 16; sector++){
+        for (int sector = 0; sector < 16; sector++) {
             uint64_t key = 0;
-            mfc_algo_saflok_one(uid, sector, keytype, &key );
+            mfc_algo_saflok_one(uid, sector, keytype, &key);
             num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
         }
     }
@@ -253,15 +253,15 @@ int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
     if (sector == 0) {
         // A
         if (keytype == 0)
-	    *key = 0xA0A1A2A3A4A5U;
-	else    // B
-	    *key = 0xB4C132439eef;
+            *key = 0xA0A1A2A3A4A5U;
+        else    // B
+            *key = 0xB4C132439eef;
 
     } else {
 
-       uint8_t xor[6];
+        uint8_t xor[6];
 
-        if ( keytype == 0 ) {
+        if (keytype == 0) {
 
             uint64_t xor_tbl_a[] = {
                 0x09125a2589e5,
@@ -273,7 +273,7 @@ int mfc_algo_mizip_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
             num_to_bytes(xor_tbl_a[sector - 1], 6, xor);
 
             *key =
-                (uint64_t)(uid[0] ^ xor[0] ) << 40 |
+                (uint64_t)(uid[0] ^ xor[0]) << 40 |
                 (uint64_t)(uid[1] ^ xor[1]) << 32 |
                 (uint64_t)(uid[2] ^ xor[2]) << 24 |
                 (uint64_t)(uid[3] ^ xor[3]) << 16 |
@@ -311,11 +311,11 @@ int mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
 
     for (int keytype = 0; keytype < 2; keytype++) {
-        for (int sector = 0; sector < 5; sector++){
+        for (int sector = 0; sector < 5; sector++) {
             uint64_t key = 0;
             mfc_algo_mizip_one(uid, sector, keytype, &key);
             num_to_bytes(key, 6, keys + (keytype * 5 * 6) + (sector * 6));
-    }
+        }
     }
     return PM3_SUCCESS;
 }
@@ -337,20 +337,20 @@ int mfc_algo_di_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key
     mbedtls_sha1(input, sizeof(input), hash);
 
     *key = (
-        (uint64_t)hash[3] << 40 |
-        (uint64_t)hash[2] << 32 |
-        (uint64_t)hash[1] << 24 |
-        (uint64_t)hash[0] << 16 |
-        (uint64_t)hash[7] << 8 |
-        hash[6]
-        );
+               (uint64_t)hash[3] << 40 |
+               (uint64_t)hash[2] << 32 |
+               (uint64_t)hash[1] << 24 |
+               (uint64_t)hash[0] << 16 |
+               (uint64_t)hash[7] << 8 |
+               hash[6]
+           );
 
     return PM3_SUCCESS;
 }
 int mfc_algo_di_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
     for (int keytype = 0; keytype < 2; keytype++) {
-        for (int sector = 0; sector < 5; sector++){
+        for (int sector = 0; sector < 5; sector++) {
             uint64_t key = 0;
             mfc_algo_di_one(uid, sector, keytype, &key);
             num_to_bytes(key, 6, keys + (keytype * 5 * 6) + (sector * 6));
@@ -361,10 +361,10 @@ int mfc_algo_di_all(uint8_t *uid, uint8_t *keys) {
 
 // Skylanders
 static uint64_t sky_crc64_like(uint64_t result, uint8_t sector) {
-    #define SKY_POLY UINT64_C(0x42f0e1eba9ea3693)
-    #define SKY_TOP UINT64_C(0x800000000000)
+#define SKY_POLY UINT64_C(0x42f0e1eba9ea3693)
+#define SKY_TOP UINT64_C(0x800000000000)
     result ^= (uint64_t)sector << 40;
-    for(int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++) {
         result = (result & SKY_TOP) ? (result << 1) ^ SKY_POLY : result << 1;
     }
     return result;
@@ -375,7 +375,7 @@ int mfc_algo_sky_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *ke
 
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
-    
+
     if (sector == 0 && keytype == 0) {
         *key = 0x4B0B20107CCB;
         return PM3_SUCCESS;
@@ -384,21 +384,21 @@ int mfc_algo_sky_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *ke
         *key = 0x000000000000;
         return PM3_SUCCESS;
     }
-    
+
     // hash UID
     uint64_t hash = 0x9AE903260CC4;
-    for(int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         hash = sky_crc64_like(hash, uid[i]);
     }
 
-    uint64_t sectorhash = sky_crc64_like(hash, sector);   
+    uint64_t sectorhash = sky_crc64_like(hash, sector);
     *key = BSWAP_64(sectorhash & SKY_KEY_MASK) >> 16;
     return PM3_SUCCESS;
 }
 int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
     for (int keytype = 0; keytype < 2; keytype++) {
-        for (int sector = 0; sector < 16; sector++){
+        for (int sector = 0; sector < 16; sector++) {
             uint64_t key = 0;
             mfc_algo_sky_one(uid, sector, keytype, &key);
             num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));

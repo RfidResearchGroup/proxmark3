@@ -141,16 +141,16 @@ void FpgaSetupSsc(void) {
     // Now set up the SSC proper, starting from a known state.
     AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
 
-	// RX clock comes from TX clock, RX starts on Transmit Start,
-	// data and frame signal is sampled on falling edge of RK
+    // RX clock comes from TX clock, RX starts on Transmit Start,
+    // data and frame signal is sampled on falling edge of RK
     AT91C_BASE_SSC->SSC_RCMR = SSC_CLOCK_MODE_SELECT(1) | SSC_CLOCK_MODE_START(1);
 
     // 8 bits per transfer, no loopback, MSB first, 1 transfer per sync
     // pulse, no output sync
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
-	// TX clock comes from TK pin, no clock output, outputs change on falling
-	// edge of TK, frame sync is sampled on rising edge of TK, start TX on rising edge of TF
+    // TX clock comes from TK pin, no clock output, outputs change on falling
+    // edge of TK, frame sync is sampled on rising edge of TK, start TX on rising edge of TF
     AT91C_BASE_SSC->SSC_TCMR = SSC_CLOCK_MODE_SELECT(2) | SSC_CLOCK_MODE_START(5);
 
     // tx framing is the same as the rx framing
@@ -439,7 +439,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
 // Send a 16 bit command/data pair to the FPGA.
 // The bit format is:  C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
 // where C is the 4 bit command and D is the 12 bit data
-// 
+//
 // @params cmd and v  gets or over eachother.  Take careful note of overlapping bits.
 //-----------------------------------------------------------------------------
 void FpgaSendCommand(uint16_t cmd, uint16_t v) {
@@ -461,11 +461,11 @@ void FpgaWriteConfWord(uint16_t v) {
 // enable/disable FPGA internal tracing
 //-----------------------------------------------------------------------------
 void FpgaEnableTracing(void) {
-	FpgaSendCommand(FPGA_CMD_TRACE_ENABLE, 1);
+    FpgaSendCommand(FPGA_CMD_TRACE_ENABLE, 1);
 }
 
 void FpgaDisableTracing(void) {
-	FpgaSendCommand(FPGA_CMD_TRACE_ENABLE, 0);
+    FpgaSendCommand(FPGA_CMD_TRACE_ENABLE, 0);
 }
 
 //-----------------------------------------------------------------------------

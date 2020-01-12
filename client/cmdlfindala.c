@@ -73,19 +73,19 @@ static int usage_lf_indala_sim(void) {
 static void encodeHeden2L(uint8_t *dest, uint32_t cardnumber) {
 
     uint8_t template[] = {
-       1,0,1,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       1,0,0,0,1,0,0,0,
-       1,0,0,0,0,0,0,0,
-       0,0,0,0,1,0,0,1,
-       0,0,0,0,0,0,1,0
+        1, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 1,
+        0, 0, 0, 0, 0, 0, 1, 0
     };
     uint8_t cardbits[32];
 
     num_to_bytebits(cardnumber, sizeof(cardbits), cardbits);
-    
+
     if (cardbits[31] == 1) template[HEDEN2L_OFFSET + 8] = 0x1;
     if (cardbits[30] == 1) template[HEDEN2L_OFFSET + 10] = 0x1;
     if (cardbits[29] == 1) template[HEDEN2L_OFFSET + 14] = 0x1;
@@ -105,14 +105,14 @@ static void encodeHeden2L(uint8_t *dest, uint32_t cardnumber) {
 
     // Parity
     uint8_t counter = 0;
-    for (int i=0; i< sizeof(template) - HEDEN2L_OFFSET; i++) {
-       if (template[i]) 
-           counter++;
-    }   
+    for (int i = 0; i < sizeof(template) - HEDEN2L_OFFSET; i++) {
+        if (template[i])
+            counter++;
+    }
     template[63] = (counter & 0x1);
-   
-    for (int i = 0; i< sizeof(template); i += 8) {
-        dest[i/8] = bytebits_to_byte(template + i, 8);
+
+    for (int i = 0; i < sizeof(template); i += 8) {
+        dest[i / 8] = bytebits_to_byte(template + i, 8);
     }
 
     PrintAndLogEx(INFO, "Heden-2L card number %u", cardnumber);
@@ -123,22 +123,22 @@ static void decodeHeden2L(uint8_t *bits) {
     uint32_t cardnumber = 0;
     uint8_t offset = HEDEN2L_OFFSET;
 
-    if ( bits[offset +  8] ) cardnumber += 1;
-    if ( bits[offset + 10] ) cardnumber += 2;
-    if ( bits[offset + 14] ) cardnumber += 4;
-    if ( bits[offset + 15] ) cardnumber += 8;
-    if ( bits[offset + 12] ) cardnumber += 16;
-    if ( bits[offset + 28] ) cardnumber += 32;
-    if ( bits[offset +  3] ) cardnumber += 64;
-    if ( bits[offset + 11] ) cardnumber += 128;
-    if ( bits[offset + 19] ) cardnumber += 256;
-    if ( bits[offset + 26] ) cardnumber += 512;
-    if ( bits[offset + 17] ) cardnumber += 1024;
-    if ( bits[offset + 18] ) cardnumber += 2048;
-    if ( bits[offset + 20] ) cardnumber += 4096;
-    if ( bits[offset + 13] ) cardnumber += 8192;
-    if ( bits[offset +  7] ) cardnumber += 16384;
-    if ( bits[offset + 23] ) cardnumber += 32768;
+    if (bits[offset +  8]) cardnumber += 1;
+    if (bits[offset + 10]) cardnumber += 2;
+    if (bits[offset + 14]) cardnumber += 4;
+    if (bits[offset + 15]) cardnumber += 8;
+    if (bits[offset + 12]) cardnumber += 16;
+    if (bits[offset + 28]) cardnumber += 32;
+    if (bits[offset +  3]) cardnumber += 64;
+    if (bits[offset + 11]) cardnumber += 128;
+    if (bits[offset + 19]) cardnumber += 256;
+    if (bits[offset + 26]) cardnumber += 512;
+    if (bits[offset + 17]) cardnumber += 1024;
+    if (bits[offset + 18]) cardnumber += 2048;
+    if (bits[offset + 20]) cardnumber += 4096;
+    if (bits[offset + 13]) cardnumber += 8192;
+    if (bits[offset +  7]) cardnumber += 16384;
+    if (bits[offset + 23]) cardnumber += 32768;
 
     PrintAndLogEx(SUCCESS, "\tHeden-2L    | %u", cardnumber);
 }
@@ -576,7 +576,7 @@ static int CmdIndalaClone(const char *Cmd) {
     if (got_cn == false) {
         CLIGetHexWithReturn(3, data, &datalen);
     }
-    
+
     is_t5555 = arg_get_lit(4);
 
     CLIParserFree();
@@ -585,12 +585,12 @@ static int CmdIndalaClone(const char *Cmd) {
         // 224 BIT UID
         // config for Indala (RF/32;PSK2 with RF/2;Maxblock=7)
         PrintAndLogEx(INFO, "Preparing to clone Indala 224bit tag with RawID %s", sprint_hex(data, datalen));
-        
+
         if (is_t5555)
             blocks[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_PSK2 | (7 << T5555_MAXBLOCK_SHIFT);
         else
             blocks[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK2 | (7 << T55x7_MAXBLOCK_SHIFT);
-        
+
         blocks[1] = bytes_to_num(data, 4);
         blocks[2] = bytes_to_num(data +  4, 4);
         blocks[3] = bytes_to_num(data +  8, 4);
@@ -608,12 +608,12 @@ static int CmdIndalaClone(const char *Cmd) {
 
         // config for Indala 64 format (RF/32;PSK1 with RF/2;Maxblock=2)
         PrintAndLogEx(INFO, "Preparing to clone Indala 64bit tag with RawID %s", sprint_hex(data, datalen));
-        
+
         if (is_t5555)
             blocks[0] = T5555_SET_BITRATE(32) | T5555_MODULATION_PSK1 | (2 << T5555_MAXBLOCK_SHIFT);
         else
             blocks[0] = T55x7_BITRATE_RF_32 | T55x7_MODULATION_PSK1 | (2 << T55x7_MAXBLOCK_SHIFT);
-        
+
         blocks[1] = bytes_to_num(data, 4);
         blocks[2] = bytes_to_num(data + 4, 4);
         max = 3;

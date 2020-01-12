@@ -2469,12 +2469,12 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
             PrintAndLogEx(WARNING, "iso14443a card select failed");
             return PM3_ESOFT;
         }
-/*
-        if (card.uidlen != 4) {
-            PrintAndLogEx(WARNING, "Wrong sized UID, expected 4bytes got %d", card.uidlen);
-            return PM3_ESOFT;
-        }
-*/
+        /*
+                if (card.uidlen != 4) {
+                    PrintAndLogEx(WARNING, "Wrong sized UID, expected 4bytes got %d", card.uidlen);
+                    return PM3_ESOFT;
+                }
+        */
         memcpy(uid, card.uid, card.uidlen);
     } else {
         if (param_gethex(Cmd, 0, uid, 8)) return usage_hf_mfu_gendiverse();

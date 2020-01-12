@@ -91,40 +91,40 @@ void HfSniff(int samplesToSkip, int triggersToSkip) {
 }
 
 void HfPlotDownload(void) {
-	uint8_t *buf = ToSend;
-	uint8_t *this_buf = buf;
+    uint8_t *buf = ToSend;
+    uint8_t *this_buf = buf;
 
-	FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-	FpgaSetupSsc();
+    FpgaSetupSsc();
 
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;   // Disable DMA Transfer
-	AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) this_buf; // start transfer to this memory address
-	AT91C_BASE_PDC_SSC->PDC_RCR = PM3_CMD_DATA_SIZE;   // transfer this many samples
-	buf[0] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;         // clear receive register
-	AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;    // Start DMA transfer
+    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;   // Disable DMA Transfer
+    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) this_buf; // start transfer to this memory address
+    AT91C_BASE_PDC_SSC->PDC_RCR = PM3_CMD_DATA_SIZE;   // transfer this many samples
+    buf[0] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;         // clear receive register
+    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;    // Start DMA transfer
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_GET_TRACE);   // let FPGA transfer its internal Block-RAM
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_GET_TRACE);   // let FPGA transfer its internal Block-RAM
 
-	LED_B_ON();
-	for(size_t i = 0; i < FPGA_TRACE_SIZE; i += PM3_CMD_DATA_SIZE) {
-		// prepare next DMA transfer:
-		uint8_t *next_buf = buf + ((i + PM3_CMD_DATA_SIZE) % (2 * PM3_CMD_DATA_SIZE));
-        
-		AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)next_buf;
-		AT91C_BASE_PDC_SSC->PDC_RNCR = PM3_CMD_DATA_SIZE;
+    LED_B_ON();
+    for (size_t i = 0; i < FPGA_TRACE_SIZE; i += PM3_CMD_DATA_SIZE) {
+        // prepare next DMA transfer:
+        uint8_t *next_buf = buf + ((i + PM3_CMD_DATA_SIZE) % (2 * PM3_CMD_DATA_SIZE));
 
-		size_t len = MIN(FPGA_TRACE_SIZE - i, PM3_CMD_DATA_SIZE);
+        AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)next_buf;
+        AT91C_BASE_PDC_SSC->PDC_RNCR = PM3_CMD_DATA_SIZE;
 
-		while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX))) {}; // wait for DMA transfer to complete
+        size_t len = MIN(FPGA_TRACE_SIZE - i, PM3_CMD_DATA_SIZE);
 
-		reply_old(CMD_FPGAMEM_DOWNLOADED, i, len, FPGA_TRACE_SIZE, this_buf, len);
-		this_buf = next_buf;
-	}
+        while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX))) {}; // wait for DMA transfer to complete
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    
-	// Trigger a finish downloading signal with an ACK frame
-	reply_mix(CMD_ACK, 1, 0, FPGA_TRACE_SIZE, 0, 0);
-	LED_B_OFF();
+        reply_old(CMD_FPGAMEM_DOWNLOADED, i, len, FPGA_TRACE_SIZE, this_buf, len);
+        this_buf = next_buf;
+    }
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    // Trigger a finish downloading signal with an ACK frame
+    reply_mix(CMD_ACK, 1, 0, FPGA_TRACE_SIZE, 0, 0);
+    LED_B_OFF();
 }
