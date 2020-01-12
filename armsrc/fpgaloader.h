@@ -41,7 +41,7 @@ thres|                          x x x x x x x x
 */
 
 // Definitions for the FPGA commands.
-// HF / LF
+// BOTH HF / LF
 #define FPGA_CMD_SET_CONFREG                        (1<<12) // C
 
 // LF
@@ -67,7 +67,7 @@ thres|                          x x x x x x x x
 #define FPGA_MAJOR_MODE_HF_ISO18092                 (5<<5) // D
 #define FPGA_MAJOR_MODE_HF_GET_TRACE                (6<<5) // D
 
-// BOTH
+// BOTH HF / LF
 #define FPGA_MAJOR_MODE_OFF                         (7<<5) // D
 
 // Options for LF_READER
@@ -107,7 +107,9 @@ thres|                          x x x x x x x x
 #define FPGA_HF_ISO18092_FLAG_READER                0x4 // 0100 enables antenna power, to act as a reader instead of tag
 
 void FpgaSendCommand(uint16_t cmd, uint16_t v);
-void FpgaWriteConfWord(uint8_t v);
+void FpgaWriteConfWord(uint16_t v);
+void FpgaEnableTracing(void);
+void FpgaDisableTracing(void);
 void FpgaDownloadAndGo(int bitstream_version);
 // void FpgaGatherVersion(int bitstream_version, char *dst, int len);
 void FpgaSetupSsc(void);

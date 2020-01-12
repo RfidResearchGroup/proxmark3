@@ -11,7 +11,7 @@ clean:
 	$(Q)$(RM) *.map *.ngc *.xrpt *.pcf *.rbt *.bld *.mrp *.ngm *.unroutes *_summary.xml netlist.lst
 	$(Q)$(RMDIR) *_auto_* xst
 
-fpga_hf.ngc: fpga_hf.v fpga.ucf xst_hf.scr util.v hi_simulate.v hi_read_tx.v hi_read_rx_xcorr.v hi_iso14443a.v hi_sniffer.v hi_flite.v
+fpga_hf.ngc: fpga_hf.v fpga.ucf xst_hf.scr util.v hi_simulate.v hi_read_tx.v hi_read_rx_xcorr.v hi_iso14443a.v hi_sniffer.v hi_flite.v hi_get_trace.v
 	$(Q)$(RM) $@
 	$(info [-] XST $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)xst -ifn xst_hf.scr
