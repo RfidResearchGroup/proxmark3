@@ -93,7 +93,7 @@ module fpga_hf(
  Communication between ARM / FPGA is done inside armsrc/fpgaloader.c see: function FpgaSendCommand()
  Send 16 bit command / data pair to FPGA
  The bit format is: C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
- where 
+ where
    C is 4bit command
    D is 12bit data
 
@@ -104,7 +104,7 @@ module fpga_hf(
 bit  |    15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
 -----+-------------------------------------------
 cmd  |     x  x  x  x
-major|                          x x x              
+major|                          x x x
 opt  |                                      x x
 divi |                          x x x x x x x x
 thres|                          x x x x x x x x

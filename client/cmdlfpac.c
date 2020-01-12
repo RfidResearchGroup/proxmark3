@@ -260,7 +260,7 @@ static int CmdPacSim(const char *Cmd) {
         rawBlocks[i] = bytes_to_num(rawBytes + (i * sizeof(uint32_t)), sizeof(uint32_t));
         num_to_bytebits(rawBlocks[i], sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
     }
-    
+
     PrintAndLogEx(SUCCESS, "Simulating PAC/Stanley - ID " _YELLOW_("%s")" raw "_YELLOW_("%08X%08X%08X%08X"), cardid, rawBlocks[0], rawBlocks[1], rawBlocks[2], rawBlocks[3]);
 
     lf_nrzsim_t *payload = calloc(1, sizeof(lf_nrzsim_t) + sizeof(bs));

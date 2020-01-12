@@ -54,26 +54,26 @@ void printConfig() {
 void setSamplingConfig(sample_config *sc) {
 
     // decimation (1-8) how many bits of adc sample value to save
-    if (sc->decimation > 0 && sc->decimation < 8) 
+    if (sc->decimation > 0 && sc->decimation < 8)
         config.decimation = sc->decimation;
 
     // bits per sample (1-8)
-    if (sc->bits_per_sample > 0 && sc->bits_per_sample < 8) 
+    if (sc->bits_per_sample > 0 && sc->bits_per_sample < 8)
         config.bits_per_sample = sc->bits_per_sample;
 
     //
     if (sc->averaging > -1)
         config.averaging = (sc->averaging > 0) ? 1 : 0;
-    
+
     // Frequency divisor (19 - 255)
     if (sc->divisor > 18 && sc->divisor < 256)
         config.divisor = sc->divisor;
-    
+
     // Start saving samples when adc value larger than trigger_threshold
-    if (sc->trigger_threshold > -1) 
+    if (sc->trigger_threshold > -1)
         config.trigger_threshold = sc->trigger_threshold;
 
-    // Skip n adc samples before saving 
+    // Skip n adc samples before saving
     if (sc->samples_to_skip > -1)
         config.samples_to_skip = sc->samples_to_skip;
 

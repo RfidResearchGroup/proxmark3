@@ -1,13 +1,13 @@
 /*
-  This code demodulates and modulates signal as described in ISO/IEC 18092. 
+  This code demodulates and modulates signal as described in ISO/IEC 18092.
   That includes packets used for Felica, NFC Tag 3, etc. (which do overlap)
-  simple envelope following algorithm is used (modification of fail0verflow LF one) 
+  simple envelope following algorithm is used (modification of fail0verflow LF one)
   is used to combat some nasty aliasing effect with testing phone (envelope looked like sine wave)
 
   Speeds supported:  only 212 kbps (fc/64) for now.  Todo: 414 kbps
-  though for reader, the selection has to come from ARM. modulation waits for market sprocket -doesn't really mean anything 
+  though for reader, the selection has to come from ARM. modulation waits for market sprocket -doesn't really mean anything
 
-   mod_type: bits 210: 
+   mod_type: bits 210:
       bit 2 : reader drive/power on/off
       bit 1 : speed bit, 0 : 212, 1 :424
       bit 0 : listen or modulate
@@ -130,7 +130,7 @@ reg ssp_din;
 reg prv = 1'b1;
 
 // for simple error correction in mod/demod detection, use maximum of modded/demodded in given interval. Maybe 1 bit is extra? but better safe than sorry.
-reg[7:0] mid = 8'd128; 
+reg[7:0] mid = 8'd128;
 
 // set TAGSIM__MODULATE on ARM if we want to write... (frame would get lost if done mid-frame...)
 // start sending over 1s on ssp->arm when we start sending preamble

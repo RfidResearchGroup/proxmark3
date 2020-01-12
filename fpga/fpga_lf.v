@@ -56,7 +56,7 @@ module fpga_lf(
  Communication between ARM / FPGA is done inside armsrc/fpgaloader.c see: function FpgaSendCommand()
  Send 16 bit command / data pair to FPGA
  The bit format is: C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
- where 
+ where
    C is 4bit command
    D is 12bit data
 
@@ -83,11 +83,11 @@ module fpga_lf(
   Each one of this major modes can have options. Currently these two major modes uses options.
    - FPGA_MAJOR_MODE_LF_READER
    - FPGA_MAJOR_MODE_LF_EDGE_DETECT
-  
+
    FPGA_MAJOR_MODE_LF_READER
    -------------------------------------
     lf_field = 1bit  (FPGA_LF_ADC_READER_FIELD)
-   
+
     You can send FPGA_CMD_SET_DIVISOR to set with FREQUENCY the fpga should sample at
     divisor = 8bits shift_reg[7:0]
 
@@ -101,7 +101,7 @@ module fpga_lf(
 
   conf_word 12bits
     conf_word[7:5] = 3bit major mode.
-    conf_word[0]    = 1bit lf_field 
+    conf_word[0]    = 1bit lf_field
     conf_word[1]    = 1bit lf_ed_toggle_mode
     conf_word[7:0]  = 8bit divisor
     conf_word[7:0]  = 8bit threshold
@@ -110,7 +110,7 @@ module fpga_lf(
 bit  |    15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
 -----+-------------------------------------------
 cmd  |     x  x  x  x
-major|                          x x x              
+major|                          x x x
 opt  |                                      x x
 divi |                          x x x x x x x x
 thres|                          x x x x x x x x
