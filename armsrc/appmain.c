@@ -930,7 +930,8 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_HITAG
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
-            SniffHitag(packet->oldarg[0]);
+              SniffHitag();
+//            SniffHitag(packet->oldarg[0]);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
