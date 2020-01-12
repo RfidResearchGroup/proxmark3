@@ -1296,6 +1296,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                 // transfer key to the emulator
                 if (transferToEml) {
                     uint8_t sectortrailer;
+
                     if (trgBlockNo < 32 * 4) {  // 4 block sector
                         sectortrailer = trgBlockNo | 0x03;
                     } else {                    // 16 block sector
@@ -1307,6 +1308,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
                         num_to_bytes(key64, 6, keyBlock);
                     else
                         num_to_bytes(key64, 6, &keyBlock[10]);
+
                     mfEmlSetMem(keyBlock, sectortrailer, 1);
                     PrintAndLogEx(SUCCESS, "Key transferred to emulator memory.");
                 }
@@ -3322,7 +3324,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
     PrintAndLogEx(NORMAL, "|sec| key A          |res| key B          |res|");
     PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
-    for (uint8_t i = 0; i < sectorscnt; ++i) {
+    for (uint8_t i = 0; i < sectorscnt; i++) {
 
         snprintf(strA, sizeof(strA), "------------");
         snprintf(strB, sizeof(strB), "------------");
@@ -3340,8 +3342,14 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
                           , strB, e_sector[i].foundKey[1]
                          );
         } else {
+            
+            // keep track if we use start_sector or i...
+            uint8_t s = start_sector;
+            if (start_sector == 0)
+                s = i;
+                
             PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%d")"|  %s  | " _YELLOW_("%d")"|"
-                          , start_sector
+                          , s
                           , strA, e_sector[i].foundKey[0]
                           , strB, e_sector[i].foundKey[1]
                          );
