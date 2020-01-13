@@ -41,7 +41,6 @@
 
 #include <dirent.h>
 #include <ctype.h>
-#include <sndfile.h>
 
 #include "pm3_cmd.h"
 #include "commonutil.h"
@@ -52,6 +51,26 @@
 #endif
 
 #define PATH_MAX_LENGTH 200
+
+struct wave_info_t {
+    char signature[4];
+    uint32_t filesize;
+    char type[4];
+    struct {
+        char tag[4];
+        uint32_t size;
+        uint16_t codec;
+        uint16_t nb_channel;
+        uint32_t sample_per_sec;
+        uint32_t byte_per_sec;
+        uint16_t block_align;
+        uint16_t bit_per_sample;
+    } PACKED format;
+    struct {
+        char tag[4];
+        uint32_t size;
+    } PACKED audio_data;
+} PACKED wave_info;
 
 /**
  * @brief checks if a file exists
@@ -405,30 +424,37 @@ int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
     if (data == NULL) return PM3_EINVARG;
     char *fileName = newfilenamemcopy(preferredName, ".wav");
     if (fileName == NULL) return PM3_EMALLOC;
-
     int retval = PM3_SUCCESS;
 
-    SF_INFO wave_info;
+    struct wave_info_t wave_info = {
+        .signature = "RIFF",
+        .filesize = sizeof(wave_info) - sizeof(wave_info.signature) - sizeof(wave_info.filesize) + datalen,
+        .type = "WAVE",
+        .format.tag = "fmt ",
+        .format.size = sizeof(wave_info.format) - sizeof(wave_info.format.tag) - sizeof(wave_info.format.size),
+        .format.codec = 1, // PCM
+        .format.nb_channel = 1,
+        .format.sample_per_sec = 125000,  // TODO update for other tag types
+        .format.byte_per_sec = 125000,    // TODO update for other tag types
+        .format.block_align = 1,
+        .format.bit_per_sample = 8,
+        .audio_data.tag = "data",
+        .audio_data.size = datalen,
+    };
 
-    // TODO update for other tag types
-    wave_info.samplerate = 125000;
-    wave_info.channels = 1;
-    wave_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_U8;
-    SNDFILE *wave_file = sf_open(fileName, SFM_WRITE, &wave_info);
-
+    FILE *wave_file = fopen(fileName, "wb");
     if (!wave_file) {
         PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
         retval = PM3_EFILE;
         goto out;
     }
-
-    // unfortunately need to upconvert to 16-bit samples because libsndfile doesn't do 8-bit(?)
+    fwrite(&wave_info, sizeof(wave_info), 1, wave_file);
     for (int i = 0; i < datalen; i++) {
-        short sample = data[i] * 256;
-        sf_write_short(wave_file, &sample, 1);
+        uint8_t sample = data[i] + 128;
+        fwrite(&sample, 1, 1, wave_file);
     }
+    fclose(wave_file);
 
-    sf_close(wave_file);
     PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
 
 out:
