@@ -52,6 +52,26 @@
 
 #define PATH_MAX_LENGTH 200
 
+struct wave_info_t {
+    char signature[4];
+    uint32_t filesize;
+    char type[4];
+    struct {
+        char tag[4];
+        uint32_t size;
+        uint16_t codec;
+        uint16_t nb_channel;
+        uint32_t sample_per_sec;
+        uint32_t byte_per_sec;
+        uint16_t block_align;
+        uint16_t bit_per_sample;
+    } PACKED format;
+    struct {
+        char tag[4];
+        uint32_t size;
+    } PACKED audio_data;
+} PACKED wave_info;
+
 /**
  * @brief checks if a file exists
  * @param filename
@@ -406,25 +426,7 @@ int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
     if (fileName == NULL) return PM3_EMALLOC;
     int retval = PM3_SUCCESS;
 
-    struct wave_info_t {
-        char signature[4];
-        uint32_t filesize;
-        char type[4];
-        struct {
-            char tag[4];
-            uint32_t size;
-            uint16_t codec;
-            uint16_t nb_channel;
-            uint32_t sample_per_sec;
-            uint32_t byte_per_sec;
-            uint16_t block_align;
-            uint16_t bit_per_sample;
-        } PACKED format;
-        struct {
-            char tag[4];
-            uint32_t size;
-        } PACKED audio_data;
-    } PACKED wave_info = {
+    struct wave_info_t wave_info = {
         .signature = "RIFF",
         .filesize = sizeof(wave_info) - sizeof(wave_info.signature) - sizeof(wave_info.filesize) + datalen,
         .type = "WAVE",
