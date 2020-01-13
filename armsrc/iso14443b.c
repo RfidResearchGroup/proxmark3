@@ -1165,6 +1165,9 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
     CodeAndTransmit14443bAsReader(message_frame, message_length + 4); //no
     // get response
     GetTagSamplesFor14443bDemod(); //no
+
+    FpgaDisableTracing();
+    
     if (Demod.len < 3)
         return 0;
 
@@ -1191,6 +1194,7 @@ uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
 
     CodeAndTransmit14443bAsReader(init_srx, sizeof(init_srx));
     GetTagSamplesFor14443bDemod(); //no
+    FpgaDisableTracing();
 
     if (Demod.len == 0)
         return 2;
@@ -1204,6 +1208,7 @@ uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
 
     CodeAndTransmit14443bAsReader(select_srx, sizeof(select_srx));
     GetTagSamplesFor14443bDemod(); //no
+    FpgaDisableTracing();
 
     if (Demod.len != 3)
         return 2;
@@ -1222,6 +1227,7 @@ uint8_t iso14443b_select_srx_card(iso14b_card_select_t *card) {
     AddCrc14B(select_srx, 1);
     CodeAndTransmit14443bAsReader(select_srx, 3); // Only first three bytes for this one
     GetTagSamplesFor14443bDemod(); //no
+    FpgaDisableTracing();
 
     if (Demod.len != 10)
         return 2;
@@ -1253,6 +1259,7 @@ uint8_t iso14443b_select_card(iso14b_card_select_t *card) {
     // first, wake up the tag
     CodeAndTransmit14443bAsReader(wupb, sizeof(wupb));
     GetTagSamplesFor14443bDemod(); //select_card
+    FpgaDisableTracing();
 
     // ATQB too short?
     if (Demod.len < 14)
@@ -1277,6 +1284,7 @@ uint8_t iso14443b_select_card(iso14b_card_select_t *card) {
 
     CodeAndTransmit14443bAsReader(attrib, sizeof(attrib));
     GetTagSamplesFor14443bDemod();//select_card
+    FpgaDisableTracing();
 
     // Answer to ATTRIB too short?
     if (Demod.len < 3)
@@ -1353,6 +1361,7 @@ static bool ReadSTBlock(uint8_t block) {
     AddCrc14B(cmd, 2);
     CodeAndTransmit14443bAsReader(cmd, sizeof(cmd));
     GetTagSamplesFor14443bDemod();
+    FpgaDisableTracing();
 
     // Check if we got an answer from the tag
     if (Demod.len != 6) {
@@ -1602,7 +1611,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     if ((param & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
         iso14b_card_select_t *card = (iso14b_card_select_t *)buf;
         status = iso14443b_select_card(card);
-        reply_old(CMD_ACK, status, sendlen, 0, buf, sendlen);
+        reply_mix(CMD_ACK, status, sendlen, 0, buf, sendlen);
         // 0: OK 2: attrib fail, 3:crc fail,
         if (status > 0) goto out;
     }
@@ -1610,14 +1619,14 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
     if ((param & ISO14B_SELECT_SR) == ISO14B_SELECT_SR) {
         iso14b_card_select_t *card = (iso14b_card_select_t *)buf;
         status = iso14443b_select_srx_card(card);
-        reply_old(CMD_ACK, status, sendlen, 0, buf, sendlen);
+        reply_mix(CMD_ACK, status, sendlen, 0, buf, sendlen);
         // 0: OK 2: demod fail, 3:crc fail,
         if (status > 0) goto out;
     }
 
     if ((param & ISO14B_APDU) == ISO14B_APDU) {
         status = iso14443b_apdu(cmd, len, buf);
-        reply_old(CMD_ACK, status, status, 0, buf, status);
+        reply_mix(CMD_ACK, status, status, 0, buf, status);
     }
 
     if ((param & ISO14B_RAW) == ISO14B_RAW) {
@@ -1628,6 +1637,7 @@ void SendRawCommand14443B_Ex(PacketCommandNG *c) {
 
         CodeAndTransmit14443bAsReader(cmd, len); // raw
         GetTagSamplesFor14443bDemod(); // raw
+        FpgaDisableTracing();
 
         sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
         status = (Demod.len > 0) ? 0 : 1;
