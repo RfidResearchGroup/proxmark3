@@ -991,10 +991,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                             memcpy(response, rats, rats_len);
                             mf_crypto1_encrypt(pcs, response, rats_len, response_par);
                             EmSendCmdPar(response, rats_len, response_par);
-                            FpgaDisableTracing();
-                        } else
+                        } else {
                             EmSendCmd(rats, rats_len);
-                            FpgaDisableTracing();
+                        }
+                        FpgaDisableTracing();
                         if (DBGLEVEL >= DBG_EXTENDED)
                             Dbprintf("[MFEMUL_WORK] RCV RATS => ACK");
                     } else {
