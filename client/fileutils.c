@@ -41,7 +41,9 @@
 
 #include <dirent.h>
 #include <ctype.h>
+#ifdef USE_SNDFILE
 #include <sndfile.h>
+#endif
 
 #include "pm3_cmd.h"
 #include "commonutil.h"
@@ -401,7 +403,7 @@ out:
 }
 
 int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
-
+#ifdef USE_SNDFILE
     if (data == NULL) return PM3_EINVARG;
     char *fileName = newfilenamemcopy(preferredName, ".wav");
     if (fileName == NULL) return PM3_EMALLOC;
@@ -434,6 +436,10 @@ int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
 out:
     free(fileName);
     return retval;
+#else
+    PrintAndLogEx(WARNING, "PM3 was built without sndfile, cannot write wave files!");
+    return PM3_EINVARG;
+#endif
 }
 
 int saveFilePM3(const char *preferredName, int *data, size_t datalen) {

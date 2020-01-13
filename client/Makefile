@@ -22,7 +22,7 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 LDLIBS ?= -L/usr/local/lib
-LDLIBS += -lreadline -lsndfile -lpthread -lm
+LDLIBS += -lreadline -lpthread -lm
 
 # RPi Zero gcc requires -latomic
 # but MacOSX /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
@@ -116,6 +116,16 @@ else
     QTGUISRCS = guidummy.cpp
     QTGUIOBJS = $(OBJDIR)/guidummy.o
 endif
+
+ifneq ($(SKIPSNDFILE),1)
+    # Check for libsndfile
+    SNDFILELDLIBS = $(shell pkg-config --libs sndfile 2>/dev/null)
+    ifneq ($(SNDFILELDLIBS), )
+        CFLAGS += -DUSE_SNDFILE
+        LDLIBS += $(SNDFILELDLIBS)
+    endif
+endif
+
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td

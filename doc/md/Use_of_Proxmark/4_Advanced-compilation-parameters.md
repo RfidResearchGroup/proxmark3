@@ -19,6 +19,13 @@ make clean
 make SKIPQT=1
 ```
 
+Here are all the client compliation options:
+
+| OPTION          | DESCRIPTION                                                              |
+|-----------------|--------------------------------------------------------------------------|
+| `SKIPQT=1`      | Don't use Qt, even if installed. Graphs will not work.                   |
+| `SKIPSNDFILE=1` | Don't use `sndfile`, even if installed. Saving WAVE files will not work. |
+
 ## Firmware
 
 By default, the firmware is of course tuned for the Proxmark3 Rdv4.0 device, which has built-in support for 256kb onboard flash SPI memory, Sim module (smart card support), FPC connector.
