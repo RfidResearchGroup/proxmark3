@@ -25,7 +25,7 @@ Install the requirements
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libsndfile1-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
 ```
 
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.
@@ -35,7 +35,7 @@ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to 
 ## On ArchLinux
 
 ```sh
-sudo pacman -Sy base-devel readline arm-none-eabi-gcc arm-none-eabi-newlib libsndfile git --needed
+sudo pacman -Sy base-devel readline arm-none-eabi-gcc arm-none-eabi-newlib git --needed
 ```
 If you want graphical output (such as in `hw tune`):
 ```sh
@@ -45,7 +45,7 @@ sudo pacman -Su qt5-base
 ## On Fedora
 
 ```sh
-sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel qt5-qtbase-devel libatomic libsndfile
+sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel qt5-qtbase-devel libatomic
 ```
 
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qt5-qtbase-devel`.

@@ -22,7 +22,7 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 LDLIBS ?= -L/usr/local/lib
-LDLIBS += -lreadline -lsndfile -lpthread -lm
+LDLIBS += -lreadline -lpthread -lm
 
 # RPi Zero gcc requires -latomic
 # but MacOSX /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld

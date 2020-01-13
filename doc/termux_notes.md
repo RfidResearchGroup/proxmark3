@@ -33,7 +33,7 @@ ref : https://github.com/Proxmark/proxmark3/wiki/android
 1. Install [Termux](https://play.google.com/store/apps/details?id=com.termux) and start it
 2. Run the following commands:
 ```
-pkg install make clang clang++ readline libc++ git tsu libsndfile
+pkg install make clang clang++ readline libc++ git tsu
 git clone https://github.com/RfidResearchGroup/proxmark3.git
 ```
 ### Building Proxmark3 client
