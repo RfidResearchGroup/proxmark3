@@ -106,16 +106,22 @@ sampling_t samples = {0, 0, 0, 0};
 
 void initSampleBuffer(uint32_t *sample_size) {
 
+    BigBuf_free();
+    BigBuf_Clear_ext(false);
+
     if (sample_size == NULL || *sample_size == 0) {
         *sample_size = BigBuf_max_traceLen();
+
+        data.buffer = BigBuf_get_addr();
+
+        memset(data.buffer, 0, *sample_size);
     } else {
         *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
+
+        data.buffer = BigBuf_malloc(*sample_size);
+
+        memset(data.buffer, 0, *sample_size);
     }
-
-    // use a bitstream to handle the output
-    data.buffer = BigBuf_get_addr();
-
-    memset(data.buffer, 0, *sample_size);
 
     //
     samples.dec_counter = 0;

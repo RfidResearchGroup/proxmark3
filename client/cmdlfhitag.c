@@ -485,8 +485,9 @@ static int CmdLFHitagInfo(const char *Cmd) {
     if (getHitagUid(&uid) == false)
         return 1;
 
-    PrintAndLogEx(SUCCESS, "UID: %08X", uid);
+    PrintAndLogEx(SUCCESS, "UID: " _YELLOW_("%08X"), uid);
 
+    return PM3_SUCCESS;
     // how to detemine Hitag types?
     // read block3,  get configuration byte.
     PrintAndLogEx(FAILED, _RED_("TODO: This is a hardcoded example!"));
@@ -497,7 +498,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
     //printHitagConfiguration( 0x02 );
     //printHitagConfiguration( 0x00 );
     //printHitagConfiguration( 0x04 );
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // TODO: iceman
@@ -564,7 +565,7 @@ static int CmdLFHitagReader(const char *Cmd) {
 
     uint32_t id = bytes_to_num(resp.data.asBytes, 4);
 
-    PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
+    PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: " _YELLOW_("%08x"), id);
     if (htf != RHT2F_UID_ONLY) {
 
         PrintAndLogEx(SUCCESS, "Dumping tag memory...");

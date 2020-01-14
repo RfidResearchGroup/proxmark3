@@ -168,7 +168,9 @@ void lf_init(bool reader) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // Prepare data trace
-    if (logging) initSampleBuffer(NULL);
+    uint32_t bufsize = 20000;
+
+    if (logging) initSampleBuffer(&bufsize);
 
 }
 
