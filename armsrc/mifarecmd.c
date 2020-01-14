@@ -1101,6 +1101,107 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     set_tracing(false);
 }
 
+void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key) {
+
+    LEDsoff();
+
+    uint64_t ui64Key = 0;
+    ui64Key = bytes_to_num(key, 6);
+
+    // variables
+    uint16_t len;
+
+    uint8_t uid[10] = {0x00};
+    uint32_t cuid = 0, nt1, nt2;
+    uint32_t target_nt = {0x00}, target_ks = {0x00};
+    uint8_t par[1] = {0x00};
+    uint8_t receivedAnswer[10] = {0x00};
+
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    LED_A_ON();
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    // free eventually allocated BigBuf memory
+    BigBuf_free();
+    BigBuf_Clear_ext(false);
+    clear_trace();
+    set_tracing(true);
+
+    int16_t isOK = 0;
+
+    LED_C_ON();
+
+    for (uint8_t retry = 0; retry < 3 && (isOK == 0); retry++) {
+
+        WDT_HIT();
+
+        // prepare next select. No need to power down the card.
+        if (mifare_classic_halt(pcs, cuid)) {
+            if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Halt error");
+            retry--;
+            continue;
+        }
+
+        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+            if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Can't select card");
+            retry--;
+            continue;
+        };
+
+        // First authenticatoin. Normal auth.
+        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
+            if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Auth1 error");
+            retry--;
+            continue;
+        };
+        
+        // second authentication. Nested auth
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
+        if (len != 4) {
+            if (DBGLEVEL >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
+            continue;
+        };
+
+        nt2 = bytes_to_num(receivedAnswer, 4);
+        uint32_t nt_tmp = prng_successor(nt1, 160);
+        target_ks = nt2 ^ nt_tmp;
+        target_nt = nt_tmp;
+        isOK = 1;
+
+        if (DBGLEVEL >= DBG_DEBUG) Dbprintf("Testing nt1=%08x nt2enc=%08x nt2par=%02x  ks=%08x", nt1, nt2, par[0], target_ks);
+    }
+
+    LED_C_OFF();
+
+    crypto1_deinit(pcs);
+
+    struct p {
+        int16_t isOK;
+        uint8_t block;
+        uint8_t keytype;
+        uint8_t cuid[4];
+        uint8_t nt[4];
+        uint8_t ks[4];
+    } PACKED payload;
+    payload.isOK = isOK;
+    payload.block = targetBlockNo;
+    payload.keytype = targetKeyType;
+
+    memcpy(payload.cuid, &cuid, 4);
+    memcpy(payload.nt, &target_nt, 4);
+    memcpy(payload.ks, &target_ks, 4);
+
+    LED_B_ON();
+    reply_ng(CMD_HF_MIFARE_STATIC_NESTED, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
+    LED_B_OFF();
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    set_tracing(false);      
+}
 //-----------------------------------------------------------------------------
 // MIFARE check keys. key count up to 85.
 //
@@ -1240,8 +1341,6 @@ void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t *found
         }
     }
 }
-
-
 
 // get Chunks of keys, to test authentication against card.
 // arg0 = antal sectorer
@@ -2065,7 +2164,6 @@ OUT:
     // turns off
     OnSuccessMagic();
     BigBuf_free();
-    BigBuf_Clear_ext(false);
 }
 
 void MifareHasStaticNonce() {
@@ -2092,8 +2190,8 @@ void MifareHasStaticNonce() {
             goto OUT;
         }
 
-        // Transmit MIFARE_CLASSIC_AUTH
-        len = mifare_sendcmd_short(pcs, false, 0x60, 0, rec, recpar, NULL);
+        // Transmit MIFARE_CLASSIC_AUTH 0x60, block 0
+        len = mifare_sendcmd_short(pcs, false, MIFARE_AUTH_KEYA, 0, rec, recpar, NULL);
         if (len != 4) {
             retval = PM3_ESOFT;
             goto OUT;
@@ -2114,8 +2212,6 @@ OUT:
     // turns off
     OnSuccessMagic();
     BigBuf_free();
-    BigBuf_Clear_ext(false);
-
     crypto1_deinit(pcs);
 }
 

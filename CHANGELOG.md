@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf staticnested` - useful when targeting the strange cards with a static nonce. (@iceman100) Thanks to @xtigmh @uzlonewolf for their solutions.
  - Added `hf plot` (@pwpiwi)
  - Fix `lf config` - when called with no params, it no longer mess up all device lf config settings. (@iceman1001)
  - Change `lf indala clone` - new option `--Q5` writes to q5/T5555 tags. (@iceman1001)

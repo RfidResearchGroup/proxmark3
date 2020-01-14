@@ -1601,9 +1601,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         res = detect_classic_static_nonce();
         if (res == 1)
-            PrintAndLogEx(SUCCESS, "Static/Fixed nonce detected");
+            PrintAndLogEx(SUCCESS, "Static nonce detected");
         if (res == 2 && verbose)
-            PrintAndLogEx(SUCCESS, "Static/Fixed nonce detection failed");
+            PrintAndLogEx(SUCCESS, "Static nonce detection failed");
     }
 
     return select_status;

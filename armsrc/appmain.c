@@ -1156,6 +1156,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareNested(payload->block, payload->keytype, payload->target_block, payload->target_keytype, payload->calibrate, payload->key);
             break;
         }
+        case CMD_HF_MIFARE_STATIC_NESTED: {
+            struct p {
+                uint8_t block;
+                uint8_t keytype;
+                uint8_t target_block;
+                uint8_t target_keytype;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareStaticNested(payload->block, payload->keytype, payload->target_block, payload->target_keytype, payload->key);
+            break;
+        }
         case CMD_HF_MIFARE_CHKKEYS: {
             MifareChkKeys(packet->data.asBytes);
             break;
