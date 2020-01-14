@@ -571,7 +571,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
             PrintAndLogEx(WARNING, "aborted via keyboard.");
             return 1;
         default :
-            PrintAndLogEx(SUCCESS, "found valid key: %012" PRIx64 "\n", key);
+            PrintAndLogEx(SUCCESS, "found valid key: "_YELLOW_("%012" PRIx64), key);
             break;
     }
     PrintAndLogEx(NORMAL, "");
@@ -1281,7 +1281,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
     // check if tag doesn't have static nonce
     if (detect_classic_static_nonce() != 0) {
         PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
-        PrintAndLogEx(INFO, "\t Try use `" _YELLOW_("hf mf staticnested") "`");
+        PrintAndLogEx(INFO, "\t Try use " _YELLOW_("`hf mf staticnested`"));
         return PM3_EOPABORTED;
     }
 
@@ -1534,7 +1534,8 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 
     // check if tag have static nonce
     if (detect_classic_static_nonce() == 0) {
-        PrintAndLogEx(WARNING, "Normal nonce detected. Quitting...");
+        PrintAndLogEx(WARNING, "None static nonce detected. Quitting...");
+        PrintAndLogEx(INFO, "\t Try use " _YELLOW_("`hf mf nested`"));
         return PM3_EOPABORTED;
     }
 
@@ -1684,7 +1685,6 @@ jumptoend:
 
     return PM3_SUCCESS;
 }
-
 
 static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint8_t blockNo = 0;
