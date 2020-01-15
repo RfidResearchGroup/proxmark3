@@ -1538,6 +1538,10 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // Pack the response into a byte array
         for (size_t i = 5; i < nrzs; i++) {
             uint8_t bit = nrz_samples[i];
+            if (bit > 1) { // When Manchester detects impossible symbol it writes "7"
+                //Dbprintf("Error in Manchester decoding, abort");
+                break;
+            }
             rx[rxlen / 8] |= bit << (7 - (rxlen % 8));
             rxlen++;
         }
