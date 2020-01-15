@@ -1528,11 +1528,14 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             //Dbprintf("Detected unexpected number of manchester decoded samples [%d]", nrzs);
             break;
         } else {
-            for (size_t i = 0; i < 5; i++) {
+            size_t i;
+            for (i = 0; i < 5; i++) {
                 if (nrz_samples[i] != 1) {
-                    Dbprintf("Detected incorrect header, the bit [%d] is zero instead of one", i);
+                    Dbprintf("Detected incorrect header, the bit [%d] is zero instead of one, abort", i);
+                    break;
                 }
             }
+            if (i < 5) break;
         }
 
         // Pack the response into a byte array
