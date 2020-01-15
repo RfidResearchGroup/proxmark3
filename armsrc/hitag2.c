@@ -1466,7 +1466,6 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 nrz_samples[nrzs++] = tag_modulation;
                 tag_modulation ^= 1;
             } else {
-                tag_modulation ^= 1;
                 // The function lf_count_edge_periods() returns > 64 periods, this is not a valid number periods
                 Dbprintf("Detected unexpected period count: %d", periods);
                 break;
