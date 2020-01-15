@@ -1436,8 +1436,18 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             if (waiting_for_first_edge) {
                 // Just break out of loop after an initial time-out (tag is probably not available)
                 if (periods == 0) break;
-                // Register the number of periods that have passed
-                response = t_wait_1 - 64 + periods;
+                if (tag_modulation == 0) {
+                    // hitag replies always start with 11111 == 1010101010, if we see 0
+                    // it means we missed the first period, e.g. if the signal never crossed 0 since reader signal
+                    // so let's add it:
+                    nrz_samples[nrzs++] = tag_modulation ^ 1;
+                    // Register the number of periods that have passed
+                    // we missed the begin of response but we know it happened one period of 16 earlier
+                    response = t_wait_1 - 64 + periods - 16;
+                } else {
+                    // Register the number of periods that have passed
+                    response = t_wait_1 - 64 + periods;
+                }
                 // Indicate that we have dealt with the first edge
                 waiting_for_first_edge = false;
                 // The first edge is always a single NRZ bit, force periods on 16
