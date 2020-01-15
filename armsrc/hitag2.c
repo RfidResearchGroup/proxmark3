@@ -1354,14 +1354,6 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         WDT_HIT();
 
-        // Check if frame was captured and store it
-        if (rxlen > 0) {
-            frame_count++;
-            response++;
-            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
-            //Dbhexdump(nbytes(rxlen), rx, false);
-        }
-
         // By default reset the transmission buffer
         tx = txbuf;
         switch (htf) {
@@ -1546,7 +1538,8 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 //                rxlen = 32;
 //            }
 
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
+            // TODO response times should be cumulative/absolute
+            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
             Dbhexdump(nbytes(rxlen), rx, false);
         }
     }
