@@ -109,11 +109,13 @@ static int hitag2_init(void) {
 #define HITAG_T_STOP     36 /* T_EOF should be > 36 */
 #define HITAG_T_LOW      8  /* T_LOW should be 4..10 */
 #define HITAG_T_0_MIN    15 /* T[0] should be 18..22 */
+#define HITAG_T_0        20 /* T[0] should be 18..22 */
 #define HITAG_T_1_MIN    25 /* T[1] should be 26..30 */
+#define HITAG_T_1        30 /* T[1] should be 26..30 */
 //#define HITAG_T_EOF      40 /* T_EOF should be > 36 */
 #define HITAG_T_EOF      80 /* T_EOF should be > 36 */
 #define HITAG_T_WAIT_1   200 /* T_wresp should be 199..206 */
-#define HITAG_T_WAIT_2   90 /* T_wresp should be 199..206 */
+#define HITAG_T_WAIT_2   90 /* T_wait2 should be at least 90 */
 #define HITAG_T_WAIT_MAX 300 /* bit more than HITAG_T_WAIT_1 + HITAG_T_WAIT_2 */
 #define HITAG_T_PROG     614
 
@@ -315,12 +317,12 @@ static uint32_t hitag_reader_send_bit(int bit) {
 
     if (bit == 0) {
         // Zero bit: |_-|
-        lf_wait_periods(20-8); // wait for 18-22 times the carrier period
-        wait += 20-8;
+        lf_wait_periods(HITAG_T_0-HITAG_T_LOW); // wait for 18-22 times the carrier period
+        wait += HITAG_T_0-HITAG_T_LOW;
     } else {
         // One bit: |_--|
-        lf_wait_periods(30-8); // wait for 26-32 times the carrier period
-        wait += 30-8;
+        lf_wait_periods(HITAG_T_1-HITAG_T_LOW); // wait for 26-32 times the carrier period
+        wait += HITAG_T_1-HITAG_T_LOW;
     }
     /*lf_wait_periods(10);*/
     LED_A_OFF();
@@ -337,14 +339,14 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
     // Enable modulation, which means, drop the field
     lf_modulation(true);
     // Wait for 4-10 times the carrier period
-    lf_wait_periods(8);
-    wait += 8;
+    lf_wait_periods(HITAG_T_LOW);
+    wait += HITAG_T_LOW;
     // Disable modulation, just activates the field again
     lf_modulation(false);
 
     // t_stop, high field for stop condition (> 36)
-    lf_wait_periods(36-8);
-    wait += 36-8;
+    lf_wait_periods(HITAG_T_STOP-HITAG_T_LOW);
+    wait += HITAG_T_STOP-HITAG_T_LOW;
     return wait;
 }
 
@@ -1349,7 +1351,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     } else if (htf < 30) {
         // hitag2 settings
         t_wait_1 = 206;
-        t_wait_2 = 90;
+        t_wait_2 = HITAG_T_WAIT_2;
         tag_size = 48;
         DbpString("Configured for hitag2 reader");
     } else {
