@@ -1167,7 +1167,7 @@ uint8_t iso14443b_apdu(uint8_t const *message, size_t message_length, uint8_t *r
     GetTagSamplesFor14443bDemod(); //no
 
     FpgaDisableTracing();
-    
+
     if (Demod.len < 3)
         return 0;
 

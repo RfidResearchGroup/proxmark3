@@ -563,14 +563,14 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
     // create key candidates.
     while (p1 <= statelists[0].tail.sltail) {
-            struct Crypto1State savestate;
-            savestate = *p1;
-            while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
-                *p3 = *p1;
-                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
-                p3++;
-                p1++;
-            }
+        struct Crypto1State savestate;
+        savestate = *p1;
+        while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
+            *p3 = *p1;
+            lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
+            p3++;
+            p1++;
+        }
     }
 
     *(uint64_t *)p3 = -1;
@@ -581,14 +581,14 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     if (keycnt == 0) goto out;
 
     PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "candidate keys", keycnt);
-  
+
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
     uint32_t max_keys_slice = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
     uint8_t keyBlock[PM3_CMD_DATA_SIZE] = {0x00};
-       
+
     for (i = 0; i < keycnt; i += max_keys_slice) {
 
         PrintAndLogEx(INFO, "Testing %u / %u ", i, keycnt);
