@@ -108,7 +108,8 @@ sampling_t samples = {0, 0, 0, 0};
 void initSampleBuffer(uint32_t *sample_size) {
 
     BigBuf_free();
-    BigBuf_Clear_ext(false);
+// We can't erase the buffer now, it would drastically delay the acquisition
+//    BigBuf_Clear_ext(false);
 
     if (sample_size == NULL || *sample_size == 0) {
         *sample_size = BigBuf_max_traceLen();
