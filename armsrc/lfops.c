@@ -2550,7 +2550,7 @@ void Cotag(uint32_t arg0) {
             doCotagAcquisitionManchester();
             break;
         case 2:
-            DoAcquisition_config(true, true);
+            DoAcquisition_config(false, 0);
             break;
     }
 

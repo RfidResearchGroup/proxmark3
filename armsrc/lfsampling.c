@@ -115,7 +115,8 @@ void initSampleBuffer(uint32_t *sample_size) {
     // use a bitstream to handle the output
     data.buffer = BigBuf_get_addr();
 
-    memset(data.buffer, 0, *sample_size);
+// We can't erase the buffer now, it would drastically delay the acquisition
+//    memset(data.buffer, 0, *sample_size);
 
     //
     samples.dec_counter = 0;
