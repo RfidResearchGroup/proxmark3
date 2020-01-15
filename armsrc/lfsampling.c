@@ -114,13 +114,15 @@ void initSampleBuffer(uint32_t *sample_size) {
 
         data.buffer = BigBuf_get_addr();
 
-        memset(data.buffer, 0, *sample_size);
+// We can't erase the buffer now, it would drastically delay the acquisition
+//        memset(data.buffer, 0, *sample_size);
     } else {
         *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
 
         data.buffer = BigBuf_malloc(*sample_size);
 
-        memset(data.buffer, 0, *sample_size);
+// We can't erase the buffer now, it would drastically delay the acquisition
+//        memset(data.buffer, 0, *sample_size);
     }
 
     //
