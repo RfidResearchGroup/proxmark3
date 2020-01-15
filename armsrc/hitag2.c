@@ -1567,7 +1567,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
 out:
     lf_finalize();
-    Dbprintf("frame received: %u", frame_count);
+    Dbprintf("TX/RX frames recorded: %u", frame_count);
 
     // release allocated memory from BigBuff.
     BigBuf_free();
