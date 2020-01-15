@@ -1450,7 +1450,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             } else {
                 // The function lf_count_edge_periods() returns 0 when a time-out occurs
                 if (periods == 0) {
-                    Dbprintf("Detected timeout after [%d] nrz samples", nrzs);
+                    //Dbprintf("Detected timeout after [%d] nrz samples", nrzs);
                     break;
                 }
             }
@@ -1470,7 +1470,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 tag_modulation ^= 1;
             } else {
                 // The function lf_count_edge_periods() returns > 64 periods, this is not a valid number periods
-                Dbprintf("Detected unexpected period count: %d", periods);
+                //Dbprintf("Detected unexpected period count: %d", periods);
                 break;
             }
         }
@@ -1510,7 +1510,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Verify if the header consists of five consecutive ones
         if (nrzs < 5) {
-            Dbprintf("Detected unexpected number of manchester decoded samples [%d]", nrzs);
+            //Dbprintf("Detected unexpected number of manchester decoded samples [%d]", nrzs);
             break;
         } else {
             for (size_t i = 0; i < 5; i++) {
