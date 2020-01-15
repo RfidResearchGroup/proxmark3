@@ -297,7 +297,8 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
 }
 
 // sim
-static void hitag_reader_send_bit(int bit) {
+static uint32_t hitag_reader_send_bit(int bit) {
+    uint32_t wait = 0;
     LED_A_ON();
     // Binary pulse length modulation (BPLM) is used to encode the data stream
     // This means that a transmission of a one takes longer than that of a zero
@@ -307,6 +308,7 @@ static void hitag_reader_send_bit(int bit) {
 
     // Wait for 4-10 times the carrier period
     lf_wait_periods(8); // wait for 4-10 times the carrier period
+    wait += 8;
 
     // Disable modulation, just activates the field again
     lf_modulation(false);
@@ -314,29 +316,36 @@ static void hitag_reader_send_bit(int bit) {
     if (bit == 0) {
         // Zero bit: |_-|
         lf_wait_periods(12); // wait for 18-22 times the carrier period
+        wait += 12;
     } else {
         // One bit: |_--|
         lf_wait_periods(22); // wait for 26-32 times the carrier period
+        wait += 22;
     }
     /*lf_wait_periods(10);*/
     LED_A_OFF();
+    return wait;
 }
 
 // sim
-static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
+static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
+    uint32_t wait = 0;
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
-        hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
+        wait += hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
     }
     // Enable modulation, which means, drop the field
     lf_modulation(true);
     // Wait for 4-10 times the carrier period
     lf_wait_periods(8);
+    wait += 8;
     // Disable modulation, just activates the field again
     lf_modulation(false);
 
     // t_stop, high field for stop condition (> 36)
     lf_wait_periods(28);
+    wait += 28;
+    return wait;
 }
 
 size_t blocknr;
@@ -1204,7 +1213,10 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     StopTicks();
 
     int frame_count = 0;
-    int response;
+    uint32_t command_start = 0;
+    uint32_t command_duration = 0;
+    uint32_t response_start = 0;
+    uint32_t response_duration = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
@@ -1399,16 +1411,16 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Wait for t_wait_2 carrier periods after the last tag bit before transmitting,
         lf_wait_periods(t_wait_2);
+        command_start += t_wait_2;
 
         // Transmit the reader frame
-        hitag_reader_send_frame(tx, txlen);
+        command_duration = hitag_reader_send_frame(tx, txlen);
+        response_start = command_start + command_duration;
 
         // Let the antenna and ADC values settle
         // And find the position where edge sampling should start
         lf_wait_periods(t_wait_1 - t_wait_1_guard);
-
-        // Reset the response time (in number of periods)
-        response = 0;
+        response_start += t_wait_1 - t_wait_1_guard;
 
         // Keep administration of the first edge detection
         bool waiting_for_first_edge = true;
@@ -1436,10 +1448,12 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                     nrz_samples[nrzs++] = tag_modulation ^ 1;
                     // Register the number of periods that have passed
                     // we missed the begin of response but we know it happened one period of 16 earlier
-                    response = t_wait_1 - t_wait_1_guard + periods - 16;
+                    response_start += periods - 16;
+                    response_duration = response_start;
                 } else {
                     // Register the number of periods that have passed
-                    response = t_wait_1 - t_wait_1_guard + periods;
+                    response_start += periods;
+                    response_duration = response_start;
                 }
                 // Indicate that we have dealt with the first edge
                 waiting_for_first_edge = false;
@@ -1454,19 +1468,20 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                     break;
                 }
             }
-
             // Evaluate the number of periods before the next edge
             if (periods > 24 && periods <= 64) {
                 // Detected two sequential equal bits and a modulation switch
                 // NRZ modulation: (11 => --|) or (11 __|)
                 nrz_samples[nrzs++] = tag_modulation;
                 nrz_samples[nrzs++] = tag_modulation;
+                response_duration += periods;
                 // Invert tag modulation state
                 tag_modulation ^= 1;
             } else if (periods > 0 && periods <= 24) {
                 // Detected one bit and a modulation switch
                 // NRZ modulation: (1 => -|) or (0 _|)
                 nrz_samples[nrzs++] = tag_modulation;
+                response_duration += periods;
                 tag_modulation ^= 1;
             } else {
                 // The function lf_count_edge_periods() returns > 64 periods, this is not a valid number periods
@@ -1480,7 +1495,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // still use the same memory space)
         if (txlen > 0) {
             frame_count++;
-            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
+            LogTrace(tx, nbytes(txlen), command_start, command_start + command_duration, NULL, true);
         }
 
         // Reset values for receiving frames
@@ -1538,8 +1553,10 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 //                rxlen = 32;
 //            }
 
-            // TODO response times should be cumulative/absolute
-            LogTrace(rx, nbytes(rxlen), response, response, NULL, false);
+            LogTrace(rx, nbytes(rxlen), response_start, response_start + response_duration, NULL, false);
+// TODO when using cumulative time for command_start, pm3 doesn't reply anymore, e.g. on lf hitag read 23 4F4E4D494B52
+//            command_start = response_start + response_duration;
+            command_start = 0;
             Dbhexdump(nbytes(rxlen), rx, false);
         }
     }
