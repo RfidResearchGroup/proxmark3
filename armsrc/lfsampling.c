@@ -93,6 +93,7 @@ sample_config *getSamplingConfig() {
 void pushBit(BitstreamOut *stream, uint8_t bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
+    *(stream->buffer + bytepos) &= ~(1 << (7 - bitpos));
     *(stream->buffer + bytepos) |= (bit > 0) << (7 - bitpos);
     stream->position++;
     stream->numbits++;
