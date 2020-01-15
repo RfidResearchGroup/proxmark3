@@ -1211,6 +1211,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     uint8_t *tx = txbuf;
     size_t txlen = 0;
     int t_wait_1;
+    int t_wait_1_guard = 8;
     int t_wait_2;
     size_t tag_size;
     bool bStop = false;
@@ -1412,7 +1413,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Let the antenna and ADC values settle
         // And find the position where edge sampling should start
-        lf_wait_periods(t_wait_1 - 64);
+        lf_wait_periods(t_wait_1 - t_wait_1_guard);
 
         // Reset the response time (in number of periods)
         response = 0;
@@ -1443,10 +1444,10 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                     nrz_samples[nrzs++] = tag_modulation ^ 1;
                     // Register the number of periods that have passed
                     // we missed the begin of response but we know it happened one period of 16 earlier
-                    response = t_wait_1 - 64 + periods - 16;
+                    response = t_wait_1 - t_wait_1_guard + periods - 16;
                 } else {
                     // Register the number of periods that have passed
-                    response = t_wait_1 - 64 + periods;
+                    response = t_wait_1 - t_wait_1_guard + periods;
                 }
                 // Indicate that we have dealt with the first edge
                 waiting_for_first_edge = false;
