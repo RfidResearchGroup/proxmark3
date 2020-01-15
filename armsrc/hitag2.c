@@ -16,7 +16,7 @@
 // (c) 2012 Roel Verdult
 //-----------------------------------------------------------------------------
 // Piwi, 2019
-// Iceman, 2019	
+// Iceman, 2019
 // Anon, 2019
 
 #include "hitag2.h"
@@ -299,10 +299,10 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
 // sim
 static void hitag_reader_send_bit(int bit) {
     LED_A_ON();
-	// Binary pulse length modulation (BPLM) is used to encode the data stream
+    // Binary pulse length modulation (BPLM) is used to encode the data stream
     // This means that a transmission of a one takes longer than that of a zero
 
-	// Enable modulation, which means, drop the field
+    // Enable modulation, which means, drop the field
     lf_modulation(true);
 
     // Wait for 4-10 times the carrier period
@@ -328,241 +328,247 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
     for (size_t i = 0; i < frame_len; i++) {
         hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
     }
-	// Enable modulation, which means, drop the field
+    // Enable modulation, which means, drop the field
     lf_modulation(true);
     // Wait for 4-10 times the carrier period
     lf_wait_periods(8);
     // Disable modulation, just activates the field again
     lf_modulation(false);
-    
+
     // t_stop, high field for stop condition (> 36)
     lf_wait_periods(28);
 }
 
 size_t blocknr;
 
-uint8_t hitag_crc(uint8_t *data, size_t length){
-	uint8_t crc = 0xff;
-	unsigned int byte, bit;
-	for(byte=0; byte<((length+7)/8); byte++){
-		crc ^= *(data + byte);
-		bit = length < (8*(byte+1)) ? (length % 8) : 8;
-		while(bit--){
-			if(crc & 0x80){
-				crc<<=1;
-				crc ^= 0x1d;
-			} else {
-				crc<<=1;
-			}
-		}
-	}
-	return crc;
+uint8_t hitag_crc(uint8_t *data, size_t length) {
+    uint8_t crc = 0xff;
+    unsigned int byte, bit;
+    for (byte = 0; byte < ((length + 7) / 8); byte++) {
+        crc ^= *(data + byte);
+        bit = length < (8 * (byte + 1)) ? (length % 8) : 8;
+        while (bit--) {
+            if (crc & 0x80) {
+                crc <<= 1;
+                crc ^= 0x1d;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+    return crc;
 }
 
 #define test_bit(data, i) (*(data+(i/8)) >> (7-(i%8))) & 1
 #define set_bit(data, i)   *(data+(i/8)) |= (1 << (7-(i%8)))
 #define clear_bit(data, i) *(data+(i/8)) &= ~(1 << (7-(i%8)))
 #define flip_bit(data, i)  *(data+(i/8)) ^= (1 << (7-(i%8)))
-void fix_ac_decoding(uint8_t *input, size_t len){
-	// Reader routine tries to decode AC data after Manchester decoding
-	// AC has double the bitrate, extract data from bit-pairs
-	uint8_t temp[len / 16];
-	memset(temp, 0, sizeof(temp));
+void fix_ac_decoding(uint8_t *input, size_t len) {
+    // Reader routine tries to decode AC data after Manchester decoding
+    // AC has double the bitrate, extract data from bit-pairs
+    uint8_t temp[len / 16];
+    memset(temp, 0, sizeof(temp));
 
-	for (size_t i = 1; i < len; i += 2) {
-		if (test_bit(input, i) && test_bit(input, (i + 1))){
-			set_bit(temp, (i / 2));
-		}
-	}
-	memcpy(input, temp, sizeof(temp));
+    for (size_t i = 1; i < len; i += 2) {
+        if (test_bit(input, i) && test_bit(input, (i + 1))) {
+            set_bit(temp, (i / 2));
+        }
+    }
+    memcpy(input, temp, sizeof(temp));
 }
 
-bool hitag_plain(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen, bool hitag_s) {
-	uint8_t crc;
-	*txlen = 0;
-	switch (rxlen) {
-		case 0: {
-			// retry waking up card
-			/*tx[0] = 0xb0; // Rev 3.0*/
-			tx[0] = 0x30; // Rev 2.0
-			*txlen = 5;
-			if(!bCollision) blocknr--;
-			if(blocknr < 0) {
-				blocknr = 0;
-			}
-			if(!hitag_s){
-				if (blocknr > 1 && blocknr < 31) {
-					blocknr=31;
-				}
-			}
-			bCollision = true;
-			return true;
-		}
-		case 32: {
-			if(bCollision){
-				// Select card by serial from response
-				tx[0] = 0x00 | rx[0] >> 5;
-				tx[1] = rx[0] << 3 | rx[1] >> 5;
-				tx[2] = rx[1] << 3 | rx[2] >> 5;
-				tx[3] = rx[2] << 3 | rx[3] >> 5;
-				tx[4] = rx[3] << 3;
-				crc = hitag_crc(tx,37);
-				tx[4] |= crc >> 5;
-				tx[5] = crc << 3;
-				*txlen = 45;
-				bCollision = false;
-			} else {
-				memcpy(tag.sectors[blocknr], rx, 4);
-				blocknr++;
-				if(!hitag_s){
-					if (blocknr > 1 && blocknr < 31) {
-						blocknr=31;
-					}
-				}
-				if (blocknr > 63) {
-					DbpString("Read succesful!");
-					*txlen = 0;
-					bSuccessful = true;
-					return false;
-				}
-				// read next page of card until done
-				Dbprintf("Reading page %02u", blocknr);
-				tx[0] = 0xc0 | blocknr >> 4; // RDPPAGE
-				tx[1] = blocknr << 4;
-				crc = hitag_crc(tx,12);
-				tx[1] |= crc >> 4;
-				tx[2] = crc << 4;
-				*txlen = 20;
-			}
-		} break;
-		default: {
-			 Dbprintf("Uknown frame length: %d",rxlen);
-			 return false;
-		} break;
-	}
-	return true;
+bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool hitag_s) {
+    uint8_t crc;
+    *txlen = 0;
+    switch (rxlen) {
+        case 0: {
+            // retry waking up card
+            /*tx[0] = 0xb0; // Rev 3.0*/
+            tx[0] = 0x30; // Rev 2.0
+            *txlen = 5;
+            if (!bCollision) blocknr--;
+            if (blocknr < 0) {
+                blocknr = 0;
+            }
+            if (!hitag_s) {
+                if (blocknr > 1 && blocknr < 31) {
+                    blocknr = 31;
+                }
+            }
+            bCollision = true;
+            return true;
+        }
+        case 32: {
+            if (bCollision) {
+                // Select card by serial from response
+                tx[0] = 0x00 | rx[0] >> 5;
+                tx[1] = rx[0] << 3 | rx[1] >> 5;
+                tx[2] = rx[1] << 3 | rx[2] >> 5;
+                tx[3] = rx[2] << 3 | rx[3] >> 5;
+                tx[4] = rx[3] << 3;
+                crc = hitag_crc(tx, 37);
+                tx[4] |= crc >> 5;
+                tx[5] = crc << 3;
+                *txlen = 45;
+                bCollision = false;
+            } else {
+                memcpy(tag.sectors[blocknr], rx, 4);
+                blocknr++;
+                if (!hitag_s) {
+                    if (blocknr > 1 && blocknr < 31) {
+                        blocknr = 31;
+                    }
+                }
+                if (blocknr > 63) {
+                    DbpString("Read succesful!");
+                    *txlen = 0;
+                    bSuccessful = true;
+                    return false;
+                }
+                // read next page of card until done
+                Dbprintf("Reading page %02u", blocknr);
+                tx[0] = 0xc0 | blocknr >> 4; // RDPPAGE
+                tx[1] = blocknr << 4;
+                crc = hitag_crc(tx, 12);
+                tx[1] |= crc >> 4;
+                tx[2] = crc << 4;
+                *txlen = 20;
+            }
+        }
+        break;
+        default: {
+            Dbprintf("Uknown frame length: %d", rxlen);
+            return false;
+        }
+        break;
+    }
+    return true;
 }
 
 size_t flipped_bit = 0;
 
 uint32_t byte_value = 0;
-bool hitag1_authenticate(uint8_t* rx, const size_t rxlen, uint8_t* tx, size_t* txlen) {
-	uint8_t crc;
-	*txlen = 0;
-	switch (rxlen) {
-		case 0: {
-			// retry waking up card
-			/*tx[0] = 0xb0; // Rev 3.0*/
-			tx[0] = 0x30; // Rev 2.0
-			*txlen = 5;
-			if (bCrypto && byte_value <= 0xff){
-				// to retry
-				bCrypto = false;
-			}
-			if(!bCollision) blocknr--;
-			if(blocknr < 0) {
-				blocknr = 0;
-			}
-			bCollision = true;
-			// will receive 32-bit UID
-		} break;
-		case 2: {
-			if (bAuthenticating) {
-				// received Auth init ACK, send nonce
-				// TODO Roel, bit-manipulation goes here
-				/*nonce[0] = 0x2d;*/
-				/*nonce[1] = 0x74;*/
-				/*nonce[2] = 0x80;*/
-				/*nonce[3] = 0xa5;*/
-				nonce[0]=byte_value;
-				byte_value++;
-				/*set_bit(nonce,flipped_bit);*/
-				memcpy(tx,nonce,4);
-				*txlen = 32;
-				// will receive 32 bit encrypted Logdata
-			} else if (bCrypto) {
-				// authed, start reading
-				tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
-				tx[1] = blocknr << 4;
-				crc = hitag_crc(tx,12);
-				tx[1] |= crc >> 4;
-				tx[2] = crc << 4;
-				*txlen = 20;
-				// will receive 32-bit encrypted page
-			}
-		} break;
-		case 32: {
-			if (bCollision){
-				// Select card by serial from response
-				tx[0] = 0x00 | rx[0] >> 5;
-				tx[1] = rx[0] << 3 | rx[1] >> 5;
-				tx[2] = rx[1] << 3 | rx[2] >> 5;
-				tx[3] = rx[2] << 3 | rx[3] >> 5;
-				tx[4] = rx[3] << 3;
-				crc = hitag_crc(tx,37);
-				tx[4] |= crc >> 5;
-				tx[5] = crc << 3;
-				*txlen = 45;
-				bCollision = false;
-				bSelecting = true;
-				// will receive 32-bit configuration page
-			} else if (bSelecting){
-				// Initiate auth
-				tx[0] = 0xa0 | key_no >> 4; // WRCPAGE
-				tx[1] = blocknr << 4;
-				crc = hitag_crc(tx,12);
-				tx[1] |= crc >> 4;
-				tx[2] = crc << 4;
-				*txlen = 20;
-				bSelecting = false;
-				bAuthenticating = true;
-				// will receive 2-bit ACK
-			} else if (bAuthenticating) {
-				// received 32-bit logdata 0
-				// TODO decrypt logdata 0, verify against logdata_0
-				memcpy(tag.sectors[0], rx, 4);
-				memcpy(tag.sectors[1], tx, 4);
-				Dbprintf("%02x%02x%02x%02x %02x%02x%02x%02x", rx[0], rx[1], rx[2], rx[3], tx[0], tx[1], tx[2], tx[3]);
-				// TODO replace with secret data stream
-				// TODO encrypt logdata_1
-				memcpy(tx,logdata_1,4);
-				*txlen = 32;
-				bAuthenticating = false;
-				bCrypto = true;
-				// will receive 2-bit ACK
-			} else if (bCrypto) {
-				// received 32-bit encrypted page
-				// TODO decrypt rx
-				memcpy(tag.sectors[blocknr],rx,4);
-				blocknr++;
-				if (blocknr > 63) {
-					DbpString("Read succesful!");
-					bSuccessful = true;
-					return false;
-				}
+bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
+    uint8_t crc;
+    *txlen = 0;
+    switch (rxlen) {
+        case 0: {
+            // retry waking up card
+            /*tx[0] = 0xb0; // Rev 3.0*/
+            tx[0] = 0x30; // Rev 2.0
+            *txlen = 5;
+            if (bCrypto && byte_value <= 0xff) {
+                // to retry
+                bCrypto = false;
+            }
+            if (!bCollision) blocknr--;
+            if (blocknr < 0) {
+                blocknr = 0;
+            }
+            bCollision = true;
+            // will receive 32-bit UID
+        }
+        break;
+        case 2: {
+            if (bAuthenticating) {
+                // received Auth init ACK, send nonce
+                // TODO Roel, bit-manipulation goes here
+                /*nonce[0] = 0x2d;*/
+                /*nonce[1] = 0x74;*/
+                /*nonce[2] = 0x80;*/
+                /*nonce[3] = 0xa5;*/
+                nonce[0] = byte_value;
+                byte_value++;
+                /*set_bit(nonce,flipped_bit);*/
+                memcpy(tx, nonce, 4);
+                *txlen = 32;
+                // will receive 32 bit encrypted Logdata
+            } else if (bCrypto) {
+                // authed, start reading
+                tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
+                tx[1] = blocknr << 4;
+                crc = hitag_crc(tx, 12);
+                tx[1] |= crc >> 4;
+                tx[2] = crc << 4;
+                *txlen = 20;
+                // will receive 32-bit encrypted page
+            }
+        }
+        break;
+        case 32: {
+            if (bCollision) {
+                // Select card by serial from response
+                tx[0] = 0x00 | rx[0] >> 5;
+                tx[1] = rx[0] << 3 | rx[1] >> 5;
+                tx[2] = rx[1] << 3 | rx[2] >> 5;
+                tx[3] = rx[2] << 3 | rx[3] >> 5;
+                tx[4] = rx[3] << 3;
+                crc = hitag_crc(tx, 37);
+                tx[4] |= crc >> 5;
+                tx[5] = crc << 3;
+                *txlen = 45;
+                bCollision = false;
+                bSelecting = true;
+                // will receive 32-bit configuration page
+            } else if (bSelecting) {
+                // Initiate auth
+                tx[0] = 0xa0 | key_no >> 4; // WRCPAGE
+                tx[1] = blocknr << 4;
+                crc = hitag_crc(tx, 12);
+                tx[1] |= crc >> 4;
+                tx[2] = crc << 4;
+                *txlen = 20;
+                bSelecting = false;
+                bAuthenticating = true;
+                // will receive 2-bit ACK
+            } else if (bAuthenticating) {
+                // received 32-bit logdata 0
+                // TODO decrypt logdata 0, verify against logdata_0
+                memcpy(tag.sectors[0], rx, 4);
+                memcpy(tag.sectors[1], tx, 4);
+                Dbprintf("%02x%02x%02x%02x %02x%02x%02x%02x", rx[0], rx[1], rx[2], rx[3], tx[0], tx[1], tx[2], tx[3]);
+                // TODO replace with secret data stream
+                // TODO encrypt logdata_1
+                memcpy(tx, logdata_1, 4);
+                *txlen = 32;
+                bAuthenticating = false;
+                bCrypto = true;
+                // will receive 2-bit ACK
+            } else if (bCrypto) {
+                // received 32-bit encrypted page
+                // TODO decrypt rx
+                memcpy(tag.sectors[blocknr], rx, 4);
+                blocknr++;
+                if (blocknr > 63) {
+                    DbpString("Read succesful!");
+                    bSuccessful = true;
+                    return false;
+                }
 
-				// TEST
-				Dbprintf("Succesfully authenticated with logdata:");
-				Dbhexdump(4,logdata_1,false);
-				bSuccessful = true;
-				return false;
+                // TEST
+                Dbprintf("Succesfully authenticated with logdata:");
+                Dbhexdump(4, logdata_1, false);
+                bSuccessful = true;
+                return false;
 
-				// read next page of card until done
-				tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
-				tx[1] = blocknr << 4;
-				crc = hitag_crc(tx,12);
-				tx[1] |= crc >> 4;
-				tx[2] = crc << 4;
-				*txlen = 20;
-			}
-		} break;
-		default: {
-			Dbprintf("Uknown frame length: %d",rxlen);
-			return false;
-		} break;
-	}
+                // read next page of card until done
+                tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
+                tx[1] = blocknr << 4;
+                crc = hitag_crc(tx, 12);
+                tx[1] |= crc >> 4;
+                tx[2] = crc << 4;
+                *txlen = 20;
+            }
+        }
+        break;
+        default: {
+            Dbprintf("Uknown frame length: %d", rxlen);
+            return false;
+        }
+        break;
+    }
 
-	return true;
+    return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -919,7 +925,7 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                 // Store the received block
                 memcpy(tag.sectors[blocknr], rx, 4);
                 blocknr++;
-                
+
                 Dbhexdump(4, rx, false);
             }
             if (blocknr > 0) {
@@ -944,7 +950,7 @@ void SniffHitag(void) {
 
     LEDsoff();
     StopTicks();
- 
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     BigBuf_free();
     BigBuf_Clear_ext(false);
@@ -968,17 +974,17 @@ void SniffHitag(void) {
 
     /*bool waiting_for_first_edge = true;*/
     LED_C_ON();
-    
+
     while (!BUTTON_PRESS() && !data_available()) {
 
         WDT_HIT();
 
-		// Receive frame, watch for at most T0*EOF periods
+        // Receive frame, watch for at most T0*EOF periods
         lf_reset_counter();
-        
+
         // Wait "infinite" for reader modulation
         periods = lf_detect_gap(20000);
-        
+
         // Test if we detected the first reader modulation edge
         if (periods != 0) {
             if (logging == false) {
@@ -986,29 +992,29 @@ void SniffHitag(void) {
                 LED_D_ON();
             }
         }
-        
+
         /*lf_count_edge_periods(10000);*/
-        while ((periods = lf_detect_gap(64)) != 0){
+        while ((periods = lf_detect_gap(64)) != 0) {
             num_to_bytes(periods, 4, periods_bytes);
             LogTrace(periods_bytes, 4, 0, 0, NULL, true);
         }
-        
 
-/*        
-        // Check if frame was captured
-        if (rxlen > 0) {
-            // frame_count++;
-            LogTrace(rx, nbytes(rxlen), response, 0, NULL, reader_frame);
 
-            // Check if we recognize a valid authentication attempt
-            if (nbytes(rxlen) == 8) {
-                // Store the authentication attempt
-                if (auth_table_len < (AUTH_TABLE_LENGTH - 8)) {
-                    memcpy(auth_table + auth_table_len, rx, 8);
-                    auth_table_len += 8;
-                }
-            }
-*/
+        /*
+                // Check if frame was captured
+                if (rxlen > 0) {
+                    // frame_count++;
+                    LogTrace(rx, nbytes(rxlen), response, 0, NULL, reader_frame);
+
+                    // Check if we recognize a valid authentication attempt
+                    if (nbytes(rxlen) == 8) {
+                        // Store the authentication attempt
+                        if (auth_table_len < (AUTH_TABLE_LENGTH - 8)) {
+                            memcpy(auth_table + auth_table_len, rx, 8);
+                            auth_table_len += 8;
+                        }
+                    }
+        */
     }
 
     lf_finalize();
@@ -1204,54 +1210,56 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     uint8_t txbuf[HITAG_FRAME_LEN];
     uint8_t *tx = txbuf;
     size_t txlen = 0;
-	int t_wait_1;
-	int t_wait_2;
-	size_t tag_size;
-	bool bStop = false;
-  
+    int t_wait_1;
+    int t_wait_2;
+    size_t tag_size;
+    bool bStop = false;
+
     // Raw demodulation/decoding by sampling edge periods
     size_t periods = 0;
-    
-	// Reset the return status
-    bSuccessful = false;
-	bCrypto = false;
-  
-	// Clean up trace and prepare it for storing frames
-	set_tracing(true);
-	clear_trace();
 
-	DbpString("Starting Hitag reader family");
+    // Reset the return status
+    bSuccessful = false;
+    bCrypto = false;
+
+    // Clean up trace and prepare it for storing frames
+    set_tracing(true);
+    clear_trace();
+
+    DbpString("Starting Hitag reader family");
 
     // Check configuration
     switch (htf) {
-  		case RHT1F_PLAIN: {
-			Dbprintf("Read public blocks in plain mode");
-			// this part will be unreadable
-			memset(tag.sectors+2, 0x0, 30);
-			blocknr = 0;
-		} break;
-
-		case RHT1F_AUTHENTICATE: {
-			Dbprintf("Read all blocks in authed mode");
-			memcpy(nonce, htd->ht1auth.nonce, 4);
-			memcpy(key, htd->ht1auth.key, 4);
-			memcpy(logdata_0, htd->ht1auth.logdata_0, 4);
-			memcpy(logdata_1, htd->ht1auth.logdata_1, 4);
-			// TEST
-            memset(nonce, 0x0, 4);
-			memset(logdata_1, 0x00, 4);
-			byte_value = 0;
-			key_no = htd->ht1auth.key_no;
-			Dbprintf("Authenticating using key #%d:", key_no);
-			Dbhexdump(4, key, false);
-			DbpString("Nonce:");
-			Dbhexdump(4, nonce, false);
-			DbpString("Logdata_0:");
-			Dbhexdump(4, logdata_0, false);
-			DbpString("Logdata_1:");
-			Dbhexdump(4, logdata_1, false);
+        case RHT1F_PLAIN: {
+            Dbprintf("Read public blocks in plain mode");
+            // this part will be unreadable
+            memset(tag.sectors + 2, 0x0, 30);
             blocknr = 0;
-		} break;
+        }
+        break;
+
+        case RHT1F_AUTHENTICATE: {
+            Dbprintf("Read all blocks in authed mode");
+            memcpy(nonce, htd->ht1auth.nonce, 4);
+            memcpy(key, htd->ht1auth.key, 4);
+            memcpy(logdata_0, htd->ht1auth.logdata_0, 4);
+            memcpy(logdata_1, htd->ht1auth.logdata_1, 4);
+            // TEST
+            memset(nonce, 0x0, 4);
+            memset(logdata_1, 0x00, 4);
+            byte_value = 0;
+            key_no = htd->ht1auth.key_no;
+            Dbprintf("Authenticating using key #%d:", key_no);
+            Dbhexdump(4, key, false);
+            DbpString("Nonce:");
+            Dbhexdump(4, nonce, false);
+            DbpString("Logdata_0:");
+            Dbhexdump(4, logdata_0, false);
+            DbpString("Logdata_1:");
+            Dbhexdump(4, logdata_1, false);
+            blocknr = 0;
+        }
+        break;
         case RHT2F_PASSWORD: {
             Dbprintf("List identifier in password mode");
             memcpy(password, htd->pwd.password, 4);
@@ -1272,9 +1280,9 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             DbpString("Authenticating using key:");
             memcpy(key, htd->crypto.key, 6);  //HACK; 4 or 6??  I read both in the code.
             Dbhexdump(6, key, false);
-			DbpString("Nonce:");
-			Dbhexdump(4,nonce,false);
-            memcpy(nonce,htd->crypto.data,4);
+            DbpString("Nonce:");
+            Dbhexdump(4, nonce, false);
+            memcpy(nonce, htd->crypto.data, 4);
             blocknr = 0;
             bCrypto = false;
             bAuthenticating = false;
@@ -1308,9 +1316,9 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     lf_init(true);
 
     uint8_t attempt_count = 0;
-    
+
     // Tag specific configuration settings (sof, timings, etc.)
-    if (htf < 10){
+    if (htf < 10) {
         // hitagS settings
         t_wait_1 = 204;
         t_wait_2 = 128;
@@ -1356,14 +1364,16 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // By default reset the transmission buffer
         tx = txbuf;
         switch (htf) {
-			case RHT1F_PLAIN: {
-				bStop = !hitag_plain(rx, rxlen, tx, &txlen, false);
-			} break;
-			
+            case RHT1F_PLAIN: {
+                bStop = !hitag_plain(rx, rxlen, tx, &txlen, false);
+            }
+            break;
+
             case RHT1F_AUTHENTICATE: {
-				bStop = !hitag1_authenticate(rx, rxlen, tx, &txlen);
-			} break;
-            
+                bStop = !hitag1_authenticate(rx, rxlen, tx, &txlen);
+            }
+            break;
+
             case RHT2F_PASSWORD: {
                 bStop = !hitag2_password(rx, rxlen, tx, &txlen, false);
                 break;
@@ -1396,7 +1406,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Wait for t_wait_2 carrier periods after the last tag bit before transmitting,
         lf_wait_periods(t_wait_2);
-        
+
         // Transmit the reader frame
         hitag_reader_send_frame(tx, txlen);
 
@@ -1406,13 +1416,13 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Reset the response time (in number of periods)
         response = 0;
-        
+
         // Keep administration of the first edge detection
         bool waiting_for_first_edge = true;
 
         // Did we detected any modulaiton at all
         bool detected_tag_modulation = false;
-        
+
         // Use the current modulation state as starting point
         tag_modulation = lf_get_tag_modulation();
 
@@ -1427,7 +1437,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 // Just break out of loop after an initial time-out (tag is probably not available)
                 if (periods == 0) break;
                 // Register the number of periods that have passed
-                response = t_wait_1-64 + periods;
+                response = t_wait_1 - 64 + periods;
                 // Indicate that we have dealt with the first edge
                 waiting_for_first_edge = false;
                 // The first edge is always a single NRZ bit, force periods on 16
@@ -1437,20 +1447,20 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             } else {
                 // The function lf_count_edge_periods() returns 0 when a time-out occurs
                 if (periods == 0) {
-                    Dbprintf("Detected timeout after [%d] nrz samples",nrzs);
+                    Dbprintf("Detected timeout after [%d] nrz samples", nrzs);
                     break;
                 }
             }
-            
+
             // Evaluate the number of periods before the next edge
-            if (periods > 24 && periods <= 64){
+            if (periods > 24 && periods <= 64) {
                 // Detected two sequential equal bits and a modulation switch
                 // NRZ modulation: (11 => --|) or (11 __|)
                 nrz_samples[nrzs++] = tag_modulation;
                 nrz_samples[nrzs++] = tag_modulation;
                 // Invert tag modulation state
                 tag_modulation ^= 1;
-            } else if (periods > 0 && periods <= 24){
+            } else if (periods > 0 && periods <= 24) {
                 // Detected one bit and a modulation switch
                 // NRZ modulation: (1 => -|) or (0 _|)
                 nrz_samples[nrzs++] = tag_modulation;
@@ -1492,24 +1502,24 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         LED_B_ON();
 
         // decode bitstream
-        manrawdecode((uint8_t*)nrz_samples, &nrzs, true, 0);
+        manrawdecode((uint8_t *)nrz_samples, &nrzs, true, 0);
 
         // decode frame
-        
+
         // Verify if the header consists of five consecutive ones
         if (nrzs < 5) {
-            Dbprintf("Detected unexpected number of manchester decoded samples [%d]",nrzs);
+            Dbprintf("Detected unexpected number of manchester decoded samples [%d]", nrzs);
             break;
         } else {
-            for (size_t i = 0; i < 5; i++){
+            for (size_t i = 0; i < 5; i++) {
                 if (nrz_samples[i] != 1) {
-                    Dbprintf("Detected incorrect header, the bit [%d] is zero instead of one",i);
+                    Dbprintf("Detected incorrect header, the bit [%d] is zero instead of one", i);
                 }
             }
         }
-        
+
         // Pack the response into a byte array
-        for (size_t i = 5; i < nrzs; i++){
+        for (size_t i = 5; i < nrzs; i++) {
             uint8_t bit = nrz_samples[i];
             rx[rxlen / 8] |= bit << (7 - (rxlen % 8));
             rxlen++;
@@ -1529,11 +1539,11 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
             Dbhexdump(nbytes(rxlen), rx, false);
         }
-	}
+    }
 
 out:
     lf_finalize();
-	Dbprintf("frame received: %u", frame_count);
+    Dbprintf("frame received: %u", frame_count);
 
     // release allocated memory from BigBuff.
     BigBuf_free();

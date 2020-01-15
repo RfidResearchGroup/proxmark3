@@ -21,8 +21,8 @@ typedef enum {
     RHTSF_KEY                 = 02,
     WHTSF_CHALLENGE           = 03,
     WHTSF_KEY                 = 04,
-	RHT1F_PLAIN               = 11,
-	RHT1F_AUTHENTICATE        = 12,
+    RHT1F_PLAIN               = 11,
+    RHT1F_AUTHENTICATE        = 12,
     RHT2F_PASSWORD            = 21,
     RHT2F_AUTHENTICATE        = 22,
     RHT2F_CRYPTO              = 23,
@@ -47,16 +47,16 @@ typedef struct {
 } PACKED rht2d_crypto;
 
 typedef struct {
-	bool key_no;
-	uint8_t logdata_0[4];
-	uint8_t logdata_1[4];
-	uint8_t nonce[4];
-	uint8_t key[4];
+    bool key_no;
+    uint8_t logdata_0[4];
+    uint8_t logdata_1[4];
+    uint8_t nonce[4];
+    uint8_t key[4];
 } PACKED rht1d_authenticate;
 
 typedef union {
     rht2d_password     pwd;
-	rht1d_authenticate ht1auth;
+    rht1d_authenticate ht1auth;
     rht2d_authenticate auth;
     rht2d_crypto       crypto;
 } hitag_data;
