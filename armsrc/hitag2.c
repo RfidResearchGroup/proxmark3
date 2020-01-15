@@ -315,12 +315,12 @@ static uint32_t hitag_reader_send_bit(int bit) {
 
     if (bit == 0) {
         // Zero bit: |_-|
-        lf_wait_periods(12); // wait for 18-22 times the carrier period
-        wait += 12;
+        lf_wait_periods(20-8); // wait for 18-22 times the carrier period
+        wait += 20-8;
     } else {
         // One bit: |_--|
-        lf_wait_periods(22); // wait for 26-32 times the carrier period
-        wait += 22;
+        lf_wait_periods(30-8); // wait for 26-32 times the carrier period
+        wait += 30-8;
     }
     /*lf_wait_periods(10);*/
     LED_A_OFF();
@@ -343,8 +343,8 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
     lf_modulation(false);
 
     // t_stop, high field for stop condition (> 36)
-    lf_wait_periods(28);
-    wait += 28;
+    lf_wait_periods(36-8);
+    wait += 36-8;
     return wait;
 }
 
