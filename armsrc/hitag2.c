@@ -1337,7 +1337,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     }
 
     uint8_t tag_modulation;
-    size_t max_nrzs = 8 * HITAG_FRAME_LEN + 5;
+    size_t max_nrzs = (8 * HITAG_FRAME_LEN + 5) * 2; // up to 2 nrzs per bit
     uint8_t nrz_samples[max_nrzs];
     size_t nrzs = 0;
 
@@ -1462,7 +1462,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 break;
             }
         }
-               
+
         // Store the TX frame, we do this now at this point, to avoid delay in processing
         // and to be able to overwrite the first samples with the trace (since they currently
         // still use the same memory space)
@@ -1509,23 +1509,25 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         }
         
         // Pack the response into a byte array
-        for (size_t i = 5; i < 37; i++){
+        for (size_t i = 5; i < nrzs; i++){
             uint8_t bit = nrz_samples[i];
             rx[rxlen / 8] |= bit << (7 - (rxlen % 8));
             rxlen++;
         }
-        
+        if (rxlen % 8 == 1) // skip spurious bit
+            rxlen--;
+
         // Check if frame was captured and store it
         if (rxlen > 0) {
             frame_count++;
-            if (bCollision){
-                // AC decoding hack
-                fix_ac_decoding(rx, 64);
-                rxlen = 32;
-            }
+//            if (bCollision){
+//                // AC decoding hack
+//                fix_ac_decoding(rx, 64);
+//                rxlen = 32;
+//            }
 
-            LogTrace(rx, rxlen, response, 0, NULL, false);
-            //Dbhexdump(rxlen, rx, false);
+            LogTrace(rx, nbytes(rxlen), response, 0, NULL, false);
+            Dbhexdump(nbytes(rxlen), rx, false);
         }
 	}
 
