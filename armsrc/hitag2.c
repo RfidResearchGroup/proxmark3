@@ -1561,7 +1561,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 // TODO when using cumulative time for command_start, pm3 doesn't reply anymore, e.g. on lf hitag read 23 4F4E4D494B52
 //            command_start = response_start + response_duration;
             command_start = 0;
-            Dbhexdump(nbytes(rxlen), rx, false);
+            // Dbhexdump(nbytes(rxlen), rx, false);
         }
     }
 
