@@ -1599,7 +1599,7 @@ int getSamples(uint32_t n, bool verbose) {
     if (n == 0 || n > sizeof(got))
         n = sizeof(got);
 
-    if (verbose) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
+    if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") "bytes from device memory", n);
 
     PacketResponseNG response;
     if (!GetFromDevice(BIG_BUF, got, n, 0, NULL, 0, &response, 10000, true)) {
@@ -1607,20 +1607,20 @@ int getSamples(uint32_t n, bool verbose) {
         return PM3_ETIMEOUT;
     }
 
-    if (verbose) PrintAndLogEx(NORMAL, "Data fetched");
+    if (verbose) PrintAndLogEx(SUCCESS, "Data fetched");
 
     uint8_t bits_per_sample = 8;
 
     //Old devices without this feature would send 0 at arg[0]
     if (response.oldarg[0] > 0) {
         sample_config *sc = (sample_config *) response.data.asBytes;
-        if (verbose) PrintAndLogEx(NORMAL, "Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+        if (verbose) PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") "bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
         bits_per_sample = sc->bits_per_sample;
     }
 
     if (bits_per_sample < 8) {
 
-        if (verbose) PrintAndLogEx(NORMAL, "Unpacking...");
+        if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
         BitstreamOut bout = { got, bits_per_sample * n,  0};
         int j = 0;
@@ -1630,7 +1630,7 @@ int getSamples(uint32_t n, bool verbose) {
         }
         GraphTraceLen = j;
 
-        if (verbose) PrintAndLogEx(NORMAL, "Unpacked %d samples", j);
+        if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
 
     } else {
         for (int j = 0; j < n; j++) {
