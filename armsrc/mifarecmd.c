@@ -1157,7 +1157,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             retry--;
             continue;
         };
-        
+
         // second authentication. Nested auth
         len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
         if (len != 4) {
@@ -1200,7 +1200,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
-    set_tracing(false);      
+    set_tracing(false);
 }
 //-----------------------------------------------------------------------------
 // MIFARE check keys. key count up to 85.

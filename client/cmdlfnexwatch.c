@@ -192,13 +192,13 @@ static int CmdNexWatchSim(const char *Cmd) {
     }
 
     if (errors || cmdp == 0) return usage_lf_nexwatch_sim();
-    
+
     // hex to bits.
     for (size_t i = 0; i < ARRAYLEN(rawblocks); i++) {
         rawblocks[i] = bytes_to_num(rawhex + (i * sizeof(uint32_t)), sizeof(uint32_t));
         num_to_bytebits(rawblocks[i], sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
     }
-    
+
     PrintAndLogEx(SUCCESS, "Simulating NexWatch - raw: %s", sprint_hex_inrow(rawhex, rawlen));
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));

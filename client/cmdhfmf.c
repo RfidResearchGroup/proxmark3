@@ -1578,7 +1578,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
         for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
 
-                for (int i = 0; i < 1; i++) {
+            for (int i = 0; i < 1; i++) {
 
                 if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
 
@@ -3557,12 +3557,12 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
                           , strB, e_sector[i].foundKey[1]
                          );
         } else {
-            
+
             // keep track if we use start_sector or i...
             uint8_t s = start_sector;
             if (start_sector == 0)
                 s = i;
-                
+
             PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%d")"|  %s  | " _YELLOW_("%d")"|"
                           , s
                           , strA, e_sector[i].foundKey[0]
