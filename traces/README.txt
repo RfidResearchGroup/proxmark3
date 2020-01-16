@@ -30,3 +30,7 @@ securakey-64169.pm3  Securakey Tag BitLen: 26, Card ID: 64169, FC: 0x35
 
 motorola_0437_00072.pm3: Motorola Grey clamshell card, old.  (RAW: A0000000E308C0C1)
 verichip_1022000000084146.pm3: VeriChip,  epoxy encased glasschip (ID: 1022-00000000084146) 
+
+sniff-ht2-BC3B8810-acg-reader.pm3:     sniffing of Hitag2 being read by an HID ACG LF Multitag reader
+sniff-ht2-BC3B8810-frosch-reader.pm3:  sniffing of Hitag2 being read by a Frosch Hitag reader
+sniff-ht2-BC3B8810-rfidler-reader.pm3: sniffing of Hitag2 being read by a RFIDler
