@@ -114,8 +114,8 @@ static int hitag2_init(void) {
 #define HITAG_T_1        30 /* T[1] should be 26..30 */
 //#define HITAG_T_EOF      40 /* T_EOF should be > 36 */
 #define HITAG_T_EOF      80 /* T_EOF should be > 36 */
-#define HITAG_T_WAIT_1   200 /* T_wresp should be 199..206 */
-#define HITAG_T_WAIT_2   90 /* T_wait2 should be at least 90 */
+#define HITAG_T_WAIT_1_MIN   199 /* T_wresp should be 199..206 */
+#define HITAG_T_WAIT_2_MIN   90 /* T_wait2 should be at least 90 */
 #define HITAG_T_WAIT_MAX 300 /* bit more than HITAG_T_WAIT_1 + HITAG_T_WAIT_2 */
 #define HITAG_T_PROG     614
 
@@ -345,8 +345,8 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
     lf_modulation(false);
 
     // t_stop, high field for stop condition (> 36)
-    lf_wait_periods(HITAG_T_STOP-HITAG_T_LOW);
-    wait += HITAG_T_STOP-HITAG_T_LOW;
+    lf_wait_periods(HITAG_T_STOP);
+    wait += HITAG_T_STOP;
     return wait;
 }
 
@@ -1172,7 +1172,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
             // terms of T0 units
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_1 - HITAG_T_LOW));
+            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_1_MIN - HITAG_T_LOW));
 
             // Send and store the tag answer (if there is any)
             if (txlen) {
@@ -1350,8 +1350,8 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         DbpString("Configured for hitag1 reader");
     } else if (htf < 30) {
         // hitag2 settings
-        t_wait_1 = 206;
-        t_wait_2 = HITAG_T_WAIT_2;
+        t_wait_1 = HITAG_T_WAIT_1_MIN;
+        t_wait_2 = HITAG_T_WAIT_2_MIN;
         tag_size = 48;
         DbpString("Configured for hitag2 reader");
     } else {
@@ -1697,7 +1697,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     } else if (htf < 30) {
         // hitag2 settings
         reset_sof = 4;
-        t_wait = HITAG_T_WAIT_2;
+        t_wait = HITAG_T_WAIT_2_MIN;
     } else {
         Dbprintf("Error, unknown hitag reader type: %d", htf);
         return;
@@ -1751,7 +1751,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         // Add transmitted frame to total count
         if (txlen > 0) {
             // frame_count++;
-            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2, HITAG_T_WAIT_2, NULL, true);
+            LogTrace(tx, nbytes(txlen), HITAG_T_WAIT_2_MIN, HITAG_T_WAIT_2_MIN, NULL, true);
         }
 
         // Reset values for receiving frames
