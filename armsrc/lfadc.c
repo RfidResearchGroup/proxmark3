@@ -61,7 +61,7 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             adc_val = AT91C_BASE_SSC->SSC_RHR;
             periods++;
 
-            if (logging) logSample(adc_val, 1, 8, 0);
+            if (logging) logSampleSimple(adc_val);
 
             // Only test field changes if state of adc values matter
             if (!wait) {
@@ -91,7 +91,7 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             if (periods == max) return 0;
         }
     }
-    if (logging) logSample(255, 1, 8, 0);
+    if (logging) logSampleSimple(0xFF);
     return 0;
 }
 
@@ -206,14 +206,13 @@ size_t lf_detect_field_drop(size_t max) {
         }
         ++checked;
 
-        // Watchdog hit
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             periods++;
             adc_val = AT91C_BASE_SSC->SSC_RHR;
 
-            if (logging) logSample(adc_val, 1, 8, 0);
+            if (logging) logSampleSimple(adc_val);
 
             if (adc_val == 0) {
                 rising_edge = false;

@@ -138,6 +138,10 @@ uint32_t getSampleCounter() {
     return samples.total_saved;
 }
 
+void logSampleSimple(uint8_t sample) {
+    logSample(sample, config.decimation, config.bits_per_sample, config.averaging);
+}
+
 void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg) {
 
     if (!data.buffer) return;
