@@ -483,7 +483,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
     // read UID
     uint32_t uid = 0;
     if (getHitagUid(&uid) == false)
-        return 1;
+        return PM3_ESOFT;
 
     PrintAndLogEx(SUCCESS, "UID: " _YELLOW_("%08X"), uid);
 
@@ -551,21 +551,22 @@ static int CmdLFHitagReader(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(cmd, htf, 0, 0, &htd, sizeof(htd));
+    SendCommandMIX(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-        return 1;
+        return PM3_ETIMEOUT;
     }
 
     if (resp.oldarg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
-        return 1;
+        return PM3_ESOFT;
     }
 
     uint32_t id = bytes_to_num(resp.data.asBytes, 4);
 
-    PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: " _YELLOW_("%08x"), id);
+    PrintAndLogEx(SUCCESS, " UID: " _YELLOW_("%08x"), id);
+
     if (htf != RHT2F_UID_ONLY) {
 
         PrintAndLogEx(SUCCESS, "Dumping tag memory...");
@@ -583,7 +584,7 @@ static int CmdLFHitagReader(const char *Cmd) {
         // block3, 1 byte
         printHitagConfiguration(data[4 * 3]);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLFHitagCheckChallenges(const char *Cmd) {
@@ -721,5 +722,5 @@ int CmdLFHitag(const char *Cmd) {
 }
 
 int readHitagUid(void) {
-    return CmdLFHitagReader("26") == 0;
+    return (CmdLFHitagReader("26") == PM3_SUCCESS);
 }
