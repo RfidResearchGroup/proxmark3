@@ -145,7 +145,8 @@ int infoLTO(bool verbose) {
     lto_switch_off_field();
 
     if (ret_val == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "\nUID: " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "UID: " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
 
         // todo:  add printing of all configuration
     }
