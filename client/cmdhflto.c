@@ -132,7 +132,7 @@ static int CmdHfLTOInfo(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    return infoLTO(true);
+    return infoLTO(false);
 }
 
 int infoLTO(bool verbose) {
@@ -146,9 +146,11 @@ int infoLTO(bool verbose) {
 
     if (ret_val == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "UID: " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
-
+        PrintAndLogEx(SUCCESS, " UID : " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
+        PrintAndLogEx(SUCCESS, "TYPE : ");
         // todo:  add printing of all configuration
+    } else {
+        if (verbose) PrintAndLogEx(WARNING, "LTO-CM card select failed");
     }
 
     /* read block:
