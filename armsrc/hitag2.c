@@ -18,6 +18,7 @@
 // Piwi, 2019
 // Iceman, 2019
 // Anon, 2019
+// Doegos, 2020
 
 #include "hitag2.h"
 #include "hitag2_crypto.h"
@@ -101,8 +102,8 @@ static int hitag2_init(void) {
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 // Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
 // T0 = TIMER_CLOCK1 / 125000 = 192
-#ifndef T0
-#define T0               192
+#ifndef HITAG_T0
+#define HITAG_T0               192
 #endif
 
 #define HITAG_FRAME_LEN  20
@@ -141,15 +142,15 @@ static void hitag_send_bit(int bit) {
     if (bit == 0) {
         // Manchester: Unloaded, then loaded |__--|
         LOW(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_HALF_PERIOD);
+        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_HALF_PERIOD);
         HIGH(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_FULL_PERIOD);
+        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_FULL_PERIOD);
     } else {
         // Manchester: Loaded, then unloaded |--__|
         HIGH(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_HALF_PERIOD);
+        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_HALF_PERIOD);
         LOW(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_FULL_PERIOD);
+        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_FULL_PERIOD);
     }
     LED_A_OFF();
 }
@@ -1123,11 +1124,11 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
         WDT_HIT();
 
         // Receive frame, watch for at most T0*EOF periods
-        while (AT91C_BASE_TC1->TC_CV < T0 * HITAG_T_EOF) {
+        while (AT91C_BASE_TC1->TC_CV < HITAG_T0 * HITAG_T_EOF) {
             // Check if rising edge in modulation is detected
             if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
                 // Retrieve the new timing values
-                int ra = (AT91C_BASE_TC1->TC_RA / T0) + overflow;
+                int ra = (AT91C_BASE_TC1->TC_RA / HITAG_T0) + overflow;
                 overflow = 0;
 
                 // Reset timer every frame, we have to capture the last edge for timing
@@ -1172,7 +1173,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
             // terms of T0 units
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_1_MIN - HITAG_T_LOW));
+            while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * (HITAG_T_WAIT_1_MIN - HITAG_T_LOW));
 
             // Send and store the tag answer (if there is any)
             if (txlen) {
@@ -1191,7 +1192,7 @@ void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
         // Reset the frame length
         rxlen = 0;
         // Save the timer overflow, will be 0 when frame was received
-        overflow += (AT91C_BASE_TC1->TC_CV / T0);
+        overflow += (AT91C_BASE_TC1->TC_CV / HITAG_T0);
         // Reset the timer to restart while-loop that receives frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
     }
@@ -1740,7 +1741,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         // falling edge occurred halfway the period. with respect to this falling edge,
         // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
         // All timer values are in terms of T0 units
-        while (AT91C_BASE_TC0->TC_CV < T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit))) {};
+        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * (t_wait + (HITAG_T_TAG_HALF_PERIOD * lastbit))) {};
 
         // Transmit the reader frame
         hitag_reader_send_frame(tx, txlen);
@@ -1764,11 +1765,11 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         uint32_t errorCount = 0;
 
         // Receive frame, watch for at most T0*EOF periods
-        while (AT91C_BASE_TC1->TC_CV < T0 * HITAG_T_WAIT_MAX) {
+        while (AT91C_BASE_TC1->TC_CV < HITAG_T0 * HITAG_T_WAIT_MAX) {
             // Check if falling edge in tag modulation is detected
             if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
                 // Retrieve the new timing values
-                int ra = (AT91C_BASE_TC1->TC_RA / T0);
+                int ra = (AT91C_BASE_TC1->TC_RA / HITAG_T0);
 
                 // Reset timer every frame, we have to capture the last edge for timing
                 AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
@@ -1835,7 +1836,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             if (errorCount > 100) break;
 
             // We can break this loop if we received the last bit from a frame
-            if (AT91C_BASE_TC1->TC_CV > T0 * HITAG_T_EOF) {
+            if (AT91C_BASE_TC1->TC_CV > HITAG_T0 * HITAG_T_EOF) {
                 if (rxlen > 0) break;
             }
         }
@@ -1843,7 +1844,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         // Wait some extra time for flash to be programmed
         if ((rxlen == 0) && (writestate == WRITE_STATE_PROG)) {
             AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_PROG - HITAG_T_WAIT_MAX));
+            while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * (HITAG_T_PROG - HITAG_T_WAIT_MAX));
         }
     }
 
@@ -1856,5 +1857,5 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     StartTicks();
 
-    reply_old(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, 48);
+    reply_mix(CMD_ACK, bSuccessful, 0, 0, (uint8_t *)tag.sectors, 48);
 }
