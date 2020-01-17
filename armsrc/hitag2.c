@@ -1326,6 +1326,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     }
 
     LED_D_ON();
+
     hitag2_init();
 
     // init as reader
