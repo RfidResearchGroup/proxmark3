@@ -1101,10 +1101,10 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "REQ Standard");
             break;
         case LTO_SELECT:
-            snprintf(exp, size, "SELECT");
-            break;
-        case LTO_SELECT_1:
-            snprintf(exp, size, "SELECT_1");
+            if (cmd[1] == 0x70)
+                snprintf(exp, size, "SELECT_UID-2");
+            else if (cmd[1] == 0x20)
+                snprintf(exp, size, "SELECT");
             break;
         case LTO_REQ_ALL:
             snprintf(exp, size, "REQ All");

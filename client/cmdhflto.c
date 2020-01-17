@@ -42,9 +42,17 @@ static void lto_switch_on_field(void) {
 }
 
 // send a raw LTO-CM command, returns the length of the response (0 in case of error)
-static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len, bool verbose) {
+static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len, bool addcrc, bool verbose) {
+  
+    uint64_t arg0 = ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS;
+    uint32_t arg1 = (len == 1) ? (7 << 16) : 0;
+    arg1 |= len;
+    
+    if (addcrc) {
+        arg0 |= ISO14A_APPEND_CRC;
+    }
 
-    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, len, 0, cmd, len);
+    SendCommandOLD(CMD_HF_ISO14443A_READER, arg0, arg1, 0, cmd, len);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -55,7 +63,6 @@ static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16
     if (resp.oldarg[0] == *response_len) {
         *response_len = resp.oldarg[0];
 
-        PrintAndLogEx(INFO, "%s", sprint_hex(resp.data.asBytes, *response_len));
         if (*response_len > 0) {
             memcpy(response, resp.data.asBytes, *response_len);
         }
@@ -66,7 +73,6 @@ static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16
     return PM3_SUCCESS;
 }
 
-
 // select a LTO-CM tag. Send WUPA and RID.
 static int lto_select(uint8_t *id_response, uint8_t id_len, bool verbose) {
     // Todo: implement anticollision
@@ -75,26 +81,27 @@ static int lto_select(uint8_t *id_response, uint8_t id_len, bool verbose) {
     uint16_t resp_len;
     uint8_t wupa_cmd[] = {LTO_REQ_STANDARD};
     uint8_t select_cmd[] = {LTO_SELECT, 0x20};
-    uint8_t select_1_cmd[] = {LTO_SELECT_1, 0x70, 0, 0, 0, 0, 0};
+    uint8_t select_1_cmd[] = {LTO_SELECT, 0x70, 0, 0, 0, 0, 0};
 
     lto_switch_on_field();
 
     resp_len = 2;
-    int status = lto_send_cmd_raw(wupa_cmd, sizeof(wupa_cmd), resp, &resp_len, verbose);
+    int status = lto_send_cmd_raw(wupa_cmd, sizeof(wupa_cmd), resp, &resp_len, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         lto_switch_off_field();
         return PM3_ESOFT; // WUPA failed
     }
 
     resp_len = id_len;
-    status = lto_send_cmd_raw(select_cmd, sizeof(select_cmd), id_response, &resp_len, verbose);
+    status = lto_send_cmd_raw(select_cmd, sizeof(select_cmd), id_response, &resp_len, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         lto_switch_off_field();
         return PM3_EWRONGANSVER; // SELECT failed
     }
 
+    memcpy(select_1_cmd + 2, id_response, sizeof(select_1_cmd) - 2);
     resp_len = 1;
-    status = lto_send_cmd_raw(select_1_cmd, sizeof(select_1_cmd), resp, &resp_len, verbose);
+    status = lto_send_cmd_raw(select_1_cmd, sizeof(select_1_cmd), resp, &resp_len, true, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
         lto_switch_off_field();
         return PM3_EWRONGANSVER; // SELECT failed
@@ -103,7 +110,6 @@ static int lto_select(uint8_t *id_response, uint8_t id_len, bool verbose) {
     // tag is now INIT and SELECTED.
     return PM3_SUCCESS;
 }
-
 
 static int CmdHfLTOInfo(const char *Cmd) {
 
@@ -134,19 +140,18 @@ int infoLTO(bool verbose) {
     clearCommandBuffer();
 
     uint8_t serial_number[5];
-    uint8_t serial_len = 0;
-
-    int ret_val = lto_select(serial_number, serial_len, verbose);
-
+    uint8_t serial_len = sizeof(serial_number);
+    int ret_val = lto_select(serial_number, serial_len, verbose);    
     lto_switch_off_field();
-    /*
-
-    --    "hf 14a raw -a -p -b 7 45"
-    --    "hf 14a raw -c -p 9320"
-    --    "hf 14a raw -c -p 9370%s", serial_number
-    --    "disconnect"
-
-
+    
+    if (ret_val == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nUID: %s", sprint_hex(serial_number, sizeof(serial_number)));
+        
+        // todo:  add printing of all configuration
+    }
+    
+    /* read block:
+    
         SendCommandNG(CMD_HF_THINFILM_READ, NULL, 0);
         PacketResponseNG resp;
         if (!WaitForResponseTimeout(CMD_HF_THINFILM_READ, &resp, 1500)) {

@@ -602,7 +602,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define LTO_READBLOCK                   0x30
 #define LTO_READBLOCK_CONT              0x80
 #define LTO_SELECT                      0x93
-#define LTO_SELECT_1                    0x97
 #define LTO_WRITEWORD                   0xB0   // write 2 bytes (word)
 #define LTO_WRITEBLOCK                  0xA0
 #define LTO_HALT                        0x50

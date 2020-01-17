@@ -2805,6 +2805,7 @@ int readIclass(bool loop, bool verbose) {
                      FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
                      FLAG_ICLASS_READER_ONE_TRY;
 
+    uint32_t res = PM3_ETIMEOUT;
     // loop in client not device - else on windows have a communication error
     while (!kbd_enter_pressed()) {
 
@@ -2876,6 +2877,6 @@ int readIclass(bool loop, bool verbose) {
         if (!loop) break;
     }
     DropField();
-    return PM3_SUCCESS;
+    return res;
 }
 
