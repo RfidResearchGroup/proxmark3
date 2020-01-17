@@ -43,11 +43,11 @@ static void lto_switch_on_field(void) {
 
 // send a raw LTO-CM command, returns the length of the response (0 in case of error)
 static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len, bool addcrc, bool verbose) {
-  
+
     uint64_t arg0 = ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS;
     uint32_t arg1 = (len == 1) ? (7 << 16) : 0;
     arg1 |= len;
-    
+
     if (addcrc) {
         arg0 |= ISO14A_APPEND_CRC;
     }
@@ -141,17 +141,17 @@ int infoLTO(bool verbose) {
 
     uint8_t serial_number[5];
     uint8_t serial_len = sizeof(serial_number);
-    int ret_val = lto_select(serial_number, serial_len, verbose);    
+    int ret_val = lto_select(serial_number, serial_len, verbose);
     lto_switch_off_field();
-    
+
     if (ret_val == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "\nUID: %s", sprint_hex(serial_number, sizeof(serial_number)));
-        
+        PrintAndLogEx(SUCCESS, "\nUID: " _YELLOW_("%s"), sprint_hex_inrow(serial_number, sizeof(serial_number)));
+
         // todo:  add printing of all configuration
     }
-    
+
     /* read block:
-    
+
         SendCommandNG(CMD_HF_THINFILM_READ, NULL, 0);
         PacketResponseNG resp;
         if (!WaitForResponseTimeout(CMD_HF_THINFILM_READ, &resp, 1500)) {
