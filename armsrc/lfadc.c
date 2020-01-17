@@ -22,7 +22,7 @@
 // as a counting signal. TIMER_CLOCK3 = MCK/32, MCK is running at 48 MHz, so the timer is running at 48/32 = 1500 kHz
 // Carrier period (T0) have duration of 8 microseconds (us), which is 1/125000 per second (125 kHz frequency)
 // T0 = timer/carrier = 1500kHz/125kHz = 1500000/125000 = 6
-#define T0 3
+//#define HITAG_T0 3
 
 //////////////////////////////////////////////////////////////////////////////
 // Global variables
@@ -52,9 +52,21 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
     volatile uint8_t adc_val;
     //uint8_t avg_peak = 140, avg_through = 96;
     uint8_t avg_peak = 130, avg_through = 106;
+    int16_t checked = 0;
 
-    while (!BUTTON_PRESS()) {
-        // Watchdog hit
+    while (true) {
+
+        // only every 1000th times, in order to save time when collecting samples.
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) {
+                checked = -1;
+                break;
+            } else {
+                checked = 0;
+            }
+        }
+        ++checked;
+
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
