@@ -17,6 +17,7 @@
 #include "cmdhflist.h"          // annotations
 #include "comms.h"              // for sending cmds to device. GetFromBigBuf
 #include "fileutils.h"          // for saveFile
+#include "cmdlfhitag.h"         // annotate hitag
 
 static int CmdHelp(const char *Cmd);
 
@@ -281,7 +282,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
             case ISO_7816_4:
-            case PROTO_HITAG:
+            case PROTO_HITAG1:
+            case PROTO_HITAG2:
+            case PROTO_HITAGS:
             default:
                 break;
         }
@@ -301,7 +304,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != ISO_15693
                 && protocol != ICLASS
                 && protocol != ISO_7816_4
-                && protocol != PROTO_HITAG
+                && protocol != PROTO_HITAG1
+                && protocol != PROTO_HITAG2
+                && protocol != PROTO_HITAGS
                 && protocol != THINFILM
                 && protocol != FELICA
                 && protocol != LTO
@@ -385,6 +390,15 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case LTO:
                 annotateLTO(explanation, sizeof(explanation), frame, data_len);
                 break;
+            case PROTO_HITAG1:
+                annotateHitag1(explanation, sizeof(explanation), frame, data_len);
+                break;            
+            case PROTO_HITAG2:
+                annotateHitag2(explanation, sizeof(explanation), frame, data_len);
+                break;            
+            case PROTO_HITAGS:            
+                annotateHitagS(explanation, sizeof(explanation), frame, data_len);
+                break;            
             default:
                 break;
         }
@@ -593,7 +607,9 @@ int CmdTraceList(const char *Cmd) {
             else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
             else if (strcmp(type, "felica") == 0)   protocol = FELICA;
             else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
-            else if (strcmp(type, "hitag") == 0)    protocol = PROTO_HITAG;
+            else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
+            else if (strcmp(type, "hitag2") == 0)    protocol = PROTO_HITAG2;
+            else if (strcmp(type, "hitags") == 0)    protocol = PROTO_HITAGS;            
             else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
             else if (strcmp(type, "lto") == 0)      protocol = LTO;
             else if (strcmp(type, "raw") == 0)      protocol = -1; //No crc, no annotations
@@ -673,11 +689,11 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
         if (protocol == ISO_7816_4)
             PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
-        if (protocol == PROTO_HITAG)
-            PrintAndLogEx(NORMAL, "Hitag2 / HitagS - Timings in ETU (8us)");
+        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS)
+            PrintAndLogEx(NORMAL, "Hitag1 / Hitag2 / HitagS - Timings in ETU (8us)");
         if (protocol == FELICA)
             PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");
-
+        
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");

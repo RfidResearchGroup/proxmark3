@@ -305,9 +305,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO_15693        7
 #define FELICA           8
 #define PROTO_MIFARE     9
-#define PROTO_HITAG     10
+#define PROTO_HITAG1    10
 #define THINFILM        11
 #define LTO             12
+#define PROTO_HITAG2    13 
+#define PROTO_HITAGS    14
 
 //-- Picopass fuses
 #define FUSE_FPERS   0x80
@@ -588,12 +590,17 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define HITAG1_HALT                     0x70    // left 4 bits only, followed by 8 bits (dummy) page and 8 bits CRC
 
 // HITAG2 commands
-#define HITAG2_START_AUTH               0xC0    // left 5 bits only
-#define HITAG2_READ_PAGE                0xC0    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_READ_PAGE_INVERTED       0x44    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_WRITE_PAGE               0x82    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_HALT                     0x00    // left 5 bits only
+#define HITAG2_START_AUTH               0x3    // left 5 bits only
 
+#define HITAG2_READ_PAGE                0x3    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_READ_PAGE_INVERTED       0x1    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_WRITE_PAGE               0x2   // page number in bits 5 to 3, page number 
+#define HITAG2_HALT                     0x0    // left 5 bits only
+
+// HITAG S commands
+#define HITAGS_QUIET                    0x70
+//inverted in bit 0 and following 2 bits
+#define HITAGS_WRITE_BLOCK              0x90
 
 // LTO-CM commands
 #define LTO_REQ_STANDARD                0x45

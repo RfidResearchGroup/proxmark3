@@ -18,6 +18,7 @@
 #include "commonutil.h"
 #include "hitag.h"
 #include "fileutils.h"  // savefile
+#include "protocols.h"  // defines
 
 static int CmdHelp(const char *Cmd);
 
@@ -85,9 +86,9 @@ static int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
     PrintAndLogEx(NORMAL, "      Not implemented");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
-    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: 4D494B52 (\"MIKR\")");
+    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: " _YELLOW_("4D494B52") "(\"MIKR\")");
     PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Read all pages, challenge mode");
-    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: 4F4E4D494B52 (\"ONMIKR\")");
+    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: " _YELLOW_("4F4E4D494B52") "(\"ONMIKR\")");
     PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
     PrintAndLogEx(NORMAL, "      26               Just read UID");
     return PM3_SUCCESS;
@@ -124,7 +125,7 @@ static int usage_hitag_checkchallenges(void) {
 
 static int CmdLFHitagList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    CmdTraceList("hitag");
+    CmdTraceList("hitag2");
     return PM3_SUCCESS;
 
     /*
@@ -697,6 +698,46 @@ static int CmdLFHitagDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 */
+
+// Annotate HITAG protocol
+void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {  
+}
+
+void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    uint8_t cmdbits = (cmd[0] & 0xC0) >> 6;
+
+    if (cmdsize == 1) {
+        if (cmdbits == HITAG2_START_AUTH) {
+            snprintf(exp, size, "START AUTH");
+            return;
+        }
+        if (cmdbits == HITAG2_HALT) {
+            snprintf(exp, size, "HALT");
+            return;
+        }
+    }
+
+    if (cmdsize == 2) {
+        if (cmdbits == HITAG2_START_AUTH) {
+            // C     1     C   0
+            // 1100 0 00 1 1100 000
+            uint8_t page = (cmd[0] & 0x38) >> 3;
+            uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
+            snprintf(exp, size, "READ page(%x) %x", page, inv_page);
+            return;
+        }
+        if (cmdbits == HITAG2_WRITE_PAGE) {
+            uint8_t page = (cmd[0] & 0x38) >> 3;
+            uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
+            snprintf(exp, size, "WRITE page(%x) %x", page, inv_page);
+            return;
+        }
+    }
+}
+
+void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+}
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help" },

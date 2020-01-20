@@ -16,5 +16,7 @@
 int CmdLFHitag(const char *Cmd);
 
 int readHitagUid(void);
-
+void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 #endif
