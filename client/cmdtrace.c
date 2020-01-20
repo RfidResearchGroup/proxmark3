@@ -46,7 +46,9 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "    iclass   - interpret data as iclass communications");
     PrintAndLogEx(NORMAL, "    legic    - interpret data as LEGIC communications");
     PrintAndLogEx(NORMAL, "    felica   - interpret data as ISO18092 / FeliCa communications");
-    PrintAndLogEx(NORMAL, "    hitag    - interpret data as Hitag2 / HitagS communications");
+    PrintAndLogEx(NORMAL, "    hitag1   - interpret data as Hitag1 communications");
+    PrintAndLogEx(NORMAL, "    hitag2   - interpret data as Hitag2 communications");
+    PrintAndLogEx(NORMAL, "    hitags   - interpret data as HitagS communications");
     PrintAndLogEx(NORMAL, "    lto      - interpret data as LTO-CM communications");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");

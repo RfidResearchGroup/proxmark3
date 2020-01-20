@@ -591,11 +591,12 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // HITAG2 commands
 #define HITAG2_START_AUTH               0x3    // left 5 bits only
+#define HITAG2_HALT                     0x0    // left 5 bits only
 
 #define HITAG2_READ_PAGE                0x3    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
 #define HITAG2_READ_PAGE_INVERTED       0x1    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
 #define HITAG2_WRITE_PAGE               0x2   // page number in bits 5 to 3, page number 
-#define HITAG2_HALT                     0x0    // left 5 bits only
+
 
 // HITAG S commands
 #define HITAGS_QUIET                    0x70
