@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix compilation under openSUSE (@hsanjuan)
  - Added `lf nexwatch sim` - use raw hex to simulate (@iceman1001)
  - Fix `lf indala read` - long id 224bits preamble identification less strict (@iceman1001)
  - Added `hf mf staticnested` - useful when targeting the strange cards with a static nonce. (@iceman100) Thanks to @xtigmh @uzlonewolf for their solutions.
