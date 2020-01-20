@@ -662,8 +662,7 @@ int CmdTraceList(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %lu bytes)", traceLen);
-    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") "bytes)", traceLen);
 
     /*
     if (protocol == FELICA) {
@@ -675,26 +674,26 @@ int CmdTraceList(const char *Cmd) {
             tracepos = printHexLine(tracepos, traceLen, trace, protocol);
         }
     } else {
-        PrintAndLogEx(NORMAL, "Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
+        PrintAndLogEx(INFO, _YELLOW_("Start") "= Start of Start Bit, " _YELLOW_("End") "= End of last modulation. " _YELLOW_("Src") "= Source of Transfer");
         if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ || protocol == LTO)
-            PrintAndLogEx(NORMAL, "ISO14443A - All times are in carrier periods (1/13.56MHz)");
+            PrintAndLogEx(INFO, "ISO14443A - All times are in carrier periods (1/13.56MHz)");
         if (protocol == THINFILM)
-            PrintAndLogEx(NORMAL, "Thinfilm - All times are in carrier periods (1/13.56MHz)");
+            PrintAndLogEx(INFO, "Thinfilm - All times are in carrier periods (1/13.56MHz)");
         if (protocol == ICLASS)
-            PrintAndLogEx(NORMAL, "iClass - Timings are not as accurate");
+            PrintAndLogEx(INFO, "iClass - Timings are not as accurate");
         if (protocol == LEGIC)
-            PrintAndLogEx(NORMAL, "LEGIC - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
+            PrintAndLogEx(INFO, "LEGIC - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
                           "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
         if (protocol == ISO_14443B)
-            PrintAndLogEx(NORMAL, "ISO14443B"); // Timings ?
+            PrintAndLogEx(INFO, "ISO14443B"); // Timings ?
         if (protocol == ISO_15693)
-            PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
+            PrintAndLogEx(INFO, "ISO15693 - Timings are not as accurate");
         if (protocol == ISO_7816_4)
-            PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
+            PrintAndLogEx(INFO, "ISO7816-4 / Smartcard - Timings N/A yet");
         if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS)
-            PrintAndLogEx(NORMAL, "Hitag1 / Hitag2 / HitagS - Timings in ETU (8us)");
+            PrintAndLogEx(INFO, "Hitag1 / Hitag2 / HitagS - Timings in ETU (8us)");
         if (protocol == FELICA)
-            PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");
+            PrintAndLogEx(INFO, "ISO18092 / FeliCa - Timings are not as accurate");
         
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
