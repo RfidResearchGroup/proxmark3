@@ -26,9 +26,7 @@
 #ifndef DELAY_ARM2AIR_AS_READER
 #define DELAY_ARM2AIR_AS_READER (4*16 + 8*16 + 8 + 8 + 1) // 209
 #endif
-
-// CRC skips two first sync bits in data buffer
-#define AddCrc(data, len) compute_crc(CRC_FELICA, (data)+2, (len),(data)+(len)+2, (data)+(len)+3)
+#define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
 static uint32_t felica_timeout;
 static uint32_t felica_nexttransfertime;
@@ -285,12 +283,12 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 // 8-byte IDm, number of blocks, blocks numbers
 // number of blocks limited to 4 for FelicaLite(S)
 static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks) {
-
     if (blocknum > 4 || blocknum <= 0)
         Dbprintf("Invalid number of blocks, %d != 4", blocknum);
 
     uint8_t c = 0, i = 0;
 
+    // Sync bytes
     frameSpace[c++] = 0xb2;
     frameSpace[c++] = 0x4d;
 
@@ -333,7 +331,8 @@ static void BuildFliteRdblk(uint8_t *idm, int blocknum, uint16_t *blocks) {
 
     //set length
     frameSpace[2] = c - 2;
-    AddCrc(frameSpace, c - 2);
+    //Add CRC
+    AddCrc(frameSpace + 2, c - 2);
 }
 
 static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
@@ -753,28 +752,26 @@ void felica_dump_lite_s() {
     uint8_t *dest = BigBuf_get_addr();
 
     while (!BUTTON_PRESS() && !data_available()) {
-
         WDT_HIT();
-
         // polling?
         //TransmitFor18092_AsReader(poll, 10, GetCountSspClk()+512, 1, 0);
         TransmitFor18092_AsReader(poll, 10, NULL, 1, 0);
 
         if (WaitForFelicaReply(512) && FelicaFrame.framebytes[3] == FELICA_POLL_ACK) {
-
             // copy 8bytes to ndef.
             memcpy(ndef, FelicaFrame.framebytes + 4, 8);
             // for (c=0; c < 8; c++)
             // ndef[c] = FelicaFrame.framebytes[c+4];
 
             for (blknum = 0; blknum < ARRAYLEN(liteblks);) {
-
                 // block to read.
                 BuildFliteRdblk(ndef, 1, &liteblks[blknum]);
 
                 //TransmitFor18092_AsReader(frameSpace, frameSpace[2]+4, GetCountSspClk()+512, 1, 0);
-                TransmitFor18092_AsReader(frameSpace, frameSpace[2] + 4, NULL, 1, 0);
 
+
+
+                TransmitFor18092_AsReader(frameSpace, frameSpace[2] + 4, NULL, 1, 0);
                 // read block
                 if (WaitForFelicaReply(1024) && FelicaFrame.framebytes[3] == FELICA_RDBLK_ACK) {
 
@@ -803,11 +800,11 @@ void felica_dump_lite_s() {
                     }
                 }
             }
+
             isOK = true;
             break;
         }
     }
-
     switch_off();
 
     //Resetting Frame mode (First set in fpgaloader.c)
