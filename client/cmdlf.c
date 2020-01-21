@@ -1213,16 +1213,17 @@ int CmdLFfind(const char *Cmd) {
 
     // only run these tests if device is online
     if (isOnline) {
+
+        if (IfPm3Hitag()) {
+            if (readHitagUid()) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!");
+                return PM3_SUCCESS;
+            }
+        }
+
         // only run if graphbuffer is just noise as it should be for hitag
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
-
-            if (IfPm3Hitag()) {
-                if (readHitagUid()) {
-                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!");
-                    return PM3_SUCCESS;
-                }
-            }
 
             if (readMotorolaUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") "found!");
