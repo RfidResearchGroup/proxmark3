@@ -11,7 +11,7 @@ local err_lock = 'use -k or change cfg0 block'
 
 copyright = 'Copyright (c) 2017 IceSQL AB. All rights reserved.'
 author = 'Christian Herrmann'
-version = 'v1.1.1'
+version = 'v1.1.2'
 desc = 'This script enables easy programming of a MAGIC NTAG 21* card'
 example =
 [[
@@ -125,7 +125,7 @@ local function sendRaw(rawdata, options)
 				+ lib14a.ISO14A_COMMAND.ISO14A_RAW
 				+ lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
 
-	local c = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a,
+	local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
 				arg1 = flags,
 		 		-- arg2 contains the length, which is half the length of the ASCII-string rawdata
 				arg2 = string.len(rawdata)/2,
