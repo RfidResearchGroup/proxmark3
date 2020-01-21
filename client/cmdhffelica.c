@@ -585,7 +585,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
         return usage_hf_felica_authentication1();
     }
 
-    PrintAndLogEx(INFO, "EXPERIMENTAL COMMAND");
+    PrintAndLogEx(INFO, "INCOMPLETE / EXPERIMENTAL COMMAND!!!");
     uint8_t data[PM3_CMD_DATA_SIZE];
     bool custom_IDm = false;
     strip_cmds(Cmd);
@@ -731,6 +731,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     if (strlen(Cmd) < 2) {
         return usage_hf_felica_authentication2();
     }
+    PrintAndLogEx(INFO, "INCOMPLETE / EXPERIMENTAL COMMAND!!!");
     PrintAndLogEx(INFO, "EXPERIMENTAL COMMAND - M2c/P2c will be not checked");
     uint8_t data[PM3_CMD_DATA_SIZE];
     bool custom_IDm = false;
@@ -978,7 +979,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         if (long_block_numbers) {
             last_block_number = 0xFFFF;
         }
-        PrintAndLogEx(INFO, "Block Element\t|  Data  ");
+        PrintAndLogEx(INFO, "Block Nr.\t|  Data  ");
         for (i = 0x00; i < last_block_number; i++) {
             data[15] = i;
             AddCrc(data, datalen);
@@ -987,8 +988,6 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
             if ((send_rd_unencrypted(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
                 if (rd_noCry_resp.status_flags.status_flag1[0] == 00 && rd_noCry_resp.status_flags.status_flag2[0] == 00) {
                     print_rd_noEncrpytion_response(&rd_noCry_resp);
-                } else {
-                    break;
                 }
             } else {
                 break;
@@ -1000,7 +999,7 @@ static int CmdHFFelicaReadWithoutEncryption(const char *Cmd) {
         datalen += 2;
         felica_read_without_encryption_response_t rd_noCry_resp;
         if (send_rd_unencrypted(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Block Element\t|  Data  ");
+            PrintAndLogEx(INFO, "Block Nr.\t|  Data  ");
             print_rd_noEncrpytion_response(&rd_noCry_resp);
         }
     }
@@ -1854,17 +1853,17 @@ static command_t CommandTable[] = {
     {"reader",              CmdHFFelicaReader,    IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
     {"sniff",               CmdHFFelicaSniff,     IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"raw",                 CmdHFFelicaCmdRaw,    IfPm3Felica,     "Send raw hex data to tag"},
-    {"----------- FeliCa Standard (support in progress) -----------", CmdHelp,       IfPm3Iso14443a,  ""},
+    {"rdunencrypted",       CmdHFFelicaReadWithoutEncryption,       IfPm3Felica,     "read Block Data from authentication-not-required Service."},
+    {"wrunencrypted",       CmdHFFelicaWriteWithoutEncryption,      IfPm3Felica,     "write Block Data to an authentication-not-required Service."},
+    {"----------- FeliCa Standard -----------", CmdHelp,       IfPm3Iso14443a,  ""},
     //{"dump",              CmdHFFelicaDump,                        IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",           CmdHFFelicaRequestService,              IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",          CmdHFFelicaRequestResponse,             IfPm3Felica,     "verify the existence of a card and its Mode."},
-    {"rdunencrypted",       CmdHFFelicaReadWithoutEncryption,       IfPm3Felica,     "read Block Data from authentication-not-required Service."},
-    {"wrunencrypted",       CmdHFFelicaWriteWithoutEncryption,      IfPm3Felica,     "write Block Data to an authentication-not-required Service."},
     {"scsvcode",            CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "acquire Area Code and Service Code."},
     {"rqsyscode",           CmdHFFelicaRequestSystemCode,           IfPm3Felica,     "acquire System Code registered to the card."},
-    {"auth1",               CmdHFFelicaAuthentication1,             IfPm3Felica,     "authenticate a card. Start mutual authentication with Auth1"},
-    {"auth2",               CmdHFFelicaAuthentication2,             IfPm3Felica,     "allow a card to authenticate a Reader/Writer. Complete mutual authentication"},
-    {"read",                CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "read Block Data from authentication-required Service."},
+    {"auth1",               CmdHFFelicaAuthentication1,           IfPm3Felica,     "authenticate a card. Start mutual authentication with Auth1"},
+    {"auth2",               CmdHFFelicaAuthentication2,           IfPm3Felica,     "allow a card to authenticate a Reader/Writer. Complete mutual authentication"},
+    //{"read",              CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "read Block Data from authentication-required Service."},
     //{"write",             CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "write Block Data to an authentication-required Service."},
     //{"scsvcodev2",        CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "verify the existence of Area or Service, and to acquire Key Version."},
     //{"getsysstatus",      CmdHFFelicaNotImplementedYet,           IfPm3Felica,     "acquire the setup information in System."},
