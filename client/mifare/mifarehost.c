@@ -279,7 +279,7 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key) {
         uint8_t filename[32];
     } PACKED payload_file;
 
-    strncpy((char*)payload_file.filename, (char*)destfn, sizeof(payload_file.filename));
+    memcpy(payload_file.filename, destfn, sizeof(payload_file.filename) - 1);
 
     PacketResponseNG resp;
     clearCommandBuffer();
