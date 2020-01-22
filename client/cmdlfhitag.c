@@ -563,7 +563,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     }
 
     uint32_t id = bytes_to_num(resp.data.asBytes, 4);
-    uint8_t *data = NULL;
+    uint8_t *data = resp.data.asBytes;
     PrintAndLogEx(SUCCESS, " UID: " _YELLOW_("%08x"), id);
 
     if (htf != RHT2F_UID_ONLY) {

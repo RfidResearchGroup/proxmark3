@@ -1288,7 +1288,11 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         break;
         case RHT2F_PASSWORD: {
             Dbprintf("List identifier in password mode");
-            memcpy(password, htd->pwd.password, 4);
+            if (memcmp(htd->pwd.password, "\x00\x00\x00\x00", 4) == 0)
+                memcpy(password, tag.sectors[1], sizeof(password));
+            else
+                memcpy(password, htd->pwd.password, sizeof(password));
+
             blocknr = 0;
             bPwd = false;
             bAuthenticating = false;
