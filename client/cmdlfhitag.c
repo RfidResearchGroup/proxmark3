@@ -563,25 +563,11 @@ static int CmdLFHitagReader(const char *Cmd) {
     }
 
     uint32_t id = bytes_to_num(resp.data.asBytes, 4);
-
+    uint8_t *data = NULL;
     PrintAndLogEx(SUCCESS, " UID: " _YELLOW_("%08x"), id);
 
     if (htf != RHT2F_UID_ONLY) {
-
-        PrintAndLogEx(SUCCESS, "Dumping tag memory...");
-        uint8_t *data = resp.data.asBytes;
-
-        char filename[FILE_PATH_SIZE];
-        char *fnameptr = filename;
-        fnameptr += sprintf(fnameptr, "lf-hitag-");
-        FillFileNameByUID(fnameptr, data, "-dump", 4);
-
-        
-
-        saveFile(filename, ".bin", data, 48);
-        saveFileEML(filename, data, 48, 4);
-        saveFileJSON(filename, jsfHitag, data, 48);
-
+    
         // block3, 1 byte
         printHitagConfiguration(data[4 * 3]);
     }
@@ -688,16 +674,29 @@ static int CmdLFHitagWriter(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-/*
-static int CmdLFHitagDump(const char *Cmd) {
+static int CmdLFHitag2Dump(const char *Cmd) {
     PrintAndLogEx(INFO, "Dumping of tag memory");
-    PrintAndLogEx(INFO, "To be done!");
 
     char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hitag_dump();
+    if (ctmp == 'h') return 0; // usage_hitag_dump();
+
+    PacketResponseNG resp;
+ 
+    PrintAndLogEx(SUCCESS, "Dumping tag memory...");
+    uint8_t *data = resp.data.asBytes;
+
+    char filename[FILE_PATH_SIZE];
+    char *fnameptr = filename;
+    fnameptr += sprintf(fnameptr, "lf-hitag-");
+    FillFileNameByUID(fnameptr, data, "-dump", 4);
+
+    saveFile(filename, ".bin", data, 48);
+    saveFileEML(filename, data, 48, 4);
+    saveFileJSON(filename, jsfHitag, data, 48);
+
     return PM3_SUCCESS;
 }
-*/
+
 
 // Annotate HITAG protocol
 void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {  
@@ -740,14 +739,15 @@ void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 }
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,                   AlwaysAvailable, "This help" },
-    {"list",     CmdLFHitagList,            IfPm3Hitag,      "List Hitag trace history" },
-    {"info",     CmdLFHitagInfo,            IfPm3Hitag,      "Tag information" },
-    {"reader",   CmdLFHitagReader,          IfPm3Hitag,      "Act like a Hitag Reader" },
-    {"sim",      CmdLFHitagSim,             IfPm3Hitag,      "Simulate Hitag transponder" },
-    {"sniff",    CmdLFHitagSniff,           IfPm3Hitag,      "Eavesdrop Hitag communication" },
-    {"writer",   CmdLFHitagWriter,          IfPm3Hitag,      "Act like a Hitag Writer" },
-    {"cc",       CmdLFHitagCheckChallenges, IfPm3Hitag,      "Test all challenges" },
+    {"help",   CmdHelp,               AlwaysAvailable, "This help" },
+    {"list",   CmdLFHitagList,        IfPm3Hitag,      "List Hitag trace history" },
+    {"info",   CmdLFHitagInfo,        IfPm3Hitag,      "Tag information" },
+    {"reader", CmdLFHitagReader,      IfPm3Hitag,      "Act like a Hitag Reader" },
+    {"sim",    CmdLFHitagSim,         IfPm3Hitag,      "Simulate Hitag transponder" },
+    {"sniff",  CmdLFHitagSniff,       IfPm3Hitag,      "Eavesdrop Hitag communication" },
+    {"writer", CmdLFHitagWriter,      IfPm3Hitag,      "Act like a Hitag Writer" },
+    {"dump",   CmdLFHitag2Dump,       IfPm3Hitag,      "Dump Hitag2 tag" },
+    {"cc",     CmdLFHitagCheckChallenges, IfPm3Hitag,  "Test all challenges" },
     { NULL, NULL, 0, NULL }
 };
 
