@@ -188,6 +188,9 @@ void lf_init(bool reader) {
 
     if (logging) initSampleBuffer(&bufsize);
 
+    sample_config *sc = getSamplingConfig();
+    sc->decimation = 2;
+    sc->averaging = 1;
 }
 
 void lf_finalize() {
@@ -202,6 +205,10 @@ void lf_finalize() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     LEDsoff();
+    
+    sample_config *sc = getSamplingConfig();
+    sc->decimation = 1;
+    sc->averaging = 0;
 }
 
 size_t lf_detect_field_drop(size_t max) {
