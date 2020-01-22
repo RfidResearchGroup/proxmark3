@@ -1783,7 +1783,8 @@ void MifareChkKeys(uint8_t *datain) {
 }
 
 void MifareChkKeys_file(uint8_t *fn) {
- 
+
+#ifdef WITH_FLASH 
     SpinOff(0);
 
     int changed = rdv40_spiffs_lazy_mount();
@@ -1801,6 +1802,7 @@ void MifareChkKeys_file(uint8_t *fn) {
     MifareChkKeys(mem);
 
     BigBuf_free();
+#endif
 }
 
 //-----------------------------------------------------------------------------
