@@ -200,7 +200,7 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
 *                  0 or 95 ==> 125 kHz
 *
 **/
-void LFSetupFPGAForADC(int divisor, bool lf_field) {
+void LFSetupFPGAForADC(int divisor, bool reader_field) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     if ((divisor == 1) || (divisor < 0) || (divisor > 255))
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_134); //~134kHz
@@ -209,14 +209,17 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
     else
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | (lf_field ? FPGA_LF_ADC_READER_FIELD : 0));
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | (reader_field ? FPGA_LF_ADC_READER_FIELD : 0));
 
     // Connect the A/D to the peak-detected low-frequency path.
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
     // 50ms for the resonant antenna to settle.
+    if (reader_field)
     SpinDelay(50);
+
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc();
+
     // start a 1.5ticks is 1us
     StartTicks();
 }
@@ -333,11 +336,11 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
     return DoAcquisition(1, 8, 0, trigger_threshold, verbose, sample_size, cancel_after, 0);
 }
 
-uint32_t ReadLF(bool activeField, bool verbose, uint32_t sample_size) {
+uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
     if (verbose)
         printConfig();
 
-    LFSetupFPGAForADC(config.divisor, activeField);
+    LFSetupFPGAForADC(config.divisor, reader_field);
     uint32_t ret = DoAcquisition_config(verbose, sample_size);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     return ret;
