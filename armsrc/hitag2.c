@@ -35,6 +35,12 @@
 #include "lfdemod.h"
 #include "commonutil.h"
 
+
+#define test_bit(data, i)  (*(data + (i/8)) >> (7-(i % 8))) & 1
+#define set_bit(data, i)   *(data + (i/8)) |= (1 << (7-(i % 8)))
+#define clear_bit(data, i) *(data + (i/8)) &= ~(1 << (7-(i % 8)))
+#define flip_bit(data, i)  *(data + (i/8)) ^= (1 << (7-(i % 8)))
+
 // Successful crypto auth
 static bool bCrypto;
 // Is in auth stage
@@ -70,7 +76,6 @@ static enum {
     WRITE_STATE_PROG
 } writestate;
 
-
 // ToDo: define a meaningful maximum size for auth_table. The bigger this is, the lower will be the available memory for traces.
 // Historically it used to be FREE_BUFFER_SIZE, which was 2744.
 #define AUTH_TABLE_LENGTH 2744
@@ -86,6 +91,11 @@ uint8_t logdata_0[4], logdata_1[4];
 uint8_t nonce[4];
 bool key_no;
 static uint64_t cipher_state;
+
+size_t blocknr;
+size_t flipped_bit = 0;
+uint32_t byte_value = 0;
+
 
 static int hitag2_reset(void) {
     tag.state = TAG_STATE_RESET;
@@ -135,10 +145,12 @@ static int hitag2_init(void) {
 
 static void hitag_send_bit(int bit) {
     LED_A_ON();
+
     // Reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 
     // Fixed modulation, earlier proxmark version used inverted signal
+    // check datasheet if reader uses BiPhase?
     if (bit == 0) {
         // Manchester: Unloaded, then loaded |__--|
         LOW(GPIO_SSC_DOUT);
@@ -351,8 +363,6 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
     return wait;
 }
 
-size_t blocknr;
-
 uint8_t hitag_crc(uint8_t *data, size_t length) {
     uint8_t crc = 0xff;
     unsigned int byte, bit;
@@ -371,10 +381,7 @@ uint8_t hitag_crc(uint8_t *data, size_t length) {
     return crc;
 }
 
-#define test_bit(data, i) (*(data+(i/8)) >> (7-(i%8))) & 1
-#define set_bit(data, i)   *(data+(i/8)) |= (1 << (7-(i%8)))
-#define clear_bit(data, i) *(data+(i/8)) &= ~(1 << (7-(i%8)))
-#define flip_bit(data, i)  *(data+(i/8)) ^= (1 << (7-(i%8)))
+/*
 void fix_ac_decoding(uint8_t *input, size_t len) {
     // Reader routine tries to decode AC data after Manchester decoding
     // AC has double the bitrate, extract data from bit-pairs
@@ -388,7 +395,12 @@ void fix_ac_decoding(uint8_t *input, size_t len) {
     }
     memcpy(input, temp, sizeof(temp));
 }
+*/
 
+
+// looks at number of received bits.  
+// 0 = collision?
+// 32 =  good response
 bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool hitag_s) {
     uint8_t crc;
     *txlen = 0;
@@ -457,9 +469,7 @@ bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bo
     return true;
 }
 
-size_t flipped_bit = 0;
 
-uint32_t byte_value = 0;
 bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     uint8_t crc;
     *txlen = 0;
@@ -958,7 +968,7 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
 }
 
 // Hitag2 Sniffing
-void SniffHitag(void) {
+void SniffHitag2(void) {
 
     LEDsoff();
     StopTicks();
@@ -1037,7 +1047,7 @@ void SniffHitag(void) {
 }
 
 // Hitag2 simulation
-void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data) {
+void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
 
     StopTicks();
 
