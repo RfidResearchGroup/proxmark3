@@ -500,6 +500,7 @@ typedef struct {
 #define CMD_HF_MIFARE_CHKKEYS                                             0x0623
 #define CMD_HF_MIFARE_SETMOD                                              0x0624
 #define CMD_HF_MIFARE_CHKKEYS_FAST                                        0x0625
+#define CMD_HF_MIFARE_CHKKEYS_FILE                                        0x0626
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
 #define CMD_HF_MIFARE_MFKEY                                               0x0631

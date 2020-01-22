@@ -349,10 +349,15 @@ int flashmem_spiffs_load(uint8_t *destfn, uint8_t *data, size_t datalen) {
         bytes_sent += bytes_in_packet;
 
         PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        
+        uint8_t retry = 3;
+        while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            ret_val = PM3_ETIMEOUT;
-            break;
+            retry--;
+            if (retry == 0) {
+                ret_val = PM3_ETIMEOUT;
+                goto out;
+            }
         }
 
         uint8_t isok = resp.oldarg[0] & 0xFF;
@@ -362,6 +367,9 @@ int flashmem_spiffs_load(uint8_t *destfn, uint8_t *data, size_t datalen) {
             break;
         }
     }
+
+out:
+    clearCommandBuffer();
 
     // turn off fast push mode
     conn.block_after_ACK = false;

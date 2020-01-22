@@ -930,12 +930,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_HITAG
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
-            SniffHitag();
-//            SniffHitag(packet->oldarg[0]);
+            SniffHitag2();
+//            SniffHitag2(packet->oldarg[0]);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
-            SimulateHitagTag((bool)packet->oldarg[0], packet->data.asBytes);
+            SimulateHitag2((bool)packet->oldarg[0], packet->data.asBytes);
             break;
         }
         case CMD_LF_HITAG_READER: { // Reader for Hitag tags, args = type and function
@@ -1174,6 +1174,14 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_MIFARE_CHKKEYS_FAST: {
             MifareChkKeys_fast(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_MIFARE_CHKKEYS_FILE: {
+            struct p {
+                uint8_t filename[32];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareChkKeys_file(payload->filename);
             break;
         }
         case CMD_HF_MIFARE_SIMULATE: {
