@@ -85,8 +85,6 @@ int CmdHFSearch(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_search();
 
-    PrintAndLogEx(INFO, "Checking for known tags...");
-
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
@@ -170,9 +168,8 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "done");
+    PrintAndLogEx(INPLACE, _RED_("No known/supported 13.56 MHz tags found"));
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(FAILED, _RED_("No known/supported 13.56 MHz tags found"));
     return PM3_ESOFT;
 }
 
@@ -272,15 +269,16 @@ static command_t CommandTable[] = {
     {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                }"},
     {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...    }"},
     {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / Felica RFIDs...       }"},
-    {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                   }"},
+    {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                  }"},
+    {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                   }"},
+    {"lto",         CmdHFLTO,         AlwaysAvailable, "{ LTO Cartridge Memory RFIDs...    }"},
     {"mf",          CmdHFMF,          AlwaysAvailable, "{ MIFARE RFIDs...                  }"},
     {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...             }"},
     {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...       }"},
     {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...          }"},
-    {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
-    {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                }"},
+    {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...      }"},
     {"list",        CmdTraceList,     AlwaysAvailable,    "List protocol data in trace buffer"},
     {"plot",        CmdHFPlot,        IfPm3Hfplot,     "Plot signal"},
     {"tune",        CmdHFTune,        IfPm3Present,    "Continuously measure HF antenna tuning"},

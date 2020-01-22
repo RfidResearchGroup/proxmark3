@@ -17,6 +17,7 @@
 #include "cmdhflist.h"          // annotations
 #include "comms.h"              // for sending cmds to device. GetFromBigBuf
 #include "fileutils.h"          // for saveFile
+#include "cmdlfhitag.h"         // annotate hitag
 
 static int CmdHelp(const char *Cmd);
 
@@ -45,7 +46,9 @@ static int usage_trace_list() {
     PrintAndLogEx(NORMAL, "    iclass   - interpret data as iclass communications");
     PrintAndLogEx(NORMAL, "    legic    - interpret data as LEGIC communications");
     PrintAndLogEx(NORMAL, "    felica   - interpret data as ISO18092 / FeliCa communications");
-    PrintAndLogEx(NORMAL, "    hitag    - interpret data as Hitag2 / HitagS communications");
+    PrintAndLogEx(NORMAL, "    hitag1   - interpret data as Hitag1 communications");
+    PrintAndLogEx(NORMAL, "    hitag2   - interpret data as Hitag2 communications");
+    PrintAndLogEx(NORMAL, "    hitags   - interpret data as HitagS communications");
     PrintAndLogEx(NORMAL, "    lto      - interpret data as LTO-CM communications");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -281,7 +284,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = iso15693_CRC_check(frame, data_len);
                 break;
             case ISO_7816_4:
-            case PROTO_HITAG:
+            case PROTO_HITAG1:
+            case PROTO_HITAG2:
+            case PROTO_HITAGS:
             default:
                 break;
         }
@@ -301,7 +306,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != ISO_15693
                 && protocol != ICLASS
                 && protocol != ISO_7816_4
-                && protocol != PROTO_HITAG
+                && protocol != PROTO_HITAG1
+                && protocol != PROTO_HITAG2
+                && protocol != PROTO_HITAGS
                 && protocol != THINFILM
                 && protocol != FELICA
                 && protocol != LTO
@@ -385,6 +392,15 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case LTO:
                 annotateLTO(explanation, sizeof(explanation), frame, data_len);
                 break;
+            case PROTO_HITAG1:
+                annotateHitag1(explanation, sizeof(explanation), frame, data_len);
+                break;            
+            case PROTO_HITAG2:
+                annotateHitag2(explanation, sizeof(explanation), frame, data_len);
+                break;            
+            case PROTO_HITAGS:            
+                annotateHitagS(explanation, sizeof(explanation), frame, data_len);
+                break;            
             default:
                 break;
         }
@@ -593,7 +609,9 @@ int CmdTraceList(const char *Cmd) {
             else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
             else if (strcmp(type, "felica") == 0)   protocol = FELICA;
             else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
-            else if (strcmp(type, "hitag") == 0)    protocol = PROTO_HITAG;
+            else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
+            else if (strcmp(type, "hitag2") == 0)    protocol = PROTO_HITAG2;
+            else if (strcmp(type, "hitags") == 0)    protocol = PROTO_HITAGS;            
             else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
             else if (strcmp(type, "lto") == 0)      protocol = LTO;
             else if (strcmp(type, "raw") == 0)      protocol = -1; //No crc, no annotations
@@ -644,8 +662,7 @@ int CmdTraceList(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = %lu bytes)", traceLen);
-    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") "bytes)", traceLen);
 
     /*
     if (protocol == FELICA) {
@@ -657,27 +674,27 @@ int CmdTraceList(const char *Cmd) {
             tracepos = printHexLine(tracepos, traceLen, trace, protocol);
         }
     } else {
-        PrintAndLogEx(NORMAL, "Start = Start of Start Bit, End = End of last modulation. Src = Source of Transfer");
+        PrintAndLogEx(INFO, _YELLOW_("Start") "= Start of Start Bit, " _YELLOW_("End") "= End of last modulation. " _YELLOW_("Src") "= Source of Transfer");
         if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ || protocol == LTO)
-            PrintAndLogEx(NORMAL, "ISO14443A - All times are in carrier periods (1/13.56MHz)");
+            PrintAndLogEx(INFO, "ISO14443A - All times are in carrier periods (1/13.56MHz)");
         if (protocol == THINFILM)
-            PrintAndLogEx(NORMAL, "Thinfilm - All times are in carrier periods (1/13.56MHz)");
+            PrintAndLogEx(INFO, "Thinfilm - All times are in carrier periods (1/13.56MHz)");
         if (protocol == ICLASS)
-            PrintAndLogEx(NORMAL, "iClass - Timings are not as accurate");
+            PrintAndLogEx(INFO, "iClass - Timings are not as accurate");
         if (protocol == LEGIC)
-            PrintAndLogEx(NORMAL, "LEGIC - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
+            PrintAndLogEx(INFO, "LEGIC - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
                           "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
         if (protocol == ISO_14443B)
-            PrintAndLogEx(NORMAL, "ISO14443B"); // Timings ?
+            PrintAndLogEx(INFO, "ISO14443B"); // Timings ?
         if (protocol == ISO_15693)
-            PrintAndLogEx(NORMAL, "ISO15693 - Timings are not as accurate");
+            PrintAndLogEx(INFO, "ISO15693 - Timings are not as accurate");
         if (protocol == ISO_7816_4)
-            PrintAndLogEx(NORMAL, "ISO7816-4 / Smartcard - Timings N/A yet");
-        if (protocol == PROTO_HITAG)
-            PrintAndLogEx(NORMAL, "Hitag2 / HitagS - Timings in ETU (8us)");
+            PrintAndLogEx(INFO, "ISO7816-4 / Smartcard - Timings N/A yet");
+        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS)
+            PrintAndLogEx(INFO, "Hitag1 / Hitag2 / HitagS - Timings in ETU (8us)");
         if (protocol == FELICA)
-            PrintAndLogEx(NORMAL, "ISO18092 / FeliCa - Timings are not as accurate");
-
+            PrintAndLogEx(INFO, "ISO18092 / FeliCa - Timings are not as accurate");
+        
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");

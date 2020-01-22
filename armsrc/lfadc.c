@@ -22,7 +22,7 @@
 // as a counting signal. TIMER_CLOCK3 = MCK/32, MCK is running at 48 MHz, so the timer is running at 48/32 = 1500 kHz
 // Carrier period (T0) have duration of 8 microseconds (us), which is 1/125000 per second (125 kHz frequency)
 // T0 = timer/carrier = 1500kHz/125kHz = 1500000/125000 = 6
-#define T0 3
+//#define HITAG_T0 3
 
 //////////////////////////////////////////////////////////////////////////////
 // Global variables
@@ -52,16 +52,28 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
     volatile uint8_t adc_val;
     //uint8_t avg_peak = 140, avg_through = 96;
     uint8_t avg_peak = 130, avg_through = 106;
+    int16_t checked = 0;
 
-    while (!BUTTON_PRESS()) {
-        // Watchdog hit
+    while (true) {
+
+        // only every 1000th times, in order to save time when collecting samples.
+        if (checked == 1000) {
+            if (BUTTON_PRESS() || data_available()) {
+                checked = -1;
+                break;
+            } else {
+                checked = 0;
+            }
+        }
+        ++checked;
+
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             adc_val = AT91C_BASE_SSC->SSC_RHR;
             periods++;
 
-            if (logging) logSample(adc_val, 1, 8, 0);
+            if (logging) logSampleSimple(adc_val);
 
             // Only test field changes if state of adc values matter
             if (!wait) {
@@ -91,7 +103,7 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             if (periods == max) return 0;
         }
     }
-    if (logging) logSample(255, 1, 8, 0);
+    if (logging) logSampleSimple(0xFF);
     return 0;
 }
 
@@ -143,7 +155,11 @@ void lf_init(bool reader) {
     FpgaSetupSsc();
 
     // When in reader mode, give the field a bit of time to settle.
-    if (reader) SpinDelay(50);
+    // 313T0 = 313 * 8us = 2504us = 2.5ms  Hitag2 tags needs to be fully powered.
+    if (reader) {
+        // 50 ms
+        SpinDelay(50);
+    }
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
@@ -168,7 +184,9 @@ void lf_init(bool reader) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // Prepare data trace
-    if (logging) initSampleBuffer(NULL);
+    uint32_t bufsize = 20000;
+
+    if (logging) initSampleBuffer(&bufsize);
 
 }
 
@@ -204,14 +222,13 @@ size_t lf_detect_field_drop(size_t max) {
         }
         ++checked;
 
-        // Watchdog hit
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             periods++;
             adc_val = AT91C_BASE_SSC->SSC_RHR;
 
-            if (logging) logSample(adc_val, 1, 8, 0);
+            if (logging) logSampleSimple(adc_val);
 
             if (adc_val == 0) {
                 rising_edge = false;

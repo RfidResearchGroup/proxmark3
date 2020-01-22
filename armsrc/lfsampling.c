@@ -93,6 +93,7 @@ sample_config *getSamplingConfig() {
 void pushBit(BitstreamOut *stream, uint8_t bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
+    *(stream->buffer + bytepos) &= ~(1 << (7 - bitpos));
     *(stream->buffer + bytepos) |= (bit > 0) << (7 - bitpos);
     stream->position++;
     stream->numbits++;
@@ -106,17 +107,25 @@ sampling_t samples = {0, 0, 0, 0};
 
 void initSampleBuffer(uint32_t *sample_size) {
 
+    BigBuf_free();
+// We can't erase the buffer now, it would drastically delay the acquisition
+//    BigBuf_Clear_ext(false);
+
     if (sample_size == NULL || *sample_size == 0) {
         *sample_size = BigBuf_max_traceLen();
-    } else {
-        *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
-    }
 
-    // use a bitstream to handle the output
-    data.buffer = BigBuf_get_addr();
+        data.buffer = BigBuf_get_addr();
 
 // We can't erase the buffer now, it would drastically delay the acquisition
-//    memset(data.buffer, 0, *sample_size);
+//        memset(data.buffer, 0, *sample_size);
+    } else {
+        *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
+
+        data.buffer = BigBuf_malloc(*sample_size);
+
+// We can't erase the buffer now, it would drastically delay the acquisition
+//        memset(data.buffer, 0, *sample_size);
+    }
 
     //
     samples.dec_counter = 0;
@@ -127,6 +136,10 @@ void initSampleBuffer(uint32_t *sample_size) {
 
 uint32_t getSampleCounter() {
     return samples.total_saved;
+}
+
+void logSampleSimple(uint8_t sample) {
+    logSample(sample, config.decimation, config.bits_per_sample, config.averaging);
 }
 
 void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg) {

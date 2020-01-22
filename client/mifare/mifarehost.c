@@ -125,15 +125,16 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             }
         }
 
-        PrintAndLogEx(SUCCESS, "found " _YELLOW_("%u") "candidate key%s\n", keycount, (keycount > 1) ? "s." : ".");
+        PrintAndLogEx(SUCCESS, "found " _YELLOW_("%u") "candidate key%s", keycount, (keycount > 1) ? "s." : ".");
 
         *key = UINT64_C(-1);
         uint8_t keyBlock[PM3_CMD_DATA_SIZE];
         uint32_t max_keys = KEYS_IN_BLOCK;
         for (uint32_t i = 0; i < keycount; i += max_keys) {
 
-            uint32_t size = keycount - i > max_keys ? max_keys : keycount - i;
-            for (uint32_t j = 0; j < size; j++) {
+            uint8_t size = keycount - i > max_keys ? max_keys : keycount - i;
+            register uint8_t j;
+            for (j = 0; j < size; j++) {
                 if (par_list == 0) {
                     num_to_bytes(last_keylist[i * max_keys + j], 6, keyBlock + (j * 6));
                 } else {
@@ -159,6 +160,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     free(keylist);
     return PM3_SUCCESS;
 }
+
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
     *key = -1;
     clearCommandBuffer();
@@ -308,7 +310,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
 }
 
 // Compare 16 Bits out of cryptostate
-static int Compare16Bits(const void *a, const void *b) {
+inline static int Compare16Bits(const void *a, const void *b) {
     if ((*(uint64_t *)b & 0x00ff000000ff0000) == (*(uint64_t *)a & 0x00ff000000ff0000)) return 0;
     if ((*(uint64_t *)b & 0x00ff000000ff0000) > (*(uint64_t *)a & 0x00ff000000ff0000)) return 1;
     return -1;
@@ -330,13 +332,14 @@ __attribute__((force_align_arg_pointer))
 
     statelist->len = p1 - statelist->head.slhead;
     statelist->tail.sltail = --p1;
+
     qsort(statelist->head.slhead, statelist->len, sizeof(uint64_t), Compare16Bits);
 
     return statelist->head.slhead;
 }
 
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate) {
-    uint16_t i;
+
     uint32_t uid;
     StateList_t statelists[2];
     struct Crypto1State *p1, *p2, *p3, *p4;
@@ -385,7 +388,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
     memcpy(&uid, package->cuid, sizeof(package->cuid));
 
-    for (i = 0; i < 2; i++) {
+    for (uint8_t i = 0; i < 2; i++) {
         statelists[i].blockNo = package->block;
         statelists[i].keyType = package->keytype;
         statelists[i].uid = uid;
@@ -402,11 +405,11 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     pthread_t thread_id[2];
 
     // create and run worker threads
-    for (i = 0; i < 2; i++)
+    for (uint8_t i = 0; i < 2; i++)
         pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
 
     // wait for threads to terminate:
-    for (i = 0; i < 2; i++)
+    for (uint8_t i = 0; i < 2; i++)
         pthread_join(thread_id[i], (void *)&statelists[i].head.slhead);
 
     // the first 16 Bits of the cryptostate already contain part of our key.
@@ -457,6 +460,8 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
 
+    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "candidate keys", keycnt);
+    
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
 
@@ -464,11 +469,14 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint32_t max_keys = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
     uint8_t keyBlock[PM3_CMD_DATA_SIZE] = {0x00};
 
-    for (i = 0; i < keycnt; i += max_keys) {
+    uint64_t start_time = msclock();
 
-        int size = keycnt - i > max_keys ? max_keys : keycnt - i;
+    for (uint32_t i = 0; i < keycnt; i += max_keys) {
 
-        for (int j = 0; j < size; j++) {
+        uint8_t size = keycnt - i > max_keys ? max_keys : keycnt - i;
+
+        register uint8_t j;
+        for (j = 0; j < size; j++) {
             crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
             num_to_bytes(key64, 6, keyBlock + j * 6);
         }
@@ -485,6 +493,13 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
                          );
             return -5;
         }
+
+        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (float)(msclock() - start_time) * 1000.0;
+        start_time = msclock();
+
+        if ( i + 1 % 10 == 0)
+		    PrintAndLogEx(INFO, " %8d keys left | %5.1f keys/sec | worst case %6.1f seconds remaining", keycnt - i, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+
     }
 
 out:
@@ -499,7 +514,7 @@ out:
 }
 
 int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey) {
-    uint16_t i;
+
     uint32_t uid;
     StateList_t statelists[1];
     struct Crypto1State *p1, *p3;
@@ -589,16 +604,18 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint32_t max_keys_slice = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
     uint8_t keyBlock[PM3_CMD_DATA_SIZE] = {0x00};
 
-    for (i = 0; i < keycnt; i += max_keys_slice) {
+    uint64_t start_time = msclock();
+    for (uint32_t i = 0; i < keycnt; i += max_keys_slice) {
 
-        PrintAndLogEx(INFO, "Testing %u / %u ", i, keycnt);
+//        PrintAndLogEx(INFO, "Testing %u / %u ", i, keycnt);
 
         key64 = 0;
 
-        int size = keycnt - i > max_keys_slice ? max_keys_slice : keycnt - i;
+        uint8_t size = keycnt - i > max_keys_slice ? max_keys_slice : keycnt - i;
 
         // copy x keys to device.
-        for (int j = 0; j < size; j++) {
+        register uint8_t j;
+        for (j = 0; j < size; j++) {
             crypto1_get_lfsr(statelists[0].head.slhead + i + j, &key64);
             num_to_bytes(key64, 6, keyBlock + j * 6);
         }
@@ -617,6 +634,12 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
                          );
             return PM3_SUCCESS;
         }
+        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (float)(msclock() - start_time) * 1000.0;
+        start_time = msclock();
+
+        if ( i+1 % 10 == 0)
+		    PrintAndLogEx(INFO, " %8d keys left | %5.1f keys/sec | worst case %6.1f seconds remaining", keycnt - i, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+
     }
 
 out:

@@ -339,7 +339,7 @@ int CmdLFCommandRead(const char *Cmd) {
     // bitbang mode
     if (payload.delay == 0) {
         if (payload.zeros < 7 || payload.ones < 7) {
-            PrintAndLogEx(WARNING, "Warning periods cannot be less than 7us in bit bang mode");
+            PrintAndLogEx(WARNING, "warning periods cannot be less than 7us in bit bang mode");
             return PM3_EINVARG;
         }
     }
@@ -347,15 +347,14 @@ int CmdLFCommandRead(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0)  return usage_lf_cmdread();
 
-    PrintAndLogEx(SUCCESS, "Sending");
+    PrintAndLogEx(SUCCESS, "sending");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, 8 + datalen);
-
-    printf("\n");
 
     PacketResponseNG resp;
 
     uint8_t i = 10;
+    // 20sec wait loop
     while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
         printf(".");
         fflush(stdout);
@@ -365,15 +364,15 @@ int CmdLFCommandRead(const char *Cmd) {
 
     if (resp.status == PM3_SUCCESS) {
         if (i) {
-            PrintAndLogEx(SUCCESS, "Downloading response signal data");
-            getSamples(0, false);
+            PrintAndLogEx(SUCCESS, "downloading response signal data");
+            getSamples(0, true);
             return PM3_SUCCESS;
         } else {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             return PM3_ETIMEOUT;
         }
     }
-    PrintAndLogEx(WARNING, "Command failed.");
+    PrintAndLogEx(WARNING, "command failed.");
     return PM3_ESOFT;
 }
 
@@ -1214,16 +1213,17 @@ int CmdLFfind(const char *Cmd) {
 
     // only run these tests if device is online
     if (isOnline) {
+
+        if (IfPm3Hitag()) {
+            if (readHitagUid()) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!");
+                return PM3_SUCCESS;
+            }
+        }
+
         // only run if graphbuffer is just noise as it should be for hitag
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
-
-            if (IfPm3Hitag()) {
-                if (readHitagUid()) {
-                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") "found!");
-                    return PM3_SUCCESS;
-                }
-            }
 
             if (readMotorolaUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") "found!");
