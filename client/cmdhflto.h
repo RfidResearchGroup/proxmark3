@@ -14,7 +14,8 @@
 #include "common.h"
 
 int infoLTO(bool verbose);
-
+int rdblLTO(uint8_t st_blk, uint8_t end_blk, bool verbose);
 int CmdHFLTO(const char *Cmd);
 
 #endif
+
