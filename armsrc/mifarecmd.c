@@ -33,6 +33,7 @@
 #include "dbprint.h"
 #include "ticks.h"
 #include "usb_cdc.h"  // usb_poll_validate_length
+#include "spiffs.h"   // spiffs
 
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
 # define HARDNESTED_AUTHENTICATION_TIMEOUT  848     // card times out 1ms after wrong authentication (according to NXP documentation)
@@ -1701,14 +1702,15 @@ void MifareChkKeys(uint8_t *datain) {
         bool found;
     } PACKED keyresult;
     keyresult.found = false;
-    uint8_t blockNo, keyType, keyCount;
+    uint8_t blockNo, keyType;
+    uint16_t keyCount;
     bool clearTrace, have_uid = false;
 
     keyType = datain[0];
     blockNo = datain[1];
     clearTrace = datain[2];
-    keyCount = datain[3];
-    datain += 4;
+    keyCount = (datain[3] << 8) | datain[4];
+    datain += 5;
 
     LEDsoff();
     LED_A_ON();
@@ -1778,6 +1780,27 @@ void MifareChkKeys(uint8_t *datain) {
     crypto1_deinit(pcs);
 
     DBGLEVEL = oldbg;
+}
+
+void MifareChkKeys_file(uint8_t *fn) {
+ 
+    SpinOff(0);
+
+    int changed = rdv40_spiffs_lazy_mount();
+    uint32_t size = size_in_spiffs((char *)fn);
+    uint8_t *mem = BigBuf_malloc(size);
+           
+    rdv40_spiffs_read_as_filetype((char *)fn, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
+
+    if (changed) {
+        rdv40_spiffs_lazy_unmount();
+    }
+
+    SpinOff(0);
+
+    MifareChkKeys(mem);
+
+    BigBuf_free();
 }
 
 //-----------------------------------------------------------------------------

@@ -17,12 +17,14 @@
 #include "comms.h"
 #include "commonutil.h"
 #include "mifare4.h"
-#include "ui.h"         // PrintAndLog...
+#include "ui.h"                 // PrintAndLog...
 #include "crapto1/crapto1.h"
 #include "crc16.h"
 #include "protocols.h"
 #include "mfkey.h"
-#include "util_posix.h"  // msclock
+#include "util_posix.h"         // msclock
+#include "cmdparser.h"          // detection of flash capabilities
+#include "cmdflashmemspiffs.h"  // upload to flash mem
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -168,9 +170,10 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
     data[0] = keyType;
     data[1] = blockNo;
     data[2] = clear_trace;
-    data[3] = keycnt;
-    memcpy(data + 4, keyBlock, 6 * keycnt);
-    SendCommandNG(CMD_HF_MIFARE_CHKKEYS, data, (4 + 6 * keycnt));
+    data[3] = 0;
+    data[4] = keycnt;
+    memcpy(data + 5, keyBlock, 6 * keycnt);
+    SendCommandNG(CMD_HF_MIFARE_CHKKEYS, data, (5 + 6 * keycnt));
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2500)) return PM3_ETIMEOUT;
@@ -263,6 +266,45 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
             return PM3_ESOFT;
     }
     return PM3_ESOFT;
+}
+
+// Trigger device to use a binary file on flash mem as keylist for mfCheckKeys.
+// As of now,  255 keys possible in the file
+// 6 * 255 = 1500 bytes
+int mfCheckKeys_file(uint8_t *destfn, uint64_t *key) {
+    *key = -1;
+    clearCommandBuffer();
+
+    struct {
+        uint8_t filename[32];
+    } PACKED payload_file;
+
+    strncpy((char*)payload_file.filename, (char*)destfn, sizeof(payload_file.filename));
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_CHKKEYS_FILE, (uint8_t *)&payload_file, sizeof(payload_file));
+
+    uint8_t retry = 10;
+
+    while (!WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2000)) {
+        retry--;
+        if (retry ==0) {
+            PrintAndLogEx(WARNING, "Chk keys file, timeouted");
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    if (resp.status != PM3_SUCCESS) return resp.status;
+
+    struct kr {
+        uint8_t key[6];
+        bool found;
+    } PACKED;
+    struct kr *keyresult = (struct kr *)&resp.data.asBytes;
+    if (!keyresult->found) return PM3_ESOFT;
+    *key = bytes_to_num(keyresult->key, sizeof(keyresult->key));
+    return PM3_SUCCESS;
 }
 
 // PM3 imp of J-Run mf_key_brute (part 2)
@@ -461,7 +503,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     if (keycnt == 0) goto out;
 
     PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "candidate keys", keycnt);
-    
+
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
 
@@ -469,9 +511,9 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint32_t max_keys = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
     uint8_t keyBlock[PM3_CMD_DATA_SIZE] = {0x00};
 
-    uint64_t start_time = msclock();
-
     for (uint32_t i = 0; i < keycnt; i += max_keys) {
+
+        uint64_t start_time = msclock();
 
         uint8_t size = keycnt - i > max_keys ? max_keys : keycnt - i;
 
@@ -498,7 +540,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
         start_time = msclock();
 
         if ( i + 1 % 10 == 0)
-		    PrintAndLogEx(INFO, " %8d keys left | %5.1f keys/sec | worst case %6.1f seconds remaining", keycnt - i, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+            PrintAndLogEx(INFO, " %8d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt , bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
 
     }
 
@@ -601,46 +643,78 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
-    uint32_t max_keys_slice = keycnt > KEYS_IN_BLOCK ? KEYS_IN_BLOCK : keycnt;
-    uint8_t keyBlock[PM3_CMD_DATA_SIZE] = {0x00};
+    uint32_t maxkeysinblock = IfPm3Flash() ? 1600 : KEYS_IN_BLOCK;
+    uint32_t max_keys_slice = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
-    uint64_t start_time = msclock();
+    uint8_t *mem = calloc( (maxkeysinblock * 6) + 5, sizeof(uint8_t));
+    if (mem == NULL) {
+        free(statelists[0].head.slhead);
+        return PM3_EMALLOC;
+    }
+
+    uint8_t *p_keyblock = mem + 5;
+    mem[0] = statelists[0].keyType;
+    mem[1] = statelists[0].blockNo;
+    mem[2] = 1;
+    mem[3] = ((maxkeysinblock >> 8) & 0xFF);
+    mem[4] = (maxkeysinblock & 0xFF);
+
+    uint8_t destfn[32];
+    strncpy((char*)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
+
     for (uint32_t i = 0; i < keycnt; i += max_keys_slice) {
 
-//        PrintAndLogEx(INFO, "Testing %u / %u ", i, keycnt);
+        int res = 0;
+        uint64_t start_time = msclock();
 
         key64 = 0;
-
-        uint8_t size = keycnt - i > max_keys_slice ? max_keys_slice : keycnt - i;
+        uint32_t size = keycnt - i > max_keys_slice ? max_keys_slice : keycnt - i;
 
         // copy x keys to device.
-        register uint8_t j;
-        for (j = 0; j < size; j++) {
+        for (uint32_t j = 0; j < size; j++) {
             crypto1_get_lfsr(statelists[0].head.slhead + i + j, &key64);
-            num_to_bytes(key64, 6, keyBlock + j * 6);
+            num_to_bytes(key64, 6, p_keyblock + j * 6);
         }
 
         // check a block of generated candidate keys.
-        if (mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, size, keyBlock, &key64) == PM3_SUCCESS) {
+        if (IfPm3Flash()) {
+             // upload to flash.
+            res = flashmem_spiffs_load(destfn, mem, 5 + (size * 6) );
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "SPIFFS upload failed");
+                return res;
+            }
 
-            free(statelists[0].head.slhead);
+            res = mfCheckKeys_file(destfn, &key64);
+        } else {
+            res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, size, mem, &key64);
+        }
 
-            num_to_bytes(key64, 6, resultKey);
+        if (res == PM3_SUCCESS) {
+                p_keyblock = NULL;
+                free(statelists[0].head.slhead);
+                free(mem);
 
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") "]",
+                num_to_bytes(key64, 6, resultKey);
+
+                PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)
                          );
             return PM3_SUCCESS;
+        } else if (res == PM3_ETIMEOUT) {
+            return res;
         }
-        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (float)(msclock() - start_time) * 1000.0;
+
+        float bruteforce_per_second = (float)maxkeysinblock / (float)(msclock() - start_time) * 1000.0;
         start_time = msclock();
 
-        if ( i+1 % 10 == 0)
-		    PrintAndLogEx(INFO, " %8d keys left | %5.1f keys/sec | worst case %6.1f seconds remaining", keycnt - i, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
-
+        PrintAndLogEx(INFO, "Chunk %8u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
     }
+
+    p_keyblock = NULL;
+    free(mem);
 
 out:
     PrintAndLogEx(SUCCESS, "target block:%3u key type: %c",
@@ -649,7 +723,6 @@ out:
                  );
 
     free(statelists[0].head.slhead);
-
     return PM3_ESOFT;
 }
 
