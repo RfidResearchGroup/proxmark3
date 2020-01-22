@@ -1119,7 +1119,7 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "READWORD");
             break;
         case (LTO_READBLOCK & 0xF0):
-            snprintf(exp, size, "READBLOCK");
+            snprintf(exp, size, "READBLOCK(%d)", cmd[1]);
             break;
         case LTO_READBLOCK_CONT:
             snprintf(exp, size, "READBLOCK CONT");
@@ -1128,7 +1128,7 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "WRITEWORD");
             break;
         case (LTO_WRITEBLOCK & 0xF0):
-            snprintf(exp, size, "WRITEBLOCK");
+            snprintf(exp, size, "WRITEBLOCK(%d)", cmd[1]);
             break;
         case LTO_HALT:
             snprintf(exp, size, "HALT");
