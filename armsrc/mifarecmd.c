@@ -1240,7 +1240,7 @@ uint8_t chkKey(struct chk_t *c) {
         }
         res = mifare_classic_authex(c->pcs, c->cuid, c->block, c->keyType, c->key, AUTH_FIRST, NULL, NULL);
 
-        CHK_TIMEOUT();
+//        CHK_TIMEOUT();
 
         // if successful auth, send HALT
         // if ( !res )
@@ -1760,7 +1760,7 @@ void MifareChkKeys(uint8_t *datain) {
         key = bytes_to_num(datain + i * 6, 6);
         res = mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST);
 
-        CHK_TIMEOUT();
+//        CHK_TIMEOUT();
 
         if (res)
             continue;
@@ -1784,13 +1784,13 @@ void MifareChkKeys(uint8_t *datain) {
 
 void MifareChkKeys_file(uint8_t *fn) {
 
-#ifdef WITH_FLASH 
+#ifdef WITH_FLASH
     SpinOff(0);
 
     int changed = rdv40_spiffs_lazy_mount();
     uint32_t size = size_in_spiffs((char *)fn);
     uint8_t *mem = BigBuf_malloc(size);
-           
+
     rdv40_spiffs_read_as_filetype((char *)fn, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
     if (changed) {
@@ -2229,7 +2229,7 @@ void MifareHasStaticNonce() {
 
         nt = bytes_to_num(rec, 4);
 
-        CHK_TIMEOUT();
+//        CHK_TIMEOUT();
     }
 
 OUT:
