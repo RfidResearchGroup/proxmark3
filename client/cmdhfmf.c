@@ -556,26 +556,26 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
     switch (isOK) {
         case -1 :
             PrintAndLogEx(WARNING, "button pressed. Aborted.");
-            return 1;
+            return PM3_ESOFT;
         case -2 :
             PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).");
-            return 1;
+            return PM3_ESOFT;
         case -3 :
             PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator is not predictable).");
-            return 1;
+            return PM3_ESOFT;
         case -4 :
             PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
             PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour.");
-            return 1;
+            return PM3_ESOFT;
         case -5 :
             PrintAndLogEx(WARNING, "aborted via keyboard.");
-            return 1;
+            return PM3_ESOFT;
         default :
             PrintAndLogEx(SUCCESS, "found valid key: "_YELLOW_("%012" PRIx64), key);
             break;
     }
     PrintAndLogEx(NORMAL, "");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfWrBl(const char *Cmd) {
@@ -1351,7 +1351,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
             num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
         }
 
-        PrintAndLogEx(SUCCESS, "Testing known keys. Sector count=%d", SectorsCnt);
+        PrintAndLogEx(SUCCESS, "Testing known keys. Sector count "_YELLOW_("%d"), SectorsCnt);
         int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false);
         if (res == PM3_SUCCESS) {
             // all keys found
@@ -1360,8 +1360,8 @@ static int CmdHF14AMfNested(const char *Cmd) {
         }
 
         uint64_t t2 = msclock() - t1;
-        PrintAndLogEx(SUCCESS, "Time to check %zu known keys: %.0f seconds\n", ARRAYLEN(g_mifare_default_keys), (float)t2 / 1000.0);
-        PrintAndLogEx(SUCCESS, "enter nested attack");
+        PrintAndLogEx(SUCCESS, "Time to check " _YELLOW_("%zu") "known keys: %.0f seconds\n", ARRAYLEN(g_mifare_default_keys), (float)t2 / 1000.0);
+        PrintAndLogEx(SUCCESS, "enter nested key recovery");
 
         // nested sectors
 //        int iterations = 0;
@@ -1407,7 +1407,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         }
 
         t1 = msclock() - t1;
-        PrintAndLogEx(SUCCESS, "time in nested: %.0f seconds\n", (float)t1 / 1000.0);
+        PrintAndLogEx(SUCCESS, "time in nested: " _YELLOW_("%.0f") "seconds\n", (float)t1 / 1000.0);
 
 
         // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
@@ -1541,7 +1541,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 
     // check if we can authenticate to sector
     if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+        PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block: %3d key type: %c", blockNo, keyType ? 'B' : 'A');
         return PM3_EOPABORTED;
     }
 
@@ -1562,7 +1562,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
         num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
     }
 
-    PrintAndLogEx(SUCCESS, "Testing known keys. Sector count=%d", SectorsCnt);
+    PrintAndLogEx(SUCCESS, "Testing known keys. Sector count "_YELLOW_("%d"), SectorsCnt);
     int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false);
     if (res == PM3_SUCCESS) {
         // all keys found
@@ -1571,8 +1571,8 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     uint64_t t2 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "Time to check %zu known keys: %.0f seconds\n", ARRAYLEN(g_mifare_default_keys), (float)t2 / 1000.0);
-    PrintAndLogEx(SUCCESS, "enter static nested attack");
+    PrintAndLogEx(SUCCESS, "Time to check "_YELLOW_("%zu") "known keys: %.0f seconds\n", ARRAYLEN(g_mifare_default_keys), (float)t2 / 1000.0);
+    PrintAndLogEx(SUCCESS, "enter static nested key recovery");
 
     // nested sectors
     for (trgKeyType = 0; trgKeyType < 2; ++trgKeyType) {
@@ -1586,6 +1586,9 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                 switch (isOK) {
                     case PM3_ETIMEOUT :
                         PrintAndLogEx(ERR, "Command execute timeout");
+                        break;
+                    case PM3_EOPABORTED :
+                        PrintAndLogEx(WARNING, "aborted via keyboard.");
                         break;
                     case PM3_ESOFT :
                         continue;
@@ -1605,7 +1608,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "time in static nested: %.0f seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in static nested: " _YELLOW_("%.0f") "seconds\n", (float)t1 / 1000.0);
 
 
     // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
@@ -1841,7 +1844,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         uint64_t key64 = 0;
         // check if we can authenticate to sector
         if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
+            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block: %3d  key type: %c", blockNo, keyType ? 'B' : 'A');
             return 3;
         }
     }
@@ -4802,7 +4805,7 @@ static command_t CommandTable[] = {
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack"},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},
-    {"staticnested", CmdHF14AMfNestedStatic, IfPm3Iso14443a,  "Nested attack against static nonce Mifare Classic cards"},
+    {"staticnested", CmdHF14AMfNestedStatic, IfPm3Iso14443a,  "Nested attack against static nonce MIFARE Classic cards"},
     {"autopwn",     CmdHF14AMfAutoPWN,      IfPm3Iso14443a,  "Automatic key recovery tool for MIFARE Classic"},
 //    {"keybrute",    CmdHF14AMfKeyBrute,     IfPm3Iso14443a,  "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
     {"nack",        CmdHf14AMfNack,         IfPm3Iso14443a,  "Test for MIFARE NACK bug"},
