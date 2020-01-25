@@ -1545,6 +1545,10 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
         return PM3_EOPABORTED;
     }
 
+    if (IfPm3Flash()) {
+        PrintAndLogEx(INFO, "RDV4 with flashmemory supported detected.");
+    }
+
     uint64_t t1 = msclock();
 
     e_sector = calloc(SectorsCnt, sizeof(sector_t));
@@ -3987,13 +3991,13 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     CLIParserInit("hf mf cwipe",
                   "Wipe gen1 magic chinese card. Set UID/ATQA/SAK/Data/Keys/Access to default values.",
                   "Usage:\n\thf mf cwipe -> wipe card.\n"
-                  "\thf mfp mf cwipe  -u 09080706 -a 0004 -s 18 -> set UID, ATQA and SAK and wipe card.");
+                  "\thf mf cwipe  -u 09080706 -a 0004 -s 18      -- set UID, ATQA and SAK and wipe card.");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("uU",  "uid",     "<HEX UID (4b)>",  "UID for card"),
-        arg_str0("aA",  "atqa",    "<HEX ATQA (2b)>", "ATQA for card"),
-        arg_str0("sS",  "sak",     "<HEX SAK (1b)>",  "SAK for card"),
+        arg_str0("uU",  "uid",     "<UID (hex 4b)>",  "UID for card"),
+        arg_str0("aA",  "atqa",    "<ATQA (hex 2b)>", "ATQA for card"),
+        arg_str0("sS",  "sak",     "<SAK (hex 1b)>",  "SAK for card"),
         arg_param_end
     };
     CLIExecWithReturn(cmd, argtable, true);
@@ -4008,11 +4012,11 @@ static int CmdHF14AMfCWipe(const char *cmd) {
         return PM3_EINVARG;
     }
     if (atqaLen && atqaLen != 2) {
-        PrintAndLogEx(ERR, "UID length must be 2 bytes instead of: %d", atqaLen);
+        PrintAndLogEx(ERR, "ATQA length must be 2 bytes instead of: %d", atqaLen);
         return PM3_EINVARG;
     }
     if (sakLen && sakLen != 1) {
-        PrintAndLogEx(ERR, "UID length must be 1 byte instead of: %d", sakLen);
+        PrintAndLogEx(ERR, "SAK length must be 1 byte instead of: %d", sakLen);
         return PM3_EINVARG;
     }
 
