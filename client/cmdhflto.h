@@ -15,6 +15,7 @@
 
 int infoLTO(bool verbose);
 int rdblLTO(uint8_t st_blk, uint8_t end_blk, bool verbose);
+int wrblLTO(uint8_t blk, uint8_t *data, bool verbose);
 int CmdHFLTO(const char *Cmd);
 
 #endif
