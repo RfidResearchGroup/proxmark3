@@ -45,6 +45,19 @@ static int usage_lto_rdbl(void) {
     return PM3_SUCCESS;
 }
 
+static int usage_lto_wrbl(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf lto wrbl [h] b <block> d <data>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h     this help");
+    PrintAndLogEx(NORMAL, "           b     block address (decimal, 0 - 254) ");
+    PrintAndLogEx(NORMAL, "           d     32 bytes of data to write (64 hex characters, no space)");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "           hf lto wrbl b 128 d 0001020304050607080910111213141516171819202122232425262728293031 - write 00..31 to block address 128");
+    PrintAndLogEx(NORMAL, "           Use 'hf lto rdbl' for verification");
+    return PM3_SUCCESS;
+}
+
 static void lto_switch_off_field(void) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
 }
@@ -179,17 +192,15 @@ static int CmdHfLTOList(const char *Cmd) {
 
 static int lto_rdbl(uint8_t blk, uint8_t *block_responce, uint8_t *block_cnt_responce, bool verbose) {
 
-    uint16_t resp_len;
+    uint16_t resp_len = 18;
     uint8_t rdbl_cmd[] = {0x30, blk};
     uint8_t rdbl_cnt_cmd[] ={0x80};
 
-    resp_len = 18;
     int status = lto_send_cmd_raw(rdbl_cmd, sizeof(rdbl_cmd), block_responce, &resp_len, true, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT ) {
         return PM3_EWRONGANSVER; // READ BLOCK failed
     }
 
-    resp_len = 18;
     status = lto_send_cmd_raw(rdbl_cnt_cmd, sizeof(rdbl_cnt_cmd), block_cnt_responce, &resp_len, false, false, verbose);
     if (status == PM3_ETIMEOUT || status == PM3_ESOFT ) {
         return PM3_EWRONGANSVER; // READ BLOCK CONTINUE failed
@@ -284,12 +295,115 @@ static int CmdHfLTOReadBlock(const char *Cmd) {
     return rdblLTO(st_blk, end_blk, true);
 }
 
+static int lto_wrbl(uint8_t blk, uint8_t *data, bool verbose) {
+
+    uint8_t resp[] = {0, 0};
+    uint16_t resp_len = 1;
+    uint8_t wrbl_cmd[] = {0xA0, blk};
+    uint8_t wrbl_d00_d15[16];
+    uint8_t wrbl_d16_d31[16];
+
+    for (int i = 0; i < 16; i++) {
+        wrbl_d00_d15[i] = data[i];
+        wrbl_d16_d31[i] = data[i+16];
+    }
+
+    int status = lto_send_cmd_raw(wrbl_cmd, sizeof(wrbl_cmd), resp, &resp_len, true, false, verbose);
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
+        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+    }
+
+    status = lto_send_cmd_raw(wrbl_d00_d15, sizeof(wrbl_d00_d15), resp, &resp_len, true, false, verbose);
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
+        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+    }
+
+    status = lto_send_cmd_raw(wrbl_d16_d31, sizeof(wrbl_d16_d31), resp, &resp_len, true, false, verbose);
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT || resp[0] != 0x0A) {
+        return PM3_EWRONGANSVER; // WRITE BLOCK failed
+    }
+
+    return PM3_SUCCESS;
+}
+
+int wrblLTO(uint8_t blk, uint8_t *data, bool verbose) {
+
+    clearCommandBuffer();
+                                                                                                                                                                                                                                                 lto_switch_on_field();
+
+    uint8_t serial_number[5];
+    uint8_t serial_len = sizeof(serial_number);
+    uint8_t type_info[2];
+    int ret_val = lto_select(serial_number, serial_len, type_info, verbose);
+
+    if (ret_val != PM3_SUCCESS) {
+        lto_switch_off_field();
+        return ret_val;
+    }
+
+    ret_val = lto_wrbl(blk, data, verbose);
+    lto_switch_off_field();
+
+    if (ret_val == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "BLK%03d: " _YELLOW_("Write Success"), blk);
+    } else {
+        PrintAndLogEx(WARNING, "BLK%03d: Write Error. Maybe this is a read-only block address.",  blk);
+    }
+
+    return ret_val;
+}
+
+static int CmdHfLTOWriteBlock(const char *Cmd) {
+
+    uint8_t cmdp = 0;
+    bool errors = false;
+    bool b_opt_selected = false;
+    bool d_opt_selected = false;
+    uint8_t blk = 128;
+    uint8_t blkData[32] = {0};
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lto_wrbl();
+            case 'b':
+                blk = param_get8(Cmd, cmdp+1);
+                b_opt_selected = true;
+                cmdp += 2;
+                break;
+            case 'd':
+                if (param_gethex(Cmd, cmdp+1, blkData, 64)) {
+                    PrintAndLogEx(WARNING, "BlockData must include 64 HEX symbols");
+                    errors = true;
+		    break;
+                }
+                d_opt_selected = true;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    //Validations
+    if (errors) {
+        usage_lto_wrbl();
+        return PM3_EINVARG;
+    } else if (b_opt_selected == false || d_opt_selected == false) {
+        PrintAndLogEx(WARNING, "Need to specify block address and data. See usage, h option");
+        return PM3_EINVARG;
+    }
+
+    return wrblLTO(blk, blkData, true);
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,             AlwaysAvailable, "This help"},
     {"info",    CmdHfLTOInfo,        IfPm3Iso14443a, "Tag information"},
     {"rdbl",    CmdHfLTOReadBlock,   IfPm3Iso14443a, "Read block"},
-//    {"wrbl",    CmdHfLTOWriteBlock,  IfPm3Iso14443a, "Write block"},
-//    {"sim",     CmdHfLTOSim,         IfPm3Iso14443a, "<uid> Simulate LTO-CM tag"},
+    {"wrbl",    CmdHfLTOWriteBlock,  IfPm3Iso14443a, "Write block"},
     {"list",    CmdHfLTOList,        AlwaysAvailable, "List LTO-CM history"},
     {NULL, NULL, NULL, NULL}
 };
