@@ -29,11 +29,8 @@ reg [7:0] pck_divider;
 reg clk_state;
 
 // Antenna logic, depending on "lf_field" (in arm defined as FPGA_LF_READER_FIELD)
-wire tag_modulation;
-assign tag_modulation = ssp_dout & !lf_field;
-
-wire reader_modulation;
-assign reader_modulation = !ssp_dout & lf_field & clk_state;
+wire tag_modulation = ssp_dout & !lf_field;
+wire reader_modulation = !ssp_dout & lf_field & clk_state;
 
 // always on (High Frequency outputs, unused)
 assign pwr_oe1 = 1'b0;
