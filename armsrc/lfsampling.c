@@ -106,25 +106,31 @@ BitstreamOut data = {0, 0, 0};
 sampling_t samples = {0, 0, 0, 0};
 
 void initSampleBuffer(uint32_t *sample_size) {
+    initSampleBufferEx(sample_size, false);
+}
+
+void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
 
     BigBuf_free();
-// We can't erase the buffer now, it would drastically delay the acquisition
-//    BigBuf_Clear_ext(false);
 
-    if (sample_size == NULL || *sample_size == 0) {
-        *sample_size = BigBuf_max_traceLen();
+    // We can't erase the buffer now, it would drastically delay the acquisition
 
-        data.buffer = BigBuf_get_addr();
+    if (use_malloc) {
 
-// We can't erase the buffer now, it would drastically delay the acquisition
-//        memset(data.buffer, 0, *sample_size);
+        if (sample_size == NULL || *sample_size == 0 ) {
+           *sample_size = BigBuf_max_traceLen();
+            data.buffer = BigBuf_get_addr();
+        } else {
+            *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
+            data.buffer = BigBuf_malloc(*sample_size);
+
+        }
+
     } else {
-        *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
-
-        data.buffer = BigBuf_malloc(*sample_size);
-
-// We can't erase the buffer now, it would drastically delay the acquisition
-//        memset(data.buffer, 0, *sample_size);
+        if (sample_size == NULL || *sample_size == 0 ) {
+            *sample_size = BigBuf_max_traceLen();
+        }
+        data.buffer = BigBuf_get_addr();
     }
 
     //

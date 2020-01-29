@@ -51,14 +51,15 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
     size_t periods = 0;
     volatile uint8_t adc_val;
     //uint8_t avg_peak = 140, avg_through = 96;
-    uint8_t avg_peak = 130, avg_through = 106;
+    // 140 - 127 - 114
+    uint8_t avg_peak = 140, avg_through = 106;
     int16_t checked = 0;
 
-    while (true) {
+    while (!BUTTON_PRESS()) {
 
-        // only every 1000th times, in order to save time when collecting samples.
+        // only every 100th times, in order to save time when collecting samples.
         if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
+            if (data_available()) {
                 checked = -1;
                 break;
             } else {
@@ -100,7 +101,7 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             }
 
             previous_adc_val = adc_val;
-            if (periods == max) return 0;
+            if (periods >= max) return 0;
         }
     }
     if (logging) logSampleSimple(0xFF);
@@ -136,7 +137,10 @@ void lf_wait_periods(size_t periods) {
     lf_count_edge_periods_ex(periods, true, false);
 }
 
-void lf_init(bool reader) {
+void lf_init(bool reader, bool simulate) {
+
+    StopTicks();
+
     reader_mode = reader;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -145,7 +149,12 @@ void lf_init(bool reader) {
     if (reader) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
     } else {
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+        if (simulate)
+//            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+        else
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+
     }
 
     // Connect the A/D to the peak-detected low-frequency path.
@@ -186,11 +195,12 @@ void lf_init(bool reader) {
     // Prepare data trace
     uint32_t bufsize = 20000;
 
-    if (logging) initSampleBuffer(&bufsize);
+    // use malloc
+    if (logging) initSampleBufferEx(&bufsize, true);
 
     sample_config *sc = getSamplingConfig();
-    sc->decimation = 2;
-    sc->averaging = 1;
+    sc->decimation = 1;
+    sc->averaging = 0;
 }
 
 void lf_finalize() {
@@ -209,6 +219,8 @@ void lf_finalize() {
     sample_config *sc = getSamplingConfig();
     sc->decimation = 1;
     sc->averaging = 0;
+    
+    StartTicks();
 }
 
 size_t lf_detect_field_drop(size_t max) {
@@ -256,6 +268,7 @@ inline void lf_modulation(bool modulation) {
     }
 }
 
+// simulation
 inline void lf_manchester_send_bit(uint8_t bit) {
     lf_modulation(bit != 0);
     lf_wait_periods(16);
@@ -263,9 +276,16 @@ inline void lf_manchester_send_bit(uint8_t bit) {
     lf_wait_periods(16);
 }
 
+// simulation
 bool lf_manchester_send_bytes(const uint8_t *frame, size_t frame_len) {
 
     LED_B_ON();
+
+    lf_manchester_send_bit(1);
+    lf_manchester_send_bit(1);
+    lf_manchester_send_bit(1);
+    lf_manchester_send_bit(1);
+    lf_manchester_send_bit(1);
 
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {

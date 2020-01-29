@@ -70,6 +70,7 @@ uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size);
  * Refactoring of lf sampling buffer
  */
 void initSampleBuffer(uint32_t *sample_size);
+void initSampleBufferEx(uint32_t *sample_size, bool use_malloc);
 void logSampleSimple(uint8_t sample);
 void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg);
 uint32_t getSampleCounter();
