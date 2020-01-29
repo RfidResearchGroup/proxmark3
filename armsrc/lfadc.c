@@ -60,7 +60,6 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
         // only every 100th times, in order to save time when collecting samples.
         if (checked == 1000) {
             if (data_available()) {
-                checked = -1;
                 break;
             } else {
                 checked = 0;
@@ -77,7 +76,7 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             if (logging) logSampleSimple(adc_val);
 
             // Only test field changes if state of adc values matter
-            if (!wait) {
+            if (wait == false) {
                 // Test if we are locating a field modulation (100% ASK = complete field drop)
                 if (detect_gap) {
                     // Only return when the field completely dissapeared
@@ -131,6 +130,9 @@ void lf_reset_counter() {
 
 bool lf_get_tag_modulation() {
     return (rising_edge == false);
+}
+bool lf_get_reader_modulation() {
+    return rising_edge;    
 }
 
 void lf_wait_periods(size_t periods) {
@@ -228,11 +230,11 @@ size_t lf_detect_field_drop(size_t max) {
     volatile uint8_t adc_val;
     int16_t checked = 0;
 
-    while (true) {
+    while (!BUTTON_PRESS()) {
 
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
+            if (data_available()) {
                 checked = -1;
                 break;
             } else {

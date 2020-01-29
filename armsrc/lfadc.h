@@ -21,7 +21,10 @@ bool lf_test_periods(size_t expected, size_t count);
 size_t lf_count_edge_periods(size_t max);
 size_t lf_detect_gap(size_t max);
 void lf_reset_counter();
+
 bool lf_get_tag_modulation();
+bool lf_get_reader_modulation();
+
 void lf_wait_periods(size_t periods);
 //void lf_init(bool reader);
 void lf_init(bool reader, bool simulate);
