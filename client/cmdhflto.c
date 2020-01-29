@@ -20,6 +20,9 @@
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "protocols.h"
+#include "fileutils.h"  //saveFile
+
+#define CM_MEM_MAX_SIZE     0x1FE0  // (32byte/block * 255block = 8160byte)
 
 static int CmdHelp(const char *Cmd);
 
@@ -55,6 +58,17 @@ static int usage_lto_wrbl(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "           hf lto wrbl b 128 d 0001020304050607080910111213141516171819202122232425262728293031 - write 00..31 to block address 128");
     PrintAndLogEx(NORMAL, "           Use 'hf lto rdbl' for verification");
+    return PM3_SUCCESS;
+}
+
+static int usage_lto_dump(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf lto dump [h|p] f <filename>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h     this help");
+    PrintAndLogEx(NORMAL, "           f     file name");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "           hf lto dump f myfile");
     return PM3_SUCCESS;
 }
 
@@ -386,7 +400,7 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
                 break;
         }
     }
-
+	
     //Validations
     if (errors) {
         usage_lto_wrbl();
@@ -399,20 +413,60 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
     return wrblLTO(blk, blkData, true);
 }
 
-/*
+int dumpLTO(uint8_t *serial_number, uint8_t serial_len, uint8_t *dump, bool verbose) {
+
+    clearCommandBuffer();
+    lto_switch_on_field();
+
+    uint8_t type_info[2];
+    int ret_val = lto_select(serial_number, serial_len, type_info, verbose);
+
+    if (ret_val != PM3_SUCCESS) {
+        lto_switch_off_field();
+        return ret_val;
+    }
+
+    uint8_t block_data_d00_d15[18];
+    uint8_t block_data_d16_d31[18];
+
+    for(uint8_t i = 0; i < 255; i++) {
+
+        ret_val = lto_rdbl(i, block_data_d00_d15,  block_data_d16_d31, verbose);
+
+        if (ret_val == PM3_SUCCESS) {
+            //Remove CRCs
+            for (int t = 0; t < 16; t++) {
+                dump[t + i * 32] = block_data_d00_d15[t];
+                dump[t + i * 32 + 16] = block_data_d16_d31[t];
+            }
+        } else {
+            lto_switch_off_field();
+            return ret_val;
+        }
+    }
+
+    lto_switch_off_field();
+    return ret_val;
+}
+
 static int CmdHfLTODump(const char *Cmd) {
 
     uint8_t cmdp = 0;
     bool errors = false;
-    uint8_t blk = 128;
+    uint32_t dump_len = CM_MEM_MAX_SIZE;
+    char filename[FILE_PATH_SIZE] = {0};
+    uint8_t serial_number[5] = {0};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_lto_dump();
-            case 'b':
-                blk = param_get8(Cmd, cmdp+1);
-                b_opt_selected = true;
+            case 'f':
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "filename too long");
+                    errors = true;
+                    break;
+                }
                 cmdp += 2;
                 break;
             default:
@@ -428,19 +482,36 @@ static int CmdHfLTODump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-// alloc memory
-// loop all blocks
-// save to file
-// free memory
+    // alloc memory
+    uint8_t *dump = calloc(dump_len, sizeof(uint8_t));
+    if (!dump) {
+        PrintAndLogEx(ERR, "error, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // loop all blocks
+    int ret_val = dumpLTO(serial_number, sizeof(serial_number), dump, true);
+    if (ret_val != PM3_SUCCESS) {
+        free(dump);
+        return ret_val; 
+    }
+
+    // save to file 
+    if (filename[0] == '\0') {
+        memcpy(filename, sprint_hex_inrow(serial_number, sizeof(serial_number)), sizeof(serial_number) * 2);
+    }
+    saveFile(filename, ".bin", dump, dump_len);
+    saveFileEML(filename, dump, dump_len, 32);
+
+    // free memory
+    free(dump);
 
     return PM3_SUCCESS;
 }
-*/
-
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,             AlwaysAvailable, "This help"},
-//    {"dump",     CmdHfLTDump,         IfPm3Iso14443a, "Dump LTO-CM tag to file"},
+    {"dump",     CmdHfLTODump,         IfPm3Iso14443a, "Dump LTO-CM tag to file"},
 //    {"restore",  CmdHfLTRestore,      IfPm3Iso14443a, "Restore dump file to LTO-CM tag"},
     {"info",     CmdHfLTOInfo,        IfPm3Iso14443a, "Tag information"},
     {"rdbl",     CmdHfLTOReadBlock,   IfPm3Iso14443a, "Read block"},
