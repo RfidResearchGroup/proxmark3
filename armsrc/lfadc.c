@@ -215,11 +215,11 @@ void lf_finalize() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     LEDsoff();
-    
+
     sample_config *sc = getSamplingConfig();
     sc->decimation = 1;
     sc->averaging = 0;
-    
+
     StartTicks();
 }
 
@@ -260,7 +260,7 @@ size_t lf_detect_field_drop(size_t max) {
     return 0;
 }
 
-inline void lf_modulation(bool modulation) {
+void lf_modulation(bool modulation) {
     if (modulation) {
         HIGH(GPIO_SSC_DOUT);
     } else {
@@ -269,7 +269,7 @@ inline void lf_modulation(bool modulation) {
 }
 
 // simulation
-inline void lf_manchester_send_bit(uint8_t bit) {
+static void lf_manchester_send_bit(uint8_t bit) {
     lf_modulation(bit != 0);
     lf_wait_periods(16);
     lf_modulation(bit == 0);
