@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf lto dump` - dump 8160 bytes of data from LTO cartridge memory and save to file (@Kevin-Nakamoto)
  - Change `data plot` - write serial port name in window title for plot / slider window (@iceman1001)
  - Added `hf lto wrbl` - write block support for LTO Cartridge memory (@Kevin-Nakamoto)
  - Fix compilation under openSUSE (@hsanjuan)
