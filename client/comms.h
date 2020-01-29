@@ -44,6 +44,7 @@ typedef enum {
     FPGA_MEM,
 } DeviceMemType_t;
 
+
 typedef struct {
     bool run; // If TRUE, continue running the uart_communication thread
     bool block_after_ACK; // if true, block after receiving an ACK package
@@ -59,6 +60,8 @@ typedef struct {
 } communication_arg_t;
 
 extern communication_arg_t conn;
+
+extern uint8_t gui_serial_port_name[FILE_PATH_SIZE];
 
 void *uart_receiver(void *targ);
 void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);

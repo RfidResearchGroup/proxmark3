@@ -24,6 +24,8 @@
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
 
+uint8_t gui_serial_port_name[FILE_PATH_SIZE];
+
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
 
@@ -568,6 +570,9 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
             uint16_t len = MIN(strlen(portname), FILE_PATH_SIZE - 1);
             memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
             memcpy(conn.serial_port_name, portname, len);
+
+            memset(gui_serial_port_name, 0, FILE_PATH_SIZE);
+            memcpy(gui_serial_port_name, portname, len);
         }
         conn.run = true;
         conn.block_after_ACK = flash_mode;

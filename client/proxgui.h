@@ -18,6 +18,7 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+//#include "comms.h"
 
 void ShowGraphWindow(void);
 void HideGraphWindow(void);
@@ -54,6 +55,12 @@ extern size_t DemodBufferLen;
 extern size_t g_DemodStartIdx;
 extern bool showDemod;
 extern uint8_t g_debugMode;
+
+
+#ifndef FILE_PATH_SIZE
+#define FILE_PATH_SIZE 1000
+#endif
+extern uint8_t gui_serial_port_name[FILE_PATH_SIZE];
 
 #ifdef __cplusplus
 }
