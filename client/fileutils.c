@@ -1016,7 +1016,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         if (line[0] == '#')
             continue;
 
-        if (CheckStringIsHEXValue(line))
+        if (!CheckStringIsHEXValue(line))
             continue;
 
         uint64_t key = strtoull(line, NULL, 16);
