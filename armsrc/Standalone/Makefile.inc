@@ -37,3 +37,7 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_14ASNIFF,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_14asniff.c
 endif
+# WITH_STANDALONE_LF_ICEHID
+ifneq (,$(findstring WITH_STANDALONE_LF_ICEHID,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_icehid.c
+endif
