@@ -34,10 +34,10 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     bool first_run = true;
 
     // message
-    PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
-    PrintAndLogEx(NORMAL, "executing Darkside attack. Expected execution time: 25sec on average");
-    PrintAndLogEx(NORMAL, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.");
-    PrintAndLogEx(NORMAL, "--------------------------------------------------------------------------------\n");
+    PrintAndLogEx(INFO, "--------------------------------------------------------------------------------\n");
+    PrintAndLogEx(INFO, "executing Darkside attack. Expected execution time: 25sec on average");
+    PrintAndLogEx(INFO, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.");
+    PrintAndLogEx(INFO, "--------------------------------------------------------------------------------\n");
 
     while (true) {
         clearCommandBuffer();
@@ -288,9 +288,17 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key) {
     uint8_t retry = 10;
 
     while (!WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2000)) {
+
+        //flush queue
+        while (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            return PM3_EOPABORTED;
+        }
+
         retry--;
-        if (retry ==0) {
+        if (retry == 0) {
             PrintAndLogEx(WARNING, "Chk keys file, timeouted");
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             return PM3_ETIMEOUT;
         }
     }
@@ -536,11 +544,11 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             return -5;
         }
 
-        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (float)(msclock() - start_time) * 1000.0;
-        start_time = msclock();
+        uint64_t t2 = msclock();
+        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (float)(t2 - start_time) * 1000.0;
 
         if ( i + 1 % 10 == 0)
-            PrintAndLogEx(INFO, " %8d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt , bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+            PrintAndLogEx(INFO, " %6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt , bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
 
     }
 
@@ -643,8 +651,8 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
-    uint32_t maxkeysinblock = IfPm3Flash() ? 1600 : KEYS_IN_BLOCK;
-    uint32_t max_keys_slice = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
+    uint32_t maxkeysinblock = IfPm3Flash() ? 1000 : KEYS_IN_BLOCK;
+    uint32_t max_keys_chunk = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
     uint8_t *mem = calloc( (maxkeysinblock * 6) + 5, sizeof(uint8_t));
     if (mem == NULL) {
@@ -656,22 +664,27 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     mem[0] = statelists[0].keyType;
     mem[1] = statelists[0].blockNo;
     mem[2] = 1;
-    mem[3] = ((maxkeysinblock >> 8) & 0xFF);
-    mem[4] = (maxkeysinblock & 0xFF);
+    mem[3] = ((max_keys_chunk >> 8) & 0xFF);
+    mem[4] = (max_keys_chunk & 0xFF);
 
     uint8_t destfn[32];
     strncpy((char*)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
 
-    for (uint32_t i = 0; i < keycnt; i += max_keys_slice) {
+    uint64_t start_time = msclock();
+    for (uint32_t i = 0; i < keycnt; i += max_keys_chunk) {
+
+        //flush queue
+        while (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            return PM3_EOPABORTED;
+        }
 
         int res = 0;
-        uint64_t start_time = msclock();
-
         key64 = 0;
-        uint32_t size = keycnt - i > max_keys_slice ? max_keys_slice : keycnt - i;
+        uint32_t chunk = keycnt - i > max_keys_chunk ? max_keys_chunk : keycnt - i;
 
         // copy x keys to device.
-        for (uint32_t j = 0; j < size; j++) {
+        for (uint32_t j = 0; j < chunk; j++) {
             crypto1_get_lfsr(statelists[0].head.slhead + i + j, &key64);
             num_to_bytes(key64, 6, p_keyblock + j * 6);
         }
@@ -679,7 +692,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         // check a block of generated candidate keys.
         if (IfPm3Flash()) {
              // upload to flash.
-            res = flashmem_spiffs_load(destfn, mem, 5 + (size * 6) );
+            res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6) );
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "SPIFFS upload failed");
                 return res;
@@ -687,7 +700,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
             res = mfCheckKeys_file(destfn, &key64);
         } else {
-            res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, size, mem, &key64);
+            res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, chunk, mem, &key64);
         }
 
         if (res == PM3_SUCCESS) {
@@ -703,14 +716,14 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
                           sprint_hex_inrow(resultKey, 6)
                          );
             return PM3_SUCCESS;
-        } else if (res == PM3_ETIMEOUT) {
+        } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
             return res;
         }
 
-        float bruteforce_per_second = (float)maxkeysinblock / (float)(msclock() - start_time) * 1000.0;
-        start_time = msclock();
-
-        PrintAndLogEx(INFO, "Chunk %8u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+//        if (i%10 == 0) {
+            float bruteforce_per_second = (float)i + max_keys_chunk / (float)(msclock() - start_time) * 1000.0;
+            PrintAndLogEx(INFO, "Chunk %6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+//        }
     }
 
     p_keyblock = NULL;
