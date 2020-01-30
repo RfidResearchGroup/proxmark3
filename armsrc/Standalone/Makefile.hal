@@ -35,13 +35,16 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
 | (RDV4 only)     | storing in flashmem - Bogito           |
 +----------------------------------------------------------+
+| HF_14ASNIFF     | 14a sniff to flashmem                  |
+| (RDV4 only)     |                                        |
++----------------------------------------------------------+
 
 endef
 
 STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE
-STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG
+STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG HF_14ASNIFF
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG
+STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG HF_14ASNIFF
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)
