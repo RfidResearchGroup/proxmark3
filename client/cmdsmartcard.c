@@ -54,7 +54,7 @@ static int usage_sm_reader(void) {
     return 0;
 }
 static int usage_sm_info(void) {
-    PrintAndLogEx(NORMAL, "Usage: s info [h|s]");
+    PrintAndLogEx(NORMAL, "Usage: sc info [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
     PrintAndLogEx(NORMAL, "");
