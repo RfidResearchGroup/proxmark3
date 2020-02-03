@@ -142,10 +142,6 @@ clone_script:
  
     ExecUpdate "update2"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
     
-    bash -c -i 'pacman -S mingw-w64-i686-readline mingw-w64-i686-gcc git make pkg-config mingw-w64-i686-qt5 --noconfirm' 2>&1>$null
-    
-    bash -c -i 'pacman -Suu --noconfirm' 2>&1>$null
-
     Write-Host "Update " -NoNewLine
     
     Write-Host "[ OK ]" -ForegroundColor Green
