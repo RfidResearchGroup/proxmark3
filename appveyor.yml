@@ -43,12 +43,15 @@ clone_script:
     Write-Host "[ OK ]" -ForegroundColor Green
 
 
-    Write-Host "Removing pm3 dir..." -NoNewLine
+    if(Test-Path -Path C:\ProxSpace\pm3){
 
-    Remove-Item -Recurse -Force -Path c:\ProxSpace\pm3\*
+        Write-Host "Removing pm3 dir..." -NoNewLine
 
-    Write-Host "[ OK ]" -ForegroundColor Green
+        Remove-Item -Recurse -Force -Path C:\ProxSpace\pm3\*
 
+        Write-Host "[ OK ]" -ForegroundColor Green
+
+    }
 
     Write-Host "Cloning repository <$env:appveyor_repo_name> to $env:appveyor_build_folder ..." -NoNewLine
 
