@@ -28,7 +28,8 @@
 #include "loclass/elite_crack.h"
 #include "fileutils.h"
 #include "protocols.h"
-
+#include "wiegand_formats.h"
+#include "wiegand_formatutils.h"
 
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
@@ -918,6 +919,17 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
+        
+        uint32_t top = 0, mid, bot;
+        mid = bytes_to_num(decrypted + (8*7), 4);
+        bot = bytes_to_num(decrypted + (8*7) + 4, 4);
+
+        PrintAndLogEx(INFO, "");        
+        PrintAndLogEx(INFO, "block 7 - Wiegand decode");
+        wiegand_message_t packed = initialize_message_object(top, mid, bot);
+        HIDTryUnpack(&packed, true);
+        PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+    
         free(decrypted);
         free(fptr);
     }
@@ -1871,13 +1883,13 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     //PrintAndLog ("startblock: %d, endblock: %d, filesize: %d, maxmemcount: %d, filemaxblock: %d",startblock, endblock,filesize, maxmemcount, filemaxblock);
 
     int i = startblock;
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
-        PrintAndLogEx(NORMAL, "      |%02X| %s", i, sprint_hex_ascii(blk, 8));
+        PrintAndLogEx(INFO, "      |%02X| %s", i, sprint_hex_ascii(blk, 8));
         i++;
     }
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
 }
 
 static int CmdHFiClassReadTagFile(const char *Cmd) {
