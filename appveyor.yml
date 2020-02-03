@@ -144,6 +144,8 @@ clone_script:
         Remove-Job -Force $Job
     }
     
+    cd C:\ProxSpace\
+    
     C:\ProxSpace\msys2\ps\setup.cmd
 
     ExecUpdate "update1"  "C:\ProxSpace\msys2\msys2_shell.cmd -mingw32 -defterm -no-start /dev/null"  "terminate?MSYS2"
