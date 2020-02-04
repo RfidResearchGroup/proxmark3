@@ -1656,7 +1656,7 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
         return errCnt;
     }
 
-    prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
+    if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
 
     int lastBit;  //set first clock check - can go negative
     size_t i, bitnum = 0;     //output counter
