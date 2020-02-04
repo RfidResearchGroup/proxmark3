@@ -101,7 +101,7 @@ uint32_t IceEM410xdemod() {
         return PM3_ESOFT;
     }
 
-    uint8_t entry[60];
+    uint8_t entry[81];
     memset(entry, 0, sizeof(entry));
 
     if (size == 128) {
