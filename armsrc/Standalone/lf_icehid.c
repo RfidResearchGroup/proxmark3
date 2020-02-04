@@ -105,7 +105,7 @@ uint32_t IceEM410xdemod() {
     memset(entry, 0, sizeof(entry));
 
     if (size == 128) {
-        sprintf((char *)entry, "EM XL TAG ID: %06lx%08lx%08lx - (%05ld_%03ld_%08ld)",
+        sprintf((char *)entry, "EM XL TAG ID: %06lx%08lx%08lx - (%05ld_%03ld_%08ld)\n",
                  hi,
                  (uint32_t)(lo >> 32),
                  (uint32_t)lo,
@@ -113,7 +113,7 @@ uint32_t IceEM410xdemod() {
                  (uint32_t)((lo >> 16LL) & 0xFF),
                  (uint32_t)(lo & 0xFFFFFF));
     } else {
-        sprintf((char *)entry, "EM TAG ID: %02lx%08lx - (%05ld_%03ld_%08ld)",
+        sprintf((char *)entry, "EM TAG ID: %02lx%08lx - (%05ld_%03ld_%08ld)\n",
                  (uint32_t)(lo >> 32),
                  (uint32_t)lo,
                  (uint32_t)(lo & 0xFFFF),
@@ -122,8 +122,6 @@ uint32_t IceEM410xdemod() {
     }
 
     append(entry, strlen((char*)entry));
-    Dbprintf("strlen %d", strlen((char*)entry));
-
     Dbprintf("%s", entry);
     BigBuf_free();
     return PM3_SUCCESS;
@@ -162,16 +160,16 @@ uint32_t IceAWIDdemod() {
         uint8_t fac = bytebits_to_byte(dest + 9, 8);
         uint32_t cardnum = bytebits_to_byte(dest + 17, 16);
         uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen);
-        sprintf((char *)entry, "AWID bit len: %d, FC: %d, Card: %ld - Wiegand: %lx, Raw: %08lx%08lx%08lx \n", fmtLen, fac, cardnum, code1, rawHi2, rawHi, rawLo);
+        sprintf((char *)entry, "AWID bit len: %d, FC: %d, Card: %ld - Wiegand: %lx, Raw: %08lx%08lx%08lx\n", fmtLen, fac, cardnum, code1, rawHi2, rawHi, rawLo);
     } else {
         uint32_t cardnum = bytebits_to_byte(dest + 8 + (fmtLen - 17), 16);
         if (fmtLen > 32) {
             uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen - 32);
             uint32_t code2 = bytebits_to_byte(dest + 8 + (fmtLen - 32), 32);
-            sprintf((char *)entry, "AWID bit len: %d -unk bit len - Card: %ld - Wiegand: %lx%08lx, Raw: %08lx%08lx%08lx \n", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            sprintf((char *)entry, "AWID bit len: %d -unk bit len - Card: %ld - Wiegand: %lx%08lx, Raw: %08lx%08lx%08lx\n", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
         } else {
             uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen);
-            sprintf((char *)entry, "AWID bit len: %d -unk bit len - Card: %ld - Wiegand: %lx, Raw: %08lx%08lx%08lx \n", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+            sprintf((char *)entry, "AWID bit len: %d -unk bit len - Card: %ld - Wiegand: %lx, Raw: %08lx%08lx%08lx\n", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
         }
     }
 
@@ -184,8 +182,8 @@ uint32_t IceAWIDdemod() {
 uint32_t IceIOdemod() {
 
     int dummyIdx = 0;
-    uint8_t version = 0, facilitycode = 0, crc = 0;
-    uint16_t number = 0, calccrc = 0;
+    uint8_t version = 0, facilitycode = 0;
+    uint16_t number = 0;
     uint32_t hi = 0, lo = 0;
 
     size_t size = MIN(12000, BigBuf_max_traceLen());
@@ -208,31 +206,19 @@ uint32_t IceIOdemod() {
     facilitycode = bytebits_to_byte(dest + idx + 18, 8);
     number = (bytebits_to_byte(dest + idx + 36, 8) << 8) | (bytebits_to_byte(dest + idx + 45, 8)); //36,9
 
-    crc = bytebits_to_byte(dest + idx + 54, 8);
-    for (uint8_t i = 1; i < 6; ++i)
-        calccrc += bytebits_to_byte(dest + idx + 9 * i, 8);
-
-    calccrc &= 0xff;
-    calccrc = 0xff - calccrc;
-
-    char *crcStr = (crc == calccrc) ? "ok" : "!crc";
-
     uint8_t entry[64];
     memset(entry, 0, sizeof(entry));
 
-    sprintf((char *)entry, "IO Prox XSF(%02d)%02x:%05d (%08lx%08lx)  [%02x %s] \n"
+    sprintf((char *)entry, "IO Prox XSF(%02d)%02x:%05d (%08lx%08lx)\n"
          , version
          , facilitycode
          , number
          , hi
          , lo
-         , crc
-         , crcStr
         );
-    
+
     append(entry, strlen((char*)entry));
     Dbprintf("%s", entry);
-
     BigBuf_free();
     return PM3_SUCCESS;
 }
@@ -263,7 +249,7 @@ uint32_t IceHIDDemod() {
         // go over previously decoded manchester data and decode into usable tag ID
         if (hi2 != 0) { //extra large HID tags  88/192 bits
 
-            sprintf((char *)entry, "HID large: %lx%08lx%08lx (%ld) \n",
+            sprintf((char *)entry, "HID large: %lx%08lx%08lx (%ld)\n",
                      hi2,
                      hi,
                      lo,
@@ -271,7 +257,7 @@ uint32_t IceHIDDemod() {
                     );
 
             append(entry, strlen((char*)entry));
-            
+
         } else {  //standard HID tags 44/96 bits
             uint8_t bitlen = 0;
             uint32_t fac = 0;
@@ -309,8 +295,8 @@ uint32_t IceHIDDemod() {
                 cardnum = (lo >> 1) & 0x7FFFF;
                 fac = ((hi & 0xF) << 12) | (lo >> 20);
             }
-  
-            sprintf((char *)entry, "HID: %lx%08lx (%ld) Format: %d bit FC: %ld Card: %ld \n",
+
+            sprintf((char *)entry, "HID: %lx%08lx (%ld) Format: %d bit FC: %ld Card: %ld\n",
                      hi,
                      lo,
                      (lo >> 1) & 0xFFFF,
@@ -318,7 +304,7 @@ uint32_t IceHIDDemod() {
                      fac,
                      cardnum
                     );
-            
+
             append(entry, strlen((char*)entry));
         }
 
@@ -330,7 +316,7 @@ uint32_t IceHIDDemod() {
 }
 
 void ModInfo(void) {
-    DbpString("  LF HID / IOprox / AWID / EM4100 collector mode -  a.k.a IceHID (Iceman)");
+    DbpString(_YELLOW_("  LF HID / IOprox / AWID / EM4100 collector mode") " - a.k.a IceHID (Iceman)");
 }
 
 void RunMod() {
@@ -341,7 +327,7 @@ void RunMod() {
 
     StandAloneMode();
 
-    Dbprintf("[=] LF HID collector a.k.a IceHID started");
+    Dbprintf(_YELLOW_("[=] Standalone mode IceHID started"));
 
     rdv40_spiffs_lazy_mount();
 
