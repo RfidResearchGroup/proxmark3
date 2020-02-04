@@ -183,6 +183,7 @@ build_script:
 
     $env:MSYSTEM_CHOST="i686-w64-mingw32"
 
+    cd C:\ProxSpace\pm3
 
     #make
 
