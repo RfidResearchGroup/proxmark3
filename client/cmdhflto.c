@@ -72,6 +72,17 @@ static int usage_lto_dump(void) {
     return PM3_SUCCESS;
 }
 
+static int usage_lto_restore(void) {
+    PrintAndLogEx(NORMAL, "Usage:  hf lto restore [h] f <filename>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "           h     this help");
+    PrintAndLogEx(NORMAL, "           f     file name [.bin|.eml]");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "           hf lto restore f hf_lto_92C7842CFF.bin|.eml");
+    return PM3_SUCCESS;
+}
+
 static void lto_switch_off_field(void) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
 }
@@ -179,7 +190,6 @@ static int CmdHfLTOInfo(const char *Cmd) {
 int infoLTO(bool verbose) {
 
     clearCommandBuffer();
-
     lto_switch_on_field();
 
     uint8_t serial_number[5];
@@ -226,7 +236,6 @@ static int lto_rdbl(uint8_t blk, uint8_t *block_responce, uint8_t *block_cnt_res
 int rdblLTO(uint8_t st_blk, uint8_t end_blk, bool verbose) {
 
     clearCommandBuffer();
-
     lto_switch_on_field();
 
     uint8_t serial_number[5];
@@ -343,7 +352,7 @@ static int lto_wrbl(uint8_t blk, uint8_t *data, bool verbose) {
 int wrblLTO(uint8_t blk, uint8_t *data, bool verbose) {
 
     clearCommandBuffer();
-                                                                                                                                                                                                                                                 lto_switch_on_field();
+    lto_switch_on_field();
 
     uint8_t serial_number[5];
     uint8_t serial_len = sizeof(serial_number);
@@ -413,11 +422,13 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
     return wrblLTO(blk, blkData, true);
 }
 
-int dumpLTO(uint8_t *serial_number, uint8_t serial_len, uint8_t *dump, bool verbose) {
+int dumpLTO(uint8_t *dump, bool verbose) {
 
     clearCommandBuffer();
     lto_switch_on_field();
 
+    uint8_t serial_number[5];
+    uint8_t serial_len = sizeof(serial_number);
     uint8_t type_info[2];
     int ret_val = lto_select(serial_number, serial_len, type_info, verbose);
 
@@ -455,7 +466,7 @@ static int CmdHfLTODump(const char *Cmd) {
     bool errors = false;
     uint32_t dump_len = CM_MEM_MAX_SIZE;
     char filename[FILE_PATH_SIZE] = {0};
-    uint8_t serial_number[5] = {0};
+    char serial_number[10] = {0};
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -490,7 +501,7 @@ static int CmdHfLTODump(const char *Cmd) {
     }
 
     // loop all blocks
-    int ret_val = dumpLTO(serial_number, sizeof(serial_number), dump, true);
+    int ret_val = dumpLTO(dump, true);
     if (ret_val != PM3_SUCCESS) {
         free(dump);
         return ret_val; 
@@ -498,7 +509,10 @@ static int CmdHfLTODump(const char *Cmd) {
 
     // save to file 
     if (filename[0] == '\0') {
-        memcpy(filename, sprint_hex_inrow(serial_number, sizeof(serial_number)), sizeof(serial_number) * 2);
+        memcpy(serial_number, sprint_hex_inrow(dump, sizeof(serial_number)), sizeof(serial_number) * 2);
+        char tmp_name[17] = "hf_lto_";
+        strcat(tmp_name, serial_number);
+        memcpy(filename, tmp_name, sizeof(tmp_name));
     }
     saveFile(filename, ".bin", dump, dump_len);
     saveFileEML(filename, dump, dump_len, 32);
@@ -509,10 +523,111 @@ static int CmdHfLTODump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int restoreLTO(uint8_t *dump_data, bool verbose) {
+
+    clearCommandBuffer();
+    lto_switch_on_field();
+
+    uint8_t type_info[2];
+    uint8_t serial_number[5];
+    uint8_t serial_len = sizeof(serial_number);
+    int ret_val = lto_select(serial_number, serial_len, type_info, verbose);
+
+    if (ret_val != PM3_SUCCESS) {
+        lto_switch_off_field();
+        return ret_val;
+    }
+
+     uint8_t blkData[32] = {0};
+
+    //Block address 0 and 1 are read-only
+    for(uint8_t blk = 2; blk < 255; blk++) {
+
+        for (int i = 0; i < 32; i++) {
+            blkData[i] = dump_data[i + blk * 32];
+        }
+
+        ret_val = lto_wrbl(blk, blkData, verbose);
+
+        if (ret_val != PM3_SUCCESS) {
+            lto_switch_off_field();
+            return ret_val;
+        }
+    }
+
+    lto_switch_off_field();
+    return ret_val;
+}
+
+static int CmdHfLTRestore(const char *Cmd) {
+
+    uint8_t cmdp = 0;
+    bool errors = false;
+    int is_data_loaded = PM3_ESOFT;
+    
+    char filename[FILE_PATH_SIZE] = {0};
+    char extension[FILE_PATH_SIZE] = {0};
+
+    uint8_t dump_data[CM_MEM_MAX_SIZE] = {0};
+    size_t dump_datalen = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lto_restore();
+            case 'f':
+                param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (strlen(filename) == 0)
+                    errors = true;
+                cmdp += 2;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || (strlen(filename)) == 0) {
+        usage_lto_restore();
+        return PM3_EINVARG;
+    }
+
+    // split file name into prefix and ext.
+    int fnLength;
+
+    fnLength = strlen(filename);
+
+    if (fnLength > 4) {
+        memcpy(extension, &filename[fnLength - 4], 4);
+        extension[5] = 0x00;
+
+        //  check if valid file extension and attempt to load data
+        if (memcmp(extension, ".bin", 4) == 0) {
+            filename[fnLength - 4] = 0x00;
+            is_data_loaded = loadFile(filename, ".bin", dump_data, sizeof(dump_data), &dump_datalen);
+
+        } else if (memcmp(extension, ".eml", 4) == 0) {
+            filename[fnLength - 4] = 0x00;
+            dump_datalen = 12;
+            is_data_loaded = loadFileEML(filename, (uint8_t *)dump_data, &dump_datalen);
+
+        } else
+            PrintAndLogEx(WARNING, "\nWarning: invalid dump filename "_YELLOW_("%s")"to restore!\n", filename);
+    }
+
+    if (is_data_loaded == PM3_SUCCESS) {
+        return restoreLTO(dump_data, true);
+    } else {
+        return PM3_EFILE;
+    }
+    
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,             AlwaysAvailable, "This help"},
-    {"dump",     CmdHfLTODump,         IfPm3Iso14443a, "Dump LTO-CM tag to file"},
-//    {"restore",  CmdHfLTRestore,      IfPm3Iso14443a, "Restore dump file to LTO-CM tag"},
+    {"dump",     CmdHfLTODump,        IfPm3Iso14443a, "Dump LTO-CM tag to file"},
+    {"restore",  CmdHfLTRestore,      IfPm3Iso14443a, "Restore dump file to LTO-CM tag"},
     {"info",     CmdHfLTOInfo,        IfPm3Iso14443a, "Tag information"},
     {"rdbl",     CmdHfLTOReadBlock,   IfPm3Iso14443a, "Read block"},
     {"wrbl",     CmdHfLTOWriteBlock,  IfPm3Iso14443a, "Write block"},
@@ -530,4 +645,3 @@ int CmdHFLTO(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
