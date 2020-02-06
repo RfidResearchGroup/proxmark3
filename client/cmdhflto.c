@@ -509,7 +509,7 @@ static int CmdHfLTODump(const char *Cmd) {
 
     // save to file 
     if (filename[0] == '\0') {
-        memcpy(serial_number, sprint_hex_inrow(dump, sizeof(serial_number)), sizeof(serial_number) * 2);
+        memcpy(serial_number, sprint_hex_inrow(dump, sizeof(serial_number)), sizeof(serial_number));
         char tmp_name[17] = "hf_lto_";
         strcat(tmp_name, serial_number);
         memcpy(filename, tmp_name, sizeof(tmp_name));
@@ -549,7 +549,9 @@ int restoreLTO(uint8_t *dump_data, bool verbose) {
 
         ret_val = lto_wrbl(blk, blkData, verbose);
 
-        if (ret_val != PM3_SUCCESS) {
+        if (ret_val == PM3_SUCCESS) {
+             PrintAndLogEx(SUCCESS, "BLK %03d: " _YELLOW_("write success"), blk);
+        } else {
             lto_switch_off_field();
             return ret_val;
         }
