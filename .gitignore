@@ -20,6 +20,7 @@
 *.dll
 *.moc.cpp
 *.z
+*.gz
 *.Td
 *.DS_Store
 *.exe
