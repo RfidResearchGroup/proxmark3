@@ -635,7 +635,12 @@ void SimulateIso14443bTag(uint32_t pupi) {
 
         // find reader field
         if (cardSTATE == SIM_NOFIELD) {
+
+#if defined RDV4
+            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+#else
             vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+#endif
             if (vHf > MF_MINFIELDV) {
                 cardSTATE = SIM_IDLE;
                 LED_A_ON();

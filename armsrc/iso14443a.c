@@ -1787,7 +1787,13 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
         ADC_MODE_PRESCALE(63) |
         ADC_MODE_STARTUP_TIME(1) |
         ADC_MODE_SAMPLE_HOLD_TIME(15);
+
+#if defined RDV4
+    AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF_RDV40);
+#else
     AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF);
+#endif
+
     // start ADC
     AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
@@ -1811,12 +1817,19 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
         ++check;
 
         // test if the field exists
-        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
+#if defined RDV4        
+        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF_RDV40)) {
+            
             analogCnt++;
-            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
+            
+            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF_RDV40];
+            
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+            
             if (analogCnt >= 32) {
+
                 if ((MAX_ADC_HF_VOLTAGE_RDV40 * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
+
                     if (timer == 0) {
                         timer = GetTickCount();
                     } else {
@@ -1832,6 +1845,35 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
                 analogAVG = 0;
             }
         }
+#else
+        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
+            
+            analogCnt++;
+            
+            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
+            
+            AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+            
+            if (analogCnt >= 32) {
+
+                if ((MAX_ADC_HF_VOLTAGE * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
+
+                    if (timer == 0) {
+                        timer = GetTickCount();
+                    } else {
+                        // 50ms no field --> card to idle state
+                        if (GetTickCountDelta(timer) > 50) {
+                            return 2;
+                        }
+                    }
+                } else {
+                    timer = 0;
+                }
+                analogCnt = 0;
+                analogAVG = 0;
+            }
+        }
+#endif
 
         // receive and test the miller decoding
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {

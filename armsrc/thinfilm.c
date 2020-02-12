@@ -52,10 +52,11 @@ void ReadThinFilm(void) {
 uint16_t FpgaSendQueueDelay;
 
 uint16_t ReadReaderField(void) {
-    uint16_t hf_av = AvgAdc(ADC_CHAN_HF);
-    if (((MAX_ADC_HF_VOLTAGE * hf_av) >> 10) > MAX_ADC_HF_VOLTAGE - 300)
-        hf_av = AvgAdc(ADC_CHAN_HF_RDV40);
-    return hf_av;
+#if defined RDV4
+    return AvgAdc(ADC_CHAN_HF_RDV40);
+#else
+    return AvgAdc(ADC_CHAN_HF);
+#endif
 }
 
 static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
@@ -119,13 +120,16 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
     CodeThinfilmAsTag(data, len);
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
     // Set up the synchronous serial port
     FpgaSetupSsc();
+
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
     SpinDelay(100);
+
     uint16_t hf_baseline = ReadReaderField();
 
     // Start the timer

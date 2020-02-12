@@ -208,12 +208,11 @@ void MeasureAntennaTuning(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
     SpinDelay(50);
 
+#if defined RDV4
+    payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+#else
     payload.v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-
-    // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-    if (payload.v_hf > MAX_ADC_HF_VOLTAGE - 300) {
-        payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
-    }
+#endif
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
@@ -222,16 +221,13 @@ void MeasureAntennaTuning(void) {
 
 // Measure HF in milliVolt
 uint16_t MeasureAntennaTuningHfData(void) {
-    uint16_t volt = 0;
-    uint16_t avg = AvgAdc(ADC_CHAN_HF);
-    volt = (MAX_ADC_HF_VOLTAGE * avg) >> 10;
-    bool use_high = (volt > MAX_ADC_HF_VOLTAGE - 300);
 
-    if (use_high) {
-        volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
-//        volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-    }
-    return volt;
+#if defined RDV4
+    return (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+#else
+    return (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+#endif
+
 }
 
 // Measure LF in milliVolt
@@ -532,7 +528,6 @@ void ListenReaderField(uint8_t limit) {
     uint16_t lf_av = 0, lf_av_new, lf_baseline = 0, lf_max = 0;
     uint16_t hf_av = 0, hf_av_new,  hf_baseline = 0, hf_max = 0;
     uint16_t mode = 1, display_val, display_max;
-    bool use_high = false;
 
     // switch off FPGA - we don't want to measure our own signal
     // 20180315 - iceman,  why load this before and then turn off?
@@ -549,15 +544,12 @@ void ListenReaderField(uint8_t limit) {
 
     if (limit == HF_ONLY) {
 
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
-
+#if defined RDV4
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-        use_high = (((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE - 300);
-        if (use_high) {
-            hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
-        }
-
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
+#else
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);    
+#endif
         Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
         hf_baseline = hf_av;
     }
@@ -608,8 +600,11 @@ void ListenReaderField(uint8_t limit) {
                     LED_B_OFF();
             }
 
-            hf_av_new = (use_high) ? AvgAdc(ADC_CHAN_HF_RDV40) :  AvgAdc(ADC_CHAN_HF);
-
+#if defined RDV4
+            hf_av_new = AvgAdc(ADC_CHAN_HF_RDV40);
+#else
+            hf_av_new = AvgAdc(ADC_CHAN_HF);
+#endif
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
                 Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
