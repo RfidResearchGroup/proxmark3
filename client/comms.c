@@ -547,6 +547,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), portname);
         fflush(stdout);
         int openCount = 0;
+        PrintAndLogEx(INPLACE, "");
         do {
             sp = uart_open(portname, speed);
             msleep(500);
@@ -587,7 +588,6 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         session.pm3_present = true;
 
         fflush(stdout);
-
         return true;
     }
 }
