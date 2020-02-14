@@ -1341,6 +1341,8 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
                     Dbprintf("Page[ 2]: __ __ __ __");
                     Dbprintf("Page[ 3]: __ __ __ __");
                 }
+                // since page 2+3 are not accessible when LKP == 1 and AUT == 1 fastforward to next readable page
+                pageNum = 4;
             }
 
             txlen = 20;
@@ -1950,6 +1952,11 @@ void check_challenges(bool file_given, uint8_t *data) {
             u1++;
 
         } else if (STATE == 2 && rxlen >= 44) {
+                Dbprintf("Challenge success: %02X%02X%02X%02X %02X%02X%02X%02X",
+                         unlocker[u1 - 1][0], unlocker[u1 - 1][1],
+                         unlocker[u1 - 1][2], unlocker[u1 - 1][3],
+                         unlocker[u1 - 1][4], unlocker[u1 - 1][5],
+                         unlocker[u1 - 1][6], unlocker[u1 - 1][7]);
             STATE = 0;
         }
 
