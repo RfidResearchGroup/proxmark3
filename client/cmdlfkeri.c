@@ -53,6 +53,57 @@ static int usage_lf_keri_sim(void) {
     PrintAndLogEx(NORMAL, "       lf keri sim 112233");
     return PM3_SUCCESS;
 }
+static int CmdKeriMSDescramble (uint32_t *FC, uint32_t *ID, uint32_t CardID)
+{
+    uint8_t CardToID [] = { 0xff,0xff,0xff,0xff,0x0d,0x0c,0x11,0x05,0xff,0x06,0xff,0x12,0x08,0xff,0x00,0x07,
+                            0x0a,0xff,0xff,0x0b,0x04,0x01,0xff,0x13,0xff,0x14,0x02,0xff,0x03,0x09,0xff,0xff };
+    uint8_t CardToFC [] = { 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+                            0xff,0xff,0x02,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x01,0xff };
+    uint8_t CardIdx; // 0 - 31
+    bool BitState;
+    int idx;
+
+    char IDDecodeState[33] = {0x00};
+    char FCDecodeState[33] = {0x00};
+    
+    memset (IDDecodeState,'-',32);
+    memset (FCDecodeState,'-',32);
+    
+    
+
+    *FC = 0;
+    *ID = 0;
+
+    for (CardIdx = 0; CardIdx < 32; CardIdx++) {
+        // Get Bit State
+        BitState = (CardID >> CardIdx) & 1;
+        //if (BitState) { // its a 1   
+        idx = CardToID[CardIdx];
+        if ((idx >= 0) && (idx <= 32)) {
+            if (BitState)
+                *ID = *ID | (1 << idx);
+            IDDecodeState[idx] = '0'+BitState;
+        }
+            //else    
+            //    IDDecodeState[CardIdx] = '-';
+            
+        idx = CardToFC[CardIdx];
+        if ((idx >= 0) && (idx <= 32)) {
+            if (BitState)
+                *FC = *FC | (1 << idx);
+            FCDecodeState[idx] = '0'+BitState;
+        }
+            //else    
+            //    IDDecodeState[CardIdx] = '-';
+
+        // }
+    }
+
+    PrintAndLogEx(SUCCESS, "BitState ID : %s",IDDecodeState);
+    PrintAndLogEx(SUCCESS, "BitState FC : %s",FCDecodeState);
+    
+    return PM3_SUCCESS;
+}
 
 static int CmdKeriDemod(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -103,6 +154,18 @@ static int CmdKeriDemod(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "KERI Tag Found -- Internal ID: %u", ID);
     PrintAndLogEx(SUCCESS, "Raw: %08X%08X", raw1, raw2);
+/*
+    Descramble Data.
+*/
+    uint32_t fc = 0;
+    uint32_t imprintID = 0;
+
+    // Just need to the low 32 bits without the 111 trailer
+    CmdKeriMSDescramble (&fc,&imprintID,raw2);
+
+    PrintAndLogEx (SUCCESS,"Descrambled MS : FC %d - imprint id %d\n",fc,imprintID);
+    
+// End Descramble test
 
     if (invert) {
         PrintAndLogEx(INFO, "Had to Invert - probably KERI");
