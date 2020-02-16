@@ -2223,7 +2223,7 @@ exit:
         ret = MBEDTLS_ERR_X509_FATAL_ERROR;
 
     if (ret != 0) {
-        *flags = (uint32_t) -1;
+        *flags = (uint32_t) - 1;
         return (ret);
     }
 

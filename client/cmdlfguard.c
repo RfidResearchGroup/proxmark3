@@ -147,7 +147,7 @@ static int CmdGuardDemod(const char *Cmd) {
 }
 
 static int CmdGuardRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 10000);
     return CmdGuardDemod(Cmd);
 }
 

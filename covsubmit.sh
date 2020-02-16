@@ -6,7 +6,7 @@ set -e
 pre_submit_hook
 
 ## delete all previous tarballs
-rm proxmark3.all.*.tgz proxmark3.all.*.log
+rm -f proxmark3.all.*.tgz proxmark3.all.*.log
 
 TODAY="$(date --date now +%Y%m%d.%H%M)"
 VERSION="0.1.$TODAY"

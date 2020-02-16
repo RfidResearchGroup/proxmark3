@@ -74,7 +74,7 @@ bool tailBit(BitstreamIn *stream) {
 void pushBit(BitstreamOut *stream, bool bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
-    *(stream->buffer + bytepos) |= (bit & 1) << (7 - bitpos);
+    *(stream->buffer + bytepos) |= (bit) << (7 - bitpos);
     stream->position++;
     stream->numbits++;
 }
@@ -169,6 +169,9 @@ void printvar(const char *name, uint8_t *arr, int len) {
 }
 
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {
+
+    if (arr == NULL) return;
+
     int cx = 0, i;
     size_t outsize = 100 + strlen(title) + len * 4;
     char *output = calloc(outsize, sizeof(char));

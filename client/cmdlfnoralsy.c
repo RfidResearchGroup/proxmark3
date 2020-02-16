@@ -133,7 +133,7 @@ static int CmdNoralsyDemod(const char *Cmd) {
 }
 
 static int CmdNoralsyRead(const char *Cmd) {
-    lf_read(true, 8000);
+    lf_read(false, 8000);
     return CmdNoralsyDemod(Cmd);
 }
 

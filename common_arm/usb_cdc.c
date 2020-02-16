@@ -573,7 +573,7 @@ bool usb_check() {
     if (isr & AT91C_UDP_ENDBUSRES) {
         pUdp->UDP_ICR = AT91C_UDP_ENDBUSRES;
         // reset all endpoints
-        pUdp->UDP_RSTEP  = (unsigned int) -1;
+        pUdp->UDP_RSTEP  = (unsigned int) - 1;
         pUdp->UDP_RSTEP  = 0;
         // Enable the function
         pUdp->UDP_FADDR = AT91C_UDP_FEN;

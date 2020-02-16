@@ -197,11 +197,22 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(plot);
     setLayout(layout);
-    show(); // places the window on the screen.
+
+    // plot window title
+    QString pt = QString("[*]Plot [ %1 ]").arg((char*)gui_serial_port_name);
+    setWindowTitle(pt);
+
+    // shows plot window on the screen.
+    show();
 
     // Move controller widget below plot
     controlWidget->move(x(), y() + frameSize().height());
     controlWidget->resize(size().width(), 200);
+
+    // Olverlays / slider window title
+    QString ct = QString("[*]Slider [ %1 ]").arg((char*)gui_serial_port_name);
+    controlWidget->setWindowTitle(ct);
+
     controlWidget->show();
 }
 

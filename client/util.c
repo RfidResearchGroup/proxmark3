@@ -394,6 +394,46 @@ void print_blocks(uint32_t *data, size_t len) {
     }
 }
 
+int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen) {
+    char buf[4] = {0};
+    int indx = 0;
+    int bytesValueLen = 0;
+    while (hexValue[indx]) {
+        if (hexValue[indx] == '\t' || hexValue[indx] == ' ') {
+            indx++;
+            continue;
+        }
+
+        if (isxdigit(hexValue[indx])) {
+            buf[strlen(buf)] = hexValue[indx];
+        } else {
+            // if we have symbols other than spaces and hex
+            return -1;
+        }
+
+        if (maxBytesValueLen && bytesValueLen >= maxBytesValueLen) {
+            // if we dont have space in buffer and have symbols to translate
+            return -2;
+        }
+
+        if (strlen(buf) >= 2) {
+            uint32_t temp = 0;
+            sscanf(buf, "%x", &temp);
+            bytesValue[bytesValueLen] = (uint8_t)(temp & 0xff);
+            memset(buf, 0, sizeof(buf));
+            bytesValueLen++;
+        }
+
+        indx++;
+    }
+
+    if (strlen(buf) > 0)
+        //error when not completed hex bytes
+        return -3;
+
+    return bytesValueLen;
+}
+
 // takes a number (uint64_t) and creates a binarray in dest.
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest) {
     while (len--) {
@@ -878,13 +918,18 @@ void strcreplace(char *buf, size_t len, char from, char to) {
     }
 }
 
-char *strmcopy(const char *buf) {
-    char *str = (char *) calloc(strlen(buf) + 1, sizeof(uint8_t));
-    if (str != NULL) {
-        memset(str, 0, strlen(buf) + 1);
-        strcpy(str, buf);
+
+char *str_dup(const char *src) {
+    return str_ndup(src, strlen(src));
+}
+char *str_ndup(const char *src, size_t len) {
+
+    char *dest = (char *) calloc(len + 1, sizeof(uint8_t));
+    if (dest != NULL) {
+        memcpy(dest, src, len);
+        dest[len] = '\0';
     }
-    return str;
+    return dest;
 }
 
 /**

@@ -124,8 +124,8 @@ static int CmdMotorolaRead(const char *Cmd) {
     // Motorola Flexpass seem to work at 74 kHz
     // and take about 4400 samples to befor modulating
     sample_config sc = {
-        .decimation = 0,
-        .bits_per_sample = 0,
+        .decimation = -1,
+        .bits_per_sample = -1,
         .averaging = false,
         .divisor = LF_FREQ2DIV(74),
         .trigger_threshold = -1,
@@ -135,7 +135,7 @@ static int CmdMotorolaRead(const char *Cmd) {
     lf_config(&sc);
 
     // 64 * 32 * 2 * n-ish
-    lf_read(true, 5000);
+    lf_read(false, 5000);
 
     // reset back to 125 kHz
     sc.divisor = LF_DIVISOR_125;

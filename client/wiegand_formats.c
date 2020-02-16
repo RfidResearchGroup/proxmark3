@@ -687,7 +687,7 @@ static void HIDDisplayUnpackedCard(wiegand_card_t *card, const cardformat_t form
     if (format.Fields.hasParity)
         snprintf(s + strlen(s), sizeof(s) - strlen(s), "    parity: %s", card->ParityValid ? "valid" : "invalid");
 
-    PrintAndLogEx(SUCCESS, "%s [%s - %s]", s, format.Name, format.Descrp);
+    PrintAndLogEx(SUCCESS, "[%s] - %s;  %s", format.Name, format.Descrp, s);
 }
 
 bool HIDTryUnpack(wiegand_message_t *packed, bool ignore_parity) {

@@ -294,7 +294,7 @@ static void write_benchfile(statelist_t *candidates) {
 #endif
 
 
-bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *foundkey) {
+bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *found_key) {
 #if defined (WRITE_BENCH_FILE)
     write_benchfile(candidates);
 #endif
@@ -353,7 +353,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
         *bf_rate = (float)num_keys_tested / ((float)elapsed_time / 1000.0);
 
     if (keys_found > 0)
-        *foundkey = found_bs_key;
+        *found_key = found_bs_key;
 
     return (keys_found != 0);
 }

@@ -28,7 +28,8 @@
 #include "loclass/elite_crack.h"
 #include "fileutils.h"
 #include "protocols.h"
-
+#include "wiegand_formats.h"
+#include "wiegand_formatutils.h"
 
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
@@ -334,15 +335,15 @@ static void fuse_config(const picopass_hdr *hdr) {
     if (isset(fuses, FUSE_FPERS))
         PrintAndLogEx(SUCCESS, "    Mode: Personalization [Programmable]");
     else
-        PrintAndLogEx(NORMAL, "    Mode: Application [Locked]");
+        PrintAndLogEx(SUCCESS, "    Mode: Application [Locked]");
 
     if (isset(fuses, FUSE_CODING1)) {
-        PrintAndLogEx(NORMAL, "    Coding: RFU");
+        PrintAndLogEx(SUCCESS, "    Coding: RFU");
     } else {
         if (isset(fuses, FUSE_CODING0))
-            PrintAndLogEx(NORMAL, "    Coding: ISO 14443-2 B/ISO 15693");
+            PrintAndLogEx(SUCCESS, "    Coding: ISO 14443-2 B/ISO 15693");
         else
-            PrintAndLogEx(NORMAL, "    Coding: ISO 14443B only");
+            PrintAndLogEx(SUCCESS, "    Coding: ISO 14443B only");
     }
     // 1 1
     if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "    Crypt: Secured page, keys not locked");
@@ -354,7 +355,7 @@ static void fuse_config(const picopass_hdr *hdr) {
     if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "    Crypt: No auth possible. Read only if RA is enabled");
 
     if (isset(fuses, FUSE_RA))
-        PrintAndLogEx(NORMAL, "    RA: Read access enabled");
+        PrintAndLogEx(SUCCESS, "    RA: Read access enabled");
     else
         PrintAndLogEx(WARNING, "    RA: Read access not enabled");
 }
@@ -918,6 +919,17 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
+        
+        uint32_t top = 0, mid, bot;
+        mid = bytes_to_num(decrypted + (8*7), 4);
+        bot = bytes_to_num(decrypted + (8*7) + 4, 4);
+
+        PrintAndLogEx(INFO, "");        
+        PrintAndLogEx(INFO, "block 7 - Wiegand decode");
+        wiegand_message_t packed = initialize_message_object(top, mid, bot);
+        HIDTryUnpack(&packed, true);
+        PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+    
         free(decrypted);
         free(fptr);
     }
@@ -1871,13 +1883,13 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     //PrintAndLog ("startblock: %d, endblock: %d, filesize: %d, maxmemcount: %d, filemaxblock: %d",startblock, endblock,filesize, maxmemcount, filemaxblock);
 
     int i = startblock;
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
-        PrintAndLogEx(NORMAL, "      |%02X| %s", i, sprint_hex_ascii(blk, 8));
+        PrintAndLogEx(INFO, "      |%02X| %s", i, sprint_hex_ascii(blk, 8));
         i++;
     }
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
 }
 
 static int CmdHFiClassReadTagFile(const char *Cmd) {
@@ -2805,6 +2817,7 @@ int readIclass(bool loop, bool verbose) {
                      FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
                      FLAG_ICLASS_READER_ONE_TRY;
 
+    uint32_t res = PM3_ETIMEOUT;
     // loop in client not device - else on windows have a communication error
     while (!kbd_enter_pressed()) {
 
@@ -2827,12 +2840,13 @@ int readIclass(bool loop, bool verbose) {
             }
 
             if (readStatus & FLAG_ICLASS_READER_CSN) {
-                PrintAndLogEx(NORMAL, "   CSN: %s", sprint_hex(data, 8));
+                PrintAndLogEx(NORMAL, "\n");
+                PrintAndLogEx(SUCCESS, "   CSN: %s", sprint_hex(data, 8));
                 tagFound = true;
             }
 
             if (readStatus & FLAG_ICLASS_READER_CC) {
-                PrintAndLogEx(NORMAL, "    CC: %s", sprint_hex(data + 16, 8));
+                PrintAndLogEx(SUCCESS, "    CC: %s", sprint_hex(data + 16, 8));
             }
 
             if (readStatus & FLAG_ICLASS_READER_CONF) {
@@ -2847,7 +2861,7 @@ int readIclass(bool loop, bool verbose) {
 
                 bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
 
-                PrintAndLogEx(NORMAL, " App IA: %s", sprint_hex(data + 8 * 5, 8));
+                PrintAndLogEx(SUCCESS, " App IA: %s", sprint_hex(data + 8 * 5, 8));
 
                 if (isHidRange) {
                     if (legacy)
@@ -2875,6 +2889,6 @@ int readIclass(bool loop, bool verbose) {
         if (!loop) break;
     }
     DropField();
-    return PM3_SUCCESS;
+    return res;
 }
 

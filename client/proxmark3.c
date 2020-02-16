@@ -10,9 +10,10 @@
 //-----------------------------------------------------------------------------
 
 #include "proxmark3.h"
-#include <limits.h>
-#include <stdio.h> // for Mingw readline
+
 #include <stdlib.h>
+#include <stdio.h>         // for Mingw readline
+#include <limits.h>
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -27,32 +28,30 @@
 #include "fileutils.h"
 #include "flash.h"
 
-
 static void showBanner(void) {
     g_printAndLog = PRINTANDLOG_PRINT;
 
     PrintAndLogEx(NORMAL, "\n");
 #if defined(__linux__) || (__APPLE__) || (_WIN32)
-    PrintAndLogEx(NORMAL, _BLUE_("██████╗ ███╗   ███╗ ████╗ ") "    ...iceman fork");
-    PrintAndLogEx(NORMAL, _BLUE_("██╔══██╗████╗ ████║   ══█║") "      ...dedicated to " _BLUE_("RDV40"));
-    PrintAndLogEx(NORMAL, _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
-    PrintAndLogEx(NORMAL, _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net");
-    PrintAndLogEx(NORMAL, _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0");
 #else
-    PrintAndLogEx(NORMAL, "======. ===.   ===. ====.     ...iceman fork");
-    PrintAndLogEx(NORMAL, "==...==.====. ====.   ..=.      ...dedicated to RDV40");
-    PrintAndLogEx(NORMAL, "======..==.====.==. ====..");
-    PrintAndLogEx(NORMAL, "==..... ==..==..==.   ..=.    iceman@icesql.net");
-    PrintAndLogEx(NORMAL, "==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, "...     ...     ... .....  pre-release v4.0");
+    PrintAndLogEx(NORMAL, "  ======. ===.   ===. ====.");
+    PrintAndLogEx(NORMAL, "  ==...==.====. ====.   ..=.");
+    PrintAndLogEx(NORMAL, "  ======..==.====.==. ====..");
+    PrintAndLogEx(NORMAL, "  ==..... ==..==..==.   ..=.    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, "  ==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
+    PrintAndLogEx(NORMAL, "  ...     ...     ... .....  pre-release v4.0");
 #endif
-    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
-    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
+//    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
+//    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
 //    printf("\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     fflush(stdout);
-
     g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 }
 
@@ -151,7 +150,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        const char *prompt = PROXPROMPT;
+        const char *prompt = PROXPROMPT_CON;
 
 check_script:
         // If there is a script file
@@ -170,18 +169,24 @@ check_script:
                 // remove linebreaks
                 strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
-                if ((cmd = strmcopy(script_cmd_buf)) != NULL)
+                cmd = str_dup(script_cmd_buf);
+                if (cmd != NULL)
                     printprompt = true;
             }
         } else {
             // If there is a script command
             if (execCommand) {
-                if ((cmd = strmcopy(script_cmd)) != NULL)
+
+                cmd = str_dup(script_cmd);
+                if (cmd != NULL)
                     printprompt = true;
+
                 uint16_t len = strlen(script_cmd) + 1;
                 script_cmd += len;
+
                 if (script_cmd_len == len - 1)
                     execCommand = false;
+
                 script_cmd_len -= len;
             } else {
                 // exit after exec command
@@ -201,7 +206,8 @@ check_script:
                     // remove linebreaks
                     strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
-                    if ((cmd = strmcopy(script_cmd_buf)) != NULL)
+                    cmd = str_dup(script_cmd_buf);
+                    if (cmd != NULL)
                         printprompt = true;
 
                 } else {
@@ -211,8 +217,9 @@ check_script:
                             prompt = PROXPROMPT_USB;
                         else
                             prompt = PROXPROMPT_FPC;
-                    } else
+                    } else {
                         prompt = PROXPROMPT_OFFLINE;
+                    }
                     cmd = readline(prompt);
                     fflush(NULL);
                 }
@@ -229,15 +236,20 @@ check_script:
             }
             // ltrim
             size_t off = 0;
-            while ((cmd[off] != '\0') && isspace(cmd[off]))
+            while ((cmd[off] != '\0') && isspace(cmd[off])) {
                 off++;
-            for (size_t i = 0; i < strlen(cmd) - off; i++)
+            }
+
+            for (size_t i = 0; i < strlen(cmd) - off; i++) {
                 cmd[i] = cmd[i + off];
+            }
+
             cmd[strlen(cmd) - off] = '\0';
 
             if (cmd[0] != '\0') {
-                if (!printprompt)
+                if (!printprompt) {
                     g_printAndLog = PRINTANDLOG_LOG;
+                }
                 PrintAndLogEx(NORMAL, "%s%s", prompt, cmd);
                 g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
@@ -245,8 +257,9 @@ check_script:
                 if (!current_cmdscriptfile()) {
                     HIST_ENTRY *entry = history_get(history_length);
                     // add if not identical to latest recorded cmd
-                    if ((!entry) || (strcmp(entry->line, cmd) != 0))
+                    if ((!entry) || (strcmp(entry->line, cmd) != 0)) {
                         add_history(cmd);
+                    }
                 }
                 // process cmd
                 int ret = CommandReceived(cmd);
@@ -278,6 +291,7 @@ check_script:
         write_history(my_history_path);
         free(my_history_path);
     }
+
     if (cmd) {
         free(cmd);
         cmd = NULL;
@@ -755,10 +769,6 @@ int main(int argc, char *argv[]) {
     if (session.stdinOnTTY && session.stdoutOnTTY)
         session.supports_colors = true;
 #endif
-    // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
-        showBanner();
-
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
         speed = USART_BAUD_RATE;
@@ -807,7 +817,11 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
 
     if (!session.pm3_present)
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check \"%s -h\" if it's not what you want.\n", exec_name);
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
+
+    // ascii art only in interactive client
+    if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
+        showBanner();
 
 #ifdef HAVE_GUI
 

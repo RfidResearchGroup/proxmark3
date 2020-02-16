@@ -14,7 +14,7 @@
 
 #include "common.h"
 
-#define PROXPROMPT "pm3 --> "
+#define PROXPROMPT_CON "[con] pm3 --> "
 #define PROXPROMPT_USB "[usb] pm3 --> "
 #define PROXPROMPT_FPC "[fpc] pm3 --> "
 #define PROXPROMPT_OFFLINE "[offline] pm3 --> "

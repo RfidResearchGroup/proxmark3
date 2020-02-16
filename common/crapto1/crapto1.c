@@ -376,6 +376,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb) {
 static uint16_t *dist = 0;
 int nonce_distance(uint32_t from, uint32_t to) {
     if (!dist) {
+        // allocation 2bytes * 0xFFFF times.
         dist = calloc(2 << 16,  sizeof(uint8_t));
         if (!dist)
             return -1;
@@ -396,7 +397,8 @@ int nonce_distance(uint32_t from, uint32_t to) {
  */
 bool validate_prng_nonce(uint32_t nonce) {
     // init prng table:
-    nonce_distance(nonce, nonce);
+    if (nonce_distance(nonce, nonce) == -1)
+        return false;
     return ((65535 - dist[nonce >> 16] + dist[nonce & 0xffff]) % 65535) == 16;
 }
 

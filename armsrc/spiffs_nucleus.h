@@ -699,7 +699,7 @@ void spiffs_cb_object_event(
     spiffs *fs,
     spiffs_page_object_ix *objix,
     int ev,
-    spiffs_obj_id obj_id,
+    spiffs_obj_id obj_id_raw,
     spiffs_span_ix spix,
     spiffs_page_ix new_pix,
     u32_t new_size);
@@ -707,14 +707,14 @@ void spiffs_cb_object_event(
 s32_t spiffs_object_open_by_id(
     spiffs *fs,
     spiffs_obj_id obj_id,
-    spiffs_fd *f,
+    spiffs_fd *fd,
     spiffs_flags flags,
     spiffs_mode mode);
 
 s32_t spiffs_object_open_by_page(
     spiffs *fs,
     spiffs_page_ix pix,
-    spiffs_fd *f,
+    spiffs_fd *fd,
     spiffs_flags flags,
     spiffs_mode mode);
 
@@ -738,8 +738,8 @@ s32_t spiffs_object_read(
 
 s32_t spiffs_object_truncate(
     spiffs_fd *fd,
-    u32_t new_len,
-    u8_t remove_object);
+    u32_t new_size,
+    u8_t remove_full);
 
 s32_t spiffs_object_find_object_index_header_by_name(
     spiffs *fs,
@@ -758,7 +758,7 @@ s32_t spiffs_gc_erase_page_stats(
 
 s32_t spiffs_gc_find_candidate(
     spiffs *fs,
-    spiffs_block_ix **block_candidate,
+    spiffs_block_ix **block_candidates,
     int *candidate_count,
     char fs_crammed);
 

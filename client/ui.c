@@ -240,7 +240,13 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
                 fprintf(stderr, "[-] Can't open logfile %s, logging disabled!\n", my_logfile_path);
                 logging = 0;
             } else {
-                printf("[=] Session log %s\n", my_logfile_path);
+
+                if (session.supports_colors) {
+                    printf(_YELLOW_("[=]") "Session log " _YELLOW_("%s") "\n", my_logfile_path);
+                } else {
+                    printf("[=] Session log %s\n", my_logfile_path);
+                }
+
             }
             free(my_logfile_path);
         }

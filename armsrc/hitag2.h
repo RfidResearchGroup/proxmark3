@@ -14,8 +14,8 @@
 #include "common.h"
 #include "hitag.h"
 
-void SniffHitag(void);
-void SimulateHitagTag(bool tag_mem_supplied, uint8_t *data);
+void SniffHitag2(void);
+void SimulateHitag2(bool tag_mem_supplied, uint8_t *data);
 void ReaderHitag(hitag_function htf, hitag_data *htd);
 void WriterHitag(hitag_function htf, hitag_data *htd, int page);
 

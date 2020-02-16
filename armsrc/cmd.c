@@ -43,10 +43,10 @@ bool reply_via_fpc = false;
 bool reply_via_usb = false;
 
 int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
-    PacketResponseOLD txcmd;
+    PacketResponseOLD txcmd = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
 
-    for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
-        ((uint8_t *)&txcmd)[i] = 0x00;
+//    for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
+//        ((uint8_t *)&txcmd)[i] = 0x00;
 
     // Compose the outgoing command frame
     txcmd.cmd = cmd;

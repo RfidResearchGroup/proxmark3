@@ -299,7 +299,7 @@ lf t55xx wr b 4 d 4c0003ff
 */
 
 static int CmdLFNedapRead(const char *Cmd) {
-    lf_read(true, 16000);
+    lf_read(false, 16000);
     return CmdLFNedapDemod(Cmd);
 }
 

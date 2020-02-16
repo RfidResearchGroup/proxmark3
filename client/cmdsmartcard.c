@@ -54,7 +54,7 @@ static int usage_sm_reader(void) {
     return 0;
 }
 static int usage_sm_info(void) {
-    PrintAndLogEx(NORMAL, "Usage: s info [h|s]");
+    PrintAndLogEx(NORMAL, "Usage: sc info [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
     PrintAndLogEx(NORMAL, "");
@@ -740,7 +740,7 @@ static int CmdSmartInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--- Smartcard Information ---------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(INFO, "ISO7618-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
-    PrintAndLogEx(INFO, "\nhttp://smartcard-atr.appspot.com/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len));
+    PrintAndLogEx(INFO, "\nhttp://smartcard-atr.apdu.fr/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len));
 
     // print ATR
     PrintAndLogEx(NORMAL, "");

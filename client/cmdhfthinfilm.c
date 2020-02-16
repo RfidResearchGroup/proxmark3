@@ -155,10 +155,12 @@ int infoThinFilm(bool verbose) {
     }
 
     if (resp.status == PM3_SUCCESS) {
-        if (resp.length == 16 || resp.length == 32 || verbose)  {
+        if (resp.length == 16 || resp.length == 32)  {
             print_barcode(resp.data.asBytes, resp.length, verbose);
         } else {
-            PrintAndLogEx(WARNING, "Response is wrong length. (%d)", resp.length);
+            if (verbose)
+                PrintAndLogEx(WARNING, "Response is wrong length. (%d)", resp.length);
+
             return PM3_ESOFT;
         }
     }

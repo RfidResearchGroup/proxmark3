@@ -97,7 +97,7 @@ local function nested(key,sak)
     core.console(cmd)
 end
 
-local function dump(uid, numsectors)
+local function dump_tag(uid, numsectors)
     dbg('dumping tag memory')
 
     local typ = 1
@@ -203,7 +203,7 @@ local function main(args)
                 -- Use nested attack
                 nested(key, sak)
                 -- Dump info
-                dump(uid, sak)
+                dump_tag(uid, sak)
 
                 if #key == 12 then _exit = true end
             else

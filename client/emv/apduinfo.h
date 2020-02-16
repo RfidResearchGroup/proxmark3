@@ -59,7 +59,7 @@ typedef struct {
 
 extern int APDUDecode(uint8_t *data, int len, APDUStruct *apdu);
 extern int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len);
-extern int APDUEncodeS(sAPDU *apdu, bool extended, uint16_t le, uint8_t *data, int *len);
+extern int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, int *len);
 extern void APDUPrint(APDUStruct apdu);
 extern void APDUPrintEx(APDUStruct apdu, size_t maxdatalen);
 

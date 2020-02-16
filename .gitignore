@@ -20,12 +20,15 @@
 *.dll
 *.moc.cpp
 *.z
+*.gz
 *.Td
 *.DS_Store
 *.exe
 *.dsym
 version.c
 *.json
+*.old
+*.swp
 
 # new build file for add-ons.
 Makefile.platform

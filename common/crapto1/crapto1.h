@@ -25,7 +25,7 @@
 #include <stdbool.h>
 
 struct Crypto1State {uint32_t odd, even;};
-void crypto1_init(struct Crypto1State *s, uint64_t key);
+void crypto1_init(struct Crypto1State *state, uint64_t key);
 void crypto1_deinit(struct Crypto1State *);
 #if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 struct Crypto1State *crypto1_create(uint64_t key);

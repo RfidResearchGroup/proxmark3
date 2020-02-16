@@ -92,7 +92,7 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
     AddCrc14A(dcmd, 2);
     memcpy(ecmd, dcmd, sizeof(dcmd));
 
-    if (crypted) {
+    if (pcs && crypted) {
         par[0] = 0;
         for (pos = 0; pos < 4; pos++) {
             ecmd[pos] = crypto1_byte(pcs, 0x00, 0) ^ dcmd[pos];
@@ -190,8 +190,18 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
     // Transmit reader nonce and reader answer
     ReaderTransmitPar(mf_nr_ar, sizeof(mf_nr_ar), par, NULL);
 
+    // save standard timeout
+    uint32_t save_timeout = iso14a_get_timeout();
+
+    // set timeout for authentication response
+    if (save_timeout > 103)
+        iso14a_set_timeout(103);
+
     // Receive 4 byte tag answer
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
+
+    iso14a_set_timeout(save_timeout);
+
     if (!len) {
         if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Authentication failed. Card timeout.");
         return 2;

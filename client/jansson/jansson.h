@@ -119,7 +119,7 @@ json_t *json_null(void);
 
 static JSON_INLINE
 json_t *json_incref(json_t *json) {
-    if (json && json->refcount != (size_t) -1)
+    if (json && json->refcount != (size_t) - 1)
         JSON_INTERNAL_INCREF(json);
     return json;
 }
@@ -129,7 +129,7 @@ void json_delete(json_t *json);
 
 static JSON_INLINE
 void json_decref(json_t *json) {
-    if (json && json->refcount != (size_t) -1 && JSON_INTERNAL_DECREF(json) == 0)
+    if (json && json->refcount != (size_t) - 1 && JSON_INTERNAL_DECREF(json) == 0)
         json_delete(json);
 }
 

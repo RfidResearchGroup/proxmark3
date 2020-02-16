@@ -61,6 +61,7 @@ typedef enum {
     jsfLegic,
     jsfT55x7,
     jsfT5555,
+    jsfMfPlusKeys,
 } JSONFileType;
 
 typedef enum {
@@ -111,15 +112,39 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
  */
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
 
-/**
- * @brief Utility function to save a keydump.
+/** STUB
+ * @brief Utility function to save WAVE data to a file. This method takes a preferred name, but if that
+ * file already exists, it tries with another name until it finds something suitable.
+ * E.g. dumpdata-15.wav
  *
+ * @param preferredName
+ * @param data The binary data to write to the file
+ * @param datalen the length of the data
+ * @return 0 for ok
+ */
+int saveFileWAVE(const char *preferredName, int *data, size_t datalen);
+
+/** STUB
+ * @brief Utility function to save PM3 data to a file. This method takes a preferred name, but if that
+ * file already exists, it tries with another name until it finds something suitable.
+ * E.g. dump_trace.pm3
+ *
+ * @param preferredName
+ * @param data The binary data to write to the file
+ * @param datalen the length of the data
+ * @return 0 for ok
+ */
+int saveFilePM3(const char *preferredName, int *data, size_t datalen);
+
+/**
+ * @brief Utility function to save a keydump into a binary file.
+ *
+ * @param preferredName
  * @param sectorsCnt the used sectors
  * @param e_sector the keys in question
- * @param fptr string pointer to the filename
  * @return 0 for ok, 1 for failz
  */
-int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr);
+int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector);
 
 /**
  * @brief Utility function to load data from a binary file. This method takes a preferred name.
@@ -175,12 +200,31 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
  *
  * @param preferredName
  * @param data The data array to store the loaded bytes from file
- * @param maxdatalen maximum size of data array in bytes
- * @param datalen the number of bytes loaded from file
+ * @param datalen the number of bytes loaded from file. may be NULL
  * @param keylen  the number of bytes a key per row is
+ * @param keycnt key count that lays in data. may be NULL
  * @return 0 for ok, 1 for failz
 */
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt);
+
+/**
+ * @brief  Utility function to load data from a DICTIONARY textfile. This method takes a preferred name.
+ * E.g. mfc_default_keys.dic
+ * can be executed several times for big dictionaries and checks length of buffer
+ *
+ * @param preferredName
+ * @param data The data array to store the loaded bytes from file
+ * @param maxdatalen maximum size of data array in bytes
+ * @param datalen the number of bytes loaded from file. may be NULL
+ * @param keylen  the number of bytes a key per row is
+ * @param keycnt key count that lays in data. may be NULL
+ * @param startFilePosition  start position in dictionary file. used for big dictionaries.
+ * @param endFilePosition in case we have keys in file and maxdatalen reached it returns current key position in file. may be NULL
+ * @param verbose print messages if true
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt,
+                         size_t startFilePosition, size_t *endFilePosition, bool verbose);
 
 /**
  * @brief  Utility function to load data safely from a DICTIONARY textfile. This method takes a preferred name.

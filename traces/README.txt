@@ -1,3 +1,4 @@
+pac-8E4C058E.pm3: PAC/Stanley 20204/21020 PAC8 tag (ID: 8E4C058E)
 em4102-clamshell.pm3: Samy's clamshell EM4102 tag (ID: 1f00d9b3a5)
 em4102-thin.pm3: Samy's thin credit-card style EM4102 tag (ID: 1a0041375d)
 EM4102-1.pm3: credit card style card EM4102 tag (ID: 010872e77c)
@@ -29,3 +30,7 @@ securakey-64169.pm3  Securakey Tag BitLen: 26, Card ID: 64169, FC: 0x35
 
 motorola_0437_00072.pm3: Motorola Grey clamshell card, old.  (RAW: A0000000E308C0C1)
 verichip_1022000000084146.pm3: VeriChip,  epoxy encased glasschip (ID: 1022-00000000084146) 
+
+sniff-ht2-BC3B8810-acg-reader.pm3:     sniffing of Hitag2 being read by an HID ACG LF Multitag reader
+sniff-ht2-BC3B8810-frosch-reader.pm3:  sniffing of Hitag2 being read by a Frosch Hitag reader
+sniff-ht2-BC3B8810-rfidler-reader.pm3: sniffing of Hitag2 being read by a RFIDler

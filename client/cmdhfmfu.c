@@ -20,6 +20,7 @@
 #include "comms.h"
 #include "fileutils.h"
 #include "protocols.h"
+#include "generator.h"
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2B
@@ -283,151 +284,6 @@ uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
     MAX_ULEV1a_BLOCKS, MAX_NTAG_213,  MAX_NTAG_216,   MAX_UL_NANO_40,    MAX_NTAG_I2C_1K
 };
 
-//------------------------------------
-// Pwd & Pack generation Stuff
-//------------------------------------
-const uint32_t c_D[] = {
-    0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
-    0xD1CC8B4E, 0xE8873E6F, 0x61399BBB, 0xF1B91926, 0xAC661520, 0xA21A31C9,
-    0xD424808D, 0xFE118E07, 0xD18E728D, 0xABAC9E17, 0x18066433, 0x00E18E79,
-    0x65A77305, 0x5AE9E297, 0x11FC628C, 0x7BB3431F, 0x942A8308, 0xB2F8FD20,
-    0x5728B869, 0x30726D5A
-};
-
-static void transform_D(uint8_t *ru) {
-    //Transform
-    uint8_t i;
-    uint8_t p = 0;
-    uint32_t v1 = ((ru[3] << 24) | (ru[2] << 16) | (ru[1] << 8) | ru[0]) + c_D[p++];
-    uint32_t v2 = ((ru[7] << 24) | (ru[6] << 16) | (ru[5] << 8) | ru[4]) + c_D[p++];
-    for (i = 0; i < 12; i += 2) {
-
-        uint32_t xor1 = v1 ^ v2;
-        uint32_t t1 = ROTL(xor1, v2 & 0x1F) + c_D[p++];
-        uint32_t xor2 = v2 ^ t1;
-        uint32_t t2 = ROTL(xor2, t1 & 0x1F) + c_D[p++];
-        uint32_t xor3 = t1 ^ t2;
-        uint32_t xor4 = t2 ^ v1;
-        v1 = ROTL(xor3, t2 & 0x1F) + c_D[p++];
-        v2 = ROTL(xor4, v1 & 0x1F) + c_D[p++];
-    }
-
-    //Re-use ru
-    ru[0] = v1 & 0xFF;
-    ru[1] = (v1 >> 8) & 0xFF;
-    ru[2] = (v1 >> 16) & 0xFF;
-    ru[3] = (v1 >> 24) & 0xFF;
-    ru[4] = v2 & 0xFF;
-    ru[5] = (v2 >> 8) & 0xFF;
-    ru[6] = (v2 >> 16) & 0xFF;
-    ru[7] = (v2 >> 24) & 0xFF;
-}
-
-// Certain pwd generation algo nickname A.
-uint32_t ul_ev1_pwdgenA(uint8_t *uid) {
-
-    uint8_t pos = (uid[3] ^ uid[4] ^ uid[5] ^ uid[6]) % 32;
-
-    uint32_t xortable[] = {
-        0x4f2711c1, 0x07D7BB83, 0x9636EF07, 0xB5F4460E, 0xF271141C, 0x7D7BB038, 0x636EF871, 0x5F4468E3,
-        0x271149C7, 0xD7BB0B8F, 0x36EF8F1E, 0xF446863D, 0x7114947A, 0x7BB0B0F5, 0x6EF8F9EB, 0x44686BD7,
-        0x11494fAF, 0xBB0B075F, 0xEF8F96BE, 0x4686B57C, 0x1494F2F9, 0xB0B07DF3, 0xF8F963E6, 0x686B5FCC,
-        0x494F2799, 0x0B07D733, 0x8F963667, 0x86B5F4CE, 0x94F2719C, 0xB07D7B38, 0xF9636E70, 0x6B5F44E0
-    };
-
-    uint8_t entry[] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t pwd[] = {0x00, 0x00, 0x00, 0x00};
-
-    num_to_bytes(xortable[pos], 4, entry);
-
-    pwd[0] = entry[0] ^ uid[1] ^ uid[2] ^ uid[3];
-    pwd[1] = entry[1] ^ uid[0] ^ uid[2] ^ uid[4];
-    pwd[2] = entry[2] ^ uid[0] ^ uid[1] ^ uid[5];
-    pwd[3] = entry[3] ^ uid[6];
-
-    return (uint32_t)bytes_to_num(pwd, 4);
-}
-
-// Certain pwd generation algo nickname B. (very simple)
-static uint32_t ul_ev1_pwdgenB(uint8_t *uid) {
-
-    uint8_t pwd[] = {0x00, 0x00, 0x00, 0x00};
-
-    pwd[0] = uid[1] ^ uid[3] ^ 0xAA;
-    pwd[1] = uid[2] ^ uid[4] ^ 0x55;
-    pwd[2] = uid[3] ^ uid[5] ^ 0xAA;
-    pwd[3] = uid[4] ^ uid[6] ^ 0x55;
-    return (uint32_t)bytes_to_num(pwd, 4);
-}
-
-// Certain pwd generation algo nickname C.
-uint32_t ul_ev1_pwdgenC(uint8_t *uid) {
-    uint32_t pwd = 0;
-    uint8_t base[] = {
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x28,
-        0x63, 0x29, 0x20, 0x43, 0x6f, 0x70, 0x79, 0x72,
-        0x69, 0x67, 0x68, 0x74, 0x20, 0x4c, 0x45, 0x47,
-        0x4f, 0x20, 0x32, 0x30, 0x31, 0x34, 0xaa, 0xaa
-    };
-
-    memcpy(base, uid, 7);
-
-    for (int i = 0; i < 32; i += 4) {
-        uint32_t b = *(uint32_t *)(base + i);
-        pwd = b + ROTR(pwd, 25) + ROTR(pwd, 10) - pwd;
-    }
-    return BSWAP_32(pwd);
-}
-// Certain pwd generation algo nickname D.
-// a.k.a xzy
-uint32_t ul_ev1_pwdgenD(uint8_t *uid) {
-    uint8_t i;
-    //Rotate
-    uint8_t r = (uid[1] + uid[3] + uid[5]) & 7; //Rotation offset
-    uint8_t ru[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; //Rotated UID
-    for (i = 0; i < 7; i++)
-        ru[(i + r) & 7] = uid[i];
-
-    transform_D(ru);
-
-    //Calc key
-    uint32_t pwd = 0; //Key as int
-    r = (ru[0] + ru[2] + ru[4] + ru[6]) & 3; //Offset
-    for (i = 0; i < 4; i++)
-        pwd = ru[i + r] + (pwd << 8);
-
-    return BSWAP_32(pwd);
-}
-// pack generation for algo 1-3
-uint16_t ul_ev1_packgenA(uint8_t *uid) {
-    uint16_t pack = (uid[0] ^ uid[1] ^ uid[2]) << 8 | (uid[2] ^ 8);
-    return pack;
-}
-uint16_t ul_ev1_packgenB(uint8_t *uid) {
-    return 0x8080;
-}
-uint16_t ul_ev1_packgenC(uint8_t *uid) {
-    return 0xaa55;
-}
-uint16_t ul_ev1_packgenD(uint8_t *uid) {
-    uint8_t i;
-    //Rotate
-    uint8_t r = (uid[2] + uid[5]) & 7; //Rotation offset
-    uint8_t ru[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; //Rotated UID
-    for (i = 0; i < 7; i++)
-        ru[(i + r) & 7] = uid[i];
-
-    transform_D(ru);
-
-    //Calc pack
-    uint32_t p = 0;
-    for (i = 0; i < 8; i++)
-        p += ru[i] * 13;
-
-    p ^= 0x5555;
-    return BSWAP_16(p & 0xFFFF);
-}
-
 static int ul_ev1_pwdgen_selftest() {
 
     uint8_t uid1[] = {0x04, 0x11, 0x12, 0x11, 0x12, 0x11, 0x10};
@@ -445,7 +301,7 @@ static int ul_ev1_pwdgen_selftest() {
     uint8_t uid4[] = {0x04, 0xC5, 0xDF, 0x4A, 0x6D, 0x51, 0x80};
     uint32_t pwd4 = ul_ev1_pwdgenD(uid4);
     PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid4, 7), pwd4, (pwd4 == 0x72B1EC61) ? "OK" : "->72B1EC61<--");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //------------------------------------
@@ -565,7 +421,7 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 static int ulc_authentication(uint8_t *key, bool switch_off_field) {
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
+    SendCommandMIX(CMD_HF_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 0;
     if (resp.oldarg[0] == 1) return 1;
@@ -2262,7 +2118,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "special PWD     block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PWD, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
 
             wait4response(MFU_NTAG_SPECIAL_PWD);
 
@@ -2278,7 +2134,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         data[3] = 0;
         PrintAndLogEx(NORMAL, "special PACK    block written 0x%X - %s\n", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
         wait4response(MFU_NTAG_SPECIAL_PACK);
 
         // Signature
@@ -2286,7 +2142,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             memcpy(data, mem->signature + i, 4);
             PrintAndLogEx(NORMAL, "special SIG     block written 0x%X - %s\n", s, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
             wait4response(s);
         }
 
@@ -2295,7 +2151,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             memcpy(data, mem->version + i, 4);
             PrintAndLogEx(NORMAL, "special VERSION block written 0x%X - %s\n", s, sprint_hex(data, 4));
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
             wait4response(s);
         }
     }
@@ -2309,7 +2165,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         //Send write Block
         memcpy(data, mem->data + (b * 4), 4);
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
         wait4response(b);
         printf(".");
         fflush(stdout);
@@ -2329,7 +2185,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             uint8_t b = blocks[i];
             memcpy(data, mem->data + (b * 4), 4);
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
+            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
             wait4response(b);
             PrintAndLogEx(NORMAL, "special block written %u - %s\n", b, sprint_hex(data, 4));
         }
@@ -2338,7 +2194,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     DropField();
     free(dump);
     PrintAndLogEx(INFO, "Finish restore");
-    return 0;
+    return PM3_SUCCESS;
 }
 //
 //  Load emulator with dump file
@@ -2388,7 +2244,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     else
         PrintAndLogEx(WARNING, "Authentication failed");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /**
@@ -2500,11 +2356,11 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
 
     if (param_gethex(Cmd, 0, pwd, 32)) {
         PrintAndLogEx(WARNING, "Password must include 32 HEX symbols");
-        return 1;
+        return PM3_EINVARG;
     }
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREUC_SETPWD, 0, 0, 0, pwd, 16);
+    SendCommandMIX(CMD_HF_MIFAREUC_SETPWD, 0, 0, 0, pwd, 16);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -2512,13 +2368,13 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
             PrintAndLogEx(INFO, "Ultralight-C new password: %s", sprint_hex(pwd, 16));
         } else {
             PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xff));
-            return 1;
+            return PM3_ESOFT;
         }
     } else {
         PrintAndLogEx(WARNING, "command execution time out");
-        return 1;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 //
@@ -2556,7 +2412,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[2] = uid[2];
     data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
+    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
@@ -2568,7 +2424,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[2] = uid[5];
     data[3] = uid[6];
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
+    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
@@ -2580,7 +2436,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[2] = oldblock2[2];
     data[3] = oldblock2[3];
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
+    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
@@ -2611,13 +2467,15 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
 
         if (select_status == 0) {
             PrintAndLogEx(WARNING, "iso14443a card select failed");
-            return 1;
+            return PM3_ESOFT;
         }
-        if (card.uidlen != 4) {
-            PrintAndLogEx(WARNING, "Wrong sized UID, expected 4bytes got %d", card.uidlen);
-            return 1;
-        }
-        memcpy(uid, card.uid, sizeof(uid));
+        /*
+                if (card.uidlen != 4) {
+                    PrintAndLogEx(WARNING, "Wrong sized UID, expected 4bytes got %d", card.uidlen);
+                    return PM3_ESOFT;
+                }
+        */
+        memcpy(uid, card.uid, card.uidlen);
     } else {
         if (param_gethex(Cmd, 0, uid, 8)) return usage_hf_mfu_gendiverse();
     }
@@ -2654,13 +2512,13 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
                            , divkey         // output
                           );
 
-    PrintAndLogEx(NORMAL, "-- 3DES version");
-    PrintAndLogEx(NORMAL, "Masterkey    :\t %s", sprint_hex(masterkey, sizeof(masterkey)));
-    PrintAndLogEx(NORMAL, "UID          :\t %s", sprint_hex(uid, sizeof(uid)));
-    PrintAndLogEx(NORMAL, "block        :\t %0d", block);
-    PrintAndLogEx(NORMAL, "Mifare key   :\t %s", sprint_hex(mifarekeyA, sizeof(mifarekeyA)));
-    PrintAndLogEx(NORMAL, "Message      :\t %s", sprint_hex(mix, sizeof(mix)));
-    PrintAndLogEx(NORMAL, "Diversified key: %s", sprint_hex(divkey + 1, 6));
+    PrintAndLogEx(SUCCESS, "-- 3DES version");
+    PrintAndLogEx(SUCCESS, "Masterkey    :\t %s", sprint_hex(masterkey, sizeof(masterkey)));
+    PrintAndLogEx(SUCCESS, "UID          :\t %s", sprint_hex(uid, sizeof(uid)));
+    PrintAndLogEx(SUCCESS, "block        :\t %0d", block);
+    PrintAndLogEx(SUCCESS, "Mifare key   :\t %s", sprint_hex(mifarekeyA, sizeof(mifarekeyA)));
+    PrintAndLogEx(SUCCESS, "Message      :\t %s", sprint_hex(mix, sizeof(mix)));
+    PrintAndLogEx(SUCCESS, "Diversified key: %s", sprint_hex(divkey + 1, 6));
 
     for (int i = 0; i < ARRAYLEN(mifarekeyA); ++i) {
         dkeyA[i]  = (mifarekeyA[i] << 1) & 0xff;
@@ -2690,11 +2548,11 @@ static int CmdHF14AMfUGenDiverseKeys(const char *Cmd) {
                            , newpwd         // output
                           );
 
-    PrintAndLogEx(NORMAL, "\n-- DES version");
-    PrintAndLogEx(NORMAL, "Mifare dkeyA :\t %s", sprint_hex(dkeyA, sizeof(dkeyA)));
-    PrintAndLogEx(NORMAL, "Mifare dkeyB :\t %s", sprint_hex(dkeyB, sizeof(dkeyB)));
-    PrintAndLogEx(NORMAL, "Mifare ABA   :\t %s", sprint_hex(dmkey, sizeof(dmkey)));
-    PrintAndLogEx(NORMAL, "Mifare Pwd   :\t %s", sprint_hex(newpwd, sizeof(newpwd)));
+    PrintAndLogEx(SUCCESS, "\n-- DES version");
+    PrintAndLogEx(SUCCESS, "Mifare dkeyA :\t %s", sprint_hex(dkeyA, sizeof(dkeyA)));
+    PrintAndLogEx(SUCCESS, "Mifare dkeyB :\t %s", sprint_hex(dkeyB, sizeof(dkeyB)));
+    PrintAndLogEx(SUCCESS, "Mifare ABA   :\t %s", sprint_hex(dmkey, sizeof(dmkey)));
+    PrintAndLogEx(SUCCESS, "Mifare Pwd   :\t %s", sprint_hex(newpwd, sizeof(newpwd)));
 
     mbedtls_des3_free(&ctx);
     // next. from the diversify_key method.

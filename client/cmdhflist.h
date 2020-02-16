@@ -48,6 +48,7 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse);
+void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen);
 bool NTParityChk(TAuthData *ad, uint32_t ntx);

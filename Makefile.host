@@ -9,6 +9,9 @@ ifeq ($(DEFSBEENHERE),)
     -include ../../Makefile.defs
 endif
 ifeq ($(DEFSBEENHERE),)
+    -include ../../../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
     $(error Can't find Makefile.defs)
 endif
 

@@ -2244,7 +2244,7 @@ s32_t spiffs_fd_find_new(spiffs *fs, spiffs_fd **fd, const char *name) {
 #if SPIFFS_TEMPORAL_FD_CACHE
     u32_t i;
     u16_t min_score = 0xffff;
-    u32_t cand_ix = (u32_t) -1;
+    u32_t cand_ix = (u32_t) - 1;
     u32_t name_hash = name ? spiffs_hash(fs, (const u8_t *)name) : 0;
     spiffs_fd *fds = (spiffs_fd *)fs->fd_space;
 
@@ -2275,7 +2275,7 @@ s32_t spiffs_fd_find_new(spiffs *fs, spiffs_fd **fd, const char *name) {
         }
     }
 
-    if (cand_ix != (u32_t) -1) {
+    if (cand_ix != (u32_t) - 1) {
         spiffs_fd *cur_fd = &fds[cand_ix];
         if (name) {
             if (cur_fd->name_hash == name_hash && cur_fd->score > 0) {

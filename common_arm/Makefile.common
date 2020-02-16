@@ -42,7 +42,7 @@ INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/confi
 CFLAGS ?= -Wall -Werror -pedantic -Wunused -Os -mthumb-interwork
 CFLAGS += -c $(INCLUDE) -std=c99 $(APP_CFLAGS)
 
-LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -n
+LDFLAGS += -nostartfiles -nodefaultlibs -Wl,-gc-sections -Wl,--build-id=none -n
 LIBS = -lgcc
 
 # Flags to generate temporary dependency files

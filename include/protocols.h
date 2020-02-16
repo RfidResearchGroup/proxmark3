@@ -56,6 +56,7 @@ ISO15693
         21 = Write Block (usage: 0221+1byte block number+4bytes data+2bytes ISO15693-CRC - answer: 4bytes)
         22 = Lock Block
         23 = Read Multiple Blocks (usage: 0223+1byte 1st block to read+1byte last block to read+2bytes ISO15693-CRC)
+        24 = Write Multiple Blocks
         25 = Select
         26 = Reset to Ready
         27 = Write AFI
@@ -239,19 +240,44 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO15693_INVENTORY     0x01
 #define ISO15693_STAYQUIET     0x02
 //First byte is 02
-#define ISO15693_READBLOCK            0x20
-#define ISO15693_WRITEBLOCK           0x21
-#define ISO15693_LOCKBLOCK            0x22
-#define ISO15693_READ_MULTI_BLOCK     0x23
-#define ISO15693_SELECT               0x25
-#define ISO15693_RESET_TO_READY       0x26
-#define ISO15693_WRITE_AFI            0x27
-#define ISO15693_LOCK_AFI             0x28
-#define ISO15693_WRITE_DSFID          0x29
-#define ISO15693_LOCK_DSFID           0x2A
-#define ISO15693_GET_SYSTEM_INFO      0x2B
-#define ISO15693_READ_MULTI_SECSTATUS 0x2C
-
+#define ISO15693_READBLOCK                   0x20
+#define ISO15693_WRITEBLOCK                  0x21
+#define ISO15693_LOCKBLOCK                   0x22
+#define ISO15693_READ_MULTI_BLOCK            0x23
+#define ISO15693_WRITE_MULTI_BLOCK           0x24
+#define ISO15693_SELECT                      0x25
+#define ISO15693_RESET_TO_READY              0x26
+#define ISO15693_WRITE_AFI                   0x27
+#define ISO15693_LOCK_AFI                    0x28
+#define ISO15693_WRITE_DSFID                 0x29
+#define ISO15693_LOCK_DSFID                  0x2A
+#define ISO15693_GET_SYSTEM_INFO             0x2B
+#define ISO15693_READ_MULTI_SECSTATUS        0x2C
+// NXP/Philips custom commands
+#define ISO15693_INVENTORY_READ              0xA0
+#define ISO15693_FAST_INVENTORY_READ         0xA1
+#define ISO15693_SET_EAS                     0xA2
+#define ISO15693_RESET_EAS                   0xA3
+#define ISO15693_LOCK_EAS                    0xA4
+#define ISO15693_EAS_ALARM                   0xA5
+#define ISO15693_PASSWORD_PROTECT_EAS        0xA6
+#define ISO15693_WRITE_EAS_ID                0xA7
+#define ISO15693_READ_EPC                    0xA8
+#define ISO15693_GET_NXP_SYSTEM_INFO         0xAB
+#define ISO15693_INVENTORY_PAGE_READ         0xB0
+#define ISO15693_FAST_INVENTORY_PAGE_READ    0xB1
+#define ISO15693_GET_RANDOM_NUMBER           0xB2
+#define ISO15693_SET_PASSWORD                0xB3
+#define ISO15693_WRITE_PASSWORD              0xB4
+#define ISO15693_LOCK_PASSWORD               0xB5
+#define ISO15693_PROTECT_PAGE                0xB6
+#define ISO15693_LOCK_PAGE_PROTECTION        0xB7
+#define ISO15693_GET_MULTI_BLOCK_PROTECTION  0xB8
+#define ISO15693_DESTROY                     0xB9
+#define ISO15693_ENABLE_PRIVACY              0xBA
+#define ISO15693_64BIT_PASSWORD_PROTECTION   0xBB
+#define ISO15693_STAYQUIET_PERSISTENT        0xBC
+#define ISO15693_READ_SIGNATURE              0xBD
 
 // Topaz command set:
 #define TOPAZ_REQA                    0x26 // Request
@@ -279,8 +305,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO_15693        7
 #define FELICA           8
 #define PROTO_MIFARE     9
-#define PROTO_HITAG     10
+#define PROTO_HITAG1    10
 #define THINFILM        11
+#define LTO             12
+#define PROTO_HITAG2    13 
+#define PROTO_HITAGS    14
 
 //-- Picopass fuses
 #define FUSE_FPERS   0x80
@@ -561,11 +590,34 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define HITAG1_HALT                     0x70    // left 4 bits only, followed by 8 bits (dummy) page and 8 bits CRC
 
 // HITAG2 commands
-#define HITAG2_START_AUTH               0xC0    // left 5 bits only
-#define HITAG2_READ_PAGE                0xC0    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_READ_PAGE_INVERTED       0x44    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_WRITE_PAGE               0x82    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_HALT                     0x00    // left 5 bits only
+#define HITAG2_START_AUTH               0x3    // left 5 bits only
+#define HITAG2_HALT                     0x0    // left 5 bits only
+
+#define HITAG2_READ_PAGE                0x3    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_READ_PAGE_INVERTED       0x1    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_WRITE_PAGE               0x2   // page number in bits 5 to 3, page number 
+
+
+// HITAG S commands
+#define HITAGS_QUIET                    0x70
+//inverted in bit 0 and following 2 bits
+#define HITAGS_WRITE_BLOCK              0x90
+
+// LTO-CM commands
+#define LTO_REQ_STANDARD                0x45
+#define LTO_REQ_ALL                     0x4A
+#define LTO_READWORD                    0x40   // read 2 bytes (word)
+#define LTO_READBLOCK                   0x30
+#define LTO_READBLOCK_CONT              0x80
+#define LTO_SELECT                      0x93
+#define LTO_WRITEWORD                   0xB0   // write 2 bytes (word)
+#define LTO_WRITEBLOCK                  0xA0
+#define LTO_HALT                        0x50
+#define LTO_TEST_CMD_1                  0x0E
+#define LTO_TEST_CMD_2                  0x6C
+
+// 0x0A = ACK
+// 0x05 = NACK
 
 #endif
 // PROTOCOLS_H

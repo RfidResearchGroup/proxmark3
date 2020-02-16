@@ -17,6 +17,7 @@
 #include "dbprint.h"
 #include "pmflash.h"
 #include "fpga.h"
+#include "fpga.h"
 #include "fpgaloader.h"
 #include "string.h"
 #include "legicrf.h"
@@ -175,7 +176,7 @@ void MeasureAntennaTuning(void) {
      */
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
     SpinDelay(50);
 
     for (uint8_t i = 255; i >= 19; i--) {
@@ -207,12 +208,11 @@ void MeasureAntennaTuning(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
     SpinDelay(50);
 
+#if defined RDV4
+    payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+#else
     payload.v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-
-    // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-    if (payload.v_hf > MAX_ADC_HF_VOLTAGE - 300) {
-        payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
-    }
+#endif
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
@@ -221,16 +221,13 @@ void MeasureAntennaTuning(void) {
 
 // Measure HF in milliVolt
 uint16_t MeasureAntennaTuningHfData(void) {
-    uint16_t volt = 0;
-    uint16_t avg = AvgAdc(ADC_CHAN_HF);
-    volt = (MAX_ADC_HF_VOLTAGE * avg) >> 10;
-    bool use_high = (volt > MAX_ADC_HF_VOLTAGE - 300);
 
-    if (use_high) {
-        volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
-//        volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-    }
-    return volt;
+#if defined RDV4
+    return (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+#else
+    return (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+#endif
+
 }
 
 // Measure LF in milliVolt
@@ -440,6 +437,11 @@ void SendCapabilities(void) {
 #else
     capabilities.compiled_with_hfsniff = false;
 #endif
+#ifdef WITH_HFPLOT
+    capabilities.compiled_with_hfplot = true;
+#else
+    capabilities.compiled_with_hfplot = false;
+#endif
 #ifdef WITH_ISO14443a
     capabilities.compiled_with_iso14443a = true;
 #else
@@ -526,7 +528,6 @@ void ListenReaderField(uint8_t limit) {
     uint16_t lf_av = 0, lf_av_new, lf_baseline = 0, lf_max = 0;
     uint16_t hf_av = 0, hf_av_new,  hf_baseline = 0, hf_max = 0;
     uint16_t mode = 1, display_val, display_max;
-    bool use_high = false;
 
     // switch off FPGA - we don't want to measure our own signal
     // 20180315 - iceman,  why load this before and then turn off?
@@ -543,15 +544,12 @@ void ListenReaderField(uint8_t limit) {
 
     if (limit == HF_ONLY) {
 
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
-
+#if defined RDV4
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-        use_high = (((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE - 300);
-        if (use_high) {
-            hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
-        }
-
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
+#else
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);    
+#endif
         Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
         hf_baseline = hf_av;
     }
@@ -602,8 +600,11 @@ void ListenReaderField(uint8_t limit) {
                     LED_B_OFF();
             }
 
-            hf_av_new = (use_high) ? AvgAdc(ADC_CHAN_HF_RDV40) :  AvgAdc(ADC_CHAN_HF);
-
+#if defined RDV4
+            hf_av_new = AvgAdc(ADC_CHAN_HF_RDV40);
+#else
+            hf_av_new = AvgAdc(ADC_CHAN_HF);
+#endif
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
                 Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
@@ -696,6 +697,8 @@ static void PacketReceived(PacketCommandNG *packet) {
     */
 
     switch (packet->cmd) {
+        case CMD_BREAK_LOOP:
+            break;
         case CMD_QUIT_SESSION: {
             reply_via_fpc = false;
             reply_via_usb = false;
@@ -728,11 +731,11 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_ACQ_RAW_ADC: {
             struct p {
-                uint8_t silent;
+                uint8_t verbose;
                 uint32_t samples;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            uint32_t bits = SampleLF(payload->silent, payload->samples);
+            uint32_t bits = SampleLF(payload->verbose, payload->samples);
             reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
@@ -773,7 +776,12 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_PSK_SIMULATE: {
             lf_psksim_t *payload = (lf_psksim_t *)packet->data.asBytes;
-            CmdPSKsimTag(payload->carrier, payload->invert, payload->clock, packet->length - sizeof(lf_psksim_t), payload->data, true);
+            CmdPSKsimTAG(payload->carrier, payload->invert, payload->clock, packet->length - sizeof(lf_psksim_t), payload->data, true);
+            break;
+        }
+        case CMD_LF_NRZ_SIMULATE: {
+            lf_nrzsim_t *payload = (lf_nrzsim_t *)packet->data.asBytes;
+            CmdNRZsimTAG(payload->invert, payload->separator, payload->clock, packet->length - sizeof(lf_nrzsim_t), payload->data, true);
             break;
         }
         case CMD_LF_HID_CLONE: {
@@ -917,11 +925,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_HITAG
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
-            SniffHitag();
+            SniffHitag2();
+//            SniffHitag2(packet->oldarg[0]);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
-            SimulateHitagTag((bool)packet->oldarg[0], packet->data.asBytes);
+            SimulateHitag2((bool)packet->oldarg[0], packet->data.asBytes);
             break;
         }
         case CMD_LF_HITAG_READER: { // Reader for Hitag tags, args = type and function
@@ -1142,12 +1151,32 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareNested(payload->block, payload->keytype, payload->target_block, payload->target_keytype, payload->calibrate, payload->key);
             break;
         }
+        case CMD_HF_MIFARE_STATIC_NESTED: {
+            struct p {
+                uint8_t block;
+                uint8_t keytype;
+                uint8_t target_block;
+                uint8_t target_keytype;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareStaticNested(payload->block, payload->keytype, payload->target_block, payload->target_keytype, payload->key);
+            break;
+        }
         case CMD_HF_MIFARE_CHKKEYS: {
             MifareChkKeys(packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS_FAST: {
             MifareChkKeys_fast(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_MIFARE_CHKKEYS_FILE: {
+            struct p {
+                uint8_t filename[32];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareChkKeys_file(payload->filename);
             break;
         }
         case CMD_HF_MIFARE_SIMULATE: {
@@ -1249,6 +1278,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareU_Otp_Tearoff();
             break;
         }
+        case CMD_HF_MIFARE_STATIC_NONCE: {
+            MifareHasStaticNonce();
+            break;
+        }
 #endif
 
 #ifdef WITH_NFCBARCODE
@@ -1343,6 +1376,13 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_HFSNIFF
         case CMD_HF_SNIFF: {
             HfSniff(packet->oldarg[0], packet->oldarg[1]);
+            break;
+        }
+#endif
+
+#ifdef WITH_HFPLOT
+        case CMD_FPGAMEM_DOWNLOAD: {
+            HfPlotDownload();
             break;
         }
 #endif
@@ -1512,7 +1552,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 case 1: // MEASURE_ANTENNA_TUNING_LF_START
                     // Let the FPGA drive the low-frequency antenna around 125kHz
                     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
                     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, packet->data.asBytes[1]);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, NULL, 0);
                     break;
@@ -1592,6 +1632,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 BigBuf_Clear_ext(false);
                 BigBuf_free();
             }
+
+            // 40 000 - (512-3) 509 = 39491
             uint16_t offset = MIN(BIGBUF_SIZE - PM3_CMD_DATA_SIZE - 3, payload->offset);
 
             // need to copy len bytes of data, not PM3_CMD_DATA_SIZE - 3 - offset
@@ -1599,6 +1641,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t len = MIN(BIGBUF_SIZE - offset, PM3_CMD_DATA_SIZE - 3);
 
             uint8_t *mem = BigBuf_get_addr();
+
+            // x + 394
             memcpy(mem + offset, &payload->data, len);
             // memcpy(mem + offset, &payload->data, PM3_CMD_DATA_SIZE - 3 - offset);
             reply_ng(CMD_LF_UPLOAD_SIM_SAMPLES, PM3_SUCCESS, NULL, 0);
@@ -1622,7 +1666,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1683,7 +1727,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1765,7 +1809,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             } else {
                 rdv40_spiffs_append((char *) filename, (uint8_t *)data, size, RDV40_SPIFFS_SAFETY_SAFE);
             }
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1807,7 +1851,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             res = Flash_Write(startidx, data, len);
             isok = (res == len) ? 1 : 0;
 
-            reply_old(CMD_ACK, isok, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1818,14 +1862,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             bool isok = false;
             if (initalwipe) {
                 isok = Flash_WipeMemory();
-                reply_old(CMD_ACK, isok, 0, 0, 0, 0);
+                reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
                 LED_B_OFF();
                 break;
             }
             if (page < 3)
                 isok = Flash_WipeMemoryPage(page);
 
-            reply_old(CMD_ACK, isok, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -1856,7 +1900,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
             FlashStop();
 
-            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             BigBuf_free();
             LED_B_OFF();
             break;
