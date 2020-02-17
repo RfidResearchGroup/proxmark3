@@ -53,55 +53,112 @@ static int usage_lf_keri_sim(void) {
     PrintAndLogEx(NORMAL, "       lf keri sim 112233");
     return PM3_SUCCESS;
 }
-static int CmdKeriMSDescramble (uint32_t *FC, uint32_t *ID, uint32_t CardID)
+
+typedef enum  {Scramble = 0,Descramble = 1} KeriMSScramble_t;
+
+static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *ID, uint32_t *CardID)
 {
     uint8_t CardToID [] = { 0xff,0xff,0xff,0xff,0x0d,0x0c,0x11,0x05,0xff,0x06,0xff,0x12,0x08,0xff,0x00,0x07,
                             0x0a,0xff,0xff,0x0b,0x04,0x01,0xff,0x13,0xff,0x14,0x02,0xff,0x03,0x09,0xff,0xff };
     uint8_t CardToFC [] = { 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
                             0xff,0xff,0x02,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x01,0xff };
+
+    uint8_t IDToCard [] = { 0x0e,0x15,0x1a,0x1c,0x14,0x07,0x09,0x0f,0x0c,0x1d,0x10,0x13,0x05,0x04,0xff,0xff,
+                            0xff,0x06,0x0b,0x17,0x19,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff };
+    uint8_t FCToCard [] = { 0xff,0x1e,0x12,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+                            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff };
+
     uint8_t CardIdx; // 0 - 31
     bool BitState;
     int idx;
 
-    char IDDecodeState[33] = {0x00};
-    char FCDecodeState[33] = {0x00};
-    
-    memset (IDDecodeState,'-',32);
-    memset (FCDecodeState,'-',32);
-    
-    
+    if (Action == Descramble) {
+        char IDDecodeState[33] = {0x00};
+        char FCDecodeState[33] = {0x00};
 
-    *FC = 0;
-    *ID = 0;
+        memset (IDDecodeState,'-',32);
+        memset (FCDecodeState,'-',32);
 
-    for (CardIdx = 0; CardIdx < 32; CardIdx++) {
-        // Get Bit State
-        BitState = (CardID >> CardIdx) & 1;
-        //if (BitState) { // its a 1   
-        idx = CardToID[CardIdx];
-        if ((idx >= 0) && (idx <= 32)) {
-            if (BitState)
-                *ID = *ID | (1 << idx);
-            IDDecodeState[idx] = '0'+BitState;
+        *FC = 0;
+        *ID = 0;
+
+        for (CardIdx = 0; CardIdx < 32; CardIdx++) {
+            // Get Bit State
+            BitState = (*CardID >> CardIdx) & 1;
+            //if (BitState) { // its a 1   
+            idx = CardToID[CardIdx];
+            if ((idx >= 0) && (idx <= 32)) {
+                if (BitState)
+                    *ID = *ID | (1 << idx);
+                IDDecodeState[31-idx] = '0'+BitState;
+            }
+
+            idx = CardToFC[CardIdx];
+            if ((idx >= 0) && (idx <= 32)) {
+                if (BitState)
+                    *FC = *FC | (1 << idx);
+                FCDecodeState[31-idx] = '0'+BitState;
+            }
         }
-            //else    
-            //    IDDecodeState[CardIdx] = '-';
-            
-        idx = CardToFC[CardIdx];
-        if ((idx >= 0) && (idx <= 32)) {
-            if (BitState)
-                *FC = *FC | (1 << idx);
-            FCDecodeState[idx] = '0'+BitState;
-        }
-            //else    
-            //    IDDecodeState[CardIdx] = '-';
 
-        // }
+        // Patch for bit order group unknown
+        // Reverse order for easy mapping for unknowns
+        // I know that these bit groups are a in the correct location, unknown order.
+        if (IDDecodeState[31-17] == '1') IDDecodeState[31-17] = '?';
+        if (IDDecodeState[31-18] == '1') IDDecodeState[31-18] = '?';
+        if (IDDecodeState[31-19] == '1') IDDecodeState[31-19] = '?';
+        if (IDDecodeState[31-20] == '1') IDDecodeState[31-20] = '?';
+    
+        if (FCDecodeState[31- 1] == '1') FCDecodeState[31- 1] = '?';
+        if (FCDecodeState[31- 2] == '1') FCDecodeState[31- 2] = '?';
+
+        PrintAndLogEx(SUCCESS, "BitState ID : %s",IDDecodeState);
+        PrintAndLogEx(SUCCESS, "BitState FC : %s",FCDecodeState);
     }
+    if (Action == Scramble)
+    {
+        // PrintAndLogEx(SUCCESS, "Scramble FC : %d - ID %d",*FC,*ID);
+        *CardID = 0; // set to 0
 
-    PrintAndLogEx(SUCCESS, "BitState ID : %s",IDDecodeState);
-    PrintAndLogEx(SUCCESS, "BitState FC : %s",FCDecodeState);
+        for (CardIdx = 0; CardIdx < 32; CardIdx++) 
+        {
+            // Card ID 
+            BitState = (*ID >> CardIdx) & 1;
+            if (BitState) {
+                idx = IDToCard[CardIdx];
+                if ((idx >= 0) && (idx <= 32)) {
+                    *CardID |= (1 << idx);
+                }
+            }
+            // FC 
+            BitState = (*FC >> CardIdx) & 1;
+            if (BitState) {
+                idx = FCToCard[CardIdx];
+                if ((idx >= 0) && (idx <= 32)) {
+                    *CardID |= (1 << idx);
+                }
+            }
+        }
+        // Fixed bits
+        /*
+            Add Parity and Fixed bits
+            Bit  3 - Note Used/Fixed 1
+            Bit 31 - 1 Fixed
+            Bit  0,1 - 2 Bit Parity
+        */
+        *CardID |= (1 <<  3);
+        // Check/Parity Bits
+        int Parity = 1;
+        for (CardIdx = 4; CardIdx <= 31; CardIdx += 2) {
+            Parity = Parity ^ ((*CardID >> CardIdx) & 11);
+        }
+        *CardID = *CardID | Parity;
+
+        // Bit 31 was fixed but not in check/parity bits
+        *CardID |= (1 << 31); 
     
+        PrintAndLogEx(SUCCESS, "Scrambled FC : %d - Card ID : %d to RAW : E0000000%08X",*FC,*ID,*CardID);
+    }
     return PM3_SUCCESS;
 }
 
@@ -158,13 +215,15 @@ static int CmdKeriDemod(const char *Cmd) {
     Descramble Data.
 */
     uint32_t fc = 0;
-    uint32_t imprintID = 0;
+    uint32_t cardid = 0;
 
     // Just need to the low 32 bits without the 111 trailer
-    CmdKeriMSDescramble (&fc,&imprintID,raw2);
+    CmdKeriMSScramble (Descramble,&fc,&cardid,&raw2);
 
-    PrintAndLogEx (SUCCESS,"Descrambled MS : FC %d - imprint id %d\n",fc,imprintID);
+    PrintAndLogEx (SUCCESS,"Descrambled MS : FC %d - Card ID %d\n",fc,cardid);
     
+    uint32_t testCard = 0;
+    CmdKeriMSScramble (Scramble,&fc,&cardid,&testCard);
 // End Descramble test
 
     if (invert) {
