@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 '''
 # Andrei Costin <zveriu@gmail.com>, 2011
