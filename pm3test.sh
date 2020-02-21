@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PM3PATH=$(dirname "$0")
 cd "$PM3PATH" || exit 1

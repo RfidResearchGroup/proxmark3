@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 from itertools import imap
 import unittest, sys, findbits

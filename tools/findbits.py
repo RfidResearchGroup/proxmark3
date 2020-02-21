@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 #  findbits.py - find Binary, Octal, Decimal or Hex number in bitstream
 #

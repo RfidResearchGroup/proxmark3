@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Convert proxmark3 trace or wav files to formats to be used by Inspectrum
 #
