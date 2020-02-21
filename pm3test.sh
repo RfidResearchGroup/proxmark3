@@ -119,6 +119,7 @@ while true; do
   if ! CheckExecute "xorcheck test" "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
   if ! CheckExecute "findbits test" "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
   if ! CheckExecute "findbits_test test" "tools/findbits_test.py 2>&1" "OK"; then break; fi
+  if ! CheckExecute "pm3_eml_mfd test" "tools/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
   exit 0
 done
