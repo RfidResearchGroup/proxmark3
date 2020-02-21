@@ -41,6 +41,8 @@ addons:
       - qt5
       - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
     taps: RfidResearchGroup/proxmark3
+# update trick to fix https://travis-ci.community/t/macos-build-fails-because-of-homebrew-bundle-unknown-command/7296/14
+    update: true
 
 install:
   if ! arm-none-eabi-gcc -v; then 
