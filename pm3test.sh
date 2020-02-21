@@ -81,6 +81,13 @@ printf "git sha: "
 git rev-parse HEAD
 echo ""
 
+# debugging Travis...
+echo "DEBUG /usr/local/opt/python*"
+ls -l /usr/local/opt/python* || true
+echo "DEBUG which python3"
+which python3 || true
+whereis python3 || true
+
 while true; do
   printf "\n${C_BLUE}Testing files:${C_NC}\n"
   if ! CheckFileExist "xorcheck exists" "tools/xorcheck.py"; then break; fi

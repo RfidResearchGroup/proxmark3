@@ -21,7 +21,7 @@ addons:
   homebrew:
     packages:
 # update trick to fix https://travis-ci.community/t/macos-build-fails-because-of-homebrew-bundle-unknown-command/7296/14
-#    update: true
+    update: true
 
 install:
   echo "install skipped"
