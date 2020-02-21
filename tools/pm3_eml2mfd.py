@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 # Andrei Costin <zveriu@gmail.com>, 2011
@@ -6,20 +6,20 @@
 # Converts PM3 Mifare Classic emulator EML text file to MFD binary dump file
 '''
 
-from __future__ import with_statement
+
 import sys
 import binascii
 
 def main(argv):
     argc = len(argv)
     if argc < 3:
-        print 'Usage:', argv[0], 'input.eml output.mfd'
+        print('Usage:', argv[0], 'input.eml output.mfd')
         sys.exit(1)
 
-    with file(argv[1], "r") as file_inp, file(argv[2], "wb") as file_out:
+    with open(argv[1], "r") as file_inp, open(argv[2], "wb") as file_out:
         for line in file_inp:
             line = line.rstrip('\n').rstrip('\r')
-            print line
+            print(line)
             data = binascii.unhexlify(line)
             file_out.write(data)
 

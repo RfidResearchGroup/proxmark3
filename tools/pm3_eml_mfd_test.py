@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from __future__ import with_statement
+
 from tempfile import mkdtemp
 from shutil import rmtree
-from itertools import imap
+
 from string import hexdigits
 import unittest, os
 import pm3_eml2mfd, pm3_mfd2eml
@@ -24,18 +24,18 @@ class TestEmlMfd(unittest.TestCase):
 
     def test_mfd2eml(self):
         self.three_argument_test(pm3_mfd2eml.main,
-                imap(reversed, self.EML2MFD_TESTCASES), c14n=hex_c14n)
+                map(reversed, self.EML2MFD_TESTCASES), c14n=hex_c14n)
 
     def three_argument_test(self, operation, cases, c14n=str):
         for case_input, case_output in cases:
             try:
                 inp_name = os.path.join(self.tmpdir, 'input')
                 out_name = os.path.join(self.tmpdir, 'output')
-                with file(inp_name, 'wb') as in_file:
+                with open(inp_name, 'w') as in_file:
                     in_file.write(case_input)
                 operation(['', inp_name, out_name])
-                with file(out_name, 'rb') as out_file:
-                    self.assertEquals(c14n(case_output), c14n(out_file.read()))
+                with open(out_name, 'r') as out_file:
+                    self.assertEqual(c14n(case_output), c14n(out_file.read()))
             finally:
                 for file_name in inp_name, out_name:
                     if os.path.exists(file_name):
