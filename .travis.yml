@@ -16,18 +16,47 @@ matrix:
     - os: osx
       osx_image: xcode11
       env: MAKE_PARAMS='PLATFORM_EXTRAS='
+    - os: osx
+      osx_image: xcode11
+      env: MAKE_PARAMS='PLATFORM_EXTRAS=BTADDON'
+    - os: linux
+      dist: xenial
+      sudo: required
+      env: MAKE_PARAMS='PLATFORM_EXTRAS='
+    - os: linux
+      dist: xenial
+      sudo: required
+      env: MAKE_PARAMS='PLATFORM_EXTRAS=BTADDON'
 
 addons:
+  apt:
+    packages:
+      - gcc-arm-none-eabi
+      - libnewlib-dev
+      - libsndfile1-dev
   homebrew:
     packages:
+      - readline
+      - libsndfile
+      - qt5
+      - RfidResearchGroup/proxmark3/arm-none-eabi-gcc
+    taps: RfidResearchGroup/proxmark3
 # update trick to fix https://travis-ci.community/t/macos-build-fails-because-of-homebrew-bundle-unknown-command/7296/14
     update: true
 
 install:
-  echo "install skipped"
+  if ! arm-none-eabi-gcc -v; then 
+    echo "arm-none-eabi-gcc [ERROR]";
+    travis_terminate 1;
+  fi
+    
+  make clean;
+  make all V=1 "$MAKE_PARAMS";
 
 script:
 ## start and run a test script
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     ./pm3test.sh;  
+  elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+    ./pm3test.sh;
   fi
