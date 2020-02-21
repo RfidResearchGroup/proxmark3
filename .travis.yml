@@ -36,6 +36,7 @@ addons:
       - libsndfile1-dev
   homebrew:
     packages:
+      - python3
       - readline
       - libsndfile
       - qt5
