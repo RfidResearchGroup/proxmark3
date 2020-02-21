@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #  xorcheck.py - find xor values for 8-bit LRC
 #
@@ -24,22 +24,21 @@ import sys
 import os
 
 if(len(sys.argv) < 3):
-    print
-    print '\t'+sys.argv[0] + ' - Generate final byte for XOR LRC'
-    print
-    print 'Usage: ' + sys.argv[0] + ' <ID Byte1> <ID Byte2> ... <LRC>'
-    print
-    print '\tSpecifying the bytes of a UID with a known LRC will find the last byte value'
-    print '\tneeded to generate that LRC with a rolling XOR. All bytes should be specified in HEX.'
-    print
-    print 'Example:'
-    print
-    print '\txorcheck.py 04 00 80 64 ba'
-    print
-    print 'Should produce the output:'
-    print
-    print '\tTarget (BA) requires final LRC XOR byte value: 5A'
-    print
+    print("""
+\t{0} - Generate final byte for XOR LRC
+
+Usage: {0} <ID Byte1> <ID Byte2> ... <LRC>
+
+\tSpecifying the bytes of a UID with a known LRC will find the last byte value
+\tneeded to generate that LRC with a rolling XOR. All bytes should be specified in HEX.
+
+Example:
+
+\t{0} 04 00 80 64 ba
+
+Should produce the output:
+
+\tTarget (BA) requires final LRC XOR byte value: 5A\n""".format(sys.argv[0]))
     os._exit(True)
 
 target= int(sys.argv[len(sys.argv) - 1],16)
@@ -47,6 +46,4 @@ target= int(sys.argv[len(sys.argv) - 1],16)
 lrc= 0x00
 for i in range(len(sys.argv) - 1):
     lrc ^= int(sys.argv[i + 1],16)
-print
-print 'Target (%02X) requires final LRC XOR byte value: %02X' % (target,lrc)
-print
+print('\nTarget (%02X) requires final LRC XOR byte value: %02X\n' % (target,lrc))
