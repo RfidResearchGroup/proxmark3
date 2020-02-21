@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #  findbits.py - find Binary, Octal, Decimal or Hex number in bitstream
 #
@@ -31,10 +31,9 @@ def invert(data):
 def search(target,data):
     location = data.find(target)
     if location >= 0:
-        print '*** Match at bit %d:' % location,
-        print '%s<%s>%s' % (data[:location],target,data[location+len(target):])
+        print('*** Match at bit {:d}: {}<{}>{}'.format(location, data[:location],target,data[location+len(target):]))
     else:
-        print 'Not found'
+        print('Not found')
 
 # convert integer to binary string
 def binstring(number):
@@ -49,32 +48,32 @@ def domatch(binary,number):
     reversed= stringreverse(number)
     inverted= invert(binary)
 
-    print '  Forward: (%s)' % number,
+    print('  Forward: (%s) ' % number, end = '')
     search(binary,number)
-    print '  Reverse: (%s)' % reversed,
+    print('  Reverse: (%s) ' % reversed, end = '')
     search(binary,reversed)
-    print '  Inverse: (%s)' % inverted
-    print '    Forward: (%s)' % number,
+    print('  Inverse: (%s) ' % inverted)
+    print('    Forward: (%s) ' % number, end = '')
     search(inverted,number)
-    print '    Reverse: (%s)' % reversed,
+    print('    Reverse: (%s) ' % reversed, end = '')
     search(inverted,reversed)
 
 def main():
     if(len(sys.argv) < 3):
-        print
-        print '\t'+sys.argv[0] + ' - Search bitstream for a known number'
-        print
-        print 'Usage: ' + sys.argv[0] + ' <NUMBER> <BITSTREAM>'
-        print
-        print '\tNUMBER will be converted to it\'s BINARY equivalent for all valid'
-        print '\tinstances of BINARY, OCTAL, DECIMAL and HEX, and the bitstream'
-        print '\tand it\'s inverse will be searched for a pattern match. Note that'
-        print '\tNUMBER must be specified in BINARY to match leading zeros.'
-        print
-        print 'Example:'
-        print
-        print '\tfindbits.py 73 0110010101110011'
-        print
+        print("""
+\t{0} - Search bitstream for a known number
+
+Usage: {0} <NUMBER> <BITSTREAM>
+
+\tNUMBER will be converted to it\'s BINARY equivalent for all valid
+\tinstances of BINARY, OCTAL, DECIMAL and HEX, and the bitstream
+\tand it\'s inverse will be searched for a pattern match. Note that
+\tNUMBER must be specified in BINARY to match leading zeros.
+
+Example:
+
+\t{0} 73 0110010101110011
+""".format(sys.argv[0]))
         os._exit(True)
 
     bases=    {
@@ -84,11 +83,10 @@ def main():
         16:'HEX',
             }
 
-    for base, base_name in sorted(bases.iteritems()):
+    for base, base_name in sorted(bases.items()):
         try:
             number= int(sys.argv[1],base)
-            print
-            print 'Trying', base_name
+            print('\nTrying ' + base_name)
             # do BINARY as specified to preserve leading zeros
             if base == 2:
                 domatch(sys.argv[1],sys.argv[2])

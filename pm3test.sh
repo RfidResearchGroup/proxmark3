@@ -117,6 +117,8 @@ while true; do
   if ! CheckExecute "mfkey64 long trace test" "tools/mfkey/./mfkey64 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea" "Found Key: \[091e639cb715\]"; then break; fi
   if ! CheckExecute "nonce2key test" "tools/nonce2key/nonce2key e9cadd9c a8bf4a12 a020a8285858b090 050f010607060e07 5693be6c00000000" "key recovered: fc00018778f7"; then break; fi
   if ! CheckExecute "xorcheck test" "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
+  if ! CheckExecute "findbits test" "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
+  if ! CheckExecute "findbits_test test" "tools/findbits_test.py 2>&1" "OK"; then break; fi
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
   exit 0
 done
