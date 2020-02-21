@@ -54,7 +54,9 @@ install:
   make all V=1 "$MAKE_PARAMS";
 
 before_script:
-  - export PATH="/usr/local/opt/python@3.8/bin:$PATH"
+  if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+    export PATH="/usr/local/opt/python@3.8/bin:$PATH";
+  fi
 
 script:
 ## start and run a test script
