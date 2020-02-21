@@ -36,7 +36,6 @@ addons:
       - libsndfile1-dev
   homebrew:
     packages:
-      - python3
       - readline
       - libsndfile
       - qt5
@@ -44,6 +43,14 @@ addons:
     taps: RfidResearchGroup/proxmark3
 # update trick to fix https://travis-ci.community/t/macos-build-fails-because-of-homebrew-bundle-unknown-command/7296/14
     update: true
+
+before_install:
+  # bug?
+  # homebrew update replaced python2.7 by python3.7 but
+  # python3 link failed while python@2 still present, so let's do it again:
+  if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+    brew link --overwrite python;
+  fi
 
 install:
   if ! arm-none-eabi-gcc -v; then 
