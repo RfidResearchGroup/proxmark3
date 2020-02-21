@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #-----------------------------------------------------------------------------
 # Copyright (C) 2014 iZsh <izsh at fail0verflow.com>
 #
@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import sys
 
 if len(sys.argv) != 2:
-    print "Usage: %s <basename>" % sys.argv[0]
+    print("Usage: %s <basename>" % sys.argv[0])
     sys.exit(1)
 
 BASENAME = sys.argv[1]
@@ -21,29 +21,15 @@ nx = numpy.fromfile(BASENAME + ".time")
 def plot_time(dat1):
     plt.plot(nx, dat1)
 
-sig = open(BASENAME + ".filtered").read()
-sig = map(lambda x: ord(x), sig)
-
-min_vals = open(BASENAME + ".min").read()
-min_vals = map(lambda x: ord(x), min_vals)
-
-max_vals = open(BASENAME + ".max").read()
-max_vals = map(lambda x: ord(x), max_vals)
-
-states = open(BASENAME + ".state").read()
-states = map(lambda x: ord(x) * 10 + 65, states)
-
-toggles = open(BASENAME+ ".toggle").read()
-toggles = map(lambda x: ord(x) * 10 + 80, toggles)
-
-high = open(BASENAME + ".high").read()
-high = map(lambda x: ord(x), high)
-highz = open(BASENAME + ".highz").read()
-highz = map(lambda x: ord(x), highz)
-lowz = open(BASENAME + ".lowz").read()
-lowz = map(lambda x: ord(x), lowz)
-low = open(BASENAME + ".low").read()
-low = map(lambda x: ord(x), low)
+sig = bytearray(open(BASENAME + ".filtered", 'rb').read())
+min_vals = bytearray(open(BASENAME + ".min", 'rb').read())
+max_vals = bytearray(open(BASENAME + ".max", 'rb').read())
+states = bytearray(open(BASENAME + ".state", 'rb').read())
+toggles = bytearray(open(BASENAME+ ".toggle", 'rb').read())
+high = bytearray(open(BASENAME + ".high", 'rb').read())
+highz = bytearray(open(BASENAME + ".highz", 'rb').read())
+lowz = bytearray(open(BASENAME + ".lowz", 'rb').read())
+low = bytearray(open(BASENAME + ".low", 'rb').read())
 
 plot_time(sig)
 plot_time(min_vals)
