@@ -6,9 +6,19 @@
 # at your option, any later version. See the LICENSE.txt file for the text of
 # the license.
 #-----------------------------------------------------------------------------
-import numpy
-import matplotlib.pyplot as plt
+
 import sys
+try:
+    import numpy
+except ModuleNotFoundError:
+    print("Please install numpy module first.")
+    sys.exit(1)
+
+try:
+    import matplotlib.pyplot as plt
+except ModuleNotFoundError:
+    print("Please install matplotlib module first.")
+    sys.exit(1)
 
 if len(sys.argv) != 2:
     print("Usage: %s <basename>" % sys.argv[0])
