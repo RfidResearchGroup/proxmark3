@@ -44,6 +44,14 @@ addons:
 # update trick to fix https://travis-ci.community/t/macos-build-fails-because-of-homebrew-bundle-unknown-command/7296/14
     update: true
 
+before_install:
+  # bug?
+  # homebrew update is replacing python2.7 by python3.7 but
+  # python3 link failed while python@2 still present, so let's do it again:
+  if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+    brew link --overwrite python;
+  fi
+
 install:
   if ! arm-none-eabi-gcc -v; then 
     echo "arm-none-eabi-gcc [ERROR]";
@@ -52,11 +60,6 @@ install:
     
   make clean;
   make all V=1 "$MAKE_PARAMS";
-
-before_script:
-  if [ "$TRAVIS_OS_NAME" == "osx" ]; then
-    export PATH="/usr/local/opt/python@3.8/bin:$PATH";
-  fi
 
 script:
 ## start and run a test script
