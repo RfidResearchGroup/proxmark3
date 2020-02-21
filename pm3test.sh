@@ -84,6 +84,7 @@ echo ""
 # debugging Travis...
 echo "DEBUG /usr/local/opt/python*"
 ls -l /usr/local/opt/python* || true
+ls -l /usr/local/opt/python@3.8/bin || true
 echo "DEBUG which python3"
 which python3 || true
 whereis python3 || true
