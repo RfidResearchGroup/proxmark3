@@ -726,7 +726,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_SAMPLING_SET_CONFIG: {
-            setSamplingConfig((sample_config *) packet->data.asBytes);
+            sample_config c;
+            memcpy(&c, packet->data.asBytes, sizeof(sample_config));
+            setSamplingConfig(&c);
+//            setSamplingConfig((sample_config *) packet->data.asBytes);
             break;
         }
         case CMD_LF_ACQ_RAW_ADC: {
