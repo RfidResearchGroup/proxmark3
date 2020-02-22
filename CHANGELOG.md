@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Ported all python 2 scripts to python 3 (@doegox and @sigwinch28)
+ - Removed undefined exit behaviour from `analyzesize` tool: it now exits with code 2 when called with wrong args (@sigwinch28)
+ - Replaced shebangs in scripts with more portable versions which use `/usr/bin/env` (@sigwinch28)
  - Added `hf lto restore` - restore LTO cartridge memory from dump file [.bin|.eml] (@Kevin-Nakamoto)
  - Added `LF_ICEHID` standalone mode which searches for lf HID credentials and store to RDV4 flashmem (@iceman1001)
  - Added `HF_14ASNIFF` standalone mode with storing trace to RDV4 flashmem (@micolous)
