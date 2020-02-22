@@ -179,7 +179,7 @@ int CmdHFTune(const char *Cmd) {
     int iter =  param_get32ex(Cmd, 0, 0, 10);
 
     PacketResponseNG resp;
-    PrintAndLogEx(SUCCESS, "Measuring HF antenna," _YELLOW_("click button") " or press" _YELLOW_("Enter") "to exit");
+    PrintAndLogEx(SUCCESS, "Measuring HF antenna, " _YELLOW_("click button") " or press " _YELLOW_("Enter") "to exit");
     clearCommandBuffer();
     uint8_t mode[] = {1};
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
