@@ -253,11 +253,11 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     uint32_t cancel_counter = 0;
     int16_t checked = 0;
 
-    while (true) {
+    while (!BUTTON_PRESS()) {
 
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
+            if (data_available()) {
                 checked = -1;
                 break;
             } else {
