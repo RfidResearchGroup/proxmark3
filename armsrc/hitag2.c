@@ -20,6 +20,8 @@
 // Anon, 2019
 // Doegox, 2020
 
+#define DBG  if (DBGLEVEL >= DBG_EXTENDED)
+
 #include "hitag2.h"
 #include "hitag2_crypto.h"
 #include "string.h"
@@ -305,6 +307,9 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
         break;
     }
 
+    // LogTrace(rx, nbytes(rxlen), 0, 0, NULL, false);
+    // LogTrace(tx, nbytes(txlen), 0, 0, NULL, true);
+
     if (tag.crypto_active) {
         hitag2_cipher_transcrypt(&(tag.cs), tx, *txlen / 8, *txlen % 8);
     }
@@ -337,12 +342,12 @@ static uint32_t hitag_reader_send_bit(int bit) {
         lf_wait_periods(HITAG_T_1 - HITAG_T_LOW); // wait for 26-32 times the carrier period
         wait += HITAG_T_1 - HITAG_T_LOW;
     }
-    /*lf_wait_periods(10);*/
+
     LED_A_OFF();
     return wait;
 }
 
-// reader/writer
+// reader / writer commands
 static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
 
     uint32_t wait = 0;
@@ -953,17 +958,18 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                 memcpy(tag.sectors[blocknr], rx, 4);
                 blocknr++;
 
-                Dbhexdump(4, rx, false);
+                DBG Dbhexdump(4, rx, false);
             }
             if (blocknr > 0) {
+                DBG DbpString("Read successful!");
                 bSuccessful = true;
-                return false;
+                return true;
             }
         }
         break;
         // Unexpected response
         default: {
-            Dbprintf("Unknown frame length: %d", rxlen);
+            DBG Dbprintf("Unknown frame length: %d", rxlen);
             return false;
         }
         break;
@@ -1017,7 +1023,7 @@ void SniffHitag2(void) {
 
 
         // Receive frame, watch for at most T0*EOF periods
-        lf_reset_counter();
+//        lf_reset_counter();
 
         // Wait "infinite" for reader modulation
         periods = lf_detect_gap(20000);
@@ -1071,8 +1077,6 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
 
     DbpString("Starting Hitag2 simulation");
 
-    LED_D_ON();
-
     // hitag2 state machine?
     hitag2_init();
 
@@ -1094,21 +1098,25 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
         Dbprintf("| %d | %08x |", i, block);
     }
 
-    uint8_t tag_modulation;
+    uint8_t reader_modulation;
     size_t max_nrzs = 8 * HITAG_FRAME_LEN + 5;
     uint8_t nrz_samples[max_nrzs];
     size_t nrzs = 0, periods = 0;
 
 //    uint32_t command_start = 0, command_duration = 0;
+  //  int16_t checked = 0;
 
-    int16_t checked = 0;
+// SIMULATE
 
     while (!BUTTON_PRESS()) {
 
-loop1:
+        LED_D_ON();
+    
+//        lf_reset_counter();
         LED_A_OFF();
         WDT_HIT();
 
+/*
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 100) {
             if (data_available()) {
@@ -1119,6 +1127,7 @@ loop1:
             }
         }
         ++checked;
+*/
 
         rxlen = 0;
 
@@ -1126,10 +1135,10 @@ loop1:
         bool waiting_for_first_edge = true;
 
         // Did we detected any modulaiton at all
-        bool detected_tag_modulation = false;
+        bool detected_modulation = false;
 
         // Use the current modulation state as starting point
-        tag_modulation = lf_get_tag_modulation();
+        reader_modulation = lf_get_reader_modulation();
 
         // Receive frame, watch for at most max_nrzs periods
         // Reset the number of NRZ samples and use edge detection to detect them
@@ -1141,7 +1150,7 @@ loop1:
             // Just break out of loop after an initial time-out (tag is probably not available)
             // The function lf_count_edge_periods() returns 0 when a time-out occurs
             if (periods == 0) {
-                goto loop1;  //break;
+                break;
             }
 
             LED_A_ON();
@@ -1159,32 +1168,36 @@ loop1:
                 periods = 16;
 
                 // We have received more than 0 periods, so we have detected a tag response
-                detected_tag_modulation = true;
+                detected_modulation = true;
             }
 
             // Evaluate the number of periods before the next edge
             if (periods > 24 && periods <= 64) {
                 // Detected two sequential equal bits and a modulation switch
                 // NRZ modulation: (11 => --|) or (11 __|)
-                nrz_samples[nrzs++] = tag_modulation;
-                nrz_samples[nrzs++] = tag_modulation;
+                nrz_samples[nrzs++] = reader_modulation;
+                nrz_samples[nrzs++] = reader_modulation;
                 // Invert tag modulation state
-                tag_modulation ^= 1;
+                reader_modulation ^= 1;
             } else if (periods > 0 && periods <= 24) {
                 // Detected one bit and a modulation switch
                 // NRZ modulation: (1 => -|) or (0 _|)
-                nrz_samples[nrzs++] = tag_modulation;
-                tag_modulation ^= 1;
+                nrz_samples[nrzs++] = reader_modulation;
+                reader_modulation ^= 1;
             } else {
-                tag_modulation ^= 1;
+                reader_modulation ^= 1;
                 // The function lf_count_edge_periods() returns > 64 periods, this is not a valid number periods
                 Dbprintf("Detected unexpected period count: %d", periods);
                 break;
             }
         }
 
+        LED_D_OFF();
+
         // If there is no response, just repeat the loop
-        if (!detected_tag_modulation) continue;
+        if (!detected_modulation) continue;
+
+        LED_A_OFF();
 
         // Make sure we always have an even number of samples. This fixes the problem
         // of ending the manchester decoding with a zero. See the example below where
@@ -1194,7 +1207,7 @@ loop1:
         // The last modulation change of a zero is not detected, but we should take
         // the half period in account, otherwise the demodulator will fail.
         if ((nrzs % 2) != 0) {
-            nrz_samples[nrzs++] = tag_modulation;
+            nrz_samples[nrzs++] = reader_modulation;
         }
 
         LED_B_ON();
@@ -1233,8 +1246,8 @@ loop1:
             // not that since the clock counts since the rising edge, but T_Wait1 is
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
-            // terms of T0 units
-            lf_wait_periods(200);
+            // terms of T0 units (HITAG_T_WAIT_1_MIN - HITAG_T_LOW )
+            lf_wait_periods(HITAG_T_WAIT_1_MIN);
 
             // Send and store the tag answer (if there is any)
             if (txlen) {
@@ -1266,15 +1279,15 @@ loop1:
 
 void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
-    uint32_t command_start = 0;
-    uint32_t command_duration = 0;
-    uint32_t response_start = 0;
-    uint32_t response_duration = 0;
+    uint32_t command_start = 0, command_duration = 0;
+    uint32_t response_start = 0, response_duration = 0;
+
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
     uint8_t *tx = txbuf;
     size_t txlen = 0;
+
     int t_wait_1;
     int t_wait_1_guard = 8;
     int t_wait_2;
@@ -1292,19 +1305,17 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     set_tracing(true);
     clear_trace();
 
-    DbpString("Starting Hitag reader family");
-
     // Check configuration
     switch (htf) {
         case RHT1F_PLAIN: {
-            Dbprintf("Read public blocks in plain mode");
+            DBG Dbprintf("Read public blocks in plain mode");
             // this part will be unreadable
             memset(tag.sectors + 2, 0x0, 30);
             blocknr = 0;
             break;
         }
         case RHT1F_AUTHENTICATE: {
-            Dbprintf("Read all blocks in authed mode");
+            DBG Dbprintf("Read all blocks in authed mode");
             memcpy(nonce, htd->ht1auth.nonce, 4);
             memcpy(key, htd->ht1auth.key, 4);
             memcpy(logdata_0, htd->ht1auth.logdata_0, 4);
@@ -1314,19 +1325,19 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             memset(logdata_1, 0x00, 4);
             byte_value = 0;
             key_no = htd->ht1auth.key_no;
-            Dbprintf("Authenticating using key #%d:", key_no);
-            Dbhexdump(4, key, false);
-            DbpString("Nonce:");
-            Dbhexdump(4, nonce, false);
-            DbpString("Logdata_0:");
-            Dbhexdump(4, logdata_0, false);
-            DbpString("Logdata_1:");
-            Dbhexdump(4, logdata_1, false);
+            DBG Dbprintf("Authenticating using key #%d:", key_no);
+            DBG Dbhexdump(4, key, false);
+            DBG DbpString("Nonce:");
+            DBG Dbhexdump(4, nonce, false);
+            DBG DbpString("Logdata_0:");
+            DBG Dbhexdump(4, logdata_0, false);
+            DBG DbpString("Logdata_1:");
+            DBG Dbhexdump(4, logdata_1, false);
             blocknr = 0;
             break;
         }
         case RHT2F_PASSWORD: {
-            Dbprintf("List identifier in password mode");
+            DBG Dbprintf("List identifier in password mode");
             if (memcmp(htd->pwd.password, "\x00\x00\x00\x00", 4) == 0)
                 memcpy(password, tag.sectors[1], sizeof(password));
             else
@@ -1338,19 +1349,19 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             break;
         }
         case RHT2F_AUTHENTICATE: {
-            DbpString("Authenticating using nr,ar pair:");
+            DBG DbpString("Authenticating using nr,ar pair:");
             memcpy(NrAr, htd->auth.NrAr, 8);
-            Dbhexdump(8, NrAr, false);
+            DBG Dbhexdump(8, NrAr, false);
             bCrypto = false;
             bAuthenticating = false;
             break;
         }
         case RHT2F_CRYPTO: {
-            DbpString("Authenticating using key:");
+            DBG DbpString("Authenticating using key:");
             memcpy(key, htd->crypto.key, 6);  //HACK; 4 or 6??  I read both in the code.
-            Dbhexdump(6, key, false);
-            DbpString("Nonce:");
-            Dbhexdump(4, nonce, false);
+            DBG Dbhexdump(6, key, false);
+            DBG DbpString("Nonce:");
+            DBG Dbhexdump(4, nonce, false);
             memcpy(nonce, htd->crypto.data, 4);
             blocknr = 0;
             bCrypto = false;
@@ -1358,7 +1369,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             break;
         }
         case RHT2F_TEST_AUTH_ATTEMPTS: {
-            Dbprintf("Testing %d authentication attempts", (auth_table_len / 8));
+            DBG Dbprintf("Testing %d authentication attempts", (auth_table_len / 8));
             auth_table_pos = 0;
             memcpy(NrAr, auth_table, 8);
             bCrypto = false;
@@ -1371,7 +1382,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             break;
         }
         default: {
-            Dbprintf("Error, unknown function: %d", htf);
+            DBG Dbprintf("Error, unknown function: %d", htf);
             set_tracing(false);
             return;
         }
@@ -1381,9 +1392,6 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
     // hitag2 state machine?
     hitag2_init();
-
-    // init as reader
-    lf_init(true, false);
 
     uint8_t attempt_count = 0;
 
@@ -1395,24 +1403,27 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         /*tag_size = 256;*/
         flipped_bit = 0;
         tag_size = 8;
-        DbpString("Configured for hitagS reader");
+        DBG DbpString("Configured for hitagS reader");
     } else if (htf < 20) {
         // hitag1 settings
         t_wait_1 = 204;
         t_wait_2 = 128;
         tag_size = 256;
         flipped_bit = 0;
-        DbpString("Configured for hitag1 reader");
+        DBG DbpString("Configured for hitag1 reader");
     } else if (htf < 30) {
         // hitag2 settings
         t_wait_1 = HITAG_T_WAIT_1_MIN;
         t_wait_2 = HITAG_T_WAIT_2_MIN;
         tag_size = 48;
-        DbpString("Configured for hitag2 reader");
+        DBG DbpString("Configured for hitag2 reader");
     } else {
-        Dbprintf("Error, unknown hitag reader type: %d", htf);
+        DBG Dbprintf("Error, unknown hitag reader type: %d", htf);
         return;
     }
+
+    // init as reader
+    lf_init(true, false);
 
     uint8_t tag_modulation;
     size_t max_nrzs = (8 * HITAG_FRAME_LEN + 5) * 2; // up to 2 nrzs per bit
@@ -1420,13 +1431,13 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     size_t nrzs = 0;
     int16_t checked = 0;
 
-    while (!bStop) {
+    while (!bStop && !BUTTON_PRESS()) {
 
         WDT_HIT();
 
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
+            if (data_available()) {
                 checked = -1;
                 break;
             } else {
@@ -1471,7 +1482,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 break;
             }
             default: {
-                Dbprintf("Error, unknown function: %d", htf);
+                DBG Dbprintf("Error, unknown function: %d", htf);
                 goto out;
             }
         }
@@ -1531,7 +1542,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
             } else {
                 // The function lf_count_edge_periods() returns 0 when a time-out occurs
                 if (periods == 0) {
-                    //Dbprintf("Detected timeout after [%d] nrz samples", nrzs);
+                    DBG Dbprintf("Detected timeout after [%d] nrz samples", nrzs);
                     break;
                 }
             }
@@ -1552,7 +1563,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
                 tag_modulation ^= 1;
             } else {
                 // The function lf_count_edge_periods() returns > 64 periods, this is not a valid number periods
-                //Dbprintf("Detected unexpected period count: %d", periods);
+                DBG Dbprintf("Detected unexpected period count: %d", periods);
                 break;
             }
         }
@@ -1591,13 +1602,13 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
 
         // Verify if the header consists of five consecutive ones
         if (nrzs < 5) {
-            Dbprintf("Detected unexpected number of manchester decoded samples [%d]", nrzs);
+            DBG Dbprintf("Detected unexpected number of manchester decoded samples [%d]", nrzs);
             break;
         } else {
             size_t i;
             for (i = 0; i < 5; i++) {
                 if (nrz_samples[i] != 1) {
-                    Dbprintf("Detected incorrect header, the bit [%d] is zero instead of one, abort", i);
+                    DBG Dbprintf("Detected incorrect header, the bit [%d] is zero instead of one, abort", i);
                     break;
                 }
             }
@@ -1608,7 +1619,7 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         for (size_t i = 5; i < nrzs; i++) {
             uint8_t bit = nrz_samples[i];
             if (bit > 1) { // When Manchester detects impossible symbol it writes "7"
-                Dbprintf("Error in Manchester decoding, abort");
+                DBG Dbprintf("Error in Manchester decoding, abort");
                 break;
             }
             rx[rxlen / 8] |= bit << (7 - (rxlen % 8));
@@ -1671,8 +1682,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     set_tracing(true);
     clear_trace();
 
-    DbpString("Starting Hitag writer family");
-    
+
     // Check configuration
     switch (htf) {
         case WHT2F_CRYPTO: {
@@ -1710,7 +1720,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
 
     // init as reader
     lf_init(true, false);
-    
+
     // Tag specific configuration settings (sof, timings, etc.)
     if (htf < 10) {
         // hitagS settings
@@ -1734,7 +1744,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         tag_size = 48;
         DbpString("Configured for hitag2 writer");
     } else {
-        Dbprintf("Error, unknown hitag writer type: %d", htf);
+        DBG Dbprintf("Error, unknown hitag writer type: %d", htf);
         return;
     }
 
@@ -1744,11 +1754,11 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     size_t nrzs = 0;
 
     int16_t checked = 0;
-    while (!bStop) {
+    while (!bStop && !BUTTON_PRESS()) {
 
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
+            if (data_available()) {
                 checked = -1;
                 break;
             } else {
