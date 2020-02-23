@@ -69,11 +69,12 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
     size_t periods = 0;
     volatile uint8_t adc_val;
     uint8_t avg_peak = adc_avg + 3, avg_through = adc_avg - 3;
-    int16_t checked = 0;
+//    int16_t checked = 0;
 
     while (!BUTTON_PRESS()) {
 
         // only every 100th times, in order to save time when collecting samples.
+/*
         if (checked == 1000) {
             if (data_available()) {
                 break;
@@ -82,7 +83,7 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             }
         }
         ++checked;
-
+*/
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -164,7 +165,11 @@ void lf_init(bool reader, bool simulate) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_134);
+    sample_config *sc = getSamplingConfig();
+    sc->decimation = 1;
+    sc->averaging = 0;
+
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
     if (reader) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
     } else {
@@ -217,10 +222,6 @@ void lf_init(bool reader, bool simulate) {
     // use malloc
     if (logging) initSampleBufferEx(&bufsize, true);
 
-    sample_config *sc = getSamplingConfig();
-    sc->decimation = 1;
-    sc->averaging = 0;
-    
     lf_sample_mean();
 }
 
@@ -237,20 +238,16 @@ void lf_finalize() {
 
     LEDsoff();
 
-    sample_config *sc = getSamplingConfig();
-    sc->decimation = 1;
-    sc->averaging = 0;
-
     StartTicks();
 }
 
 size_t lf_detect_field_drop(size_t max) {
     size_t periods = 0;
-    volatile uint8_t adc_val;
-    int16_t checked = 0;
+//    int16_t checked = 0;
 
     while (!BUTTON_PRESS()) {
 
+/*
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 1000) {
             if (data_available()) {
@@ -261,12 +258,13 @@ size_t lf_detect_field_drop(size_t max) {
             }
         }
         ++checked;
+*/
 
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             periods++;
-            adc_val = AT91C_BASE_SSC->SSC_RHR;
+            volatile uint8_t adc_val = AT91C_BASE_SSC->SSC_RHR;
 
             if (logging) logSampleSimple(adc_val);
 
