@@ -2019,12 +2019,12 @@ __attribute__((force_align_arg_pointer))
 
 static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
 
-    init_statelist_cache();
-    init_book_of_work();
-
     // create mutexes for accessing the statelist cache and our "book of work"
     pthread_mutex_init(&statelist_cache_mutex, NULL);
     pthread_mutex_init(&book_of_work_mutex, NULL);
+    
+    init_statelist_cache();
+    init_book_of_work();
 
     // create and run worker threads
     pthread_t thread_id[NUM_REDUCTION_WORKING_THREADS];
