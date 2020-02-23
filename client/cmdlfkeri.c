@@ -104,6 +104,7 @@ static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *I
         if (FCDecodeState[31- 1] == '1') FCDecodeState[31- 1] = '?';
         if (FCDecodeState[31- 2] == '1') FCDecodeState[31- 2] = '?';
 
+        PrintAndLogEx(SUCCESS, "Partial Keri MS decode");
         PrintAndLogEx(SUCCESS, "BitState ID : %s",IDDecodeState);
         PrintAndLogEx(SUCCESS, "BitState FC : %s",FCDecodeState);
     }
@@ -210,8 +211,12 @@ static int CmdKeriDemod(const char *Cmd) {
 
     PrintAndLogEx (SUCCESS,"Descrambled MS : FC %d - Card ID %d\n",fc,cardid);
     
+/*
+    Scamble: For dev testing only, will/should move to the create keri-ms code when added.
+    
     uint32_t testCard = 0;
     CmdKeriMSScramble (Scramble,&fc,&cardid,&testCard);
+*/
 
 // End Descramble test
 
