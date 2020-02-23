@@ -1845,14 +1845,15 @@ static bool TestIfKeyExists(uint64_t key) {
             num_keys_tested += count;
             hardnested_print_progress(num_acquired_nonces, "(Test: Key found)", 0.0, 0);
             crypto1_destroy(pcs);
+            pthread_mutex_destroy(&statelist_cache_mutex);
             return true;
         }
     }
 
     num_keys_tested += count;
     hardnested_print_progress(num_acquired_nonces, "(Test: Key NOT found)", 0.0, 0);
-
     crypto1_destroy(pcs);
+    pthread_mutex_destroy(&statelist_cache_mutex);
     return false;
 }
 
@@ -2041,9 +2042,6 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     for (uint16_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
         pthread_join(thread_id[i], NULL);
     }
-
-    // clean up mutex
-    pthread_mutex_destroy(&statelist_cache_mutex);
 
     maximum_states = 0;
     for (statelist_t *sl = candidates; sl != NULL; sl = sl->next) {
