@@ -1279,7 +1279,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
     }
 
     // check if tag doesn't have static nonce
-    if (detect_classic_static_nonce() != 0) {
+    if (detect_classic_static_nonce() == 1) {
         PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
         PrintAndLogEx(INFO, "\t Try use " _YELLOW_("`hf mf staticnested`"));
         return PM3_EOPABORTED;
@@ -1839,7 +1839,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (!know_target_key && nonce_file_read == false) {
 
         // check if tag doesn't have static nonce
-        if (detect_classic_static_nonce() != 0) {
+        if (detect_classic_static_nonce() == 1) {
             PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
             PrintAndLogEx(INFO, "\t Try use `" _YELLOW_("hf mf staticnested") "`");
             return PM3_EOPABORTED;
