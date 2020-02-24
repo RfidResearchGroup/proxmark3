@@ -2229,7 +2229,7 @@ void MifareHasStaticNonce() {
 
         nt = bytes_to_num(rec, 4);
 
-//        CHK_TIMEOUT();
+        CHK_TIMEOUT();
     }
 
 OUT:
