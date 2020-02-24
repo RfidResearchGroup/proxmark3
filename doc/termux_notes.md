@@ -27,17 +27,38 @@ ref : https://github.com/Proxmark/proxmark3/wiki/android
   - [LineageOS (Android 8.1)](https://download.lineageos.org/)
   - [LineageOS kernel](https://download.lineageos.org/)
   - [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
+  
+- Xiaomi Mi Mix 2S (arm64, USB-C)
+  - [LineageOS (Android 9.0)](https://download.lineageos.org/)
+  - [Magisk 20.3](https://github.com/topjohnwu/Magisk/)
+  
+- OnePlus 5T (arm64, USB-C)
+  - [LineageOS (Android 9.0)](https://download.lineageos.org/)
+  - [Franko Kernel](https://franco-lnx.net/)
+  - [Magisk 20.3](https://github.com/topjohnwu/Magisk/)
+  
+- Samsung Galaxy Tab S2 (arm64, MicroUSB)
+  - [LineageOS (Android 9.0)](https://download.lineageos.org/)
+  - [LineageOS kernel](https://download.lineageos.org/)
+  - [Magisk 20.3](https://github.com/topjohnwu/Magisk/)
+
+
 
 ## Setup
 ### Setting up Termux
-1. Install [Termux](https://play.google.com/store/apps/details?id=com.termux) and start it
-2. Run the following commands:
+Install [Termux](https://play.google.com/store/apps/details?id=com.termux) and start it
+### Install Proxmark3 package
+Run the following commands:
+```
+pkg install proxmark3 tsu
+```
+### Optional: Building Proxmark3 client from source
 ```
 pkg install make clang clang++ readline libc++ git tsu
 git clone https://github.com/RfidResearchGroup/proxmark3.git
+cd proxmark
+make clean && make client
 ```
-### Building Proxmark3 client
-1. `make clean && make client`
 
 ### USB_ACM
 You need the `USB_ACM` driver enabled and working to communicate with the Proxmark3. To see if it's working, run `tsudo ls /dev/tty*` and it should list `/dev/ttyACM0` (or similar). If you see this, congratulations, skip this step!
