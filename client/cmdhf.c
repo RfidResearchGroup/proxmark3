@@ -178,32 +178,40 @@ int CmdHFTune(const char *Cmd) {
     if (cmdp == 'h') return usage_hf_tune();
     int iter =  param_get32ex(Cmd, 0, 0, 10);
 
+    PrintAndLogEx(SUCCESS, "Measuring HF antenna, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit");
     PacketResponseNG resp;
-    PrintAndLogEx(SUCCESS, "Measuring HF antenna, " _YELLOW_("click button") " or press " _YELLOW_("Enter") "to exit");
     clearCommandBuffer();
+
     uint8_t mode[] = {1};
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF initialization, aborting");
         return PM3_ETIMEOUT;
     }
+
     mode[0] = 2;
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {
-        if (kbd_enter_pressed()) { // abort by keyboard press
+        if (kbd_enter_pressed()) {
             break;
         }
+
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
         if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
             return PM3_ETIMEOUT;
         }
-        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t)))
+
+        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t))) {
             break;
+        }
+
         uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
-        PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, "%u mV / %2u V", volt, (uint16_t)(volt / 1000));
     }
     mode[0] = 3;
+
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF shutdown, aborting");

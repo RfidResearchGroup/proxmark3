@@ -253,34 +253,41 @@ static int CmdLFTune(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_tune();
 
-    PrintAndLogEx(SUCCESS, "Measuring LF antenna at %.2f kHz, click button or press Enter to exit", LF_DIV2FREQ(divisor));
+    PrintAndLogEx(SUCCESS, "Measuring LF antenna at " _YELLOW_("%.2f") "kHz, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit", LF_DIV2FREQ(divisor));
 
     uint8_t params[] = {1, 0};
     params[1] = divisor;
     PacketResponseNG resp;
-
     clearCommandBuffer();
+
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF initialization, aborting");
         return PM3_ETIMEOUT;
     }
+
     params[0] = 2;
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {
-        if (kbd_enter_pressed()) { // abort by keyboard press
+        if (kbd_enter_pressed()) {
             break;
         }
+
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
         if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF measure, aborting");
             return PM3_ETIMEOUT;
         }
-        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint32_t)))
+
+        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint32_t))) {
             break;
+        }
+
         uint32_t volt = resp.data.asDwords[0];
-        PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint32_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, "%u mV / %3u V", volt, (uint32_t)(volt / 1000));
     }
+
     params[0] = 3;
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
@@ -291,7 +298,6 @@ static int CmdLFTune(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Done.");
     return PM3_SUCCESS;
 }
-
 
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
