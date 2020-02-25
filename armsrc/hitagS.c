@@ -940,7 +940,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
         memcpy((uint8_t *)tag.pages, data, 4 * 64);
     }
 
-    tag.uid = (uint32_t)tag.pages[0];
+    tag.uid = (tag.pages[0][3] << 24 | tag.pages[0][2] << 16 | tag.pages[0][1] << 8 | tag.pages[0][0]);
     tag.key = (intptr_t)tag.pages[3];
     tag.key <<= 16;
     tag.key += ((tag.pages[2][0]) << 8) + tag.pages[2][1];
@@ -1555,6 +1555,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
     // Capture mode, defaul timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
     // external trigger rising edge, load RA on falling edge of TIOA.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK
                              | AT91C_TC_ETRGEDG_FALLING
