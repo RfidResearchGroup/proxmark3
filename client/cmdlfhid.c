@@ -92,6 +92,7 @@ static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, "       i <issuelevel>    :  issue level");
     PrintAndLogEx(NORMAL, "       o <oem>           :  OEM code");
     PrintAndLogEx(NORMAL, "       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
+    PrintAndLogEx(NORMAL, "       x <value>         :  direction to increment card number (0=both, 1=up, 2=down). Default 0");
     PrintAndLogEx(NORMAL, "       v                 :  verbose logging, show all tries");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
@@ -366,6 +367,7 @@ static int CmdHIDBrute(const char *Cmd) {
 
     bool errors = false, verbose = false;
     uint32_t  delay = 1000;
+    int direction = 0;
     uint8_t cmdp = 0;
     int format_idx = -1;
     char format[16] = {0};
@@ -412,6 +414,10 @@ static int CmdHIDBrute(const char *Cmd) {
                 datalo.OEM = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
+            case 'x':
+                direction = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cmdp +=2;
+                break; 
             case 'v':
                 verbose = true;
                 cmdp++;
@@ -442,14 +448,17 @@ static int CmdHIDBrute(const char *Cmd) {
 
         // Do one up
         if (datahi.CardNumber < 0xFFFF) {
-            datahi.CardNumber++;
-            if (sendTry(format_idx, &datahi, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
-        }
-        
+                if(direction == 0 | direction == 1){
+                        datahi.CardNumber++;
+                        if (sendTry(format_idx, &datahi, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+        	}
+       } 
         // Do one up
         if (datalo.CardNumber > 1) {
-            datalo.CardNumber--;
-            if (sendTry(format_idx, &datalo, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+                if(direction == 0 || direction == 2){
+                        datalo.CardNumber--;
+                        if (sendTry(format_idx, &datalo, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+                }
         }
     }
     return PM3_SUCCESS;
