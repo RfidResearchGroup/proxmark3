@@ -369,9 +369,11 @@ static int CmdHIDBrute(const char *Cmd) {
     uint8_t cmdp = 0;
     int format_idx = -1;
     char format[16] = {0};
-    wiegand_card_t data;
-    memset(&data, 0, sizeof(wiegand_card_t));
-
+    wiegand_card_t datahi;
+    memset(&datahi, 0, sizeof(wiegand_card_t));
+    wiegand_card_t datalo;
+    memset(&datalo, 0, sizeof(wiegand_card_t));
+    
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
@@ -386,7 +388,8 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'c':
-                data.CardNumber = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                datahi.CardNumber = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                datalo.CardNumber = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'd':
@@ -395,15 +398,18 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'f':
-                data.FacilityCode =  param_get32ex(Cmd, cmdp + 1, 0, 10);
+                datahi.FacilityCode =  param_get32ex(Cmd, cmdp + 1, 0, 10);
+                datalo.FacilityCode =  param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'i':
-                data.IssueLevel = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                datahi.IssueLevel = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                datalo.IssueLevel = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'o':
-                data.OEM = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                datahi.OEM = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                datalo.OEM = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'v':
@@ -435,15 +441,15 @@ static int CmdHIDBrute(const char *Cmd) {
         }
 
         // Do one up
-        if (data.CardNumber < 0xFFFF) {
-            data.CardNumber++;
-            if (sendTry(format_idx, &data, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+        if (datahi.CardNumber < 0xFFFF) {
+            datahi.CardNumber++;
+            if (sendTry(format_idx, &datahi, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
         }
-
-        // Do one down  (if cardnumber is given)
-        if (data.CardNumber > 1) {
-            data.CardNumber--;
-            if (sendTry(format_idx, &data, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+        
+        // Do one up
+        if (datalo.CardNumber > 1) {
+            datalo.CardNumber--;
+            if (sendTry(format_idx, &datalo, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
         }
     }
     return PM3_SUCCESS;
