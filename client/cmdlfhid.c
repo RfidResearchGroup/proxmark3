@@ -448,12 +448,12 @@ static int CmdHIDBrute(const char *Cmd) {
 
         // Do one up
         if (datahi.CardNumber < 0xFFFF) {
-                if(direction == 0 | direction == 1){
+                if(direction == 0 || direction == 1){
                         datahi.CardNumber++;
                         if (sendTry(format_idx, &datahi, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
         	}
        } 
-        // Do one up
+        // Do one down
         if (datalo.CardNumber > 1) {
                 if(direction == 0 || direction == 2){
                         datalo.CardNumber--;
