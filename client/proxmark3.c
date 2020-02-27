@@ -61,7 +61,7 @@ static int check_comm(void) {
         rl_set_prompt(PROXPROMPT_OFFLINE);
         rl_forced_update_display();
         CloseProxmark();
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use \"hw connect\" to reconnect\n");
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use "_YELLOW_("\"hw connect\"") "to reconnect\n");
     }
     return 0;
 }

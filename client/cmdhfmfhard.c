@@ -1390,7 +1390,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     char progress_text[80];
     FILE *fnonces = NULL;
     PacketResponseNG resp;
-
     num_acquired_nonces = 0;
 
     clearCommandBuffer();
@@ -1402,24 +1401,35 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         flags |= field_off ? 0x0004 : 0;
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
 
-        if (field_off) break;
+        if (field_off) {
+            SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+            break;
+        } else {
+            SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
+        }
 
         if (initialize) {
+
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
-                uint8_t nullkey[6] = {0};
-                //strange second call (iceman)
                 clearCommandBuffer();
-                SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, nullkey, sizeof(nullkey));
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
                 return 1;
             }
-            if (resp.oldarg[0]) return resp.oldarg[0];  // error during nested_hard
+
+            // error during nested_hard
+            if (resp.oldarg[0]) {
+                clearCommandBuffer();
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+                return resp.oldarg[0];
+            }
 
             cuid = resp.oldarg[1];
             if (nonce_file_write && fnonces == NULL) {
                 if ((fnonces = fopen(filename, "wb")) == NULL) {
                     PrintAndLogEx(WARNING, "Could not create file %s", filename);
+                    clearCommandBuffer();
+                    SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
                     return 3;
                 }
                 snprintf(progress_text, 80, "Writing acquired nonces to binary file %s", filename);
@@ -1486,17 +1496,24 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         }
 
         if (!initialize) {
+
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
+                clearCommandBuffer();
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
                 return 1;
             }
+            
+            // error during nested_hard
             if (resp.oldarg[0]) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
-                return resp.oldarg[0];  // error during nested_hard
+                clearCommandBuffer();
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+                return resp.oldarg[0];
             }
         }
 
@@ -1512,11 +1529,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     if (nonce_file_write) {
         fclose(fnonces);
     }
-
-    // PrintAndLogEx(NORMAL, "Sampled a total of %d nonces in %d seconds (%0.0f nonces/minute)",
-    // total_num_nonces,
-    // time(NULL)-time1,
-    // (float)total_num_nonces*60.0/(time(NULL)-time1));
 
     return 0;
 }
@@ -1681,11 +1693,12 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
         for (uint8_t remaining_bits = 0; remaining_bits <= (~mask & 0xff); remaining_bits++) {
             if (remaining_bits_match(num_common, bytes_diff, state, (state & mask) | remaining_bits, odd_even)) {
 
-#ifdef DEBUG_KEY_ELIMINATION
-                if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even, true)) {
-#else
-                if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even)) {
-#endif
+# ifdef DEBUG_KEY_ELIMINATION
+                if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even, true))
+# else
+                if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even))
+# endif
+                {
                     found_match = true;
                     break;
                 }
@@ -1694,7 +1707,7 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
 
         if (!found_match) {
 
-#ifdef DEBUG_KEY_ELIMINATION
+# ifdef DEBUG_KEY_ELIMINATION
             if (known_target_key != -1 && state == test_state[odd_even]) {
                 PrintAndLogEx(NORMAL, "all_bitflips_match() 1st Byte: %s test state (0x%06x): Eliminated. Bytes = %02x, %02x, Common Bits = %d\n",
                               odd_even == ODD_STATE ? "odd" : "even",
@@ -1706,7 +1719,7 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
                     sprintf(failstr, "Other 1st Byte %s, all_bitflips_match(), no match", odd_even ? "odd" : "even");
                 }
             }
-#endif
+# endif
             return false;
         }
     }
