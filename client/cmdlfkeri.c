@@ -181,7 +181,10 @@ static int CmdKeriDemod(const char *Cmd) {
     uint32_t raw2 = bytebits_to_byte(DemodBuffer + 32, 32);
 
     //get internal id
-    uint32_t ID = bytebits_to_byte(DemodBuffer + 29, 32);
+    // uint32_t ID = bytebits_to_byte(DemodBuffer + 29, 32);
+    // Due to the 3 sync bits being at the start of the capture
+    // We can take the last 32bits as the internal ID.
+    uint32_t ID = raw2;
     ID &= 0x7FFFFFFF;
 
     /*
