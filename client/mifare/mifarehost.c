@@ -676,6 +676,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         //flush queue
         while (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            free(mem);
             return PM3_EOPABORTED;
         }
 
@@ -695,6 +696,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6) );
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "SPIFFS upload failed");
+                free(mem);
                 return res;
             }
 
@@ -717,6 +719,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
                          );
             return PM3_SUCCESS;
         } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
+            free(mem);
             return res;
         }
 
