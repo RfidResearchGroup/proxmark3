@@ -94,7 +94,7 @@ uint8_t nonce[4];
 bool key_no;
 static uint64_t cipher_state;
 
-size_t blocknr;
+int16_t blocknr;
 size_t flipped_bit = 0;
 uint32_t byte_value = 0;
 
@@ -582,7 +582,7 @@ bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *t
                 Dbhexdump(4, logdata_1, false);
                 bSuccessful = true;
                 return false;
-
+/*
                 // read next page of card until done
                 tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
                 tx[1] = blocknr << 4;
@@ -590,6 +590,7 @@ bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *t
                 tx[1] |= crc >> 4;
                 tx[2] = crc << 4;
                 *txlen = 20;
+*/
             }
         }
         break;
@@ -1288,10 +1289,10 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
     uint8_t *tx = txbuf;
     size_t txlen = 0;
 
-    int t_wait_1;
+    int t_wait_1 = 204;
     int t_wait_1_guard = 8;
-    int t_wait_2;
-    size_t tag_size;
+    int t_wait_2 = 128;
+    size_t tag_size = 48;
     bool bStop = false;
 
     // Raw demodulation/decoding by sampling edge periods
@@ -1417,9 +1418,6 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         t_wait_2 = HITAG_T_WAIT_2_MIN;
         tag_size = 48;
         DBG DbpString("Configured for hitag2 reader");
-    } else {
-        DBG Dbprintf("Error, unknown hitag reader type: %d", htf);
-        return;
     }
 
     // init as reader
@@ -1665,10 +1663,12 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     uint8_t txbuf[HITAG_FRAME_LEN];
     uint8_t *tx = txbuf;
     size_t txlen = 0;
-    int t_wait_1;
+
+    int t_wait_1 = 204;
     int t_wait_1_guard = 8;
-    int t_wait_2;
-    size_t tag_size;
+    int t_wait_2 = 128;
+    size_t tag_size = 48;
+
     bool bStop = false;
 
     // Raw demodulation/decoding by sampling edge periods
@@ -1743,9 +1743,6 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         t_wait_2 = HITAG_T_WAIT_2_MIN;
         tag_size = 48;
         DbpString("Configured for hitag2 writer");
-    } else {
-        DBG Dbprintf("Error, unknown hitag writer type: %d", htf);
-        return;
     }
 
     uint8_t tag_modulation;
