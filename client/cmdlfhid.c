@@ -367,7 +367,7 @@ static int CmdHIDClone(const char *Cmd) {
 static int CmdHIDBrute(const char *Cmd) {
 
     bool errors = false, verbose = false;
-    uint32_t  delay = 1000;
+    uint32_t delay = 1000;
     uint8_t cmdp = 0;
     int format_idx = -1;
     int direction = 0;
@@ -375,9 +375,9 @@ static int CmdHIDBrute(const char *Cmd) {
 
     wiegand_card_t cn_hi, cn_low;
     memset(&cn_hi, 0, sizeof(wiegand_card_t));
-    
+
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        
+
         char s[10] = {0};
         if (param_getstr(Cmd, cmdp, s, sizeof(s)) > 0) {
             if (strlen(s) > 1) {
@@ -448,12 +448,12 @@ static int CmdHIDBrute(const char *Cmd) {
         PrintAndLogEx(INFO, "OEM#............. %u", cn_hi.OEM);
         PrintAndLogEx(INFO, "ISSUE#........... %u", cn_hi.IssueLevel);
         PrintAndLogEx(INFO, "Facility#........ %u", cn_hi.FacilityCode);
-        PrintAndLogEx(INFO, "Card#............ %u", cn_hi.CardNumber);
+        PrintAndLogEx(INFO, "Card#............ %" PRIu64, cn_hi.CardNumber);
         switch( direction) {
             case 0:
                 PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH"));
                 break;
-            case 1: 
+            case 1:
                 PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("UP"));
                 break;
             case 2:
