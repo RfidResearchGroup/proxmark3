@@ -73,11 +73,11 @@ void DecodeBlock6(uint8_t *src) {
 
     // first part
     ExchangeAPDUSC(true, c, sizeof(c), false, true, resp, sizeof(resp), &resp_len);
-    PrintAndLogEx(SUCCESS, "%0.*s", resp_len - 11, resp + 9);
+    PrintAndLogEx(SUCCESS, "%.*s", resp_len - 11, resp + 9);
 
     // second part
     c[5] = 0x02;
     ExchangeAPDUSC(true, c, sizeof(c), false, true, resp, sizeof(resp), &resp_len);
-    PrintAndLogEx(SUCCESS, "%0.*s", resp_len - 11, resp + 9);
+    PrintAndLogEx(SUCCESS, "%.*s", resp_len - 11, resp + 9);
 }
 
