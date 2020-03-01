@@ -544,8 +544,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             return -5;
         }
 
-        uint64_t t2 = msclock();
-        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (float)(t2 - start_time) * 1000.0;
+        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (msclock() - start_time) * 1000.0;
 
         if ( i + 1 % 10 == 0)
             PrintAndLogEx(INFO, " %6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt , bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
@@ -724,7 +723,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
 //        if (i%10 == 0) {
-            float bruteforce_per_second = (float)i + max_keys_chunk / (float)(msclock() - start_time) * 1000.0;
+            float bruteforce_per_second = (float)i + max_keys_chunk / (msclock() - start_time) * 1000.0;
             PrintAndLogEx(INFO, "Chunk %6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
 //        }
     }
