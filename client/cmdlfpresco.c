@@ -136,7 +136,10 @@ static int CmdPrescoClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf presco read`") "to verify");
+    return res;
 }
 
 // takes base 12 ID converts to hex

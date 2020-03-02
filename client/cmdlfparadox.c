@@ -169,7 +169,10 @@ static int CmdParadoxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Paradox to T55x7 with raw hex");
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf paradox read`") "to verify");
+    return res;
 }
 
 static int CmdParadoxSim(const char *Cmd) {
