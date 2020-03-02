@@ -36,7 +36,7 @@ static int usage_lf_paradox_clone(void) {
     PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf paradox clone 0f55555695596a6a9999a59a");
+    PrintAndLogEx(NORMAL, "       lf paradox clone b 0f55555695596a6a9999a59a");
     return PM3_SUCCESS;
 }
 
