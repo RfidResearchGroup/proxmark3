@@ -1028,7 +1028,6 @@ void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
     PrintAndLogEx(NORMAL, msg);
 }
 
-
 static int CmdT55xxDetect(const char *Cmd) {
 
     bool errors = false;

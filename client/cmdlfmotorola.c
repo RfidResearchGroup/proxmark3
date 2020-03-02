@@ -177,7 +177,10 @@ static int CmdMotorolaClone(const char *Cmd) {
     blocks[2] = bytes_to_num(data + 4, 4);
 
     print_blocks(blocks, ARRAYLEN(blocks));
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf motorola read`") "to verify");
+    return res;
 }
 
 static int CmdMotorolaSim(const char *Cmd) {

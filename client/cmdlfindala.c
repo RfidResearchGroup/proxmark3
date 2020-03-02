@@ -620,7 +620,10 @@ static int CmdIndalaClone(const char *Cmd) {
     }
 
     print_blocks(blocks, max);
-    return clone_t55xx_tag(blocks, max);
+    int res = clone_t55xx_tag(blocks, max);
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf indala read`") "to verify");
+    return res;
 }
 
 static command_t CommandTable[] = {
