@@ -83,16 +83,18 @@ static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step");
     PrintAndLogEx(NORMAL, "if cardnumber is not given, it starts with 1 and goes up to 65535");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  lf hid brute [h] [v] w <format> [<field> (decimal)>] {...}");
+    PrintAndLogEx(NORMAL, "Usage:  lf hid brute [h] [v] w <format> [<field> (decimal)>] [up|down] {...}");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "       h                 :  This help");
-    PrintAndLogEx(NORMAL, "       w <format>        :  see `wiegand list` for available formats");
+    PrintAndLogEx(NORMAL, "       w <format>        :  see " _YELLOW_("`wiegand list`") "for available formats");
     PrintAndLogEx(NORMAL, "       f <facility-code> :  facility code");
     PrintAndLogEx(NORMAL, "       c <cardnumber>    :  card number to start with");
     PrintAndLogEx(NORMAL, "       i <issuelevel>    :  issue level");
     PrintAndLogEx(NORMAL, "       o <oem>           :  OEM code");
     PrintAndLogEx(NORMAL, "       d <delay>         :  delay betweens attempts in ms. Default 1000ms");
     PrintAndLogEx(NORMAL, "       v                 :  verbose logging, show all tries");
+    PrintAndLogEx(NORMAL, "       up                :  direction to increment card number. (default is both directions)");
+    PrintAndLogEx(NORMAL, "       down              :  direction to decrement card number. (default is both directions)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf hid brute w H10301 f 224");
@@ -343,7 +345,8 @@ static int CmdHIDClone(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_HID_CLONE, hi2, hi, lo, longid, sizeof(longid));
-    PrintAndLogEx(INFO, "Clone command sent. Try "_YELLOW_("'lf hid read'") " to verify");
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf hid read`") "to verify");   
     return PM3_SUCCESS;
 }
 
@@ -365,14 +368,31 @@ static int CmdHIDClone(const char *Cmd) {
 static int CmdHIDBrute(const char *Cmd) {
 
     bool errors = false, verbose = false;
-    uint32_t  delay = 1000;
+    uint32_t delay = 1000;
     uint8_t cmdp = 0;
     int format_idx = -1;
+    int direction = 0;
     char format[16] = {0};
-    wiegand_card_t data;
-    memset(&data, 0, sizeof(wiegand_card_t));
+
+    wiegand_card_t cn_hi, cn_low;
+    memset(&cn_hi, 0, sizeof(wiegand_card_t));
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+
+        char s[10] = {0};
+        if (param_getstr(Cmd, cmdp, s, sizeof(s)) > 0) {
+            if (strlen(s) > 1) {
+                str_lower((char *)s);
+                if (str_startswith(s, "up")) {
+                    direction = 1;
+                } else if (str_startswith(s, "do")) {
+                    direction = 2;
+                }
+                cmdp++;
+                continue;
+            }
+        }
+
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_lf_hid_brute();
@@ -386,7 +406,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'c':
-                data.CardNumber = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cn_hi.CardNumber = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'd':
@@ -395,15 +415,15 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'f':
-                data.FacilityCode =  param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cn_hi.FacilityCode =  param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'i':
-                data.IssueLevel = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cn_hi.IssueLevel = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'o':
-                data.OEM = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                cn_hi.OEM = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
                 break;
             case 'v':
@@ -416,13 +436,45 @@ static int CmdHIDBrute(const char *Cmd) {
                 break;
         }
     }
+
+    if (format_idx == -1) {
+        PrintAndLogEx(ERR, "You must select a wiegand format. See " _YELLOW_("`wiegand list`") "for available formats\n");
+        errors = true;
+    }
+
     if (errors) return usage_lf_hid_brute();
 
+    if (verbose) {
+        PrintAndLogEx(INFO, "Wiegand format#.. %i", format_idx);
+        PrintAndLogEx(INFO, "OEM#............. %u", cn_hi.OEM);
+        PrintAndLogEx(INFO, "ISSUE#........... %u", cn_hi.IssueLevel);
+        PrintAndLogEx(INFO, "Facility#........ %u", cn_hi.FacilityCode);
+        PrintAndLogEx(INFO, "Card#............ %" PRIu64, cn_hi.CardNumber);
+        switch( direction) {
+            case 0:
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH"));
+                break;
+            case 1:
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("UP"));
+                break;
+            case 2:
+                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("DOWN"));
+                break;
+            default: break;
+        }
+    }
     PrintAndLogEx(INFO, "Brute-forcing HID reader");
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation or run another command");
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation or press `enter` to exit");
+
+    // copy values to low.
+    cn_low = cn_hi;
 
     // main loop
-    for (;;) {
+    // iceman:  could add options for bruteforcing OEM, ISSUE or FC aswell..
+    bool exitloop = false;
+    bool fin_hi, fin_low;
+    fin_hi = fin_low = false;
+    do {
 
         if (!session.pm3_present) {
             PrintAndLogEx(WARNING, "Device offline\n");
@@ -434,18 +486,44 @@ static int CmdHIDBrute(const char *Cmd) {
             return sendPing();
         }
 
-        // Do one up
-        if (data.CardNumber < 0xFFFF) {
-            data.CardNumber++;
-            if (sendTry(format_idx, &data, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+        // do one up
+        if (direction != 2) {
+            if (cn_hi.CardNumber < 0xFFFF) {
+                cn_hi.CardNumber++;
+                if (sendTry(format_idx, &cn_hi, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+            } else {
+                fin_hi = true;
+            }
+        }
+        
+        // do one down
+        if (direction != 1) {
+            if (cn_low.CardNumber > 0) {
+                cn_low.CardNumber--;
+                if (sendTry(format_idx, &cn_low, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+            } else {
+                fin_low = true;
+            }
         }
 
-        // Do one down  (if cardnumber is given)
-        if (data.CardNumber > 1) {
-            data.CardNumber--;
-            if (sendTry(format_idx, &data, delay, verbose) != PM3_SUCCESS) return PM3_ESOFT;
+        switch (direction) {
+            case 0: 
+                if (fin_hi && fin_low) {
+                    exitloop = true;
+                }
+                break;
+            case 1:
+                exitloop = fin_hi;
+                break;
+            case 2:
+                exitloop = fin_low;
+                break;
+            default: break;
         }
-    }
+
+    } while (exitloop == false);
+
+    PrintAndLogEx(INFO, "Brute forcing finished");
     return PM3_SUCCESS;
 }
 

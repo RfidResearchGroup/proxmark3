@@ -250,7 +250,10 @@ static int CmdPyramidClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Farpointe/Pyramid to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf pyramid read`") "to verify");
+    return res;
 }
 
 static int CmdPyramidSim(const char *Cmd) {

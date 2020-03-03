@@ -1,22 +1,21 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018 iceman
+// Iceman, February 2020
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// Proxmark3 RDV40 Smartcard module commands
+// Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
 
-#ifndef CMDSMARTCARD_H__
-#define CMDSMARTCARD_H__
+#ifndef __CARDHELPER_H
+#define __CARDHELPER_H
 
+#include <ctype.h>
 #include "common.h"
-#include "mifare.h" // structs
 
-int CmdSmartcard(const char *Cmd);
-
-bool smart_select(bool silent, smart_card_atr_t *atr);
-int ExchangeAPDUSC(bool silent, uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
-
+bool IsCryptoHelperPresent(void);
+bool Encrypt(uint8_t *src, uint8_t *dest);
+bool Decrypt(uint8_t *src, uint8_t *dest);
+void DecodeBlock6(uint8_t *src);
 #endif

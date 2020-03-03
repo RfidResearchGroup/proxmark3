@@ -184,7 +184,10 @@ static int CmdVisa2kClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %"PRIu64, id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf visa2000 read`") "to verify");
+    return res;
 }
 
 static int CmdVisa2kSim(const char *Cmd) {

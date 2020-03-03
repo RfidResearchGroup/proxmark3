@@ -158,8 +158,10 @@ static int CmdNexWatchClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone NexWatch to T55x7 with raw hex");
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
-
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf nexwatch read`") "to verify");
+    return res;
 }
 
 static int CmdNexWatchSim(const char *Cmd) {

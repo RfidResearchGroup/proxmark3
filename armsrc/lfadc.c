@@ -133,16 +133,18 @@ size_t lf_detect_gap(size_t max) {
 }
 
 void lf_reset_counter() {
+
     // TODO: find out the correct reset settings for tag and reader mode
-    if (reader_mode) {
+//    if (reader_mode) {
         // Reset values for reader mode
         rising_edge = false;
         previous_adc_val = 0xFF;
-    } else {
+
+//    } else {
         // Reset values for tag/transponder mode
-        rising_edge = false;
-        previous_adc_val = 0xFF;
-    }
+//        rising_edge = false;
+//        previous_adc_val = 0xFF;
+//    }
 }
 
 bool lf_get_tag_modulation() {

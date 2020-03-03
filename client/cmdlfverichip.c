@@ -121,7 +121,10 @@ static int CmdVerichipClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Verichip to T55x7 with raw hex");
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf verichip read`") "to verify");
+    return res;
 }
 
 static int CmdVerichipSim(const char *Cmd) {

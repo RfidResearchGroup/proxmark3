@@ -296,6 +296,8 @@ static int CmdTIWrite(const char *Cmd) {
     }
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_TI_WRITE, arg0, arg1, arg2, NULL, 0);
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf ti read`") "to verify");
     return PM3_SUCCESS;
 }
 

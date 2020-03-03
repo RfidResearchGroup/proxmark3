@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change - hint texts added to all lf clone commands (@iceman1001)
+ - Change `lf keri demod` - adjusted the internal id. (@mwalker33)
+ - Added seamless integration with cryptohelper (@iceman1001)
+ - Change `lf hid brute` - new params for direction (UP/DOWN); textual and main loop actually exit. (@capnkrunchy and @iceman1001)
+ - Fix `lf hid brute` - made it work again (@capnkrunchy)
+ - Fix standalone mode HF_MATTYRUN - correct logic when all keys found in printing. partial fix  (@iceman1001)
+ - Change static nonce detection got tighter (@iceman1001)
+ - Improved termux notes (@msoose)
+ - Fix `hf mf autopwn` - works on debian 10 *nix. Bad exit commands in hardnested (@iceman1001)
+ - Fix `hf mf hardnested` - bad mutex strategies (@msoose)
+ - Change `lf hitag` - now obeys `lf config` (@iceman1001)
  - Ported all python 2 scripts to python 3 (@doegox and @sigwinch28)
  - Removed undefined exit behaviour from `analyzesize` tool: it now exits with code 2 when called with wrong args (@sigwinch28)
  - Replaced shebangs in scripts with more portable versions which use `/usr/bin/env` (@sigwinch28)

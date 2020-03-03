@@ -11,6 +11,7 @@
 #include "cmdlfpcf7931.h"
 
 #include <string.h>
+#include <ctype.h>
 
 #include "cmdparser.h"    // command_t
 #include "comms.h"
@@ -36,7 +37,7 @@ int pcf7931_resetConfig() {
     configPcf.InitDelay = PCF7931_DEFAULT_INITDELAY;
     configPcf.OffsetWidth = PCF7931_DEFAULT_OFFSET_WIDTH;
     configPcf.OffsetPosition = PCF7931_DEFAULT_OFFSET_POSITION;
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int pcf7931_printConfig() {
@@ -44,7 +45,7 @@ int pcf7931_printConfig() {
     PrintAndLogEx(NORMAL, "Tag initialization delay      : %d us", configPcf.InitDelay);
     PrintAndLogEx(NORMAL, "Offset low pulses width       : %d us", configPcf.OffsetWidth);
     PrintAndLogEx(NORMAL, "Offset low pulses position    : %d us", configPcf.OffsetPosition);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_pcf7931_read() {
@@ -54,7 +55,7 @@ static int usage_pcf7931_read() {
     PrintAndLogEx(NORMAL, "       h   This help");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf pcf7931 read");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_pcf7931_write() {
@@ -67,7 +68,7 @@ static int usage_pcf7931_write() {
     PrintAndLogEx(NORMAL, "       data           one byte of data (hex)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      lf pcf7931 write 2 1 FF");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int usage_pcf7931_config() {
@@ -87,30 +88,30 @@ static int usage_pcf7931_config() {
     PrintAndLogEx(NORMAL, "      lf pcf7931 config r");
     PrintAndLogEx(NORMAL, "      lf pcf7931 config 11223344556677 20000");
     PrintAndLogEx(NORMAL, "      lf pcf7931 config 11223344556677 17500 -10 30");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLFPCF7931Read(const char *Cmd) {
 
-    uint8_t ctmp = param_getchar(Cmd, 0);
-    if (ctmp == 'H' || ctmp == 'h') return usage_pcf7931_read();
+    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_pcf7931_read();
 
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_PCF7931_READ, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "command execution time out");
-        return 1;
+        return PM3_ETIMEOUT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLFPCF7931Config(const char *Cmd) {
 
-    uint8_t ctmp = param_getchar(Cmd, 0);
+    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 0) return pcf7931_printConfig();
-    if (ctmp == 'H' || ctmp == 'h') return usage_pcf7931_config();
-    if (ctmp == 'R' || ctmp == 'r') return pcf7931_resetConfig();
+    if (ctmp == 'h') return usage_pcf7931_config();
+    if (ctmp == 'r') return pcf7931_resetConfig();
 
     if (param_gethex(Cmd, 0, configPcf.Pwd, 14)) return usage_pcf7931_config();
 
@@ -119,13 +120,13 @@ static int CmdLFPCF7931Config(const char *Cmd) {
     configPcf.OffsetPosition = (int)(param_get32ex(Cmd, 3, 0, 10) & 0xFFFF);
 
     pcf7931_printConfig();
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLFPCF7931Write(const char *Cmd) {
 
-    uint8_t ctmp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) < 1 || ctmp == 'h' || ctmp == 'H') return usage_pcf7931_write();
+    uint8_t ctmp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || ctmp == 'h') return usage_pcf7931_write();
 
     uint8_t block = 0, bytepos = 0, data = 0;
 
@@ -136,9 +137,9 @@ static int CmdLFPCF7931Write(const char *Cmd) {
 
     data = param_get8ex(Cmd, 2, 0, 16);
 
-    PrintAndLogEx(NORMAL, "Writing block: %d", block);
-    PrintAndLogEx(NORMAL, "          pos: %d", bytepos);
-    PrintAndLogEx(NORMAL, "         data: 0x%02X", data);
+    PrintAndLogEx(INFO, "Writing block: %d", block);
+    PrintAndLogEx(INFO, "          pos: %d", bytepos);
+    PrintAndLogEx(INFO, "         data: 0x%02X", data);
 
     uint32_t buf[10]; // TODO sparse struct, 7 *bytes* then words at offset 4*7!
     memcpy(buf, configPcf.Pwd, sizeof(configPcf.Pwd));
@@ -147,9 +148,11 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     buf[9] = configPcf.InitDelay;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_LF_PCF7931_WRITE, block, bytepos, data, buf, sizeof(buf));
-    //no ack?
-    return 0;
+    SendCommandMIX(CMD_LF_PCF7931_WRITE, block, bytepos, data, buf, sizeof(buf));
+
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf pcf7931 read`") "to verify");
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -163,7 +166,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFPCF7931(const char *Cmd) {
