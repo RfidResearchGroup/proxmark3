@@ -726,10 +726,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_SAMPLING_GET_CONFIG: {
-            sample_config *c;
-            c = getSamplingConfig();
-            Dbprintf("CMD_LF_SAMPLING_GET_CONFIG - before answer");
-            reply_ng(CMD_LF_SAMPLING_GET_CONFIG, PM3_SUCCESS, (uint8_t *)c, sizeof(sample_config));
+            sample_config *config = getSamplingConfig();
+            reply_ng(CMD_LF_SAMPLING_GET_CONFIG, PM3_SUCCESS, (uint8_t *)config, sizeof(sample_config));
             break;
         }
         case CMD_LF_SAMPLING_SET_CONFIG: {

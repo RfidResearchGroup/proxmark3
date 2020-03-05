@@ -471,8 +471,7 @@ int lf_getconfig(sample_config *config) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
-
-    config = (sample_config *) resp.data.asBytes;
+    memcpy(config, resp.data.asBytes, sizeof(sample_config));
     return PM3_SUCCESS;
 }
 
