@@ -81,7 +81,7 @@ void setSamplingConfig(sample_config *sc) {
         printConfig();
 }
 
-sample_config *getSamplingConfig() {
+sample_config *getSamplingConfig(void) {
     return &config;
 }
 

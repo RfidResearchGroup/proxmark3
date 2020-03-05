@@ -721,8 +721,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             setT55xxConfig(packet->oldarg[0], (t55xx_configurations_t *) packet->data.asBytes);
             break;
         }
-        case CMD_LF_SAMPLING_GET_CONFIG: {
+        case CMD_LF_SAMPLING_PRINT_CONFIG: {
             printConfig();
+            break;
+        }
+        case CMD_LF_SAMPLING_GET_CONFIG: {
+            sample_config *c;
+            c = getSamplingConfig();
+            Dbprintf("CMD_LF_SAMPLING_GET_CONFIG - before answer");
+            reply_ng(CMD_LF_SAMPLING_GET_CONFIG, PM3_SUCCESS, (uint8_t *)c, sizeof(sample_config));
             break;
         }
         case CMD_LF_SAMPLING_SET_CONFIG: {

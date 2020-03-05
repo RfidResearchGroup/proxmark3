@@ -392,7 +392,8 @@ typedef struct {
 #define CMD_LF_T55XX_WAKEUP                                               0x0224
 #define CMD_LF_COTAG_READ                                                 0x0225
 #define CMD_LF_T55XX_SET_CONFIG                                           0x0226
-#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0227
+#define CMD_LF_SAMPLING_PRINT_CONFIG                                      0x0227
+#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0228
 
 #define CMD_LF_T55XX_CHK_PWDS                                             0x0230
 #define CMD_LF_T55XX_DANGERRAW                                            0x0231
