@@ -60,7 +60,7 @@ bool end = false;
 #db# conf0: C9 conf1: 00 conf2: 00
                 3  2  1  0
 #db# Page[ 0]: 84 11 C2 5F uid
-#db# Page[ 1]: AA 00 00 C9 conf
+#db# Page[ 1]: AA 00 00 C9 conf, HITAG S 256
 #db# Page[ 2]: 4E 4F 54 48
 #db# Page[ 3]: 52 4B 49 4D
 #db# Page[ 4]: 00 00 00 00
@@ -104,7 +104,7 @@ bool end = false;
 #define HITAG_T_TAG_CAPTURE_THREE_HALF 41
 #define HITAG_T_TAG_CAPTURE_FOUR_HALF  57
 
-#define DBGLEVEL 4
+#define DBGLEVEL 0
 
 /*
  * Implementation of the crc8 calculation from Hitag S
@@ -225,6 +225,8 @@ static void hitag_send_bit(int bit) {
 }
 
 static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
+    if (DBGLEVEL >= DBG_EXTENDED)
+        Dbprintf("hitag_send_frame: (%i) %02X %02X %02X %02X", frame_len, frame[0], frame[1], frame[2], frame[3]);
     // The beginning of the frame is hidden in some high level; pause until our bits will have an effect
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
     HIGH(GPIO_SSC_DOUT);
@@ -370,7 +372,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
         case 5: {
             //UID request with a selected response protocol mode
             if (DBGLEVEL >= DBG_EXTENDED)
-                Dbprintf("...UID req %i %02x", rxlen, rx[0]);
+                Dbprintf("UID request: length: %i first byte: %02x", rxlen, rx[0]);
             tag.pstate = HT_READY;
             tag.tstate = HT_NO_OP;
             if ((rx[0] & 0xf0) == 0x30) {
@@ -404,10 +406,10 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
         case 45: {
             //select command from reader received
             if (DBGLEVEL >= DBG_EXTENDED)
-                DbpString("...select");
+                DbpString("SELECT");
             if (check_select(rx, tag.uid) == 1) {
                 if (DBGLEVEL >= DBG_EXTENDED)
-                    DbpString("...select match");
+                    DbpString("SELECT match");
                 //if the right tag was selected
                 *txlen = 32;
                 hitagS_set_frame_modulation();
@@ -471,9 +473,10 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
              }
              */
         }
+        break;
         case 40:
             if (DBGLEVEL >= DBG_EXTENDED)
-                Dbprintf("....write");
+                Dbprintf("WRITE");
             //data received to be written
             if (tag.tstate == HT_WRITING_PAGE_DATA) {
                 tag.tstate = HT_NO_OP;
@@ -500,14 +503,10 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             }
             break;
         case 20: {
-            if (DBGLEVEL >= DBG_EXTENDED)
-                Dbprintf("....read");
             //write page, write block, read page or read block command received
             if ((rx[0] & 0xf0) == 0xc0) { //read page
                 //send page data
                 uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
-                if (DBGLEVEL >= DBG_EXTENDED)
-                    Dbprintf("....page %i", page);
                 *txlen = 32;
                 tx[0] = tag.pages[page][0];
                 tx[1] = tag.pages[page][1];
@@ -534,8 +533,6 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 }
             } else if ((rx[0] & 0xf0) == 0xd0) { //read block
                 uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
-                if (DBGLEVEL >= DBG_EXTENDED)
-                    Dbprintf("....block %i", page);
                 *txlen = 32 * 4;
                 //send page,...,page+3 data
                 for (int i = 0; i < 4; i++) {
@@ -562,10 +559,6 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 }
             } else if ((rx[0] & 0xf0) == 0x80) { //write page
                 uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
-                if (DBGLEVEL >= DBG_EXTENDED)
-                    Dbprintf("....write page: %i", page);
-
-                hitagS_set_frame_modulation();
                 if ((tag.LCON && page == 1)
                         || (tag.LKP && (page == 2 || page == 3))) {
                     //deny
@@ -580,8 +573,6 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             } else if ((rx[0] & 0xf0) == 0x90) { //write block
                 uint8_t page = ((rx[0] & 0x0f) * 6) + ((rx[1] & 0xf0) / 16);
-                if (DBGLEVEL >= DBG_EXTENDED)
-                    Dbprintf("....write block: %i", page);
                 hitagS_set_frame_modulation();
                 if (page % 4 != 0 || page == 0) {
                     //deny
@@ -599,7 +590,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
         break;
         default:
             if (DBGLEVEL >= DBG_EXTENDED)
-                Dbprintf("unknown rxlen: (%i) %02X %02X %02X %02X", rxlen, rx[0], rx[1], rx[2], rx[3]);
+                Dbprintf("unknown rxlen: (%i) %02X %02X %02X %02X ...", rxlen, rx[0], rx[1], rx[2], rx[3]);
             break;
     }
 }
@@ -1191,6 +1182,9 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
     uint64_t key = 0;
     uint64_t NrAr = 0;
     uint8_t key_[6];
+
+    tag.pstate = HT_READY;
+    tag.tstate = HT_NO_OP;
 
     switch (htf) {
         case RHTSF_CHALLENGE: {
