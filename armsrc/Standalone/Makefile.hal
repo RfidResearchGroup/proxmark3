@@ -41,9 +41,19 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_ICEHID       | LF HID collector to flashmem           |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
+| LF_EM4100EMULV1 | Simulate predefined em4100 tags  only  |
+|                 |                                        |
++----------------------------------------------------------+
+| LF_EM4100EMULV2 | Read/simulate em4100 tags              |
+|                 |                                        |
++----------------------------------------------------------+
+| LF_EM4100EMULV3 | Read/simulate em4100 tags & clone it   |
+|                 | to T555x tags                          |
++----------------------------------------------------------+
+
 endef
 
-STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID
+STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID  LF_EM4100EMULV1  LF_EM4100EMULV2  LF_EM4100EMULV3
 STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG HF_14ASNIFF
 STANDALONE_MODES_REQ_SMARTCARD :=
 STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG HF_14ASNIFF LF_ICEHID
