@@ -40,7 +40,7 @@ uint8_t *bba,slots_count;
 int buflen;
 
 void ModInfo(void) {
-    DbpString("  LF EM4100 simulate standalone V2");
+    DbpString("  LF EM4100 simulate standalone V3");
 }
 
 uint64_t ReversQuads(uint64_t bits){
