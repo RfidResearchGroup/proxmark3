@@ -142,19 +142,17 @@ rtccTime	RTC_time;			// time structure
 rtccDate	RTC_date;			// date structure
 
 // convert byte-reversed 8 digit hex to unsigned long
-unsigned long hexreversetoulong(BYTE *hex)
-{
-    unsigned long ret= 0L;
+unsigned long hexreversetoulong(BYTE *hex) {
+    unsigned long ret = 0L;
     unsigned int x;
     BYTE i;
 
-    if(strlen(hex) != 8)
+    if (strlen(hex) != 8)
         return 0L;
 
-    for(i= 0 ; i < 4 ; ++i)
-    {
-        if(sscanf(hex, "%2X", &x) != 1)
-                return 0L;
+    for (i = 0 ; i < 4 ; ++i) {
+        if (sscanf(hex, "%2X", &x) != 1)
+            return 0L;
         ret += ((unsigned long) x) << i * 8;
         hex += 2;
     }
@@ -162,18 +160,17 @@ unsigned long hexreversetoulong(BYTE *hex)
 }
 
 // convert byte-reversed 12 digit hex to unsigned long
-unsigned long long hexreversetoulonglong(BYTE *hex)
-{
-    unsigned long long ret= 0LL;
+unsigned long long hexreversetoulonglong(BYTE *hex) {
+    unsigned long long ret = 0LL;
     BYTE tmp[9];
-    
-    // this may seem an odd way to do it, but weird compiler issues were 
+
+    // this may seem an odd way to do it, but weird compiler issues were
     // breaking direct conversion!
-    
-    tmp[8]= '\0';
+
+    tmp[8] = '\0';
     memset(tmp + 4, '0', 4);
     memcpy(tmp, hex + 8, 4);
-    ret= hexreversetoulong(tmp);
+    ret = hexreversetoulong(tmp);
     ret <<= 32;
     memcpy(tmp, hex, 8);
     ret += hexreversetoulong(tmp);
