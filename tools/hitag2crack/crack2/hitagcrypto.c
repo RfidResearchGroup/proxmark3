@@ -229,17 +229,16 @@ static uint32_t hitag2_crypt(uint64_t x);
                                    ((S >> (C - 3)) & 8) )
 
 
-static uint32_t hitag2_crypt(uint64_t s)
-{
+static uint32_t hitag2_crypt(uint64_t s) {
     const uint32_t ht2_function4a = 0x2C79;	// 0010 1100 0111 1001
     const uint32_t ht2_function4b = 0x6671;	// 0110 0110 0111 0001
     const uint32_t ht2_function5c = 0x7907287B;	// 0111 1001 0000 0111 0010 1000 0111 1011
     uint32_t bitindex;
 
-    bitindex =  (ht2_function4a >> pickbits2_2 (s, 1, 4)) & 1;
-    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2 (s, 7, 11, 13)) & 0x02;
-    bitindex |= ((ht2_function4b << 2) >> pickbits1x4 (s, 16, 20, 22, 25)) & 0x04;
-    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1 (s, 27, 30, 32)) & 0x08;
+    bitindex = (ht2_function4a >> pickbits2_2(s, 1, 4)) & 1;
+    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2(s, 7, 11, 13)) & 0x02;
+    bitindex |= ((ht2_function4b << 2) >> pickbits1x4(s, 16, 20, 22, 25)) & 0x04;
+    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1(s, 27, 30, 32)) & 0x08;
     bitindex |= ((ht2_function4a << 4) >> pickbits1_2_1(s, 33, 42, 45)) & 0x10;
 
     DEBUG_PRINTF("hitag2_crypt bitindex = %02x\n", bitindex);
@@ -253,13 +252,12 @@ static uint32_t hitag2_crypt(uint64_t s)
  * uint32_t serialnum  - 32 bit tag serial number
  * uint32_t initvector - 32 bit random IV from reader, part of tag authentication
  */
-void hitag2_init(Hitag_State* pstate, uint64_t sharedkey, uint32_t serialnum, uint32_t initvector)
-{
+void hitag2_init(Hitag_State *pstate, uint64_t sharedkey, uint32_t serialnum, uint32_t initvector) {
     // init state, from serial number and lowest 16 bits of shared key
     uint64_t state = ((sharedkey & 0xFFFF) << 32) | serialnum;
 
     // mix the initialisation vector and highest 32 bits of the shared key
-    initvector ^= (uint32_t) (sharedkey >> 16);
+    initvector ^= (uint32_t)(sharedkey >> 16);
 
     // move 16 bits from (IV xor Shared Key) to top of uint64_t state
     // these will be XORed in turn with output of the crypto function
@@ -320,9 +318,9 @@ void hitag2_init(Hitag_State* pstate, uint64_t sharedkey, uint32_t serialnum, ui
         // optimise with one 64-bit intermediate
         uint64_t temp = state ^ (state >> 1);
         pstate->lfsr = state ^ (state >>  6) ^ (state >> 16)
-                  ^ (state >> 26) ^ (state >> 30) ^ (state >> 41)
-                  ^ (temp >>  2) ^ (temp >>  7) ^ (temp >> 22)
-                  ^ (temp >> 42) ^ (temp >> 46);
+                       ^ (state >> 26) ^ (state >> 30) ^ (state >> 41)
+                       ^ (temp >>  2) ^ (temp >>  7) ^ (temp >> 22)
+                       ^ (temp >> 42) ^ (temp >> 46);
     }
 }
 
@@ -338,8 +336,7 @@ void hitag2_init(Hitag_State* pstate, uint64_t sharedkey, uint32_t serialnum, ui
  * Hitag_State* pstate - in/out, internal cipher state after initialisation
  * uint32_t steps      - number of bits requested, (capped at 32)
  */
-uint32_t hitag2_nstep(Hitag_State* pstate, uint32_t steps)
-{
+uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps) {
     uint64_t state = pstate->shiftreg;
     uint32_t result = 0;
     uint64_t lfsr = pstate->lfsr;
@@ -448,7 +445,7 @@ unsigned hitag2_verifytest()
     const uint64_t key = rev64 (0x524B494D4E4FUL);
     const uint32_t serial = rev32 (0x69574349);
     const uint32_t initvec = rev32 (0x72456E65);
-    
+
     uint32_t i;
     Hitag_State state;
 
@@ -471,11 +468,10 @@ unsigned hitag2_verifytest()
 
 #ifdef UNIT_TEST
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
     unsigned pass = hitag2_verifytest();
 
-    printf ("Crypto Verify test = %s\n\n", pass ? "PASS" : "FAIL");
+    printf("Crypto Verify test = %s\n\n", pass ? "PASS" : "FAIL");
 
     if (pass) {
         hitag2_benchtest(10000);
