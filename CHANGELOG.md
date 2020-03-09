@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf personlize` - personalize the UID of a Mifare Classic EV1 card (@pwpiwi)
  - Change - hint texts added to all lf clone commands (@iceman1001)
  - Change `lf keri demod` - adjusted the internal id. (@mwalker33)
  - Added seamless integration with cryptohelper (@iceman1001)
