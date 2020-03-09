@@ -312,7 +312,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_HITAG1    10
 #define THINFILM        11
 #define LTO             12
-#define PROTO_HITAG2    13 
+#define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
 
 //-- Picopass fuses
@@ -599,7 +599,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define HITAG2_READ_PAGE                0x3    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
 #define HITAG2_READ_PAGE_INVERTED       0x1    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_WRITE_PAGE               0x2   // page number in bits 5 to 3, page number 
+#define HITAG2_WRITE_PAGE               0x2   // page number in bits 5 to 3, page number
 
 
 // HITAG S commands
