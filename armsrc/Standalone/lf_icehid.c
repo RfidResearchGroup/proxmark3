@@ -63,7 +63,7 @@ void DownloadLogInstructions() {
 
 bool log_exists;
 
-void append(uint8_t* entry, size_t entry_len) {
+void append(uint8_t *entry, size_t entry_len) {
 
     LED_B_ON();
     if (log_exists == false) {
@@ -106,22 +106,22 @@ uint32_t IceEM410xdemod() {
 
     if (size == 128) {
         sprintf((char *)entry, "EM XL TAG ID: %06lx%08lx%08lx - (%05ld_%03ld_%08ld)\n",
-                 hi,
-                 (uint32_t)(lo >> 32),
-                 (uint32_t)lo,
-                 (uint32_t)(lo & 0xFFFF),
-                 (uint32_t)((lo >> 16LL) & 0xFF),
-                 (uint32_t)(lo & 0xFFFFFF));
+                hi,
+                (uint32_t)(lo >> 32),
+                (uint32_t)lo,
+                (uint32_t)(lo & 0xFFFF),
+                (uint32_t)((lo >> 16LL) & 0xFF),
+                (uint32_t)(lo & 0xFFFFFF));
     } else {
         sprintf((char *)entry, "EM TAG ID: %02lx%08lx - (%05ld_%03ld_%08ld)\n",
-                 (uint32_t)(lo >> 32),
-                 (uint32_t)lo,
-                 (uint32_t)(lo & 0xFFFF),
-                 (uint32_t)((lo >> 16LL) & 0xFF),
-                 (uint32_t)(lo & 0xFFFFFF));
+                (uint32_t)(lo >> 32),
+                (uint32_t)lo,
+                (uint32_t)(lo & 0xFFFF),
+                (uint32_t)((lo >> 16LL) & 0xFF),
+                (uint32_t)(lo & 0xFFFFFF));
     }
 
-    append(entry, strlen((char*)entry));
+    append(entry, strlen((char *)entry));
     Dbprintf("%s", entry);
     BigBuf_free();
     return PM3_SUCCESS;
@@ -173,7 +173,7 @@ uint32_t IceAWIDdemod() {
         }
     }
 
-    append(entry, strlen((char*)entry));
+    append(entry, strlen((char *)entry));
     Dbprintf("%s", entry);
     BigBuf_free();
     return PM3_SUCCESS;
@@ -210,14 +210,14 @@ uint32_t IceIOdemod() {
     memset(entry, 0, sizeof(entry));
 
     sprintf((char *)entry, "IO Prox XSF(%02d)%02x:%05d (%08lx%08lx)\n"
-         , version
-         , facilitycode
-         , number
-         , hi
-         , lo
-        );
+            , version
+            , facilitycode
+            , number
+            , hi
+            , lo
+           );
 
-    append(entry, strlen((char*)entry));
+    append(entry, strlen((char *)entry));
     Dbprintf("%s", entry);
     BigBuf_free();
     return PM3_SUCCESS;
@@ -250,13 +250,13 @@ uint32_t IceHIDDemod() {
         if (hi2 != 0) { //extra large HID tags  88/192 bits
 
             sprintf((char *)entry, "HID large: %lx%08lx%08lx (%ld)\n",
-                     hi2,
-                     hi,
-                     lo,
-                     (lo >> 1) & 0xFFFF
-                    );
+                    hi2,
+                    hi,
+                    lo,
+                    (lo >> 1) & 0xFFFF
+                   );
 
-            append(entry, strlen((char*)entry));
+            append(entry, strlen((char *)entry));
 
         } else {  //standard HID tags 44/96 bits
             uint8_t bitlen = 0;
@@ -297,15 +297,15 @@ uint32_t IceHIDDemod() {
             }
 
             sprintf((char *)entry, "HID: %lx%08lx (%ld) Format: %d bit FC: %ld Card: %ld\n",
-                     hi,
-                     lo,
-                     (lo >> 1) & 0xFFFF,
-                     bitlen,
-                     fac,
-                     cardnum
-                    );
+                    hi,
+                    lo,
+                    (lo >> 1) & 0xFFFF,
+                    bitlen,
+                    fac,
+                    cardnum
+                   );
 
-            append(entry, strlen((char*)entry));
+            append(entry, strlen((char *)entry));
         }
 
         Dbprintf("%s", entry);
@@ -349,7 +349,7 @@ void RunMod() {
 
         uint32_t res;
 
-       // since we steal  12800 from bigbuffer, no need to sample it.
+        // since we steal  12800 from bigbuffer, no need to sample it.
         DoAcquisition_config(false, 28000);
         res = IceHIDDemod();
         if (res == PM3_SUCCESS) {
