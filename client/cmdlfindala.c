@@ -561,8 +561,8 @@ static int CmdIndalaClone(const char *Cmd) {
     CLIParserInit("lf indala clone",
                   "clone INDALA tag to T55x7 (or to q5/T5555)",
                   "Examples:\n"
-                  "\tlf indala clone -c 888\n"
-                  "\tlf indala clone -fc 123 -csn 1337\n"
+                  "\tlf indala clone --heden 888\n"
+                  "\tlf indala clone --fc 123 --cn 1337\n"
                   "\tlf indala clone -r a0000000a0002021\n"
                   "\tlf indala clone -l -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5");
 
@@ -732,9 +732,19 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
 
     // checksum
     // ICEMAN:  todo: needs to calc
-    uint8_t chk = 3;
-    bits[62] = ((chk >> 1) & 1); // b2
-    bits[63] = (chk & 1); // b1
+    uint8_t chk = 0;
+    //sum(y2, y4, y7, y8, y10, y11, y14, y16
+    chk += 0; //y == 75  
+    
+    if ((chk & 1) == 0) {
+        bits[62] = 1;
+        bits[63] = 0;
+    } else {
+        bits[62] = 0;
+        bits[63] = 1;
+    }
+    // 92 = 62
+    // 93 = 63
 
     return PM3_SUCCESS;
 }
