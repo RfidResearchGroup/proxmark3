@@ -1039,9 +1039,9 @@ static int CmdEM4x50Write(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_write();
     PrintAndLogEx(NORMAL, "no implemented yet");
-//   
+//
 //    PrintAndLogEx(SUCCESS, "Done");
-//    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf em 4x50_read`") "to verify");    
+//    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf em 4x50_read`") "to verify");
     return PM3_SUCCESS;
 }
 
@@ -1440,7 +1440,7 @@ static int CmdEM4x05Write(const char *Cmd) {
     int status = demodEM4x05resp(&dummy);
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Success writing to tag");
-    
+
     PrintAndLogEx(SUCCESS, "Done");
     PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf em 4x05_read`") "to verify");
     return status;
