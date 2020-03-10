@@ -130,7 +130,7 @@ CORESRCS =  uart_posix.c \
             util_posix.c \
             scandir.c \
             crc16.c \
-            comms.c            
+            comms.c
 
 CMDSRCS =   crapto1/crapto1.c \
             crapto1/crypto1.c \

@@ -117,8 +117,8 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
 
     if (use_malloc) {
 
-        if (sample_size == NULL || *sample_size == 0 ) {
-           *sample_size = BigBuf_max_traceLen();
+        if (sample_size == NULL || *sample_size == 0) {
+            *sample_size = BigBuf_max_traceLen();
             data.buffer = BigBuf_get_addr();
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
@@ -127,7 +127,7 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
         }
 
     } else {
-        if (sample_size == NULL || *sample_size == 0 ) {
+        if (sample_size == NULL || *sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
         }
         data.buffer = BigBuf_get_addr();
@@ -221,7 +221,7 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
     // 50ms for the resonant antenna to settle.
     if (reader_field)
-    SpinDelay(50);
+        SpinDelay(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc();
