@@ -152,7 +152,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         if (*key != UINT64_C(-1)) {
             break;
         } else {
-            PrintAndLogEx(FAILED, "all candidate keys failed. Restarting darkside attack");
+            PrintAndLogEx(FAILED, "all key candidates failed. Restarting darkside attack");
             free(last_keylist);
             last_keylist = keylist;
             first_run = true;
@@ -345,7 +345,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
         // copy candidatekeys to test key block
         memcpy(keyBlock, candidates + i, KEYBLOCK_SIZE);
 
-        // check a block of generated candidate keys.
+        // check a block of generated key candidates.
         if (mfCheckKeys(blockNo, keyType, true, KEYS_IN_BLOCK, keyBlock, &key64) == PM3_SUCCESS) {
             *resultkey = key64;
             found = true;
@@ -510,7 +510,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
 
-    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "candidate keys", keycnt);
+    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "key candidates", keycnt);
 
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
@@ -544,10 +544,10 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             return -5;
         }
 
-        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (msclock() - start_time) * 1000.0;
-
-        if (i + 1 % 10 == 0)
-            PrintAndLogEx(INFO, " %6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
+//        if (i + 1 % 10 == 0) {
+        float bruteforce_per_second = (float)(i + max_keys) / ((msclock() - start_time) / 1000.0);
+        PrintAndLogEx(INFO, "%6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
+//        }
 
     }
 
@@ -644,7 +644,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
 
-    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "candidate keys", keycnt);
+    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "key candidates", keycnt);
 
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
@@ -689,7 +689,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             num_to_bytes(key64, 6, p_keyblock + j * 6);
         }
 
-        // check a block of generated candidate keys.
+        // check a block of generated key candidates.
         if (IfPm3Flash()) {
             // upload to flash.
             res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6));
@@ -723,8 +723,8 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
 //        if (i%10 == 0) {
-        float bruteforce_per_second = (float)i + max_keys_chunk / (msclock() - start_time) * 1000.0;
-        PrintAndLogEx(INFO, "Chunk %6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
+        float bruteforce_per_second = (float)(i + max_keys_chunk) / ((msclock() - start_time) / 1000.0);
+        PrintAndLogEx(INFO, "%6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
 //        }
     }
 
