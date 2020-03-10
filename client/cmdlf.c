@@ -1351,7 +1351,7 @@ static command_t CommandTable[] = {
     {"fdx",         CmdLFFdx,           AlwaysAvailable, "{ FDX-B RFIDs...             }"},
     {"gallagher",   CmdLFGallagher,     AlwaysAvailable, "{ GALLAGHER RFIDs...         }"},
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
-    {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID RFIDs...               }"},
+    {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},
     {"indala",      CmdLFINDALA,        AlwaysAvailable, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},
