@@ -741,13 +741,13 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     chk += ((cn >> 5) & 1); //y11 == 67 - 30 = 37
     chk += ((cn >> 2) & 1); //y14 == 89 - 30 = 59
     chk += (cn & 1); //y16 == 71 - 30 = 41
-    
+
     if ((chk & 1) == 0) {
-        bits[62] = 1;
-        bits[63] = 0;
-    } else {
         bits[62] = 0;
         bits[63] = 1;
+    } else {
+        bits[62] = 1;
+        bits[63] = 0;
     }
     // 92 = 62
     // 93 = 63
