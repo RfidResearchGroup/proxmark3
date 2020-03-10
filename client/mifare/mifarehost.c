@@ -546,8 +546,8 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
         float bruteforce_per_second = (float)KEYS_IN_BLOCK / (msclock() - start_time) * 1000.0;
 
-        if ( i + 1 % 10 == 0)
-            PrintAndLogEx(INFO, " %6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt , bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+        if (i + 1 % 10 == 0)
+            PrintAndLogEx(INFO, " %6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
 
     }
 
@@ -653,7 +653,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint32_t maxkeysinblock = IfPm3Flash() ? 1000 : KEYS_IN_BLOCK;
     uint32_t max_keys_chunk = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
-    uint8_t *mem = calloc( (maxkeysinblock * 6) + 5, sizeof(uint8_t));
+    uint8_t *mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
     if (mem == NULL) {
         free(statelists[0].head.slhead);
         return PM3_EMALLOC;
@@ -667,7 +667,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     mem[4] = (max_keys_chunk & 0xFF);
 
     uint8_t destfn[32];
-    strncpy((char*)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
+    strncpy((char *)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
 
     uint64_t start_time = msclock();
     for (uint32_t i = 0; i < keycnt; i += max_keys_chunk) {
@@ -691,8 +691,8 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
         // check a block of generated candidate keys.
         if (IfPm3Flash()) {
-             // upload to flash.
-            res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6) );
+            // upload to flash.
+            res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6));
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "SPIFFS upload failed");
                 free(mem);
@@ -705,13 +705,13 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
         if (res == PM3_SUCCESS) {
-                p_keyblock = NULL;
-                free(statelists[0].head.slhead);
-                free(mem);
+            p_keyblock = NULL;
+            free(statelists[0].head.slhead);
+            free(mem);
 
-                num_to_bytes(key64, 6, resultKey);
+            num_to_bytes(key64, 6, resultKey);
 
-                PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") "]",
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)
@@ -723,8 +723,8 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
 //        if (i%10 == 0) {
-            float bruteforce_per_second = (float)i + max_keys_chunk / (msclock() - start_time) * 1000.0;
-            PrintAndLogEx(INFO, "Chunk %6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+        float bruteforce_per_second = (float)i + max_keys_chunk / (msclock() - start_time) * 1000.0;
+        PrintAndLogEx(INFO, "Chunk %6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
 //        }
     }
 
