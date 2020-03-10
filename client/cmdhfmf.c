@@ -3129,7 +3129,7 @@ out:
 }
 
 sector_t *k_sector = NULL;
-uint8_t k_sectorsCount = 16;
+uint8_t k_sectorsCount = 40;
 
 void showSectorTable() {
     if (k_sector != NULL) {
@@ -4800,72 +4800,72 @@ static int CmdHFMFNDEF(const char *Cmd) {
 
 int CmdHFMFPersonalize(const char *cmd) {
 
-	CLIParserInit("hf mf personalize",
-				  "Personalize the UID of a Mifare Classic EV1 card. This is only possible if it is a 7Byte UID card and if it is not already personalized.",
-				  "Usage:\n\thf mf personalize UIDF0                        -> double size UID according to ISO/IEC14443-3\n"
-				  "\thf mf personalize UIDF1                        -> double size UID according to ISO/IEC14443-3, optional usage of selection process shortcut\n"
-				  "\thf mf personalize UIDF2                        -> single size random ID according to ISO/IEC14443-3\n"
-				  "\thf mf personalize UIDF3                        -> single size NUID according to ISO/IEC14443-3\n"
-				  "\thf mf personalize -t B -k B0B1B2B3B4B5 UIDF3   -> use key B = 0xB0B1B2B3B4B5 instead of default key A\n");
+    CLIParserInit("hf mf personalize",
+                  "Personalize the UID of a Mifare Classic EV1 card. This is only possible if it is a 7Byte UID card and if it is not already personalized.",
+                  "Usage:\n\thf mf personalize UIDF0                        -> double size UID according to ISO/IEC14443-3\n"
+                  "\thf mf personalize UIDF1                        -> double size UID according to ISO/IEC14443-3, optional usage of selection process shortcut\n"
+                  "\thf mf personalize UIDF2                        -> single size random ID according to ISO/IEC14443-3\n"
+                  "\thf mf personalize UIDF3                        -> single size NUID according to ISO/IEC14443-3\n"
+                  "\thf mf personalize -t B -k B0B1B2B3B4B5 UIDF3   -> use key B = 0xB0B1B2B3B4B5 instead of default key A\n");
 
-	void *argtable[] = {
-		arg_param_begin,
-		arg_str0("tT",  "keytype", "<A|B>",                     "key type (A or B) to authenticate sector 0 (default: A)"),
-		arg_str0("kK",  "key",     "<key (hex 6 Bytes)>",       "key to authenticate sector 0 (default: FFFFFFFFFFFF)"),
-		arg_str1(NULL,  NULL,      "<UIDF0|UIDF1|UIDF2|UIDF3>", "Personalization Option"),
-		arg_param_end
-	};
-	CLIExecWithReturn(cmd, argtable, true);
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("tT",  "keytype", "<A|B>",                     "key type (A or B) to authenticate sector 0 (default: A)"),
+        arg_str0("kK",  "key",     "<key (hex 6 Bytes)>",       "key to authenticate sector 0 (default: FFFFFFFFFFFF)"),
+        arg_str1(NULL,  NULL,      "<UIDF0|UIDF1|UIDF2|UIDF3>", "Personalization Option"),
+        arg_param_end
+    };
+    CLIExecWithReturn(cmd, argtable, true);
 
-	char keytypestr[2] = "a";
-	uint8_t keytype = 0x00;
-	int keytypestr_len;
-	int res = CLIParamStrToBuf(arg_get_str(1), (uint8_t*)keytypestr, 1, &keytypestr_len);
+    char keytypestr[2] = "a";
+    uint8_t keytype = 0x00;
+    int keytypestr_len;
+    int res = CLIParamStrToBuf(arg_get_str(1), (uint8_t *)keytypestr, 1, &keytypestr_len);
     str_lower(keytypestr);
-    
-	if (res || (keytypestr[0] != 'a' && keytypestr[0] != 'b')) {
-		PrintAndLogEx(ERR, "ERROR: not a valid key type. Key type must be A or B");
-		CLIParserFree();
-		return PM3_EINVARG;
-	}
-	if (keytypestr[0] == 'b') {
-		keytype = 0x01;
-	}
 
-	uint8_t key[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-	int key_len;
-	res = CLIParamHexToBuf(arg_get_str(2), key, 6, &key_len);
-	if (res || (!res && key_len > 0 && key_len != 6)) {
-		PrintAndLogEx(ERR, "ERROR: not a valid key. Key must be 12 hex digits");
-		CLIParserFree();
-		return PM3_EINVARG;
-	}
+    if (res || (keytypestr[0] != 'a' && keytypestr[0] != 'b')) {
+        PrintAndLogEx(ERR, "ERROR: not a valid key type. Key type must be A or B");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+    if (keytypestr[0] == 'b') {
+        keytype = 0x01;
+    }
 
-	char pers_optionstr[6];
-	int opt_len;
-	uint8_t pers_option;
-	res = CLIParamStrToBuf(arg_get_str(3), (uint8_t*)pers_optionstr, 5, &opt_len);
+    uint8_t key[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    int key_len;
+    res = CLIParamHexToBuf(arg_get_str(2), key, 6, &key_len);
+    if (res || (!res && key_len > 0 && key_len != 6)) {
+        PrintAndLogEx(ERR, "ERROR: not a valid key. Key must be 12 hex digits");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+
+    char pers_optionstr[6];
+    int opt_len;
+    uint8_t pers_option;
+    res = CLIParamStrToBuf(arg_get_str(3), (uint8_t *)pers_optionstr, 5, &opt_len);
     str_lower(pers_optionstr);
 
-	if (res || (!res && opt_len > 0 && opt_len != 5)
-			|| (strncmp(pers_optionstr, "uidf0", 5) && strncmp(pers_optionstr, "uidf1", 5) && strncmp(pers_optionstr, "uidf2", 5) && strncmp(pers_optionstr, "uidf3", 5))) {
-		PrintAndLogEx(ERR, "ERROR: invalid personalization option. Must be one of UIDF0, UIDF1, UIDF2, or UIDF3");
-		CLIParserFree();
-		return PM3_EINVARG;
-	}
-	if (!strncmp(pers_optionstr, "uidf0", 5)) {
-		pers_option = MIFARE_EV1_UIDF0;
-	} else if (!strncmp(pers_optionstr, "uidf1", 5)) {
-		pers_option = MIFARE_EV1_UIDF1;
-	} else if (!strncmp(pers_optionstr, "uidf2", 5)) {
-		pers_option = MIFARE_EV1_UIDF2;
-	} else {
-		pers_option = MIFARE_EV1_UIDF3;
-	}
+    if (res || (!res && opt_len > 0 && opt_len != 5)
+            || (strncmp(pers_optionstr, "uidf0", 5) && strncmp(pers_optionstr, "uidf1", 5) && strncmp(pers_optionstr, "uidf2", 5) && strncmp(pers_optionstr, "uidf3", 5))) {
+        PrintAndLogEx(ERR, "ERROR: invalid personalization option. Must be one of UIDF0, UIDF1, UIDF2, or UIDF3");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+    if (!strncmp(pers_optionstr, "uidf0", 5)) {
+        pers_option = MIFARE_EV1_UIDF0;
+    } else if (!strncmp(pers_optionstr, "uidf1", 5)) {
+        pers_option = MIFARE_EV1_UIDF1;
+    } else if (!strncmp(pers_optionstr, "uidf2", 5)) {
+        pers_option = MIFARE_EV1_UIDF2;
+    } else {
+        pers_option = MIFARE_EV1_UIDF3;
+    }
 
-	CLIParserFree();
+    CLIParserFree();
 
-    clearCommandBuffer();    
+    clearCommandBuffer();
 
     struct {
         uint8_t keytype;
@@ -4875,16 +4875,16 @@ int CmdHFMFPersonalize(const char *cmd) {
     payload.keytype = keytype;
     payload.pers_option = pers_option;
 
-	memcpy(payload.key, key, 6);
+    memcpy(payload.key, key, 6);
 
     SendCommandNG(CMD_HF_MIFARE_PERSONALIZE_UID, (uint8_t *)&payload, sizeof(payload));
 
-	PacketResponseNG resp;
+    PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_HF_MIFARE_PERSONALIZE_UID, &resp, 2500)) return PM3_ETIMEOUT;
 
     PrintAndLogEx(SUCCESS, "Personalization %s", resp.status == PM3_SUCCESS ? "SUCCEEDED" : "FAILED");
 
-	return PM3_SUCCESS;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AMfList(const char *Cmd) {
@@ -4934,7 +4934,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"mad",         CmdHF14AMfMAD,          IfPm3Iso14443a,  "Checks and prints MAD"},
     {"ndef",        CmdHFMFNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
-	{"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (Mifare Classic EV1 only)"},
+    {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (Mifare Classic EV1 only)"},
     {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {NULL, NULL, NULL, NULL}
 };
