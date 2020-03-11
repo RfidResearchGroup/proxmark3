@@ -1,4 +1,4 @@
--- Run me like this: ./client/proxmark3 /dev/ttyACM0 -l hf_bruteforce.lua
+-- Run me like this: ./pm3 /dev/ttyACM0 -l hf_bruteforce.lua
 
 local getopt = require('getopt')
 
@@ -7,24 +7,24 @@ author = 'Daniel Underhay (updated), Keld Norman(original)'
 version = 'v2.0.0'
 usage = [[
 
-pm3 --> script run hf_bruteforce -s start_id -e end_id -t timeout -T mifare_card_type
+pm3 --> script run hf_bruteforce -s start_id -e end_id -t timeout -x mifare_card_type
 
 Arguments:
     -h       this help
     -s       0-0xFFFFFFFF         start id
     -e       0-0xFFFFFFFF         end id
     -t       0-99999, pause       timeout (ms) between cards (use the word 'pause' to wait for user input)
-    -T       mfc, mfu             mfc for Mifare Classic or mfu for Mifare Ultralight
+    -x       mfc, mfu             mifare type: mfc for Mifare Classic (default) or mfu for Mifare Ultralight EV1
 
 
 Example:
 
-pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -T mfc
+pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
 
 Bruteforce a 4 byte UID Mifare classic card number, starting at 11223344, ending at 11223346.
 
 
-pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -T mfu
+pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 
 Bruteforce a 7 byte UID Mifare Ultralight card number, starting at 11223344556677, ending at 11223344556679.
 
@@ -81,13 +81,13 @@ local function main(args)
     local timeout = 0
     local start_id = 0
     local end_id = 0xFFFFFFFFFFFFFF
-    local mftype = ''
+    local mftype = 'mfc'
 
-    for o, a in getopt.getopt(args, 'e:s:t:h:T:') do
+    for o, a in getopt.getopt(args, 'e:s:t:x:h:') do
         if o == 's' then start_id = a end
         if o == 'e' then end_id = a end
         if o == 't' then timeout = a end
-        if o == 'T' then mftype = a end
+        if o == 'x' then mftype = a end
         if o == 'h' then return print(usage) end
     end
 

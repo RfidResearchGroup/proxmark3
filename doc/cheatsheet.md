@@ -292,12 +292,12 @@ pm3 --> hf mfu sim t 7 u hf-mfu-XXXX-dump.eml
 
 Bruteforce Mifare Classic card numbers from 11223344 to 11223346
 ```
-pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -T mfc
+pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
 ```
 
 Bruteforce Mifare Ultralight EV1 card numbers from 11223344556677 to 11223344556679
 ```
-pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -T mfu
+pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 ```
 
 
