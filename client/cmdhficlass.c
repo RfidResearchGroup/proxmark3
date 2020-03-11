@@ -870,19 +870,18 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%u") "vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
             PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * 8);
         }
+        uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
 
         for (uint16_t blocknum = 0; blocknum < limit; ++blocknum) {
 
             uint8_t idx = blocknum * 8;
             memcpy(enc_data, decrypted + idx, 8);
 
-            // block 7 or higher,  and not empty 0xFF
-            // look inside block 6 to determine if aa1 is encrypted.
-            if (blocknum > 6 && memcmp(enc_data, empty, 8) != 0) {
-
-                if (aa1_encryption == RFU || aa1_encryption == None)
-                    continue;
-
+            if (aa1_encryption == RFU || aa1_encryption == None)
+                continue;
+                
+            // Decrypted block 7,8,9 if configured.
+            if (blocknum > 6 && blocknum <= 6 + numblocks4userid && memcmp(enc_data, empty, 8) != 0) {
                 if (use_sc) {
                     Decrypt(enc_data, decrypted + idx);
                 } else {
