@@ -3,7 +3,7 @@
 
 local getopt = require('getopt')
 
-copyright = 'The GNU General Public License v3.0'
+copyright = ''
 author = 'Daniel Underhay (updated), Keld Norman(original)'
 version = 'v2.0.0'
 usage = [[
