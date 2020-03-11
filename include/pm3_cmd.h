@@ -392,7 +392,8 @@ typedef struct {
 #define CMD_LF_T55XX_WAKEUP                                               0x0224
 #define CMD_LF_COTAG_READ                                                 0x0225
 #define CMD_LF_T55XX_SET_CONFIG                                           0x0226
-#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0227
+#define CMD_LF_SAMPLING_PRINT_CONFIG                                      0x0227
+#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0228
 
 #define CMD_LF_T55XX_CHK_PWDS                                             0x0230
 #define CMD_LF_T55XX_DANGERRAW                                            0x0231
@@ -504,6 +505,8 @@ typedef struct {
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
 #define CMD_HF_MIFARE_MFKEY                                               0x0631
+#define CMD_HF_MIFARE_PERSONALIZE_UID                                     0x0632
+
 //ultralightC
 #define CMD_HF_MIFAREUC_AUTH                                              0x0724
 //0x0725 and 0x0726 no longer used

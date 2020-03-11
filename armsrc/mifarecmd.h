@@ -45,6 +45,8 @@ void MifareCIdent();  // is "magic chinese" card?
 void MifareHasStaticNonce();  // Has the tag a static nonce?
 
 void MifareSetMod(uint8_t *datain);
+void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key);
+
 void MifareUSetPwd(uint8_t arg0, uint8_t *datain);
 void OnSuccessMagic();
 void OnErrorMagic(uint8_t reason);

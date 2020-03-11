@@ -457,6 +457,24 @@ int CmdFlexdemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int lf_getconfig(sample_config *config) {
+    if (!session.pm3_present) return PM3_ENOTTY;
+
+    if (config == NULL)
+        return PM3_EINVARG;
+
+    clearCommandBuffer();
+
+    SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_SAMPLING_GET_CONFIG, &resp, 2000)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    memcpy(config, resp.data.asBytes, sizeof(sample_config));
+    return PM3_SUCCESS;
+}
+
 int lf_config(sample_config *config) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
@@ -464,7 +482,7 @@ int lf_config(sample_config *config) {
     if (config != NULL)
         SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)config, sizeof(sample_config));
     else
-        SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
+        SendCommandNG(CMD_LF_SAMPLING_PRINT_CONFIG, NULL, 0);
 
     return PM3_SUCCESS;
 }
@@ -1333,7 +1351,7 @@ static command_t CommandTable[] = {
     {"fdx",         CmdLFFdx,           AlwaysAvailable, "{ FDX-B RFIDs...             }"},
     {"gallagher",   CmdLFGallagher,     AlwaysAvailable, "{ GALLAGHER RFIDs...         }"},
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
-    {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID RFIDs...               }"},
+    {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},
     {"indala",      CmdLFINDALA,        AlwaysAvailable, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},

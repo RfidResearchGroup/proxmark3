@@ -346,7 +346,7 @@ static int CmdHIDClone(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_HID_CLONE, hi2, hi, lo, longid, sizeof(longid));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf hid read`") "to verify");   
+    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf hid read`") "to verify");
     return PM3_SUCCESS;
 }
 
@@ -450,7 +450,7 @@ static int CmdHIDBrute(const char *Cmd) {
         PrintAndLogEx(INFO, "ISSUE#........... %u", cn_hi.IssueLevel);
         PrintAndLogEx(INFO, "Facility#........ %u", cn_hi.FacilityCode);
         PrintAndLogEx(INFO, "Card#............ %" PRIu64, cn_hi.CardNumber);
-        switch( direction) {
+        switch (direction) {
             case 0:
                 PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH"));
                 break;
@@ -460,7 +460,8 @@ static int CmdHIDBrute(const char *Cmd) {
             case 2:
                 PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("DOWN"));
                 break;
-            default: break;
+            default:
+                break;
         }
     }
     PrintAndLogEx(INFO, "Brute-forcing HID reader");
@@ -495,7 +496,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 fin_hi = true;
             }
         }
-        
+
         // do one down
         if (direction != 1) {
             if (cn_low.CardNumber > 0) {
@@ -507,7 +508,7 @@ static int CmdHIDBrute(const char *Cmd) {
         }
 
         switch (direction) {
-            case 0: 
+            case 0:
                 if (fin_hi && fin_low) {
                     exitloop = true;
                 }
@@ -518,7 +519,8 @@ static int CmdHIDBrute(const char *Cmd) {
             case 2:
                 exitloop = fin_low;
                 break;
-            default: break;
+            default:
+                break;
         }
 
     } while (exitloop == false);

@@ -93,8 +93,7 @@ uint64_t uid;
 int maxtablesize = 800000;
 uint64_t supplied_testkey = 0;
 
-void usage()
-{
+void usage() {
     printf("ht2crack4 - K Sheldrake, based on the work of Garcia et al\n\n");
     printf("Cracks a HiTag2 key using a small number (4 to 16) of encrypted\n");
     printf("nonce and challenge response pairs, using a fast correlation\n");
@@ -130,46 +129,44 @@ const uint64_t ht2_function5c = 0x7907287B; // 0111 1001 0000 0111 0010 1000 011
  * a known least-sig pattern. first index is num bits in known part, second is the
  * bit pattern of the known part. */
 double pfna[][8] = {
-{0.50000, 0.50000, },
-{0.50000, 0.50000, 0.50000, 0.50000, },
-{0.50000, 0.00000, 0.50000, 1.00000, 0.50000, 1.00000, 0.50000, 0.00000, },
+    {0.50000, 0.50000, },
+    {0.50000, 0.50000, 0.50000, 0.50000, },
+    {0.50000, 0.00000, 0.50000, 1.00000, 0.50000, 1.00000, 0.50000, 0.00000, },
 };
 double pfnb[][8] = {
-{0.62500, 0.37500, },
-{0.50000, 0.75000, 0.75000, 0.00000, },
-{0.50000, 0.50000, 0.50000, 0.00000, 0.50000, 1.00000, 1.00000, 0.00000, },
+    {0.62500, 0.37500, },
+    {0.50000, 0.75000, 0.75000, 0.00000, },
+    {0.50000, 0.50000, 0.50000, 0.00000, 0.50000, 1.00000, 1.00000, 0.00000, },
 };
 double pfnc[][16] = {
-{0.50000, 0.50000, },
-{0.62500, 0.62500, 0.37500, 0.37500, },
-{0.75000, 0.50000, 0.25000, 0.75000, 0.50000, 0.75000, 0.50000, 0.00000, },
-{1.00000, 1.00000, 0.50000, 0.50000, 0.50000, 0.50000, 0.50000, 0.00000, 0.50000, 0.00000, 0.00000, 1.00000, 0.50000, 1.00000, 0.50000, 0.00000, },
+    {0.50000, 0.50000, },
+    {0.62500, 0.62500, 0.37500, 0.37500, },
+    {0.75000, 0.50000, 0.25000, 0.75000, 0.50000, 0.75000, 0.50000, 0.00000, },
+    {1.00000, 1.00000, 0.50000, 0.50000, 0.50000, 0.50000, 0.50000, 0.00000, 0.50000, 0.00000, 0.00000, 1.00000, 0.50000, 1.00000, 0.50000, 0.00000, },
 };
 
 
 /* hitag2_crypt works on the post-shifted form of the lfsr; this is the ref in rfidler code */
-static uint32_t hitag2_crypt(uint64_t s)
-{
+static uint32_t hitag2_crypt(uint64_t s) {
     uint32_t bitindex;
 
-    bitindex =  (ht2_function4a >> pickbits2_2 (s, 1, 4)) & 1; 
-    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2 (s, 7, 11, 13)) & 0x02;
-    bitindex |= ((ht2_function4b << 2) >> pickbits1x4 (s, 16, 20, 22, 25)) & 0x04;
-    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1 (s, 27, 30, 32)) & 0x08;
+    bitindex = (ht2_function4a >> pickbits2_2(s, 1, 4)) & 1;
+    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2(s, 7, 11, 13)) & 0x02;
+    bitindex |= ((ht2_function4b << 2) >> pickbits1x4(s, 16, 20, 22, 25)) & 0x04;
+    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1(s, 27, 30, 32)) & 0x08;
     bitindex |= ((ht2_function4a << 4) >> pickbits1_2_1(s, 33, 42, 45)) & 0x10;
 
     return (ht2_function5c >> bitindex) & 1;
 }
 
 /* ht2crypt works on the pre-shifted form of the lfsr; this is the ref in the paper */
-uint64_t ht2crypt(uint64_t s)
-{
+uint64_t ht2crypt(uint64_t s) {
     uint64_t bitindex;
 
-    bitindex =  (ht2_function4a >> pickbits2_2 (s, 2, 5)) & 1;
-    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2 (s, 8, 12, 14)) & 0x02;
-    bitindex |= ((ht2_function4b << 2) >> pickbits1x4 (s, 17, 21, 23, 26)) & 0x04;
-    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1 (s, 28, 31, 33)) & 0x08;
+    bitindex = (ht2_function4a >> pickbits2_2(s, 2, 5)) & 1;
+    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2(s, 8, 12, 14)) & 0x02;
+    bitindex |= ((ht2_function4b << 2) >> pickbits1x4(s, 17, 21, 23, 26)) & 0x04;
+    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1(s, 28, 31, 33)) & 0x08;
     bitindex |= ((ht2_function4a << 4) >> pickbits1_2_1(s, 34, 43, 46)) & 0x10;
 
     return (ht2_function5c >> bitindex) & 1;
@@ -177,11 +174,10 @@ uint64_t ht2crypt(uint64_t s)
 
 
 /* fnL is the feedback function for the reference code */
-uint64_t fnL(uint64_t x)
-{
+uint64_t fnL(uint64_t x) {
     return (bitn(x, 0) ^ bitn(x, 2) ^ bitn(x, 3) ^ bitn(x, 6) ^ bitn(x, 7) ^ bitn(x, 8) ^
-        bitn(x, 16) ^ bitn(x, 22) ^ bitn(x, 23) ^ bitn(x, 26) ^ bitn(x, 30) ^ bitn(x, 41) ^
-        bitn(x, 42) ^ bitn(x, 43) ^ bitn(x, 46) ^ bitn(x, 47));
+            bitn(x, 16) ^ bitn(x, 22) ^ bitn(x, 23) ^ bitn(x, 26) ^ bitn(x, 30) ^ bitn(x, 41) ^
+            bitn(x, 42) ^ bitn(x, 43) ^ bitn(x, 46) ^ bitn(x, 47));
 }
 
 
@@ -189,18 +185,18 @@ uint64_t fnL(uint64_t x)
  * the number of relevant bits.
  * e.g. if there are 16 confirmed bits in a state, then packed_size[16] = 8 relevant bits.
  * this is for pre-shifted lfsr */
-unsigned int packed_size[] = { 0,  0,  0,  1,  2,  2,  3,  4,  4,  5,  5,  5,  5,  6,  6,  7,  8, 
+unsigned int packed_size[] = { 0,  0,  0,  1,  2,  2,  3,  4,  4,  5,  5,  5,  5,  6,  6,  7,  8,
                                8,  9,  9,  9,  9, 10, 10, 11, 11, 11, 12, 12, 13, 14, 14, 15,
-                              15, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 18, 19, 19, 20, 20 };
+                               15, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 18, 19, 19, 20, 20
+                             };
 
 
 /* f20 is the same as hitag2_crypt except it works on the packed version
  * of the state where all 20 relevant bits are squashed together */
-uint64_t f20(uint64_t y)
-{
+uint64_t f20(uint64_t y) {
     uint64_t bitindex;
 
-    bitindex =  (ht2_function4a >> (y & 0xf)) & 1; 
+    bitindex = (ht2_function4a >> (y & 0xf)) & 1;
     bitindex |= ((ht2_function4b << 1) >> ((y >> 4) & 0xf)) & 0x02;
     bitindex |= ((ht2_function4b << 2) >> ((y >> 8) & 0xf)) & 0x04;
     bitindex |= ((ht2_function4b << 3) >> ((y >> 12) & 0xf)) & 0x08;
@@ -211,14 +207,13 @@ uint64_t f20(uint64_t y)
 
 
 /* packstate packs the relevant bits from LFSR state into 20 bits for pre-shifted lfsr */
-uint64_t packstate(uint64_t s)
-{
+uint64_t packstate(uint64_t s) {
     uint64_t packed;
 
-    packed =  pickbits2_2 (s, 2, 5);
-    packed |= (pickbits1_1_2 (s, 8, 12, 14) << 4);
-    packed |= (pickbits1x4 (s, 17, 21, 23, 26) << 8);
-    packed |= (pickbits2_1_1 (s, 28, 31, 33) << 12);
+    packed =  pickbits2_2(s, 2, 5);
+    packed |= (pickbits1_1_2(s, 8, 12, 14) << 4);
+    packed |= (pickbits1x4(s, 17, 21, 23, 26) << 8);
+    packed |= (pickbits2_1_1(s, 28, 31, 33) << 12);
     packed |= (pickbits1_2_1(s, 34, 43, 46) << 16);
 
     return packed;
@@ -226,8 +221,7 @@ uint64_t packstate(uint64_t s)
 
 
 /* create_guess_table mallocs the tables */
-void create_guess_table()
-{
+void create_guess_table() {
     guesses = (struct guess *)malloc(sizeof(struct guess) * maxtablesize);
     if (!guesses) {
         printf("cannot malloc guess table\n");
@@ -238,8 +232,7 @@ void create_guess_table()
 
 /* init the guess table by reading in the encrypted nR,aR values and
  * setting the first 2^16 key guesses */
-void init_guess_table(char *filename, char *uidstr)
-{
+void init_guess_table(char *filename, char *uidstr) {
     unsigned int i, j;
     FILE *fp;
     char *buf = NULL;
@@ -289,8 +282,8 @@ void init_guess_table(char *filename, char *uidstr)
         }
         *buft2 = 0x00;
         if (!strncmp(buf, "0x", 2)) {
-            nonces[num_nRaR].enc_nR = rev32(hexreversetoulong(buf+2));
-            nonces[num_nRaR].ks = rev32(hexreversetoulong(buft1+2)) ^ 0xffffffff;
+            nonces[num_nRaR].enc_nR = rev32(hexreversetoulong(buf + 2));
+            nonces[num_nRaR].ks = rev32(hexreversetoulong(buft1 + 2)) ^ 0xffffffff;
         } else {
             nonces[num_nRaR].enc_nR = rev32(hexreversetoulong(buf));
             nonces[num_nRaR].ks = rev32(hexreversetoulong(buft1)) ^ 0xffffffff;
@@ -303,12 +296,12 @@ void init_guess_table(char *filename, char *uidstr)
 
     fprintf(stderr, "Loaded %d nRaR pairs\n", num_nRaR);
 
-    // set key and copy in enc_nR and ks values 
+    // set key and copy in enc_nR and ks values
     // set score to -1.0 to distinguish them from 0 scores
-    for (i=0; i<65536; i++) {
+    for (i = 0; i < 65536; i++) {
         guesses[i].key = i;
         guesses[i].score = -1.0;
-        for (j=0; j<num_nRaR; j++) {
+        for (j = 0; j < num_nRaR; j++) {
             guesses[i].b0to31[j] = 0;
         }
     }
@@ -320,8 +313,7 @@ void init_guess_table(char *filename, char *uidstr)
 /* bit_score calculates the ratio of partial states that could generate
  * the resulting bit b to all possible states
  * size is the number of confirmed bits in the state */
-double bit_score(uint64_t s, uint64_t size, uint64_t b)
-{
+double bit_score(uint64_t s, uint64_t size, uint64_t b) {
     uint64_t packed;
     uint64_t chopped;
     unsigned int n;
@@ -353,14 +345,14 @@ double bit_score(uint64_t s, uint64_t size, uint64_t b)
         // incomplete first nibble
         // get probability of getting a 1 from first nibble
         // and by subtraction from 1, prob of getting a 0
-        nibprob1 = pfna[n-1][packed];
+        nibprob1 = pfna[n - 1][packed];
         nibprob0 = 1.0 - nibprob1;
 
         // calc fnc prob as sum of probs of nib 1 producing a 1 and 0
         prob = (nibprob0 * pfnc[0][0]) + (nibprob1 * pfnc[0][1]);
     } else if (n < 20) {
         // calculate the fnc input first, then we'll fix it
-        fncinput =  (ht2_function4a >> (packed & 0xf)) & 1; 
+        fncinput = (ht2_function4a >> (packed & 0xf)) & 1;
         fncinput |= ((ht2_function4b << 1) >> ((packed >> 4) & 0xf)) & 0x02;
         fncinput |= ((ht2_function4b << 2) >> ((packed >> 8) & 0xf)) & 0x04;
         fncinput |= ((ht2_function4b << 3) >> ((packed >> 12) & 0xf)) & 0x08;
@@ -404,8 +396,7 @@ double bit_score(uint64_t s, uint64_t size, uint64_t b)
  * bit_scores together until no bits remain. bit_scores are
  * multiplied by the number of relevant bits in the scored state
  * to give weight to more complete states. */
-double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kssize)
-{
+double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kssize) {
     double sc, sc2;
 
     if ((size == 1) || (kssize == 1)) {
@@ -436,8 +427,7 @@ double score(uint64_t s, unsigned int size, uint64_t ks, unsigned int kssize)
 
 
 /* score_traces runs score for each encrypted nonce */
-void score_traces(struct guess *g, unsigned int size)
-{
+void score_traces(struct guess *g, unsigned int size) {
     uint64_t lfsr;
     unsigned int i;
     double sc;
@@ -448,13 +438,13 @@ void score_traces(struct guess *g, unsigned int size)
         return;
     }
 
-    for (i=0; i<num_nRaR; i++) {
+    for (i = 0; i < num_nRaR; i++) {
         // calc next b
         // create lfsr - lower 32 bits is uid, upper 16 bits are lower 16 bits of key
         // then shift by size - 16, insert upper key XOR enc_nonce XOR bitstream,
         // and calc new bit b
         lfsr = (uid >> (size - 16)) | ((g->key << (48 - size)) ^
-            ((nonces[i].enc_nR ^ g->b0to31[i]) << (64 - size)));
+                                       ((nonces[i].enc_nR ^ g->b0to31[i]) << (64 - size)));
         g->b0to31[i] = g->b0to31[i] | (ht2crypt(lfsr) << (size - 16));
 
         // create lfsr - lower 16 bits are lower 16 bits of key
@@ -491,12 +481,11 @@ void score_all_traces(unsigned int size)
 */
 
 /* score_some_traces runs score_traces for every key guess in a section of the table */
-void *score_some_traces(void *data)
-{
+void *score_some_traces(void *data) {
     unsigned int i;
     struct thread_data *tdata = (struct thread_data *)data;
 
-    for (i=tdata->start; i<tdata->end; i++) {
+    for (i = tdata->start; i < tdata->end; i++) {
         score_traces(&(guesses[i]), tdata->size);
     }
 
@@ -505,8 +494,7 @@ void *score_some_traces(void *data)
 
 
 /* score_all_traces runs score_traces for every key guess in the table */
-void score_all_traces(unsigned int size)
-{
+void score_all_traces(unsigned int size) {
     pthread_t threads[NUM_THREADS];
     void *status;
     struct thread_data tdata[NUM_THREADS];
@@ -516,9 +504,9 @@ void score_all_traces(unsigned int size)
     chunk_size = num_guesses / NUM_THREADS;
 
     // create thread data
-    for (i=0; i<NUM_THREADS; i++) {
+    for (i = 0; i < NUM_THREADS; i++) {
         tdata[i].start = i * chunk_size;
-        tdata[i].end = (i+1) * chunk_size;
+        tdata[i].end = (i + 1) * chunk_size;
         tdata[i].size = size;
     }
 
@@ -526,7 +514,7 @@ void score_all_traces(unsigned int size)
     tdata[NUM_THREADS - 1].end = num_guesses;
 
     // start the threads
-    for (i=0; i<NUM_THREADS; i++) {
+    for (i = 0; i < NUM_THREADS; i++) {
         if (pthread_create(&(threads[i]), NULL, score_some_traces, (void *)(tdata + i))) {
             printf("cannot start thread %d\n", i);
             exit(1);
@@ -534,7 +522,7 @@ void score_all_traces(unsigned int size)
     }
 
     // wait for threads to end
-    for (i=0; i<NUM_THREADS; i++) {
+    for (i = 0; i < NUM_THREADS; i++) {
         if (pthread_join(threads[i], &status)) {
             printf("cannot join thread %d\n", i);
             exit(1);
@@ -547,8 +535,7 @@ void score_all_traces(unsigned int size)
 
 
 /* cmp_guess is the comparison function for qsorting the guess table */
-int cmp_guess(const void *a, const void *b)
-{
+int cmp_guess(const void *a, const void *b) {
     struct guess *a1 = (struct guess *)a;
     struct guess *b1 = (struct guess *)b;
 
@@ -565,15 +552,14 @@ int cmp_guess(const void *a, const void *b)
 /* expand all guesses in first half of (sorted) table by
  * copying them into the second half and extending the copied
  * ones with an extra 1, leaving the first half with an extra 0 */
-void expand_guesses(unsigned int halfsize, unsigned int size)
-{
+void expand_guesses(unsigned int halfsize, unsigned int size) {
     unsigned int i, j;
 
-    for (i=0; i<halfsize; i++) {
-        guesses[i+halfsize].key = guesses[i].key | (1l << size);
-        guesses[i+halfsize].score = guesses[i].score;
-        for (j=0; j<num_nRaR; j++) {
-            guesses[i+halfsize].b0to31[j] = guesses[i].b0to31[j];
+    for (i = 0; i < halfsize; i++) {
+        guesses[i + halfsize].key = guesses[i].key | (1l << size);
+        guesses[i + halfsize].score = guesses[i].score;
+        for (j = 0; j < num_nRaR; j++) {
+            guesses[i + halfsize].b0to31[j] = guesses[i].b0to31[j];
         }
     }
 }
@@ -581,14 +567,13 @@ void expand_guesses(unsigned int halfsize, unsigned int size)
 
 /* checks if the supplied test key is still in the table, which
  * is useful when testing different scoring methods */
-void check_supplied_testkey(unsigned int size)
-{
+void check_supplied_testkey(unsigned int size) {
     uint64_t partkey;
     unsigned int i;
 
     partkey = supplied_testkey & ((1l << size) - 1);
 
-    for (i=0; i<num_guesses; i++) {
+    for (i = 0; i < num_guesses; i++) {
         if (guesses[i].key == partkey) {
             fprintf(stderr, " supplied test key score = %1.10f, position = %d\n", guesses[i].score, i);
             return;
@@ -601,8 +586,7 @@ void check_supplied_testkey(unsigned int size)
 
 
 /* execute_round scores the guesses, sorts them and expands the good half */
-void execute_round(unsigned int size)
-{
+void execute_round(unsigned int size) {
     unsigned int halfsize;
 
     // score all the current guesses
@@ -630,14 +614,13 @@ void execute_round(unsigned int size)
 
 
 /* crack is the main cracking algo; it executes the rounds */
-void crack()
-{
+void crack() {
     unsigned int i;
     uint64_t revkey;
     uint64_t foundkey;
 
-    for (i=16; i<=48; i++) {
-        fprintf(stderr, "round %2d, size=%2d\n", i-16, i);
+    for (i = 16; i <= 48; i++) {
+        fprintf(stderr, "round %2d, size=%2d\n", i - 16, i);
         execute_round(i);
 
         // print some metrics
@@ -649,8 +632,7 @@ void crack()
 
 
 /* test function to make sure I know how the LFSR works */
-void testkey(uint64_t key)
-{
+void testkey(uint64_t key) {
     uint64_t i;
     uint64_t b0to31 = 0;
     uint64_t ks = 0;
@@ -663,7 +645,7 @@ void testkey(uint64_t key)
     printf("after init with key, uid, nR:\n");
     printstate(&hstate);
     b0to31 = 0;
-    for (i=0; i<32; i++) {
+    for (i = 0; i < 32; i++) {
         b0to31 = (b0to31 >> 1) | (hitag2_nstep(&hstate, 1) << 31);
     }
     printf("ks = 0x%08" PRIx64 ", enc_aR = 0x%08" PRIx64 ", aR = 0x%08" PRIx64 "\n", b0to31, nonces[0].ks ^ 0xffffffff, nonces[0].ks ^ 0xffffffff ^ b0to31);
@@ -679,7 +661,7 @@ void testkey(uint64_t key)
     // xor upper part of key with encrypted nonce
     nRxorkey = nonces[0].enc_nR ^ (key >> 16);
     // insert keyupper xor encrypted nonce xor ks
-    for (i=0; i<32; i++) {
+    for (i = 0; i < 32; i++) {
         // store ks - when done, the first ks bit will be bit 0 and the last will be bit 31
         b0to31 = (b0to31 >> 1) | (ht2crypt(lfsr) << 31);
         // insert new bit
@@ -693,7 +675,7 @@ void testkey(uint64_t key)
     printf("\n");
 
     // iterate lfsr with fnL, extracting ks
-    for (i=0; i<32; i++) {
+    for (i = 0; i < 32; i++) {
         // store ks - when done, the first ks bit will be bit 0 and the last will be bit 31
         ks = (ks >> 1) | (ht2crypt(lfsr) << 31);
         // insert new bit
@@ -710,38 +692,37 @@ void testkey(uint64_t key)
 
 
 /* test function to generate test data */
-void gen_bitstreams_testks(struct guess *g, uint64_t key)
-{
-	unsigned int i, j;
-	uint64_t nRxorkey, lfsr, ks;
+void gen_bitstreams_testks(struct guess *g, uint64_t key) {
+    unsigned int i, j;
+    uint64_t nRxorkey, lfsr, ks;
 
-	for (j=0; j<num_nRaR; j++) {
+    for (j = 0; j < num_nRaR; j++) {
 
-		// build initial lfsr
-		lfsr = uid | ((key & 0xffff) << 32);
-		g->b0to31[j] = 0;
-		// xor upper part of key with encrypted nonce
-		nRxorkey = nonces[j].enc_nR ^ (key >> 16);
-		// insert keyupper xor encrypted nonce xor ks
-		for (i=0; i<32; i++) {
-			// store ks - when done, the first ks bit will be bit 0 and the last will be bit 31
-			g->b0to31[j] = (g->b0to31[j] >> 1) | (ht2crypt(lfsr) << 31);
-			// insert new bit
-			lfsr = lfsr | ((((nRxorkey >> i) & 0x1) ^ ((g->b0to31[j] >> 31) & 0x1)) << 48);
-			// shift lfsr
-			lfsr = lfsr >> 1;
-		}
+        // build initial lfsr
+        lfsr = uid | ((key & 0xffff) << 32);
+        g->b0to31[j] = 0;
+        // xor upper part of key with encrypted nonce
+        nRxorkey = nonces[j].enc_nR ^ (key >> 16);
+        // insert keyupper xor encrypted nonce xor ks
+        for (i = 0; i < 32; i++) {
+            // store ks - when done, the first ks bit will be bit 0 and the last will be bit 31
+            g->b0to31[j] = (g->b0to31[j] >> 1) | (ht2crypt(lfsr) << 31);
+            // insert new bit
+            lfsr = lfsr | ((((nRxorkey >> i) & 0x1) ^ ((g->b0to31[j] >> 31) & 0x1)) << 48);
+            // shift lfsr
+            lfsr = lfsr >> 1;
+        }
 
         ks = 0;
-		// iterate lfsr with fnL, extracting ks
-		for (i=0; i<32; i++) {
-			// store ks - when done, the first ks bit will be bit 0 and the last will be bit 31
-			ks = (ks >> 1) | (ht2crypt(lfsr) << 31);
-			// insert new bit
-			lfsr = lfsr | (fnL(lfsr) << 48);
-			// shift lfsr
-			lfsr = lfsr >> 1;
-		}
+        // iterate lfsr with fnL, extracting ks
+        for (i = 0; i < 32; i++) {
+            // store ks - when done, the first ks bit will be bit 0 and the last will be bit 31
+            ks = (ks >> 1) | (ht2crypt(lfsr) << 31);
+            // insert new bit
+            lfsr = lfsr | (fnL(lfsr) << 48);
+            // shift lfsr
+            lfsr = lfsr >> 1;
+        }
 
         printf("orig ks = 0x%08" PRIx64 ", gen ks = 0x%08" PRIx64 ", b0to31 = 0x%08" PRIx64 "\n", nonces[j].ks, ks, g->b0to31[j]);
         if (nonces[j].ks != ks) {
@@ -752,15 +733,14 @@ void gen_bitstreams_testks(struct guess *g, uint64_t key)
 
 
 /* test function */
-void test()
-{
+void test() {
     uint64_t lfsr;
     uint64_t packed;
 
     uint64_t i;
 
 
-    for (i=0; i<1000; i++) {
+    for (i = 0; i < 1000; i++) {
         lfsr = ((uint64_t)rand() << 32) | rand();
         packed = packstate(lfsr);
 
@@ -774,15 +754,14 @@ void test()
 
 
 /* check_key tests the potential key against an encrypted nonce, ks pair */
-int check_key(uint64_t key, uint64_t enc_nR, uint64_t ks)
-{
+int check_key(uint64_t key, uint64_t enc_nR, uint64_t ks) {
     Hitag_State hstate;
     uint64_t bits;
     int i;
 
     hitag2_init(&hstate, key, uid, enc_nR);
     bits = 0;
-    for (i=0; i<32; i++) {
+    for (i = 0; i < 32; i++) {
         bits = (bits >> 1) | (hitag2_nstep(&hstate, 1) << 31);
     }
     if (ks == bits) {
@@ -794,8 +773,7 @@ int check_key(uint64_t key, uint64_t enc_nR, uint64_t ks)
 
 
 /* start up */
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     unsigned int i;
     uint64_t revkey;
     uint64_t foundkey;
@@ -808,7 +786,7 @@ int main(int argc, char *argv[])
 //    exit(0);
 
     while ((c = getopt(argc, argv, "u:n:N:t:T:h")) != -1) {
-        switch(c) {
+        switch (c) {
             case 'u':
                 uidstr = optarg;
                 break;
@@ -848,7 +826,7 @@ int main(int argc, char *argv[])
     crack();
 
     // test all key guesses and stop if one works
-    for (i=0; i<num_guesses; i++) {
+    for (i = 0; i < num_guesses; i++) {
         if (check_key(guesses[i].key, nonces[0].enc_nR, nonces[0].ks) &&
                 check_key(guesses[i].key, nonces[1].enc_nR, nonces[1].ks)) {
             printf("WIN!!! :)\n");

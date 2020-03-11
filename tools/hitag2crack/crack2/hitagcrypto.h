@@ -159,9 +159,9 @@ typedef struct {
     uint64_t lfsr;     // fast lfsr, used to make software faster
 } Hitag_State;
 
-void hitag2_init(Hitag_State* pstate, uint64_t sharedkey, uint32_t serialnum, uint32_t initvector);
+void hitag2_init(Hitag_State *pstate, uint64_t sharedkey, uint32_t serialnum, uint32_t initvector);
 
-uint32_t hitag2_nstep(Hitag_State* pstate, uint32_t steps);
+uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps);
 
 unsigned int hitag2_benchtest_gen32();
 unsigned int hitag2_benchtest(uint32_t count);

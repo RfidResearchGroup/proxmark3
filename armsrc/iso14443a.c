@@ -1817,15 +1817,15 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
         ++check;
 
         // test if the field exists
-#if defined RDV4        
+#if defined RDV4
         if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF_RDV40)) {
-            
+
             analogCnt++;
-            
+
             analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF_RDV40];
-            
+
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
-            
+
             if (analogCnt >= 32) {
 
                 if ((MAX_ADC_HF_VOLTAGE_RDV40 * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
@@ -1847,13 +1847,13 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
         }
 #else
         if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
-            
+
             analogCnt++;
-            
+
             analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
-            
+
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
-            
+
             if (analogCnt >= 32) {
 
                 if ((MAX_ADC_HF_VOLTAGE * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {

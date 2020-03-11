@@ -29,7 +29,7 @@ bool IsCryptoHelperPresent(void) {
         uint8_t resp[20] = {0};
         ExchangeAPDUSC(true, version, sizeof(version), true, true, resp, sizeof(resp), &resp_len);
 
-        if (strstr("CryptoHelper", (char*)resp) == 0) {
+        if (strstr("CryptoHelper", (char *)resp) == 0) {
             PrintAndLogEx(INFO, "Found smart card helper");
             return true;
         } else {
@@ -56,11 +56,11 @@ static bool executeCrypto(uint8_t ins, uint8_t *src, uint8_t *dest) {
     return false;
 }
 
-bool Decrypt(uint8_t *src, uint8_t *dest){
+bool Decrypt(uint8_t *src, uint8_t *dest) {
     return executeCrypto(CARD_INS_DECRYPT, src, dest);
 }
 
-bool Encrypt(uint8_t *src, uint8_t *dest){
+bool Encrypt(uint8_t *src, uint8_t *dest) {
     return executeCrypto(CARD_INS_ENCRYPT, src, dest);
 }
 

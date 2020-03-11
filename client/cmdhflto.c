@@ -218,15 +218,15 @@ static int lto_rdbl(uint8_t blk, uint8_t *block_responce, uint8_t *block_cnt_res
 
     uint16_t resp_len = 18;
     uint8_t rdbl_cmd[] = {0x30, blk};
-    uint8_t rdbl_cnt_cmd[] ={0x80};
+    uint8_t rdbl_cnt_cmd[] = {0x80};
 
     int status = lto_send_cmd_raw(rdbl_cmd, sizeof(rdbl_cmd), block_responce, &resp_len, true, false, verbose);
-    if (status == PM3_ETIMEOUT || status == PM3_ESOFT ) {
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         return PM3_EWRONGANSVER; // READ BLOCK failed
     }
 
     status = lto_send_cmd_raw(rdbl_cnt_cmd, sizeof(rdbl_cnt_cmd), block_cnt_responce, &resp_len, false, false, verbose);
-    if (status == PM3_ETIMEOUT || status == PM3_ESOFT ) {
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
         return PM3_EWRONGANSVER; // READ BLOCK CONTINUE failed
     }
 
@@ -252,7 +252,7 @@ int rdblLTO(uint8_t st_blk, uint8_t end_blk, bool verbose) {
     uint8_t block_data_d16_d31[18];
     uint8_t block_data[32];
 
-    for(uint8_t i = st_blk; i < end_blk + 1; i++) {
+    for (uint8_t i = st_blk; i < end_blk + 1; i++) {
 
         ret_val = lto_rdbl(i, block_data_d00_d15,  block_data_d16_d31, verbose);
 
@@ -286,8 +286,8 @@ static int CmdHfLTOReadBlock(const char *Cmd) {
             case 'h':
                 return usage_lto_rdbl();
             case 's':
-                st_blk = param_get8(Cmd, cmdp+1);
-                if ( end_blk < st_blk ) {
+                st_blk = param_get8(Cmd, cmdp + 1);
+                if (end_blk < st_blk) {
                     errors = true;
                     break;
                 }
@@ -295,10 +295,11 @@ static int CmdHfLTOReadBlock(const char *Cmd) {
                 break;
 
             case 'e':
-                end_blk = param_get8(Cmd, cmdp+1);
-                if ( end_blk < st_blk ) {
+                end_blk = param_get8(Cmd, cmdp + 1);
+                if (end_blk < st_blk) {
                     errors = true;
-                    break;                                                                                                                                                                                                                                   }
+                    break;
+                }
                 cmdp += 2;
                 break;
 
@@ -328,7 +329,7 @@ static int lto_wrbl(uint8_t blk, uint8_t *data, bool verbose) {
 
     for (int i = 0; i < 16; i++) {
         wrbl_d00_d15[i] = data[i];
-        wrbl_d16_d31[i] = data[i+16];
+        wrbl_d16_d31[i] = data[i + 16];
     }
 
     int status = lto_send_cmd_raw(wrbl_cmd, sizeof(wrbl_cmd), resp, &resp_len, true, false, verbose);
@@ -390,15 +391,15 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
             case 'h':
                 return usage_lto_wrbl();
             case 'b':
-                blk = param_get8(Cmd, cmdp+1);
+                blk = param_get8(Cmd, cmdp + 1);
                 b_opt_selected = true;
                 cmdp += 2;
                 break;
             case 'd':
-                if (param_gethex(Cmd, cmdp+1, blkData, 64)) {
+                if (param_gethex(Cmd, cmdp + 1, blkData, 64)) {
                     PrintAndLogEx(WARNING, "block data must include 64 HEX symbols");
                     errors = true;
-		    break;
+                    break;
                 }
                 d_opt_selected = true;
                 cmdp += 2;
@@ -409,7 +410,7 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
                 break;
         }
     }
-	
+
     //Validations
     if (errors) {
         usage_lto_wrbl();
@@ -440,7 +441,7 @@ int dumpLTO(uint8_t *dump, bool verbose) {
     uint8_t block_data_d00_d15[18];
     uint8_t block_data_d16_d31[18];
 
-    for(uint8_t i = 0; i < 255; i++) {
+    for (uint8_t i = 0; i < 255; i++) {
 
         ret_val = lto_rdbl(i, block_data_d00_d15,  block_data_d16_d31, verbose);
 
@@ -504,10 +505,10 @@ static int CmdHfLTODump(const char *Cmd) {
     int ret_val = dumpLTO(dump, true);
     if (ret_val != PM3_SUCCESS) {
         free(dump);
-        return ret_val; 
+        return ret_val;
     }
 
-    // save to file 
+    // save to file
     if (filename[0] == '\0') {
         memcpy(serial_number, sprint_hex_inrow(dump, sizeof(serial_number)), sizeof(serial_number));
         char tmp_name[17] = "hf_lto_";
@@ -538,10 +539,10 @@ int restoreLTO(uint8_t *dump_data, bool verbose) {
         return ret_val;
     }
 
-     uint8_t blkData[32] = {0};
+    uint8_t blkData[32] = {0};
 
     //Block address 0 and 1 are read-only
-    for(uint8_t blk = 2; blk < 255; blk++) {
+    for (uint8_t blk = 2; blk < 255; blk++) {
 
         for (int i = 0; i < 32; i++) {
             blkData[i] = dump_data[i + blk * 32];
@@ -550,7 +551,7 @@ int restoreLTO(uint8_t *dump_data, bool verbose) {
         ret_val = lto_wrbl(blk, blkData, verbose);
 
         if (ret_val == PM3_SUCCESS) {
-             PrintAndLogEx(SUCCESS, "BLK %03d: " _YELLOW_("write success"), blk);
+            PrintAndLogEx(SUCCESS, "BLK %03d: " _YELLOW_("write success"), blk);
         } else {
             lto_switch_off_field();
             return ret_val;
@@ -566,7 +567,7 @@ static int CmdHfLTRestore(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
     int is_data_loaded = PM3_ESOFT;
-    
+
     char filename[FILE_PATH_SIZE] = {0};
     char extension[FILE_PATH_SIZE] = {0};
 
@@ -623,7 +624,7 @@ static int CmdHfLTRestore(const char *Cmd) {
     } else {
         return PM3_EFILE;
     }
-    
+
 }
 
 static command_t CommandTable[] = {

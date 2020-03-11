@@ -408,7 +408,7 @@ void fix_ac_decoding(uint8_t *input, size_t len) {
 */
 
 
-// looks at number of received bits.  
+// looks at number of received bits.
 // 0 = collision?
 // 32 =  good response
 bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool hitag_s) {
@@ -582,15 +582,15 @@ bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *t
                 Dbhexdump(4, logdata_1, false);
                 bSuccessful = true;
                 return false;
-/*
-                // read next page of card until done
-                tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
-                tx[1] = blocknr << 4;
-                crc = hitag_crc(tx, 12);
-                tx[1] |= crc >> 4;
-                tx[2] = crc << 4;
-                *txlen = 20;
-*/
+                /*
+                                // read next page of card until done
+                                tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
+                                tx[1] = blocknr << 4;
+                                crc = hitag_crc(tx, 12);
+                                tx[1] |= crc >> 4;
+                                tx[2] = crc << 4;
+                                *txlen = 20;
+                */
             }
         }
         break;
@@ -1091,7 +1091,7 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
     uint32_t block = 0;
     for (size_t i = 0; i < 12; i++) {
 
-       // num2bytes?
+        // num2bytes?
         for (size_t j = 0; j < 4; j++) {
             block <<= 8;
             block |= tag.sectors[i][j];
@@ -1105,30 +1105,30 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
     size_t nrzs = 0, periods = 0;
 
 //    uint32_t command_start = 0, command_duration = 0;
-  //  int16_t checked = 0;
+    //  int16_t checked = 0;
 
 // SIMULATE
 
     while (!BUTTON_PRESS()) {
 
         LED_D_ON();
-    
+
 //        lf_reset_counter();
         LED_A_OFF();
         WDT_HIT();
 
-/*
-        // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 100) {
-            if (data_available()) {
-                checked = -1;
-                break;
-            } else {
-                checked = 0;
-            }
-        }
-        ++checked;
-*/
+        /*
+                // only every 1000th times, in order to save time when collecting samples.
+                if (checked == 100) {
+                    if (data_available()) {
+                        checked = -1;
+                        break;
+                    } else {
+                        checked = 0;
+                    }
+                }
+                ++checked;
+        */
 
         rxlen = 0;
 
@@ -1220,8 +1220,8 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
         if (nrzs < 5) {
             Dbprintf("Detected unexpected number of manchester decoded samples [%d]", nrzs);
             continue;
-       } else {
-            for (size_t i = 0; i < 5; i++){
+        } else {
+            for (size_t i = 0; i < 5; i++) {
                 if (nrz_samples[i] != 1) {
                     Dbprintf("Detected incorrect header, the bit [%d] is zero instead of one", i);
                 }
@@ -1229,7 +1229,7 @@ void SimulateHitag2(bool tag_mem_supplied, uint8_t *data) {
         }
 
         // Pack the response into a byte array
-        for (size_t i = 5; i < 37; i++){
+        for (size_t i = 5; i < 37; i++) {
             uint8_t bit = nrz_samples[i];
             rx[rxlen / 8] |= bit << (7 - (rxlen % 8));
             rxlen++;
@@ -1401,7 +1401,6 @@ void ReaderHitag(hitag_function htf, hitag_data *htd) {
         // hitagS settings
         t_wait_1 = 204;
         t_wait_2 = 128;
-        /*tag_size = 256;*/
         flipped_bit = 0;
         tag_size = 8;
         DBG DbpString("Configured for hitagS reader");
@@ -1657,7 +1656,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
     uint32_t command_start = 0;
     uint32_t command_duration = 0;
     uint32_t response_start = 0;
-    uint32_t response_duration = 0; 
+    uint32_t response_duration = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t txbuf[HITAG_FRAME_LEN];
@@ -1731,14 +1730,14 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
         tag_size = 8;
         DbpString("Configured for hitagS writer");
     } else if (htf < 20) {
-       // hitag1 settings
+        // hitag1 settings
         t_wait_1 = 204;
         t_wait_2 = 128;
         tag_size = 256;
         flipped_bit = 0;
         DbpString("Configured for hitag1 writer");
     } else if (htf < 30) {
-       // hitag2 settings
+        // hitag2 settings
         t_wait_1 = HITAG_T_WAIT_1_MIN;
         t_wait_2 = HITAG_T_WAIT_2_MIN;
         tag_size = 48;
@@ -1783,7 +1782,7 @@ void WriterHitag(hitag_function htf, hitag_data *htd, int page) {
             }
         }
 
-       // Wait for t_wait_2 carrier periods after the last tag bit before transmitting,
+        // Wait for t_wait_2 carrier periods after the last tag bit before transmitting,
         lf_wait_periods(t_wait_2);
         command_start += t_wait_2;
 
