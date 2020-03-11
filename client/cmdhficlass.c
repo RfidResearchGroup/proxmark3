@@ -1263,7 +1263,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
         if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             DropField();
-            return 0;
+            return PM3_EOPABORTED;
         }
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000))
@@ -1355,8 +1355,8 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     // print the dump
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
-    PrintAndLogEx(NORMAL, "CSN   |00| %s|", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "CSN   |00| %s|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
