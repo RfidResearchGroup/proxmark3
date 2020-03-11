@@ -8,7 +8,7 @@ author = 'Daniel Underhay (updated), Keld Norman(original)'
 version = 'v2.0.0'
 usage = [[
 
-pm3 --> script run hf_bruteforce -s start_id -e end_id -t timeout -x mifare_card_type
+#pm3 --> script run hf_bruteforce -s start_id -e end_id -t timeout -x mifare_card_type
 
 Arguments:
     -h       this help
@@ -20,12 +20,12 @@ Arguments:
 
 Example:
 
-pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
+#pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
 
 Bruteforce a 4 byte UID Mifare classic card number, starting at 11223344, ending at 11223346.
 
 
-pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
+#pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 
 Bruteforce a 7 byte UID Mifare Ultralight card number, starting at 11223344556677, ending at 11223344556679.
 
@@ -84,7 +84,7 @@ local function main(args)
     local end_id = 0xFFFFFFFFFFFFFF
     local mftype = 'mfc'
 
-    for o, a in getopt.getopt(args, 'e:s:t:x:h:') do
+    for o, a in getopt.getopt(args, 'e:s:t:x:h') do
         if o == 's' then start_id = a end
         if o == 'e' then end_id = a end
         if o == 't' then timeout = a end
@@ -95,15 +95,17 @@ local function main(args)
     -- template
     local command = ''
 
-    if mftype == '' then
-        return print(usage)
-    elseif mftype == 'mfc' then
+    if mftype == 'mfc' then
         command = 'hf 14a sim t 1 u %14X'
         msg('Bruteforcing Mifare Classic card numbers')
     elseif mftype == 'mfu' then
         command = 'hf 14a sim t 2 u %14X'
         msg('Bruteforcing Mifare Ultralight card numbers')
+    else
+        return print(usage)
     end
+
+    if command == '' then return print(usage) end
 
     for n = start_id, end_id do
         local c = string.format( command, n )
