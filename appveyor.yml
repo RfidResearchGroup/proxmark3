@@ -24,7 +24,7 @@ init:
     Add-AppveyorMessage -Message "[$env:APPVEYOR_REPO_COMMIT_SHORT]$env:appveyor_repo_name($env:APPVEYOR_REPO_BRANCH)" -Category Information -Details "repository: $env:appveyor_repo_name branch: $env:APPVEYOR_REPO_BRANCH release: $releasename"
 
 
-    iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    # iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 clone_script:
 - ps: >-
     Write-Host "Removing ProxSpace..." -NoNewLine
@@ -409,4 +409,4 @@ on_success:
 on_failure:
 - ps: Write-Host "Build error." -ForegroundColor Red
 on_finish:
-- ps: $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: # $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
