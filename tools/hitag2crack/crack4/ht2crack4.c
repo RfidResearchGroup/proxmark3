@@ -575,7 +575,7 @@ void check_supplied_testkey(unsigned int size) {
 
     for (i = 0; i < num_guesses; i++) {
         if (guesses[i].key == partkey) {
-            fprintf(stderr, " supplied test key score = %1.10f, position = %d\n", guesses[i].score, i);
+            fprintf(stderr, " supplied test key score = %1.10f, position = %u\n", guesses[i].score, i);
             return;
         }
     }
