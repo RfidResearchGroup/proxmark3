@@ -179,9 +179,9 @@ static int CmdHIDDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID preamble not found"));
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error in Manchester data, size %zu, size"));
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error in Manchester data, size %zu"), size);
         else
-            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error demoding fsk %d, idx"));
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error demoding fsk %d"), idx);
 
         return PM3_ESOFT;
     }
@@ -248,7 +248,7 @@ static int CmdHIDDemod(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(DEBUG, "DEBUG: HID idx: " _GREEN_("%d"), " Len: %zu", Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer: ", idx, size);
     if (g_debugMode)
         printDemodBuff();
 
