@@ -544,7 +544,7 @@ bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *t
                 // will receive 32-bit configuration page
             } else if (bSelecting) {
                 // Initiate auth
-                tx[0] = 0xa0 | key_no >> 4; // WRCPAGE
+                tx[0] = 0xa0 | (key_no); // WRCPAGE
                 tx[1] = blocknr << 4;
                 crc = hitag_crc(tx, 12);
                 tx[1] |= crc >> 4;
