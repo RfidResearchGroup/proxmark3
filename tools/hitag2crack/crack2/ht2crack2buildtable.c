@@ -362,10 +362,10 @@ void makedirs() {
 }
 
 static int datacmp(const void *p1, const void *p2, void *dummy) {
-    unsigned char *d1 = (unsigned char *)p1;
-    unsigned char *d2 = (unsigned char *)p2;
+    unsigned char *d_1 = (unsigned char *)p1;
+    unsigned char *d_2 = (unsigned char *)p2;
 
-    return memcmp(d1, d2, DATASIZE);
+    return memcmp(d_1, d_2, DATASIZE);
 }
 
 void *sorttable(void *d) {
