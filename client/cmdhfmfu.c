@@ -62,19 +62,19 @@ static int usage_hf_mfu_info(void) {
 static int usage_hf_mfu_dump(void) {
     PrintAndLogEx(NORMAL, "Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
     PrintAndLogEx(NORMAL, "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
-    PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
+    PrintAndLogEx(NORMAL, "and saves binary dump into the file " _YELLOW_("`filename.bin`") " or " _YELLOW_("`cardUID.bin`") );
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l f <filename w/o .bin> p <page#> q <#pages>");
     PrintAndLogEx(NORMAL, "  Options :");
     PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
     PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  f <FN > : filename w/o .bin to save the dump as");
-    PrintAndLogEx(NORMAL, "  p <Pg > : starting Page number to manually set a page to start the dump at");
+    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w/o .bin") "to save the dump as");
+    PrintAndLogEx(NORMAL, "  p <pg>  : starting Page number to manually set a page to start the dump at");
     PrintAndLogEx(NORMAL, "  q <qty> : number of Pages to manually set how many pages to dump");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       hf mfu dump");
-    PrintAndLogEx(NORMAL, "       hf mfu dump n myfile");
+    PrintAndLogEx(NORMAL, "       hf mfu dump f myfile");
     PrintAndLogEx(NORMAL, "       hf mfu dump k 00112233445566778899AABBCCDDEEFF");
     PrintAndLogEx(NORMAL, "       hf mfu dump k AABBCCDD\n");
     return PM3_SUCCESS;
@@ -86,10 +86,10 @@ static int usage_hf_mfu_restore(void) {
     PrintAndLogEx(NORMAL, "  Options :");
     PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
     PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID -MAGIC TAG ONLY-");
-    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature -MAGIC NTAG 21* ONLY-");
-    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires 'e' parameter to work");
-    PrintAndLogEx(NORMAL, "  f <FN>  : filename w/o .bin to restore");
+    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID " _BLUE_("-MAGIC TAG ONLY-") );
+    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature " _BLUE_("-MAGIC NTAG 21* ONLY-") );
+    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires " _YELLOW_("'e'") "parameter to work");
+    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w/o .bin") "to restore");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       hf mfu restore s f myfile");
@@ -129,7 +129,7 @@ static int usage_hf_mfu_wrbl(void) {
 }
 
 static int usage_hf_mfu_eload(void) {
-    PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
+    PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`") );
     PrintAndLogEx(NORMAL, "Hint: See script dumptoemul-mfu.lua to convert the .bin to the eml");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
     PrintAndLogEx(NORMAL, "  Options:");
