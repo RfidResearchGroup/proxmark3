@@ -248,7 +248,7 @@ static int CmdHIDDemod(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(DEBUG, "DEBUG: HID idx: " _GREEN_("%d, Len: %zu")", Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: HID idx: " _GREEN_("%d"), " Len: %zu", Printing Demod Buffer:", idx, size);
     if (g_debugMode)
         printDemodBuff();
 
@@ -400,7 +400,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 param_getstr(Cmd, cmdp + 1, format, sizeof(format));
                 format_idx = HIDFindCardFormat(format);
                 if (format_idx == -1) {
-                    PrintAndLogEx(WARNING, _YELLOW_("Unknown format: %s"), format);
+                    PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
                     errors = true;
                 }
                 cmdp += 2;
@@ -431,7 +431,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp++;
                 break;
             default:
-                PrintAndLogEx(WARNING, _YELLOW_("Unknown parameter '%c'"), param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter: " _YELLOW_("%c"), param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
