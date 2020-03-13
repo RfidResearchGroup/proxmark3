@@ -7,6 +7,7 @@
 //-----------------------------------------------------------------------------
 // main code for HID collector aka IceHID by Iceman
 //-----------------------------------------------------------------------------
+#include <inttypes.h>
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
 #include "appmain.h"
