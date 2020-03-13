@@ -34,42 +34,38 @@
 // XYZ 3D printing
 // Vinglock
 //------------------------------------
-static void transform_D(uint8_t *ru) {
-
-    const uint32_t c_D[] = {
-        0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
-        0xD1CC8B4E, 0xE8873E6F, 0x61399BBB, 0xF1B91926, 0xAC661520, 0xA21A31C9,
-        0xD424808D, 0xFE118E07, 0xD18E728D, 0xABAC9E17, 0x18066433, 0x00E18E79,
-        0x65A77305, 0x5AE9E297, 0x11FC628C, 0x7BB3431F, 0x942A8308, 0xB2F8FD20,
+void transform_D(uint8_t* ru) {
+    
+    const uint32_t c_D[] = { 
+        0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8, 
+        0xD1CC8B4E, 0xE8873E6F, 0x61399BBB, 0xF1B91926, 0xAC661520, 0xA21A31C9, 
+        0xD424808D, 0xFE118E07, 0xD18E728D, 0xABAC9E17, 0x18066433, 0x00E18E79, 
+        0x65A77305, 0x5AE9E297, 0x11FC628C, 0x7BB3431F, 0x942A8308, 0xB2F8FD20, 
         0x5728B869, 0x30726D5A
-    };
+    };	
 
-    //Transform
-    uint8_t i;
-    uint8_t p = 0;
-    uint32_t v1 = ((ru[3] << 24) | (ru[2] << 16) | (ru[1] << 8) | ru[0]) + c_D[p++];
-    uint32_t v2 = ((ru[7] << 24) | (ru[6] << 16) | (ru[5] << 8) | ru[4]) + c_D[p++];
+	//Transform
+	uint8_t i;
+	uint8_t p = 0;
+	uint32_t v1 = ((ru[3] << 24) | (ru[2] << 16) | (ru[1] << 8) | ru[0]) + c_D[p++];
+	uint32_t v2 = ((ru[7] << 24) | (ru[6] << 16) | (ru[5] << 8) | ru[4]) + c_D[p++];
+	for (i = 0; i < 12; i += 2)
+	{
+		uint32_t t1 = PM3_ROTL(v1 ^ v2, v2 & 0x1F) + c_D[p++];
+		uint32_t t2 = PM3_ROTL(v2 ^ t1, t1 & 0x1F) + c_D[p++];
+		v1 = PM3_ROTL(t1 ^ t2, t2 & 0x1F) + c_D[p++];
+		v2 = PM3_ROTL(t2 ^ v1, v1 & 0x1F) + c_D[p++];
+	}
 
-    for (i = 0; i < 12; i += 2) {
-        uint32_t xor1 = v1 ^ v2;
-        uint32_t t1 = ROTL(xor1, v2 & 0x1F) + c_D[p++];
-        uint32_t xor2 = v2 ^ t1;
-        uint32_t t2 = ROTL(xor2, t1 & 0x1F) + c_D[p++];
-        uint32_t xor3 = t1 ^ t2;
-        uint32_t xor4 = t2 ^ v1;
-        v1 = ROTL(xor3, t2 & 0x1F) + c_D[p++];
-        v2 = ROTL(xor4, v1 & 0x1F) + c_D[p++];
-    }
-
-    //Re-use ru
-    ru[0] = v1 & 0xFF;
-    ru[1] = (v1 >> 8) & 0xFF;
-    ru[2] = (v1 >> 16) & 0xFF;
-    ru[3] = (v1 >> 24) & 0xFF;
-    ru[4] = v2 & 0xFF;
-    ru[5] = (v2 >> 8) & 0xFF;
-    ru[6] = (v2 >> 16) & 0xFF;
-    ru[7] = (v2 >> 24) & 0xFF;
+	//Re-use ru
+	ru[0] = v1 & 0xFF;
+	ru[1] = (v1 >> 8) & 0xFF;
+	ru[2] = (v1 >> 16) & 0xFF;
+	ru[3] = (v1 >> 24) & 0xFF;
+	ru[4] = v2 & 0xFF;
+	ru[5] = (v2 >> 8) & 0xFF;
+	ru[6] = (v2 >> 16) & 0xFF;
+	ru[7] = (v2 >> 24) & 0xFF;
 }
 
 // Transport system (IT) pwd generation algo nickname A.
@@ -130,17 +126,23 @@ uint32_t ul_ev1_pwdgenC(uint8_t *uid) {
 
 // XYZ 3d printing pwd generation algo nickname D.
 uint32_t ul_ev1_pwdgenD(uint8_t *uid) {
+
     uint8_t i;
-    uint8_t r = (uid[1] + uid[3] + uid[5]) & 7; // rotation offset
-    uint8_t ru[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; // rotated UID
+    // rotation offset
+    uint8_t r = (uid[1] + uid[3] + uid[5]) & 7;
+
+    // rotated UID
+    uint8_t ru[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; 
     for (i = 0; i < 7; i++)
         ru[(i + r) & 7] = uid[i];
 
     transform_D(ru);
 
-    // calc key
+    // offset    
+    r = (ru[0] + ru[2] + ru[4] + ru[6]) & 3;
+
+    // calc key    
     uint32_t pwd = 0;
-    r = (ru[0] + ru[2] + ru[4] + ru[6]) & 3; // offset
     for (i = 0; i < 4; i++)
         pwd = ru[i + r] + (pwd << 8);
 
