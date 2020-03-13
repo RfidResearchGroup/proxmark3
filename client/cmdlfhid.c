@@ -431,7 +431,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp++;
                 break;
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter: " _YELLOW_("%c"), param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter: " _YELLOW_("'%c'"), param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
