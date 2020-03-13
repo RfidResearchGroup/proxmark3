@@ -524,7 +524,7 @@ static int CmdHfLTODump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int restoreLTO(uint8_t *dump_data, bool verbose) {
+int restoreLTO(uint8_t *dump, bool verbose) {
 
     clearCommandBuffer();
     lto_switch_on_field();
@@ -545,13 +545,13 @@ int restoreLTO(uint8_t *dump_data, bool verbose) {
     for (uint8_t blk = 2; blk < 255; blk++) {
 
         for (int i = 0; i < 32; i++) {
-            blkData[i] = dump_data[i + blk * 32];
+            blkData[i] = dump[i + blk * 32];
         }
 
         ret_val = lto_wrbl(blk, blkData, verbose);
 
         if (ret_val == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "BLK %03d: " _YELLOW_("write success"), blk);
+            PrintAndLogEx(SUCCESS, "Block %03d - " _YELLOW_("write success"), blk);
         } else {
             lto_switch_off_field();
             return ret_val;
