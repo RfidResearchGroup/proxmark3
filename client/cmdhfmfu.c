@@ -527,7 +527,7 @@ static int ul_print_default(uint8_t *data) {
     uid[5] = data[6];
     uid[6] = data[7];
 
-    PrintAndLogEx(NORMAL, "       UID : %s ", sprint_hex(uid, 7));
+    PrintAndLogEx(NORMAL, "       UID : " _YELLOW_("%s"), sprint_hex(uid, 7));
     PrintAndLogEx(NORMAL, "    UID[0] : %02X, %s",  uid[0], getTagInfo(uid[0]));
     if (uid[0] == 0x05 && ((uid[1] & 0xf0) >> 4) == 2) {   // is infineon and 66RxxP
         uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
@@ -546,17 +546,17 @@ static int ul_print_default(uint8_t *data) {
     // CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2
     int crc0 = 0x88 ^ uid[0] ^ uid[1] ^ uid[2];
     if (data[3] == crc0)
-        PrintAndLogEx(NORMAL, "      BCC0 : %02X, Ok", data[3]);
+        PrintAndLogEx(NORMAL, "      BCC0 : %02X ( " _GREEN_("ok") ")", data[3]);
     else
         PrintAndLogEx(NORMAL, "      BCC0 : %02X, crc should be %02X", data[3], crc0);
 
     int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
     if (data[8] == crc1)
-        PrintAndLogEx(NORMAL, "      BCC1 : %02X, Ok", data[8]);
+        PrintAndLogEx(NORMAL, "      BCC1 : %02X ( " _GREEN_("ok") ")", data[8]);
     else
         PrintAndLogEx(NORMAL, "      BCC1 : %02X, crc should be %02X", data[8], crc1);
 
-    PrintAndLogEx(NORMAL, "  Internal : %02X, %sdefault", data[9], (data[9] == 0x48) ? "" : "not ");
+    PrintAndLogEx(NORMAL, "  Internal : %02X ( %s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default") );
 
     PrintAndLogEx(NORMAL, "      Lock : %s - %s",
                   sprint_hex(data + 10, 2),
@@ -648,10 +648,10 @@ static int ndef_print_CC(uint8_t *data) {
     PrintAndLogEx(NORMAL, "  Additional feature information");
     PrintAndLogEx(NORMAL, "  %02X", data[3]);
     PrintAndLogEx(NORMAL, "  00000000");
-    PrintAndLogEx(NORMAL, "  xxx      - %02X : RFU (%s)", msb3, (msb3 == 0) ? _GREEN_("OK") : _RED_("Fail"));
+    PrintAndLogEx(NORMAL, "  xxx      - %02X : RFU ( %s)", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(NORMAL, "     x     - %02X : %s special frame", sf, (sf) ? "support" : "don\'t support");
     PrintAndLogEx(NORMAL, "      x    - %02X : %s lock block", lb, (lb) ? "support" : "don\'t support");
-    PrintAndLogEx(NORMAL, "       xx  - %02X : RFU (%s)", mlrule, (mlrule == 0) ? _GREEN_("OK") : _RED_("Fail"));
+    PrintAndLogEx(NORMAL, "       xx  - %02X : RFU ( %s)", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(NORMAL, "         x - %02X : IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
     return PM3_SUCCESS;
 }
@@ -845,7 +845,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     if (authlim == 0)
         PrintAndLogEx(NORMAL, "                    - Unlimited password attempts");
     else
-        PrintAndLogEx(NORMAL, "                    - Max number of password attempts is %d", authlim);
+        PrintAndLogEx(NORMAL, "                    - Max number of password attempts is " _YELLOW_("%d"), authlim);
 
     PrintAndLogEx(NORMAL, "                    - NFC counter %s", (nfc_cnf_en) ? "enabled" : "disabled");
     PrintAndLogEx(NORMAL, "                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "not protected" : "password protection enabled");
