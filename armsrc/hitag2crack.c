@@ -300,7 +300,7 @@ bool hitag2crack_read_page(uint8_t *responsestr, uint8_t pagenum, uint8_t *nrar,
     uint8_t response[32];
     int i;
 
-    if ((pagenum < 0) || (pagenum > 7)) {
+    if (pagenum > 7) {
         UserMessage("hitag2crack_read_page:\r\n invalid pagenum\r\n");
         return false;
     }
@@ -351,7 +351,7 @@ bool hitag2crack_read_page(uint8_t *responsestr, uint8_t pagenum, uint8_t *nrar,
 // cmd is the binarray of the encrypted command to send;
 // len is the length of the encrypted command.
 bool hitag2crack_send_e_cmd(uint8_t *responsestr, uint8_t *nrar, uint8_t *cmd, int len) {
-    uint8_t tmp[37];
+//    uint8_t tmp[37];
     uint8_t uid[9];
     uint8_t e_page3str[9];
     int ret = 0;
@@ -551,14 +551,14 @@ bool hitag2_keystream(uint8_t *response, uint8_t *nrarhex) {
     uint8_t uid[32];
     uint8_t nrar[64];
     uint8_t e_firstcmd[10];
-    uint8_t e_page0cmd[10];
+//    uint8_t e_page0cmd[10];
 //    uint8_t keybits[2080];
     uint8_t *keybits = DataBuff;
     uint8_t keybitshex[67];
     int kslen;
     int ksoffset;
-    uint8_t pagehex[9];
-    uint8_t temp[20];
+//    uint8_t pagehex[9];
+//    uint8_t temp[20];
     int i;
     uint8_t *spaceptr = NULL;
 
