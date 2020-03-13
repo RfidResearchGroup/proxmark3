@@ -229,17 +229,17 @@ static uint32_t hitag2_crypt(uint64_t x);
                                    ((S >> (C - 3)) & 8) )
 
 
-static uint32_t hitag2_crypt(uint64_t s) {
+static uint32_t hitag2_crypt(uint64_t x) {
     const uint32_t ht2_function4a = 0x2C79;	// 0010 1100 0111 1001
     const uint32_t ht2_function4b = 0x6671;	// 0110 0110 0111 0001
     const uint32_t ht2_function5c = 0x7907287B;	// 0111 1001 0000 0111 0010 1000 0111 1011
     uint32_t bitindex;
 
-    bitindex = (ht2_function4a >> pickbits2_2(s, 1, 4)) & 1;
-    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2(s, 7, 11, 13)) & 0x02;
-    bitindex |= ((ht2_function4b << 2) >> pickbits1x4(s, 16, 20, 22, 25)) & 0x04;
-    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1(s, 27, 30, 32)) & 0x08;
-    bitindex |= ((ht2_function4a << 4) >> pickbits1_2_1(s, 33, 42, 45)) & 0x10;
+    bitindex = (ht2_function4a >> pickbits2_2(x, 1, 4)) & 1;
+    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2(x, 7, 11, 13)) & 0x02;
+    bitindex |= ((ht2_function4b << 2) >> pickbits1x4(x, 16, 20, 22, 25)) & 0x04;
+    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1(x, 27, 30, 32)) & 0x08;
+    bitindex |= ((ht2_function4a << 4) >> pickbits1_2_1(x, 33, 42, 45)) & 0x10;
 
     DEBUG_PRINTF("hitag2_crypt bitindex = %02x\n", bitindex);
     return (ht2_function5c >> bitindex) & 1;

@@ -62,19 +62,19 @@ static int usage_hf_mfu_info(void) {
 static int usage_hf_mfu_dump(void) {
     PrintAndLogEx(NORMAL, "Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
     PrintAndLogEx(NORMAL, "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
-    PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
+    PrintAndLogEx(NORMAL, "and saves binary dump into the file " _YELLOW_("`filename.bin`") "or " _YELLOW_("`cardUID.bin`") );
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l f <filename w/o .bin> p <page#> q <#pages>");
     PrintAndLogEx(NORMAL, "  Options :");
     PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
     PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  f <FN > : filename w/o .bin to save the dump as");
-    PrintAndLogEx(NORMAL, "  p <Pg > : starting Page number to manually set a page to start the dump at");
+    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w/o .bin") "to save the dump as");
+    PrintAndLogEx(NORMAL, "  p <pg>  : starting Page number to manually set a page to start the dump at");
     PrintAndLogEx(NORMAL, "  q <qty> : number of Pages to manually set how many pages to dump");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       hf mfu dump");
-    PrintAndLogEx(NORMAL, "       hf mfu dump n myfile");
+    PrintAndLogEx(NORMAL, "       hf mfu dump f myfile");
     PrintAndLogEx(NORMAL, "       hf mfu dump k 00112233445566778899AABBCCDDEEFF");
     PrintAndLogEx(NORMAL, "       hf mfu dump k AABBCCDD\n");
     return PM3_SUCCESS;
@@ -82,14 +82,14 @@ static int usage_hf_mfu_dump(void) {
 
 static int usage_hf_mfu_restore(void) {
     PrintAndLogEx(NORMAL, "Restore dumpfile onto card.");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu restore [h] [l] [s] k <key> n <filename w/o .bin> ");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu restore [h] [l] [s] k <key> n <filename w .bin> ");
     PrintAndLogEx(NORMAL, "  Options :");
     PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
     PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID -MAGIC TAG ONLY-");
-    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature -MAGIC NTAG 21* ONLY-");
-    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires 'e' parameter to work");
-    PrintAndLogEx(NORMAL, "  f <FN>  : filename w/o .bin to restore");
+    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID " _BLUE_("-MAGIC TAG ONLY-") );
+    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature " _BLUE_("-MAGIC NTAG 21* ONLY-") );
+    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires " _YELLOW_("'e'") "parameter to work");
+    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w .bin") "to restore");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       hf mfu restore s f myfile");
@@ -129,8 +129,8 @@ static int usage_hf_mfu_wrbl(void) {
 }
 
 static int usage_hf_mfu_eload(void) {
-    PrintAndLogEx(NORMAL, "It loads emul dump from the file `filename.eml`");
-    PrintAndLogEx(NORMAL, "Hint: See script dumptoemul-mfu.lua to convert the .bin to the eml");
+    PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`") );
+    PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run dumptoemul-mfu`") "to convert the .bin to the eml");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
     PrintAndLogEx(NORMAL, "  Options:");
     PrintAndLogEx(NORMAL, "    h          : this help");
@@ -174,6 +174,7 @@ static int usage_hf_mfu_ucauth(void) {
 }
 
 static int usage_hf_mfu_ucsetpwd(void) {
+    PrintAndLogEx(NORMAL, "Set 3DES password on Mifare Ultralight-C tag.");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu setpwd <password (32 hex symbols)>");
     PrintAndLogEx(NORMAL, "       [password] - (32 hex symbols)");
     PrintAndLogEx(NORMAL, "");
@@ -186,7 +187,8 @@ static int usage_hf_mfu_ucsetpwd(void) {
 static int usage_hf_mfu_ucsetuid(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mfu setuid <uid (14 hex symbols)>");
     PrintAndLogEx(NORMAL, "       [uid] - (14 hex symbols)");
-    PrintAndLogEx(NORMAL, "\nThis only works for Magic Ultralight tags.");
+    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "This only works for " _BLUE_("Magic Ultralight") "tags.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         hf mfu setuid 11223344556677");
@@ -223,7 +225,7 @@ static int usage_hf_mfu_pwdgen(void) {
 }
 
 static int usage_hf_mfu_otp_tearoff(void) {
-    PrintAndLogEx(NORMAL, "Tear-off test against OTP block on MFU tags - More help sooner or later\n");
+    PrintAndLogEx(NORMAL, "Tear-off test against OTP block on MFU tags.");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear [h]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "    h       : this help");
@@ -527,7 +529,7 @@ static int ul_print_default(uint8_t *data) {
     uid[5] = data[6];
     uid[6] = data[7];
 
-    PrintAndLogEx(NORMAL, "       UID : %s ", sprint_hex(uid, 7));
+    PrintAndLogEx(NORMAL, "       UID : " _YELLOW_("%s"), sprint_hex(uid, 7));
     PrintAndLogEx(NORMAL, "    UID[0] : %02X, %s",  uid[0], getTagInfo(uid[0]));
     if (uid[0] == 0x05 && ((uid[1] & 0xf0) >> 4) == 2) {   // is infineon and 66RxxP
         uint8_t chip = (data[8] & 0xC7); // 11000111  mask, bit 3,4,5 RFU
@@ -546,17 +548,17 @@ static int ul_print_default(uint8_t *data) {
     // CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2
     int crc0 = 0x88 ^ uid[0] ^ uid[1] ^ uid[2];
     if (data[3] == crc0)
-        PrintAndLogEx(NORMAL, "      BCC0 : %02X, Ok", data[3]);
+        PrintAndLogEx(NORMAL, "      BCC0 : %02X ( " _GREEN_("ok") ")", data[3]);
     else
         PrintAndLogEx(NORMAL, "      BCC0 : %02X, crc should be %02X", data[3], crc0);
 
     int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
     if (data[8] == crc1)
-        PrintAndLogEx(NORMAL, "      BCC1 : %02X, Ok", data[8]);
+        PrintAndLogEx(NORMAL, "      BCC1 : %02X ( " _GREEN_("ok") ")", data[8]);
     else
         PrintAndLogEx(NORMAL, "      BCC1 : %02X, crc should be %02X", data[8], crc1);
 
-    PrintAndLogEx(NORMAL, "  Internal : %02X, %sdefault", data[9], (data[9] == 0x48) ? "" : "not ");
+    PrintAndLogEx(NORMAL, "  Internal : %02X ( %s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default") );
 
     PrintAndLogEx(NORMAL, "      Lock : %s - %s",
                   sprint_hex(data + 10, 2),
@@ -648,10 +650,10 @@ static int ndef_print_CC(uint8_t *data) {
     PrintAndLogEx(NORMAL, "  Additional feature information");
     PrintAndLogEx(NORMAL, "  %02X", data[3]);
     PrintAndLogEx(NORMAL, "  00000000");
-    PrintAndLogEx(NORMAL, "  xxx      - %02X : RFU (%s)", msb3, (msb3 == 0) ? _GREEN_("OK") : _RED_("Fail"));
+    PrintAndLogEx(NORMAL, "  xxx      - %02X : RFU ( %s)", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(NORMAL, "     x     - %02X : %s special frame", sf, (sf) ? "support" : "don\'t support");
     PrintAndLogEx(NORMAL, "      x    - %02X : %s lock block", lb, (lb) ? "support" : "don\'t support");
-    PrintAndLogEx(NORMAL, "       xx  - %02X : RFU (%s)", mlrule, (mlrule == 0) ? _GREEN_("OK") : _RED_("Fail"));
+    PrintAndLogEx(NORMAL, "       xx  - %02X : RFU ( %s)", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(NORMAL, "         x - %02X : IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
     return PM3_SUCCESS;
 }
@@ -845,7 +847,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     if (authlim == 0)
         PrintAndLogEx(NORMAL, "                    - Unlimited password attempts");
     else
-        PrintAndLogEx(NORMAL, "                    - Max number of password attempts is %d", authlim);
+        PrintAndLogEx(NORMAL, "                    - Max number of password attempts is " _YELLOW_("%d"), authlim);
 
     PrintAndLogEx(NORMAL, "                    - NFC counter %s", (nfc_cnf_en) ? "enabled" : "disabled");
     PrintAndLogEx(NORMAL, "                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "not protected" : "password protection enabled");
@@ -1276,7 +1278,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenA(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password:" _GREEN_("%s") " || Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") "|| Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1286,7 +1288,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password:" _GREEN_("%s") " || Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") "|| Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1296,7 +1298,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenC(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password:" _GREEN_("%s") " || Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") "|| Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1316,7 +1318,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 key = default_pwd_pack[i];
                 len = ulev1_requestAuthentication(key, pack, sizeof(pack));
                 if (len > -1) {
-                    PrintAndLogEx(SUCCESS, "Found a default password:" _GREEN_("%s") " || Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                    PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") "|| Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                     break;
                 } else {
                     if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;

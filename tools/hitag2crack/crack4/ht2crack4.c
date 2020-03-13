@@ -270,14 +270,14 @@ void init_guess_table(char *filename, char *uidstr) {
     while ((getline(&buf, &lenbuf, fp) > 0) && (num_nRaR < MAX_NONCES)) {
         buft1 = strchr(buf, ' ');
         if (!buft1) {
-            printf("invalid file input on line %d\n", num_nRaR + 1);
+            printf("invalid file input on line %u\n", num_nRaR + 1);
             exit(1);
         }
         *buft1 = 0x00;
         buft1++;
         buft2 = strchr(buft1, '\n');
         if (!buft2) {
-            printf("no CR on line %d\n", num_nRaR + 1);
+            printf("no CR on line %u\n", num_nRaR + 1);
             exit(1);
         }
         *buft2 = 0x00;
@@ -294,7 +294,7 @@ void init_guess_table(char *filename, char *uidstr) {
     fclose(fp);
     fp = NULL;
 
-    fprintf(stderr, "Loaded %d nRaR pairs\n", num_nRaR);
+    fprintf(stderr, "Loaded %u nRaR pairs\n", num_nRaR);
 
     // set key and copy in enc_nR and ks values
     // set score to -1.0 to distinguish them from 0 scores
@@ -516,7 +516,7 @@ void score_all_traces(unsigned int size) {
     // start the threads
     for (i = 0; i < NUM_THREADS; i++) {
         if (pthread_create(&(threads[i]), NULL, score_some_traces, (void *)(tdata + i))) {
-            printf("cannot start thread %d\n", i);
+            printf("cannot start thread %u\n", i);
             exit(1);
         }
     }
@@ -524,7 +524,7 @@ void score_all_traces(unsigned int size) {
     // wait for threads to end
     for (i = 0; i < NUM_THREADS; i++) {
         if (pthread_join(threads[i], &status)) {
-            printf("cannot join thread %d\n", i);
+            printf("cannot join thread %u\n", i);
             exit(1);
         }
     }
@@ -620,13 +620,13 @@ void crack() {
     uint64_t foundkey;
 
     for (i = 16; i <= 48; i++) {
-        fprintf(stderr, "round %2d, size=%2d\n", i - 16, i);
+        fprintf(stderr, "round %2u, size=%2u\n", i - 16, i);
         execute_round(i);
 
         // print some metrics
         revkey = rev64(guesses[0].key);
         foundkey = ((revkey >> 40) & 0xff) | ((revkey >> 24) & 0xff00) | ((revkey >> 8) & 0xff0000) | ((revkey << 8) & 0xff000000) | ((revkey << 24) & 0xff00000000) | ((revkey << 40) & 0xff0000000000);
-        fprintf(stderr, " guess=%012" PRIx64 ", num_guesses = %d, top score=%1.10f, min score=%1.10f\n", foundkey, num_guesses, guesses[0].score, guesses[num_guesses - 1].score);
+        fprintf(stderr, " guess=%012" PRIx64 ", num_guesses = %u, top score=%1.10f, min score=%1.10f\n", foundkey, num_guesses, guesses[0].score, guesses[num_guesses - 1].score);
     }
 }
 
@@ -745,7 +745,7 @@ void test() {
         packed = packstate(lfsr);
 
         if (hitag2_crypt(lfsr) != f20(packed)) {
-            printf(" * * * FAIL: %3" PRIu64 ": 0x%012" PRIx64 " = %d, 0x%012" PRIx64 " = 0x%05" PRIx64 "\n", i, lfsr, hitag2_crypt(lfsr), packed, f20(packed));
+            printf(" * * * FAIL: %3" PRIu64 ": 0x%012" PRIx64 " = %u, 0x%012" PRIx64 " = 0x%05" PRIx64 "\n", i, lfsr, hitag2_crypt(lfsr), packed, f20(packed));
         }
     }
 
@@ -821,7 +821,7 @@ int main(int argc, char *argv[]) {
     if ((tot_nRaR > 0) && (tot_nRaR <= num_nRaR)) {
         num_nRaR = tot_nRaR;
     }
-    fprintf(stderr, "Using %d nRaR pairs\n", num_nRaR);
+    fprintf(stderr, "Using %u nRaR pairs\n", num_nRaR);
 
     crack();
 

@@ -19,6 +19,6 @@ int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int detectIndala64(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int detectIndala224(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int demodIndala(void);
-int getIndalaBits(uint8_t fc, uint16_t csn, uint8_t *bits);
+int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits);
 
 #endif

@@ -15,9 +15,10 @@
 #include "ui.h"
 #include "util.h"
 
-#define CARD_INS_DECRYPT 0x01
-#define CARD_INS_ENCRYPT 0x02
-#define CARD_INS_DECODE  0x06
+#define CARD_INS_DECRYPT    0x01
+#define CARD_INS_ENCRYPT    0x02
+#define CARD_INS_DECODE     0x06
+#define CARD_INS_NUMBLOCKS  0x07
 static uint8_t cmd[] = {0x96, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 // look for CryptoHelper
@@ -64,6 +65,7 @@ bool Encrypt(uint8_t *src, uint8_t *dest) {
     return executeCrypto(CARD_INS_ENCRYPT, src, dest);
 }
 
+// Call with block6
 void DecodeBlock6(uint8_t *src) {
     int resp_len = 0;
     uint8_t resp[254] = {0};
@@ -81,3 +83,12 @@ void DecodeBlock6(uint8_t *src) {
     PrintAndLogEx(SUCCESS, "%.*s", resp_len - 11, resp + 9);
 }
 
+// Call with block6
+uint8_t GetNumberBlocksForUserId(uint8_t *src) {
+    int resp_len = 0;
+    uint8_t resp[254] = {0};
+    uint8_t c[] = {0x96, CARD_INS_NUMBLOCKS, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    memcpy(c + 5, src, 8);
+    ExchangeAPDUSC(true, c, sizeof(c), false, true, resp, sizeof(resp), &resp_len);
+    return resp[8];
+}

@@ -143,16 +143,16 @@ void writetable(struct table *t1) {
 
 // store value in table
 void store(unsigned char *data) {
-    unsigned char d1, d2;
+    unsigned char d_1, d_2;
     int offset;
     struct table *t1;
 
     // use the first two bytes as an index
-    d1 = data[0];
-    d2 = data[1];
-    offset = (d1 * 0x100) + d2;
+    d_1 = data[0];
+    d_2 = data[1];
+    offset = (d_1 * 0x100) + d_2;
 
-    if (debug) printf("store, d1=%02X, d2=%02X, offset = %d\n", d1, d2, offset);
+    if (debug) printf("store, d1=%02X, d2=%02X, offset = %d\n", d_1, d_2, offset);
 
     // get pointer to table entry
     t1 = t + offset;
@@ -362,10 +362,10 @@ void makedirs() {
 }
 
 static int datacmp(const void *p1, const void *p2, void *dummy) {
-    unsigned char *d1 = (unsigned char *)p1;
-    unsigned char *d2 = (unsigned char *)p2;
+    unsigned char *d_1 = (unsigned char *)p1;
+    unsigned char *d_2 = (unsigned char *)p2;
 
-    return memcmp(d1, d2, DATASIZE);
+    return memcmp(d_1, d_2, DATASIZE);
 }
 
 void *sorttable(void *d) {

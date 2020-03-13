@@ -434,6 +434,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf mf mad` and `hf mfp mad` MAD decode, check and print commands (@merlokk)
  - Added `script run luxeodump` (@0xdrrb)
  - Fix `lf hitag reader 02` - print all bytes (@bosb)
+ - Fix hitag S simulation (still not working), write, add example HITAG S 256  (@bosb)
 
 
 ### Fixed

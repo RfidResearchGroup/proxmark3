@@ -785,7 +785,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 return usage_hf_iclass_decrypt();
             case 'd':
                 if (param_gethex(Cmd, cmdp + 1, enc_data, 16)) {
-                    PrintAndLogEx(ERR, "data must be 16 HEX symbols");
+                    PrintAndLogEx(ERR, "Data must be 16 HEX symbols");
                     errors = true;
                     break;
                 }
@@ -794,7 +794,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 break;
             case 'f':
                 if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
-                    PrintAndLogEx(WARNING, "no filename found after f");
+                    PrintAndLogEx(WARNING, "No filename found after f");
                     errors = true;
                     break;
                 }
@@ -864,18 +864,24 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         BLOCK79ENCRYPTION aa1_encryption = (decrypted[(6 * 8) + 7] & 0x03);
 
-        for (uint16_t blocknum = 0; blocknum < applimit; ++blocknum) {
+        uint32_t limit = MIN(applimit, decryptedlen / 8);
+
+        if (decryptedlen / 8 != applimit) {
+            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%u") "vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
+            PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * 8);
+        }
+        uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
+
+        for (uint16_t blocknum = 0; blocknum < limit; ++blocknum) {
 
             uint8_t idx = blocknum * 8;
             memcpy(enc_data, decrypted + idx, 8);
 
-            // block 7 or higher,  and not empty 0xFF
-            // look inside block 6 to determine if aa1 is encrypted.
-            if (blocknum > 6 && memcmp(enc_data, empty, 8) != 0) {
-
-                if (aa1_encryption == RFU || aa1_encryption == None)
-                    continue;
-
+            if (aa1_encryption == RFU || aa1_encryption == None)
+                continue;
+                
+            // Decrypted block 7,8,9 if configured.
+            if (blocknum > 6 && blocknum <= 6 + numblocks4userid && memcmp(enc_data, empty, 8) != 0) {
                 if (use_sc) {
                     Decrypt(enc_data, decrypted + idx);
                 } else {
@@ -885,7 +891,12 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
 
         //Use the first block (CSN) for filename
-        char *fptr = calloc(42, sizeof(uint8_t));
+        char *fptr = calloc(50, sizeof(uint8_t));
+        if (!fptr) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            free(decrypted);
+            return PM3_EMALLOC;
+        }
         strcat(fptr, "hf-iclass-");
         FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn));
 
@@ -893,8 +904,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         saveFileEML(fptr, decrypted, decryptedlen, 8);
         saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
 
+        PrintAndLogEx(INFO, "Following output skips CSN / block0");
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
-
 
         // decode block 6
         if (memcmp(decrypted + (8 * 6), empty, 8) != 0) {
@@ -1251,7 +1262,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
         if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             DropField();
-            return 0;
+            return PM3_EOPABORTED;
         }
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000))
@@ -1343,8 +1354,8 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     // print the dump
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
-    PrintAndLogEx(NORMAL, "CSN   |00| %s|", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "CSN   |00| %s|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {

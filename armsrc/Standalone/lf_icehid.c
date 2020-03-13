@@ -105,7 +105,7 @@ uint32_t IceEM410xdemod() {
     memset(entry, 0, sizeof(entry));
 
     if (size == 128) {
-        sprintf((char *)entry, "EM XL TAG ID: %06lx%08lx%08lx - (%05ld_%03ld_%08ld)\n",
+        sprintf((char *)entry, "EM XL TAG ID: %06"PRIx32"%08"PRIx32"%08"PRIx32" - (%05"PRIu32"_%03"PRIu32"_%08"PRIu32")\n",
                 hi,
                 (uint32_t)(lo >> 32),
                 (uint32_t)lo,
@@ -113,7 +113,7 @@ uint32_t IceEM410xdemod() {
                 (uint32_t)((lo >> 16LL) & 0xFF),
                 (uint32_t)(lo & 0xFFFFFF));
     } else {
-        sprintf((char *)entry, "EM TAG ID: %02lx%08lx - (%05ld_%03ld_%08ld)\n",
+        sprintf((char *)entry, "EM TAG ID: %02"PRIx32"%08"PRIx32" - (%05"PRIu32"_%03"PRIu32"_%08"PRIu32")\n",
                 (uint32_t)(lo >> 32),
                 (uint32_t)lo,
                 (uint32_t)(lo & 0xFFFF),
@@ -160,16 +160,16 @@ uint32_t IceAWIDdemod() {
         uint8_t fac = bytebits_to_byte(dest + 9, 8);
         uint32_t cardnum = bytebits_to_byte(dest + 17, 16);
         uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen);
-        sprintf((char *)entry, "AWID bit len: %d, FC: %d, Card: %ld - Wiegand: %lx, Raw: %08lx%08lx%08lx\n", fmtLen, fac, cardnum, code1, rawHi2, rawHi, rawLo);
+        sprintf((char *)entry, "AWID bit len: %d, FC: %d, Card: %"PRIu32" - Wiegand: %"PRIx32", Raw: %08"PRIx32"%08"PRIx32"%08"PRIx32"\n", fmtLen, fac, cardnum, code1, rawHi2, rawHi, rawLo);
     } else {
         uint32_t cardnum = bytebits_to_byte(dest + 8 + (fmtLen - 17), 16);
         if (fmtLen > 32) {
             uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen - 32);
             uint32_t code2 = bytebits_to_byte(dest + 8 + (fmtLen - 32), 32);
-            sprintf((char *)entry, "AWID bit len: %d -unk bit len - Card: %ld - Wiegand: %lx%08lx, Raw: %08lx%08lx%08lx\n", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            sprintf((char *)entry, "AWID bit len: %d -unk bit len - Card: %"PRIu32" - Wiegand: %"PRIx32"%08"PRIx32", Raw: %08"PRIx32"%08"PRIx32"%08"PRIx32"\n", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
         } else {
             uint32_t code1 = bytebits_to_byte(dest + 8, fmtLen);
-            sprintf((char *)entry, "AWID bit len: %d -unk bit len - Card: %ld - Wiegand: %lx, Raw: %08lx%08lx%08lx\n", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+            sprintf((char *)entry, "AWID bit len: %d -unk bit len - Card: %"PRIu32" - Wiegand: %"PRIx32", Raw: %08"PRIx32"%08"PRIx32"%08"PRIx32"\n", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
         }
     }
 
@@ -209,7 +209,7 @@ uint32_t IceIOdemod() {
     uint8_t entry[64];
     memset(entry, 0, sizeof(entry));
 
-    sprintf((char *)entry, "IO Prox XSF(%02d)%02x:%05d (%08lx%08lx)\n"
+    sprintf((char *)entry, "IO Prox XSF(%02u)%02x:%05u (%08"PRIx32"%08"PRIx32")\n"
             , version
             , facilitycode
             , number
@@ -249,7 +249,7 @@ uint32_t IceHIDDemod() {
         // go over previously decoded manchester data and decode into usable tag ID
         if (hi2 != 0) { //extra large HID tags  88/192 bits
 
-            sprintf((char *)entry, "HID large: %lx%08lx%08lx (%ld)\n",
+            sprintf((char *)entry, "HID large: %"PRIx32"%08"PRIx32"%08"PRIx32" (%"PRIu32")\n",
                     hi2,
                     hi,
                     lo,
@@ -296,7 +296,7 @@ uint32_t IceHIDDemod() {
                 fac = ((hi & 0xF) << 12) | (lo >> 20);
             }
 
-            sprintf((char *)entry, "HID: %lx%08lx (%ld) Format: %d bit FC: %ld Card: %ld\n",
+            sprintf((char *)entry, "HID: %"PRIx32"%08"PRIx32" (%"PRIu32") Format: %d bit FC: %"PRIu32" Card: %"PRIu32"\n",
                     hi,
                     lo,
                     (lo >> 1) & 0xFFFF,

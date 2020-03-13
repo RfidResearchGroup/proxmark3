@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <inttypes.h>
 
 #include "HardwareProfile.h"
 #include "rfidler.h"
@@ -243,7 +244,7 @@ void *crack(void *d) {
 
     // find keys
     for (klower = data->klowerstart; klower < (data->klowerstart + data->klowerrange); klower++) {
-        printf("trying klower = 0x%05lx\n", klower);
+        printf("trying klower = 0x%05"PRIx64"\n", klower);
         // build table
         count = 0;
         for (y = 0; y < 0x40000; y++) {
@@ -304,7 +305,7 @@ void *crack(void *d) {
 
             if ((found) && (!badguess)) {
                 // brute
-                printf("possible partial key found: 0x%012lx\n", ((uint64_t)kmiddle << 16) | klower);
+                printf("possible partial key found: 0x%012"PRIx64"\n", ((uint64_t)kmiddle << 16) | klower);
 
                 if (testkey(&foundkey, uid, (kmiddle << 16 | klower), TnRaR[0].nR, TnRaR[0].aR) &&
                         testkey(&foundkey, uid, (kmiddle << 16 | klower), TnRaR[1].nR, TnRaR[1].aR)) {
@@ -381,14 +382,14 @@ int main(int argc, char *argv[]) {
     while (getline(&buf, &lenbuf, fp) > 0) {
         buft1 = strchr(buf, ' ');
         if (!buft1) {
-            printf("invalid file input on line %d\n", numnrar + 1);
+            printf("invalid file input on line %u\n", numnrar + 1);
             exit(1);
         }
         *buft1 = 0x00;
         buft1++;
         buft2 = strchr(buft1, '\n');
         if (!buft2) {
-            printf("no CR on line %d\n", numnrar + 1);
+            printf("no CR on line %u\n", numnrar + 1);
             exit(1);
         }
         *buft2 = 0x00;
@@ -406,7 +407,7 @@ int main(int argc, char *argv[]) {
     fclose(fp);
     fp = NULL;
 
-    printf("Loaded %d NrAr pairs\n", numnrar);
+    printf("Loaded %u NrAr pairs\n", numnrar);
 
     // create table of thread data
     tdata = (struct threaddata *)malloc(sizeof(struct threaddata) * NUM_THREADS);
