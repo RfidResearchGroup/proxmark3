@@ -35,14 +35,14 @@
 // Vinglock
 //------------------------------------
 void transform_D(uint8_t* ru) {
-    
-    const uint32_t c_D[] = { 
-        0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8, 
-        0xD1CC8B4E, 0xE8873E6F, 0x61399BBB, 0xF1B91926, 0xAC661520, 0xA21A31C9, 
-        0xD424808D, 0xFE118E07, 0xD18E728D, 0xABAC9E17, 0x18066433, 0x00E18E79, 
-        0x65A77305, 0x5AE9E297, 0x11FC628C, 0x7BB3431F, 0x942A8308, 0xB2F8FD20, 
+
+    const uint32_t c_D[] = {
+        0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
+        0xD1CC8B4E, 0xE8873E6F, 0x61399BBB, 0xF1B91926, 0xAC661520, 0xA21A31C9,
+        0xD424808D, 0xFE118E07, 0xD18E728D, 0xABAC9E17, 0x18066433, 0x00E18E79,
+        0x65A77305, 0x5AE9E297, 0x11FC628C, 0x7BB3431F, 0x942A8308, 0xB2F8FD20,
         0x5728B869, 0x30726D5A
-    };	
+    };
 
 	//Transform
 	uint8_t i;
@@ -51,10 +51,14 @@ void transform_D(uint8_t* ru) {
 	uint32_t v2 = ((ru[7] << 24) | (ru[6] << 16) | (ru[5] << 8) | ru[4]) + c_D[p++];
 	for (i = 0; i < 12; i += 2)
 	{
-		uint32_t t1 = PM3_ROTL(v1 ^ v2, v2 & 0x1F) + c_D[p++];
-		uint32_t t2 = PM3_ROTL(v2 ^ t1, t1 & 0x1F) + c_D[p++];
-		v1 = PM3_ROTL(t1 ^ t2, t2 & 0x1F) + c_D[p++];
-		v2 = PM3_ROTL(t2 ^ v1, v1 & 0x1F) + c_D[p++];
+                uint32_t tempA = v1 ^ v2;
+		uint32_t t1 = PM3_ROTL(tempA, v2 & 0x1F) + c_D[p++];
+                uint32_t tempB = v2 ^ t1;
+		uint32_t t2 = PM3_ROTL(tempB, t1 & 0x1F) + c_D[p++];
+                tempA = t1 ^ t2;
+		v1 = PM3_ROTL(tempA, t2 & 0x1F) + c_D[p++];
+                tempB = t2 ^ v1;
+		v2 = PM3_ROTL(tempB, v1 & 0x1F) + c_D[p++];
 	}
 
 	//Re-use ru
