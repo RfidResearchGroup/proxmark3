@@ -381,14 +381,14 @@ int main(int argc, char *argv[]) {
     while (getline(&buf, &lenbuf, fp) > 0) {
         buft1 = strchr(buf, ' ');
         if (!buft1) {
-            printf("invalid file input on line %d\n", numnrar + 1);
+            printf("invalid file input on line %u\n", numnrar + 1);
             exit(1);
         }
         *buft1 = 0x00;
         buft1++;
         buft2 = strchr(buft1, '\n');
         if (!buft2) {
-            printf("no CR on line %d\n", numnrar + 1);
+            printf("no CR on line %u\n", numnrar + 1);
             exit(1);
         }
         *buft2 = 0x00;
@@ -406,7 +406,7 @@ int main(int argc, char *argv[]) {
     fclose(fp);
     fp = NULL;
 
-    printf("Loaded %d NrAr pairs\n", numnrar);
+    printf("Loaded %u NrAr pairs\n", numnrar);
 
     // create table of thread data
     tdata = (struct threaddata *)malloc(sizeof(struct threaddata) * NUM_THREADS);
