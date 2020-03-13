@@ -17,6 +17,12 @@
 #ifndef PRIx64
     #define PRIx64 "llx"
 #endif
+#ifndef PRIx32
+    #define PRIx32 "lx"
+#endif
+#ifndef PRIu32
+    #define PRIu32 "lu"
+#endif
 
 // Basic macros
 
