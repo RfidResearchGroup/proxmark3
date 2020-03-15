@@ -181,13 +181,13 @@ void getKeySettings(uint8_t *aid) {
             return;
         }
 
-        str = (resp.data.asBytes[3] & (1 << 3)) ? _GREEN_("YES") : _RED_("NO");
+        str = (resp.data.asBytes[3] & (1 << 3)) ? _GREEN_("YES") : "NO";
         PrintAndLogEx(SUCCESS, "   [0x08] Configuration changeable       : %s", str);
-        str = (resp.data.asBytes[3] & (1 << 2)) ? _RED_("NO") : _GREEN_("YES");
+        str = (resp.data.asBytes[3] & (1 << 2)) ? "NO" : _GREEN_("YES");
         PrintAndLogEx(SUCCESS, "   [0x04] CMK required for create/delete : %s", str);
-        str = (resp.data.asBytes[3] & (1 << 1)) ? _RED_("NO") : _GREEN_("YES");
+        str = (resp.data.asBytes[3] & (1 << 1)) ? "NO" : _GREEN_("YES");
         PrintAndLogEx(SUCCESS, "   [0x02] Directory list access with CMK : %s", str);
-        str = (resp.data.asBytes[3] & (1 << 0)) ? _GREEN_("YES") : _RED_("NO");
+        str = (resp.data.asBytes[3] & (1 << 0)) ? _GREEN_("YES") : "NO";
         PrintAndLogEx(SUCCESS, "   [0x01] CMK is changeable              : %s", str);
 
         {
@@ -202,8 +202,8 @@ void getKeySettings(uint8_t *aid) {
             return;
         }
         PrintAndLogEx(SUCCESS, "");
-        PrintAndLogEx(SUCCESS, "   Max number of keys       : %d", resp.data.asBytes[4]);
-        PrintAndLogEx(SUCCESS, "   Master key Version       : %d (0x%02x)", resp.data.asBytes[3], resp.data.asBytes[3]);
+        PrintAndLogEx(SUCCESS, "   Max number of keys       : " _YELLOW_("%d"), resp.data.asBytes[4]);
+        PrintAndLogEx(SUCCESS, "   Master key Version       : " _YELLOW_("%d (0x%02x)"), resp.data.asBytes[3], resp.data.asBytes[3]);
         PrintAndLogEx(INFO, "   ----------------------------------------------------------");
 
         {
