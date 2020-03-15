@@ -1189,7 +1189,7 @@ static bool CheckChipType(bool getDeviceData) {
     uint32_t word = 0;
     if (EM4x05IsBlock0(&word)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05/EM4x69"));
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf em 4x05`") "commands");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") "commands");
         retval = true;
         goto out;
     }
@@ -1197,7 +1197,7 @@ static bool CheckChipType(bool getDeviceData) {
     //check for t55xx chip...
     if (tryDetectP1(true)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("T55xx"));
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf t55xx`") "commands");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf t55xx`") "commands");
         retval = true;
     }
 
