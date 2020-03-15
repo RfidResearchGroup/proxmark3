@@ -36,7 +36,7 @@ static void showBanner(void) {
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    :snowflake:  iceman@icesql.net");
     PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/");
     PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0");
 #else
@@ -756,6 +756,7 @@ int main(int argc, char *argv[]) {
     }
 
     session.supports_colors = DetectWindowsAnsiSupport();
+    session.emoji_mode = ALTTEXT;
 
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
@@ -766,8 +767,10 @@ int main(int argc, char *argv[]) {
     // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
     //   struct stat tmp_stat;
     //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
-    if (session.stdinOnTTY && session.stdoutOnTTY)
+    if (session.stdinOnTTY && session.stdoutOnTTY) {
         session.supports_colors = true;
+        session.emoji_mode = EMOJI;
+    }
 #endif
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
