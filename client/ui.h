@@ -31,7 +31,7 @@ extern session_arg_t session;
 #define M_PI 3.14159265358979323846264338327
 #endif
 #define MAX_PRINT_BUFFER 2048
-typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE} logLevel_t;
+typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
 
 void ShowGui(void);
 void HideGraphWindow(void);

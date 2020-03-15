@@ -127,6 +127,10 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0'
     if (g_debugMode == 0 && level == DEBUG)
         return;
+    
+    // skip HINT messages if client has hints turned off i.e. 'HINT 0'
+    if (g_showhints == 0 && level == HINT)
+        return;
 
     char prefix[20] = {0};
     char buffer[MAX_PRINT_BUFFER] = {0};
@@ -146,6 +150,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         case DEBUG:
             strncpy(prefix, _BLUE_("[#]"), sizeof(prefix) - 1);
             break;
+        case HINT:
         case SUCCESS:
             strncpy(prefix, _GREEN_("[+]"), sizeof(prefix) - 1);
             break;

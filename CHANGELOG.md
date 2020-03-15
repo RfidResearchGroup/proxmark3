@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add 'HINTS' command.  Will turn off / on hint messages. Default mode is OFF.  (@iceman1001)
  - Add colour to `hf 14a` and `hf mfu` commands (@dunderhay)
  - Add colour to `lf hid` commands (@dunderhay)
  - Change `script run hf_bruteforce -s start_id -e end_id -t timeout -x mifare_card_type` - The hf_bruteforce card script now requires Mifare type (mfc or mfu) (@dunderhay)

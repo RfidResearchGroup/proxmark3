@@ -1628,13 +1628,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
     
     if (isMifareUltralight) {        
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`hf mfu info`"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
     }
     if (isMifarePlus) {        
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`hf mfp info`"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
     }
     if (isMifareDesfire) {        
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`hf mfdes info`"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
     }
     
 
