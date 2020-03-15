@@ -246,7 +246,7 @@ static int CmdIndalaDemod(const char *Cmd) {
         checksum |= DemodBuffer[63] << 0; // b1
 
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "Fmt 26 bit FC " _YELLOW_("%u") ", CN " _YELLOW_("%u") ", checksum %1d%1d"
+        PrintAndLogEx(SUCCESS, "Fmt 26 bit FC " _YELLOW_("%u") ", CN " _YELLOW_("%u") ", checksum " _YELLOW_("%1d%1d")
                       , fc
                       , csn
                       , checksum >> 1 & 0x01
@@ -505,6 +505,7 @@ static int CmdIndalaSim(const char *Cmd) {
     uint8_t hexuid[100];
     int len = 0;
     param_gethex_ex(Cmd, 0, hexuid, &len);
+
     if (len > 28)
         return usage_lf_indala_sim();
 
@@ -670,7 +671,7 @@ static int CmdIndalaClone(const char *Cmd) {
     print_blocks(blocks, max);
     int res = clone_t55xx_tag(blocks, max);
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf indala read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf indala read`") "to verify");
     return res;
 }
 
@@ -749,6 +750,11 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
         bits[62] = 1;
         bits[63] = 0;
     }
+
+    // add parity
+    bits[34] = 1; // p1  64 - 30 = 34
+    bits[38] = 1; // p2  68 - 30 = 38
+
     // 92 = 62
     // 93 = 63
 

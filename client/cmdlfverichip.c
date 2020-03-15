@@ -123,7 +123,7 @@ static int CmdVerichipClone(const char *Cmd) {
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf verichip read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf verichip read`") "to verify");
     return res;
 }
 

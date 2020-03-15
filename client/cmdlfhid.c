@@ -348,7 +348,7 @@ static int CmdHIDClone(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_HID_CLONE, hi2, hi, lo, longid, sizeof(longid));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf hid read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid read`") "to verify");
     return PM3_SUCCESS;
 }
 

@@ -179,7 +179,7 @@ static int CmdMotorolaClone(const char *Cmd) {
     print_blocks(blocks, ARRAYLEN(blocks));
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf motorola read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf motorola read`") "to verify");
     return res;
 }
 
