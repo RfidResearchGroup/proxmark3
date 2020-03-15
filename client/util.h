@@ -23,6 +23,7 @@
 
 uint8_t g_debugMode;
 uint8_t g_printAndLog;
+uint8_t g_showhints;
 
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
