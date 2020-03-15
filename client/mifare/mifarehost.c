@@ -1316,6 +1316,8 @@ int detect_classic_nackbug(bool verbose) {
     SendCommandNG(CMD_HF_MIFARE_NACK_DETECT, NULL, 0);
     PacketResponseNG resp;
 
+    PrintAndLogEx(INFO, "Checking for NACK bug");
+
     if (verbose)
         PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
 

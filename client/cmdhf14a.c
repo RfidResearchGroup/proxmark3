@@ -230,7 +230,6 @@ static int usage_hf_14a_reader(void) {
 
 static int CmdHF14AList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list 14a' instead");
     CmdTraceList("14a");
     return 0;
 }
@@ -361,7 +360,7 @@ static int CmdHF14AReader(const char *Cmd) {
 }
 
 static int CmdHF14AInfo(const char *Cmd) {
-    bool verbose = false;
+    bool verbose = true;
     bool do_nack_test = false;
     bool do_aid_search = false;
 
@@ -1281,11 +1280,19 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         return select_status;
     }
 
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "-- ISO14443-a Information -----------------------------------");
+        PrintAndLogEx(SUCCESS, "-------------------------------------------------------------");
+    }
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
     bool isMifareClassic = true;
+    bool isMifareDesfire = false;
+    bool isMifarePlus = false;
+    bool isMifareUltralight = false;
+
     switch (card.sak) {
         case 0x00:
             isMifareClassic = false;
@@ -1294,10 +1301,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             DropField();
 
             uint32_t tagT = GetHF14AMfU_Type();
-            if (tagT != UL_ERROR)
+            if (tagT != UL_ERROR) {
                 ul_print_type(tagT, 0);
-            else
+                isMifareUltralight = true;
+            } else {
                 PrintAndLogEx(SUCCESS, "TYPE: Possible AZTEK (iso14443a compliant)");
+            }
 
             // reconnect for further tests
             clearCommandBuffer();
@@ -1319,6 +1328,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         case 0x04:
             PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE (various !DESFire !DESFire EV1)");
             isMifareClassic = false;
+            isMifareDesfire = true;
             break;
         case 0x08:
             PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1");
@@ -1331,9 +1341,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             break;
         case 0x10:
             PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Plus 2k SL2");
+            isMifarePlus = true;
             break;
         case 0x11:
             PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Plus 4k SL2");
+            isMifarePlus = true;
             break;
         case 0x18:
             PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1");
@@ -1341,10 +1353,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         case 0x20:
             PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41");
             isMifareClassic = false;
+            isMifareDesfire = true;
+            isMifarePlus = true;
             break;
         case 0x24:
             PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE DESFire | DESFire EV1");
             isMifareClassic = false;
+            isMifareDesfire = true;            
             break;
         case 0x28:
             PrintAndLogEx(SUCCESS, "TYPE : JCOP31 or JCOP41 v2.3.1");
@@ -1461,9 +1476,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 switch (card.ats[pos + 2] & 0xf0) {
                     case 0x10:
                         PrintAndLogEx(SUCCESS, "                     1x -> MIFARE DESFire");
+                        isMifareDesfire = true;
+                        isMifareClassic = false;
+                        isMifarePlus = false;
                         break;
                     case 0x20:
                         PrintAndLogEx(SUCCESS, "                     2x -> MIFARE Plus");
+                        isMifarePlus = true;
+                        isMifareDesfire = false;
+                        isMifareClassic = false;
                         break;
                 }
                 switch (card.ats[pos + 2] & 0x0f) {
@@ -1590,21 +1611,32 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isMifareClassic) {
         int res = detect_classic_prng();
         if (res == 1)
-            PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("WEAK"));
+            PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
         else if (res == 0)
-            PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("HARD"));
+            PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
         else
-            PrintAndLogEx(FAILED, "prng detection:  " _RED_("Fail"));
+            PrintAndLogEx(FAILED, "prng detection:  " _RED_("fail"));
 
         if (do_nack_test)
-            detect_classic_nackbug(!verbose);
+            detect_classic_nackbug(false);
 
         res = detect_classic_static_nonce();
         if (res == 1)
-            PrintAndLogEx(SUCCESS, "Static nonce detected");
+            PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes") );
         if (res == 2 && verbose)
-            PrintAndLogEx(SUCCESS, "Static nonce detection failed");
+            PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("fail"));
     }
+    
+    if (isMifareUltralight) {        
+        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`hf mfu info`"));
+    }
+    if (isMifarePlus) {        
+        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`hf mfp info`"));
+    }
+    if (isMifareDesfire) {        
+        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`hf mfdes info`"));
+    }
+    
 
     return select_status;
 }
