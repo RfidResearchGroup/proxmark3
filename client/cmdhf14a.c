@@ -189,9 +189,9 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");
     PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223344 x");
-    PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223344");
-    PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223344556677");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344 x"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344556677"));
 //  PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223445566778899AA\n");
     return 0;
 }
@@ -202,7 +202,7 @@ static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "c - triggered by first data from card");
     PrintAndLogEx(NORMAL, "r - triggered by first 7-bit request from reader (REQ,WUP,...)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf 14a sniff c r");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf 14a sniff c r"));
     return 0;
 }
 static int usage_hf_14a_raw(void) {
@@ -261,7 +261,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
         return 1;
     }
 
-    PrintAndLogEx(SUCCESS, " UID: %s", sprint_hex(card->uid, card->uidlen));
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card->atqa[1], card->atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: %02x [%" PRIu64 "]", card->sak, resp.oldarg[0]);
     if (card->ats_len < 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
@@ -335,17 +335,17 @@ static int CmdHF14AReader(const char *Cmd) {
 
         if (select_status == 3) {
             PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-            PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+            PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
             DropField();
             return 1;
         }
 
-        PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, card.uidlen));
-        PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-        PrintAndLogEx(SUCCESS, " SAK : %02x [%" PRIu64 "]", card.sak, resp.oldarg[0]);
+        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+        PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
+        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
         if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-            PrintAndLogEx(SUCCESS, " ATS : %s", sprint_hex(card.ats, card.ats_len));
+            PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
         }
 
         if (!disconnectAfter) {
@@ -354,7 +354,7 @@ static int CmdHF14AReader(const char *Cmd) {
     }
 
     if (disconnectAfter) {
-        if (!silent) PrintAndLogEx(SUCCESS, "field dropped.");
+        if (!silent) PrintAndLogEx(INFO, "field dropped.");
     }
 
     return 0;
@@ -467,7 +467,7 @@ int CmdHF14ASim(const char *Cmd) {
                         break;
                 }
                 if (!errors) {
-                    PrintAndLogEx(SUCCESS, "Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen, sprint_hex(uid, uidlen));
+                    PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")"with " _GREEN_("%d byte UID (%s)"), uidlen, sprint_hex(uid, uidlen));
                     useUIDfromEML = false;
                 }
                 cmdp += 2;
@@ -485,7 +485,7 @@ int CmdHF14ASim(const char *Cmd) {
                 cmdp++;
                 break;
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter " _RED_("'%c'"), param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -511,7 +511,7 @@ int CmdHF14ASim(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
-    PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (!keypress) {
 
@@ -1276,14 +1276,14 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (select_status == 3) {
         PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+        PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
         DropField();
         return select_status;
     }
 
-    PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, card.uidlen));
-    PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK : %02x [%" PRIu64 "]", card.sak, resp.oldarg[0]);
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
     bool isMifareClassic = true;
     switch (card.sak) {
@@ -1364,7 +1364,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     // Double & triple sized UID, can be mapped to a manufacturer.
     if (card.uidlen > 4) {
-        PrintAndLogEx(SUCCESS, "MANUFACTURER : %s", getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _GREEN_("%s"), getTagInfo(card.uid[0]));
     }
 
     // try to request ATS even if tag claims not to support it
@@ -1608,4 +1608,3 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     return select_status;
 }
-

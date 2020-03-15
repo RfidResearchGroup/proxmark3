@@ -1291,7 +1291,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
                     cardnum = (lo >> 1) & 0x7FFFF;
                     fac = ((hi & 0xF) << 12) | (lo >> 20);
                 }
-                Dbprintf("TAG ID: " _YELLOW_("%x%08x (%d)") "- Format Len: " _YELLOW_("%d") "bit - FC: " _YELLOW_("%d") "- Card: "_YELLOW_("%d"),
+                Dbprintf("TAG ID: " _GREEN_("%x%08x (%d)") "- Format Len: " _GREEN_("%d") "bit - FC: " _GREEN_("%d") "- Card: "_GREEN_("%d"),
                          hi,
                          lo,
                          (lo >> 1) & 0xFFFF,

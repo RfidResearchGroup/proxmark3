@@ -1142,4 +1142,3 @@ int readHF14B(bool verbose) {
     if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
     return 0;
 }
-
