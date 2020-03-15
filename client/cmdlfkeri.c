@@ -282,7 +282,7 @@ static int CmdKeriClone(const char *Cmd) {
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf keri read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf keri read`") "to verify");
     return res;
 }
 
