@@ -50,7 +50,7 @@ static int usage_lf_hid_watch(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf hid watch");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf hid watch");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf hid watch"));
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_sim(void) {
@@ -62,11 +62,11 @@ static int usage_lf_hid_sim(void) {
     PrintAndLogEx(NORMAL, "       h   - This help");
     PrintAndLogEx(NORMAL, "       ID  - HID id");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf hid sim 2006ec0c86");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid sim 2006ec0c86"));
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_clone(void) {
-    PrintAndLogEx(NORMAL, "Clone HID to T55x7.  Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "Clone HID to T55x7. " _BLUE_("Tag must be on antenna!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf hid clone [h] [l] ID");
     PrintAndLogEx(NORMAL, "Options:");
@@ -74,8 +74,8 @@ static int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "       l   - 84bit ID");
     PrintAndLogEx(NORMAL, "       ID  - HID id");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86");
-    PrintAndLogEx(NORMAL, "      lf hid clone l 2006ec0c86");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone 2006ec0c86"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone l 2006ec0c86"));
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_brute(void) {
@@ -97,9 +97,9 @@ static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, "       down              :  direction to decrement card number. (default is both directions)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf hid brute w H10301 f 224");
-    PrintAndLogEx(NORMAL, "       lf hid brute w H10301 f 21 d 2000");
-    PrintAndLogEx(NORMAL, "       lf hid brute v w H10301 f 21 c 200 d 2000");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 224"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 21 d 2000"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute v w H10301 f 21 c 200 d 2000"));
     return PM3_SUCCESS;
 }
 
@@ -268,6 +268,8 @@ static int CmdHIDWatch(const char *Cmd) {
     if (ctmp == 'h') return usage_lf_hid_watch();
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_DEMOD, NULL, 0);
+    PrintAndLogEx(SUCCESS, "Watching for new HID cards - place tag on antenna");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading new cards");
     return PM3_SUCCESS;
 }
 
@@ -299,7 +301,7 @@ static int CmdHIDSim(const char *Cmd) {
         hi2 = 0;
     }
 
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
 
     payload.hi2 = hi2;
     payload.hi = hi;
