@@ -1323,55 +1323,55 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             }
             break;
         case 0x01:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP TNP3xxx Activision Game Appliance");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP TNP3xxx Activision Game Appliance"));
             break;
         case 0x04:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE (various !DESFire !DESFire EV1)");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE (various !DESFire !DESFire EV1)"));
             isMifareClassic = false;
             isMifareDesfire = true;
             break;
         case 0x08:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1"));
             break;
         case 0x09:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Mini 0.3k");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE Mini 0.3k"));
             break;
         case 0x0A:
-            PrintAndLogEx(SUCCESS, "TYPE : FM11RF005SH (Shanghai Metro)");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("FM11RF005SH (Shanghai Metro)"));
             break;
         case 0x10:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Plus 2k SL2");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE Plus 2k SL2"));
             isMifarePlus = true;
             break;
         case 0x11:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Plus 4k SL2");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE Plus 4k SL2"));
             isMifarePlus = true;
             break;
         case 0x18:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1"));
             break;
         case 0x20:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41"));
             isMifareClassic = false;
             isMifareDesfire = true;
             isMifarePlus = true;
             break;
         case 0x24:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE DESFire | DESFire EV1");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE DESFire | DESFire EV1"));
             isMifareClassic = false;
-            isMifareDesfire = true;            
+            isMifareDesfire = true;
             break;
         case 0x28:
-            PrintAndLogEx(SUCCESS, "TYPE : JCOP31 or JCOP41 v2.3.1");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("JCOP31 or JCOP41 v2.3.1"));
             break;
         case 0x38:
-            PrintAndLogEx(SUCCESS, "TYPE : Nokia 6212 or 6131 MIFARE CLASSIC 4K");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("Nokia 6212 or 6131 MIFARE CLASSIC 4K"));
             break;
         case 0x88:
-            PrintAndLogEx(SUCCESS, "TYPE : Infineon MIFARE CLASSIC 1K");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("Infineon MIFARE CLASSIC 1K"));
             break;
         case 0x98:
-            PrintAndLogEx(SUCCESS, "TYPE : Gemplus MPCOS");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("Gemplus MPCOS"));
             break;
         default:
             ;
@@ -1379,7 +1379,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     // Double & triple sized UID, can be mapped to a manufacturer.
     if (card.uidlen > 4) {
-        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _GREEN_("%s"), getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
     }
 
     // try to request ATS even if tag claims not to support it
@@ -1400,7 +1400,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (select_status == 2) {
             PrintAndLogEx(INFO, "SAK incorrectly claims that card doesn't support RATS");
         }
-        PrintAndLogEx(SUCCESS, " ATS : %s", sprint_hex(card.ats, card.ats_len));
+        PrintAndLogEx(SUCCESS, " ATS: %s", sprint_hex(card.ats, card.ats_len));
         PrintAndLogEx(SUCCESS, "       -  TL : length is %d bytes", card.ats[0]);
         if (card.ats[0] != card.ats_len - 2) {
             PrintAndLogEx(SUCCESS, "ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
@@ -1626,17 +1626,17 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (res == 2 && verbose)
             PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("fail"));
     }
-    
-    if (isMifareUltralight) {        
+
+    if (isMifareUltralight) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
     }
-    if (isMifarePlus) {        
+    if (isMifarePlus) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
     }
-    if (isMifareDesfire) {        
+    if (isMifareDesfire) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
     }
-    
+
 
     return select_status;
 }

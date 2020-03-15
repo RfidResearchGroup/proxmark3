@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Additional colour changes as recommended by @iceman (@dunderhay)
+ - Change type colour for `hf 14a` card types (@dunderhay)
+ - Add colour to `hf mfdes` command (@dunderhay)
  - Add 'HINTS' command.  Will turn off / on hint messages. Default mode is OFF.  (@iceman1001)
  - Add colour to `hf 14a` and `hf mfu` commands (@dunderhay)
  - Add colour to `lf hid` commands (@dunderhay)
