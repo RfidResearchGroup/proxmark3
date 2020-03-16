@@ -331,10 +331,11 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 #endif
 
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
+        memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), ALTTEXT);
         if (filter_ansi) { // already done
-            fprintf(logfile, "%s\n", buffer2);
+            fprintf(logfile, "%s\n", buffer3);
         } else {
-            memcpy_filter_ansi(buffer, buffer2, sizeof(buffer2), true);
+            memcpy_filter_ansi(buffer, buffer3, sizeof(buffer3), true);
             fprintf(logfile, "%s\n", buffer);
         }
         fflush(logfile);
