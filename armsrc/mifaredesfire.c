@@ -14,6 +14,7 @@
 #include "crc16.h"
 #include "mbedtls/aes.h"
 #include "commonutil.h"
+#include "util.h"
 
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
@@ -83,7 +84,7 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 
     int len = DesfireAPDU(datain, datalen, resp);
     if (DBGLEVEL >= 4)
-        print_result("ERR <--: ", resp, len);
+        print_result("RESP <--: ", resp, len);
 
     if (!len) {
         OnError(2);
@@ -96,16 +97,25 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     if (flags & DISCONNECT)
         OnSuccess();
 
-    reply_old(CMD_ACK, 1, len, 0, resp, len);
+    reply_mix(CMD_ACK, 1, len, 0, resp, len);
 }
 
 void MifareDesfireGetInformation() {
 
+    LEDsoff();
+
     int len = 0;
     iso14a_card_select_t card;
     uint8_t resp[PM3_CMD_DATA_SIZE] = {0x00};
-    uint8_t dataout[PM3_CMD_DATA_SIZE] = {0x00};
 
+    struct p {
+        uint8_t isOK;
+        uint8_t uid[7];
+        uint8_t versionHW[7];
+        uint8_t versionSW[7];
+        uint8_t details[14];
+    } PACKED payload;
+    
     /*
         1 = PCB                 1
         2 = cid                 2
@@ -122,61 +132,65 @@ void MifareDesfireGetInformation() {
     // card select - information
     if (!iso14443a_select_card(NULL, &card, NULL, true, 0, false)) {
         if (DBGLEVEL >= DBG_ERROR) DbpString("Can't select card");
-        OnError(1);
+        payload.isOK = 1;  // 2 == can not select
+        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
+        switch_off();
         return;
     }
 
     if (card.uidlen != 7) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("Wrong UID size. Expected 7byte got %d", card.uidlen);
-        OnError(2);
+        payload.isOK = 2;  // 2 == WRONG UID
+        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
+        switch_off();
         return;
     }
-
-    memcpy(dataout, card.uid, 7);
+    // add uid.
+    memcpy(payload.uid, card.uid, sizeof(card.uid));
 
     LED_A_ON();
-    LED_B_OFF();
-    LED_C_OFF();
-
-    uint8_t cmd[] = {GET_VERSION};
+    uint8_t cmd[] = {GET_VERSION, 0x00, 0x00, 0x00};
     size_t cmd_len = sizeof(cmd);
 
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        OnError(3);
+        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
+        switch_off();
         return;
     }
 
-    LED_A_OFF();
-    LED_B_ON();
-    memcpy(dataout + 7, resp + 3, 7);
+    memcpy(payload.versionHW, resp + 1, sizeof(payload.versionHW));
 
     // ADDITION_FRAME 1
     cmd[0] = ADDITIONAL_FRAME;
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        OnError(3);
+        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
+        switch_off();
         return;
     }
-
-    LED_B_OFF();
-    LED_C_ON();
-    memcpy(dataout + 7 + 7, resp + 3, 7);
+    memcpy(payload.versionSW, resp + 1,  sizeof(payload.versionSW));
 
     // ADDITION_FRAME 2
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
-        OnError(3);
+        payload.isOK = 3;  // 3 == DOESNT ANSWER TO GET_VERSION
+        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
+        switch_off();
         return;
     }
 
-    memcpy(dataout + 7 + 7 + 7, resp + 3, 14);
+    memcpy(payload.details, resp + 1,  sizeof(payload.details));
 
-    reply_old(CMD_ACK, 1, 0, 0, dataout, sizeof(dataout));
-
+    LED_B_ON();
+    reply_ng(CMD_HF_DESFIRE_INFO, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
+    LED_B_OFF();
+    
     // reset the pcb_blocknum,
     pcb_blocknum = 0;
     OnSuccess();
@@ -517,7 +531,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
     }
 
     OnSuccess();
-    reply_old(CMD_ACK, 1, len, 0, resp, len);
+    reply_mix(CMD_ACK, 1, len, 0, resp, len);
 }
 
 // 3 different ISO ways to send data to a DESFIRE (direct, capsuled, capsuled ISO)
@@ -565,15 +579,20 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
     uint8_t cmd[cmdlen];
     memset(cmd, 0, cmdlen);
 
-    cmd[0] = 0x0A;  //  0x0A = send cid,  0x02 = no cid.
+    cmd[0] = 0x02;  //  0x0A = send cid,  0x02 = no cid.
     cmd[0] |= pcb_blocknum; // OR the block number into the PCB
-    cmd[1] = 0x00;  //  CID: 0x00 //TODO: allow multiple selected cards
+
+    cmd[1] = 0x90;  //  CID: 0x00 //TODO: allow multiple selected cards
 
     memcpy(cmd + 2, datain, len);
     AddCrc14A(cmd, len + 2);
-
+    
+/*
+hf 14a apdu -sk 90 60 00 00 00
+hf 14a apdu -k 90 AF 00 00 00
+hf 14a apdu 90AF000000
+*/
     memcpy(dataout, cmd, cmdlen);
-
     return cmdlen;
 }
 
