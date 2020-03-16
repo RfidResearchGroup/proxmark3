@@ -55,7 +55,6 @@ extern size_t DemodBufferLen;
 extern size_t g_DemodStartIdx;
 extern bool showDemod;
 extern uint8_t g_debugMode;
-extern uint8_t g_showhints;
 
 #ifndef FILE_PATH_SIZE
 #define FILE_PATH_SIZE 1000

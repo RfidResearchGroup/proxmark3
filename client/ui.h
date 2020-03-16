@@ -27,6 +27,7 @@ typedef struct {
     emojiMode_t emoji_mode;
     bool pm3_present;
     bool help_dump_mode;
+    bool show_hints;
 } session_arg_t;
 
 extern session_arg_t session;

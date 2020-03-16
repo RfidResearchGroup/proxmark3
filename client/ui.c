@@ -131,7 +131,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         return;
     
     // skip HINT messages if client has hints turned off i.e. 'HINT 0'
-    if (g_showhints == 0 && level == HINT)
+    if (session.show_hints == false && level == HINT)
         return;
 
     char prefix[40] = {0};
