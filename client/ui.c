@@ -391,7 +391,7 @@ void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter) {
 
 static bool emojify_token(const char *token, uint8_t token_length, const char **emojified_token, uint8_t *emojified_token_length, emojiMode_t mode) {
     int i = 0;
-    while (EmojiTable[i].alias) {
+    while (EmojiTable[i].alias && EmojiTable[i].emoji) {
         if ((strlen(EmojiTable[i].alias) == token_length) && (0 == memcmp(EmojiTable[i].alias, token, token_length))) {
             switch (mode) {
                 case EMOJI: {
@@ -402,7 +402,7 @@ static bool emojify_token(const char *token, uint8_t token_length, const char **
                 case ALTTEXT: {
                     int j = 0;
                     *emojified_token_length = 0;
-                    while (EmojiAltTable[j].alias) {
+                    while (EmojiAltTable[j].alias && EmojiAltTable[i].alttext) {
                         if ((strlen(EmojiAltTable[j].alias) == token_length) && (0 == memcmp(EmojiAltTable[j].alias, token, token_length))) {
                             *emojified_token = EmojiAltTable[j].alttext;
                             *emojified_token_length = strlen(EmojiAltTable[j].alttext);
