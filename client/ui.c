@@ -146,41 +146,31 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     switch (level) {
         case ERR:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix, " :rotating_light: ", sizeof(prefix) - 1);
+                strncpy(prefix,  _RED_("[!!]") " :rotating_light: ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, _RED_("[!!]"), sizeof(prefix) - 1);
             stream = stderr;
             break;
         case FAILED:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix, " :no_entry: ", sizeof(prefix) - 1);
+                strncpy(prefix, _RED_("[-]") " :no_entry: ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, _RED_("[-]"), sizeof(prefix) - 1);
             break;
         case DEBUG:
-            if (session.emoji_mode == EMOJI)
-                strncpy(prefix, " :speech_balloon: ", sizeof(prefix) - 1);
-            else
-                strncpy(prefix, _BLUE_("[#]"), sizeof(prefix) - 1);
-            break;
+            strncpy(prefix, _BLUE_("[#]"), sizeof(prefix) - 1);
         case HINT:
         case SUCCESS:
-            if (session.emoji_mode == EMOJI)
-                strncpy(prefix, " :star: ", sizeof(prefix) - 1);
-            else
-                strncpy(prefix, _GREEN_("[+]"), sizeof(prefix) - 1);
+            strncpy(prefix, _GREEN_("[+]"), sizeof(prefix) - 1);
             break;
         case WARNING:
             if (session.emoji_mode == EMOJI)
-                strncpy(prefix, " :warning:  ", sizeof(prefix) - 1);
+                strncpy(prefix, _CYAN_("[!]") " :warning:  ", sizeof(prefix) - 1);
             else
                 strncpy(prefix, _CYAN_("[!]"), sizeof(prefix) - 1);
             break;
         case INFO:
-            if (session.emoji_mode == EMOJI)
-                strncpy(prefix, " :information_source:  ", sizeof(prefix) - 1);
-            else
-                strncpy(prefix, _YELLOW_("[=]"), sizeof(prefix) - 1);
+            strncpy(prefix, _YELLOW_("[=]"), sizeof(prefix) - 1);
             break;
         case INPLACE:
             if (session.emoji_mode == EMOJI) {
@@ -331,10 +321,11 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 #endif
 
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
+        memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), ALTTEXT);
         if (filter_ansi) { // already done
-            fprintf(logfile, "%s\n", buffer2);
+            fprintf(logfile, "%s\n", buffer3);
         } else {
-            memcpy_filter_ansi(buffer, buffer2, sizeof(buffer2), true);
+            memcpy_filter_ansi(buffer, buffer3, sizeof(buffer3), true);
             fprintf(logfile, "%s\n", buffer);
         }
         fflush(logfile);
