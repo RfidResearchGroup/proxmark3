@@ -253,7 +253,7 @@ static int CmdLFTune(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_tune();
 
-    PrintAndLogEx(SUCCESS, "Measuring LF antenna at " _YELLOW_("%.2f") "kHz, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit", LF_DIV2FREQ(divisor));
+    PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") "kHz, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit", LF_DIV2FREQ(divisor));
 
     uint8_t params[] = {1, 0};
     params[1] = divisor;
@@ -295,7 +295,7 @@ static int CmdLFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Done.");
+    PrintAndLogEx(INFO, "Done.");
     return PM3_SUCCESS;
 }
 
