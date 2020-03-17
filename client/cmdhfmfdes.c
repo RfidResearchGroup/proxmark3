@@ -269,39 +269,25 @@ void getKeySettings(uint8_t *aid) {
         if (resp.length == 7 ) {
             
             // number of Master keys (0x01)
-            PrintAndLogEx(SUCCESS, "   [0x08] Number of Masterkeys      : %u", resp.data.asBytes[2]);
-            uint8_t setting = (resp.data.asBytes[2] >> 6);
-            switch(setting) {
-                case 0: 
-                    PrintAndLogEx(SUCCESS, "   [00] (3)DES operation of PICC master key");
-                    break;
-                case 1:
-                    PrintAndLogEx(SUCCESS, "   [01] 3K3DES operation of PICC master key");
-                    break;
-                case 2:
-                    PrintAndLogEx(SUCCESS, "   [02] AES operation of PICC master key");
-                    break;
-                default: 
-                    break;
-            }
-            
-            str = (resp.data.asBytes[2] & (1 << 3)) ? _GREEN_("YES") : "NO";
+            PrintAndLogEx(SUCCESS, "   Number of Masterkeys      : " _YELLOW_("%u"), resp.data.asBytes[2]);
+                        
+            str = (resp.data.asBytes[1] & (1 << 3)) ? _GREEN_("YES") : "NO";
             PrintAndLogEx(SUCCESS, "   [0x08] Configuration changeable       : %s", str);
-            str = (resp.data.asBytes[2] & (1 << 2)) ? "NO" : _GREEN_("YES");
+
+            str = (resp.data.asBytes[1] & (1 << 2)) ? _GREEN_("YES") : "NO";
             PrintAndLogEx(SUCCESS, "   [0x04] CMK required for create/delete : %s", str);
-            str = (resp.data.asBytes[2] & (1 << 1)) ? "NO" : _GREEN_("YES");
+
+            str = (resp.data.asBytes[1] & (1 << 1)) ? _GREEN_("YES") : "NO";
             PrintAndLogEx(SUCCESS, "   [0x02] Directory list access with CMK : %s", str);
-            str = (resp.data.asBytes[2] & (1 << 0)) ? _GREEN_("YES") : "NO";
+
+            str = (resp.data.asBytes[1] & (1 << 0)) ? _GREEN_("YES") : "NO";
             PrintAndLogEx(SUCCESS, "   [0x01] CMK is changeable              : %s", str);
         }
 
-                     // dd == key version
-                     //     cla ins             p1   p2     lc    dd   le
-        {            //     90, 64,                       
-            uint8_t data[] = {GET_KEY_VERSION, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x64
+        {
+            uint8_t data[] = {GET_KEY_VERSION, 0x00, 0x00, 0x01, 0x0, 0x00};  // 0x64
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
-
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) { return; }
         isOK  = resp.oldarg[0] & 0xff;
         if (!isOK) {
@@ -310,21 +296,18 @@ void getKeySettings(uint8_t *aid) {
         }
         if (resp.length == 6) {
             PrintAndLogEx(SUCCESS, "");
-            PrintAndLogEx(SUCCESS, "   Max number of keys       : " _YELLOW_("%d"), resp.data.asBytes[1]);
             PrintAndLogEx(SUCCESS, "   Master key Version       : " _YELLOW_("%d (0x%02x)"), resp.data.asBytes[3], resp.data.asBytes[3]);
             PrintAndLogEx(INFO, "   ----------------------------------------------------------");
         }
         
-
         {
-             //           cla ins           p1    p2     lc    dd   le
             uint8_t data[] = {AUTHENTICATE, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x0A, KEY 0
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
-
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
-        PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
+        if (resp.length == 13)
+            PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
 
         {
             uint8_t data[] = {AUTHENTICATE_ISO, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x1A, KEY 0
@@ -333,16 +316,19 @@ void getKeySettings(uint8_t *aid) {
 
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
-        PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
+        if (resp.length >= 13)
+            PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
 
         {
-            uint8_t data[] = {AUTHENTICATE_AES, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0xAA, KEY 0
+            uint8_t data[] = {AUTHENTICATE_AES, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0xAA, KEY 0
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
         isOK  = resp.data.asBytes[2] & 0xff;
-        PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
+        if (resp.length == 13)
+            PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
+
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     } else {
