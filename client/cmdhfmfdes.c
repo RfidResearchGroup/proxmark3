@@ -52,7 +52,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
     bool is_valid = (res == 0);
 
     PrintAndLogEx(INFO, "  Tag Signature");
-    PrintAndLogEx(INFO, "  IC signature public key name  : NXP ???");
+    PrintAndLogEx(INFO, "  IC signature public key name  : NXP DESFire Light");
     PrintAndLogEx(INFO, "  IC signature public key value : %s", sprint_hex(nxp_desfire_keys[public_key], 16));
     PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 16, 16));
     PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 32, 16));
@@ -124,7 +124,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-- Desfire Information --------------------------------------");
+    PrintAndLogEx(INFO, "-- Mifare DESFire Tag Information ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "  UID                : " _GREEN_("%s"), sprint_hex(package->uid, sizeof(package->uid)));
     PrintAndLogEx(SUCCESS, "  Batch number       : " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
@@ -413,7 +413,7 @@ void getKeySettings(uint8_t *aid) {
             PrintAndLogEx(WARNING, "   Can't read Application Master key version. Trying all keys");
             //numOfKeys = MAX_NUM_KEYS;
         } else {
-            numOfKeys = resp.data.asBytes[4];
+            numOfKeys = resp.data.asBytes[1];
             PrintAndLogEx(SUCCESS, "     Max number of keys  : %d", numOfKeys);
             PrintAndLogEx(SUCCESS, "     Application Master key Version  : %d (0x%02x)", resp.data.asBytes[3], resp.data.asBytes[3]);
             PrintAndLogEx(INFO, "-------------------------------------------------------------");
@@ -532,6 +532,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
 }
+
 
 // MIAFRE DesFire Authentication
 //
