@@ -32,6 +32,7 @@ static  uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
 /*                                       PCB   CID   CMD    PAYLOAD    */
 //static uint8_t __res[MAX_FRAME_SIZE];
 
+
 bool InitDesfireCard() {
 
     iso14a_card_select_t card;

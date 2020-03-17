@@ -17,6 +17,8 @@
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "mbedtls/des.h"
+#include "crypto/libpcrypto.h"
+#include "protocols.h"
 
 uint8_t key_zero_data[16] = { 0x00 };
 uint8_t key_ones_data[16] = { 0x01 };
@@ -24,6 +26,63 @@ uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x
 uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
 
 static int CmdHelp(const char *Cmd);
+
+static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len) {
+    #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
+
+    // ref:  MIFARE Desfire Originality Signature Validation
+    uint8_t nxp_desfire_keys[1][PUBLIC_DESFIRE_ECDA_KEYLEN] = {
+        // DESFire Light
+        {
+            0x04, 0x0E, 0x98, 0xE1, 0x17, 0xAA, 0xA3, 0x64,
+            0x57, 0xF4, 0x31, 0x73, 0xDC, 0x92, 0x0A, 0x87,
+            0x57, 0x26, 0x7F, 0x44, 0xCE, 0x4E, 0xC5, 0xAD,
+            0xD3, 0xC5, 0x40, 0x75, 0x57, 0x1A, 0xEB, 0xBF,
+            0x7B, 0x94, 0x2A, 0x97, 0x74, 0xA1, 0xD9, 0x4A,
+            0xD0, 0x25, 0x72, 0x42, 0x7E, 0x5A, 0xE0, 0xA2,
+            0xDD, 0x36, 0x59, 0x1B, 0x1F, 0xB3, 0x4F, 0xCF, 0x3D
+        }
+        // DESFire Ev2
+        
+    };
+
+    uint8_t public_key = 0;
+    int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, nxp_desfire_keys[public_key], uid, 7, signature, signature_len, false);
+    bool is_valid = (res == 0);
+
+    PrintAndLogEx(INFO, "  Tag Signature");
+    PrintAndLogEx(INFO, "  IC signature public key name  : NXP ???");
+    PrintAndLogEx(INFO, "  IC signature public key value : %s", sprint_hex(nxp_desfire_keys[public_key], 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 16, 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 32, 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 48, PUBLIC_DESFIRE_ECDA_KEYLEN - 48));
+    PrintAndLogEx(INFO, "      Elliptic curve parameters : NID_secp224r1");
+    PrintAndLogEx(INFO, "               TAG IC Signature : %s", sprint_hex(signature, 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 16, 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 32, 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 48, signature_len - 48));
+    PrintAndLogEx( (is_valid) ? SUCCESS : WARNING, "  Signature verified %s", (is_valid) ? _GREEN_("successful") : _RED_("failed"));
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    return PM3_SUCCESS;
+}
+static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
+
+    PacketResponseNG resp;
+
+    uint8_t c[] = {MFDES_READSIG, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x3C
+    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, (INIT | DISCONNECT), sizeof(c), 0, c, sizeof(c));
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
+        return PM3_ETIMEOUT;
+
+    if (resp.length == 61) {
+        memcpy(signature, resp.data.asBytes + 1, 56);
+        *signature_len = 56;
+        return PM3_SUCCESS;
+    } else {
+        *signature_len = 0;
+        return PM3_ESOFT;        
+    }
+}
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -87,6 +146,13 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "      Protocol       : %s", getProtocolStr(package->versionSW[6]));
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
+    // Signature originality check
+    uint8_t signature[56] = {0};
+    size_t signature_len = 0;
+    
+    if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS) 
+        desfire_print_signature(package->uid, signature, signature_len);
+
     // Master Key settings
     getKeySettings(NULL);
 
@@ -96,6 +162,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
         return PM3_ETIMEOUT;
 
+    PrintAndLogEx(INFO, "  Free memory");    
     // Desfire Light doesn't support FREEMEM (len = 5)
     if (resp.length == 8) {
         uint8_t tmp[3];
@@ -119,7 +186,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         keys 12,13,14,15 R
 
     */
-
     return PM3_SUCCESS;
 }
 
@@ -186,7 +252,7 @@ void getKeySettings(uint8_t *aid) {
         
         // CARD MASTER KEY 
 
-        PrintAndLogEx(SUCCESS, "   CMK - PICC, Card Master Key settings");
+        PrintAndLogEx(INFO, "  CMK - PICC, Card Master Key settings");
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
         {
             uint8_t data[] = {GET_KEY_SETTINGS, 0x00, 0x00, 0x00};  // 0x45
