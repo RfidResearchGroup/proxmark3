@@ -895,12 +895,12 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
     int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, public_keys[public_key], uid, 7, signature, signature_len, false);
     bool is_valid = (res == 0);
 
-    PrintAndLogEx(NORMAL, "\n--- Tag Signature");
-    PrintAndLogEx(NORMAL, "IC signature public key name  : NXP NTAG21x (2013)");
-    PrintAndLogEx(NORMAL, "IC signature public key value : %s", sprint_hex(public_keys[public_key], PUBLIC_ECDA_KEYLEN));
-    PrintAndLogEx(NORMAL, "    Elliptic curve parameters : NID_secp128r1");
-    PrintAndLogEx(NORMAL, "             TAG IC Signature : %s", sprint_hex(signature, signature_len));
-    PrintAndLogEx(NORMAL, "Signature verified %s", (is_valid) ? _GREEN_("successful") : _RED_("failed"));
+    PrintAndLogEx(INFO, "\n--- Tag Signature");
+    PrintAndLogEx(INFO, "IC signature public key name  : NXP NTAG21x (2013)");
+    PrintAndLogEx(INFO, "IC signature public key value : %s", sprint_hex(public_keys[public_key], PUBLIC_ECDA_KEYLEN));
+    PrintAndLogEx(INFO, "    Elliptic curve parameters : NID_secp128r1");
+    PrintAndLogEx(INFO, "             TAG IC Signature : %s", sprint_hex(signature, signature_len));
+    PrintAndLogEx(SUCCESS, "Signature verified %s", (is_valid) ? _GREEN_("successful") : _RED_("failed"));
     return PM3_SUCCESS;
 }
 
