@@ -296,26 +296,6 @@ uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
     MAX_ULEV1a_BLOCKS, MAX_NTAG_213,  MAX_NTAG_216,   MAX_UL_NANO_40,    MAX_NTAG_I2C_1K
 };
 
-static int ul_ev1_pwdgen_selftest() {
-
-    uint8_t uid1[] = {0x04, 0x11, 0x12, 0x11, 0x12, 0x11, 0x10};
-    uint32_t pwd1 = ul_ev1_pwdgenA(uid1);
-    PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid1, 7), pwd1, (pwd1 == 0x8432EB17) ? "OK" : "->8432EB17<-");
-
-    uint8_t uid2[] = {0x04, 0x1f, 0x98, 0xea, 0x1e, 0x3e, 0x81};
-    uint32_t pwd2 = ul_ev1_pwdgenB(uid2);
-    PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid2, 7), pwd2, (pwd2 == 0x5fd37eca) ? "OK" : "->5fd37eca<--");
-
-    uint8_t uid3[] = {0x04, 0x62, 0xB6, 0x8A, 0xB4, 0x42, 0x80};
-    uint32_t pwd3 = ul_ev1_pwdgenC(uid3);
-    PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid3, 7), pwd3, (pwd3 == 0x5a349515) ? "OK" : "->5a349515<--");
-
-    uint8_t uid4[] = {0x04, 0xC5, 0xDF, 0x4A, 0x6D, 0x51, 0x80};
-    uint32_t pwd4 = ul_ev1_pwdgenD(uid4);
-    PrintAndLogEx(NORMAL, "UID | %s | %08X | %s", sprint_hex(uid4, 7), pwd4, (pwd4 == 0x72B1EC61) ? "OK" : "->72B1EC61<--");
-    return PM3_SUCCESS;
-}
-
 //------------------------------------
 // get version nxp product type
 static char *getProductTypeStr(uint8_t id) {
@@ -2578,7 +2558,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0  || cmdp == 'h') return usage_hf_mfu_pwdgen();
 
-    if (cmdp == 't') return ul_ev1_pwdgen_selftest();
+    if (cmdp == 't') return generator_selftest();
 
     if (cmdp == 'r') {
         // read uid from tag
