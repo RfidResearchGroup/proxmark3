@@ -15,6 +15,7 @@
 #include "mbedtls/aes.h"
 #include "commonutil.h"
 #include "util.h"
+#include "mifare.h"
 
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
@@ -35,6 +36,8 @@ static  uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
 
 bool InitDesfireCard() {
 
+    pcb_blocknum = 0;
+
     iso14a_card_select_t card;
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -48,28 +51,14 @@ bool InitDesfireCard() {
     return true;
 }
 
-// ARG0 flag enums
-enum  {
-    NONE       = 0x00,
-    INIT       = 0x01,
-    DISCONNECT = 0x02,
-    CLEARTRACE = 0x04,
-    BAR        = 0x08,
-} CmdOptions ;
-
 void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 
-    /* ARG0 contains flags.
-        0x01 = init card.
-        0x02 = Disconnect
-        0x03
-    */
     uint8_t flags = arg0;
     size_t datalen = arg1;
     uint8_t resp[RECEIVE_SIZE];
     memset(resp, 0, sizeof(resp));
 
-    if (DBGLEVEL >= 4) {
+    if (DBGLEVEL >= DBG_EXTENDED) {
         Dbprintf(" flags : %02X", flags);
         Dbprintf(" len   : %02X", datalen);
         print_result(" RX    : ", datain, datalen);
@@ -79,21 +68,19 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
         clear_trace();
 
     if (flags & INIT) {
-        if (!InitDesfireCard())
+        if (!InitDesfireCard()) {
             return;
+        }
     }
 
     int len = DesfireAPDU(datain, datalen, resp);
-    if (DBGLEVEL >= 4)
+    if (DBGLEVEL >= DBG_EXTENDED)
         print_result("RESP <--: ", resp, len);
 
     if (!len) {
         OnError(2);
         return;
     }
-
-    // reset the pcb_blocknum,
-    pcb_blocknum = 0;
 
     if (flags & DISCONNECT)
         OnSuccess();
@@ -482,7 +469,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
 
             // dekryptera tagnonce.
             if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-                if (DBGLEVEL >= 4) {
+                if (DBGLEVEL >= DBG_EXTENDED) {
                     DbpString("mbedtls_aes_setkey_dec failed");
                 }
                 OnError(7);
@@ -495,7 +482,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             memcpy(both + 16, decRndB, 16);
             uint8_t encBoth[32] = {0x00};
             if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
-                if (DBGLEVEL >= 4) {
+                if (DBGLEVEL >= DBG_EXTENDED) {
                     DbpString("mbedtls_aes_setkey_enc failed");
                 }
                 OnError(7);
@@ -549,23 +536,23 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
 
     wrappedLen = CreateAPDU(cmd, cmd_len, wCmd);
 
-    if (DBGLEVEL >= 4)
+    if (DBGLEVEL >= DBG_EXTENDED)
         print_result("WCMD <--: ", wCmd, wrappedLen);
 
     ReaderTransmit(wCmd, wrappedLen, NULL);
 
     len = ReaderReceive(resp, par);
     if (!len) {
-        if (DBGLEVEL >= 4) Dbprintf("fukked");
+        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("fukked");
         return false; //DATA LINK ERROR
     }
     // if we received an I- or R(ACK)-Block with a block number equal to the
     // current block number, toggle the current block number
-    else if (len >= 4 // PCB+CID+CRC = 4 bytes
+    if (len >= 4 // PCB+CID+CRC = 4 bytes
              && ((resp[0] & 0xC0) == 0 // I-Block
                  || (resp[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
              && (resp[0] & 0x01) == pcb_blocknum) { // equal block numbers
-        pcb_blocknum ^= 1;  //toggle next block
+        pcb_blocknum ^= 1;  //toggle next block   
     }
 
     memcpy(dataout, resp, len);
@@ -582,6 +569,8 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 
     cmd[0] = 0x02;  //  0x0A = send cid,  0x02 = no cid.
     cmd[0] |= pcb_blocknum; // OR the block number into the PCB
+
+    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("pcb_blocknum %d == %d ", pcb_blocknum, cmd[0] );
 
     cmd[1] = 0x90;  //  CID: 0x00 //TODO: allow multiple selected cards
 

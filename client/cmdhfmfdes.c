@@ -19,6 +19,7 @@
 #include "mbedtls/des.h"
 #include "crypto/libpcrypto.h"
 #include "protocols.h"
+#include "mifare.h"         // desfire raw command options
 
 uint8_t key_zero_data[16] = { 0x00 };
 uint8_t key_ones_data[16] = { 0x01 };
@@ -299,54 +300,49 @@ void getKeySettings(uint8_t *aid) {
             PrintAndLogEx(SUCCESS, "   Master key Version       : " _YELLOW_("%d (0x%02x)"), resp.data.asBytes[3], resp.data.asBytes[3]);
             PrintAndLogEx(INFO, "   ----------------------------------------------------------");
         }
-        
+                
         {
+            // 0x0A
             uint8_t data[] = {AUTHENTICATE, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x0A, KEY 0
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
-        isOK  = resp.data.asBytes[2] & 0xff;
-        if (resp.length == 13)
-            PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
+        PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (resp.length == 13) ? _YELLOW_("YES") : "NO");
 
         {
+            // 0x1A
             uint8_t data[] = {AUTHENTICATE_ISO, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x1A, KEY 0
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
-
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
-        isOK  = resp.data.asBytes[2] & 0xff;
-        if (resp.length >= 13)
-            PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
+        PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (resp.length >= 13) ? _YELLOW_("YES") : "NO");
 
         {
+            // 0xAA
             uint8_t data[] = {AUTHENTICATE_AES, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0xAA, KEY 0
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
-
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {return;}
-        isOK  = resp.data.asBytes[2] & 0xff;
-        if (resp.length == 13)
-            PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (isOK == 0xAE) ? "NO" : _YELLOW_("YES"));
+        PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (resp.length >= 13) ? _YELLOW_("YES") : "NO");
 
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     } else {
         
-        // AID - APPLICATIO MASTER KEYS
+        // AID - APPLICATION MASTER KEYS
         
         PrintAndLogEx(SUCCESS, " AMK - Application Master Key settings");
-        PrintAndLogEx(INFO, "   ----------------------------------------------------------");
-        PrintAndLogEx(INFO, "Selecting AID:  %s", sprint_hex(aid, 3) );
+        PrintAndLogEx(INFO, " ----------------------------------------------------------");
+        PrintAndLogEx(INFO, "   select AID: " _YELLOW_("%s"), sprint_hex(aid, 3) );
 
         // SELECT AID
         {
-            uint8_t data[] = {SELECT_APPLICATION, 0x00, 0x00, 0x00};  // 0x5a
-            memcpy(data + 1, aid, 3);
-            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | CLEARTRACE, sizeof(data), 0, data, sizeof(data));
+            uint8_t data[] = {SELECT_APPLICATION, 0x00, 0x00, 0x03, aid[0], aid[1], aid[2], 0x00};  // 0x5a
+            //memcpy(data + 1, aid, 3);
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT, sizeof(data), 0, data, sizeof(data));
         }
 
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
             PrintAndLogEx(WARNING, _RED_("   Timed-out"));
             return;
         }
@@ -362,7 +358,7 @@ void getKeySettings(uint8_t *aid) {
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
 
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
             return;
         }
         isOK  = resp.oldarg[0] & 0xff;
@@ -370,15 +366,15 @@ void getKeySettings(uint8_t *aid) {
             PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
         } else {
             // Access rights.
-            uint8_t rights = (resp.data.asBytes[3] >> 4 & 0xff);
+            uint8_t rights = (resp.data.asBytes[1] >> 4 & 0x0F);
             switch (rights) {
-                case 0x00:
+                case 0x0:
                     str = "AMK authentication is necessary to change any key (default)";
                     break;
-                case 0x0e:
+                case 0xE:
                     str = "Authentication with the key to be changed (same KeyNo) is necessary to change a key";
                     break;
-                case 0x0f:
+                case 0xF:
                     str = "All keys (except AMK,see Bit0) within this application are frozen";
                     break;
                 default:
@@ -389,20 +385,20 @@ void getKeySettings(uint8_t *aid) {
             PrintAndLogEx(SUCCESS, "-- " _GREEN_("%s"), str);
             PrintAndLogEx(SUCCESS, "");
             // same as CMK
-            str = (resp.data.asBytes[3] & (1 << 3)) ? "YES" : "NO";
+            str = (resp.data.asBytes[1] & (1 << 3)) ? "YES" : "NO";
             PrintAndLogEx(SUCCESS, "   0x08 Configuration changeable       : %s", str);
-            str = (resp.data.asBytes[3] & (1 << 2)) ? "NO" : "YES";
+            str = (resp.data.asBytes[1] & (1 << 2)) ? "NO" : "YES";
             PrintAndLogEx(SUCCESS, "   0x04 AMK required for create/delete : %s", str);
-            str = (resp.data.asBytes[3] & (1 << 1)) ? "NO" : "YES";
+            str = (resp.data.asBytes[1] & (1 << 1)) ? "NO" : "YES";
             PrintAndLogEx(SUCCESS, "   0x02 Directory list access with AMK : %s", str);
-            str = (resp.data.asBytes[3] & (1 << 0)) ? "YES" : "NO";
+            str = (resp.data.asBytes[1] & (1 << 0)) ? "YES" : "NO";
             PrintAndLogEx(SUCCESS, "   0x01 AMK is changeable              : %s", str);
         }
 
         // KEY VERSION  - AMK
         {
-            uint8_t data[] = {GET_KEY_VERSION, 0x00, 0x00, 0x00};  // 0x64
-            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
+            uint8_t data[] = {GET_KEY_VERSION, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x64
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -439,8 +435,8 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t isOK = 0x00;
     uint8_t aid[3];
     {
-        uint8_t data[1] = {GET_APPLICATION_IDS}; //0x6a
-        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | DISCONNECT, sizeof(data), 0, data, sizeof(data));
+        uint8_t data[] = {GET_APPLICATION_IDS, 0x00, 0x00, 0x00}; //0x6a
+        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | CLEARTRACE | DISCONNECT, sizeof(data), 0, data, sizeof(data));
     }
     PacketResponseNG resp;
 
@@ -454,17 +450,18 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         return PM3_ESOFT;
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "-- Desfire Enumerate Applications ---------------------------");
+    PrintAndLogEx(INFO, "-- Desfire Enumerate Applications ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
-    PacketResponseNG respAid;
-    PacketResponseNG respFiles;
+//    PacketResponseNG respAid;
+//    PacketResponseNG respFiles;
 
     uint8_t num = 0;
     int max = resp.oldarg[1] - 3 - 2;
+    PrintAndLogEx(INFO," MAX %d", max);
 
-    for (int i = 3; i <= max; i += 3) {
-        PrintAndLogEx(SUCCESS, " Aid %d : %02X %02X %02X ", num, resp.data.asBytes[i], resp.data.asBytes[i + 1], resp.data.asBytes[i + 2]);
+    for (int i = 1; i < max; i += 3) {
+        PrintAndLogEx(SUCCESS, " Aid %d : %02X %02X %02X ", num, resp.data.asBytes[i], resp.data.asBytes[i+1], resp.data.asBytes[i+2]);
         num++;
 
         aid[0] = resp.data.asBytes[i];
@@ -472,11 +469,11 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         aid[2] = resp.data.asBytes[i + 2];
         getKeySettings(aid);
 
+/*
         // Select Application
         {
-            uint8_t data[4] = {SELECT_APPLICATION};  // 0x5a
-            memcpy(data + 1, &resp.data.asBytes[i], 3);
-            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT, sizeof(data), 0, data, sizeof(data));
+            uint8_t data[] = {SELECT_APPLICATION, 0x00, 0x00, 0x03, aid[0], aid[1], aid[2], 0x00};  // 0x5a    
+            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
 
         if (!WaitForResponseTimeout(CMD_ACK, &respAid, 1500)) {
@@ -491,7 +488,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
         // Get File IDs
         {
-            uint8_t data[1] = {GET_FILE_IDS};  // 0x6f
+            uint8_t data[] = {GET_FILE_IDS, 0x00, 0x00, 0x00};  // 0x6f
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(data), 0, data, sizeof(data));
         }
 
@@ -512,7 +509,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
         // Get ISO File IDs
         {
-            uint8_t data[1] = {GET_ISOFILE_IDS};  // 0x61
+            uint8_t data[] = {GET_ISOFILE_IDS, 0x00, 0x00, 0x00};  // 0x61
             SendCommandMIX(CMD_HF_DESFIRE_COMMAND, DISCONNECT, sizeof(data), 0, data, sizeof(data));
         }
 
@@ -530,6 +527,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
                 }
             }
         }
+        */
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
