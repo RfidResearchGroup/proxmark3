@@ -138,10 +138,10 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 PrintAndLogEx(INFO, "SL 0: initial delivery configuration, used for card personalization");
                 break;
             case 1:
-                PrintAndLogEx(INFO, "SL 1: backwards functional compatibility mode (with MIFARE Classic 1K and MIFARE Classic 4K) with an optional AES authentication");
+                PrintAndLogEx(INFO, "SL 1: backwards functional compatibility mode (with MIFARE Classic 1K / 4K) with an optional AES authentication");
                 break;
             case 2: 
-                PrintAndLogEx(INFO, "SL 2: ");
+                PrintAndLogEx(INFO, "SL 2: 3-Pass Authentication based on AES followed by MIFARE CRYPTO1 authentication, communication secured by MIFARE CRYPTO1");
                 break;
             case 3: 
                 PrintAndLogEx(INFO, "SL 3: 3-Pass authentication based on AES, data manipulation commands secured by AES encryption and an AES based MACing method.");
