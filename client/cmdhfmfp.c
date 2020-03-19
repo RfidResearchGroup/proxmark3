@@ -65,35 +65,51 @@ static int CmdHFMFPInfo(const char *Cmd) {
         // MIFARE Type Identification Procedure
         // https://www.nxp.com/docs/en/application-note/AN10833.pdf
         uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
-        if (ATQA == 0x0004) PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 2K") "  (4b UID)");
-        if (ATQA == 0x0002) PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 4K") "  (4b UID)");
-        if (ATQA == 0x0044) PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 2K") "  (7b UID)");
-        if (ATQA == 0x0042) PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 4K") "  (7b UID)");
+       
+        bool isPlus = false;
+        
+        if (ATQA == 0x0004) {
+            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 2K") "  (4b UID)");
+            isPlus = true;
+        }
+        if (ATQA == 0x0002) {
+            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 4K") "  (4b UID)");
+            isPlus = true;
+        }
+        if (ATQA == 0x0044) {
+            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 2K") "  (7b UID)");
+            isPlus = true;
+        }
+        if (ATQA == 0x0042) {
+            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 4K") "  (7b UID)");
+            isPlus = true;
+        }
 
         uint8_t SLmode = 0xff;
-        if (card.sak == 0x08) {
-            PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 2K 7b UID"));
-            if (select_status == 2) SLmode = 1;
+        if (isPlus) {
+            if (card.sak == 0x08) {
+                PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 2K 7b UID"));
+                if (select_status == 2) SLmode = 1;
+            }
+            if (card.sak == 0x18) {
+                PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 4K 7b UID"));
+                if (select_status == 2) SLmode = 1;
+            }
+            if (card.sak == 0x10) {
+                PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 2K"));
+                if (select_status == 2) SLmode = 2;
+            }
+            if (card.sak == 0x11) {
+                PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 4K"));
+                if (select_status == 2) SLmode = 2;
+            }
         }
-        if (card.sak == 0x18) {
-            PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 4K 7b UID"));
-            if (select_status == 2) SLmode = 1;
-        }
-        if (card.sak == 0x10) {
-            PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 2K"));
-            if (select_status == 2) SLmode = 2;
-        }
-        if (card.sak == 0x11) {
-            PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 4K"));
-            if (select_status == 2) SLmode = 2;
-        }
+
         if (card.sak == 0x20) {
             PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus SL0/SL3") "or " _GREEN_("Mifare DESFire"));
 
             if (card.ats_len > 0) {
 
-                PrintAndLogEx(INFO, "");
-                PrintAndLogEx(INFO, " SL fingerprint");
                 SLmode = 3;
                 // check SL0
                 uint8_t data[250] = {0};
@@ -102,12 +118,38 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen, false);
 
+                if (memcmp(data, "\x67\x00", 2) == 0) {
+                    PrintAndLogEx(INFO, "\tMost likely a Mifare DESFire tag"); 
+                    PrintAndLogEx(HINT, "Hint:  Try " _YELLOW_("`hf mfdes info`"));
+                    DropField();
+                    return PM3_SUCCESS;
+                }
+
                 if (!res && datalen > 1 && data[0] == 0x09) {
                     SLmode = 0;
                 }
             }
         }
 
+// How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
+        PrintAndLogEx(INFO, "Security Level (SL)");
+        switch(SLmode) {
+            case 0: 
+                PrintAndLogEx(INFO, "SL 0: initial delivery configuration, used for card personalization");
+                break;
+            case 1:
+                PrintAndLogEx(INFO, "SL 1: backwards functional compatibility mode (with MIFARE Classic 1K and MIFARE Classic 4K) with an optional AES authentication");
+                break;
+            case 2: 
+                PrintAndLogEx(INFO, "SL 2: ");
+                break;
+            case 3: 
+                PrintAndLogEx(INFO, "SL 3: 3-Pass authentication based on AES, data manipulation commands secured by AES encryption and an AES based MACing method.");
+                break;
+            default: 
+                break;
+        }
+        
         if (SLmode != 0xFF)
             PrintAndLogEx(SUCCESS, "\tMifare Plus SL mode: " _YELLOW_("SL%d"), SLmode);
         else
@@ -117,7 +159,6 @@ static int CmdHFMFPInfo(const char *Cmd) {
     }
 
     DropField();
-
     return PM3_SUCCESS;
 }
 
