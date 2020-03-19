@@ -58,7 +58,11 @@ static void showBanner(void) {
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
-        rl_set_prompt(PROXPROMPT_OFFLINE);
+        if (session.supports_colors)
+            rl_set_prompt(PROXPROMPT_OFFLINE_COLOR);
+        else
+            rl_set_prompt(PROXPROMPT_OFFLINE);
+
         rl_forced_update_display();
         CloseProxmark();
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use "_YELLOW_("\"hw connect\"") "to reconnect\n");
@@ -150,7 +154,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        const char *prompt = PROXPROMPT_CON;
+        const char *prompt = (session.supports_colors) ? PROXPROMPT_CON_COLOR : PROXPROMPT_CON;
 
 check_script:
         // If there is a script file
@@ -214,11 +218,11 @@ check_script:
                     rl_event_hook = check_comm;
                     if (session.pm3_present) {
                         if (conn.send_via_fpc_usart == false)
-                            prompt = PROXPROMPT_USB;
+                            prompt = (session.supports_colors) ? PROXPROMPT_USB_COLOR : PROXPROMPT_USB;
                         else
-                            prompt = PROXPROMPT_FPC;
+                            prompt = (session.supports_colors) ? PROXPROMPT_FPC_COLOR : PROXPROMPT_FPC;
                     } else {
-                        prompt = PROXPROMPT_OFFLINE;
+                        prompt = (session.supports_colors) ? PROXPROMPT_OFFLINE_COLOR : PROXPROMPT_OFFLINE;
                     }
                     cmd = readline(prompt);
                     fflush(NULL);
