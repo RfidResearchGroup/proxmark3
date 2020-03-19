@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix 'hf mfdes enum' - now actually manages to enumerate files under all AID's. :smiley:  (@iceman1001)
+ - Fix 'hf mfdes info' - now detects DESFire light and work properly Wrapped commands :+1: (@iceman1001)
  - :smiling_imp: support (@doegox)
  - Additional colour changes as recommended by @iceman (@dunderhay)
  - Change type colour for `hf 14a` card types (@dunderhay)
