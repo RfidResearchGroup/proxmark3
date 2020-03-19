@@ -1,4 +1,5 @@
 local utils = require('utils')
+local getopt = require('getopt')
 local read14a = require('read14a')
 local uid = {} -- Array for eml files
 local B = {} -- Array for B keys
@@ -29,6 +30,17 @@ usage = [[
     You should choose your *.eml dump from being list to write it to the card by wizard
 ]]
 
+---
+-- Usage help
+local function help()
+    print(copyright)
+    print(author)
+    print(version)
+    print(desc)
+    print(example)
+    print(usage)
+end
+
 local function read()
     u = read14a.read(true, true).uid
     return u
@@ -49,6 +61,11 @@ local function wait()
 end
 
 local function main(args)
+    -- Arguments for the script
+    for o, a in getopt.getopt(args, 'h') do
+        if o == 'h' then return help() end
+    end
+
     --File lienght check for detect 4 or 7 bytes
     wait()
     print(tab)
