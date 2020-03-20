@@ -2399,13 +2399,13 @@ void SendForward(uint8_t fwd_bit_count) {
     TurnReadLF_off(EM_START_GAP);
     TurnReadLFOn(18 * 8);
 
-    // now start writting with bitbanging the antenna.
+    // now start writting with bitbanging the antenna. (each bit should be 32*8 total length)
     while (fwd_bit_sz-- > 0) { //prepare next bit modulation
         if (((*fwd_write_ptr++) & 1) == 1) {
             WaitUS(32 * 8);
         } else {
             TurnReadLF_off(23 * 8);
-            TurnReadLFOn(18 * 8);
+            TurnReadLFOn(32-23 * 8);
         }
     }
 }
