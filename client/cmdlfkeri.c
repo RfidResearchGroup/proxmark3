@@ -32,18 +32,18 @@ static int usage_lf_keri_clone(void) {
     PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
     PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] c <cardid> [Q5]");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h          : This help");
-    PrintAndLogEx(NORMAL, "      <id>       : Keri Internal ID");
-    PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
+    PrintAndLogEx(NORMAL, "      h            : This help");
+    PrintAndLogEx(NORMAL, "      <id>         : Keri Internal ID");
+    PrintAndLogEx(NORMAL, "      <Q5>         : specify write to Q5 (t5555 instead of t55x7)");
     // New format
-    PrintAndLogEx(NORMAL, "      <t> [m|i]  : Type. m - MS, i - Internal ID");
-    PrintAndLogEx(NORMAL, "      <f> <fc>   : Facility Code");
-    PrintAndLogEx(NORMAL, "      <c> <cid>  : Card ID");
+    PrintAndLogEx(NORMAL, "      <t> [m|i]    : Type. m - MS, i - Internal ID");
+    PrintAndLogEx(NORMAL, "      <f> <fc>     : Facility Code");
+    PrintAndLogEx(NORMAL, "      <c> <cardid> : Card ID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf keri clone 112233");
-    PrintAndLogEx(NORMAL, "       lf keri clone type ms fc 6 id 12345");
-    PrintAndLogEx(NORMAL, "       lf keri clone t m f 6 i 12345");
+    PrintAndLogEx(NORMAL, "       lf keri clone type ms fc 6 cardid 12345");
+    PrintAndLogEx(NORMAL, "       lf keri clone t m f 6 c 12345");
     
     return PM3_SUCCESS;
 }
