@@ -1,33 +1,45 @@
 local utils = require('utils')
 local getopt = require('getopt')
 local read14a = require('read14a')
-local uid = {} -- Array for eml files
-local B = {} -- Array for B keys
-local eml = {} -- Array for data in block 32 dig
-local a = 0
-local b = 0
-local tab = string.rep('-', 64)
+
+[[--
+---Suggestions of improvement:
+--- Add support another types of dumps: BIN, JSON
+--- Maybe it will be not only as `mfc_gen3_writer`, like a universal dump manager.
+--- Add undependence from the operation system. At the moment code not working in Linux.
+--- Add more chinesse backdoors RAW commands for UID changing (find RAW for the 4 byte familiar chinese card, from native it soft: http://bit.ly/39VIDsU)
+--- Hide system messages when you writing a dumps, replace it to some of like [#####----------] 40%
+
+-- iceman notes:
+--  doesn't take consideration filepaths for dump files.
+--  doesn't allow A keys for authenticating when writing
+--  doesn't verify that card is magic gen3.
+--]]
 
 copyright = ''
 author = 'Winds'
 version = 'v1.0.0'
 desc = [[
-    That's script gives for you a easy way to write your an *.eml dumps, using a Proxmark 3.
-    It's working for 4 and 7 bytes NXP MIFARE Classic 1K cards.
-    The script has including an injection of UID changig for the Chinese Magic Cards GEN 3.
-    
-    Whith choosen an *.eml file you can do:
+    The script gives you a easy way to write your *.eml dumps onto normal MFC and magic Gen3 cards.
 
-    1. Write it to the equals of current card UID.
-    2. Write it to anther card with changable UID.
-    3. Send command to lock UID for the Chinese Magic Cards GEN 3.
-    4. Erease all data at the card and set the FFFFFFFFFFFF keys, and Access Conditions to 78778800.
+    Works with both 4 and 7 bytes NXP MIFARE Classic 1K cards.
+    The script also has the possibility to change UID and permanent lock uid on magic Gen3 cards.
+    
+    It supports the following functionality.
+
+    1. Write it to the same  of current card UID.
+    2. Write it to magic Gen3 card.
+    3. Change uid to match dump on magic Gen3 card.
+    4. Permanent lock UID on magic Gen3 card.
+    5. Erase all data at the card and set the FF FF FF FF FF FF keys, and Access Conditions to 78778800.
+    
+    Script works in a wizard styled way.
 ]]
 example = [[
-    1. script run hf-writer
+    1. script run mfc_gen3_writer
 ]]
 usage = [[
-    You should choose your *.eml dump from being list to write it to the card by wizard
+    Select your *.eml dump from list to write to the card.
 ]]
 
 ---
@@ -40,135 +52,144 @@ local function help()
     print(example)
     print(usage)
 end
-
-local function read()
-    u = read14a.read(true, true).uid
-    return u
+---
+-- GetUID
+local function GetUID()
+    return read14a.read(true, true).uid
 end
-
-local function fkey()
-    f = 'FFFFFFFFFFFF'
-    return f
-end
-
-local function finish()
+---
+-- 
+local function dropfield()
     read14a.disconnect()
     core.clearCommandBuffer()
 end
-
+---
+-- Wait for tag (MFC)
 local function wait()
     read14a.waitFor14443a()
 end
-
+---
+--
 local function main(args)
+
     -- Arguments for the script
     for o, a in getopt.getopt(args, 'h') do
         if o == 'h' then return help() end
     end
 
-    --File lienght check for detect 4 or 7 bytes
+    local files = {} -- Array for eml files
+    local b_keys = {} -- Array for B keys
+    local eml = {} -- Array for data in block 32
+    local num_dumps = 0 -- num of found eml dump files
+
+    local tab = string.rep('-', 64)
+    --
     wait()
     print(tab)
-    if string.len(read()) == 14 then -- Detect 7 byte card
-        l = 29 -- 7 byte length of eml file
-        s = 7
+
+    local length = 23
+    local e = 14
+    -- Detect 7 byte card
+    if string.len(GetUID()) == 14 then 
+        length = 29
         e = 20
-    else
-        l = 23 -- 4 byte length of eml file
-        s = 7
-        e = 14
     end 
-    ---Listern EML files at Client catalog
+
+    ---List all EML files in /client
     for _ in io.popen([[dir ".\" /b]]):lines() do -- for UNIX: ls
+
         if string.find(_, '%.eml$') then
-            if string.len(_) == l then -- There length of eml file
-                a = a + 1
-                uid[a] = string.sub(tostring(_), s, e) -- Cut UID from eml file
-                print(' ' .. a .. ' ' .. '|' .. ' ' .. uid[a])
+
+            if string.len(_) == length then -- The length of eml file
+                num_dumps = num_dumps + 1
+                files[num_dumps] = string.sub(tostring(_), 7, e) -- Cut UID from eml file
+                print(' '..num_dumps..' | '..files[a])
             end
+
         end
     end 
 
     print(tab)
-    print(' Your card has ' .. read() .. ' UID number\n')
-    print(' Choice your dump number to write (from 1 until ' .. a .. ')')
+    print(' Your card has UID '..GetUID())
+    print('')
+    print(' Select which dump to write (1 until '..num_dumps..')')
     print(tab)
-    io.write(' --> ')   
+    io.write(' --> ')
 
     local no = tonumber(io.read())
-    local dump = io.open('./hf-mf-' .. uid[no] .. '-data.eml', 'r');    
+    local dump = io.open('./hf-mf-' .. files[no] .. '-data.eml', 'r');    
 
     print(tab)
-    print(' You have been selected ' .. no .. ' card dump, it UID is ' .. uid[no])  
-    ---EML get B key from opened EML file
+    print(' You have been selected ' .. no .. ' card dump, with UID : '..files[no])  
+
+    --- Load eml file
     for _ in dump:lines() do table.insert(eml, _); end
+
+    --- Extract B key from EML file    
+    local b = 0
     for i = 1, #eml do
+        print('line is type: ', type(eml[i]) )
+
         if (i % 4 == 0) then
             repeat
                 b = b + 1
-                B[b] = string.sub(tostring(eml[i]), (string.len(eml[i]) - 11),
-                                  string.len(eml[i])) -- Cut key from block
+                -- Cut key from block
+                b_keys[b] = string.sub(tostring(eml[i]), (string.len(eml[i]) - 11), string.len(eml[i])) 
             until b % 4 == 0
         end
     end 
+    print(tab)
 
-    print(tab)  
-    ---UID Changing
-    if (utils.confirm(' Do the UID changing?') == true) then
+    --- Change UID on certain version of magic Gen3 card.  
+    if (utils.confirm(' Change UID ?') == true) then
         wait()
-        core.console('hf 14a raw -s -c -t 2000 90f0cccc10' .. tostring(eml[1]))
+        core.console('hf 14a raw -s -c -t 2000 90f0cccc10'..tostring(eml[1]))
         print(tab)
-        print(' The new card UID is: ' .. read())
+        print(' The new card UID : ' .. GetUID())
     end 
-
     print(tab)  
-    ---UID Blocking
-    if (utils.confirm(' Would you like to BLOCK the UID for any changing?') == true) then
+    
+    --- Lock UID
+    if (utils.confirm(' Permanent lock UID ? (card can never change uid again) ') == true) then
         wait()
         core.console('hf 14a raw -s -c -t 2000 90fd111100')
     end 
+    print(tab)
+    
+    --- Writing blocks
+    local default_key = 'FFFFFFFFFFFF'
+    local default_key_blk = 'FFFFFFFFFFFF78778800FFFFFFFFFFFF'
+    local empty = string.rep('0', 32)
+    local cmd_wrbl = 'hf mf wrbl %d B %s %s'
 
-    print(tab)  
-    ---Wriiting block
-    if (utils.confirm(' At this case are you using a Blank Card?') == true) then
+    if (utils.confirm(' Are you using a empty card with default key?') == true) then
         wait()
         for i = 1, #eml do
-            core.console('hf mf wrbl ' .. (i - 1) .. ' B ' .. fkey() .. ' ' ..
-                             tostring(eml[i]))
+            core.console(string.format(cmd_wrbl, (i-1), default_key, eml[i]))
         end
-        print(tab)
     else
         print(tab)
-        if (utils.confirm(
-            ' Do you wishing DELETE ALL DATA and rewrite all keys to ' .. fkey() ..
-                '?') == true) then
+        if (utils.confirm(' Delete ALL data and write all keys to 0x'..default_key..' ?') == true) then
             wait()
             for i = 1, #eml do
                 if (i % 4 == 0) then
-                    core.console(
-                        'hf mf wrbl ' .. (i - 1) .. ' B ' .. tostring(B[i]) .. ' ' ..
-                            fkey() .. '78778800' .. fkey())
+                    core.console(string.format(cmd_wrbl, (i-1), b_keys[i], default_key_blk))
                 else
-                    core.console(
-                        'hf mf wrbl ' .. (i - 1) .. ' B ' .. tostring(B[i]) .. ' ' ..
-                            string.rep('0', 32))
+                    core.console(string.format(cmd_wrbl, (i-1), b_keys[i], empty))
                 end
             end
         else
+            print(tab)
+            print('Writing to card')
             wait()
             for i = 1, #eml do
-                core.console('hf mf wrbl ' .. (i - 1) .. ' B ' .. tostring(B[i]) ..
-                                 ' ' .. tostring(eml[i]))
+                core.console(string.format(cmd_wrbl, (i-1), b_keys[i], eml[i]))
             end
         end
     end
-    finish()
+    dropfield()
+    print(tab)
+    print('Done')
 end
-main(args)
 
----General thinks for the future:
----Add support another types of dumps: BIN, JSON
----Maybe it will be not only as `hf-writer`, like a universal dump manager.
----Add undependence from the operation system. At the moment code not working in Linux.
----Add more chinesse backdoors RAW commands for UID changing (find RAW for the 4 byte familiar chinese card, from native it soft: http://bit.ly/39VIDsU)
----Hide system messages when you writing a dumps, replace it to some of like [#####----------] 40%
+main(args)
