@@ -30,7 +30,7 @@ static int CmdHelp(const char *Cmd);
 static int usage_lf_keri_clone(void) {
     PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
-    PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] i <id> [Q5]");
+    PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] c <cardid> [Q5]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h          : This help");
     PrintAndLogEx(NORMAL, "      <id>       : Keri Internal ID");
@@ -225,7 +225,7 @@ static int CmdKeriRead(const char *Cmd) {
 static int CmdKeriClone(const char *Cmd) {
 
     uint8_t cmdptr = 0;
-    char format = 'r'; // default to raw
+    char format = 'i'; // default to raw
     uint32_t fc = 0;
     uint32_t cid = 0;
     uint32_t cardid = 0;
@@ -294,7 +294,7 @@ static int CmdKeriClone(const char *Cmd) {
             2 << T5555_MAXBLOCK_SHIFT;
     }
 */
-    // Setup card data
+    // Setup card data/build internal id
     switch (format) { 
         case 'i' : // Internal ID
             // MSB is ONE
