@@ -300,15 +300,15 @@ static int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-    PrintAndLogEx(NORMAL, "  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-data.bin");
+    PrintAndLogEx(NORMAL, "  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-dump.bin");
     PrintAndLogEx(NORMAL, "  k <name>     : key filename, specific the full filename of key file");
     PrintAndLogEx(NORMAL, "  f <name>     : data filename, specific the full filename of data file");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-data.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-data.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
+    PrintAndLogEx(NORMAL, "         hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
+    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-dump.bin");
+    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-dump.bin");
+    PrintAndLogEx(NORMAL, "         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
     return PM3_SUCCESS;
 }
 static int usage_hf14_decryptbytes(void) {
@@ -1064,7 +1064,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "\nSucceeded in dumping all blocks");
 
     if (strlen(dataFilename) < 1) {
-        fptr = GenerateFilename("hf-mf-", "-data");
+        fptr = GenerateFilename("hf-mf-", "-dump");
         if (fptr == NULL)
             return PM3_ESOFT;
 
@@ -1103,7 +1103,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 if (keyFilename[0] == 0x00)
                     snprintf(keyFilename, FILE_PATH_SIZE, "hf-mf-%s-key.bin", szTemp);
                 if (dataFilename[0] == 0x00)
-                    snprintf(dataFilename, FILE_PATH_SIZE, "hf-mf-%s-data.bin", szTemp);
+                    snprintf(dataFilename, FILE_PATH_SIZE, "hf-mf-%s-dump.bin", szTemp);
                 cmdp += 2;
                 break;
             case 'k':
@@ -1161,7 +1161,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     fclose(fkeys);
 
     if (dataFilename[0] == 0x00) {
-        fptr = GenerateFilename("hf-mf-", "-data.bin");
+        fptr = GenerateFilename("hf-mf-", "-dump.bin");
         if (fptr == NULL)
             return 1;
 
@@ -2507,7 +2507,7 @@ all_found:
         return PM3_ETIMEOUT;
     }
 
-    fnameptr = GenerateFilename("hf-mf-", "-data");
+    fnameptr = GenerateFilename("hf-mf-", "-dump");
     if (fnameptr == NULL) {
         free(dump);
         free(e_sector);

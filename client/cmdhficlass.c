@@ -898,7 +898,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             return PM3_EMALLOC;
         }
         strcat(fptr, "hf-iclass-");
-        FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn));
+        FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
         saveFile(fptr, ".bin", decrypted, decryptedlen);
         saveFileEML(fptr, decrypted, decryptedlen, 8);
@@ -1361,7 +1361,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     if (filename[0] == 0) {
         //Use the first block (CSN) for filename
         strcat(filename, "hf-iclass-");
-        FillFileNameByUID(filename, tag_data, "-data", 8);
+        FillFileNameByUID(filename, tag_data, "-dump", 8);
     }
 
     // save the dump to .bin file

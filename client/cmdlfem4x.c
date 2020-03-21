@@ -1349,7 +1349,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
         // saveFileEML will add .eml extension to filename
         // saveFile (binary) passes in the .bin extension.
         if (strcmp(preferredName, "") == 0) // Set default filename, if not set by user
-            sprintf(preferredName, "lf-4x05-%08X-data", BSWAP_32(data[1]));
+            sprintf(preferredName, "lf-4x05-%08X-dump", BSWAP_32(data[1]));
 
         saveFileEML(preferredName, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(preferredName, ".bin", data, sizeof(data));
