@@ -30,13 +30,21 @@ static int CmdHelp(const char *Cmd);
 static int usage_lf_keri_clone(void) {
     PrintAndLogEx(NORMAL, "clone a KERI tag to a T55x7 tag.");
     PrintAndLogEx(NORMAL, "Usage: lf keri clone [h] <id> <Q5>");
+    PrintAndLogEx(NORMAL, "Usage extended: lf keri clone [h] t <m|i> [f <fc>] i <id> [Q5]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h          : This help");
     PrintAndLogEx(NORMAL, "      <id>       : Keri Internal ID");
     PrintAndLogEx(NORMAL, "      <Q5>       : specify write to Q5 (t5555 instead of t55x7)");
+    // New format
+    PrintAndLogEx(NORMAL, "      <t> [m|i]  : Type. m - MS, i - Internal ID");
+    PrintAndLogEx(NORMAL, "      <f> <fc>   : Facility Code");
+    PrintAndLogEx(NORMAL, "      <c> <cid>  : Card ID");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "       lf keri clone 112233");
+    PrintAndLogEx(NORMAL, "       lf keri clone type ms fc 6 id 12345");
+    PrintAndLogEx(NORMAL, "       lf keri clone t m f 6 i 12345");
+    
     return PM3_SUCCESS;
 }
 
@@ -98,7 +106,7 @@ static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *I
             }
             // Card FC
             if (CardToFC[CardIdx] < 32) {
-                if ((*ID & (1 << CardToFC[CardIdx])) > 0)
+                if ((*FC & (1 << CardToFC[CardIdx])) > 0)
                     *CardID |= (1 << CardIdx);
             }
         }
@@ -122,7 +130,7 @@ static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *I
         // Bit 31 was fixed but not in check/parity bits
         *CardID |= (1 << 31); 
 
-        PrintAndLogEx(SUCCESS, "Scrambled FC : %d - Card ID : %d to RAW : E0000000%08X",*FC,*ID,*CardID);
+        PrintAndLogEx(SUCCESS, "Scrambled MS : FC %d - Card ID %d to RAW : E0000000%08X",*FC,*ID,*CardID);
     }
     return PM3_SUCCESS;
 }
@@ -192,10 +200,10 @@ static int CmdKeriDemod(const char *Cmd) {
     
 /*
     Scamble: For dev testing only, will/should move to the create keri-ms code when added.
-    
-    uint32_t testCard = 0;
-    CmdKeriMSScramble (Scramble,&fc,&cardid,&testCard);
-*/
+    */
+ //   uint32_t testCard = 0;
+ //   CmdKeriMSScramble (Scramble,&fc,&cardid,&testCard);
+
 
 // End Descramble test
 
@@ -216,6 +224,11 @@ static int CmdKeriRead(const char *Cmd) {
 
 static int CmdKeriClone(const char *Cmd) {
 
+    uint8_t cmdptr = 0;
+    char format = 'r'; // default to raw
+    uint32_t fc = 0;
+    uint32_t cid = 0;
+    uint32_t cardid = 0;
     uint32_t internalid = 0;
     uint32_t blocks[3] = {
         T55x7_TESTMODE_DISABLED |
@@ -233,8 +246,45 @@ static int CmdKeriClone(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_keri_clone();
 
-    internalid = param_get32ex(Cmd, 0, 0, 10);
+    // Assume old format for backwards compatibility and only parameter is the internal id
+    cid = param_get32ex(Cmd, 0, 0, 10);
 
+    // find other options
+    while (param_getchar(Cmd, cmdptr) != 0x00) { // && !errors) {
+        PrintAndLogEx (SUCCESS,"[%c]",param_getchar(Cmd, cmdptr));
+        switch (tolower(param_getchar(Cmd, cmdptr))) {
+            case 'h': // help
+                return usage_lf_keri_clone();
+            case 't': // format type
+                format = tolower(param_getchar(Cmd,cmdptr+1));
+                cmdptr += 2;
+                break;
+            case 'f': // fc
+                fc =  param_get32ex(Cmd,cmdptr+1,0,10);
+                cmdptr += 2;
+                break;
+            case 'c': // cardid
+                cid =  param_get32ex(Cmd,cmdptr+1,0,10);
+                cmdptr += 2;
+                break;
+            case 'q': // q5
+                 blocks[0] =
+                    T5555_MODULATION_PSK1 |
+                    T5555_SET_BITRATE(128) |
+                    T5555_PSK_RF_2 |
+                    2 << T5555_MAXBLOCK_SHIFT;
+                 cmdptr++;
+                break;
+            default: 
+                // Skip unknown
+                cmdptr++;
+        }
+    }
+
+    // this is managed in above code
+    // internalid = param_get32ex(Cmd, 0, 0, 10);
+/*
+    // Q5 is caught in the while loop
     //Q5
     if (tolower(param_getchar(Cmd, 1)) == 'q') {
         blocks[0] =
@@ -243,10 +293,21 @@ static int CmdKeriClone(const char *Cmd) {
             T5555_PSK_RF_2 |
             2 << T5555_MAXBLOCK_SHIFT;
     }
-
-    // MSB is ONE
-    internalid |= 0x80000000;
-
+*/
+    // Setup card data
+    switch (format) { 
+        case 'i' : // Internal ID
+            // MSB is ONE
+            internalid = cid | 0x80000000;
+            break;
+        case 'm' : // MS
+            cardid = 0;
+            CmdKeriMSScramble (Scramble,&fc,&cid,&cardid);
+            internalid = 0xE000000000000000 + cardid;
+            break;
+    }
+    
+    // Prepare and write to card
     // 3 LSB is ONE
     uint64_t data = ((uint64_t)internalid << 3) + 7;
     PrintAndLogEx(INFO, "Preparing to clone KERI to T55x7 with Internal Id: %" PRIx32, internalid);
