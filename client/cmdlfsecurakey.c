@@ -170,7 +170,7 @@ static int CmdSecurakeyClone(const char *Cmd) {
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf securakey read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf securakey read`") "to verify");
     return res;
 }
 

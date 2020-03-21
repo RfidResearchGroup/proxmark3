@@ -505,6 +505,8 @@ typedef struct {
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
 #define CMD_HF_MIFARE_MFKEY                                               0x0631
+#define CMD_HF_MIFARE_PERSONALIZE_UID                                     0x0632
+
 //ultralightC
 #define CMD_HF_MIFAREUC_AUTH                                              0x0724
 //0x0725 and 0x0726 no longer used

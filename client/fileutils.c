@@ -70,7 +70,7 @@ struct wave_info_t {
         char tag[4];
         uint32_t size;
     } PACKED audio_data;
-} PACKED wave_info;
+} PACKED;
 
 /**
  * @brief checks if a file exists

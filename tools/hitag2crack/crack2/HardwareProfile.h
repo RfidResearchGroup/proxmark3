@@ -142,11 +142,11 @@ typedef int rtccDate;
 
 
 #ifndef __PIC32MX__
-    #define __PIC32MX__
+#define __PIC32MX__
 #endif
-  
+
 #define GetSystemClock()            (80000000ul)
-#define GetPeripheralClock()        (GetSystemClock()) 
+#define GetPeripheralClock()        (GetSystemClock())
 #define GetInstructionClock()       (GetSystemClock())
 
 //#define USE_SELF_POWER_SENSE_IO
@@ -322,7 +322,7 @@ typedef int rtccDate;
 // spi for SD card
 #define SD_CARD_DET                 LATFbits.LATF0
 #define SD_CARD_WE                  LATFbits.LATF1      // write enable - unused for microsd but allocated anyway as library checks it
-                                                        // (held LOW by default - cut solder bridge to GND to free pin if required)
+// (held LOW by default - cut solder bridge to GND to free pin if required)
 #define SPI_SD                      SPI_CHANNEL1
 #define SPI_SD_BUFF                 SPI1BUF
 #define SPI_SD_STAT                 SPI1STATbits

@@ -315,7 +315,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
 }
 
 int flashmem_spiffs_load(uint8_t *destfn, uint8_t *data, size_t datalen) {
-    
+
     int ret_val = PM3_SUCCESS;
 
     // We want to mount before multiple operation so the lazy writes/append will not
@@ -349,7 +349,7 @@ int flashmem_spiffs_load(uint8_t *destfn, uint8_t *data, size_t datalen) {
         bytes_sent += bytes_in_packet;
 
         PacketResponseNG resp;
-        
+
         uint8_t retry = 3;
         while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -377,7 +377,7 @@ out:
     // We want to unmount after these to set things back to normal but more than this
     // unmouting ensure that SPIFFS CACHES are all flushed so our file is actually written on memory
     SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
-    
+
     return ret_val;
 }
 
@@ -400,8 +400,8 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'o':
-                param_getstr(Cmd, cmdp + 1, (char*)destfilename, 32);
-                if (strlen((char*)destfilename) == 0) {
+                param_getstr(Cmd, cmdp + 1, (char *)destfilename, 32);
+                if (strlen((char *)destfilename) == 0) {
                     PrintAndLogEx(FAILED, "Destination Filename missing or invalid");
                     errors = true;
                 }
@@ -429,12 +429,12 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
     }
 
     res = flashmem_spiffs_load(destfilename, data, datalen);
- 
+
     free(data);
-     
-    if ( res == PM3_SUCCESS )
+
+    if (res == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") "bytes to file "_GREEN_("%s"), datalen, destfilename);
-     
+
     return res;
 }
 

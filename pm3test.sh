@@ -95,7 +95,8 @@ while true; do
 
   printf "\n${C_BLUE}Testing data manipulation:${C_NC}\n"
   if ! CheckExecute "reveng test" "./client/proxmark3 -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
-
+  if ! CheckExecute "mfu pwdgen test" "./client/proxmark3 -c 'hf mfu pwdgen t'" "Selftest OK"; then break; fi
+  
   printf "\n${C_BLUE}Testing LF:${C_NC}\n"
   if ! CheckExecute "lf em4x05 test" "./client/proxmark3 -c 'data load traces/em4x05.pm3;lf search'" "FDX-B ID found"; then break; fi
 
@@ -120,6 +121,7 @@ while true; do
   if ! CheckExecute "findbits test" "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
   if ! CheckExecute "findbits_test test" "tools/findbits_test.py 2>&1" "OK"; then break; fi
   if ! CheckExecute "pm3_eml_mfd test" "tools/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
+  
   printf "\n${C_GREEN}Tests [OK]${C_NC}\n\n"
   exit 0
 done

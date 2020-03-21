@@ -152,7 +152,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         if (*key != UINT64_C(-1)) {
             break;
         } else {
-            PrintAndLogEx(FAILED, "all candidate keys failed. Restarting darkside attack");
+            PrintAndLogEx(FAILED, "all key candidates failed. Restarting darkside attack");
             free(last_keylist);
             last_keylist = keylist;
             first_run = true;
@@ -345,7 +345,7 @@ int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultk
         // copy candidatekeys to test key block
         memcpy(keyBlock, candidates + i, KEYBLOCK_SIZE);
 
-        // check a block of generated candidate keys.
+        // check a block of generated key candidates.
         if (mfCheckKeys(blockNo, keyType, true, KEYS_IN_BLOCK, keyBlock, &key64) == PM3_SUCCESS) {
             *resultkey = key64;
             found = true;
@@ -510,7 +510,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
 
-    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "candidate keys", keycnt);
+    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "key candidates", keycnt);
 
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
@@ -544,10 +544,10 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             return -5;
         }
 
-        float bruteforce_per_second = (float)KEYS_IN_BLOCK / (msclock() - start_time) * 1000.0;
-
-        if ( i + 1 % 10 == 0)
-            PrintAndLogEx(INFO, " %6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt , bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+//        if (i + 1 % 10 == 0) {
+        float bruteforce_per_second = (float)(i + max_keys) / ((msclock() - start_time) / 1000.0);
+        PrintAndLogEx(INFO, "%6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
+//        }
 
     }
 
@@ -644,7 +644,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
 
-    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "candidate keys", keycnt);
+    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "key candidates", keycnt);
 
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
@@ -653,7 +653,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint32_t maxkeysinblock = IfPm3Flash() ? 1000 : KEYS_IN_BLOCK;
     uint32_t max_keys_chunk = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
-    uint8_t *mem = calloc( (maxkeysinblock * 6) + 5, sizeof(uint8_t));
+    uint8_t *mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
     if (mem == NULL) {
         free(statelists[0].head.slhead);
         return PM3_EMALLOC;
@@ -667,7 +667,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     mem[4] = (max_keys_chunk & 0xFF);
 
     uint8_t destfn[32];
-    strncpy((char*)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
+    strncpy((char *)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
 
     uint64_t start_time = msclock();
     for (uint32_t i = 0; i < keycnt; i += max_keys_chunk) {
@@ -689,10 +689,10 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
             num_to_bytes(key64, 6, p_keyblock + j * 6);
         }
 
-        // check a block of generated candidate keys.
+        // check a block of generated key candidates.
         if (IfPm3Flash()) {
-             // upload to flash.
-            res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6) );
+            // upload to flash.
+            res = flashmem_spiffs_load(destfn, mem, 5 + (chunk * 6));
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "SPIFFS upload failed");
                 free(mem);
@@ -705,13 +705,13 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
         if (res == PM3_SUCCESS) {
-                p_keyblock = NULL;
-                free(statelists[0].head.slhead);
-                free(mem);
+            p_keyblock = NULL;
+            free(statelists[0].head.slhead);
+            free(mem);
 
-                num_to_bytes(key64, 6, resultKey);
+            num_to_bytes(key64, 6, resultKey);
 
-                PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") "]",
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") "]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)
@@ -723,8 +723,8 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
 //        if (i%10 == 0) {
-            float bruteforce_per_second = (float)i + max_keys_chunk / (msclock() - start_time) * 1000.0;
-            PrintAndLogEx(INFO, "Chunk %6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt-i) / bruteforce_per_second);
+        float bruteforce_per_second = (float)(i + max_keys_chunk) / ((msclock() - start_time) / 1000.0);
+        PrintAndLogEx(INFO, "%6u/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
 //        }
     }
 
@@ -1316,6 +1316,8 @@ int detect_classic_nackbug(bool verbose) {
     SendCommandNG(CMD_HF_MIFARE_NACK_DETECT, NULL, 0);
     PacketResponseNG resp;
 
+    PrintAndLogEx(INFO, "Checking for NACK bug");
+
     if (verbose)
         PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
 
@@ -1358,16 +1360,16 @@ int detect_classic_nackbug(bool verbose) {
                     return PM3_SUCCESS;
                 }
                 case  2 :
-                    PrintAndLogEx(SUCCESS, _GREEN_("always leak NACK detected"));
+                    PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("always leak NACK"));
                     return PM3_SUCCESS;
                 case  1 :
-                    PrintAndLogEx(SUCCESS, _GREEN_("NACK bug detected"));
+                    PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("detected"));
                     return PM3_SUCCESS;
                 case  0 :
-                    PrintAndLogEx(SUCCESS, "No NACK bug detected");
+                    PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("no bug"));
                     return PM3_SUCCESS;
                 default :
-                    PrintAndLogEx(ERR, "errorcode from device [%i]", ok);
+                    PrintAndLogEx(ERR, "errorcode from device " _RED_("[%i]"), ok);
                     return PM3_EUNDEF;
             }
             break;

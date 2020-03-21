@@ -59,19 +59,14 @@ typedef enum  {Scramble = 0,Descramble = 1} KeriMSScramble_t;
 static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *ID, uint32_t *CardID)
 {
     // 255 = Not used/Unknown other values are the bit offset in the ID/FC values
-    uint8_t CardToID [] = { 255,255,255,255, 13, 12, 17,  5,255,  6,255, 18,  8,255,  0,  7,
-                             10,255,255, 11,  4,  1,255, 19,255, 20,  2,255,  3,  9,255,255 };
-    uint8_t CardToFC [] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
-                            255,255,  2,255,255,255,255,255,255,255,255,255,255,255,  1,255 };
+    uint8_t CardToID [] = { 255,255,255,255, 13, 12, 20,  5, 16,  6, 21, 17,  8,255,  0,  7,
+                             10, 15,255, 11,  4,  1,255, 18,255, 19,  2, 14,  3,  9,255,255 };
+
+    uint8_t CardToFC [] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,  0,255,255,
+                            255,255,  2,255,255,255,  3,255,  4,255,255,255,255,255,  1,255 };
 
     uint8_t CardIdx; // 0 - 31
     bool BitState;
-
-    // Used to track known bit states - remove when all bit maps are known
-    char IDDecodeState[33] = {0x00};
-    char FCDecodeState[33] = {0x00};
-    memset (IDDecodeState,'-',32);
-    memset (FCDecodeState,'-',32);
 
     if (Action == Descramble) {
         *FC = 0;
@@ -82,31 +77,12 @@ static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *I
             // Card ID
             if (CardToID[CardIdx] < 32) {
                 *ID = *ID | (BitState << CardToID[CardIdx]);
-                // Remove when all bits are known
-                IDDecodeState[31-CardToID[CardIdx]] = '0'+BitState;
             }
             // Card FC
             if (CardToFC[CardIdx] < 32) {
                 *FC = *FC | (BitState << CardToFC[CardIdx]);
-                // Remove when all bits are known
-                FCDecodeState[31-CardToFC[CardIdx]] = '0'+BitState;
             }
         }
-
-        // Patch for bit order group unknown - remove when all Keri MS Bits maps are known
-        // Reverse order for easy mapping for unknowns
-        // I know that these bit groups are a in the correct location, unknown order.
-        if (IDDecodeState[31-17] == '1') IDDecodeState[31-17] = '?';
-        if (IDDecodeState[31-18] == '1') IDDecodeState[31-18] = '?';
-        if (IDDecodeState[31-19] == '1') IDDecodeState[31-19] = '?';
-        if (IDDecodeState[31-20] == '1') IDDecodeState[31-20] = '?';
-    
-        if (FCDecodeState[31- 1] == '1') FCDecodeState[31- 1] = '?';
-        if (FCDecodeState[31- 2] == '1') FCDecodeState[31- 2] = '?';
-
-        PrintAndLogEx(SUCCESS, "Partial Keri MS decode");
-        PrintAndLogEx(SUCCESS, "BitState ID : %s",IDDecodeState);
-        PrintAndLogEx(SUCCESS, "BitState FC : %s",FCDecodeState);
     }
 
     if (Action == Scramble)
@@ -119,12 +95,12 @@ static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *I
             if (CardToID[CardIdx] < 32) {
                 if ((*ID & (1 << CardToID[CardIdx])) > 0)
                     *CardID |= (1 << CardIdx);
-            }          
-            // Card FC             
+            }
+            // Card FC
             if (CardToFC[CardIdx] < 32) {
                 if ((*ID & (1 << CardToFC[CardIdx])) > 0)
                     *CardID |= (1 << CardIdx);
-            }                
+            }
         }
 
         // Fixed bits and parity/check bits
@@ -144,7 +120,7 @@ static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *I
         *CardID = *CardID | Parity;
 
         // Bit 31 was fixed but not in check/parity bits
-        *CardID |= (1 << 31); 
+        *CardID |= (uint32_t)(1 << 31);
 
         PrintAndLogEx(SUCCESS, "Scrambled FC : %d - Card ID : %d to RAW : E0000000%08X",*FC,*ID,*CardID);
     }
@@ -282,7 +258,7 @@ static int CmdKeriClone(const char *Cmd) {
 
     int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf keri read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf keri read`") "to verify");
     return res;
 }
 

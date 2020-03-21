@@ -50,7 +50,7 @@ static int usage_lf_hid_watch(void) {
     PrintAndLogEx(NORMAL, "Usage:  lf hid watch");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf hid watch");
+    PrintAndLogEx(NORMAL, _YELLOW_("        lf hid watch"));
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_sim(void) {
@@ -62,11 +62,11 @@ static int usage_lf_hid_sim(void) {
     PrintAndLogEx(NORMAL, "       h   - This help");
     PrintAndLogEx(NORMAL, "       ID  - HID id");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf hid sim 2006ec0c86");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid sim 2006ec0c86"));
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_clone(void) {
-    PrintAndLogEx(NORMAL, "Clone HID to T55x7.  Tag must be on antenna. ");
+    PrintAndLogEx(NORMAL, "Clone HID to T55x7. " _BLUE_("Tag must be on antenna!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  lf hid clone [h] [l] ID");
     PrintAndLogEx(NORMAL, "Options:");
@@ -74,8 +74,8 @@ static int usage_lf_hid_clone(void) {
     PrintAndLogEx(NORMAL, "       l   - 84bit ID");
     PrintAndLogEx(NORMAL, "       ID  - HID id");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf hid clone 2006ec0c86");
-    PrintAndLogEx(NORMAL, "      lf hid clone l 2006ec0c86");
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone 2006ec0c86"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      lf hid clone l 2006ec0c86"));
     return PM3_SUCCESS;
 }
 static int usage_lf_hid_brute(void) {
@@ -97,9 +97,9 @@ static int usage_lf_hid_brute(void) {
     PrintAndLogEx(NORMAL, "       down              :  direction to decrement card number. (default is both directions)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf hid brute w H10301 f 224");
-    PrintAndLogEx(NORMAL, "       lf hid brute w H10301 f 21 d 2000");
-    PrintAndLogEx(NORMAL, "       lf hid brute v w H10301 f 21 c 200 d 2000");
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 224"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute w H10301 f 21 d 2000"));
+    PrintAndLogEx(NORMAL, _YELLOW_("       lf hid brute v w H10301 f 21 c 200 d 2000"));
     return PM3_SUCCESS;
 }
 
@@ -162,7 +162,7 @@ static int CmdHIDDemod(const char *Cmd) {
     uint8_t bits[GraphTraceLen];
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
+        PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID not enough samples"));
         return PM3_ESOFT;
     }
     //get binary from fsk wave
@@ -171,17 +171,17 @@ static int CmdHIDDemod(const char *Cmd) {
     if (idx < 0) {
 
         if (idx == -1)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - HID not enough samples");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID not enough samples"));
         else if (idx == -2)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - HID just noise detected");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID just noise detected"));
         else if (idx == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - HID problem during FSK demod");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID problem during FSK demod"));
         else if (idx == -4)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - HID preamble not found");
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID preamble not found"));
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - HID error in Manchester data, size %zu", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error in Manchester data, size %zu"), size);
         else
-            PrintAndLogEx(DEBUG, "DEBUG: Error - HID error demoding fsk %d", idx);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error demoding fsk %d"), idx);
 
         return PM3_ESOFT;
     }
@@ -190,12 +190,12 @@ static int CmdHIDDemod(const char *Cmd) {
     setClockGrid(50, waveIdx + (idx * 50));
 
     if (hi2 == 0 && hi == 0 && lo == 0) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - HID no values found");
+        PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID no values found"));
         return PM3_ESOFT;
     }
 
     if (hi2 != 0) { //extra large HID tags
-        PrintAndLogEx(SUCCESS, "HID Prox TAG ID: %x%08x%08x (%u)", hi2, hi, lo, (lo >> 1) & 0xFFFF);
+        PrintAndLogEx(SUCCESS, "HID Prox TAG ID: " _GREEN_("%x%08x%08x (%u)"), hi2, hi, lo, (lo >> 1) & 0xFFFF);
     } else {  //standard HID tags <38 bits
         uint8_t fmtLen = 0;
         uint32_t cc = 0;
@@ -241,14 +241,14 @@ static int CmdHIDDemod(const char *Cmd) {
             fc = ((hi & 0xF) << 12) | (lo >> 20);
         }
         if (fmtLen == 32 && (lo & 0x40000000)) { //if 32 bit and Kastle bit set
-            PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: %x%08x (%u) - Format Len: 32bit - CC: %u - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
+            PrintAndLogEx(SUCCESS, "HID Prox TAG (Kastle format) ID: " _GREEN_("%x%08x (%u)")"- Format Len: 32bit - CC: %u - FC: %u - Card: %u", hi, lo, (lo >> 1) & 0xFFFF, cc, fc, cardnum);
         } else {
-            PrintAndLogEx(SUCCESS, "HID Prox TAG ID: %x%08x (%u) - Format Len: %ubit - OEM: %03u - FC: %u - Card: %u",
+            PrintAndLogEx(SUCCESS, "HID Prox TAG ID: " _GREEN_("%x%08x (%u)")"- Format Len: " _GREEN_("%u bit")"- OEM: %03u - FC: " _GREEN_("%u")"- Card: " _GREEN_("%u"),
                           hi, lo, cardnum, fmtLen, oem, fc, cardnum);
         }
     }
 
-    PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: HID idx: %d, Len: %zu, Printing Demod Buffer: ", idx, size);
     if (g_debugMode)
         printDemodBuff();
 
@@ -268,6 +268,8 @@ static int CmdHIDWatch(const char *Cmd) {
     if (ctmp == 'h') return usage_lf_hid_watch();
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_DEMOD, NULL, 0);
+    PrintAndLogEx(SUCCESS, "Watching for new HID cards - place tag on antenna");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading new cards");
     return PM3_SUCCESS;
 }
 
@@ -288,18 +290,18 @@ static int CmdHIDSim(const char *Cmd) {
             lo = (lo << 4) | (n & 0xf);
         }
 
-        PrintAndLogEx(INFO, "Simulating HID tag with long ID %x%08x%08x", hi2, hi, lo);
+        PrintAndLogEx(INFO, "Simulating HID tag with long ID: " _GREEN_("%x%08x%08x"), hi2, hi, lo);
         payload.longFMT = 1;
     } else {
         while (sscanf(&Cmd[i++], "%1x", &n) == 1) {
             hi = (hi << 4) | (lo >> 28);
             lo = (lo << 4) | (n & 0xf);
         }
-        PrintAndLogEx(SUCCESS, "Simulating HID tag with ID %x%08x", hi, lo);
+        PrintAndLogEx(SUCCESS, "Simulating HID tag with ID: " _GREEN_("%x%08x"), hi, lo);
         hi2 = 0;
     }
 
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
 
     payload.hi2 = hi2;
     payload.hi = hi;
@@ -331,7 +333,7 @@ static int CmdHIDClone(const char *Cmd) {
             lo = (lo << 4) | (n & 0xf);
         }
 
-        PrintAndLogEx(INFO, "Preparing to clone HID tag with long ID %x%08x%08x", hi2, hi, lo);
+        PrintAndLogEx(INFO, "Preparing to clone HID tag with long ID: " _GREEN_("%x%08x%08x"), hi2, hi, lo);
 
         longid[0] = 1;
     } else {
@@ -339,14 +341,14 @@ static int CmdHIDClone(const char *Cmd) {
             hi = (hi << 4) | (lo >> 28);
             lo = (lo << 4) | (n & 0xf);
         }
-        PrintAndLogEx(INFO, "Preparing to clone HID tag with ID %x%08x", hi, lo);
+        PrintAndLogEx(INFO, "Preparing to clone HID tag with ID: " _GREEN_("%x%08x"), hi, lo);
         hi2 = 0;
     }
 
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_HID_CLONE, hi2, hi, lo, longid, sizeof(longid));
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf hid read`") "to verify");   
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid read`") "to verify");
     return PM3_SUCCESS;
 }
 
@@ -400,7 +402,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 param_getstr(Cmd, cmdp + 1, format, sizeof(format));
                 format_idx = HIDFindCardFormat(format);
                 if (format_idx == -1) {
-                    PrintAndLogEx(WARNING, "Unknown format: %s", format);
+                    PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
                     errors = true;
                 }
                 cmdp += 2;
@@ -431,7 +433,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 cmdp++;
                 break;
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter: " _YELLOW_("'%c'"), param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -450,7 +452,7 @@ static int CmdHIDBrute(const char *Cmd) {
         PrintAndLogEx(INFO, "ISSUE#........... %u", cn_hi.IssueLevel);
         PrintAndLogEx(INFO, "Facility#........ %u", cn_hi.FacilityCode);
         PrintAndLogEx(INFO, "Card#............ %" PRIu64, cn_hi.CardNumber);
-        switch( direction) {
+        switch (direction) {
             case 0:
                 PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH"));
                 break;
@@ -460,7 +462,8 @@ static int CmdHIDBrute(const char *Cmd) {
             case 2:
                 PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("DOWN"));
                 break;
-            default: break;
+            default:
+                break;
         }
     }
     PrintAndLogEx(INFO, "Brute-forcing HID reader");
@@ -495,7 +498,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 fin_hi = true;
             }
         }
-        
+
         // do one down
         if (direction != 1) {
             if (cn_low.CardNumber > 0) {
@@ -507,7 +510,7 @@ static int CmdHIDBrute(const char *Cmd) {
         }
 
         switch (direction) {
-            case 0: 
+            case 0:
                 if (fin_hi && fin_low) {
                     exitloop = true;
                 }
@@ -518,7 +521,8 @@ static int CmdHIDBrute(const char *Cmd) {
             case 2:
                 exitloop = fin_low;
                 break;
-            default: break;
+            default:
+                break;
         }
 
     } while (exitloop == false);

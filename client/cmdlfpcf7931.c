@@ -151,7 +151,7 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     SendCommandMIX(CMD_LF_PCF7931_WRITE, block, bytepos, data, buf, sizeof(buf));
 
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf pcf7931 read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pcf7931 read`") "to verify");
     return PM3_SUCCESS;
 }
 

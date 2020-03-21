@@ -42,6 +42,7 @@
 #include "Standalone/standalone.h"
 #include "util.h"
 #include "ticks.h"
+#include "commonutil.h"
 
 #ifdef WITH_LCD
 #include "LCD.h"
@@ -548,7 +549,7 @@ void ListenReaderField(uint8_t limit) {
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
         hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
 #else
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);    
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
 #endif
         Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
         hf_baseline = hf_av;
@@ -1247,6 +1248,17 @@ static void PacketReceived(PacketCommandNG *packet) {
 //            SniffMifare(packet->oldarg[0]);
 //            break;
 //        }
+        case CMD_HF_MIFARE_PERSONALIZE_UID: {
+            struct p {
+                uint8_t keytype;
+                uint8_t pers_option;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            uint64_t authkey = bytes_to_num(payload->key, 6);
+            MifarePersonalizeUID(payload->keytype, payload->pers_option, authkey);
+            break;
+        }
         case CMD_HF_MIFARE_SETMOD: {
             MifareSetMod(packet->data.asBytes);
             break;

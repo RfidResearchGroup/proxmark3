@@ -1505,7 +1505,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
                 return 1;
             }
-            
+
             // error during nested_hard
             if (resp.oldarg[0]) {
                 if (nonce_file_write) {
@@ -2034,7 +2034,7 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     // create mutexes for accessing the statelist cache and our "book of work"
     pthread_mutex_init(&statelist_cache_mutex, NULL);
     pthread_mutex_init(&book_of_work_mutex, NULL);
-    
+
     init_statelist_cache();
     init_book_of_work();
 

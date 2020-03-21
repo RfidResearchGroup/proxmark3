@@ -182,7 +182,7 @@ unsigned char getbit(unsigned char byte, unsigned char bit);
 void bytestohex(unsigned char *target, unsigned char *source, unsigned int length);
 unsigned int manchester_encode(unsigned char *target, unsigned char *source, unsigned int length);
 unsigned int manchester_decode(unsigned char *target, unsigned char *source, unsigned int length);
-char * strip_newline(char *buff);
+char *strip_newline(char *buff);
 BOOL command_ack(BOOL data);
 BOOL command_nack(BYTE *reason);
 BOOL command_unknown(void);

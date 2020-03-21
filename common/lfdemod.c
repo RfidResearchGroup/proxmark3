@@ -206,7 +206,7 @@ void getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
         *low =  signalprop.low;
     }
 
-   // prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
+    // prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
 }
 
 // by marshmellow

@@ -253,7 +253,7 @@ static int CmdLFTune(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_tune();
 
-    PrintAndLogEx(SUCCESS, "Measuring LF antenna at " _YELLOW_("%.2f") "kHz, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit", LF_DIV2FREQ(divisor));
+    PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") "kHz, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit", LF_DIV2FREQ(divisor));
 
     uint8_t params[] = {1, 0};
     params[1] = divisor;
@@ -295,7 +295,7 @@ static int CmdLFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Done.");
+    PrintAndLogEx(INFO, "Done.");
     return PM3_SUCCESS;
 }
 
@@ -1189,7 +1189,7 @@ static bool CheckChipType(bool getDeviceData) {
     uint32_t word = 0;
     if (EM4x05IsBlock0(&word)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05/EM4x69"));
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf em 4x05`") "commands");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") "commands");
         retval = true;
         goto out;
     }
@@ -1197,7 +1197,7 @@ static bool CheckChipType(bool getDeviceData) {
     //check for t55xx chip...
     if (tryDetectP1(true)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("T55xx"));
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf t55xx`") "commands");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf t55xx`") "commands");
         retval = true;
     }
 
@@ -1351,7 +1351,7 @@ static command_t CommandTable[] = {
     {"fdx",         CmdLFFdx,           AlwaysAvailable, "{ FDX-B RFIDs...             }"},
     {"gallagher",   CmdLFGallagher,     AlwaysAvailable, "{ GALLAGHER RFIDs...         }"},
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
-    {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID RFIDs...               }"},
+    {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},
     {"indala",      CmdLFINDALA,        AlwaysAvailable, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},

@@ -118,7 +118,7 @@ static int CmdVikingClone(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf viking read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf viking read`") "to verify");
     return resp.status;
 }
 

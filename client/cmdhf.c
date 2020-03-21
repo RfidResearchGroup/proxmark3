@@ -178,7 +178,7 @@ int CmdHFTune(const char *Cmd) {
     if (cmdp == 'h') return usage_hf_tune();
     int iter =  param_get32ex(Cmd, 0, 0, 10);
 
-    PrintAndLogEx(SUCCESS, "Measuring HF antenna, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit");
+    PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit");
     PacketResponseNG resp;
     clearCommandBuffer();
 
@@ -218,7 +218,7 @@ int CmdHFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Done.");
+    PrintAndLogEx(INFO, "Done.");
     return PM3_SUCCESS;
 }
 

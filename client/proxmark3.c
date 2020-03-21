@@ -36,14 +36,14 @@ static void showBanner(void) {
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    :snowflake:  iceman@icesql.net :coffee:");
     PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/");
     PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0");
 #else
     PrintAndLogEx(NORMAL, "  ======. ===.   ===. ====.");
     PrintAndLogEx(NORMAL, "  ==...==.====. ====.   ..=.");
     PrintAndLogEx(NORMAL, "  ======..==.====.==. ====..");
-    PrintAndLogEx(NORMAL, "  ==..... ==..==..==.   ..=.    iceman@icesql.net");
+    PrintAndLogEx(NORMAL, "  ==..... ==..==..==.   ..=.    iceman@icesql.net :coffee:");
     PrintAndLogEx(NORMAL, "  ==.     ==. ... ==. ====..   https://github.com/rfidresearchgroup/proxmark3/");
     PrintAndLogEx(NORMAL, "  ...     ...     ... .....  pre-release v4.0");
 #endif
@@ -58,7 +58,11 @@ static void showBanner(void) {
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
-        rl_set_prompt(PROXPROMPT_OFFLINE);
+        if (session.supports_colors)
+            rl_set_prompt(PROXPROMPT_OFFLINE_COLOR);
+        else
+            rl_set_prompt(PROXPROMPT_OFFLINE);
+
         rl_forced_update_display();
         CloseProxmark();
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use "_YELLOW_("\"hw connect\"") "to reconnect\n");
@@ -150,7 +154,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        const char *prompt = PROXPROMPT_CON;
+        const char *prompt = (session.supports_colors) ? PROXPROMPT_CON_COLOR : PROXPROMPT_CON;
 
 check_script:
         // If there is a script file
@@ -214,11 +218,11 @@ check_script:
                     rl_event_hook = check_comm;
                     if (session.pm3_present) {
                         if (conn.send_via_fpc_usart == false)
-                            prompt = PROXPROMPT_USB;
+                            prompt = (session.supports_colors) ? PROXPROMPT_USB_COLOR : PROXPROMPT_USB;
                         else
-                            prompt = PROXPROMPT_FPC;
+                            prompt = (session.supports_colors) ? PROXPROMPT_FPC_COLOR : PROXPROMPT_FPC;
                     } else {
-                        prompt = PROXPROMPT_OFFLINE;
+                        prompt = (session.supports_colors) ? PROXPROMPT_OFFLINE_COLOR : PROXPROMPT_OFFLINE;
                     }
                     cmd = readline(prompt);
                     fflush(NULL);
@@ -756,6 +760,7 @@ int main(int argc, char *argv[]) {
     }
 
     session.supports_colors = DetectWindowsAnsiSupport();
+    session.emoji_mode = ALTTEXT;
 
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
@@ -766,8 +771,10 @@ int main(int argc, char *argv[]) {
     // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
     //   struct stat tmp_stat;
     //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
-    if (session.stdinOnTTY && session.stdoutOnTTY)
+    if (session.stdinOnTTY && session.stdoutOnTTY) {
         session.supports_colors = true;
+        session.emoji_mode = EMOJI;
+    }
 #endif
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
