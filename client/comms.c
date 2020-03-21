@@ -671,7 +671,13 @@ void CloseProxmark(void) {
 
     // Clean up our state
     sp = NULL;
+#ifdef __BIONIC__
+    if (communication_thread != 0) {
+        memset(&communication_thread, 0, sizeof(pthread_t));
+    }
+#else
     memset(&communication_thread, 0, sizeof(pthread_t));
+#endif
 
     session.pm3_present = false;
 }
