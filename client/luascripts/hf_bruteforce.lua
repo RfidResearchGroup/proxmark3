@@ -96,10 +96,10 @@ local function main(args)
     local command = ''
 
     if mftype == 'mfc' then
-        command = 'hf 14a sim t 1 u %14X'
+        command = 'hf 14a sim t 1 u %014x'
         msg('Bruteforcing Mifare Classic card numbers')
     elseif mftype == 'mfu' then
-        command = 'hf 14a sim t 2 u %14X'
+        command = 'hf 14a sim t 2 u %014x'
         msg('Bruteforcing Mifare Ultralight card numbers')
     else
         return print(usage)
