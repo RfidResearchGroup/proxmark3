@@ -103,8 +103,9 @@ end
 local function main(args)
 
     -- Arguments for the script
-    for o, a in getopt.getopt(args, 'h') do
+    for o, a in getopt.getopt(args, 'hd') do
         if o == 'h' then return help() end
+        if o == 'd' then DEBUG = true end
     end
 
     local files = {} -- Array for eml files
@@ -199,8 +200,7 @@ local function main(args)
     if (utils.confirm(' Are you using a empty card with default key?') == true) then
         wait()
         for i = 1, #eml do
-            --core.console(string.format(cmd_wrbl, (i-1), default_key, eml[i]))
-            print(string.format(cmd_wrbl, (i-1), default_key, eml[i]))
+            core.console(string.format(cmd_wrbl, (i-1), default_key, eml[i]))
         end
     else
         print(tab)
@@ -208,11 +208,9 @@ local function main(args)
             wait()
             for i = 1, #eml do
                 if (i % 4 == 0) then
-                    --core.console(string.format(cmd_wrbl, (i-1), b_keys[i], default_key_blk))
-                    print(string.format(cmd_wrbl, (i-1), b_keys[i], default_key_blk))
+                    core.console(string.format(cmd_wrbl, (i-1), b_keys[i], default_key_blk))
                 else
-                    --core.console(string.format(cmd_wrbl, (i-1), b_keys[i], empty))
-                    print(string.format(cmd_wrbl, (i-1), b_keys[i], empty))
+                    core.console(string.format(cmd_wrbl, (i-1), b_keys[i], empty))
                 end
             end
         else
@@ -220,8 +218,7 @@ local function main(args)
             print('Writing to card')
             wait()
             for i = 1, #eml do
-                --core.console(string.format(cmd_wrbl, (i-1), b_keys[i], eml[i]))
-                print(string.format(cmd_wrbl, (i-1), b_keys[i], eml[i]))
+                core.console(string.format(cmd_wrbl, (i-1), b_keys[i], eml[i]))
             end
         end
     end
