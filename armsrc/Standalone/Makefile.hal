@@ -35,19 +35,24 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
 | (RDV4 only)     | storing in flashmem - Bogito           |
 +----------------------------------------------------------+
+| HF_14ASNIFF     | 14a sniff to flashmem                  |
+| (RDV4 only)     |                                        |
++----------------------------------------------------------+
+| LF_ICEHID       | LF HID collector to flashmem           |
+| (RDV4 only)     |                                        |
++----------------------------------------------------------+
 | LF_EM4100EMUL   | Simulate predefined em4100 tags only   |
 |                 |                                        |
 +----------------------------------------------------------+
 | LF_EM4100RWC    | Read/simulate em4100 tags & clone it   |
 |                 | to T555x tags                          |
 +----------------------------------------------------------+
-
 endef
 
-STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_EM4100EMUL LF_EM4100RWC
-STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG
+STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID LF_EM4100EMUL LF_EM4100RWC
+STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG HF_14ASNIFF
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG
+STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG HF_14ASNIFF LF_ICEHID
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)
