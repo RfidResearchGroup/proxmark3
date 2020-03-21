@@ -140,6 +140,7 @@ local function main(args)
             print(' '..num_dumps..' | '..files[num_dumps])
         end
     end 
+    p.close()
 
     if num_dumps == 0 then return oops("Didn't find any dump files") end
 
@@ -151,13 +152,13 @@ local function main(args)
     io.write(' --> ')
 
     local no = tonumber(io.read())
-    local dump = assert(io.open('./hf-mf-' .. files[no] .. '-dump.eml', 'r'))
-
     print(tab)
     print(' You have been selected card dump ' .. no .. ', with UID : '..files[no])  
 
     --- Load eml file
-    for _ in dump:lines() do table.insert(eml, _); end
+    local dumpfile = assert(io.open('./hf-mf-' .. files[no] .. '-dump.eml', 'r'))
+    for _ in dumpfile:lines() do table.insert(eml, _); end
+    dumpfile.close()
 
     --- Extract B key from EML file    
     local b = 0
