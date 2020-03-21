@@ -233,6 +233,7 @@ out:
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen) {
 
     if (data == NULL) return PM3_EINVARG;
+
     char *fileName = newfilenamemcopy(preferredName, ".json");
     if (fileName == NULL) return PM3_EMALLOC;
 
@@ -368,10 +369,34 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             }
             break;
         }
-        case jsf14b:
-        case jsf15:
-        case jsfLegic:
-        case jsfT5555:
+        case jsf14b: {
+            JsonSaveStr(root, "FileType", "14b");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }            
+        case jsf15: {
+            JsonSaveStr(root, "FileType", "15693");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }
+        case jsfLegic: {
+            JsonSaveStr(root, "FileType", "legic");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }
+        case jsfT5555: {
+            JsonSaveStr(root, "FileType", "t5555");
+            uint8_t conf[4] = {0};
+            memcpy(conf, data, 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.ConfigBlock", conf, sizeof(conf));
+
+            for (size_t i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }
+            break;
+        }
         case jsfMfPlusKeys:
             JsonSaveStr(root, "FileType", "mfp");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
