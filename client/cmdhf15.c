@@ -399,7 +399,7 @@ static int usage_15_restore(void) {
         {"-2", "use slower '1 out of 256' mode"},
         {"-o", "set OPTION Flag (needed for TI)"},
         {"r <NUM>", "numbers of retries on error, default is 3"},
-        {"u <UID>", "load hf-15-dump-<UID>.bin"},
+        {"u <UID>", "load hf-15-<UID>-dump.bin"},
         {"f <filename>", "load <filename>"},
         {"b <block size>", "block size, default is 4"}
     };
@@ -1214,8 +1214,9 @@ static int CmdHF15Dump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\n");
 
     size_t datalen = blocknum * 4;
+    saveFile(filename, ".bin", data, datalen); 
     saveFileEML(filename, data, datalen, 4);
-    saveFile(filename, ".bin", data, datalen);
+    saveFileJSON(filename, jsf15, data, datalen);
     return PM3_SUCCESS;
 }
 
@@ -1603,7 +1604,7 @@ static int CmdHF15Restore(const char *Cmd) {
             case 'u':
                 param_getstr(Cmd, cmdp + 1, buff, FILE_PATH_SIZE);
                 cmdp++;
-                snprintf(filename, sizeof(filename), "hf-15-dump-%s-bin", buff);
+                snprintf(filename, sizeof(filename), "hf-15-%s-dump.bin", buff);
                 break;
             case 'h':
                 return usage_15_restore();
@@ -1622,6 +1623,7 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     if ((f = fopen(filename, "rb")) == NULL) {
+        
         PrintAndLogEx(WARNING, "Could not find file %s", filename);
         return PM3_EFILE;
     }
