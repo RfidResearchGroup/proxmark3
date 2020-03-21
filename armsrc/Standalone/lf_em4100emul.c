@@ -5,9 +5,8 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// LF emul V1 - Very simple mode. Simulate only predefined in low[] IDs
-//              Short click - change current slot
-//              Long press - simulate tag ID from current slot
+// LF emul  -   Very simple mode. Simulate only predefined in low[] IDs
+//              Short click - select next slot and start simulation
 //-----------------------------------------------------------------------------
 #include "standalone.h"
 #include "proxmark3_arm.h"
@@ -32,7 +31,7 @@ uint8_t *bba,slots_count;
 int buflen;
 
 void ModInfo(void) {
-    DbpString("  LF EM4100 simulate standalone V1");
+    DbpString("  LF EM4100 simulator standalone mode");
 }
 
 uint64_t ReversQuads(uint64_t bits){
@@ -72,6 +71,7 @@ void ConstructEM410xEmulBuf(uint64_t id) {
 }
 
 void LED_Slot(int i) {
+	LEDsoff();
 	if (slots_count > 4) {
 		LED(i % MAX_IND, 0); //binary indication for slots_count > 4
 	} else {
@@ -82,26 +82,17 @@ void LED_Slot(int i) {
 void RunMod() {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	int selected = 0;
+	int selected = 0; //selected slot after start
 	slots_count = sizeof(low)/sizeof(low[0]);
 	bba = BigBuf_get_addr();
-	LED_Slot(selected);
 	for (;;) {		
 		WDT_HIT();
         if (data_available()) break;
-		int button_pressed = BUTTON_HELD(1000);
-		SpinDelay(300);
-				if (button_pressed == 1) {
-					SpinUp(100);
-					SpinOff(10);
-					LED_Slot(selected);
-					ConstructEM410xEmulBuf(ReversQuads(low[selected]));
-					SimulateTagLowFrequency(buflen, 0, true);
-					LED_Slot(selected);
-				} else if (button_pressed < 0) {
-					selected = (selected + 1) % slots_count;
-					LEDsoff();
-					LED_Slot(selected);
-				} 
+		SpinDelay(100);
+		SpinUp(100);
+		LED_Slot(selected);
+		ConstructEM410xEmulBuf(ReversQuads(low[selected]));
+		SimulateTagLowFrequency(buflen, 0, true);
+		selected = (selected + 1) % slots_count;
 	}
 }

@@ -5,7 +5,7 @@
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
 //-----------------------------------------------------------------------------
-// LF emul V2 - This mode can simulate tag ID from selected slot and read tag ID
+// LF rwc   -   This mode can simulate tag ID from selected slot and read tag ID
 //              to selected slot and to flash (only RDV4). Also you can set 
 //              predefined IDs in any slot.
 //              To recall stored ID from flash execute:
@@ -39,7 +39,7 @@ uint8_t *bba,slots_count;
 int buflen;
 
 void ModInfo(void) {
-    DbpString("  LF EM4100 simulate standalone V2");
+    DbpString("  LF EM4100 read/write/clone standalone mode");
 }
 
 uint64_t ReversQuads(uint64_t bits){
@@ -79,6 +79,7 @@ void ConstructEM410xEmulBuf(uint64_t id) {
 }
 
 void LED_Slot(int i) {
+	LEDsoff();
 	if (slots_count > 4) {
 		LED(i % MAX_IND, 0); //binary indication, usefully for slots_count > 4
 	} else {
@@ -130,12 +131,10 @@ void RunMod() {
 					// Long press - switch to simulate mode
 					SpinUp(100);
 					SpinOff(100);
-					LED_Slot(selected);
 					state = 2;
 				} else if (button_pressed < 0) {
 					// Click - switch to next slot
 					selected = (selected + 1) % slots_count;
-					LEDsoff();
 					LED_Slot(selected);
 				} 
 			break;
@@ -153,7 +152,6 @@ void RunMod() {
 				if (button_pressed > 0) {
 					// Long press - switch to read mode
 					SpinDown(100);
-					SpinOff(10);
 					LED_Slot(selected);
 					state = 1;
 				} else if (button_pressed < 0) {
