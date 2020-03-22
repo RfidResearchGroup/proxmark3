@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Read Amiibo data, decrypt, and produce EML file
 # Convert proxmark MFU (MIFARE Ultralight) .bin to .eml format

@@ -1662,16 +1662,15 @@ int CmdTuneSamples(const char *Cmd) {
 #define LF_MARGINAL_V   10000
 #define HF_UNUSABLE_V   3000
 #define HF_MARGINAL_V   5000
-#define ANTENNA_ERROR   1.03 // current algo has 3% error margin.
+#define ANTENNA_ERROR   1.00 // current algo has 3% error margin.
 
     // hide demod plot line
     DemodBufferLen = 0;
     setClockGrid(0, 0);
     RepaintGraphWindow();
 
-
     int timeout = 0;
-    PrintAndLogEx(INFO, "\nMeasuring antenna characteristics, please wait...");
+    PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
@@ -1691,7 +1690,7 @@ int CmdTuneSamples(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     // in mVolt
     struct p {
         uint32_t v_lf134;

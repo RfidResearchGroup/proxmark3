@@ -9,8 +9,7 @@
 
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     Hitag_State hstate;
     FILE *fp;
     char *line = NULL;
@@ -51,7 +50,7 @@ int main(int argc, char *argv[])
             ar = strchr(line, ' ');
             *ar = 0x00;
             ar++;
-            ar[strlen(ar)-1] = 0x00;
+            ar[strlen(ar) - 1] = 0x00;
             if (!strncmp(line, "0x", 2)) {
                 nr = line + 2;
             } else {

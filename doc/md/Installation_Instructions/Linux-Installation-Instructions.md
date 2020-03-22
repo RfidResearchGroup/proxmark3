@@ -51,7 +51,7 @@ If you don't need the graphical components of the Proxmark3 client (such as in `
 ## On openSUSE
 
 ```sh
-sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel
+sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel libqt5-qtbase-devel
 ```
 
 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `libqt5-qtbase-devel`.

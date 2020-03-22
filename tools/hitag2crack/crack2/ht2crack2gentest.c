@@ -6,8 +6,7 @@
 #include "ht2crack2utils.h"
 
 
-int makerandom(char *hex, unsigned int len, int fd)
-{
+int makerandom(char *hex, unsigned int len, int fd) {
     unsigned char raw[32];
     int i;
 
@@ -26,7 +25,7 @@ int makerandom(char *hex, unsigned int len, int fd)
         exit(1);
     }
 
-    for (i=0; i<len; i++) {
+    for (i = 0; i < len; i++) {
         sprintf(hex + (2 * i), "%02X", raw[i]);
     }
 
@@ -34,8 +33,7 @@ int makerandom(char *hex, unsigned int len, int fd)
 }
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     Hitag_State hstate;
     char key[32];
     char uid[32];
@@ -64,7 +62,7 @@ int main(int argc, char *argv[])
     }
 
 
-    for (i=0; i<numtests; i++) {
+    for (i = 0; i < numtests; i++) {
 
         makerandom(key, 6, urandomfd);
         makerandom(uid, 4, urandomfd);
@@ -84,7 +82,7 @@ int main(int argc, char *argv[])
 
         hitag2_nstep(&hstate, 64);
 
-        for (j=0; j<64; j++) {
+        for (j = 0; j < 64; j++) {
             fprintf(fp, "%08X\n", hitag2_nstep(&hstate, 32));
         }
 

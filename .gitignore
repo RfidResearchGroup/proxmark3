@@ -10,6 +10,7 @@
 .profile
 *.log
 *.eml
+*.html
 *.o
 *.a
 *.d

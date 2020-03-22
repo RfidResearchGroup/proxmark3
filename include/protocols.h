@@ -163,6 +163,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define MIFARE_EV1_PERSONAL_UID     0x40
 #define MIFARE_EV1_SETMODE          0x43
+#define MIFARE_EV1_UIDF0            0x00
+#define MIFARE_EV1_UIDF1            0x40
+#define MIFARE_EV1_UIDF2            0x20
+#define MIFARE_EV1_UIDF3            0x60
 
 #define MIFARE_ULC_WRITE            0xA2
 #define MIFARE_ULC_COMP_WRITE       0xA0
@@ -308,7 +312,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_HITAG1    10
 #define THINFILM        11
 #define LTO             12
-#define PROTO_HITAG2    13 
+#define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
 
 //-- Picopass fuses
@@ -381,6 +385,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_CHANGE_KEY                0xc4
 #define MFDES_GET_KEY_VERSION           0x64
 #define MFDES_AUTHENTICATION_FRAME      0xAF
+#define MFDES_ADDITIONAL_FRAME          0xAF
+#define MFDES_READSIG                   0x3C
 
 // LEGIC Commands
 #define LEGIC_MIM_22                    0x0D
@@ -595,7 +601,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define HITAG2_READ_PAGE                0x3    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
 #define HITAG2_READ_PAGE_INVERTED       0x1    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_WRITE_PAGE               0x2   // page number in bits 5 to 3, page number 
+#define HITAG2_WRITE_PAGE               0x2   // page number in bits 5 to 3, page number
 
 
 // HITAG S commands

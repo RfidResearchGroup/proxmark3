@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 // Copyright (C) 2011 Gerhard de Koning Gans
 // Copyright (C) 2014 Midnitesnake & Andy Davies & Martin Holst Swende
+// Copyright (C) 2020 Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -12,14 +12,11 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhficlass.h"
-
 #include <ctype.h>
-
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "cmdtrace.h"
 #include "util_posix.h"
-
 #include "comms.h"
 #include "mbedtls/des.h"
 #include "loclass/cipherutils.h"
@@ -28,12 +25,14 @@
 #include "loclass/elite_crack.h"
 #include "fileutils.h"
 #include "protocols.h"
+#include "cardhelper.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
 #define ICLASS_AUTH_RETRY 10
+#define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
 
 static int CmdHelp(const char *Cmd);
 
@@ -290,16 +289,6 @@ static int usage_hf_iclass_permutekey(void) {
     return PM3_SUCCESS;
 }
 
-/*
-static int xorbits_8(uint8_t val) {
-    uint8_t res = val ^ (val >> 1); //1st pass
-    res = res ^ (res >> 1);         // 2nd pass
-    res = res ^ (res >> 2);         // 3rd pass
-    res = res ^ (res >> 4);         // 4th pass
-    return res & 1;
-}
-*/
-
 // iclass / picopass chip config structures and shared routines
 typedef struct {
     uint8_t app_limit;      //[8]
@@ -311,7 +300,6 @@ typedef struct {
     uint8_t fuses;          //[15]
 } picopass_conf_block;
 
-
 typedef struct {
     uint8_t csn[8];
     picopass_conf_block conf;
@@ -320,6 +308,13 @@ typedef struct {
     uint8_t key_c[8];
     uint8_t app_issuer_area[8];
 } picopass_hdr;
+
+typedef enum {
+    None = 0,
+    DES,
+    RFU,
+    TRIPLEDES
+} BLOCK79ENCRYPTION;
 
 static uint8_t isset(uint8_t val, uint8_t mask) {
     return (val & mask);
@@ -429,18 +424,18 @@ static void mem_app_config(const picopass_hdr *hdr) {
         PrintAndLogEx(NORMAL, "    Credit - Kc");
     }
 }
+
 static void print_picopass_info(const picopass_hdr *hdr) {
     fuse_config(hdr);
     mem_app_config(hdr);
 }
+
 static void printIclassDumpInfo(uint8_t *iclass_dump) {
     print_picopass_info((picopass_hdr *) iclass_dump);
 }
 
-
 static int CmdHFiClassList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list iclass' instead");
     CmdTraceList("iclass");
     return PM3_SUCCESS;
 }
@@ -475,24 +470,9 @@ static int CmdHFiClassSim(const char *Cmd) {
         return usage_hf_iclass_sim();
     }
 
-    /*
-            // pre-defined 8 CSN by Holiman
-            uint8_t csns[8*NUM_CSNS] = {
-                0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x13, 0x94, 0x7E, 0x76, 0xFF, 0x12, 0xE0,
-                0x2A, 0x99, 0xAC, 0x79, 0xEC, 0xFF, 0x12, 0xE0,
-                0x17, 0x12, 0x01, 0xFD, 0xF7, 0xFF, 0x12, 0xE0,
-                0xCD, 0x56, 0x01, 0x7C, 0x6F, 0xFF, 0x12, 0xE0,
-                0x4B, 0x5E, 0x0B, 0x72, 0xEF, 0xFF, 0x12, 0xE0,
-                0x00, 0x73, 0xD8, 0x75, 0x58, 0xFF, 0x12, 0xE0,
-                0x0C, 0x90, 0x32, 0xF3, 0x5D, 0xFF, 0x12, 0xE0
-            };
-    */
-    /*
-            pre-defined 9 CSN by iceman
-            only one csn depend on several others.
-            six depends only on the first csn,  (0,1, 0x45)
-    */
+    // remember to change the define NUM_CSNS to match.
+
+    // pre-defined 9 CSN by iceman
     uint8_t csns[8 * NUM_CSNS] = {
         0x01, 0x0A, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
         0x0C, 0x06, 0x0C, 0xFE, 0xF7, 0xFF, 0x12, 0xE0,
@@ -505,27 +485,6 @@ static int CmdHFiClassSim(const char *Cmd) {
         0xD2, 0x5A, 0x82, 0xF8, 0xF7, 0xFF, 0x12, 0xE0
         //0x04, 0x08, 0x9F, 0x78, 0x6E, 0xFF, 0x12, 0xE0
     };
-    /*
-            // pre-defined 15 CSN by Carl55
-            // remember to change the define NUM_CSNS to match.
-            uint8_t csns[8*NUM_CSNS] = {
-                0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x04, 0x0E, 0x08, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x09, 0x0D, 0x05, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x0A, 0x0C, 0x06, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x0F, 0x0B, 0x03, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x08, 0x0A, 0x0C, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x0D, 0x09, 0x09, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x0E, 0x08, 0x0A, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x03, 0x07, 0x17, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x3C, 0x06, 0xE0, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x01, 0x05, 0x1D, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x02, 0x04, 0x1E, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x07, 0x03, 0x1B, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x00, 0x02, 0x24, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x05, 0x01, 0x21, 0xF7, 0xFF, 0x12, 0xE0
-            };
-    */
 
     /* DUMPFILE FORMAT:
      *
@@ -801,8 +760,6 @@ static int CmdHFiClassELoad(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-#define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
-
 static int CmdHFiClassDecrypt(const char *Cmd) {
 
     bool errors = false;
@@ -812,6 +769,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     uint8_t cmdp = 0;
 
     uint8_t enc_data[8] = {0};
+    uint8_t dec_data[8] = {0};
 
     size_t keylen = 0;
     uint8_t key[32] = {0};
@@ -827,7 +785,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 return usage_hf_iclass_decrypt();
             case 'd':
                 if (param_gethex(Cmd, cmdp + 1, enc_data, 16)) {
-                    PrintAndLogEx(ERR, "data must be 16 HEX symbols");
+                    PrintAndLogEx(ERR, "Data must be 16 HEX symbols");
                     errors = true;
                     break;
                 }
@@ -836,7 +794,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 break;
             case 'f':
                 if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
-                    PrintAndLogEx(WARNING, "no filename found after f");
+                    PrintAndLogEx(WARNING, "No filename found after f");
                     errors = true;
                     break;
                 }
@@ -865,11 +823,14 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
 
-    if (have_key == false) {
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-        if (res != PM3_SUCCESS)
-            return PM3_EINVARG;
+    bool use_sc = IsCryptoHelperPresent();
 
+    if (have_key == false && use_sc == false) {
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+            return PM3_EINVARG;
+        }
         memcpy(key, keyptr, sizeof(key));
         free(keyptr);
     }
@@ -878,10 +839,13 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_dec(&ctx, key);
 
-    uint8_t dec_data[8] = {0};
-
     if (have_data) {
-        mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
+
+        if (use_sc) {
+            Decrypt(enc_data, dec_data);
+        } else {
+            mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
+        }
         PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(dec_data, sizeof(dec_data)));
     }
 
@@ -898,38 +862,87 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-        for (uint16_t blocknum = 0; blocknum < applimit; ++blocknum) {
+        BLOCK79ENCRYPTION aa1_encryption = (decrypted[(6 * 8) + 7] & 0x03);
+
+        uint32_t limit = MIN(applimit, decryptedlen / 8);
+
+        if (decryptedlen / 8 != applimit) {
+            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%u") "vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
+            PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * 8);
+        }
+        uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
+
+        for (uint16_t blocknum = 0; blocknum < limit; ++blocknum) {
 
             uint8_t idx = blocknum * 8;
             memcpy(enc_data, decrypted + idx, 8);
 
-            // block 7 or higher,  and not empty 0xFF
-            if (blocknum > 6 &&  memcmp(enc_data, empty, 8) != 0) {
-                mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+            if (aa1_encryption == RFU || aa1_encryption == None)
+                continue;
+                
+            // Decrypted block 7,8,9 if configured.
+            if (blocknum > 6 && blocknum <= 6 + numblocks4userid && memcmp(enc_data, empty, 8) != 0) {
+                if (use_sc) {
+                    Decrypt(enc_data, decrypted + idx);
+                } else {
+                    mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+                }
             }
         }
 
         //Use the first block (CSN) for filename
-        char *fptr = calloc(42, sizeof(uint8_t));
+        char *fptr = calloc(50, sizeof(uint8_t));
+        if (!fptr) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            free(decrypted);
+            return PM3_EMALLOC;
+        }
         strcat(fptr, "hf-iclass-");
-        FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn));
+        FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
         saveFile(fptr, ".bin", decrypted, decryptedlen);
         saveFileEML(fptr, decrypted, decryptedlen, 8);
         saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
 
+        PrintAndLogEx(INFO, "Following output skips CSN / block0");
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
-        
-        uint32_t top = 0, mid, bot;
-        mid = bytes_to_num(decrypted + (8*7), 4);
-        bot = bytes_to_num(decrypted + (8*7) + 4, 4);
 
-        PrintAndLogEx(INFO, "");        
-        PrintAndLogEx(INFO, "block 7 - Wiegand decode");
-        wiegand_message_t packed = initialize_message_object(top, mid, bot);
-        HIDTryUnpack(&packed, true);
-        PrintAndLogEx(INFO, "-----------------------------------------------------------------");
-    
+        // decode block 6
+        if (memcmp(decrypted + (8 * 6), empty, 8) != 0) {
+            if (use_sc) {
+                DecodeBlock6(decrypted + (8 * 6));
+            }
+        }
+
+        // decode block 7-8-9
+        if (memcmp(decrypted + (8 * 7), empty, 8) != 0) {
+
+            //todo:  remove preamble/sentinal
+
+            uint32_t top = 0, mid, bot;
+            mid = bytes_to_num(decrypted + (8 * 7), 4);
+            bot = bytes_to_num(decrypted + (8 * 7) + 4, 4);
+
+            PrintAndLogEx(INFO, "Block 7 binary");
+
+            char hexstr[8 + 1] = {0};
+            hex_to_buffer((uint8_t *)hexstr, decrypted + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
+
+            char binstr[8 * 8 + 1] = {0};
+            hextobinstring(binstr, hexstr);
+            uint8_t i = 0;
+            while (i < strlen(binstr) && binstr[i++] == '0');
+
+            PrintAndLogEx(SUCCESS, "%s", binstr + i);
+
+            PrintAndLogEx(INFO, "Wiegand decode");
+            wiegand_message_t packed = initialize_message_object(top, mid, bot);
+            HIDTryUnpack(&packed, true);
+            PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+        } else {
+            PrintAndLogEx(INFO, "No credential found.");
+        }
+
         free(decrypted);
         free(fptr);
     }
@@ -984,7 +997,9 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
 
-    if (have_key == false) {
+    bool use_sc = IsCryptoHelperPresent();
+
+    if (have_key == false && use_sc == false) {
         size_t keylen = 0;
         int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
         if (res != PM3_SUCCESS)
@@ -994,8 +1009,11 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
         free(keyptr);
     }
 
-    iClassEncryptBlkData(blk_data, key);
-
+    if (use_sc) {
+        Encrypt(blk_data, blk_data);
+    } else {
+        iClassEncryptBlkData(blk_data, key);
+    }
     printvar("encrypted block", blk_data, 8);
     return PM3_SUCCESS;
 }
@@ -1244,7 +1262,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
         if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             DropField();
-            return 0;
+            return PM3_EOPABORTED;
         }
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000))
@@ -1336,14 +1354,14 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     // print the dump
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
-    PrintAndLogEx(NORMAL, "CSN   |00| %s|", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "CSN   |00| %s|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
         //Use the first block (CSN) for filename
         strcat(filename, "hf-iclass-");
-        FillFileNameByUID(filename, tag_data, "-data", 8);
+        FillFileNameByUID(filename, tag_data, "-dump", 8);
     }
 
     // save the dump to .bin file
@@ -1750,6 +1768,13 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
     }
 
     PrintAndLogEx(SUCCESS, "block %02X: %s\n", blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
+
+    if (blockno == 6) {
+        if (IsCryptoHelperPresent()) {
+            DecodeBlock6(result->blockdata);
+        }
+    }
+
     return PM3_SUCCESS;
 }
 

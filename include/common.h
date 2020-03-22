@@ -64,8 +64,8 @@ extern int DBGLEVEL;
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
 #endif
 
-#ifndef ROTL
-# define ROTL(x,n) (((uintmax_t)(x) << (n)) | ((uintmax_t)(x) >> ((sizeof(x) * 8) - (n))))
+#ifndef PM3_ROTL
+# define PM3_ROTL(x,n) (((uintmax_t)(x) << (n)) | ((uintmax_t)(x) >> ((sizeof(x) * 8) - (n))))
 #endif
 
 // endian change for 64bit

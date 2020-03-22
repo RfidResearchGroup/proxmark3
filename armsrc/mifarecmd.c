@@ -1806,6 +1806,63 @@ void MifareChkKeys_file(uint8_t *fn) {
 }
 
 //-----------------------------------------------------------------------------
+// MIFARE Personalize UID. Only for Mifare Classic EV1 7Byte UID
+//-----------------------------------------------------------------------------
+void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
+
+    uint16_t isOK = PM3_EUNDEF;
+    uint8_t uid[10];
+    uint32_t cuid;
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    LED_A_ON();
+
+    while (true) {
+        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
+            break;
+        }
+
+        uint8_t block_number = 0;
+        if (mifare_classic_auth(pcs, cuid, block_number, keyType, key, AUTH_FIRST)) {
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Auth error");
+            break;
+        }
+
+        uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
+        uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
+        int len = mifare_sendcmd_short(pcs, true, MIFARE_EV1_PERSONAL_UID, perso_option, receivedAnswer, receivedAnswerPar, NULL);
+        if (len != 1 || receivedAnswer[0] != CARD_ACK) {
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+            break;;
+        }
+
+        if (mifare_classic_halt(pcs, cuid)) {
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Halt error");
+            break;
+        }
+        isOK = PM3_SUCCESS;
+        break;
+    }
+
+    crypto1_deinit(pcs);
+
+    LED_B_ON();
+    reply_ng(CMD_HF_MIFARE_PERSONALIZE_UID, isOK, NULL, 0);
+    LED_B_OFF();
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+}
+
+
+//-----------------------------------------------------------------------------
 // Work with emulator memory
 //
 // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
@@ -2229,7 +2286,7 @@ void MifareHasStaticNonce() {
 
         nt = bytes_to_num(rec, 4);
 
-//        CHK_TIMEOUT();
+        CHK_TIMEOUT();
     }
 
 OUT:
@@ -2276,23 +2333,23 @@ void MifareSetMod(uint8_t *datain) {
 
     while (true) {
         if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-            if (DBGLEVEL >= 1) Dbprintf("Can't select card");
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
             break;
         }
 
         if (mifare_classic_auth(pcs, cuid, 0, 0, ui64Key, AUTH_FIRST)) {
-            if (DBGLEVEL >= 1) Dbprintf("Auth error");
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Auth error");
             break;
         }
 
         int respLen;
         if (((respLen = mifare_sendcmd_short(pcs, CRYPT_ALL, 0x43, mod, receivedAnswer, receivedAnswerPar, NULL)) != 1) || (receivedAnswer[0] != 0x0a)) {
-            if (DBGLEVEL >= 1) Dbprintf("SetMod error; response[0]: %hhX, len: %d", receivedAnswer[0], respLen);
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("SetMod error; response[0]: %hhX, len: %d", receivedAnswer[0], respLen);
             break;
         }
 
         if (mifare_classic_halt(pcs, cuid)) {
-            if (DBGLEVEL >= 1) Dbprintf("Halt error");
+            if (DBGLEVEL >= DBG_ERROR) Dbprintf("Halt error");
             break;
         }
 
@@ -2304,7 +2361,6 @@ void MifareSetMod(uint8_t *datain) {
 
     LED_B_ON();
     reply_ng(CMD_HF_MIFARE_SETMOD, isOK, NULL, 0);
-
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

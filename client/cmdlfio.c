@@ -275,7 +275,10 @@ static int CmdIOProxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone IOProx to T55x7 with Version: %u FC: %u, CN: %u", version, fc, cn);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf io read`") "to verify");
+    return res;
 }
 
 static command_t CommandTable[] = {

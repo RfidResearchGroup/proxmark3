@@ -300,15 +300,15 @@ static int usage_hf14_restore(void) {
     PrintAndLogEx(NORMAL, "Usage:   hf mf restore [card memory] u <UID> k <name> f <name>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  [card memory]: 0 = 320 bytes (Mifare Mini), 1 = 1K (default), 2 = 2K, 4 = 4K");
-    PrintAndLogEx(NORMAL, "  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-data.bin");
+    PrintAndLogEx(NORMAL, "  u <UID>      : uid, try to restore from hf-mf-<UID>-key.bin and hf-mf-<UID>-dump.bin");
     PrintAndLogEx(NORMAL, "  k <name>     : key filename, specific the full filename of key file");
     PrintAndLogEx(NORMAL, "  f <name>     : data filename, specific the full filename of data file");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-data.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-data.bin");
-    PrintAndLogEx(NORMAL, "         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-data.bin");
+    PrintAndLogEx(NORMAL, "         hf mf restore                            -- read the UID from tag first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
+    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678               -- restore from hf-mf-12345678-key.bin and hf-mf-12345678-dump.bin");
+    PrintAndLogEx(NORMAL, "         hf mf restore 1 u 12345678 k dumpkey.bin -- restore from dumpkey.bin and hf-mf-12345678-dump.bin");
+    PrintAndLogEx(NORMAL, "         hf mf restore 4                          -- read the UID from tag with 4K memory first, then restore from hf-mf-<UID>-key.bin and and hf-mf-<UID>-dump.bin");
     return PM3_SUCCESS;
 }
 static int usage_hf14_decryptbytes(void) {
@@ -1064,7 +1064,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "\nSucceeded in dumping all blocks");
 
     if (strlen(dataFilename) < 1) {
-        fptr = GenerateFilename("hf-mf-", "-data");
+        fptr = GenerateFilename("hf-mf-", "-dump");
         if (fptr == NULL)
             return PM3_ESOFT;
 
@@ -1103,7 +1103,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 if (keyFilename[0] == 0x00)
                     snprintf(keyFilename, FILE_PATH_SIZE, "hf-mf-%s-key.bin", szTemp);
                 if (dataFilename[0] == 0x00)
-                    snprintf(dataFilename, FILE_PATH_SIZE, "hf-mf-%s-data.bin", szTemp);
+                    snprintf(dataFilename, FILE_PATH_SIZE, "hf-mf-%s-dump.bin", szTemp);
                 cmdp += 2;
                 break;
             case 'k':
@@ -1161,7 +1161,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     fclose(fkeys);
 
     if (dataFilename[0] == 0x00) {
-        fptr = GenerateFilename("hf-mf-", "-data.bin");
+        fptr = GenerateFilename("hf-mf-", "-dump.bin");
         if (fptr == NULL)
             return 1;
 
@@ -1279,7 +1279,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
     }
 
     // check if tag doesn't have static nonce
-    if (detect_classic_static_nonce() != 0) {
+    if (detect_classic_static_nonce() == 1) {
         PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
         PrintAndLogEx(INFO, "\t Try use " _YELLOW_("`hf mf staticnested`"));
         return PM3_EOPABORTED;
@@ -1839,7 +1839,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (!know_target_key && nonce_file_read == false) {
 
         // check if tag doesn't have static nonce
-        if (detect_classic_static_nonce() != 0) {
+        if (detect_classic_static_nonce() == 1) {
             PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
             PrintAndLogEx(INFO, "\t Try use `" _YELLOW_("hf mf staticnested") "`");
             return PM3_EOPABORTED;
@@ -2507,7 +2507,7 @@ all_found:
         return PM3_ETIMEOUT;
     }
 
-    fnameptr = GenerateFilename("hf-mf-", "-data");
+    fnameptr = GenerateFilename("hf-mf-", "-dump");
     if (fnameptr == NULL) {
         free(dump);
         free(e_sector);
@@ -3129,7 +3129,7 @@ out:
 }
 
 sector_t *k_sector = NULL;
-uint8_t k_sectorsCount = 16;
+uint8_t k_sectorsCount = 40;
 
 void showSectorTable() {
     if (k_sector != NULL) {
@@ -3217,18 +3217,22 @@ static int CmdHF14AMfSim(const char *Cmd) {
                     case 0:
                         flags |= FLAG_MF_MINI;
                         sprintf(csize, "MINI");
+                        k_sectorsCount = MIFARE_MINI_MAXSECTOR;
                         break;
                     case 1:
                         flags |= FLAG_MF_1K;
                         sprintf(csize, "1K");
+                        k_sectorsCount = MIFARE_1K_MAXSECTOR;
                         break;
                     case 2:
                         flags |= FLAG_MF_2K;
                         sprintf(csize, "2K with RATS");
+                        k_sectorsCount = MIFARE_2K_MAXSECTOR;
                         break;
                     case 4:
                         flags |= FLAG_MF_4K;
                         sprintf(csize, "4K");
+                        k_sectorsCount = MIFARE_4K_MAXSECTOR;
                         break;
                     default:
                         PrintAndLogEx(WARNING, "Unknown parameter for option t");
@@ -3342,6 +3346,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
         showSectorTable();
     }
+    
+    k_sectorsCount = MIFARE_4K_MAXSECTOR;
     return PM3_SUCCESS;
 }
 /*
@@ -4798,6 +4804,95 @@ static int CmdHFMFNDEF(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int CmdHFMFPersonalize(const char *cmd) {
+
+    CLIParserInit("hf mf personalize",
+                  "Personalize the UID of a Mifare Classic EV1 card. This is only possible if it is a 7Byte UID card and if it is not already personalized.",
+                  "Usage:\n\thf mf personalize UIDF0                        -> double size UID according to ISO/IEC14443-3\n"
+                  "\thf mf personalize UIDF1                        -> double size UID according to ISO/IEC14443-3, optional usage of selection process shortcut\n"
+                  "\thf mf personalize UIDF2                        -> single size random ID according to ISO/IEC14443-3\n"
+                  "\thf mf personalize UIDF3                        -> single size NUID according to ISO/IEC14443-3\n"
+                  "\thf mf personalize -t B -k B0B1B2B3B4B5 UIDF3   -> use key B = 0xB0B1B2B3B4B5 instead of default key A\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("tT",  "keytype", "<A|B>",                     "key type (A or B) to authenticate sector 0 (default: A)"),
+        arg_str0("kK",  "key",     "<key (hex 6 Bytes)>",       "key to authenticate sector 0 (default: FFFFFFFFFFFF)"),
+        arg_str1(NULL,  NULL,      "<UIDF0|UIDF1|UIDF2|UIDF3>", "Personalization Option"),
+        arg_param_end
+    };
+    CLIExecWithReturn(cmd, argtable, true);
+
+    char keytypestr[2] = "a";
+    uint8_t keytype = 0x00;
+    int keytypestr_len;
+    int res = CLIParamStrToBuf(arg_get_str(1), (uint8_t *)keytypestr, 1, &keytypestr_len);
+    str_lower(keytypestr);
+
+    if (res || (keytypestr[0] != 'a' && keytypestr[0] != 'b')) {
+        PrintAndLogEx(ERR, "ERROR: not a valid key type. Key type must be A or B");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+    if (keytypestr[0] == 'b') {
+        keytype = 0x01;
+    }
+
+    uint8_t key[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    int key_len;
+    res = CLIParamHexToBuf(arg_get_str(2), key, 6, &key_len);
+    if (res || (!res && key_len > 0 && key_len != 6)) {
+        PrintAndLogEx(ERR, "ERROR: not a valid key. Key must be 12 hex digits");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+
+    char pers_optionstr[6];
+    int opt_len;
+    uint8_t pers_option;
+    res = CLIParamStrToBuf(arg_get_str(3), (uint8_t *)pers_optionstr, 5, &opt_len);
+    str_lower(pers_optionstr);
+
+    if (res || (!res && opt_len > 0 && opt_len != 5)
+            || (strncmp(pers_optionstr, "uidf0", 5) && strncmp(pers_optionstr, "uidf1", 5) && strncmp(pers_optionstr, "uidf2", 5) && strncmp(pers_optionstr, "uidf3", 5))) {
+        PrintAndLogEx(ERR, "ERROR: invalid personalization option. Must be one of UIDF0, UIDF1, UIDF2, or UIDF3");
+        CLIParserFree();
+        return PM3_EINVARG;
+    }
+    if (!strncmp(pers_optionstr, "uidf0", 5)) {
+        pers_option = MIFARE_EV1_UIDF0;
+    } else if (!strncmp(pers_optionstr, "uidf1", 5)) {
+        pers_option = MIFARE_EV1_UIDF1;
+    } else if (!strncmp(pers_optionstr, "uidf2", 5)) {
+        pers_option = MIFARE_EV1_UIDF2;
+    } else {
+        pers_option = MIFARE_EV1_UIDF3;
+    }
+
+    CLIParserFree();
+
+    clearCommandBuffer();
+
+    struct {
+        uint8_t keytype;
+        uint8_t pers_option;
+        uint8_t key[6];
+    } PACKED payload;
+    payload.keytype = keytype;
+    payload.pers_option = pers_option;
+
+    memcpy(payload.key, key, 6);
+
+    SendCommandNG(CMD_HF_MIFARE_PERSONALIZE_UID, (uint8_t *)&payload, sizeof(payload));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_HF_MIFARE_PERSONALIZE_UID, &resp, 2500)) return PM3_ETIMEOUT;
+
+    PrintAndLogEx(SUCCESS, "Personalization %s", resp.status == PM3_SUCCESS ? "SUCCEEDED" : "FAILED");
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AMfList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     return CmdTraceList("mf");
@@ -4845,7 +4940,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"mad",         CmdHF14AMfMAD,          IfPm3Iso14443a,  "Checks and prints MAD"},
     {"ndef",        CmdHFMFNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
-
+    {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (Mifare Classic EV1 only)"},
     {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {NULL, NULL, NULL, NULL}
 };

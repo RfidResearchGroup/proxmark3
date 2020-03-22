@@ -115,7 +115,7 @@ local function dump_tag(uid, numsectors)
 
     if utils.confirm('Do you wish to create a memory dump of tag?') then
 
-        local dumpfile = 'hf-mf-'..uid..'-data'
+        local dumpfile = 'hf-mf-'..uid..'-dump'
 
         local dmp = ('hf mf dump %s f %s'):format(typ, dumpfile)
         core.console(dmp)

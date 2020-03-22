@@ -336,7 +336,7 @@ extern rtccDate	RTC_date;			// date structure
 #define TAG_TYPE_AWID_26                17
 #define TAG_TYPE_EM4X05                 18
 #define TAG_TYPE_TAMAGOTCHI             19
-#define TAG_TYPE_HDX                    20      // same underlying data as FDX-B, but different modulation & telegram 
+#define TAG_TYPE_HDX                    20      // same underlying data as FDX-B, but different modulation & telegram
 
 // various
 

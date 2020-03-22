@@ -4,6 +4,32 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added keri MS decode/encode and update 'lf keri clone' to support MS fc/cid cloning. (@mwalker33)
+ - Fix 'hf mfdes enum' - now actually manages to enumerate files under all AID's. :smiley:  (@iceman1001)
+ - Fix 'hf mfdes info' - now detects DESFire light and work properly Wrapped commands :+1: (@iceman1001)
+ - :smiling_imp: support (@doegox)
+ - Additional colour changes as recommended by @iceman (@dunderhay)
+ - Change type colour for `hf 14a` card types (@dunderhay)
+ - Add colour to `hf mfdes` command (@dunderhay)
+ - Add 'HINTS' command.  Will turn off / on hint messages. Default mode is OFF.  (@iceman1001)
+ - Add colour to `hf 14a` and `hf mfu` commands (@dunderhay)
+ - Add colour to `lf hid` commands (@dunderhay)
+ - Change `script run hf_bruteforce -s start_id -e end_id -t timeout -x mifare_card_type` - The hf_bruteforce card script now requires Mifare type (mfc or mfu) (@dunderhay)
+ - Updated `hf_bruteforce.lua` script - added support for brute forcing Mifare Ultralight EV1 cards (@dunderhay)
+ - Added `hf mf personlize` - personalize the UID of a Mifare Classic EV1 card (@pwpiwi)
+ - Change - hint texts added to all lf clone commands (@iceman1001)
+ - Change `lf keri demod` - adjusted the internal id. (@mwalker33)
+ - Added seamless integration with cryptohelper (@iceman1001)
+ - Change `lf hid brute` - new params for direction (UP/DOWN); textual and main loop actually exit. (@capnkrunchy and @iceman1001)
+ - Fix `lf hid brute` - made it work again (@capnkrunchy)
+ - Fix standalone mode HF_MATTYRUN - correct logic when all keys found in printing. partial fix  (@iceman1001)
+ - Change static nonce detection got tighter (@iceman1001)
+ - Improved termux notes (@msoose)
+ - Fix `hf mf autopwn` - works on debian 10 *nix. Bad exit commands in hardnested (@iceman1001)
+ - Fix `hf mf hardnested` - bad mutex strategies (@msoose)
+ - Change `lf hitag` - now obeys `lf config` (@iceman1001)
+ - Ported all python 2 scripts to python 3 (@doegox and @sigwinch28)
+ - Removed undefined exit behaviour from `analyzesize` tool: it now exits with code 2 when called with wrong args (@sigwinch28)
+ - Replaced shebangs in scripts with more portable versions which use `/usr/bin/env` (@sigwinch28)
  - Added `hf lto restore` - restore LTO cartridge memory from dump file [.bin|.eml] (@Kevin-Nakamoto)
  - Added `LF_ICEHID` standalone mode which searches for lf HID credentials and store to RDV4 flashmem (@iceman1001)
  - Added `HF_14ASNIFF` standalone mode with storing trace to RDV4 flashmem (@micolous)
@@ -22,7 +48,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `commands.md` - document with all proxmark client commands. Generated with XX_internal_command_dump_markdown_XX. (@iceman1001)
  - Change `lf pac clone` - new option `c <card id>` to allow cloning PAC/Stanley tag from card ID (@danshuk)
  - Change `lf pac read` - decoded PAC/Stanley card ID (@danshuk)
- - Change mifare classic keytable output refactored and uses colors (@iceman1001) 
+ - Change mifare classic keytable output refactored and uses colors (@iceman1001)
  - Fix `hf mf nested` - now writes the correct blockno (@iceman1001)
  - Change `lf t55xx dump` - now supports saving to JSON (@iceman1001)
  - Change `hf mf chk | fchk`  faster authentication by lower timeout limit. (@pwpiwi)
@@ -418,6 +444,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf mf mad` and `hf mfp mad` MAD decode, check and print commands (@merlokk)
  - Added `script run luxeodump` (@0xdrrb)
  - Fix `lf hitag reader 02` - print all bytes (@bosb)
+ - Fix hitag S simulation (still not working), write, add example HITAG S 256  (@bosb)
 
 
 ### Fixed
@@ -592,8 +619,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Updated the Reveng 1.31 sourcecode to 1.40 from Reveng project homepage (@iceman1001)
  - Added possibility to write direct to a Legic Prime Tag (MIM256/1024) without using values from the `BigBuffer` -> `hf legic writeRaw <addr> <value>` (@icsom)
  - Added possibility to decrease DCF values at address 0x05 & 0x06 on a Legic Prime Tag  
-   DCF-value will be pulled from the BigBuffer (address 0x05 & 0x06) so you have to 
-   load the data into the BigBuffer before with `hf legic load <path/to/legic.dump>` & then 
+   DCF-value will be pulled from the BigBuffer (address 0x05 & 0x06) so you have to
+   load the data into the BigBuffer before with `hf legic load <path/to/legic.dump>` & then
    write the DCF-Values (both at once) with `hf legic write 0x05 0x02`  (@icsom)
  - Added script `legic.lua` for display and edit Data of Legic-Prime Tags (@icsom)
  - Added the experimental HITAG_S support (@spenneb)

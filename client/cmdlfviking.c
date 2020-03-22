@@ -117,6 +117,8 @@ static int CmdVikingClone(const char *Cmd) {
         PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf viking read`") "to verify");
     return resp.status;
 }
 

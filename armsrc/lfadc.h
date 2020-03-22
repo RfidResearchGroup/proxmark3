@@ -17,6 +17,7 @@
 
 extern bool logging;
 
+void lf_sample_mean(void);
 bool lf_test_periods(size_t expected, size_t count);
 size_t lf_count_edge_periods(size_t max);
 size_t lf_detect_gap(size_t max);

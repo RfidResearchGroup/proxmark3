@@ -529,7 +529,7 @@ const char ice[] =
     "        !!: :!!      !!:      !!:     !!: !!:  !!! !!:  !!!\n        :    :: :: : : :: :::  :      :    :   : : ::    : \n"
     _RED_("        .    .. .. . . .. ...  .      .    .   . . ..    . ")
     "\n...................................................................\n"
-;
+    ;
 
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
@@ -566,8 +566,8 @@ int flash_write(flash_file_t *ctx) {
             baddr += block_size;
             length -= block_size;
             block++;
-            if ( len < strlen(ice) ) {
-                if (filter_ansi && !isalpha(ice[len]) ) {
+            if (len < strlen(ice)) {
+                if (filter_ansi && !isalpha(ice[len])) {
                     len++;
                 } else {
                     fprintf(stdout, "%c", ice[len++]);

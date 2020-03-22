@@ -202,7 +202,7 @@ static int usage_t55xx_restore() {
     PrintAndLogEx(NORMAL, _YELLOW_("     Assumes lf t55 detect has been run first!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf t55xx restore f lf-t55xx-00148040-data.bin");
+    PrintAndLogEx(NORMAL, "      lf t55xx restore f lf-t55xx-00148040-dump.bin");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -1027,7 +1027,6 @@ void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
 
     PrintAndLogEx(NORMAL, msg);
 }
-
 
 static int CmdT55xxDetect(const char *Cmd) {
 
@@ -2316,7 +2315,7 @@ static int CmdT55xxDump(const char *Cmd) {
                 else
                     break;
             }
-            strcat(preferredName, "-data");
+            strcat(preferredName, "-dump");
         }
 
         // Swap endian so the files match the txt display
