@@ -3217,18 +3217,22 @@ static int CmdHF14AMfSim(const char *Cmd) {
                     case 0:
                         flags |= FLAG_MF_MINI;
                         sprintf(csize, "MINI");
+                        k_sectorsCount = MIFARE_MINI_MAXSECTOR;
                         break;
                     case 1:
                         flags |= FLAG_MF_1K;
                         sprintf(csize, "1K");
+                        k_sectorsCount = MIFARE_1K_MAXSECTOR;
                         break;
                     case 2:
                         flags |= FLAG_MF_2K;
                         sprintf(csize, "2K with RATS");
+                        k_sectorsCount = MIFARE_2K_MAXSECTOR;
                         break;
                     case 4:
                         flags |= FLAG_MF_4K;
                         sprintf(csize, "4K");
+                        k_sectorsCount = MIFARE_4K_MAXSECTOR;
                         break;
                     default:
                         PrintAndLogEx(WARNING, "Unknown parameter for option t");
@@ -3342,6 +3346,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
         showSectorTable();
     }
+    
+    k_sectorsCount = MIFARE_4K_MAXSECTOR;
     return PM3_SUCCESS;
 }
 /*
