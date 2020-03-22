@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added keri MS decode/encode and update 'lf keri clone' to support MS fc/cid cloning. (@mwalker33)
  - Added `hf lto restore` - restore LTO cartridge memory from dump file [.bin|.eml] (@Kevin-Nakamoto)
  - Added `LF_ICEHID` standalone mode which searches for lf HID credentials and store to RDV4 flashmem (@iceman1001)
  - Added `HF_14ASNIFF` standalone mode with storing trace to RDV4 flashmem (@micolous)
