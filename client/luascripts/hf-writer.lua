@@ -121,22 +121,21 @@ local function main(args)
     local length = 25
     local e = 16
     -- Detect 7 byte card
-    if string.len(GetUID()) == 14 then 
-        length = 31
-        e = 22
+    if string.len(GetUID()) == 14 then
+        length = 40
+        e = 31
     end 
     dropfield()
 
     ---List all EML files in /client
-    local dumpEML = "find '.' -iname '*dump.eml' -type f"
+    local dumpEML = 'find "." "*dump.eml"'
     local p = assert(io.popen(dumpEML))    
     for _ in p:lines() do
-    
         -- The length of eml file
         if string.len(_) == length then 
             num_dumps = num_dumps + 1
              -- cut UID from eml file
-            files[num_dumps] = string.sub(_, 9, e)
+            files[num_dumps] = string.sub(_, 18, e)
             print(' '..num_dumps..' | '..files[num_dumps])
         end
     end 
