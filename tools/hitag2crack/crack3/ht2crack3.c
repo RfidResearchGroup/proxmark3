@@ -214,15 +214,15 @@ void *crack(void *d) {
     uint64_t y;
     uint64_t ytmp;
     uint64_t klowery;
-    unsigned int count = 0;
+    unsigned int count;
     uint64_t bit;
     uint64_t b;
     uint64_t z;
     uint64_t foundkey;
     uint64_t revkey;
     int ret;
-    unsigned int found = 0;
-    unsigned int badguess = 0;
+    unsigned int found;
+    unsigned int badguess;
 
     struct Tklower *Tk = NULL;
 
@@ -312,7 +312,7 @@ void *crack(void *d) {
                     // normalise foundkey
                     revkey = rev64(foundkey);
                     foundkey = ((revkey >> 40) & 0xff) | ((revkey >> 24) & 0xff00) | ((revkey >> 8) & 0xff0000) | ((revkey << 8) & 0xff000000) | ((revkey << 24) & 0xff00000000) | ((revkey << 40) & 0xff0000000000);
-                    printf("\n\nSuccess - key = %012lX\n", foundkey);
+                    printf("\n\nSuccess - key = %012"PRIx64"\n", foundkey);
                     exit(0);
 
                     return (void *)foundkey;
@@ -446,7 +446,7 @@ int main(int argc, char *argv[]) {
         }
         printf("thread %i finished\n", i);
         if (status) {
-            printf("Key = %012lX\n", (uint64_t)status);
+            printf("Key = %012"PRIx64"\n", (uint64_t)status);
             exit(0);
         }
     }
