@@ -159,6 +159,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             break;
         case DEBUG:
             strncpy(prefix, _BLUE_("[#]"), sizeof(prefix) - 1);
+            break;
         case HINT:
         case SUCCESS:
             strncpy(prefix, _GREEN_("[+]"), sizeof(prefix) - 1);
