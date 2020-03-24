@@ -26,7 +26,31 @@ uint8_t key_ones_data[16] = { 0x01 };
 uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
 uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
 
+
+typedef enum {
+    UNKNOWN = 0,
+    MF3ICD40,
+    EV1,
+    EV2,
+    LIGHT,
+} desfire_cardtype_t;
+
+
 static int CmdHelp(const char *Cmd);
+
+static desfire_cardtype_t getCardType(uint8_t major, uint8_t minor) {
+
+    if (major == 0x00)
+        return MF3ICD40;
+    else if (major == 0x01 && minor == 0x00)
+        return EV1;
+    else if (major == 0x12 && minor == 0x00)
+        return EV2;
+    else if (major == 0x30 && minor == 0x00)
+        return LIGHT;
+    else
+        return UNKNOWN;
+}
 
 //ICEMAN: Turn on field method?
 //none
@@ -95,11 +119,20 @@ static int get_desfire_freemem(uint32_t *free_mem) {
 
 
 // --- GET SIGNATURE
-static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len) {
+static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len, desfire_cardtype_t card_type) {
+
+    uint8_t public_key;
+    if (card_type == LIGHT)
+        public_key = 0;
+    else if (card_type == EV2)
+        public_key = 1;
+    else 
+        return PM3_EINVARG;
+    
     #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
 
     // ref:  MIFARE Desfire Originality Signature Validation
-    uint8_t nxp_desfire_keys[1][PUBLIC_DESFIRE_ECDA_KEYLEN] = {
+    uint8_t nxp_desfire_keys[2][PUBLIC_DESFIRE_ECDA_KEYLEN] = {
         // DESFire Light
         {
             0x04, 0x0E, 0x98, 0xE1, 0x17, 0xAA, 0xA3, 0x64,
@@ -109,17 +142,26 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0x7B, 0x94, 0x2A, 0x97, 0x74, 0xA1, 0xD9, 0x4A,
             0xD0, 0x25, 0x72, 0x42, 0x7E, 0x5A, 0xE0, 0xA2,
             0xDD, 0x36, 0x59, 0x1B, 0x1F, 0xB3, 0x4F, 0xCF, 0x3D
-        }
+        },
         // DESFire Ev2
+        {
+            0x04, 0x8A, 0x9B, 0x38, 0x0A, 0xF2, 0xEE, 0x1B,
+            0x98, 0xDC, 0x41, 0x7F, 0xEC, 0xC2, 0x63, 0xF8,
+            0x44, 0x9C, 0x76, 0x25, 0xCE, 0xCE, 0x82, 0xD9,
+            0xB9, 0x16, 0xC9, 0x92, 0xDA, 0x20, 0x9D, 0x68,
+            0x42, 0x2B, 0x81, 0xEC, 0x20, 0xB6, 0x5A, 0x66,
+            0xB5, 0x10, 0x2A, 0x61, 0x59, 0x6A, 0xF3, 0x37,
+            0x92, 0x00, 0x59, 0x93, 0x16, 0xA0, 0x0A, 0x14, 0x10
+        }
         
     };
 
-    uint8_t public_key = 0;
+
     int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, nxp_desfire_keys[public_key], uid, 7, signature, signature_len, false);
     bool is_valid = (res == 0);
 
     PrintAndLogEx(INFO, "  Tag Signature");
-    PrintAndLogEx(INFO, "  IC signature public key name  : NXP DESFire Light");
+    PrintAndLogEx(INFO, "  IC signature public key name  : %s", (card_type == LIGHT) ? "NXP DESFire Light" :  "NXP DESFire Ev2");
     PrintAndLogEx(INFO, "  IC signature public key value : %s", sprint_hex(nxp_desfire_keys[public_key], 16));
     PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 16, 16));
     PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 32, 16));
@@ -423,9 +465,10 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     // Signature originality check
     uint8_t signature[56] = {0};
     size_t signature_len = 0;
+    desfire_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
     
     if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS) 
-        desfire_print_signature(package->uid, signature, signature_len);
+        desfire_print_signature(package->uid, signature, signature_len, cardtype);
 
     // Master Key settings
     uint8_t master_aid[3] = {0x00, 0x00, 0x00};
