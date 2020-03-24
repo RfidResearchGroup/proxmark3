@@ -11,7 +11,7 @@
 // hitag2 attack functions
 //-----------------------------------------------------------------------------
 
-#include "hitagcrypto.h"
+#include "hitag2_crypto.h"
 #include "hitag2crack.h"
 
 #define READP0CMD "1100000111"
