@@ -36,21 +36,21 @@ bool set_bit_by_position(wiegand_message_t *data, bool value, uint8_t pos) {
         return false;
     } else if (pos > 63) {
         if (value)
-            data->Top |= (1 << (pos - 64));
+            data->Top |= (1UL << (pos - 64));
         else
-            data->Top &= ~(1 << (pos - 64));
+            data->Top &= ~(1UL << (pos - 64));
         return true;
     } else if (pos > 31) {
         if (value)
-            data->Mid |= (1 << (pos - 32));
+            data->Mid |= (1UL << (pos - 32));
         else
-            data->Mid &= ~(1 << (pos - 32));
+            data->Mid &= ~(1UL << (pos - 32));
         return true;
     } else {
         if (value)
-            data->Bot |= (1 << pos);
+            data->Bot |= (1UL << pos);
         else
-            data->Bot &= ~(1 << pos);
+            data->Bot &= ~(1UL << pos);
         return true;
     }
 }
