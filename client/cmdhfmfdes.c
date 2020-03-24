@@ -557,9 +557,6 @@ char *getVersionStr(uint8_t major, uint8_t minor) {
 
 void getKeySettings(uint8_t *aid) {
 
-    char messStr[512] = {0x00};
-    const char *str = messStr;
-
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
         
         // CARD MASTER KEY 
@@ -587,9 +584,7 @@ void getKeySettings(uint8_t *aid) {
             PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
         }
 
-
-        memset(messStr, 0x00, sizeof(messStr));
-        str = "   Operation of PICC master key          : " _YELLOW_("%s");
+        const char *str = "   Operation of PICC master key          : " _YELLOW_("%s");
         
         // 2 MSB denotes 
         switch (num_keys >> 6) {
@@ -709,8 +704,8 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         // Get File IDs
         if (get_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');             
-            for (int i = 0; i < file_ids_len; ++i) {
-                PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[i], file_ids[i]);
+            for (int j = 0; j < file_ids_len; ++j) {
+                PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
             }
         }
 
