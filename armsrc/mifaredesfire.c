@@ -134,7 +134,7 @@ void MifareDesfireGetInformation() {
         return;
     }
     // add uid.
-    memcpy(payload.uid, card.uid, sizeof(card.uid));
+    memcpy(payload.uid, card.uid, sizeof(payload.uid));
 
     LED_A_ON();
     uint8_t cmd[] = {GET_VERSION, 0x00, 0x00, 0x00};
