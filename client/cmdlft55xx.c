@@ -482,12 +482,16 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
 
     int res = T55xxReadBlockEx(T55x7_CONFIGURATION_BLOCK, T55x7_PAGE0, usepwd, override, password, downlink_mode, false);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed to read block0, use `p` password parameter?");
+        PrintAndLogEx(WARNING, "Failed to read block0, use " _YELLOW_("`p`") "password parameter?");
         return false;
     }
 
-    if (GetT55xxBlockData(&block0) == false)
+    if (GetT55xxBlockData(&block0) == false) {
+        PrintAndLogEx(DEBUG, "ERROR decoded block0 == %08x", block0);
         return false;
+    }
+    PrintAndLogEx(DEBUG, "OK read block0 == %08x", block0);
+
 
     bool isPwdBitAlreadySet = (block0 >> (32 - 28) & 1);
     if (isPwdBitAlreadySet) {
@@ -3679,7 +3683,7 @@ static int CmdT55xxProtect(const char *Cmd) {
 
     // lock
     if (t55xxProtect(true, usepwd, override, password, downlink_mode, new_password) == false) {
-        PrintAndLogEx(WARNING, "Command failed. Did you run `lf t55xx detect` before?");
+        PrintAndLogEx(WARNING, "Command failed. Did you run " _YELLOW_("`lf t55xx detect`") "before?");
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
