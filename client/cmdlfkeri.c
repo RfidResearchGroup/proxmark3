@@ -128,7 +128,7 @@ static int CmdKeriMSScramble (KeriMSScramble_t Action, uint32_t *FC, uint32_t *I
         *CardID = *CardID | Parity;
 
         // Bit 31 was fixed but not in check/parity bits
-        *CardID |= (uint32_t)(1 << 31);
+        *CardID |= 1UL << 31;
 
         PrintAndLogEx(SUCCESS, "Scrambled MS : FC %d - CN %d to RAW : E0000000%08X",*FC,*ID,*CardID);
     }
