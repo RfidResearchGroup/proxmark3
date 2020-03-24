@@ -2128,6 +2128,14 @@
         "Type": "EMV"
     },
     {
+        "AID": "7465736C6153746F7265",
+        "Vendor": "Tesla",
+        "Country": "",
+        "Name": "teslaStore",
+        "Description": "Undocumented AID associated with official Tesla Key Cards",
+        "Type": "Tesla"
+    },
+    {
         "AID": "7465736C614C6F6769633",
         "Vendor": "Tesla",
         "Country": "",
@@ -2141,6 +2149,14 @@
         "Country": "",
         "Name": "teslaLogic (Alternate AID)",
         "Description": "Key for Tesla vehicles",
+        "Type": "Tesla"
+    },
+    {
+        "AID": "5465736c61444150",
+        "Vendor": "Tesla",
+        "Country": "",
+        "Name": "TeslaDAP",
+        "Description": "Undocumented AID associated with official Tesla BTLE Key Fobs",
         "Type": "Tesla"
     }
 ]
