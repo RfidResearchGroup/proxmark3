@@ -58,7 +58,7 @@ void lf_sample_mean(void) {
             periods++;
         }
     }
-    // division by 32    
+    // division by 32
     adc_avg = adc_sum >> 5;
 
     if (DBGLEVEL >= DBG_EXTENDED)
@@ -74,16 +74,16 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
     while (!BUTTON_PRESS()) {
 
         // only every 100th times, in order to save time when collecting samples.
-/*
-        if (checked == 1000) {
-            if (data_available()) {
-                break;
-            } else {
-                checked = 0;
-            }
-        }
-        ++checked;
-*/
+        /*
+                if (checked == 1000) {
+                    if (data_available()) {
+                        break;
+                    } else {
+                        checked = 0;
+                    }
+                }
+                ++checked;
+        */
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -136,12 +136,12 @@ void lf_reset_counter() {
 
     // TODO: find out the correct reset settings for tag and reader mode
 //    if (reader_mode) {
-        // Reset values for reader mode
-        rising_edge = false;
-        previous_adc_val = 0xFF;
+    // Reset values for reader mode
+    rising_edge = false;
+    previous_adc_val = 0xFF;
 
 //    } else {
-        // Reset values for tag/transponder mode
+    // Reset values for tag/transponder mode
 //        rising_edge = false;
 //        previous_adc_val = 0xFF;
 //    }
@@ -179,7 +179,8 @@ void lf_init(bool reader, bool simulate) {
 //            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
             FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
         else
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+            // Sniff
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
 
     }
 
@@ -249,18 +250,18 @@ size_t lf_detect_field_drop(size_t max) {
 
     while (!BUTTON_PRESS()) {
 
-/*
-        // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
-            if (data_available()) {
-                checked = -1;
-                break;
-            } else {
-                checked = 0;
-            }
-        }
-        ++checked;
-*/
+        /*
+                // only every 1000th times, in order to save time when collecting samples.
+                if (checked == 1000) {
+                    if (data_available()) {
+                        checked = -1;
+                        break;
+                    } else {
+                        checked = 0;
+                    }
+                }
+                ++checked;
+        */
 
         WDT_HIT();
 

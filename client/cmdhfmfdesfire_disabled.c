@@ -8,7 +8,7 @@
 // High frequency MIFARE commands
 //-----------------------------------------------------------------------------
 
-#include "cmdhfmfdesfire.h"
+#include "cmdhfmfdesfire_disabled.h"
 
 #include "cmdparser.h"    // command_t
 
