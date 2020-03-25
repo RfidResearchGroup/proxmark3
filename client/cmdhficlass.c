@@ -867,7 +867,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         uint32_t limit = MIN(applimit, decryptedlen / 8);
 
         if (decryptedlen / 8 != applimit) {
-            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%u") "vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
+            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%zu") "vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
             PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * 8);
         }
         uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
