@@ -888,8 +888,8 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
         // use the last read tag
     }
 
-    tag.uid = (tag.pages[0][3] << 24 | tag.pages[0][2] << 16 | tag.pages[0][1] << 8 | tag.pages[0][0]);
-    tag.key = (tag.pages[3][3] << 24 | tag.pages[3][2] << 16 | tag.pages[3][1] << 8 | tag.pages[3][0]);
+    tag.uid = ((tag.pages[0][3]) << 24) | ((tag.pages[0][2]) << 16) | ((tag.pages[0][1]) << 8) | tag.pages[0][0];
+    tag.key = ((tag.pages[3][3]) << 24) | ((tag.pages[3][2]) << 16) | ((tag.pages[3][1]) << 8) | tag.pages[3][0];
     tag.key <<= 16;
     tag.key += ((tag.pages[2][3]) << 8) + tag.pages[2][2];
     tag.pwdl0 = tag.pages[2][0];
