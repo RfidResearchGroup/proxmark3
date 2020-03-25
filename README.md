@@ -47,9 +47,9 @@ On the software side: quite a lot, see the [Changelog file](CHANGELOG.md).
 > ⚠ **Note**: This is a bleeding edge repository. The maintainers actively is working out of this repository and will be periodically re-structuring the code to make it easier to comprehend, navigate, build, test, and contribute to, so **DO expect significant changes to code layout on a regular basis**.
 
 This repo compiles nicely on 
-   - Proxspace v3.2
+   - Proxspace v3.x
    - Windows/mingw environment with Qt5.6.1 & GCC 4.8
-   - Ubuntu 1404, 1510, 1604, 1804, 1904
+   - Ubuntu 1604, 1804, 1904
    - Mac OS X / Homebrew
    - ParrotOS, Gentoo, Pentoo, Kali, Nethunter, Archlinux, Fedora
    - WSL, WSL2  (Windows subsystem linux) on Windows 10
