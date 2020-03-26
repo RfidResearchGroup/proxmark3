@@ -42,7 +42,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-- Mifare Plus Tag Information ------------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    
+
     // info about 14a part
     infoHF14A(false, false, false);
 
@@ -61,13 +61,12 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
         PrintAndLogEx(INFO, " Fingerprint");
-        
+
         // MIFARE Type Identification Procedure
         // https://www.nxp.com/docs/en/application-note/AN10833.pdf
         uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
-       
         bool isPlus = false;
-        
+
         if (ATQA == 0x0004) {
             PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 2K") "  (4b UID)");
             isPlus = true;
@@ -131,25 +130,25 @@ static int CmdHFMFPInfo(const char *Cmd) {
             }
         }
 
-// How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
+        // How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
         PrintAndLogEx(INFO, "Security Level (SL)");
         switch(SLmode) {
-            case 0: 
+            case 0:
                 PrintAndLogEx(INFO, "SL 0: initial delivery configuration, used for card personalization");
                 break;
             case 1:
                 PrintAndLogEx(INFO, "SL 1: backwards functional compatibility mode (with MIFARE Classic 1K / 4K) with an optional AES authentication");
                 break;
-            case 2: 
+            case 2:
                 PrintAndLogEx(INFO, "SL 2: 3-Pass Authentication based on AES followed by MIFARE CRYPTO1 authentication, communication secured by MIFARE CRYPTO1");
                 break;
-            case 3: 
+            case 3:
                 PrintAndLogEx(INFO, "SL 3: 3-Pass authentication based on AES, data manipulation commands secured by AES encryption and an AES based MACing method.");
                 break;
-            default: 
+            default:
                 break;
         }
-        
+
         if (SLmode != 0xFF)
             PrintAndLogEx(SUCCESS, "\tMifare Plus SL mode: " _YELLOW_("SL%d"), SLmode);
         else
@@ -966,9 +965,9 @@ static int CmdHFMFPChk(const char *Cmd) {
         if (foundKeys[0][sector][0] || foundKeys[1][sector][0]) {
             if (!printedHeader) {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, ".------.--------------------------------.--------------------------------.");
+                PrintAndLogEx(INFO, "-------+--------------------------------+---------------------------------");
                 PrintAndLogEx(INFO, "|sector|            key A               |            key B               |");
-                PrintAndLogEx(INFO, "|------|--------------------------------|--------------------------------|");
+                PrintAndLogEx(INFO, "|------+--------------------------------+--------------------------------|");
                 printedHeader = true;
             }
             PrintAndLogEx(INFO, "|  %02d  |%32s|%32s|",
@@ -980,7 +979,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     if (!printedHeader)
         PrintAndLogEx(INFO, "No keys found(");
     else
-        PrintAndLogEx(INFO, "'------'--------------------------------'--------------------------------'\n");
+        PrintAndLogEx(INFO, "'------+--------------------------------+--------------------------------'\n");
 
     // save keys to json
     if ((jsonnamelen > 0) && printedHeader) {
