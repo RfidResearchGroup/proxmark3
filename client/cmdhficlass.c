@@ -122,9 +122,9 @@ static int usage_hf_iclass_clone(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to clone from");
-    PrintAndLogEx(NORMAL, "  b <Block>    : The first block to clone as 2 hex symbols");
-    PrintAndLogEx(NORMAL, "  l <Last Blk> : Set the Data to write as 16 hex symbols");
-    PrintAndLogEx(NORMAL, "  k <Key>      : Access Key as 16 hex symbols or 1 hex to select key from memory");
+    PrintAndLogEx(NORMAL, "  b <block>    : The first block to clone as 2 hex symbols");
+    PrintAndLogEx(NORMAL, "  l <last blk> : Set the Data to write as 16 hex symbols");
+    PrintAndLogEx(NORMAL, "  k <key>      : Access Key as 16 hex symbols or 1 hex to select key from memory");
     PrintAndLogEx(NORMAL, "  c            : If 'c' is specified, the key set is assumed to be the credit key\n");
     PrintAndLogEx(NORMAL, "  e            : If 'e' is specified, elite computations applied to key");
     PrintAndLogEx(NORMAL, "  r            : If 'r' is specified, no computations applied to key");
@@ -135,18 +135,18 @@ static int usage_hf_iclass_clone(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_writeblock(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass writeblk b <block> d <data> k <key> [c|e|r|v]\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass wrbl b <block> d <data> k <key> [c|e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  b <Block> : The block number as 2 hex symbols");
+    PrintAndLogEx(NORMAL, "  b <block> : The block number as 2 hex symbols");
     PrintAndLogEx(NORMAL, "  d <data>  : set the Data to write as 16 hex symbols");
-    PrintAndLogEx(NORMAL, "  k <Key>   : access Key as 16 hex symbols or 1 hex to select key from memory");
+    PrintAndLogEx(NORMAL, "  k <key>   : access Key as 16 hex symbols or 1 hex to select key from memory");
     PrintAndLogEx(NORMAL, "  c         : credit key assumed\n");
     PrintAndLogEx(NORMAL, "  e         : elite computations applied to key");
     PrintAndLogEx(NORMAL, "  r         : raw, no computations applied to key");
     PrintAndLogEx(NORMAL, "  v         : verbose output");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA k 001122334455667B");
-    PrintAndLogEx(NORMAL, "        hf iclass writeblk b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
+    PrintAndLogEx(NORMAL, "        hf iclass wrbl b 0A d AAAAAAAAAAAAAAAA k 001122334455667B");
+    PrintAndLogEx(NORMAL, "        hf iclass wrbl b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readblock(void) {
