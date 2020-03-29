@@ -60,7 +60,7 @@ Dump iClass card contents
 ```
 Options
 ---
-k <Key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
+k <key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
 
 m3 --> hf iclass dump k 0
 ```
@@ -69,8 +69,8 @@ Read iClass Block
 ```
 Options
 ---
-b <Block>  : The block number as 2 hex symbols
-k <Key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+b <block>  : The block number as 2 hex symbols
+k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
 
 pm3 --> hf iclass rdbl b 7 k 0
 ```
@@ -79,9 +79,9 @@ Write to iClass Block
 ```
 Options
 ---
-b <Block>  : The block number as 2 hex symbols
+b <block>  : The block number as 2 hex symbols
 d <data>   : Set the Data to write as 16 hex symbols
-k <Key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
 
 pm3 --> hf iclass wrbl b 07 d 6ce099fe7e614fd0 k 0
 ```
@@ -102,7 +102,7 @@ Options
 n <keynbr>    : specify the keyNbr to set in memory
 k <key>       : set a key in memory
 
-pm3 --> hf iclass managekeys n 0 k AFA785A7DAB33378
+pm3 --> hf iclass managekeys n 3 k AFA785A7DAB33378
 ```
 
 Encrypt iClass Block
@@ -124,9 +124,10 @@ Simulate iClass
 Options
 ---
 0 <CSN>     simulate the given CSN
-2           Runs part 1 of LOCLASS attack
 1           simulate default CSN
+2           Runs online part of LOCLASS attack
 3           Full simulation using emulator memory (see 'hf iclass eload')
+4           Runs online part of LOCLASS attack against reader in keyroll mode
 
 pm3 --> hf iclass sim 3
 ```
@@ -149,7 +150,7 @@ Extract custom iClass key (loclass attack)
 Options
 ---
 f <filename>   : specify a filename to clone from
-k <Key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
+k <key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
 e              : If 'e' is specified, elite computations applied to key
 
 pm3 --> hf iclass sim 2
