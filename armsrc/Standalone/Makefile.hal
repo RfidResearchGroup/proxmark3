@@ -47,6 +47,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_EM4100RWC    | Read/simulate em4100 tags & clone it   |
 |                 | to T555x tags                          |
 +----------------------------------------------------------+
+| HF_LEGIC        | Read/simulate Legic Prime tags         |
+|                 | storing in flashmem                    |
++----------------------------------------------------------+
 endef
 
 STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID LF_EM4100EMUL LF_EM4100RWC
