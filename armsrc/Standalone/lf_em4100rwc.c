@@ -121,6 +121,8 @@ void SaveIDtoFlash(int addr, uint64_t id) {
 void RunMod() {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    Dbprintf("[=] >>  LF EM4100 read/write/clone started  <<");
+    
     int selected = 0;
     //state 0 - select slot
     //      1 - read tag to selected slot,
