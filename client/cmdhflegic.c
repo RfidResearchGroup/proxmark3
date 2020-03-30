@@ -948,7 +948,7 @@ static int CmdLegicDump(const char *Cmd) {
 
     // user supplied filename?
     if (fileNlen < 1)
-        sprintf(fnameptr, "%02X%02X%02X%02X.bin", data[0], data[1], data[2], data[3]);
+        sprintf(fnameptr, "hf-legic-%02X%02X%02X%02X-dump.bin", data[0], data[1], data[2], data[3]);
     else
         sprintf(fnameptr + fileNlen, ".bin");
 
