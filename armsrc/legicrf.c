@@ -28,7 +28,6 @@
 static uint8_t *legic_mem;      /* card memory, used for read, write */
 static legic_card_select_t card;/* metadata of currently selected card */
 static crc_t legic_crc;
-int read_success = 0;
 
 //-----------------------------------------------------------------------------
 // Frame timing and pseudorandom number generator
@@ -442,10 +441,10 @@ OUT:
     StopTicks();
 }
 
-void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
+int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
+    int read_success = 0;
     // configure ARM and FPGA
     init_reader(false);
-    read_success = 0;
 
     // establish shared secret and detect card type
     uint8_t card_type = setup_phase(iv);
@@ -475,6 +474,7 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
 OUT:
     switch_off();
     StopTicks();
+    return read_success;
 }
 
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
@@ -515,5 +515,3 @@ OUT:
     switch_off();
     StopTicks();
 }
-
-int check_success(void){return read_success;}
