@@ -82,6 +82,9 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
 | HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
 | LF_ICEHID       | LF HID collector to flashmem - Iceman
+| LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy 
+| LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
+| HF_LEGIC        | HF Legic Prime standalone - uhei
 
 By default `STANDALONE=LF_SAMYRUN`.
 
