@@ -85,6 +85,12 @@ These instructions will show how to setup the environment on OSX to the point wh
 brew install readline qt5 pkgconfig
 brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 ```
+3. (optional) Install makefile dependencies:
+```
+brew install recode
+brew install astyle
+```
+
 
 ## Compile and use the project
 
