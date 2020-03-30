@@ -37,7 +37,7 @@
  * To retrieve log file from flash:
  *
  * 1. mem spiffs dump o lf_hidcollect.log f lf_hidcollect.log
- *    Copies log file from flash to your PC.
+ *    Copies log file from flash to your client.
  *
  * 2. exit the Proxmark3 client
  *
