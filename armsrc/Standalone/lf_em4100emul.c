@@ -82,6 +82,8 @@ void LED_Slot(int i) {
 void RunMod() {
     StandAloneMode();
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    Dbprintf("[=] >>  LF EM4100 simulator started  <<");
+    
     int selected = 0; //selected slot after start
     slots_count = sizeof(low) / sizeof(low[0]);
     bba = BigBuf_get_addr();
