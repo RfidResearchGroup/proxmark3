@@ -49,3 +49,7 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_LF_EM4100RWC,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_em4100rwc.c
 endif
+# WITH_STANDALONE_HF_LEGIC
+ifneq (,$(findstring WITH_STANDALONE_HF_LEGIC,$(APP_CFLAGS)))
+   SRC_STANDALONE = hf_legic.c
+endif

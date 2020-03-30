@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `HF_LEGIC` standalone mode to read and simulate a Legic prime tag (@Pizza_4u)
  - Added keri MS decode/encode and update 'lf keri clone' to support MS fc/cid cloning. (@mwalker33)
  - Fix 'hf mfdes enum' - now actually manages to enumerate files under all AID's. :smiley:  (@iceman1001)
  - Fix 'hf mfdes info' - now detects DESFire light and work properly Wrapped commands :+1: (@iceman1001)

@@ -15,7 +15,6 @@
 #include "common.h"
 
 void LegicRfInfo(void);
-void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv);
+int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv);
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data);
-
 #endif /* __LEGICRF_H */

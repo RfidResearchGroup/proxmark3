@@ -441,7 +441,8 @@ OUT:
     StopTicks();
 }
 
-void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
+int LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
+    int read_success = 0;
     // configure ARM and FPGA
     init_reader(false);
 
@@ -467,11 +468,13 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
     }
 
     // OK
+    read_success = 1;
     reply_old(CMD_ACK, 1, len, 0, legic_mem, len);
 
 OUT:
     switch_off();
     StopTicks();
+    return read_success;
 }
 
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
