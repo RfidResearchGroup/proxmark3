@@ -460,12 +460,12 @@ void LegicRfSimulate(uint8_t cardtype) {
 
     // verify command line input
     if (init_card(cardtype, &card) != 0) {
-        DbpString("Unknown tagtype.");
+        DbpString("[!] Unknown tagtype.");
         goto OUT;
     }
 
     LED_A_ON();
-    DbpString("Starting Legic emulator, press button to end");
+    DbpString("[=] Starting Legic emulator, press " _YELLOW_("button") "to end");
     while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
 
@@ -486,7 +486,7 @@ void LegicRfSimulate(uint8_t cardtype) {
     }
 
 OUT:
-    DbpString("Stopped");
+    DbpString("[=] Sim stopped");
     switch_off();
     StopTicks();
 }
