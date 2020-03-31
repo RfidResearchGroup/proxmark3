@@ -244,15 +244,12 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
     } else {
         PrintAndLogEx(NORMAL, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
         if (sigType == stECDSA_P192 || sigType == stECDSA_P256) {
-            PrintAndLogEx(NORMAL, "\tsignature: ECDSA");
-            uint8_t rval[300] = {0};
-            uint8_t sval[300] = {0};
-            int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
-            if (!res) {
-                PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(rval, 32));
-                PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(sval, 32));
-            } else {
-                PrintAndLogEx(NORMAL, "\t\error signature decode");
+            int slen = intsiglen / 2;
+            if (slen == 24 || slen == 32) {
+                PrintAndLogEx(NORMAL, "\tsignature: ECDSA-%d", slen * 8);
+                PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(&sig[indx], slen));
+                indx += slen;
+                PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(&sig[indx], slen));
             }
         } else {
             PrintAndLogEx(NORMAL, "\tsignature: unknown type");
