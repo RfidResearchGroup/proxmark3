@@ -24,12 +24,19 @@ typedef enum {
 } TypeNameFormat_t;
 
 typedef enum {
-    stNotPresent            = 0x00,
-    stRSASSA_PSS_SHA_1      = 0x01,
+    stNotPresent              = 0x00,
+    stRSASSA_PSS_SHA_1        = 0x01,
     stRSASSA_PKCS1_v1_5_WITH_SHA_1 = 0x02,
-    stDSA                   = 0x03,
-    stECDSA                 = 0x04,
-    stNA                    = 0x05
+    stDSA_1024                = 0x03,
+    stECDSA_P192              = 0x04,
+    stRSASSA_PSS_2048         = 0x05,
+    stRSASSA_PKCS1_v1_5_2048  = 0x06,
+    stDSA_2048                = 0x07,
+    stECDSA_P224              = 0x08,
+    stECDSA_K233              = 0x09,
+    stECDSA_B233              = 0x0a,
+    stECDSA_P256              = 0x0b,
+    stNA                      = 0x0c
 } ndefSigType_t;
 
 typedef enum {

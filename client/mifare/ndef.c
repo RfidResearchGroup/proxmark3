@@ -32,16 +32,24 @@ static const char *TypeNameFormat_s[] = {
 
 static const char *ndefSigType_s[] = {
     "Not present",                   // No signature present
-    "RSASSA_PSS_SHA_1",              // PKCS_1
-    "RSASSA_PKCS1_v1_5_WITH_SHA_1",  // PKCS_1
-    "DSA",
-    "ECDSA",
+    "RSASSA_PSS_SHA_1 (1024)",              // PKCS_1
+    "RSASSA_PKCS1_v1_5_WITH_SHA_1 (1024)",  // PKCS_1
+    "DSA-1024",
+    "ECDSA-P192",
+    "RSASSA-PSS-2048",
+    "RSASSA-PKCS1-v1_5-2048",
+    "DSA-2048",
+    "ECDSA-P224",
+    "ECDSA-K233",
+    "ECDSA-B233",
+    "ECDSA-P256",
     "n/a"
+    
 };
 
 static const char *ndefCertificateFormat_s[] = {
     "X_509",
-    "X9_68",
+    "X9_68 (M2M)",
     "n/a"
 };
 
@@ -169,7 +177,7 @@ static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
 
     size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
     // ecdsa 0x04
-    if (sigType == stECDSA) {
+    if (sigType == stECDSA_P192) {
         indx += 3;
         PrintAndLogEx(NORMAL, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
 
