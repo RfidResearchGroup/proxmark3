@@ -26,6 +26,8 @@
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem4x.h" // askem410xdecode
 #include "fileutils.h" // searchFile
+#include "mifare/ndef.h"
+#include "cliparser/cliparser.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
@@ -2289,6 +2291,35 @@ static int CmdDataIIR(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdDataNDEF(const char *Cmd) {
+
+#ifndef MAX_NDEF_LEN
+#define MAX_NDEF_LEN  2048
+#endif
+
+    CLIParserInit("data ndef",
+                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Usage:\n\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+
+    int datalen = 0;
+    uint8_t data[MAX_NDEF_LEN] = {0};
+    CLIGetHexWithReturn(1, data, &datalen);
+    
+    CLIParserFree();
+
+    PrintAndLogEx(NORMAL, "ice: %s", sprint_hex(data, datalen));
+
+    NDEFDecodeAndPrint(data, datalen, true);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable, "This help"},
     {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable, "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
@@ -2327,6 +2358,7 @@ static command_t CommandTable[] = {
     {"undec",           CmdUndec,                AlwaysAvailable, "Un-decimate samples by 2"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable, "Count time between zero-crossings"},
     {"iir",             CmdDataIIR,              AlwaysAvailable,    "apply IIR buttersworth filter on plotdata"},
+    {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
     {NULL, NULL, NULL, NULL}
 };
 
