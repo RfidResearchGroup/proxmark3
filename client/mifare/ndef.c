@@ -177,7 +177,7 @@ static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
 
     size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
     // ecdsa 0x04
-    if (sigType == stECDSA) {
+    if (sigType == stECDSA_P192) {
         indx += 3;
         PrintAndLogEx(NORMAL, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
 
