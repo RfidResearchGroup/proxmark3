@@ -160,14 +160,8 @@ static int ndefPrintHeader(NDEFHeader_t *header) {
     return PM3_SUCCESS;
 }
 
-static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
-    size_t indx = 0;
-    PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
-    if (sig[0] != 0x01 && sig[0] != 0x20) {
-        PrintAndLogEx(ERR, "signature version unknown.");
-        return PM3_ESOFT;
-    }
-    indx++;
+static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
+    size_t indx = 1;
 
     uint8_t sigType = sig[indx] & 0x7f;
     bool sigURI = sig[indx] & 0x80;
@@ -224,6 +218,87 @@ static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
 
     return PM3_SUCCESS;
 };
+
+// https://github.com/nfcpy/ndeflib/blob/master/src/ndef/signature.py#L292
+static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
+    size_t indx = 1;
+
+    uint8_t sigType = sig[indx] & 0x7f;
+    bool sigURI = sig[indx] & 0x80;
+    indx++;
+    
+    uint8_t hashType = sig[indx];
+    indx++;
+
+    PrintAndLogEx(NORMAL, "\tsignature type: %s", ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
+    PrintAndLogEx(NORMAL, "\tsignature uri: %s", (sigURI ? "present" : "not present"));
+    PrintAndLogEx(NORMAL, "\thash type: %s", ((hashType == 0x02) ? "SHA-256" : "unknown"));
+
+    size_t intsiglen = (sig[indx] << 8) + sig[indx + 1];
+    indx += 2;
+    
+    if (sigURI) {
+        indx += 2;
+        PrintAndLogEx(NORMAL, "\tsignature uri [%zu]: %.*s", intsiglen, (int)intsiglen, &sig[indx]);
+        indx += intsiglen;
+    } else {
+        PrintAndLogEx(NORMAL, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
+        if (sigType == stECDSA_P192 || sigType == stECDSA_P256) {
+            int slen = intsiglen / 2;
+            if (slen == 24 || slen == 32) {
+                PrintAndLogEx(NORMAL, "\tsignature: ECDSA-%d", slen * 8);
+                PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(&sig[indx], slen));
+                indx += slen;
+                PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(&sig[indx], slen));
+            }
+        } else {
+            PrintAndLogEx(NORMAL, "\tsignature: unknown type");
+        }
+        indx += intsiglen;
+    }
+
+    uint8_t certFormat = (sig[indx] >> 4) & 0x07;
+    uint8_t certCount = sig[indx] & 0x0f;
+    bool certURI = sig[indx] & 0x80;
+
+    PrintAndLogEx(NORMAL, "\tcertificate format: %s", ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
+    PrintAndLogEx(NORMAL, "\tcertificates count: %d", certCount);
+
+    // print certificates
+    indx++;
+    for (int i = 0; i < certCount; i++) {
+        size_t intcertlen = (sig[indx + 1] << 8) + sig[indx + 2];
+        indx += 2;
+
+        PrintAndLogEx(NORMAL, "\tcertificate %d [%zu]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));
+        indx += intcertlen;
+    }
+
+    // have certificate uri
+    if ((indx <= siglen) && certURI) {
+        size_t inturilen = (sig[indx] << 8) + sig[indx + 1];
+        indx += 2;
+        PrintAndLogEx(NORMAL, "\tcertificate uri [%zu]: %.*s", inturilen, (int)inturilen, &sig[indx]);
+    }
+
+    return PM3_SUCCESS;
+};
+
+static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
+    PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
+    if (sig[0] != 0x01 && sig[0] != 0x20) {
+        PrintAndLogEx(ERR, "signature version unknown.");
+        return PM3_ESOFT;
+    }
+    
+    if (sig[0] == 0x01)
+        return ndefDecodeSig1(sig, siglen);
+    
+    if (sig[0] == 0x20)
+        return ndefDecodeSig2(sig, siglen);
+    
+    return PM3_ESOFT;
+}
 
 static int ndefDecodePayload(NDEFHeader_t *ndef) {
 
