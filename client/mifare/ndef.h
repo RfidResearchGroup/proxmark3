@@ -63,5 +63,6 @@ typedef struct {
 } NDEFHeader_t;
 
 int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose);
+int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen);
 
 #endif // _NDEF_H_

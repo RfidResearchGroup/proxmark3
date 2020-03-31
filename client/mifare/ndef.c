@@ -16,6 +16,7 @@
 #include "util.h" // sprint_hex...
 #include "emv/dump.h"
 #include "crypto/asn1utils.h"
+#include "pm3_cmd.h"
 
 #define STRBOOL(p) ((p) ? "+" : "-")
 
@@ -118,7 +119,7 @@ static int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header)
     header->TypeNameFormat  = data[0] & 0x07;
     header->len             = 1 + 1 + (header->ShortRecordBit ? 1 : 4) + (header->IDLenPresent ? 1 : 0); // header + typelen + payloadlen + idlen
     if (header->len > datalen)
-        return 1;
+        return PM3_ESOFT;
 
     header->TypeLen = data[1];
     header->Type = data + header->len;
@@ -138,7 +139,7 @@ static int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header)
     if (header->RecLen > datalen)
         return 3;
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int ndefPrintHeader(NDEFHeader_t *header) {
@@ -156,8 +157,7 @@ static int ndefPrintHeader(NDEFHeader_t *header) {
     PrintAndLogEx(NORMAL, "\tPayload length   : %zu", header->PayloadLen);
     PrintAndLogEx(NORMAL, "\tID length        : %zu", header->IDLen);
     PrintAndLogEx(NORMAL, "\tRecord length    : %zu", header->RecLen);
-
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
@@ -165,7 +165,7 @@ static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
     PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
     if (sig[0] != 0x01) {
         PrintAndLogEx(ERR, "signature version unknown.");
-        return 1;
+        return PM3_ESOFT;
     }
     indx++;
 
@@ -222,7 +222,7 @@ static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
         PrintAndLogEx(NORMAL, "\tcertificate uri [%zu]: %.*s", inturilen, (int)inturilen, &sig[indx]);
     }
 
-    return 0;
+    return PM3_SUCCESS;
 };
 
 static int ndefDecodePayload(NDEFHeader_t *ndef) {
@@ -262,13 +262,13 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
         case tnfUnknownRecord:
             break;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     NDEFHeader_t NDEFHeader = {0};
     int res = ndefDecodeHeader(ndefRecord, ndefRecordLen, &NDEFHeader);
-    if (res)
+    if (res != PM3_SUCCESS)
         return res;
 
     ndefPrintHeader(&NDEFHeader);
@@ -288,30 +288,30 @@ static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
             ndefDecodePayload(&NDEFHeader);
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
-static int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     bool firstRec = true;
     size_t len = 0;
 
     while (len < ndefRecordLen) {
         NDEFHeader_t NDEFHeader = {0};
         int res = ndefDecodeHeader(&ndefRecord[len], ndefRecordLen - len, &NDEFHeader);
-        if (res)
+        if (res != PM3_SUCCESS)
             return res;
 
         if (firstRec) {
             if (!NDEFHeader.MessageBegin) {
                 PrintAndLogEx(ERR, "NDEF first record have MessageBegin=false!");
-                return 1;
+                return PM3_ESOFT;
             }
             firstRec = false;
         }
 
         if (NDEFHeader.MessageEnd && len + NDEFHeader.RecLen != ndefRecordLen) {
             PrintAndLogEx(ERR, "NDEF records have wrong length. Must be %zu, calculated %zu", ndefRecordLen, len + NDEFHeader.RecLen);
-            return 1;
+            return PM3_ESOFT;
         }
 
         ndefRecordDecodeAndPrint(&ndefRecord[len], NDEFHeader.RecLen);
@@ -322,7 +322,7 @@ static int ndefRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) 
             break;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
@@ -346,8 +346,8 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(INFO, "-- NDEF message. len: %d", len);
 
-                int res = ndefRecordsDecodeAndPrint(&ndef[indx], len);
-                if (res)
+                int res = NDEFRecordsDecodeAndPrint(&ndef[indx], len);
+                if (res != PM3_SUCCESS)
                     return res;
 
                 indx += len;
@@ -362,13 +362,13 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             }
             case 0xfe: {
                 PrintAndLogEx(INFO, "-- NDEF Terminator. Done.");
-                return 0;
+                return PM3_SUCCESS;
             }
             default: {
                 PrintAndLogEx(ERR, "unknown tag 0x%02x", ndef[indx]);
-                return 1;
+                return PM3_ESOFT;
             }
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
