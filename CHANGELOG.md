@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `data ndef` - decode NDEF messages (@iceman1001)
+ - Change - usb write's now waits for shiftregisters (@pwpiwi)
+ - Change - NDEF supports more signatures now (@iceman1001)
+ - OSX Makefile now supports `make style` and `make checks` (@Pizza_4u)
  - Added `HF_LEGIC` standalone mode to read and simulate a Legic prime tag (@Pizza_4u)
  - Added keri MS decode/encode and update 'lf keri clone' to support MS fc/cid cloning. (@mwalker33)
  - Fix 'hf mfdes enum' - now actually manages to enumerate files under all AID's. :smiley:  (@iceman1001)
