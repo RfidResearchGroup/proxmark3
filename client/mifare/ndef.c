@@ -163,7 +163,7 @@ static int ndefPrintHeader(NDEFHeader_t *header) {
 static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
     size_t indx = 0;
     PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
-    if (sig[0] != 0x01) {
+    if (sig[0] != 0x01 && sig[0] != 0x20) {
         PrintAndLogEx(ERR, "signature version unknown.");
         return PM3_ESOFT;
     }
