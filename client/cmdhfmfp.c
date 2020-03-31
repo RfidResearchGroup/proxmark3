@@ -47,7 +47,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
     infoHF14A(false, false, false);
 
     // Mifare Plus info
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
@@ -115,7 +115,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 int datalen = 0;
                 // https://github.com/Proxmark/proxmark3/blob/master/client/luascripts/mifarePlus.lua#L161
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
-                int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen, false);
+                int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
 
                 if (memcmp(data, "\x67\x00", 2) == 0) {
                     PrintAndLogEx(INFO, "\tMost likely a Mifare DESFire tag"); 
