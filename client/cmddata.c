@@ -2312,8 +2312,8 @@ static int CmdDataNDEF(const char *Cmd) {
     
     CLIParserFree();
 
-    NDEFRecordsDecodeAndPrint(data, datalen);
-    return PM3_SUCCESS;
+    PrintAndLogEx(INFO, "Parsed NDEF Records");
+    return NDEFRecordsDecodeAndPrint(data, datalen);
 }
 
 static command_t CommandTable[] = {
