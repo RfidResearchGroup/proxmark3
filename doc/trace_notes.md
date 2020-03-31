@@ -4,6 +4,43 @@ The `trace` command lists the data exchange by the proxmark3 and a tag or a read
 
 With `trace list` a table is shown which gives timing information, the src of the data bytes, the transmitted/received bytes itself, a check if the CRC was correct and some decoding of the command.
 
+## Timing
+
+The Start and the End coloumn lists timestamps when the transmission of the shown data started (time of first bit) and when it ended (end of last modulation).
+
+The unit for this time information depends on the protocol in use:
+
+* ISO14443A and Thinfilm: all times are in carrier periods (1/13.56MHz)
+* For Legic timing information depends also on direction:
+ * Reader Mode: Timings are in ticks (1us == 1.5ticks)
+ * Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)
+* Hitag1 / Hitag2 / HitagS: Elementary Time Unit (ETU) is 8µs
+* iClass, ISO15693, ISO18092 and FeliCa have no accurate timing information at the moment
+* For others timing is not available
+
+By specifing the option ```f``` (e.g. ```trace list 14a f```) the frame delay times are shown. (So you don't have to do the math by your own).
+
+## Sources
+
+If the data is marked as a response the source is shown as Tag. Otherwise it is marked as Reader (Rdr).
+
+## Data
+
+This coloumn show the raw bytes trasmitted over the air. With option ```c``` CRC bytes are marked in square brackets.
+
+## CRC
+
+Marks if the transmitted CRC matches with the calculated CRC.
+
+## Annotation
+
+Annotations provide a rough decoding of the transmitted data. For ISO14443A a more detailed decoding is available with Wireshark (s. next chapter)
+
+
+--
+
+# Trace and Wireshark
+
 To get a more detailed explanation of the transmitted data for ISO14443A traces the output can be converted to a pcapng file to read it with [Wireshark](https://www.wireshark.org/).
 
 To do so
