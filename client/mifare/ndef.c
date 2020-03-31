@@ -171,16 +171,19 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
 
     size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
     // ecdsa 0x04
-    if (sigType == stECDSA_P192) {
+    if (sigType == stECDSA_P192 || sigType == stECDSA_P256) {
         indx += 3;
+        int slen = 24;
+        if (sigType == stECDSA_P256)
+            slen = 32;
         PrintAndLogEx(NORMAL, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
 
         uint8_t rval[300] = {0};
         uint8_t sval[300] = {0};
         int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
         if (!res) {
-            PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(rval, 32));
-            PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(sval, 32));
+            PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(rval + 32 - slen, slen));
+            PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(sval + 32 - slen, slen));
         }
     }
     indx += intsiglen;
