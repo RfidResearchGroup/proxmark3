@@ -232,28 +232,33 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
 
     PrintAndLogEx(NORMAL, "\tsignature type: %s", ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
     PrintAndLogEx(NORMAL, "\tsignature uri: %s", (sigURI ? "present" : "not present"));
-    PrintAndLogEx(NORMAL, "\thash type: %s", ((hashType == 0x02) ? "SHA-256" : "unknown");
+    PrintAndLogEx(NORMAL, "\thash type: %s", ((hashType == 0x02) ? "SHA-256" : "unknown"));
 
+    size_t intsiglen = (sig[indx] << 8) + sig[indx + 1];
+    indx += 2;
+    
     if (sigURI) {
-        size_t intsigurilen = (sig[indx] << 8) + sig[indx + 1];
         indx += 2;
-        PrintAndLogEx(NORMAL, "\tsignature uri [%zu]: %.*s", intsigurilen, (int)intsigurilen, &sig[indx]);
-        indx += intsigurilen;
-    }
-return 0;
-  /*  if (sigType == stECDSA_P192 || sigType == stECDSA_P256) {
-        indx += 3;
+        PrintAndLogEx(NORMAL, "\tsignature uri [%zu]: %.*s", intsiglen, (int)intsiglen, &sig[indx]);
+        indx += intsiglen;
+    } else {
         PrintAndLogEx(NORMAL, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
-
-        uint8_t rval[300] = {0};
-        uint8_t sval[300] = {0};
-        int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
-        if (!res) {
-            PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(rval, 32));
-            PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(sval, 32));
+        if (sigType == stECDSA_P192 || sigType == stECDSA_P256) {
+            PrintAndLogEx(NORMAL, "\tsignature: ECDSA");
+            uint8_t rval[300] = {0};
+            uint8_t sval[300] = {0};
+            int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
+            if (!res) {
+                PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(rval, 32));
+                PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(sval, 32));
+            } else {
+                PrintAndLogEx(NORMAL, "\t\error signature decode");
+            }
+        } else {
+            PrintAndLogEx(NORMAL, "\tsignature: unknown type");
         }
+        indx += intsiglen;
     }
-    indx += intsiglen;*/
 
     uint8_t certFormat = (sig[indx] >> 4) & 0x07;
     uint8_t certCount = sig[indx] & 0x0f;
