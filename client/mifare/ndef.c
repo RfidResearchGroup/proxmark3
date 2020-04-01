@@ -308,15 +308,15 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
     switch (ndef->TypeNameFormat) {
         case tnfWellKnownRecord:
             PrintAndLogEx(INFO, "Well Known Record");
-            PrintAndLogEx(NORMAL, "\ttype:    %.*s", (int)ndef->TypeLen, ndef->Type);
+            PrintAndLogEx(INFO, "\ttype   : %.*s", (int)ndef->TypeLen, ndef->Type);
 
             if (!strncmp((char *)ndef->Type, "T", ndef->TypeLen)) {
-                PrintAndLogEx(NORMAL, "\ttext   : %.*s", (int)ndef->PayloadLen, ndef->Payload);
+                PrintAndLogEx(INFO, "\ttext   : " _GREEN_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
             }
 
             if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {
-                PrintAndLogEx(NORMAL
-                              , "\turi    : %s%.*s"
+                PrintAndLogEx(INFO
+                              , "\turi    : " _GREEN_("%s%.*s")
                               , (ndef->Payload[0] <= 0x23 ? URI_s[ndef->Payload[0]] : "[err]")
                               , (int)(ndef->PayloadLen - 1)
                               , &ndef->Payload[1]
@@ -330,14 +330,28 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
             break;
         case tnfAbsoluteURIRecord:
             PrintAndLogEx(INFO, "Absolute URI Record");
-            PrintAndLogEx(NORMAL, "\ttype:    %.*s", (int)ndef->TypeLen, ndef->Type);
-            PrintAndLogEx(NORMAL, "\tpayload: %.*s", (int)ndef->PayloadLen, ndef->Payload);
+            PrintAndLogEx(INFO, "\ttype    : %.*s", (int)ndef->TypeLen, ndef->Type);
+            PrintAndLogEx(INFO, "\tpayload : %.*s", (int)ndef->PayloadLen, ndef->Payload);
             break;
         case tnfEmptyRecord:
+            PrintAndLogEx(INFO, "Empty Record");
+            PrintAndLogEx(INFO, "\t -to be impl-");
+            break;
         case tnfMIMEMediaRecord:
+            PrintAndLogEx(INFO, "MIME Media Record");
+            PrintAndLogEx(INFO, "\t -to be impl-");
+            break;
         case tnfExternalRecord:
+            PrintAndLogEx(INFO, "External Record");
+            PrintAndLogEx(INFO, "\t -to be impl-");
+            break;
         case tnfUnchangedRecord:
+            PrintAndLogEx(INFO, "Unchanged Record");
+            PrintAndLogEx(INFO, "\t -to be impl-");
+            break;
         case tnfUnknownRecord:
+            PrintAndLogEx(INFO, "Unknown Record");
+            PrintAndLogEx(INFO, "\t -to be impl-");
             break;
     }
     return PM3_SUCCESS;
@@ -372,8 +386,11 @@ static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     bool firstRec = true;
     size_t len = 0;
+    size_t counter = 0;
 
     while (len < ndefRecordLen) {
+        counter++;
+
         NDEFHeader_t NDEFHeader = {0};
         int res = ndefDecodeHeader(&ndefRecord[len], ndefRecordLen - len, &NDEFHeader);
         if (res != PM3_SUCCESS)
@@ -381,7 +398,7 @@ int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
 
         if (firstRec) {
             if (!NDEFHeader.MessageBegin) {
-                PrintAndLogEx(ERR, "NDEF first record have MessageBegin=false!");
+                PrintAndLogEx(ERR, "NDEF first record have MessageBegin = false!");
                 return PM3_ESOFT;
             }
             firstRec = false;
@@ -392,6 +409,9 @@ int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
             return PM3_ESOFT;
         }
 
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "Record " _YELLOW_("%zu"), counter);
+        PrintAndLogEx(INFO, "-----------------------------------------------------");
         ndefRecordDecodeAndPrint(&ndefRecord[len], NDEFHeader.RecLen);
 
         len += NDEFHeader.RecLen;
@@ -407,22 +427,26 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 
     size_t indx = 0;
 
-    PrintAndLogEx(INFO, "NDEF decoding:");
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "NDEF parsing");
     while (indx < ndefLen) {
+
+        PrintAndLogEx(INFO, "-----------------------------------------------------");
         switch (ndef[indx]) {
             case 0x00: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-                PrintAndLogEx(INFO, "-- NDEF NULL block.");
+                
+                PrintAndLogEx(SUCCESS, "-- NDEF NULL block.");
                 if (len)
-                    PrintAndLogEx(WARNING, "NDEF NULL block size must be 0 instead of %d.", len);
+                    PrintAndLogEx(WARNING, "NDEF NULL block size must be 0, got %d bytes", len);
                 indx += len;
                 break;
             }
             case 0x03: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-                PrintAndLogEx(INFO, "-- NDEF message. len: %d", len);
+                PrintAndLogEx(SUCCESS, "Found NDEF message (%d bytes)", len);
 
                 int res = NDEFRecordsDecodeAndPrint(&ndef[indx], len);
                 if (res != PM3_SUCCESS)
@@ -434,12 +458,12 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             case 0xfd: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-                PrintAndLogEx(INFO, "-- NDEF proprietary info. Skipped %d bytes.", len);
+                PrintAndLogEx(SUCCESS, "-- NDEF proprietary info. Skipped %d bytes.", len);
                 indx += len;
                 break;
             }
             case 0xfe: {
-                PrintAndLogEx(INFO, "-- NDEF Terminator. Done.");
+                PrintAndLogEx(SUCCESS, "-- NDEF Terminator. Done.");
                 return PM3_SUCCESS;
             }
             default: {
