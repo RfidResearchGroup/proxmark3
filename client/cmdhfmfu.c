@@ -21,6 +21,9 @@
 #include "fileutils.h"
 #include "protocols.h"
 #include "generator.h"
+#include "mifare/ndef.h"
+#include "cliparser/cliparser.h"
+
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2B
@@ -561,6 +564,22 @@ static int ul_print_default(uint8_t *data) {
                  );
 
     return PM3_SUCCESS;
+}
+
+static int ndef_get_maxsize(uint8_t *data) {
+    // no NDEF message
+    if (data[0] != 0xE1)
+        return 0;
+    
+    if (data[2] == 0x06)
+        return 48;
+    else if (data[2] == 0x12)
+        return 144;
+    else if (data[2] == 0x3E)
+        return 496;
+    else if (data[2] == 0x6D)
+        return 872;
+    return 0;
 }
 
 static int ndef_print_CC(uint8_t *data) {
@@ -2633,6 +2652,100 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14MfuNDEF(const char *Cmd) {
+
+    int keylen;
+    int maxsize = 16, status;
+    bool hasAuthKey = false;
+    bool swapEndian = false;
+
+    iso14a_card_select_t card;
+    uint8_t data[16] = {0x00};
+    uint8_t key[16] = {0x00};
+    uint8_t *p_key = key;
+    uint8_t pack[4] = {0, 0, 0, 0};
+    
+    CLIParserInit("hf mfu ndef",
+                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Usage:\n\thf mfu ndef -> shows NDEF data\n"
+                  "\thf mfu ndef -k ffffffff -> shows NDEF data with key\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("kK", "key", "replace default key for NDEF", NULL),
+        arg_lit0("lL", "key", "(optional) swap entered key's endianness"),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+  
+    CLIGetHexWithReturn(1, key, &keylen);
+    swapEndian = arg_get_lit(2);
+    CLIParserFree();
+    
+    switch(keylen) {
+        case 0:
+            break;
+        case 4:
+        case 16:
+            hasAuthKey = true;
+            break;
+        default:
+            PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+            return PM3_EINVARG;
+    }
+
+    // Get tag type
+    TagTypeUL_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == UL_ERROR) return PM3_ESOFT;
+
+    // Is tag UL/NTAG?
+    
+    // Swap endianness
+    if (swapEndian && hasAuthKey) p_key = SwapEndian64(key, keylen, (keylen == 16) ? 8 : 4);
+
+    // Select and Auth
+    if (ul_auth_select(&card, tagtype, hasAuthKey, p_key, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
+  
+    // read pages 0,1,2,3 (should read 4pages)
+    status = ul_read(0, data, sizeof(data));
+    if (status == -1) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
+        return PM3_ESOFT;
+    } else if (status == 16) {
+
+        status = ndef_print_CC(data + 12);
+        if (status == PM3_ESOFT) {
+            DropField();
+            PrintAndLogEx(ERR, "Error: tag didn't contain a NDEF Container");
+            return PM3_ESOFT;
+        }
+
+        // max datasize;
+        maxsize = ndef_get_maxsize(data + 12);
+    }
+
+    // allocate mem
+    uint8_t *records = calloc(maxsize, sizeof(uint8_t));
+    if (records == NULL) {
+        DropField();
+        return PM3_EMALLOC;
+    }
+
+    // read NDEF records.
+    for(uint16_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
+        status = ul_read(4 + j, records + i, 16);
+        if (status == -1) {
+            DropField();
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
+            return PM3_ESOFT;
+        }
+    }
+    DropField();
+    status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+    free(records);
+    return status;
+}
 //------------------------------------
 // Menu Stuff
 //------------------------------------
@@ -2651,6 +2764,7 @@ static command_t CommandTable[] = {
     {"gen",     CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3des mifare diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
+    {"ndef",    CmdHF14MfuNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
 };
 
