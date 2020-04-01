@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "commonutil.h"  // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
@@ -121,18 +122,10 @@ static int get_desfire_freemem(uint32_t *free_mem) {
 // --- GET SIGNATURE
 static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len, desfire_cardtype_t card_type) {
 
-    uint8_t public_key;
-    if (card_type == LIGHT)
-        public_key = 0;
-    else if (card_type == EV2)
-        public_key = 1;
-    else 
-        return PM3_EINVARG;
-    
     #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
 
     // ref:  MIFARE Desfire Originality Signature Validation
-    uint8_t nxp_desfire_keys[2][PUBLIC_DESFIRE_ECDA_KEYLEN] = {
+    uint8_t nxp_desfire_keys[][PUBLIC_DESFIRE_ECDA_KEYLEN] = {
         // DESFire Light
         {
             0x04, 0x0E, 0x98, 0xE1, 0x17, 0xAA, 0xA3, 0x64,
@@ -143,7 +136,11 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0xD0, 0x25, 0x72, 0x42, 0x7E, 0x5A, 0xE0, 0xA2,
             0xDD, 0x36, 0x59, 0x1B, 0x1F, 0xB3, 0x4F, 0xCF, 0x3D
         },
-        // DESFire Ev2
+
+        // DESFire Ev2  - wanted
+        // DESFire Ev3  - wanted
+        
+        // Unknown - needs identification
         {
             0x04, 0x8A, 0x9B, 0x38, 0x0A, 0xF2, 0xEE, 0x1B,
             0x98, 0xDC, 0x41, 0x7F, 0xEC, 0xC2, 0x63, 0xF8,
@@ -152,26 +149,59 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0x42, 0x2B, 0x81, 0xEC, 0x20, 0xB6, 0x5A, 0x66,
             0xB5, 0x10, 0x2A, 0x61, 0x59, 0x6A, 0xF3, 0x37,
             0x92, 0x00, 0x59, 0x93, 0x16, 0xA0, 0x0A, 0x14, 0x10
-        }
+        },
         
+        // Unknown - needs identification
+        {
+            0x04, 0x44, 0x09, 0xAD, 0xC4, 0x2F, 0x91, 0xA8,
+            0x39, 0x40, 0x66, 0xBA, 0x83, 0xD8, 0x72, 0xFB,
+            0x1D, 0x16, 0x80, 0x37, 0x34, 0xE9, 0x11, 0x17,
+            0x04, 0x12, 0xDD, 0xF8, 0xBA, 0xD1, 0xA4, 0xDA,
+            0xDF, 0xD0, 0x41, 0x62, 0x91, 0xAF, 0xE1, 0xC7,
+            0x48, 0x25, 0x39, 0x25, 0xDA, 0x39, 0xA5, 0xF3,
+            0x9A, 0x1C, 0x55, 0x7F, 0xFA, 0xCD, 0x34, 0xC6, 0x2E
+        }
     };
+    
+    uint8_t i;
+    int res;
+    bool is_valid = false;
 
+    for (i = 0; i< ARRAYLEN(nxp_desfire_keys); i++) {
+    
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, nxp_desfire_keys[i], uid, 7, signature, signature_len, false);
+    
+        is_valid = (res == 0);
+        if (is_valid)
+            break;
+    }
+    if (is_valid == false) {
+        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        return PM3_ESOFT;
+    }
 
-    int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, nxp_desfire_keys[public_key], uid, 7, signature, signature_len, false);
-    bool is_valid = (res == 0);
+    char *publickeyname;
+    switch(i) {
+        case 0:
+            publickeyname = "NXP DESFire Light";
+            break;
+        default:
+            publickeyname = "Unknown DESFire, post on forum";
+            break;
+    }
 
     PrintAndLogEx(INFO, "  Tag Signature");
-    PrintAndLogEx(INFO, "  IC signature public key name  : %s", (card_type == LIGHT) ? "NXP DESFire Light" :  "NXP DESFire Ev2");
-    PrintAndLogEx(INFO, "  IC signature public key value : %s", sprint_hex(nxp_desfire_keys[public_key], 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 16, 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 32, 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[public_key] + 48, PUBLIC_DESFIRE_ECDA_KEYLEN - 48));
+    PrintAndLogEx(INFO, "  IC signature public key name  : %s", publickeyname);
+    PrintAndLogEx(INFO, "  IC signature public key value : %s", sprint_hex(nxp_desfire_keys[i], 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[i] + 16, 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[i] + 32, 16));
+    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[i] + 48, PUBLIC_DESFIRE_ECDA_KEYLEN - 48));
     PrintAndLogEx(INFO, "      Elliptic curve parameters : NID_secp224r1");
     PrintAndLogEx(INFO, "               TAG IC Signature : %s", sprint_hex(signature, 16));
     PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 16, 16));
     PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 32, 16));
     PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 48, signature_len - 48));
-    PrintAndLogEx( (is_valid) ? SUCCESS : WARNING, "  Signature verified %s", (is_valid) ? _GREEN_("successful") : _RED_("failed"));
+    PrintAndLogEx( (is_valid) ? SUCCESS : WARNING, "  Signature verified " _GREEN_("successful"));
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
 }
