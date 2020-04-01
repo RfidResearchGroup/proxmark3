@@ -557,6 +557,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
     if (activateField) {
         PacketResponseNG resp;
+        responseNum = 0;
 
         // Anticollision + SELECT card
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
