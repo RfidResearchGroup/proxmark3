@@ -124,9 +124,10 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
 
     #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
 
+    // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
     uint8_t nxp_desfire_keys[][PUBLIC_DESFIRE_ECDA_KEYLEN] = {
-        // DESFire Light
+        // NTAG42x 3 - NTAG 424 DNA, DESFire Light
         {
             0x04, 0x0E, 0x98, 0xE1, 0x17, 0xAA, 0xA3, 0x64,
             0x57, 0xF4, 0x31, 0x73, 0xDC, 0x92, 0x0A, 0x87,
@@ -136,8 +137,6 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0xD0, 0x25, 0x72, 0x42, 0x7E, 0x5A, 0xE0, 0xA2,
             0xDD, 0x36, 0x59, 0x1B, 0x1F, 0xB3, 0x4F, 0xCF, 0x3D
         },
-
-        // DESFire Ev3  - wanted
         
         // NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT
         {
@@ -161,7 +160,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0x9A, 0x1C, 0x55, 0x7F, 0xFA, 0xCD, 0x34, 0xC6, 0x2E
         },
         
-        // NTAG42x 4 - NTAG426,  DESFire Ev2
+        // NTAG42x 4 - NTAG426, DESFire Ev2
         {
             0x04, 0xB3, 0x04, 0xDC, 0x4C, 0x61, 0x5F, 0x53,
             0x26, 0xFE, 0x93, 0x83, 0xDD, 0xEC, 0x9A, 0xA8,
@@ -172,16 +171,6 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0xCE, 0x7D, 0xE3, 0x21, 0xE3, 0xE5, 0xC5, 0x2B, 0x3A
         },
 
-        // NTAG42x 3 - NTAG 424 DNA
-        {
-           0x04, 0x0E, 0x98, 0xE1, 0x17, 0xAA, 0xA3, 0x64,
-           0x57, 0xF4, 0x31, 0x73, 0xDC, 0x92, 0x0A, 0x87,
-           0x57, 0x26, 0x7F, 0x44, 0xCE, 0x4E, 0xC5, 0xAD,
-           0xD3, 0xC5, 0x40, 0x75, 0x57, 0x1A, 0xEB, 0xBF,
-           0x7B, 0x94, 0x2A, 0x97, 0x74, 0xA1, 0xD9, 0x4A,
-           0xD0, 0x25, 0x72, 0x42, 0x7E, 0x5A, 0xE0, 0xA2,
-           0xDD, 0x36, 0x59, 0x1B, 0x1F, 0xB3, 0x4F, 0xCF, 0x3D
-        },
     };
     
     uint8_t i;
@@ -204,16 +193,13 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
     char *publickeyname;
     switch(i) {
         case 0:
-            publickeyname = "NXP DESFire Light";
+            publickeyname = "NTAG42x 3 - NTAG 424 DNA / DESFire Light";
             break;
         case 1:
             publickeyname = "NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT";
             break;
         case 3:
             publickeyname = "NTAG42x 4 - NTAG426, DESFire Ev2";
-            break;
-        case 4:
-            publickeyname = "NTAG42x 3 - NTAG 424 DNA";
             break;
         default:
             publickeyname = "Unknown DESFire, post on forum";
