@@ -45,7 +45,6 @@ static const char *ndefSigType_s[] = {
     "ECDSA-B233",
     "ECDSA-P256",
     "n/a"
-    
 };
 
 static const char *ndefCertificateFormat_s[] = {
@@ -229,7 +228,7 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
     uint8_t sigType = sig[indx] & 0x7f;
     bool sigURI = sig[indx] & 0x80;
     indx++;
-    
+
     uint8_t hashType = sig[indx];
     indx++;
 
@@ -292,13 +291,13 @@ static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
         PrintAndLogEx(ERR, "signature version unknown.");
         return PM3_ESOFT;
     }
-    
+
     if (sig[0] == 0x01)
         return ndefDecodeSig1(sig, siglen);
-    
+
     if (sig[0] == 0x20)
         return ndefDecodeSig2(sig, siglen);
-    
+
     return PM3_ESOFT;
 }
 
@@ -307,15 +306,24 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
     switch (ndef->TypeNameFormat) {
         case tnfWellKnownRecord:
             PrintAndLogEx(INFO, "Well Known Record");
-            PrintAndLogEx(INFO, "\ttype   : %.*s", (int)ndef->TypeLen, ndef->Type);
+            PrintAndLogEx(INFO, "\ttype\t: %.*s", (int)ndef->TypeLen, ndef->Type);
 
             if (!strncmp((char *)ndef->Type, "T", ndef->TypeLen)) {
-                PrintAndLogEx(INFO, "\ttext   : " _GREEN_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
+                uint8_t utf8 = (ndef->Payload[0] >> 7);
+                uint8_t lc_len = ndef->Payload[0] & 0x3F;
+                PrintAndLogEx(INFO,
+                      "\tUTF %d\t: " _GREEN_("%.*s") ", " _GREEN_("%.*s"),
+                      (utf8 == 0) ? 8 : 16,
+                      lc_len,
+                      ndef->Payload + 1,
+                      (int)ndef->PayloadLen - 1 - lc_len,
+                      ndef->Payload + 1 + lc_len
+                );
             }
 
             if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {
                 PrintAndLogEx(INFO
-                              , "\turi    : " _GREEN_("%s%.*s")
+                              , "\turi\t: " _GREEN_("%s%.*s")
                               , (ndef->Payload[0] <= 0x23 ? URI_s[ndef->Payload[0]] : "[err]")
                               , (int)(ndef->PayloadLen - 1)
                               , &ndef->Payload[1]
@@ -436,7 +444,6 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             case 0x00: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-                
                 PrintAndLogEx(SUCCESS, "-- NDEF NULL block.");
                 if (len)
                     PrintAndLogEx(WARNING, "NDEF NULL block size must be 0, got %d bytes", len);
@@ -455,11 +462,11 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                     uint8_t Size = ndef[indx + 1];
                     uint8_t BytesLockedPerLockBit = (ndef[indx + 2] >> 4) & 0x0f;
                     uint8_t BytesPerPage = ndef[indx + 2] & 0x0f;
-                    PrintAndLogEx(SUCCESS, "PagesAddr. number of pages: %d", PagesAddr);                    
-                    PrintAndLogEx(SUCCESS, "ByteOffset. number of bytes: %d", ByteOffset);                    
-                    PrintAndLogEx(SUCCESS, "Size. size in bits of the lock area: %d. bytes approx: %d", Size, Size / 8);                    
-                    PrintAndLogEx(SUCCESS, "BytesPerPage. number of bytes per page: %d", BytesPerPage);                    
-                    PrintAndLogEx(SUCCESS, "BytesLockedPerLockBit. number of bytes that each dynamic lock bit is able to lock: %d", BytesLockedPerLockBit);                    
+                    PrintAndLogEx(SUCCESS, "PagesAddr. number of pages: %d", PagesAddr);
+                    PrintAndLogEx(SUCCESS, "ByteOffset. number of bytes: %d", ByteOffset);
+                    PrintAndLogEx(SUCCESS, "Size. size in bits of the lock area: %d. bytes approx: %d", Size, Size / 8);
+                    PrintAndLogEx(SUCCESS, "BytesPerPage. number of bytes per page: %d", BytesPerPage);
+                    PrintAndLogEx(SUCCESS, "BytesLockedPerLockBit. number of bytes that each dynamic lock bit is able to lock: %d", BytesLockedPerLockBit);
                 }
                 indx += len;
                 break;
@@ -475,10 +482,10 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                     uint8_t ByteOffset = ndef[indx] & 0x0f;
                     uint8_t Size = ndef[indx + 1];
                     uint8_t BytesPerPage = ndef[indx + 2] & 0x0f;
-                    PrintAndLogEx(SUCCESS, "PagesAddr. number of pages: %d", PagesAddr);                    
-                    PrintAndLogEx(SUCCESS, "ByteOffset. number of bytes: %d", ByteOffset);                    
-                    PrintAndLogEx(SUCCESS, "Size. size in bits of the reserved area: %d. bytes approx: %d", Size, Size / 8);                    
-                    PrintAndLogEx(SUCCESS, "BytesPerPage. number of bytes per page: %d", BytesPerPage);                    
+                    PrintAndLogEx(SUCCESS, "PagesAddr. number of pages: %d", PagesAddr);
+                    PrintAndLogEx(SUCCESS, "ByteOffset. number of bytes: %d", ByteOffset);
+                    PrintAndLogEx(SUCCESS, "Size. size in bits of the reserved area: %d. bytes approx: %d", Size, Size / 8);
+                    PrintAndLogEx(SUCCESS, "BytesPerPage. number of bytes per page: %d", BytesPerPage);
                 }
                 indx += len;
                 break;
