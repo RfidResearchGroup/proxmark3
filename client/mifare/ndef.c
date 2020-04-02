@@ -145,18 +145,18 @@ static int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header)
 static int ndefPrintHeader(NDEFHeader_t *header) {
     PrintAndLogEx(INFO, "Header:");
 
-    PrintAndLogEx(NORMAL, "\tMessage Begin:    %s", STRBOOL(header->MessageBegin));
-    PrintAndLogEx(NORMAL, "\tMessage End:      %s", STRBOOL(header->MessageEnd));
-    PrintAndLogEx(NORMAL, "\tChunk Flag:       %s", STRBOOL(header->ChunkFlag));
-    PrintAndLogEx(NORMAL, "\tShort Record Bit: %s", STRBOOL(header->ShortRecordBit));
-    PrintAndLogEx(NORMAL, "\tID Len Present:   %s", STRBOOL(header->IDLenPresent));
-    PrintAndLogEx(NORMAL, "\tType Name Format: [0x%02x] %s", header->TypeNameFormat, TypeNameFormat_s[header->TypeNameFormat]);
+    PrintAndLogEx(SUCCESS, "\tMessage Begin:    %s", STRBOOL(header->MessageBegin));
+    PrintAndLogEx(SUCCESS, "\tMessage End:      %s", STRBOOL(header->MessageEnd));
+    PrintAndLogEx(SUCCESS, "\tChunk Flag:       %s", STRBOOL(header->ChunkFlag));
+    PrintAndLogEx(SUCCESS, "\tShort Record Bit: %s", STRBOOL(header->ShortRecordBit));
+    PrintAndLogEx(SUCCESS, "\tID Len Present:   %s", STRBOOL(header->IDLenPresent));
+    PrintAndLogEx(SUCCESS, "\tType Name Format: [0x%02x] %s", header->TypeNameFormat, TypeNameFormat_s[header->TypeNameFormat]);
 
-    PrintAndLogEx(NORMAL, "\tHeader length    : %zu", header->len);
-    PrintAndLogEx(NORMAL, "\tType length      : %zu", header->TypeLen);
-    PrintAndLogEx(NORMAL, "\tPayload length   : %zu", header->PayloadLen);
-    PrintAndLogEx(NORMAL, "\tID length        : %zu", header->IDLen);
-    PrintAndLogEx(NORMAL, "\tRecord length    : %zu", header->RecLen);
+    PrintAndLogEx(SUCCESS, "\tHeader length    : %zu", header->len);
+    PrintAndLogEx(SUCCESS, "\tType length      : %zu", header->TypeLen);
+    PrintAndLogEx(SUCCESS, "\tPayload length   : %zu", header->PayloadLen);
+    PrintAndLogEx(SUCCESS, "\tID length        : %zu", header->IDLen);
+    PrintAndLogEx(SUCCESS, "\tRecord length    : %zu", header->RecLen);
     return PM3_SUCCESS;
 }
 
@@ -166,8 +166,8 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
     uint8_t sigType = sig[indx] & 0x7f;
     bool sigURI = sig[indx] & 0x80;
 
-    PrintAndLogEx(NORMAL, "\tsignature type: %s", ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
-    PrintAndLogEx(NORMAL, "\tsignature uri: %s", (sigURI ? "present" : "not present"));
+    PrintAndLogEx(SUCCESS, "\tsignature type: %s", ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
+    PrintAndLogEx(SUCCESS, "\tsignature uri: %s", (sigURI ? "present" : "not present"));
 
     size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
     // ecdsa 0x04
@@ -176,14 +176,14 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
         int slen = 24;
         if (sigType == stECDSA_P256)
             slen = 32;
-        PrintAndLogEx(NORMAL, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
+        PrintAndLogEx(SUCCESS, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
 
         uint8_t rval[300] = {0};
         uint8_t sval[300] = {0};
         int res = ecdsa_asn1_get_signature(&sig[indx], intsiglen, rval, sval);
         if (!res) {
-            PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(rval + 32 - slen, slen));
-            PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(sval + 32 - slen, slen));
+            PrintAndLogEx(SUCCESS, "\t\tr: %s", sprint_hex(rval + 32 - slen, slen));
+            PrintAndLogEx(SUCCESS, "\t\ts: %s", sprint_hex(sval + 32 - slen, slen));
         }
     }
     indx += intsiglen;
@@ -191,7 +191,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
     if (sigURI) {
         size_t intsigurilen = (sig[indx] << 8) + sig[indx + 1];
         indx += 2;
-        PrintAndLogEx(NORMAL, "\tsignature uri [%zu]: %.*s", intsigurilen, (int)intsigurilen, &sig[indx]);
+        PrintAndLogEx(SUCCESS, "\tsignature uri [%zu]: %.*s", intsigurilen, (int)intsigurilen, &sig[indx]);
         indx += intsigurilen;
     }
 
@@ -199,8 +199,8 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
     uint8_t certCount = sig[indx] & 0x0f;
     bool certURI = sig[indx] & 0x80;
 
-    PrintAndLogEx(NORMAL, "\tcertificate format: %s", ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
-    PrintAndLogEx(NORMAL, "\tcertificates count: %d", certCount);
+    PrintAndLogEx(SUCCESS, "\tcertificate format: %s", ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
+    PrintAndLogEx(SUCCESS, "\tcertificates count: %d", certCount);
 
     // print certificates
     indx++;
@@ -208,7 +208,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
         size_t intcertlen = (sig[indx + 1] << 8) + sig[indx + 2];
         indx += 2;
 
-        PrintAndLogEx(NORMAL, "\tcertificate %d [%zu]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));
+        PrintAndLogEx(SUCCESS, "\tcertificate %d [%zu]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));
         indx += intcertlen;
     }
 
@@ -216,7 +216,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
     if ((indx <= siglen) && certURI) {
         size_t inturilen = (sig[indx] << 8) + sig[indx + 1];
         indx += 2;
-        PrintAndLogEx(NORMAL, "\tcertificate uri [%zu]: %.*s", inturilen, (int)inturilen, &sig[indx]);
+        PrintAndLogEx(SUCCESS, "\tcertificate uri [%zu]: %.*s", inturilen, (int)inturilen, &sig[indx]);
     }
 
     return PM3_SUCCESS;
@@ -233,29 +233,28 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
     uint8_t hashType = sig[indx];
     indx++;
 
-    PrintAndLogEx(NORMAL, "\tsignature type: %s", ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
-    PrintAndLogEx(NORMAL, "\tsignature uri: %s", (sigURI ? "present" : "not present"));
-    PrintAndLogEx(NORMAL, "\thash type: %s", ((hashType == 0x02) ? "SHA-256" : "unknown"));
+    PrintAndLogEx(SUCCESS, "\tsignature type :\t" _GREEN_("%s"), ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
+    PrintAndLogEx(SUCCESS, "\tsignature uri :\t\t%s", (sigURI ? "present" : "not present"));
+    PrintAndLogEx(SUCCESS, "\thash type :\t\t%s", ((hashType == 0x02) ? _GREEN_("SHA-256") : _RED_("unknown")));
 
     size_t intsiglen = (sig[indx] << 8) + sig[indx + 1];
     indx += 2;
-    
+
     if (sigURI) {
         indx += 2;
-        PrintAndLogEx(NORMAL, "\tsignature uri [%zu]: %.*s", intsiglen, (int)intsiglen, &sig[indx]);
+        PrintAndLogEx(SUCCESS, "\tsignature uri [%zu]: %.*s", intsiglen, (int)intsiglen, &sig[indx]);
         indx += intsiglen;
     } else {
-        PrintAndLogEx(NORMAL, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
+        PrintAndLogEx(SUCCESS, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
         if (sigType == stECDSA_P192 || sigType == stECDSA_P256) {
             int slen = intsiglen / 2;
             if (slen == 24 || slen == 32) {
-                PrintAndLogEx(NORMAL, "\tsignature: ECDSA-%d", slen * 8);
-                PrintAndLogEx(NORMAL, "\t\tr: %s", sprint_hex(&sig[indx], slen));
-                indx += slen;
-                PrintAndLogEx(NORMAL, "\t\ts: %s", sprint_hex(&sig[indx], slen));
+                PrintAndLogEx(SUCCESS, "\tsignature : " _GREEN_("ECDSA-%d"), slen * 8);
+                PrintAndLogEx(SUCCESS, "\t\tr: %s", sprint_hex(&sig[indx], slen));
+                PrintAndLogEx(SUCCESS, "\t\ts: %s", sprint_hex(&sig[indx + slen], slen));
             }
         } else {
-            PrintAndLogEx(NORMAL, "\tsignature: unknown type");
+            PrintAndLogEx(INFO, "\tsignature: unknown type");
         }
         indx += intsiglen;
     }
@@ -264,8 +263,8 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
     uint8_t certCount = sig[indx] & 0x0f;
     bool certURI = sig[indx] & 0x80;
 
-    PrintAndLogEx(NORMAL, "\tcertificate format: %s", ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
-    PrintAndLogEx(NORMAL, "\tcertificates count: %d", certCount);
+    PrintAndLogEx(SUCCESS, "\tcertificate format : " _GREEN_("%s"), ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
+    PrintAndLogEx(SUCCESS, "\tcertificates count : %d", certCount);
 
     // print certificates
     indx++;
@@ -273,7 +272,7 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
         size_t intcertlen = (sig[indx + 1] << 8) + sig[indx + 2];
         indx += 2;
 
-        PrintAndLogEx(NORMAL, "\tcertificate %d [%zu]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));
+        PrintAndLogEx(SUCCESS, "\tcertificate %d [%zu]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));
         indx += intcertlen;
     }
 
@@ -281,14 +280,14 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
     if ((indx <= siglen) && certURI) {
         size_t inturilen = (sig[indx] << 8) + sig[indx + 1];
         indx += 2;
-        PrintAndLogEx(NORMAL, "\tcertificate uri [%zu]: %.*s", inturilen, (int)inturilen, &sig[indx]);
+        PrintAndLogEx(SUCCESS, "\tcertificate uri [%zu]: %.*s", inturilen, (int)inturilen, &sig[indx]);
     }
 
     return PM3_SUCCESS;
 };
 
 static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
-    PrintAndLogEx(NORMAL, "\tsignature version: 0x%02x", sig[0]);
+    PrintAndLogEx(SUCCESS, "\tsignature version : \t" _GREEN_("0x%02x"), sig[0]);
     if (sig[0] != 0x01 && sig[0] != 0x20) {
         PrintAndLogEx(ERR, "signature version unknown.");
         return PM3_ESOFT;
