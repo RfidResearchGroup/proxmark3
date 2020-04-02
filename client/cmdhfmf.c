@@ -248,10 +248,10 @@ static int usage_hf14_chk(void) {
     PrintAndLogEx(NORMAL, "      t    write keys to emulator memory\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf chk 0 A 1234567890ab         -- target block 0, Key A using key 1234567890ab");
-    PrintAndLogEx(NORMAL, "      hf mf chk 0 A mfc_default_keys.dic -- target block 0, Key A using default dictionary file");
-    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? t                   -- target all blocks, all keys, 1K, write to emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf chk *1 ? d                   -- target all blocks, all keys, 1K, write to file");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf chk 0 A 1234567890ab")"         -- target block 0, Key A using key 1234567890ab");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf chk 0 A mfc_default_keys.dic")" -- target block 0, Key A using default dictionary file");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf chk *1 ? t")"                   -- target all blocks, all keys, 1K, write to emulator memory");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf chk *1 ? d")"                   -- target all blocks, all keys, 1K, write to file");
     return PM3_SUCCESS;
 }
 static int usage_hf14_chk_fast(void) {
@@ -269,12 +269,12 @@ static int usage_hf14_chk_fast(void) {
     PrintAndLogEx(NORMAL, "      m    use dictionary from flashmemory\n");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 1234567890ab         -- target 1K using key 1234567890ab");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 mfc_default_keys.dic -- target 1K using default dictionary file");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 t                    -- target 1K, write to emulator memory");
-    PrintAndLogEx(NORMAL, "      hf mf fchk 1 d                    -- target 1K, write to file");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 1234567890ab")"         -- target 1K using key 1234567890ab");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 mfc_default_keys.dic")" -- target 1K using default dictionary file");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 t")"                    -- target 1K, write to emulator memory");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 d")"                    -- target 1K, write to file");
     if (IfPm3Flash())
-        PrintAndLogEx(NORMAL, "      hf mf fchk 1 m                    -- target 1K, use dictionary from flashmemory");
+        PrintAndLogEx(NORMAL, _YELLOW_("      hf mf fchk 1 m")"                    -- target 1K, use dictionary from flashmemory");
     return PM3_SUCCESS;
 }
 /*
@@ -1447,7 +1447,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
 jumptoend:
 
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "found keys:");
+        PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
 
         //print them
         printKeyTable(SectorsCnt, e_sector);
@@ -1652,7 +1652,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 jumptoend:
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "found keys:");
+    PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
 
     //print them
     printKeyTable(SectorsCnt, e_sector);
@@ -2463,7 +2463,7 @@ all_found:
 
     // Show the results to the user
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "found keys:");
+    PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
 
     printKeyTable(sectors_cnt, e_sector);
 
@@ -2715,7 +2715,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
         // strategys. 1= deep first on sector 0 AB,  2= width first on all sectors
         for (uint8_t strategy = 1; strategy < 3; strategy++) {
-            PrintAndLogEx(SUCCESS, "Running strategy %u", strategy);
+            PrintAndLogEx(INFO, "Running strategy %u", strategy);
 
             // main keychunk loop
             for (i = 0; i < keycnt; i += chunksize) {
@@ -2746,7 +2746,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     }
 out:
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "Time in checkkeys (fast):  %.1fs\n", (float)(t1 / 1000.0));
+    PrintAndLogEx(INFO, "Time in checkkeys (fast):  %.1fs\n", (float)(t1 / 1000.0));
 
     // check..
     uint8_t found_keys = 0;
@@ -2764,7 +2764,7 @@ out:
     } else {
 
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "found keys:");
+        PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
 
         printKeyTable(sectorsCnt, e_sector);
 
@@ -3027,7 +3027,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         }
     }
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\nTime in checkkeys: %.0f seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(INFO, "\nTime in checkkeys: %.0f seconds\n", (float)t1 / 1000.0);
 
 
     // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
@@ -3075,7 +3075,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
 out:
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "found keys:");
+    PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
 
     //print keys
     if (SectorsCnt == 1)
@@ -3346,7 +3346,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
         showSectorTable();
     }
-    
+
     k_sectorsCount = MIFARE_4K_MAXSECTOR;
     return PM3_SUCCESS;
 }
@@ -3549,9 +3549,9 @@ void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
 void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
     char strA[12 + 1] = {0};
     char strB[12 + 1] = {0};
-    PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
-    PrintAndLogEx(NORMAL, "|sec| key A          |res| key B          |res|");
-    PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
+    PrintAndLogEx(SUCCESS, "|-----|----------------|---|----------------|---|");
+    PrintAndLogEx(SUCCESS, "| Sec | key A          |res| key B          |res|");
+    PrintAndLogEx(SUCCESS, "|-----|----------------|---|----------------|---|");
     for (uint8_t i = 0; i < sectorscnt; i++) {
 
         snprintf(strA, sizeof(strA), "------------");
@@ -3564,7 +3564,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             snprintf(strB, sizeof(strB), "%012" PRIx64, e_sector[i].Key[1]);
 
         if (e_sector[i].foundKey[0] > 1) {
-            PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%c")"|  %s  | " _YELLOW_("%c")"|"
+            PrintAndLogEx(SUCCESS, "| "_YELLOW_("%03d")"| " _GREEN_("%s")"  | " _YELLOW_("%c")"|  " _GREEN_("%s")"  | " _YELLOW_("%c")"|"
                           , i
                           , strA, e_sector[i].foundKey[0]
                           , strB, e_sector[i].foundKey[1]
@@ -3576,14 +3576,14 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             if (start_sector == 0)
                 s = i;
 
-            PrintAndLogEx(NORMAL, "|%03d|  %s  | " _YELLOW_("%d")"|  %s  | " _YELLOW_("%d")"|"
+            PrintAndLogEx(SUCCESS, "| "_YELLOW_("%03d")"| " _GREEN_("%s")"  | " _YELLOW_("%d")"| " _GREEN_("%s")"  | " _YELLOW_("%d")"|"
                           , s
                           , strA, e_sector[i].foundKey[0]
                           , strB, e_sector[i].foundKey[1]
                          );
         }
     }
-    PrintAndLogEx(NORMAL, "|---|----------------|---|----------------|---|");
+    PrintAndLogEx(SUCCESS, "|-----|----------------|---|----------------|---|");
 
     if (e_sector[0].foundKey[0] > 1) {
         PrintAndLogEx(INFO, "( "
@@ -3597,7 +3597,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
                       ")"
                      );
     } else {
-        PrintAndLogEx(INFO, "( " _YELLOW_("0") ":Failed / " _YELLOW_("1") ":Success)");
+        PrintAndLogEx(SUCCESS, "( " _YELLOW_("0") ":Failed / " _YELLOW_("1") ":Success)");
     }
 }
 
@@ -4955,4 +4955,3 @@ int CmdHFMF(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
