@@ -18,48 +18,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int CmdFlashMemSpiFFSMount(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSUnmount(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSTest(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_TEST, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSCheck(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_CHECK, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSTree(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_PRINT_TREE, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSInfo(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_PRINT_FSINFO, NULL, 0);
-    return PM3_SUCCESS;
-}
-
 static int usage_flashmemspiffs_remove(void) {
     PrintAndLogEx(NORMAL, "Remove a file from spiffs filesystem");
     PrintAndLogEx(NORMAL, " Usage:  mem spiffs remove <filename>");
@@ -107,15 +65,63 @@ static int usage_flashmemspiffs_load(void) {
     return PM3_SUCCESS;
 }
 
+
+static int CmdFlashMemSpiFFSMount(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSUnmount(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSTest(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_TEST, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSCheck(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_CHECK, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSTree(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_PRINT_TREE, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSInfo(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_PRINT_FSINFO, NULL, 0);
+    return PM3_SUCCESS;
+}
+
 static int CmdFlashMemSpiFFSRemove(const char *Cmd) {
+
+    int len = strlen(Cmd);
+    if (len < 1) {
+        return usage_flashmemspiffs_remove();
+    }
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (len == 1 && ctmp == 'h') {
+        return usage_flashmemspiffs_remove();
+    }
 
     char filename[32] = {0};
     bool errors = false;
-
-    /*char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') {
-        return usage_flashmemspiffs_remove();
-    }*/
 
     if (param_getstr(Cmd, 0, filename, 32) >= 32) {
         PrintAndLogEx(FAILED, "Filename too long");
@@ -134,14 +140,19 @@ static int CmdFlashMemSpiFFSRemove(const char *Cmd) {
 
 static int CmdFlashMemSpiFFSRename(const char *Cmd) {
 
+    int len = strlen(Cmd);   
+    if (len < 1) {
+        return usage_flashmemspiffs_rename();
+    }
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (len  == 1 && ctmp == 'h') {
+        return usage_flashmemspiffs_rename();
+    }
+    
     char srcfilename[32] = {0};
     char destfilename[32] = {0};
     bool errors = false;
-
-    /*char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') {
-        return usage_flashmemspiffs_rename();
-    }*/
 
     if (param_getstr(Cmd, 0, srcfilename, 32) >= 32) {
         PrintAndLogEx(FAILED, "Source Filename too long");
@@ -174,15 +185,20 @@ static int CmdFlashMemSpiFFSRename(const char *Cmd) {
 }
 
 static int CmdFlashMemSpiFFSCopy(const char *Cmd) {
+    int len = strlen(Cmd);
+    if (len < 1) {
+        return usage_flashmemspiffs_copy();
+    }
 
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (len == 1 && ctmp == 'h') {
+        return usage_flashmemspiffs_copy();
+    }
+
+    
     char srcfilename[32] = {0};
     char destfilename[32] = {0};
     bool errors = false;
-
-    /*char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') {
-        return usage_flashmemspiffs_copy();
-    }*/
 
     if (param_getstr(Cmd, 0, srcfilename, 32) >= 32) {
         PrintAndLogEx(FAILED, "Source Filename too long");
@@ -441,8 +457,7 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
 static command_t CommandTable[] = {
 
     {"help", CmdHelp, AlwaysAvailable, "This help"},
-    {
-        "copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
+    {"copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
         "Copy a file to another (destructively) in SPIFFS FileSystem in FlashMEM (spiffs)"
     },
     {"check", CmdFlashMemSpiFFSCheck, IfPm3Flash, "Check/try to defrag faulty/fragmented Filesystem"},
