@@ -422,6 +422,7 @@ int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
     return PM3_SUCCESS;
 }
 
+// http://apps4android.org/nfc-specifications/NFCForum-TS-Type-2-Tag_1.1.pdf
 int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 
     size_t indx = 0;
@@ -439,6 +440,24 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 PrintAndLogEx(SUCCESS, "-- NDEF NULL block.");
                 if (len)
                     PrintAndLogEx(WARNING, "NDEF NULL block size must be 0, got %d bytes", len);
+                indx += len;
+                break;
+            }
+            case 0x01: {
+                indx++;
+                uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
+                PrintAndLogEx(INFO, "-- NDEF Lock Control.");
+                if (len != 3)
+                    PrintAndLogEx(WARNING, "NDEF Lock Control block size must be 3 instead of %d.", len);
+                indx += len;
+                break;
+            }
+            case 0x02: {
+                indx++;
+                uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
+                PrintAndLogEx(INFO, "-- NDEF Memory Control.");
+                if (len != 3)
+                    PrintAndLogEx(WARNING, "NDEF Memory Control block size must be 3 instead of %d.", len);
                 indx += len;
                 break;
             }
