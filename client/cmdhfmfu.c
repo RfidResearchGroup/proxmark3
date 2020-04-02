@@ -2797,6 +2797,8 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
             return PM3_ESOFT;
         }
     }
+    
+    PrintAndLogEx(INFO, "ICE:: %s", sprint_hex(records, maxsize));
     DropField();
     status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
     free(records);
