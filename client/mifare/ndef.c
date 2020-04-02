@@ -450,11 +450,11 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 if (len != 3) {
                     PrintAndLogEx(WARNING, "NDEF Lock Control block size must be 3 instead of %d.", len);
                 } else {
-                    uint8_t ByteOffset = (ndef[indx] >> 4) & 0x0f;
-                    uint8_t PagesAddr = ndef[indx] & 0x0f;
+                    uint8_t PagesAddr = (ndef[indx] >> 4) & 0x0f;
+                    uint8_t ByteOffset = ndef[indx] & 0x0f;
                     uint8_t Size = ndef[indx + 1];
-                    uint8_t BytesPerPage = (ndef[indx + 2] >> 4) & 0x0f;
-                    uint8_t BytesLockedPerLockBit = ndef[indx + 2] & 0x0f;
+                    uint8_t BytesLockedPerLockBit = (ndef[indx + 2] >> 4) & 0x0f;
+                    uint8_t BytesPerPage = ndef[indx + 2] & 0x0f;
                     PrintAndLogEx(SUCCESS, "PagesAddr. number of pages: %d", PagesAddr);                    
                     PrintAndLogEx(SUCCESS, "ByteOffset. number of bytes: %d", ByteOffset);                    
                     PrintAndLogEx(SUCCESS, "Size. size in bits of the lock area: %d. bytes approx: %d", Size, Size / 8);                    
@@ -474,7 +474,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                     uint8_t PagesAddr = (ndef[indx] >> 4) & 0x0f;
                     uint8_t ByteOffset = ndef[indx] & 0x0f;
                     uint8_t Size = ndef[indx + 1];
-                    uint8_t BytesPerPage = (ndef[indx + 2] >> 4) & 0x0f;
+                    uint8_t BytesPerPage = ndef[indx + 2] & 0x0f;
                     PrintAndLogEx(SUCCESS, "PagesAddr. number of pages: %d", PagesAddr);                    
                     PrintAndLogEx(SUCCESS, "ByteOffset. number of bytes: %d", ByteOffset);                    
                     PrintAndLogEx(SUCCESS, "Size. size in bits of the reserved area: %d. bytes approx: %d", Size, Size / 8);                    
