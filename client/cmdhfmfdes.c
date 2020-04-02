@@ -137,7 +137,6 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0xDD, 0x36, 0x59, 0x1B, 0x1F, 0xB3, 0x4F, 0xCF, 0x3D
         },
 
-        // DESFire Ev2  - wanted
         // DESFire Ev3  - wanted
         
         // NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT
@@ -162,7 +161,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0x9A, 0x1C, 0x55, 0x7F, 0xFA, 0xCD, 0x34, 0xC6, 0x2E
         },
         
-        // NTAG42x 4 - NTAG426
+        // NTAG42x 4 - NTAG426,  DESFire Ev2
         {
             0x04, 0xB3, 0x04, 0xDC, 0x4C, 0x61, 0x5F, 0x53,
             0x26, 0xFE, 0x93, 0x83, 0xDD, 0xEC, 0x9A, 0xA8,
@@ -210,9 +209,8 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         case 1:
             publickeyname = "NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT";
             break;
-            
         case 3:
-            publickeyname = "NTAG42x 4 - NTAG426";
+            publickeyname = "NTAG42x 4 - NTAG426, DESFire Ev2";
             break;
         case 4:
             publickeyname = "NTAG42x 3 - NTAG 424 DNA";

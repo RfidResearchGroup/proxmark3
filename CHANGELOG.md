@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change - updated public keys info (@anon)
  - Change - mfc default keys removed dublicates (@iceman1001)
  . Change - mfc default keys got new entries found on TagInfo app (@anon)
  - Added `hf mfu ndef` - read and decode NDEF Type2 messages (@iceman1001)
