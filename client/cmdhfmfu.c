@@ -21,6 +21,9 @@
 #include "fileutils.h"
 #include "protocols.h"
 #include "generator.h"
+#include "mifare/ndef.h"
+#include "cliparser/cliparser.h"
+
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2B
@@ -258,29 +261,6 @@ uint8_t default_3des_keys[][16] = {
 uint8_t default_pwd_pack[][4] = {
     {0xFF, 0xFF, 0xFF, 0xFF}, // PACK 0x00,0x00 -- factory default
 };
-
-#define PUBLIC_ECDA_KEYLEN 33
-
-// known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
-// ref: AN11350 NTAG 21x Originality Signature Validation
-// ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
-uint8_t public_keys[2][PUBLIC_ECDA_KEYLEN] = {
-    // UL, NTAG21x and NDEF
-    {
-        0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
-        0xfe, 0x3d, 0xc1, 0x0e, 0x5d, 0xe6, 0x8a, 0x49,
-        0x9b, 0x1c, 0x20, 0x2d, 0xb5, 0xb1, 0x32, 0x39,
-        0x3e, 0x89, 0xed, 0x19, 0xfe, 0x5b, 0xe8, 0xbc, 0x61
-    },
-    // UL EV1
-    {
-        0x04, 0x90, 0x93, 0x3b, 0xdc, 0xd6, 0xe9, 0x9b,
-        0x4e, 0x25, 0x5e, 0x3d, 0xa5, 0x53, 0x89, 0xa8,
-        0x27, 0x56, 0x4e, 0x11, 0x71, 0x8e, 0x01, 0x72,
-        0x92, 0xfa, 0xf2, 0x32, 0x26, 0xa9, 0x66, 0x14, 0xb8
-    }
-};
-
 
 uint32_t UL_TYPES_ARRAY[] = {
     UNKNOWN,   UL,          UL_C,        UL_EV1_48,       UL_EV1_128,      NTAG,
@@ -561,6 +541,22 @@ static int ul_print_default(uint8_t *data) {
                  );
 
     return PM3_SUCCESS;
+}
+
+static int ndef_get_maxsize(uint8_t *data) {
+    // no NDEF message
+    if (data[0] != 0xE1)
+        return 0;
+    
+    if (data[2] == 0x06)
+        return 48;
+    else if (data[2] == 0x12)
+        return 144;
+    else if (data[2] == 0x3E)
+        return 496;
+    else if (data[2] == 0x6D)
+        return 872;
+    return 0;
 }
 
 static int ndef_print_CC(uint8_t *data) {
@@ -868,19 +864,98 @@ static int ulev1_print_counters() {
 }
 
 static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
-    uint8_t public_key = 0;
-    if (tagtype == UL_EV1_48 || tagtype == UL_EV1_128) {
-        public_key = 1;
+
+    #define PUBLIC_ECDA_KEYLEN 33
+
+    // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
+    // ref: AN11350 NTAG 21x Originality Signature Validation
+    // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
+    uint8_t nxp_mfu_public_keys[6][PUBLIC_ECDA_KEYLEN] = {
+        // UL, NTAG21x and NDEF
+        {
+            0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
+            0xfe, 0x3d, 0xc1, 0x0e, 0x5d, 0xe6, 0x8a, 0x49,
+            0x9b, 0x1c, 0x20, 0x2d, 0xb5, 0xb1, 0x32, 0x39,
+            0x3e, 0x89, 0xed, 0x19, 0xfe, 0x5b, 0xe8, 0xbc, 0x61
+        },
+        // UL EV1
+        {
+            0x04, 0x90, 0x93, 0x3b, 0xdc, 0xd6, 0xe9, 0x9b,
+            0x4e, 0x25, 0x5e, 0x3d, 0xa5, 0x53, 0x89, 0xa8,
+            0x27, 0x56, 0x4e, 0x11, 0x71, 0x8e, 0x01, 0x72,
+            0x92, 0xfa, 0xf2, 0x32, 0x26, 0xa9, 0x66, 0x14, 0xb8
+        },
+        // unknown. Needs identification
+        {
+            0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
+            0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
+            0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
+            0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
+        },
+        // unknown. Needs identification
+        {
+            0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
+            0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
+            0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
+            0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
+        },
+        // manufacturer public key
+        {
+            0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
+            0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
+            0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
+            0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
+        },
+        // MIKRON public key.
+        {
+            0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
+            0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
+            0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
+            0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2 
+        }
+    };
+
+    uint8_t i;
+    int res;
+    bool is_valid = false;
+    for (i = 0; i< ARRAYLEN(nxp_mfu_public_keys); i++) {
+    
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, nxp_mfu_public_keys[i], uid, 7, signature, signature_len, false);
+    
+        is_valid = (res == 0);
+        if (is_valid)
+            break;
     }
-    int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, public_keys[public_key], uid, 7, signature, signature_len, false);
-    bool is_valid = (res == 0);
+    if (is_valid == false) {
+        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+    
+    char *publickeyname;
+    switch(i) {
+        case 0:
+            publickeyname = "NXP NTAG21x (2013)";
+            break;
+        case 1:
+            publickeyname = "NXP Ev1";
+            break;
+        case 4:
+            publickeyname = "Manufacturer,  post on forum";
+            break;
+        case 5:
+            publickeyname = "MIKRON";
+            break;
+        default:
+            publickeyname = "Unknown, post on forum";
+            break;
+    }
 
     PrintAndLogEx(INFO, "\n--- Tag Signature");
-    PrintAndLogEx(INFO, "IC signature public key name  : NXP NTAG21x (2013)");
-    PrintAndLogEx(INFO, "IC signature public key value : %s", sprint_hex(public_keys[public_key], PUBLIC_ECDA_KEYLEN));
+    PrintAndLogEx(INFO, "IC signature public key name  : %s", publickeyname);
+    PrintAndLogEx(INFO, "IC signature public key value : %s", sprint_hex(nxp_mfu_public_keys[i], PUBLIC_ECDA_KEYLEN));
     PrintAndLogEx(INFO, "    Elliptic curve parameters : NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature : %s", sprint_hex(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "Signature verified %s", (is_valid) ? _GREEN_("successful") : _RED_("failed"));
+    PrintAndLogEx(SUCCESS, "Signature verified " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
 
@@ -2633,6 +2708,100 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14MfuNDEF(const char *Cmd) {
+
+    int keylen;
+    int maxsize = 16, status;
+    bool hasAuthKey = false;
+    bool swapEndian = false;
+
+    iso14a_card_select_t card;
+    uint8_t data[16] = {0x00};
+    uint8_t key[16] = {0x00};
+    uint8_t *p_key = key;
+    uint8_t pack[4] = {0, 0, 0, 0};
+    
+    CLIParserInit("hf mfu ndef",
+                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Usage:\n\thf mfu ndef -> shows NDEF data\n"
+                  "\thf mfu ndef -k ffffffff -> shows NDEF data with key\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("kK", "key", "replace default key for NDEF", NULL),
+        arg_lit0("lL", "key", "(optional) swap entered key's endianness"),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+  
+    CLIGetHexWithReturn(1, key, &keylen);
+    swapEndian = arg_get_lit(2);
+    CLIParserFree();
+    
+    switch(keylen) {
+        case 0:
+            break;
+        case 4:
+        case 16:
+            hasAuthKey = true;
+            break;
+        default:
+            PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+            return PM3_EINVARG;
+    }
+
+    // Get tag type
+    TagTypeUL_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == UL_ERROR) return PM3_ESOFT;
+
+    // Is tag UL/NTAG?
+    
+    // Swap endianness
+    if (swapEndian && hasAuthKey) p_key = SwapEndian64(key, keylen, (keylen == 16) ? 8 : 4);
+
+    // Select and Auth
+    if (ul_auth_select(&card, tagtype, hasAuthKey, p_key, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
+  
+    // read pages 0,1,2,3 (should read 4pages)
+    status = ul_read(0, data, sizeof(data));
+    if (status == -1) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
+        return PM3_ESOFT;
+    } else if (status == 16) {
+
+        status = ndef_print_CC(data + 12);
+        if (status == PM3_ESOFT) {
+            DropField();
+            PrintAndLogEx(ERR, "Error: tag didn't contain a NDEF Container");
+            return PM3_ESOFT;
+        }
+
+        // max datasize;
+        maxsize = ndef_get_maxsize(data + 12);
+    }
+
+    // allocate mem
+    uint8_t *records = calloc(maxsize, sizeof(uint8_t));
+    if (records == NULL) {
+        DropField();
+        return PM3_EMALLOC;
+    }
+
+    // read NDEF records.
+    for(uint16_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
+        status = ul_read(4 + j, records + i, 16);
+        if (status == -1) {
+            DropField();
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
+            return PM3_ESOFT;
+        }
+    }
+    DropField();
+    status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+    free(records);
+    return status;
+}
 //------------------------------------
 // Menu Stuff
 //------------------------------------
@@ -2651,6 +2820,7 @@ static command_t CommandTable[] = {
     {"gen",     CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3des mifare diversified keys"},
     {"pwdgen",  CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear", CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
+    {"ndef",    CmdHF14MfuNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -2309,8 +2309,9 @@ static int CmdDataNDEF(const char *Cmd) {
     int datalen = 0;
     uint8_t data[MAX_NDEF_LEN] = {0};
     CLIGetHexWithReturn(1, data, &datalen);
-    
     CLIParserFree();
+    if (datalen == 0)
+        return PM3_EINVARG;
 
     PrintAndLogEx(INFO, "Parsed NDEF Records");
     return NDEFRecordsDecodeAndPrint(data, datalen);

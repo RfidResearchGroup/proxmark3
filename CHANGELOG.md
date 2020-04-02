@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mfu ndef` - read and decode NDEF Type2 messages (@iceman1001)
  - Added `data ndef` - decode NDEF messages (@iceman1001)
  - Change - usb write's now waits for shiftregisters (@pwpiwi)
  - Change - NDEF supports more signatures now (@iceman1001)

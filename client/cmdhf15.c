@@ -208,7 +208,8 @@ const productName uidmapping[] = {
     { 0, 0, "no tag-info available" } // must be the last entry
 };
 
-uint8_t nxp_public_keys[][33] = {
+#define PUBLIC_ECDA_KEYLEN 33
+uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
     // ICODE SLIX2 / DNA
     {
         0x04, 0x88, 0x78, 0xA2, 0xA2, 0xD3, 0xEE, 0xC3,
@@ -216,9 +217,66 @@ uint8_t nxp_public_keys[][33] = {
         0xF9, 0xBE, 0x11, 0xC4, 0xE2, 0xE8, 0x96, 0x64,
         0x8B, 0x32, 0xEF, 0xA5, 0x9C, 0xEA, 0x6E, 0x59, 0xF0
     },
+    // unknown. Needs identification
+    {
+        0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
+        0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
+        0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
+        0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
+    },
+    // unknown. Needs identification
+    {
+        0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
+        0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
+        0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
+        0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
+    },
+    // manufacturer public key
+    {
+        0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
+        0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
+        0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
+        0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
+    },
+    // MIKRON public key.
+    {
+        0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
+        0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
+        0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
+        0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2 
+    }
 };
 
 static int CmdHF15Help(const char *Cmd);
+
+static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
+
+    uint8_t i;
+    int res;
+    bool is_valid = false;
+    for (i = 0; i< ARRAYLEN(nxp_15693_public_keys); i++) {
+    
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, nxp_15693_public_keys[i], uid, 8, signature, 32, false);
+    
+        is_valid = (res == 0);
+        if (is_valid)
+            break;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    if (is_valid == false) {
+        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "\n--- Tag Signature");
+    PrintAndLogEx(INFO, "   IC signature public key name  : %s", (i == 0)? "NXP ICODE SLIX2 / DNA" : "unknown, post on forum");
+    PrintAndLogEx(INFO, "   IC signature public key value : %s", sprint_hex(nxp_15693_public_keys[i], 33));
+    PrintAndLogEx(INFO, "       Elliptic curve parameters : NID_secp128r1");
+    PrintAndLogEx(INFO, "                TAG IC Signature : %s", sprint_hex(signature, 32));
+    PrintAndLogEx(INFO, "   Signature verification " _GREEN_("successful"));
+    return PM3_SUCCESS;
+}
 
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
@@ -796,16 +854,8 @@ static int NxpSysInfo(uint8_t *uid) {
             uint8_t signature[32] = {0x00};
             memcpy(signature, recv + 1, 32);
 
-            int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, nxp_public_keys[0], uid, 8, signature, 32, false);
-            bool is_valid = (res == 0);
+            nxp_15693_print_signature(uid, signature);
 
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(NORMAL, "  Tag Signature");
-            PrintAndLogEx(NORMAL, "    IC signature public key name  : NXP ICODE SLIX2 / DNA");
-            PrintAndLogEx(NORMAL, "    IC signature public key value : %s", sprint_hex(nxp_public_keys[0], 33));
-            PrintAndLogEx(NORMAL, "        Elliptic curve parameters : NID_secp128r1");
-            PrintAndLogEx(NORMAL, "                 TAG IC Signature : %s", sprint_hex(signature, 32));
-            PrintAndLogEx(NORMAL, "    Signature verification %s", (is_valid) ? _GREEN_("successful") : _RED_("failed"));
         }
     }
 
@@ -901,9 +951,15 @@ static int CmdHF15Info(const char *Cmd) {
     }
 
     // Check if SLIX2 and attempt to get NXP System Information
+    PrintAndLogEx(INFO, "4 & 08 :: %02x   7 == 1 :: %u   8 == 4 :: %u", recv[4], recv[7], recv[8]);
     if (recv[8] == 0x04 && recv[7] == 0x01 && recv[4] & 0x80) {
         return NxpSysInfo(uid);
     }
+
+//    if (recv[8] == 0x04 && recv[7] == 0x02 && recv[4] & 0x80) {
+        return NxpSysInfo(uid);
+    //}
+
 
     PrintAndLogEx(NORMAL, "");
 
