@@ -447,8 +447,20 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(INFO, "-- NDEF Lock Control.");
-                if (len != 3)
+                if (len != 3) {
                     PrintAndLogEx(WARNING, "NDEF Lock Control block size must be 3 instead of %d.", len);
+                } else {
+                    uint8_t PagesAddr = (ndef[indx] >> 4) & 0x0f;
+                    uint8_t ByteOffset = ndef[indx] & 0x0f;
+                    uint8_t Size = ndef[indx + 1];
+                    uint8_t BytesLockedPerLockBit = (ndef[indx + 2] >> 4) & 0x0f;
+                    uint8_t BytesPerPage = ndef[indx + 2] & 0x0f;
+                    PrintAndLogEx(SUCCESS, "PagesAddr. number of pages: %d", PagesAddr);                    
+                    PrintAndLogEx(SUCCESS, "ByteOffset. number of bytes: %d", ByteOffset);                    
+                    PrintAndLogEx(SUCCESS, "Size. size in bits of the lock area: %d. bytes approx: %d", Size, Size / 8);                    
+                    PrintAndLogEx(SUCCESS, "BytesPerPage. number of bytes per page: %d", BytesPerPage);                    
+                    PrintAndLogEx(SUCCESS, "BytesLockedPerLockBit. number of bytes that each dynamic lock bit is able to lock: %d", BytesLockedPerLockBit);                    
+                }
                 indx += len;
                 break;
             }
@@ -456,8 +468,18 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(INFO, "-- NDEF Memory Control.");
-                if (len != 3)
+                if (len != 3) {
                     PrintAndLogEx(WARNING, "NDEF Memory Control block size must be 3 instead of %d.", len);
+                } else {
+                    uint8_t PagesAddr = (ndef[indx] >> 4) & 0x0f;
+                    uint8_t ByteOffset = ndef[indx] & 0x0f;
+                    uint8_t Size = ndef[indx + 1];
+                    uint8_t BytesPerPage = ndef[indx + 2] & 0x0f;
+                    PrintAndLogEx(SUCCESS, "PagesAddr. number of pages: %d", PagesAddr);                    
+                    PrintAndLogEx(SUCCESS, "ByteOffset. number of bytes: %d", ByteOffset);                    
+                    PrintAndLogEx(SUCCESS, "Size. size in bits of the reserved area: %d. bytes approx: %d", Size, Size / 8);                    
+                    PrintAndLogEx(SUCCESS, "BytesPerPage. number of bytes per page: %d", BytesPerPage);                    
+                }
                 indx += len;
                 break;
             }
