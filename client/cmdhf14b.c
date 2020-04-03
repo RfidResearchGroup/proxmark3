@@ -185,7 +185,7 @@ static int CmdHF14BSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14BSimCRF(const char *Cmd) {		//meltem
+static int CmdHF14BSimCRF(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_14b_sim();
 
@@ -1104,7 +1104,7 @@ static command_t CommandTable[] = {
     {"sniff",       CmdHF14BSniff,    IfPm3Iso14443b,  "Eavesdrop ISO 14443B"},
     {"sriread",     CmdHF14BReadSri,  IfPm3Iso14443b,  "Read contents of a SRI512 | SRIX4K tag"},
     {"sriwrite",    CmdHF14BWriteSri, IfPm3Iso14443b,  "Write data to a SRI512 | SRIX4K tag"},
-    {"simcrf",	    CmdHF14BSimCRF,   IfPm3Iso14443b,  "Simulate a Crypto RF tag"},	//meltem
+    {"simcrf",	    CmdHF14BSimCRF,   IfPm3Iso14443b,  "Simulate a Crypto RF tag"},
     //{"valid",     srix4kValid,      AlwaysAvailable, "srix4k checksum test"},
     {NULL, NULL, NULL, NULL}
 };
