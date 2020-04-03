@@ -23,16 +23,13 @@
 // the client. Signal Processing & decoding is done on the pc. This is the slowest
 // variant, but offers the possibility to analyze the waveforms directly.
 #include "cmdhf15.h"
-
 #include <ctype.h>
-
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
 #include "iso15693tools.h"
 #include "crypto/libpcrypto.h"
-
 #include "graph.h"
 #include "crc16.h"             // iso15 crc
 #include "cmddata.h"           // getsamples
@@ -56,12 +53,19 @@
 #ifndef sprintUID
 # define sprintUID(target, uid)  Iso15693sprintUID((target), (uid))
 #endif
+
+typedef struct {
+    uint8_t lock;
+    uint8_t block[4];
+} t15memory_t;
+
 // structure and database for uid -> tagtype lookups
 typedef struct {
     uint64_t uid;
     int mask; // how many MSB bits used
     const char *desc;
 } productName;
+
 
 const productName uidmapping[] = {
 
@@ -243,7 +247,7 @@ uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
         0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
         0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
         0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
-        0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2 
+        0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
     }
 };
 
@@ -255,9 +259,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
     int res;
     bool is_valid = false;
     for (i = 0; i< ARRAYLEN(nxp_15693_public_keys); i++) {
-    
         res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, nxp_15693_public_keys[i], uid, 8, signature, 32, false);
-    
         is_valid = (res == 0);
         if (is_valid)
             break;
@@ -888,7 +890,7 @@ static int CmdHF15Info(const char *Cmd) {
     AddCrc15(req,  reqlen);
     reqlen += 2;
 
-    //PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
+    // PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
@@ -956,13 +958,7 @@ static int CmdHF15Info(const char *Cmd) {
         return NxpSysInfo(uid);
     }
 
-//    if (recv[8] == 0x04 && recv[7] == 0x02 && recv[4] & 0x80) {
-        return NxpSysInfo(uid);
-    //}
-
-
     PrintAndLogEx(NORMAL, "");
-
     return PM3_SUCCESS;
 }
 
@@ -1067,7 +1063,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     AddCrc15(req, reqlen);
     reqlen += 2;
 
-    //PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
+    // PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
@@ -1126,7 +1122,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     AddCrc15(req, reqlen);
     reqlen += 2;
 
-    //PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
+    // PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
@@ -1151,11 +1147,6 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
-typedef struct {
-    uint8_t lock;
-    uint8_t block[4];
-} t15memory;
 
 // Reads all memory pages
 // need to write to file
@@ -1206,7 +1197,7 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t *recv = NULL;
 
     // memory.
-    t15memory mem[256];
+    t15memory_t mem[256];
 
     uint8_t data[256 * 4] = {0};
     memset(data, 0, sizeof(data));
@@ -1278,7 +1269,6 @@ static int CmdHF15Dump(const char *Cmd) {
 
 static int CmdHF15List(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    //PrintAndLogEx(WARNING, "Deprecated command, use 'hf list 15' instead");
     CmdTraceList("15");
     return PM3_SUCCESS;
 }
@@ -1405,7 +1395,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     pagenum = param_get8ex(cmd, 0, 0, 10);
     pagecount = param_get8ex(cmd, 1, 0, 10);
 
-    //PrintAndLogEx(NORMAL, "ice %d %d\n", pagenum, pagecount);
+    // PrintAndLogEx(NORMAL, "ice %d %d\n", pagenum, pagecount);
 
     // 0 means 1 page,
     // 1 means 2 pages, ...
@@ -1445,7 +1435,8 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return PM3_EWRONGANSVER;
     }
 
-    int start = 1;  // skip status byte
+    // skip status byte
+    int start = 1; 
     int stop = (pagecount + 1) * 5;
     int currblock = pagenum;
     // print response
@@ -1840,23 +1831,25 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHF15Help,        AlwaysAvailable, "This help"},
+    {"list",        CmdHF15List,        AlwaysAvailable, "List ISO15693 history"},
     {"demod",       CmdHF15Demod,       AlwaysAvailable, "Demodulate ISO15693 from tag"},
     {"dump",        CmdHF15Dump,        IfPm3Iso15693,   "Read all memory pages of an ISO15693 tag, save to file"},
+    {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
+//    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
+    {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
+    {"record",      CmdHF15Record,      IfPm3Iso15693,   "Record Samples (ISO15693)"},
+    {"read",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
+    {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
+    {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
+    {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO15693 tag"},
+    {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire Samples as Reader (enables carrier, sends inquiry)"},
+    {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO15693 tag"},
+    {"write",       CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
+    {"-----------", CmdHF15Help,        IfPm3Iso15693,  ""},
     {"findafi",     CmdHF15FindAfi,     IfPm3Iso15693,   "Brute force AFI of an ISO15693 tag"},
     {"writeafi",    CmdHF15WriteAfi,    IfPm3Iso15693,   "Writes the AFI on an ISO15693 tag"},
     {"writedsfid",  CmdHF15WriteDsfid,  IfPm3Iso15693,   "Writes the DSFID on an ISO15693 tag"},
-    {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
-//    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
-    {"list",        CmdHF15List,        AlwaysAvailable, "List ISO15693 history"},
-    {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
-    {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
-    {"record",      CmdHF15Record,      IfPm3Iso15693,   "Record Samples (ISO15693)"},
-    {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO15693 tag"},
-    {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO15693 tag"},
-    {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire Samples as Reader (enables carrier, sends inquiry)"},
-    {"read",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
-    {"write",       CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
-    {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
+    {"-----------",  CmdHF15Help,       IfPm3Iso15693,  ""},
     {"csetuid",     CmdHF15CSetUID,     IfPm3Iso15693,   "Set UID for magic Chinese card"},
     {NULL, NULL, NULL, NULL}
 };
@@ -1874,7 +1867,7 @@ int CmdHF15(const char *Cmd) {
 
 // used with 'hf search'
 bool readHF15Uid(bool verbose) {
-    uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t uid[8] = {0};
     if (!getUID(uid)) {
         if (verbose) PrintAndLogEx(WARNING, "No tag found.");
         return false;
