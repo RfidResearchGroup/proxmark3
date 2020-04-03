@@ -25,8 +25,8 @@ static int CmdHelp(const char *Cmd);
 
 static int usage_legic_calccrc(void) {
     PrintAndLogEx(NORMAL, "Calculates the legic crc8/crc16 on the given data.");
-    PrintAndLogEx(NORMAL, "There must be an even number of hexsymbols as input.");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic crc [h] d <data> u <uidcrc> c <8|16>");
+    PrintAndLogEx(NORMAL, "There must be an even number of hexsymbols as input.\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic crc [h] d <data> u <uidcrc> c <8|16>\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      d <data>      : (hex symbols) bytes to calculate crc over");
@@ -34,29 +34,29 @@ static int usage_legic_calccrc(void) {
     PrintAndLogEx(NORMAL, "      c <8|16>      : Crc type");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic crc d deadbeef1122");
-    PrintAndLogEx(NORMAL, "      hf legic crc d deadbeef1122 u 9A c 16");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic crc d deadbeef1122"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic crc d deadbeef1122 u 9A c 16"));
     return PM3_SUCCESS;
 }
-static int usage_legic_rdmem(void) {
-    PrintAndLogEx(NORMAL, "Read data from a legic tag.");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic rdmem [h] <offset> <length> <IV>");
+static int usage_legic_rdbl(void) {
+    PrintAndLogEx(NORMAL, "Read data from a LEGIC Prime tag\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic rdbl [h] s <offset> <length> <IV>\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      <offset>      : (hex) offset in data array to start download from");
-    PrintAndLogEx(NORMAL, "      <length>      : (hex) number of bytes to read");
-    PrintAndLogEx(NORMAL, "      <IV>          : (hex) (optional) Initialization vector to use. Must be odd and 7bits max");
+    PrintAndLogEx(NORMAL, "      o <offset>    : (hex) offset in data array to start download from");
+    PrintAndLogEx(NORMAL, "      l <length>    : (hex) number of bytes to read");
+    PrintAndLogEx(NORMAL, "      i <IV>        : (hex) (optional) Initialization vector to use. Must be odd and 7bits max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic rdmem 0 16        - reads from byte[0] 0x16 bytes(system header)");
-    PrintAndLogEx(NORMAL, "      hf legic rdmem 0 4 55      - reads from byte[0] 0x4 bytes with IV 0x55");
-    PrintAndLogEx(NORMAL, "      hf legic rdmem 0 100 55    - reads 0x100 bytes with IV 0x55");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 16        - reads from byte[0] 0x16 bytes(system header)"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 4 55      - reads from byte[0] 0x4 bytes with IV 0x55"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 100 55    - reads 0x100 bytes with IV 0x55"));
     return PM3_SUCCESS;
 }
 static int usage_legic_sim(void) {
     PrintAndLogEx(NORMAL, "Simulates a LEGIC Prime tag. MIM22, MIM256, MIM1024 types can be emulated");
-    PrintAndLogEx(NORMAL, "Use ELOAD/ESAVE to upload a dump into emulator memory");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>");
+    PrintAndLogEx(NORMAL, "Use " _YELLOW_("`hf legic eload`") "to upload a dump into emulator memory\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic sim [h] <tagtype>\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      <tagtype>     : 0 = MIM22");
@@ -64,12 +64,12 @@ static int usage_legic_sim(void) {
     PrintAndLogEx(NORMAL, "                    : 2 = MIM1024");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic sim 2");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic sim 2"));
     return PM3_SUCCESS;
 }
-static int usage_legic_write(void) {
-    PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic write [h] o <offset> d <data (hex symbols)>");
+static int usage_legic_wrbl(void) {
+    PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic wrbl [h] o <offset> d <data (hex symbols)>\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      o <offset>    : (hex) offset in data array to start writing");
@@ -77,92 +77,93 @@ static int usage_legic_write(void) {
     PrintAndLogEx(NORMAL, "      d <data>      : (hex symbols) bytes to write ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic write o 10 d 11223344    - Write 0x11223344 starting from offset 0x10");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic wrbl o 10 d 11223344    - Write 0x11223344 starting from offset 0x10"));
     return PM3_SUCCESS;
 }
 static int usage_legic_reader(void) {
-    PrintAndLogEx(NORMAL, "Read UID and type information from a legic tag.");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic reader [h]");
+    PrintAndLogEx(NORMAL, "Read UID and type information from a LEGIC Prime tag\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic reader [h]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic reader");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic reader"));
     return PM3_SUCCESS;
 }
 static int usage_legic_info(void) {
-    PrintAndLogEx(NORMAL, "Reads information from a legic prime tag.");
-    PrintAndLogEx(NORMAL, "Shows systemarea, user areas etc");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic info [h]");
+    PrintAndLogEx(NORMAL, "Reads information from a LEGIC Prime tag like systemarea, user areas etc\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic info [h]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic info");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic info"));
     return PM3_SUCCESS;
 }
 static int usage_legic_dump(void) {
-    PrintAndLogEx(NORMAL, "Reads all pages from LEGIC Prime MIM22, MIM256, MIM1024");
-    PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
+    PrintAndLogEx(NORMAL, "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024");
+    PrintAndLogEx(NORMAL, "and saves bin/eml/json dump file");
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic dump [h] f <filename w/o .bin>");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic dump [h] f <filename w/o .bin>\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to dump bytes");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic dump");
-    PrintAndLogEx(NORMAL, "      hf legic dump f myfile");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump                -- uses UID as filename"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump f myfile"));
     return PM3_SUCCESS;
 }
 static int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "Reads binary file and it autodetects card type and verifies that the file has the same size");
     PrintAndLogEx(NORMAL, "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]\n");
-    PrintAndLogEx(NORMAL, "Usage:   hf legic restore [h] i <filename w/o .bin>");
+    PrintAndLogEx(NORMAL, "Usage:   hf legic restore [h] [f <filename w/o .bin>]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      i <filename>  : filename w/o '.bin' to restore bytes on to card from");
+    PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to restore bytes on to card from");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic restore i myfile");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic restore f myfile"));
     return PM3_SUCCESS;
 }
 static int usage_legic_eload(void) {
-    PrintAndLogEx(NORMAL, "It loads binary dump from the file `filename.bin`");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic eload [h] [card memory] <file name w/o `.bin`>");
+    PrintAndLogEx(NORMAL, "It loads a binary dump into emulator memory\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic eload [h] [card memory] [f <file name w/o `.bin`>]\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      [card memory] : 0 = MIM22");
-    PrintAndLogEx(NORMAL, "                    : 1 = MIM256 (default)");
-    PrintAndLogEx(NORMAL, "                    : 2 = MIM1024");
-    PrintAndLogEx(NORMAL, "      <filename>    : filename w/o .bin to load");
+    PrintAndLogEx(NORMAL, "      h               : this help");
+    PrintAndLogEx(NORMAL, "      [card memory]   : 0 = MIM22");
+    PrintAndLogEx(NORMAL, "                      : 1 = MIM256 (default)");
+    PrintAndLogEx(NORMAL, "                      : 2 = MIM1024");
+    PrintAndLogEx(NORMAL, "      f <filename>    : filename w/o .bin to load");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic eload 2 myfile");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic eload 2 myfile"));
     return PM3_SUCCESS;
 }
 static int usage_legic_esave(void) {
-    PrintAndLogEx(NORMAL, "It saves binary dump into the file `filename.bin` or `cardID.bin`");
-    PrintAndLogEx(NORMAL, " Usage:  hf legic esave [h] [card memory] [file name w/o `.bin`]");
+    PrintAndLogEx(NORMAL, "It saves bin/eml/json dump file of emulator memory\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic esave [h] [card memory] f <file name w/o `.bin`>\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      [card memory] : 0 = MIM22");
-    PrintAndLogEx(NORMAL, "                    : 1 = MIM256 (default)");
-    PrintAndLogEx(NORMAL, "                    : 2 = MIM1024");
-    PrintAndLogEx(NORMAL, "      <filename>    : filename w/o .bin to load");
+    PrintAndLogEx(NORMAL, "      h               : this help");
+    PrintAndLogEx(NORMAL, "      [card memory]   : 0 = MIM22");
+    PrintAndLogEx(NORMAL, "                      : 1 = MIM256 (default)");
+    PrintAndLogEx(NORMAL, "                      : 2 = MIM1024");
+    PrintAndLogEx(NORMAL, "      f <filename>    : filename w/o .bin to load");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic esave 2 myfile");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic esave 2                -- uses UID as filename"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic esave 2 f myfile"));
     return PM3_SUCCESS;
 }
 static int usage_legic_wipe(void) {
-    PrintAndLogEx(NORMAL, "Fills a legic tag memory with zeros. From byte7 and to the end.");
-    PrintAndLogEx(NORMAL, " Usage:  hf legic wipe [h]");
+    PrintAndLogEx(NORMAL, "Fills a LEGIC Prime tags memory with zeros. From byte7 and to the end");
+    PrintAndLogEx(NORMAL, "It autodetects card type\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic wipe [h]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf legic wipe");
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic wipe"));
     return PM3_SUCCESS;
 }
 /*
@@ -495,10 +496,10 @@ out:
 // params:
 // offset in data memory
 // number of bytes to read
-static int CmdLegicRdmem(const char *Cmd) {
+static int CmdLegicRdbl(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_legic_rdmem();
+    if (cmdp == 'h') return usage_legic_rdbl();
 
     uint32_t offset = 0, len = 0, iv = 1;
     uint16_t datalen = 0;
@@ -529,7 +530,7 @@ static int CmdLegicRdmem(const char *Cmd) {
     return status;
 }
 
-static int CmdLegicRfSim(const char *Cmd) {
+static int CmdLegicSim(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
@@ -541,7 +542,7 @@ static int CmdLegicRfSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdLegicRfWrite(const char *Cmd) {
+static int CmdLegicWrbl(const char *Cmd) {
 
     uint8_t *data = NULL;
     uint8_t cmdp = 0;
@@ -612,7 +613,7 @@ static int CmdLegicRfWrite(const char *Cmd) {
     if (errors || cmdp == 0) {
         if (data)
             free(data);
-        return usage_legic_write();
+        return usage_legic_wrbl();
     }
 
     // tagtype
@@ -951,10 +952,8 @@ static int CmdLegicDump(const char *Cmd) {
     }
 
     saveFile(filename, ".bin", data, readlen);
-    saveFileEML(filename, data, readlen, 16);
+    saveFileEML(filename, data, readlen, 8);
     saveFileJSON(filename, jsfLegic, data, readlen);
-
-    PrintAndLogEx(SUCCESS, "Wrote %d bytes to %s", readlen, filename);
     return PM3_SUCCESS;
 }
 
@@ -1088,32 +1087,45 @@ static int CmdLegicRestore(const char *Cmd) {
 }
 
 static int CmdLegicELoad(const char *Cmd) {
-    FILE *f;
-    char filename[FILE_PATH_SIZE];
-    char *fnameptr = filename;
-    int len, numofbytes;
-    int nameParamNo = 1;
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h' || cmdp == 0x00)
-        return usage_legic_eload();
+    size_t numofbytes = 256;
+    int fileNameLen = 0;
+    char filename[FILE_PATH_SIZE] = {0x00};
+    bool errors = false;
+    uint8_t cmdp = 0;
 
-    switch (cmdp) {
-        case '0' :
-            numofbytes = 22;
-            break;
-        case '1' :
-        case '\0':
-            numofbytes = 256;
-            break;
-        case '2' :
-            numofbytes = 1024;
-            break;
-        default  :
-            numofbytes = 256;
-            nameParamNo = 0;
-            break;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h' :
+                return usage_legic_eload();
+            case 'f' :
+                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (!fileNameLen)
+                    errors = true;
+                if (fileNameLen > FILE_PATH_SIZE - 5)
+                    fileNameLen = FILE_PATH_SIZE - 5;
+                cmdp += 2;
+                break;
+            case '0' :
+                numofbytes = 22;
+                cmdp++;
+                break;
+            case '1' :
+                numofbytes = 256;
+                cmdp++;
+                break;
+            case '2' :
+                numofbytes = 1024;
+                cmdp++;
+                break;
+            default :
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
     }
+    //Validations
+    if (errors || strlen(Cmd) == 0) return usage_legic_eload();
 
     // set up buffer
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
@@ -1122,75 +1134,61 @@ static int CmdLegicELoad(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    // set up file
-    len = param_getstr(Cmd, nameParamNo, filename, FILE_PATH_SIZE);
-    if (len > FILE_PATH_SIZE - 5)
-        len = FILE_PATH_SIZE - 5;
-    fnameptr += len;
-    sprintf(fnameptr, ".bin");
-
-    // open file
-    f = fopen(filename, "rb");
-    if (!f) {
-        PrintAndLogEx(WARNING, "File %s not found or locked", filename);
+    if (loadFile_safe(filename, ".bin", (void **)&data, &numofbytes) != PM3_SUCCESS) {
         free(data);
+        PrintAndLogEx(WARNING, "Error, reading file");
         return PM3_EFILE;
     }
 
-    // load file
-    size_t bytes_read = fread(data, 1, numofbytes, f);
-    if (bytes_read == 0) {
-        PrintAndLogEx(ERR, "File reading error");
-        free(data);
-        fclose(f);
-        f = NULL;
-        return PM3_EFILE;
-    }
-    fclose(f);
-    f = NULL;
+    PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
 
-    // transfer to device
     legic_seteml(data, 0, numofbytes);
 
     free(data);
-    PrintAndLogEx(SUCCESS, "\nLoaded %d bytes from file: %s  to emulator memory", numofbytes, filename);
+    PrintAndLogEx(SUCCESS, "Done");
     return PM3_SUCCESS;
 }
 
 static int CmdLegicESave(const char *Cmd) {
 
-    char filename[FILE_PATH_SIZE];
-    char *fnameptr = filename;
-    int fileNlen, numofbytes, nameParamNo = 1;
-
-    memset(filename, 0, sizeof(filename));
-
-    char cmdp = tolower(param_getchar(Cmd, 0));
-
-    if (cmdp == 'h' || cmdp == 0x00)
-        return usage_legic_esave();
-
-    switch (cmdp) {
-        case '0' :
-            numofbytes = 22;
-            break;
-        case '1' :
-        case '\0':
-            numofbytes = 256;
-            break;
-        case '2' :
-            numofbytes = 1024;
-            break;
-        default  :
-            numofbytes = 256;
-            nameParamNo = 0;
-            break;
+    char filename[FILE_PATH_SIZE] = {0};
+    char *fptr = filename;
+    int fileNameLen = 0;
+    size_t numofbytes = 256;
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h' :
+                return usage_legic_esave();
+            case 'f' :
+                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (!fileNameLen)
+                    errors = true;
+                if (fileNameLen > FILE_PATH_SIZE - 5)
+                    fileNameLen = FILE_PATH_SIZE - 5;
+                cmdp += 2;
+                break;
+            case '0' :
+                numofbytes = 22;
+                cmdp++;
+                break;
+            case '1' :
+                numofbytes = 256;
+                cmdp++;
+                break;
+            case '2' :
+                numofbytes = 1024;
+                cmdp++;
+                break;
+            default :
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
     }
-
-    fileNlen = param_getstr(Cmd, nameParamNo, filename, FILE_PATH_SIZE);
-
-    if (fileNlen > FILE_PATH_SIZE - 5)
-        fileNlen = FILE_PATH_SIZE - 5;
+    //Validations
+    if (errors || strlen(Cmd) == 0) return usage_legic_esave();
 
     // set up buffer
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
@@ -1206,14 +1204,17 @@ static int CmdLegicESave(const char *Cmd) {
         free(data);
         return PM3_ETIMEOUT;
     }
-    // user supplied filename?
-    if (fileNlen < 1)
-        sprintf(fnameptr, "%02X%02X%02X%02X.bin", data[0], data[1], data[2], data[3]);
-    else
-        sprintf(fnameptr + fileNlen, ".bin");
 
-    saveFileEML(filename, data, numofbytes, 8);
+    // user supplied filename?
+    if (fileNameLen < 1) {
+        PrintAndLogEx(INFO, "Using UID as filename");
+        fptr += sprintf(fptr, "hf-legic-");
+        FillFileNameByUID(fptr, data, "-dump", 4);
+    }
+
     saveFile(filename, ".bin", data, numofbytes);
+    saveFileEML(filename, data, numofbytes, 8);
+    saveFileJSON(filename, jsfLegic, data, numofbytes);
     return PM3_SUCCESS;
 }
 
@@ -1290,17 +1291,17 @@ static int CmdLegicList(const char *Cmd) {
 
 static command_t CommandTable[] =  {
     {"help",    CmdHelp,          AlwaysAvailable, "This help"},
+    {"list",    CmdLegicList,     AlwaysAvailable,    "List LEGIC history"},
     {"reader",  CmdLegicReader,   IfPm3Legicrf,    "LEGIC Prime Reader UID and tag info"},
     {"info",    CmdLegicInfo,     IfPm3Legicrf,    "Display deobfuscated and decoded LEGIC Prime tag data"},
     {"dump",    CmdLegicDump,     IfPm3Legicrf,    "Dump LEGIC Prime tag to binary file"},
     {"restore", CmdLegicRestore,  IfPm3Legicrf,    "Restore a dump file onto a LEGIC Prime tag"},
-    {"rdmem",   CmdLegicRdmem,    IfPm3Legicrf,    "Read bytes from a LEGIC Prime tag"},
-    {"sim",     CmdLegicRfSim,    IfPm3Legicrf,    "Start tag simulator"},
-    {"write",   CmdLegicRfWrite,  IfPm3Legicrf,    "Write data to a LEGIC Prime tag"},
+    {"rdbl",    CmdLegicRdbl,     IfPm3Legicrf,    "Read bytes from a LEGIC Prime tag"},
+    {"sim",     CmdLegicSim,      IfPm3Legicrf,    "Start tag simulator"},
+    {"wrbl",    CmdLegicWrbl,     IfPm3Legicrf,    "Write data to a LEGIC Prime tag"},
     {"crc",     CmdLegicCalcCrc,  AlwaysAvailable, "Calculate Legic CRC over given bytes"},
     {"eload",   CmdLegicELoad,    IfPm3Legicrf,    "Load binary dump to emulator memory"},
     {"esave",   CmdLegicESave,    IfPm3Legicrf,    "Save emulator memory to binary file"},
-    {"list",    CmdLegicList,     AlwaysAvailable,    "List LEGIC history"},
     {"wipe",    CmdLegicWipe,     IfPm3Legicrf,    "Wipe a LEGIC Prime tag"},
     {NULL, NULL, NULL, NULL}
 };
