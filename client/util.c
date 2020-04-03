@@ -211,6 +211,9 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
     for (; i < minStrLen; i++, tmp += 1)
         sprintf(tmp, " ");
 
+    // remove last space
+    --tmp;
+    *tmp = '\0';
     return;
 }
 
@@ -346,7 +349,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
     memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
     size_t max_len = (len > 1010) ? 1010 : len;
 
-    snprintf(tmp, UTIL_BUFFER_SIZE_SPRINT, "%s| ", sprint_hex(data, max_len));
+    snprintf(tmp, UTIL_BUFFER_SIZE_SPRINT, "%s | ", sprint_hex(data, max_len));
 
     size_t i = 0;
     size_t pos = (max_len * 3) + 2;

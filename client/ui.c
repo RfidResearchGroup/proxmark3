@@ -80,10 +80,11 @@ int searchHomeFilePath(char **foundpath, const char *filename, bool create_home)
     if ((result != 0) && create_home) {
 
 #ifdef _WIN32
-        if (_mkdir(path)) {
+        if (_mkdir(path))
 #else
-        if (mkdir(path, 0700)) {
+        if (mkdir(path, 0700))
 #endif
+        {
             fprintf(stderr, "Could not create user directory %s\n", path);
             free(path);
             return PM3_EFILE;
