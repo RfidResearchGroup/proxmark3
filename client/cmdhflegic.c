@@ -105,14 +105,14 @@ static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Reads all pages from LEGIC Prime MIM22, MIM256, MIM1024");
     PrintAndLogEx(NORMAL, "and saves binary dump into the file `filename.bin` or `cardUID.bin`");
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic dump [h] o <filename w/o .bin>");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic dump [h] f <filename w/o .bin>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
-    PrintAndLogEx(NORMAL, "      o <filename>  : filename w/o '.bin' to dump bytes");
+    PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to dump bytes");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "      hf legic dump");
-    PrintAndLogEx(NORMAL, "      hf legic dump o myfile");
+    PrintAndLogEx(NORMAL, "      hf legic dump f myfile");
     return PM3_SUCCESS;
 }
 static int usage_legic_restore(void) {
@@ -865,26 +865,23 @@ static int CmdLegicReader(const char *Cmd) {
 
 static int CmdLegicDump(const char *Cmd) {
 
-    FILE *f;
+    int fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
-    char *fnameptr = filename;
-    size_t fileNlen = 0;
+    char *fptr = filename;
     bool errors = false;
     uint16_t dumplen;
     uint8_t cmdp = 0;
-
-    memset(filename, 0, sizeof(filename));
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_legic_dump();
-            case 'o':
-                fileNlen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (!fileNlen)
+            case 'f':
+                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (!fileNameLen)
                     errors = true;
-                if (fileNlen > FILE_PATH_SIZE - 5)
-                    fileNlen = FILE_PATH_SIZE - 5;
+                if (fileNameLen > FILE_PATH_SIZE - 5)
+                    fileNameLen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
                 break;
             default:
@@ -947,22 +944,16 @@ static int CmdLegicDump(const char *Cmd) {
     }
 
     // user supplied filename?
-    if (fileNlen < 1)
-        sprintf(fnameptr, "hf-legic-%02X%02X%02X%02X-dump.bin", data[0], data[1], data[2], data[3]);
-    else
-        sprintf(fnameptr + fileNlen, ".bin");
-
-    f = fopen(filename, "wb");
-    if (!f) {
-        PrintAndLogEx(WARNING, "Could not create file name %s", filename);
-        if (data)
-            free(data);
-        return PM3_EFILE;
+    if (fileNameLen < 1) {
+        PrintAndLogEx(INFO, "Using UID as filename");
+        fptr += sprintf(fptr, "hf-legic-");
+        FillFileNameByUID(fptr, data, "-dump", 4);
     }
-    fwrite(data, 1, readlen, f);
-    fflush(f);
-    fclose(f);
-    free(data);
+
+    saveFile(filename, ".bin", data, readlen);
+    saveFileEML(filename, data, readlen, 16);
+    saveFileJSON(filename, jsfLegic, data, readlen);
+
     PrintAndLogEx(SUCCESS, "Wrote %d bytes to %s", readlen, filename);
     return PM3_SUCCESS;
 }
