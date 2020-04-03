@@ -48,7 +48,7 @@ static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
 };
 
 static int usage_hf_iclass_sim(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass sim <option> [CSN]");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass sim [h] <option> [CSN]");
     PrintAndLogEx(NORMAL, "        options");
     PrintAndLogEx(NORMAL, "                0 <CSN> simulate the given CSN");
     PrintAndLogEx(NORMAL, "                1       simulate default CSN");
@@ -65,7 +65,7 @@ static int usage_hf_iclass_sim(void) {
 }
 static int usage_hf_iclass_eload(void) {
     PrintAndLogEx(NORMAL, "Loads iclass tag-dump into emulator memory on device");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass eload f <filename>");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass eload [h] f <filename>");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
     return PM3_SUCCESS;
@@ -165,7 +165,16 @@ static int usage_hf_iclass_readblock(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readtagfile() {
-    PrintAndLogEx(NORMAL, "Usage: hf iclass readtagfile <filename> [startblock] [endblock]");
+    PrintAndLogEx(NORMAL, "Print a iClass tag-dump file");
+    PrintAndLogEx(NORMAL, "Usage: hf iClass readtagfile [f <filename>] [s <startblock>] [e <endblock>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "              h                  this help");
+    PrintAndLogEx(NORMAL, "              f <filename>       filename of dump");
+    PrintAndLogEx(NORMAL, "              s <startblock>     print from this block (default block6)");
+    PrintAndLogEx(NORMAL, "              e <endblock>       end printing at this block (default 0, ALL)");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf iclass readtagfile f iclass_tagdump-aa162d30f8ff12f1.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf iclass readtagfile s 1 f iclass_tagdump-aa162d30f8ff12f1.bin"));
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_calc_newkey(void) {
@@ -1354,8 +1363,8 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     // print the dump
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "------+--+-------------------------+");
-    PrintAndLogEx(INFO, "CSN   |00| %s|", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
@@ -1884,11 +1893,10 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
-    uint8_t mem_config;
-    memcpy(&mem_config, iclass_dump + 13, 1);
-    uint8_t maxmemcount;
 
+    uint8_t maxmemcount;
     uint8_t filemaxblock = filesize / 8;
+    uint8_t mem_config = iclass_dump[13];
 
     if (mem_config & 0x80)
         maxmemcount = 255;
@@ -1905,7 +1913,15 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     if (endblock > filemaxblock - 1)
         endblock = filemaxblock - 1;
 
-    //PrintAndLog ("startblock: %d, endblock: %d, filesize: %d, maxmemcount: %d, filemaxblock: %d",startblock, endblock,filesize, maxmemcount, filemaxblock);
+    /*
+    PrintAndLogEx(INFO, "startblock: %u, endblock: %u, filesize: %zu, maxmemcount: %u, filemaxblock: %u"
+        , startblock
+        , endblock
+        , filesize
+        , maxmemcount
+        , filemaxblock
+    );
+    */
 
     int i = startblock;
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
@@ -1920,24 +1936,40 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 static int CmdHFiClassReadTagFile(const char *Cmd) {
     int startblock = 0;
     int endblock = 0;
-    char tempnum[5];
-    FILE *f;
     char filename[FILE_PATH_SIZE];
-    if (param_getstr(Cmd, 0, filename, sizeof(filename)) < 1)
-        return usage_hf_iclass_readtagfile();
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_readtagfile();
+            case 'f':
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                    errors = true;
+                    break;
+                }
+                cmdp += 2;
+                break;
+            case 's':
+                startblock = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            case 'e':
+                endblock = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;            
+            default:
+                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
 
-    if (param_getstr(Cmd, 1, tempnum, sizeof(tempnum)) < 1)
-        startblock = 0;
-    else
-        sscanf(tempnum, "%d", &startblock);
-
-    if (param_getstr(Cmd, 2, tempnum, sizeof(tempnum)) < 1)
-        endblock = 0;
-    else
-        sscanf(tempnum, "%d", &endblock);
+    if (errors || (strlen(Cmd) == 0)) return usage_hf_iclass_readtagfile();
 
     // file handling and reading
-    f = fopen(filename, "rb");
+    FILE *f = fopen(filename, "rb");
     if (!f) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
@@ -1960,10 +1992,15 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
     }
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
+    
+    PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
+    PrintAndLogEx(INFO, "File size %d bytes, file blocks %d (0x%02x)", bytes_read, bytes_read >> 3, bytes_read >> 3);
+    PrintAndLogEx(INFO, "Printing blocks from");
+    PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") "end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
 
     uint8_t *csn = dump;
-    PrintAndLogEx(INFO, "------+--+-------------------------+\n");
-    PrintAndLogEx(INFO, "CSN   |00| %s|\n", sprint_hex(csn, 8));
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
     free(dump);
     return PM3_SUCCESS;
