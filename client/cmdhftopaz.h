@@ -15,5 +15,5 @@
 
 int CmdHFTopaz(const char *Cmd);
 
-int readTopazUid(void);
+int readTopazUid(bool verbose);
 #endif
