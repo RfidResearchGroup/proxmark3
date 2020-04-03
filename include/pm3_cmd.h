@@ -516,6 +516,8 @@ typedef struct {
 #define CMD_HF_THINFILM_READ                                              0x0810
 #define CMD_HF_THINFILM_SIMULATE                                          0x0811
 
+#define CMD_HF_ISO14443B_SIM_CRYPTORF                                     0x0812
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags
