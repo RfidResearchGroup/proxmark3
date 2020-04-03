@@ -235,6 +235,41 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
 
+//meltem
+//defined crypto RF commands
+//only interpreting channel 1 communication
+#define CRYPTORF_SET_USER_ZONE      0x11
+#define CRYPTORF_READ_USER_ZONE     0x12
+#define CRYPTORF_WRITE_USER_ZONE    0x13
+#define CRYPTORF_WRITE_SYSTEM_ZONE  0x14
+#define CRYPTORF_READ_SYSTEM_ZONE   0x16
+#define CRYPTORF_VERIFY_CRYPTO      0x18
+#define CRYPTORF_SEND_CHECKSUM      0x19
+#define CRYPTORF_DESELECT           0x1A
+#define CRYPTORF_IDLE               0x1B
+#define CRYPTORF_CHECK_PASSWORD     0x1C
+
+//meltem
+//defined Crypto RF errors
+#define CRYPTORF_ERR_ACCESS_DENIED_ZONE               0x99
+#define CRYPTORF_ERR_PARAM_INVALID                    0xA1
+#define CRYPTORF_ERR_ADDRES_INVALID                   0xA2
+#define CRYPTORF_ERR_LENGTH_INVALID                   0xA3
+#define CRYPTORF_ERR_AUTH_ENC_REQ                     0xA9
+#define CRYPTORF_ERR_ACCESS_DENIED_WLOCK              0xB9
+#define CRYPTORF_ERR_BYTE_ACCESS_DENIED_NOT_ALLOWED   0xBA
+#define CRYPTORF_ERR_ACCESS_DENIED_NOT_ALLOWED        0xBA
+#define CRYPTORF_ERR_BYTE_ACCESS_DENIED_PASSWD_REQ    0xBC
+#define CRYPTORF_ERR_CHECKSUM_FAIL2                   0xC8
+#define CRYPTORF_ERR_CHECKSUM_FAIL                    0xC9
+#define CRYPTORF_ERR_PASSWD_REQ                       0xD9
+#define CRYPTORF_ERR_FUSE_ACCESS_DENIED               0xDF
+#define CRYPTORF_ERR_MODIFY_FORBIDDEN                 0xE9
+#define CRYPTORF_ERR_ACCESS_DENIED_FUSE_ORDR          0xE9
+#define CRYPTORF_ERR_MEMORY_WRITE_DATA_M              0xED
+#define CRYPTORF_ERR_MEMORY_ACCESS                    0xEE
+#define CRYPTORF_ERR_MEMORY_ACCESS_SEC                0xF9
+
 //First byte is 26
 #define ISO15693_INVENTORY     0x01
 #define ISO15693_STAYQUIET     0x02
