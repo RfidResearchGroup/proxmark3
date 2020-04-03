@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `hf search` - now continue to search in case of dual tech cards (@iceman1001) Thanks to @ikarus23 for the suggestion!
+ - Added `hf topas info` - old reader command,  now also prints NDEF (@iceman1001)
+ - Change `hf topaz reader` - now only prints lighter info, like UID. (@iceman1001)
  - Change `hf iclass readtagfile` - improved param handling (@iceman1001)
  - Change `hf mfu ndef` - text record now correctly decode language code and test (@iceman1001) Thanks to @bettse!
  - Updated the helptexts for `hf iclass` commands (@iceman1001)
