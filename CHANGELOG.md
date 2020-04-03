@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf 14b simcrf` with encryption engine enabled (@baloncu)
+ - Added TR0 and TR1 time for hf 14b tags (@baloncu)
  - Fix hf list felica and hf felica sniff (@7homasSutter)
  - Added hf felica wrunencrypted (@7homasSutter)
  - Added hf felica rdunencrypted (@7homasSutter)
