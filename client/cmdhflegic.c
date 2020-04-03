@@ -104,23 +104,26 @@ static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Read all memory from LEGIC Prime MIM22, MIM256, MIM1024");
     PrintAndLogEx(NORMAL, "and saves bin/eml/json dump file");
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic dump [h] f <filename w/o .bin>\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic dump [h] [x] [f <filename w/o .bin>]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to dump bytes");
+    PrintAndLogEx(NORMAL, "      x             : deobfuscate dump data");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump                -- uses UID as filename"));
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump f myfile"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump x"));
     return PM3_SUCCESS;
 }
 static int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "Reads binary file and it autodetects card type and verifies that the file has the same size");
     PrintAndLogEx(NORMAL, "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]\n");
-    PrintAndLogEx(NORMAL, "Usage:   hf legic restore [h] [f <filename w/o .bin>]\n");
+    PrintAndLogEx(NORMAL, "Usage:   hf legic restore [h] [x] [f <filename w/o .bin>]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to restore bytes on to card from");
+    PrintAndLogEx(NORMAL, "      x             : obfuscate dump data");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic restore f myfile"));
@@ -166,6 +169,25 @@ static int usage_legic_wipe(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic wipe"));
     return PM3_SUCCESS;
 }
+
+static bool legic_xor(uint8_t *data, uint8_t cardsize) {
+    bool ret = true;
+    uint8_t crc = data[4];
+    uint32_t calc_crc = CRC8Legic(data, 4);
+    if (crc != calc_crc) {
+        PrintAndLogEx(INFO, "Crc mismatch, obsfuscation not possible");
+        ret = false;
+    } else if (cardsize <= 22) {
+        PrintAndLogEx(INFO, "No obsfuscation such small dump");
+    } else {
+        for(uint16_t i = 22; i < cardsize - 22; i++) {
+            data[i] ^= crc;
+        }
+        PrintAndLogEx(SUCCESS, "Obsfuscation done");
+    }
+    return ret;
+}
+
 /*
  *  Output BigBuf and deobfuscate LEGIC RF tag data.
  *  This is based on information given in the talk held
@@ -531,7 +553,6 @@ static int CmdLegicRdbl(const char *Cmd) {
 }
 
 static int CmdLegicSim(const char *Cmd) {
-
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_legic_sim();
 
@@ -869,7 +890,7 @@ static int CmdLegicDump(const char *Cmd) {
     int fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
     char *fptr = filename;
-    bool errors = false;
+    bool errors = false, shall_deobsfuscate = false;
     uint16_t dumplen;
     uint8_t cmdp = 0;
 
@@ -884,6 +905,10 @@ static int CmdLegicDump(const char *Cmd) {
                 if (fileNameLen > FILE_PATH_SIZE - 5)
                     fileNameLen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
+                break;
+            case 'x':
+                shall_deobsfuscate = true;
+                cmdp++;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -950,6 +975,10 @@ static int CmdLegicDump(const char *Cmd) {
         fptr += sprintf(fptr, "hf-legic-");
         FillFileNameByUID(fptr, data, "-dump", 4);
     }
+    
+    if (shall_deobsfuscate) {
+        legic_xor(data, card.cardsize);
+    }
 
     saveFile(filename, ".bin", data, readlen);
     saveFileEML(filename, data, readlen, 8);
@@ -959,12 +988,10 @@ static int CmdLegicDump(const char *Cmd) {
 
 static int CmdLegicRestore(const char *Cmd) {
 
-    FILE *f;
     char filename[FILE_PATH_SIZE] = {0x00};
-    char *fnameptr = filename;
     size_t fileNlen = 0;
-    bool errors = false;
-    uint16_t numofbytes;
+    bool errors = false, shall_obsfuscate = false;
+    size_t numofbytes;
     uint8_t cmdp = 0;
 
     memset(filename, 0, sizeof(filename));
@@ -974,7 +1001,7 @@ static int CmdLegicRestore(const char *Cmd) {
             case 'h':
                 errors = true;
                 break;
-            case 'i':
+            case 'f':
                 fileNlen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
                 if (!fileNlen)
                     errors = true;
@@ -982,6 +1009,10 @@ static int CmdLegicRestore(const char *Cmd) {
                 if (fileNlen > FILE_PATH_SIZE - 5)
                     fileNlen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
+                break;
+            case 'x':
+                shall_obsfuscate = true;
+                cmdp++;
                 break;
             default:
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
@@ -998,48 +1029,30 @@ static int CmdLegicRestore(const char *Cmd) {
         PrintAndLogEx(WARNING, "Failed to identify tagtype");
         return PM3_ESOFT;
     }
-    numofbytes = card.cardsize;
+
+    legic_print_type(card.cardsize, 0);
 
     // set up buffer
-    uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
+    uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
 
-    legic_print_type(numofbytes, 0);
+    if (loadFile_safe(filename, ".bin", (void **)&data, &numofbytes) != PM3_SUCCESS) {
+        free(data);
+        PrintAndLogEx(WARNING, "Error, reading file");
+        return PM3_EFILE;
+    }
 
-    // set up file
-    fnameptr += fileNlen;
-    sprintf(fnameptr, ".bin");
-
-    f = fopen(filename, "rb");
-    if (!f) {
-        PrintAndLogEx(WARNING, "File %s not found or locked", filename);
+    if (card.cardsize != numofbytes) {
+        PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%zu != %u]", card.cardsize, numofbytes);
         free(data);
         return PM3_EFILE;
     }
 
-    // verify size of dumpfile is the same as card.
-    fseek(f, 0, SEEK_END); // seek to end of file
-    size_t filesize = ftell(f); // get current file pointer
-    fseek(f, 0, SEEK_SET); // seek back to beginning of file
-
-    if (filesize != numofbytes) {
-        PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%zu != %u]", filesize, numofbytes);
-        free(data);
-        fclose(f);
-        return PM3_EFILE;
-    }
-
-    // load file
-    size_t bytes_read = fread(data, 1, numofbytes, f);
-    fclose(f);
-
-    if (bytes_read == 0) {
-        PrintAndLogEx(ERR, "File reading error");
-        free(data);
-        return PM3_EFILE;
+    if (shall_obsfuscate){
+        legic_xor(data, card.cardsize);
     }
 
     PrintAndLogEx(SUCCESS, "Restoring to card");
@@ -1082,7 +1095,7 @@ static int CmdLegicRestore(const char *Cmd) {
     }
 
     free(data);
-    PrintAndLogEx(SUCCESS, "\nWrote %d bytes to card from file %s", numofbytes, filename);
+    PrintAndLogEx(SUCCESS, "Done");
     return PM3_SUCCESS;
 }
 
@@ -1091,7 +1104,7 @@ static int CmdLegicELoad(const char *Cmd) {
     size_t numofbytes = 256;
     int fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
-    bool errors = false;
+    bool errors = false, shall_obsfuscate = false;
     uint8_t cmdp = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -1105,6 +1118,10 @@ static int CmdLegicELoad(const char *Cmd) {
                 if (fileNameLen > FILE_PATH_SIZE - 5)
                     fileNameLen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
+                break;
+            case 'x':
+                shall_obsfuscate = true;
+                cmdp++;
                 break;
             case '0' :
                 numofbytes = 22;
@@ -1140,8 +1157,11 @@ static int CmdLegicELoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
+    if (shall_obsfuscate) {
+        legic_xor(data, numofbytes);
+    }
 
+    PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
     legic_seteml(data, 0, numofbytes);
 
     free(data);
@@ -1155,7 +1175,7 @@ static int CmdLegicESave(const char *Cmd) {
     char *fptr = filename;
     int fileNameLen = 0;
     size_t numofbytes = 256;
-    bool errors = false;
+    bool errors = false, shall_deobsfuscate = false;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
@@ -1168,6 +1188,10 @@ static int CmdLegicESave(const char *Cmd) {
                 if (fileNameLen > FILE_PATH_SIZE - 5)
                     fileNameLen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
+                break;
+            case 'x':
+                shall_deobsfuscate = true;
+                cmdp++;
                 break;
             case '0' :
                 numofbytes = 22;
@@ -1210,6 +1234,10 @@ static int CmdLegicESave(const char *Cmd) {
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += sprintf(fptr, "hf-legic-");
         FillFileNameByUID(fptr, data, "-dump", 4);
+    }
+
+    if (shall_deobsfuscate) {
+        legic_xor(data, numofbytes);
     }
 
     saveFile(filename, ".bin", data, numofbytes);
