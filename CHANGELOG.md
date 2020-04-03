@@ -3,10 +3,15 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `hf iclass readtagfile` - improved param handling (@iceman1001)
+ - Change `hf mfu ndef` - text record now correctly decode language code and test (@iceman1001) Thanks to @bettse!
+ - Updated the helptexts for `hf iclass` commands (@iceman1001)
+ - Fix NDEF TLV lock / memory parsed correct (@merlokk)
+ - Change `mem spiffs` commands now parse h param correct (@iceman1001)
  - Add colour to `hf mf chk` and `hf mf fchk` (@dunderhay)
- - Change - updated public keys info (@anon)
+ - Change - updated public keys info (@bkerler)
  - Change - mfc default keys removed dublicates (@iceman1001)
- . Change - mfc default keys got new entries found on TagInfo app (@anon)
+ . Change - mfc default keys got new entries found on TagInfo app (@bkerler)
  - Added `hf mfu ndef` - read and decode NDEF Type2 messages (@iceman1001)
  - Added `data ndef` - decode NDEF messages (@iceman1001)
  - Change - usb write's now waits for shiftregisters (@pwpiwi)
@@ -49,7 +54,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fix compilation under openSUSE (@hsanjuan)
  - Added `lf nexwatch sim` - use raw hex to simulate (@iceman1001)
  - Fix `lf indala read` - long id 224bits preamble identification less strict (@iceman1001)
- - Added `hf mf staticnested` - useful when targeting the strange cards with a static nonce. (@iceman100) Thanks to @xtigmh @uzlonewolf for their solutions.
+ - Added `hf mf staticnested` - useful when targeting the strange cards with a static nonce. (@iceman1001) Thanks to @xtigmh @uzlonewolf for their solutions.
  - Added `hf plot` (@pwpiwi)
  - Fix `lf config` - when called with no params, it no longer mess up all device lf config settings. (@iceman1001)
  - Change `lf indala clone` - new option `--Q5` writes to q5/T5555 tags. (@iceman1001)
