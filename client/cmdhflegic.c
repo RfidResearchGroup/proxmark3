@@ -40,7 +40,7 @@ static int usage_legic_calccrc(void) {
 }
 static int usage_legic_rdbl(void) {
     PrintAndLogEx(NORMAL, "Read data from a LEGIC Prime tag\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic rdbl [h] s <offset> <length> <IV>\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic rdbl [h] [o <offset>] [l <length>] [iv <IV>]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      o <offset>    : (hex) offset in data array to start download from");
@@ -49,8 +49,8 @@ static int usage_legic_rdbl(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 16        - reads from byte[0] 0x16 bytes(system header)"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 4 55      - reads from byte[0] 0x4 bytes with IV 0x55"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 100 55    - reads 0x100 bytes with IV 0x55"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 4 iv 55      - reads from byte[0] 0x4 bytes with IV 0x55"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 100 iv 55    - reads 0x100 bytes with IV 0x55"));
     return PM3_SUCCESS;
 }
 static int usage_legic_sim(void) {
@@ -69,7 +69,7 @@ static int usage_legic_sim(void) {
 }
 static int usage_legic_wrbl(void) {
     PrintAndLogEx(NORMAL, "Write data to a LEGIC Prime tag. It autodetects tagsize to make sure size\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf legic wrbl [h] o <offset> d <data (hex symbols)>\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf legic wrbl [h] [o <offset>] [d <data (hex symbols)>]\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      o <offset>    : (hex) offset in data array to start writing");
@@ -520,12 +520,33 @@ out:
 // number of bytes to read
 static int CmdLegicRdbl(const char *Cmd) {
 
-    char cmdp = tolower(param_getchar(Cmd, 0));
-    if (cmdp == 'h') return usage_legic_rdbl();
-
-    uint32_t offset = 0, len = 0, iv = 1;
-    uint16_t datalen = 0;
-    sscanf(Cmd, "%x %x %x", &offset, &len, &iv);
+    uint32_t offset = 0, len = 0, iv = 1;   
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h' :
+                return usage_legic_rdbl();
+            case 'o' :
+                offset = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                cmdp += 2;
+                break;
+            case 'l' :
+                len = param_get32ex(Cmd, cmdp + 1, 0, 16);
+                cmdp += 2;
+                break;
+            case 'i' :
+                iv = param_get32ex(Cmd, cmdp + 1, 1, 16);
+                cmdp += 2;
+                break;
+            default :
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    //Validations
+    if (errors || strlen(Cmd) == 0) return usage_legic_rdbl();
 
     // sanity checks
     if (len + offset >= MAX_LENGTH) {
@@ -542,6 +563,7 @@ static int CmdLegicRdbl(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    uint16_t datalen = 0;
     int status = legic_read_mem(offset, len, iv, data, &datalen);
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "\n ##  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F");
@@ -573,7 +595,7 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'd':
+            case 'd': {
                 // peek at length of the input string so we can
                 // figure out how many elements to malloc in "data"
                 bg = en = 0;
@@ -617,17 +639,21 @@ static int CmdLegicWrbl(const char *Cmd) {
                 len >>= 1;
                 cmdp += 2;
                 break;
-            case 'o':
+            }
+            case 'o': {
                 offset = param_get32ex(Cmd, cmdp + 1, 4, 16);
                 cmdp += 2;
                 break;
-            case 'h':
+            }
+            case 'h': {
                 errors = true;
                 break;
-            default:
+            }
+            default: {
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
+            }
         }
     }
     //Validations
