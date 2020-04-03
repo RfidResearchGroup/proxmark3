@@ -27,7 +27,8 @@ SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
 #UNUSED: mifaresniff.c desfire_crypto.c
-SRC_ISO14443b = iso14443b.c
+#cryptolib is for the cryptoRF simulation
+SRC_ISO14443b = iso14443b.c cryptolib.c
 SRC_FELICA = felica.c
 SRC_CRAPTO1 = crypto1.c des.c desfire_key.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
@@ -133,7 +134,7 @@ VERSIONSRC = version.c \
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common_arm/Makefile.common
 
-COMMON_FLAGS =  -Os
+COMMON_FLAGS =  -Os -O2
 
 INSTALLFW = $(OBJDIR)/fullimage.elf
 ifneq (,$(FWTAG))
