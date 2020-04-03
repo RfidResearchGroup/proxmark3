@@ -462,7 +462,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(ERR, "A CSN should consist of 16 HEX symbols");
             return usage_hf_iclass_sim();
         }
-        PrintAndLogEx(NORMAL, " simtype: %02x csn: %s", simType, sprint_hex(CSN, 8));
+        PrintAndLogEx(INFO, " simtype: %02x CSN: %s", simType, sprint_hex(CSN, 8));
     }
 
     if (simType > 4) {
@@ -505,7 +505,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
@@ -520,7 +520,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             }
             uint8_t num_mac  = resp.oldarg[1];
             bool success = (NUM_CSNS == num_mac);
-            PrintAndLogEx(NORMAL, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
+            PrintAndLogEx( (success) ? SUCCESS : WARNING, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
 
             if (num_mac == 0)
                 break;
@@ -554,7 +554,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
@@ -569,7 +569,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             }
             uint8_t num_mac = resp.oldarg[1];
             bool success = ((NUM_CSNS * 2) == num_mac);
-            PrintAndLogEx(NORMAL, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS * 2, (success) ? "OK" : "FAIL");
+            PrintAndLogEx((success) ? SUCCESS : WARNING, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS * 2, (success) ? "OK" : "FAIL");
 
             if (num_mac == 0)
                 break;
@@ -645,7 +645,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
 
     if (param_gethex(Cmd, 0, MAC, 8)) {
         PrintAndLogEx(FAILED, "MAC must include 8 HEX symbols");
-        return 1;
+        return PM3_EINVARG;
     }
 
     clearCommandBuffer();
@@ -1269,7 +1269,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
             break;
     }
     // dump cmd switch off at device when finised.
-
+            
     uint32_t blocksRead = resp.oldarg[1];
     uint8_t isOK = resp.oldarg[0] & 0xff;
     if (!isOK && !blocksRead) {
@@ -1949,21 +1949,21 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
     if (fsize <= 0) {
         PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
-        return 1;
+        return PM3_EFILE;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
-        return 1;
+        return PM3_EMALLOC;
     }
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
 
     uint8_t *csn = dump;
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+\n");
-    PrintAndLogEx(NORMAL, "CSN   |00| %s|\n", sprint_hex(csn, 8));
+    PrintAndLogEx(INFO, "------+--+-------------------------+\n");
+    PrintAndLogEx(INFO, "CSN   |00| %s|\n", sprint_hex(csn, 8));
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
     free(dump);
     return PM3_SUCCESS;
@@ -2087,7 +2087,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         if (!select_only(CSN, CCNR, false, true)) {
             DropField();
-            return 0;
+            return PM3_ESOFT;
         }
     }
 
@@ -2109,21 +2109,21 @@ static int loadKeys(char *filename) {
     if (fsize <= 0) {
         PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
-        return 1;
+        return PM3_EFILE;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
-        return 1;
+        return PM3_EMALLOC;
     }
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
     if (bytes_read > ICLASS_KEYS_MAX * 8) {
         PrintAndLogEx(WARNING, "File is too long to load - bytes: %zu", bytes_read);
         free(dump);
-        return 0;
+        return PM3_EFILE;
     }
     uint8_t i = 0;
     for (; i < bytes_read / 8; i++)
