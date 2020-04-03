@@ -10,238 +10,214 @@ static byte_t funny_mod7f_lut[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x0
 
 
 typedef enum {
-  CA_ENCRYPT = 0x01,
-  CA_DECRYPT = 0x02
+    CA_ENCRYPT = 0x01,
+    CA_DECRYPT = 0x02
 } CryptoAction;
 
-int counter=0;
+int counter = 0;
 
-byte_t nibbles_to_byte(nibble b0, nibble b1)
-{
-  // Combine both nibbles
-  return ((b0<<4)|b1);
+byte_t nibbles_to_byte(nibble b0, nibble b1) {
+    // Combine both nibbles
+    return ((b0 << 4) | b1);
 }
 
-byte_t funny_mod(byte_t a, byte_t m)
-{
-  // Just return the input when this is less or equal than the modular value
-  if (a<m) return a;
-  
-  // Compute the modular value
-  a %= m;
+byte_t funny_mod(byte_t a, byte_t m) {
+    // Just return the input when this is less or equal than the modular value
+    if (a < m) return a;
 
-  // Return the funny value, when the output was now zero, return the modular value
-  return (a == 0) ? m : a;
+    // Compute the modular value
+    a %= m;
+
+    // Return the funny value, when the output was now zero, return the modular value
+    return (a == 0) ? m : a;
 }
 
-byte_t bit_rotate_left(byte_t a, byte_t n_bits)
-{
-  // Rotate value a with the length of n_bits only 1 time
-  byte_t mask = (1 << n_bits) - 1;
-  return ((a << 1) | (a >> (n_bits - 1))) & mask;
+byte_t bit_rotate_left(byte_t a, byte_t n_bits) {
+    // Rotate value a with the length of n_bits only 1 time
+    byte_t mask = (1 << n_bits) - 1;
+    return ((a << 1) | (a >> (n_bits - 1))) & mask;
 }
 
 //meltem changed this function to make it perform faster
 //to get a better idea of the algorithm check out cryptorf inside the tools directory
-void RAMFUNC next(size_t repeat, byte_t in, crypto_state s)
-{
-  size_t i = repeat;
-  byte_t a;
-  byte_t * cipher_p;
-  do {
-    // Construct the cipher update 'a' from (input ^ feedback)
-    a = in ^ ((s->b0 << 4) | s->b1);
+void RAMFUNC next(size_t repeat, byte_t in, crypto_state s) {
+    size_t i = repeat;
+    byte_t a;
+    byte_t *cipher_p;
+    do {
+        // Construct the cipher update 'a' from (input ^ feedback)
+        a = in ^ ((s->b0 << 4) | s->b1);
 
-    // Shift the cipher state
-	  //left
-	  cipher_p = (byte_t* ) &s->l;
-	  cipher_p[5] = cipher_p[5] ^ (a & 0x1f);
-	  s->l = (s->l >> 8);
-	  cipher_p[7] = funny_mod1f_lut[cipher_p[3] + rotate5_lut[cipher_p[0]]];
-	  s->b1l = cipher_p[7] ^ cipher_p[3];
+        // Shift the cipher state
+        //left
+        cipher_p = (byte_t *) &s->l;
+        cipher_p[5] = cipher_p[5] ^ (a & 0x1f);
+        s->l = (s->l >> 8);
+        cipher_p[7] = funny_mod1f_lut[cipher_p[3] + rotate5_lut[cipher_p[0]]];
+        s->b1l = cipher_p[7] ^ cipher_p[3];
 
-	  //middle
-	  cipher_p = (byte_t *) &s->m;	
-	  cipher_p[3] = cipher_p[3] ^ ((a << 3) | (a >> 5));
-	  s->m = (s->m >> 8);
-	  cipher_p[7] = funny_mod7f_lut[(cipher_p[1] & 0x7f) + rotate7_lut[(cipher_p[0] & 0x7f)]];
-	  s->b1s = cipher_p[7] & 0x0f;
+        //middle
+        cipher_p = (byte_t *) &s->m;
+        cipher_p[3] = cipher_p[3] ^ ((a << 3) | (a >> 5));
+        s->m = (s->m >> 8);
+        cipher_p[7] = funny_mod7f_lut[(cipher_p[1] & 0x7f) + rotate7_lut[(cipher_p[0] & 0x7f)]];
+        s->b1s = cipher_p[7] & 0x0f;
 
-	  //right
-	  cipher_p = (byte_t *) &s->r;	
-	  cipher_p[6] = cipher_p[6] ^ (a >> 3);
-	  s->r = (s->r >> 8);
-	  cipher_p[7] = funny_mod1f_lut[cipher_p[4] + cipher_p[2]];
-	  s->b1r = cipher_p[7] ^ cipher_p[4];
+        //right
+        cipher_p = (byte_t *) &s->r;
+        cipher_p[6] = cipher_p[6] ^ (a >> 3);
+        s->r = (s->r >> 8);
+        cipher_p[7] = funny_mod1f_lut[cipher_p[4] + cipher_p[2]];
+        s->b1r = cipher_p[7] ^ cipher_p[4];
 
 
-    // The nible from b1 shifts to b0
-    s->b0 = s->b1;
+        // The nible from b1 shifts to b0
+        s->b0 = s->b1;
 
-    // Construct the new value of nible b1
-    s->b1 = (s->b1l & 0x0f)  & ~(s->b1s);
-    s->b1 |= s->b1r &  s->b1s;
-  } while (--i);
+        // Construct the new value of nible b1
+        s->b1 = (s->b1l & 0x0f)  & ~(s->b1s);
+        s->b1 |= s->b1r &  s->b1s;
+    } while (--i);
 }
 
-void next_n(size_t n, byte_t in, crypto_state s)
-{
-  // While n-rounds left, shift the cipher
-  while (n--) next(1,in, s);
+void next_n(size_t n, byte_t in, crypto_state s) {
+    // While n-rounds left, shift the cipher
+    while (n--) next(1, in, s);
 }
 
-void initialize(const byte_t* Gc, const byte_t* Ci, const byte_t* Q, const size_t n, crypto_state s)
-{
-  size_t pos;
+void initialize(const byte_t *Gc, const byte_t *Ci, const byte_t *Q, const size_t n, crypto_state s) {
+    size_t pos;
 
-  // Reset the cipher state
-  memset(s,0x00,sizeof(crypto_state_t));
+    // Reset the cipher state
+    memset(s, 0x00, sizeof(crypto_state_t));
 
-  // Load in the ci (tag-nonce), together with the first half of Q (reader-nonce)
-  for (pos = 0; pos < 4; pos++)
-  {
-    next(n,Ci[2*pos  ],s);
-    next(n,Ci[2*pos+1],s);
-    next(1,Q[pos],s);
-  }
-
-  // Load in the diversified key (Gc), together with the second half of Q (reader-nonce)
-  for (pos = 0; pos < 4; pos++)
-  {
-    next(n,Gc[2*pos  ],s);
-    next(n,Gc[2*pos+1],s);
-    next(1,Q[pos+4],s);
-  }
-}
-
-byte_t cm_byte(crypto_state s)
-{
-  // Construct keystream byte by combining both nibbles
-  return nibbles_to_byte(s->b0,s->b1);
-}
-
-void print_crypto_state(const char* text,crypto_state s)
-{
-  int pos;
-  
-  printf("%s",text);
-  for(pos=6;pos>=0;pos--)
-    printf(" %02x",(byte_t)(s->l>>(pos*5))&0x1f);
-  printf(" |");
-  for(pos=6;pos>=0;pos--)
-    printf(" %02x",(byte_t)(s->m>>(pos*7))&0x7f);
-  printf(" |");
-  for(pos=4;pos>=0;pos--)
-    printf(" %02x",(byte_t)(s->r>>(pos*5))&0x1f);
-  
-  printf(" | %02x",cm_byte(s));
-  printf("\n");
-}
-
-void cm_auth(const byte_t* Gc, const byte_t* Ci, const byte_t* Q, byte_t* Ch, byte_t* Ci_1, byte_t* Ci_2, crypto_state s)
-{
-  size_t pos;
-
-  initialize(Gc,Ci,Q,3,s);
-
-  // Construct the reader-answer (challange)
-  next(6,0,s);
-  Ch[0] = cm_byte(s);
-  for (pos = 1; pos < 8; pos++)
-  {
-    next(7,0,s);
-    Ch [pos] = cm_byte(s);
-  }
-  
-  // Construct the tag-answer (Ci+1 = ff .. .. .. .. .. .. ..)
-  Ci_1[0] = 0xff;
-  for (pos = 1; pos < 8; pos++)
-  {
-    next(2,0,s);
-    Ci_1[pos] = cm_byte(s);
-  }
-  
-  // Construct the session key (Ci+2)
-  for (pos = 0; pos < 8; pos++)
-  {
-    next(2,0,s);
-    Ci_2[pos] = cm_byte(s);
-  }
-
-  // Prepare the cipher for encryption by shifting 3 more times
-  next(3,0,s);
-}
-
-void cm_crypt(const CryptoAction ca, const byte_t offset, const byte_t len, const byte_t* in, byte_t* out, crypto_state s)
-{
-  size_t pos;
-  byte_t bt;
-
-  next(5,0,s);
-  next(1,offset,s);
-  next(5,0,s);
-  next(1,len,s);
-  for (pos=0; pos<len; pos++)
-  {
-    // Perform the crypto operation
-    bt = in[pos] ^ cm_byte(s);
-    
-    // Generate output
-    if (out) out[pos] = bt;
-
-    // Detect where to find the plaintext for loading into cipher state
-    if (ca == CA_DECRYPT)
-    {
-      next(1,bt,s);
-    } else {
-      next(1,in[pos],s);
+    // Load in the ci (tag-nonce), together with the first half of Q (reader-nonce)
+    for (pos = 0; pos < 4; pos++) {
+        next(n, Ci[2 * pos  ], s);
+        next(n, Ci[2 * pos + 1], s);
+        next(1, Q[pos], s);
     }
-    
-    // Shift the cipher state 5 times
-    next(5,0,s);
-  }
+
+    // Load in the diversified key (Gc), together with the second half of Q (reader-nonce)
+    for (pos = 0; pos < 4; pos++) {
+        next(n, Gc[2 * pos  ], s);
+        next(n, Gc[2 * pos + 1], s);
+        next(1, Q[pos + 4], s);
+    }
 }
 
-void cm_encrypt(const byte_t offset, const byte_t len, const byte_t* ct, byte_t* pt, crypto_state s)
-{
-  next(5,0,s);
-  next(1,0,s);
-  cm_crypt(CA_ENCRYPT,offset,len,ct,pt,s);
+byte_t cm_byte(crypto_state s) {
+    // Construct keystream byte by combining both nibbles
+    return nibbles_to_byte(s->b0, s->b1);
 }
 
-void cm_decrypt(const byte_t offset, const byte_t len, const byte_t* ct, byte_t* pt, crypto_state s)
-{
-  next(5,0,s);
-  next(1,0,s);
-  cm_crypt(CA_DECRYPT,offset,len,ct,pt,s);
+void print_crypto_state(const char *text, crypto_state s) {
+    int pos;
+
+    printf("%s", text);
+    for (pos = 6; pos >= 0; pos--)
+        printf(" %02x", (byte_t)(s->l >> (pos * 5)) & 0x1f);
+    printf(" |");
+    for (pos = 6; pos >= 0; pos--)
+        printf(" %02x", (byte_t)(s->m >> (pos * 7)) & 0x7f);
+    printf(" |");
+    for (pos = 4; pos >= 0; pos--)
+        printf(" %02x", (byte_t)(s->r >> (pos * 5)) & 0x1f);
+
+    printf(" | %02x", cm_byte(s));
+    printf("\n");
 }
 
-void cm_grind_read_system_zone(const byte_t offset, const byte_t len, const byte_t* pt, crypto_state s)
-{
-  cm_crypt(CA_ENCRYPT,offset,len,pt,null,s);
+void cm_auth(const byte_t *Gc, const byte_t *Ci, const byte_t *Q, byte_t *Ch, byte_t *Ci_1, byte_t *Ci_2, crypto_state s) {
+    size_t pos;
+
+    initialize(Gc, Ci, Q, 3, s);
+
+    // Construct the reader-answer (challange)
+    next(6, 0, s);
+    Ch[0] = cm_byte(s);
+    for (pos = 1; pos < 8; pos++) {
+        next(7, 0, s);
+        Ch [pos] = cm_byte(s);
+    }
+
+    // Construct the tag-answer (Ci+1 = ff .. .. .. .. .. .. ..)
+    Ci_1[0] = 0xff;
+    for (pos = 1; pos < 8; pos++) {
+        next(2, 0, s);
+        Ci_1[pos] = cm_byte(s);
+    }
+
+    // Construct the session key (Ci+2)
+    for (pos = 0; pos < 8; pos++) {
+        next(2, 0, s);
+        Ci_2[pos] = cm_byte(s);
+    }
+
+    // Prepare the cipher for encryption by shifting 3 more times
+    next(3, 0, s);
 }
 
-void cm_grind_set_user_zone(const byte_t zone, crypto_state s)
-{
-  next(1,zone,s);
+void cm_crypt(const CryptoAction ca, const byte_t offset, const byte_t len, const byte_t *in, byte_t *out, crypto_state s) {
+    size_t pos;
+    byte_t bt;
+
+    next(5, 0, s);
+    next(1, offset, s);
+    next(5, 0, s);
+    next(1, len, s);
+    for (pos = 0; pos < len; pos++) {
+        // Perform the crypto operation
+        bt = in[pos] ^ cm_byte(s);
+
+        // Generate output
+        if (out) out[pos] = bt;
+
+        // Detect where to find the plaintext for loading into cipher state
+        if (ca == CA_DECRYPT) {
+            next(1, bt, s);
+        } else {
+            next(1, in[pos], s);
+        }
+
+        // Shift the cipher state 5 times
+        next(5, 0, s);
+    }
 }
 
-void cm_mac(byte_t* mac, crypto_state s)
-{
-  next(10,0,s);
-  if (mac) mac[0] = cm_byte(s);
-  next(5,0,s);
-  if (mac) mac[1] = cm_byte(s);
+void cm_encrypt(const byte_t offset, const byte_t len, const byte_t *ct, byte_t *pt, crypto_state s) {
+    next(5, 0, s);
+    next(1, 0, s);
+    cm_crypt(CA_ENCRYPT, offset, len, ct, pt, s);
 }
 
-void cm_password(const byte_t* pt, byte_t* ct, crypto_state s)
-{
-  size_t pos;
+void cm_decrypt(const byte_t offset, const byte_t len, const byte_t *ct, byte_t *pt, crypto_state s) {
+    next(5, 0, s);
+    next(1, 0, s);
+    cm_crypt(CA_DECRYPT, offset, len, ct, pt, s);
+}
 
-  for (pos=0; pos<3; pos++)
-  {
-    next(5,pt[pos],s);
-    ct[pos] = cm_byte(s);
-  }
+void cm_grind_read_system_zone(const byte_t offset, const byte_t len, const byte_t *pt, crypto_state s) {
+    cm_crypt(CA_ENCRYPT, offset, len, pt, null, s);
+}
+
+void cm_grind_set_user_zone(const byte_t zone, crypto_state s) {
+    next(1, zone, s);
+}
+
+void cm_mac(byte_t *mac, crypto_state s) {
+    next(10, 0, s);
+    if (mac) mac[0] = cm_byte(s);
+    next(5, 0, s);
+    if (mac) mac[1] = cm_byte(s);
+}
+
+void cm_password(const byte_t *pt, byte_t *ct, crypto_state s) {
+    size_t pos;
+
+    for (pos = 0; pos < 3; pos++) {
+        next(5, pt[pos], s);
+        ct[pos] = cm_byte(s);
+    }
 }
 

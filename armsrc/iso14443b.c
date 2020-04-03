@@ -174,10 +174,10 @@ InitCRCTable();
 static uint8_t userZone = 0;
 
 //CRF Encryption Engine state
-crypto_state_t s; 
+crypto_state_t s;
 
-static uint8_t respATQB[] = {0x8e, 0x0f, 0x7a, 0xff, 0xff, 0xff, 0x64, 0x00, 0x30, 0x51}; 
-static uint8_t respRFB[] = {0xf0};	//fused(locked) tag	
+static uint8_t respATQB[] = {0x8e, 0x0f, 0x7a, 0xff, 0xff, 0xff, 0x64, 0x00, 0x30, 0x51};
+static uint8_t respRFB[] = {0xf0};	//fused(locked) tag
 
 //authentication and encryption activation
 static uint8_t auth_activated = 0x00;
@@ -186,7 +186,7 @@ static uint8_t enc_activated = 0x00;
 static struct {
     uint8_t cmd;
     uint8_t ack;
-    uint8_t * body;
+    uint8_t *body;
     uint8_t errStatus;
     uint8_t crc1;
     uint8_t crc2;
@@ -778,7 +778,7 @@ void SimulateIso14443bTag(uint32_t pupi) {
 
         ++cmdsReceived;
 
-	if(cmdsReceived >= 48) {Dbprintf("many commands later..."); break;}
+        if (cmdsReceived >= 48) {Dbprintf("many commands later..."); break;}
 
     }
     if (DBGLEVEL >= 2)
@@ -1704,122 +1704,122 @@ out:
 }
 
 //Prepare the response for the command
-void RAMFUNC getCRFResponse(uint8_t * cmd) {
+void RAMFUNC getCRFResponse(uint8_t *cmd) {
 
-    switch(cmd[0]) {
-	    case ISO14443B_REQB   : {
-		response.cmd = ISO14443B_REQB;
-		response.ack = 0x00; 
-		response.body = respATQB;
-		response.bodyLen = 10; 
-		response.errStatus = 0x51;		//this is not an error, protocol 3 byte of ATQB
-		
-		auth_activated = 0;			//once reqb is called, reset the encryption and activation status
-		enc_activated = 0;
-		break;
-	    }
-	    case ISO14443B_ATTRIB : {
-		response.cmd = 0x00;		//attrib doesn't echo command 
-		response.ack = 0x01;		//it only returns the channel number
-		response.body = 0x00;		//no body of the response
-		response.bodyLen = 0; 
-		response.errStatus = 0x00;	//attrib should be handled differently for crc calculation and trasmit
-		break;
-	    }
-	    case CRYPTORF_READ_SYSTEM_ZONE: {
-		response.cmd = CRYPTORF_READ_SYSTEM_ZONE;
-		response.ack = 0x00; 
-		if (cmd[1] == 0x01) {				//read fuse byte
-		    response.body = respRFB;
-		    response.bodyLen = 1; 
-		} else {			
-		    response.body = sys_mem + cmd[2];
-		    response.bodyLen = cmd[3] + 1;
-		} 
-		response.errStatus = 0x00;
-		break;
-	    }
-	    case CRYPTORF_SET_USER_ZONE : {
-		response.cmd = CRYPTORF_SET_USER_ZONE;
-		response.ack = 0x00; 
-		response.body = 0x00;			//no body of the response
-		response.bodyLen = 0; 
-		response.errStatus = 0x00;		
-		break;
-	    }
-	    case CRYPTORF_READ_USER_ZONE: {
-		response.cmd = CRYPTORF_READ_USER_ZONE;
-		response.ack = 0x00; 
-		response.body = tag_mem[userZone] + (((cmd[1] & 0x0001) << 8) | cmd[2]);	//for AT88SC6416CRF addresses could be up-to 512 bytes
-		response.bodyLen = cmd[3] + 1;
-		response.errStatus = 0x00;
-		if(enc_activated) {	//bring the enc engine to required state
-		  next(5,0,&s);
-		  next(1,cmd[1] & 0x0001,&s);
-		  next(5,0,&s);
-		  next(1,cmd[2],&s);
-		  next(5,0,&s);
-		  next(1, cmd[3]+1,&s); 		
-		}
-		break;
-	    }
-	    case CRYPTORF_CHECK_PASSWORD: { 
-		response.cmd = CRYPTORF_CHECK_PASSWORD;		//echo command
-		response.ack = 0x00; 
-		response.body = 0x00;			//no body of the response
-		response.bodyLen = 0; 
-		response.errStatus = 0x00;		
-		break;
-	    }
-	    case CRYPTORF_WRITE_USER_ZONE: 	//writes are not handled by our simulation, all seem to be successful
-	    case CRYPTORF_WRITE_SYSTEM_ZONE: 
-	    case CRYPTORF_VERIFY_CRYPTO: 
-	    case CRYPTORF_SEND_CHECKSUM: 
-	    case CRYPTORF_DESELECT: 
-	    case CRYPTORF_IDLE: {
-		response.cmd = cmd[0];		//echo command
-		response.ack = 0x00; 
-		response.body = 0x00;			//no body of the response
-		response.bodyLen = 0; 
-		response.errStatus = 0x00;		
-		break;
-	    }
-	    case ISO14443B_HALT   : {
-		response.cmd = 0x00;			//HALT doesn't echo the command
-		response.ack = 0x00; 
-		response.body = 0x00;			//no body of the response
-		response.bodyLen = 0; 
-		response.errStatus = 0x00;		//halt should be handled differently for crc calculation	
-		break;
-	    }
-	    default : {
-		Dbprintf("unknown or not implemented command %02x", cmd[0]);
-		response.cmd = 0x00;		
-		response.ack = 0x01;	
-		response.body = 0x00;
-		response.bodyLen = 0; 
-		response.errStatus = 0x00;
-		break;
-	    }
-	}
+    switch (cmd[0]) {
+        case ISO14443B_REQB   : {
+            response.cmd = ISO14443B_REQB;
+            response.ack = 0x00;
+            response.body = respATQB;
+            response.bodyLen = 10;
+            response.errStatus = 0x51;		//this is not an error, protocol 3 byte of ATQB
 
-	//calculate crc bytes - we will ignore attrib and halt differences, our reader doesn't care
-	uint16_t crc = 0xffff;
-	uint8_t n = response.bodyLen;
-	uint8_t * resp_p = response.body;
-	crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ response.cmd];
-	crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ response.ack];
-	while (n--) crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ *resp_p++];
-	crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ response.errStatus];
-	crc = ~crc;
+            auth_activated = 0;			//once reqb is called, reset the encryption and activation status
+            enc_activated = 0;
+            break;
+        }
+        case ISO14443B_ATTRIB : {
+            response.cmd = 0x00;		//attrib doesn't echo command
+            response.ack = 0x01;		//it only returns the channel number
+            response.body = 0x00;		//no body of the response
+            response.bodyLen = 0;
+            response.errStatus = 0x00;	//attrib should be handled differently for crc calculation and trasmit
+            break;
+        }
+        case CRYPTORF_READ_SYSTEM_ZONE: {
+            response.cmd = CRYPTORF_READ_SYSTEM_ZONE;
+            response.ack = 0x00;
+            if (cmd[1] == 0x01) {				//read fuse byte
+                response.body = respRFB;
+                response.bodyLen = 1;
+            } else {
+                response.body = sys_mem + cmd[2];
+                response.bodyLen = cmd[3] + 1;
+            }
+            response.errStatus = 0x00;
+            break;
+        }
+        case CRYPTORF_SET_USER_ZONE : {
+            response.cmd = CRYPTORF_SET_USER_ZONE;
+            response.ack = 0x00;
+            response.body = 0x00;			//no body of the response
+            response.bodyLen = 0;
+            response.errStatus = 0x00;
+            break;
+        }
+        case CRYPTORF_READ_USER_ZONE: {
+            response.cmd = CRYPTORF_READ_USER_ZONE;
+            response.ack = 0x00;
+            response.body = tag_mem[userZone] + (((cmd[1] & 0x0001) << 8) | cmd[2]);	//for AT88SC6416CRF addresses could be up-to 512 bytes
+            response.bodyLen = cmd[3] + 1;
+            response.errStatus = 0x00;
+            if (enc_activated) {	//bring the enc engine to required state
+                next(5, 0, &s);
+                next(1, cmd[1] & 0x0001, &s);
+                next(5, 0, &s);
+                next(1, cmd[2], &s);
+                next(5, 0, &s);
+                next(1, cmd[3] + 1, &s);
+            }
+            break;
+        }
+        case CRYPTORF_CHECK_PASSWORD: {
+            response.cmd = CRYPTORF_CHECK_PASSWORD;		//echo command
+            response.ack = 0x00;
+            response.body = 0x00;			//no body of the response
+            response.bodyLen = 0;
+            response.errStatus = 0x00;
+            break;
+        }
+        case CRYPTORF_WRITE_USER_ZONE: 	//writes are not handled by our simulation, all seem to be successful
+        case CRYPTORF_WRITE_SYSTEM_ZONE:
+        case CRYPTORF_VERIFY_CRYPTO:
+        case CRYPTORF_SEND_CHECKSUM:
+        case CRYPTORF_DESELECT:
+        case CRYPTORF_IDLE: {
+            response.cmd = cmd[0];		//echo command
+            response.ack = 0x00;
+            response.body = 0x00;			//no body of the response
+            response.bodyLen = 0;
+            response.errStatus = 0x00;
+            break;
+        }
+        case ISO14443B_HALT   : {
+            response.cmd = 0x00;			//HALT doesn't echo the command
+            response.ack = 0x00;
+            response.body = 0x00;			//no body of the response
+            response.bodyLen = 0;
+            response.errStatus = 0x00;		//halt should be handled differently for crc calculation
+            break;
+        }
+        default : {
+            Dbprintf("unknown or not implemented command %02x", cmd[0]);
+            response.cmd = 0x00;
+            response.ack = 0x01;
+            response.body = 0x00;
+            response.bodyLen = 0;
+            response.errStatus = 0x00;
+            break;
+        }
+    }
 
-	response.crc1 = (crc & 0xFF);
-	response.crc2 = ((crc >> 8) & 0xFF);
+    //calculate crc bytes - we will ignore attrib and halt differences, our reader doesn't care
+    uint16_t crc = 0xffff;
+    uint8_t n = response.bodyLen;
+    uint8_t *resp_p = response.body;
+    crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ response.cmd];
+    crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ response.ack];
+    while (n--) crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ *resp_p++];
+    crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ response.errStatus];
+    crc = ~crc;
+
+    response.crc1 = (crc & 0xFF);
+    response.crc2 = ((crc >> 8) & 0xFF);
 }
 
 //We implement use this function for the CryptoRF tag simulation
 //It is based on same principles as the original function, there are changes for the response construction, encoding and transmit
-void SimulateIso14443b_CRF_Tag(void) {	
+void SimulateIso14443b_CRF_Tag(void) {
     // setup device.
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // connect Demodulated Signal to ADC:
@@ -1845,7 +1845,7 @@ void SimulateIso14443b_CRF_Tag(void) {
     static uint8_t encodedSOF[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
     static uint8_t encodedEOF[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
 
-    //other crypto variables    
+    //other crypto variables
     byte_t ch[8] = {0x00};
     byte_t chs[8] = {0x00};
     byte_t dummy[8] = {0x00};
@@ -1855,212 +1855,212 @@ void SimulateIso14443b_CRF_Tag(void) {
 
     // Simulation loop
     while (!BUTTON_PRESS() && !data_available()) {
-	WDT_HIT();
+        WDT_HIT();
 
-	// Get reader command
-	if (!GetIso14443bCommandFromReader(receivedCmd, &len)) {
-	    Dbprintf("button pressed, received %d commands", cmdsReceived);
-	    break;
-	}
-        
-	time_start_ssp = GetCountSspClk();  
-	
-	getCRFResponse(receivedCmd);	//get the response according to command received 
+        // Get reader command
+        if (!GetIso14443bCommandFromReader(receivedCmd, &len)) {
+            Dbprintf("button pressed, received %d commands", cmdsReceived);
+            break;
+        }
 
-	FpgaSetupSsc();
+        time_start_ssp = GetCountSspClk();
 
-	//TR0 delay
-	while ((GetCountSspClk() - time_start_ssp) < TR0); //this delay solves the communication error (0x86) from the reader mostly, but not completely. 
+        getCRFResponse(receivedCmd);	//get the response according to command received
 
-	FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
+        FpgaSetupSsc();
 
-	//start transmitting the response (SOF + CMD + ACK + BODY + ERR_STATUS + CRC + EOF)
-	//encoded value for a byte is looked up using a table (encoded_lut)
-	//each data byte becomes 6 bytes when encoded for transmit
-	//send SOF
-	for(uint16_t i = 0; i<SOF_LEN;) {
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		uint8_t b = encodedSOF[i];
-		AT91C_BASE_SSC->SSC_THR = b;
-		i++;
-	    }
+        //TR0 delay
+        while ((GetCountSspClk() - time_start_ssp) < TR0); //this delay solves the communication error (0x86) from the reader mostly, but not completely.
 
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		(void)b;
-	    }
-	}
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
 
-	//send cmd
-	for(uint16_t i = 0; i<ENC_BYTE_LEN;) {
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		AT91C_BASE_SSC->SSC_THR = encoded_lut[response.cmd][i];
-		i++;
-	    }
+        //start transmitting the response (SOF + CMD + ACK + BODY + ERR_STATUS + CRC + EOF)
+        //encoded value for a byte is looked up using a table (encoded_lut)
+        //each data byte becomes 6 bytes when encoded for transmit
+        //send SOF
+        for (uint16_t i = 0; i < SOF_LEN;) {
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                uint8_t b = encodedSOF[i];
+                AT91C_BASE_SSC->SSC_THR = b;
+                i++;
+            }
 
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		(void)b;
-	    }
-	}
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                (void)b;
+            }
+        }
 
-	//send ack
-	for(uint16_t i = 0; i<ENC_BYTE_LEN;) {
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		AT91C_BASE_SSC->SSC_THR = encoded_lut[response.ack][i];
-		i++;
-	    }
+        //send cmd
+        for (uint16_t i = 0; i < ENC_BYTE_LEN;) {
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                AT91C_BASE_SSC->SSC_THR = encoded_lut[response.cmd][i];
+                i++;
+            }
 
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		(void)b;
-	    }
-	}
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                (void)b;
+            }
+        }
 
-	//if encrypted communication mode is activated, then use stream cipher to encrypt data bytes
-	if(receivedCmd[0] == CRYPTORF_READ_USER_ZONE && enc_activated) {
-	    //encrypt and send body
-	    uint16_t j = 0;
-	    for(uint16_t i = 0; i<response.bodyLen;) {
-		send_byte = response.body[i];
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		    AT91C_BASE_SSC->SSC_THR = encoded_lut[send_byte^((s.b0 << 4) | s.b1)][j];
-		    j++;    
-		    if(j == ENC_BYTE_LEN) {	//grind the byte into the stream cipher state
-			next(1, send_byte, &s);
-			next(5, 0, &s);
-			i++;
-			j = 0;
-		    }
-		}
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		    volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		    (void)b;
-		}
-	    }
+        //send ack
+        for (uint16_t i = 0; i < ENC_BYTE_LEN;) {
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                AT91C_BASE_SSC->SSC_THR = encoded_lut[response.ack][i];
+                i++;
+            }
 
-	} else {
-	    //send body
-	    uint16_t EncRespLen = response.bodyLen * ENC_BYTE_LEN;
-	    for(uint16_t i = 0; i<EncRespLen;) {
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		    AT91C_BASE_SSC->SSC_THR = encoded_lut[response.body[i/ENC_BYTE_LEN]][i % ENC_BYTE_LEN];
-		    i++;
-		}
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                (void)b;
+            }
+        }
 
-		if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		    volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		    (void)b;
-		}
-	    }
-	}
+        //if encrypted communication mode is activated, then use stream cipher to encrypt data bytes
+        if (receivedCmd[0] == CRYPTORF_READ_USER_ZONE && enc_activated) {
+            //encrypt and send body
+            uint16_t j = 0;
+            for (uint16_t i = 0; i < response.bodyLen;) {
+                send_byte = response.body[i];
+                if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                    AT91C_BASE_SSC->SSC_THR = encoded_lut[send_byte ^ ((s.b0 << 4) | s.b1)][j];
+                    j++;
+                    if (j == ENC_BYTE_LEN) {	//grind the byte into the stream cipher state
+                        next(1, send_byte, &s);
+                        next(5, 0, &s);
+                        i++;
+                        j = 0;
+                    }
+                }
+                if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                    volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                    (void)b;
+                }
+            }
 
-	//send errStatus
-	for(uint16_t i = 0; i<ENC_BYTE_LEN;) {
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		AT91C_BASE_SSC->SSC_THR = encoded_lut[response.errStatus][i];
-		i++;
-	    }
+        } else {
+            //send body
+            uint16_t EncRespLen = response.bodyLen * ENC_BYTE_LEN;
+            for (uint16_t i = 0; i < EncRespLen;) {
+                if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                    AT91C_BASE_SSC->SSC_THR = encoded_lut[response.body[i / ENC_BYTE_LEN]][i % ENC_BYTE_LEN];
+                    i++;
+                }
 
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		(void)b;
-	    }
-	}
+                if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                    volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                    (void)b;
+                }
+            }
+        }
 
-	//send crc1
-	for(uint16_t i = 0; i<ENC_BYTE_LEN;) {
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		AT91C_BASE_SSC->SSC_THR = encoded_lut[response.crc1][i];
-		i++;
-	    }
+        //send errStatus
+        for (uint16_t i = 0; i < ENC_BYTE_LEN;) {
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                AT91C_BASE_SSC->SSC_THR = encoded_lut[response.errStatus][i];
+                i++;
+            }
 
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		(void)b;
-	    }
-	}
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                (void)b;
+            }
+        }
 
-	//send crc2
-	for(uint16_t i = 0; i<ENC_BYTE_LEN;) {
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		AT91C_BASE_SSC->SSC_THR = encoded_lut[response.crc2][i];
-		i++;
-	    }
+        //send crc1
+        for (uint16_t i = 0; i < ENC_BYTE_LEN;) {
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                AT91C_BASE_SSC->SSC_THR = encoded_lut[response.crc1][i];
+                i++;
+            }
 
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		(void)b;
-	    }
-	}
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                (void)b;
+            }
+        }
 
-	//send EOF
-	for(uint16_t i = 0; i<EOF_LEN;) {
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-		uint8_t b = encodedEOF[i];
-		AT91C_BASE_SSC->SSC_THR = b;
-		i++;
-	    }
+        //send crc2
+        for (uint16_t i = 0; i < ENC_BYTE_LEN;) {
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                AT91C_BASE_SSC->SSC_THR = encoded_lut[response.crc2][i];
+                i++;
+            }
 
-	    if(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-		volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-		(void)b;
-	    }
-	}
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                (void)b;
+            }
+        }
 
-	while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXEMPTY))) {}
+        //send EOF
+        for (uint16_t i = 0; i < EOF_LEN;) {
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
+                uint8_t b = encodedEOF[i];
+                AT91C_BASE_SSC->SSC_THR = b;
+                i++;
+            }
 
-	//update cryptogram if this was a VERIFY_CRYPTO command
-	if(receivedCmd[0] == CRYPTORF_VERIFY_CRYPTO) {
-	    if(receivedCmd[1] & 0xF0) {		
-		//cm_auth(S, Ci, Q, Ch, Ci_1, Ci_2, s)
-		cm_auth(sys_mem + 0x58 + (receivedCmd[1] & 0x0F) * 16,
-			sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16, 
-			receivedCmd + 2, 
-			chs, 
-			sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16, 
-			dummy, &s);
-		enc_activated = (auth_activated) ? 0x1 : 0x0;	//encryption activation - only after auth activation
-		cm_grind_read_system_zone(0x50, 8, sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16, &s);
-	    } else {				
-		//cm_auth(G, Ci, Q, Ch, Ci_1, Ci_2, s)
-		cm_auth(sys_mem + 0x90 + (receivedCmd[1] & 0x0F) * 8, 
-			sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16, 
-			receivedCmd + 2, 
-			ch, 
-			sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16, 
-			sys_mem + 0x58 + (receivedCmd[1] & 0x0F) * 16, &s);
-		auth_activated = 0x1;	//authorization activation
-	    }
-	} 
+            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+                volatile uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+                (void)b;
+            }
+        }
 
-	if(receivedCmd[0] == CRYPTORF_CHECK_PASSWORD && enc_activated) {
-	    //grind the password at the password index
-	    uint8_t * pswd_addr = sys_mem + 0xB0 + (receivedCmd[1] & 0x0F) * 8 + ((receivedCmd[1] & 0xF0) ? 5 : 1);
-	    cm_password(pswd_addr, pass_dummy, &s);
-	} 
+        while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXEMPTY))) {}
 
-	//this is not the actual usage of send checksum command
-	//system uses incorrect checksum to make tag get out of encrypted communication mode
-	if(receivedCmd[0] == CRYPTORF_SEND_CHECKSUM) {
-	    auth_activated = 0;
-	    enc_activated = 0;
-	}
+        //update cryptogram if this was a VERIFY_CRYPTO command
+        if (receivedCmd[0] == CRYPTORF_VERIFY_CRYPTO) {
+            if (receivedCmd[1] & 0xF0) {
+                //cm_auth(S, Ci, Q, Ch, Ci_1, Ci_2, s)
+                cm_auth(sys_mem + 0x58 + (receivedCmd[1] & 0x0F) * 16,
+                        sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16,
+                        receivedCmd + 2,
+                        chs,
+                        sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16,
+                        dummy, &s);
+                enc_activated = (auth_activated) ? 0x1 : 0x0;	//encryption activation - only after auth activation
+                cm_grind_read_system_zone(0x50, 8, sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16, &s);
+            } else {
+                //cm_auth(G, Ci, Q, Ch, Ci_1, Ci_2, s)
+                cm_auth(sys_mem + 0x90 + (receivedCmd[1] & 0x0F) * 8,
+                        sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16,
+                        receivedCmd + 2,
+                        ch,
+                        sys_mem + 0x50 + (receivedCmd[1] & 0x0F) * 16,
+                        sys_mem + 0x58 + (receivedCmd[1] & 0x0F) * 16, &s);
+                auth_activated = 0x1;	//authorization activation
+            }
+        }
 
-	if(receivedCmd[0] == CRYPTORF_SET_USER_ZONE) {
-	    userZone = receivedCmd[1] & 0x0F;		//set active zone
-	    if (enc_activated) next(1, receivedCmd[1], &s);	//grind user zone
-	}
+        if (receivedCmd[0] == CRYPTORF_CHECK_PASSWORD && enc_activated) {
+            //grind the password at the password index
+            uint8_t *pswd_addr = sys_mem + 0xB0 + (receivedCmd[1] & 0x0F) * 8 + ((receivedCmd[1] & 0xF0) ? 5 : 1);
+            cm_password(pswd_addr, pass_dummy, &s);
+        }
 
-	LogTrace(receivedCmd, len, 0, 0, NULL, true);
-	LogTrace(response.body, response.bodyLen, 0, 0, NULL, false);
+        //this is not the actual usage of send checksum command
+        //system uses incorrect checksum to make tag get out of encrypted communication mode
+        if (receivedCmd[0] == CRYPTORF_SEND_CHECKSUM) {
+            auth_activated = 0;
+            enc_activated = 0;
+        }
 
-	cmdsReceived++;
+        if (receivedCmd[0] == CRYPTORF_SET_USER_ZONE) {
+            userZone = receivedCmd[1] & 0x0F;		//set active zone
+            if (enc_activated) next(1, receivedCmd[1], &s);	//grind user zone
+        }
+
+        LogTrace(receivedCmd, len, 0, 0, NULL, true);
+        LogTrace(response.body, response.bodyLen, 0, 0, NULL, false);
+
+        cmdsReceived++;
 
     }
 
     if (DBGLEVEL >= 2)
-	Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
+        Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
     switch_off(); //simulate
 
 }

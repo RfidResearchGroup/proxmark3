@@ -1021,7 +1021,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             SimulateIso14443bTag(packet->oldarg[0]);
             break;
         }
-		case CMD_HF_ISO14443B_SIM_CRYPTORF: {
+        case CMD_HF_ISO14443B_SIM_CRYPTORF: {
             SimulateIso14443b_CRF_Tag();
             break;
         }
