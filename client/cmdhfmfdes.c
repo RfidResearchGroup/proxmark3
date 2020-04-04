@@ -230,19 +230,19 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
     }
     */
 
-    PrintAndLogEx(INFO, "--- Tag Signature");
-    PrintAndLogEx(INFO, "IC signature public key name  : %s", nxp_desfire_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value : %.16s", nxp_desfire_public_keys[i].value);
-    PrintAndLogEx(INFO, "                              : %.16s", nxp_desfire_public_keys[i].value + 16);
-    PrintAndLogEx(INFO, "                              : %.16s", nxp_desfire_public_keys[i].value + 32);
-    PrintAndLogEx(INFO, "                              : %.16s", nxp_desfire_public_keys[i].value + 48);
-    PrintAndLogEx(INFO, "    Elliptic curve parameters : NID_secp224r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature : %s", sprint_hex(signature, 16));
-    PrintAndLogEx(INFO, "                              : %s", sprint_hex(signature + 16, 16));
-    PrintAndLogEx(INFO, "                              : %s", sprint_hex(signature + 32, 16));
-    PrintAndLogEx(INFO, "                              : %s", sprint_hex(signature + 48, signature_len - 48));
-    PrintAndLogEx( (is_valid) ? SUCCESS : WARNING, "Signature verified " _GREEN_("successful"));
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(NORMAL,"");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_desfire_public_keys[i].desc);
+    PrintAndLogEx(INFO, "IC signature public key value: %.16s", nxp_desfire_public_keys[i].value);
+    PrintAndLogEx(INFO, "                             : %.16s", nxp_desfire_public_keys[i].value + 16);
+    PrintAndLogEx(INFO, "                             : %.16s", nxp_desfire_public_keys[i].value + 32);
+    PrintAndLogEx(INFO, "                             : %.16s", nxp_desfire_public_keys[i].value + 48);
+    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
+    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex(signature, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex(signature + 16, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex(signature + 32, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex(signature + 48, signature_len - 48));
+    PrintAndLogEx(SUCCESS, "        Signature verified: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
 
@@ -488,30 +488,30 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-- Mifare DESFire Tag Information ---------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "  UID                : " _GREEN_("%s"), sprint_hex(package->uid, sizeof(package->uid)));
-    PrintAndLogEx(SUCCESS, "  Batch number       : " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
-    PrintAndLogEx(SUCCESS, "  Production date    : week " _GREEN_("%02x") "/ " _GREEN_("20%02x"), package->details[12], package->details[13]);
-    PrintAndLogEx(INFO, "  -----------------------------------------------------------");
-    PrintAndLogEx(INFO, "  Hardware Information");
-    PrintAndLogEx(SUCCESS, "      Vendor Id      : " _YELLOW_("%s"), getTagInfo(package->versionHW[0]));
-    PrintAndLogEx(SUCCESS, "      Type           : " _YELLOW_("0x%02X"), package->versionHW[1]);
-    PrintAndLogEx(SUCCESS, "      Subtype        : " _YELLOW_("0x%02X"), package->versionHW[2]);
-    PrintAndLogEx(SUCCESS, "      Version        : %s", getVersionStr(package->versionHW[3], package->versionHW[4]));
-    PrintAndLogEx(SUCCESS, "      Storage size   : %s", getCardSizeStr(package->versionHW[5]));
-    PrintAndLogEx(SUCCESS, "      Protocol       : %s", getProtocolStr(package->versionHW[6]));
-    PrintAndLogEx(INFO, "  -----------------------------------------------------------");
-    PrintAndLogEx(INFO, "  Software Information");
-    PrintAndLogEx(SUCCESS, "      Vendor Id      : " _YELLOW_("%s"), getTagInfo(package->versionSW[0]));
-    PrintAndLogEx(SUCCESS, "      Type           : " _YELLOW_("0x%02X"), package->versionSW[1]);
-    PrintAndLogEx(SUCCESS, "      Subtype        : " _YELLOW_("0x%02X"), package->versionSW[2]);
-    PrintAndLogEx(SUCCESS, "      Version        : " _YELLOW_("%d.%d"),  package->versionSW[3], package->versionSW[4]);
-    PrintAndLogEx(SUCCESS, "      storage size   : %s", getCardSizeStr(package->versionSW[5]));
-    PrintAndLogEx(SUCCESS, "      Protocol       : %s", getProtocolStr(package->versionSW[6]));
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(package->uid, sizeof(package->uid)));
+    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") "/ " _GREEN_("20%02x"), package->details[12], package->details[13]);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionHW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionHW[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionHW[2]);
+    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(package->versionHW[3], package->versionHW[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionHW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionHW[6]));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionSW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionSW[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionSW[2]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  package->versionSW[3], package->versionSW[4]);
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionSW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionSW[6]));
 
-    PrintAndLogEx(INFO, "Card capabilities");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Card capabilities"));
     uint8_t major = package->versionSW[3];
     uint8_t minor = package->versionSW[4];
     if (major == 0 && minor == 4)
@@ -529,8 +529,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
-
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     
     // Signature originality check
     uint8_t signature[56] = {0};
@@ -545,7 +543,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     getKeySettings(master_aid);
 
     // Free memory on card
-    PrintAndLogEx(INFO, "  Free memory");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Free memory"));
     uint32_t free_mem = 0;
     if (get_desfire_freemem(&free_mem) == PM3_SUCCESS) {
         desfire_print_freemem(free_mem);
@@ -630,8 +629,8 @@ void getKeySettings(uint8_t *aid) {
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
         
         // CARD MASTER KEY 
-        PrintAndLogEx(INFO, "  CMK - PICC, Card Master Key settings");
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
 
         if (get_desfire_select_application(aid) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
@@ -695,8 +694,8 @@ void getKeySettings(uint8_t *aid) {
     } else {
         
         // AID - APPLICATION MASTER KEYS
-        PrintAndLogEx(SUCCESS, " AMK - Application Master Key settings");
-        PrintAndLogEx(INFO, " ----------------------------------------------------------");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
 
         if (get_desfire_select_application(aid) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
@@ -734,7 +733,6 @@ void getKeySettings(uint8_t *aid) {
                 }
             }
         }
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
     }
     
     DropField();
