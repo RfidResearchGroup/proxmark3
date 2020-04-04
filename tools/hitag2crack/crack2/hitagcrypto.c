@@ -211,7 +211,7 @@
 
 // We want the crypto functions to be as fast as possible, so optimize!
 // The best compiler optimization in Microchip's free XC32 edition is -O1
-//#pragma GCC optimize("O1")
+#pragma GCC optimize("O1")
 
 // private, nonlinear function to generate 1 crypto bit
 static uint32_t hitag2_crypt(uint64_t x);
@@ -227,6 +227,7 @@ static uint32_t hitag2_crypt(uint64_t x);
                                    ((S >> (C - 3)) & 8) )
 #define pickbits1_2_1(S, A, B, C)  ( ((S >> A) & 1) | ((S >> (B - 1)) & 6) | \
                                    ((S >> (C - 3)) & 8) )
+
 
 static uint32_t hitag2_crypt(uint64_t x) {
     const uint32_t ht2_function4a = 0x2C79;	// 0010 1100 0111 1001
@@ -343,8 +344,6 @@ uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps) {
     if (steps == 0)
         return 0;
 
-// commented out the restriction on number of steps so we can step further in one go.
-// this still only returns 32 bits obviously
 //    if (steps > 32)
 //        steps = 32;
 
@@ -371,112 +370,4 @@ uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps) {
 }
 
 // end of crypto core, revert to default optimization level
-//#pragma GCC reset_options
-
-
-/* Test code
-
-   Test data and below information about it comes from
-     http://www.mikrocontroller.net/attachment/102194/hitag2.c
-     Written by "I.C. Wiener 2006-2007"
-
-   "MIKRON"		=  O  N  M  I  K  R
-    Key			= 4F 4E 4D 49 4B 52		- Secret 48-bit key
-    Serial		= 49 43 57 69			- Serial number of the tag, transmitted in clear
-    Random		= 65 6E 45 72			- Random IV, transmitted in clear
-    ~28~DC~80~31	= D7 23 7F CE			- Authenticator value = inverted first 4 bytes of the keystream
-
-   The code below must print out "D7 23 7F CE 8C D0 37 A9 57 49 C1 E6 48 00 8A B6".
-   The inverse of the first 4 bytes is sent to the tag to authenticate.
-   The rest is encrypted by XORing it with the subsequent keystream.
-
-*/
-
-
-/*
-unsigned int hitag2_benchtest_gen32()
-{
-    const uint64_t key = 0x4ad292b272f2;
-    const uint32_t serial = 0x96eac292;
-    const uint32_t initvec = 0x4ea276a6;
-    Hitag_State state;
-
-    // init crypto
-    hitag2_init(&state, key, serial, initvec);
-
-    // benchmark: generation of 32 bit stream (excludes initialisation)
-    GetTimer_us(RESET);
-
-    (void) hitag2_nstep(&state, 32);
-
-    return GetTimer_us(NO_RESET);
-}
-
-
-unsigned int hitag2_benchtest(uint32_t count)
-{
-    const uint64_t key = 0x4ad292b272f2;
-    const uint32_t serial = 0x96eac292;
-    const uint32_t initvec = 0x4ea276a6;
-    Hitag_State state;
-    uint32_t i;
-
-    // start timer
-    GetTimer_us(RESET);
-
-    // benchmark: initialise crypto & generate 32 bit authentication
-    // adding i stops gcc optimizer moving init function call out of loop
-    for (i = 0; i < count; i++) {
-        hitag2_init(&state, key, serial, initvec + i);
-        (void) hitag2_nstep(&state, 32);
-    }
-
-    return GetTimer_us(NO_RESET);
-}
-
-
-unsigned hitag2_verifytest()
-{
-    uint8_t expected[16] = { 0xD7, 0x23, 0x7F, 0xCE, 0x8C, 0xD0, 0x37, 0xA9, 0x57, 0x49, 0xC1, 0xE6, 0x48, 0x00, 0x8A, 0xB6 };
-    // key = 0x4ad292b272f2  after each byte has its bit order reversed
-    // serial = 0x96eac292    ditto
-    // initvec = 0x4ea276a6   ditto
-    const uint64_t key = rev64 (0x524B494D4E4FUL);
-    const uint32_t serial = rev32 (0x69574349);
-    const uint32_t initvec = rev32 (0x72456E65);
-
-    uint32_t i;
-    Hitag_State state;
-
-    // initialise
-    hitag2_init(&state, key, serial, initvec);
-
-    for (i = 0; i < 16; i++) {
-        // get 8 bits of keystream
-        uint8_t x = (uint8_t) hitag2_nstep(&state, 8);
-        uint8_t y = expected[i];
-
-        DEBUG_PRINTF ("%02X (%02X) \n", x, y);
-        if (x != y)
-            return 0;
-    }
-
-    return 1;
-}
-*/
-
-#ifdef UNIT_TEST
-
-int main(int argc, char *argv[]) {
-    unsigned pass = hitag2_verifytest();
-
-    printf("Crypto Verify test = %s\n\n", pass ? "PASS" : "FAIL");
-
-    if (pass) {
-        hitag2_benchtest(10000);
-    }
-
-    return 0;
-}
-
-#endif // UNIT_TEST
+#pragma GCC reset_options

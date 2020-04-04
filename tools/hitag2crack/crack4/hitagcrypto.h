@@ -163,9 +163,5 @@ void hitag2_init(Hitag_State *pstate, uint64_t sharedkey, uint32_t serialnum, ui
 
 uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps);
 
-unsigned int hitag2_benchtest_gen32();
-unsigned int hitag2_benchtest(uint32_t count);
-unsigned hitag2_verifytest();
-
 #endif	/* HITAGCRYPTO_H */
 
