@@ -3751,7 +3751,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
             return PM3_SUCCESS;
         }
     }
-    PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: " _YELLOW_("%s"), blockNum, filename);
+    PrintAndLogEx(SUCCESS, "Done");
     free(data);
     return PM3_SUCCESS;
 }
@@ -3835,6 +3835,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     mfc_eload_t payload;
     payload.sectorcnt = numSectors;
     payload.keytype = keyType;
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
     return PM3_SUCCESS;
@@ -3842,8 +3843,6 @@ static int CmdHF14AMfECFill(const char *Cmd) {
 
 static int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
-    char filename[FILE_PATH_SIZE];
-    char *fptr = filename;
     uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
     uint8_t data[16];
     uint8_t uid[4];
@@ -3915,6 +3914,8 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     // dump the keys
     if (createDumpFile) {
 
+        char filename[FILE_PATH_SIZE] = {0};
+        char *fptr = filename;
         fptr += sprintf(fptr, "hf-mf-");
         FillFileNameByUID(fptr + strlen(fptr), uid, "-key", sizeof(uid));
 
@@ -3981,8 +3982,8 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "old UID:%s", sprint_hex(oldUid, 4));
-    PrintAndLogEx(SUCCESS, "new UID:%s", sprint_hex(uid, 4));
+    PrintAndLogEx(SUCCESS, "Old UID : %s", sprint_hex(oldUid, 4));
+    PrintAndLogEx(SUCCESS, "New UID : %s", sprint_hex(uid, 4));
     return PM3_SUCCESS;
 }
 
