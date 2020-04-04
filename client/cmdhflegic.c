@@ -49,8 +49,8 @@ static int usage_legic_rdbl(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 16        - reads from byte[0] 0x16 bytes(system header)"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 4 iv 55      - reads from byte[0] 0x4 bytes with IV 0x55"));
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 100 iv 55    - reads 0x100 bytes with IV 0x55"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 4 iv 55   - reads from byte[0] 0x4 bytes with IV 0x55"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic rdbl o 0 l 100 iv 55 - reads 0x100 bytes with IV 0x55"));
     return PM3_SUCCESS;
 }
 static int usage_legic_sim(void) {
@@ -111,7 +111,7 @@ static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "      x             : deobfuscate dump data (xor with MCC)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump                -- uses UID as filename"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump                 - uses UID as filename"));
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump f myfile"));
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump x"));
     return PM3_SUCCESS;
@@ -154,7 +154,7 @@ static int usage_legic_esave(void) {
     PrintAndLogEx(NORMAL, "      f <filename>    : filename w/o .bin to load");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic esave 2                -- uses UID as filename"));
+    PrintAndLogEx(NORMAL, _YELLOW_("      hf legic esave 2              - uses UID as filename"));
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic esave 2 f myfile"));
     return PM3_SUCCESS;
 }
