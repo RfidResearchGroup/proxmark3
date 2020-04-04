@@ -1,7 +1,10 @@
 HiTag2 Cracking Suite
 ---------------------
 
-Author: Kevin Sheldrake <kev@headhacking.com>
+Authors:
+
+* Attacks 1, 2, 3, 4 : Kevin Sheldrake <kev@headhacking.com>
+* Attacks 5, 5gpu : anonymous, based on https://github.com/factoritbv/hitag2hell by FactorIT B.V.
 
 Introduction
 ------------
@@ -89,6 +92,21 @@ encrypted nonces and the keystream they should produce.  Each guess is then
 expanded by 1 bit and the process iterates, with only the best guesses taken
 forward to the next iteration.
 
+Attack 5
+--------
+
+Attack 5 is heavily based on the HiTag2 Hell CPU implementation from https://github.com/factoritbv/hitag2hell by FactorIT B.V.,
+with the following changes:
+
+* Main takes a UID and 2 {nR},{aR} pairs as arguments and searches for states producing the first aR sample, reconstructs the corresponding key candidates and tests them against the second nR,aR pair;
+* Reuses the Hitag helping functions of the other attacks.
+
+Attack 5gpu
+-----------
+
+Attack 5gpu is identical to attack 5, simply the code has been ported to OpenCL
+to run on GPUs and is therefore much faster than attack 5.
+
 Usage details: Attack 1
 -----------------------
 
@@ -171,6 +189,36 @@ Stop once you got enough pairs.
 
 Start with -N 16 and -t 500000.  If the attack fails to find the key, double
 the table size and try again, repeating if it still fails.
+
+Usage details: Attack 5
+-----------------------
+
+Attack 5 requires two encrypted nonce and challenge
+response value pairs (nR, aR) for the tag's UID.
+
+```
+pm3 --> lf hitag sniff
+```
+Stop once you got two pairs.
+
+```
+$ ./ht2crack5 <UID> <nR1> <aR1> <nR2> <aR2>
+```
+
+Usage details: Attack 5gpu
+--------------------------
+
+Attack 5gpu requires two encrypted nonce and challenge
+response value pairs (nR, aR) for the tag's UID.
+
+```
+pm3 --> lf hitag sniff
+```
+Stop once you got two pairs.
+
+```
+$ ./ht2crack5gpu <UID> <nR1> <aR1> <nR2> <aR2>
+```
 
 Usage details: Next steps
 -------------------------
