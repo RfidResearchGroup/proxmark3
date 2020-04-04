@@ -38,6 +38,28 @@ typedef enum {
 
 static int CmdHelp(const char *Cmd);
 
+static int SendDesfireCmd(uint8_t* c, int len, int flags, PacketResponseNG* response, int timeout)
+{
+    PacketResponseNG resp;
+
+    if (response == NULL)
+        response = &resp;
+
+    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, flags , len, 0, c, len);
+    if (!WaitForResponseTimeout(CMD_ACK, response, timeout)) {
+        PrintAndLogEx(WARNING, "[SendDesfireCmd] Timed-out: " _RED_("%s"), sprint_hex(c,sizeof(c)));
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+
+    uint8_t isOK  = response->oldarg[0] & 0xff;
+    if (!isOK) {
+        PrintAndLogEx(WARNING, "[SendDesfireCmd] Unsuccessful: " _RED_("%s"), sprint_hex(c,sizeof(c)));
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
+}
+
 static desfire_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 
     if (major == 0x00)
@@ -81,6 +103,14 @@ static int test_desfire_authenticate_iso() {
 }
 //none
 static int test_desfire_authenticate_aes() {
+    /*  Just left here for future use, from TI TRF7970A sloa213 document
+        const static u08_t CustomKey1[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        const static u08_t CustomKey2[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+        0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+        const static u08_t CustomKey3[16] = {0x79, 0x70, 0x25, 0x53, 0x79, 0x70, 0x25,
+        0x53, 0x79, 0x70, 0x25, 0x53, 0x79, 0x70, 0x25, 0x53};
+     */
     uint8_t c[] = {AUTHENTICATE_AES, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0xAA, KEY 0
     SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
     PacketResponseNG resp;
@@ -107,7 +137,7 @@ static int get_desfire_freemem(uint32_t *free_mem) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         return PM3_ETIMEOUT;
     }
-    
+
     if (resp.length == 8) {
         *free_mem = le24toh(resp.data.asBytes + 1);
         return PM3_SUCCESS;
@@ -124,73 +154,15 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
     // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
 
-    #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
+#define PUBLIC_DESFIRE_ECDA_KEYLEN 57
     const ecdsa_publickey_t nxp_desfire_public_keys[] = {
-        {"NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT,  NTAG424DNA, DESFire EV2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
-        {"NTAG42x 4, NTAG426, DESFire Ev2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
-        {"NTAG42x 3, NTAG 424 DNA,  DESFire Light EV1", "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
-        {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
-        {"Mifare Plus", "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"},
-        {"NTAG424DNA, NTAG424DNATT (Tag Tamper), DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
+            {"NTAG424DNA, DESFire EV2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
+            {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
+            {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
+            {"NTAG424DNA,NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
+            {"DESFire Light EV1",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
+            {"Mifare Plus",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
-
-/*
-    uint8_t nxp_desfire_keys[][PUBLIC_DESFIRE_ECDA_KEYLEN] = {
-        // NTAG42x 3 - NTAG 424 DNA, DESFire Light
-        {
-            0x04, 0x0E, 0x98, 0xE1, 0x17, 0xAA, 0xA3, 0x64,
-            0x57, 0xF4, 0x31, 0x73, 0xDC, 0x92, 0x0A, 0x87,
-            0x57, 0x26, 0x7F, 0x44, 0xCE, 0x4E, 0xC5, 0xAD,
-            0xD3, 0xC5, 0x40, 0x75, 0x57, 0x1A, 0xEB, 0xBF,
-            0x7B, 0x94, 0x2A, 0x97, 0x74, 0xA1, 0xD9, 0x4A,
-            0xD0, 0x25, 0x72, 0x42, 0x7E, 0x5A, 0xE0, 0xA2,
-            0xDD, 0x36, 0x59, 0x1B, 0x1F, 0xB3, 0x4F, 0xCF, 0x3D
-        },
-
-        // NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT
-        {
-            0x04, 0x8A, 0x9B, 0x38, 0x0A, 0xF2, 0xEE, 0x1B,
-            0x98, 0xDC, 0x41, 0x7F, 0xEC, 0xC2, 0x63, 0xF8,
-            0x44, 0x9C, 0x76, 0x25, 0xCE, 0xCE, 0x82, 0xD9,
-            0xB9, 0x16, 0xC9, 0x92, 0xDA, 0x20, 0x9D, 0x68,
-            0x42, 0x2B, 0x81, 0xEC, 0x20, 0xB6, 0x5A, 0x66,
-            0xB5, 0x10, 0x2A, 0x61, 0x59, 0x6A, 0xF3, 0x37,
-            0x92, 0x00, 0x59, 0x93, 0x16, 0xA0, 0x0A, 0x14, 0x10
-        },
-
-        // Unknown - needs identification
-        {
-            0x04, 0x44, 0x09, 0xAD, 0xC4, 0x2F, 0x91, 0xA8,
-            0x39, 0x40, 0x66, 0xBA, 0x83, 0xD8, 0x72, 0xFB,
-            0x1D, 0x16, 0x80, 0x37, 0x34, 0xE9, 0x11, 0x17,
-            0x04, 0x12, 0xDD, 0xF8, 0xBA, 0xD1, 0xA4, 0xDA,
-            0xDF, 0xD0, 0x41, 0x62, 0x91, 0xAF, 0xE1, 0xC7,
-            0x48, 0x25, 0x39, 0x25, 0xDA, 0x39, 0xA5, 0xF3,
-            0x9A, 0x1C, 0x55, 0x7F, 0xFA, 0xCD, 0x34, 0xC6, 0x2E
-        },
-
-        // NTAG42x 4 - NTAG426, DESFire Ev2
-        {
-            0x04, 0xB3, 0x04, 0xDC, 0x4C, 0x61, 0x5F, 0x53,
-            0x26, 0xFE, 0x93, 0x83, 0xDD, 0xEC, 0x9A, 0xA8,
-            0x92, 0xDF, 0x3A, 0x57, 0xFA, 0x7F, 0xFB, 0x32,
-            0x76, 0x19, 0x2B, 0xC0, 0xEA, 0xA2, 0x52, 0xED,
-            0x45, 0xA8, 0x65, 0xE3, 0xB0, 0x93, 0xA3, 0xD0,
-            0xDC, 0xE5, 0xBE, 0x29, 0xE9, 0x2F, 0x13, 0x92,
-            0xCE, 0x7D, 0xE3, 0x21, 0xE3, 0xE5, 0xC5, 0x2B, 0x3A
-        },
-        // Unknown - needs identification
-        {
-            0x04, 0xBB, 0x5D, 0x51, 0x4F, 0x70, 0x50, 0x02,
-            0x5C, 0x7D, 0x0F, 0x39, 0x73, 0x10, 0x36, 0x0E,
-            0xEC, 0x91, 0xEA, 0xF7, 0x92, 0xE9, 0x6F, 0xC7,
-            0xE0, 0xF4, 0x96, 0xCB, 0x4E, 0x66, 0x9D, 0x41,
-            0x4F, 0x87, 0x7B, 0x7B, 0x27, 0x90, 0x1F, 0xE6,
-            0x7C, 0x2E, 0x3B, 0x33, 0xCD, 0x39, 0xD1, 0xC7,
-            0x97, 0x71, 0x51, 0x89, 0xAC, 0x95, 0x1C, 0x2A, 0xDD
-        }
-    };
-*/
 
     uint8_t i;
     int res;
@@ -212,31 +184,13 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         return PM3_ESOFT;
     }
 
-/*
-    char *publickeyname;
-    switch(i) {
-        case 0:
-            publickeyname = "NTAG42x 3 - NTAG 424 DNA / DESFire Light";
-            break;
-        case 1:
-            publickeyname = "NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT";
-            break;
-        case 3:
-            publickeyname = "NTAG42x 4 - NTAG426, DESFire Ev2";
-            break;
-        default:
-            publickeyname = "Unknown DESFire, post on forum";
-            break;
-    }
-    */
-
     PrintAndLogEx(NORMAL,"");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_desfire_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value: %.16s", nxp_desfire_public_keys[i].value);
-    PrintAndLogEx(INFO, "                             : %.16s", nxp_desfire_public_keys[i].value + 16);
-    PrintAndLogEx(INFO, "                             : %.16s", nxp_desfire_public_keys[i].value + 32);
-    PrintAndLogEx(INFO, "                             : %.16s", nxp_desfire_public_keys[i].value + 48);
+    PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_desfire_public_keys[i].value);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 16);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 32);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 48);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex(signature, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex(signature + 16, 16));
@@ -260,7 +214,7 @@ static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
         return PM3_SUCCESS;
     } else {
         *signature_len = 0;
-        return PM3_ESOFT;        
+        return PM3_ESOFT;
     }
 }
 
@@ -270,7 +224,7 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 
     PrintAndLogEx(SUCCESS, "     AID Key settings           : %02x", key_settings);
     PrintAndLogEx(SUCCESS, "     Max number of keys in AID  : %d", num_keys);
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");   
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "  Changekey Access rights");
 
     // Access rights.
@@ -293,7 +247,7 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
     PrintAndLogEx(SUCCESS, "   [0x08] Configuration changeable       : %s", (key_settings & (1 << 3)) ? _GREEN_("YES") : "NO");
     PrintAndLogEx(SUCCESS, "   [0x04] AMK required for create/delete : %s", (key_settings & (1 << 2)) ? "NO" : "YES");
     PrintAndLogEx(SUCCESS, "   [0x02] Directory list access with AMK : %s", (key_settings & (1 << 1)) ? "NO" : "YES");
-    PrintAndLogEx(SUCCESS, "   [0x01] AMK is changeable              : %s", (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO");    
+    PrintAndLogEx(SUCCESS, "   [0x01] AMK is changeable              : %s", (key_settings & (1 << 0)) ? _GREEN_("YES") : "NO");
     return PM3_SUCCESS;
 }
 
@@ -301,19 +255,11 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
     PacketResponseNG resp;
     uint8_t c[] = {MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00};  // 0x45
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, _RED_("   Timed-out"));
-        return PM3_ETIMEOUT;
-    }
+    int ret=SendDesfireCmd(c, sizeof(c), NONE, &resp, 1500);
+    if (ret!=PM3_SUCCESS) return ret;
 
-    uint8_t isOK  = resp.oldarg[0] & 0xFF;
-    if (isOK == false) {
-        return PM3_ESOFT;
-    }
-    
     if (resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0xae) {
-        PrintAndLogEx(WARNING, _RED_("   authentication error"));
+        PrintAndLogEx(WARNING, _RED_("[get_desfire_keysettings] Authentication error"));
         return PM3_ESOFT;
     }
 //    PrintAndLogEx(INFO, "ICE: KEYSETTING resp :: %s", sprint_hex(resp.data.asBytes, resp.length));
@@ -332,21 +278,13 @@ static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
 static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
     PacketResponseNG resp;
     uint8_t c[] = {MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, curr_key, 0x00};  // 0x64
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, _RED_("   Timed-out"));
-        return PM3_ETIMEOUT;
-    }
+    int ret=SendDesfireCmd(c, sizeof(c), NONE, &resp, 1500);
+    if (ret!=PM3_SUCCESS) return ret;
 
-    uint8_t isOK  = resp.oldarg[0] & 0xFF;
-    if (isOK == false) {
-        return PM3_ESOFT;
-    }
-    
     if ( resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0x40) {
         return PM3_ESOFT;
     }
-    
+
     *num_versions = resp.data.asBytes[1];
     return PM3_SUCCESS;
 }
@@ -357,20 +295,17 @@ static int get_desfire_select_application(uint8_t *aid) {
     if (aid == NULL) return PM3_ESOFT;
 
     uint8_t c[] = {SELECT_APPLICATION, 0x00, 0x00, 0x03, aid[0], aid[1], aid[2], 0x00};  // 0x5a
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT, sizeof(c), 0, c, sizeof(c));
-
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
-        PrintAndLogEx(WARNING, _RED_("   timed-out"));
-        return PM3_ETIMEOUT;
+    int ret=SendDesfireCmd(c, sizeof(c), INIT, &resp, 3000);
+    if (ret!=PM3_SUCCESS)
+    {
+        if (ret==PM3_ESOFT)
+        {
+            PrintAndLogEx(WARNING, "[get_desfire_select_application] Can't select AID: " _RED_("%s"), sprint_hex(aid, 3));
+        }
+        return ret;
     }
 
-    uint8_t isOK  = resp.oldarg[0] & 0xff;
-    if (!isOK) {
-        PrintAndLogEx(WARNING, "   Can't select AID: " _RED_("%s"), sprint_hex(aid, 3));
-        return PM3_ESOFT;
-    }
-    
     if (resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0x00) {
         return PM3_SUCCESS;
     }
@@ -383,42 +318,25 @@ static int get_desfire_select_application(uint8_t *aid) {
 static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
 
     uint8_t c[] = {GET_APPLICATION_IDS, 0x00, 0x00, 0x00}; //0x6a
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, INIT | CLEARTRACE | DISCONNECT , sizeof(c), 0, c, sizeof(c));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        return PM3_ETIMEOUT;
-    }
-
-    uint8_t isOK  = resp.oldarg[0] & 0xff;
-    if (!isOK) {
-        PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
-        return PM3_ESOFT;
-    }
+    int ret=SendDesfireCmd(c, sizeof(c), INIT | CLEARTRACE | DISCONNECT, &resp, 1500);
+    if (ret!=PM3_SUCCESS) return ret;
 
     *app_ids_len = resp.length - 5;
-    
+
     // resp.length - 2crc, 2status, 1pcb...
     memcpy(dest, resp.data.asBytes + 1, *app_ids_len);
-    
+
     if (resp.data.asBytes[resp.length - 3] == MFDES_ADDITIONAL_FRAME) {
 
         c[0] = MFDES_ADDITIONAL_FRAME; //0xAF
-        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
+        ret=SendDesfireCmd(c, sizeof(c), NONE, &resp, 1500);
+        if (ret!=PM3_SUCCESS) return ret;
 
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            return PM3_ETIMEOUT;
-        }
-
-        isOK  = resp.oldarg[0] & 0xff;
-        if (!isOK) {
-            PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
-            return PM3_ESOFT;
-        }
-        
         memcpy(dest + *app_ids_len, resp.data.asBytes + 1, resp.length - 5);
-        
-        *app_ids_len += (resp.length - 5); 
-    }   
+
+        *app_ids_len += (resp.length - 5);
+    }
     return PM3_SUCCESS;
 }
 
@@ -426,18 +344,9 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
 // none
 static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
     uint8_t c[] = {MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00};  // 0x6f
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, _RED_("   Timed-out"));
-        return PM3_ETIMEOUT;
-    }
-
-    uint8_t isOK  = resp.oldarg[0] & 0xff;
-    if (!isOK) {
-        PrintAndLogEx(WARNING, _RED_("Command unsuccessful"));
-        return PM3_ESOFT;
-    }
+    int ret=SendDesfireCmd(c, sizeof(c), NONE, &resp, 1500);
+    if (ret!=PM3_SUCCESS) return ret;
 
     if (resp.data.asBytes[resp.length - 4] == 0x91 && resp.data.asBytes[resp.length - 3] == 0x00) {
         *file_ids_len = resp.length - 5;
@@ -459,7 +368,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         DropField();
         return PM3_ETIMEOUT;
     }
-    
+
     struct p {
         uint8_t isOK;
         uint8_t uid[7];
@@ -469,9 +378,9 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     } PACKED;
 
     struct p *package = (struct p *) resp.data.asBytes;
-    
+
     if (resp.status != PM3_SUCCESS) {
-        
+
         switch (package->isOK) {
             case 1:
                 PrintAndLogEx(WARNING, "Can't select card");
@@ -529,13 +438,13 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
-    
+
     // Signature originality check
     uint8_t signature[56] = {0};
     size_t signature_len = 0;
     desfire_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
-    
-    if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS) 
+
+    if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS)
         desfire_print_signature(package->uid, signature, signature_len, cardtype);
 
     // Master Key settings
@@ -590,7 +499,7 @@ char *getCardSizeStr(uint8_t fsize) {
     if (fsize & 1)
         sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
     else
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
+    sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
     return buf;
 }
 
@@ -602,7 +511,7 @@ char *getProtocolStr(uint8_t id) {
     if (id == 0x05)
         sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
     else
-        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+    sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
     return buf;
 }
 
@@ -620,15 +529,15 @@ char *getVersionStr(uint8_t major, uint8_t minor) {
     else if (major == 0x30 && minor == 0x00)
         sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
     else
-        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
+    sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
     return buf;
 }
 
 void getKeySettings(uint8_t *aid) {
 
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-        
-        // CARD MASTER KEY 
+
+        // CARD MASTER KEY
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
 
@@ -640,7 +549,7 @@ void getKeySettings(uint8_t *aid) {
 
         // KEY Settings - AMK
         uint8_t num_keys = 0;
-        uint8_t key_setting = 0;        
+        uint8_t key_setting = 0;
         if (get_desfire_keysettings(&key_setting, &num_keys) == PM3_SUCCESS) {
             // number of Master keys (0x01)
             PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F) );
@@ -654,8 +563,8 @@ void getKeySettings(uint8_t *aid) {
         }
 
         const char *str = "   Operation of PICC master key          : " _YELLOW_("%s");
-        
-        // 2 MSB denotes 
+
+        // 2 MSB denotes
         switch (num_keys >> 6) {
             case 0:
                 PrintAndLogEx(SUCCESS, str, "(3)DES");
@@ -692,7 +601,7 @@ void getKeySettings(uint8_t *aid) {
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     } else {
-        
+
         // AID - APPLICATION MASTER KEYS
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
@@ -705,7 +614,7 @@ void getKeySettings(uint8_t *aid) {
 
         // KEY Settings - AMK
         uint8_t num_keys = 0;
-        uint8_t key_setting = 0;        
+        uint8_t key_setting = 0;
         if (get_desfire_keysettings(&key_setting, &num_keys) == PM3_SUCCESS) {
             desfire_print_keysetting(key_setting, num_keys);
         } else {
@@ -713,7 +622,7 @@ void getKeySettings(uint8_t *aid) {
         }
 
         // KEY VERSION  - AMK
-        uint8_t num_version = 0;        
+        uint8_t num_version = 0;
         if (get_desfire_keyversion(0, &num_version) == PM3_SUCCESS) {
             PrintAndLogEx(INFO, "-------------------------------------------------------------");
             PrintAndLogEx(INFO, "  Application keys");
@@ -734,7 +643,7 @@ void getKeySettings(uint8_t *aid) {
             }
         }
     }
-    
+
     DropField();
 }
 
@@ -745,33 +654,33 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t aid[3];
     uint8_t app_ids[78] = {0};
     uint8_t app_ids_len = 0;
-    
+
     uint8_t file_ids[33] = {0};
     uint8_t file_ids_len = 0;
-    
+
     if (get_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         return PM3_ESOFT;
     }
-    
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-- Mifare DESFire Enumerate applications --------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's'); 
-        
+    PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's');
+
     for (int i = 0; i < app_ids_len; i += 3) {
 
         aid[0] = app_ids[i];
         aid[1] = app_ids[i + 1];
         aid[2] = app_ids[i + 2];
-        
+
         PrintAndLogEx(SUCCESS, " AID %d : " _GREEN_("%02X %02X %02X"), i, app_ids[i], app_ids[i+1], app_ids[i+2]);
 
         getKeySettings(aid);
 
         // Get File IDs
         if (get_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');             
+            PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
             for (int j = 0; j < file_ids_len; ++j) {
                 PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
             }
@@ -925,13 +834,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,                     AlwaysAvailable, "This help"},
-    {"info",    CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
-    {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
-    {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
+        {"help",    CmdHelp,                     AlwaysAvailable, "This help"},
+        {"info",    CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
+        {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
+        {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
-    {NULL, NULL, NULL, NULL}
+        {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {
