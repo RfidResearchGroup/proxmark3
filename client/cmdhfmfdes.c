@@ -38,23 +38,25 @@ typedef enum {
 
 static int CmdHelp(const char *Cmd);
 
-static int SendDesfireCmd(uint8_t* c, int len, int flags, PacketResponseNG* response, int timeout)
-{
+
+static int SendDesfireCmd(uint8_t *c, size_t len, int p0, int p1, int p2, PacketResponseNG *response, int timeout) {
     PacketResponseNG resp;
 
     if (response == NULL)
         response = &resp;
 
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, flags , len, 0, c, len);
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, p0, p1, p2, c, len);
+
     if (!WaitForResponseTimeout(CMD_ACK, response, timeout)) {
-        PrintAndLogEx(WARNING, "[SendDesfireCmd] Timed-out: " _RED_("%s"), sprint_hex(c,sizeof(c)));
+        PrintAndLogEx(WARNING, "[SendDesfireCmd] Timed-out: " _RED_("%s"), sprint_hex(c, len));
         DropField();
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isOK  = response->oldarg[0] & 0xff;
+    uint8_t isOK  = response->data.asBytes[0] & 0xff;
     if (!isOK) {
-        PrintAndLogEx(WARNING, "[SendDesfireCmd] Unsuccessful: " _RED_("%s"), sprint_hex(c,sizeof(c)));
+        PrintAndLogEx(WARNING, "[SendDesfireCmd] Unsuccessful: " _RED_("%s"), sprint_hex(c, len));
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
@@ -156,19 +158,19 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
 
 #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
     const ecdsa_publickey_t nxp_desfire_public_keys[] = {
-            {"NTAG424DNA, DESFire EV2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
-            {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
-            {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
-            {"NTAG424DNA,NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
-            {"DESFire Light EV1",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
-            {"Mifare Plus",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
+        {"NTAG424DNA, DESFire EV2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
+        {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
+        {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
+        {"NTAG424DNA,NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
+        {"DESFire Light EV1",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
+        {"Mifare Plus",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
 
     uint8_t i;
     int res;
     bool is_valid = false;
 
-    for (i = 0; i< ARRAYLEN(nxp_desfire_public_keys); i++) {
+    for (i = 0; i < ARRAYLEN(nxp_desfire_public_keys); i++) {
 
         int dl = 0;
         uint8_t key[PUBLIC_DESFIRE_ECDA_KEYLEN];
@@ -184,7 +186,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL,"");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_desfire_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_desfire_public_keys[i].value);
@@ -222,8 +224,8 @@ static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
 // --- KEY SETTING
 static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 
-    PrintAndLogEx(SUCCESS, "     AID Key settings           : %02x", key_settings);
-    PrintAndLogEx(SUCCESS, "     Max number of keys in AID  : %d", num_keys);
+    PrintAndLogEx(SUCCESS, "  AID Key settings           : %02x", key_settings);
+    PrintAndLogEx(SUCCESS, "  Max number of keys in AID  : %d", num_keys);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "  Changekey Access rights");
 
@@ -255,8 +257,8 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
     PacketResponseNG resp;
     uint8_t c[] = {MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00};  // 0x45
-    int ret=SendDesfireCmd(c, sizeof(c), NONE, &resp, 1500);
-    if (ret!=PM3_SUCCESS) return ret;
+    int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
+    if (ret != PM3_SUCCESS) return ret;
 
     if (resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0xae) {
         PrintAndLogEx(WARNING, _RED_("[get_desfire_keysettings] Authentication error"));
@@ -270,7 +272,7 @@ static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
 
 // --- KEY VERSION
 static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
-    PrintAndLogEx(SUCCESS, " Key [%u]  Version : %d (0x%02x)", key_idx, key_version, key_version);
+    PrintAndLogEx(SUCCESS, "   Key [%u]  Version : %d (0x%02x)", key_idx, key_version, key_version);
     return PM3_SUCCESS;
 }
 
@@ -278,10 +280,10 @@ static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
 static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
     PacketResponseNG resp;
     uint8_t c[] = {MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, curr_key, 0x00};  // 0x64
-    int ret=SendDesfireCmd(c, sizeof(c), NONE, &resp, 1500);
-    if (ret!=PM3_SUCCESS) return ret;
+    int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
+    if (ret != PM3_SUCCESS) return ret;
 
-    if ( resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0x40) {
+    if (resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0x40) {
         return PM3_ESOFT;
     }
 
@@ -296,11 +298,9 @@ static int get_desfire_select_application(uint8_t *aid) {
 
     uint8_t c[] = {SELECT_APPLICATION, 0x00, 0x00, 0x03, aid[0], aid[1], aid[2], 0x00};  // 0x5a
     PacketResponseNG resp;
-    int ret=SendDesfireCmd(c, sizeof(c), INIT, &resp, 3000);
-    if (ret!=PM3_SUCCESS)
-    {
-        if (ret==PM3_ESOFT)
-        {
+    int ret = SendDesfireCmd(c, sizeof(c), INIT, sizeof(c), 0, &resp, 3000);
+    if (ret != PM3_SUCCESS) {
+        if (ret == PM3_ESOFT) {
             PrintAndLogEx(WARNING, "[get_desfire_select_application] Can't select AID: " _RED_("%s"), sprint_hex(aid, 3));
         }
         return ret;
@@ -319,8 +319,8 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
 
     uint8_t c[] = {GET_APPLICATION_IDS, 0x00, 0x00, 0x00}; //0x6a
     PacketResponseNG resp;
-    int ret=SendDesfireCmd(c, sizeof(c), INIT | CLEARTRACE | DISCONNECT, &resp, 1500);
-    if (ret!=PM3_SUCCESS) return ret;
+    int ret = SendDesfireCmd(c, sizeof(c), INIT | CLEARTRACE | DISCONNECT, sizeof(c), 0, &resp, 1500);
+    if (ret != PM3_SUCCESS) return ret;
 
     *app_ids_len = resp.length - 5;
 
@@ -330,8 +330,8 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
     if (resp.data.asBytes[resp.length - 3] == MFDES_ADDITIONAL_FRAME) {
 
         c[0] = MFDES_ADDITIONAL_FRAME; //0xAF
-        ret=SendDesfireCmd(c, sizeof(c), NONE, &resp, 1500);
-        if (ret!=PM3_SUCCESS) return ret;
+        ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
+        if (ret != PM3_SUCCESS) return ret;
 
         memcpy(dest + *app_ids_len, resp.data.asBytes + 1, resp.length - 5);
 
@@ -345,8 +345,8 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
 static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
     uint8_t c[] = {MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00};  // 0x6f
     PacketResponseNG resp;
-    int ret=SendDesfireCmd(c, sizeof(c), NONE, &resp, 1500);
-    if (ret!=PM3_SUCCESS) return ret;
+    int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
+    if (ret != PM3_SUCCESS) return ret;
 
     if (resp.data.asBytes[resp.length - 4] == 0x91 && resp.data.asBytes[resp.length - 3] == 0x00) {
         *file_ids_len = resp.length - 5;
@@ -499,7 +499,7 @@ char *getCardSizeStr(uint8_t fsize) {
     if (fsize & 1)
         sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
     else
-    sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
+        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
     return buf;
 }
 
@@ -511,7 +511,7 @@ char *getProtocolStr(uint8_t id) {
     if (id == 0x05)
         sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
     else
-    sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
     return buf;
 }
 
@@ -529,7 +529,7 @@ char *getVersionStr(uint8_t major, uint8_t minor) {
     else if (major == 0x30 && minor == 0x00)
         sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
     else
-    sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
+        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
     return buf;
 }
 
@@ -552,7 +552,7 @@ void getKeySettings(uint8_t *aid) {
         uint8_t key_setting = 0;
         if (get_desfire_keysettings(&key_setting, &num_keys) == PM3_SUCCESS) {
             // number of Master keys (0x01)
-            PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F) );
+            PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
 
             PrintAndLogEx(SUCCESS, "   [0x08] Configuration changeable       : %s", (key_setting & (1 << 3)) ? _GREEN_("YES") : "NO");
             PrintAndLogEx(SUCCESS, "   [0x04] CMK required for create/delete : %s", (key_setting & (1 << 2)) ? _GREEN_("YES") : "NO");
@@ -674,7 +674,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         aid[1] = app_ids[i + 1];
         aid[2] = app_ids[i + 2];
 
-        PrintAndLogEx(SUCCESS, " AID %d : " _GREEN_("%02X %02X %02X"), i, app_ids[i], app_ids[i+1], app_ids[i+2]);
+        PrintAndLogEx(SUCCESS, " AID %d : " _GREEN_("%02X %02X %02X"), i, app_ids[i], app_ids[i + 1], app_ids[i + 2]);
 
         getKeySettings(aid);
 
@@ -686,28 +686,28 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             }
         }
 
-/*
-        // Get ISO File IDs
-        {
-            uint8_t data[] = {GET_ISOFILE_IDS, 0x00, 0x00, 0x00};  // 0x61
-            SendCommandMIX(CMD_HF_DESFIRE_COMMAND, DISCONNECT, sizeof(data), 0, data, sizeof(data));
-        }
-
-        if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
-            PrintAndLogEx(WARNING, _RED_("   Timed-out"));
-            continue;
-        } else {
-            isOK  = respFiles.data.asBytes[2] & 0xff;
-            if (!isOK) {
-                PrintAndLogEx(WARNING, _RED_("   Can't get ISO file ids"));
-            } else {
-                int respfileLen = resp.oldarg[1] - 3 - 2;
-                for (int j = 0; j < respfileLen; ++j) {
-                    PrintAndLogEx(SUCCESS, " ISO  Fileid %d :", resp.data.asBytes[j + 3]);
+        /*
+                // Get ISO File IDs
+                {
+                    uint8_t data[] = {GET_ISOFILE_IDS, 0x00, 0x00, 0x00};  // 0x61
+                    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, DISCONNECT, sizeof(data), 0, data, sizeof(data));
                 }
-            }
-        }
-        */
+
+                if (!WaitForResponseTimeout(CMD_ACK, &respFiles, 1500)) {
+                    PrintAndLogEx(WARNING, _RED_("   Timed-out"));
+                    continue;
+                } else {
+                    isOK  = respFiles.data.asBytes[2] & 0xff;
+                    if (!isOK) {
+                        PrintAndLogEx(WARNING, _RED_("   Can't get ISO file ids"));
+                    } else {
+                        int respfileLen = resp.oldarg[1] - 3 - 2;
+                        for (int j = 0; j < respfileLen; ++j) {
+                            PrintAndLogEx(SUCCESS, " ISO  Fileid %d :", resp.data.asBytes[j + 3]);
+                        }
+                    }
+                }
+                */
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     DropField();
@@ -720,7 +720,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
                 if (!res && datalen > 1 && data[0] == 0x09) {
                     SLmode = 0;
                 }
-                
+
 */
 
 
@@ -834,13 +834,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-        {"help",    CmdHelp,                     AlwaysAvailable, "This help"},
-        {"info",    CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
-        {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
-        {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
+    {"help",    CmdHelp,                     AlwaysAvailable, "This help"},
+    {"info",    CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
+    {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
+    {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
-        {NULL, NULL, NULL, NULL}
+    {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {
