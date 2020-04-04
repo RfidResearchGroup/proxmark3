@@ -108,7 +108,7 @@ static int usage_legic_dump(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to dump bytes");
-    PrintAndLogEx(NORMAL, "      x             : deobfuscate dump data");
+    PrintAndLogEx(NORMAL, "      x             : deobfuscate dump data (xor with MCC)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic dump                -- uses UID as filename"));
@@ -123,7 +123,7 @@ static int usage_legic_restore(void) {
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "      h             : this help");
     PrintAndLogEx(NORMAL, "      f <filename>  : filename w/o '.bin' to restore bytes on to card from");
-    PrintAndLogEx(NORMAL, "      x             : obfuscate dump data");
+    PrintAndLogEx(NORMAL, "      x             : obfuscate dump data (xor with MCC)");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("      hf legic restore f myfile"));
@@ -171,24 +171,24 @@ static int usage_legic_wipe(void) {
 }
 
 static bool legic_xor(uint8_t *data, uint16_t cardsize) {
-    
+
     if (cardsize <= 22) {
         PrintAndLogEx(INFO, "No obsfuscation such small dump");
         return false;
     }
-    
+
     uint8_t crc = data[4];
     uint32_t calc_crc = CRC8Legic(data, 4);
     if (crc != calc_crc) {
         PrintAndLogEx(INFO, "Crc mismatch, obsfuscation not possible");
         return false;
-    } 
-    
-    
-    for(uint16_t i = 22; i < cardsize - 22; i++) {
+    }
+
+
+    for(uint16_t i = 22; i < cardsize; i++) {
         data[i] ^= crc;
     }
-    PrintAndLogEx(SUCCESS, "Obsfuscation done");
+    PrintAndLogEx(SUCCESS, "(De)Obsfuscation done");
     return true;
 }
 
@@ -524,7 +524,7 @@ out:
 // number of bytes to read
 static int CmdLegicRdbl(const char *Cmd) {
 
-    uint32_t offset = 0, len = 0, iv = 1;   
+    uint32_t offset = 0, len = 0, iv = 1;
     bool errors = false;
     uint8_t cmdp = 0;
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -1005,9 +1005,11 @@ static int CmdLegicDump(const char *Cmd) {
         fptr += sprintf(fptr, "hf-legic-");
         FillFileNameByUID(fptr, data, "-dump", 4);
     }
-    
+
     if (shall_deobsfuscate) {
-        legic_xor(data, card.cardsize);
+        // Deobfuscate the whole dump. Unused data (after the last sector) will be MCC since
+        // 0x00 ^ MCC = MCC. Finding the end of used data is not part of this function.
+        legic_xor(data, dumplen);
     }
 
     saveFile(filename, ".bin", data, readlen);
