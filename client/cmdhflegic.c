@@ -170,22 +170,26 @@ static int usage_legic_wipe(void) {
     return PM3_SUCCESS;
 }
 
-static bool legic_xor(uint8_t *data, uint8_t cardsize) {
-    bool ret = true;
+static bool legic_xor(uint8_t *data, uint16_t cardsize) {
+    
+    if (cardsize <= 22) {
+        PrintAndLogEx(INFO, "No obsfuscation such small dump");
+        return false;
+    }
+    
     uint8_t crc = data[4];
     uint32_t calc_crc = CRC8Legic(data, 4);
     if (crc != calc_crc) {
         PrintAndLogEx(INFO, "Crc mismatch, obsfuscation not possible");
-        ret = false;
-    } else if (cardsize <= 22) {
-        PrintAndLogEx(INFO, "No obsfuscation such small dump");
-    } else {
-        for(uint16_t i = 22; i < cardsize - 22; i++) {
-            data[i] ^= crc;
-        }
-        PrintAndLogEx(SUCCESS, "Obsfuscation done");
+        return false;
+    } 
+    
+    
+    for(uint16_t i = 22; i < cardsize - 22; i++) {
+        data[i] ^= crc;
     }
-    return ret;
+    PrintAndLogEx(SUCCESS, "Obsfuscation done");
+    return true;
 }
 
 /*
