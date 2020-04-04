@@ -27,7 +27,6 @@ uint8_t key_ones_data[16] = { 0x01 };
 uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
 uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
 
-
 typedef enum {
     UNKNOWN = 0,
     MF3ICD40,
@@ -122,10 +121,20 @@ static int get_desfire_freemem(uint32_t *free_mem) {
 // --- GET SIGNATURE
 static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len, desfire_cardtype_t card_type) {
 
-    #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
-
     // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
+
+    #define PUBLIC_DESFIRE_ECDA_KEYLEN 57
+    const ecdsa_publickey_t nxp_desfire_public_keys[] = {
+        {"NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT,  NTAG424DNA, DESFire EV2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
+        {"NTAG42x 4, NTAG426, DESFire Ev2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
+        {"NTAG42x 3, NTAG 424 DNA,  DESFire Light EV1", "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
+        {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
+        {"Mifare Plus", "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"},
+        {"NTAG424DNA, NTAG424DNATT (Tag Tamper), DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
+    };
+
+/*
     uint8_t nxp_desfire_keys[][PUBLIC_DESFIRE_ECDA_KEYLEN] = {
         // NTAG42x 3 - NTAG 424 DNA, DESFire Light
         {
@@ -137,7 +146,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0xD0, 0x25, 0x72, 0x42, 0x7E, 0x5A, 0xE0, 0xA2,
             0xDD, 0x36, 0x59, 0x1B, 0x1F, 0xB3, 0x4F, 0xCF, 0x3D
         },
-        
+
         // NTAG42x 1-3 NTAG 424 DNA TagTamper, NTAG426 TT
         {
             0x04, 0x8A, 0x9B, 0x38, 0x0A, 0xF2, 0xEE, 0x1B,
@@ -148,7 +157,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0xB5, 0x10, 0x2A, 0x61, 0x59, 0x6A, 0xF3, 0x37,
             0x92, 0x00, 0x59, 0x93, 0x16, 0xA0, 0x0A, 0x14, 0x10
         },
-        
+
         // Unknown - needs identification
         {
             0x04, 0x44, 0x09, 0xAD, 0xC4, 0x2F, 0x91, 0xA8,
@@ -159,7 +168,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0x48, 0x25, 0x39, 0x25, 0xDA, 0x39, 0xA5, 0xF3,
             0x9A, 0x1C, 0x55, 0x7F, 0xFA, 0xCD, 0x34, 0xC6, 0x2E
         },
-        
+
         // NTAG42x 4 - NTAG426, DESFire Ev2
         {
             0x04, 0xB3, 0x04, 0xDC, 0x4C, 0x61, 0x5F, 0x53,
@@ -170,17 +179,30 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             0xDC, 0xE5, 0xBE, 0x29, 0xE9, 0x2F, 0x13, 0x92,
             0xCE, 0x7D, 0xE3, 0x21, 0xE3, 0xE5, 0xC5, 0x2B, 0x3A
         },
-
+        // Unknown - needs identification
+        {
+            0x04, 0xBB, 0x5D, 0x51, 0x4F, 0x70, 0x50, 0x02,
+            0x5C, 0x7D, 0x0F, 0x39, 0x73, 0x10, 0x36, 0x0E,
+            0xEC, 0x91, 0xEA, 0xF7, 0x92, 0xE9, 0x6F, 0xC7,
+            0xE0, 0xF4, 0x96, 0xCB, 0x4E, 0x66, 0x9D, 0x41,
+            0x4F, 0x87, 0x7B, 0x7B, 0x27, 0x90, 0x1F, 0xE6,
+            0x7C, 0x2E, 0x3B, 0x33, 0xCD, 0x39, 0xD1, 0xC7,
+            0x97, 0x71, 0x51, 0x89, 0xAC, 0x95, 0x1C, 0x2A, 0xDD
+        }
     };
-    
+*/
+
     uint8_t i;
     int res;
     bool is_valid = false;
 
-    for (i = 0; i< ARRAYLEN(nxp_desfire_keys); i++) {
-    
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, nxp_desfire_keys[i], uid, 7, signature, signature_len, false);
-    
+    for (i = 0; i< ARRAYLEN(nxp_desfire_public_keys); i++) {
+
+        int dl = 0;
+        uint8_t key[PUBLIC_DESFIRE_ECDA_KEYLEN];
+        param_gethex_to_eol(nxp_desfire_public_keys[i].value, 0, key, PUBLIC_DESFIRE_ECDA_KEYLEN, &dl);
+
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, 7, signature, signature_len, false);
         is_valid = (res == 0);
         if (is_valid)
             break;
@@ -190,6 +212,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         return PM3_ESOFT;
     }
 
+/*
     char *publickeyname;
     switch(i) {
         case 0:
@@ -205,19 +228,20 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
             publickeyname = "Unknown DESFire, post on forum";
             break;
     }
+    */
 
-    PrintAndLogEx(INFO, "  Tag Signature");
-    PrintAndLogEx(INFO, "  IC signature public key name  : %s", publickeyname);
-    PrintAndLogEx(INFO, "  IC signature public key value : %s", sprint_hex(nxp_desfire_keys[i], 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[i] + 16, 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[i] + 32, 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(nxp_desfire_keys[i] + 48, PUBLIC_DESFIRE_ECDA_KEYLEN - 48));
-    PrintAndLogEx(INFO, "      Elliptic curve parameters : NID_secp224r1");
-    PrintAndLogEx(INFO, "               TAG IC Signature : %s", sprint_hex(signature, 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 16, 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 32, 16));
-    PrintAndLogEx(INFO, "                                : %s", sprint_hex(signature + 48, signature_len - 48));
-    PrintAndLogEx( (is_valid) ? SUCCESS : WARNING, "  Signature verified " _GREEN_("successful"));
+    PrintAndLogEx(INFO, "--- Tag Signature");
+    PrintAndLogEx(INFO, "IC signature public key name  : %s", nxp_desfire_public_keys[i].desc);
+    PrintAndLogEx(INFO, "IC signature public key value : %.16s", nxp_desfire_public_keys[i].value);
+    PrintAndLogEx(INFO, "                              : %.16s", nxp_desfire_public_keys[i].value + 16);
+    PrintAndLogEx(INFO, "                              : %.16s", nxp_desfire_public_keys[i].value + 32);
+    PrintAndLogEx(INFO, "                              : %.16s", nxp_desfire_public_keys[i].value + 48);
+    PrintAndLogEx(INFO, "    Elliptic curve parameters : NID_secp224r1");
+    PrintAndLogEx(INFO, "             TAG IC Signature : %s", sprint_hex(signature, 16));
+    PrintAndLogEx(INFO, "                              : %s", sprint_hex(signature + 16, 16));
+    PrintAndLogEx(INFO, "                              : %s", sprint_hex(signature + 32, 16));
+    PrintAndLogEx(INFO, "                              : %s", sprint_hex(signature + 48, signature_len - 48));
+    PrintAndLogEx( (is_valid) ? SUCCESS : WARNING, "Signature verified " _GREEN_("successful"));
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
 }

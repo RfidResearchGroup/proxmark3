@@ -8,9 +8,7 @@
 // High frequency MIFARE ULTRALIGHT (C) commands
 //-----------------------------------------------------------------------------
 #include "cmdhfmfu.h"
-
 #include <ctype.h>
-
 #include "cmdparser.h"
 #include "commonutil.h"
 #include "crypto/libpcrypto.h"
@@ -535,7 +533,7 @@ static int ul_print_default(uint8_t *data) {
                   sprint_bin(data + 10, 2)
                  );
 
-    PrintAndLogEx(SUCCESS, "OneTimePad : %s - %s\n",
+    PrintAndLogEx(SUCCESS, "OneTimePad: %s - %s\n",
                   sprint_hex(data + 12, 4),
                   sprint_bin(data + 12, 4)
                  );
@@ -609,23 +607,24 @@ static int ndef_print_CC(uint8_t *data) {
     }
 
 
-    PrintAndLogEx(NORMAL, "--- NDEF Message");
-    PrintAndLogEx(NORMAL, "Capability Container: %s", sprint_hex(data, 4));
-    PrintAndLogEx(NORMAL, "  %02X : NDEF Magic Number", data[0]);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("NDEF Message"));
+    PrintAndLogEx(SUCCESS, "Capability Container: %s", sprint_hex(data, 4));
+    PrintAndLogEx(SUCCESS, "  %02X: NDEF Magic Number", data[0]);
 
-//    PrintAndLogEx(NORMAL, "  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0F);
-    PrintAndLogEx(NORMAL, "  %02X : version %d.%d supported by tag", data[1], cc_major, cc_minor);
-    PrintAndLogEx(NORMAL, "       : %s / %s", rStr, wStr);
+//    PrintAndLogEx(SUCCESS, "  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0F);
+    PrintAndLogEx(SUCCESS, "  %02X: version %d.%d supported by tag", data[1], cc_major, cc_minor);
+    PrintAndLogEx(SUCCESS, "       : %s / %s", rStr, wStr);
 
-    PrintAndLogEx(NORMAL, "  %02X : Physical Memory Size: %d bytes", data[2], data[2] * 8);
+    PrintAndLogEx(SUCCESS, "  %02X: Physical Memory Size: %d bytes", data[2], data[2] * 8);
     if (data[2] == 0x06)
-        PrintAndLogEx(NORMAL, "  %02X : NDEF Memory Size: %d bytes", data[2], 48);
+        PrintAndLogEx(SUCCESS, "  %02X: NDEF Memory Size: %d bytes", data[2], 48);
     else if (data[2] == 0x12)
-        PrintAndLogEx(NORMAL, "  %02X : NDEF Memory Size: %d bytes", data[2], 144);
+        PrintAndLogEx(SUCCESS, "  %02X: NDEF Memory Size: %d bytes", data[2], 144);
     else if (data[2] == 0x3E)
-        PrintAndLogEx(NORMAL, "  %02X : NDEF Memory Size: %d bytes", data[2], 496);
+        PrintAndLogEx(SUCCESS, "  %02X: NDEF Memory Size: %d bytes", data[2], 496);
     else if (data[2] == 0x6D)
-        PrintAndLogEx(NORMAL, "  %02X : NDEF Memory Size: %d bytes", data[2], 872);
+        PrintAndLogEx(SUCCESS, "  %02X: NDEF Memory Size: %d bytes", data[2], 872);
 
     uint8_t msb3   = (data[3] & 0xE0) >> 5;
     uint8_t sf     = (data[3] & 0x10) >> 4;
@@ -633,14 +632,14 @@ static int ndef_print_CC(uint8_t *data) {
     uint8_t mlrule = (data[3] & 0x06) >> 1;
     uint8_t mbread = (data[3] & 0x01);
 
-    PrintAndLogEx(NORMAL, "  Additional feature information");
-    PrintAndLogEx(NORMAL, "  %02X", data[3]);
-    PrintAndLogEx(NORMAL, "  00000000");
-    PrintAndLogEx(NORMAL, "  xxx      - %02X : RFU ( %s)", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(NORMAL, "     x     - %02X : %s special frame", sf, (sf) ? "support" : "don\'t support");
-    PrintAndLogEx(NORMAL, "      x    - %02X : %s lock block", lb, (lb) ? "support" : "don\'t support");
-    PrintAndLogEx(NORMAL, "       xx  - %02X : RFU ( %s)", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(NORMAL, "         x - %02X : IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
+    PrintAndLogEx(SUCCESS, "  Additional feature information");
+    PrintAndLogEx(SUCCESS, "  %02X", data[3]);
+    PrintAndLogEx(SUCCESS, "  00000000");
+    PrintAndLogEx(SUCCESS, "  xxx      - %02X: RFU ( %s)", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(SUCCESS, "     x     - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
+    PrintAndLogEx(SUCCESS, "      x    - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");
+    PrintAndLogEx(SUCCESS, "       xx  - %02X: RFU ( %s)", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(SUCCESS, "         x - %02X: IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
     return PM3_SUCCESS;
 }
 
@@ -710,31 +709,31 @@ int ul_print_type(uint32_t tagtype, uint8_t spaces) {
 }
 
 static int ulc_print_3deskey(uint8_t *data) {
-    PrintAndLogEx(NORMAL, "         deskey1 [44/0x2C] : %s [%s]", sprint_hex(data, 4), sprint_ascii(data, 4));
-    PrintAndLogEx(NORMAL, "         deskey1 [45/0x2D] : %s [%s]", sprint_hex(data + 4, 4), sprint_ascii(data + 4, 4));
-    PrintAndLogEx(NORMAL, "         deskey2 [46/0x2E] : %s [%s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
-    PrintAndLogEx(NORMAL, "         deskey2 [47/0x2F] : %s [%s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
-    PrintAndLogEx(NORMAL, "\n 3des key : %s", sprint_hex(SwapEndian64(data, 16, 8), 16));
+    PrintAndLogEx(NORMAL, "         deskey1 [44/0x2C]: %s [%s]", sprint_hex(data, 4), sprint_ascii(data, 4));
+    PrintAndLogEx(NORMAL, "         deskey1 [45/0x2D]: %s [%s]", sprint_hex(data + 4, 4), sprint_ascii(data + 4, 4));
+    PrintAndLogEx(NORMAL, "         deskey2 [46/0x2E]: %s [%s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
+    PrintAndLogEx(NORMAL, "         deskey2 [47/0x2F]: %s [%s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
+    PrintAndLogEx(NORMAL, "\n 3des key: %s", sprint_hex(SwapEndian64(data, 16, 8), 16));
     return PM3_SUCCESS;
 }
 
 static int ulc_print_configuration(uint8_t *data) {
 
-    PrintAndLogEx(NORMAL, "--- UL-C Configuration");
-    PrintAndLogEx(NORMAL, " Higher Lockbits [40/0x28] : %s - %s", sprint_hex(data, 4), sprint_bin(data, 2));
-    PrintAndLogEx(NORMAL, "         Counter [41/0x29] : %s - %s", sprint_hex(data + 4, 4), sprint_bin(data + 4, 2));
+    PrintAndLogEx(NORMAL, "\n--- " _CYAN_("UL-C Configuration"));
+    PrintAndLogEx(NORMAL, " Higher Lockbits [40/0x28]: %s - %s", sprint_hex(data, 4), sprint_bin(data, 2));
+    PrintAndLogEx(NORMAL, "         Counter [41/0x29]: %s - %s", sprint_hex(data + 4, 4), sprint_bin(data + 4, 2));
 
     bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
     if (validAuth)
-        PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A] : %s page %d/0x%02X and above need authentication", sprint_hex(data + 8, 4), data[8], data[8]);
+        PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s page %d/0x%02X and above need authentication", sprint_hex(data + 8, 4), data[8], data[8]);
     else {
         if (data[8] == 0) {
-            PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A] : %s default", sprint_hex(data + 8, 4));
+            PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s default", sprint_hex(data + 8, 4));
         } else {
-            PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A] : %s auth byte is out-of-range", sprint_hex(data + 8, 4));
+            PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s auth byte is out-of-range", sprint_hex(data + 8, 4));
         }
     }
-    PrintAndLogEx(NORMAL, "           Auth1 [43/0x2B] : %s %s",
+    PrintAndLogEx(NORMAL, "           Auth1 [43/0x2B]: %s %s",
                   sprint_hex(data + 12, 4),
                   (data[12] & 1) ? "write access restricted" : "read and write access restricted"
                  );
@@ -743,7 +742,8 @@ static int ulc_print_configuration(uint8_t *data) {
 
 static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t startPage) {
 
-    PrintAndLogEx(NORMAL, "\n--- Tag Configuration");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Configuration"));
 
     bool strg_mod_en = (data[0] & 2);
     uint8_t authlim = (data[4] & 0x07);
@@ -753,7 +753,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     bool prot = (data[4] & 0x80);
     uint8_t vctid = data[5];
 
-    PrintAndLogEx(NORMAL, "  cfg0 [%u/0x%02X] : %s", startPage, startPage, sprint_hex(data, 4));
+    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", startPage, startPage, sprint_hex(data, 4));
 
     if ((tagtype & (NTAG_213_F | NTAG_216_F))) {
         uint8_t mirror_conf = (data[0] & 0xC0);
@@ -764,35 +764,35 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 
         switch (mirror_conf) {
             case 0:
-                PrintAndLogEx(NORMAL, "                    - no ASCII mirror");
+                PrintAndLogEx(INFO, "                    - no ASCII mirror");
                 break;
             case 1:
-                PrintAndLogEx(NORMAL, "                    - UID ASCII mirror");
+                PrintAndLogEx(INFO, "                    - UID ASCII mirror");
                 break;
             case 2:
-                PrintAndLogEx(NORMAL, "                    - NFC counter ASCII mirror");
+                PrintAndLogEx(INFO, "                    - NFC counter ASCII mirror");
                 break;
             case 3:
-                PrintAndLogEx(NORMAL, "                    - UID and NFC counter ASCII mirror");
+                PrintAndLogEx(INFO, "                    - UID and NFC counter ASCII mirror");
                 break;
             default:
                 break;
         }
 
-        PrintAndLogEx(NORMAL, "                    - SLEEP mode %s", (sleep_en) ? "enabled" : "disabled");
+        PrintAndLogEx(INFO, "                    - SLEEP mode %s", (sleep_en) ? "enabled" : "disabled");
 
         switch (fdp_conf) {
             case 0:
-                PrintAndLogEx(NORMAL, "                    - no field detect");
+                PrintAndLogEx(INFO, "                    - no field detect");
                 break;
             case 1:
-                PrintAndLogEx(NORMAL, "                    - enabled by first State-of-Frame (start of communication)");
+                PrintAndLogEx(INFO, "                    - enabled by first State-of-Frame (start of communication)");
                 break;
             case 2:
-                PrintAndLogEx(NORMAL, "                    - enabled by selection of the tag");
+                PrintAndLogEx(INFO, "                    - enabled by selection of the tag");
                 break;
             case 3:
-                PrintAndLogEx(NORMAL, "                    - enabled by field presence");
+                PrintAndLogEx(INFO, "                    - enabled by field presence");
                 break;
             default:
                 break;
@@ -801,54 +801,54 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
         if (tagtype & NTAG_213_F) {
             switch (mirror_conf) {
                 case 1:
-                { PrintAndLogEx(NORMAL, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x24) ? "OK" : "Invalid value"); break;}
+                { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x24) ? "OK" : "Invalid value"); break;}
                 case 2:
-                { PrintAndLogEx(NORMAL, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x26) ? "OK" : "Invalid value"); break;}
+                { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x26) ? "OK" : "Invalid value"); break;}
                 case 3:
-                { PrintAndLogEx(NORMAL, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x22) ? "OK" : "Invalid value"); break;}
+                { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x22) ? "OK" : "Invalid value"); break;}
                 default:
                     break;
             }
         } else if (tagtype & NTAG_216_F) {
             switch (mirror_conf) {
                 case 1:
-                { PrintAndLogEx(NORMAL, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0xDE) ? "OK" : "Invalid value"); break;}
+                { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0xDE) ? "OK" : "Invalid value"); break;}
                 case 2:
-                { PrintAndLogEx(NORMAL, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0xE0) ? "OK" : "Invalid value"); break;}
+                { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0xE0) ? "OK" : "Invalid value"); break;}
                 case 3:
-                { PrintAndLogEx(NORMAL, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0xDC) ? "OK" : "Invalid value"); break;}
+                { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0xDC) ? "OK" : "Invalid value"); break;}
                 default:
                     break;
             }
         }
     }
-    PrintAndLogEx(NORMAL, "                    - strong modulation mode %s", (strg_mod_en) ? "enabled" : "disabled");
+    PrintAndLogEx(INFO, "                    - strong modulation mode %s", (strg_mod_en) ? "enabled" : "disabled");
 
     if (data[3] < 0xff)
-        PrintAndLogEx(NORMAL, "                    - page %d and above need authentication", data[3]);
+        PrintAndLogEx(INFO, "                    - page %d and above need authentication", data[3]);
     else
-        PrintAndLogEx(NORMAL, "                    - pages don't need authentication");
+        PrintAndLogEx(INFO, "                    - pages don't need authentication");
 
-    PrintAndLogEx(NORMAL, "  cfg1 [%u/0x%02X] : %s", startPage + 1, startPage + 1,  sprint_hex(data + 4, 4));
+    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: %s", startPage + 1, startPage + 1,  sprint_hex(data + 4, 4));
     if (authlim == 0)
-        PrintAndLogEx(NORMAL, "                    - Unlimited password attempts");
+        PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited password attempts"));
     else
-        PrintAndLogEx(NORMAL, "                    - Max number of password attempts is " _YELLOW_("%d"), authlim);
+        PrintAndLogEx(INFO, "                    - Max number of password attempts is " _YELLOW_("%d"), authlim);
 
-    PrintAndLogEx(NORMAL, "                    - NFC counter %s", (nfc_cnf_en) ? "enabled" : "disabled");
-    PrintAndLogEx(NORMAL, "                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "not protected" : "password protection enabled");
+    PrintAndLogEx(INFO, "                    - NFC counter %s", (nfc_cnf_en) ? "enabled" : "disabled");
+    PrintAndLogEx(INFO, "                    - NFC counter %s", (nfc_cnf_prot_pwd) ? "not protected" : "password protection enabled");
 
-    PrintAndLogEx(NORMAL, "                    - user configuration %s", cfglck ? "permanently locked" : "writeable");
-    PrintAndLogEx(NORMAL, "                    - %s access is protected with password", prot ? "read and write" : "write");
-    PrintAndLogEx(NORMAL, "                    - %02X, Virtual Card Type Identifier is %s default", vctid, (vctid == 0x05) ? "" : "not");
-    PrintAndLogEx(NORMAL, "  PWD  [%u/0x%02X] : %s- (cannot be read)", startPage + 2, startPage + 2,  sprint_hex(data + 8, 4));
-    PrintAndLogEx(NORMAL, "  PACK [%u/0x%02X] : %s      - (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data + 12, 2));
-    PrintAndLogEx(NORMAL, "  RFU  [%u/0x%02X] :       %s- (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data + 14, 2));
+    PrintAndLogEx(INFO, "                    - user configuration %s", cfglck ? "permanently locked" : "writeable");
+    PrintAndLogEx(INFO, "                    - %s access is protected with password", prot ? "read and write" : "write");
+    PrintAndLogEx(INFO, "                    - %02X, Virtual Card Type Identifier is %sdefault", vctid, (vctid == 0x05) ? "" : "not ");
+    PrintAndLogEx(INFO, "  PWD  [%u/0x%02X]: %s- (cannot be read)", startPage + 2, startPage + 2,  sprint_hex(data + 8, 4));
+    PrintAndLogEx(INFO, "  PACK [%u/0x%02X]: %s      - (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data + 12, 2));
+    PrintAndLogEx(INFO, "  RFU  [%u/0x%02X]:       %s- (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data + 14, 2));
     return PM3_SUCCESS;
 }
 
 static int ulev1_print_counters() {
-    PrintAndLogEx(NORMAL, "--- Tag Counters");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counters"));
     uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
     uint16_t len = 0;
@@ -856,8 +856,8 @@ static int ulev1_print_counters() {
         ulev1_readTearing(i, tear, sizeof(tear));
         len = ulev1_readCounter(i, counter, sizeof(counter));
         if (len == 3) {
-            PrintAndLogEx(NORMAL, "       [%0d] : %s", i, sprint_hex(counter, 3));
-            PrintAndLogEx(NORMAL, "                    - %02X tearing %s", tear[0], (tear[0] == 0xBD) ? "Ok" : "failure");
+            PrintAndLogEx(INFO, "       [%0d]: %s", i, sprint_hex(counter, 3));
+            PrintAndLogEx(SUCCESS, "            - %02X tearing %s", tear[0], (tear[0] == 0xBD) ? "Ok" : "failure");
         }
     }
     return len;
@@ -866,10 +866,20 @@ static int ulev1_print_counters() {
 static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
 
     #define PUBLIC_ECDA_KEYLEN 33
-
     // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
     // ref: AN11350 NTAG 21x Originality Signature Validation
     // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
+    const ecdsa_publickey_t nxp_mfu_public_keys[] = {
+        {"NXP Mifare Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"Manufacturer Mifare Classic MFC1C14_x", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
+        {"NXP ICODE DNA, ICODE SLIX2", "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
+        {"NXP Public key", "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
+        {"NXP Ultralight Ev1", "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
+        {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
+        {"MICRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+    };
+    
+/*  
     uint8_t nxp_mfu_public_keys[6][PUBLIC_ECDA_KEYLEN] = {
         // UL, NTAG21x and NDEF
         {
@@ -914,61 +924,49 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
             0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2 
         }
     };
-
+*/
     uint8_t i;
     int res;
     bool is_valid = false;
     for (i = 0; i< ARRAYLEN(nxp_mfu_public_keys); i++) {
-    
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, nxp_mfu_public_keys[i], uid, 7, signature, signature_len, false);
+
+        int dl = 0;
+        uint8_t key[PUBLIC_ECDA_KEYLEN];
+        param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
+        
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
     
         is_valid = (res == 0);
         if (is_valid)
             break;
     }
+
+    PrintAndLogEx(NORMAL, "");
     if (is_valid == false) {
         PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
         return PM3_ESOFT;
     }
-    
-    char *publickeyname;
-    switch(i) {
-        case 0:
-            publickeyname = "NXP NTAG21x (2013)";
-            break;
-        case 1:
-            publickeyname = "NXP Ev1";
-            break;
-        case 4:
-            publickeyname = "Manufacturer,  post on forum";
-            break;
-        case 5:
-            publickeyname = "MIKRON";
-            break;
-        default:
-            publickeyname = "Unknown, post on forum";
-            break;
-    }
 
-    PrintAndLogEx(INFO, "\n--- Tag Signature");
-    PrintAndLogEx(INFO, "IC signature public key name  : %s", publickeyname);
-    PrintAndLogEx(INFO, "IC signature public key value : %s", sprint_hex(nxp_mfu_public_keys[i], PUBLIC_ECDA_KEYLEN));
-    PrintAndLogEx(INFO, "    Elliptic curve parameters : NID_secp128r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature : %s", sprint_hex(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "Signature verified " _GREEN_("successful"));
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_mfu_public_keys[i].desc);
+    PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
+    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+    PrintAndLogEx(INFO,    "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
+    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
 
 static int ulev1_print_version(uint8_t *data) {
-    PrintAndLogEx(NORMAL, "\n--- Tag Version");
-    PrintAndLogEx(NORMAL, "       Raw bytes: %s", sprint_hex(data, 8));
-    PrintAndLogEx(NORMAL, "       Vendor ID: %02X, %s", data[1], getTagInfo(data[1]));
-    PrintAndLogEx(NORMAL, "    Product type: %s", getProductTypeStr(data[2]));
-    PrintAndLogEx(NORMAL, " Product subtype: %02X, %s", data[3], (data[3] == 1) ? "17 pF" : "50pF");
-    PrintAndLogEx(NORMAL, "   Major version: %02X", data[4]);
-    PrintAndLogEx(NORMAL, "   Minor version: %02X", data[5]);
-    PrintAndLogEx(NORMAL, "            Size: %s", getUlev1CardSizeStr(data[6]));
-    PrintAndLogEx(NORMAL, "   Protocol type: %02X %s", data[7], (data[7] == 0x3) ? "(ISO14443-3 Compliant)" : "");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Version"));
+    PrintAndLogEx(INFO, "       Raw bytes: %s", sprint_hex(data, 8));
+    PrintAndLogEx(INFO, "       Vendor ID: %02X, %s", data[1], getTagInfo(data[1]));
+    PrintAndLogEx(INFO, "    Product type: %s", getProductTypeStr(data[2]));
+    PrintAndLogEx(INFO, " Product subtype: %02X, %s", data[3], (data[3] == 1) ? "17 pF" : "50pF");
+    PrintAndLogEx(INFO, "   Major version: %02X", data[4]);
+    PrintAndLogEx(INFO, "   Minor version: %02X", data[5]);
+    PrintAndLogEx(INFO, "            Size: %s", getUlev1CardSizeStr(data[6]));
+    PrintAndLogEx(INFO, "   Protocol type: %02X%s", data[7], (data[7] == 0x3) ? ", ISO14443-3 Compliant" : "");
     return PM3_SUCCESS;
 }
 
@@ -1188,8 +1186,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     TagTypeUL_t tagtype = GetHF14AMfU_Type();
     if (tagtype == UL_ERROR) return PM3_ESOFT;
 
-    PrintAndLogEx(NORMAL, "\n--- Tag Information ---------");
-    PrintAndLogEx(NORMAL, "-------------------------------------------------------------");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     ul_print_type(tagtype, 6);
 
     // Swap endianness
@@ -1339,7 +1338,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         // hasAuthKey,  if we was called with key, skip test.
         if (!authlim && !hasAuthKey) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, _GREEN_("--- Known EV1/NTAG passwords ---"));
+            PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known EV1/NTAG passwords"));
             // test pwd gen A
             num_to_bytes(ul_ev1_pwdgenA(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
@@ -1790,7 +1789,7 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
 //  Read and Dump Card Contents,  using auto detection of tag size.
 static int CmdHF14AMfUDump(const char *Cmd) {
 
-    uint8_t fileNameLen = 0;
+    int fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
     char *fptr = filename;
 
@@ -1834,6 +1833,8 @@ static int CmdHF14AMfUDump(const char *Cmd) {
                 break;
             case 'f':
                 fileNameLen = param_getstr(Cmd, cmdp + 1, filename, sizeof(filename));
+                if (fileNameLen > FILE_PATH_SIZE - 5)
+                    fileNameLen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
                 break;
             case 'p': //set start page
