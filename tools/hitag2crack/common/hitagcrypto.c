@@ -136,10 +136,7 @@
 // #define TEST_DEBUG
 
 //#include <GenericTypeDefs.h>
-#include "HardwareProfile.h"
-#include "rfidler.h"
 #include "hitagcrypto.h"
-#include "util.h"
 
 #ifdef UNIT_TEST
 #include <stdio.h>

@@ -2,11 +2,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <inttypes.h>
+#include <string.h>
 
-#include "HardwareProfile.h"
-#include "rfidler.h"
 #include "hitagcrypto.h"
-#include "util.h"
+#include "ht2crackutils.h"
 
 // max number of NrAr pairs to load - you only need 136 good pairs, but this
 // is the max
@@ -34,27 +33,6 @@ struct threaddata {
     uint64_t klowerstart;
     uint64_t klowerrange;
 };
-
-void printbin(uint64_t val) {
-    int i;
-
-    for (i = 0; i < 64; i++) {
-        if (val & 0x8000000000000000) {
-            printf("1");
-        } else {
-            printf("0");
-        }
-        val = val << 1;
-    }
-}
-
-void printstate(Hitag_State *hstate) {
-    printf("shiftreg =\t");
-    printbin(hstate->shiftreg);
-    printf("\n");
-}
-
-
 
 // macros to pick out 4 bits in various patterns of 1s & 2s & make a new number
 // these and the following hitag2_crypt function taken from Rfidler

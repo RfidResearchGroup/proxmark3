@@ -6,7 +6,6 @@
 
 #include "ht2crackutils.h"
 
-
 #define INPUTFILE "sorted/%02x/%02x.bin"
 #define DATASIZE 10
 

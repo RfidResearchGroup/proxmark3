@@ -5,7 +5,6 @@
 
 #include "ht2crackutils.h"
 
-
 int makerandom(char *hex, unsigned int len, int fd) {
     unsigned char raw[32];
     int i;

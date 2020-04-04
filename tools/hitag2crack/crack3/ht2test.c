@@ -1,13 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-
-#include "HardwareProfile.h"
-#include "rfidler.h"
 #include "hitagcrypto.h"
-#include "util.h"
-
-
+#include "ht2crackutils.h"
 
 int main(int argc, char *argv[]) {
     Hitag_State hstate;

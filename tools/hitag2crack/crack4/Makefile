@@ -3,11 +3,8 @@ LIBS=-lpthread
 VPATH=../common
 INC=-I ../common
 
-all: ht2crack4.c HardwareProfile.h rfidler.h util.h utilpart.o hitagcrypto.o ht2crackutils.o
-	$(CC) $(CFLAGS) $(INC) -o ht2crack4 $< utilpart.o hitagcrypto.o ht2crackutils.o $(LIBS)
-
-utilpart.o: utilpart.c util.h
-	$(CC) $(CFLAGS) -c $<
+all: ht2crack4.c hitagcrypto.o ht2crackutils.o
+	$(CC) $(CFLAGS) $(INC) -o ht2crack4 $< hitagcrypto.o ht2crackutils.o $(LIBS)
 
 hitagcrypto.o: hitagcrypto.c hitagcrypto.h
 	$(CC) $(CFLAGS) -c $<

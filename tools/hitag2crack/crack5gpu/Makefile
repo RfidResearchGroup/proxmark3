@@ -9,11 +9,8 @@ LIBS=-L/opt/nvidia/cuda/lib64 -lOpenCL
 VPATH=../common
 INC=-I ../common
 
-all: ht2crack5.c utilpart.o ht2crackutils.o hitagcrypto.o
-	$(CC) $(CFLAGS) $(INC) -o ht2crack5gpu $< utilpart.o ht2crackutils.o hitagcrypto.o $(LIBS) -lpthread
-
-utilpart.o: utilpart.c util.h
-	$(CC) $(CFLAGS) $(INCLUDE) -c $<
+all: ht2crack5.c ht2crackutils.o hitagcrypto.o
+	$(CC) $(CFLAGS) $(INC) -o ht2crack5gpu $< ht2crackutils.o hitagcrypto.o $(LIBS) -lpthread
 
 hitagcrypto.o: hitagcrypto.c hitagcrypto.h
 	$(CC) $(CFLAGS) $(INCLUDE) -c $<
