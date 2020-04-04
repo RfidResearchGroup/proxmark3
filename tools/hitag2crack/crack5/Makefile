@@ -1,17 +1,19 @@
 CFLAGS?=-Wall
 LIBS=-lpthread
+VPATH=../common
+INC=-I ../common
 
-all: ht2crack5.c utilpart.o ht2crack2utils.o hitagcrypto.o
-	$(CC) $(CFLAGS) -O3 ht2crack5.c -o ht2crack5 utilpart.o ht2crack2utils.o hitagcrypto.o $(LIBS)
+all: ht2crack5.c utilpart.o ht2crackutils.o hitagcrypto.o
+	$(CC) $(CFLAGS) $(INC) -O3 $< -o ht2crack5 utilpart.o ht2crackutils.o hitagcrypto.o $(LIBS)
 
-utilpart.o: util.h utilpart.c
-	$(CC) $(CFLAGS) -c utilpart.c
+utilpart.o: utilpart.c util.h
+	$(CC) $(CFLAGS) -c $<
 
-hitagcrypto.o: hitagcrypto.h hitagcrypto.c
-	$(CC) $(CFLAGS) -c hitagcrypto.c
+hitagcrypto.o: hitagcrypto.c hitagcrypto.h
+	$(CC) $(CFLAGS) -c $<
 
-ht2crack2utils.o: ht2crack2utils.h ht2crack2utils.c
-	$(CC) $(CFLAGS) -c ht2crack2utils.c
+ht2crackutils.o: ht2crackutils.c ht2crackutils.h
+	$(CC) $(CFLAGS) -c $<
 
 clean:
 	rm -f *.o ht2crack5

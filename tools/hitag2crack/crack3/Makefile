@@ -1,15 +1,17 @@
 CFLAGS?=-Wall
 LIBS=
+VPATH=../common
+INC=-I ../common
 
 all: ht2crack3.c ht2test.c hitagcrypto.o utilpart.o
-	$(CC) $(CFLAGS) -o ht2crack3 ht2crack3.c hitagcrypto.o utilpart.o -lpthread $(LIBS)
-	$(CC) $(CFLAGS) -o ht2test ht2test.c hitagcrypto.o utilpart.o $(LIBS)
+	$(CC) $(CFLAGS) $(INC) -o ht2crack3 $< hitagcrypto.o utilpart.o -lpthread $(LIBS)
+	$(CC) $(CFLAGS) $(INC) -o ht2test ht2test.c hitagcrypto.o utilpart.o $(LIBS)
 
 hitagcrypto.o: hitagcrypto.c hitagcrypto.h
-	$(CC) $(CFLAGS) -c hitagcrypto.c
+	$(CC) $(CFLAGS) -c $<
 
 utilpart.o: utilpart.c util.h
-	$(CC) $(CFLAGS) -c utilpart.c
+	$(CC) $(CFLAGS) -c $<
 
 clean:
 	rm -rf *.o ht2crack3 ht2test

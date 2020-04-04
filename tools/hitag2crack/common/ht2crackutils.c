@@ -1,4 +1,4 @@
-#include "ht2crack2utils.h"
+#include "ht2crackutils.h"
 
 // writes a value into a buffer as a series of bytes
 void writebuf(unsigned char *buf, uint64_t val, unsigned int len) {

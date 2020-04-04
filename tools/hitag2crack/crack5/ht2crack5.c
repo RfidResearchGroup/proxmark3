@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <pthread.h>
-#include "ht2crack2utils.h"
+#include "ht2crackutils.h"
 
 const uint8_t bits[9] = {20, 14, 4, 3, 1, 1, 1, 1, 1};
 #define lfsr_inv(state) (((state)<<1) | (__builtin_parityll((state) & ((0xce0044c101cd>>1)|(1ull<<(47))))))

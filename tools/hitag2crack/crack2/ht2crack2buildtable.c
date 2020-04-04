@@ -3,7 +3,7 @@
  * This builds the 1.2TB table and sorts it.
  */
 
-#include "ht2crack2utils.h"
+#include "ht2crackutils.h"
 
 
 // DATAMAX is the size of each bucket (bytes).  There are 65536 buckets so choose a value such that

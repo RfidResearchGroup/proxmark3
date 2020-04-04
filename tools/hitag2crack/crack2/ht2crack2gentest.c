@@ -3,7 +3,7 @@
  * this uses the RFIDler hitag2 PRNG code to generate test cases to test the tables
  */
 
-#include "ht2crack2utils.h"
+#include "ht2crackutils.h"
 
 
 int makerandom(char *hex, unsigned int len, int fd) {

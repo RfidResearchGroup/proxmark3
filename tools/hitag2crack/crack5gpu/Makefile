@@ -6,18 +6,20 @@ INCLUDE=-I/opt/nvidia/cuda/include
 LIBS=-L/opt/nvidia/cuda/lib64 -lOpenCL
 #Mac
 #LIBS=-framework OpenCL
+VPATH=../common
+INC=-I ../common
 
-all: ht2crack5.c utilpart.o ht2crack2utils.o hitagcrypto.o
-	$(CC) $(CFLAGS) ht2crack5.c -o ht2crack5gpu utilpart.o ht2crack2utils.o hitagcrypto.o $(LIBS) -lpthread
+all: ht2crack5.c utilpart.o ht2crackutils.o hitagcrypto.o
+	$(CC) $(CFLAGS) $(INC) -o ht2crack5gpu $< utilpart.o ht2crackutils.o hitagcrypto.o $(LIBS) -lpthread
 
-utilpart.o: util.h utilpart.c
-	$(CC) $(CFLAGS) $(INCLUDE) -c utilpart.c
+utilpart.o: utilpart.c util.h
+	$(CC) $(CFLAGS) $(INCLUDE) -c $<
 
-hitagcrypto.o: hitagcrypto.h hitagcrypto.c
-	$(CC) $(CFLAGS) $(INCLUDE) -c hitagcrypto.c
+hitagcrypto.o: hitagcrypto.c hitagcrypto.h
+	$(CC) $(CFLAGS) $(INCLUDE) -c $<
 
-ht2crack2utils.o: ht2crack2utils.h ht2crack2utils.c
-	$(CC) $(CFLAGS) $(INCLUDE) -c ht2crack2utils.c
+ht2crackutils.o: ht2crackutils.c ht2crackutils.h
+	$(CC) $(CFLAGS) $(INCLUDE) -c $<
 
 clean:
 	rm -f *.o ht2crack5gpu

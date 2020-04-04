@@ -4,7 +4,7 @@
  * PRNG state, checks it is correct, and then rolls back the PRNG to recover the key
  */
 
-#include "ht2crack2utils.h"
+#include "ht2crackutils.h"
 
 
 #define INPUTFILE "sorted/%02x/%02x.bin"

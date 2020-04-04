@@ -29,7 +29,7 @@
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include <CL/cl.h>
 #endif
-#include "ht2crack2utils.h"
+#include "ht2crackutils.h"
 
 const uint8_t bits[9] = {20, 14, 4, 3, 1, 1, 1, 1, 1};
 #define lfsr_inv(state) (((state)<<1) | (__builtin_parityll((state) & ((0xce0044c101cd>>1)|(1ull<<(47))))))
