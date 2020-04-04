@@ -22,8 +22,6 @@
 #include "tlv.h"
 
 #include <string.h>
-#include <stdint.h>
-#include <stddef.h>
 #include <stdlib.h>
 
 #define TLV_TAG_CLASS_MASK  0xc0
@@ -369,12 +367,14 @@ void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len,
 
         // replace tlv element
         struct tlvdb *tnewelm = tlvdb_fixed(tag, len, value);
+        bool tnewelm_linked = false;
         tnewelm->next = telm->next;
         tnewelm->parent = telm->parent;
 
         // if telm stayed first in children chain
         if (telm->parent && telm->parent->children == telm) {
             telm->parent->children = tnewelm;
+            tnewelm_linked = true;
         }
 
         // if telm have previous element
@@ -389,6 +389,7 @@ void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len,
             for (; celm; celm = celm->next) {
                 if (celm->next == telm) {
                     celm->next = tnewelm;
+                    tnewelm_linked = true;
                     break;
                 }
             }
@@ -398,8 +399,13 @@ void tlvdb_change_or_add_node_ex(struct tlvdb *tlvdb, tlv_tag_t tag, size_t len,
         telm->next = NULL;
         tlvdb_free(telm);
 
-        if (tlvdb_elm)
+        if (tlvdb_elm) {
             *tlvdb_elm = tnewelm;
+            tnewelm_linked = true;
+        }
+        if (! tnewelm_linked) {
+            tlvdb_free(tnewelm);
+        }
     }
 
     return;

@@ -11,23 +11,10 @@
 #ifndef CMDHF15_H__
 #define CMDHF15_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-
-#include "proxmark3.h"
-#include "graph.h"
-#include "ui.h"
-#include "util.h"
-#include "cmdparser.h"
-#include "crc16.h"             // iso15 crc
-#include "cmdmain.h"
-#include "cmddata.h"           // getsamples
-#include "loclass/fileutils.h" // savefileEML
+#include "common.h"
 
 int CmdHF15(const char *Cmd);
 
-int readHF15Uid(bool verbose);
+bool readHF15Uid(bool verbose);
 
 #endif

@@ -9,11 +9,11 @@ You might want to follow one of these external resources to get an overview, but
 ![Linux Installation Video Screenshot](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS/blob/master/screenshot-www.youtube.com-2019.03.17-20-44-33.png)
 
 * ParrotOS: some further notes can be found at @5w0rdfish repo [Proxmark Installation for Parrot OS](https://github.com/5w0rdfish/Proxmark3-RDV4-ParrotOS)
-* Iceman has also added this script to the fork. https://github.com/RfidResearchGroup/proxmark3/blob/master/install.sh
+
 
 # Install the required dependencies
 
-## On Debian / Ubuntu / Kali / ParrotOS
+## On Debian / Ubuntu / Kali / ParrotOS / Raspbian
 
 First what we want to do is get an update for the system. If you need to upgrade do this **before** the install. An upgrade was carried out prior to following these instructions. 
 
@@ -24,25 +24,37 @@ sudo apt-get update
 Install the requirements
 
 ```sh
-sudo apt-get install p7zip git ca-certificates build-essential libreadline5 libreadline-dev \
-libusb-0.1-4 libusb-dev libqt4-dev perl pkg-config wget libncurses5-dev gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib
+sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
 ```
 
-If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `libqt4-dev`.
+If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qtbase5-dev`.
 
 If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_ you may have to install `libcanberra-gtk-module`.
 
 ## On ArchLinux
 
 ```sh
-sudo pacman -Sy base-devel p7zip libusb readline ncurses arm-none-eabi-gcc arm-none-eabi-newlib git --needed
-```
-Additional AUR packages:
-```sh
-yaourt -S termcap
+sudo pacman -Sy git base-devel readline arm-none-eabi-gcc arm-none-eabi-newlib qt5-base --needed
 ```
 
-Note that with only these requirements, you will not get the graphical components of the Proxmark3 client. (Untested: how to get it? `yaourt -S qt4` ?)
+If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-base`.
+
+## On Fedora
+
+```sh
+sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel qt5-qtbase-devel libatomic
+```
+
+If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-qtbase-devel`.
+
+## On openSUSE
+
+```sh
+sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel libqt5-qtbase-devel
+```
+
+If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `libqt5-qtbase-devel`.
 
 # Clone the RRG/Iceman repository
 
@@ -52,7 +64,8 @@ git clone https://github.com/RfidResearchGroup/proxmark3.git
 
 # Check ModemManager
 
-**Very important**: make sure ModemManager will not interfer, otherwise it could brick your Proxmark3!
+### ⚠️ Very important ⚠️
+make sure ModemManager will not interfer, otherwise it could brick your Proxmark3!
 Read carefully [this page about ModemManager](ModemManager-Must-Be-Discarded.md) and follow its instructions.
 
 # Check connection

@@ -19,16 +19,18 @@
 
 /* For asprintf */
 #define _GNU_SOURCE
-#include <stdio.h>
 
 #include "emv_pk.h"
-#include "crypto.h"
-#include "proxmark3.h"
 
-#include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/types.h>
+
+#include "ui.h"
+#include "crypto.h"
+#include "proxmark3.h"
+#include "fileutils.h"
+#include "pm3_cmd.h"
 
 #define BCD(c) (((c) >= '0' && (c) <= '9') ? ((c) - '0') : \
                 -1)
@@ -40,14 +42,14 @@
 
 #define TOHEX(v) ((v) < 10 ? (v) + '0' : (v) - 10 + 'a')
 
-static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_t *read) {
+static ssize_t emv_pk_read_bin(char *buf, size_t buflen, unsigned char *bin, size_t size, size_t *read) {
 
     if (buf == NULL)
         return 0;
 
     size_t left = size;
     char *p = buf;
-    while (*p == ' ')
+    while ((*p == ' ') && (p < (buf + buflen - 1)))
         p++;
 
     while (left > 0) {
@@ -55,15 +57,19 @@ static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_
         c1 = HEX(*p);
         if (c1 == -1)
             return -(p - buf);
+        if (p == (buf + buflen - 1))
+            return -(p - buf);
         p++;
         c2 = HEX(*p);
         if (c2 == -1)
+            return -(p - buf);
+        if (p == (buf + buflen - 1))
             return -(p - buf);
         p++;
         *bin = (c1 * 16 + c2);
         bin ++;
         left --;
-        if (*p == ':')
+        if ((*p == ':') && (p < (buf + buflen - 1)))
             p++;
         else if (read) {
             *read = (size - left);
@@ -74,7 +80,7 @@ static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_
             return -(p - buf);
     }
 
-    while (*p == ' ')
+    while ((*p == ' ') && (p < (buf + buflen - 1)))
         p++;
 
     p--;
@@ -82,7 +88,7 @@ static ssize_t emv_pk_read_bin(char *buf, unsigned char *bin, size_t size, size_
     return (p - buf);
 }
 
-static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
+static ssize_t emv_pk_read_ymv(char *buf, size_t buflen, unsigned *ymv) {
 
     if (buf == NULL)
         return 0;
@@ -93,7 +99,7 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
 
     *ymv = 0;
 
-    while (*p == ' ')
+    while ((*p == ' ') && (p < (buf + buflen - 1)))
         p++;
 
     for (i = 0; i < 3; i++) {
@@ -101,15 +107,19 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
         c1 = BCD(*p);
         if (c1 == -1)
             return -(p - buf);
+        if (p == (buf + buflen - 1))
+            return -(p - buf);
         p++;
         c2 = BCD(*p);
         if (c2 == -1)
+            return -(p - buf);
+        if (p == (buf + buflen - 1))
             return -(p - buf);
         p++;
         temp[i] = (c1 * 16 + c2);
     }
 
-    while (*p == ' ')
+    while ((*p == ' ') && (p < (buf + buflen - 1)))
         p++;
 
     p--;
@@ -122,13 +132,13 @@ static ssize_t emv_pk_read_ymv(char *buf, unsigned *ymv) {
     return (p - buf);
 }
 
-static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
+static ssize_t emv_pk_read_string(char *buf, size_t buflen, char *str, size_t size) {
 
     if (buf == NULL)
         return 0;
 
     char *p = buf;
-    while (*p == ' ')
+    while ((*p == ' ') && (p < (buf + buflen - 1)))
         p++;
 
     while (size > 1) {
@@ -137,6 +147,8 @@ static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
         else if (*p < 0x20 || *p >= 0x7f)
             return -(p - buf);
         *str = *p;
+        if (p == (buf + buflen - 1))
+            return -(p - buf);
         p++;
         str ++;
         size --;
@@ -144,7 +156,7 @@ static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
 
     *str = 0;
 
-    while (*p == ' ')
+    while ((*p == ' ') && (p < (buf + buflen - 1)))
         p++;
 
     p--;
@@ -153,27 +165,27 @@ static ssize_t emv_pk_read_string(char *buf, char *str, size_t size) {
 }
 
 
-struct emv_pk *emv_pk_parse_pk(char *buf) {
+struct emv_pk *emv_pk_parse_pk(char *buf, size_t buflen) {
     struct emv_pk *r = calloc(1, sizeof(*r));
     ssize_t l;
     char temp[10];
 
-    l = emv_pk_read_bin(buf, r->rid, 5, NULL);
+    l = emv_pk_read_bin(buf, buflen, r->rid, 5, NULL);
     if (l <= 0)
         goto out;
     buf += l;
 
-    l = emv_pk_read_bin(buf, &r->index, 1, NULL);
+    l = emv_pk_read_bin(buf, buflen, &r->index, 1, NULL);
     if (l <= 0)
         goto out;
     buf += l;
 
-    l = emv_pk_read_ymv(buf, &r->expire);
+    l = emv_pk_read_ymv(buf, buflen, &r->expire);
     if (l <= 0)
         goto out;
     buf += l;
 
-    l = emv_pk_read_string(buf, temp, sizeof(temp));
+    l = emv_pk_read_string(buf, buflen, temp, sizeof(temp));
     if (l <= 0)
         goto out;
     buf += l;
@@ -183,18 +195,18 @@ struct emv_pk *emv_pk_parse_pk(char *buf) {
     else
         goto out;
 
-    l = emv_pk_read_bin(buf, r->exp, sizeof(r->exp), &r->elen);
+    l = emv_pk_read_bin(buf, buflen, r->exp, sizeof(r->exp), &r->elen);
     if (l <= 0)
         goto out;
     buf += l;
 
     r->modulus = malloc(2048 / 8);
-    l = emv_pk_read_bin(buf, r->modulus, 2048 / 8, &r->mlen);
+    l = emv_pk_read_bin(buf, buflen, r->modulus, 2048 / 8, &r->mlen);
     if (l <= 0)
         goto out2;
     buf += l;
 
-    l = emv_pk_read_string(buf, temp, sizeof(temp));
+    l = emv_pk_read_string(buf, buflen, temp, sizeof(temp));
     if (l <= 0)
         goto out2;
     buf += l;
@@ -204,7 +216,7 @@ struct emv_pk *emv_pk_parse_pk(char *buf) {
     else
         goto out2;
 
-    l = emv_pk_read_bin(buf, r->hash, 20, NULL);
+    l = emv_pk_read_bin(buf, buflen, r->hash, 20, NULL);
     if (l <= 0)
         goto out2;
 
@@ -398,7 +410,7 @@ static struct emv_pk *emv_pk_get_ca_pk_from_file(const char *fname,
 
     FILE *f = fopen(fname, "r");
     if (!f) {
-        perror("fopen");
+        PrintAndLogEx(ERR, "Error: can't open file %s.", fname);
         return NULL;
     }
 
@@ -407,21 +419,20 @@ static struct emv_pk *emv_pk_get_ca_pk_from_file(const char *fname,
         if (fgets(buf, sizeof(buf), f) == NULL)
             break;
 
-        struct emv_pk *pk = emv_pk_parse_pk(buf);
+        struct emv_pk *pk = emv_pk_parse_pk(buf, sizeof(buf));
         if (!pk)
             continue;
+
         if (memcmp(pk->rid, rid, 5) || pk->index != idx) {
             emv_pk_free(pk);
             continue;
         }
 
         fclose(f);
-
         return pk;
     }
 
     fclose(f);
-
     return NULL;
 }
 
@@ -483,13 +494,12 @@ struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
             }
         }
     */
-    const char *relfname = "emv/capk.txt";
-
-    char fname[strlen(get_my_executable_directory()) + strlen(relfname) + 1];
-    strcpy(fname, get_my_executable_directory());
-    strcat(fname, relfname);
-
-    pk = emv_pk_get_ca_pk_from_file(fname, rid, idx);
+    char *path;
+    if (searchFile(&path, RESOURCES_SUBDIR, "capk", ".txt", false) != PM3_SUCCESS) {
+        return NULL;
+    }
+    pk = emv_pk_get_ca_pk_from_file(path, rid, idx);
+    free(path);
 
     if (!pk)
         return NULL;

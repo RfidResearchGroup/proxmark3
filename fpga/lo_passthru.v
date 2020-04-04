@@ -5,13 +5,13 @@
 // iZsh <izsh at fail0verflow.com>, June 2014
 
 module lo_passthru(
-	input pck_divclk,
-	output pwr_lo, output pwr_hi,
-	output pwr_oe1, output pwr_oe2, output pwr_oe3, output pwr_oe4,
-	output adc_clk,
-	output ssp_din, input ssp_dout,
-	input cross_lo,
-	output dbg
+    input pck_divclk,
+    output pwr_lo, output pwr_hi,
+    output pwr_oe1, output pwr_oe2, output pwr_oe3, output pwr_oe4,
+    output adc_clk,
+    output ssp_din, input ssp_dout,
+    input cross_lo,
+    output dbg
 );
 
 // the antenna is modulated when ssp_dout = 1, when 0 the

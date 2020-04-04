@@ -3,8 +3,14 @@
 
 .history
 .bash_history
+.bash_profile
+.bash_logout
+.bashrc
+.inputrc
+.profile
 *.log
 *.eml
+*.html
 *.o
 *.a
 *.d
@@ -15,12 +21,15 @@
 *.dll
 *.moc.cpp
 *.z
+*.gz
 *.Td
 *.DS_Store
 *.exe
 *.dsym
 version.c
 *.json
+*.old
+*.swp
 
 # new build file for add-ons.
 Makefile.platform
@@ -30,10 +39,13 @@ Makefile.platform
 !client/hardnested/*.bin
 !client/hardnested/tables/*.z
 client/ui/ui_overlays.h
+client/reveng/bmptst
 
 hardnested_stats.txt
 proxmark3
+proxmark3-flasher
 flasher
+!flasher/
 lua
 luac
 fpga_compress
@@ -61,10 +73,13 @@ client/traces/*
 armsrc/TEMP EMV/*
 tools/mf_nonce_brute/*
 tools/andrew/*
+tools/jtag_openocd/openocd_configuration
 ppls patches/*
 *- Copy.*
 
-client/lualibs/mf_default_keys.lua
+client/lualibs/mfc_default_keys.lua
 client/lualibs/pm3_cmd.lua
 # recompiled
 fpga_version_info.c
+
+.proxmark3/*

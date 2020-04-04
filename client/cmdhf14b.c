@@ -11,6 +11,17 @@
 
 #include "cmdhf14b.h"
 
+#include <ctype.h>
+#include "fileutils.h"
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"        // clearCommandBuffer
+#include "cmdtrace.h"
+
+#include "crc16.h"
+#include "cmdhf14a.h"
+#include "protocols.h"  // definitions of ISO14B protocol
+
 #define TIMEOUT 2000
 static int CmdHelp(const char *Cmd);
 
@@ -109,13 +120,13 @@ static int usage_hf_14b_dump(void) {
 /*
 static void switch_on_field_14b(void) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT, 0, 0, NULL, 0);
 }
 */
 
 static int switch_off_field_14b(void) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_DISCONNECT, 0, 0, NULL, 0);
     return 0;
 }
 
@@ -136,15 +147,15 @@ static bool waitCmd14b(bool verbose) {
             if (len >= 3) {
                 bool crc = check_crc(CRC_14443_B, data, len);
 
-                PrintAndLogEx(NORMAL, "[LEN %u] %s[%02X %02X] %s",
+                PrintAndLogEx(SUCCESS, "[LEN %u] %s[%02X %02X] %s",
                               len,
                               sprint_hex(data, len - 2),
                               data[len - 2],
                               data[len - 1],
-                              (crc) ? "OK" : "FAIL"
+                              (crc) ? _GREEN_("OK") : _RED_("FAIL")
                              );
             } else {
-                PrintAndLogEx(NORMAL, "[LEN %u] %s", len, sprint_hex(data, len));
+                PrintAndLogEx(SUCCESS, "[LEN %u] %s", len, sprint_hex(data, len));
             }
         }
         return true;
@@ -170,8 +181,8 @@ static int CmdHF14BSim(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_SIMULATE_TAG_ISO_14443B, pupi, 0, 0, NULL, 0);
-    return 0;
+    SendCommandMIX(CMD_HF_ISO14443B_SIMULATE, pupi, 0, 0, NULL, 0);
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14BSniff(const char *Cmd) {
@@ -180,8 +191,8 @@ static int CmdHF14BSniff(const char *Cmd) {
     if (cmdp == 'h') return usage_hf_14b_sniff();
 
     clearCommandBuffer();
-    SendCommandNG(CMD_SNIFF_ISO_14443B, NULL, 0);
-    return 0;
+    SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14BCmdRaw(const char *Cmd) {
@@ -251,15 +262,16 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
             continue;
         }
         PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, i));
-        return 0;
+        return PM3_EINVARG;
     }
 
     if (hasTimeout) {
-#define MAX_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
+
+#define MAX_14B_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         flags |= ISO14B_SET_TIMEOUT;
-        if (user_timeout > MAX_TIMEOUT) {
-            user_timeout = MAX_TIMEOUT;
-            PrintAndLogEx(NORMAL, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
+        if (user_timeout > MAX_14B_TIMEOUT) {
+            user_timeout = MAX_14B_TIMEOUT;
+            PrintAndLogEx(INFO, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
         time_wait = 13560000 / 1000 / (8 * 16) * user_timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
@@ -274,9 +286,9 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_ISO_14443B_COMMAND, flags, datalen, time_wait, data, datalen);
+    SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, datalen, time_wait, data, datalen);
 
-    if (!reply) return 1;
+    if (!reply) return PM3_SUCCESS;
 
     bool success = true;
     // get back iso14b_card_select_t, don't print it.
@@ -286,7 +298,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     // get back response from the raw bytes you sent.
     if (success && datalen > 0) waitCmd14b(true);
 
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static bool get_14b_UID(iso14b_card_select_t *card) {
@@ -301,7 +313,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     while (retry--) {
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
             uint8_t status = resp.oldarg[0];
@@ -317,7 +329,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     while (retry--) {
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
         if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
 
             uint8_t status = resp.oldarg[0];
@@ -473,7 +485,6 @@ static void print_st_general_info(uint8_t *data, uint8_t len) {
     PrintAndLogEx(NORMAL, " UID: %s", sprint_hex(SwapEndian64(data, 8, 8), len));
     PrintAndLogEx(NORMAL, " MFG: %02X, %s", data[6], getTagInfo(data[6]));
     PrintAndLogEx(NORMAL, "Chip: %02X, %s", data[5] >> 2, get_ST_Chip_Model(data[5] >> 2));
-    return;
 }
 
 //05 00 00 = find one tag in field
@@ -501,7 +512,7 @@ static bool HF14B_Std_Info(bool verbose) {
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
-    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
@@ -517,9 +528,10 @@ static bool HF14B_Std_Info(bool verbose) {
 
     switch (status) {
         case 0:
-            PrintAndLogEx(NORMAL, " UID    : %s", sprint_hex(card.uid, card.uidlen));
-            PrintAndLogEx(NORMAL, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
-            PrintAndLogEx(NORMAL, " CHIPID : %02X", card.chipid);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+            PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+            PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
             isSuccess = true;
             break;
@@ -541,7 +553,7 @@ static bool HF14B_Std_Info(bool verbose) {
 static bool HF14B_ST_Info(bool verbose) {
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
@@ -597,7 +609,7 @@ static bool HF14B_ST_Reader(bool verbose) {
 
     // SRx get and print general info about SRx chip from UID
     clearCommandBuffer();
-    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
         if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
@@ -636,7 +648,7 @@ static bool HF14B_Std_Reader(bool verbose) {
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();
-    SendCommandMIX(CMD_ISO_14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
@@ -651,9 +663,10 @@ static bool HF14B_Std_Reader(bool verbose) {
 
     switch (status) {
         case 0:
-            PrintAndLogEx(NORMAL, " UID    : %s", sprint_hex(card.uid, card.uidlen));
-            PrintAndLogEx(NORMAL, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
-            PrintAndLogEx(NORMAL, " CHIPID : %02X", card.chipid);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+            PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+            PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
             print_atqb_resp(card.atqb, card.cid);
             isSuccess = true;
             break;
@@ -680,7 +693,7 @@ static bool HF14B_Other_Reader() {
     // uint32_t flags = ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC;
 
     // clearCommandBuffer();
-    // SendCommandOLD(CMD_ISO_14443B_COMMAND, flags, datalen, 0, data, datalen);
+    // SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, datalen, 0, data, datalen);
     // PacketResponseNG resp;
     // WaitForResponse(CMD_ACK,&resp);
 
@@ -694,7 +707,7 @@ static bool HF14B_Other_Reader() {
 
     // data[0] = ISO14443B_AUTHENTICATE;
     // clearCommandBuffer();
-    // SendCommandOLD(CMD_ISO_14443B_COMMAND, flags, 1, 0, data, 1);
+    // SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     // PacketResponseNG resp;
     // WaitForResponse(CMD_ACK, &resp);
 
@@ -708,7 +721,7 @@ static bool HF14B_Other_Reader() {
 
     // data[0] = ISO14443B_RESET;
     // clearCommandBuffer();
-    // SendCommandOLD(CMD_ISO_14443B_COMMAND, flags, 1, 0, data, 1);
+    // SendCommandOLD(CMD_HF_ISO14443B_COMMAND, flags, 1, 0, data, 1);
     // PacketResponseNG resp;
     // WaitForResponse(CMD_ACK, &resp);
 
@@ -745,7 +758,7 @@ static int CmdHF14BReadSri(const char *Cmd) {
     uint8_t blocks = (tagtype == 1) ? 0x7F : 0x0F;
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_READ_SRI_TAG, blocks, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_SRI_READ, blocks, 0, 0, NULL, 0);
     return 0;
 }
 // New command to write a SRI512/SRIX4K tag.
@@ -782,28 +795,28 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     if (isSrix4k) {
         if (blockno > 0x7f && blockno != 0xff) {
             PrintAndLogEx(FAILED, "block number out of range");
-            return 0;
+            return PM3_ESOFT;
         }
     } else {
         if (blockno > 0x0f && blockno != 0xff) {
             PrintAndLogEx(FAILED, "block number out of range");
-            return 0;
+            return PM3_ESOFT;
         }
     }
 
     if (param_gethex(Cmd, 2, data, 8)) {
         PrintAndLogEx(WARNING, "data must include 8 HEX symbols");
-        return 0;
+        return PM3_ESOFT;
     }
 
     if (blockno == 0xff) {
-        PrintAndLogEx(SUCCESS, "[%s] Write special block %02X [ %s ]",
+        PrintAndLogEx(SUCCESS, "[%s] Write special block %02X [ " _YELLOW_("%s")" ]",
                       (isSrix4k) ? "SRIX4K" : "SRI512",
                       blockno,
                       sprint_hex(data, 4)
                      );
     } else {
-        PrintAndLogEx(SUCCESS, "[%s] Write block %02X [ %s ]",
+        PrintAndLogEx(SUCCESS, "[%s] Write block %02X [ " _YELLOW_("%s")" ]",
                       (isSrix4k) ? "SRIX4K" : "SRI512",
                       blockno,
                       sprint_hex(data, 4)
@@ -811,8 +824,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     }
 
     sprintf(str, "-ss -c %02x %02x %02x %02x %02x %02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
-    CmdHF14BCmdRaw(str);
-    return 0;
+    return CmdHF14BCmdRaw(str);
 }
 
 // need to write to file
@@ -864,7 +876,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
     if (!get_14b_UID(&card)) {
         PrintAndLogEx(WARNING, "No tag found.");
-        return 1;
+        return PM3_SUCCESS;
     }
 
     if (fileNameLen < 1) {
@@ -884,12 +896,12 @@ static int CmdHF14BDump(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_ISO_14443B_COMMAND,  ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443B_COMMAND,  ISO14B_CONNECT | ISO14B_SELECT_SR, 0, 0, NULL, 0);
 
     //select
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         if (resp.oldarg[0]) {
-            PrintAndLogEx(INFO, "failed to select %d | %d", resp.oldarg[0], resp.oldarg[1]);
+            PrintAndLogEx(INFO, "failed to select %" PRId64 " | %" PRId64, resp.oldarg[0], resp.oldarg[1]);
             goto out;
         }
     }
@@ -901,7 +913,7 @@ static int CmdHF14BDump(const char *Cmd) {
         req[1] = blocknum;
 
         clearCommandBuffer();
-        SendCommandOLD(CMD_ISO_14443B_COMMAND,  ISO14B_APPEND_CRC | ISO14B_RAW, 2, 0, req, sizeof(req));
+        SendCommandOLD(CMD_HF_ISO14443B_COMMAND,  ISO14B_APPEND_CRC | ISO14B_RAW, 2, 0, req, sizeof(req));
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
 
@@ -1091,7 +1103,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHF14B(const char *Cmd) {
@@ -1130,4 +1142,3 @@ int readHF14B(bool verbose) {
     if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
     return 0;
 }
-

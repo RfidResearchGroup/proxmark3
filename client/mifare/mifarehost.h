@@ -10,22 +10,9 @@
 #ifndef __MIFARE_HOST_H
 #define __MIFARE_HOST_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <pthread.h>
-
-#include "proxmark3.h"  // time_t
 #include "common.h"
+
 #include "util.h"       // FILE_PATH_SIZE
-#include "ui.h"         // PrintAndLog...
-#include "crapto1/crapto1.h"
-#include "crc16.h"
-#include "protocols.h"
-#include "mifare.h"
-#include "mfkey.h"
-#include "util_posix.h"  // msclock
 
 #define MIFARE_SECTOR_RETRY     10
 
@@ -52,7 +39,7 @@ typedef struct {
     uint32_t uid;
     uint32_t blockNo;
     uint32_t keyType;
-    uint32_t nt;
+    uint32_t nt_enc;
     uint32_t ks1;
 } StateList_t;
 
@@ -74,9 +61,13 @@ extern char logHexFileName[FILE_PATH_SIZE];
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate);
+int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey);
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key);
 int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
                      uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory);
+
+int mfCheckKeys_file(uint8_t *destfn, uint64_t *key);
+
 int mfKeyBrute(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint64_t *resultkey);
 
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data);
@@ -86,6 +77,7 @@ int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
 
 int mfCSetUID(uint8_t *uid, uint8_t *atqa, uint8_t *sak, uint8_t *oldUID, uint8_t wipecard);
+int mfCWipe(uint8_t *uid, uint8_t *atqa, uint8_t *sak);
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params);
 int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params);
 
@@ -102,5 +94,6 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 int detect_classic_prng(void);
 int detect_classic_nackbug(bool verbose);
 void detect_classic_magic(void);
+int detect_classic_static_nonce(void);
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted);
 #endif

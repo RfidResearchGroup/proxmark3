@@ -9,8 +9,7 @@
 #ifndef __CRC_H
 #define __CRC_H
 
-#include "common.h" //stdint, stddef, stdbool
-#include "commonutil.h"   // reflect, bswap_16
+#include "common.h"
 
 typedef struct crc_ctx {
     uint32_t state;
@@ -23,6 +22,18 @@ typedef struct crc_ctx {
     bool refin;    /* Parameter: Reflect input bytes?        */
     bool refout;   /* Parameter: Reflect output CRC?         */
 } crc_t;
+
+/* Static initialization of a crc structure */
+#define CRC_INITIALIZER(_order, _polynom, _initial_value, _final_xor) { \
+    .state = ((_initial_value) & ((1L<<(_order))-1)), \
+    .order = (_order), \
+    .polynom = (_polynom), \
+    .initial_value = (_initial_value), \
+    .final_xor = (_final_xor), \
+    .mask = ((1L<<(_order))-1) \
+    .refin = false, \
+    .refout = false \
+}
 
 /* Initialize a crc structure. order is the order of the polynom, e.g. 32 for a CRC-32
  * polynom is the CRC polynom. initial_value is the initial value of a clean state.
@@ -62,16 +73,6 @@ uint32_t CRC4Legic(uint8_t *buff, size_t size);
 // Calculate CRC-8/Legic checksum
 uint32_t CRC8Legic(uint8_t *buff, size_t size);
 
-/* Static initialization of a crc structure */
-#define CRC_INITIALIZER(_order, _polynom, _initial_value, _final_xor) { \
-    .state = ((_initial_value) & ((1L<<(_order))-1)), \
-    .order = (_order), \
-    .polynom = (_polynom), \
-    .initial_value = (_initial_value), \
-    .final_xor = (_final_xor), \
-    .mask = ((1L<<(_order))-1) \
-    .refin = false, \
-    .refout = false \
-}
-
+// Calculate CRC-8/Cardx checksum
+uint32_t CRC8Cardx(uint8_t *buff, size_t size);
 #endif /* __CRC_H */

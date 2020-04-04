@@ -11,9 +11,7 @@
 #ifndef MIFAREDEFAULT_H__
 #define MIFAREDEFAULT_H__
 
-#include <inttypes.h>
-
-#define MIFARE_DEFAULTKEYS_SIZE sizeof(g_mifare_default_keys) / sizeof(uint64_t)
+#include "common.h"
 
 static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)
@@ -45,5 +43,8 @@ static const uint8_t g_mifare_mad_key[] =  {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5};
 static const uint8_t g_mifare_ndef_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
 static const uint8_t g_mifarep_mad_key[] =  {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7};
 static const uint8_t g_mifarep_ndef_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
+
+extern const char *g_mifare_plus_default_keys[];
+extern size_t g_mifare_plus_default_keys_len;
 
 #endif

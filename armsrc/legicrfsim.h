@@ -12,8 +12,8 @@
 #ifndef __LEGICRFSIM_H
 #define __LEGICRFSIM_H
 
-#include "proxmark3.h"
+#include "common.h"
 
-void LegicRfSimulate(uint8_t tagtype);
+void LegicRfSimulate(uint8_t cardtype);
 
 #endif /* __LEGICRFSIM_H */

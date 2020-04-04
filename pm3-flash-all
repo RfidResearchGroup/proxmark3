@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+PM3PATH=$(dirname "$0")
+. "$PM3PATH/pm3"

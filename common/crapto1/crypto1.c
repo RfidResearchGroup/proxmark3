@@ -17,46 +17,44 @@
 
     Copyright (C) 2008-2008 bla <blapost@gmail.com>
 */
-#include "crapto1.h"
-
 #include <stdlib.h>
+
+#include "crapto1.h"
 #include "parity.h"
 
 #define SWAPENDIAN(x)\
     (x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
 
-#if defined(__arm__) && !defined(__linux__) && !defined(_WIN32) && !defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
-void crypto1_create(struct Crypto1State *s, uint64_t key) {
-    int i;
-
-    for (i = 47; s && i > 0; i -= 2) {
-        s->odd  = s->odd  << 1 | BIT(key, (i - 1) ^ 7);
-        s->even = s->even << 1 | BIT(key, i ^ 7);
+void crypto1_init(struct Crypto1State *state, uint64_t key) {
+    if (state == NULL)
+        return;
+    state->odd = 0;
+    state->even = 0;
+    for (int i = 47; i > 0; i -= 2) {
+        state->odd  = state->odd  << 1 | BIT(key, (i - 1) ^ 7);
+        state->even = state->even << 1 | BIT(key, i ^ 7);
     }
     return;
 }
-void crypto1_destroy(struct Crypto1State *state) {
+
+void crypto1_deinit(struct Crypto1State *state) {
     state->odd = 0;
     state->even = 0;
 }
-#else
+
+#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 struct Crypto1State *crypto1_create(uint64_t key) {
-    struct Crypto1State *s = malloc(sizeof(*s));
-    if (!s) return NULL;
-
-    s->odd = s->even = 0;
-
-    int i;
-    for (i = 47; i > 0; i -= 2) {
-        s->odd  = s->odd  << 1 | BIT(key, (i - 1) ^ 7);
-        s->even = s->even << 1 | BIT(key, i ^ 7);
-    }
-    return s;
+    struct Crypto1State *state = malloc(sizeof(*state));
+    if (!state) return NULL;
+    crypto1_init(state, key);
+    return state;
 }
+
 void crypto1_destroy(struct Crypto1State *state) {
     free(state);
 }
 #endif
+
 void crypto1_get_lfsr(struct Crypto1State *state, uint64_t *lfsr) {
     int i;
     for (*lfsr = 0, i = 23; i >= 0; --i) {

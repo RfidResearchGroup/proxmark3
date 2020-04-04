@@ -11,13 +11,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"
+#include "comms.h"
 #include "crc16.h"
-#include "proxmark3.h"
 #include "ui.h"
 #include "graph.h"
-#include "cmdparser.h"
 #include "cmdlfti.h"
-#include "cmdmain.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -80,8 +81,8 @@ static int CmdTIDemod(const char *Cmd) {
 
     save_restoreGB(GRAPH_SAVE);
 
-    int lowLen = sizeof(LowTone) / sizeof(int);
-    int highLen = sizeof(HighTone) / sizeof(int);
+    int lowLen = ARRAYLEN(LowTone);
+    int highLen = ARRAYLEN(HighTone);
     int convLen = (highLen > lowLen) ? highLen : lowLen;
     uint16_t crc;
     int i, j, TagType;
@@ -233,7 +234,7 @@ static int CmdTIDemod(const char *Cmd) {
 
         // only 15 bits compare, last bit of ident is not valid
         if ((shift3 ^ shift0) & 0x7FFF) {
-            PrintAndLogEx(WARNING, "Error: Ident mismatch!");
+            PrintAndLogEx(WARNING, "Warning: Ident mismatch!");
         }
         // WARNING the order of the bytes in which we calc crc below needs checking
         // i'm 99% sure the crc algorithm is correct, but it may need to eat the
@@ -257,7 +258,7 @@ static int CmdTIDemod(const char *Cmd) {
         PrintAndLogEx(INFO, "Tag data = %08X%08X  [Crc %04X %s]", shift1, shift0, crc, crcStr);
 
         if (crc != (shift2 & 0xFFFF))
-            PrintAndLogEx(WARNING, "Error: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
+            PrintAndLogEx(WARNING, "Warning: CRC mismatch, calculated %04X, got %04X", crc, shift2 & 0xFFFF);
 
         retval = PM3_SUCCESS;
         goto out;
@@ -276,7 +277,7 @@ out:
 static int CmdTIRead(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    SendCommandNG(CMD_READ_TI_TYPE, NULL, 0);
+    SendCommandNG(CMD_LF_TI_READ, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -294,7 +295,9 @@ static int CmdTIWrite(const char *Cmd) {
         return PM3_EINVARG;
     }
     clearCommandBuffer();
-    SendCommandMIX(CMD_WRITE_TI_TYPE, arg0, arg1, arg2, NULL, 0);
+    SendCommandMIX(CMD_LF_TI_WRITE, arg0, arg1, arg2, NULL, 0);
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf ti read`") "to verify");
     return PM3_SUCCESS;
 }
 

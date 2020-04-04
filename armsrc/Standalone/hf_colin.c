@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Colin Brigato, 2016, 2017
+// Colin Brigato, 2016, 2017, 2018, 2019
 // Christian Herrmann, 2017
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
@@ -8,11 +8,78 @@
 //-----------------------------------------------------------------------------
 // main code for HF Mifare aka ColinRun by Colin Brigato
 //-----------------------------------------------------------------------------
+
+#include "standalone.h" // standalone definitions
+
 #include "hf_colin.h"
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "util.h"
+#include "commonutil.h"
+#include "BigBuf.h"
+#include "iso14443a.h"
+#include "mifareutil.h"
+#include "mifaresim.h"
+#include "vtsend.h"
+#include "spiffs.h"
+#include "frozen.h"
 
 #define MF1KSZ 1024
 #define MF1KSZSIZE 64
 #define AUTHENTICATION_TIMEOUT 848
+#define HFCOLIN_LASTTAG_SYMLINK "hf_colin/lasttag.bin"
+#define HFCOLIN_SCHEMAS_JSON "hf_colin/schemas.json"
+
+/* Example jsonconfig file schemas.json : (array !)
+[{
+  "name": "UrmetCaptive",
+  "trigger": "0x8829da9daf76",
+  "keysA": [
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76"
+  ],
+  "keysB": [
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76",
+    "0x8829da9daf76"
+  ]
+},{
+  "name": "Noralsy",
+...
+
+]
+
+*/
 
 uint8_t cjuid[10];
 uint32_t cjcuid;
@@ -26,39 +93,127 @@ int curlline;
 
 // Colin's VIGIKPWN sniff/simulate/clone repeat routine for HF Mifare
 
-/*
-void cjPrintBigArray(const char *bigar, int len, uint8_t newlines, uint8_t debug)
-{
-    uint32_t chunksize = (PM3_CMD_DATA_SIZE / 4);
-    uint8_t totalchunks = len / chunksize;
-    uint8_t last_chunksize = len - (totalchunks * chunksize);
-    char chunk[chunksize + 1];
-    memset(chunk, 0x00, sizeof(chunk));
-    if (debug > 0)
-    {
-        Dbprintf("len : %d", len);
-        Dbprintf("chunksize : %d bytes", chunksize);
-        Dbprintf("totalchunks : %d", totalchunks);
-        Dbprintf("last_chunksize: %d", last_chunksize);
-    }
-    for (uint8_t i = 0; i < totalchunks; i++)
-    {
-        memset(chunk, 0x00, sizeof(chunk));
-        memcpy(chunk, &bigar[i * chunksize], chunksize);
-        DbprintfEx(FLAG_RAWPRINT, "%s", chunk);
-    }
-    if (last_chunksize > 0)
-    {
-        memset(chunk, 0x00, sizeof(chunk));
-        memcpy(chunk, &bigar[totalchunks * chunksize], last_chunksize);
-        DbprintfEx(FLAG_RAWPRINT, "%s", chunk);
-    }
-    if (newlines > 0)
-    {
-        DbprintfEx(FLAG_NEWLINE, " ");
+static const uint8_t is_hex[] = {
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0,
+    0, 11, 12, 13, 14, 15, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 11, 12, 13, 14, 15, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0,
+    0, 0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0
+};
+
+static inline uint64_t hex2i(const char *s) {
+    uint64_t val = 0;
+    if (s == NULL || s[0] == 0)
+        return 0;
+    if (s[1] == 'x')
+        s += 2;
+    else if (*s == 'x')
+        s++;
+    while (is_hex[(uint8_t)*s])
+        val = (val << 4) | (is_hex[(uint8_t) * (s++)] - 1);
+    return val;
+}
+
+/*char *noralsy2test =
+    "{\"name\":\"noralsy2\",\"trigger\":\"0x414C41524F4E\",\"keysA\":[\"0x414C41524F4E\",\"0x414C41524F4E\","
+    "\"0x414C41524F4E\","
+    "\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\","
+    "\"0x414C41524F4E\",\"0x414C41524F4E\","
+    "\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\",\"0x414C41524F4E\","
+    "\"0x414C41524F4E\"],\"keysB\":["
+    "\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\","
+    "\"0x424C41524F4E\",\"0x424C41524F4E\","
+    "\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\",\"0x424C41524F4E\","
+    "\"0x424C41524F4E\",\"0x424C41524F4E\","
+    "\"0x424C41524F4E\",\"0x424C41524F4E\"]}";*/
+
+/*char *urmetcaptive2test =
+    "{\"name\":\"urmetcaptive2\",\"trigger\":\"0x8829da9daf76\",\"keysA\":[\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\"],\"keysB\":["
+    "\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\","
+    "\"0x8829da9daf76\",\"0x8829da9daf76\"]}";*/
+
+typedef struct MFC1KSchema {
+    uint8_t name[32];
+    uint64_t trigger;
+    uint64_t keysA[16];
+    uint64_t keysB[16];
+} MFC1KSchema;
+
+#define MAX_SCHEMAS 4
+
+static void scan_keys(const char *str, int len, uint64_t *user_data) {
+    struct json_token t;
+    int i;
+    char ks[32];
+    for (i = 0; json_scanf_array_elem(str, len, "", i, &t) > 0; i++) {
+        sprintf(ks, "%.*s", t.len, t.ptr);
+        user_data[i] = hex2i(ks);
     }
 }
+
+MFC1KSchema Schemas[MAX_SCHEMAS];
+
+/*MFC1KSchema Noralsy = {
+    .name = "Noralsy",
+    .trigger = 0x414c41524f4e,
+    .keysA = {0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e,
+              0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e,
+              0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e, 0x414c41524f4e},
+    .keysB = {0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e,
+              0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e,
+              0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e, 0x424c41524f4e}};
+
+MFC1KSchema InfiHexact = {.name = "Infineon/Hexact",
+                          .trigger = 0x484558414354,
+                          .keysA = {0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354,
+                                    0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354,
+                                    0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354, 0x484558414354,
+                                    0x484558414354},
+                          .keysB = {0xa22ae129c013, 0x49fae4e3849f, 0x38fcf33072e0, 0x8ad5517b4b18, 0x509359f131b1,
+                                    0x6c78928e1317, 0xaa0720018738, 0xa6cac2886412, 0x62d0c424ed8e, 0xe64a986a5d94,
+                                    0x8fa1d601d0a2, 0x89347350bd36, 0x66d2b7dc39ef, 0x6bc1e1ae547d, 0x22729a9bd40f}};
 */
+
+/*MFC1KSchema UrmetCaptive = {
+    .name = "Urmet Captive",
+    .trigger = 0x8829da9daf76,
+    .keysA = {0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
+              0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
+              0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76},
+    .keysB = {0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
+              0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76,
+              0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76, 0x8829da9daf76}};
+*/
+
+int total_schemas = 0;
+
+void add_schema(MFC1KSchema *p, MFC1KSchema a, int *schemas_counter) {
+    if (*schemas_counter < MAX_SCHEMAS) {
+        p[*schemas_counter] = a;
+        *schemas_counter += 1;
+    }
+}
+
+void delete_schema(MFC1KSchema *p, int *schemas_counter, int index) {
+    if (*schemas_counter > 0 && index < *schemas_counter && index > -1) {
+        int last_index = *schemas_counter - 1;
+        for (int i = index; i < last_index; i++) {
+            p[i] = p[i + 1];
+        }
+        *schemas_counter -= 1;
+    }
+}
 
 void cjSetCursFRight() {
     vtsend_cursor_position(NULL, 98, (currfline));
@@ -80,11 +235,45 @@ void cjTabulize() { DbprintfEx(FLAG_RAWPRINT, "\t\t\t"); }
 /*
 void cjPrintKey(uint64_t key, uint8_t *foundKey, uint16_t sectorNo, uint8_t type) {
     char tosendkey[13];
-    sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[0], foundKey[1], foundKey[2], foundKey[3], foundKey[4], foundKey[5]);
-    cjSetCursRight();
-    DbprintfEx(FLAG_NEWLINE, "SEC: %02x | KEY : %s | TYP: %d", sectorNo, tosendkey, type);
+    sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[0], foundKey[1], foundKey[2], foundKey[3], foundKey[4],
+foundKey[5]); cjSetCursRight(); DbprintfEx(FLAG_NEWLINE, "SEC: %02x | KEY : %s | TYP: %d", sectorNo, tosendkey, type);
 }
 */
+
+char *ReadSchemasFromSPIFFS(char *filename) {
+    SpinOff(0);
+
+    int changed = rdv40_spiffs_lazy_mount();
+    uint32_t size = size_in_spiffs((char *)filename);
+    uint8_t *mem = BigBuf_malloc(size);
+    rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)mem, size, RDV40_SPIFFS_SAFETY_SAFE);
+
+    if (changed) {
+        rdv40_spiffs_lazy_unmount();
+    }
+    SpinOff(0);
+    return (char *)mem;
+}
+
+void add_schemas_from_json_in_spiffs(char *filename) {
+
+    char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
+
+    int i, len = strlen(jsonfile);
+    struct json_token t;
+    for (i = 0; json_scanf_array_elem(jsonfile, len, "", i, &t) > 0; i++) {
+        char *tmpname;
+        char *tmptrigger;
+        MFC1KSchema tmpscheme;
+        json_scanf(t.ptr, t.len, "{ name:%Q, trigger:%Q, keysA:%M, keysB:%M}", &tmpname, &tmptrigger, scan_keys,
+                   &tmpscheme.keysA, scan_keys, &tmpscheme.keysB);
+        memcpy(tmpscheme.name, tmpname, 32);
+        tmpscheme.trigger = hex2i(tmptrigger);
+        add_schema(Schemas, tmpscheme, &total_schemas);
+        DbprintfEx(FLAG_NEWLINE, "Schema loaded : %s", tmpname);
+        cjSetCursLeft();
+    }
+}
 
 void ReadLastTagFromFlash() {
     SpinOff(0);
@@ -92,47 +281,26 @@ void ReadLastTagFromFlash() {
     LED_B_ON();
     LED_C_ON();
     LED_D_ON();
-    uint32_t startidx = 0;
     uint16_t len = 1024;
+    size_t size = len;
 
     DbprintfEx(FLAG_NEWLINE, "Button HELD ! Using LAST Known TAG for Simulation...");
     cjSetCursLeft();
 
-    size_t size = len;
     uint8_t *mem = BigBuf_malloc(size);
 
-    if (!FlashInit()) {
-        return;
-    }
-    Flash_CheckBusy(BUSY_TIMEOUT);
+    // this one will handle filetype (symlink or not) and resolving by itself
+    rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
 
-    uint32_t start_time = GetTickCount();
-    uint32_t delta_time = 0;
+    emlSetMem(mem, 0, 64);
 
-    for (size_t i = 0; i < len; i += size) {
-        len = MIN((len - i), size);
-        uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
-        if (isok == len) {
-            emlSetMem(mem, 0, 64);
-        } else {
-            DbprintfEx(FLAG_NEWLINE, "FlashMem reading failed | %d | %d", len, isok);
-            cjSetCursLeft();
-            FlashStop();
-            SpinOff(100);
-            return;
-        }
-    }
-    delta_time = GetTickCountDelta(start_time);
     DbprintfEx(FLAG_NEWLINE, "[OK] Last tag recovered from FLASHMEM set to emulator");
     cjSetCursLeft();
-    DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_READ", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time, _XWHITE_);
-    cjSetCursLeft();
-    FlashStop();
     SpinOff(0);
     return;
 }
 
-void WriteTagToFlash(uint8_t index, size_t size) {
+void WriteTagToFlash(uint32_t uid, size_t size) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -140,68 +308,37 @@ void WriteTagToFlash(uint8_t index, size_t size) {
     LED_D_ON();
 
     uint32_t len = size;
-    uint32_t bytes_sent = 0;
-    uint32_t bytes_remaining = len;
-
     uint8_t data[(size * (16 * 64)) / 1024];
-    uint8_t buff[PAGESIZE];
 
     emlGetMem(data, 0, (size * 64) / 1024);
 
-    if (!FlashInit()) {
-        return;
-    }
+    char dest[SPIFFS_OBJ_NAME_LEN];
+    uint8_t buid[4];
+    num_to_bytes(uid, 4, buid);
+    sprintf(dest, "hf_colin/mf_%02x%02x%02x%02x.bin", buid[0], buid[1], buid[2], buid[3]);
 
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase4k(0, 0);
+    // TODO : by using safe function for multiple writes we are both breaking cache mecanisms and making useless and
+    // unoptimized mount operations we should manage at out level the mount status before and after the whole
+    // standalone mode
+    rdv40_spiffs_write((char *)dest, (uint8_t *)data, len, RDV40_SPIFFS_SAFETY_SAFE);
+    // lastag will only contain filename/path to last written tag file so we don't loose time or space.
+    rdv40_spiffs_make_symlink((char *)dest, (char *)HFCOLIN_LASTTAG_SYMLINK, RDV40_SPIFFS_SAFETY_SAFE);
 
-    uint32_t start_time = GetTickCount();
-    uint32_t delta_time = 0;
-
-    while (bytes_remaining > 0) {
-        Flash_CheckBusy(BUSY_TIMEOUT);
-        Flash_WriteEnable();
-
-        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
-
-        memcpy(buff, data + bytes_sent, bytes_in_packet);
-
-        bytes_remaining -= bytes_in_packet;
-        uint16_t res = Flash_WriteDataCont(bytes_sent + (index * size), buff, bytes_in_packet);
-        bytes_sent += bytes_in_packet;
-
-        uint8_t isok = (res == bytes_in_packet) ? 1 : 0;
-
-        if (!isok) {
-            DbprintfEx(FLAG_NEWLINE, "FlashMem write FAILEd [offset %u]", bytes_sent);
-            cjSetCursLeft();
-            SpinOff(100);
-            return;
-        }
-
-        LED_A_INV();
-        LED_B_INV();
-        LED_C_INV();
-        LED_D_INV();
-    }
-    delta_time = GetTickCountDelta(start_time);
-
-    DbprintfEx(FLAG_NEWLINE, "[OK] TAG WRITTEN TO FLASH ! [0-to offset %u]", bytes_sent);
+    DbprintfEx(FLAG_NEWLINE, "[OK] TAG WRITTEN TO FLASH !");
     cjSetCursLeft();
-    DbprintfEx(FLAG_NEWLINE, "%s[IN]%s %s%dms%s for TAG_FLASH_WRITE", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time, _XWHITE_);
-    cjSetCursLeft();
-    FlashStop();
     SpinOff(0);
     return;
 }
 
-void ModInfo(void) {
-    DbpString("   HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)");
-}
+void ModInfo(void) { DbpString("  HF Mifare ultra fast sniff/sim/clone - aka VIGIKPWN (Colin Brigato)"); }
 
 void RunMod() {
     StandAloneMode();
+
+    // add_schema(Schemas, Noralsy, &total_schemas);
+    // add_schema(Schemas, InfiHexact, &total_schemas);
+    // add_schema_from_json_in_spiffs((char *)HFCOLIN_URMETCAPTIVE_JSON);
+    // add_schema(Schemas, UrmetCaptive, &total_schemas);
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     currline = 20;
@@ -210,7 +347,7 @@ void RunMod() {
     memset(cjuid, 0, sizeof(cjuid));
     cjcuid = 0;
     uint8_t sectorsCnt = (MF1KSZ / MF1KSZSIZE);
-    uint64_t key64;           // Defines current key
+    uint64_t key64;    // Defines current key
     uint8_t *keyBlock; // Where the keys will be held in memory.
 
     /* VIGIK EXPIRED DUMP FOR STUDY
@@ -249,15 +386,13 @@ void RunMod() {
     ACCBITS : 796788[00]+VALUE
     */
 
-    //----------------------------
-    //   Set of keys to be used.
-    //  This should cover ~98% of
-    //  French VIGIK system @2017
-    //----------------------------
+//----------------------------
+//   Set of keys to be used.
+//  This should cover ~98% of
+//  French VIGIK system @2017
+//----------------------------
 
-#define STKEYS 37
-
-    const uint64_t mfKeys[STKEYS] = {
+    const uint64_t mfKeys[] = {
         0xffffffffffff, // TRANSPORTS
         0x000000000000, // Blankkey
         0x484558414354, // INFINEONON A / 0F SEC B / INTRATONE / HEXACT...
@@ -298,8 +433,8 @@ void RunMod() {
     };
 
     // Can remember something like that in case of Bigbuf
-    keyBlock = BigBuf_malloc(STKEYS * 6);
-    int mfKeysCnt = sizeof(mfKeys) / sizeof(uint64_t);
+    keyBlock = BigBuf_malloc(ARRAYLEN(mfKeys) * 6);
+    int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
         num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
@@ -338,6 +473,8 @@ void RunMod() {
     currfline = 24;
     cjSetCursLeft();
 
+    add_schemas_from_json_in_spiffs((char *)HFCOLIN_SCHEMAS_JSON);
+
 failtag:
 
     vtsend_cursor_position_save(NULL);
@@ -350,7 +487,7 @@ failtag:
     SpinOff(50);
     LED_A_ON();
     uint8_t ticker = 0;
-    //while (!BUTTON_PRESS() && !iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true))
+    // while (!BUTTON_PRESS() && !iso14443a_select_card(cjuid, NULL, &cjcuid, true, 0, true))
     while (!iso14443a_select_card(cjuid, &p_card, &cjcuid, true, 0, true)) {
         WDT_HIT();
 
@@ -381,7 +518,7 @@ failtag:
     if (cjcuid == 0) {
         cjSetCursLeft();
         DbprintfEx(FLAG_NEWLINE, "%s>>%s BUG: 0000_CJCUID! Retrying...", _XRED_, _XWHITE_);
-        SpinErr(0, 100, 8);
+        SpinErr(LED_A, 100, 8);
         goto failtag;
     }
 
@@ -424,7 +561,7 @@ failtag:
     //-----------------------------------------------------------------------------
     // also we could avoid first UID check for every block
 
-    // then let’s expose this “optimal case” of “well known vigik schemes” :
+    // then let's expose this optimal case of well known vigik schemes :
     for (uint8_t type = 0; type < 2 && !err && !trapped; type++) {
         for (int sec = 0; sec < sectorsCnt && !err && !trapped; ++sec) {
             key = cjat91_saMifareChkKeys(sec * 4, type, NULL, size, &keyBlock[0], &key64);
@@ -432,8 +569,8 @@ failtag:
             if (key == -1) {
                 err = 1;
                 allKeysFound = false;
-                // used in “portable” imlementation on microcontroller: it reports back the fail and open the standalone lock
-                // reply_old(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
+                // used in portable imlementation on microcontroller: it reports back the fail and open the
+                // standalone lock reply_old(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
                 break;
             } else if (key == -2) {
                 err = 1; // Can't select card.
@@ -448,10 +585,10 @@ failtag:
                 cjSetCursRight();
                 DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %012" PRIx64 " ; TYP: %i", sec, key64, type);
                 /*reply_old(CMD_CJB_INFORM_CLIENT_KEY, 12, sec, type, tosendkey, 12);*/
-                switch (key64) {
-                    /////////////////////////////////////////////////////////
-                    // COMMON SCHEME 1  : INFINITRON/HEXACT
-                    case 0x484558414354:
+
+                for (int i = 0; i < total_schemas; i++) {
+                    if (key64 == Schemas[i].trigger) {
+
                         cjSetCursLeft();
                         DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _XRED_, _XWHITE_);
                         cjSetCursLeft();
@@ -459,232 +596,36 @@ failtag:
                         DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _XGREEN_, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "%sDetected: %s INFI_HEXACT_VIGIK_TAG%s", _XORANGE_, _XCYAN_, _XWHITE_);
+                        DbprintfEx(FLAG_NEWLINE, "%sDetected: %s %s%s", _XORANGE_, _XCYAN_, Schemas[i].name, _XWHITE_);
                         cjSetCursLeft();
 
-                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _XYELLOW_, _XGREEN_, _XYELLOW_, _XGREEN_);
+                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _XYELLOW_, _XGREEN_,
+                                   _XYELLOW_, _XGREEN_);
                         cjSetCursLeft();
 
                         DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _XGREEN_, _XWHITE_);
-                        ;
-                        // Type 0 / A first
+
                         uint16_t t = 0;
                         for (uint16_t s = 0; s < sectorsCnt; s++) {
-                            num_to_bytes(0x484558414354, 6, foundKey[t][s]);
-                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][s][0], foundKey[t][s][1], foundKey[t][s][2],
-                                    foundKey[t][s][3], foundKey[t][s][4], foundKey[t][s][5]);
+                            num_to_bytes(Schemas[i].keysA[s], 6, foundKey[t][s]);
+                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][s][0], foundKey[t][s][1],
+                                    foundKey[t][s][2], foundKey[t][s][3], foundKey[t][s][4], foundKey[t][s][5]);
                             cjSetCursRight();
                             DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, t);
                         }
                         t = 1;
-                        uint16_t sectorNo = 0;
-                        num_to_bytes(0xa22ae129c013, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 1;
-                        num_to_bytes(0x49fae4e3849f, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 2;
-                        num_to_bytes(0x38fcf33072e0, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 3;
-                        num_to_bytes(0x8ad5517b4b18, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 4;
-                        num_to_bytes(0x509359f131b1, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 5;
-                        num_to_bytes(0x6c78928e1317, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 6;
-                        num_to_bytes(0xaa0720018738, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 7;
-                        num_to_bytes(0xa6cac2886412, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 8;
-                        num_to_bytes(0x62d0c424ed8e, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 9;
-                        num_to_bytes(0xe64a986a5d94, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 10;
-                        num_to_bytes(0x8fa1d601d0a2, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 11;
-                        num_to_bytes(0x89347350bd36, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 12;
-                        num_to_bytes(0x66d2b7dc39ef, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 13;
-                        num_to_bytes(0x6bc1e1ae547d, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 14;
-                        num_to_bytes(0x22729a9bd40f, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        sectorNo = 15;
-                        num_to_bytes(0x484558414354, 6, foundKey[t][sectorNo]);
-                        sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][sectorNo][0], foundKey[t][sectorNo][1], foundKey[t][sectorNo][2],
-                                foundKey[t][sectorNo][3], foundKey[t][sectorNo][4], foundKey[t][sectorNo][5]);
-                        cjSetCursRight();
-
-                        DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", sectorNo, tosendkey, t);
-                        trapped = 1;
-                        break;
-                    ////////////////END OF SCHEME 1//////////////////////////////
-
-                    ///////////////////////////////////////
-                    // COMMON SCHEME 2  : URMET CAPTIVE / COGELEC!/?
-                    case 0x8829da9daf76:
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _XRED_, _XWHITE_);
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _XGREEN_, _XWHITE_);
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "%sDetected :%sURMET_CAPTIVE_VIGIK_TAG%s", _XORANGE_, _XCYAN_, _XWHITE_);
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _XYELLOW_, _XGREEN_, _XYELLOW_, _XGREEN_);
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _XGREEN_, _XWHITE_);
-                        cjSetCursLeft();
-
-                        // emlClearMem();
-                        // A very weak one...
-                        for (uint16_t i = 0; i < 2; i++) {
-                            for (uint16_t s = 0; s < sectorsCnt; s++) {
-                                num_to_bytes(key64, 6, foundKey[i][s]);
-                                sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
-                                        foundKey[i][s][0],
-                                        foundKey[i][s][1],
-                                        foundKey[i][s][2],
-                                        foundKey[i][s][3],
-                                        foundKey[i][s][4],
-                                        foundKey[i][s][5]
-                                       );
-                                cjSetCursRight();
-                                DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, i);
-                            }
-                        }
-                        trapped = 1;
-                        break;
-                    ////////////////END OF SCHEME 2//////////////////////////////
-
-                    ///////////////////////////////////////
-                    // COMMON SCHEME 3  : NORALSY "A-LARON & B-LARON . . . NORAL-B & NORAL-A"
-                    case 0x414c41524f4e: // Thumbs up to the guy who had the idea of such a "mnemotechnical" key pair
-                    case 0x424c41524f4e:
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*STOP*!<<<<<<<<<<<<<<%s", _XRED_, _XWHITE_);
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "    .TAG SEEMS %sDETERMINISTIC%s.     ", _XGREEN_, _XWHITE_);
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "%s  Detected :%sNORALSY_VIGIK_TAG %s", _XORANGE_, _XCYAN_, _XWHITE_);
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "...%s[%sKey_derivation_schemeTest%s]%s...", _XYELLOW_, _XGREEN_, _XYELLOW_, _XGREEN_);
-                        cjSetCursLeft();
-
-                        DbprintfEx(FLAG_NEWLINE, "%s>>>>>>>>>>>>!*DONE*!<<<<<<<<<<<<<<%s", _XGREEN_, _XWHITE_);
-
-                        t = 0;
                         for (uint16_t s = 0; s < sectorsCnt; s++) {
-                            num_to_bytes(0x414c41524f4e, 6, foundKey[t][s]);
-                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
-                                    foundKey[t][s][0],
-                                    foundKey[t][s][1],
-                                    foundKey[t][s][2],
-                                    foundKey[t][s][3],
-                                    foundKey[t][s][4],
-                                    foundKey[t][s][5]);
-                            cjSetCursRight();
-                            DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, t);
-                        }
-
-                        t = 1;
-                        for (uint16_t s = 0; s < sectorsCnt; s++) {
-                            num_to_bytes(0x424c41524f4e, 6, foundKey[t][s]);
-                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x",
-                                    foundKey[t][s][0],
-                                    foundKey[t][s][1],
-                                    foundKey[t][s][2],
-                                    foundKey[t][s][3],
-                                    foundKey[t][s][4],
-                                    foundKey[t][s][5]);
+                            num_to_bytes(Schemas[i].keysB[s], 6, foundKey[t][s]);
+                            sprintf(tosendkey, "%02x%02x%02x%02x%02x%02x", foundKey[t][s][0], foundKey[t][s][1],
+                                    foundKey[t][s][2], foundKey[t][s][3], foundKey[t][s][4], foundKey[t][s][5]);
                             cjSetCursRight();
                             DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %s ; TYP: %d", s, tosendkey, t);
                         }
                         trapped = 1;
                         break;
-                        ////////////////END OF SCHEME 3//////////////////////////////
+                    }
                 }
+
                 /* etc etc for testing schemes quick schemes */
             }
         }
@@ -695,7 +636,7 @@ failtag:
         cjTabulize();
         DbprintfEx(FLAG_NEWLINE, "%s[ FAIL ]%s\r\n->did not found all the keys :'(", _XRED_, _XWHITE_);
         cjSetCursLeft();
-        SpinErr(1, 100, 8);
+        SpinErr(LED_B, 100, 8);
         SpinOff(100);
         return;
     }
@@ -731,7 +672,7 @@ failtag:
             cjSetCursLeft();
 
             DbprintfEx(FLAG_NEWLINE, "FATAL:EML_FALLBACKFILL_B");
-            SpinErr(2, 100, 8);
+            SpinErr(LED_C, 100, 8);
             SpinOff(100);
             return;
         }
@@ -740,7 +681,8 @@ failtag:
     delta_time = GetTickCountDelta(start_time);
     cjSetCursLeft();
 
-    DbprintfEx(FLAG_NEWLINE, "%s>>%s Time for VIGIK break :%s%dms%s", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time, _XWHITE_);
+    DbprintfEx(FLAG_NEWLINE, "%s>>%s Time for VIGIK break :%s%dms%s", _XGREEN_, _XWHITE_, _XYELLOW_, delta_time,
+               _XWHITE_);
 
     vtsend_cursor_position_save(NULL);
     vtsend_set_attribute(NULL, 1);
@@ -750,10 +692,9 @@ failtag:
     cjSetCursLeft();
     cjSetCursLeft();
 
-    WriteTagToFlash(0, 1024);
+    WriteTagToFlash(cjcuid, 1024);
 
 readysim:
-    // SIM ?
     cjSetCursLeft();
 
     DbprintfEx(FLAG_NEWLINE, "-> We launch Emulation ->");
@@ -762,8 +703,9 @@ readysim:
     DbprintfEx(FLAG_NEWLINE, "%s!> HOLD ON : %s When you'll click, simm will stop", _XRED_, _XWHITE_);
     cjSetCursLeft();
 
-    DbprintfEx(FLAG_NEWLINE, "Then %s immediately %s we'll try to %s dump our emulator state%s \r\nin a %s chinese tag%s", _XRED_, _XWHITE_, _XYELLOW_, _XWHITE_,
-               _XCYAN_, _XWHITE_);
+    DbprintfEx(FLAG_NEWLINE,
+               "Then %s immediately %s we'll try to %s dump our emulator state%s \r\nin a %s chinese tag%s", _XRED_,
+               _XWHITE_, _XYELLOW_, _XWHITE_, _XCYAN_, _XWHITE_);
     cjSetCursLeft();
     cjSetCursLeft();
 
@@ -775,19 +717,39 @@ readysim:
     SpinOff(100);
     LED_C_ON();
 
-    uint16_t flags;
-    switch (p_card.uidlen) {
+    DBGLEVEL = DBG_NONE;
+
+    //uint16_t flags=0;
+    /*switch (p_card.uidlen) {
         case 10:
             flags = FLAG_10B_UID_IN_DATA;
             break;
         case 7:
             flags = FLAG_7B_UID_IN_DATA;
             break;
-        default:
+        case 4:
             flags = FLAG_4B_UID_IN_DATA;
             break;
-    }
-    Mifare1ksim(flags | FLAG_MF_1K, 0, cjuid);
+        default:
+            flags = FLAG_UID_IN_EMUL;
+            break;
+    }*/
+
+    // Use UID, SAK, ATQA from EMUL, if uid not defined
+    // if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
+    //flags |= FLAG_UID_IN_EMUL;
+    //}
+    //flags |= FLAG_MF_1K;
+    //if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
+    //    flags |= FLAG_UID_IN_EMUL;
+    //}
+    //flags = 0x10;
+    uint16_t flags = 0;
+    flags = 16;
+    DbprintfEx(FLAG_NEWLINE, "\n\n\n\n\n\n\n\nn\n\nn\n\n\nflags: %d (0x%02x)", flags, flags);
+    cjSetCursLeft();
+    SpinOff(1000);
+    Mifare1ksim(flags, 0, cjuid, 0, 0);
     LED_C_OFF();
     SpinOff(50);
     vtsend_cursor_position_restore(NULL);
@@ -816,7 +778,7 @@ readysim:
     DbprintfEx(FLAG_NEWLINE, "- [ LA FIN ] -\r\n%s`-> You can take shell back :) ...", _XWHITE_);
     cjSetCursLeft();
     vtsend_set_attribute(NULL, 0);
-    SpinErr(3, 100, 16);
+    SpinErr(LED_D, 100, 16);
     SpinDown(75);
     SpinOff(100);
     return;
@@ -895,16 +857,17 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
             DbprintfEx(FLAG_NEWLINE, "Halt error");
     };
 
-    crypto1_destroy(pcs);
+    crypto1_deinit(pcs);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     return (isOK) ? PM3_SUCCESS : PM3_EUNDEF;
 }
 
-/* the chk function is a piwi’ed(tm) check that will try all keys for
+/* the chk function is a piwi'ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
-int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key) {
+int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain,
+                           uint64_t *key) {
     DBGLEVEL = DBG_NONE;
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
@@ -931,12 +894,12 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
             SpinDelayUs(AUTHENTICATION_TIMEOUT);
             continue;
         }
-        crypto1_destroy(pcs);
+        crypto1_deinit(pcs);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         *key = ui64Key;
         return i;
     }
-    crypto1_destroy(pcs);
+    crypto1_deinit(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     return -1;
@@ -1009,6 +972,7 @@ void saMifareMakeTag(void) {
     }
 }
 
+// TODO : make this work either for a Gen1a or for a block 0 direct write all transparently
 //-----------------------------------------------------------------------------
 // Matt's StandAlone mod.
 // Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
@@ -1095,7 +1059,8 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
             };
         }
 
-        if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) ||
+                (receivedAnswer[0] != 0x0a)) {
             DbprintfEx(FLAG_NEWLINE, "write block send command error");
             break;
         };

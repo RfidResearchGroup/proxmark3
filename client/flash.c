@@ -10,19 +10,26 @@
 
 #include "flash.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "ui.h"
+#include "elf.h"
+#include "proxendian.h"
+#include "at91sam7s512.h"
+#include "util_posix.h"
+#include "comms.h"
+
 #define FLASH_START            0x100000
 
-#ifdef HAS_512_FLASH
-# define FLASH_SIZE             (512*1024)
-#else
-# define FLASH_SIZE             (256*1024)
-#endif
-
-#define FLASH_END              (FLASH_START + FLASH_SIZE)
 #define BOOTLOADER_SIZE        0x2000
 #define BOOTLOADER_END         (FLASH_START + BOOTLOADER_SIZE)
 
 #define BLOCK_SIZE             0x200
+
+#define FLASHER_VERSION        BL_VERSION_1_0_0
 
 static const uint8_t elf_ident[] = {
     0x7f, 'E', 'L', 'F',
@@ -31,9 +38,45 @@ static const uint8_t elf_ident[] = {
     EV_CURRENT
 };
 
+static int chipid_to_mem_avail(uint32_t iChipID) {
+    int mem_avail = 0;
+    switch ((iChipID & 0xF00) >> 8) {
+        case 0:
+            mem_avail = 0;
+            break;
+        case 1:
+            mem_avail = 8;
+            break;
+        case 2:
+            mem_avail = 16;
+            break;
+        case 3:
+            mem_avail = 32;
+            break;
+        case 5:
+            mem_avail = 64;
+            break;
+        case 7:
+            mem_avail = 128;
+            break;
+        case 9:
+            mem_avail = 256;
+            break;
+        case 10:
+            mem_avail = 512;
+            break;
+        case 12:
+            mem_avail = 1024;
+            break;
+        case 14:
+            mem_avail = 2048;
+    }
+    return mem_avail;
+}
+
 // Turn PHDRs into flasher segments, checking for PHDR sanity and merging adjacent
 // unaligned segments if needed
-static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, uint16_t num_phdrs) {
+static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs, uint16_t num_phdrs, uint32_t flash_end) {
     Elf32_Phdr *phdr = phdrs;
     flash_seg_t *seg;
     uint32_t last_end = 0;
@@ -41,7 +84,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
     ctx->segments = calloc(sizeof(flash_seg_t) * num_phdrs, sizeof(uint8_t));
     if (!ctx->segments) {
         PrintAndLogEx(ERR, "Out of memory");
-        return -1;
+        return PM3_EMALLOC;
     }
     ctx->num_segs = 0;
     seg = ctx->segments;
@@ -71,19 +114,19 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
         if (filesz != memsz) {
             PrintAndLogEx(ERR, "Error: PHDR file size does not equal memory size\n"
                           "(DATA+BSS PHDRs do not make sense on ROM platforms!)");
-            return -1;
+            return PM3_EFILE;
         }
         if (paddr < last_end) {
             PrintAndLogEx(ERR, "Error: PHDRs not sorted or overlap");
-            return -1;
+            return PM3_EFILE;
         }
-        if (paddr < FLASH_START || (paddr + filesz) > FLASH_END) {
+        if (paddr < FLASH_START || (paddr + filesz) > flash_end) {
             PrintAndLogEx(ERR, "Error: PHDR is not contained in Flash");
-            return -1;
+            return PM3_EFILE;
         }
-        if (vaddr >= FLASH_START && vaddr < FLASH_END && (flags & PF_W)) {
+        if (vaddr >= FLASH_START && vaddr < flash_end && (flags & PF_W)) {
             PrintAndLogEx(ERR, "Error: Flash VMA segment is writable");
-            return -1;
+            return PM3_EFILE;
         }
 
         uint8_t *data;
@@ -91,12 +134,12 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
         data = calloc(filesz + BLOCK_SIZE, sizeof(uint8_t));
         if (!data) {
             PrintAndLogEx(ERR, "Error: Out of memory");
-            return -1;
+            return PM3_EMALLOC;
         }
         if (fseek(fd, offset, SEEK_SET) < 0 || fread(data, 1, filesz, fd) != filesz) {
             PrintAndLogEx(ERR, "Error while reading PHDR payload");
             free(data);
-            return -1;
+            return PM3_EFILE;
         }
 
         uint32_t block_offset = paddr & (BLOCK_SIZE - 1);
@@ -115,7 +158,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                     if (!new_data) {
                         PrintAndLogEx(ERR, "Error: Out of memory");
                         free(data);
-                        return -1;
+                        return PM3_EMALLOC;
                     }
                     memset(new_data, 0xff, new_length);
                     memcpy(new_data, prev_seg->data, prev_seg->length);
@@ -149,46 +192,51 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
         last_end = paddr + filesz;
         phdr++;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Sanity check segments and check for bootloader writes
-static int check_segs(flash_file_t *ctx, int can_write_bl) {
+static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_end) {
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
         if (seg->start & (BLOCK_SIZE - 1)) {
             PrintAndLogEx(ERR, "Error: Segment is not aligned");
-            return -1;
+            return PM3_EFILE;
         }
         if (seg->start < FLASH_START) {
             PrintAndLogEx(ERR, "Error: Segment is outside of flash bounds");
-            return -1;
+            return PM3_EFILE;
         }
-        if (seg->start + seg->length > FLASH_END) {
+        if (seg->start + seg->length > flash_end) {
             PrintAndLogEx(ERR, "Error: Segment is outside of flash bounds");
-            return -1;
+            return PM3_EFILE;
         }
         if (!can_write_bl && seg->start < BOOTLOADER_END) {
             PrintAndLogEx(ERR, "Attempted to write bootloader but bootloader writes are not enabled");
-            return -1;
+            return PM3_EINVARG;
+        }
+        if (can_write_bl && seg->start < BOOTLOADER_END && (seg->start + seg->length > BOOTLOADER_END)) {
+            PrintAndLogEx(ERR, "Error: Segment is outside of bootloader bounds");
+            return PM3_EFILE;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Load an ELF file and prepare it for flashing
-int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
+int flash_load(flash_file_t *ctx, const char *name, int can_write_bl, int flash_size) {
     FILE *fd;
     Elf32_Ehdr ehdr;
     Elf32_Phdr *phdrs = NULL;
     uint16_t num_phdrs;
-    int res;
+    uint32_t flash_end  = FLASH_START + flash_size;
+    int res = PM3_EUNDEF;
 
     fd = fopen(name, "rb");
     if (!fd) {
         PrintAndLogEx(ERR, _RED_("Could not open file") "%s  >>> ", name);
-        perror(NULL);
+        res = PM3_EFILE;
         goto fail;
     }
 
@@ -196,28 +244,34 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
 
     if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
         PrintAndLogEx(ERR, "Error while reading ELF file header");
+        res = PM3_EFILE;
         goto fail;
     }
     if (memcmp(ehdr.e_ident, elf_ident, sizeof(elf_ident))
             || le32(ehdr.e_version) != 1) {
         PrintAndLogEx(ERR, "Not an ELF file or wrong ELF type");
+        res = PM3_EFILE;
         goto fail;
     }
     if (le16(ehdr.e_type) != ET_EXEC) {
         PrintAndLogEx(ERR, "ELF is not executable");
+        res = PM3_EFILE;
         goto fail;
     }
     if (le16(ehdr.e_machine) != EM_ARM) {
         PrintAndLogEx(ERR, "Wrong ELF architecture");
+        res = PM3_EFILE;
         goto fail;
     }
     if (!ehdr.e_phnum || !ehdr.e_phoff) {
         PrintAndLogEx(ERR, "ELF has no PHDRs");
+        res = PM3_EFILE;
         goto fail;
     }
     if (le16(ehdr.e_phentsize) != sizeof(Elf32_Phdr)) {
         // could be a structure padding issue...
         PrintAndLogEx(ERR, "Either the ELF file or this code is made of fail");
+        res = PM3_EFILE;
         goto fail;
     }
     num_phdrs = le16(ehdr.e_phnum);
@@ -225,28 +279,31 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl) {
     phdrs = calloc(le16(ehdr.e_phnum) * sizeof(Elf32_Phdr), sizeof(uint8_t));
     if (!phdrs) {
         PrintAndLogEx(ERR, "Out of memory");
+        res = PM3_EMALLOC;
         goto fail;
     }
     if (fseek(fd, le32(ehdr.e_phoff), SEEK_SET) < 0) {
         PrintAndLogEx(ERR, "Error while reading ELF PHDRs");
+        res = PM3_EFILE;
         goto fail;
     }
     if (fread(phdrs, sizeof(Elf32_Phdr), num_phdrs, fd) != num_phdrs) {
+        res = PM3_EFILE;
         PrintAndLogEx(ERR, "Error while reading ELF PHDRs");
         goto fail;
     }
 
-    res = build_segs_from_phdrs(ctx, fd, phdrs, num_phdrs);
-    if (res < 0)
+    res = build_segs_from_phdrs(ctx, fd, phdrs, num_phdrs, flash_end);
+    if (res != PM3_SUCCESS)
         goto fail;
-    res = check_segs(ctx, can_write_bl);
-    if (res < 0)
+    res = check_segs(ctx, can_write_bl, flash_end);
+    if (res != PM3_SUCCESS)
         goto fail;
 
     free(phdrs);
     fclose(fd);
     ctx->filename = name;
-    return 0;
+    return PM3_SUCCESS;
 
 fail:
     if (phdrs)
@@ -254,7 +311,7 @@ fail:
     if (fd)
         fclose(fd);
     flash_free(ctx);
-    return -1;
+    return res;
 }
 
 // Get the state of the proxmark, backwards compatible
@@ -280,22 +337,23 @@ static int get_proxmark_state(uint32_t *state) {
             break;
         default:
             PrintAndLogEx(ERR, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04x", resp.cmd);
-            return -1;
+            return PM3_EFATAL;
             break;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // Enter the bootloader to be able to start flashing
 static int enter_bootloader(char *serial_port_name) {
     uint32_t state;
+    int ret;
 
-    if (get_proxmark_state(&state) < 0)
-        return -1;
+    if ((ret = get_proxmark_state(&state)) != PM3_SUCCESS)
+        return ret;
 
     /* Already in flash state, we're done. */
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM)
-        return 0;
+        return PM3_SUCCESS;
 
     if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
         PrintAndLogEx(SUCCESS, _BLUE_("Entering bootloader..."));
@@ -318,15 +376,15 @@ static int enter_bootloader(char *serial_port_name) {
 
         if (OpenProxmark(serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
             PrintAndLogEx(NORMAL, " " _GREEN_("Found"));
-            return 0;
+            return PM3_SUCCESS;
         } else {
             PrintAndLogEx(ERR, _RED_("Error:") "Proxmark3 not found.");
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
 
     PrintAndLogEx(ERR, _RED_("Error:") "Unknown Proxmark3 mode");
-    return -1;
+    return PM3_EFATAL;
 }
 
 static int wait_for_ack(PacketResponseNG *ack) {
@@ -337,37 +395,112 @@ static int wait_for_ack(PacketResponseNG *ack) {
                       ack->cmd,
                       (ack->cmd == CMD_NACK) ? "NACK" : ""
                      );
-        return -1;
+        return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
+}
+
+static void flash_suggest_update_bootloader(void) {
+    PrintAndLogEx(ERR, _RED_("It is recommended that you first " _YELLOW_("update your bootloader") _RED_("alone,")));
+    PrintAndLogEx(ERR, _RED_("reboot the Proxmark3 then only update the main firmware") "\n");
+}
+
+static void flash_suggest_update_flasher(void) {
+    PrintAndLogEx(ERR, _RED_("It is recommended that you first " _YELLOW_("update your flasher")));
 }
 
 // Go into flashing mode
-int flash_start_flashing(int enable_bl_writes, char *serial_port_name) {
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t *max_allowed) {
     uint32_t state;
+    uint32_t chipinfo = 0;
+    int ret;
 
-    if (enter_bootloader(serial_port_name) < 0)
-        return -1;
+    ret = enter_bootloader(serial_port_name);
+    if (ret != PM3_SUCCESS)
+        return ret;
 
-    if (get_proxmark_state(&state) < 0)
-        return -1;
+    ret = get_proxmark_state(&state);
+    if (ret != PM3_SUCCESS)
+        return ret;
 
+    if (state & DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO) {
+        SendCommandBL(CMD_CHIP_INFO, 0, 0, 0, NULL, 0);
+        PacketResponseNG resp;
+        WaitForResponse(CMD_CHIP_INFO, &resp);
+        chipinfo = resp.oldarg[0];
+    }
+
+    int version = BL_VERSION_INVALID;
+    if (state & DEVICE_INFO_FLAG_UNDERSTANDS_VERSION) {
+        SendCommandBL(CMD_BL_VERSION, 0, 0, 0, NULL, 0);
+        PacketResponseNG resp;
+        WaitForResponse(CMD_BL_VERSION, &resp);
+        version = resp.oldarg[0];
+        if ((BL_VERSION_MAJOR(version) < BL_VERSION_FIRST_MAJOR) || (BL_VERSION_MAJOR(version) > BL_VERSION_LAST_MAJOR)) {
+            // version info seems fishy
+            version = BL_VERSION_INVALID;
+            PrintAndLogEx(ERR, _RED_("====================== OBS ! ==========================="));
+            PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported an invalid version number"));
+            flash_suggest_update_bootloader();
+            //
+        } else if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(FLASHER_VERSION)) {
+            PrintAndLogEx(ERR, _RED_("====================== OBS ! ==================================="));
+            PrintAndLogEx(ERR, _RED_("Note: Your bootloader reported a version older than this flasher"));
+            flash_suggest_update_bootloader();
+        } else if (BL_VERSION_MAJOR(version) > BL_VERSION_MAJOR(FLASHER_VERSION)) {
+            PrintAndLogEx(ERR, _RED_("====================== OBS ! ========================="));
+            PrintAndLogEx(ERR, _RED_("Note: Your bootloader is more recent than this flasher"));
+            flash_suggest_update_flasher();
+        }
+    } else {
+        PrintAndLogEx(ERR, _RED_("====================== OBS ! ==========================================="));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("CMD_BL_VERSION") _RED_("command")));
+        flash_suggest_update_bootloader();
+    }
+
+    uint32_t flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES / 2;
+    *max_allowed = 256;
+
+    int mem_avail = chipid_to_mem_avail(chipinfo);
+    if (mem_avail != 0) {
+        PrintAndLogEx(INFO, "Available memory on this board: "_YELLOW_("%uK") "bytes\n", mem_avail);
+        if (mem_avail > 256) {
+            if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(BL_VERSION_1_0_0)) {
+                PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================"));
+                PrintAndLogEx(ERR, _RED_("Your bootloader does not support writing above 256k"));
+                flash_suggest_update_bootloader();
+            } else {
+                flash_end = FLASH_START + AT91C_IFLASH_PAGE_SIZE * AT91C_IFLASH_NB_OF_PAGES;
+                *max_allowed = mem_avail;
+            }
+        }
+    } else {
+        PrintAndLogEx(INFO, "Available memory on this board: "_RED_("UNKNOWN")"\n");
+        PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================================"));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("CHIP_INFO") _RED_("command")));
+        flash_suggest_update_bootloader();
+    }
+
+    if (enable_bl_writes) {
+        PrintAndLogEx(INFO, "Permitted flash range: 0x%08x-0x%08x", FLASH_START, flash_end);
+    } else {
+        PrintAndLogEx(INFO, "Permitted flash range: 0x%08x-0x%08x", BOOTLOADER_END, flash_end);
+    }
     if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
-        // This command is stupid. Why the heck does it care which area we're
-        // flashing, as long as it's not the bootloader area? The mind boggles.
         PacketResponseNG resp;
 
         if (enable_bl_writes) {
-            SendCommandBL(CMD_START_FLASH, FLASH_START, FLASH_END, START_FLASH_MAGIC, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, FLASH_START, flash_end, START_FLASH_MAGIC, NULL, 0);
         } else {
-            SendCommandBL(CMD_START_FLASH, BOOTLOADER_END, FLASH_END, 0, NULL, 0);
+            SendCommandBL(CMD_START_FLASH, BOOTLOADER_END, flash_end, 0, NULL, 0);
         }
         return wait_for_ack(&resp);
     } else {
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new START_FLASH command"));
-        PrintAndLogEx(ERR, _RED_("It is recommended that you update your bootloader") "\n");
+        PrintAndLogEx(ERR, _RED_("====================== OBS ! ========================================"));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("START_FLASH") _RED_("command")));
+        flash_suggest_update_bootloader();
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
@@ -390,9 +523,22 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     return ret;
 }
 
+const char ice[] =
+    "...................................................................\n        @@@  @@@@@@@ @@@@@@@@ @@@@@@@@@@   @@@@@@  @@@  @@@\n"
+    "        @@! !@@      @@!      @@! @@! @@! @@!  @@@ @@!@!@@@\n        !!@ !@!      @!!!:!   @!! !!@ @!@ @!@!@!@! @!@@!!@!\n"
+    "        !!: :!!      !!:      !!:     !!: !!:  !!! !!:  !!!\n        :    :: :: : : :: :::  :      :    :   : : ::    : \n"
+    _RED_("        .    .. .. . . .. ...  .      .    .   . . ..    . ")
+    "\n...................................................................\n"
+    ;
+
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
+    int len = 0;
+
     PrintAndLogEx(SUCCESS, "Writing segments for file: %s", ctx->filename);
+
+    bool filter_ansi = !session.supports_colors;
+
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
@@ -413,20 +559,28 @@ int flash_write(flash_file_t *ctx) {
 
             if (write_block(baddr, data, block_size) < 0) {
                 PrintAndLogEx(ERR, "Error writing block %d of %u", block, blocks);
-                return -1;
+                return PM3_EFATAL;
             }
 
             data += block_size;
             baddr += block_size;
             length -= block_size;
             block++;
-            fprintf(stdout, ".");
+            if (len < strlen(ice)) {
+                if (filter_ansi && !isalpha(ice[len])) {
+                    len++;
+                } else {
+                    fprintf(stdout, "%c", ice[len++]);
+                }
+            } else {
+                fprintf(stdout, ".");
+            }
             fflush(stdout);
         }
         PrintAndLogEx(NORMAL, " " _GREEN_("OK"));
         fflush(stdout);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // free a file context
@@ -446,5 +600,5 @@ void flash_free(flash_file_t *ctx) {
 int flash_stop_flashing(void) {
     SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
     msleep(100);
-    return 0;
+    return PM3_SUCCESS;
 }

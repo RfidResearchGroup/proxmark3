@@ -32,8 +32,8 @@
 //
 // VICC (tag) -> VCD (reader)
 // Modulation:
-//    ASK / one subcarrier (423,75 khz)
-//    FSK / two subcarriers (423,75 khz && 484,28 khz)
+//    ASK / one subcarrier (423,75 kHz)
+//    FSK / two subcarriers (423,75 kHz && 484,28 kHz)
 // Data Rates / Modes:
 //  low ASK: 6,62 kbit/s
 //  low FSK: 6.67 kbit/s
@@ -58,12 +58,20 @@
 // *) remove or refactor code under "depricated"
 // *) document all the functions
 
-#include "proxmark3.h"
+#include "iso15693.h"
+
+#include "proxmark3_arm.h"
 #include "util.h"
-#include "apps.h"
 #include "string.h"
 #include "iso15693tools.h"
 #include "cmd.h"
+#include "appmain.h"
+#include "dbprint.h"
+#include "fpgaloader.h"
+#include "commonutil.h"
+#include "ticks.h"
+#include "BigBuf.h"
+#include "crc16.h"
 
 ///////////////////////////////////////////////////////////////////////
 // ISO 15693 Part 2 - Air Interface
@@ -84,8 +92,6 @@
 //#define Crc(data, len)        Crc(CRC_15693, (data), (len))
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
 #define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
-
-#define sprintUID(target,uid) Iso15693sprintUID((target), (uid))
 
 static void BuildIdentifyRequest(uint8_t *cmdout);
 //static void BuildReadBlockRequest(uint8_t *cmdout, uint8_t *uid, uint8_t blockNumber );
@@ -695,7 +701,7 @@ static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid) {
 //  speed ... 0 low speed, 1 hi speed
 //  **recv will return you a pointer to the received data
 //  If you do not need the answer use NULL for *recv[]
-//  return: lenght of received data
+//  return: length of received data
 // logging enabled
 int SendDataTag(uint8_t *send, int sendlen, bool init, int speed, uint8_t *outdata) {
 
@@ -758,7 +764,7 @@ void DbdecodeIso15693Answer(int len, uint8_t *d) {
                     strncat(status, "0F: no info", DBD15STATLEN - strlen(status));
                     break;
                 case 0x10:
-                    strncat(status, "10: dont exist", DBD15STATLEN - strlen(status));
+                    strncat(status, "10: don't exist", DBD15STATLEN - strlen(status));
                     break;
                 case 0x11:
                     strncat(status, "11: lock again", DBD15STATLEN - strlen(status));
@@ -921,6 +927,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
     uint8_t buf[ISO15_MAX_FRAME];
     memset(buf, 0x00, sizeof(buf));
     int datalen = 0, recvlen = 0;
+    bool aborted = false;
 
     Iso15693InitReader();
 
@@ -929,16 +936,15 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
     data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
     data[1] = ISO15_CMD_INVENTORY;
-    data[2] = 0; // mask length
+    data[2] = 0; // AFI
     AddCrc15(data, 3);
-    datalen += 2;
-
+    datalen = 5;
     recvlen = SendDataTag(data, datalen, false, speed, buf);
 
     WDT_HIT();
 
     if (recvlen >= 12) {
-        Dbprintf("NoAFI UID = %s", sprintUID(NULL, buf + 2));
+        Dbprintf("NoAFI UID = %s", iso15693_sprintUID(NULL, buf + 2));
     }
 
     // now with AFI
@@ -947,17 +953,21 @@ void BruteforceIso15693Afi(uint32_t speed) {
     data[2] = 0; // AFI
     data[3] = 0; // mask length
 
+    // 4 + 2crc
+    datalen = 6;
+
     for (uint16_t i = 0; i < 256; i++) {
         data[2] = i & 0xFF;
         AddCrc15(data, 4);
-        datalen += 2;
         recvlen = SendDataTag(data, datalen, false, speed, buf);
         WDT_HIT();
         if (recvlen >= 12) {
-            Dbprintf("AFI = %i  UID = %s", i, sprintUID(NULL, buf + 2));
+            Dbprintf("AFI = %i  UID = %s", i, iso15693_sprintUID(NULL, buf + 2));
         }
 
-        if (BUTTON_PRESS()) {
+        aborted = BUTTON_PRESS();
+
+        if (aborted) {
             DbpString("button pressed, aborting..");
             break;
         }
@@ -965,6 +975,12 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
     DbpString("AFI Bruteforcing done.");
     switch_off();
+
+    if (aborted) {
+        reply_ng(CMD_ACK, PM3_EOPABORTED, NULL, 0);
+    } else {
+        reply_ng(CMD_ACK, PM3_SUCCESS, NULL, 0);
+    }
 }
 
 // Allows to directly send commands to the tag via the client

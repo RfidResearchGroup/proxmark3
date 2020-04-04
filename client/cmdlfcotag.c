@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Authored by Iceman
+// Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -8,6 +8,16 @@
 // Low frequency COTAG commands
 //-----------------------------------------------------------------------------
 #include "cmdlfcotag.h"  // COTAG function declarations
+
+#include <string.h>
+#include <stdio.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "lfdemod.h"
+#include "cmddata.h"    // getSamples
+#include "ui.h"         // PrintAndLog
+#include "ctype.h"      // tolower
 
 static int CmdHelp(const char *Cmd);
 
@@ -69,14 +79,14 @@ static int CmdCOTAGDemod(const char *Cmd) {
 // 2 = raw signal -  maxlength bigbuff
 static int CmdCOTAGRead(const char *Cmd) {
 
-    if (Cmd[0] == 'h' || Cmd[0] == 'H') return usage_lf_cotag_read();
+    if (tolower(Cmd[0]) == 'h') return usage_lf_cotag_read();
 
     uint32_t rawsignal = 1;
     sscanf(Cmd, "%u", &rawsignal);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_COTAG, rawsignal, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, NULL, 7000)) {
+    SendCommandMIX(CMD_LF_COTAG_READ, rawsignal, 0, 0, NULL, 0);
+    if (!WaitForResponseTimeout(CMD_LF_COTAG_READ, NULL, 7000)) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -86,12 +96,12 @@ static int CmdCOTAGRead(const char *Cmd) {
         case 2: {
             CmdPlot("");
             CmdGrid("384");
-            getSamples(0, true);
+            getSamples(0, false);
             break;
         }
         case 1: {
 
-            if (!GetFromDevice(BIG_BUF, DemodBuffer, COTAG_BITS, 0, NULL, 1000, false)) {
+            if (!GetFromDevice(BIG_BUF, DemodBuffer, COTAG_BITS, 0, NULL, 0, NULL, 1000, false)) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
                 return PM3_ETIMEOUT;
             }

@@ -122,8 +122,8 @@ end
 -- @param ignoreresponse - if set to true, we don't read the device answer packet
 --     which is usually recipe for fail. If not sent, the host will wait 2s for a
 --     response of type CMD_ACK
--- @return packet,nil if successfull
---         nil, errormessage if unsuccessfull
+-- @return packet,nil if successful
+--         nil, errormessage if unsuccessful
 function Command:sendMIX( ignore_response, timeout )
     local data = self.data
     local cmd = self.cmd

@@ -34,7 +34,7 @@ typedef struct {
     uint8_t signature[32];
     uint8_t counter_tearing[3][4];  // 3 bytes counter, 1 byte tearing flag
     uint8_t data[1024];
-} mfu_dump_t;
+} PACKED mfu_dump_t;
 
 //-----------------------------------------------------------------------------
 // ISO 14443A
@@ -46,7 +46,7 @@ typedef struct {
     uint8_t sak;
     uint8_t ats_len;
     uint8_t ats[256];
-} __attribute__((__packed__)) iso14a_card_select_t;
+} PACKED iso14a_card_select_t;
 
 typedef enum ISO14A_COMMAND {
     ISO14A_CONNECT = (1 << 0),
@@ -69,7 +69,17 @@ typedef struct {
     uint16_t modulation_n;
     uint32_t ProxToAirDuration;
     uint8_t  par; // enough for precalculated parity of 8 Byte responses
-} tag_response_info_t;
+} PACKED tag_response_info_t;
+
+// DESFIRE_RAW flag enums
+typedef enum DESFIRE_COMMAND {
+    NONE         = 0x00,
+    INIT         = 0x01,
+    DISCONNECT   = 0x02,
+    CLEARTRACE   = 0x04,
+    BAR          = 0x10,
+} desfire_command_t;
+
 //-----------------------------------------------------------------------------
 // ISO 14443B
 //-----------------------------------------------------------------------------
@@ -79,7 +89,7 @@ typedef struct {
     uint8_t atqb[7];
     uint8_t chipid;
     uint8_t cid;
-} __attribute__((__packed__)) iso14b_card_select_t;
+} PACKED iso14b_card_select_t;
 
 typedef enum ISO14B_COMMAND {
     ISO14B_CONNECT = (1 << 0),
@@ -121,7 +131,7 @@ typedef struct {
         FIRST,
         SECOND,
     } state;
-} nonces_t;
+} PACKED nonces_t;
 
 //-----------------------------------------------------------------------------
 // ISO 7618  Smart Card
@@ -129,7 +139,7 @@ typedef struct {
 typedef struct {
     uint8_t atr_len;
     uint8_t atr[30];
-} __attribute__((__packed__)) smart_card_atr_t;
+} PACKED smart_card_atr_t;
 
 typedef enum SMARTCARD_COMMAND {
     SC_CONNECT = (1 << 0),
@@ -167,7 +177,72 @@ typedef struct {
     uint8_t iccode[2];
     uint8_t mrt[6];
     uint8_t servicecode[2];
-} __attribute__((__packed__)) felica_card_select_t;
+} PACKED felica_card_select_t;
+
+typedef struct {
+    uint8_t sync[2];
+    uint8_t length[1];
+    uint8_t cmd_code[1];
+    uint8_t IDm[8];
+} PACKED felica_frame_response_t;
+
+typedef struct {
+    uint8_t status_flag1[1];
+    uint8_t status_flag2[1];
+} PACKED felica_status_flags_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    uint8_t node_number[1];
+    uint8_t node_key_versions[2];
+} PACKED felica_request_service_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    uint8_t mode[1];
+} PACKED felica_request_request_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    felica_status_flags_t status_flags;
+    uint8_t number_of_block[1];
+    uint8_t block_data[16];
+    uint8_t block_element_number[1];
+} PACKED felica_read_without_encryption_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    felica_status_flags_t status_flags;
+} PACKED felica_status_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    uint8_t number_of_systems[1];
+    uint8_t system_code_list[32];
+} PACKED felica_syscode_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    felica_status_flags_t status_flags;
+    uint8_t format_version[1];
+    uint8_t basic_version[2];
+    uint8_t number_of_option[1];
+    uint8_t option_version_list[4];
+} PACKED felica_request_spec_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    uint8_t m2c[8];
+    uint8_t m3c[8];
+} PACKED felica_auth1_response_t;
+
+typedef struct {
+    uint8_t code[1];
+    uint8_t IDtc[8];
+    uint8_t IDi[8];
+    uint8_t PMi[8];
+} PACKED felica_auth2_response_t;
+
 
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),

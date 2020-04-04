@@ -8,13 +8,12 @@
 // Command parser
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "util.h"
-#include "ui.h"
 #include "cmdparser.h"
-#include "proxmark3.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "ui.h"
 #include "comms.h"
 
 bool AlwaysAvailable(void) {
@@ -73,6 +72,11 @@ bool IfPm3FpcUsartDevFromUsb(void) {
     return !conn.send_via_fpc_usart;
 }
 
+bool IfPm3FpcUsartFromUsb(void) {
+    // true if FPC USART Host or developer support and if talking from USB-CDC interface
+    return IfPm3FpcUsartHostFromUsb() || IfPm3FpcUsartDevFromUsb();
+}
+
 bool IfPm3Lf(void) {
     if (!IfPm3Present())
         return false;
@@ -89,6 +93,12 @@ bool IfPm3Hfsniff(void) {
     if (!IfPm3Present())
         return false;
     return pm3_capabilities.compiled_with_hfsniff;
+}
+
+bool IfPm3Hfplot(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_hfplot;
 }
 
 bool IfPm3Iso14443a(void) {
@@ -133,6 +143,12 @@ bool IfPm3Iclass(void) {
     return pm3_capabilities.compiled_with_iclass;
 }
 
+bool IfPm3NfcBarcode(void) {
+    if (!IfPm3Present())
+        return false;
+    return pm3_capabilities.compiled_with_nfcbarcode;
+}
+
 bool IfPm3Lcd(void) {
     if (!IfPm3Present())
         return false;
@@ -144,8 +160,11 @@ void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;
     int i = 0;
     while (Commands[i].Name) {
-        if (Commands[i].IsAvailable())
-            PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
+        if (Commands[i].IsAvailable()) {
+            g_printAndLog = PRINTANDLOG_PRINT;
+            PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
+            g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+        }
         ++i;
     }
 }
@@ -161,11 +180,21 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         dumpCommandsRecursive(Commands, 1);
         return PM3_SUCCESS;
     }
+
     char cmd_name[128];
-    int len = 0;
     memset(cmd_name, 0, sizeof(cmd_name));
+
+    int len = 0;
+    // %n == receives an integer of value equal to the number of chars read so far.
+    // len = max 127
     sscanf(Cmd, "%127s%n", cmd_name, &len);
+
     str_lower(cmd_name);
+
+    // Comment
+    if (cmd_name[0] == '#')
+        return PM3_SUCCESS;
+
     int i = 0;
     while (Commands[i].Name) {
         if (0 == strcmp(Commands[i].Name, cmd_name)) {
@@ -225,8 +254,11 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
     }
 
     while (cmds[i].Name) {
-        const char *cmd_offline = "N";
+
+        if ((cmds[i].Name[0] == '-' || strlen(cmds[i].Name) == 0) && ++i) continue;
         if (cmds[i].Help[0] == '{' && ++i) continue;
+
+        const char *cmd_offline = "N";
 
         if (cmds[i].IsAvailable())
             cmd_offline = "Y";
@@ -241,6 +273,8 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown) {
 
     // Then, print the categories. These will go into subsections with their own tables
     while (cmds[i].Name) {
+
+        if ((cmds[i].Name[0] == '-' || strlen(cmds[i].Name) == 0) && ++i) continue;
         if (cmds[i].Help[0] != '{' && ++i)  continue;
 
         PrintAndLogEx(NORMAL, "### %s%s\n\n %s\n", parent, cmds[i].Name, cmds[i].Help);

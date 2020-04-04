@@ -213,6 +213,7 @@ int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) 
 #if defined(__ANDROID__) || defined(ANDROID)
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 WAI_NOINLINE

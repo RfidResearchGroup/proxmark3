@@ -11,9 +11,8 @@
 #ifndef __PRINTF_H
 #define __PRINTF_H
 
-#include <stdarg.h>
-#include <stddef.h>
-#include "string.h"
+#include "common.h"
+#include <stdarg.h> // va_list
 
 int kvsprintf(const char *fmt, void *arg, int radix, va_list ap) __attribute__((format(printf, 1, 0)));
 int vsprintf(char *dest, const char *fmt, va_list ap) __attribute__((format(printf, 2, 0)));

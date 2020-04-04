@@ -11,19 +11,7 @@
 #ifndef CMDLFEM4X_H__
 #define CMDLFEM4X_H__
 
-#include <stdio.h>
-#include <stdbool.h>    // for bool
-#include <string.h>
-#include <inttypes.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "util.h"
-#include "graph.h"
-#include "cmdparser.h"
-#include "cmddata.h"
-#include "comms.h"
-#include "cmdlf.h"
-#include "lfdemod.h"
+#include "common.h"
 
 int CmdLFEM4X(const char *Cmd);
 

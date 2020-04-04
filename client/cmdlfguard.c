@@ -9,6 +9,21 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfguard.h"
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "commonutil.h"     // ARRAYLEN
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+#include "cmdlft55xx.h" // verifywrite
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_guard_clone(void) {
@@ -69,7 +84,7 @@ static int CmdGuardDemod(const char *Cmd) {
         else if (preambleIndex == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII preamble not found");
         else if (preambleIndex == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII size not correct: %zu", size);
         else if (preambleIndex == -5)
             PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII wrong spacerbits");
         else
@@ -88,14 +103,14 @@ static int CmdGuardDemod(const char *Cmd) {
     // remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
     size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
     if (len != 72) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %u, start: %u", len, startIdx);
+        PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %zu, start: %zu", len, startIdx);
         return PM3_ESOFT;
     }
     // get key and then get all 8 bytes of payload decoded
     xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
     for (size_t idx = 0; idx < 8; idx++) {
         ByteStream[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer + 8 + (idx * 8), 8)) ^ xorKey;
-        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %u after xor: %02x", (unsigned int)idx, ByteStream[idx]);
+        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %zu after xor: %02x", idx, ByteStream[idx]);
     }
 
     setDemodBuff(DemodBuffer, 96, preambleIndex);
@@ -132,7 +147,7 @@ static int CmdGuardDemod(const char *Cmd) {
 }
 
 static int CmdGuardRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 10000);
     return CmdGuardDemod(Cmd);
 }
 
@@ -142,11 +157,6 @@ static int CmdGuardClone(const char *Cmd) {
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_guard_clone();
 
     uint32_t facilitycode = 0, cardnumber = 0, fc = 0, cn = 0, fmtlen = 0;
-    uint8_t bs[96];
-    memset(bs, 0x00, sizeof(bs));
-
-    //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
-    uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
 
     if (sscanf(Cmd, "%u %u %u", &fmtlen, &fc, &cn) != 3) return usage_lf_guard_clone();
 
@@ -154,8 +164,13 @@ static int CmdGuardClone(const char *Cmd) {
     facilitycode = (fc & 0x000000FF);
     cardnumber = (cn & 0x0000FFFF);
 
+    //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
+    uint32_t blocks[4] = {T55x7_MODULATION_BIPHASE | T55x7_BITRATE_RF_64 | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0, 0};
+    uint8_t *bs = calloc(96, sizeof(uint8_t));
+
     if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+        free(bs);
         return PM3_ESOFT;
     }
 
@@ -167,33 +182,15 @@ static int CmdGuardClone(const char *Cmd) {
     blocks[2] = bytebits_to_byte(bs + 32, 32);
     blocks[3] = bytebits_to_byte(bs + 64, 32);
 
+    free(bs);
+
     PrintAndLogEx(INFO, "Preparing to clone Guardall to T55x7 with Facility Code: %u, Card Number: %u", facilitycode, cardnumber);
-    print_blocks(blocks, 4);
+    print_blocks(blocks,  ARRAYLEN(blocks));
 
-    PacketResponseNG resp;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-    for (uint8_t i = 0; i < 4; i++) {
-        if (i == 3) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-
-        t55xx_write_block_t ng;
-        ng.data = blocks[i];
-        ng.pwd = 0;
-        ng.blockno = i;
-        ng.flags = 0;
-
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
-    }
-    return PM3_SUCCESS;
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf gprox read`") "to verify");
+    return res;
 }
 
 static int CmdGuardSim(const char *Cmd) {
@@ -213,7 +210,7 @@ static int CmdGuardSim(const char *Cmd) {
     cardnumber = (cn & 0x0000FFFF);
 
     if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
@@ -228,11 +225,11 @@ static int CmdGuardSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -244,7 +241,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdGuardDemod,  AlwaysAvailable, "demodulate a G Prox II tag from the GraphBuffer"},
     {"read",    CmdGuardRead,   IfPm3Lf,         "attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdGuardClone,  IfPm3Lf,         "clone Guardall tag"},
+    {"clone",   CmdGuardClone,  IfPm3Lf,         "clone Guardall tag to T55x7"},
     {"sim",     CmdGuardSim,    IfPm3Lf,         "simulate Guardall tag"},
     {NULL, NULL, NULL, NULL}
 };

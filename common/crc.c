@@ -9,6 +9,8 @@
 //
 #include "crc.h"
 
+#include "commonutil.h"
+
 void crc_init_ref(crc_t *crc, int order, uint32_t polynom, uint32_t initial_value, uint32_t final_xor, bool refin, bool refout) {
     crc_init(crc, order, polynom, initial_value, final_xor);
     crc->refin = refin;
@@ -123,4 +125,12 @@ uint32_t CRC8Legic(uint8_t *buff, size_t size) {
     for (size_t i = 0; i < size; ++i)
         crc_update2(&crc, buff[i], 8);
     return reflect8(crc_finish(&crc));
+}
+// width=8  poly=0x107, init=0x2C  refin=true  refout=true  xorout=0x0000  check=0 name="CRC-8/CARDX"
+uint32_t CRC8Cardx(uint8_t *buff, size_t size) {
+    crc_t crc;
+    crc_init_ref(&crc, 8, 0x107, 0x2C, 0, true, true);
+    for (size_t i = 0; i < size; ++i)
+        crc_update2(&crc, buff[i], 8);
+    return crc_finish(&crc);
 }

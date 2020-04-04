@@ -31,7 +31,8 @@
  */
 
 #include "vtsend.h"
-#include "apps.h"
+#include "pm3_cmd.h"
+#include "dbprint.h"
 
 #define ESC (0x1B)
 //#define UART_WRITE(P, BUF, SIZ)   (P)->uart_write(BUF, SIZ, (P)->extobj)

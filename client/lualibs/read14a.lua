@@ -60,7 +60,7 @@ local function parse14443a(data)
         uint8_t sak;
         uint8_t ats_len;
         uint8_t ats[256];
-    } __attribute__((__packed__)) iso14a_card_select_t;
+    } PACKED iso14a_card_select_t;
     --]]
 
     local count, uid, uidlen, atqa, sak, ats_len, ats = bin.unpack('H10CH2CCH', data)
@@ -80,13 +80,13 @@ end
 
 -- This function does a connect and retrieves som einfo
 -- @param dont_disconnect - if true, does not disable the field
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function read14443a(dont_disconnect, no_rats)
     local command, result, info, err, data
 
     command = Command:newMIX{
-            cmd = cmds.CMD_READER_ISO_14443a,
+            cmd = cmds.CMD_HF_ISO14443A_READER,
             arg1 = ISO14A_COMMAND.ISO14A_CONNECT
             }
 
@@ -118,11 +118,11 @@ end
 
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader.
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function waitFor14443a()
-    print('Waiting for card... press any key to quit')
-    while not core.ukbhit() do
+    print('Waiting for card... press Enter to quit')
+    while not core.kbd_enter_pressed() do
         res, err = read14443a()
         if res then return res end
         -- err means that there was no response from card
@@ -132,7 +132,7 @@ end
 
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect14443a()
-    local c = Command:newMIX{cmd = cmds.CMD_READER_ISO_14443a}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
     return c:sendMIX(true)

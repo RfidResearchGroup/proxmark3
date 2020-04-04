@@ -12,21 +12,34 @@
 #ifndef PROXMARK3_H__
 #define PROXMARK3_H__
 
-#include "pm3_cmd.h"
-#include "cmdscript.h"  // CmdScriptRun
+#include "common.h"
 
-#define PROXPROMPT "pm3 --> "
+#define PROXPROMPT_CON "[con] pm3 --> "
+#define PROXPROMPT_CON_COLOR "[\001\033[1;32m\002con\001\033[0m\002] pm3 --> "
+
 #define PROXPROMPT_USB "[usb] pm3 --> "
+#define PROXPROMPT_USB_COLOR "[\001\033[1;32m\002usb\001\033[0m\002] pm3 --> "
+
 #define PROXPROMPT_FPC "[fpc] pm3 --> "
+#define PROXPROMPT_FPC_COLOR "[\001\033[1;32m\002fpc\001\033[0m\002] pm3 --> "
+
 #define PROXPROMPT_OFFLINE "[offline] pm3 --> "
+#define PROXPROMPT_OFFLINE_COLOR "[\001\033[1;31m\002offline\001\033[0m\002] pm3 --> "
+
+#define PROXHISTORY "history.txt"
+#define PROXLOG "log_%Y%m%d.txt"
+#define MAX_NESTED_CMDSCRIPT 10
+#define MAX_NESTED_LUASCRIPT 10
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+int push_cmdscriptfile(char *path, bool stayafter);
 const char *get_my_executable_path(void);
 const char *get_my_executable_directory(void);
-void main_loop(char *script_cmds_file, char *script_cmd);
+const char *get_my_user_directory(void);
+void main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);
 
 #ifdef __cplusplus
 }

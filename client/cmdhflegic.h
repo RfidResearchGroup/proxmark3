@@ -11,18 +11,9 @@
 #ifndef CMDHFLEGIC_H__
 #define CMDHFLEGIC_H__
 
-#include <stdio.h>
-#include <string.h>
-#include "proxmark3.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "comms.h"
-#include "util.h"
-#include "crc.h"
-#include "legic_prng.h"
-#include "legic.h" // legic_card_select_t struct
-#include "cmdhf.h" // "hf list"
-#include "loclass/fileutils.h"  //saveFile
+#include "common.h"
+
+#include "legic.h" // struct
 
 int CmdHFLegic(const char *Cmd);
 

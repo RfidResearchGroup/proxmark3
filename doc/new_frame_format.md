@@ -200,7 +200,7 @@ Bootrom code will still use the old frame format to remain compatible with other
 (`bootrom/bootrom.c`)
 
     usb_read (common/usb_cdc.c) ⇒ UsbPacketReceived (bootrom.c)
-      ⇒ CMD_DEVICE_INFO / CMD_START_FLASH / CMD_FINISH_WRITE / CMD_HARDWARE_RESET / CMD_SETUP_WRITE
+      ⇒ CMD_DEVICE_INFO / CMD_START_FLASH / CMD_FINISH_WRITE / CMD_HARDWARE_RESET
 
 also `usb_enable`, `usb_disable` (`common/usb_cdc.c`)
 
@@ -373,9 +373,9 @@ It was needed to tune pm3 RX usart `maxtry` :
     time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "lf read"
     6.28s
 
-    time client/proxmark3 -p /dev/ttyACM0 -c "mem save f foo_usb"
+    time client/proxmark3 -p /dev/ttyACM0 -c "mem dump f foo_usb"
     1.48s
-    time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "mem save f foo_fpc"
+    time client/proxmark3 -p /dev/ttyUSB0 -b 115200 -c "mem dump f foo_fpc"
     25.34s
 
 

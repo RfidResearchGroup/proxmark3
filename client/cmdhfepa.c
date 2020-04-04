@@ -9,6 +9,18 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfepa.h"
 
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <inttypes.h>
+#include <stdlib.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"   // ARRAYLEN
+#include "comms.h"        // clearCommandBuffer
+#include "ui.h"
+#include "util_posix.h"
+
 static int CmdHelp(const char *Cmd);
 
 // Perform (part of) the PACE protocol
@@ -26,19 +38,19 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
     m = m > 0 ? m : 1;
     n = n > 0 ? n : 1;
 
-    PrintAndLogEx(NORMAL, "Collecting %u %u byte nonces", n, m);
-    PrintAndLogEx(NORMAL, "Start: %" PRIu64, msclock() / 1000);
+    PrintAndLogEx(SUCCESS, "Collecting %u %u byte nonces", n, m);
+    PrintAndLogEx(SUCCESS, "Start: %" PRIu64, msclock() / 1000);
     // repeat n times
     for (uint32_t i = 0; i < n; i++) {
         // execute PACE
         clearCommandBuffer();
-        SendCommandMIX(CMD_EPA_PACE_COLLECT_NONCE, (int)m, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_EPA_COLLECT_NONCE, (int)m, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_ACK, &resp);
 
         // check if command failed
         if (resp.oldarg[0] != 0) {
-            PrintAndLogEx(FAILED, "Error in step %d, Return code: %d", resp.oldarg[0], (int)resp.oldarg[1]);
+            PrintAndLogEx(FAILED, "Error in step %" PRId64 ", Return code: %" PRId64, resp.oldarg[0], resp.oldarg[1]);
         } else {
             size_t nonce_length = resp.oldarg[1];
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
@@ -46,15 +58,15 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
                 sprintf(nonce + (2 * j), "%02X", resp.data.asBytes[j]);
             }
             // print nonce
-            PrintAndLogEx(NORMAL, "Length: %d, Nonce: %s", nonce_length, nonce);
+            PrintAndLogEx(SUCCESS, "Length: %zu, Nonce: %s", nonce_length, nonce);
             free(nonce);
         }
         if (i < n - 1) {
             sleep(d);
         }
     }
-    PrintAndLogEx(NORMAL, "End: %" PRIu64, msclock() / 1000);
-    return 1;
+    PrintAndLogEx(SUCCESS, "End: %" PRIu64, msclock() / 1000);
+    return PM3_SUCCESS;
 }
 
 // perform the PACE protocol by replaying APDUs
@@ -75,7 +87,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
     int skip = 0, skip_add = 0, scan_return;
     // for each APDU
-    for (int i = 0; i < sizeof(apdu_lengths); i++) {
+    for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
         // scan to next space or end of string
         while (Cmd[skip] != ' ' && Cmd[skip] != '\0') {
             // convert
@@ -86,9 +98,9 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
                                 );
 
             if (scan_return < 1) {
-                PrintAndLogEx(NORMAL, (char *)usage_msg);
+                PrintAndLogEx(INFO, (char *)usage_msg);
                 PrintAndLogEx(WARNING, "Not enough APDUs! Try again!");
-                return 0;
+                return PM3_SUCCESS;
             }
             skip += skip_add;
             apdu_lengths[i]++;
@@ -96,10 +108,10 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
         // break on EOF
         if (Cmd[skip] == '\0') {
-            if (i < sizeof(apdu_lengths) - 1) {
+            if (i < ARRAYLEN(apdu_lengths) - 1) {
 
-                PrintAndLogEx(NORMAL, (char *)usage_msg);
-                return 0;
+                PrintAndLogEx(INFO, (char *)usage_msg);
+                return PM3_SUCCESS;
             }
             break;
         }
@@ -111,7 +123,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE];
     // fast push mode
     conn.block_after_ACK = true;
-    for (int i = 0; i < sizeof(apdu_lengths); i++) {
+    for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
         // transfer the APDU in several parts if necessary
         for (int j = 0; j * sizeof(data) < apdu_lengths[i]; j++) {
             // amount of data in this packet
@@ -119,7 +131,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             if (packet_length > sizeof(data)) {
                 packet_length = sizeof(data);
             }
-            if ((i == sizeof(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
+            if ((i == ARRAYLEN(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
                 // Disable fast mode on last packet
                 conn.block_after_ACK = false;
             }
@@ -130,36 +142,36 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             clearCommandBuffer();
             // arg0: APDU number
             // arg1: offset into the APDU
-            SendCommandOLD(CMD_EPA_PACE_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
+            SendCommandOLD(CMD_HF_EPA_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
             WaitForResponse(CMD_ACK, &resp);
             if (resp.oldarg[0] != 0) {
                 PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
-                return 0;
+                return PM3_ESOFT;
             }
         }
     }
 
     // now perform the replay
     clearCommandBuffer();
-    SendCommandMIX(CMD_EPA_PACE_REPLAY, 0, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_EPA_REPLAY, 0, 0, 0, NULL, 0);
     WaitForResponse(CMD_ACK, &resp);
     if (resp.oldarg[0] != 0) {
-        PrintAndLogEx(NORMAL, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);
-        PrintAndLogEx(NORMAL, "Measured times:");
-        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.data.asDwords[0]);
-        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.data.asDwords[1]);
-        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.data.asDwords[2]);
-        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
-        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
+        PrintAndLogEx(SUCCESS, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);
+        PrintAndLogEx(SUCCESS, "Measured times:");
+        PrintAndLogEx(SUCCESS, "MSE Set AT: %u us", resp.data.asDwords[0]);
+        PrintAndLogEx(SUCCESS, "GA Get Nonce: %u us", resp.data.asDwords[1]);
+        PrintAndLogEx(SUCCESS, "GA Map Nonce: %u us", resp.data.asDwords[2]);
+        PrintAndLogEx(SUCCESS, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
+        PrintAndLogEx(SUCCESS, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
     } else {
-        PrintAndLogEx(NORMAL, "PACE replay successfull!");
-        PrintAndLogEx(NORMAL, "MSE Set AT: %u us", resp.data.asDwords[0]);
-        PrintAndLogEx(NORMAL, "GA Get Nonce: %u us", resp.data.asDwords[1]);
-        PrintAndLogEx(NORMAL, "GA Map Nonce: %u us", resp.data.asDwords[2]);
-        PrintAndLogEx(NORMAL, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
-        PrintAndLogEx(NORMAL, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
+        PrintAndLogEx(SUCCESS, "PACE replay successful!");
+        PrintAndLogEx(SUCCESS, "MSE Set AT: %u us", resp.data.asDwords[0]);
+        PrintAndLogEx(SUCCESS, "GA Get Nonce: %u us", resp.data.asDwords[1]);
+        PrintAndLogEx(SUCCESS, "GA Map Nonce: %u us", resp.data.asDwords[2]);
+        PrintAndLogEx(SUCCESS, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
+        PrintAndLogEx(SUCCESS, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
     }
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
@@ -172,7 +184,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHFEPA(const char *Cmd) {

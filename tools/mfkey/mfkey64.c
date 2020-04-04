@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < encc; i++) {
         enclen[i] = strlen(argv[i + 6]) / 2;
         for (int i2 = 0; i2 < enclen[i]; i2++) {
-            sscanf(argv[i + 6] + i2 * 2, "%2x", (unsigned int *)&enc[i][i2]);
+            sscanf(argv[i + 6] + i2 * 2, "%2hhx", &enc[i][i2]);
         }
     }
 

@@ -9,6 +9,23 @@
 //-----------------------------------------------------------------------------
 #include "cmdcrc.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#ifdef _WIN32
+#  include <io.h>
+#  include <fcntl.h>
+#  ifndef STDIN_FILENO
+#    define STDIN_FILENO 0
+#  endif /* STDIN_FILENO */
+#endif /* _WIN32 */
+
+#include "reveng/reveng.h"
+#include "ui.h"
+#include "util.h"
+
 #define MAX_ARGS 20
 
 static int split(char *str, char *arr[MAX_ARGS]) {
@@ -72,6 +89,8 @@ int GetModels(char *Models[], int *count, uint8_t *width) {
                 memcpy(tmp, model.name, size);
                 Models[mode] = tmp;
                 width[mode] = plen(model.spoly);
+            } else {
+                free(tmp);
             }
         }
         mfree(&model);
@@ -248,7 +267,7 @@ int RunModel(char *inModel, char *inHexStr, bool reverse, char endian, char *res
     //set model
     c = mbynam(&model, inModel);
     if (!c) {
-        PrintAndLogEx(WARNING, "error: preset model '%s' not found.  Use reveng -D to list presets. [%d]", inModel, c);
+        PrintAndLogEx(ERR, "error: preset model '%s' not found.  Use reveng -D to list presets. [%d]", inModel, c);
         return 0;
     }
     if (c < 0) {

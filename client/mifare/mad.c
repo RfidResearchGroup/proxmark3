@@ -10,6 +10,8 @@
 
 #include "mad.h"
 #include "ui.h"
+#include "commonutil.h"  // ARRAYLEN
+
 #include "crc.h"
 #include "util.h"
 
@@ -179,7 +181,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
         if (!res)
             res = res2;
 
-        if (verbose & !res2)
+        if (verbose && !res2)
             PrintAndLogEx(NORMAL, "CRC8-MAD2 OK.");
     }
 

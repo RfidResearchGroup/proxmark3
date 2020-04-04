@@ -11,8 +11,10 @@
 #ifndef CMDHW_H__
 #define CMDHW_H__
 
+#include "common.h"
+
 int CmdHW(const char *Cmd);
 
-void pm3_version(bool verbose);
+void pm3_version(bool verbose, bool oneliner);
 
 #endif

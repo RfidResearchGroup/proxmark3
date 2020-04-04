@@ -9,6 +9,20 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfnoralsy.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "commonutil.h"     // ARRAYLEN
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+#include "cmdlft55xx.h" // verifywrite
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_noralsy_clone(void) {
@@ -71,7 +85,7 @@ static int CmdNoralsyDemod(const char *Cmd) {
             else if (ans == -2)
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: preamble not found");
             else if (ans == -3)
-                PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: Size not correct: %d", size);
+                PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: Size not correct: %zu", size);
             else
                 PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ans: %d", ans);
         }
@@ -119,7 +133,7 @@ static int CmdNoralsyDemod(const char *Cmd) {
 }
 
 static int CmdNoralsyRead(const char *Cmd) {
-    lf_read(true, 8000);
+    lf_read(false, 8000);
     return CmdNoralsyDemod(Cmd);
 }
 
@@ -128,55 +142,37 @@ static int CmdNoralsyClone(const char *Cmd) {
     uint16_t year = 0;
     uint32_t id = 0;
     uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0};
-    uint8_t bits[96];
-    memset(bits, 0, sizeof(bits));
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H') return usage_lf_noralsy_clone();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_noralsy_clone();
 
     id = param_get32ex(Cmd, 0, 0, 10);
     year = param_get32ex(Cmd, 1, 2000, 10);
 
     //Q5
-    if (param_getchar(Cmd, 2) == 'Q' || param_getchar(Cmd, 2) == 'q')
+    if (tolower(param_getchar(Cmd, 2) == 'q'))
         blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(32) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
+    uint8_t *bits = calloc(96, sizeof(uint8_t));
     if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+        free(bits);
         return PM3_ESOFT;
     }
 
-    //
     blocks[1] = bytebits_to_byte(bits, 32);
     blocks[2] = bytebits_to_byte(bits + 32, 32);
     blocks[3] = bytebits_to_byte(bits + 64, 32);
 
+    free(bits);
+
     PrintAndLogEx(INFO, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
-    print_blocks(blocks, 4);
+    print_blocks(blocks,  ARRAYLEN(blocks));
 
-    PacketResponseNG resp;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-    for (uint8_t i = 0; i < 4; i++) {
-        if (i == 3) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-        t55xx_write_block_t ng;
-        ng.data = blocks[i];
-        ng.pwd = 0;
-        ng.blockno = i;
-        ng.flags = 0;
-
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
-    }
-    return PM3_SUCCESS;
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf noralsy read`") "to verify");
+    return res;
 }
 
 static int CmdNoralsySim(const char *Cmd) {
@@ -187,15 +183,15 @@ static int CmdNoralsySim(const char *Cmd) {
     uint16_t year = 0;
     uint32_t id = 0;
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) == 0 || cmdp == 'h' || cmdp == 'H')
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) == 0 || cmdp == 'h')
         return usage_lf_noralsy_sim();
 
     id = param_get32ex(Cmd, 0, 0, 10);
     year = param_get32ex(Cmd, 1, 2000, 10);
 
     if (getnoralsyBits(id, year, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
@@ -209,15 +205,16 @@ static int CmdNoralsySim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
+
     return PM3_SUCCESS;
 }
 
@@ -225,7 +222,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
     {"demod",   CmdNoralsyDemod, AlwaysAvailable, "Demodulate an Noralsy tag from the GraphBuffer"},
     {"read",    CmdNoralsyRead,  IfPm3Lf,         "Attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdNoralsyClone, IfPm3Lf,         "clone Noralsy to T55x7"},
+    {"clone",   CmdNoralsyClone, IfPm3Lf,         "clone Noralsy tag to T55x7 (or to q5/T5555)"},
     {"sim",     CmdNoralsySim,   IfPm3Lf,         "simulate Noralsy tag"},
     {NULL, NULL, NULL, NULL}
 };

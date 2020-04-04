@@ -11,7 +11,9 @@
 //
 
 #include "cbortools.h"
-#include <stdlib.h>
+
+#include <inttypes.h>
+
 #include "emv/emvjson.h"
 #include "util.h"
 #include "fidocore.h"
@@ -73,9 +75,9 @@ static CborError dumpelm(CborValue *it, bool *got_next, int nestingLevel) {
         }
 
         case CborSimpleType: {
-            uint8_t type;
-            cbor_value_get_simple_type(it, &type);
-            printf("simple(%u)", type);
+            uint8_t t;
+            cbor_value_get_simple_type(it, &t);
+            printf("simple(%u)", t);
             break;
         }
 
@@ -204,7 +206,7 @@ int TinyCborPrintFIDOPackage(uint8_t cmdCode, bool isResponse, uint8_t *data, si
 
     if (err) {
         fprintf(stderr,
-                "CBOR parsing failure at offset %" PRId32 " : %s\n",
+                "CBOR parsing failure at offset %" PRIu32 " : %s\n",
                 (uint32_t)(cb.ptr - data),
                 cbor_error_string(err)
                );
@@ -355,7 +357,7 @@ CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxda
     return CborGetArrayBinStringValueEx(elm, data, maxdatalen, datalen, NULL, 0);
 }
 
-CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimeter, size_t delimeterlen) {
+CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimiter, size_t delimiterlen) {
     CborValue array;
     if (datalen)
         *datalen = 0;
@@ -371,9 +373,9 @@ CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t max
         cbor_check(res);
 
         totallen += slen;
-        if (delimeter) {
-            memcpy(&data[totallen], delimeter, delimeterlen);
-            totallen += delimeterlen;
+        if (delimiter) {
+            memcpy(&data[totallen], delimiter, delimiterlen);
+            totallen += delimiterlen;
         }
         slen = maxdatalen - totallen;
     }
@@ -402,7 +404,7 @@ CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen
     return CborNoError;
 };
 
-CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimeter) {
+CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimiter) {
     CborValue array;
     if (datalen)
         *datalen = 0;
@@ -418,9 +420,9 @@ CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen,
         cbor_check(res);
 
         totallen += slen;
-        if (delimeter) {
-            strcat(data, delimeter);
-            totallen += strlen(delimeter);
+        if (delimiter) {
+            strcat(data, delimiter);
+            totallen += strlen(delimiter);
         }
         slen = maxdatalen - totallen;
         data[totallen] = 0x00;

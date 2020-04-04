@@ -8,18 +8,33 @@
 //-----------------------------------------------------------------------------
 // main code for HF standalone mode Mifare /sniff/emulation by Craig Young
 //-----------------------------------------------------------------------------
-#include "hf_young.h"
+
+#include "standalone.h" // standalone definitions
+#include <inttypes.h>
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "string.h"
+#include "commonutil.h"
+#include "mifarecmd.h"
+#include "iso14443a.h"
+#include "protocols.h"
+
+#define OPTS 2
 
 typedef struct {
     uint8_t uid[10];
     uint8_t uidlen;
     uint8_t atqa[2];
     uint8_t sak;
-} __attribute__((__packed__)) card_clone_t;
+} PACKED card_clone_t;
 
 
 void ModInfo(void) {
-    DbpString("   HF Mifare sniff/simulation - (Craig Young)");
+    DbpString("  HF Mifare sniff/simulation - (Craig Young)");
 }
 
 void RunMod() {
@@ -99,9 +114,9 @@ void RunMod() {
             Dbprintf("ATQA = %02X%02X", uids[selected].atqa[0], uids[selected].atqa[1]);
             Dbprintf("SAK = %02X", uids[selected].sak);
             LEDsoff();
-            LED(LED_B,  200);
+            LED(LED_B, 200);
             LED(LED_A, 200);
-            LED(LED_B,  200);
+            LED(LED_B, 200);
             LED(LED_A, 200);
 
             LEDsoff();
@@ -136,18 +151,18 @@ void RunMod() {
             SpinDelay(500);
             // Begin clone function here:
             /* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
-                    SendCommandOLD(CMD_MIFARE_CSETBLOCK, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
+                    SendCommandOLD(CMD_HF_MIFARE_CSETBL, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
 
                 Block read is similar:
-                    SendCommandOLD(CMD_MIFARE_CGETBLOCK, params, blockNo, 0,...};
+                    SendCommandOLD(CMD_HF_MIFARE_CGETBL, params, blockNo, 0,...};
                 We need to imitate that call with blockNo 0 to set a uid.
 
                 The get and set commands are handled in this file:
                     // Work with "magic Chinese" card
-                    case CMD_MIFARE_CSETBLOCK:
+                    case CMD_HF_MIFARE_CSETBL:
                             MifareCSetBlock(c->arg[0], c->arg[1], c->d.asBytes);
                             break;
-                    case CMD_MIFARE_CGETBLOCK:
+                    case CMD_HF_MIFARE_CGETBL:
                             MifareCGetBlock(c->arg[0], c->arg[1], c->d.asBytes);
                             break;
 
@@ -180,7 +195,7 @@ void RunMod() {
                 MifareCGetBlock(params, 0, testBlock0);
 
                 if (memcmp(testBlock0, newBlock0, 16) == 0) {
-                    DbpString("Cloned successfull!");
+                    DbpString("Cloned successful!");
                     cardRead[selected] = 0; // Only if the card was cloned successfully should we clear it
                     playing = 0;
                     iGotoRecord = 1;

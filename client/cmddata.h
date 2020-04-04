@@ -11,26 +11,9 @@
 #ifndef CMDDATA_H__
 #define CMDDATA_H__
 
-#include <stdlib.h>  //size_t
-#include <stdint.h>  //uint_32+
-#include <stdbool.h> //bool
-#include "cmdparser.h" // for command_t
+#include "common.h"
 
-#include <stdio.h>    // also included in util.h
-#include <string.h>   // also included in util.h
-#include <inttypes.h>
-#include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
-#include "util.h"
-#include "cmdmain.h"
-#include "proxmark3.h"// sendcommand
-#include "ui.h"       // for show graph controls
-#include "graph.h"    // for graph data
-#include "comms.h"
-#include "lfdemod.h"  // for demod code
-#include "crc.h"      // for pyramid checksum maxim
-#include "crc16.h"    // for FDXB demod checksum
-#include "loclass/cipherutils.h" // for decimating samples in getsamples
-#include "cmdlfem4x.h" // askem410xdecode
+//#include <stdlib.h>  //size_t
 
 int CmdData(const char *Cmd);
 
@@ -70,6 +53,7 @@ int CmdHpf(const char *Cmd);                                                    
 int CmdLtrim(const char *Cmd);                                                                  // used by cmd lf em4x, lf t55xx
 int CmdNorm(const char *Cmd);                                                                   // used by cmd lf data (!)
 int CmdPlot(const char *Cmd);                                                                   // used by cmd lf cotag
+int CmdSave(const char *Cmd);                                                                   // used by cmd auto
 int CmdTuneSamples(const char *Cmd);                                                            // used by cmd lf hw
 int ASKbiphaseDemod(const char *Cmd, bool verbose);                                             // used by cmd lf em4x, lf fdx, lf guard, lf jablotron, lf nedap, lf t55xx
 int ASKDemod(const char *Cmd, bool verbose, bool emSearch, uint8_t askType);                    // used by cmd lf em4x, lf t55xx, lf viking
@@ -84,7 +68,7 @@ void setDemodBuff(uint8_t *buff, size_t size, size_t start_idx);
 bool getDemodBuff(uint8_t *buff, size_t *size);
 void save_restoreDB(uint8_t saveOpt);// option '1' to save DemodBuffer any other to restore
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose);
-int getSamples(uint32_t n, bool silent);
+int getSamples(uint32_t n, bool verbose);
 void setClockGrid(uint32_t clk, int offset);
 int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
 int AskEdgeDetect(const int *in, int *out, int len, int threshold);

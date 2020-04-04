@@ -10,14 +10,21 @@
 //-----------------------------------------------------------------------------
 
 #include "comms.h"
+
+#include <inttypes.h>
+#include <string.h>
+#include <stdio.h>
+
+#include "uart.h"
+#include "ui.h"
 #include "crc16.h"
-#if defined(__linux__) || (__APPLE__)
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
+#include "util_posix.h" // msclock
+#include "util_darwin.h" // en/dis-ableNapp();
 
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
+
+uint8_t gui_serial_port_name[FILE_PATH_SIZE];
 
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
@@ -53,7 +60,9 @@ static pthread_mutex_t rxBufferMutex = PTHREAD_MUTEX_INITIALIZER;
 // as sending lot of these packets can slow down things wuite a lot on slow links (e.g. hw status or lf read at 9600)
 static uint64_t timeout_start_time;
 
-static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
+static uint64_t last_packet_time;
+
+static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
 // Simple alias to track usages linked to the Bootloader, these commands must not be migrated.
 // - commands sent to enter bootloader mode as we might have to talk to old firmwares
@@ -116,7 +125,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         return;
     }
     if (len > PM3_CMD_DATA_SIZE) {
-        PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much, abort", len);
+        PrintAndLogEx(WARNING, "Sending %zu bytes of payload is too much, abort", len);
         return;
     }
 
@@ -136,7 +145,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     txBufferNG.pre.ng = ng;
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
-    if ( len > 0 && data ) 
+    if (len > 0 && data)
         memcpy(&txBufferNG.data, data, len);
 
     if ((conn.send_via_fpc_usart && conn.send_with_crc_on_fpc) || ((!conn.send_via_fpc_usart) && conn.send_with_crc_on_usb)) {
@@ -176,7 +185,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > PM3_CMD_DATA_SIZE_MIX) {
-        PrintAndLogEx(WARNING, "Sending %d bytes of payload is too much for MIX frames, abort", len);
+        PrintAndLogEx(WARNING, "Sending %zu bytes of payload is too much for MIX frames, abort", len);
         return;
     }
     uint8_t cmddata[PM3_CMD_DATA_SIZE];
@@ -248,11 +257,14 @@ static int getReply(PacketResponseNG *packet) {
 //-----------------------------------------------------------------------------
 static void PacketResponseReceived(PacketResponseNG *packet) {
 
-//  PrintAndLogEx(NORMAL, "RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
-//                packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
-
     // we got a packet, reset WaitForResponseTimeout timeout
-    __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
+    uint64_t prev_clk = __atomic_load_n(&last_packet_time, __ATOMIC_SEQ_CST);
+    uint64_t clk = msclock();
+    __atomic_store_n(&timeout_start_time,  clk, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&last_packet_time, clk, __ATOMIC_SEQ_CST);
+    (void) prev_clk;
+//    PrintAndLogEx(NORMAL, "[%07"PRIu64"] RECV %s magic %08x length %04x status %04x crc %04x cmd %04x",
+//                clk - prev_clk, packet->ng ? "NG" : "OLD", packet->magic, packet->length, packet->status, packet->crc, packet->cmd);
 
     switch (packet->cmd) {
         // First check if we are handling a debug message
@@ -292,7 +304,8 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
             break;
         }
         case CMD_DEBUG_PRINT_INTEGERS: {
-            PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            if (! packet->ng)
+                PrintAndLogEx(NORMAL, "#db# %" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
             break;
         }
         // iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of
@@ -359,7 +372,7 @@ __attribute__((force_align_arg_pointer))
 
                     res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
                     if ((res != PM3_SUCCESS) || (rxlen != length)) {
-                        PrintAndLogEx(WARNING, "Received packet frame error variable part too short? %d/%d", rxlen, length);
+                        PrintAndLogEx(WARNING, "Received packet frame with variable part too short? %d/%d", rxlen, length);
                         error = true;
                     } else {
 
@@ -392,7 +405,7 @@ __attribute__((force_align_arg_pointer))
                 if (!error) {                        // Get the postamble
                     res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
                     if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
-                        PrintAndLogEx(WARNING, "Received packet frame error fetching postamble");
+                        PrintAndLogEx(WARNING, "Received packet frame without postamble");
                         error = true;
                     }
                 }
@@ -402,7 +415,7 @@ __attribute__((force_align_arg_pointer))
                         uint8_t first, second;
                         compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + length, &first, &second);
                         if ((first << 8) + second != rx.crc) {
-                            PrintAndLogEx(WARNING, "Received packet frame CRC error %02X%02X <> %04X", first, second, rx.crc);
+                            PrintAndLogEx(WARNING, "Received packet frame with invalid CRC %02X%02X <> %04X", first, second, rx.crc);
                             error = true;
                         }
                     }
@@ -424,7 +437,7 @@ __attribute__((force_align_arg_pointer))
 
                 res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
                 if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
-                    PrintAndLogEx(WARNING, "Received packet OLD frame payload error too short? %d/%d", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
+                    PrintAndLogEx(WARNING, "Received packet OLD frame with payload too short? %d/%zu", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
                     error = true;
                 }
                 if (!error) {
@@ -454,7 +467,7 @@ __attribute__((force_align_arg_pointer))
             }
         } else {
             if (rxlen > 0) {
-                PrintAndLogEx(WARNING, "Received packet frame preamble too short: %d/%d", rxlen, sizeof(PacketResponseNGPreamble));
+                PrintAndLogEx(WARNING, "Received packet frame preamble too short: %d/%zu", rxlen, sizeof(PacketResponseNGPreamble));
                 error = true;
             }
             if (res == PM3_ENOTTY) {
@@ -534,6 +547,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), portname);
         fflush(stdout);
         int openCount = 0;
+        PrintAndLogEx(INPLACE, "");
         do {
             sp = uart_open(portname, speed);
             msleep(500);
@@ -557,6 +571,9 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
             uint16_t len = MIN(strlen(portname), FILE_PATH_SIZE - 1);
             memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
             memcpy(conn.serial_port_name, portname, len);
+
+            memset(gui_serial_port_name, 0, FILE_PATH_SIZE);
+            memcpy(gui_serial_port_name, portname, len);
         }
         conn.run = true;
         conn.block_after_ACK = flash_mode;
@@ -571,7 +588,6 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         session.pm3_present = true;
 
         fflush(stdout);
-
         return true;
     }
 }
@@ -585,6 +601,7 @@ int TestProxmark(void) {
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
 
+    __atomic_store_n(&last_packet_time,  msclock(), __ATOMIC_SEQ_CST);
     clearCommandBuffer();
     SendCommandNG(CMD_PING, data, len);
 
@@ -622,7 +639,9 @@ int TestProxmark(void) {
     conn.send_via_fpc_usart = pm3_capabilities.via_fpc;
     conn.uart_speed = pm3_capabilities.baudrate;
 
-    PrintAndLogEx(INFO, "Communicating with PM3 over %s", conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"));
+    PrintAndLogEx(INFO, "Communicating with PM3 over %s%s",
+                  conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
+                  memcmp(conn.serial_port_name, "tcp:", 4) == 0 ? "over " _YELLOW_("TCP") : "");
 
     if (conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);
@@ -652,7 +671,13 @@ void CloseProxmark(void) {
 
     // Clean up our state
     sp = NULL;
+#ifdef __BIONIC__
+    if (communication_thread != 0) {
+        memset(&communication_thread, 0, sizeof(pthread_t));
+    }
+#else
     memset(&communication_thread, 0, sizeof(pthread_t));
+#endif
 
     session.pm3_present = false;
 }
@@ -702,10 +727,16 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             if (cmd == CMD_UNKNOWN || response->cmd == cmd) {
                 return true;
             }
+            if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
+                uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
+                PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
+                if (ms_timeout != (size_t) - 1)
+                    ms_timeout += wtx;
+            }
         }
 
         uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
-        if ((ms_timeout != (size_t) -1) && (msclock() - tmp_clk > ms_timeout))
+        if ((ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout))
             break;
 
         if (msclock() - tmp_clk > 3000 && show_warning) {
@@ -714,6 +745,8 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
+        // just to avoid CPU busy loop:
+        msleep(10);
     }
     return false;
 }
@@ -734,12 +767,14 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
 * @param dest Destination address for transfer
 * @param bytes number of bytes to be transferred
 * @param start_index offset into Proxmark3 BigBuf[]
+* @param data used by SPIFFS to provide filename
+* @param datalen used by SPIFFS to provide filename length
 * @param response struct to copy last command (CMD_ACK) into
 * @param ms_timeout timeout in milliseconds
 * @param show_warning display message after 2 seconds
 * @return true if command was returned, otherwise false
 */
-bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
     if (dest == NULL) return false;
     if (bytes == 0) return true;
@@ -754,32 +789,40 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
     switch (memtype) {
         case BIG_BUF: {
             SendCommandMIX(CMD_DOWNLOAD_BIGBUF, start_index, bytes, 0, NULL, 0);
-            return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_BIGBUF);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_BIGBUF);
         }
         case BIG_BUF_EML: {
             SendCommandMIX(CMD_DOWNLOAD_EML_BIGBUF, start_index, bytes, 0, NULL, 0);
-            return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
+        }
+        case SPIFFS: {
+            SendCommandMIX(CMD_SPIFFS_DOWNLOAD, start_index, bytes, 0, data, datalen);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_SPIFFS_DOWNLOADED);
         }
         case FLASH_MEM: {
             SendCommandMIX(CMD_FLASHMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
-            return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED);
         }
         case SIM_MEM: {
             //SendCommandMIX(CMD_DOWNLOAD_SIM_MEM, start_index, bytes, 0, NULL, 0);
-            //return dl_it(dest, bytes, start_index, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
+            //return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
             return false;
+        }
+        case FPGA_MEM: {
+            SendCommandMIX(CMD_FPGAMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FPGAMEM_DOWNLOADED);
         }
     }
     return false;
 }
 
-static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
+static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
 
     uint32_t bytes_completed = 0;
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
     // Add delay depending on the communication channel & speed
-    if (ms_timeout != (size_t) -1)
+    if (ms_timeout != (size_t) - 1)
         ms_timeout += communication_delay();
 
     while (true) {
@@ -810,6 +853,11 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketRes
                 bytes_completed += copy_bytes;
             } else if (response->cmd == CMD_ACK) {
                 return true;
+            } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
+                uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
+                PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
+                if (ms_timeout != (size_t) - 1)
+                    ms_timeout += wtx;
             }
         }
 

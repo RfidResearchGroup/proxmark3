@@ -11,9 +11,7 @@
 #ifndef _MAD_H_
 #define _MAD_H_
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include "common.h"
 
 typedef struct {
     uint16_t AID;

@@ -8,6 +8,9 @@
 //-----------------------------------------------------------------------------
 #ifndef CMDLFPARADOX_H__
 #define CMDLFPARADOX_H__
+
+#include "common.h"
+
 int CmdLFParadox(const char *Cmd);
 
 int demodParadox(void);

@@ -34,12 +34,15 @@
  *
  *
  ****************************************************************************/
+#include "cipherutils.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "util.h" // sprint_hex
+#include "commonutil.h"  // ARRAYLEN
+
 #include "fileutils.h"
-#include "cipherutils.h"
 /**
  *
  * @brief Return and remove the first bit (x0) in the stream : <x0 x1 x2 x3 ... xn >
@@ -71,7 +74,7 @@ bool tailBit(BitstreamIn *stream) {
 void pushBit(BitstreamOut *stream, bool bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
-    *(stream->buffer + bytepos) |= (bit & 1) << (7 - bitpos);
+    *(stream->buffer + bytepos) |= (bit) << (7 - bitpos);
     stream->position++;
     stream->numbits++;
 }
@@ -124,18 +127,21 @@ uint64_t x_bytes_to_num(uint8_t *src, size_t len) {
     }
     return num;
 }
+
 uint8_t reversebytes(uint8_t b) {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
 }
+
 void reverse_arraybytes(uint8_t *arr, size_t len) {
     uint8_t i;
     for (i = 0; i < len ; i++) {
         arr[i] = reversebytes(arr[i]);
     }
 }
+
 void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
     uint8_t i;
     for (i = 0; i < len ; i++) {
@@ -144,6 +150,8 @@ void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
 }
 
 void printarr(const char *name, uint8_t *arr, int len) {
+    if (name == NULL || arr == NULL) return;
+
     int cx, i;
     size_t outsize = 40 + strlen(name) + len * 5;
     char *output = calloc(outsize, sizeof(char));
@@ -152,34 +160,28 @@ void printarr(const char *name, uint8_t *arr, int len) {
         cx += snprintf(output + cx, outsize - cx, "0x%02x,", *(arr + i)); //5 bytes per byte
     }
     snprintf(output + cx, outsize - cx, "};");
-    PrintAndLogDevice(NORMAL, output);
+    PrintAndLogEx(INFO, output);
     free(output);
 }
 
 void printvar(const char *name, uint8_t *arr, int len) {
-    int cx, i;
-    size_t outsize = 40 + strlen(name) + len * 2;
-    char *output = calloc(outsize, sizeof(char));
-    cx = snprintf(output, outsize, "%s = ", name);
-    for (i = 0; i < len; i++) {
-        cx += snprintf(output + cx, outsize - cx, "%02x", *(arr + i)); //2 bytes per byte
-    }
-
-    PrintAndLogDevice(NORMAL, output);
-    free(output);
+    PrintAndLogEx(INFO, "%s = " _YELLOW_("%s"), name, sprint_hex(arr, len));
 }
 
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {
-    int cx, i;
+
+    if (arr == NULL) return;
+
+    int cx = 0, i;
     size_t outsize = 100 + strlen(title) + len * 4;
     char *output = calloc(outsize, sizeof(char));
-    cx = snprintf(output, outsize,  "\n\t%s\n", title);
+    PrintAndLogEx(INFO, "%s", title);
     for (i = 0;  i < len; i++) {
         if (i % 16 == 0)
             cx += snprintf(output + cx, outsize - cx, "\n%02x| ", i);
         cx += snprintf(output + cx, outsize - cx, "%02x ", *(arr + i));
     }
-    PrintAndLogDevice(NORMAL, output);
+    PrintAndLogEx(INFO, output);
     free(output);
 }
 
@@ -201,16 +203,16 @@ static int testBitStream() {
     }
 
     if (memcmp(input, output, sizeof(input)) == 0) {
-        PrintAndLogDevice(SUCCESS, "    Bitstream test 1 ok");
+        PrintAndLogEx(SUCCESS, "    Bitstream test 1 ok");
     } else {
-        PrintAndLogDevice(FAILED, "    Bitstream test 1 failed");
+        PrintAndLogEx(FAILED, "    Bitstream test 1 failed");
         uint8_t i;
-        for (i = 0 ; i < sizeof(input) ; i++) {
-            PrintAndLogDevice(NORMAL, "    IN %02x, OUT %02x", input[i], output[i]);
+        for (i = 0 ; i < ARRAYLEN(input) ; i++) {
+            PrintAndLogEx(NORMAL, "    IN %02x, OUT %02x", input[i], output[i]);
         }
-        return 1;
+        return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int testReversedBitstream() {
@@ -231,21 +233,21 @@ static int testReversedBitstream() {
     }
 
     if (memcmp(input, output, sizeof(input)) == 0) {
-        PrintAndLogDevice(SUCCESS, "    Bitstream test 2 ok");
+        PrintAndLogEx(SUCCESS, "    Bitstream test 2 ok");
     } else {
-        PrintAndLogDevice(FAILED, "    Bitstream test 2 failed");
+        PrintAndLogEx(FAILED, "    Bitstream test 2 failed");
         uint8_t i;
-        for (i = 0 ; i < sizeof(input) ; i++) {
-            PrintAndLogDevice(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i], reverse[i], output[i]);
+        for (i = 0 ; i < ARRAYLEN(input) ; i++) {
+            PrintAndLogEx(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i], reverse[i], output[i]);
         }
-        return 1;
+        return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 
 int testCipherUtils(void) {
-    PrintAndLogDevice(INFO, "Testing some internals...");
+    PrintAndLogEx(INFO, "Testing some internals...");
     int retval = 0;
     retval |= testBitStream();
     retval |= testReversedBitstream();

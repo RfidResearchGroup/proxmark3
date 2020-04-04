@@ -19,6 +19,8 @@
 */
 #include "crapto1.h"
 
+#include "bucketsort.h"
+
 #include <stdlib.h>
 #include "parity.h"
 
@@ -122,6 +124,9 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 
     return sl;
 }
+
+
+#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 /** lfsr_recovery
  * recover the state of the lfsr given 32 bits of the keystream
  * additionally you can use the in parameter to specify the value
@@ -284,6 +289,7 @@ continue2:
     }
     return statelist;
 }
+#endif
 
 /** lfsr_rollback_bit
  * Rollback the shift register in order to get previous states
@@ -370,6 +376,7 @@ uint32_t lfsr_rollback_word(struct Crypto1State *s, uint32_t in, int fb) {
 static uint16_t *dist = 0;
 int nonce_distance(uint32_t from, uint32_t to) {
     if (!dist) {
+        // allocation 2bytes * 0xFFFF times.
         dist = calloc(2 << 16,  sizeof(uint8_t));
         if (!dist)
             return -1;
@@ -390,7 +397,8 @@ int nonce_distance(uint32_t from, uint32_t to) {
  */
 bool validate_prng_nonce(uint32_t nonce) {
     // init prng table:
-    nonce_distance(nonce, nonce);
+    if (nonce_distance(nonce, nonce) == -1)
+        return false;
     return ((65535 - dist[nonce >> 16] + dist[nonce & 0xffff]) % 65535) == 16;
 }
 
@@ -463,7 +471,7 @@ static struct Crypto1State *check_pfx_parity(uint32_t prefix, uint32_t rresp, ui
     return sl + good;
 }
 
-
+#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 /** lfsr_common_prefix
  * Implentation of the common prefix attack.
  * Requires the 28 bit constant prefix used as reader nonce (pfx)
@@ -502,3 +510,4 @@ out:
     free(even);
     return statelist;
 }
+#endif

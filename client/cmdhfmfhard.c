@@ -21,28 +21,29 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
-#include <time.h>
-#include <pthread.h>
 #include <locale.h>
 #include <math.h>
+#include <time.h> // MingW
+
+#include "commonutil.h"  // ARRAYLEN
+#include "comms.h"
+
 #include "proxmark3.h"
-#include "cmdmain.h"
 #include "ui.h"
-#include "util.h"
 #include "util_posix.h"
 #include "crapto1/crapto1.h"
 #include "parity.h"
-#include "hardnested/hardnested_bruteforce.h"
 #include "hardnested/hardnested_bf_core.h"
 #include "hardnested/hardnested_bitarray_core.h"
 #include "zlib.h"
+#include "fileutils.h"
 
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
 #define NUM_REDUCTION_WORKING_THREADS   (num_CPUs())
 
 #define IGNORE_BITFLIP_THRESHOLD        0.99 // ignore bitflip arrays which have nearly only valid states
 
-#define STATE_FILES_DIRECTORY           "hardnested/tables/"
+#define STATE_FILES_DIRECTORY           "hardnested_tables/"
 #define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.z"
 
 #define DEBUG_KEY_ELIMINATION
@@ -236,7 +237,6 @@ static void init_bitflip_bitarrays(void) {
     uint8_t line = 0;
 #endif
 
-
     z_stream compressed_stream;
 
     char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + strlen(STATE_FILE_TEMPLATE) + 1];
@@ -247,18 +247,25 @@ static void init_bitflip_bitarrays(void) {
         for (uint16_t bitflip = 0x001; bitflip < 0x400; bitflip++) {
             bitflip_bitarrays[odd_even][bitflip] = NULL;
             count_bitflip_bitarrays[odd_even][bitflip] = 1 << 24;
+
             sprintf(state_file_name, STATE_FILE_TEMPLATE, odd_even, bitflip);
-            strcpy(state_files_path, get_my_executable_directory());
-            strcat(state_files_path, STATE_FILES_DIRECTORY);
+            strcpy(state_files_path, STATE_FILES_DIRECTORY);
             strcat(state_files_path, state_file_name);
-            FILE *statesfile = fopen(state_files_path, "rb");
+
+            char *path;
+            if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) != PM3_SUCCESS) {
+                continue;
+            }
+
+            FILE *statesfile = fopen(path, "rb");
+            free(path);
             if (statesfile == NULL) {
                 continue;
             } else {
                 fseek(statesfile, 0, SEEK_END);
                 int fsize = ftell(statesfile);
                 if (fsize == -1) {
-                    PrintAndLogEx(WARNING, "File read error with %s. Aborting...\n", state_file_name);
+                    PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
                     fclose(statesfile);
                     exit(5);
                 }
@@ -267,7 +274,7 @@ static void init_bitflip_bitarrays(void) {
                 uint8_t input_buffer[filesize];
                 size_t bytesread = fread(input_buffer, 1, filesize, statesfile);
                 if (bytesread != filesize) {
-                    PrintAndLogEx(WARNING, "File read error with %s. Aborting...\n", state_file_name);
+                    PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
                     fclose(statesfile);
                     //inflateEnd(&compressed_stream);
                     exit(5);
@@ -275,17 +282,27 @@ static void init_bitflip_bitarrays(void) {
                 fclose(statesfile);
                 uint32_t count = 0;
                 init_inflate(&compressed_stream, input_buffer, filesize, (uint8_t *)&count, sizeof(count));
-                inflate(&compressed_stream, Z_SYNC_FLUSH);
+                int res = inflate(&compressed_stream, Z_SYNC_FLUSH);
+                if (res != Z_OK) {
+                    PrintAndLogEx(ERR, "Inflate error. Aborting...\n");
+                    inflateEnd(&compressed_stream);
+                    exit(4);
+                }
                 if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
                     uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
                     if (bitset == NULL) {
-                        PrintAndLogEx(WARNING, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
+                        PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
                         inflateEnd(&compressed_stream);
                         exit(4);
                     }
                     compressed_stream.next_out = (uint8_t *)bitset;
                     compressed_stream.avail_out = sizeof(uint32_t) * (1 << 19);
-                    inflate(&compressed_stream, Z_SYNC_FLUSH);
+                    res = inflate(&compressed_stream, Z_SYNC_FLUSH);
+                    if (res != Z_OK && res != Z_STREAM_END) {
+                        PrintAndLogEx(ERR, "Inflate error. Aborting...\n");
+                        inflateEnd(&compressed_stream);
+                        exit(4);
+                    }
                     effective_bitflip[odd_even][num_effective_bitflips[odd_even]++] = bitflip;
                     bitflip_bitarrays[odd_even][bitflip] = bitset;
                     count_bitflip_bitarrays[odd_even][bitflip] = count;
@@ -390,7 +407,7 @@ static void init_part_sum_bitarrays(void) {
         for (uint16_t part_sum_a0 = 0; part_sum_a0 < NUM_PART_SUMS; part_sum_a0++) {
             part_sum_a0_bitarrays[odd_even][part_sum_a0] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
             if (part_sum_a0_bitarrays[odd_even][part_sum_a0] == NULL) {
-                PrintAndLogEx(WARNING, "Out of memory error in init_part_suma0_statelists(). Aborting...\n");
+                PrintAndLogEx(ERR, "Out of memory error in init_part_suma0_statelists(). Aborting...\n");
                 exit(4);
             }
             clear_bitarray24(part_sum_a0_bitarrays[odd_even][part_sum_a0]);
@@ -410,7 +427,7 @@ static void init_part_sum_bitarrays(void) {
         for (uint16_t part_sum_a8 = 0; part_sum_a8 < NUM_PART_SUMS; part_sum_a8++) {
             part_sum_a8_bitarrays[odd_even][part_sum_a8] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
             if (part_sum_a8_bitarrays[odd_even][part_sum_a8] == NULL) {
-                PrintAndLogEx(WARNING, "Out of memory error in init_part_suma8_statelists(). Aborting...\n");
+                PrintAndLogEx(ERR, "Out of memory error in init_part_suma8_statelists(). Aborting...\n");
                 exit(4);
             }
             clear_bitarray24(part_sum_a8_bitarrays[odd_even][part_sum_a8]);
@@ -449,7 +466,7 @@ static void init_sum_bitarrays(void) {
         for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
             sum_a0_bitarrays[odd_even][sum_a0] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
             if (sum_a0_bitarrays[odd_even][sum_a0] == NULL) {
-                PrintAndLogEx(WARNING, "Out of memory error in init_sum_bitarrays(). Aborting...\n");
+                PrintAndLogEx(ERR, "Out of memory error in init_sum_bitarrays(). Aborting...\n");
                 exit(4);
             }
             clear_bitarray24(sum_a0_bitarrays[odd_even][sum_a0]);
@@ -564,14 +581,14 @@ static void init_nonce_memory(void) {
         }
         nonces[i].states_bitarray[EVEN_STATE] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
         if (nonces[i].states_bitarray[EVEN_STATE] == NULL) {
-            PrintAndLogEx(WARNING, "Out of memory error in init_nonce_memory(). Aborting...\n");
+            PrintAndLogEx(ERR, "Out of memory error in init_nonce_memory(). Aborting...\n");
             exit(4);
         }
         set_bitarray24(nonces[i].states_bitarray[EVEN_STATE]);
         nonces[i].num_states_bitarray[EVEN_STATE] = 1 << 24;
         nonces[i].states_bitarray[ODD_STATE] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
         if (nonces[i].states_bitarray[ODD_STATE] == NULL) {
-            PrintAndLogEx(WARNING, "Out of memory error in init_nonce_memory(). Aborting...\n");
+            PrintAndLogEx(ERR, "Out of memory error in init_nonce_memory(). Aborting...\n");
             exit(4);
         }
         set_bitarray24(nonces[i].states_bitarray[ODD_STATE]);
@@ -1035,6 +1052,11 @@ static void estimate_sum_a8(void) {
 
 
 static int read_nonce_file(char *filename) {
+
+    if (filename == NULL) {
+        PrintAndLogEx(WARNING, "Filename is NULL");
+        return 1;
+    }
     FILE *fnonces = NULL;
     char progress_text[80] = "";
     uint8_t read_buf[9];
@@ -1044,11 +1066,12 @@ static int read_nonce_file(char *filename) {
         PrintAndLogEx(WARNING, "Could not open file %s", filename);
         return 1;
     }
+
     snprintf(progress_text, 80, "Reading nonces from file %s...", filename);
     hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
     size_t bytes_read = fread(read_buf, 1, 6, fnonces);
     if (bytes_read != 6) {
-        PrintAndLogEx(WARNING, "File reading error.");
+        PrintAndLogEx(ERR, "File reading error.");
         fclose(fnonces);
         return 1;
     }
@@ -1367,7 +1390,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     char progress_text[80];
     FILE *fnonces = NULL;
     PacketResponseNG resp;
-
     num_acquired_nonces = 0;
 
     clearCommandBuffer();
@@ -1379,24 +1401,35 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         flags |= field_off ? 0x0004 : 0;
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
 
-        if (field_off) break;
+        if (field_off) {
+            SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+            break;
+        } else {
+            SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
+        }
 
         if (initialize) {
+
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
-                uint8_t nullkey[6] = {0};
-                //strange second call (iceman)
                 clearCommandBuffer();
-                SendCommandMIX(CMD_MIFARE_ACQUIRE_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, nullkey, sizeof(nullkey));
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
                 return 1;
             }
-            if (resp.oldarg[0]) return resp.oldarg[0];  // error during nested_hard
+
+            // error during nested_hard
+            if (resp.oldarg[0]) {
+                clearCommandBuffer();
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+                return resp.oldarg[0];
+            }
 
             cuid = resp.oldarg[1];
             if (nonce_file_write && fnonces == NULL) {
                 if ((fnonces = fopen(filename, "wb")) == NULL) {
                     PrintAndLogEx(WARNING, "Could not create file %s", filename);
+                    clearCommandBuffer();
+                    SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
                     return 3;
                 }
                 snprintf(progress_text, 80, "Writing acquired nonces to binary file %s", filename);
@@ -1463,17 +1496,24 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         }
 
         if (!initialize) {
+
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
+                clearCommandBuffer();
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
                 return 1;
             }
+
+            // error during nested_hard
             if (resp.oldarg[0]) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
-                return resp.oldarg[0];  // error during nested_hard
+                clearCommandBuffer();
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+                return resp.oldarg[0];
             }
         }
 
@@ -1489,11 +1529,6 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     if (nonce_file_write) {
         fclose(fnonces);
     }
-
-    // PrintAndLogEx(NORMAL, "Sampled a total of %d nonces in %d seconds (%0.0f nonces/minute)",
-    // total_num_nonces,
-    // time(NULL)-time1,
-    // (float)total_num_nonces*60.0/(time(NULL)-time1));
 
     return 0;
 }
@@ -1631,14 +1666,17 @@ static inline bool bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_e
     return true;
 }
 
-
+/*
 static uint_fast8_t reverse(uint_fast8_t b) {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
 }
-
+*/
+static uint_fast8_t reverse(uint_fast8_t b) {
+    return (b * 0x0202020202ULL & 0x010884422010ULL) % 1023;
+}
 
 static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even) {
     uint32_t masks[2][8] = {
@@ -1655,11 +1693,12 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
         for (uint8_t remaining_bits = 0; remaining_bits <= (~mask & 0xff); remaining_bits++) {
             if (remaining_bits_match(num_common, bytes_diff, state, (state & mask) | remaining_bits, odd_even)) {
 
-#ifdef DEBUG_KEY_ELIMINATION
-                if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even, true)) {
-#else
-                if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even)) {
-#endif
+# ifdef DEBUG_KEY_ELIMINATION
+                if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even, true))
+# else
+                if (bitflips_match(byte2, (state & mask) | remaining_bits, odd_even))
+# endif
+                {
                     found_match = true;
                     break;
                 }
@@ -1668,7 +1707,7 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
 
         if (!found_match) {
 
-#ifdef DEBUG_KEY_ELIMINATION
+# ifdef DEBUG_KEY_ELIMINATION
             if (known_target_key != -1 && state == test_state[odd_even]) {
                 PrintAndLogEx(NORMAL, "all_bitflips_match() 1st Byte: %s test state (0x%06x): Eliminated. Bytes = %02x, %02x, Common Bits = %d\n",
                               odd_even == ODD_STATE ? "odd" : "even",
@@ -1680,7 +1719,7 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
                     sprintf(failstr, "Other 1st Byte %s, all_bitflips_match(), no match", odd_even ? "odd" : "even");
                 }
             }
-#endif
+# endif
             return false;
         }
     }
@@ -1711,12 +1750,12 @@ static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, ui
     const uint32_t worstcase_size = 1 << 20;
     candidates->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
     if (candidates->states[odd_even] == NULL) {
-        PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - statelist.\n");
+        PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - statelist.\n");
         exit(4);
     }
     uint32_t *candidates_bitarray = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * worstcase_size);
     if (candidates_bitarray == NULL) {
-        PrintAndLogEx(WARNING, "Out of memory error in add_matching_states() - bitarray.\n");
+        PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - bitarray.\n");
         free(candidates->states[odd_even]);
         exit(4);
     }
@@ -1746,7 +1785,7 @@ static void add_matching_states(statelist_t *candidates, uint8_t part_sum_a0, ui
 }
 
 static statelist_t *add_more_candidates(void) {
-    statelist_t *new_candidates = candidates;
+    statelist_t *new_candidates;
     if (candidates == NULL) {
         candidates = (statelist_t *)malloc(sizeof(statelist_t));
         new_candidates = candidates;
@@ -1772,7 +1811,7 @@ static void add_bitflip_candidates(uint8_t byte) {
         uint32_t worstcase_size = nonces[byte].num_states_bitarray[odd_even] + 1;
         candidates1->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
         if (candidates1->states[odd_even] == NULL) {
-            PrintAndLogEx(WARNING, "Out of memory error in add_bitflip_candidates().\n");
+            PrintAndLogEx(ERR, "Out of memory error in add_bitflip_candidates().\n");
             exit(4);
         }
 
@@ -1825,7 +1864,6 @@ static bool TestIfKeyExists(uint64_t key) {
 
     num_keys_tested += count;
     hardnested_print_progress(num_acquired_nonces, "(Test: Key NOT found)", 0.0, 0);
-
     crypto1_destroy(pcs);
     return false;
 }
@@ -1993,12 +2031,12 @@ __attribute__((force_align_arg_pointer))
 
 static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
 
-    init_statelist_cache();
-    init_book_of_work();
-
     // create mutexes for accessing the statelist cache and our "book of work"
     pthread_mutex_init(&statelist_cache_mutex, NULL);
     pthread_mutex_init(&book_of_work_mutex, NULL);
+
+    init_statelist_cache();
+    init_book_of_work();
 
     // create and run worker threads
     pthread_t thread_id[NUM_REDUCTION_WORKING_THREADS];
@@ -2015,9 +2053,6 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     for (uint16_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
         pthread_join(thread_id[i], NULL);
     }
-
-    // clean up mutex
-    pthread_mutex_destroy(&statelist_cache_mutex);
 
     maximum_states = 0;
     for (statelist_t *sl = candidates; sl != NULL; sl = sl->next) {

@@ -13,8 +13,7 @@
 #ifndef __CBORTOOLS_H__
 #define __CBORTOOLS_H__
 
-#include <stddef.h>
-#include <stdint.h>
+#include "common.h"
 #include <jansson.h>
 #include <cbor.h>
 
@@ -26,9 +25,9 @@ int JsonToCbor(json_t *elm, CborEncoder *encoder);
 
 int CborMapGetKeyById(CborParser *parser, CborValue *map, uint8_t *data, size_t dataLen, int key);
 CborError CborGetArrayBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen);
-CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimeter, size_t delimeterlen);
+CborError CborGetArrayBinStringValueEx(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen, uint8_t *delimiter, size_t delimiterlen);
 CborError CborGetBinStringValue(CborValue *elm, uint8_t *data, size_t maxdatalen, size_t *datalen);
-CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimeter);
+CborError CborGetArrayStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen, char *delimiter);
 CborError CborGetStringValue(CborValue *elm, char *data, size_t maxdatalen, size_t *datalen);
 CborError CborGetStringValueBuf(CborValue *elm);
 

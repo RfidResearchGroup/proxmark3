@@ -9,14 +9,16 @@
 //-----------------------------------------------------------------------------
 
 #include "emvjson.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <inttypes.h>
+
 #include <string.h>
+
+#include "commonutil.h"  // ARRAYLEN
 #include "ui.h"
+#include "util.h"
 #include "proxmark3.h"
 #include "emv_tags.h"
+#include "fileutils.h"
+#include "pm3_cmd.h"
 
 static const ApplicationDataElm ApplicationData[] = {
     {0x82,    "AIP"},
@@ -57,10 +59,9 @@ static const ApplicationDataElm ApplicationData[] = {
 
     {0x00,    "end..."}
 };
-int ApplicationDataLen = sizeof(ApplicationData) / sizeof(ApplicationDataElm);
 
 const char *GetApplicationDataName(tlv_tag_t tag) {
-    for (int i = 0; i < ApplicationDataLen; i++)
+    for (int i = 0; i < ARRAYLEN(ApplicationData); i++)
         if (ApplicationData[i].Tag == tag)
             return ApplicationData[i].Name;
 
@@ -75,7 +76,7 @@ int JsonSaveJsonObject(json_t *root, const char *path, json_t *value) {
 
     if (path[0] == '$') {
         if (json_path_set(root, path, value, 0, &error)) {
-            PrintAndLogEx(ERR, "ERROR: can't set json path: ", error.text);
+            PrintAndLogEx(ERR, "ERROR: can't set json path: %s", error.text);
             return 2;
         } else {
             return 0;
@@ -156,7 +157,7 @@ int JsonSaveTLVElm(json_t *elm, const char *path, struct tlv *tlvelm, bool saveN
                 }
             } else {
                 if (json_path_set(elm, path, obj, 0, &error)) {
-                    PrintAndLogEx(ERR, "ERROR: can't set json path: ", error.text);
+                    PrintAndLogEx(ERR, "ERROR: can't set json path: %s", error.text);
                     return 2;
                 }
             }
@@ -254,7 +255,7 @@ static bool HexToBuffer(const char *errormsg, const char *hexvalue, uint8_t *buf
     }
 
     if (buflen > maxbufferlen) {
-        PrintAndLogEx(ERR, "%s HEX length (%d) more than %d", errormsg, (bufferlen) ? *bufferlen : -1, maxbufferlen);
+        PrintAndLogEx(ERR, "%s HEX length (%zu) more than %zu", errormsg, (bufferlen) ? *bufferlen : -1, maxbufferlen);
         return false;
     }
 
@@ -304,13 +305,12 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         return false;
     }
 
-    // current path + file name
-    const char *relfname = "emv/defparams.json";
-    char fname[strlen(get_my_executable_directory()) + strlen(relfname) + 1];
-    strcpy(fname, get_my_executable_directory());
-    strcat(fname, relfname);
-
-    root = json_load_file(fname, 0, &error);
+    char *path;
+    if (searchFile(&path, RESOURCES_SUBDIR, "emv_defparams", ".json", false) != PM3_SUCCESS) {
+        return false;
+    }
+    root = json_load_file(path, 0, &error);
+    free(path);
     if (!root) {
         PrintAndLogEx(ERR, "Load params: json error on line " _YELLOW_("%d") ": %s", error.line, error.text);
         return false;
@@ -321,7 +321,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         return false;
     }
 
-    PrintAndLogEx(SUCCESS, "Load params: json(%d) " _GREEN_("OK"), json_array_size(root));
+    PrintAndLogEx(SUCCESS, "Load params: json(%zu) " _GREEN_("OK"), json_array_size(root));
 
     for (int i = 0; i < json_array_size(root); i++) {
         json_t *data, *jtag, *jlength, *jvalue;
@@ -372,8 +372,8 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
             return false;
         }
         tlv_tag_t tag = 0;
-        for (int i = 0; i < buflen; i++) {
-            tag = (tag << 8) | buf[i];
+        for (int j = 0; j < buflen; j++) {
+            tag = (tag << 8) | buf[j];
         }
 
         if (!HexToBuffer("TLV Error value:", tlvValue, buf, sizeof(buf) - 1, &buflen)) {
@@ -382,7 +382,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         }
 
         if (buflen != tlvLength) {
-            PrintAndLogEx(ERR, "Load params: data [%d] length of HEX must(%d) be identical to length in TLV param(%d)", i + 1, buflen, tlvLength);
+            PrintAndLogEx(ERR, "Load params: data [%d] length of HEX must(%zu) be identical to length in TLV param(%d)", i + 1, buflen, tlvLength);
             json_decref(root);
             return false;
         }

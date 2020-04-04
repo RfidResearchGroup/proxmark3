@@ -11,21 +11,12 @@
 #ifndef CMDHFFELICA_H__
 #define CMDHFFELICA_H__
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include "proxmark3.h"
 #include "common.h"
-#include "ui.h"
-#include "util.h"
-#include "cmdparser.h"
-#include "comms.h"      // getfromdevice
-#include "cmdhf.h"      // list cmd
-#include "mifare.h"     // felica_card_select_t struct
+#include "mifare.h"
 
 int CmdHFFelica(const char *Cmd);
-
 int readFelicaUid(bool verbose);
+int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
+int send_rd_unencrypted(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp);
+
 #endif

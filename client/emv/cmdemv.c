@@ -8,14 +8,24 @@
 // EMV commands
 //-----------------------------------------------------------------------------
 
-#include <ctype.h>
-#include "mifare.h"
 #include "cmdemv.h"
+
+#include <string.h>
+
+#include "comms.h" // DropField
+#include "cmdsmartcard.h" // smart_select
+#include "cmdtrace.h"
 #include "emvjson.h"
-#include "emv_pki.h"
 #include "test/cryptotest.h"
 #include "cliparser/cliparser.h"
-#include <jansson.h>
+#include "cmdparser.h"
+#include "proxmark3.h"
+#include "emv_roca.h"
+#include "emvcore.h"
+#include "cmdhf14a.h"
+#include "dol.h"
+#include "ui.h"
+#include "emv_tags.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -222,7 +232,7 @@ static int CmdEMVGPO(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("kK",  "keep",    "keep field ON for next command"),
-        arg_lit0("pP",  "params",  "load parameters from `emv/defparams.json` file for PDOLdata making from PDOL and parameters"),
+        arg_lit0("pP",  "params",  "load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters"),
         arg_lit0("mM",  "make",    "make PDOLdata from PDOL (tag 9F38) and parameters (by default uses default parameters)"),
         arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
@@ -287,11 +297,11 @@ static int CmdEMVGPO(const char *Cmd) {
         PrintAndLogEx(ERR, "Can't create PDOL data.");
         tlvdb_free(tmp_ext);
         tlvdb_free(tlvRoot);
-        if (pdol_data_tlv != &data_tlv);
-        free(pdol_data_tlv);
+        if (pdol_data_tlv != &data_tlv)
+            free(pdol_data_tlv);
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+    PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
     // exec
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -388,7 +398,7 @@ static int CmdEMVAC(const char *Cmd) {
         arg_lit0("kK",  "keep",     "keep field ON for next command"),
         arg_lit0("cC",  "cda",      "executes CDA transaction. Needs to get SDAD in results."),
         arg_str0("dD",  "decision", "<aac|tc|arqc>", "Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested"),
-        arg_lit0("pP",  "params",   "load parameters from `emv/defparams.json` file for CDOLdata making from CDOL and parameters"),
+        arg_lit0("pP",  "params",   "load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters"),
         arg_lit0("mM",  "make",     "make CDOLdata from CDOL (tag 8C and 8D) and parameters (by default uses default parameters)"),
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",      "TLV decode results of selected applets"),
@@ -467,7 +477,7 @@ static int CmdEMVAC(const char *Cmd) {
         cdol_data_tlv = &data_tlv;
     }
 
-    PrintAndLogEx(INFO, "CDOL data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
+    PrintAndLogEx(INFO, "CDOL data[%zu]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
 
     // exec
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -533,7 +543,7 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Challenge: %s", sprint_hex(buf, len));
 
     if (len != 4 && len != 8)
-        PrintAndLogEx(WARNING, "Length of challenge must be 4 or 8, but it %d", len);
+        PrintAndLogEx(WARNING, "Length of challenge must be 4 or 8, but it %zu", len);
 
     return PM3_SUCCESS;
 }
@@ -554,7 +564,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("kK",  "keep",    "keep field ON for next command"),
-        arg_lit0("pP",  "params",  "load parameters from `emv/defparams.json` file for DDOLdata making from DDOL and parameters"),
+        arg_lit0("pP",  "params",  "load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters"),
         arg_lit0("mM",  "make",    "make DDOLdata from DDOL (tag 9F49) and parameters (by default uses default parameters)"),
         arg_lit0("aA",  "apdu",    "show APDU reqests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
@@ -614,7 +624,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
         ddol_data_tlv = &data_tlv;
     }
 
-    PrintAndLogEx(INFO, "DDOL data[%d]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
+    PrintAndLogEx(INFO, "DDOL data[%zu]: %s", ddol_data_tlv->len, sprint_hex(ddol_data_tlv->value, ddol_data_tlv->len));
 
     // exec
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -652,10 +662,7 @@ static void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON,
     }
 
     //9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
-    const char *qVSDC = "\x26\x00\x00\x00";
-    if (GenACGPO) {
-        qVSDC = "\x26\x80\x00\x00";
-    }
+
     switch (TrType) {
         case TT_MSD:
             TLV_ADD(0x9F66, "\x86\x00\x00\x00"); // MSD
@@ -665,10 +672,20 @@ static void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON,
             TLV_ADD(0x9F66, "\x46\x00\x00\x00"); // VSDC
             break;
         case TT_QVSDCMCHIP:
-            TLV_ADD(0x9F66, qVSDC); // qVSDC
+            // qVSDC
+            if (GenACGPO) {
+                TLV_ADD(0x9F66, "\x26\x80\x00\x00");
+            } else {
+                TLV_ADD(0x9F66, "\x26\x00\x00\x00");
+            }
             break;
         case TT_CDA:
-            TLV_ADD(0x9F66, qVSDC); // qVSDC (VISA CDA not enabled)
+            // qVSDC (VISA CDA not enabled)
+            if (GenACGPO) {
+                TLV_ADD(0x9F66, "\x26\x80\x00\x00");
+            } else {
+                TLV_ADD(0x9F66, "\x26\x00\x00\x00");
+            }
             break;
         default:
             break;
@@ -683,7 +700,7 @@ static void ProcessGPOResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_
         }
 
         if (len < 4 || (len - 4) % 4) {
-            PrintAndLogEx(ERR, "GPO response format 1 parsing error. length = %d", len);
+            PrintAndLogEx(ERR, "GPO response format 1 parsing error. length = %zu", len);
         } else {
             // AIP
             struct tlvdb *f1AIP = tlvdb_fixed(0x82, 2, buf + 2);
@@ -715,7 +732,7 @@ static void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t
         uint8_t elmlen = len - 2; // wo 0x80XX
 
         if (len < 4 + 2 || (elmlen - 2) % 4 || elmlen != buf[1]) {
-            PrintAndLogEx(ERR, "GPO response format1 parsing error. length=%d", len);
+            PrintAndLogEx(ERR, "GPO response format1 parsing error. length=%zu", len);
         } else {
             struct tlvdb *tlvElm = NULL;
             if (decodeTLV)
@@ -742,6 +759,7 @@ static void ProcessACResponseFormat1(struct tlvdb *tlvRoot, uint8_t *buf, size_t
                 if (decodeTLV)
                     TLVPrintFromTLV(tlvElm);
             }
+            tlvdb_free(tlvElm);
         }
     } else {
         if (decodeTLV)
@@ -775,12 +793,12 @@ static int CmdEMVExec(const char *Cmd) {
         arg_lit0("sS",  "select",   "activate field and select card."),
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses."),
         arg_lit0("tT",  "tlv",      "TLV decode results."),
-        arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv/defparams.json` file."),
+        arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv_defparams.json` file."),
         arg_lit0("fF",  "forceaid", "Force search AID. Search AID instead of execute PPSE."),
         arg_rem("By default:",      "Transaction type - MSD"),
         arg_lit0("vV",  "qvsdc",    "Transaction type - qVSDC or M/Chip."),
         arg_lit0("cC",  "qvsdccda", "Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)."),
-        arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standart behavior."),
+        arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standard behavior."),
         arg_lit0("gG",  "acgpo",    "VISA. generate AC from GPO."),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. Contactless interface set by default."),
         arg_param_end
@@ -829,6 +847,12 @@ static int CmdEMVExec(const char *Cmd) {
         PrintAndLogEx(NORMAL, "\n* PPSE.");
         SetAPDULogging(showAPDU);
         res = EMVSearchPSE(channel, activateField, true, psenum, decodeTLV, tlvSelect);
+
+        // check PPSE instead of PSE and vice versa
+        if (res) {
+            PrintAndLogEx(NORMAL, "Check PPSE instead of PSE and vice versa...");
+            res = EMVSearchPSE(channel, false, true, psenum == 1 ? 2 : 1, decodeTLV, tlvSelect);
+        }
 
         // check PPSE and select application id
         if (!res) {
@@ -891,7 +915,7 @@ static int CmdEMVExec(const char *Cmd) {
         PrintAndLogEx(ERR, "Error: can't create PDOL data.");
         dreturn(PM3_ESOFT);
     }
-    PrintAndLogEx(NORMAL, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+    PrintAndLogEx(NORMAL, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
     PrintAndLogEx(NORMAL, "\n* GPO.");
     res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
@@ -931,7 +955,7 @@ static int CmdEMVExec(const char *Cmd) {
 
     while (AFL && AFL->len) {
         if (AFL->len % 4) {
-            PrintAndLogEx(WARNING, "Error: Wrong AFL length: %d", AFL->len);
+            PrintAndLogEx(WARNING, "Warning: Wrong AFL length: %zu", AFL->len);
             break;
         }
 
@@ -991,7 +1015,7 @@ static int CmdEMVExec(const char *Cmd) {
     if (ODAiListLen) {
         struct tlvdb *oda = tlvdb_fixed(0x21, ODAiListLen, ODAiList); // not a standard tag
         tlvdb_add(tlvRoot, oda);
-        PrintAndLogEx(NORMAL, "* Input list for Offline Data Authentication added to TLV. len=%d \n", ODAiListLen);
+        PrintAndLogEx(NORMAL, "* Input list for Offline Data Authentication added to TLV. len=%zu \n", ODAiListLen);
     }
 
     // get AIP
@@ -1001,7 +1025,7 @@ static int CmdEMVExec(const char *Cmd) {
         AIP = AIPtlv->value[0] + AIPtlv->value[1] * 0x100;
         PrintAndLogEx(NORMAL, "* * AIP=%04x", AIP);
     } else {
-        PrintAndLogEx(ERR, "Can't found AIP.");
+        PrintAndLogEx(ERR, "Can't find AIP.");
     }
 
     // SDA
@@ -1042,16 +1066,16 @@ static int CmdEMVExec(const char *Cmd) {
                     if (IAD->len >= IAD->value[0] + 1) {
                         PrintAndLogEx(NORMAL, "\tKey index:  0x%02x", IAD->value[1]);
                         PrintAndLogEx(NORMAL, "\tCrypto ver: 0x%02x(%03d)", IAD->value[2], IAD->value[2]);
-                        PrintAndLogEx(NORMAL, "\tCVR:", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
+                        PrintAndLogEx(NORMAL, "\tCVR: %s", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
                         struct tlvdb *cvr = tlvdb_fixed(0x20, IAD->value[0] - 2, &IAD->value[3]);
                         TLVPrintFromTLVLev(cvr, 1);
                     }
                 } else {
-                    PrintAndLogEx(NORMAL, "WARNING: IAD not found.");
+                    PrintAndLogEx(WARNING, "WARNING: IAD not found.");
                 }
 
             } else {
-                PrintAndLogEx(WARNING, "Error AC: Application Transaction Counter (ATC) not found.");
+                PrintAndLogEx(WARNING, "Warning AC: Application Transaction Counter (ATC) not found.");
             }
         }
     }
@@ -1069,7 +1093,7 @@ static int CmdEMVExec(const char *Cmd) {
                 dreturn(PM3_ERFTRANS);
             }
             if (len < 4) {
-                PrintAndLogEx(ERR, "Error GetChallenge. Wrong challenge length %d", len);
+                PrintAndLogEx(ERR, "Error GetChallenge. Wrong challenge length %zu", len);
                 dreturn(PM3_ESOFT);
             }
 
@@ -1088,7 +1112,7 @@ static int CmdEMVExec(const char *Cmd) {
                 dreturn(PM3_ESOFT);
             }
 
-            PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
+            PrintAndLogEx(NORMAL, "CDOL1 data[%zu]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
 
             PrintAndLogEx(NORMAL, "* * AC1");
             // EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
@@ -1131,14 +1155,14 @@ static int CmdEMVExec(const char *Cmd) {
                             PrintAndLogEx(NORMAL, "Transaction approved ONLINE.");
                             break;
                         default:
-                            PrintAndLogEx(WARNING, "Error: CID transaction code error %2x", CID->value[0] & EMVAC_AC_MASK);
+                            PrintAndLogEx(WARNING, "Warning: CID transaction code error %2x", CID->value[0] & EMVAC_AC_MASK);
                             break;
                     }
                 } else {
-                    PrintAndLogEx(WARNING, "Error: Wrong CID length %d", CID->len);
+                    PrintAndLogEx(WARNING, "Warning: Wrong CID length %zu", CID->len);
                 }
             } else {
-                PrintAndLogEx(WARNING, "Error: CID(9F27) not found.");
+                PrintAndLogEx(WARNING, "Warning: CID(9F27) not found.");
             }
 
         }
@@ -1178,7 +1202,7 @@ static int CmdEMVExec(const char *Cmd) {
                     dreturn(PM3_ESOFT);
                 }
 
-                PrintAndLogEx(NORMAL, "UDOL data[%d]: %s", udol_data_tlv->len, sprint_hex(udol_data_tlv->value, udol_data_tlv->len));
+                PrintAndLogEx(NORMAL, "UDOL data[%zu]: %s", udol_data_tlv->len, sprint_hex(udol_data_tlv->value, udol_data_tlv->len));
 
                 PrintAndLogEx(NORMAL, "\n* Mastercard compute cryptographic checksum(UDOL)");
 
@@ -1212,7 +1236,7 @@ static int CmdEMVExec(const char *Cmd) {
             dreturn(PM3_ESOFT);
         }
 
-        PrintAndLogEx(NORMAL, "CDOL1 data[%d]: %s", cdol1_data_tlv->len, sprint_hex(cdol1_data_tlv->value, cdol1_data_tlv->len));
+        PrintAndLogEx(NORMAL, "CDOL1 data[%zu]: %s", cdol1_data_tlv->len, sprint_hex(cdol1_data_tlv->value, cdol1_data_tlv->len));
 
         PrintAndLogEx(NORMAL, "* * AC1");
         // EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
@@ -1244,7 +1268,7 @@ static int CmdEMVExec(const char *Cmd) {
             PrintAndLogEx(NORMAL, "\n* * Issuer Application Data (IAD):");
             uint8_t VDDlen = IAD->value[0]; // Visa discretionary data length
             uint8_t IDDlen = 0;             // Issuer discretionary data length
-            PrintAndLogEx(NORMAL, "IAD length: %d", IAD->len);
+            PrintAndLogEx(NORMAL, "IAD length: %zu", IAD->len);
             PrintAndLogEx(NORMAL, "VDDlen: %d", VDDlen);
             if (VDDlen < IAD->len - 1)
                 IDDlen = IAD->value[VDDlen + 1];
@@ -1315,7 +1339,7 @@ static int CmdEMVExec(const char *Cmd) {
                 dreturn(PM3_ESOFT);
             }
 
-            PrintAndLogEx(NORMAL, "CDOL2 data[%d]: %s", cdol2_data_tlv->len, sprint_hex(cdol2_data_tlv->value, cdol2_data_tlv->len));
+            PrintAndLogEx(NORMAL, "CDOL2 data[%zu]: %s", cdol2_data_tlv->len, sprint_hex(cdol2_data_tlv->value, cdol2_data_tlv->len));
             //PrintAndLogEx(NORMAL, "* * AC2");
             // here must be AC2, but we dont make external authenticate (
             /*          // AC2
@@ -1360,11 +1384,11 @@ static int CmdEMVScan(const char *Cmd) {
         arg_lit0("aA",  "apdu",     "show APDU reqests and responses."),
         arg_lit0("tT",  "tlv",      "TLV decode results."),
         arg_lit0("eE",  "extract",  "Extract TLV elements and fill Application Data"),
-        arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv/defparams.json` file."),
+        arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv_defparams.json` file."),
         arg_rem("By default:",      "Transaction type - MSD"),
         arg_lit0("vV",  "qvsdc",    "Transaction type - qVSDC or M/Chip."),
         arg_lit0("cC",  "qvsdccda", "Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)."),
-        arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standart behavior."),
+        arg_lit0("xX",  "vsdc",     "Transaction type - VSDC. For test only. Not a standard behavior."),
         arg_lit0("gG",  "acgpo",    "VISA. generate AC from GPO."),
         arg_lit0("mM",  "merge",    "Merge output file with card's data. (warning: the file may be corrupted!)"),
         arg_lit0("wW",  "wired",    "Send data via contact (iso7816) interface. Contactless interface set by default."),
@@ -1574,7 +1598,7 @@ static int CmdEMVScan(const char *Cmd) {
         DropFieldEx(channel);
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+    PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
     PrintAndLogEx(INFO, "-->GPO.");
     res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
@@ -1606,7 +1630,7 @@ static int CmdEMVScan(const char *Cmd) {
 
     while (AFL && AFL->len) {
         if (AFL->len % 4) {
-            PrintAndLogEx(ERR, "Wrong AFL length: %d", AFL->len);
+            PrintAndLogEx(ERR, "Wrong AFL length: %zu", AFL->len);
             break;
         }
 
@@ -1698,8 +1722,23 @@ static int CmdEMVList(const char *Cmd) {
 }
 
 static int CmdEMVTest(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    return ExecuteCryptoTests(true);
+    CLIParserInit("emv test",
+                  "Executes tests\n",
+                  "Usage:\n\temv test [l]\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("iI",  "ignore",  "ignore timing tests for VM"),
+        arg_lit0("lL",  "long",  "run long tests too"),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+
+    bool ignoreTimeTest = arg_get_lit(1);
+    bool runSlowTests = arg_get_lit(2);
+    CLIParserFree();
+
+    return ExecuteCryptoTests(true, ignoreTimeTest, runSlowTests);
 }
 
 static int CmdEMVRoca(const char *Cmd) {
@@ -1819,7 +1858,7 @@ static int CmdEMVRoca(const char *Cmd) {
         free(pdol_data_tlv);
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "PDOL data[%d]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+    PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
     PrintAndLogEx(INFO, "-->GPO.");
     res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
@@ -1840,7 +1879,7 @@ static int CmdEMVRoca(const char *Cmd) {
 
     while (AFL && AFL->len) {
         if (AFL->len % 4) {
-            PrintAndLogEx(ERR, "Wrong AFL length: %d", AFL->len);
+            PrintAndLogEx(ERR, "Wrong AFL length: %zu", AFL->len);
             break;
         }
 

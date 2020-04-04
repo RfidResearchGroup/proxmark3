@@ -10,7 +10,6 @@
 //
 
 #include "additional_ca.h"
-#include "mbedtls/certs.h"
 
 #define GLOBALSIGN_CA \
     "-----BEGIN CERTIFICATE-----\r\n" \
@@ -37,6 +36,8 @@
 
 // Name: Yubico U2F Root CA Serial 457200631
 // Issued: 2014-08-01
+// https://github.com/Yubico/developers.yubico.com/tree/master/static/U2F
+// https://fido-mds-parser.appspot.com/?url=https://mds.fidoalliance.org/metadata/7DwVE5vbRQysYTJrf95b3a
 #define YUBICO_CA \
     "-----BEGIN CERTIFICATE-----\r\n" \
     "MIIDHjCCAgagAwIBAgIEG0BT9zANBgkqhkiG9w0BAQsFADAuMSwwKgYDVQQDEyNZ\r\n" \
@@ -75,6 +76,83 @@
     "jQGd7rwSZuE5RWUPVygYhUstQO9zNUOs\r\n" \
     "-----END CERTIFICATE-----\r\n"
 
+// FEITIAN U2F
+// https://fido-mds-parser.appspot.com/?url=https://mds.fidoalliance.org/metadata/eS7v8sum4jxp7kgLQ5Qqcg
+#define FEITIAN_U2F_CA \
+    "-----BEGIN CERTIFICATE-----\r\n" \
+    "MIIBfjCCASWgAwIBAgIBATAKBggqhkjOPQQDAjAXMRUwEwYDVQQDDAxGVCBGSURP\r\n" \
+    "IDAyMDAwIBcNMTYwNTAxMDAwMDAwWhgPMjA1MDA1MDEwMDAwMDBaMBcxFTATBgNV\r\n" \
+    "BAMMDEZUIEZJRE8gMDIwMDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABNBmrRqV\r\n" \
+    "OxztTJVN19vtdqcL7tKQeol2nnM2/yYgvksZnr50SKbVgIEkzHQVOu80LVEE3lVh\r\n" \
+    "eO1HjggxAlT6o4WjYDBeMB0GA1UdDgQWBBRJFWQt1bvG3jM6XgmV/IcjNtO/CzAf\r\n" \
+    "BgNVHSMEGDAWgBRJFWQt1bvG3jM6XgmV/IcjNtO/CzAMBgNVHRMEBTADAQH/MA4G\r\n" \
+    "A1UdDwEB/wQEAwIBBjAKBggqhkjOPQQDAgNHADBEAiAwfPqgIWIUB+QBBaVGsdHy\r\n" \
+    "0s5RMxlkzpSX/zSyTZmUpQIgB2wJ6nZRM8oX/nA43Rh6SJovM2XwCCH//+LirBAb\r\n" \
+    "B0M=\r\n" \
+    "-----END CERTIFICATE-----\r\n"
+
+// FEITIAN FIDO2
+#define FEITIAN_FIDO2_CA \
+    "-----BEGIN CERTIFICATE-----\r\n" \
+    "MIIB2DCCAX6gAwIBAgIQGBUrQbdDrm20FZnDsX2CBTAKBggqhkjOPQQDAjBLMQsw\r\n" \
+    "CQYDVQQGEwJVUzEdMBsGA1UECgwURmVpdGlhbiBUZWNobm9sb2dpZXMxHTAbBgNV\r\n" \
+    "BAMMFEZlaXRpYW4gRklETyBSb290IENBMCAXDTE4MDQwMTAwMDAwMFoYDzIwNDgw\r\n" \
+    "MzMxMjM1OTU5WjBLMQswCQYDVQQGEwJVUzEdMBsGA1UECgwURmVpdGlhbiBUZWNo\r\n" \
+    "bm9sb2dpZXMxHTAbBgNVBAMMFEZlaXRpYW4gRklETyBSb290IENBMFkwEwYHKoZI\r\n" \
+    "zj0CAQYIKoZIzj0DAQcDQgAEsFYEEhiJuqqnMgQjSiivBjV7DGCTf4XBBH/B7uvZ\r\n" \
+    "sKxXShF0L8uDISWUvcExixRs6gB3oldSrjox6L8T94NOzqNCMEAwHQYDVR0OBBYE\r\n" \
+    "FEu9hyYRrRyJzwRYvnDSCIxrFiO3MA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/\r\n" \
+    "BAQDAgEGMAoGCCqGSM49BAMCA0gAMEUCIDHSb2mbNDAUNXvpPU0oWKeNye0fQ2l9\r\n" \
+    "D01AR2+sLZdhAiEAo3wz684IFMVsCCRmuJqxH6FQRESNqezuo1E+KkGxWuM=\r\n" \
+    "-----END CERTIFICATE-----\r\n"
+
+// https://hypersecu.com/support/downloads
+// HyperFIDO U2F Security Key Attestation CA
+// Issuer: CN=FT FIDO 0100
+#define HYPERFIDO_U2F_1_CA \
+    "-----BEGIN CERTIFICATE-----\r\n" \
+    "MIIBjTCCATOgAwIBAgIBATAKBggqhkjOPQQDAjAXMRUwEwYDVQQDEwxGVCBGSURP\r\n" \
+    "IDAxMDAwHhcNMTQwNzAxMTUzNjI2WhcNNDQwNzAzMTUzNjI2WjAXMRUwEwYDVQQD\r\n" \
+    "EwxGVCBGSURPIDAxMDAwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASxdLxJx8ol\r\n" \
+    "S3DS5cIHzunPF0gg69d+o8ZVCMJtpRtlfBzGuVL4YhaXk2SC2gptPTgmpZCV2vbN\r\n" \
+    "fAPi5gOF0vbZo3AwbjAdBgNVHQ4EFgQUXt4jWlYDgwhaPU+EqLmeM9LoPRMwPwYD\r\n" \
+    "VR0jBDgwNoAUXt4jWlYDgwhaPU+EqLmeM9LoPROhG6QZMBcxFTATBgNVBAMTDEZU\r\n" \
+    "IEZJRE8gMDEwMIIBATAMBgNVHRMEBTADAQH/MAoGCCqGSM49BAMCA0gAMEUCIQC2\r\n" \
+    "D9o9cconKTo8+4GZPyZBJ3amc8F0/kzyidX9dhrAIAIgM9ocs5BW/JfmshVP9Mb+\r\n" \
+    "Joa/kgX4dWbZxrk0ioTfJZg=\r\n" \
+    "-----END CERTIFICATE-----\r\n"
+
+// Issuer: CN= HYPERFIDO 0200
+#define HYPERFIDO_U2F_2_CA \
+    "-----BEGIN CERTIFICATE-----\r\n" \
+    "MIIBxzCCAWygAwIBAgICEAswCgYIKoZIzj0EAwIwOjELMAkGA1UEBhMCQ0ExEjAQ\r\n" \
+    "BgNVBAoMCUhZUEVSU0VDVTEXMBUGA1UEAwwOSFlQRVJGSURPIDAyMDAwIBcNMTgw\r\n" \
+    "MTAxMDAwMDAwWhgPMjA0NzEyMzEyMzU5NTlaMDoxCzAJBgNVBAYTAkNBMRIwEAYD\r\n" \
+    "VQQKDAlIWVBFUlNFQ1UxFzAVBgNVBAMMDkhZUEVSRklETyAwMjAwMFkwEwYHKoZI\r\n" \
+    "zj0CAQYIKoZIzj0DAQcDQgAErKUI1G0S7a6IOLlmHipLlBuxTYjsEESQvzQh3dB7\r\n" \
+    "dvxxWWm7kWL91rq6S7ayZG0gZPR+zYqdFzwAYDcG4+aX66NgMF4wHQYDVR0OBBYE\r\n" \
+    "FLZYcfMMwkQAGbt3ryzZFPFypmsIMB8GA1UdIwQYMBaAFLZYcfMMwkQAGbt3ryzZ\r\n" \
+    "FPFypmsIMAwGA1UdEwQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMAoGCCqGSM49BAMC\r\n" \
+    "A0kAMEYCIQCG2/ppMGt7pkcRie5YIohS3uDPIrmiRcTjqDclKVWg0gIhANcPNDZH\r\n" \
+    "E2/zZ+uB5ThG9OZus+xSb4knkrbAyXKX2zm/\r\n" \
+    "-----END CERTIFICATE-----\r\n"
+
+// NXP
+// https://fido-mds-parser.appspot.com/?url=https://mds.fidoalliance.org/metadata/JKP5CiDehdMMPwtG5i7to5
+#define NXP_U2F_CA \
+    "-----BEGIN CERTIFICATE-----\r\n" \
+    "MIIBjzCCATWgAwIBAgIJASNFZ4mrze8BMAoGCCqGSM49BAMCMCgxJjAkBgNVBAMM\r\n" \
+    "HU5YUCBTZW1pY29uZHVjdG9yIFUyRiBSb290IENBMB4XDTE1MTIxNjE2MDUxMFoX\r\n" \
+    "DTI1MTIxMzE2MDUxMFowGjEYMBYGA1UEAwwPTlhQIEZJRE8gVTJGIHYwMFkwEwYH\r\n" \
+    "KoZIzj0CAQYIKoZIzj0DAQcDQgAExbuQcVAAX7IPwqVVVX/ni3Ch3Zzo04WkSsr5\r\n" \
+    "nHXpEarB+sd846FAi/o3a7oF1+u/oV65syguDD/0FaUGuUgTpKNWMFQwDAYDVR0T\r\n" \
+    "AQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwHwYDVR0jBBgwFoAUpaNTDgOg8hGDmawL\r\n" \
+    "bDydVSoNNPgwEwYLKwYBBAGC5RwCAQEEBAMCBDAwCgYIKoZIzj0EAwIDSAAwRQIh\r\n" \
+    "AJlr23jig2LxRM1PpgMAQXnZJy/HnkRB9O8KD0o2oK/mAiBG5EK1S3yVHdkkVGTJ\r\n" \
+    "Q12ffuK8Op7Nx89cszCr0WyIhQ==\r\n" \
+    "-----END CERTIFICATE-----\r\n"
+
 /* Concatenation of all additional CA certificates in PEM format if available */
-const char   additional_ca_pem[] = GLOBALSIGN_CA YUBICO_CA SOLOKEY_CA;
+const char   additional_ca_pem[] = GLOBALSIGN_CA YUBICO_CA SOLOKEY_CA \
+                                   FEITIAN_U2F_CA FEITIAN_FIDO2_CA HYPERFIDO_U2F_1_CA HYPERFIDO_U2F_2_CA NXP_U2F_CA;
 const size_t additional_ca_pem_len = sizeof(additional_ca_pem);

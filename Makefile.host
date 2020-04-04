@@ -1,0 +1,79 @@
+# This Makefile might have been called from various subdirs, trying to find our Makefile.defs
+ifeq ($(DEFSBEENHERE),)
+    -include Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    -include ../../../Makefile.defs
+endif
+ifeq ($(DEFSBEENHERE),)
+    $(error Can't find Makefile.defs)
+endif
+
+CFLAGS ?= -Wall -Werror -O3
+CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
+
+vpath %.c $(MYSRCPATHS)
+
+# Flags to generate temporary dependency files
+DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td
+# make temporary to final dependency files after successful compilation
+POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
+
+BINDIR := .
+OBJDIR := obj
+
+MYOBJS = $(MYSRCS:%.c=$(OBJDIR)/%.o)
+CLEAN = $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
+
+all: $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
+
+clean:
+	$(Q)$(RM) $(CLEAN)
+	$(Q)$(RMDIR) $(OBJDIR)
+
+install: all
+ifneq (,$(INSTALLTOOLS))
+	    $(info [@] Installing $(BINS) to $(DESTDIR)$(PREFIX)...)
+	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
+	    $(Q)$(CP) $(INSTALLTOOLS) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
+endif
+	@true
+
+uninstall:
+ifneq (,$(INSTALLTOOLS))
+	    $(info [@] Uninstalling $(BINS) from $(DESTDIR)$(PREFIX)...)
+	    $(Q)$(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)$(PATHSEP)$(notdir $(tool)))
+endif
+	@true
+
+.PHONY: all clean install uninstall
+
+$(BINDIR)/$(LIB_A): $(MYOBJS)
+	$(info [=] AR $(notdir $@))
+	$(Q)$(AR) $@ $(MYOBJS)
+	$(Q)$(RANLIB) $@
+
+$(BINDIR)/% : $(OBJDIR)/%.o $(MYOBJS) $(MYLIBS)
+	$(info [=] LD $(notdir $@))
+	$(Q)$(LD) $(LDFLAGS) $(MYOBJS) $< -o $@ $(MYLIBS)
+
+$(OBJDIR)/%.o : %.c | $(OBJDIR)
+	$(info [-] CC $<)
+	$(Q)$(CC) $(DEPFLAGS) $(CFLAGS) -c -o $@ $<
+	$(Q)$(POSTCOMPILE)
+
+$(OBJDIR):
+	$(Q)$(MKDIR) $(OBJDIR)
+
+DEPENDENCY_FILES = $(MYOBJS:%.o=%.d) $(BINS:%=$(OBJDIR)/%.d)
+
+$(DEPENDENCY_FILES): ;
+.PRECIOUS: $(DEPENDENCY_FILES)
+
+-include $(DEPENDENCY_FILES)

@@ -10,6 +10,13 @@
 
 #include "apduinfo.h"
 
+#include <string.h> // memmove
+#include <stdio.h>
+
+#include "ui.h"  // Print...
+#include "util.h"
+#include "commonutil.h"  // ARRAYLEN
+
 const APDUCode APDUCodeTable[] = {
     //  ID             Type                  Description
     {"XXXX",     APDUCODE_TYPE_NONE,         ""}, // blank string
@@ -22,7 +29,7 @@ const APDUCode APDUCodeTable[] = {
     {"6281",     APDUCODE_TYPE_WARNING,      "Part of returned data may be corrupted"},
     {"6282",     APDUCODE_TYPE_WARNING,      "End of file/record reached before reading Le bytes"},
     {"6283",     APDUCODE_TYPE_WARNING,      "Selected file invalidated"},
-    {"6284",     APDUCODE_TYPE_WARNING,      "Selected file is not valid. FCI not formated according to ISO"},
+    {"6284",     APDUCODE_TYPE_WARNING,      "Selected file is not valid. FCI not formatted according to ISO"},
     {"6285",     APDUCODE_TYPE_WARNING,      "No input data available from a sensor on the card. No Purse Engine enslaved for R3bc"},
     {"62A2",     APDUCODE_TYPE_WARNING,      "Wrong R-MAC"},
     {"62A4",     APDUCODE_TYPE_WARNING,      "Card locked (during reset( ))"},
@@ -136,7 +143,7 @@ const APDUCode APDUCodeTable[] = {
     {"6FXX",     APDUCODE_TYPE_ERROR,        "No precise diagnosis (procedure byte), (ISO 7816-3)"},
     {"9---",     APDUCODE_TYPE_NONE,         ""},
     {"9000",     APDUCODE_TYPE_INFO,         "Command successfully executed (OK)."},
-    {"9004",     APDUCODE_TYPE_WARNING,      "PIN not succesfully verified, 3 or more PIN tries left"},
+    {"9004",     APDUCODE_TYPE_WARNING,      "PIN not successfully verified, 3 or more PIN tries left"},
     {"9008",     APDUCODE_TYPE_NONE,         "Key/file not found"},
     {"9080",     APDUCODE_TYPE_WARNING,      "Unblock Try Counter has reached zero"},
     {"9100",     APDUCODE_TYPE_NONE,         "OK"},
@@ -184,7 +191,7 @@ const APDUCode APDUCodeTable[] = {
     {"9681",     APDUCODE_TYPE_NONE,         "Slave not found"},
     {"9700",     APDUCODE_TYPE_NONE,         "PIN blocked and Unblock Try Counter is 1 or 2"},
     {"9702",     APDUCODE_TYPE_NONE,         "Main keys are blocked"},
-    {"9704",     APDUCODE_TYPE_NONE,         "PIN not succesfully verified, 3 or more PIN tries left"},
+    {"9704",     APDUCODE_TYPE_NONE,         "PIN not successfully verified, 3 or more PIN tries left"},
     {"9784",     APDUCODE_TYPE_NONE,         "Base key"},
     {"9785",     APDUCODE_TYPE_NONE,         "Limit exceeded - C-MAC key"},
     {"9786",     APDUCODE_TYPE_NONE,         "SM error - Limit exceeded - R-MAC key"},
@@ -198,13 +205,13 @@ const APDUCode APDUCodeTable[] = {
     {"9850",     APDUCODE_TYPE_ERROR,        "INCREASE or DECREASE could not be executed because a limit has been reached."},
     {"9862",     APDUCODE_TYPE_ERROR,        "Authentication Error, application specific (incorrect MAC)"},
     {"9900",     APDUCODE_TYPE_NONE,         "1 PIN try left"},
-    {"9904",     APDUCODE_TYPE_NONE,         "PIN not succesfully verified, 1 PIN try left"},
+    {"9904",     APDUCODE_TYPE_NONE,         "PIN not successfully verified, 1 PIN try left"},
     {"9985",     APDUCODE_TYPE_NONE,         "Wrong status - Cardholder lock"},
     {"9986",     APDUCODE_TYPE_ERROR,        "Missing privilege"},
     {"9987",     APDUCODE_TYPE_NONE,         "PIN is not installed"},
     {"9988",     APDUCODE_TYPE_NONE,         "Wrong status - R-MAC state"},
     {"9A00",     APDUCODE_TYPE_NONE,         "2 PIN try left"},
-    {"9A04",     APDUCODE_TYPE_NONE,         "PIN not succesfully verified, 2 PIN try left"},
+    {"9A04",     APDUCODE_TYPE_NONE,         "PIN not successfully verified, 2 PIN try left"},
     {"9A71",     APDUCODE_TYPE_NONE,         "Wrong parameter value - Double agent AID"},
     {"9A72",     APDUCODE_TYPE_NONE,         "Wrong parameter value - Double agent Type"},
     {"9D05",     APDUCODE_TYPE_ERROR,        "Incorrect certificate type"},
@@ -251,13 +258,12 @@ const APDUCode APDUCodeTable[] = {
     {"9D63",     APDUCODE_TYPE_ERROR,        "Crypto functions not available"},
     {"9D64",     APDUCODE_TYPE_ERROR,        "No application loaded"},
     {"9E00",     APDUCODE_TYPE_NONE,         "PIN not installed"},
-    {"9E04",     APDUCODE_TYPE_NONE,         "PIN not succesfully verified, PIN not installed"},
+    {"9E04",     APDUCODE_TYPE_NONE,         "PIN not successfully verified, PIN not installed"},
     {"9F00",     APDUCODE_TYPE_NONE,         "PIN blocked and Unblock Try Counter is 3"},
-    {"9F04",     APDUCODE_TYPE_NONE,         "PIN not succesfully verified, PIN blocked and Unblock Try Counter is 3"},
+    {"9F04",     APDUCODE_TYPE_NONE,         "PIN not successfully verified, PIN blocked and Unblock Try Counter is 3"},
     {"9FXX",     APDUCODE_TYPE_NONE,         "Command successfully executed; 'xx' bytes of data are available and can be requested using GET RESPONSE."},
     {"9XXX",     APDUCODE_TYPE_NONE,         "Application related status, (ISO 7816-3)"}
 };
-const size_t APDUCodeTableLen = sizeof(APDUCodeTable) / sizeof(APDUCode);
 
 static int CodeCmp(const char *code1, const char *code2) {
     int xsymb = 0;
@@ -279,12 +285,12 @@ static int CodeCmp(const char *code1, const char *code2) {
 
 const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
     char buf[6] = {0};
-    int mineq = APDUCodeTableLen;
+    int mineq = ARRAYLEN(APDUCodeTable);
     int mineqindx = 0;
 
     sprintf(buf, "%02X%02X", sw1, sw2);
 
-    for (int i = 0; i < APDUCodeTableLen; i++) {
+    for (int i = 0; i < ARRAYLEN(APDUCodeTable); i++) {
         int res = CodeCmp(APDUCodeTable[i].ID, buf);
 
         // equal
@@ -300,7 +306,7 @@ const APDUCode *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
     }
 
     // if we have not equal, but with some 'X'
-    if (mineqindx < APDUCodeTableLen) {
+    if (mineqindx < ARRAYLEN(APDUCodeTable)) {
         return &APDUCodeTable[mineqindx];
     }
 
@@ -313,4 +319,191 @@ const char *GetAPDUCodeDescription(uint8_t sw1, uint8_t sw2) {
         return cd->Description;
     else
         return APDUCodeTable[0].Description; //empty string
+}
+
+int APDUDecode(uint8_t *data, int len, APDUStruct *apdu) {
+    ExtAPDUHeader *hapdu = (ExtAPDUHeader *)data;
+
+    apdu->cla = hapdu->cla;
+    apdu->ins = hapdu->ins;
+    apdu->p1 = hapdu->p1;
+    apdu->p2 = hapdu->p2;
+
+    apdu->lc = 0;
+    apdu->data = NULL;
+    apdu->le = 0;
+    apdu->extended_apdu = false;
+    apdu->case_type = 0x00;
+
+    uint8_t b0 = hapdu->lc[0];
+
+    // case 1
+    if (len == 4) {
+        apdu->case_type = 0x01;
+    }
+
+    // case 2S (Le)
+    if (len == 5) {
+        apdu->case_type = 0x02;
+        apdu->le = b0;
+        if (!apdu->le)
+            apdu->le = 0x100;
+    }
+
+    // case 3S (Lc + data)
+    if (len == 5U + b0 && b0 != 0) {
+        apdu->case_type = 0x03;
+        apdu->lc = b0;
+    }
+
+    // case 4S (Lc + data + Le)
+    if (len == 5U + b0 + 1U && b0 != 0) {
+        apdu->case_type = 0x04;
+        apdu->lc = b0;
+        apdu->le = data[len - 1];
+        if (!apdu->le)
+            apdu->le = 0x100;
+    }
+
+    // extended length apdu
+    if (len >= 7 && b0 == 0) {
+        uint16_t extlen = (hapdu->lc[1] << 8) + hapdu->lc[2];
+
+        // case 2E (Le) - extended
+        if (len == 7) {
+            apdu->case_type = 0x12;
+            apdu->extended_apdu = true;
+            apdu->le = extlen;
+            if (!apdu->le)
+                apdu->le = 0x10000;
+        }
+
+        // case 3E (Lc + data) - extended
+        if (len == 7U + extlen) {
+            apdu->case_type = 0x13;
+            apdu->extended_apdu = true;
+            apdu->lc = extlen;
+        }
+
+        // case 4E (Lc + data + Le) - extended 2-byte Le
+        if (len == 7U + extlen + 2U) {
+            apdu->case_type = 0x14;
+            apdu->extended_apdu = true;
+            apdu->lc = extlen;
+            apdu->le = (data[len - 2] << 8) + data[len - 1];
+            if (!apdu->le)
+                apdu->le = 0x10000;
+        }
+
+        // case 4E (Lc + data + Le) - extended 3-byte Le
+        if (len == 7U + extlen + 3U && data[len - 3] == 0) {
+            apdu->case_type = 0x24;
+            apdu->extended_apdu = true;
+            apdu->lc = extlen;
+            apdu->le = (data[len - 2] << 8) + data[len - 1];
+            if (!apdu->le)
+                apdu->le = 0x10000;
+        }
+    }
+
+    if (!apdu->case_type)
+        return 1;
+
+    if (apdu->lc) {
+        if (apdu->extended_apdu) {
+            apdu->data = data + 7;
+        } else {
+            apdu->data = data + 5;
+        }
+
+    }
+
+    return 0;
+}
+
+int APDUEncode(APDUStruct *apdu, uint8_t *data, int *len) {
+    if (len)
+        *len = 0;
+
+    if (apdu->le > 0x10000 || apdu->lc > 0xffff)
+        return 1;
+
+    size_t dptr = 0;
+    data[dptr++] = apdu->cla;
+    data[dptr++] = apdu->ins;
+    data[dptr++] = apdu->p1;
+    data[dptr++] = apdu->p2;
+
+    if (apdu->lc) {
+        if (apdu->extended_apdu || apdu->lc > 0xff || apdu->le > 0x100) {
+            data[dptr++] = 0x00;
+            data[dptr++] = (apdu->lc >> 8) & 0xff;
+            data[dptr++] = (apdu->lc) & 0xff;
+            memmove(&data[dptr], apdu->data, apdu->lc);
+            dptr += apdu->lc;
+            apdu->extended_apdu = true;
+        } else {
+            data[dptr++] = apdu->lc;
+            memmove(&data[dptr], apdu->data, apdu->lc);
+            dptr += apdu->lc;
+        }
+    }
+
+    if (apdu->le) {
+        if (apdu->extended_apdu) {
+            if (apdu->le != 0x10000) {
+                data[dptr++] = 0x00;
+                data[dptr++] = (apdu->le >> 8) & 0xff;
+                data[dptr++] = (apdu->le) & 0xff;
+            } else {
+                data[dptr++] = 0x00;
+                data[dptr++] = 0x00;
+                data[dptr++] = 0x00;
+            }
+        } else {
+            if (apdu->le != 0x100)
+                data[dptr++] = apdu->le;
+            else
+                data[dptr++] = 0x00;
+        }
+    }
+
+    if (len)
+        *len = dptr;
+    return 0;
+}
+
+int APDUEncodeS(sAPDU *sapdu, bool extended, uint16_t le, uint8_t *data, int *len) {
+    if (extended && le > 0x100)
+        return 10;
+
+    APDUStruct apdu;
+
+    apdu.cla = sapdu->CLA;
+    apdu.ins = sapdu->INS;
+    apdu.p1 = sapdu->P1;
+    apdu.p2 = sapdu->P2;
+
+    apdu.lc = sapdu->Lc;
+    if (sapdu->Lc)
+        apdu.data = sapdu->data;
+    else
+        apdu.data = NULL;
+    apdu.le = le;
+
+    apdu.extended_apdu = extended;
+    apdu.case_type = 0x00;
+
+    return APDUEncode(&apdu, data, len);
+}
+
+void APDUPrint(APDUStruct apdu) {
+    APDUPrintEx(apdu, 0);
+}
+
+void APDUPrintEx(APDUStruct apdu, size_t maxdatalen) {
+    PrintAndLogEx(INFO, "APDU: %scase=0x%02x cla=0x%02x ins=0x%02x p1=0x%02x p2=0x%02x Lc=0x%02x(%d) Le=0x%02x(%d)",
+                  apdu.extended_apdu ? "[e]" : "", apdu.case_type, apdu.cla, apdu.ins, apdu.p1, apdu.p2, apdu.lc, apdu.lc, apdu.le, apdu.le);
+    if (maxdatalen > 0)
+        PrintAndLogEx(INFO, "data: %s%s", sprint_hex(apdu.data, MIN(apdu.lc, maxdatalen)), apdu.lc > maxdatalen ? "..." : "");
 }

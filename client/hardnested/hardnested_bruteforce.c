@@ -55,6 +55,8 @@ THE SOFTWARE.
 #include <pthread.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include "common.h"
 #include "proxmark3.h"
 #include "cmdhfmfhard.h"
 #include "hardnested_bf_core.h"
@@ -63,11 +65,13 @@ THE SOFTWARE.
 #include "util_posix.h"
 #include "crapto1/crapto1.h"
 #include "parity.h"
+#include "fileutils.h"
+#include "pm3_cmd.h"
 
 #define NUM_BRUTE_FORCE_THREADS         (num_CPUs())
 #define DEFAULT_BRUTE_FORCE_RATE        (120000000.0) // if benchmark doesn't succeed
 #define TEST_BENCH_SIZE                 (6000)        // number of odd and even states for brute force benchmark
-#define TEST_BENCH_FILENAME             "hardnested/bf_bench_data.bin"
+#define TEST_BENCH_FILENAME             "hardnested_bf_bench_data.bin"
 //#define WRITE_BENCH_FILE
 
 // debugging options
@@ -160,7 +164,7 @@ crack_states_thread(void *x) {
         statelist_t *bucket = buckets[current_bucket];
         if (bucket) {
 #if defined (DEBUG_BRUTE_FORCE)
-            printf("Thread %u starts working on bucket %u\n", thread_id, current_bucket);
+            PrintAndLogEx(INFO, "Thread %u starts working on bucket %u\n", thread_id, current_bucket);
 #endif
             const uint64_t key = crack_states_bitsliced(thread_arg->cuid, thread_arg->best_first_bytes, bucket, &keys_found, &num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, thread_arg->nonces);
             if (key != -1) {
@@ -246,16 +250,16 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte) {
     uint32_t bf_test_nonce_temp[4];
     uint8_t bf_test_nonce_par_temp[4];
     uint8_t bf_test_nonce_2nd_byte_temp[4];
-    for (uint8_t i = 0; i < 4 && i < nonces_to_bruteforce; i++) {
-        bf_test_nonce_temp[i] = bf_test_nonce[best_4[i]];
+    for (uint8_t j = 0; j < 4 && j < nonces_to_bruteforce; j++) {
+        bf_test_nonce_temp[j] = bf_test_nonce[best_4[j]];
 
-        bf_test_nonce_par_temp[i] = bf_test_nonce_par[best_4[i]];
-        bf_test_nonce_2nd_byte_temp[i] = bf_test_nonce_2nd_byte[best_4[i]];
+        bf_test_nonce_par_temp[j] = bf_test_nonce_par[best_4[j]];
+        bf_test_nonce_2nd_byte_temp[j] = bf_test_nonce_2nd_byte[best_4[j]];
     }
-    for (uint8_t i = 0; i < 4 && i < nonces_to_bruteforce; i++) {
-        bf_test_nonce[i] = bf_test_nonce_temp[i];
-        bf_test_nonce_par[i] = bf_test_nonce_par_temp[i];
-        bf_test_nonce_2nd_byte[i] = bf_test_nonce_2nd_byte_temp[i];
+    for (uint8_t j = 0; j < 4 && j < nonces_to_bruteforce; j++) {
+        bf_test_nonce[j] = bf_test_nonce_temp[j];
+        bf_test_nonce_par[j] = bf_test_nonce_par_temp[j];
+        bf_test_nonce_2nd_byte[j] = bf_test_nonce_2nd_byte_temp[j];
     }
 }
 
@@ -263,8 +267,12 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte) {
 #if defined (WRITE_BENCH_FILE)
 static void write_benchfile(statelist_t *candidates) {
 
-    printf("Writing brute force benchmark data...");
-    FILE *benchfile = fopen(TEST_BENCH_FILENAME, "wb");
+    PrintAndLogEx(NORMAL, "Writing brute force benchmark data in " RESOURCES_SUBDIR " subdirectory...");
+    FILE *benchfile = fopen(RESOURCES_SUBDIR TEST_BENCH_FILENAME, "wb");
+    if (benchfile == NULL) {
+        PrintAndLogEx(ERR, "Can't write " RESOURCES_SUBDIR TEST_BENCH_FILENAME", abort!");
+        return;
+    }
     fwrite(&nonces_to_bruteforce, 1, sizeof(nonces_to_bruteforce), benchfile);
     for (uint32_t i = 0; i < nonces_to_bruteforce; i++) {
         fwrite(&(bf_test_nonce[i]), 1, sizeof(bf_test_nonce[i]), benchfile);
@@ -281,12 +289,12 @@ static void write_benchfile(statelist_t *candidates) {
         fwrite(&(candidates->states[ODD_STATE][i]), 1, sizeof(uint32_t), benchfile);
     }
     fclose(benchfile);
-    printf("done.\n");
+    PrintAndLogEx(NORMAL, "Done");
 }
 #endif
 
 
-bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *foundkey) {
+bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *found_key) {
 #if defined (WRITE_BENCH_FILE)
     write_benchfile(candidates);
 #endif
@@ -345,7 +353,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
         *bf_rate = (float)num_keys_tested / ((float)elapsed_time / 1000.0);
 
     if (keys_found > 0)
-        *foundkey = found_bs_key;
+        *found_key = found_bs_key;
 
     return (keys_found != 0);
 }
@@ -358,14 +366,17 @@ static bool read_bench_data(statelist_t *test_candidates) {
     uint32_t num_states = 0;
     uint32_t states_read = 0;
 
-    char bench_file_path[strlen(get_my_executable_directory()) + strlen(TEST_BENCH_FILENAME) + 1];
-    strcpy(bench_file_path, get_my_executable_directory());
-    strcat(bench_file_path, TEST_BENCH_FILENAME);
-
-    FILE *benchfile = fopen(bench_file_path, "rb");
-    if (benchfile == NULL) {
+    char *path;
+    if (searchFile(&path, RESOURCES_SUBDIR, TEST_BENCH_FILENAME, "", false) != PM3_SUCCESS) {
         return false;
     }
+
+    FILE *benchfile = fopen(path, "rb");
+    if (benchfile == NULL) {
+        free(path);
+        return false;
+    }
+    free(path);
     bytes_read = fread(&nonces_to_bruteforce, 1, sizeof(nonces_to_bruteforce), benchfile);
     if (bytes_read != sizeof(nonces_to_bruteforce)) {
         fclose(benchfile);

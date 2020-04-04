@@ -11,6 +11,9 @@
 //-----------------------------------------------------------------------------
 #include "hitag2_crypto.h"
 
+#include "util.h"
+#include "string.h"
+
 /* Following is a modified version of cryptolib.com/ciphers/hitag2/ */
 // Software optimized 48-bit Philips/NXP Mifare Hitag2 PCF7936/46/47/52 stream cipher algorithm by I.C. Wiener 2006-2007.
 // For educational purposes only.

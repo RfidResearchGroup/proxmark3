@@ -9,11 +9,52 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfnexwatch.h"
+#include <inttypes.h>       // PRIu
+#include <string.h>
+#include <ctype.h>          // tolower
+#include <stdlib.h>         // free, alloc
+
+#include "commonutil.h"     // ARRAYLEN
+#include "cmdparser.h"      // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"        // preamblesearch
+#include "cmdlf.h"
+#include "lfdemod.h"
+#include "protocols.h"      // t55xx defines
+#include "cmdlft55xx.h"     // clone..
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_lf_nexwatch_clone(void) {
+    PrintAndLogEx(NORMAL, "clone a Nexwatch tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage: lf nexwatch clone [h] [b <raw hex>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "      h             : this help");
+    PrintAndLogEx(NORMAL, "      r <raw hex>   : raw hex data. 16 bytes max");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       lf nexwatch clone r 5600000000213C9F8F150C0000000000");
+    return PM3_SUCCESS;
+}
+
+static int usage_lf_nexwatch_sim(void) {
+    PrintAndLogEx(NORMAL, "Enables simulation of Nexwatch card");
+    PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  lf nexwatch sim [h] <r raw hex>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "      h            : this help");
+    PrintAndLogEx(NORMAL, "      r <raw hex>  : raw hex data. 16 bytes max");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       lf nexwatch sim r 5600000000213C9F8F150C0000000000");
+    return PM3_SUCCESS;
+}
+
 static int CmdNexWatchDemod(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+    (void)Cmd;
 
     if (PSKDemod("", false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - NexWatch can't demod signal");
@@ -40,7 +81,7 @@ static int CmdNexWatchDemod(const char *Cmd) {
     }
 
     setDemodBuff(DemodBuffer, size, idx + 4);
-    setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 4)*g_DemodClock));
+    setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 4) * g_DemodClock));
 
 //    idx = 8 + 32; // 8 = preamble, 32 = reserved bits (always 0)
 
@@ -56,28 +97,138 @@ static int CmdNexWatchDemod(const char *Cmd) {
     //checksum check (TBD)
 
     //output
-    PrintAndLogEx(NORMAL, "NexWatch ID: %d", ID);
+    PrintAndLogEx(SUCCESS, "NexWatch ID: " _YELLOW_("%"PRIu32), ID);
     if (invert) {
-        PrintAndLogEx(NORMAL, "Had to Invert - probably NexKey");
+        PrintAndLogEx(INFO, "Had to Invert - probably NexKey");
         for (size_t i = 0; i < size; i++)
             DemodBuffer[i] ^= 1;
     }
 
+    // bits to hex
     CmdPrintDemodBuff("x");
+    //PrintAndLogEx(INFO, "Raw: %s", sprint_hex_inrow(DemodBuffer, DemodBufferLen));
+
     return PM3_SUCCESS;
 }
 
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdNexWatchRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 20000);
     return CmdNexWatchDemod(Cmd);
 }
 
+static int CmdNexWatchClone(const char *Cmd) {
+
+    // 56000000 00213C9F 8F150C00 00000000
+    uint32_t blocks[5];
+    bool errors = false;
+    uint8_t cmdp = 0;
+    int datalen = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_nexwatch_clone();
+            case 'r': {
+                // skip first block,  4*4 = 16 bytes left
+                uint8_t rawhex[16] = {0};
+                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
+                if (res != 0)
+                    errors = true;
+
+                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
+                }
+                cmdp += 2;
+                break;
+            }
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || cmdp == 0) return usage_lf_nexwatch_clone();
+
+    //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
+    blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT;
+
+    PrintAndLogEx(INFO, "Preparing to clone NexWatch to T55x7 with raw hex");
+    print_blocks(blocks,  ARRAYLEN(blocks));
+
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf nexwatch read`") "to verify");
+    return res;
+}
+
+static int CmdNexWatchSim(const char *Cmd) {
+
+    uint8_t cmdp = 0;
+    bool errors = false;
+    int rawlen = 0;
+    uint8_t rawhex[16] = {0};
+    uint32_t rawblocks[4];
+    uint8_t bs[128];
+    memset(bs, 0, sizeof(bs));
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_nexwatch_clone();
+            case 'r': {
+                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &rawlen);
+                if (res != 0)
+                    errors = true;
+
+                cmdp += 2;
+                break;
+            }
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || cmdp == 0) return usage_lf_nexwatch_sim();
+
+    // hex to bits.
+    for (size_t i = 0; i < ARRAYLEN(rawblocks); i++) {
+        rawblocks[i] = bytes_to_num(rawhex + (i * sizeof(uint32_t)), sizeof(uint32_t));
+        num_to_bytebits(rawblocks[i], sizeof(uint32_t) * 8, bs + (i * sizeof(uint32_t) * 8));
+    }
+
+    PrintAndLogEx(SUCCESS, "Simulating NexWatch - raw: %s", sprint_hex_inrow(rawhex, rawlen));
+
+    lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    payload->carrier = 2;
+    payload->invert = 0;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    free(payload);
+
+    PacketResponseNG resp;
+    WaitForResponse(CMD_LF_PSK_SIMULATE, &resp);
+
+    PrintAndLogEx(INFO, "Done");
+    if (resp.status != PM3_EOPABORTED)
+        return resp.status;
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
-    {"help",  CmdHelp,          AlwaysAvailable, "This help"},
-    {"demod", CmdNexWatchDemod, AlwaysAvailable, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
-    {"read",  CmdNexWatchRead,  IfPm3Lf,         "Attempt to Read and Extract tag data from the antenna"},
+    {"help",  CmdHelp,           AlwaysAvailable, "This help"},
+    {"demod", CmdNexWatchDemod,  AlwaysAvailable, "Demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
+    {"read",  CmdNexWatchRead,   IfPm3Lf,         "Attempt to Read and Extract tag data from the antenna"},
+    {"clone", CmdNexWatchClone,  IfPm3Lf,         "clone NexWatch tag to T55x7"},
+    {"sim",   CmdNexWatchSim,    IfPm3Lf,         "simulate NexWatch tag"},
     {NULL, NULL, NULL, NULL}
 };
 

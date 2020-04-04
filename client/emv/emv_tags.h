@@ -17,7 +17,7 @@
 #define TAGS_H
 
 #include "tlv.h"
-#include <stdio.h>
+#include <stdio.h> // FILE
 
 // AC
 # define EMVAC_AC_MASK   0xC0

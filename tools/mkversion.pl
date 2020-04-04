@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 # Output a version.c file that includes information about the current build
 # Normally a couple of lines of bash would be enough (see openpcd project, original firmware by Harald Welte and Milosch Meriac)
@@ -64,7 +64,7 @@ $fullgitinfo =~ s/(\s)//g;
 $fullgitinfo = substr $fullgitinfo, 0, 49;
 
 print <<EOF
-#include "proxmark3.h"
+#include "proxmark3_arm.h"
 /* Generated file, do not edit */
 const struct version_information __attribute__((section(".version_information"))) version_information = {
     VERSION_INFORMATION_MAGIC,

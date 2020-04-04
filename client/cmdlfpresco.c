@@ -8,6 +8,22 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdlfpresco.h"
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "commonutil.h"     // ARRAYLEN
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+#include "cmdlft55xx.h" // verifywrite
+
 static int CmdHelp(const char *Cmd);
 
 static int usage_lf_presco_clone(void) {
@@ -56,7 +72,7 @@ static int CmdPrescoDemod(const char *Cmd) {
         else if (ans == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: preamble not found");
         else if (ans == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: Size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Presco: ans: %d", ans);
         return PM3_ESOFT;
@@ -84,7 +100,7 @@ static int CmdPrescoDemod(const char *Cmd) {
 //see ASKDemod for what args are accepted
 static int CmdPrescoRead(const char *Cmd) {
     // Presco Number: 123456789 --> Sitecode 30 | usercode 8665
-    lf_read(true, 12000);
+    lf_read(false, 12000);
     return CmdPrescoDemod(Cmd);
 }
 
@@ -118,31 +134,12 @@ static int CmdPrescoClone(const char *Cmd) {
     blocks[4] = fullcode;
 
     PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
-    print_blocks(blocks, 5);
+    print_blocks(blocks,  ARRAYLEN(blocks));
 
-    PacketResponseNG resp;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-    for (uint8_t i = 0; i < 5; i++) {
-        if (i == 4) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-        t55xx_write_block_t ng;
-        ng.data = blocks[i];
-        ng.pwd = 0;
-        ng.blockno = i;
-        ng.flags = 0;
-
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
-    }
-    return PM3_SUCCESS;
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf presco read`") "to verify");
+    return res;
 }
 
 // takes base 12 ID converts to hex
@@ -167,11 +164,11 @@ static int CmdPrescoSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -182,7 +179,7 @@ static int CmdPrescoSim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"read",    CmdPrescoRead,  IfPm3Lf,         "Attempt to read and Extract tag data"},
-    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag"},
+    {"clone",   CmdPrescoClone, IfPm3Lf,         "clone presco tag to T55x7 (or to q5/T5555)"},
     {"sim",     CmdPrescoSim,   IfPm3Lf,         "simulate presco tag"},
     {NULL, NULL, NULL, NULL}
 };

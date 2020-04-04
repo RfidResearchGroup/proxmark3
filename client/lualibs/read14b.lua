@@ -28,7 +28,7 @@ local ISO14B_COMMAND = {
     ISO14B_SELECT_SR = 0x80,
 }
 
-local function parse1443b(data)
+local function parse14443b(data)
     --[[
 
     Based on this struct :
@@ -39,7 +39,7 @@ local function parse1443b(data)
         uint8_t atqb[7];
         uint8_t chipid;
         uint8_t cid;
-    } __attribute__((__packed__)) iso14b_card_select_t;
+    } PACKED iso14b_card_select_t;
 
     --]]
 
@@ -55,8 +55,8 @@ local function parse1443b(data)
 end
 
 -- This function does a connect and retrieves some info
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function read14443b(disconnect)
 
     local command, result, info, err, data
@@ -70,7 +70,7 @@ local function read14443b(disconnect)
     end
 
     command = Command:newMIX{
-            cmd = cmds.CMD_ISO_14443B_COMMAND,
+            cmd = cmds.CMD_HF_ISO14443B_COMMAND,
             arg1 = flags
             }
 
@@ -79,7 +79,7 @@ local function read14443b(disconnect)
         local count,cmd,arg0,arg1,arg2 = bin.unpack('LLLL',result)
         if arg0 == 0 then
             data = string.sub(result, count)
-            info, err = parse1443b(data)
+            info, err = parse14443b(data)
         else
             err = 'iso14443b card select failed'
         end
@@ -96,11 +96,11 @@ end
 
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader.
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function waitFor14443b()
-    print('Waiting for card... press any key to quit')
-    while not core.ukbhit() do
+    print('Waiting for card... press Enter to quit')
+    while not core.kbd_enter_pressed() do
         res, err = read14443b(false)
         if res then return res end
         -- err means that there was no response from card
@@ -111,13 +111,13 @@ end
 ---
 -- turns on the HF field.
 local function connect14443b()
-    local c = Command:newMIX{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_CONNECT}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_CONNECT}
     return c:sendMIX(true)
 end
 ---
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect14443b()
-    local c = Command:newMIX{cmd = cmds.CMD_ISO_14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_DISCONNECT}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443B_COMMAND, arg1 = ISO14B_COMMAND.ISO14B_DISCONNECT}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443b.c, ReaderIso14443b() for details
     return c:sendMIX(true)
@@ -126,7 +126,7 @@ end
 local library = {
     read = read14443b,
     waitFor14443b = waitFor14443b,
-    parse1443b  = parse1443b,
+    parse14443b  = parse14443b,
     connect = connect14443b,
     disconnect = disconnect14443b,
     ISO14B_COMMAND = ISO14B_COMMAND,

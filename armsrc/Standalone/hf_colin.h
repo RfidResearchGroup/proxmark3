@@ -9,26 +9,16 @@
 // StandAlone Mod
 //-----------------------------------------------------------------------------
 
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+
 #ifndef FALSE
 #define FALSE 0
 #endif
 
 #ifndef __HF_COLIN_H
 #define __HF_COLIN_H
-
-#include "proxmark3.h"
-#include "mifaresim.h"  // mifare1ksim
-#include "mifareutil.h"
-#include "iso14443a.h"
-#include "protocols.h"
-#include "util.h"
-#include "standalone.h" // standalone definitions
-#include <stdbool.h>    // for bool
-#include <stdio.h>
-#include <string.h>
-#include "vtsend.h"
-#include "apps.h"
-#include "printf.h"
 
 #define _XRED_ "\x1b[31m"
 #define _XGREEN_ "\x1b[32m"
@@ -43,7 +33,7 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
 int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype);
 void saMifareMakeTag(void);
 int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void WriteTagToFlash(uint8_t index, size_t size);
+void WriteTagToFlash(uint32_t uid, size_t size);
 
 const char clearTerm[8] = {0x1b, 0x5b, 0x48, 0x1b, 0x5b, 0x32, 0x4a, '\0'};
 

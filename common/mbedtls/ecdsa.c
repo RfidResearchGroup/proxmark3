@@ -286,8 +286,8 @@ cleanup:
 /*
  * Convert a signature (given by context) to ASN.1
  */
-static int ecdsa_signature_to_asn1(const mbedtls_mpi *r, const mbedtls_mpi *s,
-                                   unsigned char *sig, size_t *slen) {
+int ecdsa_signature_to_asn1(const mbedtls_mpi *r, const mbedtls_mpi *s,
+                            unsigned char *sig, size_t *slen) {
     int ret;
     unsigned char buf[MBEDTLS_ECDSA_MAX_LEN];
     unsigned char *p = buf + sizeof(buf);

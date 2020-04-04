@@ -600,9 +600,6 @@ plast(const poly_t poly) {
     idx = size - 1UL;
     while (idx && !(accu = poly.bitmap[idx])) --idx;
 
-    if (poly.length == 24)
-        printf("ICE plast B - poly.length %lu vs size %lu idx %lu bitmap %ld\n", poly.length, size, idx,  poly.bitmap[idx]);
-
     if (!idx && !(accu = poly.bitmap[idx])) return (0UL);
 
     /* now accu == poly.bitmap[idx] and contains last significant term */
@@ -1080,10 +1077,6 @@ praloc(poly_t *poly, unsigned long length) {
 
     if (poly->bitmap) {
 
-        if (poly->length == 24)
-            printf("ICE praloc - poly->length %lu\n", poly->length);
-
-
         if (poly->length < length) {
             /* poly->length >= 0, length > 0, size > 0.
              * poly expanded. clear old last word and all new words
@@ -1094,15 +1087,11 @@ praloc(poly_t *poly, unsigned long length) {
             while (oldsize < size)
                 poly->bitmap[oldsize++] = BMP_C(0);
 
-            if (poly->length == 24) printf("ICE praloc MISS A\n");
-
         } else if (LOFS(length)) {
             /* poly->length >= length > 0.
              * poly shrunk. clear new last word
              */
             poly->bitmap[size - 1UL] &= ~(~BMP_C(0) >> LOFS(length));
-
-            if (poly->length == 24) printf("ICE praloc B  size %lu,  bm %lu \n", size, poly->bitmap[size - 1UL]);
         }
 
         poly->length = length;

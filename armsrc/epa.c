@@ -12,6 +12,16 @@
 //-----------------------------------------------------------------------------
 #include "epa.h"
 
+#include "cmd.h"
+#include "fpgaloader.h"
+#include "iso14443a.h"
+#include "iso14443b.h"
+#include "string.h"
+#include "util.h"
+#include "dbprint.h"
+#include "commonutil.h"
+#include "ticks.h"
+
 // Protocol and Parameter Selection Request for ISO 14443 type A cards
 // use regular (1x) speed in both directions
 // CRC is already included
@@ -129,8 +139,8 @@ void EPA_Finish() {
 //-----------------------------------------------------------------------------
 // Parses DER encoded data, e.g. from EF.CardAccess and fills out the given
 // structs. If a pointer is 0, it is ignored.
-// The function returns 0 on success and if an error occured, it returns the
-// offset where it occured.
+// The function returns 0 on success and if an error occurred, it returns the
+// offset where it occurred.
 //
 // TODO: This function can access memory outside of the given data if the DER
 //       encoding is broken
@@ -264,7 +274,7 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
      * ack layout:
      *   arg:
      *       1. element
-     *           step where the error occured or 0 if no error occured
+     *           step where the error occurred or 0 if no error occurred
      *       2. element
      *           return code of the last executed function
      *   d:
@@ -470,14 +480,14 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
     uint8_t response_apdu[300] = {0};
 
     // now replay the data and measure the timings
-    for (int i = 0; i < sizeof(apdu_lengths_replay); i++) {
+    for (int i = 0; i < ARRAYLEN(apdu_lengths_replay); i++) {
         StartCountUS();
         func_return = EPA_APDU(apdus_replay[i].data,
                                apdu_lengths_replay[i],
                                response_apdu);
         timings[i] = GetCountUS();
         // every step but the last one should succeed
-        if (i < sizeof(apdu_lengths_replay) - 1
+        if (i < ARRAYLEN(apdu_lengths_replay) - 1
                 && (func_return < 6
                     || response_apdu[func_return - 4] != 0x90
                     || response_apdu[func_return - 3] != 0x00)) {

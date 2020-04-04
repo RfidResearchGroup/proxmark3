@@ -12,11 +12,11 @@
 #define __UTIL_H
 
 #include "common.h"
-#include "commonutil.h"
-#include "proxmark3.h"
-#include "string.h"
-#include "BigBuf.h"
-#include "ticks.h"
+
+// PRIx64 definition missing with gcc-arm-none-eabi v8?
+#ifndef PRIx64
+    #define PRIx64 "llx"
+#endif
 
 // Basic macros
 

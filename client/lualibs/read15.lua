@@ -64,8 +64,8 @@ end
 
 -- This function does a connect and retrieves som info
 -- @param dont_disconnect - if true, does not disable the field
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function read15693(slow, dont_readresponse)
 
 --[[
@@ -95,7 +95,7 @@ local function read15693(slow, dont_readresponse)
     data = utils.Crc15("260100")
 
     command = Command:newMIX{
-            cmd = cmds.CMD_ISO_15693_COMMAND,
+            cmd = cmds.CMD_HF_ISO15693_COMMAND,
             arg1 = #data / 2,
             arg2 = 1,
             arg3 = 1,
@@ -130,11 +130,11 @@ end
 
 ---
 -- Waits for a ISO15693 card to be placed within the vicinity of the reader.
--- @return if successfull: an table containing card info
--- @return if unsuccessfull : nil, error
+-- @return if successful: an table containing card info
+-- @return if unsuccessful : nil, error
 local function waitFor15693()
-    print('Waiting for card... press any key to quit')
-    while not core.ukbhit() do
+    print('Waiting for card... press Enter to quit')
+    while not core.kbd_enter_pressed() do
         res, err = read15693()
         if res then return res end
         -- err means that there was no response from card
@@ -144,7 +144,7 @@ end
 
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect15693()
-    local c = Command:newMIX{cmd = cmds.CMD_ISO_15693_COMMAND}
+    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO15693_COMMAND}
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
     return c:sendMIX(true)

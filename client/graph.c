@@ -8,6 +8,13 @@
 // Graph utilities
 //-----------------------------------------------------------------------------
 #include "graph.h"
+#include <stdlib.h>
+#include <string.h>
+#include "ui.h"
+#include "util.h"    //param_get32ex
+#include "lfdemod.h"
+#include "cmddata.h" //for g_debugmode
+
 
 int GraphBuffer[MAX_GRAPH_TRACE_LEN];
 size_t GraphTraceLen;
@@ -77,6 +84,8 @@ void setGraphBuf(uint8_t *buff, size_t size) {
 
 size_t getFromGraphBuf(uint8_t *buff) {
     if (buff == NULL) return 0;
+    if (GraphTraceLen == 0) return 0;
+
     size_t i;
     for (i = 0; i < GraphTraceLen; ++i) {
         //trim
@@ -95,6 +104,7 @@ bool HasGraphData(void) {
     }
     return true;
 }
+
 bool isGraphBitstream(void) {
     // convert to bitstream if necessary
     for (int i = 0; i < GraphTraceLen; i++) {
@@ -104,9 +114,11 @@ bool isGraphBitstream(void) {
     }
     return true;
 }
+
 void convertGraphFromBitstream() {
     convertGraphFromBitstreamEx(1, 0);
 }
+
 void convertGraphFromBitstreamEx(int hi, int low) {
     for (int i = 0; i < GraphTraceLen; i++) {
         if (GraphBuffer[i] == hi)
@@ -116,29 +128,47 @@ void convertGraphFromBitstreamEx(int hi, int low) {
         else
             GraphBuffer[i] = 0;
     }
-    uint8_t bits[GraphTraceLen];
-    memset(bits, 0, sizeof(bits));
+
+    uint8_t *bits = calloc(GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(DEBUG, "ERR: convertGraphFromBitstreamEx, failed to allocate memory");
+        return;
+    }
+
     size_t size = getFromGraphBuf(bits);
+    if (size == 0) {
+        PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+        free(bits);
+        return;
+    }
 
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
+    free(bits);
     RepaintGraphWindow();
 }
 
 // Get or auto-detect ask clock rate
 int GetAskClock(const char *str, bool printAns) {
     if (getSignalProperties()->isnoise)
-        return false;
+        return -1;
 
     int clock1 = param_get32ex(str, 0, 0, 10);
     if (clock1 > 0)
         return clock1;
 
     // Auto-detect clock
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return -1;
+    }
+
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+        free(bits);
         return -1;
     }
 
@@ -156,21 +186,31 @@ int GetAskClock(const char *str, bool printAns) {
     if (printAns || g_debugMode)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d, Best Starting Position: %d", clock1, idx);
 
+    free(bits);
     return clock1;
 }
 
 uint8_t GetPskCarrier(const char *str, bool printAns) {
     if (getSignalProperties()->isnoise)
-        return false;
+        return -1;
 
     uint8_t carrier = 0;
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return -1;
+    }
+
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
-        return 0;
+        free(bits);
+        return -1;
     }
+
     uint16_t fc = countFC(bits, size, false);
+    free(bits);
     carrier = fc & 0xFF;
     if (carrier != 2 && carrier != 4 && carrier != 8) return 0;
     if ((fc >> 8) == 10 && carrier == 8) return 0;
@@ -190,20 +230,28 @@ int GetPskClock(const char *str, bool printAns) {
         return clock1;
 
     // Auto-detect clock
-    uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
-    size_t size = getFromGraphBuf(grph);
-    if (size == 0) {
-        PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return -1;
     }
+
+    size_t size = getFromGraphBuf(bits);
+    if (size == 0) {
+        PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+        free(bits);
+        return -1;
+    }
+
     size_t firstPhaseShiftLoc = 0;
     uint8_t curPhase = 0, fc = 0;
-    clock1 = DetectPSKClock(grph, size, 0, &firstPhaseShiftLoc, &curPhase, &fc);
+    clock1 = DetectPSKClock(bits, size, 0, &firstPhaseShiftLoc, &curPhase, &fc);
     setClockGrid(clock1, firstPhaseShiftLoc);
     // Only print this message if we're not looping something
     if (printAns)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
 
+    free(bits);
     return clock1;
 }
 
@@ -217,21 +265,30 @@ int GetNrzClock(const char *str, bool printAns) {
         return clock1;
 
     // Auto-detect clock
-    uint8_t grph[MAX_GRAPH_TRACE_LEN] = {0};
-    size_t size = getFromGraphBuf(grph);
-    if (size == 0) {
-        PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return -1;
     }
+
+    size_t size = getFromGraphBuf(bits);
+    if (size == 0) {
+        PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+        free(bits);
+        return -1;
+    }
+
     size_t clkStartIdx = 0;
-    clock1 = DetectNRZClock(grph, size, 0, &clkStartIdx);
+    clock1 = DetectNRZClock(bits, size, 0, &clkStartIdx);
     setClockGrid(clock1, clkStartIdx);
     // Only print this message if we're not looping something
     if (printAns)
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
 
+    free(bits);
     return clock1;
 }
+
 //by marshmellow
 //attempt to detect the field clock and bit clock for FSK
 int GetFskClock(const char *str, bool printAns) {
@@ -243,12 +300,13 @@ int GetFskClock(const char *str, bool printAns) {
     uint8_t fc1 = 0, fc2 = 0, rf1 = 0;
     int firstClockEdge = 0;
 
-    if (!fskClocks(&fc1, &fc2, &rf1, &firstClockEdge))
+    if (fskClocks(&fc1, &fc2, &rf1, &firstClockEdge) == false)
         return 0;
 
     if ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5)) {
         if (printAns)
             PrintAndLogEx(SUCCESS, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+
         setClockGrid(rf1, firstClockEdge);
         return rf1;
     }
@@ -257,27 +315,41 @@ int GetFskClock(const char *str, bool printAns) {
     PrintAndLogEx(DEBUG, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
     return 0;
 }
+
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 
     if (getSignalProperties()->isnoise)
         return false;
 
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
-    size_t size = getFromGraphBuf(bits);
-    if (size == 0)
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return false;
+    }
+
+    size_t size = getFromGraphBuf(bits);
+    if (size == 0) {
+        PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
+        free(bits);
+        return false;
+    }
 
     uint16_t ans = countFC(bits, size, true);
     if (ans == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: No data found");
+        free(bits);
         return false;
     }
 
     *fc1 = (ans >> 8) & 0xFF;
     *fc2 = ans & 0xFF;
     *rf1 = detectFSKClk(bits, size, *fc1, *fc2, firstClockEdge);
+
+    free(bits);
+
     if (*rf1 == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Clock detect error");
+
         return false;
     }
     return true;

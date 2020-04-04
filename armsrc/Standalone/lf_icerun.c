@@ -7,13 +7,17 @@
 //-----------------------------------------------------------------------------
 // main code for skeleton  aka IceRun by Iceman
 //-----------------------------------------------------------------------------
-#include "lf_icerun.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
 
 void ModInfo(void) {
-    DbpString("   LF skeleton mode -  aka IceRun (iceman)");
+    DbpString("  LF skeleton mode -  aka IceRun (iceman)");
 }
 
-// samy's sniff and repeat routine for LF
 void RunMod() {
     StandAloneMode();
     Dbprintf("[=] LF skeleton code a.k.a IceRun started");

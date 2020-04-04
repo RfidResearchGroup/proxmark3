@@ -12,16 +12,9 @@
 #ifndef _HITAGS_H_
 #define _HITAGS_H_
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include "hitag2_crypto.h"
+#include "common.h"
+
 #include "hitag.h"
-#include "proxmark3.h"
-#include "apps.h"
-#include "util.h"
-#include "string.h"
-#include "BigBuf.h"
 
 void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data);
 void ReadHitagS(hitag_function htf, hitag_data *htd);

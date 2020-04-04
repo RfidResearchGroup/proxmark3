@@ -7,20 +7,40 @@
 // Low frequency Paradox tag commands
 // FSK2a, rf/50, 96 bits (completely known)
 //-----------------------------------------------------------------------------
+#include "cmdlfparadox.h"
+
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
-#include "cmdlfparadox.h"
-#include "proxmark3.h"
+#include <stdlib.h>
+#include <ctype.h>
+
+#include "commonutil.h"     // ARRAYLEN
+#include "cmdparser.h"    // command_t
+#include "comms.h"
 #include "ui.h"
-#include "util.h"
 #include "graph.h"
-#include "cmdparser.h"
 #include "cmddata.h"
 #include "cmdlf.h"
 #include "lfdemod.h"
+#include "protocols.h"  // t55xx defines
+#include "cmdlft55xx.h" // clone..
+
 static int CmdHelp(const char *Cmd);
 
+static int usage_lf_paradox_clone(void) {
+    PrintAndLogEx(NORMAL, "clone a Paradox tag to a T55x7 tag.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage: lf paradox clone [h] [b <raw hex>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h               : this help");
+    PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       lf paradox clone b 0f55555695596a6a9999a59a");
+    return PM3_SUCCESS;
+}
+
+/*
 static int usage_lf_paradox_sim(void) {
     PrintAndLogEx(NORMAL, "Enables simulation of Paradox card with specified card number.");
     PrintAndLogEx(NORMAL, "Simulation runs until the button is pressed or another USB command is issued.");
@@ -36,6 +56,7 @@ static int usage_lf_paradox_sim(void) {
     PrintAndLogEx(NORMAL, "       lf paradox sim 123 11223");
     return PM3_SUCCESS;
 }
+*/
 
 //by marshmellow
 //Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
@@ -65,7 +86,7 @@ static int CmdParadoxDemod(const char *Cmd) {
         else if (idx == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox preamble not found");
         else if (idx == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error in Manchester data, size %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error in Manchester data, size %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
 
@@ -96,7 +117,7 @@ static int CmdParadoxDemod(const char *Cmd) {
                   rawLo
                  );
 
-    PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %d, Printing Demod Buffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: Paradox idx: %d, len: %zu, Printing Demod Buffer:", idx, size);
     if (g_debugMode)
         printDemodBuff();
 
@@ -105,12 +126,60 @@ static int CmdParadoxDemod(const char *Cmd) {
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdParadoxRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 10000);
     return CmdParadoxDemod(Cmd);
 }
 
-static int CmdParadoxSim(const char *Cmd) {
+static int CmdParadoxClone(const char *Cmd) {
 
+    uint32_t blocks[4];
+    bool errors = false;
+    uint8_t cmdp = 0;
+    int datalen = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_lf_paradox_clone();
+            case 'b': {
+                // skip first block,  3*4 =12 bytes left
+                uint8_t rawhex[12] = {0};
+                int res = param_gethex_to_eol(Cmd, cmdp + 1, rawhex, sizeof(rawhex), &datalen);
+                if (res != 0)
+                    errors = true;
+
+                for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+                    blocks[i] = bytes_to_num(rawhex + ((i - 1) * 4), sizeof(uint32_t));
+                }
+                cmdp += 2;
+                break;
+            }
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+
+    if (errors || cmdp == 0) return usage_lf_paradox_clone();
+
+    //Securakey - compat mode, ASK/Man, data rate 40, 3 data blocks
+    blocks[0] = T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_50 | 3 << T55x7_MAXBLOCK_SHIFT;
+
+    PrintAndLogEx(INFO, "Preparing to clone Paradox to T55x7 with raw hex");
+    print_blocks(blocks,  ARRAYLEN(blocks));
+
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf paradox read`") "to verify");
+    return res;
+}
+
+static int CmdParadoxSim(const char *Cmd) {
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+/*
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) == 0 || cmdp == 'h') return usage_lf_paradox_sim();
 
@@ -128,7 +197,7 @@ static int CmdParadoxSim(const char *Cmd) {
     cardnumber = (cn & 0x0000FFFF);
 
     // if ( GetParadoxBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
-    // PrintAndLogEx(WARNING, "Error with tag bitstream generation.");
+    // PrintAndLogEx(ERR, "Error with tag bitstream generation.");
     // return 1;
     // }
 
@@ -142,23 +211,23 @@ static int CmdParadoxSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_FSK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_FSK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_FSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
         return resp.status;
     return PM3_SUCCESS;
 }
-
+*/
 static command_t CommandTable[] = {
     {"help",  CmdHelp,          AlwaysAvailable, "This help"},
     {"demod", CmdParadoxDemod,  AlwaysAvailable, "Demodulate a Paradox FSK tag from the GraphBuffer"},
     {"read",  CmdParadoxRead,   IfPm3Lf,         "Attempt to read and Extract tag data from the antenna"},
-//  {"clone", CmdParadoxClone,  IfPm3Lf,         "clone paradox tag"},
+    {"clone", CmdParadoxClone,  IfPm3Lf,         "clone paradox tag to T55x7"},
     {"sim",   CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
     {NULL, NULL, NULL, NULL}
 };

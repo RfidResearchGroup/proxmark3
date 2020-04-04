@@ -11,10 +11,19 @@
 //-----------------------------------------------------------------------------
 #include "legicrf.h"
 
-#include "ticks.h"              /* timers */
 #include "crc.h"                /* legic crc-4 */
 #include "legic_prng.h"         /* legic PRNG impl */
 #include "legic.h"              /* legic_card_select_t struct */
+
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "BigBuf.h"
+#include "fpgaloader.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "util.h"
+#include "string.h"
+#include "protocols.h"
 
 static uint8_t *legic_mem;      /* card memory, used for read, write */
 static legic_card_select_t card;/* metadata of currently selected card */
@@ -395,6 +404,10 @@ bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 //
 // Only this functions are public / called from appmain.c
 //-----------------------------------------------------------------------------
+legic_card_select_t* getLegicCardInfo(void) {
+    return &card;
+}
+
 void LegicRfInfo(void) {
     // configure ARM and FPGA
     init_reader(false);
@@ -432,6 +445,44 @@ OUT:
     StopTicks();
 }
 
+int LegicRfReaderEx(uint16_t offset, uint16_t len, uint8_t iv) {
+
+    int res = PM3_SUCCESS;
+
+    // configure ARM and FPGA
+    init_reader(false);
+
+    // establish shared secret and detect card type
+    uint8_t card_type = setup_phase(iv);
+    if (init_card(card_type, &card) != 0) {
+        res = PM3_ESOFT;
+        goto OUT;
+    }
+
+    // do not read beyond card memory
+    if (len + offset > card.cardsize) {
+        len = card.cardsize - offset;
+    }
+
+    for (uint16_t i = 0; i < len; ++i) {
+        int16_t byte = read_byte(offset + i, card.cmdsize);
+        if (byte == -1) {
+            res = PM3_EOVFLOW;
+            goto OUT;
+        }
+        legic_mem[i] = byte;
+        
+        if (i < 4) {
+            card.uid[i] = byte;
+        }
+    }
+
+OUT:
+    switch_off();
+    StopTicks();
+    return res;
+}
+
 void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
     // configure ARM and FPGA
     init_reader(false);
@@ -455,6 +506,10 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
             goto OUT;
         }
         legic_mem[i] = byte;
+        
+        if (i < 4) {
+            card.uid[i] = byte;
+        }
     }
 
     // OK

@@ -20,17 +20,17 @@ local Utils =
     end,
     ---
     -- Asks the user for input
-    input = function (message , default)
-        local answer
+    input = function (message, default)
+        local answer = ''
         if default ~= nil then
             message = message .. " (default: ".. default.. " )"
         end
-        message = message .." \n > "
-        io.write(message)
+        io.write(message, "\n > ")
         io.flush()
-        answer = io.read()
-        if answer == '' then answer = default end
-
+        answer = io.read("*L")
+        answer = string.gsub(answer, "\r\n", "")
+        answer = string.gsub(answer, "\n", "")
+        if answer == '' or answer == nil then answer = default end
         return answer
     end,
 
@@ -59,7 +59,7 @@ local Utils =
     -- @param blockData. Assumed to be on the format {'\0\1\2\3,'\b\e\e\f' ...,
     -- that is, blockData[row] contains a string with the actual data, not ascii hex representation
     -- return filename if all went well,
-    -- @reurn nil, error message if unsuccessfulls
+    -- @reurn nil, error message if unsuccessful
     WriteDumpFile = function(uid, blockData)
         local destination = string.format("%s.eml", uid)
         local file = io.open(destination, "w")

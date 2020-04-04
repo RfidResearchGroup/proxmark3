@@ -81,6 +81,7 @@ typedef enum {
     MBEDTLS_ECP_DP_SECP224K1,      /*!< Domain parameters for 224-bit "Koblitz" curve. */
     MBEDTLS_ECP_DP_SECP256K1,      /*!< Domain parameters for 256-bit "Koblitz" curve. */
     MBEDTLS_ECP_DP_CURVE448,       /*!< Domain parameters for Curve448. */
+    MBEDTLS_ECP_DP_SECP128R1,      /*!< Domain parameters for the 128-bit curve used for NXP originality check. */
 } mbedtls_ecp_group_id;
 
 /**
@@ -527,7 +528,7 @@ int mbedtls_ecp_tls_write_point(const mbedtls_ecp_group *grp, const mbedtls_ecp_
  *
  * \return          \c 0 on success,
  * \return          An \c MBEDTLS_ERR_MPI_XXX error code on initialization failure.
- * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE for unkownn groups.
+ * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE for unknown groups.
 
  */
 int mbedtls_ecp_group_load(mbedtls_ecp_group *grp, mbedtls_ecp_group_id id);

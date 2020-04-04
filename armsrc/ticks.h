@@ -12,11 +12,7 @@
 #ifndef __TICKS_H
 #define __TICKS_H
 
-#include <stddef.h>
-#include <stdint.h>
 #include "common.h"
-#include "apps.h"
-#include "proxmark3.h"
 
 #ifndef GET_TICKS
 #define GET_TICKS GetTicks()
@@ -37,12 +33,14 @@ void SpinDelayCountUs(uint32_t us);
 void StartCountSspClk();
 void ResetSspClk(void);
 uint32_t RAMFUNC GetCountSspClk();
+uint32_t RAMFUNC GetCountSspClkDelta();
 
 void StartTicks(void);
 uint32_t GetTicks(void);
 void WaitTicks(uint32_t ticks);
-void WaitUS(uint16_t us);
-void WaitMS(uint16_t ms);
+void WaitUS(uint32_t us);
+void WaitMS(uint32_t ms);
 
 void StopTicks(void);
+
 #endif

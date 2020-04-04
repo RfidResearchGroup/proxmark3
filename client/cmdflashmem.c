@@ -9,9 +9,17 @@
 //-----------------------------------------------------------------------------
 #include "cmdflashmem.h"
 
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+
+#include "pmflash.h"
+#include "fileutils.h"  //saveFile
+#include "comms.h"              //getfromdevice
+#include "cmdflashmemspiffs.h" // spiffs commands
+
 #include "mbedtls/rsa.h"
 #include "mbedtls/sha1.h"
-#include "mbedtls/base64.h"
 
 #define MCK 48000000
 #define FLASH_MINFAST 24000000 //33000000
@@ -29,25 +37,14 @@ static int usage_flashmem_spibaud(void) {
     PrintAndLogEx(NORMAL, "           h    this help");
     PrintAndLogEx(NORMAL, "      <baudrate>    SPI baudrate in MHz [24|48]");
     PrintAndLogEx(NORMAL, "           ");
-    PrintAndLogEx(NORMAL, "           If >= 24Mhz, FASTREADS instead of READS instruction will be used.");
-    PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48Mhz setting");
-    PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24Mhz");
+    PrintAndLogEx(NORMAL, "           If >= 24MHz, FASTREADS instead of READS instruction will be used.");
+    PrintAndLogEx(NORMAL, "           Reading Flash ID will virtually always fail under 48MHz setting");
+    PrintAndLogEx(NORMAL, "           Unless you know what you are doing, please stay at 24MHz");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "           mem spibaud 48");
     return PM3_SUCCESS;
 }
 
-static int usage_flashmem_read(void) {
-    PrintAndLogEx(NORMAL, "Read flash memory on device");
-    PrintAndLogEx(NORMAL, "Usage:  mem read o <offset> l <len>");
-    PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
-    PrintAndLogEx(NORMAL, "  l <len>       :      length");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        mem read o 0 l 32");    // read 32 bytes starting at offset 0
-    PrintAndLogEx(NORMAL, "        mem read o 1024 l 10"); // read 10 bytes starting at offset 1024
-    return PM3_SUCCESS;
-}
 static int usage_flashmem_load(void) {
     PrintAndLogEx(NORMAL, "Loads binary file into flash memory on device");
     PrintAndLogEx(NORMAL, "Usage:  mem load [o <offset>] f <file name> [m|t|i]");
@@ -62,22 +59,24 @@ static int usage_flashmem_load(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        mem load f myfile");         // upload file myfile at default offset 0
     PrintAndLogEx(NORMAL, "        mem load f myfile o 1024");  // upload file myfile at offset 1024
-    PrintAndLogEx(NORMAL, "        mem load f default_keys m");
-    PrintAndLogEx(NORMAL, "        mem load f default_pwd t");
-    PrintAndLogEx(NORMAL, "        mem load f default_iclass_keys i");
+    PrintAndLogEx(NORMAL, "        mem load f mfc_default_keys m");
+    PrintAndLogEx(NORMAL, "        mem load f t55xx_default_pwds t");
+    PrintAndLogEx(NORMAL, "        mem load f iclass_default_keys i");
     return PM3_SUCCESS;
 }
-static int usage_flashmem_save(void) {
-    PrintAndLogEx(NORMAL, "Saves flash memory on device into the file");
-    PrintAndLogEx(NORMAL, " Usage:  mem save [o <offset>] [l <length>] f <file name>");
+static int usage_flashmem_dump(void) {
+    PrintAndLogEx(NORMAL, "Dumps flash memory on device into a file or in console");
+    PrintAndLogEx(NORMAL, " Usage:  mem dump [o <offset>] [l <length>] [f <file name>] [p]");
     PrintAndLogEx(NORMAL, "  o <offset>    :      offset in memory");
     PrintAndLogEx(NORMAL, "  l <length>    :      length");
     PrintAndLogEx(NORMAL, "  f <filename>  :      file name");
+    PrintAndLogEx(NORMAL, "  p             :      print dump in console");
+    PrintAndLogEx(NORMAL, " You must specify at lease option f or option p, both if you wish");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        mem save f myfile");                 // download whole flashmem to file myfile
-    PrintAndLogEx(NORMAL, "        mem save f myfile l 4096");          // download 4096 bytes from default offset 0 to file myfile
-    PrintAndLogEx(NORMAL, "        mem save f myfile o 1024 l 4096");   // downlowd 4096 bytes from offset 1024 to file myfile
+    PrintAndLogEx(NORMAL, "        mem dump f myfile");                 // download whole flashmem to file myfile
+    PrintAndLogEx(NORMAL, "        mem dump p o 262015 l 128");         // display 128 bytes from offset 262015 (RSA sig)
+    PrintAndLogEx(NORMAL, "        mem dump p f myfile o 241664 l 58"); // download and display 58 bytes from offset 241664 to file myfile
     return PM3_SUCCESS;
 }
 static int usage_flashmem_wipe(void) {
@@ -105,46 +104,6 @@ static int usage_flashmem_info(void) {
     return PM3_SUCCESS;
 }
 
-static int CmdFlashMemRead(const char *Cmd) {
-
-    uint8_t cmdp = 0;
-    bool errors = false;
-    uint32_t start_index = 0, len  = 0;
-
-    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
-        switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'o':
-                start_index = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'l':
-                len = param_get32ex(Cmd, cmdp + 1, 0, 10);
-                cmdp += 2;
-                break;
-            case 'h':
-                return usage_flashmem_read();
-            default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
-                errors = true;
-                break;
-        }
-    }
-
-    //Validations
-    if (errors || cmdp == 0) {
-        usage_flashmem_read();
-        return PM3_EINVARG;
-    }
-    if (start_index + len > FLASH_MEM_MAX_SIZE) {
-        PrintAndLogDevice(WARNING, "error, start_index + length is larger than available memory");
-        return PM3_EOVFLOW;
-    }
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_FLASHMEM_READ, start_index, len, 0, NULL, 0);
-    return PM3_SUCCESS;
-}
-
 static int CmdFlashmemSpiBaudrate(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
@@ -158,7 +117,7 @@ static int CmdFlashmemSpiBaudrate(const char *Cmd) {
         usage_flashmem_spibaud();
         return PM3_EINVARG;
     }
-    SendCommandMIX(CMD_FLASHMEM_SET_SPIBAUDRATE, baudrate, 0, 0, NULL, 0);
+    SendCommandNG(CMD_FLASHMEM_SET_SPIBAUDRATE, (uint8_t *)&baudrate, sizeof(uint32_t));
     return PM3_SUCCESS;
 }
 
@@ -250,21 +209,20 @@ static int CmdFlashMemLoad(const char *Cmd) {
             datalen += 2;
             break;
         case DICTIONARY_NONE:
-            res = loadFile(filename, ".bin", data, FLASH_MEM_MAX_SIZE, &datalen);
-            //int res = loadFileEML( filename, data, &datalen);
-            if (res) {
+            res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
+            if (res != PM3_SUCCESS) {
                 free(data);
                 return PM3_EFILE;
             }
 
             if (datalen > FLASH_MEM_MAX_SIZE) {
-                PrintAndLogDevice(WARNING, "error, filesize is larger than available memory");
+                PrintAndLogEx(ERR, "error, filesize is larger than available memory");
                 free(data);
                 return PM3_EOVFLOW;
             }
             break;
     }
-
+// not needed when we transite to loadxxxx_safe methods.(iceman)
     uint8_t *newdata = realloc(data, datalen);
     if (newdata == NULL) {
         free(data);
@@ -308,20 +266,21 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
     conn.block_after_ACK = false;
     free(data);
-    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u")"bytes to offset "_GREEN_("%u"), datalen, start_index);
+    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu")"bytes to offset "_GREEN_("%u"), datalen, start_index);
     return PM3_SUCCESS;
 }
-static int CmdFlashMemSave(const char *Cmd) {
+static int CmdFlashMemDump(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE] = {0};
     uint8_t cmdp = 0;
     bool errors = false;
+    bool print = false;
     uint32_t start_index = 0, len = FLASH_MEM_MAX_SIZE;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
-                return usage_flashmem_save();
+                return usage_flashmem_dump();
             case 'l':
                 len = param_get32ex(Cmd, cmdp + 1, FLASH_MEM_MAX_SIZE, 10);
                 cmdp += 2;
@@ -329,6 +288,10 @@ static int CmdFlashMemSave(const char *Cmd) {
             case 'o':
                 start_index = param_get32ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
+                break;
+            case 'p':
+                print = true;
+                cmdp += 1;
                 break;
             case 'f':
                 //File handling
@@ -348,25 +311,32 @@ static int CmdFlashMemSave(const char *Cmd) {
 
     //Validations
     if (errors || cmdp == 0) {
-        usage_flashmem_save();
+        usage_flashmem_dump();
         return PM3_EINVARG;
     }
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogDevice(WARNING, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
 
     PrintAndLogEx(INFO, "downloading "_YELLOW_("%u")"bytes from flashmem", len);
-    if (!GetFromDevice(FLASH_MEM, dump, len, start_index, NULL, -1, true)) {
+    if (!GetFromDevice(FLASH_MEM, dump, len, start_index, NULL, 0, NULL, -1, true)) {
         PrintAndLogEx(FAILED, "ERROR; downloading from flashmemory");
         free(dump);
         return PM3_EFLASH;
     }
 
-    saveFile(filename, ".bin", dump, len);
-    saveFileEML(filename, dump, len, 16);
+    if (print) {
+        print_hex_break(dump, len, 32);
+    }
+
+    if (filename[0] != '\0') {
+        saveFile(filename, ".bin", dump, len);
+        saveFileEML(filename, dump, len, 16);
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -611,11 +581,11 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
+    {"spiffs",  CmdFlashMemSpiFFS,  IfPm3Flash,      "High level SPI FileSystem Flash manipulation [rdv40]"},
     {"spibaud", CmdFlashmemSpiBaudrate, IfPm3Flash,  "Set Flash memory Spi baudrate [rdv40]"},
-    {"read",    CmdFlashMemRead,    IfPm3Flash,      "Read Flash memory [rdv40]"},
     {"info",    CmdFlashMemInfo,    IfPm3Flash,      "Flash memory information [rdv40]"},
     {"load",    CmdFlashMemLoad,    IfPm3Flash,      "Load data into flash memory [rdv40]"},
-    {"save",    CmdFlashMemSave,    IfPm3Flash,      "Save data from flash memory [rdv40]"},
+    {"dump",    CmdFlashMemDump,    IfPm3Flash,      "Dump data from flash memory [rdv40]"},
     {"wipe",    CmdFlashMemWipe,    IfPm3Flash,      "Wipe data from flash memory [rdv40]"},
     {NULL, NULL, NULL, NULL}
 };

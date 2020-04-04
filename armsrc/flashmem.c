@@ -1,4 +1,10 @@
 #include "flashmem.h"
+#include "pmflash.h"
+
+#include "proxmark3_arm.h"
+#include "ticks.h"
+#include "dbprint.h"
+#include "string.h"
 
 /* here: use NCPS2 @ PA10: */
 #define SPI_CSR_NUM      2
@@ -15,7 +21,7 @@ uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
-    Dbprintf("Spi Baudrate : %dMhz", FLASHMEM_SPIBAUDRATE / 1000000);
+    Dbprintf("Spi Baudrate : %dMHz", FLASHMEM_SPIBAUDRATE / 1000000);
 }
 
 // initialize
@@ -553,6 +559,7 @@ void Flashmem_print_status(void) {
 }
 
 void Flashmem_print_info(void) {
+
     if (!FlashInit()) return;
 
     DbpString(_BLUE_("Flash memory dictionary loaded"));
@@ -561,25 +568,28 @@ void Flashmem_print_info(void) {
     uint8_t keysum[2];
     uint16_t num;
 
+    Flash_CheckBusy(BUSY_TIMEOUT);
     uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET, keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  Mifare................"_YELLOW_("%d")"keys", num);
+            Dbprintf("  Mifare.................."_YELLOW_("%d")"keys", num);
     }
 
+    Flash_CheckBusy(BUSY_TIMEOUT);
     isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET, keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  T55x7................."_YELLOW_("%d")"keys", num);
+            Dbprintf("  T55x7..................."_YELLOW_("%d")"keys", num);
     }
 
+    Flash_CheckBusy(BUSY_TIMEOUT);
     isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET, keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  iClass................"_YELLOW_("%d")"keys", num);
+            Dbprintf("  iClass.................."_YELLOW_("%d")"keys", num);
     }
 
     FlashStop();

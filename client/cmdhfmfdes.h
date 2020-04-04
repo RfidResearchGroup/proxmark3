@@ -10,19 +10,7 @@
 #ifndef __MFDESFIRE_H
 #define __MFDESFIRE_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include "cmdmain.h"
-#include "proxmark3.h"
-#include "../include/common.h"
-#include "../include/mifare.h"
-#include "ui.h"
-#include "cmdparser.h"
-#include "util.h"
-#include "cmdhf14a.h"
-#include "mbedtls/des.h"
+#include "common.h"
 
 int CmdHFMFDes(const char *Cmd);
 
@@ -30,16 +18,6 @@ char *getCardSizeStr(uint8_t fsize);
 char *getProtocolStr(uint8_t id);
 char *getVersionStr(uint8_t major, uint8_t minor);
 void getKeySettings(uint8_t *aid);
-
-// Command options for Desfire behavior.
-enum  {
-    NONE       =    0x00,
-    INIT       =    0x01,
-    DISCONNECT =    0x02,
-    CLEARTRACE =    0x04,
-    BAR        =    0x08,
-} CmdOptions ;
-
 
 #define CREATE_APPLICATION          0xca
 #define DELETE_APPLICATION          0xda

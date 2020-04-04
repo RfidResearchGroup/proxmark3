@@ -9,15 +9,27 @@
 //-----------------------------------------------------------------------------
 
 // ensure gmtime_r is available even with -std=c99; must be included before
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__APPLE__)
 #define _POSIX_C_SOURCE 200112L
 #endif
 
 #include "util.h"
 
+#include <stdarg.h>
+#include <inttypes.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h> // Mingw
+
+#include "ui.h"     // PrintAndLog
+
 #define UTIL_BUFFER_SIZE_SPRINT 4097
 // global client debug variable
 uint8_t g_debugMode = 0;
+// global client disable logging variable
+uint8_t g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
 #ifdef _WIN32
 #include <windows.h>
@@ -26,38 +38,45 @@ uint8_t g_debugMode = 0;
 #define MAX_BIN_BREAK_LENGTH   (3072+384+1)
 
 #ifndef _WIN32
-#include <termios.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
-#include <stdarg.h>
+#include <fcntl.h>
 
-int ukbhit(void) {
-    int cnt = 0;
-    int error;
-    static struct termios Otty, Ntty;
-
-    if (tcgetattr(STDIN_FILENO, &Otty) == -1) return -1;
-
-    Ntty = Otty;
-
-    Ntty.c_iflag          = 0x0000;   // input mode
-    Ntty.c_oflag          = 0x0000;   // output mode
-    Ntty.c_lflag          &= ~ICANON; // control mode = raw
-    Ntty.c_cc[VMIN]       = 1;        // return if at least 1 character is in the queue
-    Ntty.c_cc[VTIME]      = 0;        // no timeout. Wait forever
-
-    if (0 == (error = tcsetattr(STDIN_FILENO, TCSANOW, &Ntty))) {  // set new attributes
-        error += ioctl(STDIN_FILENO, FIONREAD, &cnt);              // get number of characters available
-        error += tcsetattr(STDIN_FILENO, TCSANOW, &Otty);          // reset attributes
+int kbd_enter_pressed(void) {
+    int flags;
+    if ((flags = fcntl(STDIN_FILENO, F_GETFL, 0)) < 0) {
+        PrintAndLogEx(ERR, "fcntl failed in kbd_enter_pressed");
+        return -1;
     }
-    return (error == 0 ? cnt : -1);
+    //non-blocking
+    flags |= O_NONBLOCK;
+    if (fcntl(STDIN_FILENO, F_SETFL, flags) < 0) {
+        PrintAndLogEx(ERR, "fcntl failed in kbd_enter_pressed");
+        return -1;
+    }
+    int c;
+    int ret = 0;
+    do { //get all available chars
+        c = getchar();
+        ret |= c == '\n';
+    } while (c != EOF);
+    //blocking
+    flags &= ~O_NONBLOCK;
+    if (fcntl(STDIN_FILENO, F_SETFL, flags) < 0) {
+        PrintAndLogEx(ERR, "fcntl failed in kbd_enter_pressed");
+        return -1;
+    }
+    return ret;
 }
 
 #else
 
 #include <conio.h>
-int ukbhit(void) {
-    return kbhit();
+int kbd_enter_pressed(void) {
+    int ret = 0;
+    while (kbhit()) {
+        ret |= getch() == '\r';
+    }
+    return ret;
 }
 #endif
 
@@ -170,8 +189,8 @@ bool CheckStringIsHEXValue(const char *value) {
 void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
                    const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 
-    if (buf == NULL ) return;
-    
+    if (buf == NULL) return;
+
     char *tmp = (char *)buf;
     size_t i;
     memset(tmp, 0x00, hex_max_len);
@@ -192,21 +211,24 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
     for (; i < minStrLen; i++, tmp += 1)
         sprintf(tmp, " ");
 
+    // remove last space
+    --tmp;
+    *tmp = '\0';
     return;
 }
 
 // printing and converting functions
 void print_hex(const uint8_t *data, const size_t len) {
-    if (data == NULL || len == 0 ) return;
-    
+    if (data == NULL || len == 0) return;
+
     for (size_t i = 0; i < len; i++)
         printf("%02x ", data[i]);
     printf("\n");
 }
 
 void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
-    if (data == NULL || len == 0 ) return;
-    
+    if (data == NULL || len == 0) return;
+
     int rownum = 0;
     printf("[%02d] | ", rownum);
     for (size_t i = 0; i < len; ++i) {
@@ -327,7 +349,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
     memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
     size_t max_len = (len > 1010) ? 1010 : len;
 
-    snprintf(tmp, UTIL_BUFFER_SIZE_SPRINT, "%s| ", sprint_hex(data, max_len));
+    snprintf(tmp, UTIL_BUFFER_SIZE_SPRINT, "%s | ", sprint_hex(data, max_len));
 
     size_t i = 0;
     size_t pos = (max_len * 3) + 2;
@@ -364,15 +386,55 @@ char *sprint_ascii(const uint8_t *data, const size_t len) {
 }
 
 void print_blocks(uint32_t *data, size_t len) {
-    PrintAndLogEx(NORMAL, "Blk | Data ");
-    PrintAndLogEx(NORMAL, "----+------------");
+    PrintAndLogEx(SUCCESS, "Blk | Data ");
+    PrintAndLogEx(SUCCESS, "----+------------");
 
     if (!data) {
         PrintAndLogEx(ERR, "..empty data");
     } else {
         for (uint8_t i = 0; i < len; i++)
-            PrintAndLogEx(NORMAL, "%02d | 0x%08X", i, data[i]);
+            PrintAndLogEx(SUCCESS, " %02d | %08X", i, data[i]);
     }
+}
+
+int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen) {
+    char buf[4] = {0};
+    int indx = 0;
+    int bytesValueLen = 0;
+    while (hexValue[indx]) {
+        if (hexValue[indx] == '\t' || hexValue[indx] == ' ') {
+            indx++;
+            continue;
+        }
+
+        if (isxdigit(hexValue[indx])) {
+            buf[strlen(buf)] = hexValue[indx];
+        } else {
+            // if we have symbols other than spaces and hex
+            return -1;
+        }
+
+        if (maxBytesValueLen && bytesValueLen >= maxBytesValueLen) {
+            // if we dont have space in buffer and have symbols to translate
+            return -2;
+        }
+
+        if (strlen(buf) >= 2) {
+            uint32_t temp = 0;
+            sscanf(buf, "%x", &temp);
+            bytesValue[bytesValueLen] = (uint8_t)(temp & 0xff);
+            memset(buf, 0, sizeof(buf));
+            bytesValueLen++;
+        }
+
+        indx++;
+    }
+
+    if (strlen(buf) > 0)
+        //error when not completed hex bytes
+        return -3;
+
+    return bytesValueLen;
 }
 
 // takes a number (uint64_t) and creates a binarray in dest.
@@ -528,6 +590,14 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base) {
     int bg, en;
     if (!param_getptr(line, &bg, &en, paramnum))
         return strtoull(&line[bg], NULL, base);
+    else
+        return deflt;
+}
+
+float param_getfloat(const char *line, int paramnum, float deflt) {
+    int bg, en;
+    if (!param_getptr(line, &bg, &en, paramnum))
+        return strtof(&line[bg], NULL);
     else
         return deflt;
 }
@@ -800,24 +870,12 @@ int num_CPUs(void) {
     SYSTEM_INFO sysinfo;
     GetSystemInfo(&sysinfo);
     return sysinfo.dwNumberOfProcessors;
-#elif defined(__linux__) && defined(_SC_NPROCESSORS_ONLN)
+#else
 #include <unistd.h>
     int count = sysconf(_SC_NPROCESSORS_ONLN);
     if (count <= 0)
         count = 1;
     return count;
-#elif defined(__APPLE__)
-    /*
-       TODO ICEMAN 2019, its commented out until someone finds a better solution
-#include "sys/sysctl.h"
-        uint32_t logicalcores = 0;
-        size_t size = sizeof( logicalcores );
-        sysctlbyname( "hw.logicalcpu", &logicalcores, &size, NULL, 0 );
-        return logicalcores;
-        */
-    return 1;
-#else
-    return 1;
 #endif
 }
 
@@ -863,11 +921,33 @@ void strcreplace(char *buf, size_t len, char from, char to) {
     }
 }
 
-char *strmcopy(const char *buf) {
-    char *str = (char *) calloc(strlen(buf) + 1, sizeof(uint8_t));
-    if (str != NULL) {
-        memset(str, 0, strlen(buf) + 1);
-        strcpy(str, buf);
+
+char *str_dup(const char *src) {
+    return str_ndup(src, strlen(src));
+}
+char *str_ndup(const char *src, size_t len) {
+
+    char *dest = (char *) calloc(len + 1, sizeof(uint8_t));
+    if (dest != NULL) {
+        memcpy(dest, src, len);
+        dest[len] = '\0';
     }
-    return str;
+    return dest;
+}
+
+/**
+ * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers, one nibble
+ * at a time.
+ *
+ * Returns the number of nibbles (4 bits) entered.
+ */
+int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
+    int n = 0, i = 0;
+
+    while (sscanf(&str[i++], "%1x", &n) == 1) {
+        *hi2 = (*hi2 << 4) | (*hi >> 28);
+        *hi = (*hi << 4) | (*lo >> 28);
+        *lo = (*lo << 4) | (n & 0xf);
+    }
+    return i - 1;
 }

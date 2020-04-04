@@ -11,6 +11,23 @@
 
 #include "cmdlfvisa2000.h"
 
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <inttypes.h>
+
+#include "commonutil.h"     // ARRAYLEN
+#include "common.h"
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "ui.h"
+#include "graph.h"
+#include "cmddata.h"
+#include "cmdlf.h"
+#include "protocols.h"  // for T55xx config register definitions
+#include "lfdemod.h"    // parityTest
+#include "cmdlft55xx.h"    // write verify
+
 #define BL0CK1 0x56495332
 
 static int CmdHelp(const char *Cmd);
@@ -103,7 +120,7 @@ static int CmdVisa2kDemod(const char *Cmd) {
         else if (ans == -2)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: preamble not found");
         else if (ans == -3)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: Size not correct: %d", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: Size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
 
@@ -142,7 +159,7 @@ static int CmdVisa2kDemod(const char *Cmd) {
 
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
 static int CmdVisa2kRead(const char *Cmd) {
-    lf_read(true, 20000);
+    lf_read(false, 20000);
     return CmdVisa2kDemod(Cmd);
 }
 
@@ -158,39 +175,19 @@ static int CmdVisa2kClone(const char *Cmd) {
     id = param_get32ex(Cmd, 0, 0, 10);
 
     //Q5
-    if (param_getchar(Cmd, 1) == 'Q' || param_getchar(Cmd, 1) == 'q')
+    if (tolower(param_getchar(Cmd, 1)) == 'q')
         blocks[0] = T5555_MODULATION_MANCHESTER | T5555_SET_BITRATE(64) | T5555_ST_TERMINATOR | 3 << T5555_MAXBLOCK_SHIFT;
 
     blocks[2] = id;
     blocks[3] = (visa_parity(id) << 4) | visa_chksum(id);
 
-    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %u", id);
-    print_blocks(blocks, 4);
+    PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %"PRIu64, id);
+    print_blocks(blocks,  ARRAYLEN(blocks));
 
-    PacketResponseNG resp;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-    for (uint8_t i = 0; i < 4; i++) {
-        if (i == 3) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-        t55xx_write_block_t ng;
-        ng.data = blocks[i];
-        ng.pwd = 0;
-        ng.blockno = i;
-        ng.flags = 0;
-
-        SendCommandNG(CMD_T55XX_WRITE_BLOCK, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_T55XX_WRITE_BLOCK, &resp, T55XX_WRITE_TIMEOUT)) {
-
-            PrintAndLogEx(WARNING, "Error occurred, device did not respond during write operation.");
-            return PM3_ETIMEOUT;
-        }
-    }
-    return PM3_SUCCESS;
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf visa2000 read`") "to verify");
+    return res;
 }
 
 static int CmdVisa2kSim(const char *Cmd) {
@@ -218,11 +215,11 @@ static int CmdVisa2kSim(const char *Cmd) {
     memcpy(payload->data, bs, sizeof(bs));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_ASK_SIM_TAG, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
+    SendCommandNG(CMD_LF_ASK_SIMULATE, (uint8_t *)payload,  sizeof(lf_asksim_t) + sizeof(bs));
     free(payload);
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_ASK_SIM_TAG, &resp);
+    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
     if (resp.status != PM3_EOPABORTED)
@@ -234,7 +231,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"demod",   CmdVisa2kDemod, AlwaysAvailable, "demodulate an VISA2000 tag from the GraphBuffer"},
     {"read",    CmdVisa2kRead,  IfPm3Lf,         "attempt to read and extract tag data from the antenna"},
-    {"clone",   CmdVisa2kClone, IfPm3Lf,         "clone Visa2000 to t55x7"},
+    {"clone",   CmdVisa2kClone, IfPm3Lf,         "clone Visa2000 tag to T55x7 (or to q5/T5555)"},
     {"sim",     CmdVisa2kSim,   IfPm3Lf,         "simulate Visa2000 tag"},
     {NULL, NULL, NULL, NULL}
 };

@@ -1,0 +1,46 @@
+# Hide full compilation line:
+ifneq ($(V),1)
+  Q?=@
+endif
+# To see full command lines, use make V=1
+
+# been here
+DEFSBEENHERE = true
+
+CP = cp -a
+GZIP = gzip
+MKDIR = mkdir -p
+RM = rm -f
+RMDIR = rm -rf
+# rmdir only if dir is empty, tolerate failure
+RMDIR_SOFT = -rmdir
+MV = mv
+TOUCH = touch
+FALSE = false
+TAR = tar
+TARFLAGS ?= -v --ignore-failed-read -r
+TARFLAGS += -C .. -f
+CROSS  ?= arm-none-eabi-
+CC = gcc
+CXX = g++
+LD = g++
+
+PATHSEP=/
+PREFIX ?=              /usr/local
+UDEV_PREFIX ?=         /etc/udev/rules.d
+INSTALLBINRELPATH ?=   bin
+INSTALLSHARERELPATH ?= share/proxmark3
+INSTALLFWRELPATH ?=    share/proxmark3/firmware
+INSTALLTOOLSRELPATH ?= share/proxmark3/tools
+INSTALLDOCSRELPATH ?=  share/doc/proxmark3
+
+platform = $(shell uname)
+DETECTED_OS=$(platform)
+
+ifeq ($(platform),Darwin)
+    AR= /usr/bin/ar rcs
+    RANLIB= /usr/bin/ranlib
+else
+    AR= ar rcs
+    RANLIB= ranlib
+endif

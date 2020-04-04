@@ -11,17 +11,20 @@
 //
 
 #include "fidocore.h"
+
+#include "commonutil.h"  // ARRAYLEN
+
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
-#include <cbor.h>
 #include "cbortools.h"
-#include <mbedtls/x509_crt.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/pk.h>
+#include "mbedtls/x509_crt.h"
 #include "crypto/asn1utils.h"
 #include "crypto/libpcrypto.h"
-#include "fido/additional_ca.h"
-#include "fido/cose.h"
+#include "additional_ca.h"
+#include "cose.h"
+#include "emv/dump.h"
+#include "ui.h"
+#include "util.h"
 
 typedef struct {
     uint8_t ErrorCode;
@@ -150,7 +153,7 @@ fido2Desc_t fido2CmdGetInfoRespDesc[] = {
 };
 
 const char *fido2GetCmdErrorDescription(uint8_t errorCode) {
-    for (size_t i = 0; i < sizeof(fido2Errors) / sizeof(fido2Error_t); i++)
+    for (size_t i = 0; i < ARRAYLEN(fido2Errors); i++)
         if (fido2Errors[i].ErrorCode == errorCode)
             return fido2Errors[i].Description;
 
@@ -158,7 +161,7 @@ const char *fido2GetCmdErrorDescription(uint8_t errorCode) {
 }
 
 const char *fido2GetCmdMemberDescription(uint8_t cmdCode, bool isResponse, int memberNum) {
-    for (size_t i = 0; i < sizeof(fido2CmdGetInfoRespDesc) / sizeof(fido2Desc_t); i++)
+    for (size_t i = 0; i < ARRAYLEN(fido2CmdGetInfoRespDesc); i++)
         if (fido2CmdGetInfoRespDesc[i].Command == cmdCode &&
                 fido2CmdGetInfoRespDesc[i].PckType == (isResponse ? ptResponse : ptQuery) &&
                 fido2CmdGetInfoRespDesc[i].MemberNumber == memberNum)
@@ -262,7 +265,7 @@ int FIDOCheckDERAndGetKey(uint8_t *der, size_t derLen, bool verbose, uint8_t *pu
     }
 
     // get public key
-    res = ecdsa_public_key_from_pk(&cert.pk, publicKey, publicKeyMaxLen);
+    res = ecdsa_public_key_from_pk(&cert.pk, MBEDTLS_ECP_DP_SECP256R1, publicKey, publicKeyMaxLen);
     if (res) {
         PrintAndLogEx(ERR, "ERROR: getting public key from certificate 0x%x - %s", (res < 0) ? -res : res, ecdsa_get_error(res));
     } else {
@@ -381,10 +384,10 @@ static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, 
                          clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
                          NULL, 0);
         //PrintAndLogEx(NORMAL, "--xbuf(%d)[%d]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
-        res = ecdsa_signature_verify(publickey, xbuf, xbuflen, sign, signLen);
+        res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, publickey, xbuf, xbuflen, sign, signLen, true);
         if (res) {
-            if (res == -0x4e00) {
-                PrintAndLogEx(WARNING, "Signature is NOT VALID.");
+            if (res == MBEDTLS_ERR_ECP_VERIFY_FAILED) {
+                PrintAndLogEx(WARNING, "Signature is " _RED_("NOT VALID"));
             } else {
                 PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
             }
@@ -431,9 +434,9 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
     memcpy(authData, ubuf, authDataLen);
 
     if (verbose2) {
-        PrintAndLogEx(INFO, "authData[%d]: %s", n, sprint_hex_inrow(authData, authDataLen));
+        PrintAndLogEx(INFO, "authData[%zu]: %s", n, sprint_hex_inrow(authData, authDataLen));
     } else {
-        PrintAndLogEx(INFO, "authData[%d]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
+        PrintAndLogEx(INFO, "authData[%zu]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
     }
 
     PrintAndLogEx(INFO, "RP ID Hash: %s", sprint_hex(ubuf, 32));
@@ -527,9 +530,9 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
             res = CborGetBinStringValue(&mapsmt, sign, sizeof(sign), &signLen);
             cbor_check(res);
             if (verbose2) {
-                PrintAndLogEx(INFO, "signature [%d]: %s", signLen, sprint_hex_inrow(sign, signLen));
+                PrintAndLogEx(INFO, "signature [%zu]: %s", signLen, sprint_hex_inrow(sign, signLen));
             } else {
-                PrintAndLogEx(INFO, "signature [%d]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
+                PrintAndLogEx(INFO, "signature [%zu]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
             }
         }
 
@@ -537,11 +540,11 @@ int FIDO2MakeCredentionalParseRes(json_t *root, uint8_t *data, size_t dataLen, b
             res = CborGetArrayBinStringValue(&mapsmt, der, sizeof(der), &derLen);
             cbor_check(res);
             if (verbose2) {
-                PrintAndLogEx(NORMAL, "DER certificate[%d]:\n------------------DER-------------------", derLen);
+                PrintAndLogEx(NORMAL, "DER certificate[%zu]:\n------------------DER-------------------", derLen);
                 dump_buffer_simple((const unsigned char *)der, derLen, NULL);
                 PrintAndLogEx(NORMAL, "\n----------------DER---------------------");
             } else {
-                PrintAndLogEx(NORMAL, "DER [%d]: %s...", derLen, sprint_hex(der, MIN(derLen, 16)));
+                PrintAndLogEx(NORMAL, "DER [%zu]: %s...", derLen, sprint_hex(der, MIN(derLen, 16)));
             }
             JsonSaveBufAsHexCompact(root, "$.AppData.DER", der, derLen);
         }
@@ -671,7 +674,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
             uint8_t cid[200] = {0};
             res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
             cbor_check(res);
-            PrintAndLogEx(SUCCESS, "credential id [%d]: %s", n, sprint_hex(cid, n));
+            PrintAndLogEx(SUCCESS, "credential id [%zu]: %s", n, sprint_hex(cid, n));
         }
     }
     res = cbor_value_leave_container(&map, &mapint);
@@ -690,9 +693,9 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
     memcpy(authData, ubuf, authDataLen);
 
     if (verbose2) {
-        PrintAndLogEx(INFO, "authData[%d]: %s", n, sprint_hex_inrow(authData, authDataLen));
+        PrintAndLogEx(INFO, "authData[%zu]: %s", n, sprint_hex_inrow(authData, authDataLen));
     } else {
-        PrintAndLogEx(INFO, "authData[%d]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
+        PrintAndLogEx(INFO, "authData[%zu]: %s...", n, sprint_hex(authData, MIN(authDataLen, 16)));
     }
 
     PrintAndLogEx(INFO, "RP ID Hash: %s", sprint_hex(ubuf, 32));
@@ -746,7 +749,7 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
                 uint8_t cid[200] = {0};
                 res = CborGetBinStringValue(&mapint, cid, sizeof(cid), &n);
                 cbor_check(res);
-                PrintAndLogEx(SUCCESS, "UserEntity id [%d]: %s", n, sprint_hex(cid, n));
+                PrintAndLogEx(SUCCESS, "UserEntity id [%zu]: %s", n, sprint_hex(cid, n));
 
                 // check
                 uint8_t idbuf[100] = {0};
@@ -778,9 +781,9 @@ int FIDO2GetAssertionParseRes(json_t *root, uint8_t *data, size_t dataLen, bool 
 
     cbor_check(res);
     if (verbose2) {
-        PrintAndLogEx(SUCCESS, "signature [%d]: %s", signLen, sprint_hex_inrow(sign, signLen));
+        PrintAndLogEx(SUCCESS, "signature [%zu]: %s", signLen, sprint_hex_inrow(sign, signLen));
     } else {
-        PrintAndLogEx(SUCCESS, "signature [%d]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
+        PrintAndLogEx(SUCCESS, "signature [%zu]: %s...", signLen, sprint_hex(sign, MIN(signLen, 16)));
     }
 
     // get public key from json

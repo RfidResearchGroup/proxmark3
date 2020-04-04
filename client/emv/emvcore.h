@@ -11,22 +11,12 @@
 #ifndef EMVCORE_H__
 #define EMVCORE_H__
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <string.h>
-#include <jansson.h>
-#include "util.h"
 #include "common.h"
-#include "ui.h"
-#include "cmdhf14a.h"
+
+#include <inttypes.h>
+#include <jansson.h>
+
 #include "apduinfo.h"
-#include "tlv.h"
-#include "dol.h"
-#include "dump.h"
-#include "emv_tags.h"
-#include "emv_pk.h"
 #include "emv_pki.h"
 
 #define APDU_RES_LEN 260
@@ -39,20 +29,11 @@ typedef enum {
 
 enum TransactionType {
     TT_MSD,
-    TT_VSDC,        // contact only. not standart for contactless
+    TT_VSDC,        // contact only. not standard for contactless
     TT_QVSDCMCHIP,
     TT_CDA,
 };
 extern const char *TransactionTypeStr[];
-
-typedef struct {
-    uint8_t CLA;
-    uint8_t INS;
-    uint8_t P1;
-    uint8_t P2;
-    uint8_t Lc;
-    uint8_t *data;
-} sAPDU;
 
 enum CardPSVendor {
     CV_NA,

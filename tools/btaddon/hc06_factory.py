@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 
 import time
-import serial
+import sys
+
+try:
+    import serial
+except ModuleNotFoundError:
+    print("Please install pyserial module first.")
+    sys.exit(1)
 
 name = b'PM3_RDV4.0'
 pin  = b'1234'

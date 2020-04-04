@@ -1,8 +1,9 @@
 #include "standalone.h" // standalone definitions
-#include "apps.h" // debug statements
+
+#include "dbprint.h"
 
 void ModInfo(void) {
-    DbpString("   No standalone mode present");
+    DbpString("  No standalone mode present");
 }
 
 void RunMod() {

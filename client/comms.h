@@ -12,19 +12,22 @@
 #ifndef COMMS_H_
 #define COMMS_H_
 
-#include <stdbool.h>
-#include <pthread.h>
-
-#include "pm3_cmd.h"
-#include "uart.h"
-#include "ui.h"
 #include "common.h"
-#include "util_posix.h"
-#include "util.h"
-#include "util_darwin.h"
+#include "pm3_cmd.h"    // Packet structs
+#include "util.h"       // FILE_PATH_SIZE
 
-#if defined(__linux__) && !defined(NO_UNLINK)
-#include <unistd.h> // for unlink()
+#ifndef DropField
+#define DropField() { \
+        clearCommandBuffer(); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); \
+    }
+#endif
+
+#ifndef DropFieldEx
+#define DropFieldEx(x) { \
+        if ( (x) == ECC_CONTACTLESS) { \
+            DropField(); \
+        } \
+    }
 #endif
 
 //For storing command that are received from the device
@@ -37,7 +40,10 @@ typedef enum {
     BIG_BUF_EML,
     FLASH_MEM,
     SIM_MEM,
+    SPIFFS,
+    FPGA_MEM,
 } DeviceMemType_t;
+
 
 typedef struct {
     bool run; // If TRUE, continue running the uart_communication thread
@@ -54,6 +60,8 @@ typedef struct {
 } communication_arg_t;
 
 extern communication_arg_t conn;
+
+extern uint8_t gui_serial_port_name[FILE_PATH_SIZE];
 
 void *uart_receiver(void *targ);
 void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
@@ -72,7 +80,8 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
 bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);
 bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
 
-bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
+//bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 
 #endif
 

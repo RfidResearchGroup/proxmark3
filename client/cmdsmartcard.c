@@ -8,7 +8,21 @@
 // Proxmark3 RDV40 Smartcard module commands
 //-----------------------------------------------------------------------------
 #include "cmdsmartcard.h"
-#include "../emv/emvjson.h"
+
+#include <ctype.h>
+#include <string.h>
+
+#include "cmdparser.h"    // command_t
+#include "commonutil.h"  // ARRAYLEN
+#include "protocols.h"
+#include "cmdtrace.h"
+#include "proxmark3.h"
+#include "comms.h"              // getfromdevice
+#include "emv/emvcore.h"        // decodeTVL
+#include "crypto/libpcrypto.h"  // sha512hash
+#include "emv/dump.h"
+#include "ui.h"
+#include "fileutils.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -40,7 +54,7 @@ static int usage_sm_reader(void) {
     return 0;
 }
 static int usage_sm_info(void) {
-    PrintAndLogEx(NORMAL, "Usage: s info [h|s]");
+    PrintAndLogEx(NORMAL, "Usage: sc info [h|s]");
     PrintAndLogEx(NORMAL, "       h          :  this help");
     PrintAndLogEx(NORMAL, "       s          :  silent (no messages)");
     PrintAndLogEx(NORMAL, "");
@@ -55,13 +69,13 @@ static int usage_sm_upgrade(void) {
     PrintAndLogEx(NORMAL, "       f <filename>    :  firmware file name");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/SIM011.BIN");
+    PrintAndLogEx(NORMAL, "        sc upgrade f ../tools/simmodule/sim011.bin");
     return 0;
 }
 static int usage_sm_setclock(void) {
     PrintAndLogEx(NORMAL, "Usage: sc setclock [h] c <clockspeed>");
     PrintAndLogEx(NORMAL, "       h          :  this help");
-    PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16mhz, 1=8mhz, 2=4mhz) ");
+    PrintAndLogEx(NORMAL, "       c <>       :  clockspeed (0 = 16MHz, 1=8MHz, 2=4MHz) ");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "        sc setclock c 2");
@@ -79,33 +93,35 @@ static int usage_sm_brute(void) {
     return 0;
 }
 
-static int smart_loadjson(const char *preferredName, const char *suffix, json_t **root) {
+static int smart_loadjson(const char *preferredName, json_t **root) {
 
     json_error_t error;
 
     if (preferredName == NULL) return 1;
-    if (suffix == NULL) return 1;
 
-    int retval = 0;
-    int size = sizeof(char) * (strlen(get_my_executable_directory()) + strlen(preferredName) + strlen(suffix) + 10);
-    char *fileName = calloc(size, sizeof(char));
-    sprintf(fileName, "%s%s.%s", get_my_executable_directory(), preferredName, suffix);
-    *root = json_load_file(fileName, 0, &error);
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    int retval = PM3_SUCCESS;
+    *root = json_load_file(path, 0, &error);
     if (!*root) {
-        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", fileName, error.line, error.text);
-        retval = 2;
+        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
+        retval = PM3_ESOFT;
         goto out;
     }
 
     if (!json_is_array(*root)) {
-        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", fileName);
-        retval = 3;
+        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
+        retval = PM3_ESOFT;
         goto out;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK.", fileName);
+    PrintAndLogEx(SUCCESS, "Loaded file (%s) OK.", path);
 out:
-    free(fileName);
+    free(path);
     return retval;
 }
 
@@ -200,23 +216,23 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     bool protocol_T15_present = false;
 
     if (T0 & 0x10) {
-        PrintAndLogEx(NORMAL, "\t- TA1 (Maximum clock frequency, proposed bit duration) [ 0x%02x ]", atr[2 + T1len]);
+        PrintAndLogEx(INFO, "\t- TA1 (Maximum clock frequency, proposed bit duration) [ 0x%02x ]", atr[2 + T1len]);
         T1len++;
     }
 
     if (T0 & 0x20) {
-        PrintAndLogEx(NORMAL, "\t- TB1 (Deprecated: VPP requirements) [ 0x%02x ]", atr[2 + T1len]);
+        PrintAndLogEx(INFO, "\t- TB1 (Deprecated: VPP requirements) [ 0x%02x ]", atr[2 + T1len]);
         T1len++;
     }
 
     if (T0 & 0x40) {
-        PrintAndLogEx(NORMAL, "\t- TC1 (Extra delay between bytes required by card) [ 0x%02x ]", atr[2 + T1len]);
+        PrintAndLogEx(INFO, "\t- TC1 (Extra delay between bytes required by card) [ 0x%02x ]", atr[2 + T1len]);
         T1len++;
     }
 
     if (T0 & 0x80) {
         uint8_t TD1 = atr[2 + T1len];
-        PrintAndLogEx(NORMAL, "\t- TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
+        PrintAndLogEx(INFO, "\t- TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
         protocol_T0_present = false;
         if ((TD1 & 0x0f) == 0) {
             protocol_T0_present = true;
@@ -228,20 +244,20 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
         T1len++;
 
         if (TD1 & 0x10) {
-            PrintAndLogEx(NORMAL, "\t- TA2 (Specific protocol and parameters to be used after the ATR) [ 0x%02x ]", atr[2 + T1len + TD1len]);
+            PrintAndLogEx(INFO, "\t- TA2 (Specific protocol and parameters to be used after the ATR) [ 0x%02x ]", atr[2 + T1len + TD1len]);
             TD1len++;
         }
         if (TD1 & 0x20) {
-            PrintAndLogEx(NORMAL, "\t- TB2 (Deprecated: VPP precise voltage requirement) [ 0x%02x ]", atr[2 + T1len + TD1len]);
+            PrintAndLogEx(INFO, "\t- TB2 (Deprecated: VPP precise voltage requirement) [ 0x%02x ]", atr[2 + T1len + TD1len]);
             TD1len++;
         }
         if (TD1 & 0x40) {
-            PrintAndLogEx(NORMAL, "\t- TC2 (Maximum waiting time for protocol T=0) [ 0x%02x ]", atr[2 + T1len + TD1len]);
+            PrintAndLogEx(INFO, "\t- TC2 (Maximum waiting time for protocol T=0) [ 0x%02x ]", atr[2 + T1len + TD1len]);
             TD1len++;
         }
         if (TD1 & 0x80) {
             uint8_t TDi = atr[2 + T1len + TD1len];
-            PrintAndLogEx(NORMAL, "\t- TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol T%d", TDi, TDi & 0x0f);
+            PrintAndLogEx(INFO, "\t- TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol T%d", TDi, TDi & 0x0f);
             if ((TDi & 0x0f) == 0) {
                 protocol_T0_present = true;
             }
@@ -255,20 +271,20 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
             while (nextCycle) {
                 nextCycle = false;
                 if (TDi & 0x10) {
-                    PrintAndLogEx(NORMAL, "\t- TA%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+                    PrintAndLogEx(INFO, "\t- TA%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
                     TDilen++;
                 }
                 if (TDi & 0x20) {
-                    PrintAndLogEx(NORMAL, "\t- TB%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+                    PrintAndLogEx(INFO, "\t- TB%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
                     TDilen++;
                 }
                 if (TDi & 0x40) {
-                    PrintAndLogEx(NORMAL, "\t- TC%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
+                    PrintAndLogEx(INFO, "\t- TC%d: 0x%02x", vi, atr[2 + T1len + TD1len + TDilen]);
                     TDilen++;
                 }
                 if (TDi & 0x80) {
                     TDi = atr[2 + T1len + TD1len + TDilen];
-                    PrintAndLogEx(NORMAL, "\t- TD%d [ 0x%02x ] Protocol T%d", vi, TDi, TDi & 0x0f);
+                    PrintAndLogEx(INFO, "\t- TD%d [ 0x%02x ] Protocol T%d", vi, TDi, TDi & 0x0f);
                     TDilen++;
 
                     nextCycle = true;
@@ -284,7 +300,7 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
             vxor ^= atr[i];
 
         if (vxor)
-            PrintAndLogEx(WARNING, "Check sum error. Must be 0 got 0x%02X", vxor);
+            PrintAndLogEx(WARNING, "Invalid check sum. Must be 0 got 0x%02X", vxor);
         else
             PrintAndLogEx(INFO, "Check sum OK.");
     }
@@ -295,10 +311,10 @@ static int PrintATR(uint8_t *atr, size_t atrlen) {
     uint8_t calen = 2 + T1len + TD1len + TDilen + K;
 
     if (atrlen != calen && atrlen != calen + 1)  // may be CRC
-        PrintAndLogEx(ERR, "ATR length error. len: %d, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
+        PrintAndLogEx(WARNING, "Invalid ATR length. len: %zu, T1len: %d, TD1len: %d, TDilen: %d, K: %d", atrlen, T1len, TD1len, TDilen, K);
 
     if (K > 0)
-        PrintAndLogEx(INFO, "\nHistorical bytes | len 0x%02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
+        PrintAndLogEx(INFO, "Historical bytes | len 0x%02d | format %02x", K, atr[2 + T1len + TD1len + TDilen]);
 
     if (K > 1) {
         PrintAndLogEx(INFO, "\tHistorical bytes");
@@ -345,7 +361,9 @@ static int smart_responseEx(uint8_t *data, bool silent) {
 
     if (needGetData) {
         int len = data[datalen - 1];
+
         if (!silent) PrintAndLogEx(INFO, "Requesting 0x%02X bytes response", len);
+
         uint8_t getstatus[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, len};
         clearCommandBuffer();
         SendCommandOLD(CMD_SMART_RAW, SC_RAW, sizeof(getstatus), 0, getstatus, sizeof(getstatus));
@@ -427,7 +445,7 @@ static int CmdSmartRaw(const char *Cmd) {
                         PrintAndLogEx(WARNING, "Invalid HEX value.");
                         return 1;
                     case 2:
-                        PrintAndLogEx(WARNING, "Too many bytes.  Max %d bytes", sizeof(data));
+                        PrintAndLogEx(WARNING, "Too many bytes.  Max %zu bytes", sizeof(data));
                         return 1;
                     case 3:
                         PrintAndLogEx(WARNING, "Hex must have even number of digits.");
@@ -532,7 +550,6 @@ static int CmdSmartUpgrade(const char *Cmd) {
     //Validations
     if (errors || cmdp == 0) return usage_sm_upgrade();
 
-
     char sha512filename[FILE_PATH_SIZE] = {'\0'};
     char *bin_extension = filename;
     char *dot_position = NULL;
@@ -540,11 +557,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
         bin_extension = dot_position + 1;
     }
 
-    if (!strcmp(bin_extension, "BIN")
-#ifdef _WIN32
-            || !strcmp(bin_extension, "bin")
-#endif
-       ) {
+    if (!strcmp(bin_extension, "BIN") || !strcmp(bin_extension, "bin")) {
         memcpy(sha512filename, filename, strlen(filename) - strlen("bin"));
         strcat(sha512filename, "sha512.txt");
     } else {
@@ -568,14 +581,14 @@ static int CmdSmartUpgrade(const char *Cmd) {
     fseek(f, 0, SEEK_SET);
 
     if (fsize <= 0) {
-        PrintAndLogEx(WARNING, "error, when getting filesize");
+        PrintAndLogEx(ERR, "error, when getting filesize");
         fclose(f);
         return 1;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
-        PrintAndLogEx(WARNING, "error, cannot allocate memory ");
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
         fclose(f);
         return 1;
     }
@@ -729,10 +742,9 @@ static int CmdSmartInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--- Smartcard Information ---------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(INFO, "ISO7618-3 ATR : %s", sprint_hex(card.atr, card.atr_len));
-    PrintAndLogEx(INFO, "\nhttp://smartcard-atr.appspot.com/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len));
+    PrintAndLogEx(INFO, "http://smartcard-atr.apdu.fr/parse?ATR=%s", sprint_hex_inrow(card.atr, card.atr_len));
 
     // print ATR
-    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "ATR");
     PrintATR(card.atr, card.atr_len);
 
@@ -745,14 +757,14 @@ static int CmdSmartInfo(const char *Cmd) {
     if (GetATRTA1(card.atr, card.atr_len) == 0x11)
         PrintAndLogEx(INFO, "Using default values...");
 
-    PrintAndLogEx(NORMAL, "\t- Di %d", Di);
-    PrintAndLogEx(NORMAL, "\t- Fi %d", Fi);
-    PrintAndLogEx(NORMAL, "\t- F  %.1f MHz", F);
+    PrintAndLogEx(INFO, "\t- Di %d", Di);
+    PrintAndLogEx(INFO, "\t- Fi %d", Fi);
+    PrintAndLogEx(INFO, "\t- F  %.1f MHz", F);
 
     if (Di && Fi) {
-        PrintAndLogEx(NORMAL, "\t- Cycles/ETU %d", Fi / Di);
-        PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at 4 MHz", (float)4000000 / (Fi / Di));
-        PrintAndLogEx(NORMAL, "\t- %.1f bits/sec at Fmax (%.1fMHz)", (F * 1000000) / (Fi / Di), F);
+        PrintAndLogEx(INFO, "\t- Cycles/ETU %d", Fi / Di);
+        PrintAndLogEx(INFO, "\t- %.1f bits/sec at 4 MHz", (float)4000000 / (Fi / Di));
+        PrintAndLogEx(INFO, "\t- %.1f bits/sec at Fmax (%.1fMHz)", (F * 1000000) / (Fi / Di), F);
     } else {
         PrintAndLogEx(WARNING, "\t- Di or Fi is RFU.");
     };
@@ -843,13 +855,13 @@ static int CmdSmartSetClock(const char *Cmd) {
 
     switch (clock1) {
         case 0:
-            PrintAndLogEx(SUCCESS, "Clock changed to 16mhz giving 10800 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 16MHz giving 10800 baudrate");
             break;
         case 1:
-            PrintAndLogEx(SUCCESS, "Clock changed to 8mhz giving 21600 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 8MHz giving 21600 baudrate");
             break;
         case 2:
-            PrintAndLogEx(SUCCESS, "Clock changed to 4mhz giving 86400 baudrate");
+            PrintAndLogEx(SUCCESS, "Clock changed to 4MHz giving 86400 baudrate");
             break;
         default:
             break;
@@ -878,7 +890,7 @@ static void smart_brute_prim() {
 
     PrintAndLogEx(INFO, "Reading primitives");
 
-    for (int i = 0; i < sizeof(get_card_data); i += 5) {
+    for (int i = 0; i < ARRAYLEN(get_card_data); i += 5) {
 
         clearCommandBuffer();
         SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, 5, 0, get_card_data + i, 5);
@@ -914,9 +926,7 @@ static int smart_brute_sfi(bool decodeTLV) {
 
         for (uint16_t rec = 1; rec <= 255; rec++) {
 
-            if (ukbhit()) {
-                int gc = getchar();
-                (void)gc;
+            if (kbd_enter_pressed()) {
                 PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                 free(buf);
                 return 1;
@@ -1024,7 +1034,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Importing AID list");
     json_t *root = NULL;
-    smart_loadjson("aidlist", "json", &root);
+    smart_loadjson("aidlist", &root);
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!buf)
@@ -1147,11 +1157,12 @@ int CmdSmartcard(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int ExchangeAPDUSC(bool silent, uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+
     *dataoutlen = 0;
 
     if (activateCard)
-        smart_select(false, NULL);
+        smart_select(true, NULL);
 
     PrintAndLogEx(DEBUG, "APDU SC");
 
@@ -1159,10 +1170,11 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
     if (activateCard) {
         flags |= SC_SELECT | SC_CONNECT;
     }
+
     clearCommandBuffer();
     SendCommandOLD(CMD_SMART_RAW, flags, datainlen, 0, datain, datainlen);
 
-    int len = smart_responseEx(dataout, true);
+    int len = smart_responseEx(dataout, silent);
 
     if (len < 0) {
         return 1;
@@ -1180,7 +1192,7 @@ int ExchangeAPDUSC(uint8_t *datain, int datainlen, bool activateCard, bool leave
         // something fishy: we have only 5 bytes but we put datainlen in arg1?
         SendCommandOLD(CMD_SMART_RAW, SC_RAW_T0, datainlen, 0, data, sizeof(data));
 
-        len = smart_responseEx(dataout, true);
+        len = smart_responseEx(dataout, silent);
     }
 
     *dataoutlen = len;
@@ -1195,6 +1207,7 @@ bool smart_select(bool silent, smart_card_atr_t *atr) {
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+
         if (!silent) PrintAndLogEx(WARNING, "smart card select failed");
         return false;
     }

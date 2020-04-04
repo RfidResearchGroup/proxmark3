@@ -10,32 +10,7 @@
 #ifndef CMDHFLIST_H
 #define CMDHFLIST_H
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include "util.h"
-#include "ui.h"
-#include "cmdhf14a.h"       // ISO14443-A
-#include "cmdhf14b.h"       // ISO14443-B
-#include "cmdhf15.h"        // ISO15693
-#include "cmdhfepa.h"
-#include "cmdhflegic.h"     // LEGIC
-#include "cmdhficlass.h"    // ICLASS
-#include "cmdhfmf.h"        // CLASSIC
-#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
-#include "cmdhfmfdes.h"     // DESFIRE
-#include "cmdhftopaz.h"     // TOPAZ
-#include "cmdhffelica.h"    // ISO18092 / FeliCa
-#include "emv/cmdemv.h"     // EMV
-#include "protocols.h"
-#include "crapto1/crapto1.h"
-#include "mifare/mifarehost.h"
-#include "mifare/mifaredefault.h"
-#include "parity.h"         // oddparity
-#include "iso15693tools.h"  // ISO15693 crc
-
+#include "common.h"
 
 typedef struct {
     uint32_t uid;       // UID
@@ -56,6 +31,7 @@ void ClearAuthData(void);
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
 uint8_t iso14443B_CRC_check(uint8_t *d, uint8_t n);
+uint8_t felica_CRC_check(uint8_t *d, uint8_t n);
 uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len);
 uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n);
 uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
@@ -72,6 +48,7 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, uint8_t paritysize, bool isResponse);
+void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen);
 bool NTParityChk(TAuthData *ad, uint32_t ntx);

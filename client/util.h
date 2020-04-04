@@ -10,102 +10,10 @@
 #ifndef __UTIL_H_
 #define __UTIL_H_
 
-#include <stdint.h> //included in data.h
-#include <stddef.h>
-#include <inttypes.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include "ui.h"     // PrintAndLog
-#include "commonutil.h"
+#include "common.h"
 
 #ifdef ANDROID
 #include <endian.h>
-#endif
-
-#ifndef ROTR
-# define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
-#endif
-#ifndef ROTL
-# define ROTL(x,n) (((uintmax_t)(x) << (n)) | ((uintmax_t)(x) >> ((sizeof(x) * 8) - (n))))
-#endif
-
-#ifndef MIN
-# define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-#ifndef MAX
-# define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-
-// endian change for 64bit
-#ifdef __GNUC__
-#ifndef BSWAP_64
-#define BSWAP_64(x) __builtin_bswap64(x)
-#endif
-#else
-#ifdef _MSC_VER
-#ifndef BSWAP_64
-#define BSWAP_64(x) _byteswap_uint64(x)
-#endif
-#else
-#ifndef BSWAP_64
-#define BSWAP_64(x) \
-    (((uint64_t)(x) << 56) | \
-     (((uint64_t)(x) << 40) & 0xff000000000000ULL) | \
-     (((uint64_t)(x) << 24) & 0xff0000000000ULL) | \
-     (((uint64_t)(x) << 8)  & 0xff00000000ULL) | \
-     (((uint64_t)(x) >> 8)  & 0xff000000ULL) | \
-     (((uint64_t)(x) >> 24) & 0xff0000ULL) | \
-     (((uint64_t)(x) >> 40) & 0xff00ULL) | \
-     ((uint64_t)(x)  >> 56))
-#endif
-#endif
-#endif
-
-// endian change for 32bit
-#ifdef __GNUC__
-#ifndef BSWAP_32
-#define BSWAP_32(x) __builtin_bswap32(x)
-#endif
-#else
-#ifdef _MSC_VER
-#ifndef BSWAP_32
-#define BSWAP_32(x) _byteswap_ulong(x)
-#endif
-#else
-#ifndef BSWAP_32
-# define BSWAP_32(x) \
-    ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) | \
-     (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24))
-#endif
-#endif
-#endif
-
-#define EVEN                        0
-#define ODD                         1
-
-// Nibble logic
-#ifndef NIBBLE_HIGH
-# define NIBBLE_HIGH(b) ( (b & 0xF0) >> 4 )
-#endif
-#ifndef NIBBLE_LOW
-# define NIBBLE_LOW(b)  ( b & 0x0F )
-#endif
-#ifndef CRUMB
-# define CRUMB(b,p)    (((b & (0x3 << p) ) >> p ) & 0xF)
-#endif
-#ifndef SWAP_NIBBLE
-# define SWAP_NIBBLE(b)  ( (NIBBLE_LOW(b)<< 4) | NIBBLE_HIGH(b))
-#endif
-
-// Binary Encoded Digit
-#ifndef BCD2DEC
-# define BCD2DEC(bcd) HornerScheme(bcd, 0x10, 10)
-#endif
-#ifndef DEC2BCD
-# define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
 #endif
 
 // used for save/load files
@@ -113,23 +21,13 @@
 # define FILE_PATH_SIZE 1000
 #endif
 
-#ifndef DropField
-#define DropField() { \
-        clearCommandBuffer(); SendCommandMIX(CMD_READER_ISO_14443a, 0, 0, 0, NULL, 0); \
-    }
-#endif
-
-#ifndef DropFieldEx
-#define DropFieldEx(x) { \
-        if ( (x) == ECC_CONTACTLESS) { \
-            DropField(); \
-        } \
-    }
-#endif
-
 uint8_t g_debugMode;
+uint8_t g_printAndLog;
 
-int ukbhit(void);
+#define PRINTANDLOG_PRINT 1
+#define PRINTANDLOG_LOG   2
+
+int kbd_enter_pressed(void);
 void AddLogLine(const char *fn, const char *data, const char *c);
 void AddLogHex(const char *fn, const char *extData, const uint8_t *data, const size_t len);
 void AddLogUint64(const char *fn, const char *data, const uint64_t value);
@@ -158,6 +56,7 @@ char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_st
 
 void print_blocks(uint32_t *data, size_t len);
 
+int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize);
@@ -171,6 +70,7 @@ uint8_t param_get8(const char *line, int paramnum);
 uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base);
 uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base);
 uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
+float param_getfloat(const char *line, int paramnum, float deflt);
 uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination);
 uint8_t param_isdec(const char *line, int paramnum);
 int param_gethex(const char *line, int paramnum, uint8_t *data, int hexcnt);
@@ -186,7 +86,7 @@ uint8_t GetParity(uint8_t *bits, uint8_t type, int length);
 void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);
 
-void xor(unsigned char *dst, unsigned char *src, size_t len);
+//void xor(unsigned char *dst, unsigned char *src, size_t len);
 int32_t le24toh(uint8_t data[3]);
 
 uint32_t PackBits(uint8_t start, uint8_t len, uint8_t *bits);
@@ -200,5 +100,7 @@ bool str_endswith(const char *s,  const char *suffix);    // check for suffix in
 void clean_ascii(unsigned char *buf, size_t len);
 void strcleanrn(char *buf, size_t len);
 void strcreplace(char *buf, size_t len, char from, char to);
-char *strmcopy(const char *buf);
+char *str_dup(const char *src);
+char *str_ndup(const char *src, size_t len);
+int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 #endif

@@ -111,7 +111,11 @@ static void error_set(json_error_t *error, const lex_t *lex,
 
         if (saved_text && saved_text[0]) {
             if (lex->saved_text.length <= 20) {
-                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH, "%s near '%s'", msg_text, saved_text);
+                int ret = snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH, "%s near '%s'", msg_text, saved_text);
+                if (ret < 0) {
+                    jsonp_error_set(error, line, col, pos, code, "%s", "internal snprint error");
+                    return;
+                }
                 msg_with_context[JSON_ERROR_TEXT_LENGTH - 1] = '\0';
                 result = msg_with_context;
             }
@@ -124,7 +128,11 @@ static void error_set(json_error_t *error, const lex_t *lex,
                 /* No context for UTF-8 decoding errors */
                 result = msg_text;
             } else {
-                snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH, "%s near end of file", msg_text);
+                int ret = snprintf(msg_with_context, JSON_ERROR_TEXT_LENGTH, "%s near end of file", msg_text);
+                if (ret < 0) {
+                    jsonp_error_set(error, line, col, pos, code, "%s", "internal snprint error");
+                    return;
+                }
                 msg_with_context[JSON_ERROR_TEXT_LENGTH - 1] = '\0';
                 result = msg_with_context;
             }
@@ -1071,7 +1079,7 @@ static int callback_get(void *data) {
     if (stream->pos >= stream->len) {
         stream->pos = 0;
         stream->len = stream->callback(stream->data, MAX_BUF_LEN, stream->arg);
-        if (stream->len == 0 || stream->len == (size_t) -1)
+        if (stream->len == 0 || stream->len == (size_t) - 1)
             return EOF;
     }
 

@@ -10,18 +10,7 @@
 #ifndef CMDLFINDALA_H__
 #define CMDLFINDALA_H__
 
-#include <stdio.h>      // sscanf
-#include <stdlib.h>
-#include <string.h>
-#include "proxmark3.h"  // Definitions, USB controls, etc
-#include "ui.h"         // PrintAndLog
-#include "cmdparser.h"  // CmdsParse, CmdsHelp
-#include "lfdemod.h"    // parityTest, bitbytes_to_byte
-#include "util.h"       // weigandparity
-#include "protocols.h"  // for T55xx config register definitions
-#include "cmdmain.h"
-#include "cmddata.h"
-#include "cmdlf.h"      // lf_read
+#include "common.h"
 
 int CmdLFINDALA(const char *Cmd);
 
@@ -30,5 +19,6 @@ int detectIndala26(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int detectIndala64(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int detectIndala224(uint8_t *bitStream, size_t *size, uint8_t *invert);
 int demodIndala(void);
+int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits);
 
 #endif

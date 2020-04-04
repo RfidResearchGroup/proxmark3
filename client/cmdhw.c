@@ -12,12 +12,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
+#include <ctype.h>
+
+#include "cmdparser.h"    // command_t
+#include "comms.h"
+#include "usart_defs.h"
 #include "ui.h"
-#include "proxmark3.h"
-#include "cmdparser.h"
 #include "cmdhw.h"
-#include "cmdmain.h"
 #include "cmddata.h"
 
 static int CmdHelp(const char *Cmd);
@@ -85,7 +86,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     char asBuff[120];
     memset(asBuff, 0, sizeof(asBuff));
     uint32_t mem_avail = 0;
-    PrintAndLogEx(NORMAL, "\n [ Hardware ] ");
+    PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Hardware ]"));
 
     switch (iChipID) {
         case 0x270B0A40:
@@ -365,7 +366,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Type: %s", asBuff);
 }
 
-int CmdDbg(const char *Cmd) {
+static int CmdDbg(const char *Cmd) {
 
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (strlen(Cmd) < 1 || ctmp == 'h') return usage_dbg();
@@ -446,13 +447,13 @@ static int CmdSetDivisor(const char *Cmd) {
     uint8_t arg = param_get8ex(Cmd, 0, 95, 10);
 
     if (arg < 19) {
-        PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+        PrintAndLogEx(ERR, "divisor must be between" _YELLOW_("19") " and " _YELLOW_("255"));
         return PM3_EINVARG;
     }
-    // 12 000 000 (12Mhz)
+    // 12 000 000 (12MHz)
     clearCommandBuffer();
-    SendCommandNG(CMD_SET_LF_DIVISOR, (uint8_t *)&arg, sizeof(arg));
-    PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f kHz", ((double)12000 / (arg + 1)));
+    SendCommandNG(CMD_LF_SET_DIVISOR, (uint8_t *)&arg, sizeof(arg));
+    PrintAndLogEx(SUCCESS, "Divisor set, expected " _YELLOW_("%.1f")" kHz", ((double)12000 / (arg + 1)));
     return PM3_SUCCESS;
 }
 
@@ -466,10 +467,14 @@ static int CmdSetMux(const char *Cmd) {
     str_lower((char *)Cmd);
 
     uint8_t arg = 0;
-    if (strcmp(Cmd, "lopkd") == 0)      arg = 0;
-    else if (strcmp(Cmd, "loraw") == 0) arg = 1;
-    else if (strcmp(Cmd, "hipkd") == 0) arg = 2;
-    else if (strcmp(Cmd, "hiraw") == 0) arg = 3;
+    if (strcmp(Cmd, "lopkd") == 0)
+        arg = 0;
+    else if (strcmp(Cmd, "loraw") == 0)
+        arg = 1;
+    else if (strcmp(Cmd, "hipkd") == 0)
+        arg = 2;
+    else if (strcmp(Cmd, "hiraw") == 0)
+        arg = 3;
     else {
         usage_hw_setmux();
         return PM3_EINVARG;
@@ -479,13 +484,20 @@ static int CmdSetMux(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdStandalone(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_STANDALONE, NULL, 0);
+    return PM3_SUCCESS;
+}
+
 static int CmdTune(const char *Cmd) {
     return CmdTuneSamples(Cmd);
 }
 
 static int CmdVersion(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    pm3_version(true);
+    pm3_version(true, false);
     return PM3_SUCCESS;
 }
 
@@ -494,8 +506,20 @@ static int CmdStatus(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_STATUS, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000))
+    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000) == false)
         PrintAndLogEx(WARNING, "Status command failed. Communication speed test timed out");
+    return PM3_SUCCESS;
+}
+
+static int CmdTia(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition (TIA)...");
+    PacketResponseNG resp;
+    SendCommandNG(CMD_TIA, NULL, 0);
+    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false)
+        PrintAndLogEx(WARNING, "TIA command failed. You probably need to unplug the Proxmark3.");
+    PrintAndLogEx(INFO, "TIA done.");
     return PM3_SUCCESS;
 }
 
@@ -504,7 +528,7 @@ static int CmdPing(const char *Cmd) {
     if (len > PM3_CMD_DATA_SIZE)
         len = PM3_CMD_DATA_SIZE;
     if (len) {
-        PrintAndLogEx(INFO, "Ping sent with payload len=%d", len);
+        PrintAndLogEx(INFO, "Ping sent with payload len = %d", len);
     } else {
         PrintAndLogEx(INFO, "Ping sent");
     }
@@ -515,12 +539,11 @@ static int CmdPing(const char *Cmd) {
         data[i] = i & 0xFF;
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
-        bool error = false;
         if (len) {
-            error = memcmp(data, resp.data.asBytes, len) != 0;
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("ok"));
+            bool error = (memcmp(data, resp.data.asBytes, len) != 0);
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("OK"));
         } else {
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received"));
+            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
         }
     } else
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
@@ -562,8 +585,6 @@ static int CmdConnect(const char *Cmd) {
         memcpy(port, conn.serial_port_name, sizeof(port));
     }
 
-    printf("Port:: %s  Baud:: %u\n", port, baudrate);
-
     if (session.pm3_present) {
         CloseProxmark();
     }
@@ -574,14 +595,15 @@ static int CmdConnect(const char *Cmd) {
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark3\n");
         CloseProxmark();
+        return PM3_ENOTTY;
     }
     return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
     {"help",          CmdHelp,        AlwaysAvailable, "This help"},
-    {"dbg",           CmdDbg,         IfPm3Present,    "Set Proxmark3 debug level"},
     {"connect",       CmdConnect,     AlwaysAvailable, "connect Proxmark3 to serial port"},
+    {"dbg",           CmdDbg,         IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "['l'|'h'] -- Detect external reader field (option 'l' or 'h' to limit to LF or HF)"},
     {"fpgaoff",       CmdFPGAOff,     IfPm3Present,    "Set FPGA off"},
     {"lcd",           CmdLCD,         IfPm3Lcd,        "<HEX command> <count> -- Send command/data to LCD"},
@@ -589,9 +611,11 @@ static command_t CommandTable[] = {
     {"ping",          CmdPing,        IfPm3Present,    "Test if the Proxmark3 is responsive"},
     {"readmem",       CmdReadmem,     IfPm3Present,    "[address] -- Read memory at decimal address from flash"},
     {"reset",         CmdReset,       IfPm3Present,    "Reset the Proxmark3"},
-    {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12Mhz/(divisor+1)"},
+    {"setlfdivisor",  CmdSetDivisor,  IfPm3Present,    "<19 - 255> -- Drive LF antenna at 12MHz/(divisor+1)"},
     {"setmux",        CmdSetMux,      IfPm3Present,    "Set the ADC mux to a specific value"},
+    {"standalone",    CmdStandalone,  IfPm3Present,    "Jump to the standalone mode"},
     {"status",        CmdStatus,      IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
+    {"tia",           CmdTia,         IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"tune",          CmdTune,        IfPm3Present,    "Measure antenna tuning"},
     {"version",       CmdVersion,     IfPm3Present,    "Show version information about the connected Proxmark3"},
     {NULL, NULL, NULL, NULL}
@@ -608,7 +632,66 @@ int CmdHW(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-void pm3_version(bool verbose) {
+void pm3_version(bool verbose, bool oneliner) {
+
+#if defined(__MINGW64__)
+# define PM3CLIENTCOMPILER "MinGW-w64 "
+#elif defined(__MINGW32__)
+# define PM3CLIENTCOMPILER "MinGW "
+#elif defined(__clang__)
+# define PM3CLIENTCOMPILER "Clang/LLVM "
+#elif defined(__GNUC__) || defined(__GNUG__)
+# define PM3CLIENTCOMPILER "GCC "
+#else
+# define PM3CLIENTCOMPILER "unknown compiler "
+#endif
+
+#if defined(__APPLE__) || defined(__MACH__)
+# define PM3HOSTOS " OS:OSX"
+#elif defined(__ANDROID__) || defined(ANDROID)
+// must be tested before __linux__
+# define PM3HOSTOS " OS:Android"
+#elif defined(__linux__)
+# define PM3HOSTOS " OS:Linux"
+#elif defined(__FreeBSD__)
+# define PM3HOSTOS " OS:FreeBSD"
+#elif defined(__NetBSD__)
+# define PM3HOSTOS " OS:NetBSD"
+#elif defined(__OpenBSD__)
+# define PM3HOSTOS " OS:OpenBSD"
+#elif defined(__CYGWIN__)
+# define PM3HOSTOS " OS:Cygwin"
+#elif defined(_WIN64) | defined(__WIN64__)
+// must be tested before _WIN32
+# define PM3HOSTOS " OS:Windows (64b)"
+#elif defined(_WIN32) | defined(__WIN32__)
+# define PM3HOSTOS " OS:Windows (32b)"
+#else
+# define PM3HOSTOS " OS:unknown"
+#endif
+
+#if defined(__x86_64__)
+# define PM3HOSTARCH " ARCH:x86_64"
+#elif defined(__i386__)
+# define PM3HOSTARCH " ARCH:x86"
+#elif defined(__aarch64__)
+# define PM3HOSTARCH " ARCH:aarch64"
+#elif defined(__arm__)
+# define PM3HOSTARCH " ARCH:arm"
+#elif defined(__powerpc64__)
+# define PM3HOSTARCH " ARCH:powerpc64"
+#elif defined(__mips__)
+# define PM3HOSTARCH " ARCH:mips"
+#else
+# define PM3HOSTARCH " ARCH:unknown"
+#endif
+
+    if (oneliner) {
+        // For "proxmark3 -v", simple printf, avoid logging
+        printf("Client: RRG/Iceman compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH "\n");
+        return;
+    }
+
     if (!verbose)
         return;
 
@@ -618,17 +701,24 @@ void pm3_version(bool verbose) {
     SendCommandNG(CMD_VERSION, NULL, 0);
 
     if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-        PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
-        PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
+        PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Proxmark3 RFID instrument ]"));
+        PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ CLIENT ]"));
         PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
-        PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 ]");
-        PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
-        PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-        PrintAndLogEx(NORMAL, "\n [ PROXMARK RDV4 Extras ]");
-        PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+        PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
-        if (IfPm3FpcUsartDevFromUsb())
-            PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
+        if (IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
+            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 ]"));
+        } else {
+            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 RDV4 ]"));
+            PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 RDV4 Extras ]"));
+            PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+
+            if (IfPm3FpcUsartDevFromUsb()) {
+                PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
+            }
+        }
 
         PrintAndLogEx(NORMAL, "");
 

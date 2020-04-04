@@ -32,16 +32,16 @@ reg [2:0] fc_div;
 always @(negedge ck_1356megb)
     fc_div <= fc_div + 1;
 
-(* clock_signal = "yes" *) reg adc_clk;				// sample frequency, always 16 * fc
+(* clock_signal = "yes" *) reg adc_clk;             // sample frequency, always 16 * fc
 always @(ck_1356megb, xcorr_is_848, xcorr_quarter_freq, fc_div)
-	if (xcorr_is_848 & ~xcorr_quarter_freq)			// fc = 847.5 kHz, standard ISO14443B
-		adc_clk <= ck_1356megb;
-	else if (~xcorr_is_848 & ~xcorr_quarter_freq)	// fc = 423.75 kHz 
-		adc_clk <= fc_div[0];
-	else if (xcorr_is_848 & xcorr_quarter_freq)		// fc = 211.875 kHz
-		adc_clk <= fc_div[1];
-	else 											// fc = 105.9375 kHz
-		adc_clk <= fc_div[2];
+    if (xcorr_is_848 & ~xcorr_quarter_freq)         // fc = 847.5 kHz, standard ISO14443B
+        adc_clk <= ck_1356megb;
+    else if (~xcorr_is_848 & ~xcorr_quarter_freq)   // fc = 423.75 kHz
+        adc_clk <= fc_div[0];
+    else if (xcorr_is_848 & xcorr_quarter_freq)     // fc = 211.875 kHz
+        adc_clk <= fc_div[1];
+    else                                            // fc = 105.9375 kHz
+        adc_clk <= fc_div[2];
 
 // When we're a reader, we just need to do the BPSK demod; but when we're an
 // eavesdropper, we also need to pick out the commands sent by the reader,
@@ -94,9 +94,9 @@ reg ssp_frame;
 
 always @(negedge adc_clk)
 begin
-		corr_i_cnt <= corr_i_cnt + 1;
-end		
-		
+        corr_i_cnt <= corr_i_cnt + 1;
+end
+
 
 // ADC data appears on the rising edge, so sample it on the falling edge
 always @(negedge adc_clk)
@@ -147,7 +147,7 @@ begin
         else
             corr_i_accum <= corr_i_accum + adc_d;
 
-        if(corr_i_cnt[3] == corr_i_cnt[2])			// phase shifted by pi/2
+        if(corr_i_cnt[3] == corr_i_cnt[2])          // phase shifted by pi/2
             corr_q_accum <= corr_q_accum + adc_d;
         else
             corr_q_accum <= corr_q_accum - adc_d;
@@ -177,8 +177,8 @@ begin
         end
     end
 
-	// set ssp_frame signal for corr_i_cnt = 0..3 and corr_i_cnt = 32..35
-	// (send two frames with 8 Bits each)
+    // set ssp_frame signal for corr_i_cnt = 0..3 and corr_i_cnt = 32..35
+    // (send two frames with 8 Bits each)
     if(corr_i_cnt[5:2] == 4'b0000 || corr_i_cnt[5:2] == 4'b1000)
         ssp_frame = 1'b1;
     else

@@ -33,7 +33,21 @@ on a blank card.
 ## Spanish full description of the project [here](http://bit.ly/2c9nZXR).
 */
 
-#include "hf_mattyrun.h"
+#include "standalone.h" // standalone definitions
+#include "proxmark3_arm.h"
+#include "appmain.h"
+#include "fpgaloader.h"
+#include "util.h"
+#include "dbprint.h"
+#include "ticks.h"
+#include "string.h"
+#include "commonutil.h"
+#include "iso14443a.h"
+#include "mifarecmd.h"
+#include "crc16.h"
+#include "BigBuf.h"
+#include "mifaresim.h"  // mifare1ksim
+#include "mifareutil.h"
 
 uint8_t uid[10];
 uint32_t cuid;
@@ -122,7 +136,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
             };
         }
 
-        if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
             DbprintfEx(FLAG_NEWLINE, "write block send command error");
             break;
         };
@@ -181,19 +195,19 @@ static int saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, ui
             SpinDelayUs(AUTHENTICATION_TIMEOUT);
             continue;
         }
-        crypto1_destroy(pcs);
+        crypto1_deinit(pcs);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         *key = ui64Key;
         return i;
     }
-    crypto1_destroy(pcs);
+    crypto1_deinit(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     return -1;
 }
 
 void ModInfo(void) {
-    DbpString("   HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
+    DbpString("  HF Mifare sniff/clone - aka MattyRun (Matías A. Ré Medina)");
 }
 
 void RunMod() {
@@ -223,6 +237,7 @@ void RunMod() {
     */
     bool printKeys = false;         // Prints keys
     bool transferToEml = true;      // Transfer keys to emulator memory
+    bool ecfill = true;             // Fill emulator memory with cards content.
     bool simulation = true;         // Simulates an exact copy of the target tag
     bool fillFromEmulator = false;  // Dump emulator memory.
 
@@ -261,7 +276,7 @@ void RunMod() {
         keys in keyBlock's memory space .
     */
     keyBlock = BigBuf_malloc(stKeyBlock * 6);
-    int mfKeysCnt = sizeof(mfKeys) / sizeof(uint64_t);
+    int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
         num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
@@ -308,7 +323,7 @@ void RunMod() {
             Dbprintf("\tCurrent sector:%3d, block:%3d, key type: %c, key count: %i ", sec, block, type ? 'B' : 'A', mfKeysCnt);
             int key = saMifareChkKeys(block, type, true, size, &keyBlock[0], &key64);
             if (key == -1) {
-                LED(LED_RED, 50); //red
+                LED(LED_RED, 50);
                 Dbprintf("\t✕ Key not found for this sector!");
                 allKeysFound = false;
                 // break;
@@ -333,21 +348,24 @@ void RunMod() {
         TODO:
         - Get UID from tag and set accordingly in emulator memory and call mifaresim with right flags (iceman)
     */
-    if (!allKeysFound && keyFound) {
-        Dbprintf("\t✕ There's currently no nested attack in MattyRun, sorry!");
-        LED_C_ON(); //red
-        LED_A_ON(); //yellow
-        // no room to run nested attack on device (iceman)
-        // Do nested attack, set allKeysFound = true;
-        // allKeysFound = true;
+    if (allKeysFound) {
+        Dbprintf("\t✓ All keys found");
     } else {
-        Dbprintf("\t✕ There's nothing I can do without at least a one valid key, sorry!");
-        LED_C_ON(); //red
+        if (keyFound) {
+            Dbprintf("\t✕ There's currently no nested attack in MattyRun, sorry!");
+            LED_C_ON(); //red
+            LED_A_ON(); //yellow
+            // no room to run nested attack on device (iceman)
+            // Do nested attack, set allKeysFound = true;
+            // allKeysFound = true;
+        }   else {
+            Dbprintf("\t✕ There's nothing I can do without at least a one valid key, sorry!");
+            LED_C_ON(); //red
+        }
     }
 
-    /*
-        If enabled, transfers found keys to memory and loads target content in emulator memory. Then it simulates to be the tag it has basically cloned.
-    */
+    // If enabled, transfers found keys to memory and loads target content in emulator memory. Then it simulates to be the tag it has basically cloned.
+
     if ((transferToEml) && (allKeysFound)) {
 
         emlClearMem();
@@ -399,7 +417,7 @@ void RunMod() {
                         simflags = FLAG_4B_UID_IN_DATA;
                         break;
                 }
-                Mifare1ksim(simflags | FLAG_MF_1K, 0, uid);
+                Mifare1ksim(simflags | FLAG_MF_1K, 0, uid, 0, 0);
                 LED_B_OFF();
 
                 /*

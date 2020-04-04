@@ -11,10 +11,7 @@
 #ifndef ISO15693_H__
 #define ISO15693_H__
 
-#include "proxmark3.h"
-#include <stdint.h>
-#include <stdlib.h>
-#include "crc16.h"
+#include "common.h"
 
 // REQUEST FLAGS
 #define ISO15_REQ_SUBCARRIER_SINGLE      0x00 // Tag should respond using one subcarrier (ASK)
@@ -54,23 +51,45 @@
 #define ISO15_ERROR_BLOCL_WRITELOCK      0x14 // Locking was unsuccessful
 
 // COMMAND CODES
-#define ISO15_CMD_INVENTORY              0x01
-#define ISO15_CMD_STAYQUIET              0x02
-#define ISO15_CMD_READ                   0x20
-#define ISO15_CMD_WRITE                  0x21
-#define ISO15_CMD_LOCK                   0x22
-#define ISO15_CMD_READMULTI              0x23
-#define ISO15_CMD_WRITEMULTI             0x24
-#define ISO15_CMD_SELECT                 0x25
-#define ISO15_CMD_RESET                  0x26
-#define ISO15_CMD_WRITEAFI               0x27
-#define ISO15_CMD_LOCKAFI                0x28
-#define ISO15_CMD_WRITEDSFID             0x29
-#define ISO15_CMD_LOCKDSFID              0x2A
-#define ISO15_CMD_SYSINFO                0x2B
-#define ISO15_CMD_SECSTATUS              0x2C
-
-char *Iso15693sprintUID(char *target, uint8_t *uid);
+#define ISO15_CMD_INVENTORY               0x01
+#define ISO15_CMD_STAYQUIET               0x02
+#define ISO15_CMD_READ                    0x20
+#define ISO15_CMD_WRITE                   0x21
+#define ISO15_CMD_LOCK                    0x22
+#define ISO15_CMD_READMULTI               0x23
+#define ISO15_CMD_WRITEMULTI              0x24
+#define ISO15_CMD_SELECT                  0x25
+#define ISO15_CMD_RESET                   0x26
+#define ISO15_CMD_WRITEAFI                0x27
+#define ISO15_CMD_LOCKAFI                 0x28
+#define ISO15_CMD_WRITEDSFID              0x29
+#define ISO15_CMD_LOCKDSFID               0x2A
+#define ISO15_CMD_SYSINFO                 0x2B
+#define ISO15_CMD_SECSTATUS               0x2C
+#define ISO15_CMD_INVENTORYREAD           0xA0
+#define ISO15_CMD_FASTINVENTORYREAD       0xA1
+#define ISO15_CMD_SETEAS                  0xA2
+#define ISO15_CMD_RESETEAS                0xA3
+#define ISO15_CMD_LOCKEAS                 0xA4
+#define ISO15_CMD_EASALARM                0xA5
+#define ISO15_CMD_PASSWORDPROTECTEAS      0xA6
+#define ISO15_CMD_WRITEEASID              0xA7
+#define ISO15_CMD_READEPC                 0xA8
+#define ISO15_CMD_GETNXPSYSTEMINFO        0xAB
+#define ISO15_CMD_INVENTORYPAGEREAD       0xB0
+#define ISO15_CMD_FASTINVENTORYPAGEREAD   0xB1
+#define ISO15_CMD_GETRANDOMNUMBER         0xB2
+#define ISO15_CMD_SETPASSWORD             0xB3
+#define ISO15_CMD_WRITEPASSWORD           0xB4
+#define ISO15_CMD_LOCKPASSWORD            0xB5
+#define ISO15_CMD_PROTECTPAGE             0xB6
+#define ISO15_CMD_LOCKPAGEPROTECTION      0xB7
+#define ISO15_CMD_GETMULTIBLOCKPROTECTION 0xB8
+#define ISO15_CMD_DESTROY                 0xB9
+#define ISO15_CMD_ENABLEPRIVACY           0xBA
+#define ISO15_CMD_64BITPASSWORDPROTECTION 0xBB
+#define ISO15_CMD_STAYQUIETPERSISTENT     0xBC
+#define ISO15_CMD_READSIGNATURE           0xBD
 
 //-----------------------------------------------------------------------------
 // Map a sequence of octets (~layer 2 command) into the set of bits to feed
@@ -82,8 +101,8 @@ char *Iso15693sprintUID(char *target, uint8_t *uid);
 
 // SOF defined as
 // 1) Unmodulated time of 56.64us
-// 2) 24 pulses of 423.75khz
-// 3) logic '1' (unmodulated for 18.88us followed by 8 pulses of 423.75khz)
+// 2) 24 pulses of 423.75kHz
+// 3) logic '1' (unmodulated for 18.88us followed by 8 pulses of 423.75kHz)
 
 static const int Iso15693FrameSOF[] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -109,8 +128,8 @@ static const int Iso15693Logic1[] = {
     };
 
 // EOF defined as
-// 1) logic '0' (8 pulses of 423.75khz followed by unmodulated for 18.88us)
-// 2) 24 pulses of 423.75khz
+// 1) logic '0' (8 pulses of 423.75kHz followed by unmodulated for 18.88us)
+// 2) 24 pulses of 423.75kHz
 // 3) Unmodulated time of 56.64us
 static const int Iso15693FrameEOF[] = {
     1,  1,  1,  1,
@@ -122,5 +141,7 @@ static const int Iso15693FrameEOF[] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
+
+char *iso15693_sprintUID(char *dest, uint8_t *uid);
 
 #endif
