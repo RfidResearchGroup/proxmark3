@@ -2,13 +2,14 @@ local cmds = require('commands')
 local getopt = require('getopt')
 local bin = require('bin')
 local utils = require('utils')
+local ansicolors = require('ansicolors')
 
 local format = string.format
 local floor = math.floor
 
 copyright = ''
 author = "Iceman"
-version  = 'v1.0.1'
+version  = 'v1.0.2'
 desc =[[
 This script will program a T55x7 TAG with a configuration and four blocks of data.
 It will then try to detect and read back those block data and compare if read data matches the expected data.
@@ -32,10 +33,9 @@ example = [[
     1. script run test_t55x7
 ]]
 usage = [[
-
-script run test_t55x7
-
-Arguments:
+script run test_t55x7 [-h]
+]]
+arguments = [[
     -h       this help
 ]]
 
@@ -79,9 +79,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print("Example usage")
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- Exit message
