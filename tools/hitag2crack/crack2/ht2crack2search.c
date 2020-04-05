@@ -4,8 +4,7 @@
  * PRNG state, checks it is correct, and then rolls back the PRNG to recover the key
  */
 
-#include "ht2crack2utils.h"
-
+#include "ht2crackutils.h"
 
 #define INPUTFILE "sorted/%02x/%02x.bin"
 #define DATASIZE 10
@@ -17,16 +16,14 @@ struct rngdata {
 
 
 
-static int datacmp(const void *p1, const void *p2)
-{
+static int datacmp(const void *p1, const void *p2) {
     unsigned char *d1 = (unsigned char *)p1;
     unsigned char *d2 = (unsigned char *)p2;
 
     return memcmp(d1, d2, DATASIZE - 6);
 }
 
-int loadrngdata(struct rngdata *r, char *file)
-{
+int loadrngdata(struct rngdata *r, char *file) {
     int fd;
     int i, j;
     int nibble;
@@ -72,7 +69,7 @@ int loadrngdata(struct rngdata *r, char *file)
 
     j = 0;
     nibble = 0;
-    for (i=0; (i<filestat.st_size) && (j < r->len); i++) {
+    for (i = 0; (i < filestat.st_size) && (j < r->len); i++) {
         if ((data[i] != 0x0a) && (data[i] != 0x0d) && (data[i] != 0x20)) {
             if (!nibble) {
                 r->data[j] = hex2bin(data[i]) << 4;
@@ -93,8 +90,7 @@ int loadrngdata(struct rngdata *r, char *file)
     return 1;
 }
 
-int makecand(unsigned char *c, struct rngdata *r, int bitoffset)
-{
+int makecand(unsigned char *c, struct rngdata *r, int bitoffset) {
     int bytenum;
     int bitnum;
     int i;
@@ -107,7 +103,7 @@ int makecand(unsigned char *c, struct rngdata *r, int bitoffset)
     bytenum = bitoffset / 8;
     bitnum = bitoffset % 8;
 
-    for (i=0; i<6; i++) {
+    for (i = 0; i < 6; i++) {
         if (!bitnum) {
             c[i] = r->data[bytenum + i];
         } else {
@@ -120,8 +116,7 @@ int makecand(unsigned char *c, struct rngdata *r, int bitoffset)
 
 
 // test the candidate against the next or previous rng data
-int testcand(unsigned char *f, unsigned char *rt, int fwd)
-{
+int testcand(unsigned char *f, unsigned char *rt, int fwd) {
     Hitag_State hstate;
     int i;
     uint32_t ks1;
@@ -130,8 +125,8 @@ int testcand(unsigned char *f, unsigned char *rt, int fwd)
 
     // build the prng state at the candidate
     hstate.shiftreg = 0;
-    for (i=0; i<6; i++) {
-        hstate.shiftreg = (hstate.shiftreg << 8) | f[i+4];
+    for (i = 0; i < 6; i++) {
+        hstate.shiftreg = (hstate.shiftreg << 8) | f[i + 4];
     }
     buildlfsr(&hstate);
 
@@ -149,7 +144,7 @@ int testcand(unsigned char *f, unsigned char *rt, int fwd)
     ks2 = hitag2_nstep(&hstate, 24);
 
     writebuf(buf, ks1, 3);
-    writebuf(buf+3, ks2, 3);
+    writebuf(buf + 3, ks2, 3);
 
     // compare them
     if (!memcmp(buf, rt, 6)) {
@@ -159,8 +154,7 @@ int testcand(unsigned char *f, unsigned char *rt, int fwd)
     }
 }
 
-int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned char *m, unsigned char *s)
-{
+int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned char *m, unsigned char *s) {
     int fd;
     struct stat filestat;
     char file[64];
@@ -193,7 +187,7 @@ int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned char *m, u
         exit(1);
     }
 
-    memcpy(item, c+2, 4);
+    memcpy(item, c + 2, 4);
 
     found = (unsigned char *)bsearch(item, data, filestat.st_size / DATASIZE, DATASIZE, datacmp);
 
@@ -209,13 +203,13 @@ int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned char *m, u
         while (((found - data) <= (filestat.st_size - DATASIZE)) && (!memcmp(found, item, 4))) {
             if (testcand(found, rt, fwd)) {
                 memcpy(m, c, 2);
-                memcpy(m+2, found, 4);
-                memcpy(s, found+4, 6);
+                memcpy(m + 2, found, 4);
+                memcpy(s, found + 4, 6);
 
                 munmap(data, filestat.st_size);
                 close(fd);
                 return 1;
-            } 
+            }
 
             found = found + DATASIZE;
         }
@@ -228,8 +222,7 @@ int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned char *m, u
 
 }
 
-int findmatch(struct rngdata *r, unsigned char *outmatch, unsigned char *outstate, int *bitoffset)
-{
+int findmatch(struct rngdata *r, unsigned char *outmatch, unsigned char *outstate, int *bitoffset) {
     int i;
     int bitlen;
     unsigned char cand[6];
@@ -243,7 +236,7 @@ int findmatch(struct rngdata *r, unsigned char *outmatch, unsigned char *outstat
 
     bitlen = r->len * 8;
 
-    for (i=0; i<=bitlen - 48; i++) {
+    for (i = 0; i <= bitlen - 48; i++) {
         // print progress
         if ((i % 100) == 0) {
             printf("searching on bit %d\n", i);
@@ -283,8 +276,7 @@ int findmatch(struct rngdata *r, unsigned char *outmatch, unsigned char *outstat
 
 
 
-void rollbackrng(Hitag_State *hstate, unsigned char *s, int offset)
-{
+void rollbackrng(Hitag_State *hstate, unsigned char *s, int offset) {
     int i;
 
     if (!s) {
@@ -294,7 +286,7 @@ void rollbackrng(Hitag_State *hstate, unsigned char *s, int offset)
 
     // build prng at recovered offset
     hstate->shiftreg = 0;
-    for (i=0; i<6; i++) {
+    for (i = 0; i < 6; i++) {
         hstate->shiftreg = (hstate->shiftreg << 8) | s[i];
     }
 
@@ -313,8 +305,7 @@ void rollbackrng(Hitag_State *hstate, unsigned char *s, int offset)
 
 }
 
-uint64_t recoverkey(Hitag_State *hstate, char *uidstr, char *nRstr)
-{
+uint64_t recoverkey(Hitag_State *hstate, char *uidstr, char *nRstr) {
     uint64_t key;
     uint64_t keyupper;
     uint32_t uid;
@@ -333,7 +324,7 @@ uint64_t recoverkey(Hitag_State *hstate, char *uidstr, char *nRstr)
 
     uidtmp = uid;
     // rollback and extract bits b
-    for (i=0; i<32; i++) {
+    for (i = 0; i < 32; i++) {
         hstate->shiftreg = ((hstate->shiftreg) << 1) | ((uidtmp >> 31) & 0x1);
         uidtmp = uidtmp << 1;
         b = (b << 1) | fnf(hstate->shiftreg);
@@ -364,8 +355,7 @@ uint64_t recoverkey(Hitag_State *hstate, char *uidstr, char *nRstr)
 }
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     Hitag_State hstate;
     struct rngdata rng;
     int bitoffset = 0;
@@ -420,7 +410,7 @@ int main(int argc, char *argv[])
     printf("\n");
 
     printf("KEY:\t\t");
-    for (i=0; i<6; i++) {
+    for (i = 0; i < 6; i++) {
         printf("%02X", (int)(key & 0xff));
         key = key >> 8;
     }

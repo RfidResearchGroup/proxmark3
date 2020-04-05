@@ -33,7 +33,7 @@ brew upgrade --fetch-HEAD proxmark3
 
 ## Flash the BOOTROM & FULLIMAGE
 
-With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're un bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
+With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're in bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
 
 In principle, the helper script `pm3-flash-all` should auto-detect your port, so you can just try:
 
@@ -85,6 +85,12 @@ These instructions will show how to setup the environment on OSX to the point wh
 brew install readline qt5 pkgconfig
 brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 ```
+3. (optional) Install makefile dependencies:
+```
+brew install recode
+brew install astyle
+```
+
 
 ## Compile and use the project
 

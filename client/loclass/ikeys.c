@@ -199,7 +199,6 @@ static uint64_t check(uint64_t z) {
     ck2 &= 0x00000000FFFFFF000000;
 
     return ck1 | ck2 >> 24;
-
 }
 
 static void permute(BitstreamIn *p_in, uint64_t z, int l, int r, BitstreamOut *out) {
@@ -219,6 +218,7 @@ static void permute(BitstreamIn *p_in, uint64_t z, int l, int r, BitstreamOut *o
         permute(p_in, z, l, r + 1, out);
     }
 }
+
 static void printbegin() {
     if (debug_print < 2)
         return;

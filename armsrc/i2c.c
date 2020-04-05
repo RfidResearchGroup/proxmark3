@@ -709,7 +709,7 @@ void SmartCardAtr(void) {
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
     bool isOK = GetATR(&card);
-    reply_old(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
+    reply_mix(CMD_ACK, isOK, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
     set_tracing(false);
     LEDsoff();
 }
@@ -760,7 +760,7 @@ void SmartCardRaw(uint64_t arg0, uint64_t arg1, uint8_t *data) {
         }
     }
 OUT:
-    reply_old(CMD_ACK, len, 0, 0, resp, len);
+    reply_mix(CMD_ACK, len, 0, 0, resp, len);
     BigBuf_free();
     set_tracing(false);
     LEDsoff();

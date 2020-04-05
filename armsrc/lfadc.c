@@ -10,6 +10,7 @@
 #include "lfsampling.h"
 #include "fpgaloader.h"
 #include "ticks.h"
+#include "dbprint.h"
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
@@ -46,27 +47,43 @@ bool lf_test_periods(size_t expected, size_t count) {
 // Low frequency (LF) adc passthrough functionality
 //////////////////////////////////////////////////////////////////////////////
 uint8_t previous_adc_val = 0;
+uint8_t adc_avg = 0;
+
+void lf_sample_mean(void) {
+    uint8_t periods = 0;
+    uint32_t adc_sum = 0;
+    while (periods < 32) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            adc_sum += AT91C_BASE_SSC->SSC_RHR;
+            periods++;
+        }
+    }
+    // division by 32
+    adc_avg = adc_sum >> 5;
+
+    if (DBGLEVEL >= DBG_EXTENDED)
+        Dbprintf("LF ADC average %u", adc_avg);
+}
 
 size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
     size_t periods = 0;
     volatile uint8_t adc_val;
-    //uint8_t avg_peak = 140, avg_through = 96;
-    // 140 - 127 - 114
-    uint8_t avg_peak = 140, avg_through = 106;
-    int16_t checked = 0;
+    uint8_t avg_peak = adc_avg + 3, avg_through = adc_avg - 3;
+//    int16_t checked = 0;
 
     while (!BUTTON_PRESS()) {
 
         // only every 100th times, in order to save time when collecting samples.
-        if (checked == 1000) {
-            if (data_available()) {
-                break;
-            } else {
-                checked = 0;
-            }
-        }
-        ++checked;
-
+        /*
+                if (checked == 1000) {
+                    if (data_available()) {
+                        break;
+                    } else {
+                        checked = 0;
+                    }
+                }
+                ++checked;
+        */
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -98,8 +115,8 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
                     }
                 }
             }
-
             previous_adc_val = adc_val;
+
             if (periods >= max) return 0;
         }
     }
@@ -116,23 +133,26 @@ size_t lf_detect_gap(size_t max) {
 }
 
 void lf_reset_counter() {
+
     // TODO: find out the correct reset settings for tag and reader mode
-    if (reader_mode) {
-        // Reset values for reader mode
-        rising_edge = false;
-        previous_adc_val = 0xFF;
-    } else {
-        // Reset values for tag/transponder mode
-        rising_edge = false;
-        previous_adc_val = 0xFF;
-    }
+//    if (reader_mode) {
+    // Reset values for reader mode
+    rising_edge = false;
+    previous_adc_val = 0xFF;
+
+//    } else {
+    // Reset values for tag/transponder mode
+//        rising_edge = false;
+//        previous_adc_val = 0xFF;
+//    }
 }
 
 bool lf_get_tag_modulation() {
     return (rising_edge == false);
 }
+
 bool lf_get_reader_modulation() {
-    return rising_edge;    
+    return rising_edge;
 }
 
 void lf_wait_periods(size_t periods) {
@@ -147,7 +167,11 @@ void lf_init(bool reader, bool simulate) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    sample_config *sc = getSamplingConfig();
+    sc->decimation = 1;
+    sc->averaging = 0;
+
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
     if (reader) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
     } else {
@@ -155,7 +179,8 @@ void lf_init(bool reader, bool simulate) {
 //            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
             FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
         else
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+            // Sniff
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
 
     }
 
@@ -168,8 +193,8 @@ void lf_init(bool reader, bool simulate) {
     // When in reader mode, give the field a bit of time to settle.
     // 313T0 = 313 * 8us = 2504us = 2.5ms  Hitag2 tags needs to be fully powered.
     if (reader) {
-        // 50 ms
-        SpinDelay(50);
+        // 10 ms
+        SpinDelay(10);
     }
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation
@@ -195,14 +220,12 @@ void lf_init(bool reader, bool simulate) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // Prepare data trace
-    uint32_t bufsize = 20000;
+    uint32_t bufsize = 10000;
 
     // use malloc
     if (logging) initSampleBufferEx(&bufsize, true);
 
-    sample_config *sc = getSamplingConfig();
-    sc->decimation = 1;
-    sc->averaging = 0;
+    lf_sample_mean();
 }
 
 void lf_finalize() {
@@ -218,36 +241,33 @@ void lf_finalize() {
 
     LEDsoff();
 
-    sample_config *sc = getSamplingConfig();
-    sc->decimation = 1;
-    sc->averaging = 0;
-
     StartTicks();
 }
 
 size_t lf_detect_field_drop(size_t max) {
     size_t periods = 0;
-    volatile uint8_t adc_val;
-    int16_t checked = 0;
+//    int16_t checked = 0;
 
     while (!BUTTON_PRESS()) {
 
-        // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
-            if (data_available()) {
-                checked = -1;
-                break;
-            } else {
-                checked = 0;
-            }
-        }
-        ++checked;
+        /*
+                // only every 1000th times, in order to save time when collecting samples.
+                if (checked == 1000) {
+                    if (data_available()) {
+                        checked = -1;
+                        break;
+                    } else {
+                        checked = 0;
+                    }
+                }
+                ++checked;
+        */
 
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             periods++;
-            adc_val = AT91C_BASE_SSC->SSC_RHR;
+            volatile uint8_t adc_val = AT91C_BASE_SSC->SSC_RHR;
 
             if (logging) logSampleSimple(adc_val);
 
@@ -275,7 +295,7 @@ static void lf_manchester_send_bit(uint8_t bit) {
     lf_modulation(bit != 0);
     lf_wait_periods(16);
     lf_modulation(bit == 0);
-    lf_wait_periods(16);
+    lf_wait_periods(32);
 }
 
 // simulation

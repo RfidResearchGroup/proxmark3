@@ -59,11 +59,13 @@ static int CmdScriptRun(const char *Cmd) {
     if ((!str_endswith(preferredName, ".cmd")) && (searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", true) == PM3_SUCCESS)) {
         int error;
         if (luascriptfile_idx == MAX_NESTED_LUASCRIPT) {
-            PrintAndLogEx(ERR, "Too many nested scripts, skipping %s\n", script_path);
+            PrintAndLogEx(ERR, "too many nested scripts, skipping %s\n", script_path);
             free(script_path);
             return PM3_EMALLOC;
         }
-        PrintAndLogEx(SUCCESS, "Executing Lua script: %s, args '%s'\n", script_path, arguments);
+        PrintAndLogEx(SUCCESS, "executing lua " _YELLOW_("%s"), script_path);
+        PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
+
         luascriptfile_idx++;
 
         // create new Lua state
@@ -94,7 +96,7 @@ static int CmdScriptRun(const char *Cmd) {
         if (error) { // if non-0, then an error
             // the top of the stack should be the error string
             if (!lua_isstring(lua_state, lua_gettop(lua_state)))
-                PrintAndLogEx(FAILED, "Error - but no error (?!)");
+                PrintAndLogEx(FAILED, "error - but no error (?!)");
 
             // get the top of the stack as the error and pop it off
             const char *str = lua_tostring(lua_state, lua_gettop(lua_state));
@@ -106,17 +108,22 @@ static int CmdScriptRun(const char *Cmd) {
         // close the Lua state
         lua_close(lua_state);
         luascriptfile_idx--;
-        PrintAndLogEx(SUCCESS, "\nFinished %s\n", preferredName);
+        PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), preferredName);
         return PM3_SUCCESS;
     }
+
     if ((!str_endswith(preferredName, ".lua")) && (searchFile(&script_path, CMD_SCRIPTS_SUBDIR, preferredName, ".cmd", true) == PM3_SUCCESS)) {
-        PrintAndLogEx(SUCCESS, "Executing Cmd script: %s, args '%s'\n", script_path, arguments);
+
+        PrintAndLogEx(SUCCESS, "executing Cmd " _YELLOW_("%s"), script_path);
+        PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
+
         int ret = push_cmdscriptfile(script_path, true);
         if (ret != PM3_SUCCESS)
             PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", script_path);
         free(script_path);
         return ret;
     }
+
     // file not found, let's search again to display the error messages
     int ret = PM3_EUNDEF;
     if (!str_endswith(preferredName, ".cmd")) ret = searchFile(&script_path, LUA_SCRIPTS_SUBDIR, preferredName, ".lua", false);
@@ -141,7 +148,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     PrintAndLogEx(NORMAL, "This is a feature to run Lua-scripts. You can place Lua-scripts within the luascripts/-folder. ");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 /**

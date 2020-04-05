@@ -253,34 +253,41 @@ static int CmdLFTune(const char *Cmd) {
     //Validations
     if (errors) return usage_lf_tune();
 
-    PrintAndLogEx(SUCCESS, "Measuring LF antenna at %.2f kHz, click button or press Enter to exit", LF_DIV2FREQ(divisor));
+    PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") "kHz, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit", LF_DIV2FREQ(divisor));
 
     uint8_t params[] = {1, 0};
     params[1] = divisor;
     PacketResponseNG resp;
-
     clearCommandBuffer();
+
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF initialization, aborting");
         return PM3_ETIMEOUT;
     }
+
     params[0] = 2;
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {
-        if (kbd_enter_pressed()) { // abort by keyboard press
+        if (kbd_enter_pressed()) {
             break;
         }
+
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
         if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF measure, aborting");
             return PM3_ETIMEOUT;
         }
-        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint32_t)))
+
+        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint32_t))) {
             break;
+        }
+
         uint32_t volt = resp.data.asDwords[0];
-        PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint32_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, "%u mV / %3u V", volt, (uint32_t)(volt / 1000));
     }
+
     params[0] = 3;
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
@@ -288,10 +295,9 @@ static int CmdLFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Done.");
+    PrintAndLogEx(INFO, "Done.");
     return PM3_SUCCESS;
 }
-
 
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
@@ -451,6 +457,24 @@ int CmdFlexdemod(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int lf_getconfig(sample_config *config) {
+    if (!session.pm3_present) return PM3_ENOTTY;
+
+    if (config == NULL)
+        return PM3_EINVARG;
+
+    clearCommandBuffer();
+
+    SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_SAMPLING_GET_CONFIG, &resp, 2000)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    memcpy(config, resp.data.asBytes, sizeof(sample_config));
+    return PM3_SUCCESS;
+}
+
 int lf_config(sample_config *config) {
     if (!session.pm3_present) return PM3_ENOTTY;
 
@@ -458,7 +482,7 @@ int lf_config(sample_config *config) {
     if (config != NULL)
         SendCommandNG(CMD_LF_SAMPLING_SET_CONFIG, (uint8_t *)config, sizeof(sample_config));
     else
-        SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
+        SendCommandNG(CMD_LF_SAMPLING_PRINT_CONFIG, NULL, 0);
 
     return PM3_SUCCESS;
 }
@@ -1165,7 +1189,7 @@ static bool CheckChipType(bool getDeviceData) {
     uint32_t word = 0;
     if (EM4x05IsBlock0(&word)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05/EM4x69"));
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf em 4x05`") "commands");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") "commands");
         retval = true;
         goto out;
     }
@@ -1173,7 +1197,7 @@ static bool CheckChipType(bool getDeviceData) {
     //check for t55xx chip...
     if (tryDetectP1(true)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("T55xx"));
-        PrintAndLogEx(INFO, "Hint: try " _YELLOW_("`lf t55xx`") "commands");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf t55xx`") "commands");
         retval = true;
     }
 
@@ -1327,16 +1351,16 @@ static command_t CommandTable[] = {
     {"fdx",         CmdLFFdx,           AlwaysAvailable, "{ FDX-B RFIDs...             }"},
     {"gallagher",   CmdLFGallagher,     AlwaysAvailable, "{ GALLAGHER RFIDs...         }"},
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
-    {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID RFIDs...               }"},
+    {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},
     {"indala",      CmdLFINDALA,        AlwaysAvailable, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},
     {"jablotron",   CmdLFJablotron,     AlwaysAvailable, "{ Jablotron RFIDs...         }"},
     {"keri",        CmdLFKeri,          AlwaysAvailable, "{ KERI RFIDs...              }"},
+    {"motorola",    CmdLFMotorola,      AlwaysAvailable, "{ Motorola RFIDs...          }"},
     {"nedap",       CmdLFNedap,         AlwaysAvailable, "{ Nedap RFIDs...             }"},
     {"nexwatch",    CmdLFNEXWATCH,      AlwaysAvailable, "{ NexWatch RFIDs...          }"},
     {"noralsy",     CmdLFNoralsy,       AlwaysAvailable, "{ Noralsy RFIDs...           }"},
-    {"motorola",    CmdLFMotorola,      AlwaysAvailable, "{ Motorola RFIDs...          }"},
     {"pac",         CmdLFPac,           AlwaysAvailable, "{ PAC/Stanley RFIDs...       }"},
     {"paradox",     CmdLFParadox,       AlwaysAvailable, "{ Paradox RFIDs...           }"},
     {"pcf7931",     CmdLFPCF7931,       AlwaysAvailable, "{ PCF7931 CHIPs...           }"},

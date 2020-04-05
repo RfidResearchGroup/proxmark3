@@ -39,11 +39,15 @@ static int CmdHFMFPInfo(const char *Cmd) {
     if (Cmd && strlen(Cmd) > 0)
         PrintAndLogEx(WARNING, "command don't have any parameters.\n");
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-- Mifare Plus Tag Information ------------------------------");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+
     // info about 14a part
     infoHF14A(false, false, false);
 
     // Mifare Plus info
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
@@ -54,61 +58,106 @@ static int CmdHFMFPInfo(const char *Cmd) {
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
     if (select_status == 1 || select_status == 2) {
-        PrintAndLogEx(NORMAL, "----------------------------------------------");
-        PrintAndLogEx(NORMAL, "Mifare Plus info:");
+
+        PrintAndLogEx(INFO, "-------------------------------------------------------------");
+        PrintAndLogEx(INFO, " Fingerprint");
 
         // MIFARE Type Identification Procedure
         // https://www.nxp.com/docs/en/application-note/AN10833.pdf
         uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
-        if (ATQA == 0x0004) PrintAndLogEx(INFO, "ATQA: Mifare Plus 2k 4bUID");
-        if (ATQA == 0x0002) PrintAndLogEx(INFO, "ATQA: Mifare Plus 4k 4bUID");
-        if (ATQA == 0x0044) PrintAndLogEx(INFO, "ATQA: Mifare Plus 2k 7bUID");
-        if (ATQA == 0x0042) PrintAndLogEx(INFO, "ATQA: Mifare Plus 4k 7bUID");
+        bool isPlus = false;
+
+        if (ATQA == 0x0004) {
+            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 2K") "  (4b UID)");
+            isPlus = true;
+        }
+        if (ATQA == 0x0002) {
+            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 4K") "  (4b UID)");
+            isPlus = true;
+        }
+        if (ATQA == 0x0044) {
+            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 2K") "  (7b UID)");
+            isPlus = true;
+        }
+        if (ATQA == 0x0042) {
+            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("Mifare Plus 4K") "  (7b UID)");
+            isPlus = true;
+        }
 
         uint8_t SLmode = 0xff;
-        if (card.sak == 0x08) {
-            PrintAndLogEx(INFO, "SAK: Mifare Plus 2k 7bUID");
-            if (select_status == 2) SLmode = 1;
+        if (isPlus) {
+            if (card.sak == 0x08) {
+                PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 2K 7b UID"));
+                if (select_status == 2) SLmode = 1;
+            }
+            if (card.sak == 0x18) {
+                PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 4K 7b UID"));
+                if (select_status == 2) SLmode = 1;
+            }
+            if (card.sak == 0x10) {
+                PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 2K"));
+                if (select_status == 2) SLmode = 2;
+            }
+            if (card.sak == 0x11) {
+                PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus 4K"));
+                if (select_status == 2) SLmode = 2;
+            }
         }
-        if (card.sak == 0x18) {
-            PrintAndLogEx(INFO, "SAK: Mifare Plus 4k 7bUID");
-            if (select_status == 2) SLmode = 1;
-        }
-        if (card.sak == 0x10) {
-            PrintAndLogEx(INFO, "SAK: Mifare Plus 2k");
-            if (select_status == 2) SLmode = 2;
-        }
-        if (card.sak == 0x11) {
-            PrintAndLogEx(INFO, "SAK: Mifare Plus 4k");
-            if (select_status == 2) SLmode = 2;
-        }
-        if (card.sak == 0x20) {
-            PrintAndLogEx(INFO, "SAK: Mifare Plus SL0/SL3 or Mifare desfire");
-            if (card.ats_len > 0) {
-                SLmode = 3;
 
+        if (card.sak == 0x20) {
+            PrintAndLogEx(INFO, "   SAK - " _GREEN_("Mifare Plus SL0/SL3") "or " _GREEN_("Mifare DESFire"));
+
+            if (card.ats_len > 0) {
+
+                SLmode = 3;
                 // check SL0
                 uint8_t data[250] = {0};
                 int datalen = 0;
                 // https://github.com/Proxmark/proxmark3/blob/master/client/luascripts/mifarePlus.lua#L161
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
-                int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen, false);
+                int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
+
+                if (memcmp(data, "\x67\x00", 2) == 0) {
+                    PrintAndLogEx(INFO, "\tMost likely a Mifare DESFire tag"); 
+                    PrintAndLogEx(HINT, "Hint:  Try " _YELLOW_("`hf mfdes info`"));
+                    DropField();
+                    return PM3_SUCCESS;
+                }
+
                 if (!res && datalen > 1 && data[0] == 0x09) {
                     SLmode = 0;
                 }
             }
         }
 
-        if (SLmode != 0xff)
-            PrintAndLogEx(INFO, "Mifare Plus SL mode: SL%d", SLmode);
+        // How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
+        PrintAndLogEx(INFO, "Security Level (SL)");
+        switch(SLmode) {
+            case 0:
+                PrintAndLogEx(INFO, "SL 0: initial delivery configuration, used for card personalization");
+                break;
+            case 1:
+                PrintAndLogEx(INFO, "SL 1: backwards functional compatibility mode (with MIFARE Classic 1K / 4K) with an optional AES authentication");
+                break;
+            case 2:
+                PrintAndLogEx(INFO, "SL 2: 3-Pass Authentication based on AES followed by MIFARE CRYPTO1 authentication, communication secured by MIFARE CRYPTO1");
+                break;
+            case 3:
+                PrintAndLogEx(INFO, "SL 3: 3-Pass authentication based on AES, data manipulation commands secured by AES encryption and an AES based MACing method.");
+                break;
+            default:
+                break;
+        }
+
+        if (SLmode != 0xFF)
+            PrintAndLogEx(SUCCESS, "\tMifare Plus SL mode: " _YELLOW_("SL%d"), SLmode);
         else
-            PrintAndLogEx(WARNING, "Mifare Plus SL mode: unknown(");
+            PrintAndLogEx(WARNING, "\tMifare Plus SL mode: " _YELLOW_("unknown"));
     } else {
-        PrintAndLogEx(INFO, "Mifare Plus info not available.");
+        PrintAndLogEx(INFO, "\tMifare Plus info not available.");
     }
 
     DropField();
-
     return PM3_SUCCESS;
 }
 
@@ -916,9 +965,9 @@ static int CmdHFMFPChk(const char *Cmd) {
         if (foundKeys[0][sector][0] || foundKeys[1][sector][0]) {
             if (!printedHeader) {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, ".------.--------------------------------.--------------------------------.");
+                PrintAndLogEx(INFO, "-------+--------------------------------+---------------------------------");
                 PrintAndLogEx(INFO, "|sector|            key A               |            key B               |");
-                PrintAndLogEx(INFO, "|------|--------------------------------|--------------------------------|");
+                PrintAndLogEx(INFO, "|------+--------------------------------+--------------------------------|");
                 printedHeader = true;
             }
             PrintAndLogEx(INFO, "|  %02d  |%32s|%32s|",
@@ -930,7 +979,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     if (!printedHeader)
         PrintAndLogEx(INFO, "No keys found(");
     else
-        PrintAndLogEx(INFO, "'------'--------------------------------'--------------------------------'\n");
+        PrintAndLogEx(INFO, "'------+--------------------------------+--------------------------------'\n");
 
     // save keys to json
     if ((jsonnamelen > 0) && printedHeader) {

@@ -127,57 +127,41 @@
  *                                                                         *
  ***************************************************************************/
 
-// Author: Adam Laurie <adam@aperturelabs.com>
+// Author: unknown.
+// Modifications for RFIDler: Tony Naggs <tony.naggs@gmail.com>, Adam Laurie <adam@aperturelabs.com>
 
 
-#include <string.h>
-#include <stdio.h>
-#include "HardwareProfile.h"
-#include "util.h"
-#include "rfidler.h"
-//#include "comms.h"
+#ifndef HITAGCRYPTO_H
+#define	HITAGCRYPTO_H
 
-// rtc
-rtccTime	RTC_time;			// time structure
-rtccDate	RTC_date;			// date structure
+#include <stdint.h>
 
-// convert byte-reversed 8 digit hex to unsigned long
-unsigned long hexreversetoulong(BYTE *hex)
-{
-    unsigned long ret= 0L;
-    unsigned int x;
-    BYTE i;
+/*
+   Our model of Hitag 2 crypto uses 2 parallel shift registers:
+   a. 48 bit Feedback Shift Register, required for inputs to the nonlinear function.
+   b. 48 bit Linear Feedback Shift Register (LFSR).
+      A transform of initial register (a) value, which is then run in parallel.
+      Enables much faster calculation of the feedback values.
 
-    if(strlen(hex) != 8)
-        return 0L;
+   API:
+   void hitag2_init(Hitag_State* pstate, uint64_t sharedkey, uint32_t serialnum,
+         uint32_t initvector);
+      Initialise state from 48 bit shared (secret) reader/tag key,
+      32 bit tag serial number and 32 bit initialisation vector from reader.
 
-    for(i= 0 ; i < 4 ; ++i)
-    {
-        if(sscanf(hex, "%2X", &x) != 1)
-                return 0L;
-        ret += ((unsigned long) x) << i * 8;
-        hex += 2;
-    }
-    return ret;
-}
+   uint32_t hitag2_nstep(Hitag_State* pstate, uint32_t steps);
+      update shift register state and generate N cipher bits (N should be <= 32)
+ */
 
-// convert byte-reversed 12 digit hex to unsigned long
-unsigned long long hexreversetoulonglong(BYTE *hex)
-{
-    unsigned long long ret= 0LL;
-    BYTE tmp[9];
-    
-    // this may seem an odd way to do it, but weird compiler issues were 
-    // breaking direct conversion!
-    
-    tmp[8]= '\0';
-    memset(tmp + 4, '0', 4);
-    memcpy(tmp, hex + 8, 4);
-    ret= hexreversetoulong(tmp);
-    ret <<= 32;
-    memcpy(tmp, hex, 8);
-    ret += hexreversetoulong(tmp);
-    return ret;
-}
 
+typedef struct {
+    uint64_t shiftreg; // naive shift register, required for nonlinear fn input
+    uint64_t lfsr;     // fast lfsr, used to make software faster
+} Hitag_State;
+
+void hitag2_init(Hitag_State *pstate, uint64_t sharedkey, uint32_t serialnum, uint32_t initvector);
+
+uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps);
+
+#endif	/* HITAGCRYPTO_H */
 

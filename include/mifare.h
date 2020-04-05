@@ -70,6 +70,16 @@ typedef struct {
     uint32_t ProxToAirDuration;
     uint8_t  par; // enough for precalculated parity of 8 Byte responses
 } PACKED tag_response_info_t;
+
+// DESFIRE_RAW flag enums
+typedef enum DESFIRE_COMMAND {
+    NONE         = 0x00,
+    INIT         = 0x01,
+    DISCONNECT   = 0x02,
+    CLEARTRACE   = 0x04,
+    BAR          = 0x10,
+} desfire_command_t;
+
 //-----------------------------------------------------------------------------
 // ISO 14443B
 //-----------------------------------------------------------------------------

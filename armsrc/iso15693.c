@@ -93,8 +93,6 @@
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
 #define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
 
-#define sprintUID(target,uid) Iso15693sprintUID((target), (uid))
-
 static void BuildIdentifyRequest(uint8_t *cmdout);
 //static void BuildReadBlockRequest(uint8_t *cmdout, uint8_t *uid, uint8_t blockNumber );
 static void BuildInventoryResponse(uint8_t *cmdout, uint8_t *uid);
@@ -946,7 +944,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
     WDT_HIT();
 
     if (recvlen >= 12) {
-        Dbprintf("NoAFI UID = %s", sprintUID(NULL, buf + 2));
+        Dbprintf("NoAFI UID = %s", iso15693_sprintUID(NULL, buf + 2));
     }
 
     // now with AFI
@@ -964,7 +962,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
         recvlen = SendDataTag(data, datalen, false, speed, buf);
         WDT_HIT();
         if (recvlen >= 12) {
-            Dbprintf("AFI = %i  UID = %s", i, sprintUID(NULL, buf + 2));
+            Dbprintf("AFI = %i  UID = %s", i, iso15693_sprintUID(NULL, buf + 2));
         }
 
         aborted = BUTTON_PRESS();

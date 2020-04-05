@@ -41,10 +41,19 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_ICEHID       | LF HID collector to flashmem           |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
+| LF_EM4100EMUL   | Simulate predefined em4100 tags only   |
+|                 |                                        |
++----------------------------------------------------------+
+| LF_EM4100RWC    | Read/simulate em4100 tags & clone it   |
+|                 | to T555x tags                          |
++----------------------------------------------------------+
+| HF_LEGIC        | Read/simulate Legic Prime tags         |
+|                 | storing in flashmem                    |
++----------------------------------------------------------+
 endef
 
-STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID
-STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG HF_14ASNIFF
+STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID LF_EM4100EMUL LF_EM4100RWC
+STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG HF_14ASNIFF HF_LEGIC
 STANDALONE_MODES_REQ_SMARTCARD :=
 STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG HF_14ASNIFF LF_ICEHID
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)

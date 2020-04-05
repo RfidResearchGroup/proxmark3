@@ -136,10 +136,7 @@
 // #define TEST_DEBUG
 
 //#include <GenericTypeDefs.h>
-#include "HardwareProfile.h"
-#include "rfidler.h"
 #include "hitagcrypto.h"
-#include "util.h"
 
 #ifdef UNIT_TEST
 #include <stdio.h>
@@ -211,7 +208,7 @@
 
 // We want the crypto functions to be as fast as possible, so optimize!
 // The best compiler optimization in Microchip's free XC32 edition is -O1
-//#pragma GCC optimize("O1")
+#pragma GCC optimize("O1")
 
 // private, nonlinear function to generate 1 crypto bit
 static uint32_t hitag2_crypt(uint64_t x);
@@ -229,18 +226,17 @@ static uint32_t hitag2_crypt(uint64_t x);
                                    ((S >> (C - 3)) & 8) )
 
 
-static uint32_t hitag2_crypt(uint64_t s)
-{
+static uint32_t hitag2_crypt(uint64_t x) {
     const uint32_t ht2_function4a = 0x2C79;	// 0010 1100 0111 1001
     const uint32_t ht2_function4b = 0x6671;	// 0110 0110 0111 0001
     const uint32_t ht2_function5c = 0x7907287B;	// 0111 1001 0000 0111 0010 1000 0111 1011
     uint32_t bitindex;
 
-    bitindex =  (ht2_function4a >> pickbits2_2 (s, 1, 4)) & 1;
-    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2 (s, 7, 11, 13)) & 0x02;
-    bitindex |= ((ht2_function4b << 2) >> pickbits1x4 (s, 16, 20, 22, 25)) & 0x04;
-    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1 (s, 27, 30, 32)) & 0x08;
-    bitindex |= ((ht2_function4a << 4) >> pickbits1_2_1(s, 33, 42, 45)) & 0x10;
+    bitindex = (ht2_function4a >> pickbits2_2(x, 1, 4)) & 1;
+    bitindex |= ((ht2_function4b << 1) >> pickbits1_1_2(x, 7, 11, 13)) & 0x02;
+    bitindex |= ((ht2_function4b << 2) >> pickbits1x4(x, 16, 20, 22, 25)) & 0x04;
+    bitindex |= ((ht2_function4b << 3) >> pickbits2_1_1(x, 27, 30, 32)) & 0x08;
+    bitindex |= ((ht2_function4a << 4) >> pickbits1_2_1(x, 33, 42, 45)) & 0x10;
 
     DEBUG_PRINTF("hitag2_crypt bitindex = %02x\n", bitindex);
     return (ht2_function5c >> bitindex) & 1;
@@ -253,13 +249,12 @@ static uint32_t hitag2_crypt(uint64_t s)
  * uint32_t serialnum  - 32 bit tag serial number
  * uint32_t initvector - 32 bit random IV from reader, part of tag authentication
  */
-void hitag2_init(Hitag_State* pstate, uint64_t sharedkey, uint32_t serialnum, uint32_t initvector)
-{
+void hitag2_init(Hitag_State *pstate, uint64_t sharedkey, uint32_t serialnum, uint32_t initvector) {
     // init state, from serial number and lowest 16 bits of shared key
     uint64_t state = ((sharedkey & 0xFFFF) << 32) | serialnum;
 
     // mix the initialisation vector and highest 32 bits of the shared key
-    initvector ^= (uint32_t) (sharedkey >> 16);
+    initvector ^= (uint32_t)(sharedkey >> 16);
 
     // move 16 bits from (IV xor Shared Key) to top of uint64_t state
     // these will be XORed in turn with output of the crypto function
@@ -320,9 +315,9 @@ void hitag2_init(Hitag_State* pstate, uint64_t sharedkey, uint32_t serialnum, ui
         // optimise with one 64-bit intermediate
         uint64_t temp = state ^ (state >> 1);
         pstate->lfsr = state ^ (state >>  6) ^ (state >> 16)
-                  ^ (state >> 26) ^ (state >> 30) ^ (state >> 41)
-                  ^ (temp >>  2) ^ (temp >>  7) ^ (temp >> 22)
-                  ^ (temp >> 42) ^ (temp >> 46);
+                       ^ (state >> 26) ^ (state >> 30) ^ (state >> 41)
+                       ^ (temp >>  2) ^ (temp >>  7) ^ (temp >> 22)
+                       ^ (temp >> 42) ^ (temp >> 46);
     }
 }
 
@@ -338,8 +333,7 @@ void hitag2_init(Hitag_State* pstate, uint64_t sharedkey, uint32_t serialnum, ui
  * Hitag_State* pstate - in/out, internal cipher state after initialisation
  * uint32_t steps      - number of bits requested, (capped at 32)
  */
-uint32_t hitag2_nstep(Hitag_State* pstate, uint32_t steps)
-{
+uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps) {
     uint64_t state = pstate->shiftreg;
     uint32_t result = 0;
     uint64_t lfsr = pstate->lfsr;
@@ -347,8 +341,6 @@ uint32_t hitag2_nstep(Hitag_State* pstate, uint32_t steps)
     if (steps == 0)
         return 0;
 
-// commented out the restriction on number of steps so we can step further in one go.
-// this still only returns 32 bits obviously
 //    if (steps > 32)
 //        steps = 32;
 
@@ -375,113 +367,4 @@ uint32_t hitag2_nstep(Hitag_State* pstate, uint32_t steps)
 }
 
 // end of crypto core, revert to default optimization level
-//#pragma GCC reset_options
-
-
-/* Test code
-
-   Test data and below information about it comes from
-     http://www.mikrocontroller.net/attachment/102194/hitag2.c
-     Written by "I.C. Wiener 2006-2007"
-
-   "MIKRON"		=  O  N  M  I  K  R
-    Key			= 4F 4E 4D 49 4B 52		- Secret 48-bit key
-    Serial		= 49 43 57 69			- Serial number of the tag, transmitted in clear
-    Random		= 65 6E 45 72			- Random IV, transmitted in clear
-    ~28~DC~80~31	= D7 23 7F CE			- Authenticator value = inverted first 4 bytes of the keystream
-
-   The code below must print out "D7 23 7F CE 8C D0 37 A9 57 49 C1 E6 48 00 8A B6".
-   The inverse of the first 4 bytes is sent to the tag to authenticate.
-   The rest is encrypted by XORing it with the subsequent keystream.
-
-*/
-
-
-/*
-unsigned int hitag2_benchtest_gen32()
-{
-    const uint64_t key = 0x4ad292b272f2;
-    const uint32_t serial = 0x96eac292;
-    const uint32_t initvec = 0x4ea276a6;
-    Hitag_State state;
-
-    // init crypto
-    hitag2_init(&state, key, serial, initvec);
-
-    // benchmark: generation of 32 bit stream (excludes initialisation)
-    GetTimer_us(RESET);
-
-    (void) hitag2_nstep(&state, 32);
-
-    return GetTimer_us(NO_RESET);
-}
-
-
-unsigned int hitag2_benchtest(uint32_t count)
-{
-    const uint64_t key = 0x4ad292b272f2;
-    const uint32_t serial = 0x96eac292;
-    const uint32_t initvec = 0x4ea276a6;
-    Hitag_State state;
-    uint32_t i;
-
-    // start timer
-    GetTimer_us(RESET);
-
-    // benchmark: initialise crypto & generate 32 bit authentication
-    // adding i stops gcc optimizer moving init function call out of loop
-    for (i = 0; i < count; i++) {
-        hitag2_init(&state, key, serial, initvec + i);
-        (void) hitag2_nstep(&state, 32);
-    }
-
-    return GetTimer_us(NO_RESET);
-}
-
-
-unsigned hitag2_verifytest()
-{
-    uint8_t expected[16] = { 0xD7, 0x23, 0x7F, 0xCE, 0x8C, 0xD0, 0x37, 0xA9, 0x57, 0x49, 0xC1, 0xE6, 0x48, 0x00, 0x8A, 0xB6 };
-    // key = 0x4ad292b272f2  after each byte has its bit order reversed
-    // serial = 0x96eac292    ditto
-    // initvec = 0x4ea276a6   ditto
-    const uint64_t key = rev64 (0x524B494D4E4FUL);
-    const uint32_t serial = rev32 (0x69574349);
-    const uint32_t initvec = rev32 (0x72456E65);
-    
-    uint32_t i;
-    Hitag_State state;
-
-    // initialise
-    hitag2_init(&state, key, serial, initvec);
-
-    for (i = 0; i < 16; i++) {
-        // get 8 bits of keystream
-        uint8_t x = (uint8_t) hitag2_nstep(&state, 8);
-        uint8_t y = expected[i];
-
-        DEBUG_PRINTF ("%02X (%02X) \n", x, y);
-        if (x != y)
-            return 0;
-    }
-
-    return 1;
-}
-*/
-
-#ifdef UNIT_TEST
-
-int main(int argc, char* argv[])
-{
-    unsigned pass = hitag2_verifytest();
-
-    printf ("Crypto Verify test = %s\n\n", pass ? "PASS" : "FAIL");
-
-    if (pass) {
-        hitag2_benchtest(10000);
-    }
-
-    return 0;
-}
-
-#endif // UNIT_TEST
+#pragma GCC reset_options

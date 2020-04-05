@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/bin/env python3
 
 import json
 import subprocess
@@ -17,7 +17,7 @@ except FileNotFoundError:
 
 if len(sys.argv) < 3:
     print("Usage: analyzesize.py <info|add|diff> <datasetname>")
-    exit(-1)
+    exit(2)
 action, name = sys.argv[1:3]
 currentdata = subprocess.run(["arm-none-eabi-size","armsrc/obj/fullimage.stage1.elf"], stdout=subprocess.PIPE).stdout
 currentdata = currentdata.split(b"\n")[1].strip()

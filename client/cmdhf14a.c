@@ -189,9 +189,9 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, "    e     : (Optional) Fill simulator keys from found keys");
     PrintAndLogEx(NORMAL, "    v     : (Optional) Verbose");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223344 x");
-    PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223344");
-    PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223344556677");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344 x"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344556677"));
 //  PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223445566778899AA\n");
     return 0;
 }
@@ -202,7 +202,7 @@ static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "c - triggered by first data from card");
     PrintAndLogEx(NORMAL, "r - triggered by first 7-bit request from reader (REQ,WUP,...)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf 14a sniff c r");
+    PrintAndLogEx(NORMAL, _YELLOW_("        hf 14a sniff c r"));
     return 0;
 }
 static int usage_hf_14a_raw(void) {
@@ -230,7 +230,6 @@ static int usage_hf_14a_reader(void) {
 
 static int CmdHF14AList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list 14a' instead");
     CmdTraceList("14a");
     return 0;
 }
@@ -261,7 +260,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
         return 1;
     }
 
-    PrintAndLogEx(SUCCESS, " UID: %s", sprint_hex(card->uid, card->uidlen));
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card->atqa[1], card->atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: %02x [%" PRIu64 "]", card->sak, resp.oldarg[0]);
     if (card->ats_len < 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
@@ -335,17 +334,17 @@ static int CmdHF14AReader(const char *Cmd) {
 
         if (select_status == 3) {
             PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-            PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+            PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
             DropField();
             return 1;
         }
 
-        PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, card.uidlen));
-        PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-        PrintAndLogEx(SUCCESS, " SAK : %02x [%" PRIu64 "]", card.sak, resp.oldarg[0]);
+        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+        PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
+        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
         if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-            PrintAndLogEx(SUCCESS, " ATS : %s", sprint_hex(card.ats, card.ats_len));
+            PrintAndLogEx(SUCCESS, " ATS: " _GREEN_("%s"), sprint_hex(card.ats, card.ats_len));
         }
 
         if (!disconnectAfter) {
@@ -354,14 +353,14 @@ static int CmdHF14AReader(const char *Cmd) {
     }
 
     if (disconnectAfter) {
-        if (!silent) PrintAndLogEx(SUCCESS, "field dropped.");
+        if (!silent) PrintAndLogEx(INFO, "field dropped.");
     }
 
     return 0;
 }
 
 static int CmdHF14AInfo(const char *Cmd) {
-    bool verbose = false;
+    bool verbose = true;
     bool do_nack_test = false;
     bool do_aid_search = false;
 
@@ -467,7 +466,7 @@ int CmdHF14ASim(const char *Cmd) {
                         break;
                 }
                 if (!errors) {
-                    PrintAndLogEx(SUCCESS, "Emulating ISO/IEC 14443 type A tag with %d byte UID (%s)", uidlen, sprint_hex(uid, uidlen));
+                    PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")"with " _GREEN_("%d byte UID (%s)"), uidlen, sprint_hex(uid, uidlen));
                     useUIDfromEML = false;
                 }
                 cmdp += 2;
@@ -485,7 +484,7 @@ int CmdHF14ASim(const char *Cmd) {
                 cmdp++;
                 break;
             default:
-                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                PrintAndLogEx(WARNING, "Unknown parameter " _RED_("'%c'"), param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
         }
@@ -511,7 +510,7 @@ int CmdHF14ASim(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
-    PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (!keypress) {
 
@@ -558,6 +557,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
     if (activateField) {
         PacketResponseNG resp;
+        responseNum = 0;
 
         // Anticollision + SELECT card
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
@@ -1276,16 +1276,24 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (select_status == 3) {
         PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
+        PrintAndLogEx(SUCCESS, "ATQA: %02x %02x", card.atqa[1], card.atqa[0]);
         DropField();
         return select_status;
     }
 
-    PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, card.uidlen));
-    PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK : %02x [%" PRIu64 "]", card.sak, resp.oldarg[0]);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "-- ISO14443-a Information -----------------------------------");
+        PrintAndLogEx(SUCCESS, "-------------------------------------------------------------");
+    }
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02x %02x"), card.atqa[1], card.atqa[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02x [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
     bool isMifareClassic = true;
+    bool isMifareDesfire = false;
+    bool isMifarePlus = false;
+    bool isMifareUltralight = false;
+
     switch (card.sak) {
         case 0x00:
             isMifareClassic = false;
@@ -1294,10 +1302,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             DropField();
 
             uint32_t tagT = GetHF14AMfU_Type();
-            if (tagT != UL_ERROR)
+            if (tagT != UL_ERROR) {
                 ul_print_type(tagT, 0);
-            else
+                isMifareUltralight = true;
+            } else {
                 PrintAndLogEx(SUCCESS, "TYPE: Possible AZTEK (iso14443a compliant)");
+            }
 
             // reconnect for further tests
             clearCommandBuffer();
@@ -1314,49 +1324,55 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             }
             break;
         case 0x01:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP TNP3xxx Activision Game Appliance");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP TNP3xxx Activision Game Appliance"));
             break;
         case 0x04:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE (various !DESFire !DESFire EV1)");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE (various !DESFire !DESFire EV1)"));
             isMifareClassic = false;
+            isMifareDesfire = true;
             break;
         case 0x08:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE CLASSIC 1k | Plus 2k SL1 | 1k Ev1"));
             break;
         case 0x09:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Mini 0.3k");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE Mini 0.3k"));
             break;
         case 0x0A:
-            PrintAndLogEx(SUCCESS, "TYPE : FM11RF005SH (Shanghai Metro)");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("FM11RF005SH (Shanghai Metro)"));
             break;
         case 0x10:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Plus 2k SL2");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE Plus 2k SL2"));
+            isMifarePlus = true;
             break;
         case 0x11:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Plus 4k SL2");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE Plus 4k SL2"));
+            isMifarePlus = true;
             break;
         case 0x18:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE Classic 4k | Plus 4k SL1 | 4k Ev1"));
             break;
         case 0x20:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE DESFire 4k | DESFire EV1 2k/4k/8k | Plus 2k/4k SL3 | JCOP 31/41"));
             isMifareClassic = false;
+            isMifareDesfire = true;
+            isMifarePlus = true;
             break;
         case 0x24:
-            PrintAndLogEx(SUCCESS, "TYPE : NXP MIFARE DESFire | DESFire EV1");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("NXP MIFARE DESFire | DESFire EV1"));
             isMifareClassic = false;
+            isMifareDesfire = true;
             break;
         case 0x28:
-            PrintAndLogEx(SUCCESS, "TYPE : JCOP31 or JCOP41 v2.3.1");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("JCOP31 or JCOP41 v2.3.1"));
             break;
         case 0x38:
-            PrintAndLogEx(SUCCESS, "TYPE : Nokia 6212 or 6131 MIFARE CLASSIC 4K");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("Nokia 6212 or 6131 MIFARE CLASSIC 4K"));
             break;
         case 0x88:
-            PrintAndLogEx(SUCCESS, "TYPE : Infineon MIFARE CLASSIC 1K");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("Infineon MIFARE CLASSIC 1K"));
             break;
         case 0x98:
-            PrintAndLogEx(SUCCESS, "TYPE : Gemplus MPCOS");
+            PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("Gemplus MPCOS"));
             break;
         default:
             ;
@@ -1364,7 +1380,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     // Double & triple sized UID, can be mapped to a manufacturer.
     if (card.uidlen > 4) {
-        PrintAndLogEx(SUCCESS, "MANUFACTURER : %s", getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
     }
 
     // try to request ATS even if tag claims not to support it
@@ -1385,7 +1401,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (select_status == 2) {
             PrintAndLogEx(INFO, "SAK incorrectly claims that card doesn't support RATS");
         }
-        PrintAndLogEx(SUCCESS, " ATS : %s", sprint_hex(card.ats, card.ats_len));
+        PrintAndLogEx(SUCCESS, " ATS: %s", sprint_hex(card.ats, card.ats_len));
         PrintAndLogEx(SUCCESS, "       -  TL : length is %d bytes", card.ats[0]);
         if (card.ats[0] != card.ats_len - 2) {
             PrintAndLogEx(SUCCESS, "ATS may be corrupted. Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
@@ -1461,9 +1477,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 switch (card.ats[pos + 2] & 0xf0) {
                     case 0x10:
                         PrintAndLogEx(SUCCESS, "                     1x -> MIFARE DESFire");
+                        isMifareDesfire = true;
+                        isMifareClassic = false;
+                        isMifarePlus = false;
                         break;
                     case 0x20:
                         PrintAndLogEx(SUCCESS, "                     2x -> MIFARE Plus");
+                        isMifarePlus = true;
+                        isMifareDesfire = false;
+                        isMifareClassic = false;
                         break;
                 }
                 switch (card.ats[pos + 2] & 0x0f) {
@@ -1590,22 +1612,32 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isMifareClassic) {
         int res = detect_classic_prng();
         if (res == 1)
-            PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("WEAK"));
+            PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
         else if (res == 0)
-            PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("HARD"));
+            PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
         else
-            PrintAndLogEx(FAILED, "prng detection:  " _RED_("Fail"));
+            PrintAndLogEx(FAILED, "prng detection:  " _RED_("fail"));
 
         if (do_nack_test)
-            detect_classic_nackbug(!verbose);
+            detect_classic_nackbug(false);
 
         res = detect_classic_static_nonce();
         if (res == 1)
-            PrintAndLogEx(SUCCESS, "Static nonce detected");
+            PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes") );
         if (res == 2 && verbose)
-            PrintAndLogEx(SUCCESS, "Static nonce detection failed");
+            PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("fail"));
     }
+
+    if (isMifareUltralight) {
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
+    }
+    if (isMifarePlus) {
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
+    }
+    if (isMifareDesfire) {
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
+    }
+
 
     return select_status;
 }
-

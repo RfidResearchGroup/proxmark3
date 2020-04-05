@@ -1,18 +1,16 @@
-WARN=-Wall
-CFLAGS=-c $(WARN) $(INCLUDE)
+CFLAGS?=-Wall
 LIBS=-lpthread
+VPATH=../common
+INC=-I ../common
 
-all: ht2crack4.c HardwareProfile.h rfidler.h util.h utilpart.o hitagcrypto.o ht2crack2utils.o
-	cc $(WARN) -o ht2crack4 ht2crack4.c utilpart.o hitagcrypto.o ht2crack2utils.o $(LIBS)
-
-utilpart.o: utilpart.c util.h
-	cc $(CFLAGS) utilpart.c
+all: ht2crack4.c hitagcrypto.o ht2crackutils.o
+	$(CC) $(CFLAGS) $(INC) -o ht2crack4 $< hitagcrypto.o ht2crackutils.o $(LIBS)
 
 hitagcrypto.o: hitagcrypto.c hitagcrypto.h
-	cc $(CFLAGS) hitagcrypto.c
+	$(CC) $(CFLAGS) -c $<
 
-ht2crack2utils.o: ht2crack2utils.c ht2crack2utils.h
-	cc $(CFLAGS) ht2crack2utils.c
+ht2crackutils.o: ht2crackutils.c ht2crackutils.h
+	$(CC) $(CFLAGS) -c $<
 
 clean:
 	rm -rf *.o ht2crack4

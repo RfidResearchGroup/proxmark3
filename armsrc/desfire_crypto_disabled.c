@@ -26,9 +26,7 @@
  * May 2005
  */
 #include <string.h>
-
-#include "desfire_crypto.h"
-
+#include "desfire_crypto_disabled.h"
 #include "crc32.h"
 #include "printf.h"
 #include "desfire.h"

@@ -45,7 +45,7 @@
  * This module emits debug strings during normal operation -- so try it out in
  * the lab connected to PM3 client before taking it into the field.
  *
- * To delete the trace data from flash: 
+ * To delete the trace data from flash:
  *
  * Caveats / notes:
  * - Trace buffer will be cleared on starting stand-alone mode. Data in flash
@@ -97,7 +97,7 @@ void RunMod() {
     if (trace_len > 0) {
         Dbprintf("[!] Trace length (bytes) = %u", trace_len);
 
-        uint8_t* trace_buffer = BigBuf_get_addr();
+        uint8_t *trace_buffer = BigBuf_get_addr();
         if (!exists_in_spiffs(HF_14ASNIFF_LOGFILE)) {
             rdv40_spiffs_write(
                 HF_14ASNIFF_LOGFILE, trace_buffer, trace_len, RDV40_SPIFFS_SAFETY_SAFE);
@@ -117,7 +117,7 @@ void RunMod() {
 
     SpinErr(LED_A, 200, 5);
     SpinDelay(100);
-    
+
     LEDsoff();
     SpinDelay(300);
     DownloadTraceInstructions();

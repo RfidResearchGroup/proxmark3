@@ -790,6 +790,7 @@ static int l_reveng_runmodel(lua_State *L) {
     //          l = little endian input and output, L = little endian output only, t = left justified}
     //result = calculated crc hex string
     char result[50];
+    memset(result, 0x00, sizeof(result));
 
     const char *inModel = luaL_checkstring(L, 1);
     const char *inHexStr = luaL_checkstring(L, 2);
@@ -800,7 +801,7 @@ static int l_reveng_runmodel(lua_State *L) {
     if (!ans)
         return returnToLuaWithError(L, "Reveng failed");
 
-    lua_pushstring(L, (const char *)result);
+    lua_pushstring(L, result);
     return 1;
 }
 

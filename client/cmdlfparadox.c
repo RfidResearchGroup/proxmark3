@@ -36,7 +36,7 @@ static int usage_lf_paradox_clone(void) {
     PrintAndLogEx(NORMAL, "  b <raw hex>     : raw hex data. 12 bytes max");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       lf paradox clone 0f55555695596a6a9999a59a");
+    PrintAndLogEx(NORMAL, "       lf paradox clone b 0f55555695596a6a9999a59a");
     return PM3_SUCCESS;
 }
 
@@ -169,7 +169,10 @@ static int CmdParadoxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Paradox to T55x7 with raw hex");
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf paradox read`") "to verify");
+    return res;
 }
 
 static int CmdParadoxSim(const char *Cmd) {

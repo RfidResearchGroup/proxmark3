@@ -10,22 +10,22 @@
 // Data and Graph commands
 //-----------------------------------------------------------------------------
 #include "cmddata.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
 #include <math.h>     // pow
 #include <ctype.h>    // tolower
-
-#include "commonutil.h"  // ARRAYLEN
-#include "cmdparser.h" // for command_t
-#include "ui.h"       // for show graph controls
-#include "graph.h"    // for graph data
+#include "commonutil.h"          // ARRAYLEN
+#include "cmdparser.h"           // for command_t
+#include "ui.h"                  // for show graph controls
+#include "graph.h"               // for graph data
 #include "comms.h"
-#include "lfdemod.h"  // for demod code
+#include "lfdemod.h"             // for demod code
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
-#include "cmdlfem4x.h" // askem410xdecode
-#include "fileutils.h" // searchFile
+#include "cmdlfem4x.h"           // askem410xdecode
+#include "fileutils.h"           // searchFile
+#include "mifare/ndef.h"
+#include "cliparser/cliparser.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
@@ -1662,16 +1662,15 @@ int CmdTuneSamples(const char *Cmd) {
 #define LF_MARGINAL_V   10000
 #define HF_UNUSABLE_V   3000
 #define HF_MARGINAL_V   5000
-#define ANTENNA_ERROR   1.03 // current algo has 3% error margin.
+#define ANTENNA_ERROR   1.00 // current algo has 3% error margin.
 
     // hide demod plot line
     DemodBufferLen = 0;
     setClockGrid(0, 0);
     RepaintGraphWindow();
 
-
     int timeout = 0;
-    PrintAndLogEx(INFO, "\nMeasuring antenna characteristics, please wait...");
+    PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
@@ -1691,7 +1690,7 @@ int CmdTuneSamples(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     // in mVolt
     struct p {
         uint32_t v_lf134;
@@ -2290,6 +2289,34 @@ static int CmdDataIIR(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdDataNDEF(const char *Cmd) {
+
+#ifndef MAX_NDEF_LEN
+#define MAX_NDEF_LEN  2048
+#endif
+
+    CLIParserInit("data ndef",
+                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Usage:\n\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+
+    int datalen = 0;
+    uint8_t data[MAX_NDEF_LEN] = {0};
+    CLIGetHexWithReturn(1, data, &datalen);
+    CLIParserFree();
+    if (datalen == 0)
+        return PM3_EINVARG;
+
+    PrintAndLogEx(INFO, "Parsed NDEF Records");
+    return NDEFRecordsDecodeAndPrint(data, datalen);
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable, "This help"},
     {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable, "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
@@ -2328,6 +2355,7 @@ static command_t CommandTable[] = {
     {"undec",           CmdUndec,                AlwaysAvailable, "Un-decimate samples by 2"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable, "Count time between zero-crossings"},
     {"iir",             CmdDataIIR,              AlwaysAvailable,    "apply IIR buttersworth filter on plotdata"},
+    {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -19,16 +19,6 @@ char *getProtocolStr(uint8_t id);
 char *getVersionStr(uint8_t major, uint8_t minor);
 void getKeySettings(uint8_t *aid);
 
-// Command options for Desfire behavior.
-enum  {
-    NONE       =    0x00,
-    INIT       =    0x01,
-    DISCONNECT =    0x02,
-    CLEARTRACE =    0x04,
-    BAR        =    0x08,
-} CmdOptions ;
-
-
 #define CREATE_APPLICATION          0xca
 #define DELETE_APPLICATION          0xda
 #define GET_APPLICATION_IDS         0x6a

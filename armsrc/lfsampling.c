@@ -81,7 +81,7 @@ void setSamplingConfig(sample_config *sc) {
         printConfig();
 }
 
-sample_config *getSamplingConfig() {
+sample_config *getSamplingConfig(void) {
     return &config;
 }
 
@@ -117,8 +117,8 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
 
     if (use_malloc) {
 
-        if (sample_size == NULL || *sample_size == 0 ) {
-           *sample_size = BigBuf_max_traceLen();
+        if (sample_size == NULL || *sample_size == 0) {
+            *sample_size = BigBuf_max_traceLen();
             data.buffer = BigBuf_get_addr();
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
@@ -127,7 +127,7 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
         }
 
     } else {
-        if (sample_size == NULL || *sample_size == 0 ) {
+        if (sample_size == NULL || *sample_size == 0) {
             *sample_size = BigBuf_max_traceLen();
         }
         data.buffer = BigBuf_get_addr();
@@ -221,7 +221,7 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
     // 50ms for the resonant antenna to settle.
     if (reader_field)
-    SpinDelay(50);
+        SpinDelay(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc();
@@ -253,11 +253,11 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     uint32_t cancel_counter = 0;
     int16_t checked = 0;
 
-    while (true) {
+    while (!BUTTON_PRESS()) {
 
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
+            if (data_available()) {
                 checked = -1;
                 break;
             } else {

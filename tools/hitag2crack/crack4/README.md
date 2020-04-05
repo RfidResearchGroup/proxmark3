@@ -5,9 +5,10 @@ ht2crack4
 Build
 -----
 
+```
 make clean
 make
-
+```
 
 Run
 ---
@@ -17,7 +18,9 @@ encrypted nonces and challenge response values.  They should be in hex with
 one pair per line, e.g.:
 0x12345678 0x9abcdef0
 
+```
 ./ht2crack4 -u UID -n NRARFILE [-N nonces to use] [-t table size]
+```
 
 UID is the UID of the tag that you used to gather the nR aR values.
 NRARFILE is the file containing the nR aR values.

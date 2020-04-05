@@ -23,16 +23,13 @@
 // the client. Signal Processing & decoding is done on the pc. This is the slowest
 // variant, but offers the possibility to analyze the waveforms directly.
 #include "cmdhf15.h"
-
 #include <ctype.h>
-
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
 #include "iso15693tools.h"
 #include "crypto/libpcrypto.h"
-
 #include "graph.h"
 #include "crc16.h"             // iso15 crc
 #include "cmddata.h"           // getsamples
@@ -53,15 +50,18 @@
 #define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
-#ifndef sprintUID
-# define sprintUID(target, uid)  Iso15693sprintUID((target), (uid))
-#endif
+typedef struct {
+    uint8_t lock;
+    uint8_t block[4];
+} t15memory_t;
+
 // structure and database for uid -> tagtype lookups
 typedef struct {
     uint64_t uid;
     int mask; // how many MSB bits used
     const char *desc;
 } productName;
+
 
 const productName uidmapping[] = {
 
@@ -208,17 +208,89 @@ const productName uidmapping[] = {
     { 0, 0, "no tag-info available" } // must be the last entry
 };
 
-uint8_t nxp_public_keys[][33] = {
-    // ICODE SLIX2 / DNA
-    {
-        0x04, 0x88, 0x78, 0xA2, 0xA2, 0xD3, 0xEE, 0xC3,
-        0x36, 0xB4, 0xF2, 0x61, 0xA0, 0x82, 0xBD, 0x71,
-        0xF9, 0xBE, 0x11, 0xC4, 0xE2, 0xE8, 0x96, 0x64,
-        0x8B, 0x32, 0xEF, 0xA5, 0x9C, 0xEA, 0x6E, 0x59, 0xF0
-    },
-};
-
 static int CmdHF15Help(const char *Cmd);
+
+static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
+
+    #define PUBLIC_ECDA_KEYLEN 33
+   const ecdsa_publickey_t nxp_15693_public_keys[] = {
+        {"NXP Mifare Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"Manufacturer Mifare Classic MFC1C14_x", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
+        {"NXP ICODE DNA, ICODE SLIX2", "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
+        {"NXP Public key", "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
+        {"NXP Ultralight Ev1", "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
+        {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
+        {"MICRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+    };
+/*
+    uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
+        // ICODE SLIX2 / DNA
+        {
+            0x04, 0x88, 0x78, 0xA2, 0xA2, 0xD3, 0xEE, 0xC3,
+            0x36, 0xB4, 0xF2, 0x61, 0xA0, 0x82, 0xBD, 0x71,
+            0xF9, 0xBE, 0x11, 0xC4, 0xE2, 0xE8, 0x96, 0x64,
+            0x8B, 0x32, 0xEF, 0xA5, 0x9C, 0xEA, 0x6E, 0x59, 0xF0
+        },
+        // unknown. Needs identification
+        {
+            0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
+            0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
+            0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
+            0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
+        },
+        // unknown. Needs identification
+        {
+            0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
+            0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
+            0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
+            0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
+        },
+        // manufacturer public key
+        {
+            0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
+            0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
+            0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
+            0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
+        },
+        // MIKRON public key.
+        {
+            0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
+            0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
+            0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
+            0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
+        }
+    };
+*/
+
+    uint8_t i;
+    int res;
+    bool is_valid = false;
+    for (i = 0; i< ARRAYLEN(nxp_15693_public_keys); i++) {
+
+        int dl = 0;
+        uint8_t key[PUBLIC_ECDA_KEYLEN];
+        param_gethex_to_eol(nxp_15693_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);        
+        
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, false);
+        is_valid = (res == 0);
+        if (is_valid)
+            break;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    if (is_valid == false) {
+        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_15693_public_keys[i].desc);
+    PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_15693_public_keys[i].value);
+    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex(signature, 32));
+    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
+    return PM3_SUCCESS;
+}
 
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
@@ -399,7 +471,7 @@ static int usage_15_restore(void) {
         {"-2", "use slower '1 out of 256' mode"},
         {"-o", "set OPTION Flag (needed for TI)"},
         {"r <NUM>", "numbers of retries on error, default is 3"},
-        {"u <UID>", "load hf-15-dump-<UID>.bin"},
+        {"u <UID>", "load hf-15-<UID>-dump.bin"},
         {"f <filename>", "load <filename>"},
         {"b <block size>", "block size, default is 4"}
     };
@@ -517,7 +589,7 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
                 return false;
             }
             memcpy(&req[tmpreqlen], uid, sizeof(uid));
-            PrintAndLogEx(SUCCESS, "Detected UID %s", sprintUID(NULL, uid));
+            PrintAndLogEx(SUCCESS, "Detected UID " _GREEN_("%s"), iso15693_sprintUID(NULL,uid));
             tmpreqlen += sizeof(uid);
             break;
         default:
@@ -530,7 +602,7 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
                 uid[7 - i] = temp & 0xff;
             }
 
-            PrintAndLogEx(SUCCESS, "Using UID %s", sprintUID(NULL, uid));
+            PrintAndLogEx(SUCCESS, "Using UID " _GREEN_("%s"), iso15693_sprintUID(NULL,uid));
             memcpy(&req[tmpreqlen], uid, sizeof(uid));
             tmpreqlen +=  sizeof(uid);
             break;
@@ -796,16 +868,8 @@ static int NxpSysInfo(uint8_t *uid) {
             uint8_t signature[32] = {0x00};
             memcpy(signature, recv + 1, 32);
 
-            int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, nxp_public_keys[0], uid, 8, signature, 32, false);
-            bool is_valid = (res == 0);
+            nxp_15693_print_signature(uid, signature);
 
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(NORMAL, "  Tag Signature");
-            PrintAndLogEx(NORMAL, "    IC signature public key name  : NXP ICODE SLIX2 / DNA");
-            PrintAndLogEx(NORMAL, "    IC signature public key value : %s", sprint_hex(nxp_public_keys[0], 33));
-            PrintAndLogEx(NORMAL, "        Elliptic curve parameters : NID_secp128r1");
-            PrintAndLogEx(NORMAL, "                 TAG IC Signature : %s", sprint_hex(signature, 32));
-            PrintAndLogEx(NORMAL, "    Signature verification %s", (is_valid) ? _GREEN_("successful") : _RED_("failed"));
         }
     }
 
@@ -818,8 +882,8 @@ static int NxpSysInfo(uint8_t *uid) {
  */
 static int CmdHF15Info(const char *Cmd) {
 
-    char cmdp = param_getchar(Cmd, 0);
-    if (strlen(Cmd) < 1 || cmdp == 'h' || cmdp == 'H') return usage_15_info();
+    char cmdp = tolower(param_getchar(Cmd, 0));
+    if (strlen(Cmd) < 1 || cmdp == 'h') return usage_15_info();
 
     PacketResponseNG resp;
     uint8_t *recv;
@@ -838,11 +902,8 @@ static int CmdHF15Info(const char *Cmd) {
     AddCrc15(req,  reqlen);
     reqlen += 2;
 
-    //PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
-
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
-
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
         PrintAndLogEx(WARNING, "iso15693 card select failed");
         DropField();
@@ -866,11 +927,12 @@ static int CmdHF15Info(const char *Cmd) {
     }
 
     memcpy(uid, recv + 2, sizeof(uid));
-
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "  UID  : %s", sprintUID(NULL, uid));
-    PrintAndLogEx(SUCCESS, "  TYPE : %s", getTagInfo_15(recv + 2));
-    PrintAndLogEx(SUCCESS, "  SYSINFO : %s", sprint_hex(recv, status - 2));
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(SUCCESS, "      TYPE: " _YELLOW_("%s"), getTagInfo_15(recv + 2));
+    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), iso15693_sprintUID(NULL,uid));
+    PrintAndLogEx(SUCCESS, "   SYSINFO: %s", sprint_hex(recv, status - 2));
 
     // DSFID
     if (recv[1] & 0x01)
@@ -901,12 +963,12 @@ static int CmdHF15Info(const char *Cmd) {
     }
 
     // Check if SLIX2 and attempt to get NXP System Information
+    PrintAndLogEx(DEBUG, "4 & 08 :: %02x   7 == 1 :: %u   8 == 4 :: %u", recv[4], recv[7], recv[8]);
     if (recv[8] == 0x04 && recv[7] == 0x01 && recv[4] & 0x80) {
         return NxpSysInfo(uid);
     }
 
     PrintAndLogEx(NORMAL, "");
-
     return PM3_SUCCESS;
 }
 
@@ -941,7 +1003,7 @@ static int CmdHF15Sim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Starting simulating UID %s", sprint_hex(uid, sizeof(uid)));
+    PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL,uid));
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_SIMULATE, 0, 0, 0, uid, 8);
@@ -1011,7 +1073,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     AddCrc15(req, reqlen);
     reqlen += 2;
 
-    //PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
+    // PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
@@ -1070,7 +1132,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     AddCrc15(req, reqlen);
     reqlen += 2;
 
-    //PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
+    // PrintAndLogEx(NORMAL, "cmd %s", sprint_hex(req, reqlen) );
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_COMMAND, reqlen, arg1, 1, req, reqlen);
@@ -1095,11 +1157,6 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
-typedef struct {
-    uint8_t lock;
-    uint8_t block[4];
-} t15memory;
 
 // Reads all memory pages
 // need to write to file
@@ -1144,13 +1201,13 @@ static int CmdHF15Dump(const char *Cmd) {
     }
     // detect blocksize from card :)
 
-    PrintAndLogEx(SUCCESS, "Reading memory from tag UID " _YELLOW_("%s"), sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, "Reading memory from tag UID " _YELLOW_("%s"), iso15693_sprintUID(NULL,uid));
 
     int blocknum = 0;
     uint8_t *recv = NULL;
 
     // memory.
-    t15memory mem[256];
+    t15memory_t mem[256];
 
     uint8_t data[256 * 4] = {0};
     memset(data, 0, sizeof(data));
@@ -1214,14 +1271,14 @@ static int CmdHF15Dump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\n");
 
     size_t datalen = blocknum * 4;
+    saveFile(filename, ".bin", data, datalen); 
     saveFileEML(filename, data, datalen, 4);
-    saveFile(filename, ".bin", data, datalen);
+    saveFileJSON(filename, jsf15, data, datalen);
     return PM3_SUCCESS;
 }
 
 static int CmdHF15List(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    //PrintAndLogEx(WARNING, "Deprecated command, use 'hf list 15' instead");
     CmdTraceList("15");
     return PM3_SUCCESS;
 }
@@ -1348,7 +1405,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     pagenum = param_get8ex(cmd, 0, 0, 10);
     pagecount = param_get8ex(cmd, 1, 0, 10);
 
-    //PrintAndLogEx(NORMAL, "ice %d %d\n", pagenum, pagecount);
+    // PrintAndLogEx(NORMAL, "ice %d %d\n", pagenum, pagecount);
 
     // 0 means 1 page,
     // 1 means 2 pages, ...
@@ -1388,7 +1445,8 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return PM3_EWRONGANSVER;
     }
 
-    int start = 1;  // skip status byte
+    // skip status byte
+    int start = 1; 
     int stop = (pagecount + 1) * 5;
     int currblock = pagenum;
     // print response
@@ -1603,7 +1661,7 @@ static int CmdHF15Restore(const char *Cmd) {
             case 'u':
                 param_getstr(Cmd, cmdp + 1, buff, FILE_PATH_SIZE);
                 cmdp++;
-                snprintf(filename, sizeof(filename), "hf-15-dump-%s-bin", buff);
+                snprintf(filename, sizeof(filename), "hf-15-%s-dump.bin", buff);
                 break;
             case 'h':
                 return usage_15_restore();
@@ -1622,6 +1680,7 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     if ((f = fopen(filename, "rb")) == NULL) {
+        
         PrintAndLogEx(WARNING, "Could not find file %s", filename);
         return PM3_EFILE;
     }
@@ -1703,7 +1762,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Input new UID | %s", sprint_hex(uid, sizeof(uid)));
+    PrintAndLogEx(SUCCESS, "Input new UID | " _YELLOW_("%s"), iso15693_sprintUID(NULL,uid));
 
     if (!getUID(oldUid)) {
         PrintAndLogEx(FAILED, "Can't get old/current UID.");
@@ -1774,31 +1833,33 @@ static int CmdHF15CSetUID(const char *Cmd) {
         PrintAndLogEx(FAILED, "Setting UID on tag failed.");
         return PM3_ESOFT;
     } else {
-        PrintAndLogEx(SUCCESS, "old UID : %02X %02X %02X %02X %02X %02X %02X %02X", oldUid[7], oldUid[6], oldUid[5], oldUid[4], oldUid[3], oldUid[2], oldUid[1], oldUid[0]);
-        PrintAndLogEx(SUCCESS, "new UID : %02X %02X %02X %02X %02X %02X %02X %02X", newUid[7], newUid[6], newUid[5], newUid[4], newUid[3], newUid[2], newUid[1], newUid[0]);
+        PrintAndLogEx(SUCCESS, "Old: %s", iso15693_sprintUID(NULL, oldUid));
+        PrintAndLogEx(SUCCESS, "New: " _GREEN_("%s"), iso15693_sprintUID(NULL, newUid));
         return PM3_SUCCESS;
     }
 }
 
 static command_t CommandTable[] = {
     {"help",        CmdHF15Help,        AlwaysAvailable, "This help"},
+    {"list",        CmdHF15List,        AlwaysAvailable, "List ISO15693 history"},
     {"demod",       CmdHF15Demod,       AlwaysAvailable, "Demodulate ISO15693 from tag"},
     {"dump",        CmdHF15Dump,        IfPm3Iso15693,   "Read all memory pages of an ISO15693 tag, save to file"},
+    {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
+//    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
+    {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
+    {"record",      CmdHF15Record,      IfPm3Iso15693,   "Record Samples (ISO15693)"},
+    {"read",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
+    {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
+    {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
+    {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO15693 tag"},
+    {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire Samples as Reader (enables carrier, sends inquiry)"},
+    {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO15693 tag"},
+    {"write",       CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
+    {"-----------", CmdHF15Help,        IfPm3Iso15693,  ""},
     {"findafi",     CmdHF15FindAfi,     IfPm3Iso15693,   "Brute force AFI of an ISO15693 tag"},
     {"writeafi",    CmdHF15WriteAfi,    IfPm3Iso15693,   "Writes the AFI on an ISO15693 tag"},
     {"writedsfid",  CmdHF15WriteDsfid,  IfPm3Iso15693,   "Writes the DSFID on an ISO15693 tag"},
-    {"info",        CmdHF15Info,        IfPm3Iso15693,   "Tag information"},
-//    {"sniff",       CmdHF15Sniff,       IfPm3Iso15693,   "Sniff ISO15693 traffic"},
-    {"list",        CmdHF15List,        AlwaysAvailable, "List ISO15693 history"},
-    {"raw",         CmdHF15Raw,         IfPm3Iso15693,   "Send raw hex data to tag"},
-    {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO15693 reader"},
-    {"record",      CmdHF15Record,      IfPm3Iso15693,   "Record Samples (ISO15693)"},
-    {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO15693 tag"},
-    {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO15693 tag"},
-    {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire Samples as Reader (enables carrier, sends inquiry)"},
-    {"read",        CmdHF15Read,        IfPm3Iso15693,   "Read a block"},
-    {"write",       CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
-    {"readmulti",   CmdHF15Readmulti,   IfPm3Iso15693,   "Reads multiple Blocks"},
+    {"-----------",  CmdHF15Help,       IfPm3Iso15693,  ""},
     {"csetuid",     CmdHF15CSetUID,     IfPm3Iso15693,   "Set UID for magic Chinese card"},
     {NULL, NULL, NULL, NULL}
 };
@@ -1816,13 +1877,13 @@ int CmdHF15(const char *Cmd) {
 
 // used with 'hf search'
 bool readHF15Uid(bool verbose) {
-    uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t uid[8] = {0};
     if (!getUID(uid)) {
         if (verbose) PrintAndLogEx(WARNING, "No tag found.");
         return false;
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, " UID  : %s", sprintUID(NULL, uid));
-    PrintAndLogEx(SUCCESS, " TYPE : %s", getTagInfo_15(uid));
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("%s"), getTagInfo_15(uid));
     return true;
 }

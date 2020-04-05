@@ -160,12 +160,12 @@ void printarr(const char *name, uint8_t *arr, int len) {
         cx += snprintf(output + cx, outsize - cx, "0x%02x,", *(arr + i)); //5 bytes per byte
     }
     snprintf(output + cx, outsize - cx, "};");
-    PrintAndLogEx(NORMAL, output);
+    PrintAndLogEx(INFO, output);
     free(output);
 }
 
 void printvar(const char *name, uint8_t *arr, int len) {
-    PrintAndLogEx(NORMAL, "%s = " _YELLOW_("%s"), name, sprint_hex(arr, len));
+    PrintAndLogEx(INFO, "%s = " _YELLOW_("%s"), name, sprint_hex(arr, len));
 }
 
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {
@@ -175,13 +175,13 @@ void printarr_human_readable(const char *title, uint8_t *arr, int len) {
     int cx = 0, i;
     size_t outsize = 100 + strlen(title) + len * 4;
     char *output = calloc(outsize, sizeof(char));
-    PrintAndLogEx(NORMAL, "\n    %s", title);
+    PrintAndLogEx(INFO, "%s", title);
     for (i = 0;  i < len; i++) {
         if (i % 16 == 0)
             cx += snprintf(output + cx, outsize - cx, "\n%02x| ", i);
         cx += snprintf(output + cx, outsize - cx, "%02x ", *(arr + i));
     }
-    PrintAndLogEx(NORMAL, output);
+    PrintAndLogEx(INFO, output);
     free(output);
 }
 

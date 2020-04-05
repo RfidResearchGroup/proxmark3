@@ -70,7 +70,7 @@ struct wave_info_t {
         char tag[4];
         uint32_t size;
     } PACKED audio_data;
-} PACKED wave_info;
+} PACKED;
 
 /**
  * @brief checks if a file exists
@@ -180,7 +180,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -223,7 +223,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     }
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32)" blocks to text file " _YELLOW_("%s"), blocks, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32) "blocks to text file " _YELLOW_("%s"), blocks, fileName);
 
 out:
     free(fileName);
@@ -233,6 +233,7 @@ out:
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen) {
 
     if (data == NULL) return PM3_EINVARG;
+
     char *fileName = newfilenamemcopy(preferredName, ".json");
     if (fileName == NULL) return PM3_EMALLOC;
 
@@ -368,10 +369,34 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             }
             break;
         }
-        case jsf14b:
-        case jsf15:
-        case jsfLegic:
-        case jsfT5555:
+        case jsf14b: {
+            JsonSaveStr(root, "FileType", "14b");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }            
+        case jsf15: {
+            JsonSaveStr(root, "FileType", "15693");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }
+        case jsfLegic: {
+            JsonSaveStr(root, "FileType", "legic");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }
+        case jsfT5555: {
+            JsonSaveStr(root, "FileType", "t5555");
+            uint8_t conf[4] = {0};
+            memcpy(conf, data, 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.ConfigBlock", conf, sizeof(conf));
+
+            for (size_t i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }
+            break;
+        }
         case jsfMfPlusKeys:
             JsonSaveStr(root, "FileType", "mfp");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
@@ -455,7 +480,7 @@ int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
     }
     fclose(wave_file);
 
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
 
 out:
     free(fileName);
@@ -482,7 +507,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
 
 out:
     free(fileName);
@@ -581,7 +606,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     memcpy((data), dump, bytes_read);
     free(dump);
 
-    PrintAndLogEx(SUCCESS, "loaded %zu bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
 
     *datalen = bytes_read;
 
@@ -637,7 +662,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     *datalen = bytes_read;
 
-    PrintAndLogEx(SUCCESS, "loaded %zu bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
     return PM3_SUCCESS;
 }
 
@@ -688,7 +713,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded %zu bytes from text file " _YELLOW_("%s"), counter, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from text file " _YELLOW_("%s"), counter, fileName);
 
     if (datalen)
         *datalen = counter;

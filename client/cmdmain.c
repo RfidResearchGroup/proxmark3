@@ -36,8 +36,22 @@
 #include "cmdwiegand.h"   // wiegand commands
 #include "ui.h"
 #include "util_posix.h"
+#include "commonutil.h"   // ARRAYLEN
 
 static int CmdHelp(const char *Cmd);
+
+static int usage_hints(void) {
+    PrintAndLogEx(NORMAL, "Turn on/off hints");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage:  hints [h] <0|1>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       <0|1>      off or on");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "       hints 1");
+    return PM3_SUCCESS;
+}
 
 static int usage_msleep(void) {
     PrintAndLogEx(NORMAL, "Sleep for given amount of milliseconds");
@@ -78,6 +92,70 @@ static void AppendDate(char *s, size_t slen, char *fmt) {
         strftime(s, slen, fmt, ct);
 }
 
+static int lf_search_plus(const char *Cmd) {
+
+    sample_config oldconfig;
+    memset(&oldconfig, 0, sizeof(sample_config));
+
+    int retval = lf_getconfig(&oldconfig);
+
+    if (retval != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get current device config");
+        return retval;
+    }
+
+    // Divisor : frequency(khz)
+    // 95      88      47      31      23
+    // 125.00  134.83  250.00  375.00  500.00
+
+    int16_t default_divisor[] = {95, 88, 47, 31, 23};
+
+    /*
+      default LF config is set to:
+      decimation = 1
+      bits_per_sample = 8
+      averaging = YES
+      divisor = 95 (125kHz)
+      trigger_threshold = 0
+      samples_to_skip = 0
+      verbose = YES
+    */
+    sample_config config = {
+        .decimation = 1,
+        .bits_per_sample = 8,
+        .averaging = 1,
+        .trigger_threshold = 0,
+        .samples_to_skip = 0,
+        .verbose = false
+    };
+
+    // Iteration defaults
+    for (int i = 0; i < ARRAYLEN(default_divisor); ++i) {
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(INFO, "Keyboard pressed. Done.");
+            break;
+        }
+        // Try to change config!
+        uint32_t d;
+        d = config.divisor = default_divisor[i];
+        PrintAndLogEx(INFO, "-->  trying  ( " _GREEN_("%d.%02d kHz")")", 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
+
+        retval = lf_config(&config);
+        if (retval != PM3_SUCCESS)
+            break;
+
+        // The config for pm3 is changed, we can trying search!
+        retval = CmdLFfind(Cmd);
+        if (retval == PM3_SUCCESS)
+            break;
+
+    }
+
+    lf_config(&oldconfig);
+    return retval;
+}
+
 static int CmdAuto(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_auto();
@@ -90,8 +168,12 @@ static int CmdAuto(const char *Cmd) {
     if (ret == PM3_SUCCESS)
         return ret;
 
+    ret = lf_search_plus("");
+    if (ret == PM3_SUCCESS)
+        return ret;
+
     PrintAndLogEx(INFO, "Failed both LF / HF SEARCH,");
-    PrintAndLogEx(INFO, "Trying 'lf read' and save a trace for you...");
+    PrintAndLogEx(INFO, "Trying " _YELLOW_("`lf read`") "and save a trace for you");
 
     CmdPlot("");
     lf_read(false, 40000);
@@ -106,6 +188,33 @@ int CmdRem(const char *Cmd) {
     char buf[22] = {0};
     AppendDate(buf, sizeof(buf), NULL);
     PrintAndLogEx(NORMAL, "%s remark: %s", buf, Cmd);
+    return PM3_SUCCESS;
+}
+
+static int CmdHints(const char *Cmd) {
+    uint32_t ms = 0;
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (ctmp == 'h') return usage_hints();
+
+    if (strlen(Cmd) > 1){     
+       str_lower((char *)Cmd);
+       if (str_startswith(Cmd, "of")) {
+            session.show_hints = false;
+       } else {
+            session.show_hints = true;
+       }      
+    } else if (strlen(Cmd) == 1) {
+        if (param_getchar(Cmd, 0) != 0x00) {
+            ms = param_get32ex(Cmd, 0, 0, 10);
+            if (ms == 0) {
+                session.show_hints = false;
+            } else {
+                session.show_hints = true;
+            }
+        }
+    }
+    
+    PrintAndLogEx(INFO, "Hints are %s", (session.show_hints) ? "ON" : "OFF");
     return PM3_SUCCESS;
 }
 
@@ -149,6 +258,7 @@ static command_t CommandTable[] = {
     {"usart",   CmdUsart,     IfPm3FpcUsartFromUsb,    "{ USART commands... }"},
     {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
     {"",        CmdHelp,      AlwaysAvailable,         ""},
+    {"hints",   CmdHints,     AlwaysAvailable,         "Turn hints on / off"},
     {"msleep",  CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
     {"rem",     CmdRem,       AlwaysAvailable,         "Add a text line in log file"},
     {"quit",    CmdQuit,      AlwaysAvailable,         ""},

@@ -85,12 +85,14 @@ int CmdHFSearch(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_search();
 
+    int res = PM3_ESOFT; 
+    
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
@@ -99,7 +101,7 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443a()) {
         if (infoLTO(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
@@ -108,7 +110,7 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443a()) {
         if (infoHF14A(false, false, false) > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-A tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
@@ -117,7 +119,7 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false)) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO15693 tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
@@ -126,16 +128,16 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
-        if (readTopazUid() == PM3_SUCCESS) {
+        if (readTopazUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
@@ -144,7 +146,7 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Felica()) {
         if (readFelicaUid(false) == PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "\nValid " _GREEN_("ISO18092 / FeliCa tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
@@ -154,7 +156,7 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443a()) {
         if (readHF14B(false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
@@ -163,14 +165,18 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iclass()) {
         if (readIclass(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iClass tag / PicoPass tag") "found\n");
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
         }
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, _RED_("No known/supported 13.56 MHz tags found"));
-    PrintAndLogEx(NORMAL, "");
-    return PM3_ESOFT;
+    if (res != PM3_SUCCESS) {
+
+        PrintAndLogEx(INPLACE, _RED_("No known/supported 13.56 MHz tags found"));
+        res = PM3_ESOFT;
+    }
+    printf("\n");
+    return res;
 }
 
 int CmdHFTune(const char *Cmd) {
@@ -178,39 +184,47 @@ int CmdHFTune(const char *Cmd) {
     if (cmdp == 'h') return usage_hf_tune();
     int iter =  param_get32ex(Cmd, 0, 0, 10);
 
+    PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") "or press " _GREEN_("Enter") "to exit");
     PacketResponseNG resp;
-    PrintAndLogEx(SUCCESS, "Measuring HF antenna," _YELLOW_("click button") " or press" _YELLOW_("Enter") "to exit");
     clearCommandBuffer();
+
     uint8_t mode[] = {1};
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF initialization, aborting");
         return PM3_ETIMEOUT;
     }
+
     mode[0] = 2;
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint8_t i = 0; iter == 0 || i < iter; i++) {
-        if (kbd_enter_pressed()) { // abort by keyboard press
+        if (kbd_enter_pressed()) {
             break;
         }
+
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
         if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
             return PM3_ETIMEOUT;
         }
-        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t)))
+
+        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t))) {
             break;
+        }
+
         uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
-        PrintAndLogEx(INPLACE, "%u mV / %5u V", volt, (uint16_t)(volt / 1000));
+        PrintAndLogEx(INPLACE, "%u mV / %2u V", volt, (uint16_t)(volt / 1000));
     }
     mode[0] = 3;
+
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
     if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Done.");
+    PrintAndLogEx(INFO, "Done.");
     return PM3_SUCCESS;
 }
 
