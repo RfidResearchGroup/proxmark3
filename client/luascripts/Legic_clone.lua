@@ -1,4 +1,5 @@
 local utils = require('utils')
+local cmds = require('commands')
 local getopt = require('getopt')
 local ansicolors  = require('ansicolors')
 --[[
@@ -16,10 +17,10 @@ local ansicolors  = require('ansicolors')
 
     simplest usage:
     read a valid legic tag with 'hf legic reader'
-    save the dump with 'hf legic save orig.hex'
-  place your 'empty' tag on the reader and run 'script run Legic_clone -i orig.hex -w'
+    save the dump with 'hf legic dump o orig'
+  place your 'empty' tag on the reader and run 'script run Legic_clone -i orig.bin -w'
   you will see some output like:
-        read 1024 bytes from legic_dumps/j_0000.hex
+        read 1024 bytes from orig.bin
 
         place your empty tag onto the PM3 to read and display the MCD & MSN0..2
         the values will be shown below
@@ -92,18 +93,18 @@ author = 'Mosci'
 version = 'v1.0.2'
 desc = [[
 This is a script which creates a clone-dump of a dump from a Legic Prime Tag (MIM256 or MIM1024)
-(created with 'hf legic save my_dump.hex')
+(created with 'hf legic dump o my_dump')
 ]]
 example = [[
-    script run legic_clone -i my_dump.hex -o my_clone.hex -c f8
-    script run legic_clone -i my_dump.hex -d -s
+    script run legic_clone -i my_dump.bin -o my_clone.bin -c f8
+    script run legic_clone -i my_dump.bin -d -s
 ]]
 usage = [[
 script run legic_clone -h -i <file> -o <file> -c <crc> -d -s -w
 ]]
 arguments = [[
 required :
-    -i <input file>     (file to read data from)
+    -i <input file>     (file to read data from, must be in binary format (*.bin))
 
 optional :
     -h                  - Help text
@@ -111,7 +112,7 @@ optional :
     -c <new-tag crc>    - requires option -o to be given
     -d                  - Display content of found Segments
     -s                  - Display summary at the end
-    -w                  - write directly to Tag - a file myLegicClone.hex wille be generated also
+    -w                  - write directly to Tag - a file myLegicClone.bin will be generated also
 
     e.g.:
     hint: using the CRC '00' will result in a plain dump ( -c 00 )
@@ -138,6 +139,23 @@ local function oops(err)
     core.clearCommandBuffer()
     return nil, err
 end
+
+-- read LEGIC data
+local function readlegicdata( offset, length, iv )
+    -- Read data
+    local command = Command:newMIX{
+                    cmd = cmds.CMD_HF_LEGIC_READER
+                    , arg1 = offset
+                    , arg2 = length
+                    , arg3 = iv
+                    , data = nil
+                    }
+    local result, err = command:sendMIX()
+    if not result then return oops(err) end
+    -- result is a packed data structure, data starts at offset 33
+    return result
+end
+
 ---
 -- Usage help
 local function help()
@@ -179,16 +197,12 @@ local function getInputBytes(infile)
     local line
     local bytes = {}
 
-    local fhi,err = io.open(infile)
+    local fhi,err = io.open(infile,"rb")
     if err then print("OOps ... faild to read from file ".. infile); return false; end
 
-    while true do
-        line = fhi:read()
-        if line == nil then break end
-
-        for byte in line:gmatch("%w+") do
-            table.insert(bytes, byte)
-        end
+    str = fhi:read("*all")
+    for c in (str or ''):gmatch'.' do
+        bytes[#bytes+1] = ('%02x'):format(c:byte())
     end
 
     fhi:close()
@@ -199,25 +213,11 @@ end
 
 -- write to file
 local function writeOutputBytes(bytes, outfile)
-    local line
-    local bcnt = 0
-    local fho,err = io.open(outfile,"w")
+    local fho,err = io.open(outfile,"wb")
     if err then print("OOps ... faild to open output-file ".. outfile); return false; end
 
     for i = 1, #bytes do
-        if (bcnt == 0) then
-            line = bytes[i]
-        elseif (bcnt <= 7) then
-            line = line.." "..bytes[i]
-        end
-        if (bcnt == 7) then
-            -- write line to new file
-            fho:write(line.."\n")
-            -- reset counter & line
-            bcnt = -1
-            line = ""
-        end
-        bcnt = bcnt + 1
+        fho:write(string.char(tonumber(bytes[i],16)))
     end
     fho:close()
     print("\nwrote ".. #bytes .." bytes to " .. outfile)
@@ -322,7 +322,7 @@ function getSegmentCrcBytes(bytes)
     return crcbytes
 end
 
--- print segment-data (hf legic decode like)
+-- print segment-data (hf legic info like)
 function displaySegments(bytes)
     --display segment header(s)
     start = 23
@@ -389,23 +389,25 @@ end
 -- write clone-data to tag
 function writeToTag(plainBytes)
     local SegCrcs = {}
-    if(utils.confirm("\nplace your empty tag onto the PM3 to read and display the MCD & MSN0..2\nthe values will be shown below\n confirm when ready") == false) then
+    local output
+    local readbytes
+    if(utils.confirm("\nplace your empty tag onto the PM3 to restore the data of the input file\nthe CRCs will be calculated as needed\n confirm when ready") == false) then
     return
   end
 
+    readbytes = readlegicdata(0, 4, 0x55)
     -- gather MCD & MSN from new Tag - this must be enterd manually
-    cmd = 'hf legic read 0x00 0x04'
-    core.console(cmd)
     print("\nthese are the MCD MSN0 MSN1 MSN2 from the Tag that has being read:")
-    cmd = 'data hexsamples 4'
-    core.console(cmd)
-    print("^^ use this values as input for the following answers (one 2-digit-value per question/answer):")
-    -- enter MCD & MSN (in hex)
-    MCD  = utils.input("type in  MCD as 2-digit value - e.g.: 00", plainBytes[1])
-    MSN0 = utils.input("type in MSN0 as 2-digit value - e.g.: 01", plainBytes[2])
-    MSN1 = utils.input("type in MSN1 as 2-digit value - e.g.: 02", plainBytes[3])
-    MSN2 = utils.input("type in MSN2 as 2-digit value - e.g.: 03", plainBytes[4])
 
+    plainBytes[1] = ('%02x'):format(readbytes:byte(33))
+    plainBytes[2] = ('%02x'):format(readbytes:byte(34))
+    plainBytes[3] = ('%02x'):format(readbytes:byte(35))
+    plainBytes[4] = ('%02x'):format(readbytes:byte(36))
+
+    MCD  = plainBytes[1]
+    MSN0 = plainBytes[2]
+    MSN1 = plainBytes[3]
+    MSN2 = plainBytes[4]
     -- calculate crc8 over MCD & MSN
     cmd = MCD..MSN0..MSN1..MSN2
     MCC = ("%02x"):format(utils.Crc8Legic(cmd))
@@ -437,27 +439,10 @@ function writeToTag(plainBytes)
     bytes = xorBytes(plainBytes, MCC)
 
     -- write data to file
-    if (writeOutputBytes(bytes, "myLegicClone.hex")) then
-        WriteBytes = utils.input("enter number of bytes to write?", SegCrcs[#SegCrcs])
-
-        -- load file into pm3-buffer
-        cmd = 'hf legic eload myLegicClone.hex'
-        core.console(cmd)
-
+    if (writeOutputBytes(bytes, "myLegicClone.bin")) then
         -- write pm3-buffer to Tag
-        for i=0, WriteBytes do
-            if ( i<5 or i>6) then
-                cmd = ('hf legic write o %02x d 01'):format(i)
-                core.console(cmd)
-            elseif (i == 6) then
-                -- write DCF in reverse order (requires 'mosci-patch')
-                cmd = 'hf legic write o 05 d 02'
-                core.console(cmd)
-            else
-                print("skipping byte 0x05 - will be written next step")
-            end
-            utils.Sleep(0.2)
-        end
+        cmd = ('hf legic restore i myLegicClone')
+        core.console(cmd)
     end
 end
 
@@ -495,7 +480,7 @@ function main(args)
         end
         -- new crc
         if o == 'c' then
-            newcrc = a
+            newcrc = a:lower()
             ncs = true
         end
         -- display segments switch
@@ -535,7 +520,7 @@ function main(args)
                 res = res .."\nafter writing this dump to a tag!"
                 res = res .."\n\na segmentCRC gets calculated over MCD,MSN0..3,Segment-Header0..3"
                 res = res .."\ne.g. (based on Segment00 of the data from "..infile.."):"
-                res = res .."\nhf legic crc8 "..bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[23]..bytes[24]..bytes[25]..bytes[26]
+                res = res .."\nhf legic crc d "..bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[23]..bytes[24]..bytes[25]..bytes[26].." u "..newcrc.." c 8"
                 -- this can not be calculated without knowing the new MCD, MSN0..2
                 print(res)
             end
@@ -549,7 +534,7 @@ function main(args)
         end
     end
     -- write to tag
-    if (ws and #bytes == 1024) then
+    if (ws and ( #bytes == 1024 or #bytes == 256)) then
             writeToTag(bytes)
     end
 end
