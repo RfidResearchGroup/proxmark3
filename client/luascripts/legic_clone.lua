@@ -4,10 +4,9 @@ local getopt = require('getopt')
 local ansicolors  = require('ansicolors')
 
 --[[
-    script to create a clone-dump with new crc
+  script to create a clone-dump with new crc
   Author: mosci
-   my Fork: https://github.com/icsom/proxmark3.git
-    Upstream: https://github.com/Proxmark/proxmark3.git
+    my Fork: https://github.com/icsom/proxmark3.git
 
     1. read tag-dump, xor byte 22..end with byte 0x05 of the inputfile
     2. write to outfile
@@ -16,11 +15,13 @@ local ansicolors  = require('ansicolors')
     5. from 0x22..end xored with newcrc
     6. calculate new crc on each segment (needs to know the new MCD & MSN0..2)
 
-    simplest usage:
-    read a valid legic tag with 'hf legic reader'
-    save the dump with 'hf legic dump f orig'
-  place your 'empty' tag on the reader and run 'script run legic_clone -i orig.bin -w'
-  you will see some output like:
+  simplest usage:
+    Dump a legic tag with 'hf legic dump' 
+    place your 'empty' tag on the reader and run
+        'script run legic_clone -i orig.bin -w'
+
+    you will see some output like:
+
         read 1024 bytes from orig.bin
 
         place your empty tag onto the PM3 to read and display the MCD & MSN0..2
@@ -90,8 +91,8 @@ copyright = ''
 author = 'Mosci'
 version = 'v1.0.2'
 desc = [[
-This is a script which creates a clone-dump of a dump from a Legic Prime Tag (MIM256 or MIM1024)
-Create a dump by running 'hf legic dump'.
+This is a script which creates a clone-dump of a dump from a LEGIC Prime Tag (MIM256 or MIM1024)
+Create a dump by running `hf legic dump`.
 ]]
 example = [[
     script run legic_clone -i my_dump.bin -o my_clone.bin -c f8
@@ -115,15 +116,30 @@ optional :
     e.g.:
     hint: using the CRC '00' will result in a plain dump ( -c 00 )
 ]]
-
+local DEBUG = true
 local bxor = bit32.bxor
-
+---
+-- This is only meant to be used when errors occur
+local function dbg(args)
+    if not DEBUG then return end
+    if type(args) == 'table' then
+        local i = 1
+        while args[i] do
+            dbg(args[i])
+            i = i+1
+        end
+    else
+        print('###', args)
+    end
+end
 -- we need always 2 digits
 local function prepend_zero(s)
-    if (string.len(s) == 1) then
+    if s == nil then return '..' end
+
+    if (#s == 1) then
         return '0' .. s
     else
-        if (string.len(s) == 0) then
+        if (#s == 0) then
             return '00'
         else
             return s
@@ -190,20 +206,18 @@ end
 
 -- read input-file into array
 local function getInputBytes(infile)
-    local line
     local bytes = {}
+    local f = io.open(infile, "rb")
+    if f == nil then print("OOps ... failed to read from file ".. infile); return false; end
 
-    local fhi,err = io.open(infile, "rb")
-    if err then print("OOps ... faild to read from file ".. infile); return false; end
+    local str = f:read("*all")
+    f:close()
 
-    str = fhi:read("*all")
     for c in (str or ''):gmatch'.' do
         bytes[#bytes + 1] = ('%02x'):format(c:byte())
     end
 
-    fhi:close()
-
-    print("\nread ".. #bytes .." bytes from ".. infile)
+    print("\nread ".. #bytes .." bytes from "..ansicolors.yellow..infile..ansicolors.reset)
     return bytes
 end
 
@@ -318,8 +332,22 @@ local function getSegmentCrcBytes(bytes)
     return crcbytes
 end
 
+-- print Segment values
+local function printSegment(SegmentData)
+    res = "\nSegment "..SegmentData[9]..": "
+    res = res.. "raw header="..SegmentData[0]..", "
+    res = res.. "flag="..SegmentData[1].." (valid="..SegmentData[2].." last="..SegmentData[3].."), "
+    res = res.. "len="..("%04d"):format(SegmentData[4])..", "
+    res = res.. "WRP="..prepend_zero(SegmentData[5])..", "
+    res = res.. "WRC="..prepend_zero(SegmentData[6])..", "
+    res = res.. "RD="..SegmentData[7]..", "
+    res = res.. "crc="..SegmentData[8]
+    print(res)
+end
+
 -- print segment-data (hf legic info like)
 local function displaySegments(bytes)
+
     --display segment header(s)
     start = 23
     index = '00'
@@ -330,7 +358,10 @@ local function displaySegments(bytes)
         wrp = ''
         pld = ''
         Seg = getSegmentData(bytes, start, index)
+        if Seg == nil then return OOps("segment is nil") end
+        
         KGH = CheckKgh(bytes, start, (start + tonumber(Seg[4], 10)))
+
         printSegment(Seg)
 
         -- wrc
@@ -367,19 +398,6 @@ local function displaySegments(bytes)
         index = prepend_zero(tonumber(Seg[9]) + 1)
 
     until (Seg[3] == 1 or tonumber(Seg[9]) == 126 )
-end
-
--- print Segment values
-local function printSegment(SegmentData)
-    res = "\nSegment "..SegmentData[9]..": "
-    res = res.. "raw header="..SegmentData[0]..", "
-    res = res.. "flag="..SegmentData[1].." (valid="..SegmentData[2].." last="..SegmentData[3].."), "
-    res = res.. "len="..("%04d"):format(SegmentData[4])..", "
-    res = res.. "WRP="..prepend_zero(SegmentData[5])..", "
-    res = res.. "WRC="..prepend_zero(SegmentData[6])..", "
-    res = res.. "RD="..SegmentData[7]..", "
-    res = res.. "crc="..SegmentData[8]
-    print(res)
 end
 
 -- write clone-data to tag
@@ -470,7 +488,7 @@ local function main(args)
             bytes = getInputBytes(infile)
             oldcrc = bytes[5]
             ifs = true
-            if (bytes == false) then return oops('couldnt get input bytes') end
+            if (bytes == false) then return oops('couldnt read file') end
 
             i = i + 1
         end
@@ -489,7 +507,7 @@ local function main(args)
         if o == 'h' then return help() end
     end
 
-    if (not ifs) then return oops('option -i <input file> is required but missing') end
+    if (not ifs) then return oops('option -i <input file> is required') end
 
     -- bytes to plain
     bytes = xorBytes(bytes, oldcrc)
