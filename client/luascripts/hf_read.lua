@@ -19,7 +19,7 @@ arguments = [[
 ]]
 ---
 -- This is only meant to be used when errors occur
-local function dbg(err)
+local function dbg(args)
     if not DEBUG then return end
     if type(args) == 'table' then
         local i = 1
