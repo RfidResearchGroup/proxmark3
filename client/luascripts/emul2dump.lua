@@ -1,7 +1,7 @@
 local getopt = require('getopt')
 local bin = require('bin')
 local dumplib = require('html_dumplib')
-local ansicolors  = require('ansicolors')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'

@@ -2,6 +2,7 @@ local cmds = require('commands')
 local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils =  require('utils')
+local ansicolors  = require('ansicolors')
 
 -- global
 local DEBUG = false -- the debug flag
@@ -11,10 +12,9 @@ local err_lock = 'use -k or change cfg0 block'
 
 copyright = 'Copyright (c) 2017 IceSQL AB. All rights reserved.'
 author = 'Christian Herrmann'
-version = 'v1.1.2'
+version = 'v1.1.3'
 desc = 'This script enables easy programming of a MAGIC NTAG 21* card'
-example =
-[[
+example = [[
 	-- wipe tag
 	script run mfu_magic -w
 
@@ -36,12 +36,10 @@ example =
 	-- set signature
 	script run mfu_magic -s 1122334455667788990011223344556677889900112233445566778899001122
 ]]
-usage =
-[[
-Usage:
+usage = [[
 script run mfu_magic -h -k <passwd> -c -w -u <uid> -t <type> -p <passwd> -a <pack> -s <signature> -o <otp> -v <version>
-
-Arguments:
+]]
+arguments = [[
 	-h		this help
 	-c		read magic configuration
 	-u		UID (14 hexsymbols), set UID on tag
@@ -94,9 +92,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- set the global password variable

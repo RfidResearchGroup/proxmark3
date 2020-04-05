@@ -2,20 +2,23 @@ local getopt = require('getopt')
 local lib14a = require('read14a')
 local cmds = require('commands')
 local utils = require('utils')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Martin Holst Swende"
-version = 'v1.0.2'
+version = 'v1.0.3'
 desc = [[
 This is a script which automates cracking and dumping mifare classic cards. It sets itself into
 'listening'-mode, after which it cracks and dumps any mifare classic card that you
 place by the device.
 ]]
 example = [[
-script run mifare_autopwn
+    1. script run mifare_autopwn
 ]]
 usage = [[
-Arguments:
+script run mifare_autopwn [-h] [-d] [-k <key>]
+]]
+arguments = [[
     -h          this help
     -d          debug logging on
     -k          known key for Sector 0 ,  keytype A
@@ -61,9 +64,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- Waits for a mifare card to be placed within the vicinity of the reader.
