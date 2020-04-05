@@ -217,7 +217,7 @@ static int CmdLegicInfo(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Reading full tag memory of %d bytes...", card.cardsize);
+    PrintAndLogEx(SUCCESS, "Reading full tag memory of " _YELLOW_("%d") "bytes...", card.cardsize);
 
     // allocate receiver buffer
     uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
@@ -235,15 +235,13 @@ static int CmdLegicInfo(const char *Cmd) {
 
     // Output CDF System area (9 bytes) plus remaining header area (12 bytes)
     crc = data[4];
-    uint32_t calc_crc =  CRC8Legic(data, 4);
+    uint32_t calc_crc = CRC8Legic(data, 4);
 
-    PrintAndLogEx(SUCCESS, _YELLOW_("CDF: System Area"));
+    PrintAndLogEx(SUCCESS, " " _CYAN_("CDF: System Area"));
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
-    PrintAndLogEx(NORMAL, "MCD: %02x, MSN: %02x %02x %02x, MCC: %02x %s",
+    PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " ( %s)",
                   data[0],
-                  data[1],
-                  data[2],
-                  data[3],
+                  sprint_hex(data +1, 3),
                   data[4],
                   (calc_crc == crc) ? _GREEN_("OK") : _RED_("Fail")
                  );
@@ -350,7 +348,7 @@ static int CmdLegicInfo(const char *Cmd) {
     if (dcf > 60000)
         goto out;
 
-    PrintAndLogEx(SUCCESS, _YELLOW_("\nADF: User Area"));
+    PrintAndLogEx(SUCCESS, _CYAN_("ADF: User Area"));
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
 
     if (bIsSegmented) {
@@ -383,7 +381,7 @@ static int CmdLegicInfo(const char *Cmd) {
             segCalcCRC = CRC8Legic(segCrcBytes, 8);
             segCRC = data[i + 4] ^ crc;
 
-            PrintAndLogEx(SUCCESS, "Segment     | %02u ", segmentNum);
+            PrintAndLogEx(SUCCESS, "Segment     | " _YELLOW_("%02u"), segmentNum);
             PrintAndLogEx(SUCCESS, "raw header  | 0x%02X 0x%02X 0x%02X 0x%02X",
                           data[i] ^ crc,
                           data[i + 1] ^ crc,
@@ -396,7 +394,7 @@ static int CmdLegicInfo(const char *Cmd) {
                           (segment_flag & 0x4) >> 2,
                           (segment_flag & 0x8) >> 3
                          );
-            PrintAndLogEx(SUCCESS, "            | WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
+            PrintAndLogEx(SUCCESS, "            | WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X ( %s)",
                           wrp,
                           wrc,
                           ((data[i + 3] ^ crc) & 0x80) >> 7,
@@ -821,16 +819,16 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     PacketResponseNG resp;
 
     uint8_t timeout = 0;
-    while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    while (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
         ++timeout;
         printf(".");
         fflush(stdout);
-        if (timeout > 7) {
+        if (timeout > 14) {
             PrintAndLogEx(WARNING, "\ncommand execution time out");
             return PM3_ETIMEOUT;
         }
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
 
     uint8_t isOK = resp.oldarg[0] & 0xFF;
     *outlen = resp.oldarg[1];
@@ -856,13 +854,13 @@ int legic_print_type(uint32_t tagtype, uint8_t spaces) {
     char *spacer = spc + (10 - spaces);
 
     if (tagtype == 22)
-        PrintAndLogEx(SUCCESS, "%sTYPE : MIM%d card (outdated)", spacer, tagtype);
+        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIM%d card (outdated)"), spacer, tagtype);
     else if (tagtype == 256)
-        PrintAndLogEx(SUCCESS, "%sTYPE : MIM%d card (234 bytes)", spacer, tagtype);
+        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIM%d card (234 bytes)"), spacer, tagtype);
     else if (tagtype == 1024)
-        PrintAndLogEx(SUCCESS, "%sTYPE : MIM%d card (1002 bytes)", spacer, tagtype);
+        PrintAndLogEx(SUCCESS, "%sTYPE: " _YELLOW_("MIM%d card (1002 bytes)"), spacer, tagtype);
     else
-        PrintAndLogEx(INFO, "%sTYPE : Unknown %06x", spacer, tagtype);
+        PrintAndLogEx(INFO, "%sTYPE: " _YELLOW_("Unknown %06x"), spacer, tagtype);
     return PM3_SUCCESS;
 }
 int legic_get_type(legic_card_select_t *card) {
@@ -1393,7 +1391,8 @@ int readLegicUid(bool verbose) {
             break;
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, " UID : %s", sprint_hex(card.uid, sizeof(card.uid)));
+    PrintAndLogEx(SUCCESS, " MCD: " _GREEN_("%02X"), card.uid[0]);
+    PrintAndLogEx(SUCCESS, " MSN: " _GREEN_("%s"), sprint_hex(card.uid + 1, sizeof(card.uid) - 1));
     legic_print_type(card.cardsize, 0);
     return PM3_SUCCESS;
 }
