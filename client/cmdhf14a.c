@@ -1342,9 +1342,22 @@ typedef struct {
 
 const uidname uidmap[] = {
     // UID0, UID1, TEXT
-    {0x02, 0x03, "ST SRIX4K"},
-    {0x05, 0x1E, "my-d(tm) move SLE66r01P"},
-    {0x05, 0x20, "my-d(tm) move SLE66r01P"},
+    {0x02, 0x00, "SR176"},
+    {0x02, 0x03, "SRIX4K"},
+    {0x02, 0x0C, "SRT512"},
+    {0x02, 0x0F, "SRI2K"},
+    {0x02, 0x1B, "25TB512-AC"},
+    {0x02, 0x3D, "SRIX4K"},
+    {0x02, 0x3F, "25TB02K"},
+    {0x02, 0x4D, "SRIX512"},
+    {0x02, 0x6D, "SRI512"},
+    {0x02, 0x7D, "SRI4K"},
+    {0x02, 0x84, "M24SR64-Y"},
+    {0x02, 0xA3, "25TA02KB-P"},
+    {0x02, 0xC4, "25TA64K"},
+    {0x02, 0xE3, "25TA02KB"},
+    {0x02, 0xE4, "25TA512B"},
+    {0x02, 0xF3, "25TA02KB-D"},
     {0x11, 0x22, "NTAG21x Modifiable"},
     {0x00, 0x00, "None"}
 };
@@ -1447,8 +1460,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 if ((nxptype & mtOther) == mtOther) isMifareClassic = true;
                 break;
             case 0x05: // Infineon
-                if ((card.uid[1] & 0xF0) == 0x30) {
-                    printTag("my-d(tm) move lean SLE 66R01PN");
+                if ((card.uid[1] & 0xF0) == 0x10) {
+                    printTag("my-d(tm) command set SLE 66R04/16/32P, SLE 66R04/16/32S");
+                } else if ((card.uid[1] & 0xF0) == 0x20) {
+                    printTag("my-d(tm) command set SLE 66R01/16/32P (Type 2 Tag)");
+                } else if ((card.uid[1] & 0xF0) == 0x30) {
+                    printTag("my-d(tm) move lean SLE 66R01P/66R01PN");
                 } else if ((card.uid[1] & 0xF0) == 0x70) {
                     printTag("my-d(tm) move lean SLE 66R01L");
                 }
