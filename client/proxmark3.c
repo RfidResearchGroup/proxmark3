@@ -27,6 +27,7 @@
 #include "comms.h"
 #include "fileutils.h"
 #include "flash.h"
+#include "settings.h"
 
 static void showBanner(void) {
     g_printAndLog = PRINTANDLOG_PRINT;
@@ -557,6 +558,7 @@ int main(int argc, char *argv[]) {
 
     /* initialize history */
     using_history();
+    
 
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);
@@ -581,6 +583,12 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
     set_my_user_directory();
 
+    // Settings
+    settingsLoad ();
+    settingsSave ();
+    printf ("Ver : %s\n",mySettings.version);
+    // End Settings
+    
     for (int i = 1; i < argc; i++) {
 
         if (argv[i][0] != '-') {

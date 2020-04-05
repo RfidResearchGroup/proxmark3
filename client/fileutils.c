@@ -52,6 +52,9 @@
 
 #define PATH_MAX_LENGTH 200
 
+extern void JsonLoadSettingsCallback  (json_t *root);
+extern void JsonSaveSettingsCallback  (json_t *root);
+
 struct wave_info_t {
     char signature[4];
     uint32_t filesize;
@@ -424,6 +427,9 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
                     JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], 16);
                 }
             }
+            break;
+        case jsfSettings: 
+            JsonSaveSettingsCallback (root);
             break;
         default:
             break;
@@ -863,7 +869,9 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         }
         *datalen = sptr;
     }
-
+    if (!strcmp(ctype,"settings")) {
+        JsonLoadSettingsCallback  (root);
+    }
     PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
     json_decref(root);
