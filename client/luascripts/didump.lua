@@ -6,10 +6,11 @@ local utils = require('utils')
 local lib14a = require('read14a')
 local json = require('dkjson')
 local toys = require('default_toys_di')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This is a script to dump and decrypt the data of a specific type of Mifare Mini token.
 The dump is decrypted. If a raw dump is wanted, use the -r parameter
@@ -28,8 +29,8 @@ example = [[
 ]]
 usage = [[
 script run didump -h -t -r -d -e -v -i dumpdata.json
-
-Arguments:
+]]
+arguments = [[
       h                 this helptext
       r                 raw
       t                 selftest
@@ -88,9 +89,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 --
