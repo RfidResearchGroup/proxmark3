@@ -127,7 +127,7 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC tag") "found\n");
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") "found\n");
             res = PM3_SUCCESS;
         }
     }

@@ -2405,7 +2405,7 @@ void SendForward(uint8_t fwd_bit_count) {
             WaitUS(32 * 8);
         } else {
             TurnReadLF_off(23 * 8);
-            TurnReadLFOn(32-23 * 8);
+            TurnReadLFOn((32-23) * 8);
         }
     }
 }
