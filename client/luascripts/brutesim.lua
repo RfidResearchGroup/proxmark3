@@ -1,8 +1,9 @@
 local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Kenzy Carey'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 
   .-----------------------------------------------------------------.
@@ -34,10 +35,9 @@ example = [[
     script run brutesim -r pyramid -f 10 -b 1000 -c 10 -t 1 -d down
 ]]
 usage = [[
-
 script run brutesim -r rfid_tag -f facility_code -b base_card_number -c count -t timeout -d direction
-
-Arguments:
+]]
+arguments = [[
     -h       this help
     -r       *see below           RFID Tag: the RFID tag to emulate
              pyramid
@@ -89,9 +89,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message

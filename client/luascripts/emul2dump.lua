@@ -5,7 +5,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc =[[
 This script takes an dumpfile on EML (ASCII) format and converts it to the PM3 dumpbin file to be used with `hf mf restore`
 ]]
@@ -17,7 +17,6 @@ example =[[
 usage = [[
 script run emul2dump [-i <file>] [-o <file>]
 ]]
-
 arguments = [[
     -h              This help
     -i <filename>   Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
@@ -26,7 +25,7 @@ arguments = [[
 ]]
 ---
 -- This is only meant to be used when errors occur
-local function oops(err)
+local function dbg(err)
     if not DEBUG then return end
     if type(args) == 'table' then
         local i = 1
@@ -37,6 +36,13 @@ local function oops(err)
     else
         print('###', args)
     end
+end
+---
+-- This is only meant to be used when errors occur
+local function oops(err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
 end
 ---
 -- Usage help

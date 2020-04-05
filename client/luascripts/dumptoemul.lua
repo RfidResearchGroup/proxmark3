@@ -2,10 +2,11 @@
 -- Have a look there for further details
 getopt = require('getopt')
 bin = require('bin')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Martin Holst Swende'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This script takes a dumpfile from 'hf mf dump' and converts it to a format that can be used
 by the emulator
@@ -14,9 +15,9 @@ example = [[
     script run dumptoemul -i dumpdata-foobar.bin
 ]]
 usage = [[
-_script run dumptoemul [-i <file>] [-o <file>]
-
-Arguments:
+script run dumptoemul [-i <file>] [-o <file>]
+]]
+arguments = [[
     -h              This help
     -i <file>       Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
     -o <filename>   Specifies the output file. If omitted, <uid>.eml is used.
@@ -56,9 +57,12 @@ function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 
 local function convert_to_ascii(hexdata)

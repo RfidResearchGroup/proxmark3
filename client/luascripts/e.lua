@@ -1,9 +1,10 @@
 local getopt = require('getopt')
 local utils = require('utils')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This script calculates many checksums (CRC) over the provided hex input.
 ]]
@@ -12,7 +13,9 @@ example = [[
     script run e -b 010203040506070809 -w 16
 ]]
 usage = [[
-Arguments:
+script run e [-b <hex bytes] [-w <width>]
+]]
+arguments = [[
      -b       data in hex
      -w       bitwidth of the CRC family of algorithm. <optional> defaults to all known CRC presets.
 ]]
@@ -44,9 +47,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- The main entry point

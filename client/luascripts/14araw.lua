@@ -1,10 +1,11 @@
 local cmds = require('commands')
 local getopt = require('getopt')
 local lib14a = require('read14a')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Martin Holst Swende"
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This is a script to allow raw 1444a commands to be sent and received.
 ]]
@@ -23,8 +24,8 @@ example = [[
 ]]
 usage = [[
 script run 14araw -x 6000F57b
-
-Arguments:
+]]
+arguments = [[
     -o              do not connect - use this only if you previously used -p to stay connected
     -r              do not read response
     -c              calculate and append CRC
@@ -79,9 +80,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- The main entry point
