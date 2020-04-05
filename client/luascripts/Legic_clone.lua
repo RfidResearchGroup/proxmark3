@@ -1,3 +1,6 @@
+local utils = require('utils')
+local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 --[[
     script to create a clone-dump with new crc
   Author: mosci
@@ -86,7 +89,7 @@
 
 copyright = ''
 author = 'Mosci'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This is a script which creates a clone-dump of a dump from a Legic Prime Tag (MIM256 or MIM1024)
 (created with 'hf legic save my_dump.hex')
@@ -97,11 +100,12 @@ example = [[
 ]]
 usage = [[
 script run legic_clone -h -i <file> -o <file> -c <crc> -d -s -w
-
-required arguments:
+]]
+arguments = [[
+required :
     -i <input file>     (file to read data from)
 
-optional arguments :
+optional :
     -h                  - Help text
     -o <output file>    - requires option -c to be given
     -c <new-tag crc>    - requires option -o to be given
@@ -112,8 +116,7 @@ optional arguments :
     e.g.:
     hint: using the CRC '00' will result in a plain dump ( -c 00 )
 ]]
-local utils = require('utils')
-local getopt = require('getopt')
+
 local bxor = bit32.bxor
 
 -- we need always 2 digits
@@ -128,7 +131,6 @@ local function prepend_zero(s)
         end
     end
 end
-
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
@@ -136,7 +138,6 @@ local function oops(err)
     core.clearCommandBuffer()
     return nil, err
 end
-
 ---
 -- Usage help
 local function help()
@@ -144,9 +145,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 
 -- Check availability of file

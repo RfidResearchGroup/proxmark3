@@ -3,10 +3,11 @@
 -- Updated 2017-04-18
 -- Updated 2018-02-20 iceman
 local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Brian Redbeard"
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 Perform bulk enrollment of 26 bit H10301 style RFID Tags
 For more info, check the comments in the code
@@ -17,8 +18,8 @@ example = [[
 ]]
 usage = [[
 script run lf_bulk.lua -f facility -b base_id_num -c count
-
-Arguments:
+]]
+arguments = [[
     -h      : this help
     -f      : facility id
     -b      : starting card id
@@ -56,9 +57,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- Exit message
