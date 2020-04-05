@@ -2,10 +2,11 @@ local cmds = require('commands')
 local getopt = require('getopt')
 local bin = require('bin')
 local utils = require('utils')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This script will program a T55x7 TAG with the configuration: block 0x00 data 0x000100
 The outlined procedure is as following:
@@ -37,9 +38,9 @@ example = [[
     1. script run test_t55x7_fsk
 ]]
 usage = [[
-script run test_t55x7_fsk
-
-Arguments:
+script run test_t55x7_fsk [-h]
+]]
+arguments = [[
     -h             : this help
 ]]
 
@@ -83,9 +84,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message

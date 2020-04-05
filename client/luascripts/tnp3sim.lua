@@ -6,25 +6,26 @@ local utils = require('utils')
 local md5 = require('md5')
 local toys = require('default_toys')
 local pre = require('precalc')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
-desc =[[
+version = 'v1.0.2'
+desc = [[
 This script will try to load a binary datadump of a Mifare TNP3xxx card.
 It vill try to validate all checksums and view some information stored in the dump
 For an experimental mode, it tries to manipulate some data.
 At last it sends all data to the PM3 device memory where it can be used in the command  "hf mf sim"
 ]]
-example =[[
+example = [[
     1. script run tnp3sim
     2. script run tnp3sim -m
     3. script run tnp3sim -m -i myfile
 ]]
 usage = [[
-script run tnp3sim -h -m -i <filename>
-
-Arguments:
+script run tnp3sim [-h] [-m] [-i <filename>]
+]]
+arguments = [[
     -h             : this help
     -m             : Maxed out items (experimental)
     -i             : filename for the datadump to read (bin)
@@ -70,9 +71,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message

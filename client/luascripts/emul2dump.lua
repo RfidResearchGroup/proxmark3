@@ -1,13 +1,13 @@
 local getopt = require('getopt')
 local bin = require('bin')
 local dumplib = require('html_dumplib')
-local ansicolors  = require('ansicolors')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
 version = 'v1.0.2'
 desc =[[
-This script takes an dumpfile on EML (ASCII) format and converts it to the PM3 dumpbin file to be used with `hf mf restore`
+This script takes an dumpfile in EML (ASCII) format and converts it to the PM3 dumpbin file to be used with `hf mf restore`
 ]]
 example =[[
     1. script run emul2dump
@@ -25,7 +25,7 @@ arguments = [[
 ]]
 ---
 -- This is only meant to be used when errors occur
-local function dbg(err)
+local function dbg(args)
     if not DEBUG then return end
     if type(args) == 'table' then
         local i = 1

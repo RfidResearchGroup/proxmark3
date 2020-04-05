@@ -1,10 +1,11 @@
 local utils = require('utils')
 local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 -- this script writes bytes 8 to 256 on the Legic MIM256
 
 copyright = ''
 author = 'Mosci'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc =
 [[
 This is a script which writes value 0x01 to bytes from position 0x07 until 0xFF on a Legic Prime Tag (MIM256 or MIM1024)  -- (created with 'hf legic save my_dump.hex') --
@@ -14,8 +15,8 @@ example = [[
 ]]
 usage = [[
 script run legic_buffer2card -h
-
-Arguments
+]]
+arguments = [[
     -h       - Help text
 ]]
 
@@ -33,9 +34,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- simple loop-write from 0x07 to 0xff
