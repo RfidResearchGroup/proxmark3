@@ -93,7 +93,7 @@ author = 'Mosci'
 version = 'v1.0.2'
 desc = [[
 This is a script which creates a clone-dump of a dump from a Legic Prime Tag (MIM256 or MIM1024)
-(created with 'hf legic dump o my_dump')
+(created with 'hf legic dump f my_dump')
 ]]
 example = [[
     script run legic_clone -i my_dump.bin -o my_clone.bin -c f8
@@ -441,7 +441,7 @@ function writeToTag(plainBytes)
     -- write data to file
     if (writeOutputBytes(bytes, "myLegicClone.bin")) then
         -- write pm3-buffer to Tag
-        cmd = ('hf legic restore i myLegicClone')
+        cmd = ('hf legic restore f myLegicClone')
         core.console(cmd)
     end
 end
@@ -515,7 +515,7 @@ function main(args)
                 res = "\n+-------------------------------------------- Summary -------------------------------------------+"
                 res = res .."\ncreated clone_dump from\n\t"..infile.." crc: "..oldcrc.."\ndump_file:"
                 res = res .."\n\t"..outfile.." crc: "..string.sub(newcrc,-2)
-                res = res .."\nyou may load the new file with: hf legic load "..outfile
+                res = res .."\nyou may load the new file with: hf legic eload "..outfile
                 res = res .."\n\nif you don't write to tag immediately ('-w' switch) you will need to recalculate each segmentCRC"
                 res = res .."\nafter writing this dump to a tag!"
                 res = res .."\n\na segmentCRC gets calculated over MCD,MSN0..3,Segment-Header0..3"
