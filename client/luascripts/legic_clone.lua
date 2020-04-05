@@ -2,6 +2,7 @@ local utils = require('utils')
 local cmds = require('commands')
 local getopt = require('getopt')
 local ansicolors  = require('ansicolors')
+
 --[[
     script to create a clone-dump with new crc
   Author: mosci
@@ -17,18 +18,15 @@ local ansicolors  = require('ansicolors')
 
     simplest usage:
     read a valid legic tag with 'hf legic reader'
-    save the dump with 'hf legic dump o orig'
-  place your 'empty' tag on the reader and run 'script run Legic_clone -i orig.bin -w'
+    save the dump with 'hf legic dump f orig'
+  place your 'empty' tag on the reader and run 'script run legic_clone -i orig.bin -w'
   you will see some output like:
         read 1024 bytes from orig.bin
 
         place your empty tag onto the PM3 to read and display the MCD & MSN0..2
         the values will be shown below
          confirm when ready [y/n] ?y
-        #db# setting up legic card
-        #db# MIM 256 card found, reading card ...
-        #db# Card read, use 'hf legic decode' or
-        #db# 'data hexsamples 8' to view results
+
         0b ad c0 de  <- !! here you'll see the MCD & MSN of your empty tag, which has to be typed in manually as seen below !!
         type in  MCD as 2-digit value - e.g.: 00 (default: 79 )
          > 0b
@@ -93,18 +91,18 @@ author = 'Mosci'
 version = 'v1.0.2'
 desc = [[
 This is a script which creates a clone-dump of a dump from a Legic Prime Tag (MIM256 or MIM1024)
-(created with 'hf legic dump f my_dump')
+Create a dump by running 'hf legic dump'.
 ]]
 example = [[
     script run legic_clone -i my_dump.bin -o my_clone.bin -c f8
     script run legic_clone -i my_dump.bin -d -s
 ]]
 usage = [[
-script run legic_clone -h -i <file> -o <file> -c <crc> -d -s -w
+script run legic_clone [-h] [-i <file>] [-o <file>] [-c <crc>] [-d] [-s] [-w]
 ]]
 arguments = [[
 required :
-    -i <input file>     (file to read data from, must be in binary format (*.bin))
+    -i <input file>     - file to read data from, must be in binary format (*.bin)
 
 optional :
     -h                  - Help text
@@ -112,7 +110,7 @@ optional :
     -c <new-tag crc>    - requires option -o to be given
     -d                  - Display content of found Segments
     -s                  - Display summary at the end
-    -w                  - write directly to Tag - a file myLegicClone.bin will be generated also
+    -w                  - write directly to tag - a file hf-legic-UID-dump.bin will also be generated
 
     e.g.:
     hint: using the CRC '00' will result in a plain dump ( -c 00 )
@@ -139,23 +137,6 @@ local function oops(err)
     core.clearCommandBuffer()
     return nil, err
 end
-
--- read LEGIC data
-local function readlegicdata( offset, length, iv )
-    -- Read data
-    local command = Command:newMIX{
-                    cmd = cmds.CMD_HF_LEGIC_READER
-                    , arg1 = offset
-                    , arg2 = length
-                    , arg3 = iv
-                    , data = nil
-                    }
-    local result, err = command:sendMIX()
-    if not result then return oops(err) end
-    -- result is a packed data structure, data starts at offset 33
-    return result
-end
-
 ---
 -- Usage help
 local function help()
@@ -170,23 +151,38 @@ local function help()
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
+-- read LEGIC data
+local function readlegicdata(offset, length, iv)
+    -- Read data
+    local command = Command:newMIX{
+                    cmd = cmds.CMD_HF_LEGIC_READER
+                    , arg1 = offset
+                    , arg2 = length
+                    , arg3 = iv
+                    , data = nil
+                    }
+    local result, err = command:sendMIX()
+    if not result then return oops(err) end
+    -- result is a packed data structure, data starts at offset 33
+    return result
+end
 
 -- Check availability of file
 local function file_check(file_name)
-    local file_found = io.open(file_name, "r")
-    if not file_found then
-        file_found = false
+    local exists = io.open(file_name, "r")
+    if not exists then
+        exists = false
     else
-        file_found = true
+        exists = true
     end
-    return file_found
+    return exists
 end
 
 --- xor-wrapper
 -- xor all from addr 0x22 (start counting from 1 => 23)
 local function xorme(hex, xor, index)
     if ( index >= 23 ) then
-        return ('%02x'):format(bxor( tonumber(hex,16) , tonumber(xor,16) ))
+        return ('%02x'):format(bxor( tonumber(hex, 16) , tonumber(xor, 16) ))
     else
         return hex
     end
@@ -197,12 +193,12 @@ local function getInputBytes(infile)
     local line
     local bytes = {}
 
-    local fhi,err = io.open(infile,"rb")
+    local fhi,err = io.open(infile, "rb")
     if err then print("OOps ... faild to read from file ".. infile); return false; end
 
     str = fhi:read("*all")
     for c in (str or ''):gmatch'.' do
-        bytes[#bytes+1] = ('%02x'):format(c:byte())
+        bytes[#bytes + 1] = ('%02x'):format(c:byte())
     end
 
     fhi:close()
@@ -213,11 +209,11 @@ end
 
 -- write to file
 local function writeOutputBytes(bytes, outfile)
-    local fho,err = io.open(outfile,"wb")
+    local fho,err = io.open(outfile, "wb")
     if err then print("OOps ... faild to open output-file ".. outfile); return false; end
 
     for i = 1, #bytes do
-        fho:write(string.char(tonumber(bytes[i],16)))
+        fho:write(string.char(tonumber(bytes[i], 16)))
     end
     fho:close()
     print("\nwrote ".. #bytes .." bytes to " .. outfile)
@@ -232,7 +228,7 @@ local function xorBytes(inBytes, crc)
     end
     if (#inBytes == #bytes) then
         -- replace crc
-        bytes[5] = string.sub(crc,-2)
+        bytes[5] = string.sub(crc, -2)
         return bytes
     else
         print("error: byte-count missmatch")
@@ -241,63 +237,63 @@ local function xorBytes(inBytes, crc)
 end
 
 -- get raw segment-data
-function getSegmentData(bytes, start, index)
+local function getSegmentData(bytes, start, index)
     local raw, len, valid, last, wrp, wrc, rd, crc
     local segment = {}
-    segment[0] = bytes[start]..' '..bytes[start+1]..' '..bytes[start+2]..' '..bytes[start+3]
+    segment[0] = bytes[start]..' '..bytes[start + 1]..' '..bytes[start + 2]..' '..bytes[start + 3]
     -- flag = high nibble of byte 1
-    segment[1] = string.sub(bytes[start+1],0,1)
+    segment[1] = string.sub(bytes[start + 1], 0, 1)
 
     -- valid = bit 6 of byte 1
-    segment[2] = tonumber(bit32.extract('0x'..bytes[start+1],6,1),16)
+    segment[2] = tonumber(bit32.extract('0x'..bytes[start + 1], 6, 1), 16)
 
     -- last = bit 7 of byte 1
-    segment[3] = tonumber(bit32.extract('0x'..bytes[start+1],7,1),16)
+    segment[3] = tonumber(bit32.extract('0x'..bytes[start + 1], 7, 1), 16)
 
     -- len = (byte 0)+(bit0-3 of byte 1)
-  segment[4] = tonumber(('%03x'):format(tonumber(bit32.extract('0x'..bytes[start+1],0,3),16)..tonumber(bytes[start],16)),16)
+    segment[4] = tonumber(('%03x'):format(tonumber(bit32.extract('0x'..bytes[start + 1], 0, 3), 16)..tonumber(bytes[start], 16)), 16)
 
     -- wrp (write proteted) = byte 2
-    segment[5] = tonumber(bytes[start+2])
+    segment[5] = tonumber(bytes[start + 2])
 
     -- wrc (write control) - bit 4-6 of byte 3
-    segment[6] = tonumber(bit32.extract('0x'..bytes[start+3],4,3),16)
+    segment[6] = tonumber(bit32.extract('0x'..bytes[start + 3], 4, 3), 16)
 
     -- rd (read disabled) - bit 7 of byte 3
-    segment[7] = tonumber(bit32.extract('0x'..bytes[start+3],7,1),16)
+    segment[7] = tonumber(bit32.extract('0x'..bytes[start + 3], 7, 1), 16)
 
     -- crc byte 4
-    segment[8] = bytes[start+4]
+    segment[8] = bytes[start + 4]
 
     -- segment index
     segment[9] = index
 
     -- # crc-byte
-    segment[10] = start+4
+    segment[10] = start + 4
   return segment
 end
 
 --- Kaba Group Header
 -- checks if a segment does have a kghCRC
 -- returns boolean false if no kgh has being detected or the kghCRC if a kgh was detected
-function CheckKgh(bytes, segStart, segEnd)
-    if (bytes[8]=='9f' and bytes[9]=='ff' and bytes[13]=='11') then
+local function CheckKgh(bytes, segStart, segEnd)
+    if (bytes[8] == '9f' and bytes[9] == 'ff' and bytes[13] == '11') then
         local i
         local data = {}
         segStart = tonumber(segStart, 10)
         segEnd = tonumber(segEnd, 10)
-        local dataLen = segEnd-segStart-5
+        local dataLen = segEnd - segStart - 5
         --- gather creadentials for verify
-        local WRP = bytes[(segStart+2)]
-        local WRC = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3],4,3),16))
-        local RD = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3],7,1),16))
+        local WRP = bytes[(segStart + 2)]
+        local WRC = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3], 4, 3), 16))
+        local RD = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3], 7, 1), 16))
         local XX = "00"
         cmd = bytes[1]..bytes[2]..bytes[3]..bytes[4]..WRP..WRC..RD..XX
-        for i = (segStart+5), (segStart+5+dataLen-2) do
+        for i = (segStart + 5), (segStart + 5 + dataLen - 2) do
             cmd = cmd..bytes[i]
         end
         local KGH = ("%02x"):format(utils.Crc8Legic(cmd))
-        if (KGH == bytes[segEnd-1]) then
+        if (KGH == bytes[segEnd - 1]) then
             return KGH
         else
             return false
@@ -308,12 +304,12 @@ function CheckKgh(bytes, segStart, segEnd)
 end
 
 -- get only the addresses of segemnt-crc's and the length of bytes
-function getSegmentCrcBytes(bytes)
+local function getSegmentCrcBytes(bytes)
     local start = 23
     local index = 0
     local crcbytes = {}
     repeat
-        seg = getSegmentData(bytes,start,index)
+        seg = getSegmentData(bytes, start, index)
         crcbytes[index] = seg[10]
         start = start + seg[4]
         index = index + 1
@@ -323,7 +319,7 @@ function getSegmentCrcBytes(bytes)
 end
 
 -- print segment-data (hf legic info like)
-function displaySegments(bytes)
+local function displaySegments(bytes)
     --display segment header(s)
     start = 23
     index = '00'
@@ -334,24 +330,24 @@ function displaySegments(bytes)
         wrp = ''
         pld = ''
         Seg = getSegmentData(bytes, start, index)
-        KGH = CheckKgh(bytes, start, (start+tonumber(Seg[4],10)))
+        KGH = CheckKgh(bytes, start, (start + tonumber(Seg[4], 10)))
         printSegment(Seg)
 
         -- wrc
         if (Seg[6] > 0) then
             print("WRC protected area:")
             -- length of wrc = wrc
-            for i=1, Seg[6] do
+            for i = 1, Seg[6] do
                 -- starts at (segment-start + segment-header + segment-crc)-1
-                wrc = wrc..bytes[(start+4+1+i)-1]..' '
+                wrc = wrc..bytes[(start + 4 + 1 + i) - 1]..' '
             end
             print(wrc)
         elseif (Seg[5] > 0) then
             print("Remaining write protected area:")
             -- length of wrp = (wrp-wrc)
-            for i=1, (Seg[5]-Seg[6]) do
+            for i = 1, (Seg[5] - Seg[6]) do
                 -- starts at (segment-start + segment-header + segment-crc + wrc)-1
-                wrp = wrp..bytes[(start+4+1+Seg[6]+i)-1]..' '
+                wrp = wrp..bytes[(start + 4 + 1 + Seg[6] + i) - 1]..' '
             end
             print(wrp)
         end
@@ -359,22 +355,22 @@ function displaySegments(bytes)
         -- payload
         print("Remaining segment payload:")
         --length of payload = segment-len - segment-header - segment-crc - wrp -wrc
-        for i=1, (Seg[4]-4-1-Seg[5]-Seg[6]) do
+        for i = 1, (Seg[4] - 4 - 1 - Seg[5] - Seg[6]) do
             -- starts at (segment-start + segment-header + segment-crc + segment-wrp + segemnt-wrc)-1
-            pld = pld..bytes[(start+4+1+Seg[5]+Seg[6]+i)-1]..' '
+            pld = pld..bytes[(start + 4 + 1 + Seg[5] + Seg[6] + i) - 1]..' '
         end
         print(pld)
         if (KGH) then
-            print("'Kaba Group Header' detected")
+            print(ansicolors.yellow.."'Kaba Group Header' detected"..ansicolors.reset)
         end
-        start = start+Seg[4]
-        index = prepend_zero(tonumber(Seg[9])+1)
+        start = start + Seg[4]
+        index = prepend_zero(tonumber(Seg[9]) + 1)
 
     until (Seg[3] == 1 or tonumber(Seg[9]) == 126 )
 end
 
 -- print Segment values
-function printSegment(SegmentData)
+local function printSegment(SegmentData)
     res = "\nSegment "..SegmentData[9]..": "
     res = res.. "raw header="..SegmentData[0]..", "
     res = res.. "flag="..SegmentData[1].." (valid="..SegmentData[2].." last="..SegmentData[3].."), "
@@ -387,18 +383,19 @@ function printSegment(SegmentData)
 end
 
 -- write clone-data to tag
-function writeToTag(plainBytes)
+local function writeToTag(plainBytes)
     local SegCrcs = {}
     local output
     local readbytes
-    if(utils.confirm("\nplace your empty tag onto the PM3 to restore the data of the input file\nthe CRCs will be calculated as needed\n confirm when ready") == false) then
-    return
-  end
+    if (utils.confirm("\nplace your empty tag onto the PM3 to restore the data of the input file\nthe CRCs will be calculated as needed\n confirm when ready") == false) then
+        return
+    end
 
     readbytes = readlegicdata(0, 4, 0x55)
     -- gather MCD & MSN from new Tag - this must be enterd manually
     print("\nthese are the MCD MSN0 MSN1 MSN2 from the Tag that has being read:")
 
+    -- readbytes is a usbcommandOLD package,  hence 32 bytes offset until data.
     plainBytes[1] = ('%02x'):format(readbytes:byte(33))
     plainBytes[2] = ('%02x'):format(readbytes:byte(34))
     plainBytes[3] = ('%02x'):format(readbytes:byte(35))
@@ -411,19 +408,19 @@ function writeToTag(plainBytes)
     -- calculate crc8 over MCD & MSN
     cmd = MCD..MSN0..MSN1..MSN2
     MCC = ("%02x"):format(utils.Crc8Legic(cmd))
-    print("MCD:"..MCD..", MSN:"..MSN0.." "..MSN1.." "..MSN2..", MCC:"..MCC)
+    print("MCD:"..ansicolors.green..MCD..ansicolors.reset..", MSN:"..ansicolors.green..MSN0.." "..MSN1.." "..MSN2..ansicolors.reset..", MCC:"..MCC)
 
     -- calculate new Segment-CRC for each valid segment
     SegCrcs = getSegmentCrcBytes(plainBytes)
-    for i=0, (#SegCrcs-1) do
-    -- SegCrcs[i]-4 = address of first byte of segmentHeader (low byte segment-length)
-    segLen = tonumber(("%1x"):format(tonumber(bit32.extract("0x"..plainBytes[(SegCrcs[i]-3)],0,3),16))..("%02x"):format(tonumber(plainBytes[SegCrcs[i]-4],16)),16)
-    segStart = (SegCrcs[i]-4)
-    segEnd = (SegCrcs[i]-4+segLen)
-    KGH = CheckKgh(plainBytes,segStart,segEnd)
-    if (KGH) then
-      print("'Kaba Group Header' detected - re-calculate...")
-    end
+    for i = 0, (#SegCrcs - 1) do
+        -- SegCrcs[i]-4 = address of first byte of segmentHeader (low byte segment-length)
+        segLen = tonumber(("%1x"):format(tonumber(bit32.extract("0x"..plainBytes[(SegCrcs[i] - 3)], 0, 3), 16))..("%02x"):format(tonumber(plainBytes[SegCrcs[i] - 4], 16)), 16)
+        segStart = (SegCrcs[i] - 4)
+        segEnd = (SegCrcs[i] - 4 + segLen)
+        KGH = CheckKgh(plainBytes, segStart, segEnd)
+        if (KGH) then
+          print("'Kaba Group Header' detected - re-calculate...")
+        end
         cmd = MCD..MSN0..MSN1..MSN2..plainBytes[SegCrcs[i]-4]..plainBytes[SegCrcs[i]-3]..plainBytes[SegCrcs[i]-2]..plainBytes[SegCrcs[i]-1]
         plainBytes[SegCrcs[i]] = ("%02x"):format(utils.Crc8Legic(cmd))
     end
@@ -439,15 +436,15 @@ function writeToTag(plainBytes)
     bytes = xorBytes(plainBytes, MCC)
 
     -- write data to file
-    if (writeOutputBytes(bytes, "myLegicClone.bin")) then
+    if (writeOutputBytes(bytes, "hf-legic-UID-dump.bin")) then
         -- write pm3-buffer to Tag
-        cmd = ('hf legic restore f myLegicClone')
+        cmd = ('hf legic restore f hf-legic-UID-dump')
         core.console(cmd)
     end
 end
 
 -- main function
-function main(args)
+local function main(args)
     -- some variables
     local i = 0
     local oldcrc, newcrc, infile, outfile
@@ -462,21 +459,20 @@ function main(args)
             ofs = true
             if (file_check(a)) then
                 local answer = utils.confirm('\nthe output-file '..a..' already exists!\nthis will delete the previous content!\ncontinue?')
-                if (answer==false) then return oops('quiting') end
+                if (answer == false) then return oops('quiting') end
             end
         end
         -- input file
         if o == 'i' then
             infile = a
-            if (file_check(infile)==false) then
-                return oops('input file: '..infile..' not found')
-            else
-                bytes = getInputBytes(infile)
-                oldcrc = bytes[5]
-                ifs = true
-                if (bytes == false) then return oops('couldnt get input bytes') end
-            end
-            i = i+1
+            if (file_check(infile) == false) then return oops('input file: '..infile..' not found') end
+
+            bytes = getInputBytes(infile)
+            oldcrc = bytes[5]
+            ifs = true
+            if (bytes == false) then return oops('couldnt get input bytes') end
+
+            i = i + 1
         end
         -- new crc
         if o == 'c' then
@@ -514,13 +510,15 @@ function main(args)
                 -- information
                 res = "\n+-------------------------------------------- Summary -------------------------------------------+"
                 res = res .."\ncreated clone_dump from\n\t"..infile.." crc: "..oldcrc.."\ndump_file:"
-                res = res .."\n\t"..outfile.." crc: "..string.sub(newcrc,-2)
-                res = res .."\nyou may load the new file with: hf legic eload "..outfile
+                res = res .."\n\t"..outfile.." crc: "..string.sub(newcrc, -2)
+                res = res .."\nyou may load the new file with:"
+                res = res ..ansicolors.yellow.."hf legic eload f "..outfile..ansicolors.reset
                 res = res .."\n\nif you don't write to tag immediately ('-w' switch) you will need to recalculate each segmentCRC"
                 res = res .."\nafter writing this dump to a tag!"
-                res = res .."\n\na segmentCRC gets calculated over MCD,MSN0..3,Segment-Header0..3"
+                res = res .."\n\na segmentCRC gets calculated over MCD,MSN0..3, Segment-Header0..3"
                 res = res .."\ne.g. (based on Segment00 of the data from "..infile.."):"
-                res = res .."\nhf legic crc d "..bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[23]..bytes[24]..bytes[25]..bytes[26].." u "..newcrc.." c 8"
+                res = res .."\n"
+                res = res ..ansicolors.yellow.."hf legic crc d "..bytes[1]..bytes[2]..bytes[3]..bytes[4]..bytes[23]..bytes[24]..bytes[25]..bytes[26].." u "..newcrc.." c 8"..ansicolors.reset
                 -- this can not be calculated without knowing the new MCD, MSN0..2
                 print(res)
             end
@@ -535,7 +533,7 @@ function main(args)
     end
     -- write to tag
     if (ws and ( #bytes == 1024 or #bytes == 256)) then
-            writeToTag(bytes)
+        writeToTag(bytes)
     end
 end
 
