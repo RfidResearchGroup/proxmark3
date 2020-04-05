@@ -12,9 +12,9 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = '0xdrrb'
-version = 'v0.1.0'
+version = 'v0.1.1'
 desc = [[
-This is a script to dump and decrypt the data of a specific type of Mifare laundromat token.
+This is a script that tries to dump and decrypt the data of a specific type of Mifare laundromat token.  OBS! Tag must be on the antenna.
 ]]
 example = [[
     script run luxeodump
@@ -22,7 +22,9 @@ example = [[
 usage = [[
 script run luxeodump
 ]]
-
+arguments = [[
+    -h              This help
+]]
 local PM3_SUCCESS = 0
 
 -- Some shortcuts
@@ -48,7 +50,22 @@ local function oops(err)
     core.clearCommandBuffer()
     return nil, err
 end
-
+---
+-- Usage help
+local function help()
+    print(copyright)
+    print(author)
+    print(version)
+    print(desc)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
+    print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
+end
+---
+--
 local function setdevicedebug( status )
     local c = 'hw dbg '
     if status then
@@ -72,8 +89,8 @@ local function xteaCrypt(num_rounds, v, key)
 		-- v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + key[(sum>>11) & 3]);
 		v1 = band(bxor(bxor(lsh(v0,4), rsh(v0,5)) + v0, sum + key[band(rsh(sum,11),3)]) + v1, 0xFFFFFFFF)
 	end
-	v[0]=v0
-	v[1]=v1
+	v[0] = v0
+	v[1] = v1
 end
 
 local function xteaDecrypt(num_rounds, v, key)
@@ -89,8 +106,8 @@ local function xteaDecrypt(num_rounds, v, key)
 		-- v0 -= (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + key[sum & 3]);
 		v0 = band(v0 - bxor(bxor(lsh(v1,4), rsh(v1,5)) + v1, sum + key[band(sum,3)]), 0xFFFFFFFF)
 	end
-	v[0]=v0
-	v[1]=v1
+	v[0] = v0
+	v[1] = v1
 end
 
 local function createxteakey(mfuid)
@@ -150,7 +167,7 @@ local function readtag(mfkey,xteakey)
 
 	-- Read 4 sectors and build table
 	for sect = 8, 11 do
-		for blockn = sect*4, (sect*4)+2 do
+		for blockn = sect * 4, (sect * 4) + 2 do
 			local blockdata = readblock(blockn, mfkey)
 			if not blockdata then return oops('[!] failed reading block') end
 			table.insert(tagdata, blockdata)
@@ -160,17 +177,17 @@ local function readtag(mfkey,xteakey)
 	-- Decrypt data and build clear table
 	for key,value in ipairs(tagdata) do
 		local clearblockdata
-		v[0]=utils.SwapEndianness(value:sub(1,8),32)
-		v[1]=utils.SwapEndianness(value:sub(9,16),32)
+		v[0] = utils.SwapEndianness(value:sub(1, 8), 32)
+		v[1] = utils.SwapEndianness(value:sub(9, 16), 32)
 		xteaDecrypt(16, v, xteakey)
-		vv[0]=utils.SwapEndianness(value:sub(17,24),32)
-		vv[1]=utils.SwapEndianness(value:sub(25,32),32)
+		vv[0] = utils.SwapEndianness(value:sub(17, 24), 32)
+		vv[1] = utils.SwapEndianness(value:sub(25, 32), 32)
 		xteaDecrypt(16, vv, xteakey)
 		clearblockdata=string.format("%08X%08X%08X%08X",
-			utils.SwapEndianness(string.format("%08X", v[0]),32),
-			utils.SwapEndianness(string.format("%08X", v[1]),32),
-			utils.SwapEndianness(string.format("%08X", vv[0]),32),
-			utils.SwapEndianness(string.format("%08X", vv[1]),32))
+			utils.SwapEndianness(string.format("%08X", v[0]), 32),
+			utils.SwapEndianness(string.format("%08X", v[1]), 32),
+			utils.SwapEndianness(string.format("%08X", vv[0]), 32),
+			utils.SwapEndianness(string.format("%08X", vv[1]), 32))
 		table.insert(cleardata, clearblockdata)
 	end
 
@@ -180,6 +197,12 @@ end
 
 
 local function main(args)
+
+    -- Arguments for the script
+    for o, a in getopt.getopt(args, 'h') do
+        if o == 'h' then return help() end
+    end
+
 	local xteakey = {}
 	-- local v = {}
 	local edata = {}
@@ -207,7 +230,7 @@ local function main(args)
 	print(acblue.."UID: "..tag.uid..acoff)
 	print(acblue..string.format("XTEA key: %08X %08X %08X %08X", xteakey[0], xteakey[1], xteakey[2], xteakey[3])..acoff)
 
-	edata, cdata = readtag("415A54454B4D",xteakey)
+	edata, cdata = readtag("415A54454B4D", xteakey)
 
 	if edata == nil or cdata == nil then
 		print("ERROR Reading tag!")

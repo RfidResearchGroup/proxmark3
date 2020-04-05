@@ -1,8 +1,9 @@
 local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Neuromancer"
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This script tries to decode Mifare Classic Access bytes
 ]]
@@ -10,9 +11,9 @@ example = [[
     1. script run mifare_access -a 7F0F0869
 ]]
 usage = [[
-script run mifare_access -h -a <access bytes>
-
-Arguments:
+script run mifare_access [-h] [-a <access bytes>]
+]]
+arguments = [[
     -h                   : this help
     -a <access bytes>    : 4 bytes ACCESS CONDITIONS
 ]]
@@ -50,9 +51,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 
 local access_condition_sector_trailer = {}

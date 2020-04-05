@@ -3,10 +3,11 @@ local getopt = require('getopt')
 local bin = require('bin')
 local lib14a = require('read14a')
 local utils = require('utils')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This script will generate 'hf mf wrbl' commands for each block to format a Mifare card.
 
@@ -29,8 +30,8 @@ example = [[
 ]]
 usage = [[
 script run formatMifare -k <key> -n <key> -a <access> -x
-
-Arguments:
+]]
+arguments = [[
     -h             - this help
     -k <key>       - the current six byte key with write access
     -n <key>       - the new key that will be written to the card
@@ -71,9 +72,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message

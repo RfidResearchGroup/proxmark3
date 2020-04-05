@@ -1,10 +1,11 @@
 local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils = require('utils')
+local ansicolors = require('ansicolors')
 
 copyright = 'Copyright (c) 2017 IceSQL AB. All rights reserved.'
 author = "Christian Herrmann"
-version = 'v1.0.4'
+version = 'v1.0.5'
 desc = [[
 This script writes a empty template for 3D printing system onto a empty NTAG213 or MAGIC NTAG21*
 
@@ -21,9 +22,9 @@ example =[[
      script run ntag_3d -u 11223344556677 -c 46 -m 50 -p 5448 -s 4555  -l 200 -1
 ]]
 usage = [[
-script run ntag_3d -h -t -u <uid> -c <color> -m <material> -p <region> -s <region> -l <length>
-
-Arguments:
+script run ntag_3d [-h] [-t] [-u <uid>] [-c <color>] [-m <material>] [-p <region>] [-s <region>] [-l <length>]
+]]
+arguments = [[
     -h             : this help
     -t             : selftest
     -u <UID>       : UID
@@ -168,9 +169,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message
