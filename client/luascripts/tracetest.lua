@@ -3,11 +3,12 @@ local getopt = require('getopt')
 local bin = require('bin')
 local utils = require('utils')
 local dumplib = require('html_dumplib')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
-desc =[[
+version = 'v1.0.2'
+desc = [[
 This script will load several traces files in ../traces/ folder and do
 "data load"
 "lf search 1 u"
@@ -16,13 +17,13 @@ The following tracefiles will be loaded:
    em*.pm3
    m*.pm3
 ]]
-example =[[
-    script run tracetest
+example = [[
+    1. script run tracetest
 ]]
 usage = [[
-script run tracetest -h
-
-Arguments:
+script run tracetest [-h]
+]]
+arguments = [[
     -h             : this help
 ]]
 local DEBUG = true -- the debug flag
@@ -54,9 +55,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message
