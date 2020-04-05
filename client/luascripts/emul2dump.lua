@@ -1,6 +1,7 @@
 local getopt = require('getopt')
 local bin = require('bin')
 local dumplib = require('html_dumplib')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
@@ -15,8 +16,9 @@ example =[[
 ]]
 usage = [[
 script run emul2dump [-i <file>] [-o <file>]
+]]
 
-Arguments:
+arguments = [[
     -h              This help
     -i <filename>   Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
     -o <filename>   Specifies the output file. If omitted, <currdate>.bin is used.
@@ -43,9 +45,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message
