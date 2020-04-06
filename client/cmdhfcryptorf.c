@@ -372,7 +372,7 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
     size_t datalen = 1024;
     int fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
-    bool errors = false;
+    bool errors = false, has_filename = false;
     uint8_t cmdp = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
@@ -380,11 +380,12 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
             case 'h' :
                 return usage_hf_cryptorf_eload();
             case 'f' :
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (!fileNameLen)
+               if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
                     errors = true;
-                if (fileNameLen > FILE_PATH_SIZE - 5)
-                    fileNameLen = FILE_PATH_SIZE - 5;
+                    break;
+                }
+                has_filename = true;
                 cmdp += 2;
                 break;
             default :
@@ -393,6 +394,9 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
                 break;
         }
     }
+    if (has_filename == false)
+        errors = true;
+
     //Validations
     if (errors || strlen(Cmd) == 0) return usage_hf_cryptorf_eload();
 
@@ -430,11 +434,11 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;
     }
+*/  
     free(data);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Done");
-*/  
-  return PM3_SUCCESS;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFCryptoRFESave(const char *Cmd) {
