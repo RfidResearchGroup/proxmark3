@@ -94,6 +94,10 @@ int JsonSaveStr(json_t *root, const char *path, const char *value) {
     return JsonSaveJsonObject(root, path, json_string(value));
 };
 
+int JsonSaveBoolean(json_t *root, const char *path, bool value) {
+    return JsonSaveJsonObject(root, path, json_boolean(value));
+}
+
 int JsonSaveBufAsHexCompact(json_t *elm, const char *path, uint8_t *data, size_t datalen) {
     char *msg = sprint_hex_inrow(data, datalen);
     if (msg && strlen(msg) && msg[strlen(msg) - 1] == ' ')

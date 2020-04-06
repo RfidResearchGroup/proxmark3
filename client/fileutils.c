@@ -38,6 +38,7 @@
 // this define is needed for scandir/alphasort to work
 #define _GNU_SOURCE
 #include "fileutils.h"
+#include "settings.h"
 
 #include <dirent.h>
 #include <ctype.h>
@@ -424,6 +425,9 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
                     JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], 16);
                 }
             }
+            break;
+        case jsfSettings: 
+            settings_save_callback (root);
             break;
         default:
             break;
@@ -863,7 +867,9 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         }
         *datalen = sptr;
     }
-
+    if (!strcmp(ctype,"settings")) {
+        settings_load_callback (root);
+    }
     PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
     json_decref(root);

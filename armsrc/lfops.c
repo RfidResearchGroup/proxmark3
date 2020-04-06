@@ -2040,7 +2040,7 @@ void T55xx_ChkPwds(uint8_t flags) {
     if (isok != sizeof(counter))
         goto OUT;
 
-    pwdCount = counter[1] << 8 | counter[0];
+    pwdCount = (uint16_t)(counter[1] << 8 | counter[0]);
 
     if (pwdCount == 0 || pwdCount == 0xFFFF)
         goto OUT;

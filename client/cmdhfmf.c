@@ -3712,7 +3712,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "Copying to emulator memory");
+    PrintAndLogEx(INFO, "Uploading to emulator memory");
 
     // fast push mode
     conn.block_after_ACK = true;

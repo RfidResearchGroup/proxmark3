@@ -2808,6 +2808,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
         if (status == -1) {
             DropField();
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
+            free(records);
             return PM3_ESOFT;
         }
     }
