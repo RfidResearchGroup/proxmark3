@@ -360,6 +360,21 @@ static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
     return PM3_ESOFT;
 }
 
+static int get_desfire_filesettings( uint8_t file_id, uint8_t *dest, uint8_t *destlen) {
+    uint8_t c[] = {MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, file_id, 0x00};  // 0xF5
+    PacketResponseNG resp;
+    int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
+    if (ret != PM3_SUCCESS) return ret;
+
+    if (resp.data.asBytes[resp.length - 4] == 0x91 && resp.data.asBytes[resp.length - 3] == 0x00) {
+        *destlen = resp.length - 5;
+        memcpy(dest, resp.data.asBytes + 1, *destlen);
+        return PM3_SUCCESS;
+    }
+
+    return PM3_ESOFT;
+}
+
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
@@ -433,13 +448,13 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 0 && minor == 6)
         PrintAndLogEx(INFO, "\t0.6 - DESFire MF3ICD40, Add ISO/IEC 7816 command set compatibility");
     if (major == 1 && minor == 3)
-        PrintAndLogEx(INFO, "\t1.3 - DESFire Ev1, Support extended APDU commands");
+        PrintAndLogEx(INFO, "\t1.3 - DESFire Ev1 MF3ICD21/41/81, Support extended APDU commands, EAL4+");
     if (major == 1 && minor == 4)
-        PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1, N/A (report to iceman!)");
+        PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1 MF3ICD21/41/81, EAL4+, N/A (report to iceman!)");
     if (major == 2 && minor == 0)
-        PrintAndLogEx(INFO, "\t2.0 - DESFire Ev2, Originality check, proximity check");
+        PrintAndLogEx(INFO, "\t2.0 - DESFire Ev2, Originality check, proximity check, EAL5");
 //    if (major == 3 && minor == 0)
-//        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass");
+//        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL5");
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
@@ -685,13 +700,31 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
         getKeySettings(aid);
 
+
+        if (get_desfire_select_application(aid) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
+            DropField();
+            return PM3_ESOFT;
+        }
+
+
         // Get File IDs
         if (get_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
             for (int j = 0; j < file_ids_len; ++j) {
                 PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
+                
+                uint8_t filesettings[20] = {0};
+                uint8_t fileset_len = 0;
+                int res = get_desfire_filesettings(j, filesettings, &fileset_len);
+                if (res == PM3_SUCCESS) {
+                    PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len) );
+                }
             }
         }
+        
+        
+        
 
         /*
                 // Get ISO File IDs
