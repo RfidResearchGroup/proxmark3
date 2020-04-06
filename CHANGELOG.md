@@ -3,8 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Improved `hf 14a info` - card detection handling (@bkerler)
  - Updated helptext layout in all luascripts (@iceman1001)
- - Change `hf mfdes info` - output and logging (@brkeler)
+ - Change `hf mfdes info` - output and logging (@bkerler)
  - Updated texts in legic commands (@ikarus23)
  - Fix timing bug inside 40x5 (@mwalker33)
  - Refactored all Hitag2 attacks (@doegox)
