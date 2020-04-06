@@ -1031,12 +1031,11 @@ static int CmdLegicRestore(const char *Cmd) {
                 break;
             }
             case 'f': {
-                int len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (!len)
-                    errors = true;
-                else
-                    have_filename = true;
-
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                    break;
+                }
+                have_filename = true;
                 cmdp += 2;
                 break;
             }
@@ -1147,12 +1146,11 @@ static int CmdLegicELoad(const char *Cmd) {
                 return usage_legic_eload();
             }
             case 'f' : {
-                int len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (!len)
-                    errors = true;
-                else
-                    have_filename = true;
-
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                    break;
+                }
+                have_filename = true;
                 cmdp += 2;
                 break;
             }
