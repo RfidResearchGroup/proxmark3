@@ -50,8 +50,7 @@ void memxor(uint8_t *dest, uint8_t *src, size_t len) {
 
 int strlen(const char *str) {
     const char *p;
-    for (p = str; *p != '\0'; ++p) {
-    }
+    for (p = str; *p != '\0'; ++p) {};
     return p - str;
 }
 

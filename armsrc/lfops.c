@@ -446,7 +446,7 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
             } else {
                 // if field already on leave alone (affects timing otherwise)
                 if (off) {
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
                     LED_D_ON();
                     off = false;
                 }
@@ -470,10 +470,10 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint32_t period_0, uint
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
     }
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // now do the read
-    DoAcquisition_config(false, 0);
+    DoAcquisition_config(true, 0);
 
     // Turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1149,7 +1149,7 @@ static void pskSimBit(uint8_t waveLen, int *n, uint8_t clk, uint8_t *curPhase, b
 }
 
 // args clock, carrier, invert,
-void CmdPSKsimTag(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
+void CmdPSKsimTAG(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     set_tracing(false);
 
@@ -1173,6 +1173,55 @@ void CmdPSKsimTag(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size, u
     reply_ng(CMD_LF_PSK_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
 
+// compose nrz waveform for one bit(NRZ)
+static void nrzSimBit(uint8_t c, int *n, uint8_t clock) {
+    uint8_t *dest = BigBuf_get_addr();
+//    uint8_t halfClk = clock / 2;
+    // c = current bit 1 or 0
+    memset(dest + (*n), c, clock);
+    *n += clock;
+}
+
+// args clock,
+void CmdNRZsimTAG(uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size, uint8_t *bits, bool ledcontrol) {
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    set_tracing(false);
+
+    int n = 0, i = 0;
+
+    // NRZ
+
+    leadingZeroAskSimBits(&n, clk);
+
+    for (i = 0; i < size; i++) {
+        nrzSimBit(bits[i] ^ invert, &n, clk);
+    }
+
+    if (bits[0] == bits[size - 1]) {
+        for (i = 0; i < size; i++) {
+            nrzSimBit(bits[i] ^ invert ^ 1, &n, clk);
+        }
+    }
+
+    if (separator == 1)
+        Dbprintf("sorry but separator option not yet available");
+
+    WDT_HIT();
+
+    Dbprintf("Simulating with clk: %d, invert: %d, separator: %d, n: %d"
+             , clk
+             , invert
+             , separator
+             , n
+            );
+
+    if (ledcontrol) LED_A_ON();
+    SimulateTagLowFrequency(n, 0, ledcontrol);
+    if (ledcontrol) LED_A_OFF();
+    reply_ng(CMD_LF_NRZ_SIMULATE, PM3_EOPABORTED, NULL, 0);
+}
+
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
     uint8_t *dest = BigBuf_get_addr();
@@ -1190,7 +1239,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition_default(-1, true);
+        DoAcquisition_default(-1, false);
         // FSK demodulator
         size = 50 * 128 * 2; //big enough to catch 2 sequences of largest format
         int idx = HIDdemodFSK(dest, &size, &hi2, &hi, &lo, &dummyIdx);
@@ -1242,7 +1291,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
                     cardnum = (lo >> 1) & 0x7FFFF;
                     fac = ((hi & 0xF) << 12) | (lo >> 20);
                 }
-                Dbprintf("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
+                Dbprintf("TAG ID: " _GREEN_("%x%08x (%d)") "- Format Len: " _GREEN_("%d") "bit - FC: " _GREEN_("%d") "- Card: "_GREEN_("%d"),
                          hi,
                          lo,
                          (lo >> 1) & 0xFFFF,
@@ -1269,10 +1318,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
 void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
 
     uint8_t *dest = BigBuf_get_addr();
-
-    //big enough to catch 2 sequences of largest format but don't exeed whats available in bigbuff.
-    size_t size = MIN(12800, BigBuf_max_traceLen()); //50 * 128 * 2;
-
+    size_t size;
     int dummyIdx = 0;
 
     BigBuf_Clear_keep_EM();
@@ -1284,13 +1330,12 @@ void CmdAWIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol)
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition_default(-1, true);
+        DoAcquisition_default(-1, false);
         // FSK demodulator
 
-        size  = BigBuf_max_traceLen();
-        //askdemod and manchester decode
-        if (size > 12800) size = 12800; //big enough to catch 2 sequences of largest format
+        size = MIN(12800, BigBuf_max_traceLen());
 
+        //askdemod and manchester decode
         int idx = detectAWID(dest, &size, &dummyIdx);
 
         if (idx <= 0 || size != 96) continue;
@@ -1376,11 +1421,11 @@ void CmdEM410xdemod(int findone, uint32_t *high, uint64_t *low, int ledcontrol) 
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition_default(-1, true);
+        DoAcquisition_default(-1, false);
 
-        size  = BigBuf_max_traceLen();
+        size = MIN(16385, BigBuf_max_traceLen());
+
         //askdemod and manchester decode
-        if (size > 16385) size = 16385; //big enough to catch 2 sequences of largest format
         int errCnt = askdemod(dest, &size, &clk, &invert, maxErr, 0, 1);
         WDT_HIT();
 
@@ -1441,13 +1486,11 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
         WDT_HIT();
         if (ledcontrol) LED_A_ON();
 
-        DoAcquisition_default(-1, true);
+        DoAcquisition_default(-1, false);
+
+        size = MIN(12000, BigBuf_max_traceLen());
 
         //fskdemod and get start index
-        size  = BigBuf_max_traceLen();
-        //askdemod and manchester decode
-        if (size > 12000) size = 12000; //big enough to catch 2 sequences of largest format
-
         int idx = detectIOProx(dest, &size, &dummyIdx);
         if (idx < 0) continue;
         //valid tag found
@@ -1524,7 +1567,7 @@ void CmdIOdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) {
  */
 
 void TurnReadLFOn(uint32_t delay) {
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // measure antenna strength.
     //int adcval = ((MAX_ADC_LF_VOLTAGE * AvgAdc(ADC_CHAN_LF)) >> 10);
@@ -1729,7 +1772,7 @@ void T55xxResetRead(uint8_t flags) {
     TurnReadLFOn(T55xx_Timing.m[downlink_mode].read_gap);
 
     // Acquisition
-    DoPartialAcquisition(0, true, BigBuf_max_traceLen(), 0);
+    DoPartialAcquisition(0, false, BigBuf_max_traceLen(), 0);
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1826,7 +1869,7 @@ void T55xxWriteBlock(uint8_t *data) {
         // response should be (for t55x7) a 0 bit then (ST if on)
         // block data written in on repeat until reset.
 
-        //DoPartialAcquisition(20, true, 12000);
+        //DoPartialAcquisition(20, false, 12000);
     }
     // turn field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1887,7 +1930,7 @@ bool brute_mem = (flags & 0x0100) >> 8;
 
     // Acquisition
     // Now do the acquisition
-    DoPartialAcquisition(0, true, samples, 0);
+    DoPartialAcquisition(0, false, samples, 0);
 
     // Turn the field off
     if (!brute_mem) {
@@ -1947,7 +1990,7 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
 
     // Acquisition
     // Now do the acquisition
-    DoPartialAcquisition(0, true, samples, 0);
+    DoPartialAcquisition(0, false, samples, 0);
 
     // Turn the field off
     if (!brute_mem) {
@@ -2356,13 +2399,13 @@ void SendForward(uint8_t fwd_bit_count) {
     TurnReadLF_off(EM_START_GAP);
     TurnReadLFOn(18 * 8);
 
-    // now start writting with bitbanging the antenna.
+    // now start writting with bitbanging the antenna. (each bit should be 32*8 total length)
     while (fwd_bit_sz-- > 0) { //prepare next bit modulation
         if (((*fwd_write_ptr++) & 1) == 1) {
             WaitUS(32 * 8);
         } else {
             TurnReadLF_off(23 * 8);
-            TurnReadLFOn(18 * 8);
+            TurnReadLFOn(32-23 * 8);
         }
     }
 }
@@ -2404,7 +2447,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd) {
 
     WaitUS(400);
 
-    DoPartialAcquisition(20, true, 6000, 1000);
+    DoPartialAcquisition(20, false, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_EM4X_READWORD, PM3_SUCCESS, NULL, 0);
@@ -2437,7 +2480,7 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd) {
     //Wait 20ms for write to complete?
     WaitMS(7);
 
-    DoPartialAcquisition(20, true, 6000, 1000);
+    DoPartialAcquisition(20, false, 6000, 1000);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_EM4X_WRITEWORD, PM3_SUCCESS, NULL, 0);
@@ -2482,7 +2525,7 @@ void Cotag(uint32_t arg0) {
 # define OFF(x)  { FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS((x)); }
 #endif
 #ifndef ON
-# define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
+# define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
 #endif
     uint8_t rawsignal = arg0 & 0xF;
 
@@ -2507,7 +2550,7 @@ void Cotag(uint32_t arg0) {
             doCotagAcquisitionManchester();
             break;
         case 2:
-            DoAcquisition_config(true, 0);
+            DoAcquisition_config(false, 0);
             break;
     }
 

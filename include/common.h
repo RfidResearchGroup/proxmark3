@@ -64,8 +64,8 @@ extern int DBGLEVEL;
 # define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
 #endif
 
-#ifndef ROTL
-# define ROTL(x,n) (((uintmax_t)(x) << (n)) | ((uintmax_t)(x) >> ((sizeof(x) * 8) - (n))))
+#ifndef PM3_ROTL
+# define PM3_ROTL(x,n) (((uintmax_t)(x) << (n)) | ((uintmax_t)(x) >> ((sizeof(x) * 8) - (n))))
 #endif
 
 // endian change for 64bit
@@ -140,5 +140,11 @@ extern int DBGLEVEL;
 #ifndef DEC2BCD
 # define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
 #endif
+
+// bit stream operations
+#define TEST_BIT(data, i) (*(data + (i / 8)) >> (7 - (i % 8))) & 1
+#define SET_BIT(data, i)   *(data + (i / 8)) |= (1 << (7 - (i % 8)))
+#define CLEAR_BIT(data, i) *(data + (i / 8)) &= ~(1 << (7 - (i % 8)))
+#define FLIP_BIT(data, i)  *(data + (i / 8)) ^= (1 << (7 - (i % 8)))
 
 #endif

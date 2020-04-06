@@ -73,4 +73,6 @@ uint32_t CRC4Legic(uint8_t *buff, size_t size);
 // Calculate CRC-8/Legic checksum
 uint32_t CRC8Legic(uint8_t *buff, size_t size);
 
+// Calculate CRC-8/Cardx checksum
+uint32_t CRC8Cardx(uint8_t *buff, size_t size);
 #endif /* __CRC_H */

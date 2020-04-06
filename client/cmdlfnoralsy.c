@@ -133,7 +133,7 @@ static int CmdNoralsyDemod(const char *Cmd) {
 }
 
 static int CmdNoralsyRead(const char *Cmd) {
-    lf_read(true, 8000);
+    lf_read(false, 8000);
     return CmdNoralsyDemod(Cmd);
 }
 
@@ -169,7 +169,10 @@ static int CmdNoralsyClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Noralsy to T55x7 with CardId: %u", id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf noralsy read`") "to verify");
+    return res;
 }
 
 static int CmdNoralsySim(const char *Cmd) {

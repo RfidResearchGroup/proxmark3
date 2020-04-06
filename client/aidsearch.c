@@ -8,13 +8,10 @@
 // Proxmark3 RDV40 AID list library
 //-----------------------------------------------------------------------------
 #include "aidsearch.h"
-
 #include <ctype.h>
 #include <string.h>
-
 #include "fileutils.h"
 #include "pm3_cmd.h"
-
 
 int openAIDFile(json_t **root, bool verbose) {
     json_error_t error;
@@ -39,7 +36,7 @@ int openAIDFile(json_t **root, bool verbose) {
         goto out;
     }
 
-    if (verbose) PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %d records.", path, json_array_size(*root));
+    if (verbose) PrintAndLogEx(SUCCESS, "Loaded file (%s) OK. %zu records.", path, json_array_size(*root));
 out:
     free(path);
     return retval;

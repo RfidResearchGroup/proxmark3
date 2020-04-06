@@ -488,14 +488,14 @@ static CborError value_to_pretty(CborStreamFunction stream, void *out, CborValue
                 case CborFloatType:
                     cbor_value_get_float(it, &f);
                     val = f;
-                    suffix = flags & CborPrettyNumericEncodingIndicators ? "_2" : "f";
+                    suffix = (flags & CborPrettyNumericEncodingIndicators) ? "_2" : "f";
                 } else if (false) {
                     uint16_t f16;
                 case CborHalfFloatType:
 #ifndef CBOR_NO_HALF_FLOAT_TYPE
                     cbor_value_get_half_float(it, &f16);
                     val = decode_half(f16);
-                    suffix = flags & CborPrettyNumericEncodingIndicators ? "_1" : "f16";
+                    suffix = (flags & CborPrettyNumericEncodingIndicators) ? "_1" : "f16";
 #else
                     (void)f16;
                     err = CborErrorUnsupportedType;

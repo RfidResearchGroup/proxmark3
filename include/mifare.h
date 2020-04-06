@@ -70,6 +70,16 @@ typedef struct {
     uint32_t ProxToAirDuration;
     uint8_t  par; // enough for precalculated parity of 8 Byte responses
 } PACKED tag_response_info_t;
+
+// DESFIRE_RAW flag enums
+typedef enum DESFIRE_COMMAND {
+    NONE         = 0x00,
+    INIT         = 0x01,
+    DISCONNECT   = 0x02,
+    CLEARTRACE   = 0x04,
+    BAR          = 0x10,
+} desfire_command_t;
+
 //-----------------------------------------------------------------------------
 // ISO 14443B
 //-----------------------------------------------------------------------------
@@ -219,6 +229,20 @@ typedef struct {
     uint8_t number_of_option[1];
     uint8_t option_version_list[4];
 } PACKED felica_request_spec_response_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    uint8_t m2c[8];
+    uint8_t m3c[8];
+} PACKED felica_auth1_response_t;
+
+typedef struct {
+    uint8_t code[1];
+    uint8_t IDtc[8];
+    uint8_t IDi[8];
+    uint8_t PMi[8];
+} PACKED felica_auth2_response_t;
+
 
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),

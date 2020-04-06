@@ -552,8 +552,6 @@ RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
     return false;    // not finished yet, need more data
 }
 
-
-
 //=============================================================================
 // Finally, a `sniffer' for ISO 14443 Type A
 // Both sides of communication!
@@ -716,6 +714,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             data = dmaBuf;
         }
     } // end main loop
+
+    FpgaDisableTracing();
 
     if (DBGLEVEL >= DBG_ERROR) {
         Dbprintf("maxDataLen=%d, Uart.state=%x, Uart.len=%d", maxDataLen, Uart.state, Uart.len);
@@ -1669,9 +1669,6 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
         LastTimeProxToAirStart = ThisTransferTime;
     }
 
-    // clear TXRDY
-    AT91C_BASE_SSC->SSC_THR = SEC_Y;
-
     uint16_t c = 0;
     while (c < len) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
@@ -1790,7 +1787,13 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
         ADC_MODE_PRESCALE(63) |
         ADC_MODE_STARTUP_TIME(1) |
         ADC_MODE_SAMPLE_HOLD_TIME(15);
+
+#if defined RDV4
+    AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF_RDV40);
+#else
     AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF);
+#endif
+
     // start ADC
     AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
@@ -1814,12 +1817,19 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
         ++check;
 
         // test if the field exists
-        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
+#if defined RDV4
+        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF_RDV40)) {
+
             analogCnt++;
-            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
+
+            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF_RDV40];
+
             AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+
             if (analogCnt >= 32) {
+
                 if ((MAX_ADC_HF_VOLTAGE_RDV40 * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
+
                     if (timer == 0) {
                         timer = GetTickCount();
                     } else {
@@ -1835,6 +1845,35 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
                 analogAVG = 0;
             }
         }
+#else
+        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
+
+            analogCnt++;
+
+            analogAVG += AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF];
+
+            AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+
+            if (analogCnt >= 32) {
+
+                if ((MAX_ADC_HF_VOLTAGE * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
+
+                    if (timer == 0) {
+                        timer = GetTickCount();
+                    } else {
+                        // 50ms no field --> card to idle state
+                        if (GetTickCountDelta(timer) > 50) {
+                            return 2;
+                        }
+                    }
+                } else {
+                    timer = 0;
+                }
+                analogCnt = 0;
+                analogAVG = 0;
+            }
+        }
+#endif
 
         // receive and test the miller decoding
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
@@ -2649,6 +2688,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
         if (!(param & ISO14A_NO_SELECT)) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
             arg0 = iso14443a_select_card(NULL, card, NULL, true, 0, param & ISO14A_NO_RATS);
+            FpgaDisableTracing();
+
             reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
             if (arg0 == 0)
                 goto OUT;
@@ -2661,6 +2702,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
     if ((param & ISO14A_APDU)) {
         uint8_t res;
         arg0 = iso14_apdu(cmd, len, (param & ISO14A_SEND_CHAINING), buf, &res);
+        FpgaDisableTracing();
+
         reply_old(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
     }
 
@@ -2705,6 +2748,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
             }
         }
         arg0 = ReaderReceive(buf, par);
+        FpgaDisableTracing();
+
         reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
     }
 
@@ -3016,6 +3061,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 
     if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Number of sent auth requests: %u", i);
 
+    FpgaDisableTracing();
+
     struct {
         int32_t isOK;
         uint8_t cuid[4];
@@ -3273,6 +3320,7 @@ void DetectNACKbug(void) {
 
     // num_nacks = number of nacks recieved. should be only 1. if not its a clone card which always sends NACK (parity == 0) ?
     // i  =  number of authentications sent.  Not always 256, since we are trying to sync but close to it.
+    FpgaDisableTracing();
 
     uint8_t *data = BigBuf_malloc(4);
     data[0] = isOK;

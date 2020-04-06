@@ -28,19 +28,17 @@ sudo apt-get install --no-install-recommends git ca-certificates build-essential
 libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev
 ```
 
-If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.
+If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qtbase5-dev`.
 
 If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_ you may have to install `libcanberra-gtk-module`.
 
 ## On ArchLinux
 
 ```sh
-sudo pacman -Sy base-devel readline arm-none-eabi-gcc arm-none-eabi-newlib git --needed
+sudo pacman -Sy git base-devel readline arm-none-eabi-gcc arm-none-eabi-newlib qt5-base --needed
 ```
-If you want graphical output (such as in `hw tune`):
-```sh
-sudo pacman -Su qt5-base
-```
+
+If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-base`.
 
 ## On Fedora
 
@@ -48,7 +46,15 @@ sudo pacman -Su qt5-base
 sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel qt5-qtbase-devel libatomic
 ```
 
-If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qt5-qtbase-devel`.
+If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-qtbase-devel`.
+
+## On openSUSE
+
+```sh
+sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel libqt5-qtbase-devel
+```
+
+If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `libqt5-qtbase-devel`.
 
 # Clone the RRG/Iceman repository
 

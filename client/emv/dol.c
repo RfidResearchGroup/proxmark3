@@ -32,14 +32,14 @@ static size_t dol_calculate_len(const struct tlv *tlv, size_t data_len) {
     size_t count = 0;
 
     while (left) {
-        struct tlv tlv;
-        if (!tlv_parse_tl(&buf, &left, &tlv))
+        struct tlv cur_tlv;
+        if (!tlv_parse_tl(&buf, &left, &cur_tlv))
             return 0;
 
-        count += tlv.len;
+        count += cur_tlv.len;
 
         /* Last tag can be of variable length */
-        if (tlv.len == 0 && left == 0)
+        if (cur_tlv.len == 0 && left == 0)
             count = data_len;
     }
 

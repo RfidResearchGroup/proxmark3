@@ -211,6 +211,9 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
     for (; i < minStrLen; i++, tmp += 1)
         sprintf(tmp, " ");
 
+    // remove last space
+    --tmp;
+    *tmp = '\0';
     return;
 }
 
@@ -346,7 +349,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
     memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
     size_t max_len = (len > 1010) ? 1010 : len;
 
-    snprintf(tmp, UTIL_BUFFER_SIZE_SPRINT, "%s| ", sprint_hex(data, max_len));
+    snprintf(tmp, UTIL_BUFFER_SIZE_SPRINT, "%s | ", sprint_hex(data, max_len));
 
     size_t i = 0;
     size_t pos = (max_len * 3) + 2;
@@ -392,6 +395,46 @@ void print_blocks(uint32_t *data, size_t len) {
         for (uint8_t i = 0; i < len; i++)
             PrintAndLogEx(SUCCESS, " %02d | %08X", i, data[i]);
     }
+}
+
+int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen) {
+    char buf[4] = {0};
+    int indx = 0;
+    int bytesValueLen = 0;
+    while (hexValue[indx]) {
+        if (hexValue[indx] == '\t' || hexValue[indx] == ' ') {
+            indx++;
+            continue;
+        }
+
+        if (isxdigit(hexValue[indx])) {
+            buf[strlen(buf)] = hexValue[indx];
+        } else {
+            // if we have symbols other than spaces and hex
+            return -1;
+        }
+
+        if (maxBytesValueLen && bytesValueLen >= maxBytesValueLen) {
+            // if we dont have space in buffer and have symbols to translate
+            return -2;
+        }
+
+        if (strlen(buf) >= 2) {
+            uint32_t temp = 0;
+            sscanf(buf, "%x", &temp);
+            bytesValue[bytesValueLen] = (uint8_t)(temp & 0xff);
+            memset(buf, 0, sizeof(buf));
+            bytesValueLen++;
+        }
+
+        indx++;
+    }
+
+    if (strlen(buf) > 0)
+        //error when not completed hex bytes
+        return -3;
+
+    return bytesValueLen;
 }
 
 // takes a number (uint64_t) and creates a binarray in dest.
@@ -878,13 +921,18 @@ void strcreplace(char *buf, size_t len, char from, char to) {
     }
 }
 
-char *strmcopy(const char *buf) {
-    char *str = (char *) calloc(strlen(buf) + 1, sizeof(uint8_t));
-    if (str != NULL) {
-        memset(str, 0, strlen(buf) + 1);
-        strcpy(str, buf);
+
+char *str_dup(const char *src) {
+    return str_ndup(src, strlen(src));
+}
+char *str_ndup(const char *src, size_t len) {
+
+    char *dest = (char *) calloc(len + 1, sizeof(uint8_t));
+    if (dest != NULL) {
+        memcpy(dest, src, len);
+        dest[len] = '\0';
     }
-    return str;
+    return dest;
 }
 
 /**

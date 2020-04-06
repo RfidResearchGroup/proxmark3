@@ -23,7 +23,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
              -DON_DEVICE \
              -fno-strict-aliasing -ffunction-sections -fdata-sections
 
-SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c
+SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
 #UNUSED: mifaresniff.c desfire_crypto.c

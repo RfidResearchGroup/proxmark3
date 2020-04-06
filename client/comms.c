@@ -24,6 +24,8 @@
 //#define COMMS_DEBUG
 //#define COMMS_DEBUG_RAW
 
+uint8_t gui_serial_port_name[FILE_PATH_SIZE];
+
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
 
@@ -545,6 +547,7 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), portname);
         fflush(stdout);
         int openCount = 0;
+        PrintAndLogEx(INPLACE, "");
         do {
             sp = uart_open(portname, speed);
             msleep(500);
@@ -568,6 +571,9 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
             uint16_t len = MIN(strlen(portname), FILE_PATH_SIZE - 1);
             memset(conn.serial_port_name, 0, FILE_PATH_SIZE);
             memcpy(conn.serial_port_name, portname, len);
+
+            memset(gui_serial_port_name, 0, FILE_PATH_SIZE);
+            memcpy(gui_serial_port_name, portname, len);
         }
         conn.run = true;
         conn.block_after_ACK = flash_mode;
@@ -582,7 +588,6 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
         session.pm3_present = true;
 
         fflush(stdout);
-
         return true;
     }
 }
@@ -666,7 +671,13 @@ void CloseProxmark(void) {
 
     // Clean up our state
     sp = NULL;
+#ifdef __BIONIC__
+    if (communication_thread != 0) {
+        memset(&communication_thread, 0, sizeof(pthread_t));
+    }
+#else
     memset(&communication_thread, 0, sizeof(pthread_t));
+#endif
 
     session.pm3_present = false;
 }
@@ -725,7 +736,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
         }
 
         uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
-        if ((ms_timeout != (size_t) -1) && (msclock() - tmp_clk > ms_timeout))
+        if ((ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout))
             break;
 
         if (msclock() - tmp_clk > 3000 && show_warning) {
@@ -797,6 +808,10 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
             //return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
             return false;
         }
+        case FPGA_MEM: {
+            SendCommandMIX(CMD_FPGAMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FPGAMEM_DOWNLOADED);
+        }
     }
     return false;
 }
@@ -807,7 +822,7 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
     // Add delay depending on the communication channel & speed
-    if (ms_timeout != (size_t) -1)
+    if (ms_timeout != (size_t) - 1)
         ms_timeout += communication_delay();
 
     while (true) {

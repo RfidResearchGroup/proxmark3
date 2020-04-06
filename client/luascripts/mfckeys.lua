@@ -159,9 +159,10 @@ end
 end
 --
 -- dumps all keys to file
-local function dumptofile(keys)
+local function dumptofile(uid, keys)
     if utils.confirm('Do you wish to save the keys to dumpfile?') then
-        local destination = utils.input('Select a filename to store to', 'dumpkeys.bin')
+        local filename = ('hf-mf-%s-key.bin'):format(uid);
+        local destination = utils.input('Select a filename to store to', filename)
         local file = io.open(destination, 'wb')
         if file == nil then
             print('Could not write to file ', destination)
@@ -192,7 +193,7 @@ local function printkeys()
 end
 ---
 --
-local function perform_check(numsectors)
+local function perform_check(uid, numsectors)
 
     local keyType = 0 -- A=0, B=1
 
@@ -237,7 +238,7 @@ local function perform_check(numsectors)
     display_results(keys)
 
     -- save to dumpkeys.bin
-    dumptofile(keys)
+    dumptofile(uid, keys)
 end
 --
 -- shows tag information
@@ -282,7 +283,7 @@ local function main(args)
     -- detect sectors and print taginfo
     numsectors = taginfo(tag)
 
-    perform_check(numsectors)
+    perform_check(tag.uid, numsectors)
 end
 
 main( args)

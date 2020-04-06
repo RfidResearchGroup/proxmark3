@@ -86,7 +86,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     char asBuff[120];
     memset(asBuff, 0, sizeof(asBuff));
     uint32_t mem_avail = 0;
-    PrintAndLogEx(NORMAL, "\n [ Hardware ] ");
+    PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Hardware ]"));
 
     switch (iChipID) {
         case 0x270B0A40:
@@ -447,13 +447,13 @@ static int CmdSetDivisor(const char *Cmd) {
     uint8_t arg = param_get8ex(Cmd, 0, 95, 10);
 
     if (arg < 19) {
-        PrintAndLogEx(ERR, "divisor must be between 19 and 255");
+        PrintAndLogEx(ERR, "divisor must be between" _YELLOW_("19") " and " _YELLOW_("255"));
         return PM3_EINVARG;
     }
     // 12 000 000 (12MHz)
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SET_DIVISOR, (uint8_t *)&arg, sizeof(arg));
-    PrintAndLogEx(SUCCESS, "Divisor set, expected %.1f kHz", ((double)12000 / (arg + 1)));
+    PrintAndLogEx(SUCCESS, "Divisor set, expected " _YELLOW_("%.1f")" kHz", ((double)12000 / (arg + 1)));
     return PM3_SUCCESS;
 }
 
@@ -514,11 +514,11 @@ static int CmdStatus(const char *Cmd) {
 static int CmdTia(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     clearCommandBuffer();
-    PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition...");
+    PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition (TIA)...");
     PacketResponseNG resp;
     SendCommandNG(CMD_TIA, NULL, 0);
     if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false)
-        PrintAndLogEx(WARNING, "Tia command failed. You probably need to unplug the Proxmark3.");
+        PrintAndLogEx(WARNING, "TIA command failed. You probably need to unplug the Proxmark3.");
     PrintAndLogEx(INFO, "TIA done.");
     return PM3_SUCCESS;
 }
@@ -528,7 +528,7 @@ static int CmdPing(const char *Cmd) {
     if (len > PM3_CMD_DATA_SIZE)
         len = PM3_CMD_DATA_SIZE;
     if (len) {
-        PrintAndLogEx(INFO, "Ping sent with payload len=%d", len);
+        PrintAndLogEx(INFO, "Ping sent with payload len = %d", len);
     } else {
         PrintAndLogEx(INFO, "Ping sent");
     }
@@ -539,9 +539,8 @@ static int CmdPing(const char *Cmd) {
         data[i] = i & 0xFF;
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
-        bool error = false;
         if (len) {
-            error = memcmp(data, resp.data.asBytes, len) != 0;
+            bool error = (memcmp(data, resp.data.asBytes, len) != 0);
             PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("OK"));
         } else {
             PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
@@ -702,26 +701,24 @@ void pm3_version(bool verbose, bool oneliner) {
     SendCommandNG(CMD_VERSION, NULL, 0);
 
     if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-        PrintAndLogEx(NORMAL, "\n" _BLUE_(" [ Proxmark3 RFID instrument ]") "\n");
-        PrintAndLogEx(NORMAL, "\n [ CLIENT ]");
+        PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ Proxmark3 RFID instrument ]"));
+        PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ CLIENT ]"));
         PrintAndLogEx(NORMAL, "  client: RRG/Iceman"); // TODO version info?
         PrintAndLogEx(NORMAL, "  compiled with " PM3CLIENTCOMPILER __VERSION__ PM3HOSTOS PM3HOSTARCH);
 
-//#if PLATFORM == PM3RDV4
         if (IfPm3Flash() == false && IfPm3Smartcard() == false && IfPm3FpcUsartHost() == false) {
-            PrintAndLogEx(NORMAL, "\n [ PROXMARK3 ]");
+            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 ]"));
         } else {
-            PrintAndLogEx(NORMAL, "\n [ PROXMARK3 RDV4 ]");
+            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 RDV4 ]"));
             PrintAndLogEx(NORMAL, "  external flash:                  %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
             PrintAndLogEx(NORMAL, "  smartcard reader:                %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
-            PrintAndLogEx(NORMAL, "\n [ PROXMARK3 RDV4 Extras ]");
+            PrintAndLogEx(NORMAL, "\n " _YELLOW_("[ PROXMARK3 RDV4 Extras ]"));
             PrintAndLogEx(NORMAL, "  FPC USART for BT add-on support: %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
 
             if (IfPm3FpcUsartDevFromUsb()) {
                 PrintAndLogEx(NORMAL, "  FPC USART for developer support: %s", _GREEN_("present"));
             }
         }
-//#endif
 
         PrintAndLogEx(NORMAL, "");
 

@@ -468,7 +468,7 @@ static int CmdEM410xDemod(const char *Cmd) {
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdEM410xRead(const char *Cmd) {
-    lf_read(true, 12288);
+    lf_read(false, 12288);
     return CmdEM410xDemod(Cmd);
 }
 
@@ -625,7 +625,7 @@ static int CmdEM410xWatch(const char *Cmd) {
             PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
             break;
         }
-        lf_read(true, 12288);
+        lf_read(false, 12288);
 
     } while (CmdEM410xRead("") != PM3_SUCCESS);
     return PM3_SUCCESS;
@@ -700,6 +700,8 @@ static int CmdEM410xWrite(const char *Cmd) {
     }
 
     SendCommandMIX(CMD_LF_EM410X_WRITE, card, (uint32_t)(id >> 32), (uint32_t)id, NULL, 0);
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x_read`") "to verify");
     return PM3_SUCCESS;
 }
 
@@ -1037,6 +1039,9 @@ static int CmdEM4x50Write(const char *Cmd) {
     uint8_t ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_lf_em4x50_write();
     PrintAndLogEx(NORMAL, "no implemented yet");
+//
+//    PrintAndLogEx(SUCCESS, "Done");
+//    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50_read`") "to verify");
     return PM3_SUCCESS;
 }
 
@@ -1344,7 +1349,7 @@ static int CmdEM4x05Dump(const char *Cmd) {
         // saveFileEML will add .eml extension to filename
         // saveFile (binary) passes in the .bin extension.
         if (strcmp(preferredName, "") == 0) // Set default filename, if not set by user
-            sprintf(preferredName, "lf-4x05-%08X-data", BSWAP_32(data[1]));
+            sprintf(preferredName, "lf-4x05-%08X-dump", BSWAP_32(data[1]));
 
         saveFileEML(preferredName, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(preferredName, ".bin", data, sizeof(data));
@@ -1434,9 +1439,10 @@ static int CmdEM4x05Write(const char *Cmd) {
     uint32_t dummy = 0;
     int status = demodEM4x05resp(&dummy);
     if (status == PM3_SUCCESS)
-        PrintAndLogEx(NORMAL, "Write " _GREEN_("Verified"));
-    else
-        PrintAndLogEx(NORMAL, "Write could " _RED_("not") "be verified");
+        PrintAndLogEx(SUCCESS, "Success writing to tag");
+
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05_read`") "to verify");
     return status;
 }
 static int CmdEM4x05Wipe(const char *Cmd) {

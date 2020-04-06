@@ -79,7 +79,7 @@ static int CmdVikingDemod(const char *Cmd) {
 //by marshmellow
 //see ASKDemod for what args are accepted
 static int CmdVikingRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 10000);
     return CmdVikingDemod(Cmd);
 }
 
@@ -117,6 +117,8 @@ static int CmdVikingClone(const char *Cmd) {
         PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf viking read`") "to verify");
     return resp.status;
 }
 

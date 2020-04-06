@@ -662,10 +662,7 @@ static void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON,
     }
 
     //9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
-    const char *qVSDC = "\x26\x00\x00\x00";
-    if (GenACGPO) {
-        qVSDC = "\x26\x80\x00\x00";
-    }
+
     switch (TrType) {
         case TT_MSD:
             TLV_ADD(0x9F66, "\x86\x00\x00\x00"); // MSD
@@ -675,10 +672,20 @@ static void InitTransactionParameters(struct tlvdb *tlvRoot, bool paramLoadJSON,
             TLV_ADD(0x9F66, "\x46\x00\x00\x00"); // VSDC
             break;
         case TT_QVSDCMCHIP:
-            TLV_ADD(0x9F66, qVSDC); // qVSDC
+            // qVSDC
+            if (GenACGPO) {
+                TLV_ADD(0x9F66, "\x26\x80\x00\x00");
+            } else {
+                TLV_ADD(0x9F66, "\x26\x00\x00\x00");
+            }
             break;
         case TT_CDA:
-            TLV_ADD(0x9F66, qVSDC); // qVSDC (VISA CDA not enabled)
+            // qVSDC (VISA CDA not enabled)
+            if (GenACGPO) {
+                TLV_ADD(0x9F66, "\x26\x80\x00\x00");
+            } else {
+                TLV_ADD(0x9F66, "\x26\x00\x00\x00");
+            }
             break;
         default:
             break;

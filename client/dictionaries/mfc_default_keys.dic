@@ -5,7 +5,8 @@
 #
 ffffffffffff # Defaultkey(firstkeyusedbyprogramifnouserdefinedkey)
 000000000000 # Blankkey
-a0a1a2a3a4a5 # NFCForumMADkey
+a0a1a2a3a4a5 # NFC Forum MADkey
+A5A4A3A2A1A0 # MAD access key (reversed) 
 b0b1b2b3b4b5
 c0c1c2c3c4c5
 d0d1d2d3d4d5
@@ -20,19 +21,49 @@ a0478cc39091
 533cb6c723f6
 8fd0a4f256e9
 #
-d2ece8b9395e # lib
+d2ece8b9395e # lib / Nat Bieb
 # NSCP default key
 1494E81663D7
+#
+# Kiev keys
+569369c5a0e5 # kiev
+632193be1c3c # kiev
+644672bd4afe # kiev
+8fe644038790 # kiev
+9de89e070277 # kiev
+b5ff67cba951 # kiev / ov-chipkaart
+eff603e1efe9 # kiev
+f14ee7cae863 # kiev
+#
+# RKF
+fc00018778f7 # Västtrafiken KeyA, RKF ÖstgötaTrafiken KeyA
+0297927c0f77 # Västtrafiken KeyA
+54726176656c # Västtrafiken KeyA
+00000ffe2488 # Västtrafiken KeyB
+776974687573 # Västtrafiken KeyB
+ee0042f88840 # Västtrafiken KeyB
+26940b21ff5d # RKF SLKeyA
+a64598a77478 # RKF SLKeyA
+5c598c9c58b5 # RKF SLKeyB
+e4d2770a89be # RKF SLKeyB
+722bfcc5375f # RKF RejskortDanmark KeyA
+f1d83f964314 # RKF RejskortDanmark KeyB
+505249564141 # RKF JOJOPRIVAKeyA
+505249564142 # RKF JOJOPRIVAKeyB
+47524f555041 # RKF JOJOGROUPKeyA
+47524f555042 # RKF JOJOGROUPKeyB
+434f4d4d4f41 # RKF JOJOGROUPKeyA
+434f4d4d4f42 # RKF JOJOGROUPKeyB
+# 
+4b0b20107ccb # TNP3xxx
 #
 # more Keys from mfc_default_keys.lua
 000000000001
 000000000002
 00000000000a
 00000000000b
-00000ffe2488 # VästtrafikenKeyB
 010203040506
 0123456789ab
-0297927c0f77 # VästtrafikenKeyA
 100000000000
 111111111111
 123456789abc
@@ -41,72 +72,39 @@ d2ece8b9395e # lib
 1999a3554a55
 200000000000
 222222222222
-26940b21ff5d # RKFSLKeyA
 27dd91f1fcf1
 2BA9621E0A36 # DirectoryandeventlogKeyB
+4AF9D7ADEBE4 # DirectoryandeventlogKeyA
 333333333333
 33f974b42769
 34d1df9934c5
-434f4d4d4f41 # RKFJOJOGROUPKeyA
-434f4d4d4f42 # RKFJOJOGROUPKeyB
 43ab19ef5c31
 444444444444
-47524f555041 # RKFJOJOGROUPKeyA
-47524f555042 # RKFJOJOGROUPKeyB
-4AF9D7ADEBE4 # DirectoryandeventlogKeyA
-4b0b20107ccb # TNP3xxx
-505249564141 # RKFJOJOPRIVAKeyA
-505249564142 # RKFJOJOPRIVAKeyB
 505249565441
 505249565442
-54726176656c # VästtrafikenKeyA
 555555555555
 55f5a5dd38c9
-569369c5a0e5 # kiev
-5c598c9c58b5 # RKFSLKeyB
-632193be1c3c # kiev
-644672bd4afe # kiev
 666666666666
-722bfcc5375f # RKFRejskortDanmarkKeyA
-776974687573 # VästtrafikenKeyB
 777777777777
 888888888888
-8fe644038790 # kiev
 999999999999
 99c636334433
-9de89e070277 # kiev
 a00000000000
 a053a292a4af
-a64598a77478 # RKFSLKeyA
 a94133013401
 aaaaaaaaaaaa
 abcdef123456 # Keyfromladyada.net
 b00000000000
 b127c6f41436
-b5ff67cba951 # kiev
 bbbbbbbbbbbb
 bd493a3962b6
 c934fe34d934
 cccccccccccc
 dddddddddddd
-e4d2770a89be # RKFSLKeyB
-ee0042f88840 # VästtrafikenKeyB
 eeeeeeeeeeee
-eff603e1efe9 # kiev
-f14ee7cae863 # kiev
 f1a97341a9fc
-f1d83f964314 # RKFRejskortDanmarkKeyB
-fc00018778f7 # VästtrafikenKeyA, RKFÖstgötaTrafikenKeyA
 44ab09010845 # hotel system
 85fed980ea5a # hotel system
-314B49474956 # VIGIK1 A
-564c505f4d41 # VIGIK1 B
-ba5b895da162 # VIGIK1 B
-# Vigik mystery Keys Mifare 1k EV1 (S50)
-5c8ff9990da2 # 16 A
-75ccb59c9bed # 17 A
-d01afeeb890a # 16 B
-4b791bea7bcc # 17 B
 #
 43454952534E # ARD (fr) key A
 4A2B29111213 # ARD (fr) key B
@@ -361,11 +359,29 @@ a56c2df9a26d
 #
 68d3f7307c89
 568c9083f71c # Smart Rider. Western Australian Public Transport Cards
+#
+#
+97F5DA640B18 # Bangkok metro key
+A8844B0BCA06 # Metro Valencia key
+857464D3AAD1 # HTC Eindhoven key
+#
 # Vigik Keys
 # Various sources :
 # * https://github.com/DumpDos/Vigik
 # * http://newffr.com/viewtopic.php?&forum=235&topic=11559
 # * Own dumps
+#
+# French VIGIK
+314B49474956 # VIGIK1 A
+564c505f4d41 # VIGIK1 B
+ba5b895da162 # VIGIK1 B
+#
+# Vigik mystery Keys Mifare 1k EV1 (S50)
+5c8ff9990da2 # 16 A
+75ccb59c9bed # 17 A
+d01afeeb890a # 16 B
+4b791bea7bcc # 17 B
+#
 021209197591 # BTCINO UNDETERMINED SPREAKD 0x01->0x13 key
 2ef720f2af76
 414c41524f4e
@@ -543,10 +559,12 @@ B66AC040203A
 2E641D99AD5B
 AD4FB33388BF
 69FB7B7CD8EE
-2A6D9205E7CA
+2A6D9205E7CA # Hotel
 2a2c13cc242a
 27FBC86A00D0
 01FA3FC68349
+#
+13B91C226E56 # Hotel
 #
 6D44B5AAF464 # Smart Rider. Western Australian Public Transport Cards
 1717E34A7A8A # Smart Rider. Western Australian Public Transport Cards
@@ -1035,3 +1053,68 @@ bb2c0007d022 # Hotel Berlin Classic room B KEY
 #
 0734bfb93dab
 85a438f72a8a
+#
+# Data from forum, Chinese hotel
+58ac17bf3629
+b62307b62307
+#
+a2a3cca2a3cc
+#
+# Granada, ES Transport Card
+000000270000
+0f385ffb6529
+29173860fc76
+2fca8492f386
+385efa542907
+3864fcba5937
+3f3865fccb69
+5c8ff9990da2
+6291b3860fc8
+63fca9492f38
+863fcb959373
+87291f3861fc
+913385ffb752
+b385efa64290
+c9739233861f
+f3864fcca693
+fc9839273862
+#
+# various hotel keys
+34D3C568B348
+91FF18E63887
+4D8B8B95FDEE
+354A787087F1
+4a306e62e9b6
+B9C874AE63D0
+#
+# Data from offical repo
+f00dfeedd0d0
+0bb31dc123e5
+7578bf2c66a9
+cd212889c3ed
+6936c035ae1b
+c6c866aa421e
+590bd659cdd2
+aa734d2f40e0
+09800ff94aaf
+5a12f83326e7
+c554ef6a6015
+0d8ca561bdf3
+b8937130b6ba
+d7744a1a0c44
+82908b57ef4f
+fe04ecfe5577
+# comfort inn hotel
+4d57414c5648
+4d48414c5648
+# 
+# unknown hotel key
+6d9b485a4845
+#
+5a7a52d5e20d # Bosch Solution 6000
+#
+# Found in TagInfo app
+8A19D40CF2B5 # Hotel key card key 
+C1E51C63B8F5 # RATB key 
+1DB710648A65
+18F34C92A56E # E-GO card key 

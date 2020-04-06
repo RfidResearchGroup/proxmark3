@@ -18,48 +18,6 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int CmdFlashMemSpiFFSMount(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSUnmount(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSTest(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_TEST, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSCheck(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_CHECK, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSTree(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_PRINT_TREE, NULL, 0);
-    return PM3_SUCCESS;
-}
-
-static int CmdFlashMemSpiFFSInfo(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    clearCommandBuffer();
-    SendCommandNG(CMD_SPIFFS_PRINT_FSINFO, NULL, 0);
-    return PM3_SUCCESS;
-}
-
 static int usage_flashmemspiffs_remove(void) {
     PrintAndLogEx(NORMAL, "Remove a file from spiffs filesystem");
     PrintAndLogEx(NORMAL, " Usage:  mem spiffs remove <filename>");
@@ -107,15 +65,63 @@ static int usage_flashmemspiffs_load(void) {
     return PM3_SUCCESS;
 }
 
+
+static int CmdFlashMemSpiFFSMount(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSUnmount(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSTest(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_TEST, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSCheck(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_CHECK, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSTree(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_PRINT_TREE, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdFlashMemSpiFFSInfo(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    clearCommandBuffer();
+    SendCommandNG(CMD_SPIFFS_PRINT_FSINFO, NULL, 0);
+    return PM3_SUCCESS;
+}
+
 static int CmdFlashMemSpiFFSRemove(const char *Cmd) {
+
+    int len = strlen(Cmd);
+    if (len < 1) {
+        return usage_flashmemspiffs_remove();
+    }
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (len == 1 && ctmp == 'h') {
+        return usage_flashmemspiffs_remove();
+    }
 
     char filename[32] = {0};
     bool errors = false;
-
-    /*char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') {
-        return usage_flashmemspiffs_remove();
-    }*/
 
     if (param_getstr(Cmd, 0, filename, 32) >= 32) {
         PrintAndLogEx(FAILED, "Filename too long");
@@ -134,14 +140,19 @@ static int CmdFlashMemSpiFFSRemove(const char *Cmd) {
 
 static int CmdFlashMemSpiFFSRename(const char *Cmd) {
 
+    int len = strlen(Cmd);   
+    if (len < 1) {
+        return usage_flashmemspiffs_rename();
+    }
+
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (len  == 1 && ctmp == 'h') {
+        return usage_flashmemspiffs_rename();
+    }
+    
     char srcfilename[32] = {0};
     char destfilename[32] = {0};
     bool errors = false;
-
-    /*char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') {
-        return usage_flashmemspiffs_rename();
-    }*/
 
     if (param_getstr(Cmd, 0, srcfilename, 32) >= 32) {
         PrintAndLogEx(FAILED, "Source Filename too long");
@@ -174,15 +185,20 @@ static int CmdFlashMemSpiFFSRename(const char *Cmd) {
 }
 
 static int CmdFlashMemSpiFFSCopy(const char *Cmd) {
+    int len = strlen(Cmd);
+    if (len < 1) {
+        return usage_flashmemspiffs_copy();
+    }
 
+    char ctmp = tolower(param_getchar(Cmd, 0));
+    if (len == 1 && ctmp == 'h') {
+        return usage_flashmemspiffs_copy();
+    }
+
+    
     char srcfilename[32] = {0};
     char destfilename[32] = {0};
     bool errors = false;
-
-    /*char ctmp = tolower(param_getchar(Cmd, 0));
-    if (strlen(Cmd) < 1 || ctmp == 'h') {
-        return usage_flashmemspiffs_copy();
-    }*/
 
     if (param_getstr(Cmd, 0, srcfilename, 32) >= 32) {
         PrintAndLogEx(FAILED, "Source Filename too long");
@@ -314,11 +330,77 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int flashmem_spiffs_load(uint8_t *destfn, uint8_t *data, size_t datalen) {
+
+    int ret_val = PM3_SUCCESS;
+
+    // We want to mount before multiple operation so the lazy writes/append will not
+    // trigger a mount + umount each loop iteration (lazy ops device side)
+    SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);
+
+    // Send to device
+    uint32_t bytes_sent = 0;
+    uint32_t bytes_remaining = datalen;
+    uint32_t append = 0;
+
+    // fast push mode
+    conn.block_after_ACK = true;
+
+    while (bytes_remaining > 0) {
+        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
+
+        clearCommandBuffer();
+
+        char fdata[32 + bytes_in_packet];
+        memset(fdata, 0, sizeof(fdata));
+        memcpy(fdata, destfn, 32);
+        memcpy(fdata + 32, data + bytes_sent, bytes_in_packet);
+
+        if (bytes_sent > 0)
+            append = 1;
+
+        SendCommandOLD(CMD_SPIFFS_WRITE, append, bytes_in_packet, 0, fdata, 32 + bytes_in_packet);
+
+        bytes_remaining -= bytes_in_packet;
+        bytes_sent += bytes_in_packet;
+
+        PacketResponseNG resp;
+
+        uint8_t retry = 3;
+        while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            retry--;
+            if (retry == 0) {
+                ret_val = PM3_ETIMEOUT;
+                goto out;
+            }
+        }
+
+        uint8_t isok = resp.oldarg[0] & 0xFF;
+        if (!isok) {
+            PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
+            ret_val = PM3_EFLASH;
+            break;
+        }
+    }
+
+out:
+    clearCommandBuffer();
+
+    // turn off fast push mode
+    conn.block_after_ACK = false;
+
+    // We want to unmount after these to set things back to normal but more than this
+    // unmouting ensure that SPIFFS CACHES are all flushed so our file is actually written on memory
+    SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
+
+    return ret_val;
+}
+
 static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
 
-    uint32_t append = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    char destfilename[32] = {0};
+    uint8_t destfilename[32] = {0};
     bool errors = false;
     uint8_t cmdp = 0;
 
@@ -334,8 +416,8 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'o':
-                param_getstr(Cmd, cmdp + 1, destfilename, 32);
-                if (strlen(destfilename) == 0) {
+                param_getstr(Cmd, cmdp + 1, (char *)destfilename, 32);
+                if (strlen((char *)destfilename) == 0) {
                     PrintAndLogEx(FAILED, "Destination Filename missing or invalid");
                     errors = true;
                 }
@@ -362,70 +444,20 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    // We want to mount before multiple operation so the lazy writes/append will not
-    // trigger a mount + umount each loop iteration (lazy ops device side)
-    SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);
+    res = flashmem_spiffs_load(destfilename, data, datalen);
 
-    // Send to device
-    uint32_t bytes_sent = 0;
-    uint32_t bytes_remaining = datalen;
-
-    // fast push mode
-    conn.block_after_ACK = true;
-
-    // SendCommandMIX(CMD_SPIFFS_COPY, 0, 0, 0, (uint8_t *)data, 65);
-
-    while (bytes_remaining > 0) {
-        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
-
-        clearCommandBuffer();
-
-        char fdata[32 + bytes_in_packet];
-        memset(fdata, 0, sizeof(fdata));
-        memcpy(fdata, destfilename, 32);
-        memcpy(fdata + 32, data + bytes_sent, bytes_in_packet);
-        // sprintf(fdata, "%s%s", destfilename, data + bytes_sent);
-
-        if (bytes_sent > 0)
-            append = 1;
-
-        SendCommandOLD(CMD_SPIFFS_WRITE, append, bytes_in_packet, 0, fdata, 32 + bytes_in_packet);
-
-        bytes_remaining -= bytes_in_packet;
-        bytes_sent += bytes_in_packet;
-
-        PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            conn.block_after_ACK = false;
-            free(data);
-            return PM3_ETIMEOUT;
-        }
-
-        uint8_t isok = resp.oldarg[0] & 0xFF;
-        if (!isok) {
-            conn.block_after_ACK = false;
-            PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
-            free(data);
-            return PM3_EFLASH;
-        }
-    }
-
-    conn.block_after_ACK = false;
     free(data);
-    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") "bytes to file "_GREEN_("%s"), datalen, destfilename);
 
-    // We want to unmount after these to set things back to normal but more than this
-    // unmouting ensure that SPIFFS CACHES are all flushed so our file is actually written on memory
-    SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
-    return PM3_SUCCESS;
+    if (res == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") "bytes to file "_GREEN_("%s"), datalen, destfilename);
+
+    return res;
 }
 
 static command_t CommandTable[] = {
 
     {"help", CmdHelp, AlwaysAvailable, "This help"},
-    {
-        "copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
+    {"copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
         "Copy a file to another (destructively) in SPIFFS FileSystem in FlashMEM (spiffs)"
     },
     {"check", CmdFlashMemSpiFFSCheck, IfPm3Flash, "Check/try to defrag faulty/fragmented Filesystem"},

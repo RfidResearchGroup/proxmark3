@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>
 //
+// iceman 2019
+//
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
 // the license.
@@ -8,22 +10,22 @@
 // Data and Graph commands
 //-----------------------------------------------------------------------------
 #include "cmddata.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>   // for CmdNorm INT_MIN && INT_MAX
 #include <math.h>     // pow
 #include <ctype.h>    // tolower
-
-#include "commonutil.h"  // ARRAYLEN
-#include "cmdparser.h" // for command_t
-#include "ui.h"       // for show graph controls
-#include "graph.h"    // for graph data
+#include "commonutil.h"          // ARRAYLEN
+#include "cmdparser.h"           // for command_t
+#include "ui.h"                  // for show graph controls
+#include "graph.h"               // for graph data
 #include "comms.h"
-#include "lfdemod.h"  // for demod code
+#include "lfdemod.h"             // for demod code
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
-#include "cmdlfem4x.h" // askem410xdecode
-#include "fileutils.h" // searchFile
+#include "cmdlfem4x.h"           // askem410xdecode
+#include "fileutils.h"           // searchFile
+#include "mifare/ndef.h"
+#include "cliparser/cliparser.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;
@@ -32,6 +34,21 @@ int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
 
+static int usage_data_save(void) {
+    PrintAndLogEx(NORMAL, "Save trace from graph window , i.e. the GraphBuffer");
+    PrintAndLogEx(NORMAL, "This is a text file with number -127 to 127.  With the option `w` you can save it as wave file");
+    PrintAndLogEx(NORMAL, "Filename should be without file extension");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Usage: data save [h] [w] [f <filename w/o ext>]");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "       h              this help");
+    PrintAndLogEx(NORMAL, "       w              save as wave format (.wav)");
+    PrintAndLogEx(NORMAL, "       f <filename>   save file name");
+    PrintAndLogEx(NORMAL, "Samples:");
+    PrintAndLogEx(NORMAL, "       data save f mytrace      - save graphbuffer to file");
+    PrintAndLogEx(NORMAL, "       data save f mytrace w    - save graphbuffer to wave file");
+    return PM3_SUCCESS;
+}
 static int usage_data_scale(void) {
     PrintAndLogEx(NORMAL, "Set cursor display scale.");
     PrintAndLogEx(NORMAL, "Setting the scale makes the differential `dt` reading between the yellow and purple markers meaningful. ");
@@ -40,8 +57,8 @@ static int usage_data_scale(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage: data scale [h] <kHz>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
-    PrintAndLogEx(NORMAL, "       <kHz>      Sets scale of carrier frequency expressed in kHz");
+    PrintAndLogEx(NORMAL, "       h          this help");
+    PrintAndLogEx(NORMAL, "       <kHz>      sets scale of carrier frequency expressed in kHz");
     PrintAndLogEx(NORMAL, "Samples:");
     PrintAndLogEx(NORMAL, "       data scale 125      - if sampled in 125kHz");
     return PM3_SUCCESS;
@@ -49,7 +66,7 @@ static int usage_data_scale(void) {
 static int usage_data_printdemodbuf(void) {
     PrintAndLogEx(NORMAL, "Usage: data printdemodbuffer x o <offset> l <length>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "       h          This help");
+    PrintAndLogEx(NORMAL, "       h          this help");
     PrintAndLogEx(NORMAL, "       i          invert Demodbuffer before printing");
     PrintAndLogEx(NORMAL, "       x          output in hex (omit for binary output)");
     PrintAndLogEx(NORMAL, "       o <offset> enter offset in # of bits");
@@ -83,19 +100,26 @@ static int usage_data_biphaserawdecode(void) {
 }
 static int usage_data_rawdemod(void) {
     PrintAndLogEx(NORMAL, "Usage:  data rawdemod [modulation] <help>|<options>");
-    PrintAndLogEx(NORMAL, "   [modulation] as 2 char, 'ab' for ask/biphase, 'am' for ask/manchester, 'ar' for ask/raw, 'fs' for fsk, ...");
-    PrintAndLogEx(NORMAL, "         'nr' for nrz/direct, 'p1' for psk1, 'p2' for psk2");
+    PrintAndLogEx(NORMAL, "   [modulation] as 2 char,");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("ab")"- ask/biphase");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("am")"- ask/manchester");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("ar")"- ask/raw");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("fs")"- fsk");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("nr")"- nrz/direct");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("p1")"- psk1");
+    PrintAndLogEx(NORMAL, "       "_YELLOW_("p2")"- psk2");
     PrintAndLogEx(NORMAL, "   <help> as 'h', prints the help for the specific modulation");
     PrintAndLogEx(NORMAL, "   <options> see specific modulation help for optional parameters");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data rawdemod fs h         = print help specific to fsk demod");
-    PrintAndLogEx(NORMAL, "          : data rawdemod fs           = demod GraphBuffer using: fsk - autodetect");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ab           = demod GraphBuffer using: ask/biphase - autodetect");
-    PrintAndLogEx(NORMAL, "          : data rawdemod am           = demod GraphBuffer using: ask/manchester - autodetect");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ar           = demod GraphBuffer using: ask/raw - autodetect");
-    PrintAndLogEx(NORMAL, "          : data rawdemod nr           = demod GraphBuffer using: nrz/direct - autodetect");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p1           = demod GraphBuffer using: psk1 - autodetect");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p2           = demod GraphBuffer using: psk2 - autodetect");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs h         = print help specific to fsk demod");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs           = demod GraphBuffer using: fsk - autodetect");
+    PrintAndLogEx(NORMAL, "       data rawdemod ab           = demod GraphBuffer using: ask/biphase - autodetect");
+    PrintAndLogEx(NORMAL, "       data rawdemod am           = demod GraphBuffer using: ask/manchester - autodetect");
+    PrintAndLogEx(NORMAL, "       data rawdemod ar           = demod GraphBuffer using: ask/raw - autodetect");
+    PrintAndLogEx(NORMAL, "       data rawdemod nr           = demod GraphBuffer using: nrz/direct - autodetect");
+    PrintAndLogEx(NORMAL, "       data rawdemod p1           = demod GraphBuffer using: psk1 - autodetect");
+    PrintAndLogEx(NORMAL, "       data rawdemod p2           = demod GraphBuffer using: psk2 - autodetect");
     return PM3_SUCCESS;
 }
 static int usage_data_rawdemod_am(void) {
@@ -107,11 +131,12 @@ static int usage_data_rawdemod_am(void) {
     PrintAndLogEx(NORMAL, "     [set maximum Samples to read], default = 32768 (512 bits at rf/64)");
     PrintAndLogEx(NORMAL, "     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "          : data rawdemod am 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "          : data rawdemod am 32 1   = demod an ask/manchester tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod am 1      = demod an ask/manchester tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "       data rawdemod am        = demod an ask/manchester tag from GraphBuffer");
+    PrintAndLogEx(NORMAL, "       data rawdemod am 32     = demod an ask/manchester tag from GraphBuffer using a clock of RF/32");
+    PrintAndLogEx(NORMAL, "       data rawdemod am 32 1   = demod an ask/manchester tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod am 1      = demod an ask/manchester tag from GraphBuffer while inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod am 64 1 0 = demod an ask/manchester tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return PM3_SUCCESS;
 }
 static int usage_data_rawdemod_ab(void) {
@@ -128,13 +153,14 @@ static int usage_data_rawdemod_ab(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "     NOTE: --invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data rawdemod ab              = demod an ask/biph tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ab 0 a          = demod an ask/biph tag from GraphBuffer, amplified");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ab 1 32         = demod an ask/biph tag from GraphBuffer using an offset of 1 and a clock of RF/32");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ab 0 32 1       = demod an ask/biph tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ab 0 1          = demod an ask/biph tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ab 0 64 1 0     = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ab 0 64 1 0 0 a = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "       data rawdemod ab              = demod an ask/biph tag from GraphBuffer");
+    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 a          = demod an ask/biph tag from GraphBuffer, amplified");
+    PrintAndLogEx(NORMAL, "       data rawdemod ab 1 32         = demod an ask/biph tag from GraphBuffer using an offset of 1 and a clock of RF/32");
+    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 32 1       = demod an ask/biph tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 1          = demod an ask/biph tag from GraphBuffer while inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 64 1 0     = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, "       data rawdemod ab 0 64 1 0 0 a = demod an ask/biph tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return PM3_SUCCESS;
 }
 static int usage_data_rawdemod_ar(void) {
@@ -145,13 +171,14 @@ static int usage_data_rawdemod_ar(void) {
     PrintAndLogEx(NORMAL, "     [set maximum Samples to read], default = 32768 (1024 bits at rf/64)");
     PrintAndLogEx(NORMAL, "     <amplify>, 'a' to attempt demod with ask amplification, default = no amp");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data rawdemod ar            = demod an ask tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ar a          = demod an ask tag from GraphBuffer, amplified");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ar 32         = demod an ask tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ar 32 1       = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ar 1          = demod an ask tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ar 64 1 0     = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
-    PrintAndLogEx(NORMAL, "          : data rawdemod ar 64 1 0 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "       data rawdemod ar            = demod an ask tag from GraphBuffer");
+    PrintAndLogEx(NORMAL, "       data rawdemod ar a          = demod an ask tag from GraphBuffer, amplified");
+    PrintAndLogEx(NORMAL, "       data rawdemod ar 32         = demod an ask tag from GraphBuffer using a clock of RF/32");
+    PrintAndLogEx(NORMAL, "       data rawdemod ar 32 1       = demod an ask tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod ar 1          = demod an ask tag from GraphBuffer while inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod ar 64 1 0     = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, "       data rawdemod ar 64 1 0 0 a = demod an ask tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors, and amp");
     return PM3_SUCCESS;
 }
 static int usage_data_rawdemod_fs(void) {
@@ -161,13 +188,14 @@ static int usage_data_rawdemod_fs(void) {
     PrintAndLogEx(NORMAL, "     [fchigh], larger field clock length, omit for autodetect");
     PrintAndLogEx(NORMAL, "     [fclow], small field clock length, omit for autodetect");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data rawdemod fs           = demod an fsk tag from GraphBuffer using autodetect");
-    PrintAndLogEx(NORMAL, "          : data rawdemod fs 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
-    PrintAndLogEx(NORMAL, "          : data rawdemod fs 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");
-    PrintAndLogEx(NORMAL, "          : data rawdemod fs 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
-    PrintAndLogEx(NORMAL, "          : data rawdemod fs 64 0 8 5  = demod an fsk1 RF/64 tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "          : data rawdemod fs 50 0 10 8 = demod an fsk2 RF/50 tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "          : data rawdemod fs 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs           = demod an fsk tag from GraphBuffer using autodetect");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs 32        = demod an fsk tag from GraphBuffer using a clock of RF/32, autodetect fc");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs 1         = demod an fsk tag from GraphBuffer using autodetect, invert output");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs 32 1      = demod an fsk tag from GraphBuffer using a clock of RF/32, invert output, autodetect fc");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs 64 0 8 5  = demod an fsk1 RF/64 tag from GraphBuffer");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs 50 0 10 8 = demod an fsk2 RF/50 tag from GraphBuffer");
+    PrintAndLogEx(NORMAL, "       data rawdemod fs 50 1 10 8 = demod an fsk2a RF/50 tag from GraphBuffer");
     return PM3_SUCCESS;
 }
 static int usage_data_rawdemod_nr(void) {
@@ -176,11 +204,12 @@ static int usage_data_rawdemod_nr(void) {
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
     PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data rawdemod nr        = demod a nrz/direct tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "          : data rawdemod nr 32     = demod a nrz/direct tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "          : data rawdemod nr 32 1   = demod a nrz/direct tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod nr 1      = demod a nrz/direct tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod nr 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "       data rawdemod nr        = demod a nrz/direct tag from GraphBuffer");
+    PrintAndLogEx(NORMAL, "       data rawdemod nr 32     = demod a nrz/direct tag from GraphBuffer using a clock of RF/32");
+    PrintAndLogEx(NORMAL, "       data rawdemod nr 32 1   = demod a nrz/direct tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod nr 1      = demod a nrz/direct tag from GraphBuffer while inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod nr 64 1 0 = demod a nrz/direct tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return PM3_SUCCESS;
 }
 static int usage_data_rawdemod_p1(void) {
@@ -189,11 +218,12 @@ static int usage_data_rawdemod_p1(void) {
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
     PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data rawdemod p1        = demod a psk1 tag from GraphBuffer");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p1 32     = demod a psk1 tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p1 32 1   = demod a psk1 tag from GraphBuffer using a clock of RF/32 and inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p1 1      = demod a psk1 tag from GraphBuffer while inverting data");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p1 64 1 0 = demod a psk1 tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "       data rawdemod p1        = demod a psk1 tag from GraphBuffer");
+    PrintAndLogEx(NORMAL, "       data rawdemod p1 32     = demod a psk1 tag from GraphBuffer using a clock of RF/32");
+    PrintAndLogEx(NORMAL, "       data rawdemod p1 32 1   = demod a psk1 tag from GraphBuffer using a clock of RF/32 and inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod p1 1      = demod a psk1 tag from GraphBuffer while inverting data");
+    PrintAndLogEx(NORMAL, "       data rawdemod p1 64 1 0 = demod a psk1 tag from GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors");
     return PM3_SUCCESS;
 }
 static int usage_data_rawdemod_p2(void) {
@@ -202,11 +232,12 @@ static int usage_data_rawdemod_p2(void) {
     PrintAndLogEx(NORMAL, "     <invert>, 1 for invert output");
     PrintAndLogEx(NORMAL, "     [set maximum allowed errors], default = 100.");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "   Example: data rawdemod p2         = demod a psk2 tag from GraphBuffer, autodetect clock");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p2 32      = demod a psk2 tag from GraphBuffer using a clock of RF/32");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p2 32 1    = demod a psk2 tag from GraphBuffer using a clock of RF/32 and inverting output");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p2 1       = demod a psk2 tag from GraphBuffer, autodetect clock and invert output");
-    PrintAndLogEx(NORMAL, "          : data rawdemod p2 64 1 0  = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
+    PrintAndLogEx(NORMAL, "Example:");
+    PrintAndLogEx(NORMAL, "       data rawdemod p2         = demod a psk2 tag from GraphBuffer, autodetect clock");
+    PrintAndLogEx(NORMAL, "       data rawdemod p2 32      = demod a psk2 tag from GraphBuffer using a clock of RF/32");
+    PrintAndLogEx(NORMAL, "       data rawdemod p2 32 1    = demod a psk2 tag from GraphBuffer using a clock of RF/32 and inverting output");
+    PrintAndLogEx(NORMAL, "       data rawdemod p2 1       = demod a psk2 tag from GraphBuffer, autodetect clock and invert output");
+    PrintAndLogEx(NORMAL, "       data rawdemod p2 64 1 0  = demod a psk2 tag from GraphBuffer using a clock of RF/64, inverting output and allowing 0 demod errors");
     return PM3_SUCCESS;
 }
 static int usage_data_autocorr(void) {
@@ -406,7 +437,7 @@ static int CmdSetDebugMode(const char *Cmd) {
 void printDemodBuff(void) {
     int len = DemodBufferLen;
     if (len < 1) {
-        PrintAndLogEx(NORMAL, "(printDemodBuff) no bits found in demod buffer");
+        PrintAndLogEx(INFO, "(printDemodBuff) no bits found in demod buffer");
         return;
     }
     if (len > 512) len = 512;
@@ -458,7 +489,7 @@ int CmdPrintDemodBuff(const char *Cmd) {
     if (errors) return usage_data_printdemodbuf();
 
     if (DemodBufferLen == 0) {
-        PrintAndLogEx(NORMAL, "Demodbuffer is empty");
+        PrintAndLogEx(WARNING, "Demodbuffer is empty");
         return PM3_ESOFT;
     }
     if (lstrip) {
@@ -491,9 +522,9 @@ int CmdPrintDemodBuff(const char *Cmd) {
         if (numBits == 0) {
             return PM3_ESOFT;
         }
-        PrintAndLogEx(NORMAL, "DemodBuffer: %s", hex);
+        PrintAndLogEx(SUCCESS, "DemodBuffer: %s", hex);
     } else {
-        PrintAndLogEx(NORMAL, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 32));
+        PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", sprint_bin_break(DemodBuffer + offset, length, 32));
     }
     return PM3_SUCCESS;
 }
@@ -1558,7 +1589,7 @@ static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut *b) {
     return val;
 }
 
-int getSamples(uint32_t n, bool silent) {
+int getSamples(uint32_t n, bool verbose) {
     //If we get all but the last byte in bigbuf,
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
@@ -1568,7 +1599,7 @@ int getSamples(uint32_t n, bool silent) {
     if (n == 0 || n > sizeof(got))
         n = sizeof(got);
 
-    if (!silent) PrintAndLogEx(NORMAL, "Reading %d bytes from device memory\n", n);
+    if (verbose) PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") "bytes from device memory", n);
 
     PacketResponseNG response;
     if (!GetFromDevice(BIG_BUF, got, n, 0, NULL, 0, &response, 10000, true)) {
@@ -1576,20 +1607,20 @@ int getSamples(uint32_t n, bool silent) {
         return PM3_ETIMEOUT;
     }
 
-    if (!silent) PrintAndLogEx(NORMAL, "Data fetched");
+    if (verbose) PrintAndLogEx(SUCCESS, "Data fetched");
 
     uint8_t bits_per_sample = 8;
 
     //Old devices without this feature would send 0 at arg[0]
     if (response.oldarg[0] > 0) {
         sample_config *sc = (sample_config *) response.data.asBytes;
-        if (!silent) PrintAndLogEx(NORMAL, "Samples @ %d bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+        if (verbose) PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") "bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
         bits_per_sample = sc->bits_per_sample;
     }
 
     if (bits_per_sample < 8) {
 
-        if (!silent) PrintAndLogEx(NORMAL, "Unpacking...");
+        if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
         BitstreamOut bout = { got, bits_per_sample * n,  0};
         int j = 0;
@@ -1599,7 +1630,7 @@ int getSamples(uint32_t n, bool silent) {
         }
         GraphTraceLen = j;
 
-        if (!silent) PrintAndLogEx(NORMAL, "Unpacked %d samples", j);
+        if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
 
     } else {
         for (int j = 0; j < n; j++) {
@@ -1631,16 +1662,15 @@ int CmdTuneSamples(const char *Cmd) {
 #define LF_MARGINAL_V   10000
 #define HF_UNUSABLE_V   3000
 #define HF_MARGINAL_V   5000
-#define ANTENNA_ERROR   1.03 // current algo has 3% error margin.
+#define ANTENNA_ERROR   1.00 // current algo has 3% error margin.
 
     // hide demod plot line
     DemodBufferLen = 0;
     setClockGrid(0, 0);
     RepaintGraphWindow();
 
-
     int timeout = 0;
-    PrintAndLogEx(INFO, "\nMeasuring antenna characteristics, please wait...");
+    PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
@@ -1660,7 +1690,7 @@ int CmdTuneSamples(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     // in mVolt
     struct p {
         uint32_t v_lf134;
@@ -1876,24 +1906,42 @@ int CmdSave(const char *Cmd) {
 
     int len = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
+    uint8_t cmdp = 0;
+    bool errors = false, as_wave = false, has_name = false;
 
-    len = strlen(Cmd);
-    if (len > FILE_PATH_SIZE) len = FILE_PATH_SIZE;
-    memcpy(filename, Cmd, len);
-
-    FILE *f = fopen(filename, "w");
-    if (!f) {
-        PrintAndLogEx(WARNING, "couldn't open '%s'", filename);
-        return PM3_EFILE;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        char ctmp = tolower(param_getchar(Cmd, cmdp));
+        switch (ctmp) {
+            case 'h':
+                return usage_data_save();
+            case 'f':
+                len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (len < 1) {
+                    errors = true;
+                    break;
+                }
+                has_name = true;
+                cmdp += 2;
+                break;
+            case 'w':
+                as_wave = true;
+                cmdp++;
+                break;
+            default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
     }
 
-    for (uint32_t i = 0; i < GraphTraceLen; i++)
-        fprintf(f, "%d\n", GraphBuffer[i]);
+    if (!has_name) errors = true;
 
-    fclose(f);
+    if (errors || cmdp == 0) return usage_data_save();
 
-    PrintAndLogEx(SUCCESS, "saved to " _YELLOW_("'%s'"), Cmd);
-    return PM3_SUCCESS;
+    if (as_wave)
+        return saveFileWAVE(filename, GraphBuffer, GraphTraceLen);
+    else
+        return saveFilePM3(filename, GraphBuffer, GraphTraceLen);
 }
 
 static int CmdScale(const char *Cmd) {
@@ -2241,6 +2289,34 @@ static int CmdDataIIR(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdDataNDEF(const char *Cmd) {
+
+#ifndef MAX_NDEF_LEN
+#define MAX_NDEF_LEN  2048
+#endif
+
+    CLIParserInit("data ndef",
+                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Usage:\n\tdata ndef -d 9101085402656e48656c6c6f5101085402656e576f726c64\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_strx0("dD",  "data", "<hex>", "NDEF data to decode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+
+    int datalen = 0;
+    uint8_t data[MAX_NDEF_LEN] = {0};
+    CLIGetHexWithReturn(1, data, &datalen);
+    CLIParserFree();
+    if (datalen == 0)
+        return PM3_EINVARG;
+
+    PrintAndLogEx(INFO, "Parsed NDEF Records");
+    return NDEFRecordsDecodeAndPrint(data, datalen);
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable, "This help"},
     {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable, "[threshold] Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave (use 20-45, def:25)"},
@@ -2269,7 +2345,7 @@ static command_t CommandTable[] = {
     {"printdemodbuffer", CmdPrintDemodBuff,      AlwaysAvailable, "[x] [o] <offset> [l] <length> -- print the data in the DemodBuffer - 'x' for hex output"},
     {"rawdemod",        CmdRawDemod,             AlwaysAvailable, "[modulation] ... <options> -see help (h option) -- Demodulate the data in the GraphBuffer and output binary"},
     {"samples",         CmdSamples,              IfPm3Present,    "[512 - 40000] -- Get raw samples for graph window (GraphBuffer)"},
-    {"save",            CmdSave,                 AlwaysAvailable, "<filename> -- Save trace (from graph window)"},
+    {"save",            CmdSave,                 AlwaysAvailable, "Save trace (from graph window)"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable, "[orange_marker] [blue_marker] (in graph window)"},
     {"scale",           CmdScale,                AlwaysAvailable, "<int> -- Set cursor display scale in carrier frequency expressed in kHz"},
     {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable, "<0|1|2> -- Set Debugging Level on client side"},
@@ -2279,6 +2355,7 @@ static command_t CommandTable[] = {
     {"undec",           CmdUndec,                AlwaysAvailable, "Un-decimate samples by 2"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable, "Count time between zero-crossings"},
     {"iir",             CmdDataIIR,              AlwaysAvailable,    "apply IIR buttersworth filter on plotdata"},
+    {"ndef",            CmdDataNDEF,             AlwaysAvailable,  "Decode NDEF records"},
     {NULL, NULL, NULL, NULL}
 };
 

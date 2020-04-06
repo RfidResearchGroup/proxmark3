@@ -159,7 +159,7 @@ static int CmdVisa2kDemod(const char *Cmd) {
 
 // 64*96*2=12288 samples just in case we just missed the first preamble we can still catch 2 of them
 static int CmdVisa2kRead(const char *Cmd) {
-    lf_read(true, 20000);
+    lf_read(false, 20000);
     return CmdVisa2kDemod(Cmd);
 }
 
@@ -184,7 +184,10 @@ static int CmdVisa2kClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Visa2000 to T55x7 with CardId: %"PRIu64, id);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf visa2000 read`") "to verify");
+    return res;
 }
 
 static int CmdVisa2kSim(const char *Cmd) {

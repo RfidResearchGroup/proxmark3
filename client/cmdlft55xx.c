@@ -202,7 +202,7 @@ static int usage_t55xx_restore() {
     PrintAndLogEx(NORMAL, _YELLOW_("     Assumes lf t55 detect has been run first!"));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      lf t55xx restore f lf-t55xx-00148040-data.bin");
+    PrintAndLogEx(NORMAL, "      lf t55xx restore f lf-t55xx-00148040-dump.bin");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -482,12 +482,16 @@ static bool t55xxProtect(bool lock, bool usepwd, uint8_t override, uint32_t pass
 
     int res = T55xxReadBlockEx(T55x7_CONFIGURATION_BLOCK, T55x7_PAGE0, usepwd, override, password, downlink_mode, false);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed to read block0, use `p` password parameter?");
+        PrintAndLogEx(WARNING, "Failed to read block0, use " _YELLOW_("`p`") "password parameter?");
         return false;
     }
 
-    if (GetT55xxBlockData(&block0) == false)
+    if (GetT55xxBlockData(&block0) == false) {
+        PrintAndLogEx(DEBUG, "ERROR decoded block0 == %08x", block0);
         return false;
+    }
+    PrintAndLogEx(DEBUG, "OK read block0 == %08x", block0);
+
 
     bool isPwdBitAlreadySet = (block0 >> (32 - 28) & 1);
     if (isPwdBitAlreadySet) {
@@ -1027,7 +1031,6 @@ void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
 
     PrintAndLogEx(NORMAL, msg);
 }
-
 
 static int CmdT55xxDetect(const char *Cmd) {
 
@@ -2316,7 +2319,7 @@ static int CmdT55xxDump(const char *Cmd) {
                 else
                     break;
             }
-            strcat(preferredName, "-data");
+            strcat(preferredName, "-dump");
         }
 
         // Swap endian so the files match the txt display
@@ -2325,6 +2328,7 @@ static int CmdT55xxDump(const char *Cmd) {
         for (int i = 0; i < T55x7_BLOCK_COUNT; i++)
             data[i] = BSWAP_32(cardmem[i].blockdata);
 
+        saveFileJSON(preferredName, jsfT55x7, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t));
         saveFileEML(preferredName, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), sizeof(uint32_t));
         saveFile(preferredName, ".bin", data, sizeof(data));
     }
@@ -2527,7 +2531,7 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
         return false;
     }
 
-    getSamples(12000, true);
+    getSamples(12000, false);
 
     return !getSignalProperties()->isnoise;
 }
@@ -3061,8 +3065,6 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        // loop
-        uint64_t curr_password = 0x00;
         for (uint16_t c = 0; c < keycount; ++c) {
 
             if (!session.pm3_present) {
@@ -3076,7 +3078,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
                 return PM3_EOPABORTED;
             }
 
-            curr_password = bytes_to_num(keyBlock + 4 * c, 4);
+            uint64_t curr_password = bytes_to_num(keyBlock + 4 * c, 4);
 
             PrintAndLogEx(INFO, "Testing %08"PRIX64, curr_password);
             for (dl_mode = downlink_mode; dl_mode <= 3; dl_mode++) {
@@ -3484,14 +3486,20 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
     if (!useGB) {
         for (dl_mode = downlink_mode; dl_mode < 4; dl_mode++) {
             found = AcquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, usepwd, password, dl_mode);
-            //return PM3_ENODATA;
-            if (tryDetectP1(false)) { //tryDetectModulation())
+            if (found == false)
+                continue;
+
+            if (tryDetectP1(false)) {
                 found = true;
                 found_mode = dl_mode;
                 dl_mode = 4;
-            } else found = false;
+            } else {
+                found = false;
+            }
 
-            if (!try_all_dl_modes) dl_mode = 4;
+            if (!try_all_dl_modes) {
+                dl_mode = 4;
+            }
         }
 
     } else {
@@ -3675,7 +3683,7 @@ static int CmdT55xxProtect(const char *Cmd) {
 
     // lock
     if (t55xxProtect(true, usepwd, override, password, downlink_mode, new_password) == false) {
-        PrintAndLogEx(WARNING, "Command failed. Did you run `lf t55xx detect` before?");
+        PrintAndLogEx(WARNING, "Command failed. Did you run " _YELLOW_("`lf t55xx detect`") "before?");
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;

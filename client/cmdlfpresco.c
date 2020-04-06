@@ -100,7 +100,7 @@ static int CmdPrescoDemod(const char *Cmd) {
 //see ASKDemod for what args are accepted
 static int CmdPrescoRead(const char *Cmd) {
     // Presco Number: 123456789 --> Sitecode 30 | usercode 8665
-    lf_read(true, 12000);
+    lf_read(false, 12000);
     return CmdPrescoDemod(Cmd);
 }
 
@@ -136,7 +136,10 @@ static int CmdPrescoClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Presco to T55x7 with SiteCode: %u, UserCode: %u, FullCode: %08x", sitecode, usercode, fullcode);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf presco read`") "to verify");
+    return res;
 }
 
 // takes base 12 ID converts to hex

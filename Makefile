@@ -210,13 +210,20 @@ style:
 
 # Detecting weird codepages and tabs.
 checks:
+	# Make sure recode is installed
+	@which recode >/dev/null || ( echo "Please install 'recode' package first" ; exit 1 )
 	@echo "Files with suspicious chars:"
 	@find . \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" \) \
 	      -exec sh -c "cat {} |recode utf8.. >/dev/null || echo {}" \;
 	@echo "Files with tabs:"
 # to remove tabs within lines, one can try with: vi $file -c ':set tabstop=4' -c ':set et|retab' -c ':wq'
+ifeq ($(platform),Darwin)
+	@find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \
+	      -exec egrep -l '\t' {} \;
+else
 	@find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \
 	      -exec grep -lP '\t' {} \;
+endif
 #	@echo "Files with printf \\\\t:"
 #	@find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \
 #	      -exec grep -lP '\\t' {} \;

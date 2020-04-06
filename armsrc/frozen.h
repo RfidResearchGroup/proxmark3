@@ -144,7 +144,7 @@ typedef int (*json_printf_callback_t)(struct json_out *, va_list *ap);
  * overflown bytes are not printed.
  */
 int json_printf(struct json_out *, const char *fmt, ...);
-int json_vprintf(struct json_out *, const char *fmt, va_list ap);
+int json_vprintf(struct json_out *, const char *fmt, va_list xap);
 
 /*
  * Same as json_printf, but prints to a file.
@@ -212,8 +212,7 @@ typedef void (*json_scanner_t)(const char *str, int len, void *user_data);
  * Fills `token` with the matched JSON token.
  * Return -1 if no array element found, otherwise non-negative token length.
  */
-int json_scanf_array_elem(const char *s, int len, const char *path, int index,
-                          struct json_token *token);
+int json_scanf_array_elem(const char *s, int len, const char *path, int idx, struct json_token *token);
 
 /*
  * Unescape JSON-encoded string src,slen into dst, dlen.

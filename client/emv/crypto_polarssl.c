@@ -136,9 +136,15 @@ static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl) {
     mbedtls_mpi_read_binary(&cp->ctx.Q, (const unsigned char *)q, qlen);
     mbedtls_mpi_read_binary(&cp->ctx.DP, (const unsigned char *)dp, dplen);
     mbedtls_mpi_read_binary(&cp->ctx.DQ, (const unsigned char *)dq, dqlen);
-    mbedtls_mpi_inv_mod(&cp->ctx.QP, &cp->ctx.Q, &cp->ctx.P);
 
-    int res = mbedtls_rsa_check_privkey(&cp->ctx);
+    int res = mbedtls_mpi_inv_mod(&cp->ctx.QP, &cp->ctx.Q, &cp->ctx.P);
+    if (res != 0) {
+        fprintf(stderr, "PolarSSL private key error res=%x exp=%d mod=%d.\n", res * -1, explen, modlen);
+        free(cp);
+        return NULL;
+    }
+
+    res = mbedtls_rsa_check_privkey(&cp->ctx);
     if (res != 0) {
         fprintf(stderr, "PolarSSL private key error res=%x exp=%d mod=%d.\n", res * -1, explen, modlen);
         free(cp);
@@ -150,9 +156,7 @@ static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl) {
 
 static int myrand(void *rng_state, unsigned char *output, size_t len) {
     size_t i;
-
-    if (rng_state != NULL)
-        rng_state = NULL;
+    rng_state = NULL;
 
     for (i = 0; i < len; ++i)
         output[i] = rand();

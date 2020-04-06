@@ -52,6 +52,26 @@
 
 #define PATH_MAX_LENGTH 200
 
+struct wave_info_t {
+    char signature[4];
+    uint32_t filesize;
+    char type[4];
+    struct {
+        char tag[4];
+        uint32_t size;
+        uint16_t codec;
+        uint16_t nb_channel;
+        uint32_t sample_per_sec;
+        uint32_t byte_per_sec;
+        uint16_t block_align;
+        uint16_t bit_per_sample;
+    } PACKED format;
+    struct {
+        char tag[4];
+        uint32_t size;
+    } PACKED audio_data;
+} PACKED;
+
 /**
  * @brief checks if a file exists
  * @param filename
@@ -160,7 +180,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved %zu bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -203,7 +223,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     }
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved %d blocks to text file " _YELLOW_("%s"), blocks, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32)" blocks to text file " _YELLOW_("%s"), blocks, fileName);
 
 out:
     free(fileName);
@@ -213,6 +233,7 @@ out:
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen) {
 
     if (data == NULL) return PM3_EINVARG;
+
     char *fileName = newfilenamemcopy(preferredName, ".json");
     if (fileName == NULL) return PM3_EMALLOC;
 
@@ -337,9 +358,9 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
         }
         case jsfT55x7: {
             JsonSaveStr(root, "FileType", "t55x7");
-            uint8_t id[4] = {0};
-            memcpy(id, data, 4);
-            JsonSaveBufAsHexCompact(root, "$.Card.ID", id, sizeof(id));
+            uint8_t conf[4] = {0};
+            memcpy(conf, data, 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.ConfigBlock", conf, sizeof(conf));
 
             for (size_t i = 0; i < (datalen / 4); i++) {
                 char path[PATH_MAX_LENGTH] = {0};
@@ -348,10 +369,62 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             }
             break;
         }
-        case jsf14b:
-        case jsf15:
-        case jsfLegic:
-        case jsfT5555:
+        case jsf14b: {
+            JsonSaveStr(root, "FileType", "14b");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }            
+        case jsf15: {
+            JsonSaveStr(root, "FileType", "15693");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }
+        case jsfLegic: {
+            JsonSaveStr(root, "FileType", "legic");
+            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+            break;
+        }
+        case jsfT5555: {
+            JsonSaveStr(root, "FileType", "t5555");
+            uint8_t conf[4] = {0};
+            memcpy(conf, data, 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.ConfigBlock", conf, sizeof(conf));
+
+            for (size_t i = 0; i < (datalen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                sprintf(path, "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+            }
+            break;
+        }
+        case jsfMfPlusKeys:
+            JsonSaveStr(root, "FileType", "mfp");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[11], 2);
+            uint8_t atslen = data[13];
+            if (atslen > 0)
+                JsonSaveBufAsHexCompact(root, "$.Card.ATS", &data[14], atslen);
+
+            uint8_t vdata[2][64][16 + 1] = {{{0}}};
+            memcpy(vdata, &data[14 + atslen], 2 * 64 * 17);
+
+            for (size_t i = 0; i < datalen; i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+
+                if (vdata[0][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.SectorKeys.%d.KeyA", mfSectorNum(i));
+                    JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], 16);
+                }
+
+                if (vdata[1][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.SectorKeys.%d.KeyB", mfSectorNum(i));
+                    JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], 16);
+                }
+            }
+            break;
         default:
             break;
     }
@@ -371,33 +444,114 @@ out:
     return retval;
 }
 
-int createMfcKeyDump(uint8_t sectorsCnt, sector_t *e_sector, char *fptr) {
-    uint8_t tmpKey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    int i;
+int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
 
-    if (fptr == NULL) {
-        return PM3_EINVARG;
+    if (data == NULL) return PM3_EINVARG;
+    char *fileName = newfilenamemcopy(preferredName, ".wav");
+    if (fileName == NULL) return PM3_EMALLOC;
+    int retval = PM3_SUCCESS;
+
+    struct wave_info_t wave_info = {
+        .signature = "RIFF",
+        .filesize = sizeof(wave_info) - sizeof(wave_info.signature) - sizeof(wave_info.filesize) + datalen,
+        .type = "WAVE",
+        .format.tag = "fmt ",
+        .format.size = sizeof(wave_info.format) - sizeof(wave_info.format.tag) - sizeof(wave_info.format.size),
+        .format.codec = 1, // PCM
+        .format.nb_channel = 1,
+        .format.sample_per_sec = 125000,  // TODO update for other tag types
+        .format.byte_per_sec = 125000,    // TODO update for other tag types
+        .format.block_align = 1,
+        .format.bit_per_sample = 8,
+        .audio_data.tag = "data",
+        .audio_data.size = datalen,
+    };
+
+    FILE *wave_file = fopen(fileName, "wb");
+    if (!wave_file) {
+        PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
+        retval = PM3_EFILE;
+        goto out;
+    }
+    fwrite(&wave_info, sizeof(wave_info), 1, wave_file);
+    for (int i = 0; i < datalen; i++) {
+        uint8_t sample = data[i] + 128;
+        fwrite(&sample, 1, 1, wave_file);
+    }
+    fclose(wave_file);
+
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
+
+out:
+    free(fileName);
+    return retval;
+}
+
+int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
+
+    if (data == NULL) return PM3_EINVARG;
+    char *fileName = newfilenamemcopy(preferredName, ".pm3");
+    if (fileName == NULL) return PM3_EMALLOC;
+
+    int retval = PM3_SUCCESS;
+
+    FILE *f = fopen(fileName, "w");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
+        retval = PM3_EFILE;
+        goto out;
     }
 
-    FILE *fkeys = fopen(fptr, "wb");
-    if (fkeys == NULL) {
-        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fptr);
+    for (uint32_t i = 0; i < datalen; i++)
+        fprintf(f, "%d\n", data[i]);
+
+    fflush(f);
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu")" bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
+
+out:
+    free(fileName);
+    return retval;
+}
+
+int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector) {
+
+    if (e_sector == NULL) return PM3_EINVARG;
+
+    char *fileName = newfilenamemcopy(preferredName, ".bin");
+    if (fileName == NULL) return PM3_EMALLOC;
+
+    FILE *f = fopen(fileName, "wb");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fileName);
+        free(fileName);
         return PM3_EFILE;
     }
-    PrintAndLogEx(SUCCESS, "Printing keys to binary file " _YELLOW_("%s")"...", fptr);
+    PrintAndLogEx(SUCCESS, "Generating binary key file");
 
-    for (i = 0; i < sectorsCnt; i++) {
-        num_to_bytes(e_sector[i].Key[0], 6, tmpKey);
-        fwrite(tmpKey, 1, 6, fkeys);
+    uint8_t empty[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t tmp[6] = {0, 0, 0, 0, 0, 0};
+
+    for (int i = 0; i < sectorsCnt; i++) {
+        if (e_sector[i].foundKey[0])
+            num_to_bytes(e_sector[i].Key[0], sizeof(tmp), tmp);
+        else
+            memcpy(tmp, empty, sizeof(tmp));
+        fwrite(tmp, 1, sizeof(tmp), f);
     }
 
-    for (i = 0; i < sectorsCnt; i++) {
-        num_to_bytes(e_sector[i].Key[1], 6, tmpKey);
-        fwrite(tmpKey, 1, 6, fkeys);
+    for (int i = 0; i < sectorsCnt; i++) {
+        if (e_sector[i].foundKey[0])
+            num_to_bytes(e_sector[i].Key[1], sizeof(tmp), tmp);
+        else
+            memcpy(tmp, empty, sizeof(tmp));
+        fwrite(tmp, 1, sizeof(tmp), f);
     }
 
-    fclose(fkeys);
-    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")" --> 0xffffffffffff has been inserted for unknown keys.", fptr);
+    fflush(f);
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s")"--> 0xffffffffffff has been inserted for unknown keys.", fileName);
+    free(fileName);
     return PM3_SUCCESS;
 }
 
@@ -515,6 +669,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
     if (data == NULL) return PM3_EINVARG;
+
     char *fileName = filenamemcopy(preferredName, ".eml");
     if (fileName == NULL) return PM3_EMALLOC;
 
@@ -532,6 +687,8 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
     char line[131];
     memset(line, 0, sizeof(line));
     uint8_t buf[64] = {0x00};
+
+    uint8_t *udata = (uint8_t *)data;
 
     while (!feof(f)) {
 
@@ -551,7 +708,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
         int res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
         if (res == 0 || res == 1) {
-            memcpy(data + counter, buf, hexlen);
+            memcpy(udata + counter, buf, hexlen);
             counter += hexlen;
         }
     }
@@ -715,25 +872,35 @@ out:
 }
 
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint16_t *keycnt) {
+    // t5577 == 4bytes
+    // mifare == 6 bytes
+    // mf plus == 16 bytes
+    // iclass == 8 bytes
+    // default to 6 bytes.
+    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16) {
+        keylen = 6;
+    }
+
+    return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL, true);
+}
+
+int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint16_t *keycnt,
+                         size_t startFilePosition, size_t *endFilePosition, bool verbose) {
 
     if (data == NULL) return PM3_EINVARG;
+
+    if (endFilePosition)
+        *endFilePosition = 0;
+
     char *path;
     if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
         return PM3_EFILE;
-
-    // t5577 == 4bytes
-    // mifare == 6 bytes
-    // iclass == 8 bytes
-    // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8) {
-        keylen = 6;
-    }
 
     // double up since its chars
     keylen <<= 1;
 
     char line[255];
-
+    uint16_t vkeycnt = 0;
     size_t counter = 0;
     int retval = PM3_SUCCESS;
 
@@ -744,8 +911,24 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         goto out;
     }
 
+    if (startFilePosition) {
+        if (fseek(f, startFilePosition, SEEK_SET) < 0) {
+            fclose(f);
+            retval = PM3_EFILE;
+            goto out;
+        }
+    }
+
+    uint8_t *udata = (uint8_t *)data;
+
     // read file
-    while (fgets(line, sizeof(line), f)) {
+    while (!feof(f)) {
+        size_t filepos = ftell(f);
+        if (!fgets(line, sizeof(line), f)) {
+            if (endFilePosition)
+                *endFilePosition = 0;
+            break;
+        }
 
         // add null terminator
         line[keylen] = 0;
@@ -758,23 +941,32 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
         if (line[0] == '#')
             continue;
 
-        if (!isxdigit(line[0])) {
-            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_("%2d") "HEX symbols", line, keylen);
+        if (!CheckStringIsHEXValue(line))
             continue;
+
+        // cant store more data
+        if (maxdatalen && (counter + (keylen >> 1) > maxdatalen)) {
+            retval = 1;
+            if (endFilePosition)
+                *endFilePosition = filepos;
+            break;
         }
 
-        uint64_t key = strtoull(line, NULL, 16);
+        if (hex_to_bytes(line, udata + counter, keylen >> 1) != (keylen >> 1))
+            continue;
 
-        num_to_bytes(key, keylen >> 1, data + counter);
-        (*keycnt)++;
+        vkeycnt++;
         memset(line, 0, sizeof(line));
         counter += (keylen >> 1);
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
 
     if (datalen)
         *datalen = counter;
+    if (keycnt)
+        *keycnt = vkeycnt;
 out:
     free(path);
     return retval;
@@ -790,9 +982,10 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
     // t5577 == 4bytes
     // mifare == 6 bytes
+    // mf plus == 16 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8) {
+    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16) {
         keylen = 6;
     }
 
@@ -848,10 +1041,8 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         if (line[0] == '#')
             continue;
 
-        if (!isxdigit(line[0])) {
-            PrintAndLogEx(FAILED, "file content error. '%s' must include " _BLUE_("%2d") "HEX symbols", line, keylen);
+        if (!CheckStringIsHEXValue(line))
             continue;
-        }
 
         uint64_t key = strtoull(line, NULL, 16);
 

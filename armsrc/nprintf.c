@@ -281,7 +281,7 @@ static size_t _ntoa_long(out_fct_type out, char *buffer, size_t idx, size_t maxl
     if (!(flags & FLAGS_PRECISION) || value) {
         do {
             const char digit = (char)(value % base);
-            buf[len++] = digit < 10 ? '0' + digit : (flags & FLAGS_UPPERCASE ? 'A' : 'a') + digit - 10;
+            buf[len++] = digit < 10 ? '0' + digit : ((flags & FLAGS_UPPERCASE) ? 'A' : 'a') + digit - 10;
             value /= base;
         } while (value && (len < PRINTF_NTOA_BUFFER_SIZE));
     }
@@ -305,7 +305,7 @@ static size_t _ntoa_long_long(out_fct_type out, char *buffer, size_t idx, size_t
     if (!(flags & FLAGS_PRECISION) || value) {
         do {
             const char digit = (char)(value % base);
-            buf[len++] = digit < 10 ? '0' + digit : (flags & FLAGS_UPPERCASE ? 'A' : 'a') + digit - 10;
+            buf[len++] = digit < 10 ? '0' + digit : ((flags & FLAGS_UPPERCASE) ? 'A' : 'a') + digit - 10;
             value /= base;
         } while (value && (len < PRINTF_NTOA_BUFFER_SIZE));
     }
@@ -782,7 +782,7 @@ static int _vsnprintf(out_fct_type out, char *buffer, const size_t maxlen, const
 
             case 's' : {
                 const char *p = va_arg(va, char *);
-                unsigned int l = _strnlen_s(p, precision ? precision : (size_t) -1);
+                unsigned int l = _strnlen_s(p, precision ? precision : (size_t) - 1);
                 // pre padding
                 if (flags & FLAGS_PRECISION) {
                     l = (l < precision ? l : precision);
@@ -849,7 +849,7 @@ int printf_(const char *format, ...) {
     va_list va;
     va_start(va, format);
     char buffer[1];
-    const int ret = _vsnprintf(_out_char, buffer, (size_t) -1, format, va);
+    const int ret = _vsnprintf(_out_char, buffer, (size_t) - 1, format, va);
     va_end(va);
     return ret;
 }
@@ -858,7 +858,7 @@ int printf_(const char *format, ...) {
 int sprintf_(char *buffer, const char *format, ...) {
     va_list va;
     va_start(va, format);
-    const int ret = _vsnprintf(_out_buffer, buffer, (size_t) -1, format, va);
+    const int ret = _vsnprintf(_out_buffer, buffer, (size_t) - 1, format, va);
     va_end(va);
     return ret;
 }
@@ -875,7 +875,7 @@ int snprintf_(char *buffer, size_t count, const char *format, ...) {
 
 int vprintf_(const char *format, va_list va) {
     char buffer[1];
-    return _vsnprintf(_out_char, buffer, (size_t) -1, format, va);
+    return _vsnprintf(_out_char, buffer, (size_t) - 1, format, va);
 }
 
 
@@ -888,7 +888,7 @@ int fctprintf(void (*out)(char character, void *arg), void *arg, const char *for
     va_list va;
     va_start(va, format);
     const out_fct_wrap_type out_fct_wrap = { out, arg };
-    const int ret = _vsnprintf(_out_fct, (char *)(uintptr_t)&out_fct_wrap, (size_t) -1, format, va);
+    const int ret = _vsnprintf(_out_fct, (char *)(uintptr_t)&out_fct_wrap, (size_t) - 1, format, va);
     va_end(va);
     return ret;
 }

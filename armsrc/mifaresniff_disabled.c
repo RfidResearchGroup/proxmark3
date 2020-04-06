@@ -8,7 +8,7 @@
 // Routines to support mifare classic sniffer.
 //-----------------------------------------------------------------------------
 
-#include "mifaresniff.h"
+#include "mifaresniff_disabled.h"
 
 #ifndef CheckCrc14A
 # define CheckCrc14A(data, len) check_crc(CRC_14443_A, (data), (len))

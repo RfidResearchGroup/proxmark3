@@ -258,7 +258,7 @@ static int CmdFdxDemod(const char *Cmd) {
 }
 
 static int CmdFdxRead(const char *Cmd) {
-    lf_read(true, 10000);
+    lf_read(false, 10000);
     return CmdFdxDemod(Cmd);
 }
 
@@ -301,7 +301,10 @@ static int CmdFdxClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone FDX-B to T55x7 with animal ID: %04u-%"PRIu64, countryid, animalid);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf fdx read`") "to verify");
+    return res;
 }
 
 static int CmdFdxSim(const char *Cmd) {

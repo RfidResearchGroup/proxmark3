@@ -13,16 +13,16 @@
 #include "argtable3.h"
 #include "util.h"
 
-#define arg_param_begin arg_lit0("hH",  "help",    "print this help and exit")
+#define arg_param_begin arg_lit0("hH",  "help",    "This help")
 #define arg_param_end arg_end(20)
 
-#define arg_getsize(a) (sizeof(a) / sizeof(a[0]))
-#define arg_get_lit(n)(((struct arg_lit*)argtable[n])->count)
+#define arg_getsize(a)      (sizeof(a) / sizeof(a[0]))
+#define arg_get_lit(n)      (((struct arg_lit*)argtable[n])->count)
 #define arg_get_int_count(n)(((struct arg_int*)argtable[n])->count)
-#define arg_get_int(n)(((struct arg_int*)argtable[n])->ival[0])
-#define arg_get_int_def(n,def)(arg_get_int_count(n)?(arg_get_int(n)):(def))
-#define arg_get_str(n)((struct arg_str*)argtable[n])
-#define arg_get_str_len(n)(strlen(((struct arg_str*)argtable[n])->sval[0]))
+#define arg_get_int(n)      (((struct arg_int*)argtable[n])->ival[0])
+#define arg_get_int_def(n, def)(arg_get_int_count(n) ? (arg_get_int(n)) : (def))
+#define arg_get_str(n)      ((struct arg_str*)argtable[n])
+#define arg_get_str_len(n)  (strlen(((struct arg_str*)argtable[n])->sval[0]))
 
 #define arg_strx1(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 1, 250, (glossary)))
 #define arg_strx0(shortopts, longopts, datatype, glossary) (arg_strn((shortopts), (longopts), (datatype), 0, 250, (glossary)))

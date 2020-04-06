@@ -113,12 +113,12 @@ typedef struct {
 
 // A struct used to send sample-configs over USB
 typedef struct {
-    uint8_t decimation;
-    uint8_t bits_per_sample;
-    bool averaging;
-    int divisor;
-    int trigger_threshold;
-    uint32_t samples_to_skip;
+    int8_t decimation;
+    int8_t bits_per_sample;
+    int8_t averaging;
+    int16_t divisor;
+    int16_t trigger_threshold;
+    int32_t samples_to_skip;
     bool verbose;
 } PACKED sample_config;
 /*
@@ -174,6 +174,7 @@ typedef struct {
     bool compiled_with_hitag           : 1;
     // hf
     bool compiled_with_hfsniff         : 1;
+    bool compiled_with_hfplot          : 1;
     bool compiled_with_iso14443a       : 1;
     bool compiled_with_iso14443b       : 1;
     bool compiled_with_iso15693        : 1;
@@ -188,7 +189,7 @@ typedef struct {
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 3
+#define CAPABILITIES_VERSION 4
 extern capabilities_t pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL
@@ -239,6 +240,14 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_psksim_t;
 
+// For CMD_LF_NRZ_SIMULATE (NRZ)
+typedef struct {
+    uint8_t invert;
+    uint8_t separator;
+    uint8_t clock;
+    uint8_t data[];
+} PACKED lf_nrzsim_t;
+
 typedef struct {
     uint8_t blockno;
     uint8_t keytype;
@@ -288,6 +297,7 @@ typedef struct {
 #define CMD_STANDALONE                                                    0x0115
 #define CMD_WTX                                                           0x0116
 #define CMD_TIA                                                           0x0117
+#define CMD_BREAK_LOOP                                                    0x0118
 
 // RDV40, Flash memory operations
 #define CMD_FLASHMEM_WRITE                                                0x0121
@@ -370,18 +380,20 @@ typedef struct {
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
 #define CMD_LF_IO_DEMOD                                                   0x021A
-#define CMD_LF_EM410X_DEMOD                                               0x021c
+#define CMD_LF_EM410X_DEMOD                                               0x021C
 // Sampling configuration for LF reader/sniffer
-#define CMD_LF_SAMPLING_SET_CONFIG                                        0x021d
+#define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
 #define CMD_LF_ASK_SIMULATE                                               0x021F
 #define CMD_LF_PSK_SIMULATE                                               0x0220
+#define CMD_LF_NRZ_SIMULATE                                               0x0232
 #define CMD_LF_AWID_DEMOD                                                 0x0221
 #define CMD_LF_VIKING_CLONE                                               0x0222
 #define CMD_LF_T55XX_WAKEUP                                               0x0224
 #define CMD_LF_COTAG_READ                                                 0x0225
 #define CMD_LF_T55XX_SET_CONFIG                                           0x0226
-#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0227
+#define CMD_LF_SAMPLING_PRINT_CONFIG                                      0x0227
+#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0228
 
 #define CMD_LF_T55XX_CHK_PWDS                                             0x0230
 #define CMD_LF_T55XX_DANGERRAW                                            0x0231
@@ -477,6 +489,7 @@ typedef struct {
 #define CMD_HF_MIFARE_NESTED                                              0x0612
 #define CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                                0x0613
 #define CMD_HF_MIFARE_ACQ_NONCES                                          0x0614
+#define CMD_HF_MIFARE_STATIC_NESTED                                       0x0615
 
 #define CMD_HF_MIFARE_READBL                                              0x0620
 #define CMD_HF_MIFAREU_READBL                                             0x0720
@@ -488,9 +501,12 @@ typedef struct {
 #define CMD_HF_MIFARE_CHKKEYS                                             0x0623
 #define CMD_HF_MIFARE_SETMOD                                              0x0624
 #define CMD_HF_MIFARE_CHKKEYS_FAST                                        0x0625
+#define CMD_HF_MIFARE_CHKKEYS_FILE                                        0x0626
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
 #define CMD_HF_MIFARE_MFKEY                                               0x0631
+#define CMD_HF_MIFARE_PERSONALIZE_UID                                     0x0632
+
 //ultralightC
 #define CMD_HF_MIFAREUC_AUTH                                              0x0724
 //0x0725 and 0x0726 no longer used
@@ -506,11 +522,17 @@ typedef struct {
 #define CMD_HF_DESFIRE_COMMAND                                            0x072e
 
 #define CMD_HF_MIFARE_NACK_DETECT                                         0x0730
+#define CMD_HF_MIFARE_STATIC_NONCE                                        0x0731
 
 // MFU OTP TearOff
 #define CMD_HF_MFU_OTP_TEAROFF                                            0x0740
 
 #define CMD_HF_SNIFF                                                      0x0800
+#define CMD_HF_PLOT                                                       0x0801
+
+// Fpga plot download
+#define CMD_FPGAMEM_DOWNLOAD                                              0x0802
+#define CMD_FPGAMEM_DOWNLOADED                                            0x0803
 
 // For ThinFilm Kovio
 #define CMD_HF_THINFILM_READ                                              0x0810
@@ -552,6 +574,8 @@ typedef struct {
 
 // Error codes                          Usages:
 
+// Success, transfer nonces            pm3:        Sending nonces back to client
+#define PM3_SNONCES             1
 // Success (no error)
 #define PM3_SUCCESS             0
 
@@ -589,6 +613,8 @@ typedef struct {
 #define PM3_EWRONGANSVER      -16
 // Memory out-of-bounds error           client/pm3: error when a read/write is outside the expected array
 #define PM3_EOUTOFBOUND       -17
+// exchange with card error             client/pm3: error when cant get answer from card or got an incorrect answer
+#define PM3_ECARDEXCHANGE     -18
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

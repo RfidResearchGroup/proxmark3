@@ -14,5 +14,6 @@
 #include "common.h"
 
 int CmdFlashMemSpiFFS(const char *Cmd);
+int flashmem_spiffs_load(uint8_t *destfn, uint8_t *data, size_t datalen);
 
 #endif

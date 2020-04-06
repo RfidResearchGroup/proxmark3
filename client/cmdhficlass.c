@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
 // Copyright (C) 2010 iZsh <izsh at fail0verflow.com>, Hagen Fritsch
 // Copyright (C) 2011 Gerhard de Koning Gans
 // Copyright (C) 2014 Midnitesnake & Andy Davies & Martin Holst Swende
+// Copyright (C) 2020 Iceman
 //
 // This code is licensed to you under the terms of the GNU GPL, version 2 or,
 // at your option, any later version. See the LICENSE.txt file for the text of
@@ -12,14 +12,11 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhficlass.h"
-
 #include <ctype.h>
-
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
 #include "cmdtrace.h"
 #include "util_posix.h"
-
 #include "comms.h"
 #include "mbedtls/des.h"
 #include "loclass/cipherutils.h"
@@ -28,11 +25,14 @@
 #include "loclass/elite_crack.h"
 #include "fileutils.h"
 #include "protocols.h"
-
+#include "cardhelper.h"
+#include "wiegand_formats.h"
+#include "wiegand_formatutils.h"
 
 #define NUM_CSNS 9
 #define ICLASS_KEYS_MAX 8
 #define ICLASS_AUTH_RETRY 10
+#define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
 
 static int CmdHelp(const char *Cmd);
 
@@ -48,63 +48,78 @@ static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
 };
 
 static int usage_hf_iclass_sim(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass sim <option> [CSN]");
-    PrintAndLogEx(NORMAL, "        options");
-    PrintAndLogEx(NORMAL, "                0 <CSN> simulate the given CSN");
-    PrintAndLogEx(NORMAL, "                1       simulate default CSN");
-    PrintAndLogEx(NORMAL, "                2       Reader-attack, gather reader responses to extract elite key");
-    PrintAndLogEx(NORMAL, "                3       Full simulation using emulator memory (see 'hf iclass eload')");
-    PrintAndLogEx(NORMAL, "                4       Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key");
+    PrintAndLogEx(NORMAL, "Simulate a iclass legacy/standard tag\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass sim [h] <option> [CSN]\n");
+    PrintAndLogEx(NORMAL, "Options");
+    PrintAndLogEx(NORMAL, "  h         : Show this help");
+    PrintAndLogEx(NORMAL, "  0 <CSN>   : simulate the given CSN");
+    PrintAndLogEx(NORMAL, "  1         : simulate default CSN");
+    PrintAndLogEx(NORMAL, "  2         : Reader-attack, gather reader responses to extract elite key");
+    PrintAndLogEx(NORMAL, "  3         : Full simulation using emulator memory (see 'hf iclass eload')");
+    PrintAndLogEx(NORMAL, "  4         : Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass sim 0 031FEC8AF7FF12E0");
-    PrintAndLogEx(NORMAL, "        hf iclass sim 2");
-    PrintAndLogEx(NORMAL, "        hf iclass eload 'tagdump.bin'");
-    PrintAndLogEx(NORMAL, "        hf iclass sim 3");
-    PrintAndLogEx(NORMAL, "        hf iclass sim 4");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 0 031FEC8AF7FF12E0"));
+    PrintAndLogEx(NORMAL, "   -- execute loclass attack online part");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 2"));
+    PrintAndLogEx(NORMAL, "   -- simulate full iClass 2k tag");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload f hf-iclass-AA162D30F8FF12F1-dump.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sim 3"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_eload(void) {
-    PrintAndLogEx(NORMAL, "Loads iclass tag-dump into emulator memory on device");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass eload f <filename>");
+    PrintAndLogEx(NORMAL, "Loads iclass tag-dump into emulator memory on device\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass eload [h] f <filename>\n");
+    PrintAndLogEx(NORMAL, "Options");
+    PrintAndLogEx(NORMAL, "  h            : Show this help");
+    PrintAndLogEx(NORMAL, "  f <filename> : filename of dump");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass eload f iclass_tagdump-aa162d30f8ff12f1.bin");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass eload f hf-iclass-AA162D30F8FF12F1-dump.bin"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_decrypt(void) {
-    PrintAndLogEx(NORMAL, "This is simple implementation, it tries to decrypt every block after block 6.");
+    PrintAndLogEx(NORMAL, "3DES decrypt data\n");
+    PrintAndLogEx(NORMAL, "This is naive implementation, it tries to decrypt every block after block 6.");
     PrintAndLogEx(NORMAL, "Correct behaviour would be to decrypt only the application areas where the key is valid,");
     PrintAndLogEx(NORMAL, "which is defined by the configuration block.");
     PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt d <enc data> f <tagdump> k <transport key>");
-    PrintAndLogEx(NORMAL, "        options");
-    PrintAndLogEx(NORMAL, "              d <encrypted block>    16 bytes hex");
-    PrintAndLogEx(NORMAL, "              f <filename>           filename of dump");
-    PrintAndLogEx(NORMAL, "              k <transport key>      16 bytes hex");
+    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data\n");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass decrypt d <enc data> f <tagdump> k <transport key>\n");
+    PrintAndLogEx(NORMAL, "Options");
+    PrintAndLogEx(NORMAL, "  h                 : Show this help");
+    PrintAndLogEx(NORMAL, "  d <encrypted blk> : 16 bytes hex");
+    PrintAndLogEx(NORMAL, "  f <filename>      : filename of dump");
+    PrintAndLogEx(NORMAL, "  k <transport key> : 16 bytes hex");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "S       hf iclass decrypt f tagdump_1.bin");
-    PrintAndLogEx(NORMAL, "S       hf iclass decrypt f tagdump_1.bin k 000102030405060708090a0b0c0d0e0f");
-    PrintAndLogEx(NORMAL, "S       hf iclass decrypt d 1122334455667788 k 000102030405060708090a0b0c0d0e0f");
-
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt f hf-iclass-AA162D30F8FF12F1-dump.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt f hf-iclass-AA162D30F8FF12F1-dump.bin k 000102030405060708090a0b0c0d0e0f"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass decrypt d 1122334455667788 k 000102030405060708090a0b0c0d0e0f"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_encrypt(void) {
-    PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside");
-    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass encrypt d <blockdata> k <transport key>");
+    PrintAndLogEx(NORMAL, "3DES encrypt data\n");
+    PrintAndLogEx(NORMAL, "OBS! In order to use this function, the file " _YELLOW_("'iclass_decryptionkey.bin'") " must reside");
+    PrintAndLogEx(NORMAL, "in the resources directory. The file should be 16 bytes binary data\n");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass encrypt d <blockdata> k <transport key>\n");
+    PrintAndLogEx(NORMAL, "Options");
+    PrintAndLogEx(NORMAL, "  h                 : Show this help");
+    PrintAndLogEx(NORMAL, "  d <block data>    : 16 bytes hex");
+    PrintAndLogEx(NORMAL, "  k <transport key> : 16 bytes hex");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass encrypt d 0102030405060708");
-    PrintAndLogEx(NORMAL, "        hf iclass encrypt d 0102030405060708 k 00112233445566778899AABBCCDDEEFF");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass encrypt d 0102030405060708"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass encrypt d 0102030405060708 k 00112233445566778899AABBCCDDEEFF"));
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_dump(void) {
+    PrintAndLogEx(NORMAL, "Dump all memory from a iClass tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass dump f <fileName> k <key> c <creditkey> [e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h            : Show this help");
     PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to save dump to");
     PrintAndLogEx(NORMAL, "  k <key>      : <required> access Key as 16 hex symbols or 1 hex to select key from memory");
     PrintAndLogEx(NORMAL, "  c <creditkey>: credit key as 16 hex symbols or 1 hex to select key from memory");
@@ -113,45 +128,56 @@ static int usage_hf_iclass_dump(void) {
     PrintAndLogEx(NORMAL, "  v            : verbose output");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass dump k 001122334455667B");
-    PrintAndLogEx(NORMAL, "        hf iclass dump k AAAAAAAAAAAAAAAA c 001122334455667B");
-    PrintAndLogEx(NORMAL, "        hf iclass dump k AAAAAAAAAAAAAAAA e");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass dump k 001122334455667B"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass dump k AAAAAAAAAAAAAAAA c 001122334455667B"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass dump k AAAAAAAAAAAAAAAA e"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass dump k 0"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_clone(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r");
+    PrintAndLogEx(NORMAL, "Restore data from dumpfile onto a iClass tag\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass clone f <tagfile.bin> b <first block> l <last block> k <KEY> c e|r\n");
     PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h            : Show this help");
     PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to clone from");
-    PrintAndLogEx(NORMAL, "  b <Block>    : The first block to clone as 2 hex symbols");
-    PrintAndLogEx(NORMAL, "  l <Last Blk> : Set the Data to write as 16 hex symbols");
-    PrintAndLogEx(NORMAL, "  k <Key>      : Access Key as 16 hex symbols or 1 hex to select key from memory");
+    PrintAndLogEx(NORMAL, "  b <block>    : The first block to clone as 2 hex symbols");
+    PrintAndLogEx(NORMAL, "  l <last blk> : Set the data to write as 16 hex symbols");
+    PrintAndLogEx(NORMAL, "  k <key>      : Access key as 16 hex symbols or 1 hex to select key from memory");
     PrintAndLogEx(NORMAL, "  c            : If 'c' is specified, the key set is assumed to be the credit key\n");
     PrintAndLogEx(NORMAL, "  e            : If 'e' is specified, elite computations applied to key");
-    PrintAndLogEx(NORMAL, "  r            : If 'r' is specified, no computations applied to key");
+    PrintAndLogEx(NORMAL, "  r            : If 'r' is specified, no computations applied to key (raw)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "       hf iclass clone f iclass_tagdump-121345.bin b 06 l 1A k 1122334455667788 e");
-    PrintAndLogEx(NORMAL, "       hf iclass clone f iclass_tagdump-121345.bin b 05 l 19 k 0");
-    PrintAndLogEx(NORMAL, "       hf iclass clone f iclass_tagdump-121345.bin b 06 l 19 k 0 e");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass clone f hf-iclass-AA162D30F8FF12F1-dump.bin b 06 l 1A k 1122334455667788 e"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass clone f hf-iclass-AA162D30F8FF12F1-dump b 05 l 19 k 0"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass clone f hf-iclass-AA162D30F8FF12F1-dump b 06 l 19 k 0 e"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_writeblock(void) {
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass writeblk b <block> d <data> k <key> [c|e|r|v]\n");
+    PrintAndLogEx(NORMAL, "Write data to a iClass tag\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass wrbl b <block> d <data> k <key> [c|e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  b <Block> : The block number as 2 hex symbols");
+    PrintAndLogEx(NORMAL, "  h         : Show this help");
+    PrintAndLogEx(NORMAL, "  b <block> : The block number as 2 hex symbols");
     PrintAndLogEx(NORMAL, "  d <data>  : set the Data to write as 16 hex symbols");
-    PrintAndLogEx(NORMAL, "  k <Key>   : access Key as 16 hex symbols or 1 hex to select key from memory");
+    PrintAndLogEx(NORMAL, "  k <key>   : access Key as 16 hex symbols or 1 hex to select key from memory");
     PrintAndLogEx(NORMAL, "  c         : credit key assumed\n");
     PrintAndLogEx(NORMAL, "  e         : elite computations applied to key");
-    PrintAndLogEx(NORMAL, "  r         : raw, no computations applied to key");
+    PrintAndLogEx(NORMAL, "  r         : raw, no computations applied to key (raw)");
     PrintAndLogEx(NORMAL, "  v         : verbose output");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass writeblk b 0A d AAAAAAAAAAAAAAAA k 001122334455667B");
-    PrintAndLogEx(NORMAL, "        hf iclass writeblk b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass wrbl b 0A d AAAAAAAAAAAAAAAA k 001122334455667B"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass wrbl b 1B d AAAAAAAAAAAAAAAA k 001122334455667B c"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass wrbl b 1B d AAAAAAAAAAAAAAAA k 0"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readblock(void) {
+    PrintAndLogEx(NORMAL, "Read a iClass block from tag\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass rdbl b <block> k <key> [c|e|r|v]\n");
     PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h         : Show this help");
     PrintAndLogEx(NORMAL, "  b <block> : The block number as 2 hex symbols");
     PrintAndLogEx(NORMAL, "  k <key>   : Access Key as 16 hex symbols or 1 hex to select key from memory");
     PrintAndLogEx(NORMAL, "  c         : credit key assumed\n");
@@ -159,35 +185,53 @@ static int usage_hf_iclass_readblock(void) {
     PrintAndLogEx(NORMAL, "  r         : raw, no computations applied to key");
     PrintAndLogEx(NORMAL, "  v         : verbose output");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass rdbl b 06 k 0011223344556677");
-    PrintAndLogEx(NORMAL, "        hf iclass rdbl b 1B k 0011223344556677 c");
-    PrintAndLogEx(NORMAL, "        hf iclass rdbl b 0A k 0");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass rdbl b 06 k 0011223344556677"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass rdbl b 1B k 0011223344556677 c"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass rdbl b 0A k 0"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_readtagfile() {
-    PrintAndLogEx(NORMAL, "Usage: hf iclass readtagfile <filename> [startblock] [endblock]");
+    PrintAndLogEx(NORMAL, "Print a iClass tag-dump file\n");
+    PrintAndLogEx(NORMAL, "Usage: hf iClass readtagfile [f <filename>] [s <startblock>] [e <endblock>] [v]\n");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h                Show this help");
+    PrintAndLogEx(NORMAL, "  f <filename>     filename of dump");
+    PrintAndLogEx(NORMAL, "  s <startblock>   print from this block (default block6)");
+    PrintAndLogEx(NORMAL, "  e <endblock>     end printing at this block (default 0, ALL)");
+    PrintAndLogEx(NORMAL, "  v                verbose output");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass readtagfile f hf-iclass-AA162D30F8FF12F1-dump.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass readtagfile s 1 f hf-iclass-AA162D30F8FF12F1-dump.bin"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_calc_newkey(void) {
     PrintAndLogEx(NORMAL, "Calculate new key for updating\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass calc_newkey o <Old key> n <New key> s [csn] e");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass calc_newkey o <old key> n <new key> s [csn] e\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "  o <oldkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
-    PrintAndLogEx(NORMAL, "  n <newkey> : *specify a key as 16 hex symbols or a key number as 1 symbol");
-    PrintAndLogEx(NORMAL, "  s <csn>    : specify a card Serial number to diversify the key (if omitted will attempt to read a csn)");
-    PrintAndLogEx(NORMAL, "  e          : specify new key as elite calc");
-    PrintAndLogEx(NORMAL, "  ee         : specify old and new key as elite calc");
+    PrintAndLogEx(NORMAL, "  h           : Show this help");
+    PrintAndLogEx(NORMAL, "  o <old key> : *specify a key as 16 hex symbols or a key number as 1 symbol");
+    PrintAndLogEx(NORMAL, "  n <new key> : *specify a key as 16 hex symbols or a key number as 1 symbol");
+    PrintAndLogEx(NORMAL, "  s <csn>     : specify a card Serial number to diversify the key (if omitted will attempt to read a csn)");
+    PrintAndLogEx(NORMAL, "  e           : specify new key as elite calc");
+    PrintAndLogEx(NORMAL, "  ee          : specify old and new key as elite calc");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, " e key to e key given csn  : hf iclass calcnewkey o 1122334455667788 n 2233445566778899 s deadbeafdeadbeaf ee");
-    PrintAndLogEx(NORMAL, " std key to e key read csn : hf iclass calcnewkey o 1122334455667788 n 2233445566778899 e");
-    PrintAndLogEx(NORMAL, " std to std read csn       : hf iclass calcnewkey o 1122334455667788 n 2233445566778899");
-    PrintAndLogEx(NORMAL, "\nNOTE: * = required\n");
+    PrintAndLogEx(NORMAL, "   -- e key to e key given csn");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass calcnewkey o 1122334455667788 n 2233445566778899 s deadbeafdeadbeaf ee"));
+    PrintAndLogEx(NORMAL, "   -- std key to e key read csn");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass calcnewkey o 1122334455667788 n 2233445566778899 e"));
+    PrintAndLogEx(NORMAL, "   -- std to std read csn");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass calcnewkey o 1122334455667788 n 2233445566778899"));
+    PrintAndLogEx(NORMAL, "\nNOTE: * = required");
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;;
 }
 static int usage_hf_iclass_managekeys(void) {
-    PrintAndLogEx(NORMAL, "HELP :  Manage iClass Keys in client memory:\n");
+    PrintAndLogEx(NORMAL, "Manage iClass Keys in client memory:\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass managekeys n [keynbr] k [key] f [filename] s l p\n");
     PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h            : Show this help");
     PrintAndLogEx(NORMAL, "  n <keynbr>   : specify the keyNbr to set in memory");
     PrintAndLogEx(NORMAL, "  k <key>      : set a key in memory");
     PrintAndLogEx(NORMAL, "  f <filename> : specify a filename to use with load or save operations");
@@ -195,109 +239,115 @@ static int usage_hf_iclass_managekeys(void) {
     PrintAndLogEx(NORMAL, "  l            : load keys to memory from file specified by filename");
     PrintAndLogEx(NORMAL, "  p            : print keys loaded into memory\n");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, " set key       : hf iclass managekeys n 0 k 1122334455667788");
-    PrintAndLogEx(NORMAL, " save key file : hf iclass managekeys f mykeys.bin s");
-    PrintAndLogEx(NORMAL, " load key file : hf iclass managekeys f mykeys.bin l");
-    PrintAndLogEx(NORMAL, " print keys    : hf iclass managekeys p\n");
+    PrintAndLogEx(NORMAL, "   -- set key");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys n 0 k 1122334455667788"));
+    PrintAndLogEx(NORMAL, "   -- save key file");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys f mykeys.bin s"));
+    PrintAndLogEx(NORMAL, "   -- load key file");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys f mykeys.bin l"));
+    PrintAndLogEx(NORMAL, "   -- print keys");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass managekeys p"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_reader(void) {
     PrintAndLogEx(NORMAL, "Act as a Iclass reader.  Look for iClass tags until Enter or the pm3 button is pressed\n");
     PrintAndLogEx(NORMAL, "Usage:  hf iclass reader [h] [1]\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h   This help text");
-    PrintAndLogEx(NORMAL, "    1   read only 1 tag");
+    PrintAndLogEx(NORMAL, "  h   Show this help");
+    PrintAndLogEx(NORMAL, "  1   read only 1 tag");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass reader 1");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass reader 1"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_replay(void) {
-    PrintAndLogEx(NORMAL, "Replay a collected mac message");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass replay [h] <mac>");
+    PrintAndLogEx(NORMAL, "Replay a collected mac message\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass replay [h] <mac>\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       This help text");
-    PrintAndLogEx(NORMAL, "    <mac>   Mac bytes to replay (8 hexsymbols)");
+    PrintAndLogEx(NORMAL, "  h       Show this help");
+    PrintAndLogEx(NORMAL, "  <mac>   Mac bytes to replay (8 hexsymbols)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass replay 00112233");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass replay 00112233"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_sniff(void) {
-    PrintAndLogEx(NORMAL, "Sniff the communication between reader and tag");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass sniff [h]");
+    PrintAndLogEx(NORMAL, "Sniff the communication between reader and tag\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass sniff [h]\n");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "  h       Show this help");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf iclass sniff");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass sniff"));
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_loclass(void) {
-    PrintAndLogEx(NORMAL, "Usage: hf iclass loclass [h] [t [l]] [f <filename>]");
+    PrintAndLogEx(NORMAL, "Execute the offline part of loclass attack");
+    PrintAndLogEx(NORMAL, "  An iclass dumpfile is assumed to consist of an arbitrary number of");
+    PrintAndLogEx(NORMAL, "  malicious CSNs, and their protocol responses");
+    PrintAndLogEx(NORMAL, "  The binary format of the file is expected to be as follows: ");
+    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+    PrintAndLogEx(NORMAL, "  <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
+    PrintAndLogEx(NORMAL, "   ... totalling N*24 bytes\n");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass loclass [h] [t [l]] [f <filename>]\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             Show this help");
-    PrintAndLogEx(NORMAL, "      t             Perform self-test");
-    PrintAndLogEx(NORMAL, "      t l           Perform self-test, including long ones");
-    PrintAndLogEx(NORMAL, "      f <filename>  Bruteforce iclass dumpfile");
-    PrintAndLogEx(NORMAL, "                    An iclass dumpfile is assumed to consist of an arbitrary number of");
-    PrintAndLogEx(NORMAL, "                    malicious CSNs, and their protocol responses");
-    PrintAndLogEx(NORMAL, "                    The binary format of the file is expected to be as follows: ");
-    PrintAndLogEx(NORMAL, "                    <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "                    <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "                    <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC>");
-    PrintAndLogEx(NORMAL, "                   ... totalling N*24 bytes");
+    PrintAndLogEx(NORMAL, "  h             Show this help");
+    PrintAndLogEx(NORMAL, "  t             Perform self-test");
+    PrintAndLogEx(NORMAL, "  t l           Perform self-test, including long ones");
+    PrintAndLogEx(NORMAL, "  f <filename>  Bruteforce iclass dumpfile");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass loclass f iclass-dump.bin"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass loclass t"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_chk(void) {
-    PrintAndLogEx(NORMAL, "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass chk [h|e|r] [f  (*.dic)]");
+    PrintAndLogEx(NORMAL, "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag\n");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass chk [h|e|r] [f  (*.dic)]\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             Show this help");
-    PrintAndLogEx(NORMAL, "      f <filename>  Dictionary file with default iclass keys");
-    PrintAndLogEx(NORMAL, "      r             raw");
-    PrintAndLogEx(NORMAL, "      e             elite");
-    PrintAndLogEx(NORMAL, "      c             credit key  (if not use, default is debit)");
+    PrintAndLogEx(NORMAL, "  h             Show this help");
+    PrintAndLogEx(NORMAL, "  f <filename>  Dictionary file with default iclass keys");
+    PrintAndLogEx(NORMAL, "  r             raw");
+    PrintAndLogEx(NORMAL, "  e             elite");
+    PrintAndLogEx(NORMAL, "  c             credit key  (if not use, default is debit)");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "         hf iclass chk f dictionaries/iclass_default_keys.dic");
-    PrintAndLogEx(NORMAL, "         hf iclass chk f dictionaries/iclass_default_keys.dic e");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass chk f dictionaries/iclass_default_keys.dic"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass chk f dictionaries/iclass_default_keys.dic e"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;;
 }
 static int usage_hf_iclass_lookup(void) {
-    PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file");
-    PrintAndLogEx(NORMAL, "Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [u <csn>] [p <epurse>] [m <macs>]");
+    PrintAndLogEx(NORMAL, "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file\n");
+    PrintAndLogEx(NORMAL, "Usage: hf iclass lookup [h|e|r] [f  (*.dic)] [u <csn>] [p <epurse>] [m <macs>]\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "      h             Show this help");
-    PrintAndLogEx(NORMAL, "      f <filename>  Dictionary file with default iclass keys");
-    PrintAndLogEx(NORMAL, "      u             CSN");
-    PrintAndLogEx(NORMAL, "      p             EPURSE");
-    PrintAndLogEx(NORMAL, "      m             macs");
-    PrintAndLogEx(NORMAL, "      r             raw");
-    PrintAndLogEx(NORMAL, "      e             elite");
+    PrintAndLogEx(NORMAL, "  h             Show this help");
+    PrintAndLogEx(NORMAL, "  f <filename>  Dictionary file with default iclass keys");
+    PrintAndLogEx(NORMAL, "  u             CSN");
+    PrintAndLogEx(NORMAL, "  p             EPURSE");
+    PrintAndLogEx(NORMAL, "  m             macs");
+    PrintAndLogEx(NORMAL, "  r             raw");
+    PrintAndLogEx(NORMAL, "  e             elite");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic");
-    PrintAndLogEx(NORMAL, "        hf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic e");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic"));
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass lookup u 9655a400f8ff12e0 p f0ffffffffffffff m 0000000089cb984b f dictionaries/iclass_default_keys.dic e"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 static int usage_hf_iclass_permutekey(void) {
-    PrintAndLogEx(NORMAL, "Permute function from 'heart of darkness' paper.");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "Usage:  hf iclass permute [h] <r|f> <bytes>");
+    PrintAndLogEx(NORMAL, "Permute function from 'heart of darkness' paper.\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf iclass permute [h] <r|f> <bytes>\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "           h          This help");
-    PrintAndLogEx(NORMAL, "           r          reverse permuted key");
-    PrintAndLogEx(NORMAL, "           f          permute key");
-    PrintAndLogEx(NORMAL, "           <bytes>    input bytes");
+    PrintAndLogEx(NORMAL, "  h          Show this help");
+    PrintAndLogEx(NORMAL, "  r          reverse permuted key");
+    PrintAndLogEx(NORMAL, "  f          permute key");
+    PrintAndLogEx(NORMAL, "  <bytes>    input bytes");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "      hf iclass permute r 0123456789abcdef");
+    PrintAndLogEx(NORMAL, _YELLOW_("\thf iclass permute r 0123456789abcdef"));
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-
-/*
-static int xorbits_8(uint8_t val) {
-    uint8_t res = val ^ (val >> 1); //1st pass
-    res = res ^ (res >> 1);         // 2nd pass
-    res = res ^ (res >> 2);         // 3rd pass
-    res = res ^ (res >> 4);         // 4th pass
-    return res & 1;
-}
-*/
 
 // iclass / picopass chip config structures and shared routines
 typedef struct {
@@ -310,7 +360,6 @@ typedef struct {
     uint8_t fuses;          //[15]
 } picopass_conf_block;
 
-
 typedef struct {
     uint8_t csn[8];
     picopass_conf_block conf;
@@ -319,6 +368,13 @@ typedef struct {
     uint8_t key_c[8];
     uint8_t app_issuer_area[8];
 } picopass_hdr;
+
+typedef enum {
+    None = 0,
+    DES,
+    RFU,
+    TRIPLEDES
+} BLOCK79ENCRYPTION;
 
 static uint8_t isset(uint8_t val, uint8_t mask) {
     return (val & mask);
@@ -334,15 +390,15 @@ static void fuse_config(const picopass_hdr *hdr) {
     if (isset(fuses, FUSE_FPERS))
         PrintAndLogEx(SUCCESS, "    Mode: Personalization [Programmable]");
     else
-        PrintAndLogEx(NORMAL, "    Mode: Application [Locked]");
+        PrintAndLogEx(SUCCESS, "    Mode: Application [Locked]");
 
     if (isset(fuses, FUSE_CODING1)) {
-        PrintAndLogEx(NORMAL, "    Coding: RFU");
+        PrintAndLogEx(SUCCESS, "    Coding: RFU");
     } else {
         if (isset(fuses, FUSE_CODING0))
-            PrintAndLogEx(NORMAL, "    Coding: ISO 14443-2 B/ISO 15693");
+            PrintAndLogEx(SUCCESS, "    Coding: ISO 14443-2 B/ISO 15693");
         else
-            PrintAndLogEx(NORMAL, "    Coding: ISO 14443B only");
+            PrintAndLogEx(SUCCESS, "    Coding: ISO 14443B only");
     }
     // 1 1
     if (isset(fuses, FUSE_CRYPT1) && isset(fuses, FUSE_CRYPT0)) PrintAndLogEx(SUCCESS, "    Crypt: Secured page, keys not locked");
@@ -354,7 +410,7 @@ static void fuse_config(const picopass_hdr *hdr) {
     if (notset(fuses, FUSE_CRYPT1) && notset(fuses, FUSE_CRYPT0)) PrintAndLogEx(NORMAL, "    Crypt: No auth possible. Read only if RA is enabled");
 
     if (isset(fuses, FUSE_RA))
-        PrintAndLogEx(NORMAL, "    RA: Read access enabled");
+        PrintAndLogEx(SUCCESS, "    RA: Read access enabled");
     else
         PrintAndLogEx(WARNING, "    RA: Read access not enabled");
 }
@@ -428,18 +484,18 @@ static void mem_app_config(const picopass_hdr *hdr) {
         PrintAndLogEx(NORMAL, "    Credit - Kc");
     }
 }
+
 static void print_picopass_info(const picopass_hdr *hdr) {
     fuse_config(hdr);
     mem_app_config(hdr);
 }
+
 static void printIclassDumpInfo(uint8_t *iclass_dump) {
     print_picopass_info((picopass_hdr *) iclass_dump);
 }
 
-
 static int CmdHFiClassList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    //PrintAndLogEx(NORMAL, "Deprecated command, use 'hf list iclass' instead");
     CmdTraceList("iclass");
     return PM3_SUCCESS;
 }
@@ -466,7 +522,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(ERR, "A CSN should consist of 16 HEX symbols");
             return usage_hf_iclass_sim();
         }
-        PrintAndLogEx(NORMAL, " simtype: %02x csn: %s", simType, sprint_hex(CSN, 8));
+        PrintAndLogEx(INFO, " simtype: %02x CSN: %s", simType, sprint_hex(CSN, 8));
     }
 
     if (simType > 4) {
@@ -474,24 +530,9 @@ static int CmdHFiClassSim(const char *Cmd) {
         return usage_hf_iclass_sim();
     }
 
-    /*
-            // pre-defined 8 CSN by Holiman
-            uint8_t csns[8*NUM_CSNS] = {
-                0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x13, 0x94, 0x7E, 0x76, 0xFF, 0x12, 0xE0,
-                0x2A, 0x99, 0xAC, 0x79, 0xEC, 0xFF, 0x12, 0xE0,
-                0x17, 0x12, 0x01, 0xFD, 0xF7, 0xFF, 0x12, 0xE0,
-                0xCD, 0x56, 0x01, 0x7C, 0x6F, 0xFF, 0x12, 0xE0,
-                0x4B, 0x5E, 0x0B, 0x72, 0xEF, 0xFF, 0x12, 0xE0,
-                0x00, 0x73, 0xD8, 0x75, 0x58, 0xFF, 0x12, 0xE0,
-                0x0C, 0x90, 0x32, 0xF3, 0x5D, 0xFF, 0x12, 0xE0
-            };
-    */
-    /*
-            pre-defined 9 CSN by iceman
-            only one csn depend on several others.
-            six depends only on the first csn,  (0,1, 0x45)
-    */
+    // remember to change the define NUM_CSNS to match.
+
+    // pre-defined 9 CSN by iceman
     uint8_t csns[8 * NUM_CSNS] = {
         0x01, 0x0A, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
         0x0C, 0x06, 0x0C, 0xFE, 0xF7, 0xFF, 0x12, 0xE0,
@@ -504,27 +545,6 @@ static int CmdHFiClassSim(const char *Cmd) {
         0xD2, 0x5A, 0x82, 0xF8, 0xF7, 0xFF, 0x12, 0xE0
         //0x04, 0x08, 0x9F, 0x78, 0x6E, 0xFF, 0x12, 0xE0
     };
-    /*
-            // pre-defined 15 CSN by Carl55
-            // remember to change the define NUM_CSNS to match.
-            uint8_t csns[8*NUM_CSNS] = {
-                0x00, 0x0B, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x04, 0x0E, 0x08, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x09, 0x0D, 0x05, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x0A, 0x0C, 0x06, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x0F, 0x0B, 0x03, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x08, 0x0A, 0x0C, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x0D, 0x09, 0x09, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x0E, 0x08, 0x0A, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x03, 0x07, 0x17, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x3C, 0x06, 0xE0, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x01, 0x05, 0x1D, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x02, 0x04, 0x1E, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x07, 0x03, 0x1B, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x00, 0x02, 0x24, 0xF7, 0xFF, 0x12, 0xE0,
-                0x00, 0x05, 0x01, 0x21, 0xF7, 0xFF, 0x12, 0xE0
-            };
-    */
 
     /* DUMPFILE FORMAT:
      *
@@ -545,7 +565,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
@@ -560,7 +580,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             }
             uint8_t num_mac  = resp.oldarg[1];
             bool success = (NUM_CSNS == num_mac);
-            PrintAndLogEx(NORMAL, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
+            PrintAndLogEx( (success) ? SUCCESS : WARNING, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
 
             if (num_mac == 0)
                 break;
@@ -594,7 +614,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandOLD(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, simType, NUM_CSNS, 0, csns, 8 * NUM_CSNS);
 
             while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
                 tries++;
@@ -609,7 +629,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             }
             uint8_t num_mac = resp.oldarg[1];
             bool success = ((NUM_CSNS * 2) == num_mac);
-            PrintAndLogEx(NORMAL, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS * 2, (success) ? "OK" : "FAIL");
+            PrintAndLogEx((success) ? SUCCESS : WARNING, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS * 2, (success) ? "OK" : "FAIL");
 
             if (num_mac == 0)
                 break;
@@ -685,7 +705,7 @@ static int CmdHFiClassReader_Replay(const char *Cmd) {
 
     if (param_gethex(Cmd, 0, MAC, 8)) {
         PrintAndLogEx(FAILED, "MAC must include 8 HEX symbols");
-        return 1;
+        return PM3_EINVARG;
     }
 
     clearCommandBuffer();
@@ -800,8 +820,6 @@ static int CmdHFiClassELoad(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-#define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
-
 static int CmdHFiClassDecrypt(const char *Cmd) {
 
     bool errors = false;
@@ -811,6 +829,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     uint8_t cmdp = 0;
 
     uint8_t enc_data[8] = {0};
+    uint8_t dec_data[8] = {0};
 
     size_t keylen = 0;
     uint8_t key[32] = {0};
@@ -826,7 +845,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 return usage_hf_iclass_decrypt();
             case 'd':
                 if (param_gethex(Cmd, cmdp + 1, enc_data, 16)) {
-                    PrintAndLogEx(ERR, "data must be 16 HEX symbols");
+                    PrintAndLogEx(ERR, "Data must be 16 HEX symbols");
                     errors = true;
                     break;
                 }
@@ -835,7 +854,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 break;
             case 'f':
                 if (param_getstr(Cmd, cmdp + 1, filename, sizeof(filename)) == 0) {
-                    PrintAndLogEx(WARNING, "no filename found after f");
+                    PrintAndLogEx(WARNING, "No filename found after f");
                     errors = true;
                     break;
                 }
@@ -864,11 +883,14 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_decrypt();
 
-    if (have_key == false) {
-        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-        if (res != PM3_SUCCESS)
-            return PM3_EINVARG;
+    bool use_sc = IsCryptoHelperPresent();
 
+    if (have_key == false && use_sc == false) {
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+            return PM3_EINVARG;
+        }
         memcpy(key, keyptr, sizeof(key));
         free(keyptr);
     }
@@ -877,10 +899,13 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     mbedtls_des3_context ctx;
     mbedtls_des3_set2key_dec(&ctx, key);
 
-    uint8_t dec_data[8] = {0};
-
     if (have_data) {
-        mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
+
+        if (use_sc) {
+            Decrypt(enc_data, dec_data);
+        } else {
+            mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
+        }
         PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(dec_data, sizeof(dec_data)));
     }
 
@@ -897,27 +922,87 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-        for (uint16_t blocknum = 0; blocknum < applimit; ++blocknum) {
+        BLOCK79ENCRYPTION aa1_encryption = (decrypted[(6 * 8) + 7] & 0x03);
+
+        uint32_t limit = MIN(applimit, decryptedlen / 8);
+
+        if (decryptedlen / 8 != applimit) {
+            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%zu") "vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
+            PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * 8);
+        }
+        uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
+
+        for (uint16_t blocknum = 0; blocknum < limit; ++blocknum) {
 
             uint8_t idx = blocknum * 8;
             memcpy(enc_data, decrypted + idx, 8);
 
-            // block 7 or higher,  and not empty 0xFF
-            if (blocknum > 6 &&  memcmp(enc_data, empty, 8) != 0) {
-                mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+            if (aa1_encryption == RFU || aa1_encryption == None)
+                continue;
+                
+            // Decrypted block 7,8,9 if configured.
+            if (blocknum > 6 && blocknum <= 6 + numblocks4userid && memcmp(enc_data, empty, 8) != 0) {
+                if (use_sc) {
+                    Decrypt(enc_data, decrypted + idx);
+                } else {
+                    mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+                }
             }
         }
 
         //Use the first block (CSN) for filename
-        char *fptr = calloc(42, sizeof(uint8_t));
+        char *fptr = calloc(50, sizeof(uint8_t));
+        if (!fptr) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            free(decrypted);
+            return PM3_EMALLOC;
+        }
         strcat(fptr, "hf-iclass-");
-        FillFileNameByUID(fptr, hdr->csn, "-data-decrypted", sizeof(hdr->csn));
+        FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
         saveFile(fptr, ".bin", decrypted, decryptedlen);
         saveFileEML(fptr, decrypted, decryptedlen, 8);
         saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen);
 
+        PrintAndLogEx(INFO, "Following output skips CSN / block0");
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
+
+        // decode block 6
+        if (memcmp(decrypted + (8 * 6), empty, 8) != 0) {
+            if (use_sc) {
+                DecodeBlock6(decrypted + (8 * 6));
+            }
+        }
+
+        // decode block 7-8-9
+        if (memcmp(decrypted + (8 * 7), empty, 8) != 0) {
+
+            //todo:  remove preamble/sentinal
+
+            uint32_t top = 0, mid, bot;
+            mid = bytes_to_num(decrypted + (8 * 7), 4);
+            bot = bytes_to_num(decrypted + (8 * 7) + 4, 4);
+
+            PrintAndLogEx(INFO, "Block 7 binary");
+
+            char hexstr[8 + 1] = {0};
+            hex_to_buffer((uint8_t *)hexstr, decrypted + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
+
+            char binstr[8 * 8 + 1] = {0};
+            hextobinstring(binstr, hexstr);
+            uint8_t i = 0;
+            while (i < strlen(binstr) && binstr[i++] == '0');
+
+            PrintAndLogEx(SUCCESS, "%s", binstr + i);
+
+            PrintAndLogEx(INFO, "Wiegand decode");
+            wiegand_message_t packed = initialize_message_object(top, mid, bot);
+            HIDTryUnpack(&packed, true);
+            PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+        } else {
+            PrintAndLogEx(INFO, "No credential found.");
+        }
+
         free(decrypted);
         free(fptr);
     }
@@ -972,7 +1057,9 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     if (errors || cmdp < 1) return usage_hf_iclass_encrypt();
 
-    if (have_key == false) {
+    bool use_sc = IsCryptoHelperPresent();
+
+    if (have_key == false && use_sc == false) {
         size_t keylen = 0;
         int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
         if (res != PM3_SUCCESS)
@@ -982,8 +1069,11 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
         free(keyptr);
     }
 
-    iClassEncryptBlkData(blk_data, key);
-
+    if (use_sc) {
+        Encrypt(blk_data, blk_data);
+    } else {
+        iClassEncryptBlkData(blk_data, key);
+    }
     printvar("encrypted block", blk_data, 8);
     return PM3_SUCCESS;
 }
@@ -1232,14 +1322,14 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
         if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\n[!] aborted via keyboard!\n");
             DropField();
-            return 0;
+            return PM3_EOPABORTED;
         }
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000))
             break;
     }
     // dump cmd switch off at device when finised.
-
+            
     uint32_t blocksRead = resp.oldarg[1];
     uint8_t isOK = resp.oldarg[0] & 0xff;
     if (!isOK && !blocksRead) {
@@ -1324,14 +1414,14 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
 
     // print the dump
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
-    PrintAndLogEx(NORMAL, "CSN   |00| %s|", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
         //Use the first block (CSN) for filename
         strcat(filename, "hf-iclass-");
-        FillFileNameByUID(filename, tag_data, "-data", 8);
+        FillFileNameByUID(filename, tag_data, "-dump", 8);
     }
 
     // save the dump to .bin file
@@ -1738,6 +1828,13 @@ static int ReadBlock(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite,
     }
 
     PrintAndLogEx(SUCCESS, "block %02X: %s\n", blockno, sprint_hex(result->blockdata, sizeof(result->blockdata)));
+
+    if (blockno == 6) {
+        if (IsCryptoHelperPresent()) {
+            DecodeBlock6(result->blockdata);
+        }
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -1847,11 +1944,10 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
-    uint8_t mem_config;
-    memcpy(&mem_config, iclass_dump + 13, 1);
-    uint8_t maxmemcount;
 
+    uint8_t maxmemcount;
     uint8_t filemaxblock = filesize / 8;
+    uint8_t mem_config = iclass_dump[13];
 
     if (mem_config & 0x80)
         maxmemcount = 255;
@@ -1868,39 +1964,67 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     if (endblock > filemaxblock - 1)
         endblock = filemaxblock - 1;
 
-    //PrintAndLog ("startblock: %d, endblock: %d, filesize: %d, maxmemcount: %d, filemaxblock: %d",startblock, endblock,filesize, maxmemcount, filemaxblock);
+    /*
+    PrintAndLogEx(INFO, "startblock: %u, endblock: %u, filesize: %zu, maxmemcount: %u, filemaxblock: %u"
+        , startblock
+        , endblock
+        , filesize
+        , maxmemcount
+        , filemaxblock
+    );
+    */
 
     int i = startblock;
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
-        PrintAndLogEx(NORMAL, "      |%02X| %s", i, sprint_hex_ascii(blk, 8));
+        PrintAndLogEx(INFO, "      |%02X| %s", i, sprint_hex_ascii(blk, 8));
         i++;
     }
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+");
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
 }
 
 static int CmdHFiClassReadTagFile(const char *Cmd) {
     int startblock = 0;
     int endblock = 0;
-    char tempnum[5];
-    FILE *f;
     char filename[FILE_PATH_SIZE];
-    if (param_getstr(Cmd, 0, filename, sizeof(filename)) < 1)
-        return usage_hf_iclass_readtagfile();
+    bool errors = false, verbose = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h':
+                return usage_hf_iclass_readtagfile();
+            case 'f':
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                    PrintAndLogEx(FAILED, "Filename too long");
+                    errors = true;
+                    break;
+                }
+                cmdp += 2;
+                break;
+            case 's':
+                startblock = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;
+            case 'e':
+                endblock = param_get8ex(Cmd, cmdp + 1, 0, 10);
+                cmdp += 2;
+                break;     
+            case 'v':
+                verbose = true;
+                cmdp++;
+                break;                
+            default:
+                PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
 
-    if (param_getstr(Cmd, 1, tempnum, sizeof(tempnum)) < 1)
-        startblock = 0;
-    else
-        sscanf(tempnum, "%d", &startblock);
-
-    if (param_getstr(Cmd, 2, tempnum, sizeof(tempnum)) < 1)
-        endblock = 0;
-    else
-        sscanf(tempnum, "%d", &endblock);
+    if (errors || (strlen(Cmd) == 0)) return usage_hf_iclass_readtagfile();
 
     // file handling and reading
-    f = fopen(filename, "rb");
+    FILE *f = fopen(filename, "rb");
     if (!f) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
         return PM3_EFILE;
@@ -1912,21 +2036,27 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
     if (fsize <= 0) {
         PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
-        return 1;
+        return PM3_EFILE;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
-        return 1;
+        return PM3_EMALLOC;
     }
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
-
+    
+    if (verbose) {
+        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
+        PrintAndLogEx(INFO, "File size %d bytes, file blocks %d (0x%02x)", bytes_read, bytes_read >> 3, bytes_read >> 3);
+        PrintAndLogEx(INFO, "Printing blocks from");
+        PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") "end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
+    }
     uint8_t *csn = dump;
-    PrintAndLogEx(NORMAL, "------+--+-------------------------+\n");
-    PrintAndLogEx(NORMAL, "CSN   |00| %s|\n", sprint_hex(csn, 8));
+    PrintAndLogEx(INFO, "------+--+-------------------------+----------");
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
     free(dump);
     return PM3_SUCCESS;
@@ -2050,7 +2180,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         if (!select_only(CSN, CCNR, false, true)) {
             DropField();
-            return 0;
+            return PM3_ESOFT;
         }
     }
 
@@ -2072,21 +2202,21 @@ static int loadKeys(char *filename) {
     if (fsize <= 0) {
         PrintAndLogEx(ERR, "Error, when getting filesize");
         fclose(f);
-        return 1;
+        return PM3_EFILE;
     }
 
     uint8_t *dump = calloc(fsize, sizeof(uint8_t));
     if (!dump) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
-        return 1;
+        return PM3_EMALLOC;
     }
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
     if (bytes_read > ICLASS_KEYS_MAX * 8) {
         PrintAndLogEx(WARNING, "File is too long to load - bytes: %zu", bytes_read);
         free(dump);
-        return 0;
+        return PM3_EFILE;
     }
     uint8_t i = 0;
     for (; i < bytes_read / 8; i++)
@@ -2805,6 +2935,7 @@ int readIclass(bool loop, bool verbose) {
                      FLAG_ICLASS_READER_CONF | FLAG_ICLASS_READER_ONLY_ONCE |
                      FLAG_ICLASS_READER_ONE_TRY;
 
+    uint32_t res = PM3_ETIMEOUT;
     // loop in client not device - else on windows have a communication error
     while (!kbd_enter_pressed()) {
 
@@ -2827,12 +2958,13 @@ int readIclass(bool loop, bool verbose) {
             }
 
             if (readStatus & FLAG_ICLASS_READER_CSN) {
-                PrintAndLogEx(NORMAL, "   CSN: %s", sprint_hex(data, 8));
+                PrintAndLogEx(NORMAL, "\n");
+                PrintAndLogEx(SUCCESS, "   CSN: %s", sprint_hex(data, 8));
                 tagFound = true;
             }
 
             if (readStatus & FLAG_ICLASS_READER_CC) {
-                PrintAndLogEx(NORMAL, "    CC: %s", sprint_hex(data + 16, 8));
+                PrintAndLogEx(SUCCESS, "    CC: %s", sprint_hex(data + 16, 8));
             }
 
             if (readStatus & FLAG_ICLASS_READER_CONF) {
@@ -2847,7 +2979,7 @@ int readIclass(bool loop, bool verbose) {
 
                 bool se_enabled = (memcmp((uint8_t *)(data + 8 * 5), "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
 
-                PrintAndLogEx(NORMAL, " App IA: %s", sprint_hex(data + 8 * 5, 8));
+                PrintAndLogEx(SUCCESS, " App IA: %s", sprint_hex(data + 8 * 5, 8));
 
                 if (isHidRange) {
                     if (legacy)
@@ -2875,6 +3007,6 @@ int readIclass(bool loop, bool verbose) {
         if (!loop) break;
     }
     DropField();
-    return PM3_SUCCESS;
+    return res;
 }
 

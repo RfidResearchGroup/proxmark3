@@ -134,6 +134,7 @@ CORESRCS =  uart_posix.c \
 
 CMDSRCS =   crapto1/crapto1.c \
             crapto1/crypto1.c \
+            mifare/mifaredefault.c \
             mifare/mfkey.c \
             tea.c \
             fido/additional_ca.c \
@@ -158,6 +159,7 @@ CMDSRCS =   crapto1/crapto1.c \
             legic_prng.c \
             iso15693tools.c \
             prng.c \
+            generator.c \
             graph.c \
             cmddata.c \
             lfdemod.c \
@@ -203,6 +205,7 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdhffido.c \
             cmdhffelica.c \
             cmdhfthinfilm.c \
+            cmdhflto.c \
             cmdhw.c \
             cmdlf.c \
             cmdlfawid.c \
@@ -247,7 +250,8 @@ CMDSRCS =   crapto1/crapto1.c \
             bucketsort.c \
             flash.c \
             wiegand_formats.c \
-            wiegand_formatutils.c
+            wiegand_formatutils.c \
+            cardhelper.c
 
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )

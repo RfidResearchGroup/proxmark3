@@ -35,7 +35,7 @@ struct emv_pk {
 
 #define EXPIRE(yy, mm, dd) 0x ## yy ## mm ## dd
 
-struct emv_pk *emv_pk_parse_pk(char *bufm, size_t buflen);
+struct emv_pk *emv_pk_parse_pk(char *buf, size_t buflen);
 struct emv_pk *emv_pk_new(size_t modlen, size_t explen);
 void emv_pk_free(struct emv_pk *pk);
 char *emv_pk_dump_pk(const struct emv_pk *pk);

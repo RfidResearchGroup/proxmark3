@@ -136,7 +136,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
             };
         }
 
-        if ((mifare_sendcmd_short(NULL, 0, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
             DbprintfEx(FLAG_NEWLINE, "write block send command error");
             break;
         };
@@ -323,7 +323,7 @@ void RunMod() {
             Dbprintf("\tCurrent sector:%3d, block:%3d, key type: %c, key count: %i ", sec, block, type ? 'B' : 'A', mfKeysCnt);
             int key = saMifareChkKeys(block, type, true, size, &keyBlock[0], &key64);
             if (key == -1) {
-                LED(LED_RED, 50); //red
+                LED(LED_RED, 50);
                 Dbprintf("\t✕ Key not found for this sector!");
                 allKeysFound = false;
                 // break;
@@ -348,21 +348,24 @@ void RunMod() {
         TODO:
         - Get UID from tag and set accordingly in emulator memory and call mifaresim with right flags (iceman)
     */
-    if (!allKeysFound && keyFound) {
-        Dbprintf("\t✕ There's currently no nested attack in MattyRun, sorry!");
-        LED_C_ON(); //red
-        LED_A_ON(); //yellow
-        // no room to run nested attack on device (iceman)
-        // Do nested attack, set allKeysFound = true;
-        // allKeysFound = true;
+    if (allKeysFound) {
+        Dbprintf("\t✓ All keys found");
     } else {
-        Dbprintf("\t✕ There's nothing I can do without at least a one valid key, sorry!");
-        LED_C_ON(); //red
+        if (keyFound) {
+            Dbprintf("\t✕ There's currently no nested attack in MattyRun, sorry!");
+            LED_C_ON(); //red
+            LED_A_ON(); //yellow
+            // no room to run nested attack on device (iceman)
+            // Do nested attack, set allKeysFound = true;
+            // allKeysFound = true;
+        }   else {
+            Dbprintf("\t✕ There's nothing I can do without at least a one valid key, sorry!");
+            LED_C_ON(); //red
+        }
     }
 
-    /*
-        If enabled, transfers found keys to memory and loads target content in emulator memory. Then it simulates to be the tag it has basically cloned.
-    */
+    // If enabled, transfers found keys to memory and loads target content in emulator memory. Then it simulates to be the tag it has basically cloned.
+
     if ((transferToEml) && (allKeysFound)) {
 
         emlClearMem();

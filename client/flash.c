@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "ui.h"
 #include "elf.h"
@@ -522,9 +523,22 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     return ret;
 }
 
+const char ice[] =
+    "...................................................................\n        @@@  @@@@@@@ @@@@@@@@ @@@@@@@@@@   @@@@@@  @@@  @@@\n"
+    "        @@! !@@      @@!      @@! @@! @@! @@!  @@@ @@!@!@@@\n        !!@ !@!      @!!!:!   @!! !!@ @!@ @!@!@!@! @!@@!!@!\n"
+    "        !!: :!!      !!:      !!:     !!: !!:  !!! !!:  !!!\n        :    :: :: : : :: :::  :      :    :   : : ::    : \n"
+    _RED_("        .    .. .. . . .. ...  .      .    .   . . ..    . ")
+    "\n...................................................................\n"
+    ;
+
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
+    int len = 0;
+
     PrintAndLogEx(SUCCESS, "Writing segments for file: %s", ctx->filename);
+
+    bool filter_ansi = !session.supports_colors;
+
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
@@ -552,7 +566,15 @@ int flash_write(flash_file_t *ctx) {
             baddr += block_size;
             length -= block_size;
             block++;
-            fprintf(stdout, ".");
+            if (len < strlen(ice)) {
+                if (filter_ansi && !isalpha(ice[len])) {
+                    len++;
+                } else {
+                    fprintf(stdout, "%c", ice[len++]);
+                }
+            } else {
+                fprintf(stdout, ".");
+            }
             fflush(stdout);
         }
         PrintAndLogEx(NORMAL, " " _GREEN_("OK"));

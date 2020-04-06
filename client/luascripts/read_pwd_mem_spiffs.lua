@@ -16,7 +16,7 @@ example =
 
     -- This will read the other.log file in SPIFFS and print the stored passwords
     script run read_pwd_mem_spiffs -f other.log
-	
+
     -- This will delete the hf_bog.log file from SPIFFS
     script run read_pwd_mem_spiffs -r
 ]]
@@ -68,7 +68,7 @@ local function main(args)
 
         -- offset
         if o == 'f' then filename = a end
-		
+
         -- remove
         if o == 'r' then removeflag = true end
 
@@ -79,7 +79,7 @@ local function main(args)
         core.console("mem spiffs remove " ..filename)
         return
     end
-	
+
     data, length, err = core.GetFromFlashMemSpiffs(filename)
     if data == nil then return oops('Problem while reading file from SPIFFS') end
 

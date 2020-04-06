@@ -305,7 +305,7 @@ static int EMVExchangeEx(EMVCommandChannel channel, bool ActivateField, bool Lea
             break;
         case ECC_CONTACT:
             if (IfPm3Smartcard())
-                res = ExchangeAPDUSC(data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
+                res = ExchangeAPDUSC(true, data, datalen, ActivateField, LeaveFieldON, Result, (int)MaxResultLen, (int *)ResultLen);
             else
                 res = 1;
             if (res) {
@@ -490,10 +490,10 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
 
                 for (uint8_t ui = 0x01; ui <= 0x10; ui++) {
                     if (sfidatalen[ui]) {
-                        struct tlvdb *tsfi = NULL;
-                        tsfi = tlvdb_parse_multi(sfidata[ui], sfidatalen[ui]);
-                        if (tsfi) {
-                            struct tlvdb *tsfitmp = tlvdb_find_path(tsfi, (tlv_tag_t[]) {0x70, 0x61, 0x00});
+
+                        struct tlvdb *tsfi_a = tlvdb_parse_multi(sfidata[ui], sfidatalen[ui]);
+                        if (tsfi_a) {
+                            struct tlvdb *tsfitmp = tlvdb_find_path(tsfi_a, (tlv_tag_t[]) {0x70, 0x61, 0x00});
                             if (!tsfitmp) {
                                 PrintAndLogEx(FAILED, "SFI 0x%02zu doesn't have any records.", sfidatalen[ui]);
                                 continue;
@@ -501,7 +501,7 @@ int EMVSearchPSE(EMVCommandChannel channel, bool ActivateField, bool LeaveFieldO
                             res = EMVCheckAID(channel, decodeTLV, tsfitmp, tlv);
                             fileFound = true;
                         }
-                        tlvdb_free(tsfi);
+                        tlvdb_free(tsfi_a);
                     }
                 }
             }

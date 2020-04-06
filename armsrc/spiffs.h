@@ -577,7 +577,7 @@ s32_t SPIFFS_close(spiffs *fs, spiffs_file fh);
  * @param old           path of file to rename
  * @param newPath       new path of file
  */
-s32_t SPIFFS_rename(spiffs *fs, const char *old, const char *newPath);
+s32_t SPIFFS_rename(spiffs *fs, const char *old_path, const char *new_path);
 
 #if SPIFFS_OBJ_META_LEN
 /**
@@ -801,7 +801,7 @@ s32_t SPIFFS_ix_unmap(spiffs *fs, spiffs_file fh);
  * @param fh      the mapped file handle of the file to remap
  * @param offset  new absolute file offset where to start the index map
  */
-s32_t SPIFFS_ix_remap(spiffs *fs, spiffs_file fh, u32_t offs);
+s32_t SPIFFS_ix_remap(spiffs *fs, spiffs_file fh, u32_t offset);
 
 /**
  * Utility function to get number of spiffs_page_ix entries a map buffer must

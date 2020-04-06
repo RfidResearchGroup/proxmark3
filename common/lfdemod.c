@@ -206,7 +206,7 @@ void getHiLo(int *high, int *low, uint8_t fuzzHi, uint8_t fuzzLo) {
         *low =  signalprop.low;
     }
 
-    prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
+    // prnt("getHiLo fuzzed: High %d | Low %d", *high, *low);
 }
 
 // by marshmellow
@@ -1566,7 +1566,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                     }
                     if (*startIdx == 0) {
                         *startIdx = i - clk;
-                        prnt("DEBUG ASK: cleanAskRawDemod minus clock [%d]", *startIdx);
+                        if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod minus clock [%d]", *startIdx);
                     }
                     waveHigh = !waveHigh;
                     smplCnt = 0;
@@ -1587,7 +1587,7 @@ static uint16_t cleanAskRawDemod(uint8_t *bits, size_t *size, int clk, int inver
                     }
                     if (*startIdx == 0) {
                         *startIdx = i - cl_2;
-                        prnt("DEBUG ASK: cleanAskRawDemod minus half clock [%d]", *startIdx);
+                        if (g_debugMode == 2) prnt("DEBUG ASK: cleanAskRawDemod minus half clock [%d]", *startIdx);
                     }
                     waveHigh = !waveHigh;
                     smplCnt = 0;
@@ -1651,12 +1651,12 @@ int askdemod_ext(uint8_t *bits, size_t *size, int *clk, int *invert, int maxErr,
             errCnt = manrawdecode(bits, size, 0, &alignPos);
             *startIdx += ((*clk / 2) * alignPos);
 
-            prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u , bestError %zu", *startIdx, alignPos, errCnt);
+            if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) CLEAN: startIdx %i, alignPos %u , bestError %zu", *startIdx, alignPos, errCnt);
         }
         return errCnt;
     }
 
-    prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
+    if (g_debugMode == 2) prnt("DEBUG: (askdemod_ext) Weak wave detected: startIdx %i", *startIdx);
 
     int lastBit;  //set first clock check - can go negative
     size_t i, bitnum = 0;     //output counter

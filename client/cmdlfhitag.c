@@ -18,6 +18,7 @@
 #include "commonutil.h"
 #include "hitag.h"
 #include "fileutils.h"  // savefile
+#include "protocols.h"  // defines
 
 static int CmdHelp(const char *Cmd);
 
@@ -35,7 +36,7 @@ static int usage_hitag_sniff(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag sniff");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hitag_sim(void) {
     PrintAndLogEx(NORMAL, "Simulate " _YELLOW_("Hitag2 / HitagS")" transponder");
@@ -49,7 +50,7 @@ static int usage_hitag_sim(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag sim 2 b lf-hitag-dump");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hitag_info(void) {
     PrintAndLogEx(NORMAL, "Usage:   lf hitag info [h] p <pwd>");
@@ -58,7 +59,7 @@ static int usage_hitag_info(void) {
     PrintAndLogEx(NORMAL, "       p <pwd>    password");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag info");
-    return 0;
+    return PM3_SUCCESS;
 }
 /*
 static int usage_hitag_dump(void) {
@@ -71,7 +72,7 @@ static int usage_hitag_dump(void) {
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag dump f mydump");
     PrintAndLogEx(NORMAL, "         lf hitag dump p 4D494B52 f mydump");
-    return 0;
+    return PM3_SUCCESS;
 }
 */
 static int usage_hitag_reader(void) {
@@ -85,12 +86,12 @@ static int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
     PrintAndLogEx(NORMAL, "      Not implemented");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
-    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: 4D494B52 (\"MIKR\")");
+    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: " _YELLOW_("4D494B52") "(\"MIKR\")");
     PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Read all pages, challenge mode");
-    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: 4F4E4D494B52 (\"ONMIKR\")");
+    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: " _YELLOW_("4F4E4D494B52") "(\"ONMIKR\")");
     PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
     PrintAndLogEx(NORMAL, "      26               Just read UID");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "Hitag writer functions");
@@ -106,7 +107,7 @@ static int usage_hitag_writer(void) {
     PrintAndLogEx(NORMAL, "      24  <key> <page> <byte0...byte3>       Write page, crypto mode. Key format: ISK high + ISK low.");
     PrintAndLogEx(NORMAL, "                                             Default: 4F4E4D494B52 (\"ONMIKR\"). Set key=0 for no auth");
     PrintAndLogEx(NORMAL, "      27  <password> <page> <byte0...byte3>  Write page, password mode. Default: 4D494B52 (\"MIKR\")");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hitag_checkchallenges(void) {
     PrintAndLogEx(NORMAL, "Check challenges, load a file with save hitag crypto challenges and test them all.");
@@ -119,19 +120,19 @@ static int usage_hitag_checkchallenges(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, "         lf hitag cc f lf-hitag-challenges");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLFHitagList(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-    CmdTraceList("hitag");
-    return 0;
+    CmdTraceList("hitag2");
+    return PM3_SUCCESS;
 
     /*
     uint8_t *got = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!got) {
         PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
-        return 2;
+        return PM3_EMALLOC;
     }
 
     // Query for the actual size of the trace
@@ -139,7 +140,7 @@ static int CmdLFHitagList(const char *Cmd) {
     if (!GetFromDevice(BIG_BUF, got, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(got);
-        return 2;
+        return PM3_ETIMEOUT;
     }
 
     uint16_t traceLen = response.arg[2];
@@ -148,13 +149,13 @@ static int CmdLFHitagList(const char *Cmd) {
         if (p == NULL) {
             PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
             free(got);
-            return 2;
+            return PM3_EMALLOC;
         }
         got = p;
         if (!GetFromDevice(BIG_BUF, got, traceLen, 0, NULL, 0, NULL, 2500, false)) {
             PrintAndLogEx(WARNING, "command execution time out");
             free(got);
-            return 2;
+            return PM3_ETIMEOUT;
         }
     }
 
@@ -251,7 +252,7 @@ static int CmdLFHitagList(const char *Cmd) {
     }
 
     free(got);
-    return 0;
+    return PM3_SUCCES;
     */
 }
 
@@ -262,7 +263,7 @@ static int CmdLFHitagSniff(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAG_SNIFF, NULL, 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLFHitagSim(const char *Cmd) {
@@ -343,7 +344,7 @@ static int CmdLFHitagSim(const char *Cmd) {
     }
 
     free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static void printHitagConfiguration(uint8_t config) {
@@ -483,21 +484,20 @@ static int CmdLFHitagInfo(const char *Cmd) {
     // read UID
     uint32_t uid = 0;
     if (getHitagUid(&uid) == false)
-        return 1;
+        return PM3_ESOFT;
 
-    PrintAndLogEx(SUCCESS, "UID: %08X", uid);
+    PrintAndLogEx(SUCCESS, "UID: " _YELLOW_("%08X"), uid);
 
     // how to detemine Hitag types?
     // read block3,  get configuration byte.
-    PrintAndLogEx(FAILED, _RED_("TODO: This is a hardcoded example!"));
 
     // common configurations.
-    printHitagConfiguration(0x06);
+    // printHitagConfiguration(0x06);
     //printHitagConfiguration( 0x0E );
     //printHitagConfiguration( 0x02 );
     //printHitagConfiguration( 0x00 );
     //printHitagConfiguration( 0x04 );
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // TODO: iceman
@@ -550,39 +550,28 @@ static int CmdLFHitagReader(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandOLD(cmd, htf, 0, 0, &htd, sizeof(htd));
+    SendCommandMIX(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-        return 1;
+        return PM3_ETIMEOUT;
     }
 
     if (resp.oldarg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
-        return 1;
+        return PM3_ESOFT;
     }
 
     uint32_t id = bytes_to_num(resp.data.asBytes, 4);
+    uint8_t *data = resp.data.asBytes;
+    PrintAndLogEx(SUCCESS, " UID: " _YELLOW_("%08x"), id);
 
-    PrintAndLogEx(SUCCESS, "Valid Hitag2 tag found - UID: %08x", id);
     if (htf != RHT2F_UID_ONLY) {
-
-        PrintAndLogEx(SUCCESS, "Dumping tag memory...");
-        uint8_t *data = resp.data.asBytes;
-
-        char filename[FILE_PATH_SIZE];
-        char *fnameptr = filename;
-        fnameptr += sprintf(fnameptr, "lf-hitag-");
-        FillFileNameByUID(fnameptr, data, "-dump", 4);
-
-        saveFile(filename, ".bin", data, 48);
-        saveFileEML(filename, data, 48, 4);
-        saveFileJSON(filename, jsfHitag, data, 48);
-
+    
         // block3, 1 byte
         printHitagConfiguration(data[4 * 3]);
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLFHitagCheckChallenges(const char *Cmd) {
@@ -631,7 +620,7 @@ static int CmdLFHitagCheckChallenges(const char *Cmd) {
         SendCommandMIX(CMD_LF_HITAGS_TEST_TRACES, 0, 0, 0, NULL, 0);
 
     free(data);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdLFHitagWriter(const char *Cmd) {
@@ -675,43 +664,97 @@ static int CmdLFHitagWriter(const char *Cmd) {
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 4000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-        return 1;
+        return PM3_ETIMEOUT;
     }
 
     if (resp.oldarg[0] == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag write failed");
-        return 1;
+        return PM3_ESOFT;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
-/*
-static int CmdLFHitagDump(const char *Cmd) {
+static int CmdLFHitag2Dump(const char *Cmd) {
     PrintAndLogEx(INFO, "Dumping of tag memory");
-    PrintAndLogEx(INFO, "To be done!");
 
     char ctmp = tolower(param_getchar(Cmd, 0));
-    if (ctmp == 'h') return usage_hitag_dump();
-    return 0;
+    if (ctmp == 'h') return 0; // usage_hitag_dump();
+
+    PacketResponseNG resp;
+ 
+    PrintAndLogEx(SUCCESS, "Dumping tag memory...");
+    uint8_t *data = resp.data.asBytes;
+
+    char filename[FILE_PATH_SIZE];
+    char *fnameptr = filename;
+    fnameptr += sprintf(fnameptr, "lf-hitag-");
+    FillFileNameByUID(fnameptr, data, "-dump", 4);
+
+    saveFile(filename, ".bin", data, 48);
+    saveFileEML(filename, data, 48, 4);
+    saveFileJSON(filename, jsfHitag, data, 48);
+
+    return PM3_SUCCESS;
 }
-*/
+
+
+// Annotate HITAG protocol
+void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {  
+}
+
+void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    uint8_t cmdbits = (cmd[0] & 0xC0) >> 6;
+
+    if (cmdsize == 1) {
+        if (cmdbits == HITAG2_START_AUTH) {
+            snprintf(exp, size, "START AUTH");
+            return;
+        }
+        if (cmdbits == HITAG2_HALT) {
+            snprintf(exp, size, "HALT");
+            return;
+        }
+    }
+
+    if (cmdsize == 2) {
+        if (cmdbits == HITAG2_START_AUTH) {
+            // C     1     C   0
+            // 1100 0 00 1 1100 000
+            uint8_t page = (cmd[0] & 0x38) >> 3;
+            uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
+            snprintf(exp, size, "READ page(%x) %x", page, inv_page);
+            return;
+        }
+        if (cmdbits == HITAG2_WRITE_PAGE) {
+            uint8_t page = (cmd[0] & 0x38) >> 3;
+            uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
+            snprintf(exp, size, "WRITE page(%x) %x", page, inv_page);
+            return;
+        }
+    }
+}
+
+void annotateHitagS(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+}
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,                   AlwaysAvailable, "This help" },
-    {"list",     CmdLFHitagList,            IfPm3Hitag,      "List Hitag trace history" },
-    {"info",     CmdLFHitagInfo,            IfPm3Hitag,      "Tag information" },
-    {"reader",   CmdLFHitagReader,          IfPm3Hitag,      "Act like a Hitag Reader" },
-    {"sim",      CmdLFHitagSim,             IfPm3Hitag,      "Simulate Hitag transponder" },
-    {"sniff",    CmdLFHitagSniff,           IfPm3Hitag,      "Eavesdrop Hitag communication" },
-    {"writer",   CmdLFHitagWriter,          IfPm3Hitag,      "Act like a Hitag Writer" },
-    {"cc",       CmdLFHitagCheckChallenges, IfPm3Hitag,      "Test all challenges" },
+    {"help",   CmdHelp,               AlwaysAvailable, "This help" },
+    {"list",   CmdLFHitagList,        IfPm3Hitag,      "List Hitag trace history" },
+    {"info",   CmdLFHitagInfo,        IfPm3Hitag,      "Tag information" },
+    {"reader", CmdLFHitagReader,      IfPm3Hitag,      "Act like a Hitag Reader" },
+    {"sim",    CmdLFHitagSim,         IfPm3Hitag,      "Simulate Hitag transponder" },
+    {"sniff",  CmdLFHitagSniff,       IfPm3Hitag,      "Eavesdrop Hitag communication" },
+    {"writer", CmdLFHitagWriter,      IfPm3Hitag,      "Act like a Hitag Writer" },
+    {"dump",   CmdLFHitag2Dump,       IfPm3Hitag,      "Dump Hitag2 tag" },
+    {"cc",     CmdLFHitagCheckChallenges, IfPm3Hitag,  "Test all challenges" },
     { NULL, NULL, 0, NULL }
 };
 
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdLFHitag(const char *Cmd) {
@@ -720,5 +763,5 @@ int CmdLFHitag(const char *Cmd) {
 }
 
 int readHitagUid(void) {
-    return CmdLFHitagReader("26") == 0;
+    return (CmdLFHitagReader("26") == PM3_SUCCESS);
 }

@@ -125,7 +125,7 @@ static int CmdSecurakeyDemod(const char *Cmd) {
 }
 
 static int CmdSecurakeyRead(const char *Cmd) {
-    lf_read(true, 8000);
+    lf_read(false, 8000);
     return CmdSecurakeyDemod(Cmd);
 }
 
@@ -168,7 +168,10 @@ static int CmdSecurakeyClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone Securakey to T55x7 with raw hex");
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf securakey read`") "to verify");
+    return res;
 }
 
 static int CmdSecurakeySim(const char *Cmd) {

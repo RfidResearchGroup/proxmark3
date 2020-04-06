@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Andrei Costin <zveriu@gmail.com>, 2011
 # gen_pm3mfsim_script.sh

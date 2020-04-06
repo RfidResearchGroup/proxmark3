@@ -437,27 +437,27 @@ static int json_doit(struct frozen *f) {
 }
 
 int json_escape(struct json_out *out, const char *p, size_t len) WEAK;
-int json_escape(struct json_out *out, const char *p, size_t len) {
+int json_escape(struct json_out *out, const char *str, size_t str_len) {
     size_t i, cl, n = 0;
     const char *hex_digits = "0123456789abcdef";
     const char *specials = "btnvfr";
 
-    for (i = 0; i < len; i++) {
-        unsigned char ch = ((unsigned char *) p)[i];
+    for (i = 0; i < str_len; i++) {
+        unsigned char ch = ((unsigned char *) str)[i];
         if (ch == '"' || ch == '\\') {
             n += out->printer(out, "\\", 1);
-            n += out->printer(out, p + i, 1);
+            n += out->printer(out, str + i, 1);
         } else if (ch >= '\b' && ch <= '\r') {
             n += out->printer(out, "\\", 1);
             n += out->printer(out, &specials[ch - '\b'], 1);
         } else if (c_isprint(ch)) {
-            n += out->printer(out, p + i, 1);
+            n += out->printer(out, str + i, 1);
         } else if ((cl = json_get_utf8_char_len(ch)) == 1) {
             n += out->printer(out, "\\u00", 4);
             n += out->printer(out, &hex_digits[(ch >> 4) % 0xf], 1);
             n += out->printer(out, &hex_digits[ch % 0xf], 1);
         } else {
-            n += out->printer(out, p + i, cl);
+            n += out->printer(out, str + i, cl);
             i += cl - 1;
         }
     }
@@ -1032,8 +1032,8 @@ static void json_scanf_cb(void *callback_data, const char *name,
     }
 }
 
-int json_vscanf(const char *s, int len, const char *fmt, va_list ap) WEAK;
-int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
+int json_vscanf(const char *str, int len, const char *fmt, va_list ap) WEAK;
+int json_vscanf(const char *str, int len, const char *fmt, va_list ap) {
     char path[JSON_MAX_PATH_LEN] = "", fmtbuf[20];
     int i = 0;
     char *p = NULL;
@@ -1070,7 +1070,7 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
                     break;
                 }
             }
-            json_walk(s, len, json_scanf_cb, &info);
+            json_walk(str, len, json_scanf_cb, &info);
         } else if (json_isalpha(fmt[i]) || json_get_utf8_char_len(fmt[i]) > 1) {
             char *pe;
             const char *delims = ": \r\n\t";

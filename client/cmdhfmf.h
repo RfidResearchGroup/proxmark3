@@ -22,5 +22,6 @@ int CmdHF14AMfDbg(const char *Cmd);   // used by cmd hf mfu dbg
 void showSectorTable(void);
 void readerAttack(nonces_t data, bool setEmulatorMem, bool verbose);
 void printKeyTable(uint8_t sectorscnt, sector_t *e_sector);
+void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector);
 void printKeyTable_fast(uint8_t sectorscnt, icesector_t *e_sector, uint64_t bar, uint64_t foo);
 #endif

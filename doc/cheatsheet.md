@@ -60,7 +60,7 @@ Dump iClass card contents
 ```
 Options
 ---
-k <Key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
+k <key>      : *Access Key as 16 hex symbols or 1 hex to select key from memory
 
 m3 --> hf iclass dump k 0
 ```
@@ -69,8 +69,8 @@ Read iClass Block
 ```
 Options
 ---
-b <Block>  : The block number as 2 hex symbols
-k <Key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+b <block>  : The block number as 2 hex symbols
+k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
 
 pm3 --> hf iclass rdbl b 7 k 0
 ```
@@ -79,9 +79,9 @@ Write to iClass Block
 ```
 Options
 ---
-b <Block>  : The block number as 2 hex symbols
+b <block>  : The block number as 2 hex symbols
 d <data>   : Set the Data to write as 16 hex symbols
-k <Key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
+k <key>    : Access Key as 16 hex symbols or 1 hex to select key from memory
 
 pm3 --> hf iclass wrbl b 07 d 6ce099fe7e614fd0 k 0
 ```
@@ -102,7 +102,7 @@ Options
 n <keynbr>    : specify the keyNbr to set in memory
 k <key>       : set a key in memory
 
-pm3 --> hf iclass managekeys n 0 k AFA785A7DAB33378
+pm3 --> hf iclass managekeys n 3 k AFA785A7DAB33378
 ```
 
 Encrypt iClass Block
@@ -124,9 +124,10 @@ Simulate iClass
 Options
 ---
 0 <CSN>     simulate the given CSN
-2           Runs part 1 of LOCLASS attack
 1           simulate default CSN
+2           Runs online part of LOCLASS attack
 3           Full simulation using emulator memory (see 'hf iclass eload')
+4           Runs online part of LOCLASS attack against reader in keyroll mode
 
 pm3 --> hf iclass sim 3
 ```
@@ -149,7 +150,7 @@ Extract custom iClass key (loclass attack)
 Options
 ---
 f <filename>   : specify a filename to clone from
-k <Key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
+k <key>        : Access Key as 16 hex symbols or 1 hex to select key from memory
 e              : If 'e' is specified, elite computations applied to key
 
 pm3 --> hf iclass sim 2
@@ -275,6 +276,29 @@ Clone Mifare 1K Sequence
 pm3 --> hf mf chk *1 ? d mfc_default_keys
 pm3 --> hf mf dump
 pm3 --> hf mf restore 1 u 4A6CE843 k hf-mf-A29558E4-key.bin f hf-mf-A29558E4-data.bin
+```
+
+Read Mifare Ultralight EV1
+```
+pm3 --> hf mfu info
+```
+
+Clone Mifare Ultralight EV1 Sequence
+```
+pm3 --> hf mfu dump k FFFFFFFF
+pm3 --> script run dumptoemul-mfu -i hf-mfu-XXXX-dump.bin -o hf-mfu-XXXX-dump.eml
+pm3 --> hf mfu eload u hf-mfu-XXXX-dump.eml
+pm3 --> hf mfu sim t 7 u hf-mfu-XXXX-dump.eml
+```
+
+Bruteforce Mifare Classic card numbers from 11223344 to 11223346
+```
+pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
+```
+
+Bruteforce Mifare Ultralight EV1 card numbers from 11223344556677 to 11223344556679
+```
+pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 ```
 
 ## Wiegand manipulation

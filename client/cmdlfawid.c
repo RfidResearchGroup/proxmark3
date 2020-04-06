@@ -333,7 +333,7 @@ static int CmdAWIDDemod(const char *Cmd) {
 
 // this read is the "normal" read,  which download lf signal and tries to demod here.
 static int CmdAWIDRead(const char *Cmd) {
-    lf_read(true, 12000);
+    lf_read(false, 12000);
     return CmdAWIDDemod(Cmd);
 }
 
@@ -422,7 +422,10 @@ static int CmdAWIDClone(const char *Cmd) {
     PrintAndLogEx(INFO, "Preparing to clone AWID %u to T55x7 with FC: %u, CN: %u", fmtlen, fc, cn);
     print_blocks(blocks,  ARRAYLEN(blocks));
 
-    return clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    int res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf awid read`") "to verify");
+    return res;
 }
 
 static int CmdAWIDBrute(const char *Cmd) {

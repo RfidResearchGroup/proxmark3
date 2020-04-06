@@ -96,7 +96,7 @@ static int CmdCOTAGRead(const char *Cmd) {
         case 2: {
             CmdPlot("");
             CmdGrid("384");
-            getSamples(0, true);
+            getSamples(0, false);
             break;
         }
         case 1: {

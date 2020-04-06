@@ -56,7 +56,7 @@ endef
 PLTNAME = Unknown Platform
 
 ifeq ($(PLATFORM),PM3RDV4)
-    PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH
+    PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DRDV4
     PLTNAME = Proxmark3 rdv4
 else ifeq ($(PLATFORM),PM3OTHER)
     PLTNAME = Proxmark3 Generic target
@@ -92,7 +92,8 @@ PLATFORM_DEFS += \
     -DWITH_ICLASS \
     -DWITH_FELICA \
     -DWITH_NFCBARCODE \
-    -DWITH_HFSNIFF
+    -DWITH_HFSNIFF \
+    -DWITH_HFPLOT
 
 
 # Standalone mode

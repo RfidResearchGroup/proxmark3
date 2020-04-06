@@ -1,4 +1,6 @@
 /*******************************************************************************
+ * argtable3: Declares the main interfaces of the library
+ *
  * This file is part of the argtable3 library.
  *
  * Copyright (C) 1998-2001,2003-2011,2013 Stewart Heitmann
@@ -39,6 +41,13 @@ extern "C" {
 #endif
 
 #define ARG_REX_ICASE 1
+#define ARG_DSTR_SIZE 200
+#define ARG_CMD_NAME_LEN 100
+#define ARG_CMD_DESCRIPTION_LEN 256
+
+#ifndef ARG_REPLACE_GETOPT
+#define ARG_REPLACE_GETOPT 1 /* use the embedded getopt as the system getopt(3) */
+#endif                       /* ARG_REPLACE_GETOPT */
 
 /* bit masks for arg_hdr.flag */
 enum {
@@ -143,6 +152,13 @@ struct arg_end {
     const char **argval;     /* Array of pointers to offending argv[] string */
 };
 
+/*
+typedef struct arg_cmd_info {
+    char name[ARG_CMD_NAME_LEN];
+    char description[ARG_CMD_DESCRIPTION_LEN];
+    arg_cmdfn* proc;
+} arg_cmd_info_t;
+*/
 
 /**** arg_xxx constructor functions *********************************/
 
