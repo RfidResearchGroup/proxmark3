@@ -1020,37 +1020,41 @@ static int CmdLegicDump(const char *Cmd) {
 static int CmdLegicRestore(const char *Cmd) {
 
     char filename[FILE_PATH_SIZE] = {0x00};
-    size_t fileNlen = 0;
-    bool errors = false, shall_obsfuscate = false;
+    bool errors = false, shall_obsfuscate = false, have_filename = false;
     size_t numofbytes;
     uint8_t cmdp = 0;
 
-    memset(filename, 0, sizeof(filename));
-
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h':
+            case 'h': {
                 errors = true;
                 break;
-            case 'f':
-                fileNlen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (!fileNlen)
+            }
+            case 'f': {
+                int len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (!len)
                     errors = true;
+                else
+                    have_filename = true;
 
-                if (fileNlen > FILE_PATH_SIZE - 5)
-                    fileNlen = FILE_PATH_SIZE - 5;
                 cmdp += 2;
                 break;
-            case 'x':
+            }
+            case 'x': {
                 shall_obsfuscate = true;
                 cmdp++;
                 break;
-            default:
+            }
+            default: {
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
+            }
         }
     }
+    if (have_filename == false)
+        errors = true;
+
     //Validations
     if (errors || cmdp == 0) return usage_legic_restore();
 
@@ -1133,45 +1137,55 @@ static int CmdLegicRestore(const char *Cmd) {
 static int CmdLegicELoad(const char *Cmd) {
 
     size_t numofbytes = 256;
-    int fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
-    bool errors = false, shall_obsfuscate = false;
+    bool errors = false, shall_obsfuscate = false, have_filename = false;
     uint8_t cmdp = 0;
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
-            case 'h' :
+            case 'h' : {
                 return usage_legic_eload();
-            case 'f' :
-                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
-                if (!fileNameLen)
+            }
+            case 'f' : {
+                int len = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (!len)
                     errors = true;
-                if (fileNameLen > FILE_PATH_SIZE - 5)
-                    fileNameLen = FILE_PATH_SIZE - 5;
+                else
+                    have_filename = true;
+
                 cmdp += 2;
                 break;
-            case 'x':
+            }
+            case 'x': {
                 shall_obsfuscate = true;
                 cmdp++;
                 break;
-            case '0' :
+            }
+            case '0' : {
                 numofbytes = 22;
                 cmdp++;
                 break;
-            case '1' :
+            }
+            case '1' : {
                 numofbytes = 256;
                 cmdp++;
                 break;
-            case '2' :
+            }
+            case '2' : {
                 numofbytes = 1024;
                 cmdp++;
                 break;
-            default :
+            }
+            default : {
                 PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
                 errors = true;
                 break;
+            }
         }
     }
+    if (have_filename == false)
+        errors = true;
+
     //Validations
     if (errors || strlen(Cmd) == 0) return usage_legic_eload();
 
