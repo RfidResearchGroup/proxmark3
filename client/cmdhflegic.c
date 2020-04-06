@@ -1359,8 +1359,8 @@ static command_t CommandTable[] =  {
     {"sim",     CmdLegicSim,      IfPm3Legicrf,    "Start tag simulator"},
     {"wrbl",    CmdLegicWrbl,     IfPm3Legicrf,    "Write data to a LEGIC Prime tag"},
     {"crc",     CmdLegicCalcCrc,  AlwaysAvailable, "Calculate Legic CRC over given bytes"},
-    {"eload",   CmdLegicELoad,    IfPm3Legicrf,    "Load binary dump to emulator memory"},
-    {"esave",   CmdLegicESave,    IfPm3Legicrf,    "Save emulator memory to binary file"},
+    {"eload",   CmdLegicELoad,    AlwaysAvailable,    "Load binary dump to emulator memory"},
+    {"esave",   CmdLegicESave,    AlwaysAvailable,    "Save emulator memory to binary file"},
     {"wipe",    CmdLegicWipe,     IfPm3Legicrf,    "Wipe a LEGIC Prime tag"},
     {NULL, NULL, NULL, NULL}
 };
