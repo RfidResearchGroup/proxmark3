@@ -205,6 +205,7 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdhffido.c \
             cmdhffelica.c \
             cmdhfthinfilm.c \
+            cmdhfcryptorf.c \
             cmdhflto.c \
             cmdhw.c \
             cmdlf.c \

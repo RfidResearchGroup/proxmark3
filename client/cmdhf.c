@@ -34,6 +34,7 @@
 #include "cmdhffido.h"      // FIDO authenticators
 #include "cmdhfthinfilm.h"  // Thinfilm
 #include "cmdhflto.h"       // LTO-CM
+#include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
 #include "cmddata.h"
@@ -149,11 +150,22 @@ int CmdHFSearch(const char *Cmd) {
             res = PM3_SUCCESS;
         }
     }
+/*    
+    // 14b and iclass is the longest test (put last)
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, "Searching for CryptoRF tag...");
+    if (IfPm3Iso14443b()) {
+        if (readHFCryptoRF(false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") "found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+*/
 
     // 14b and iclass is the longest test (put last)
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
-    if (IfPm3Iso14443a()) {
+    if (IfPm3Iso14443b()) {
         if (readHF14B(false) == 1) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO14443-B tag") "found\n");
             res = PM3_SUCCESS;
@@ -281,6 +293,7 @@ static command_t CommandTable[] = {
     {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...               }"},
     {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...               }"},
     {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                }"},
+//    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                }"},
     {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...    }"},
     {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / Felica RFIDs...       }"},
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators... }"},
