@@ -558,7 +558,6 @@ int main(int argc, char *argv[]) {
 
     /* initialize history */
     using_history();
-    
 
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);
@@ -583,9 +582,9 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
     set_my_user_directory();
 
-    // Settings
-    settingsLoad ();
-    settingsSave ();
+    // Settings Load and Test
+    settings_load ();
+    settings_save ();
     printf ("Ver : %s\n",mySettings.version);
     // End Settings
     

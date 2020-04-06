@@ -43,10 +43,8 @@
 #include "comms.h"
 #include "emv/emvjson.h"
 
-// settings_t mySettings; 
-
 // Load all settings into memory (struct)
-void settingsLoad (void)
+int settings_load (void)
 {
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
@@ -79,17 +77,17 @@ void settingsLoad (void)
     printf (" window_hsize (int) : [%d]\n",mySettings.window_hsize);
     printf (" window_wsize (int) : [%d]\n",mySettings.window_wsize);
 
+    return PM3_SUCCESS;
 }
 
 // Save all settings from memory (struct) to file
-int settingsSave (void)
+int settings_save (void)
 {
     // Note sure if backup has value ?
     char backupFilename[500];
-    // if (mySettings.loaded)
 
     snprintf (backupFilename,sizeof(backupFilename),"%s.bak",settingsFilename);
-    
+
     if (fileExists (backupFilename)) {
         if (remove (backupFilename) != 0) { 
             PrintAndLogEx (FAILED, "Error - could not delete old settings backup file \"%s\"",backupFilename);
@@ -115,7 +113,7 @@ int settingsSave (void)
     return PM3_SUCCESS;
 }
 
-void JsonSaveSettingsCallback (json_t *root)
+void settings_save_callback (json_t *root)
 {
       //      extern settings_t mySettings;
         
@@ -141,7 +139,7 @@ void JsonSaveSettingsCallback (json_t *root)
             JsonSaveInt     (root,"window.wsize",mySettings.window_wsize);    
 }
 
-void JsonLoadSettingsCallback (json_t *root)
+void settings_load_callback (json_t *root)
 {
 //     extern settings_t mySettings;
     json_error_t up_error = {0};

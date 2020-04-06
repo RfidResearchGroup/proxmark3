@@ -8,10 +8,13 @@
 //-----------------------------------------------------------------------------
 // Settings Functions
 //-----------------------------------------------------------------------------
+#ifndef settings_h
+#define settings_h
 
 #include "fileutils.h"
 
 #define settingsFilename "settings.json"
+
 typedef struct {
         bool loaded;
         char version[20];
@@ -23,10 +26,13 @@ typedef struct {
         int  window_wsize;
 } settings_t;
 
+// Settings struct so as to be available to other modules by including settings.h
 settings_t mySettings; 
 
-void settingsLoad (void);
-int settingsSave (void);
+int settings_load (void);
+int settings_save (void);
 
-void JsonSaveCallback ( json_t *root);
-void JsonLoadCallback ( json_t *root);
+void settings_save_callback (json_t *root);
+void settings_load_callback (json_t *root);
+
+#endif

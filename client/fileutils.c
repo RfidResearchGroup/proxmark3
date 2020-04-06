@@ -38,6 +38,8 @@
 // this define is needed for scandir/alphasort to work
 #define _GNU_SOURCE
 #include "fileutils.h"
+#include "settings.h"
+
 
 #include <dirent.h>
 #include <ctype.h>
@@ -51,9 +53,6 @@
 #endif
 
 #define PATH_MAX_LENGTH 200
-
-extern void JsonLoadSettingsCallback  (json_t *root);
-extern void JsonSaveSettingsCallback  (json_t *root);
 
 struct wave_info_t {
     char signature[4];
@@ -429,7 +428,7 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             }
             break;
         case jsfSettings: 
-            JsonSaveSettingsCallback (root);
+            settings_save_callback (root);
             break;
         default:
             break;
@@ -870,7 +869,7 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         *datalen = sptr;
     }
     if (!strcmp(ctype,"settings")) {
-        JsonLoadSettingsCallback  (root);
+        settings_load_callback (root);
     }
     PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
