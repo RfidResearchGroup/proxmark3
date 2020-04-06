@@ -82,6 +82,31 @@ static int usage_hf_cryptorf_dump(void) {
             "\thf cryptorf dump f mydump");
     return PM3_SUCCESS;
 }
+static int usage_hf_cryptorf_eload(void) {
+    PrintAndLogEx(NORMAL, "It loads a binary dump into emulator memory\n"
+            "Usage:  hf cryptorf eload [f <file name w/o `.eml`>]\n"
+            "Options:\n"
+            "    h         this help\n"
+            "    f <name>  filename,  if no <name> UID will be used as filename\n"
+            "\n"
+            "Examples:\n"
+            _YELLOW_("        hf cryptorf eload f filename")
+            );
+    return PM3_SUCCESS;
+}
+static int usage_hf_cryptorf_esave(void) {
+    PrintAndLogEx(NORMAL, "It saves bin/eml/json dump file of emulator memory\n"
+            " Usage:  hf cryptorf esave [f <file name w/o `.eml`>]\n"
+            "Options:\n"
+            "    h         this help\n"
+            "    f <name>  filename,  if no <name> UID will be used as filename\n"
+            "\n"
+            "Examples:\n"
+            _YELLOW_("        hf cryptorf esave ")
+            _YELLOW_("        hf cryptorf esave f filename")
+            );
+    return PM3_SUCCESS;
+}
 
 static int switch_off_field_cryptorf(void) {
     clearCommandBuffer();
@@ -109,7 +134,7 @@ static int CmdHFCryptoRFSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14BSniff(const char *Cmd) {
+static int CmdHFCryptoRFSniff(const char *Cmd) {
 
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_cryptorf_sniff();
@@ -342,14 +367,146 @@ out:
     return switch_off_field_cryptorf();
 }
 
+static int CmdHFCryptoRFELoad(const char *Cmd) {
+
+    size_t datalen = 1024;
+    int fileNameLen = 0;
+    char filename[FILE_PATH_SIZE] = {0x00};
+    bool errors = false;
+    uint8_t cmdp = 0;
+
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h' :
+                return usage_hf_cryptorf_eload();
+            case 'f' :
+                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (!fileNameLen)
+                    errors = true;
+                if (fileNameLen > FILE_PATH_SIZE - 5)
+                    fileNameLen = FILE_PATH_SIZE - 5;
+                cmdp += 2;
+                break;
+            default :
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    //Validations
+    if (errors || strlen(Cmd) == 0) return usage_hf_cryptorf_eload();
+
+    // set up buffer
+    uint8_t *data = calloc(datalen, sizeof(uint8_t));
+    if (!data) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    if (loadFile_safe(filename, ".bin", (void **)&data, &datalen) != PM3_SUCCESS) {
+        free(data);
+        PrintAndLogEx(WARNING, "Error, reading file");
+        return PM3_EFILE;
+    }
+
+    PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
+
+/*
+    // fast push mode
+    conn.block_after_ACK = true;
+
+    //Send to device
+    uint32_t bytes_sent = 0;
+    uint32_t bytes_remaining  = bytes_read;
+
+    while (bytes_remaining > 0) {
+        uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
+        if (bytes_in_packet == bytes_remaining) {
+            // Disable fast mode on last packet
+            conn.block_after_ACK = false;
+        }
+        clearCommandBuffer();
+        SendCommandOLD(CMD_HF_CRYPTORF_EML_MEMSET, bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);
+        bytes_remaining -= bytes_in_packet;
+        bytes_sent += bytes_in_packet;
+    }
+    free(data);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Done");
+*/  
+  return PM3_SUCCESS;
+}
+
+static int CmdHFCryptoRFESave(const char *Cmd) {
+
+    char filename[FILE_PATH_SIZE] = {0};
+    char *fptr = filename;
+    int fileNameLen = 0;
+    size_t numofbytes = 1024;
+    bool errors = false;
+    uint8_t cmdp = 0;
+    while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
+        switch (tolower(param_getchar(Cmd, cmdp))) {
+            case 'h' :
+                return usage_hf_cryptorf_esave();
+            case 'f' :
+                fileNameLen = param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE);
+                if (!fileNameLen)
+                    errors = true;
+                if (fileNameLen > FILE_PATH_SIZE - 5)
+                    fileNameLen = FILE_PATH_SIZE - 5;
+                cmdp += 2;
+                break;
+            default :
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
+                break;
+        }
+    }
+    //Validations
+    if (errors || strlen(Cmd) == 0) return usage_hf_cryptorf_esave();
+
+    // set up buffer
+    uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
+    if (!data) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // download emulator memory
+    PrintAndLogEx(SUCCESS, "Reading emulator memory...");
+    if (!GetFromDevice(BIG_BUF_EML, data, numofbytes, 0, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(data);
+        return PM3_ETIMEOUT;
+    }
+
+    // user supplied filename?
+    if (fileNameLen < 1) {
+        PrintAndLogEx(INFO, "Using UID as filename");
+        fptr += sprintf(fptr, "hf-cryptorf-");
+        FillFileNameByUID(fptr, data, "-dump", 4);
+    }
+
+    saveFile(filename, ".bin", data, numofbytes);
+    //needs to change
+    saveFileEML(filename, data, numofbytes, 8);
+    //needs to change
+    saveFileJSON(filename, jsfRaw, data, numofbytes);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,              AlwaysAvailable, "This help"},
-    {"dump",        CmdHFCryptoRFDump,    IfPm3Iso14443b,  "Read all memory pages of an CryptoRF tag, save to file"},
-    {"info",        CmdHFCryptoRFInfo,    IfPm3Iso14443b,  "Tag information"},
-    {"list",        CmdHFCryptoRFList,    AlwaysAvailable,  "List ISO 14443B history"},
-    {"reader",      CmdHFCryptoRFReader,  IfPm3Iso14443b,  "Act as a CryptoRF reader to identify a tag"},
-    {"sim",         CmdHFCryptoRFSim,     IfPm3Iso14443b,  "Fake CryptoRF tag"},
-    {"sniff",       CmdHF14BSniff,   IfPm3Iso14443b,  "Eavesdrop CryptoRF"},
+    {"help",    CmdHelp,              AlwaysAvailable, "This help"},
+    {"dump",    CmdHFCryptoRFDump,    IfPm3Iso14443b,  "Read all memory pages of an CryptoRF tag, save to file"},
+    {"info",    CmdHFCryptoRFInfo,    IfPm3Iso14443b,  "Tag information"},
+    {"list",    CmdHFCryptoRFList,    AlwaysAvailable,  "List ISO 14443B history"},
+    {"reader",  CmdHFCryptoRFReader,  IfPm3Iso14443b,  "Act as a CryptoRF reader to identify a tag"},
+    {"sim",     CmdHFCryptoRFSim,     IfPm3Iso14443b,  "Fake CryptoRF tag"},
+    {"sniff",   CmdHFCryptoRFSniff,   IfPm3Iso14443b,  "Eavesdrop CryptoRF"},
+    {"eload",   CmdHFCryptoRFELoad,   AlwaysAvailable, "Load binary dump to emulator memory"},
+    {"esave",   CmdHFCryptoRFESave,   AlwaysAvailable, "Save emulator memory to binary file"},
+
     {NULL, NULL, NULL, NULL}
 };
 
