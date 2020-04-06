@@ -370,7 +370,6 @@ out:
 static int CmdHFCryptoRFELoad(const char *Cmd) {
 
     size_t datalen = 1024;
-    int fileNameLen = 0;
     char filename[FILE_PATH_SIZE] = {0x00};
     bool errors = false, has_filename = false;
     uint8_t cmdp = 0;
