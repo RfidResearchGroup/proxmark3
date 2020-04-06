@@ -267,6 +267,11 @@ typedef struct {
     uint8_t AIA[8];
 } PACKED iclass_reader_t;
 
+typedef struct {
+    const char *desc;
+    const char *value;
+} PACKED ecdsa_publickey_t;
+
 // For the bootloader
 #define CMD_DEVICE_INFO                                                   0x0000
 //#define CMD_SETUP_WRITE                                                   0x0001

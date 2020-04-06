@@ -1,10 +1,10 @@
 local getopt = require('getopt')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
-desc =
-[[
+version = 'v1.0.2'
+desc = [[
 This is a script that tries to bring back a chinese magic card (1k generation1)
 from the dead when it's block 0 has been written with bad values.
 or mifare Ultralight magic card which answers to chinese backdoor commands
@@ -15,9 +15,9 @@ example = [[
 
 ]]
 usage = [[
-script run remagic
-
-Arguments:
+script run remagic [-h] [-u]
+]]
+arguments = [[
     -h      this help
     -u      remagic a Ultralight tag w 7 bytes UID.
 ]]
@@ -49,9 +49,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 
 local function cmdUltralight()

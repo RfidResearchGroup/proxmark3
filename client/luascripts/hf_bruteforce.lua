@@ -2,38 +2,38 @@
 -- Run me like this (connected via Blueshark addon): ./client/proxmark3 /dev/rfcomm0 -l ./hf_bruteforce.lua
 
 local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Daniel Underhay (updated), Keld Norman(original)'
-version = 'v2.0.0'
-usage = [[
-
-pm3 --> script run hf_bruteforce -s start_id -e end_id -t timeout -x mifare_card_type
-
-Arguments:
-    -h       this help
-    -s       0-0xFFFFFFFF         start id
-    -e       0-0xFFFFFFFF         end id
-    -t       0-99999, pause       timeout (ms) between cards (use the word 'pause' to wait for user input)
-    -x       mfc, mfu             mifare type: mfc for Mifare Classic (default) or mfu for Mifare Ultralight EV1
-
-
-Example:
-
-pm3 --> script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
-
+version = 'v2.0.1'
+desc =[[
+This script bruteforces 4 or 7 byte UID Mifare classic card numbers.
+]]
+example =[[
 Bruteforce a 4 byte UID Mifare classic card number, starting at 11223344, ending at 11223346.
-
-
-pm3 --> script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
+    
+    script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
 
 Bruteforce a 7 byte UID Mifare Ultralight card number, starting at 11223344556677, ending at 11223344556679.
 
+    script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
+]]
+usage = [[
+script run hf_bruteforce [-s <start_id>] [-e <end_id>] [-t <timeout>] [-x <mifare_card_type>]
+]]
+arguments = [[
+    -h       this help
+    -s       0-0xFFFFFFFF         start id
+    -e       0-0xFFFFFFFF         end id
+    -t       0-99999, pause       timeout (ms) between cards 
+                                  (use the word 'pause' to wait for user input)
+    -x       mfc, mfu             mifare type: 
+                                    mfc for Mifare Classic (default)
+                                    mfu for Mifare Ultralight EV1
 ]]
 
-
 local DEBUG = true
-
 ---
 -- Debug print function
 local function dbg(args)
@@ -62,9 +62,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 --- Print user message

@@ -1,4 +1,6 @@
-#include "ht2crack2utils.h"
+#include <string.h>
+#include <stdio.h>
+#include "ht2crackutils.h"
 
 // writes a value into a buffer as a series of bytes
 void writebuf(unsigned char *buf, uint64_t val, unsigned int len) {
@@ -168,5 +170,38 @@ void buildlfsr(Hitag_State *hstate) {
                    ^ (temp >> 42) ^ (temp >> 46);
 }
 
+// convert byte-reversed 8 digit hex to unsigned long
+unsigned long hexreversetoulong(char *hex) {
+    unsigned long ret = 0L;
+    unsigned int x;
+    char i;
 
+    if (strlen(hex) != 8)
+        return 0L;
 
+    for (i = 0 ; i < 4 ; ++i) {
+        if (sscanf(hex, "%2X", &x) != 1)
+            return 0L;
+        ret += ((unsigned long) x) << i * 8;
+        hex += 2;
+    }
+    return ret;
+}
+
+// convert byte-reversed 12 digit hex to unsigned long
+unsigned long long hexreversetoulonglong(char *hex) {
+    unsigned long long ret = 0LL;
+    char tmp[9];
+
+    // this may seem an odd way to do it, but weird compiler issues were
+    // breaking direct conversion!
+
+    tmp[8] = '\0';
+    memset(tmp + 4, '0', 4);
+    memcpy(tmp, hex + 8, 4);
+    ret = hexreversetoulong(tmp);
+    ret <<= 32;
+    memcpy(tmp, hex, 8);
+    ret += hexreversetoulong(tmp);
+    return ret;
+}

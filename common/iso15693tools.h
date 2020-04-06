@@ -142,6 +142,6 @@ static const int Iso15693FrameEOF[] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
 
-char *Iso15693sprintUID(char *target, uint8_t *uid);
+char *iso15693_sprintUID(char *dest, uint8_t *uid);
 
 #endif

@@ -1,12 +1,13 @@
 local getopt = require('getopt')
 local bin = require('bin')
 local dumplib = require('html_dumplib')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc =[[
-This script takes an dumpfile on EML (ASCII) format and converts it to the PM3 dumpbin file to be used with `hf mf restore`
+This script takes an dumpfile in EML (ASCII) format and converts it to the PM3 dumpbin file to be used with `hf mf restore`
 ]]
 example =[[
     1. script run emul2dump
@@ -15,8 +16,8 @@ example =[[
 ]]
 usage = [[
 script run emul2dump [-i <file>] [-o <file>]
-
-Arguments:
+]]
+arguments = [[
     -h              This help
     -i <filename>   Specifies the dump-file (input). If omitted, 'dumpdata.eml' is used
     -o <filename>   Specifies the output file. If omitted, <currdate>.bin is used.
@@ -24,7 +25,7 @@ Arguments:
 ]]
 ---
 -- This is only meant to be used when errors occur
-local function oops(err)
+local function dbg(args)
     if not DEBUG then return end
     if type(args) == 'table' then
         local i = 1
@@ -37,15 +38,25 @@ local function oops(err)
     end
 end
 ---
+-- This is only meant to be used when errors occur
+local function oops(err)
+    print('ERROR:', err)
+    core.clearCommandBuffer()
+    return nil, err
+end
+---
 -- Usage help
 local function help()
     print(copyright)
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message

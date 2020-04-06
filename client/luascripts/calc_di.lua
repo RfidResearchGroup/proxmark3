@@ -2,10 +2,11 @@ local bin = require('bin')
 local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils =  require('utils')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Iceman"
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 This script calculates mifare keys based on uid diversification for DI.
 Algo not found by me.
@@ -19,8 +20,8 @@ example = [[
 ]]
 usage = [[
 script run calc_di -h -u <uid>
-
-Arguments:
+]]
+arguments = [[
     -h             : this help
     -u <UID>       : UID
 ]]
@@ -57,9 +58,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- Exit message

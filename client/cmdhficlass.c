@@ -2050,7 +2050,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
     
     if (verbose) {
         PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
-        PrintAndLogEx(INFO, "File size %d bytes, file blocks %d (0x%02x)", bytes_read, bytes_read >> 3, bytes_read >> 3);
+        PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, (uint16_t)(bytes_read >> 3), (uint16_t)(bytes_read >> 3));
         PrintAndLogEx(INFO, "Printing blocks from");
         PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") "end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
     }

@@ -49,7 +49,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
-#include "ht2crack2utils.h"
+#include "ht2crackutils.h"
 
 /* you could have more than 32 traces, but you shouldn't really need
  * more than 16.  You can still win with 8 if you're lucky. */

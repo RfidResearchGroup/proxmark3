@@ -15,15 +15,19 @@ Calculate DATAMAX = free RAM available / 65536, and then round down to a power o
 
 The Makefile is configured for linux.  To compile on Mac, edit it and swap the LIBS= lines.
 
+```
 make clean
 make
-
+```
 
 Run ht2crack2buildtable
 -----------------------
 
 Make sure you are in a directory on a disk with at least 1.5TB of space.
+
+```
 ./ht2crack2buildtable
+```
 
 Wait a very long time.  Maybe a few days.
 
@@ -36,19 +40,28 @@ original files.  It will then exit and you'll have your shiny table.
 Test with ht2crack2gentests
 ---------------------------
 
+```
 ./ht2crack2gentests NUMBER_OF_TESTS
+```
 
 to generate NUMBER_OF_TESTS test files.  These will all be named
 keystream.key-KEYVALUE.uid-UIDVALUE.nR-NRVALUE
 
 Test a single test with
-./runtest.sh KEYSTREAMFILE
 
+```
+./runtest.sh KEYSTREAMFILE
+```
 or manually with
+
+```
 ./ht2crack2search KEYSTREAMFILE UIDVALUE NRVALUE
+```
 
 or run all tests with
+```
 ./runalltests.sh
+```
 
 Feel free to edit the shell scripts to find your tools.  You might want to create a
 symbolic link to your sorted/ directory called 'sorted' to help ht2crack2seach find the
@@ -63,6 +76,6 @@ Search for key in real keystream
 Recover 2048 bits of keystream from the target RFID tag with the RFIDler.  You will have had
 to supply an NR value and you should know the tag's UID (you can get this using the RFIDler).
 
+```
 ./ht2crack2search KEYSTREAMFILE UIDVALUE NRVALUE
-
-
+```

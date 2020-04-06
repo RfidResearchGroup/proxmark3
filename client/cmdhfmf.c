@@ -3712,7 +3712,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "Copying to emulator memory");
+    PrintAndLogEx(INFO, "Uploading to emulator memory");
 
     // fast push mode
     conn.block_after_ACK = true;
@@ -3751,7 +3751,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
             return PM3_SUCCESS;
         }
     }
-    PrintAndLogEx(SUCCESS, "Loaded %d blocks from file: " _YELLOW_("%s"), blockNum, filename);
+    PrintAndLogEx(SUCCESS, "Done");
     free(data);
     return PM3_SUCCESS;
 }
@@ -3835,6 +3835,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     mfc_eload_t payload;
     payload.sectorcnt = numSectors;
     payload.keytype = keyType;
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
     return PM3_SUCCESS;
@@ -3842,8 +3843,6 @@ static int CmdHF14AMfECFill(const char *Cmd) {
 
 static int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
-    char filename[FILE_PATH_SIZE];
-    char *fptr = filename;
     uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
     uint8_t data[16];
     uint8_t uid[4];
@@ -3915,6 +3914,8 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     // dump the keys
     if (createDumpFile) {
 
+        char filename[FILE_PATH_SIZE] = {0};
+        char *fptr = filename;
         fptr += sprintf(fptr, "hf-mf-");
         FillFileNameByUID(fptr + strlen(fptr), uid, "-key", sizeof(uid));
 
@@ -3981,8 +3982,8 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "old UID:%s", sprint_hex(oldUid, 4));
-    PrintAndLogEx(SUCCESS, "new UID:%s", sprint_hex(uid, 4));
+    PrintAndLogEx(SUCCESS, "Old UID : %s", sprint_hex(oldUid, 4));
+    PrintAndLogEx(SUCCESS, "New UID : %s", sprint_hex(uid, 4));
     return PM3_SUCCESS;
 }
 
@@ -4912,13 +4913,16 @@ static command_t CommandTable[] = {
     {"fchk",        CmdHF14AMfChk_fast,     IfPm3Iso14443a,  "Check keys fast, targets all keys on card"},
     {"decrypt",     CmdHf14AMfDecryptBytes, AlwaysAvailable, "[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  ""},
+    {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
+    {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE classic tag to binary file"},
+    {"mad",         CmdHF14AMfMAD,          IfPm3Iso14443a,  "Checks and prints MAD"},
+    {"ndef",        CmdHFMFNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
+    {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (Mifare Classic EV1 only)"},
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE classic block"},
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE classic sector"},
-    {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE classic tag to binary file"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE classic binary file to BLANK tag"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE classic block"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
-    {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
 //    {"sniff",       CmdHF14AMfSniff,        0, "Sniff card-reader communication"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  ""},
     {"sim",         CmdHF14AMfSim,          IfPm3Iso14443a,  "Simulate MIFARE card"},
@@ -4938,9 +4942,6 @@ static command_t CommandTable[] = {
     {"cload",       CmdHF14AMfCLoad,        IfPm3Iso14443a,  "Load dump   (magic chinese card)"},
     {"csave",       CmdHF14AMfCSave,        IfPm3Iso14443a,  "Save dump from magic chinese card into file or emulator"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  ""},
-    {"mad",         CmdHF14AMfMAD,          IfPm3Iso14443a,  "Checks and prints MAD"},
-    {"ndef",        CmdHFMFNDEF,            IfPm3Iso14443a,  "Prints NDEF records from card"},
-    {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (Mifare Classic EV1 only)"},
     {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {NULL, NULL, NULL, NULL}
 };

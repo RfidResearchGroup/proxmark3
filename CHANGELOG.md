@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Improved `hf 14a info` - card detection handling (@bkerler)
+ - Updated helptext layout in all luascripts (@iceman1001)
+ - Change `hf mfdes info` - output and logging (@bkerler)
+ - Updated texts in legic commands (@ikarus23)
+ - Fix timing bug inside 40x5 (@mwalker33)
+ - Refactored all Hitag2 attacks (@doegox)
+ - Added two new Hitag2 attacks (@doegox)
  - Change `hf search` - now continue to search in case of dual tech cards (@iceman1001) Thanks to @ikarus23 for the suggestion!
  - Added `hf topas info` - old reader command,  now also prints NDEF (@iceman1001)
  - Change `hf topaz reader` - now only prints lighter info, like UID. (@iceman1001)

@@ -4,6 +4,7 @@ local lib14a = require('read14a')
 local utils = require('utils')
 local pre = require('precalc')
 local toys = require('default_toys')
+local ansicolors = require('ansicolors')
 
 local lsh = bit32.lshift
 local rsh = bit32.rshift
@@ -12,11 +13,11 @@ local band = bit32.band
 
 copyright = ''
 author = "Iceman"
-version = 'v1.0.1'
-desc =[[
+version = 'v1.0.2'
+desc = [[
 This script will try making a barebone clone of a tnp3 tag on to a magic generation1 card.
 ]]
-example =[[
+example = [[
     script run tnp3clone
     script run tnp3clone -h
     script run tnp3clone -l
@@ -24,9 +25,9 @@ example =[[
 
 ]]
 usage = [[
-script run tnp3clone -t <toytype> -s <subtype>
-
-Arguments:
+script run tnp3clone [-h] [-t <toytype>] [-s <subtype>]
+]]
+arguments = [[
     -h             : this help
     -l             : list all known toy tokens
     -t <data>      : toytype id, 4hex symbols
@@ -56,9 +57,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- decode response and get the blockdata from a normal mifare read command
