@@ -1013,6 +1013,7 @@ static int CmdLegicDump(const char *Cmd) {
     saveFile(filename, ".bin", data, readlen);
     saveFileEML(filename, data, readlen, 8);
     saveFileJSON(filename, jsfLegic, data, readlen);
+    free(data);
     return PM3_SUCCESS;
 }
 
@@ -1076,7 +1077,7 @@ static int CmdLegicRestore(const char *Cmd) {
     }
 
     if (card.cardsize != numofbytes) {
-        PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%zu != %u]", card.cardsize, numofbytes);
+        PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%u != %zu]", card.cardsize, numofbytes);
         free(data);
         return PM3_EFILE;
     }
