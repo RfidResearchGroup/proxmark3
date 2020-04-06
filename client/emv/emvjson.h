@@ -24,6 +24,7 @@ const char *GetApplicationDataName(tlv_tag_t tag);
 
 int JsonSaveJsonObject(json_t *root, const char *path, json_t *value);
 int JsonSaveStr(json_t *root, const char *path, const char *value);
+int JsonSaveBoolean(json_t *root, const char *path, bool value);
 int JsonSaveInt(json_t *root, const char *path, int value);
 int JsonSaveBufAsHexCompact(json_t *elm, const char *path, uint8_t *data, size_t datalen);
 int JsonSaveBufAsHex(json_t *elm, const char *path, uint8_t *data, size_t datalen);
