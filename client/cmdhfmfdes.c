@@ -32,6 +32,7 @@ typedef enum {
     MF3ICD40,
     EV1,
     EV2,
+    EV3,
     LIGHT,
 } desfire_cardtype_t;
 
@@ -70,6 +71,8 @@ static desfire_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return EV1;
     else if (major == 0x12 && minor == 0x00)
         return EV2;
+//    else if (major == 0x13 && minor == 0x00)
+//        return EV3;
     else if (major == 0x30 && minor == 0x00)
         return LIGHT;
     else
@@ -161,7 +164,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         {"NTAG424DNA, DESFire EV2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
         {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
         {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
-        {"NTAG424DNA,NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
+        {"NTAG424DNA, NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
         {"DESFire Light EV1",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
         {"Mifare Plus",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
@@ -432,9 +435,11 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 1 && minor == 3)
         PrintAndLogEx(INFO, "\t1.3 - DESFire Ev1, Support extended APDU commands");
     if (major == 1 && minor == 4)
-        PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1, N/A information about this version. report to iceman!");
+        PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1, N/A (report to iceman!)");
     if (major == 2 && minor == 0)
         PrintAndLogEx(INFO, "\t2.0 - DESFire Ev2, Originality check, proximity check");
+//    if (major == 3 && minor == 0)
+//        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass");
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
@@ -526,6 +531,8 @@ char *getVersionStr(uint8_t major, uint8_t minor) {
         sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
         sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
+//    else if (major == 0x13 && minor == 0x00)
+//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);    
     else if (major == 0x30 && minor == 0x00)
         sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
     else
