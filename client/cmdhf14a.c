@@ -1421,38 +1421,30 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     // Double & triple sized UID, can be mapped to a manufacturer.
     if (card.uidlen <= 4) {
         nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
-        if ((nxptype & MTCLASSIC) == MTCLASSIC) isMifareClassic = true;
-        else isMifareClassic = false;
-        if ((nxptype & MTDESFIRE) == MTDESFIRE) {
-            isMifareDESFire = true;
-        } else {
-            isMifareDESFire = false;
-        }
-        if ((nxptype & MTPLUS) == MTPLUS) isMifarePlus = true;
-        else isMifarePlus = false;
-        if ((nxptype & MTULTRALIGHT) == MTULTRALIGHT) isMifareUltralight = true;
-        else isMifareUltralight = false;
-        if ((nxptype & MTOTHER) == MTOTHER) isMifareClassic = true;
+        
+        isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
+        isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
+        isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
+        isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
+       
+        if ((nxptype & MTOTHER) == MTOTHER)
+            isMifareClassic = true;
     }
     if (card.uidlen > 4) {
         PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
-
         PrintAndLogEx(SUCCESS, "Possible Type:");
         switch (card.uid[0]) {
             case 0x04: // NXP
                 nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
-                if ((nxptype & MTCLASSIC) == MTCLASSIC) isMifareClassic = true;
-                else isMifareClassic = false;
-                if ((nxptype & MTDESFIRE) == MTDESFIRE) {
-                    isMifareDESFire = true;
-                } else {
-                    isMifareDESFire = false;
-                }
-                if ((nxptype & MTPLUS) == MTPLUS) isMifarePlus = true;
-                else isMifarePlus = false;
-                if ((nxptype & MTULTRALIGHT) == MTULTRALIGHT) isMifareUltralight = true;
-                else isMifareUltralight = false;
-                if ((nxptype & MTOTHER) == MTOTHER) isMifareClassic = true;
+                
+                isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
+                isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
+                isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
+                isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
+                
+                if ((nxptype & MTOTHER) == MTOTHER) 
+                    isMifareClassic = true;
+
                 break;
             case 0x05: // Infineon
                 if ((card.uid[1] & 0xF0) == 0x10) {
@@ -1473,7 +1465,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             default:
                 getTagLabel(card.uid[0], card.uid[1]);
                 switch (card.sak) {
-                    case 0x00:
+                    case 0x00: {
                         isMifareClassic = false;
 
                         // ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
@@ -1502,23 +1494,30 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                             return select_status;
                         }
                         break;
-                    case 0x0A:
+                    }
+                    case 0x0A: {
                         printTag("FM11RF005SH (Shanghai Metro)");
                         break;
-                    case 0x20:
+                    }
+                    case 0x20: {
                         printTag("JCOP 31/41");
                         break;
-                    case 0x28:
+                    }
+                    case 0x28: {
                         printTag("JCOP31 or JCOP41 v2.3.1");
                         break;
-                    case 0x38:
+                    }
+                    case 0x38: {
                         printTag("Nokia 6212 or 6131");
                         break;
-                    case 0x98:
+                    }
+                    case 0x98: {
                         printTag("Gemplus MPCOS");
                         break;
-                    default:
+                    }
+                    default: {
                         break;
+                    }
                 }
                 break;
         }
@@ -1784,5 +1783,6 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
     }
 
+    DropField();
     return select_status;
 }
