@@ -583,9 +583,9 @@ int main(int argc, char *argv[]) {
     set_my_user_directory();
 
     // Settings Load and Test
-    settings_load ();
-    settings_save ();
-    printf ("Ver : %s\n",mySettings.version);
+    // settings_load ();
+    // settings_save ();
+    // printf ("Ver : %s\n",mySettings.version);
     // End Settings
     
     for (int i = 1; i < argc; i++) {

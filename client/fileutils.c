@@ -40,7 +40,6 @@
 #include "fileutils.h"
 #include "settings.h"
 
-
 #include <dirent.h>
 #include <ctype.h>
 
