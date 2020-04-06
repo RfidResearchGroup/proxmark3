@@ -1246,7 +1246,7 @@ int CmdHF14A(const char *Cmd) {
 }
 
 static void printTag(char *tag) {
-    PrintAndLogEx(SUCCESS, _YELLOW_("    %s"), tag);
+    PrintAndLogEx(SUCCESS, "POSSIBLE TYPE:" _YELLOW_("    %s"), tag);
 }
 
 
@@ -1265,8 +1265,8 @@ int detect_nxp_card(uint8_t sak, uint16_t atqa) {
     int type = MTNONE;
 
     if (sak == 0x00) {
-        printTag("NTAG 21x / NTAG 21x TT / NTAG I2C plus");
-        printTag("MIFARE Ultralight C / Ultralight CL2");
+        printTag("NTAG 20x / 21x / 21x TT / I2C plus");
+        printTag("MIFARE Ultralight / C / EV1 / Nano");
         type = MTULTRALIGHT;
     }
 
@@ -1431,8 +1431,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             isMifareClassic = true;
     }
     if (card.uidlen > 4) {
-        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
-        PrintAndLogEx(SUCCESS, "Possible Type:");
+        PrintAndLogEx(SUCCESS, "MANUFACTURER:    " _YELLOW_("%s"), getTagInfo(card.uid[0]));
         switch (card.uid[0]) {
             case 0x04: // NXP
                 nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
@@ -1769,7 +1768,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             else if (res == 0)
                 PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
             else
-                PrintAndLogEx(FAILED, "prng detection:  " _RED_("fail"));
+                PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
 
             if (do_nack_test)
                 detect_classic_nackbug(false);
