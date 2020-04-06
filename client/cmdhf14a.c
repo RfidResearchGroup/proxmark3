@@ -246,17 +246,20 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     if (select_status == 0) {
         PrintAndLogEx(ERR, "E->iso14443a card select failed");
+        DropField();
         return 1;
     }
 
     if (select_status == 2) {
         PrintAndLogEx(ERR, "E->Card doesn't support iso14443-4 mode");
+        DropField();
         return 1;
     }
 
     if (select_status == 3) {
         PrintAndLogEx(INFO, "E->Card doesn't support standard iso14443-3 anticollision");
         PrintAndLogEx(SUCCESS, "\tATQA : %02x %02x", card->atqa[1], card->atqa[0]);
+        DropField();
         return 1;
     }
 
@@ -265,6 +268,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     PrintAndLogEx(SUCCESS, " SAK: %02x [%" PRIu64 "]", card->sak, resp.oldarg[0]);
     if (card->ats_len < 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
         PrintAndLogEx(INFO, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
+        DropField();
         return 1;
     }
 
@@ -416,6 +420,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         // check if command failed
         if (resp.oldarg[0] == 0) {
             PrintAndLogEx(WARNING, "card select failed.");
+            DropField();
         } else {
             char uid_string[20];
             for (uint16_t m = 0; m < card->uidlen; m++) {
@@ -563,17 +568,20 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             if (!silentMode) PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
+            DropField();
             return 1;
         }
 
         // check result
         if (resp.oldarg[0] == 0) {
             if (!silentMode) PrintAndLogEx(ERR, "No card in field.");
+            DropField();
             return 1;
         }
 
         if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
             if (!silentMode) PrintAndLogEx(ERR, "Card not in iso14443-4. res=%" PRId64 ".", resp.oldarg[0]);
+            DropField();
             return 1;
         }
 
@@ -583,11 +591,13 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
             SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, 2);
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                 if (!silentMode) PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
+                DropField();
                 return 1;
             }
 
             if (resp.oldarg[0] == 0) { // ats_len
                 if (!silentMode) PrintAndLogEx(ERR, "Can't get ATS.");
+                DropField();
                 return 1;
             }
         }
@@ -610,6 +620,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
         if (!iLen) {
             if (!silentMode) PrintAndLogEx(ERR, "No card response.");
+            DropField();
             return 1;
         }
 
@@ -619,11 +630,13 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
         if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
             if (!silentMode) PrintAndLogEx(ERR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
+            DropField();
             return 2;
         }
 
         if (recv[0] != data[0]) {
             if (!silentMode) PrintAndLogEx(ERR, "iso14443-4 framing error. Card send %2x must be %2x", dataout[0], data[0]);
+            DropField();
             return 2;
         }
 
@@ -632,11 +645,13 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         // CRC Check
         if (iLen == -1) {
             if (!silentMode) PrintAndLogEx(ERR, "ISO 14443A CRC error.");
+            DropField();
             return 3;
         }
 
     } else {
         if (!silentMode) PrintAndLogEx(ERR, "Reply timeout.");
+        DropField();
         return 4;
     }
 
@@ -657,17 +672,20 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
+        DropField();
         return 1;
     }
 
     // check result
     if (resp.oldarg[0] == 0) {
         PrintAndLogEx(ERR, "No card in field.");
+        DropField();
         return 1;
     }
 
     if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
         PrintAndLogEx(ERR, "Card not in iso14443-4. res=%" PRId64 ".", resp.oldarg[0]);
+        DropField();
         return 1;
     }
 
@@ -677,11 +695,13 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
         SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
+            DropField();
             return 1;
         }
 
         if (resp.oldarg[0] == 0) { // ats_len
             PrintAndLogEx(ERR, "Can't get ATS.");
+            DropField();
             return 1;
         }
 
@@ -759,18 +779,21 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
 
         if (!iLen) {
             PrintAndLogEx(ERR, "APDU: No APDU response.");
+            DropField();
             return 1;
         }
 
         // check apdu length
         if (iLen < 2 && iLen >= 0) {
             PrintAndLogEx(ERR, "APDU: Small APDU response. Len=%d", iLen);
+            DropField();
             return 2;
         }
 
         // check block TODO
         if (iLen == -2) {
             PrintAndLogEx(ERR, "APDU: Block type mismatch.");
+            DropField();
             return 2;
         }
 
@@ -784,10 +807,12 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         // CRC Check
         if (iLen == -1) {
             PrintAndLogEx(ERR, "APDU: ISO 14443A CRC error.");
+            DropField();
             return 3;
         }
     } else {
         PrintAndLogEx(ERR, "APDU: Reply timeout.");
+        DropField();
         return 4;
     }
 
@@ -1149,12 +1174,15 @@ static int waitCmd(uint8_t iSelect) {
             PrintAndLogEx(NORMAL, "received %i bytes", len);
         }
 
-        if (!len)
+        if (!len) {
+            DropField();
             return 1;
+        }
 
         PrintAndLogEx(NORMAL, "%s", sprint_hex(resp.data.asBytes, len));
     } else {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        DropField();
         return 3;
     }
     return 0;
