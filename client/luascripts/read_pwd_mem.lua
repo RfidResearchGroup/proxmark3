@@ -1,11 +1,11 @@
 local getopt = require('getopt')
 local bin = require('bin')
+local ansicolors = require('ansicolors')
 
 copyright = 'Copyright (c) 2018 Bogito. All rights reserved.'
 author = 'Bogito'
-version = 'v1.0.3'
-desc =
-[[
+version = 'v1.0.4'
+desc = [[
 This script will read the flash memory of RDV4 and print the stored passwords/keys.
 
 It was meant to be used as a help tool after using the BogRun standalone mode before SPIFFS.
@@ -13,8 +13,7 @@ You should now use read_pwd_mem_spiffs instead after the updated BogRun standalo
 
 (Iceman) script adapted to read and print keys in the default dictionary flashmemory sections.
 ]]
-example =
-[[
+example = [[
     -- This will scan the first 256 bytes of flash memory for stored passwords
     script run read_pwd_mem
 
@@ -33,12 +32,10 @@ example =
     -- This will print the stored iClass dictionary keys
     script run read_pwd_mem -i
 ]]
-usage =
-[[
-Usage:
-    script run read_pwd_mem -h -o <offset> -l <length> -k <keylength>
-
-Arguments:
+usage = [[
+    script run read_pwd_mem [-h] [-o <offset>] [-l <length>] [-k <keylength>] [-m] [-t] [-i]
+]]
+arguments = [[
     -h              :  this help
     -o <offset>     :  memory offset, default is 0
     -l <length>     :  length in bytes, default is 256
@@ -61,9 +58,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- The main entry point

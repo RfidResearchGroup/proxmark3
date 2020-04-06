@@ -3,10 +3,11 @@
 getopt = require('getopt')
 bin = require('bin')
 dumplib = require('html_dumplib')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Martin Holst Swende'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc =[[
 This script takes a dumpfile and produces a html based dump, which is a
 bit more easily analyzed.
@@ -16,8 +17,8 @@ example = [[
 ]]
 usage = [[
 script run htmldump [-i <file>] [-o <file>]
-
-Arguments:
+]]
+arguments = [[
     -h              This help
     -i <file>       Specifies the dump-file (input). If omitted, 'dumpdata.bin' is used
     -o <filename>   Speciies the output file. If omitted, <curtime>.html is used.
@@ -55,9 +56,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 
 local function main(args)

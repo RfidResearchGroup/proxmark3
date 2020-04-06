@@ -2,11 +2,12 @@ local getopt = require('getopt')
 local cmds = require('commands')
 local lib14a = require('read14a')
 local utils = require('utils')
+local ansicolors = require('ansicolors')
 --
 -- Refactored iceman, 2019
 copyright = ''
 author = 'Martin Holst Swende & Asper'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This script will automatically recognize and dump full content of a NFC NDEF Initialized tag; non-initialized tags will be ignored.
 
@@ -23,9 +24,9 @@ example = [[
     1. script run ndef_dump
 ]]
 usage = [[
-script run ndef_dump
-
-Arguments:
+script run ndef_dump [-h] [-d] [-v]
+]]
+arguments = [[
     -h              this help
     -d              debug logging on
     -v              verbose output (from ndef parsing)
@@ -63,9 +64,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Sends an instruction to do nothing, only disconnect

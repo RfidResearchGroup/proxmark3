@@ -2781,7 +2781,20 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
         // max datasize;
         maxsize = ndef_get_maxsize(data + 12);
     }
-
+    
+    // iceman: maybe always take MIN of tag identified size vs NDEF reported size?
+    // fix: UL_EV1 48bytes != NDEF reported size
+    for (uint8_t i = 0; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
+        if (tagtype & UL_TYPES_ARRAY[i]) {
+            
+            if (maxsize != (UL_MEMORY_ARRAY[i] * 4) ) {
+                PrintAndLogEx(INFO, "Tag reported size vs NDEF reported size mismatch. Using smallest value");
+            }
+            maxsize = MIN(maxsize, (UL_MEMORY_ARRAY[i] * 4));
+            break;
+        }
+    }
+                
     // allocate mem
     uint8_t *records = calloc(maxsize, sizeof(uint8_t));
     if (records == NULL) {
@@ -2795,6 +2808,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
         if (status == -1) {
             DropField();
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
+            free(records);
             return PM3_ESOFT;
         }
     }

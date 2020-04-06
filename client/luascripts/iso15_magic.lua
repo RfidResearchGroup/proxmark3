@@ -2,10 +2,11 @@ local cmds = require('commands')
 local lib15 = require('read15')
 local getopt = require('getopt')
 local utils =  require('utils')
+local ansicolors  = require('ansicolors')
 
 copyright = 'Copyright (c) 2018 IceSQL AB. All rights reserved.'
 author = 'Christian Herrmann'
-version = 'v1.0.5'
+version = 'v1.0.6'
 desc = [[
 This script tries to set UID on a IS15693 SLIX magic card
 Remember the UID  ->MUST<- start with 0xE0
@@ -20,8 +21,8 @@ example = [[
 ]]
 usage = [[
 script run iso15_magic -h -u <uid>
-
-Arguments:
+]]
+arguments = [[
     -h             : this help
     -u <UID>       : UID (16 hexsymbols)
     -a             : use offical pm3 repo ISO15 commands instead of iceman fork.
@@ -56,9 +57,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 --- Set UID on magic command enabled on a ICEMAN based REPO

@@ -1,16 +1,15 @@
 local getopt = require('getopt')
 local bin = require('bin')
+local ansicolors = require('ansicolors')
 
 copyright = 'Copyright (c) 2019 Bogito. All rights reserved.'
 author = 'Bogito'
-version = 'v1.1.1'
-desc =
-[[
+version = 'v1.1.2'
+desc = [[
 This script will read the flash memory of RDV4 using SPIFFS and print the stored passwords.
 It was meant to be used as a help tool after using the BogRun standalone mode.
 ]]
-example =
-[[
+example = [[
     -- This will read the hf_bog.log file in SPIFFS and print the stored passwords
     script run read_pwd_mem_spiffs
 
@@ -20,12 +19,10 @@ example =
     -- This will delete the hf_bog.log file from SPIFFS
     script run read_pwd_mem_spiffs -r
 ]]
-usage =
-[[
-Usage:
-    script run read_pwd_mem_spiffs -h -f <filename> -r
-
-Arguments:
+usage = [[
+    script run read_pwd_mem_spiffs [-h] [-f <filename>] [-r]
+]]
+arguments = [[
     -h              :  this help
     -f <filename>   :  filename in SPIFFS
     -r              :  delete filename from SPIFFS
@@ -44,9 +41,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- The main entry point

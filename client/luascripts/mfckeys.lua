@@ -13,10 +13,11 @@ local keylist = require('mfc_default_keys')
 local lib14a = require('read14a')
 local getopt = require('getopt')
 local utils = require('utils')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Holiman"
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = ("This script implements Mifare check keys.\
 It utilises a large list of default keys (currently %d keys).\
 If you want to add more, just put them inside /lualibs/mfc_default_keys.lua\n"):format(#keylist)
@@ -24,7 +25,9 @@ example = [[
     1. script run mfckeys
 ]]
 usage = [[
-Arguments:
+script run mfckeys [-p]
+]]
+arguments = [[
     -h             : this help
     -p             : print keys
 ]]
@@ -46,9 +49,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- waits for answer from pm3 device
@@ -269,8 +275,6 @@ end
 -- The main entry point
 local function main(args)
 
-    local numSectors = 16
-
     -- Arguments for the script
     for o, a in getopt.getopt(args, 'hp') do
         if o == 'h' then return help() end
@@ -279,6 +283,8 @@ local function main(args)
     -- identify tag
     tag, err = lib14a.read(false, true)
     if not tag then return oops(err) end
+
+    local numSectors = 16
 
     -- detect sectors and print taginfo
     numsectors = taginfo(tag)
