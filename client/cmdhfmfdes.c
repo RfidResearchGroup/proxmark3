@@ -779,22 +779,29 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     uint8_t keylength = 8;
     unsigned char key[24];
+    uint8_t aidlength = 3;
+    unsigned char aid[3];
 
     if (strlen(Cmd) < 3) {
-        PrintAndLogEx(NORMAL, "Usage:  hf mfdes auth <1|2|3> <1|2|3|4> <keyno> <key> ");
+        PrintAndLogEx(NORMAL, "Usage:  hf mfdes auth <1|2|3> <1|2|3|4> <appid> <keyno> <key> ");
         PrintAndLogEx(NORMAL, "            Auth modes");
         PrintAndLogEx(NORMAL, "                 1 = normal, 2 = iso, 3 = aes");
         PrintAndLogEx(NORMAL, "            Crypto");
         PrintAndLogEx(NORMAL, "                 1 = DES 2 = 3DES 3 = 3K3DES 4 = AES");
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "Examples:");
-        PrintAndLogEx(NORMAL, _YELLOW_("         hf mfdes auth 1 1 0 11223344"));
-        PrintAndLogEx(NORMAL, _YELLOW_("         hf mfdes auth 3 4 0 404142434445464748494a4b4c4d4e4f"));
+        PrintAndLogEx(NORMAL, _YELLOW_("         hf mfdes auth 1 1 0 0 11223344"));
+        PrintAndLogEx(NORMAL, _YELLOW_("         hf mfdes auth 3 4 018380 0 404142434445464748494a4b4c4d4e4f"));
         return PM3_SUCCESS;
     }
     uint8_t cmdAuthMode = param_get8(Cmd, 0);
     uint8_t cmdAuthAlgo = param_get8(Cmd, 1);
-    uint8_t cmdKeyNo    = param_get8(Cmd, 2);
+    // AID
+    if (param_gethex(Cmd, 2, aid, aidlength*2)) {
+        PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
+        return PM3_EINVARG;
+    }
+    uint8_t cmdKeyNo    = param_get8(Cmd, 3);
 
     switch (cmdAuthMode) {
         case 1:
@@ -841,10 +848,20 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
 
     // key
-    if (param_gethex(Cmd, 3, key, keylength * 2)) {
+    if (param_gethex(Cmd, 4, key, keylength * 2)) {
         PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
         return PM3_EINVARG;
     }
+
+    if (get_desfire_select_application(aid) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint8_t file_ids[33] = {0};
+    uint8_t file_ids_len = 0;
+    get_desfire_fileids(file_ids, &file_ids_len);
 
     // algo, keylength,
     uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
