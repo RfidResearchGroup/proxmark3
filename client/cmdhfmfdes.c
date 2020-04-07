@@ -345,6 +345,32 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
     return PM3_SUCCESS;
 }
 
+typedef struct {
+    uint8_t aid[3];
+    uint8_t fid[2];
+    uint8_t name[16];
+} dfname_t;
+
+static int get_desfire_dfnames(dfname_t *dest, uint8_t* dfname_count) {
+    if (dest == NULL) return PM3_ESOFT;
+    uint8_t c[] = {MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00}; //0x6d
+    PacketResponseNG resp;
+    int ret = SendDesfireCmd(c, sizeof(c), INIT, sizeof(c), 0, &resp, 3000);
+    if (ret != PM3_SUCCESS) return ret;
+
+    uint8_t count=0;
+    memcpy(&dest[count], resp.data.asBytes+1, resp.length - 5);
+    if (resp.data.asBytes[resp.length - 3] == MFDES_ADDITIONAL_FRAME) {
+        c[0] = MFDES_ADDITIONAL_FRAME; //0xAF
+        ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 3000);
+        if (ret != PM3_SUCCESS) return ret;
+        count++;
+        memcpy(&dest[count], resp.data.asBytes+1, resp.length - 5);
+    }
+    *dfname_count=count-1;
+    return PM3_SUCCESS;
+}
+
 
 // none
 static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
@@ -562,9 +588,7 @@ void getKeySettings(uint8_t *aid) {
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
 
         // CARD MASTER KEY
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-
+        //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
         if (get_desfire_select_application(aid) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
             DropField();
@@ -627,9 +651,7 @@ void getKeySettings(uint8_t *aid) {
     } else {
 
         // AID - APPLICATION MASTER KEYS
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-
+        //PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
         if (get_desfire_select_application(aid) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
             DropField();
@@ -682,8 +704,18 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t file_ids[33] = {0};
     uint8_t file_ids_len = 0;
 
+    dfname_t dfnames[255] = {0};
+    uint8_t dfname_count=0;
+
     if (get_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
+        return PM3_ESOFT;
+    }
+
+    if (get_desfire_dfnames(dfnames,&dfname_count)!=PM3_SUCCESS)
+    {
+        PrintAndLogEx(WARNING, _RED_("Can't get DF Names"));
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -698,7 +730,21 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         aid[1] = app_ids[i + 1];
         aid[2] = app_ids[i + 2];
 
-        PrintAndLogEx(SUCCESS, " AID %d : " _GREEN_("%02X %02X %02X"), i, app_ids[i], app_ids[i + 1], app_ids[i + 2]);
+        PrintAndLogEx(NORMAL, "");
+
+        if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
+            // CARD MASTER KEY
+            PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
+        }
+        else {
+            PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
+        }
+
+        if (i<dfname_count) {
+             PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X %02X %02X"), aid[0], aid[1], aid[2]);
+        } else {
+             PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X %02X %02X") " - Name : " _YELLOW_("%s"), aid[0], aid[1], aid[2], dfnames[i/3].name);
+        }
 
         getKeySettings(aid);
 
@@ -709,13 +755,12 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-
         // Get File IDs
         if (get_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
             for (int j = 0; j < file_ids_len; ++j) {
                 PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
-                
+
                 uint8_t filesettings[20] = {0};
                 uint8_t fileset_len = 0;
                 int res = get_desfire_filesettings(j, filesettings, &fileset_len);

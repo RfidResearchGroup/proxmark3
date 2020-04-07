@@ -768,6 +768,9 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     case MFDES_GET_FILE_IDS:
                         snprintf(exp, size, "GET FILE IDS");
                         break;
+                    case MFDES_GET_DF_NAMES:
+                        snprintf(exp, size, "GET DF NAMES");
+                        break;
                     case MFDES_GET_ISOFILE_IDS:
                         snprintf(exp, size, "GET ISOFILE IDS");
                         break;
