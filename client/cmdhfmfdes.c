@@ -21,6 +21,7 @@
 #include "crypto/libpcrypto.h"
 #include "protocols.h"
 #include "mifare.h"         // desfire raw command options
+#include "cmdtrace.h"
 
 uint8_t key_zero_data[16] = { 0x00 };
 uint8_t key_ones_data[16] = { 0x01 };
@@ -890,9 +891,15 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesList(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    return CmdTraceList("des");
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,                     AlwaysAvailable, "This help"},
     {"info",    CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
+    {"list",    CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
     {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
     {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
