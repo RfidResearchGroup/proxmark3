@@ -300,6 +300,7 @@ static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
 static int get_desfire_select_application(uint8_t *aid) {
     if (aid == NULL) return PM3_ESOFT;
 
+    DropField();
     uint8_t c[] = {SELECT_APPLICATION, 0x00, 0x00, 0x03, aid[0], aid[1], aid[2], 0x00};  // 0x5a
     PacketResponseNG resp;
     int ret = SendDesfireCmd(c, sizeof(c), INIT, sizeof(c), 0, &resp, 3000);
