@@ -351,23 +351,23 @@ typedef struct {
     uint8_t name[16];
 } dfname_t;
 
-static int get_desfire_dfnames(dfname_t *dest, uint8_t* dfname_count) {
+static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
     if (dest == NULL) return PM3_ESOFT;
     uint8_t c[] = {MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00}; //0x6d
     PacketResponseNG resp;
     int ret = SendDesfireCmd(c, sizeof(c), INIT, sizeof(c), 0, &resp, 3000);
     if (ret != PM3_SUCCESS) return ret;
 
-    uint8_t count=0;
-    memcpy(&dest[count], resp.data.asBytes+1, resp.length - 5);
+    uint8_t count = 1;
+    memcpy(&dest[count - 1], resp.data.asBytes + 1, resp.length - 5);
     if (resp.data.asBytes[resp.length - 3] == MFDES_ADDITIONAL_FRAME) {
         c[0] = MFDES_ADDITIONAL_FRAME; //0xAF
         ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 3000);
         if (ret != PM3_SUCCESS) return ret;
         count++;
-        memcpy(&dest[count], resp.data.asBytes+1, resp.length - 5);
+        memcpy(&dest[count - 1], resp.data.asBytes + 1, resp.length - 5);
     }
-    *dfname_count=count-1;
+    *dfname_count = count;
     return PM3_SUCCESS;
 }
 
@@ -388,7 +388,7 @@ static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
     return PM3_ESOFT;
 }
 
-static int get_desfire_filesettings( uint8_t file_id, uint8_t *dest, uint8_t *destlen) {
+static int get_desfire_filesettings(uint8_t file_id, uint8_t *dest, uint8_t *destlen) {
     uint8_t c[] = {MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, file_id, 0x00};  // 0xF5
     PacketResponseNG resp;
     int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
@@ -575,7 +575,7 @@ char *getVersionStr(uint8_t major, uint8_t minor) {
     else if (major == 0x12 && minor == 0x00)
         sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
 //    else if (major == 0x13 && minor == 0x00)
-//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);    
+//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
         sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
     else
@@ -705,15 +705,14 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t file_ids_len = 0;
 
     dfname_t dfnames[255] = {0};
-    uint8_t dfname_count=0;
+    uint8_t dfname_count = 0;
 
     if (get_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         return PM3_ESOFT;
     }
 
-    if (get_desfire_dfnames(dfnames,&dfname_count)!=PM3_SUCCESS)
-    {
+    if (get_desfire_dfnames(dfnames, &dfname_count) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("Can't get DF Names"));
         DropField();
         return PM3_ESOFT;
@@ -735,15 +734,15 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
         if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
             // CARD MASTER KEY
             PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-        }
-        else {
+        } else {
             PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
         }
 
-        if (i<dfname_count) {
-             PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X %02X %02X"), aid[0], aid[1], aid[2]);
-        } else {
-             PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X %02X %02X") " - Name : " _YELLOW_("%s"), aid[0], aid[1], aid[2], dfnames[i/3].name);
+        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X %02X %02X"), aid[0], aid[1], aid[2]);
+        for (int m = 0; m < dfname_count; m++) {
+            if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
+                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X %02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[0], dfnames[m].fid[1], dfnames[m].name);
+            }
         }
 
         getKeySettings(aid);
@@ -765,13 +764,13 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
                 uint8_t fileset_len = 0;
                 int res = get_desfire_filesettings(j, filesettings, &fileset_len);
                 if (res == PM3_SUCCESS) {
-                    PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len) );
+                    PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len));
                 }
             }
         }
-        
-        
-        
+
+
+
 
         /*
                 // Get ISO File IDs
@@ -844,7 +843,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     uint8_t cmdAuthMode = param_get8(Cmd, 0);
     uint8_t cmdAuthAlgo = param_get8(Cmd, 1);
     // AID
-    if (param_gethex(Cmd, 2, aid, aidlength*2)) {
+    if (param_gethex(Cmd, 2, aid, aidlength * 2)) {
         PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
         return PM3_EINVARG;
     }
