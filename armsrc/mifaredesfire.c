@@ -204,7 +204,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
     uint8_t decRndB[16] = {0x00};
     uint8_t both[32] = {0x00};
 
-    InitDesfireCard();
+    //InitDesfireCard();
 
     LED_A_ON();
     LED_B_OFF();
@@ -455,8 +455,12 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             mbedtls_aes_init(&ctx);
 
             cmd[0] = AUTHENTICATE_AES;
-            cmd[1] = 0x00;  //keynumber
-            len = DesfireAPDU(cmd, 2, resp);
+            cmd[1] = 0x0;
+            cmd[2] = 0x0;
+            cmd[3] = 0x1;
+            cmd[4] = arg2;  //keynumber
+            cmd[5] = 0x0;
+            len = DesfireAPDU(cmd, 6, resp);
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -465,7 +469,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 return;
             }
 
-            memcpy(encRndB, resp + 3, 16);
+            memcpy(encRndB, resp + 1, 16);
 
             // dekryptera tagnonce.
             if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
@@ -491,9 +495,13 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, both, encBoth);
 
             cmd[0] = ADDITIONAL_FRAME;
-            memcpy(cmd + 1, encBoth, 32);
+            cmd[1] = 0x00;
+            cmd[2] = 0x00;
+            cmd[3] = 0x20;
+            memcpy(cmd + 4, encBoth, 32);
+            cmd[36]=0x0;
 
-            len = DesfireAPDU(cmd, 33, resp);  // 1 + 32 == 33
+            len = DesfireAPDU(cmd, 37, resp);  // 4 + 32 + 1 == 37
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -502,7 +510,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 return;
             }
 
-            if (resp[2] == 0x00) {
+            if ((resp[1+16] == 0x91)&&(resp[1+16+1] == 0x00)) {
                 // Create AES Session key
                 struct desfire_key sessionKey = {0};
                 desfirekey_t skey = &sessionKey;
