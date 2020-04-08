@@ -434,6 +434,22 @@ int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, in
     return intExchangeRAW14aPlus(c, sizeof(c), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 }
 
+int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+    uint8_t tmp[10] = {0};
+    uint8_t c[] = {0x60};
+    int res = intExchangeRAW14aPlus(c, sizeof(c), activateField, true, tmp, maxdataoutlen, dataoutlen);
+    if (tmp[0] == 0xAF) { //MFDES_ADDITIONAL_FRAME
+        memcpy(dataout, tmp + 1, 7);
+        c[0] = 0xAF;      
+        res =  intExchangeRAW14aPlus(c, sizeof(c), false, leaveSignalON, tmp, maxdataoutlen, dataoutlen);
+        if (res == 0) {
+            memcpy(dataout + 7, tmp + 1, 7);
+            *dataoutlen = 14;
+        }
+    }
+    return res;
+}
+
 // Mifare Memory Structure: up to 32 Sectors with 4 blocks each (1k and 2k cards),
 // plus evtl. 8 sectors with 16 blocks each (4k cards)
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo) {

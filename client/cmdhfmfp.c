@@ -34,6 +34,63 @@ uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA0
 
 static int CmdHelp(const char *Cmd);
 
+/*
+  The 7 MSBits (= n) code the storage size itself based on 2^n,
+  the LSBit is set to '0' if the size is exactly 2^n
+    and set to '1' if the storage size is between 2^n and 2^(n+1).
+    For this version of DESFire the 7 MSBits are set to 0x0C (2^12 = 4096) and the LSBit is '0'.
+*/
+static char *getCardSizeStr(uint8_t fsize) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+
+    uint16_t usize = 1 << ((fsize >> 1) + 1);
+    uint16_t lsize = 1 << (fsize >> 1);
+
+    // is  LSB set?
+    if (fsize & 1)
+        sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+    else
+        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
+    return buf;
+}
+
+static char *getProtocolStr(uint8_t id) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+
+    if (id == 0x05)
+        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+    else
+        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+    return buf;
+}
+
+static char *getVersionStr(uint8_t major, uint8_t minor) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+
+    if (major == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+    else if (major == 0x01 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV1") ")", major, minor);
+    else if (major == 0x12 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
+//    else if (major == 0x13 && minor == 0x00)
+//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);
+    else if (major == 0x30 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
+
+    else if (major == 0x11 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("Plus EV1") ")", major, minor);
+    else
+        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
+    return buf;
+}
+
 // --- GET SIGNATURE
 static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
 
@@ -97,6 +154,40 @@ static int get_plus_signature(uint8_t *signature, int *signature_len) {
     mfpSetVerboseMode(false);
     return retval;
 }
+// GET VERSION
+static int plus_print_version(uint8_t *version) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), version[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
+    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(version[3], version[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6]));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), version[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  version[3], version[4]);
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6]));
+    return PM3_SUCCESS;
+}
+static int get_plus_version(uint8_t *version, int *version_len) {
+    
+    int resplen = 0, retval = PM3_SUCCESS;
+
+    mfpSetVerboseMode(false);
+    MFPGetVersion(true, false, version, *version_len, &resplen);
+    mfpSetVerboseMode(false);
+
+    *version_len = resplen;
+    if (resplen != 14) {
+        retval = PM3_ESOFT;
+    }
+    return retval;
+}
 
 static int CmdHFMFPInfo(const char *Cmd) {
 
@@ -110,6 +201,13 @@ static int CmdHFMFPInfo(const char *Cmd) {
     // info about 14a part
     infoHF14A(false, false, false);
 
+    // version check
+    uint8_t version[15] = {0};
+    int version_len = sizeof(version);
+    if (get_plus_version(version, &version_len) == PM3_SUCCESS) {
+        plus_print_version(version);
+    }
+    
     // Mifare Plus info
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -126,7 +224,6 @@ static int CmdHFMFPInfo(const char *Cmd) {
     if (get_plus_signature(signature, &signature_len) == PM3_SUCCESS) {
         plus_print_signature(card.uid, card.uidlen, signature, signature_len);
     }
-
 
     if (select_status == 1 || select_status == 2) {
 
