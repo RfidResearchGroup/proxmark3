@@ -201,7 +201,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_desfire_public_keys[i].desc);
+    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_desfire_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_desfire_public_keys[i].value);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 16);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 32);
@@ -211,7 +211,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
-    PrintAndLogEx(SUCCESS, "        Signature verified: " _GREEN_("successful"));
+    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
 
