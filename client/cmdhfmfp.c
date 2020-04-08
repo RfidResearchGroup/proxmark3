@@ -24,12 +24,172 @@
 #include "mifare/mifaredefault.h"
 #include "util_posix.h"
 #include "fileutils.h"
+#include "protocols.h"
+#include "crypto/libpcrypto.h"
+
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
 
 static int CmdHelp(const char *Cmd);
+
+/*
+  The 7 MSBits (= n) code the storage size itself based on 2^n,
+  the LSBit is set to '0' if the size is exactly 2^n
+    and set to '1' if the storage size is between 2^n and 2^(n+1).
+    For this version of DESFire the 7 MSBits are set to 0x0C (2^12 = 4096) and the LSBit is '0'.
+*/
+static char *getCardSizeStr(uint8_t fsize) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+
+    uint16_t usize = 1 << ((fsize >> 1) + 1);
+    uint16_t lsize = 1 << (fsize >> 1);
+
+    // is  LSB set?
+    if (fsize & 1)
+        sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+    else
+        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
+    return buf;
+}
+
+static char *getProtocolStr(uint8_t id) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+
+    if (id == 0x05)
+        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+    else
+        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+    return buf;
+}
+
+static char *getVersionStr(uint8_t major, uint8_t minor) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+
+    if (major == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+    else if (major == 0x01 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV1") ")", major, minor);
+    else if (major == 0x12 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
+//    else if (major == 0x13 && minor == 0x00)
+//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);
+    else if (major == 0x30 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
+
+    else if (major == 0x11 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("Plus EV1") ")", major, minor);
+    else
+        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
+    return buf;
+}
+
+// --- GET SIGNATURE
+static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
+
+    // ref:  MIFARE Plus EV1 Originality Signature Validation
+    #define PUBLIC_PLUS_ECDA_KEYLEN 57
+    const ecdsa_publickey_t nxp_plus_public_keys[] = {
+        {"Mifare Plus EV1",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
+    };
+
+    uint8_t i;
+    int res;
+    bool is_valid = false;
+
+    for (i = 0; i < ARRAYLEN(nxp_plus_public_keys); i++) {
+
+        int dl = 0;
+        uint8_t key[PUBLIC_PLUS_ECDA_KEYLEN];
+        param_gethex_to_eol(nxp_plus_public_keys[i].value, 0, key, PUBLIC_PLUS_ECDA_KEYLEN, &dl);
+
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
+        is_valid = (res == 0);
+        if (is_valid)
+            break;
+    }
+    if (is_valid == false) {
+        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_plus_public_keys[i].desc);
+    PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_plus_public_keys[i].value);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 16);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 32);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 48);
+    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
+    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
+    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
+    return PM3_SUCCESS;
+}
+
+static int get_plus_signature(uint8_t *signature, int *signature_len) {
+
+    mfpSetVerboseMode(false);
+
+    uint8_t data[59] = {0};
+    int resplen = 0, retval = PM3_SUCCESS;
+    MFPGetSignature(true, false, data, sizeof(data), &resplen);
+       
+    if (resplen == 59) {
+        memcpy(signature, data + 1, 56);
+        *signature_len = 56;
+    } else {
+        *signature_len = 0;
+        retval = PM3_ESOFT;
+    }
+    mfpSetVerboseMode(false);
+    return retval;
+}
+// GET VERSION
+static int plus_print_version(uint8_t *version) {
+    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(version + 14, 7));
+    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(version + 21, 5));
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") "/ " _GREEN_("20%02x"), version[7+7+7+5], version[7+7+7+5+1]);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), version[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
+    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(version[3], version[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6]));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), version[1]);
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  version[3], version[4]);
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6]));
+    return PM3_SUCCESS;
+}
+static int get_plus_version(uint8_t *version, int *version_len) {
+    
+    int resplen = 0, retval = PM3_SUCCESS;
+    mfpSetVerboseMode(false);
+    MFPGetVersion(true, false, version, *version_len, &resplen);
+    mfpSetVerboseMode(false);
+
+    *version_len = resplen;
+    if (resplen != 28) {
+        retval = PM3_ESOFT;
+    }
+    return retval;
+}
 
 static int CmdHFMFPInfo(const char *Cmd) {
 
@@ -40,9 +200,20 @@ static int CmdHFMFPInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
-    // info about 14a part
-    infoHF14A(false, false, false);
+    bool supportVersion = false;
+    bool supportSignature = false;
 
+    // version check
+    uint8_t version[30] = {0};
+    int version_len = sizeof(version);
+    if (get_plus_version(version, &version_len) == PM3_SUCCESS) {
+        plus_print_version(version);
+        supportVersion = true;
+    } else {
+        // info about 14a part
+        infoHF14A(false, false, false);
+    }
+    
     // Mifare Plus info
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -53,9 +224,23 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
+    // Signature originality check
+    uint8_t signature[56] = {0};
+    int signature_len = sizeof(signature);
+    if (get_plus_signature(signature, &signature_len) == PM3_SUCCESS) {
+        plus_print_signature(card.uid, card.uidlen, signature, signature_len);
+        supportSignature = true;
+    }
+
     if (select_status == 1 || select_status == 2) {
 
         PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+        
+        if (supportVersion && supportSignature) {
+            PrintAndLogEx(INFO, "          Tech: " _GREEN_("MIFARE Plus EV1"));
+        } else {
+            PrintAndLogEx(INFO, "          Tech: " _YELLOW_("MIFARE Plus SE/X"));
+        }
 
         // MIFARE Type Identification Procedure
         // https://www.nxp.com/docs/en/application-note/AN10833.pdf
@@ -63,36 +248,36 @@ static int CmdHFMFPInfo(const char *Cmd) {
         bool isPlus = false;
 
         if (ATQA & 0x0004) {
-            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("MIFARE Plus 2K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("2K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
         if (ATQA & 0x0002) {
-            PrintAndLogEx(INFO, "  ATQA - " _GREEN_("MIFARE Plus 4K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("4K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
 
-        uint8_t SLmode = 0xff;
+        uint8_t SLmode = 0xFF;
         if (isPlus) {
             if (card.sak == 0x08) {
-                PrintAndLogEx(INFO, "   SAK - " _GREEN_("MIFARE Plus 2K 7b UID"));
+                PrintAndLogEx(INFO, "            SAK: " _GREEN_("2K 7b UID"));
                 if (select_status == 2) SLmode = 1;
             }
             if (card.sak == 0x18) {
-                PrintAndLogEx(INFO, "   SAK - " _GREEN_("MIFARE Plus 4K 7b UID"));
+                PrintAndLogEx(INFO, "            SAK: " _GREEN_("4K 7b UID"));
                 if (select_status == 2) SLmode = 1;
             }
             if (card.sak == 0x10) {
-                PrintAndLogEx(INFO, "   SAK - " _GREEN_("MIFARE Plus 2K"));
+                PrintAndLogEx(INFO, "            SAK: " _GREEN_("2K"));
                 if (select_status == 2) SLmode = 2;
             }
             if (card.sak == 0x11) {
-                PrintAndLogEx(INFO, "   SAK - " _GREEN_("MIFARE Plus 4K"));
+                PrintAndLogEx(INFO, "            SAK: " _GREEN_("4K"));
                 if (select_status == 2) SLmode = 2;
             }
         }
 
         if (card.sak == 0x20) {
-            PrintAndLogEx(INFO, "   SAK - " _GREEN_("MIFARE Plus SL0/SL3") "or " _GREEN_("MIFARE DESFire"));
+            PrintAndLogEx(INFO, "           SAK: " _GREEN_("MIFARE Plus SL0/SL3") "or " _GREEN_("MIFARE DESFire"));
 
             if (card.ats_len > 0) {
 
@@ -117,34 +302,35 @@ static int CmdHFMFPInfo(const char *Cmd) {
             }
         }
 
-        // How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
-        PrintAndLogEx(INFO, "--- " _CYAN_("Security Level (SL)"));
+        if (isPlus) {
+            // How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
+            PrintAndLogEx(INFO, "--- " _CYAN_("Security Level (SL)"));
 
-        if (SLmode != 0xFF)
-            PrintAndLogEx(SUCCESS, "    MIFARE Plus SL mode: " _YELLOW_("SL%d"), SLmode);
-        else
-            PrintAndLogEx(WARNING, "    MIFARE Plus SL mode: " _YELLOW_("unknown"));
-
-        switch(SLmode) {
-            case 0:
-                PrintAndLogEx(INFO, " SL 0: initial delivery configuration, used for card personalization");
-                break;
-            case 1:
-                PrintAndLogEx(INFO, " SL 1: backwards functional compatibility mode (with MIFARE Classic 1K / 4K) with an optional AES authentication");
-                break;
-            case 2:
-                PrintAndLogEx(INFO, " SL 2: 3-Pass Authentication based on AES followed by MIFARE CRYPTO1 authentication, communication secured by MIFARE CRYPTO1");
-                break;
-            case 3:
-                PrintAndLogEx(INFO, " SL 3: 3-Pass authentication based on AES, data manipulation commands secured by AES encryption and an AES based MACing method.");
-                break;
-            default:
-                break;
+            if (SLmode != 0xFF )
+                PrintAndLogEx(SUCCESS, "       SL mode: " _YELLOW_("SL%d"), SLmode);
+            else
+                PrintAndLogEx(WARNING, "       SL mode: " _YELLOW_("unknown"));
+            switch(SLmode) {
+                case 0:
+                    PrintAndLogEx(INFO, "  SL 0: initial delivery configuration, used for card personalization");
+                    break;
+                case 1:
+                    PrintAndLogEx(INFO, "  SL 1: backwards functional compatibility mode (with MIFARE Classic 1K / 4K) with an optional AES authentication");
+                    break;
+                case 2:
+                    PrintAndLogEx(INFO, "  SL 2: 3-Pass Authentication based on AES followed by MIFARE CRYPTO1 authentication, communication secured by MIFARE CRYPTO1");
+                    break;
+                case 3:
+                    PrintAndLogEx(INFO, "  SL 3: 3-Pass authentication based on AES, data manipulation commands secured by AES encryption and an AES based MACing method.");
+                    break;
+                default:
+                    break;
+            }
         }
     } else {
         PrintAndLogEx(INFO, "\tMifare Plus info not available.");
     }
-
+    PrintAndLogEx(NORMAL, "");
     DropField();
     return PM3_SUCCESS;
 }
