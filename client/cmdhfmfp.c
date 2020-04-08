@@ -248,11 +248,11 @@ static int CmdHFMFPInfo(const char *Cmd) {
         bool isPlus = false;
 
         if (ATQA & 0x0004) {
-            PrintAndLogEx(INFO, "          ATQA: " _GREEN_("2K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("2K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
         if (ATQA & 0x0002) {
-            PrintAndLogEx(INFO, "          ATQA: " _GREEN_("4K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("4K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
 
