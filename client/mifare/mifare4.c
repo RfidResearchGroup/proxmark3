@@ -429,6 +429,11 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     return 0;
 }
 
+int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+    uint8_t c[] = {0x3c, 0x00};
+    return intExchangeRAW14aPlus(c, sizeof(c), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+}
+
 // Mifare Memory Structure: up to 32 Sectors with 4 blocks each (1k and 2k cards),
 // plus evtl. 8 sectors with 16 blocks each (4k cards)
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo) {

@@ -24,12 +24,79 @@
 #include "mifare/mifaredefault.h"
 #include "util_posix.h"
 #include "fileutils.h"
+#include "protocols.h"
+#include "crypto/libpcrypto.h"
+
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
 
 static int CmdHelp(const char *Cmd);
+
+// --- GET SIGNATURE
+static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
+
+    // ref:  MIFARE Plus EV1 Originality Signature Validation
+    #define PUBLIC_PLUS_ECDA_KEYLEN 57
+    const ecdsa_publickey_t nxp_plus_public_keys[] = {
+        {"Mifare Plus EV1",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
+    };
+
+    uint8_t i;
+    int res;
+    bool is_valid = false;
+
+    for (i = 0; i < ARRAYLEN(nxp_plus_public_keys); i++) {
+
+        int dl = 0;
+        uint8_t key[PUBLIC_PLUS_ECDA_KEYLEN];
+        param_gethex_to_eol(nxp_plus_public_keys[i].value, 0, key, PUBLIC_PLUS_ECDA_KEYLEN, &dl);
+
+        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
+        is_valid = (res == 0);
+        if (is_valid)
+            break;
+    }
+    if (is_valid == false) {
+        PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_plus_public_keys[i].desc);
+    PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_plus_public_keys[i].value);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 16);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 32);
+    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 48);
+    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
+    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
+    PrintAndLogEx(SUCCESS, "           Signature verified: " _GREEN_("successful"));
+    return PM3_SUCCESS;
+}
+
+static int get_plus_signature(uint8_t *signature, int *signature_len) {
+
+    mfpSetVerboseMode(false);
+
+    uint8_t data[59] = {0};
+    int resplen = 0, retval = PM3_SUCCESS;
+    MFPGetSignature(true, false, data, sizeof(data), &resplen);
+       
+    if (resplen == 59) {
+        memcpy(signature, data + 1, 56);
+        *signature_len = 56;
+    } else {
+        *signature_len = 0;
+        retval = PM3_ESOFT;
+    }
+    mfpSetVerboseMode(false);
+    return retval;
+}
 
 static int CmdHFMFPInfo(const char *Cmd) {
 
@@ -52,6 +119,14 @@ static int CmdHFMFPInfo(const char *Cmd) {
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+
+    // Signature originality check
+    uint8_t signature[56] = {0};
+    int signature_len = sizeof(signature);
+    if (get_plus_signature(signature, &signature_len) == PM3_SUCCESS) {
+        plus_print_signature(card.uid, card.uidlen, signature, signature_len);
+    }
+
 
     if (select_status == 1 || select_status == 2) {
 
