@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Rewrote `hf mfdes` functions and added apdu debugging (@bkerler)
  - Add Mifare Desfire GetDFNames and improve HF MFDES Enum output (@bkerler)
  - Fix Mifare Desfire select appid handling (@bkerler)
  - Improved `hf 14a info` - card detection handling (@bkerler)
