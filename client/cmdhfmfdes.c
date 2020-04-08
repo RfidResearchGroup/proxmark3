@@ -83,7 +83,7 @@ static desfire_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 //ICEMAN: Turn on field method?
 //none
 static int test_desfire_authenticate() {
-    uint8_t c[] = {AUTHENTICATE, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x0A, KEY 0
+    uint8_t c[] = {MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x0A, KEY 0
     SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
@@ -96,7 +96,7 @@ static int test_desfire_authenticate() {
 }
 // none
 static int test_desfire_authenticate_iso() {
-    uint8_t c[] = {AUTHENTICATE_ISO, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x1A, KEY 0
+    uint8_t c[] = {MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x1A, KEY 0
     SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
@@ -117,7 +117,7 @@ static int test_desfire_authenticate_aes() {
         const static u08_t CustomKey3[16] = {0x79, 0x70, 0x25, 0x53, 0x79, 0x70, 0x25,
         0x53, 0x79, 0x70, 0x25, 0x53, 0x79, 0x70, 0x25, 0x53};
      */
-    uint8_t c[] = {AUTHENTICATE_AES, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0xAA, KEY 0
+    uint8_t c[] = {MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0xAA, KEY 0
     SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
@@ -137,7 +137,7 @@ static int desfire_print_freemem(uint32_t free_mem) {
 
 // init / disconnect
 static int get_desfire_freemem(uint32_t *free_mem) {
-    uint8_t c[] = {GET_FREE_MEMORY, 0x00, 0x00, 0x00};  // 0x6E
+    uint8_t c[] = {MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00};  // 0x6E
     SendCommandMIX(CMD_HF_DESFIRE_COMMAND, (INIT | DISCONNECT), sizeof(c), 0, c, sizeof(c));
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
@@ -301,7 +301,7 @@ static int get_desfire_select_application(uint8_t *aid) {
     if (aid == NULL) return PM3_ESOFT;
 
     DropField();
-    uint8_t c[] = {SELECT_APPLICATION, 0x00, 0x00, 0x03, aid[0], aid[1], aid[2], 0x00};  // 0x5a
+    uint8_t c[] = {MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid[0], aid[1], aid[2], 0x00};  // 0x5a
     PacketResponseNG resp;
     int ret = SendDesfireCmd(c, sizeof(c), INIT, sizeof(c), 0, &resp, 3000);
     if (ret != PM3_SUCCESS) {
@@ -322,7 +322,7 @@ static int get_desfire_select_application(uint8_t *aid) {
 // init / disconnect
 static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
 
-    uint8_t c[] = {GET_APPLICATION_IDS, 0x00, 0x00, 0x00}; //0x6a
+    uint8_t c[] = {MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00}; //0x6a
     PacketResponseNG resp;
     int ret = SendDesfireCmd(c, sizeof(c), INIT | CLEARTRACE | DISCONNECT, sizeof(c), 0, &resp, 1500);
     if (ret != PM3_SUCCESS) return ret;
