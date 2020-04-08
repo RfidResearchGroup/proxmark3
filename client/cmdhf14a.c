@@ -1317,10 +1317,8 @@ int detect_nxp_card(uint8_t sak, uint16_t atqa) {
             printTag("MIFARE NTAG424DNA (Random ID feature)");
             type |= MTDESFIRE;
         } else {
-            printTag("MIFARE Plus 2K / Plus EV1 2K");
-            printTag("MIFARE Plus 4K / Plus EV1 4K");
-            printTag("MIFARE Plus CL2 2K / Plus CL2 EV1 4K");
-            printTag("MIFARE Plus CL2 4K / Plus CL2 EV1 4K");
+            printTag("MIFARE Plus 2K/4K / Plus EV1 2K/4K");
+            printTag("MIFARE Plus CL2 2K/4K / Plus CL2 EV1 2K/4K");
             type |= MTPLUS;
         }
     }
