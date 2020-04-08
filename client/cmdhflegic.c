@@ -681,7 +681,7 @@ static int CmdLegicWrbl(const char *Cmd) {
         return PM3_EOUTOFBOUND;
     }
 
-    if (len + offset >= card.cardsize) {
+    if (len + offset > card.cardsize) {
         PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
         return PM3_EOUTOFBOUND;
     }
