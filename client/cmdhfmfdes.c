@@ -16,6 +16,7 @@
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
+#include "cmdhw.h"
 #include "cmdhf14a.h"
 #include "mbedtls/des.h"
 #include "crypto/libpcrypto.h"
@@ -24,7 +25,7 @@
 #include "cmdtrace.h"
 #include "cliparser/cliparser.h"
 #include "emv/apduinfo.h"   // APDU manipulation / errorcodes
-#include "emv/emvcore.h"    // APDU logging 
+#include "emv/emvcore.h"    // APDU logging
 #include "util_posix.h"     // msleep
 #include "mifare/mifare4.h" // MIFARE Authenticate / MAC
 
@@ -50,27 +51,111 @@ typedef struct {
 
 static int CmdHelp(const char *Cmd);
 
-static int SendDesfireCmd(uint8_t *c, size_t len, int p0, int p1, int p2, PacketResponseNG *response, int timeout) {
+/*
+         uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
+                int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen, false);
 
-    PacketResponseNG resp;
-    if (response == NULL)
-        response = &resp;
+                if (!res && datalen > 1 && data[0] == 0x09) {
+                    SLmode = 0;
+                }
 
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, p0, p1, p2, c, len);
+*/
 
-    if (!WaitForResponseTimeout(CMD_ACK, response, timeout)) {
-        PrintAndLogEx(WARNING, "[SendDesfireCmd] Timed-out: " _RED_("%s"), sprint_hex(c, len));
+int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, int max_result_len, int *result_len, uint16_t *sw) {
+    *result_len = 0;
+    if (sw) *sw = 0;
+
+    uint16_t isw = 0;
+    int res = 0;
+
+    if (activate_field) {
         DropField();
-        return PM3_ETIMEOUT;
+        msleep(50);
     }
 
-    uint8_t isOK  = response->data.asBytes[0] & 0xff;
-    if (!isOK) {
-        PrintAndLogEx(WARNING, "[SendDesfireCmd] Unsuccessful: " _RED_("%s"), sprint_hex(c, len));
-        return PM3_ESOFT;
+    // select?
+    uint8_t data[APDU_RES_LEN] = {0};
+
+    // COMPUTE APDU
+    int datalen = 0;
+    //if (APDUEncodeS(&apdu, false, IncludeLe ? 0x100 : 0x00, data, &datalen)) {
+    if (APDUEncodeS(&apdu, false, 0x100, data, &datalen)) {
+        PrintAndLogEx(ERR, "APDU encoding error.");
+        return PM3_EAPDU_ENCODEFAIL;
     }
+
+    if (GetAPDULogging() || (g_debugMode > 1))
+        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, datalen));
+
+    res = ExchangeAPDU14a(data, datalen, activate_field, leavefield_on, result, max_result_len, result_len);
+    if (res) {
+        return res;
+    }
+
+    if (GetAPDULogging() || (g_debugMode > 1))
+        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(result, *result_len));
+
+    if (*result_len < 2) {
+        return PM3_SUCCESS;
+    }
+
+    *result_len -= 2;
+    isw = (result[*result_len] << 8) + result[*result_len + 1];
+    if (sw)
+        *sw = isw;
+
+    if (isw != 0x9000 && isw != MFDES_SUCCESS_FRAME_RESP && isw != MFDES_ADDITIONAL_FRAME_RESP) {
+        if (GetAPDULogging()) {
+            if (isw >> 8 == 0x61) {
+                PrintAndLogEx(ERR, "APDU chaining len:%02x -->", isw & 0xff);
+            } else {
+                PrintAndLogEx(ERR, "APDU(%02x%02x) ERROR: [%4X] %s", apdu.CLA, apdu.INS, isw, GetAPDUCodeDescription(isw >> 8, isw & 0xff));
+                return PM3_EAPDU_FAIL;
+            }
+        }
+    }
+
     return PM3_SUCCESS;
+}
+
+
+static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_len, uint16_t *sw, int splitbysize) {
+    //SetAPDULogging(true);
+    *sw = 0;
+    uint8_t data[255 * 5]  = {0x00};
+    int resplen = 0;
+    int pos = 0;
+    int i = 1;
+    int res = DESFIRESendApdu(select, true, *apdu, data, sizeof(data), &resplen, sw);
+    if (res != PM3_SUCCESS) return res;
+    if (*sw != MFDES_ADDITIONAL_FRAME_RESP && *sw != MFDES_SUCCESS_FRAME_RESP) return PM3_ESOFT;
+    if (dest != NULL) {
+        memcpy(dest, data, resplen);
+    }
+
+    pos += resplen;
+    if (*sw == MFDES_ADDITIONAL_FRAME_RESP) {
+        apdu->INS = MFDES_ADDITIONAL_FRAME; //0xAF
+
+        res = DESFIRESendApdu(false, true, *apdu, data, sizeof(data), &resplen, sw);
+        if (res != PM3_SUCCESS) return res;
+        if (dest != NULL) {
+            if (splitbysize) {
+                memcpy(&dest[i * splitbysize], data, resplen);
+                i += 1;
+            } else {
+                memcpy(&dest[pos], data, resplen);
+            }
+        }
+        pos += resplen;
+    }
+    if (splitbysize) *recv_len = i;
+    else {
+        *recv_len = pos;
+    }
+    //SetAPDULogging(false);
+    return PM3_SUCCESS;
+
 }
 
 static desfire_cardtype_t getCardType(uint8_t major, uint8_t minor) {
@@ -89,53 +174,31 @@ static desfire_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return UNKNOWN;
 }
 
-//ICEMAN: Turn on field method?
 //none
 static int test_desfire_authenticate() {
-    uint8_t c[] = {MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x0A, KEY 0
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-        DropField();
-        return PM3_ETIMEOUT;
-    }
-    if (resp.length == 13)
-        return PM3_SUCCESS;
-    return PM3_ESOFT;
+    uint8_t c = 0x00;
+    sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, &c}; // 0x0A, KEY 0
+    int recv_len = 0;
+    uint16_t sw = 0;
+    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
 }
+
 // none
 static int test_desfire_authenticate_iso() {
-    uint8_t c[] = {MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x1A, KEY 0
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-        DropField();
-        return PM3_ETIMEOUT;
-    }
-    if (resp.length >= 13)
-        return PM3_SUCCESS;
-    return PM3_ESOFT;
+    uint8_t c = 0x00;
+    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, &c}; // 0x1A, KEY 0
+    int recv_len = 0;
+    uint16_t sw = 0;
+    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
 }
+
 //none
 static int test_desfire_authenticate_aes() {
-    /*  Just left here for future use, from TI TRF7970A sloa213 document
-        const static u08_t CustomKey1[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        const static u08_t CustomKey2[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
-        0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
-        const static u08_t CustomKey3[16] = {0x79, 0x70, 0x25, 0x53, 0x79, 0x70, 0x25,
-        0x53, 0x79, 0x70, 0x25, 0x53, 0x79, 0x70, 0x25, 0x53};
-     */
-    uint8_t c[] = {MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0xAA, KEY 0
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(c), 0, c, sizeof(c));
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
-        DropField();
-        return PM3_ETIMEOUT;
-    }
-    if (resp.length >= 13)
-        return PM3_SUCCESS;
-    return PM3_ESOFT;
+    uint8_t c = 0x00;
+    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, &c}; // 0xAA, KEY 0
+    int recv_len = 0;
+    uint16_t sw = 0;
+    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
 }
 
 // --- FREE MEM
@@ -146,20 +209,18 @@ static int desfire_print_freemem(uint32_t free_mem) {
 
 // init / disconnect
 static int get_desfire_freemem(uint32_t *free_mem) {
-    uint8_t c[] = {MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00};  // 0x6E
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, (INIT | DISCONNECT), sizeof(c), 0, c, sizeof(c));
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        return PM3_ETIMEOUT;
-    }
+    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NONE}; // 0x6E
+    int recv_len = 0;
+    uint16_t sw = 0;
+    uint8_t fmem[4] = {0};
 
-    if (resp.length == 8) {
-        *free_mem = le24toh(resp.data.asBytes + 1);
-        return PM3_SUCCESS;
+    int res = send_desfire_cmd(&apdu, true, fmem, &recv_len, &sw, 0);
+    if (res == PM3_SUCCESS) {
+        *free_mem = le24toh(fmem);
+        return res;
     }
-
     *free_mem = 0;
-    return PM3_ESOFT;
+    return res;
 }
 
 
@@ -176,7 +237,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
         {"NTAG424DNA, NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
         {"DESFire Light EV1",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
-        {"Mifare Plus EV1",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
+        {"Mifare Plus EV1",         "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
 
     uint8_t i;
@@ -217,20 +278,25 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
 
 // init / disconnect
 static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
-    uint8_t c[] = {MFDES_READSIG, 0x00, 0x00, 0x01, 0x00, 0x00};  // 0x3C
-    SendCommandMIX(CMD_HF_DESFIRE_COMMAND, (INIT | DISCONNECT), sizeof(c), 0, c, sizeof(c));
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500))
-        return PM3_ETIMEOUT;
+    uint8_t c = 0x00;
+    sAPDU apdu = {0x90, MFDES_READSIG, 0x00, 0x00, 0x01, &c}; // 0x3C
+    int recv_len = 0;
+    uint16_t sw = 0;
+    int res = send_desfire_cmd(&apdu, true, signature, &recv_len, &sw, 0);
+    if (res == PM3_SUCCESS) {
+        if (recv_len != 56) {
+            *signature_len = 0;
+            DropField();
+            return PM3_ESOFT;
+        } else {
+            *signature_len = recv_len;
 
-    if (resp.length == 61) {
-        memcpy(signature, resp.data.asBytes + 1, 56);
-        *signature_len = 56;
+        }
+        DropField();
         return PM3_SUCCESS;
-    } else {
-        *signature_len = 0;
-        return PM3_ESOFT;
     }
+    DropField();
+    return res;
 }
 
 
@@ -268,18 +334,21 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 
 // none
 static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
-    PacketResponseNG resp;
-    uint8_t c[] = {MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00};  // 0x45
-    int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
-    if (ret != PM3_SUCCESS) return ret;
-
-    if (resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0xae) {
+    sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NONE}; //0x45
+    int recv_len = 0;
+    uint16_t sw = 0;
+    uint8_t data[2] = {0};
+    if (num_keys == NULL) return PM3_ESOFT;
+    if (key_settings == NULL) return PM3_ESOFT;
+    int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0);
+    if (sw == MFDES_EAUTH_RESP) {
         PrintAndLogEx(WARNING, _RED_("[get_desfire_keysettings] Authentication error"));
         return PM3_ESOFT;
     }
-//    PrintAndLogEx(INFO, "ICE: KEYSETTING resp :: %s", sprint_hex(resp.data.asBytes, resp.length));
-    *key_settings = resp.data.asBytes[1];
-    *num_keys = resp.data.asBytes[2];
+    if (res != PM3_SUCCESS) return res;
+
+    *key_settings = data[0];
+    *num_keys = data[1];
     return PM3_SUCCESS;
 }
 
@@ -291,122 +360,72 @@ static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
 
 // none
 static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
-    PacketResponseNG resp;
-    uint8_t c[] = {MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, curr_key, 0x00};  // 0x64
-    int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
-    if (ret != PM3_SUCCESS) return ret;
-
-    if (resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0x40) {
+    sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
+    int recv_len = 0;
+    uint16_t sw = 0;
+    if (num_versions == NULL) return PM3_ESOFT;
+    int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0);
+    if (sw == MFDES_ENO_SUCH_KEY_RESP) {
+        PrintAndLogEx(WARNING, _RED_("[get_desfire_keyversion] Key %d doesn't exist"), curr_key);
         return PM3_ESOFT;
     }
-
-    *num_versions = resp.data.asBytes[1];
-    return PM3_SUCCESS;
-}
-
-
-// init
-static int get_desfire_select_application(uint8_t *aid) {
-    if (aid == NULL) return PM3_ESOFT;
-
-    DropField();
-    uint8_t c[] = {MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid[0], aid[1], aid[2], 0x00};  // 0x5a
-    PacketResponseNG resp;
-    int ret = SendDesfireCmd(c, sizeof(c), INIT, sizeof(c), 0, &resp, 3000);
-    if (ret != PM3_SUCCESS) {
-        if (ret == PM3_ESOFT) {
-            PrintAndLogEx(WARNING, "[get_desfire_select_application] Can't select AID: " _RED_("%s"), sprint_hex(aid, 3));
-        }
-        return ret;
-    }
-
-    if (resp.data.asBytes[1] == 0x91 && resp.data.asBytes[2] == 0x00) {
-        return PM3_SUCCESS;
-    }
-
-    return PM3_ESOFT;
+    return res;
 }
 
 
 // init / disconnect
 static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
-
-    uint8_t c[] = {MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00}; //0x6a
-    PacketResponseNG resp;
-    int ret = SendDesfireCmd(c, sizeof(c), INIT | CLEARTRACE | DISCONNECT, sizeof(c), 0, &resp, 1500);
-    if (ret != PM3_SUCCESS) return ret;
-
-    *app_ids_len = resp.length - 5;
-
-    // resp.length - 2crc, 2status, 1pcb...
-    memcpy(dest, resp.data.asBytes + 1, *app_ids_len);
-
-    if (resp.data.asBytes[resp.length - 3] == MFDES_ADDITIONAL_FRAME) {
-
-        c[0] = MFDES_ADDITIONAL_FRAME; //0xAF
-        ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
-        if (ret != PM3_SUCCESS) return ret;
-
-        memcpy(dest + *app_ids_len, resp.data.asBytes + 1, resp.length - 5);
-
-        *app_ids_len += (resp.length - 5);
-    }
-    return PM3_SUCCESS;
+    sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00, NULL}; //0x6a
+    int recv_len = 0;
+    uint16_t sw = 0;
+    if (dest == NULL) return PM3_ESOFT;
+    if (app_ids_len == NULL) return PM3_ESOFT;
+    int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0);
+    if (res != PM3_SUCCESS) return res;
+    *app_ids_len = (uint8_t)recv_len & 0xFF;
+    return res;
 }
 
 static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
+    sAPDU apdu = {0x90, MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00, NULL}; //0x6d
+    int recv_len = 0;
+    uint16_t sw = 0;
     if (dest == NULL) return PM3_ESOFT;
-    uint8_t c[] = {MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00}; //0x6d
-    PacketResponseNG resp;
-    int ret = SendDesfireCmd(c, sizeof(c), INIT, sizeof(c), 0, &resp, 3000);
-    if (ret != PM3_SUCCESS) return ret;
-
-    uint8_t count = 1;
-    memcpy(&dest[count - 1], resp.data.asBytes + 1, resp.length - 5);
-    if (resp.data.asBytes[resp.length - 3] == MFDES_ADDITIONAL_FRAME) {
-        c[0] = MFDES_ADDITIONAL_FRAME; //0xAF
-
-        ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 3000);
-        if (ret != PM3_SUCCESS) return ret;
-        
-        
-        count++;
-        memcpy(&dest[count - 1], resp.data.asBytes + 1, resp.length - 5);
-    }
-    *dfname_count = count;
-    return PM3_SUCCESS;
+    if (dfname_count == NULL) return PM3_ESOFT;
+    int res = send_desfire_cmd(&apdu, true, (uint8_t *)dest, &recv_len, &sw, sizeof(dfname_t));
+    if (res != PM3_SUCCESS) return res;
+    *dfname_count = recv_len;
+    return res;
 }
 
+
+// init
+static int get_desfire_select_application(uint8_t *aid) {
+    sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
+    int recv_len = 0;
+    uint16_t sw = 0;
+    if (aid == NULL) return PM3_ESOFT;
+    return send_desfire_cmd(&apdu, true, NONE, &recv_len, &sw, sizeof(dfname_t));
+}
 
 // none
 static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
-    uint8_t c[] = {MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00};  // 0x6f
-    PacketResponseNG resp;
-    int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
-    if (ret != PM3_SUCCESS) return ret;
-
-    if (resp.data.asBytes[resp.length - 4] == 0x91 && resp.data.asBytes[resp.length - 3] == 0x00) {
-        *file_ids_len = resp.length - 5;
-        memcpy(dest, resp.data.asBytes + 1, *file_ids_len);
-        return PM3_SUCCESS;
-    }
-
-    return PM3_ESOFT;
+    sAPDU apdu = {0x90, MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00, NULL}; //0x6f
+    int recv_len = 0;
+    uint16_t sw = 0;
+    if (dest == NULL) return PM3_ESOFT;
+    if (file_ids_len == NULL) return PM3_ESOFT;
+    *file_ids_len = 0;
+    int res = send_desfire_cmd(&apdu, false, dest, &recv_len, &sw, 0);
+    if (res != PM3_SUCCESS) return res;
+    *file_ids_len = recv_len;
+    return res;
 }
 
-static int get_desfire_filesettings(uint8_t file_id, uint8_t *dest, uint8_t *destlen) {
-    uint8_t c[] = {MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, file_id, 0x00};  // 0xF5
-    PacketResponseNG resp;
-    int ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 1500);
-    if (ret != PM3_SUCCESS) return ret;
-
-    if (resp.data.asBytes[resp.length - 4] == 0x91 && resp.data.asBytes[resp.length - 3] == 0x00) {
-        *destlen = resp.length - 5;
-        memcpy(dest, resp.data.asBytes + 1, *destlen);
-        return PM3_SUCCESS;
-    }
-
-    return PM3_ESOFT;
+static int get_desfire_filesettings(uint8_t file_id, uint8_t *dest, int *destlen) {
+    sAPDU apdu = {0x90, MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, &file_id}; // 0xF5
+    uint16_t sw = 0;
+    return send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0);
 }
 
 static int CmdHF14ADesInfo(const char *Cmd) {
@@ -703,7 +722,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
 
 //    uint8_t isOK = 0x00;
-    uint8_t aid[3];
+    uint8_t aid[3] = {0};
     uint8_t app_ids[78] = {0};
     uint8_t app_ids_len = 0;
 
@@ -715,6 +734,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
     if (get_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -767,7 +787,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
 
                 uint8_t filesettings[20] = {0};
-                uint8_t fileset_len = 0;
+                int fileset_len = 0;
                 int res = get_desfire_filesettings(j, filesettings, &fileset_len);
                 if (res == PM3_SUCCESS) {
                     PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len));
@@ -805,195 +825,90 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     DropField();
     return PM3_SUCCESS;
 }
-/*
-         uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
-                int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen, false);
 
-                if (!res && datalen > 1 && data[0] == 0x09) {
-                    SLmode = 0;
-                }
-
-*/
-
-int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, int max_result_len, int *result_len, uint16_t *sw) {
-   
-    *result_len = 0;
-    if (sw) *sw = 0;
-
-    uint16_t isw = 0;
-    int res = 0;
-
-    if (activate_field) {
-        DropField();
-        msleep(50);
-    }
-
-    // select?
-    uint8_t data[APDU_RES_LEN] = {0};
-
-    // COMPUTE APDU
-    int datalen = 0;
-    //if (APDUEncodeS(&apdu, false, IncludeLe ? 0x100 : 0x00, data, &datalen)) {
-    if (APDUEncodeS(&apdu, false, 0x100, data, &datalen)) {
-        PrintAndLogEx(ERR, "APDU encoding error.");
-        return PM3_EAPDU_ENCODEFAIL;
-    }
-
-    if (GetAPDULogging())
-        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, datalen));
-
-    res = ExchangeAPDU14a(data, datalen, activate_field, leavefield_on, result, max_result_len, result_len);
-    if (res) {
-        return res;
-    }
-
-    if (GetAPDULogging())
-        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(result, *result_len));
-
-    if (*result_len < 2) {
-        return PM3_SUCCESS;
-    }
-
-    *result_len -= 2;
-    isw = (result[*result_len] << 8) + result[*result_len + 1];
-    if (sw)
-        *sw = isw;
-
-    if (isw != 0x9000 && isw != 0x9100) {
-        if (GetAPDULogging()) {
-            if (isw >> 8 == 0x61) {
-                PrintAndLogEx(ERR, "APDU chaining len:%02x -->", isw & 0xff);
-            } else {
-                PrintAndLogEx(ERR, "APDU(%02x%02x) ERROR: [%4X] %s", apdu.CLA, apdu.INS, isw, GetAPDUCodeDescription(isw >> 8, isw & 0xff));
-                return PM3_EAPDU_FAIL;
-            }
-        }
-    }
- 
-    return PM3_SUCCESS;
-}
-
-static int CmdHF14ADesTEST(const char *Cmd) {
-
-    uint8_t aid[3];
-    uint8_t app_ids[78] = {0};
-    int app_ids_len = 0;
-
-//    uint8_t file_ids[33] = {0};
-//    uint8_t file_ids_len = 0;
-
-    uint8_t data[255*5]  = {0};
-    dfname_t dfnames[255] = {0};
-    int dfname_count = 0;
-    uint16_t sw = 0;
-
-    SetAPDULogging(true);
-
-    // get application ids        
-    sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00,  NULL};
-    int res = DESFIRESendApdu(true, true, apdu, app_ids, sizeof(app_ids), &app_ids_len, &sw);
-    if (res != PM3_SUCCESS)
-        goto out;
-        
-    // get dfnames
-    apdu.INS = MFDES_GET_DF_NAMES;
-    res = DESFIRESendApdu(true, false, apdu, data, sizeof(data), &dfname_count, &sw);
-    if (res != PM3_SUCCESS)
-        goto out;
-    
-     
-    // enum test...
-    for (int i = 0; i < app_ids_len; i += 3) {
-
-        aid[0] = app_ids[i];
-        aid[1] = app_ids[i + 1];
-        aid[2] = app_ids[i + 2];
-
-        PrintAndLogEx(NORMAL, "");
-
-        if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-            // CARD MASTER KEY
-            PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-        } else {
-            PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-        }
-
-        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%s"), sprint_hex(aid, sizeof(aid)));
-        for (int m = 0; m < dfname_count; m++) {
-            if (memcmp (dfnames[m].aid, aid, 3) == 0) {
-                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X %02X") " Name : " _YELLOW_("%s"),
-                        dfnames[m].fid[0], dfnames[m].fid[1],
-                        dfnames[m].name
-                        );
-            }
-        }
-    }
-
-
-out:
-    SetAPDULogging(false);
-    return PM3_SUCCESS;
-}
-    
 // MIAFRE DESFire Authentication
 //
 #define BUFSIZE 256
 static int CmdHF14ADesAuth(const char *Cmd) {
-
+    clearCommandBuffer();
     // NR  DESC     KEYLENGHT
     // ------------------------
     // 1 = DES      8
     // 2 = 3DES     16
     // 3 = 3K 3DES  24
     // 4 = AES      16
-
+    //SetAPDULogging(true);
     uint8_t keylength = 8;
-    uint8_t key[24];
-    uint8_t aidlength = 3;
-    uint8_t aid[3];
 
-    if (strlen(Cmd) < 3) {
-        PrintAndLogEx(NORMAL, "Usage:  hf mfdes auth <1|2|3> <1|2|3|4> <appid> <keyno> <key> ");
-        PrintAndLogEx(NORMAL, "            Auth modes");
-        PrintAndLogEx(NORMAL, "                 1 = normal, 2 = iso, 3 = aes");
-        PrintAndLogEx(NORMAL, "            Crypto");
-        PrintAndLogEx(NORMAL, "                 1 = DES 2 = 3DES 3 = 3K3DES 4 = AES");
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(NORMAL, "Examples:");
-        PrintAndLogEx(NORMAL, _YELLOW_("         hf mfdes auth 1 1 0 0 11223344"));
-        PrintAndLogEx(NORMAL, _YELLOW_("         hf mfdes auth 3 4 018380 0 404142434445464748494a4b4c4d4e4f"));
-        return PM3_SUCCESS;
-    }
-    uint8_t cmdAuthMode = param_get8(Cmd, 0);
-    uint8_t cmdAuthAlgo = param_get8(Cmd, 1);
-    // AID
-    if (param_gethex(Cmd, 2, aid, aidlength * 2)) {
-        PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
+    CLIParserInit("hf mfdes auth",
+                  "Authenticates Mifare DESFire using Key",
+                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
+                  "Example:\n\thf mfdes auth -m 3 -t 4 -a 018380 -n 0 -k 404142434445464748494a4b4c4d4e4f\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("mM",  "type",   "Auth type (1=normal, 2=iso, 3=aes)", NULL),
+        arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)", NULL),
+        arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification"),
+        arg_int0("nN",  "keyno",  "Key number used for authentification", NULL),
+        arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+
+    uint8_t cmdAuthMode = arg_get_int_def(1, 0);
+    uint8_t cmdAuthAlgo = arg_get_int_def(2, 0);
+
+    int aidlength = 3;
+    uint8_t aid[3] = {0};
+    CLIGetHexWithReturn(3, aid, &aidlength);
+
+    uint8_t cmdKeyNo  = arg_get_int_def(4, 0);
+
+    uint8_t key[24] = {0};
+    int keylen = 0;
+    CLIGetHexWithReturn(5, key, &keylen);
+    CLIParserFree();
+
+    if ((keylen < 8) || (keylen > 24)) {
+        PrintAndLogEx(ERR, "Specified key must have 16 bytes length.");
+        //SetAPDULogging(false);
         return PM3_EINVARG;
     }
-    uint8_t cmdKeyNo    = param_get8(Cmd, 3);
+
+    // AID
+    if (aidlength != 3) {
+        PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
+        //SetAPDULogging(false);
+        return PM3_EINVARG;
+    }
 
     switch (cmdAuthMode) {
         case 1:
             if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
+                //SetAPDULogging(false);
                 return PM3_EINVARG;
             }
             break;
         case 2:
             if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2 && cmdAuthAlgo != 3) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
+                //SetAPDULogging(false);
                 return PM3_EINVARG;
             }
             break;
         case 3:
             if (cmdAuthAlgo != 4) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
+                //SetAPDULogging(false);
                 return PM3_EINVARG;
             }
             break;
         default:
-            PrintAndLogEx(WARNING, "Wrong Auth mode");
+            PrintAndLogEx(WARNING, "Wrong Auth mode (%d) -> (1=normal, 2=iso, 3=aes)", cmdAuthMode);
+            //SetAPDULogging(false);
             return PM3_EINVARG;
     }
 
@@ -1017,8 +932,8 @@ static int CmdHF14ADesAuth(const char *Cmd) {
             break;
     }
 
-    // key
-    if (param_gethex(Cmd, 4, key, keylength * 2)) {
+    // KEY
+    if (keylen != keylength) {
         PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
         return PM3_EINVARG;
     }
@@ -1031,17 +946,23 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     uint8_t file_ids[33] = {0};
     uint8_t file_ids_len = 0;
-    get_desfire_fileids(file_ids, &file_ids_len);
+    int res = get_desfire_fileids(file_ids, &file_ids_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Get file ids error.");
+        DropField();
+        return res;
+    }
+
 
     // algo, keylength,
     uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
     memcpy(data + 1, key, keylength);
-    clearCommandBuffer();
     SendCommandOLD(CMD_HF_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength + 1);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
         PrintAndLogEx(WARNING, "Client command execute timeout");
+        DropField();
         return PM3_ETIMEOUT;
     }
 
@@ -1073,7 +994,6 @@ static command_t CommandTable[] = {
     {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
-    {"test",    CmdHF14ADesTEST,               IfPm3Iso14443a,  "testing command"},
     {NULL, NULL, NULL, NULL}
 };
 
