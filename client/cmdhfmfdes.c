@@ -176,7 +176,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
         {"NTAG424DNA, NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
         {"DESFire Light EV1",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
-        {"Mifare Plus",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
+        {"Mifare Plus EV1",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
 
     uint8_t i;
@@ -207,10 +207,10 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
     PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 32);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 48);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex(signature, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex(signature + 16, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex(signature + 32, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex(signature + 48, signature_len - 48));
+    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
+    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
     PrintAndLogEx(SUCCESS, "        Signature verified: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }
