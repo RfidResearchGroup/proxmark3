@@ -662,6 +662,8 @@ static int CmdLegicWrbl(const char *Cmd) {
     // OUT-OF-BOUNDS checks
     // UID 4+1 bytes can't be written to.
     if (offset < 5) {
+        if (data)
+            free(data);
         PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
         return PM3_EOUTOFBOUND;
     }
