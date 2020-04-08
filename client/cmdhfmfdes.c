@@ -22,6 +22,11 @@
 #include "protocols.h"
 #include "mifare.h"         // desfire raw command options
 #include "cmdtrace.h"
+#include "cliparser/cliparser.h"
+#include "emv/apduinfo.h"   // APDU manipulation / errorcodes
+#include "emv/emvcore.h"    // APDU logging 
+#include "util_posix.h"     // msleep
+#include "mifare/mifare4.h" // MIFARE Authenticate / MAC
 
 uint8_t key_zero_data[16] = { 0x00 };
 uint8_t key_ones_data[16] = { 0x01 };
@@ -37,13 +42,17 @@ typedef enum {
     LIGHT,
 } desfire_cardtype_t;
 
+typedef struct {
+    uint8_t aid[3];
+    uint8_t fid[2];
+    uint8_t name[16];
+} dfname_t;
 
 static int CmdHelp(const char *Cmd);
 
-
 static int SendDesfireCmd(uint8_t *c, size_t len, int p0, int p1, int p2, PacketResponseNG *response, int timeout) {
-    PacketResponseNG resp;
 
+    PacketResponseNG resp;
     if (response == NULL)
         response = &resp;
 
@@ -345,12 +354,6 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
     return PM3_SUCCESS;
 }
 
-typedef struct {
-    uint8_t aid[3];
-    uint8_t fid[2];
-    uint8_t name[16];
-} dfname_t;
-
 static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
     if (dest == NULL) return PM3_ESOFT;
     uint8_t c[] = {MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00}; //0x6d
@@ -362,8 +365,11 @@ static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
     memcpy(&dest[count - 1], resp.data.asBytes + 1, resp.length - 5);
     if (resp.data.asBytes[resp.length - 3] == MFDES_ADDITIONAL_FRAME) {
         c[0] = MFDES_ADDITIONAL_FRAME; //0xAF
+
         ret = SendDesfireCmd(c, sizeof(c), NONE, sizeof(c), 0, &resp, 3000);
         if (ret != PM3_SUCCESS) return ret;
+        
+        
         count++;
         memcpy(&dest[count - 1], resp.data.asBytes + 1, resp.length - 5);
     }
@@ -809,8 +815,126 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
 */
 
+int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, int max_result_len, int *result_len, uint16_t *sw) {
+   
+    *result_len = 0;
+    if (sw) *sw = 0;
+
+    uint16_t isw = 0;
+    int res = 0;
+
+    if (activate_field) {
+        DropField();
+        msleep(50);
+    }
+
+    // select?
+    uint8_t data[APDU_RES_LEN] = {0};
+
+    // COMPUTE APDU
+    int datalen = 0;
+    //if (APDUEncodeS(&apdu, false, IncludeLe ? 0x100 : 0x00, data, &datalen)) {
+    if (APDUEncodeS(&apdu, false, 0x100, data, &datalen)) {
+        PrintAndLogEx(ERR, "APDU encoding error.");
+        return PM3_EAPDU_ENCODEFAIL;
+    }
+
+    if (GetAPDULogging())
+        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(data, datalen));
+
+    res = ExchangeAPDU14a(data, datalen, activate_field, leavefield_on, result, max_result_len, result_len);
+    if (res) {
+        return res;
+    }
+
+    if (GetAPDULogging())
+        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(result, *result_len));
+
+    if (*result_len < 2) {
+        return PM3_SUCCESS;
+    }
+
+    *result_len -= 2;
+    isw = (result[*result_len] << 8) + result[*result_len + 1];
+    if (sw)
+        *sw = isw;
+
+    if (isw != 0x9000 && isw != 0x9100) {
+        if (GetAPDULogging()) {
+            if (isw >> 8 == 0x61) {
+                PrintAndLogEx(ERR, "APDU chaining len:%02x -->", isw & 0xff);
+            } else {
+                PrintAndLogEx(ERR, "APDU(%02x%02x) ERROR: [%4X] %s", apdu.CLA, apdu.INS, isw, GetAPDUCodeDescription(isw >> 8, isw & 0xff));
+                return PM3_EAPDU_FAIL;
+            }
+        }
+    }
+ 
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesTEST(const char *Cmd) {
+
+    uint8_t aid[3];
+    uint8_t app_ids[78] = {0};
+    int app_ids_len = 0;
+
+//    uint8_t file_ids[33] = {0};
+//    uint8_t file_ids_len = 0;
+
+    uint8_t data[255*5]  = {0};
+    dfname_t dfnames[255] = {0};
+    int dfname_count = 0;
+    uint16_t sw = 0;
+
+    SetAPDULogging(true);
+
+    // get application ids        
+    sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00,  NULL};
+    int res = DESFIRESendApdu(true, true, apdu, app_ids, sizeof(app_ids), &app_ids_len, &sw);
+    if (res != PM3_SUCCESS)
+        goto out;
+        
+    // get dfnames
+    apdu.INS = MFDES_GET_DF_NAMES;
+    res = DESFIRESendApdu(true, false, apdu, data, sizeof(data), &dfname_count, &sw);
+    if (res != PM3_SUCCESS)
+        goto out;
+    
+     
+    // enum test...
+    for (int i = 0; i < app_ids_len; i += 3) {
+
+        aid[0] = app_ids[i];
+        aid[1] = app_ids[i + 1];
+        aid[2] = app_ids[i + 2];
+
+        PrintAndLogEx(NORMAL, "");
+
+        if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
+            // CARD MASTER KEY
+            PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
+        } else {
+            PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
+        }
+
+        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%s"), sprint_hex(aid, sizeof(aid)));
+        for (int m = 0; m < dfname_count; m++) {
+            if (memcmp (dfnames[m].aid, aid, 3) == 0) {
+                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X %02X") " Name : " _YELLOW_("%s"),
+                        dfnames[m].fid[0], dfnames[m].fid[1],
+                        dfnames[m].name
+                        );
+            }
+        }
+    }
 
 
+out:
+    SetAPDULogging(false);
+    return PM3_SUCCESS;
+}
+    
 // MIAFRE DESFire Authentication
 //
 #define BUFSIZE 256
@@ -824,9 +948,9 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     // 4 = AES      16
 
     uint8_t keylength = 8;
-    unsigned char key[24];
+    uint8_t key[24];
     uint8_t aidlength = 3;
-    unsigned char aid[3];
+    uint8_t aid[3];
 
     if (strlen(Cmd) < 3) {
         PrintAndLogEx(NORMAL, "Usage:  hf mfdes auth <1|2|3> <1|2|3|4> <appid> <keyno> <key> ");
@@ -949,6 +1073,7 @@ static command_t CommandTable[] = {
     {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
+    {"test",    CmdHF14ADesTEST,               IfPm3Iso14443a,  "testing command"},
     {NULL, NULL, NULL, NULL}
 };
 
