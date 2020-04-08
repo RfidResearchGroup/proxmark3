@@ -10,12 +10,9 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmfp.h"
-
 #include <string.h>
-
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"  // ARRAYLEN
-
 #include "comms.h"
 #include "ui.h"
 #include "cmdhf14a.h"
