@@ -435,18 +435,37 @@ int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, in
 }
 
 int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    uint8_t tmp[10] = {0};
+    uint8_t tmp[20] = {0};
     uint8_t c[] = {0x60};
     int res = intExchangeRAW14aPlus(c, sizeof(c), activateField, true, tmp, maxdataoutlen, dataoutlen);
-    if (tmp[0] == 0xAF) { //MFDES_ADDITIONAL_FRAME
-        memcpy(dataout, tmp + 1, 7);
+    if (res != 0) {
+        DropField();
+        *dataoutlen = 0;
+        return res;
+    }
+
+    memcpy(dataout, tmp + 1, (*dataoutlen - 3));
+
+    *dataoutlen = 0;
+    // MFDES_ADDITIONAL_FRAME
+    if (tmp[0] == 0xAF) {
         c[0] = 0xAF;      
-        res =  intExchangeRAW14aPlus(c, sizeof(c), false, leaveSignalON, tmp, maxdataoutlen, dataoutlen);
+        res = intExchangeRAW14aPlus(c, sizeof(c), false, true, tmp, maxdataoutlen, dataoutlen);
         if (res == 0) {
-            memcpy(dataout + 7, tmp + 1, 7);
-            *dataoutlen = 14;
+            
+            memcpy(dataout + 7, tmp + 1, (*dataoutlen - 3));
+            
+            // MFDES_ADDITIONAL_FRAME
+            res = intExchangeRAW14aPlus(c, sizeof(c), false, false, tmp, maxdataoutlen, dataoutlen);
+            if (res == 0) {
+                if (tmp[0] == 0x90) {
+                    memcpy(dataout + 7 + 7, tmp + 1, (*dataoutlen - 3));
+                    *dataoutlen = 28;
+                }
+            }
         }
     }
+    DropField();
     return res;
 }
 
