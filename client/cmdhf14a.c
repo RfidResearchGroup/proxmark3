@@ -193,7 +193,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344556677"));
 //  PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223445566778899AA\n");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
@@ -203,7 +203,7 @@ static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "r - triggered by first 7-bit request from reader (REQ,WUP,...)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        hf 14a sniff c r"));
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14a_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a raw [-h] [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
@@ -217,7 +217,7 @@ static int usage_hf_14a_raw(void) {
     PrintAndLogEx(NORMAL, "       -t    timeout in ms");
     PrintAndLogEx(NORMAL, "       -T    use Topaz protocol to send command");
     PrintAndLogEx(NORMAL, "       -3    ISO14443-3 select only (skip RATS)");
-    return 0;
+    return PM3_SUCCESS;
 }
 static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a reader [k|s|x] [3]");
@@ -225,7 +225,7 @@ static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");
     PrintAndLogEx(NORMAL, "       x    just drop the signal field");
     PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AList(const char *Cmd) {
@@ -580,7 +580,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
             // get ATS
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
-            SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, 2);
+            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                 if (!silentMode) PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
                 return 1;
@@ -674,7 +674,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
         // get ATS
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
-        SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
             return 1;
@@ -1237,7 +1237,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int CmdHF14A(const char *Cmd) {

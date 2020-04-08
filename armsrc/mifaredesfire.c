@@ -609,6 +609,6 @@ void OnSuccess() {
 }
 
 void OnError(uint8_t reason) {
-    reply_old(CMD_ACK, 0, reason, 0, 0, 0);
+    reply_mix(CMD_ACK, 0, reason, 0, 0, 0);
     OnSuccess();
 }
