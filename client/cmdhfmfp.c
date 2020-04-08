@@ -37,7 +37,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         PrintAndLogEx(WARNING, "command don't have any parameters.\n");
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-- Mifare Plus Tag Information ------------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     // info about 14a part
@@ -45,7 +45,6 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
     // Mifare Plus info
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
-
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
 
@@ -56,8 +55,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
     if (select_status == 1 || select_status == 2) {
 
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
-        PrintAndLogEx(INFO, " Fingerprint");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
 
         // MIFARE Type Identification Procedure
         // https://www.nxp.com/docs/en/application-note/AN10833.pdf
