@@ -246,9 +246,18 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             else if (arg1 == 1)
                 Desfire_des_key_new(keybytes, key);
 
+
             cmd[0] = AUTHENTICATE;
+            cmd[1] = 0x0;
+            cmd[2] = 0x0;
+            cmd[3] = 0x1;
+            cmd[4] = arg2;  //keynumber
+            cmd[5] = 0x0;
+            len = DesfireAPDU(cmd, 6, resp);
+
+            /*cmd[0] = AUTHENTICATE;
             cmd[1] = arg2;  //keynumber
-            len = DesfireAPDU(cmd, 2, resp);
+            len = DesfireAPDU(cmd, 2, resp);*/
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -257,14 +266,13 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 return;
             }
 
-            if (resp[2] == 0xaf) {
-            } else {
+            if (resp[2] == (uint8_t)0xaf) {
                 DbpString("Authentication failed. Invalid key number.");
                 OnError(3);
                 return;
             }
 
-            memcpy(encRndB, resp + 3, 8);
+            memcpy(encRndB, resp + 1, 8);
             if (arg1 == 2)
                 tdes_dec(&decRndB, &encRndB, key->data);
             else if (arg1 == 1)
@@ -298,9 +306,12 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             memcpy(both + 8, encRndB, 8);
 
             cmd[0] = ADDITIONAL_FRAME;
-            memcpy(cmd + 1, both, 16);
-
-            len = DesfireAPDU(cmd, 17, resp);
+            cmd[1] = 0x00;
+            cmd[2] = 0x00;
+            cmd[3] = 0x10;
+            memcpy(cmd + 4, both, 16);
+            cmd[16+4]=0x0;
+            len = DesfireAPDU(cmd, 4+16+1, resp);
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -309,14 +320,14 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 return;
             }
 
-            if (resp[2] == 0x00) {
+            if (resp[len-3] == 0x00) {
 
                 struct desfire_key sessionKey = {0};
                 desfirekey_t skey = &sessionKey;
                 Desfire_session_key_new(RndA, RndB, key, skey);
                 //print_result("SESSION : ", skey->data, 8);
 
-                memcpy(encRndA, resp + 3, 8);
+                memcpy(encRndA, resp + 1, 8);
 
                 if (arg1 == 2)
                     tdes_dec(&encRndA, &encRndA, key->data);
@@ -326,15 +337,15 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 rol(decRndA, 8);
                 for (int x = 0; x < 8; x++) {
                     if (decRndA[x] != encRndA[x]) {
-                        DbpString("Authentication failed. Cannot varify PICC.");
+                        DbpString("Authentication failed. Cannot verify PICC.");
                         OnError(4);
                         return;
                     }
                 }
 
                 //Change the selected key to a new value.
-                /*
 
+                /*
                  // Current key is a 3DES key, change it to a DES key
                  if (arg1 == 2) {
                 cmd[0] = CHANGE_KEY;
