@@ -34,6 +34,8 @@ uint8_t key_ones_data[16] = { 0x01 };
 uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
 uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
 
+#define status(x) ( ((uint16_t)(0x91<<8)) + x )
+
 typedef enum {
     UNKNOWN = 0,
     MF3ICD40,
@@ -104,7 +106,7 @@ int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t
     if (sw)
         *sw = isw;
 
-    if (isw != 0x9000 && isw != MFDES_SUCCESS_FRAME_RESP && isw != MFDES_ADDITIONAL_FRAME_RESP) {
+    if (isw != 0x9000 && isw != status(MFDES_OPERATION_OK) && isw != status(MFDES_ADDITIONAL_FRAME) && isw != status(MFDES_NO_CHANGES)) {
         if (GetAPDULogging()) {
             if (isw >> 8 == 0x61) {
                 PrintAndLogEx(ERR, "APDU chaining len:%02x -->", isw & 0xff);
@@ -114,31 +116,163 @@ int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t
             }
         }
     }
-
     return PM3_SUCCESS;
 }
 
+static char* GetErrorString(int res)
+{
+    switch(res){
+        case PM3_EUNDEF:
+            return "Undefined error";
+        case PM3_EINVARG:
+            return "Invalid argument(s)";
+        case PM3_EDEVNOTSUPP:
+            return "Operation not supported by device";
+        case PM3_ETIMEOUT:
+            return "Operation timed out";
+        case PM3_EOPABORTED:
+            return "Operation aborted (by user)";
+        case PM3_ENOTIMPL:
+            return "Not (yet) implemented";
+        case PM3_ERFTRANS:
+            return "Error while RF transmission";
+        case PM3_EIO:
+            return "Input / output error";
+        case PM3_EOVFLOW:
+            return "Buffer overflow";
+        case PM3_ESOFT:
+            return "Software error";
+        case PM3_EFLASH:
+            return "Flash error";
+        case PM3_EMALLOC:
+            return "Memory allocation error";
+        case PM3_EFILE:
+            return "File error";
+        case PM3_ENOTTY:
+            return "Generic TTY error";
+        case PM3_EINIT:
+            return "Initialization error";
+        case PM3_EWRONGANSVER:
+            return "Expected a different answer error";
+        case PM3_EOUTOFBOUND:
+            return "Memory out-of-bounds error";
+        case PM3_ECARDEXCHANGE:
+            return "Exchange with card error";
+        case PM3_EAPDU_ENCODEFAIL:
+            return "Failed to create APDU";
+        case PM3_ENODATA:
+            return "No data";
+        case PM3_EFATAL:
+            return "Fatal error";
+        default:
+            break;
+    }
+    return "";
+}
+
+static int getstatus(int res, uint16_t * sw)
+{
+    if (sw==NULL) return PM3_ESOFT;
+
+    if (res==PM3_EAPDU_FAIL)
+    {
+        if (((*sw>>8)&0xFF)==0x91){
+            switch (*sw&0xFF){
+                case MFDES_E_OUT_OF_EEPROM:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Out of Eeprom, insufficient NV-Memory to complete command", *sw & 0xff);
+                    break;
+                case MFDES_E_ILLEGAL_COMMAND_CODE:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Command code not supported", *sw & 0xff);
+                    break;
+                case MFDES_E_INTEGRITY_ERROR:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> CRC or MAC does not match data / Padding bytes invalid", *sw & 0xff);
+                    break;
+                case MFDES_E_NO_SUCH_KEY:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Invalid key number specified", *sw & 0xff);
+                    break;
+                case MFDES_E_LENGTH:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Length of command string invalid", *sw & 0xff);
+                    break;
+                case MFDES_E_PERMISSION_DENIED:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Current configuration/status does not allow the requested command", *sw & 0xff);
+                    break;
+                case MFDES_E_PARAMETER_ERROR:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Value of the parameter(s) invalid", *sw & 0xff);
+                    break;
+                case MFDES_E_APPLICATION_NOT_FOUND:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Requested AID not present on PICC", *sw & 0xff);
+                    break;
+                case MFDES_E_APPL_INTEGRITY:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Application integrity error, application will be disabled", *sw & 0xff);
+                    break;
+                case MFDES_E_AUTHENTIFICATION_ERROR:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Current authentication status does not allow the requested command", *sw & 0xff);
+                    break;
+                case MFDES_E_BOUNDARY:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Attempted to read/write data from/to beyong the file's/record's limit", *sw & 0xff);
+                    break;
+                case MFDES_E_PICC_INTEGRITY:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> PICC integrity error, PICC will be disabled", *sw & 0xff);
+                    break;
+                case MFDES_E_COMMAND_ABORTED:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Previous command was not fully completed / Not all Frames were requested or provided by the PCD", *sw & 0xff);
+                    break;
+                case MFDES_E_PICC_DISABLED:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> PICC was disabled by an unrecoverable error", *sw & 0xff);
+                    break;
+                case MFDES_E_COUNT:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Application count is limited to 28, not addition CreateApplication possible", *sw & 0xff);
+                    break;
+                case MFDES_E_DUPLICATE:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Duplicate entry: File/Application does already exist", *sw & 0xff);
+                    break;
+                case MFDES_E_EEPROM:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Eeprom error due to loss of power, internal backup/rollback mechanism activated", *sw & 0xff);
+                    break;
+                case MFDES_E_FILE_NOT_FOUND:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Specified file number does not exist", *sw & 0xff);
+                    break;
+                case MFDES_E_FILE_INTEGRITY:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> File integrity error, file will be disabled", *sw & 0xff);
+                    break;
+                default:
+                    PrintAndLogEx(ERR, "APDU error: %02x --> Unknown error", *sw & 0xff);
+                    break;
+        }
+      }
+    } else {
+        PrintAndLogEx(ERR, "%s",GetErrorString(res));
+    }
+    return res;
+}
 
 static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_len, uint16_t *sw, int splitbysize) {
-    //SetAPDULogging(true);
+    if (g_debugMode)
+    {
+        if (apdu==NULL) PrintAndLogEx(ERR, "APDU=NULL");
+        if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
+        if (sw==NULL) PrintAndLogEx(ERR, "SW=NULL");
+        if (recv_len==NULL) PrintAndLogEx(ERR, "RECV_LEN=NULL");
+    }
+    if (apdu==NULL || sw==NULL || recv_len==NULL) return PM3_ESOFT;
+
     *sw = 0;
     uint8_t data[255 * 5]  = {0x00};
     int resplen = 0;
     int pos = 0;
     int i = 1;
     int res = DESFIRESendApdu(select, true, *apdu, data, sizeof(data), &resplen, sw);
-    if (res != PM3_SUCCESS) return res;
-    if (*sw != MFDES_ADDITIONAL_FRAME_RESP && *sw != MFDES_SUCCESS_FRAME_RESP) return PM3_ESOFT;
+    if (res != PM3_SUCCESS) return getstatus(res,sw);
     if (dest != NULL) {
         memcpy(dest, data, resplen);
     }
 
     pos += resplen;
-    if (*sw == MFDES_ADDITIONAL_FRAME_RESP) {
+    while (*sw == status(MFDES_ADDITIONAL_FRAME)) {
         apdu->INS = MFDES_ADDITIONAL_FRAME; //0xAF
 
         res = DESFIRESendApdu(false, true, *apdu, data, sizeof(data), &resplen, sw);
-        if (res != PM3_SUCCESS) return res;
+        if (res != PM3_SUCCESS) return getstatus(res,sw);
         if (dest != NULL) {
             if (splitbysize) {
                 memcpy(&dest[i * splitbysize], data, resplen);
@@ -148,12 +282,12 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
             }
         }
         pos += resplen;
+        if (*sw!=status(MFDES_ADDITIONAL_FRAME)) break;
     }
     if (splitbysize) *recv_len = i;
     else {
         *recv_len = pos;
     }
-    //SetAPDULogging(false);
     return PM3_SUCCESS;
 
 }
@@ -180,7 +314,7 @@ static int test_desfire_authenticate() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, &c}; // 0x0A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 // none
@@ -189,7 +323,7 @@ static int test_desfire_authenticate_iso() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, &c}; // 0x1A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 //none
@@ -198,7 +332,7 @@ static int test_desfire_authenticate_aes() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, &c}; // 0xAA, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 // --- FREE MEM
@@ -209,7 +343,8 @@ static int desfire_print_freemem(uint32_t free_mem) {
 
 // init / disconnect
 static int get_desfire_freemem(uint32_t *free_mem) {
-    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NONE}; // 0x6E
+    if (free_mem==NULL) return PM3_ESOFT;
+    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NULL}; // 0x6E
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t fmem[4] = {0};
@@ -226,7 +361,7 @@ static int get_desfire_freemem(uint32_t *free_mem) {
 
 // --- GET SIGNATURE
 static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len, desfire_cardtype_t card_type) {
-
+    if (uid==NULL || signature==NULL) return PM3_ESOFT;
     // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
 
@@ -278,6 +413,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
 
 // init / disconnect
 static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
+    if (signature==NULL || signature_len==NULL) return PM3_ESOFT;
     uint8_t c = 0x00;
     sAPDU apdu = {0x90, MFDES_READSIG, 0x00, 0x00, 0x01, &c}; // 0x3C
     int recv_len = 0;
@@ -334,17 +470,14 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 
 // none
 static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
-    sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NONE}; //0x45
+    if (key_settings==NULL || num_keys==NULL) return PM3_ESOFT;
+    sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NULL}; //0x45
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t data[2] = {0};
     if (num_keys == NULL) return PM3_ESOFT;
     if (key_settings == NULL) return PM3_ESOFT;
     int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0);
-    if (sw == MFDES_EAUTH_RESP) {
-        PrintAndLogEx(WARNING, _RED_("[get_desfire_keysettings] Authentication error"));
-        return PM3_ESOFT;
-    }
     if (res != PM3_SUCCESS) return res;
 
     *key_settings = data[0];
@@ -360,21 +493,19 @@ static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
 
 // none
 static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
+    if (num_versions==NULL) return PM3_ESOFT;
     sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
     int recv_len = 0;
     uint16_t sw = 0;
     if (num_versions == NULL) return PM3_ESOFT;
     int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0);
-    if (sw == MFDES_ENO_SUCH_KEY_RESP) {
-        PrintAndLogEx(WARNING, _RED_("[get_desfire_keyversion] Key %d doesn't exist"), curr_key);
-        return PM3_ESOFT;
-    }
     return res;
 }
 
 
 // init / disconnect
 static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
+    if (dest==NULL || app_ids_len==NULL) return PM3_ESOFT;
     sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00, NULL}; //0x6a
     int recv_len = 0;
     uint16_t sw = 0;
@@ -387,6 +518,7 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
 }
 
 static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
+    if (dest==NULL || dfname_count==NULL) return PM3_ESOFT;
     sAPDU apdu = {0x90, MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00, NULL}; //0x6d
     int recv_len = 0;
     uint16_t sw = 0;
@@ -401,15 +533,22 @@ static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
 
 // init
 static int get_desfire_select_application(uint8_t *aid) {
+    if (aid==NULL) return PM3_ESOFT;
     sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
     int recv_len = 0;
     uint16_t sw = 0;
-    if (aid == NULL) return PM3_ESOFT;
-    return send_desfire_cmd(&apdu, true, NONE, &recv_len, &sw, sizeof(dfname_t));
+    int res=send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, sizeof(dfname_t));
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, _RED_("   Can't select AID %X -> %s"),(aid[0]<<16)+(aid[1]<<8)+aid[2],GetErrorString(res));
+        DropField();
+        return res;
+    }
+    return PM3_SUCCESS;
 }
 
 // none
 static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
+    if (dest==NULL || file_ids_len==NULL) return PM3_ESOFT;
     sAPDU apdu = {0x90, MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00, NULL}; //0x6f
     int recv_len = 0;
     uint16_t sw = 0;
@@ -417,16 +556,178 @@ static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
     if (file_ids_len == NULL) return PM3_ESOFT;
     *file_ids_len = 0;
     int res = send_desfire_cmd(&apdu, false, dest, &recv_len, &sw, 0);
-    if (res != PM3_SUCCESS) return res;
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, _RED_("   Can't get file ids -> %s"),GetErrorString(res));
+        DropField();
+        return res;
+    }
     *file_ids_len = recv_len;
     return res;
 }
 
 static int get_desfire_filesettings(uint8_t file_id, uint8_t *dest, int *destlen) {
+    if (dest==NULL || destlen==NULL) return PM3_ESOFT;
     sAPDU apdu = {0x90, MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, &file_id}; // 0xF5
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0);
+    int res=send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, _RED_("   Can't get file settings -> %s"),GetErrorString(res));
+        DropField();
+        return res;
+    }
+    return res;
 }
+
+typedef struct {
+    uint8_t aid[3];
+    uint8_t keysetting1;
+    uint8_t keysetting2;
+    uint8_t fid[2];
+    uint8_t name[16];
+} aidhdr_t;
+
+static int get_desfire_createapp(aidhdr_t* aidhdr) {
+    if (aidhdr==NULL) return PM3_ESOFT;
+    sAPDU apdu = {0x90, MFDES_CREATE_APPLICATION, 0x00, 0x00, sizeof(aidhdr_t), (uint8_t*)aidhdr}; // 0xCA
+    uint16_t sw = 0;
+    int recvlen=0;
+    int res=send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"),GetErrorString(res));
+        DropField();
+        return res;
+    }
+    return res;
+}
+
+static int CmdHF14ADesCreateApp(const char *Cmd) {
+    if (Cmd==NULL) return PM3_ESOFT;
+    clearCommandBuffer();
+
+    CLIParserInit("hf mfdes caid",
+                  "Create Application ID",
+                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
+                  "Example:\n\thf mfdes caid -a 123456 -f 1122 -k 0F -l 2E -n AppName\n"
+    );
+
+    void *argtable[] = {
+            arg_param_begin,
+            arg_strx0("aA",  "aid",    "<aid>", "App ID to create"),
+            arg_strx0("fF",  "fid",    "<fid>", "File ID"),
+            arg_strx0("kK",  "keysetting1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
+            arg_strx0("lL",  "keysetting2",    "<keysetting2>", "Key Setting 2"),
+            arg_strx0("nN",  "name",    "<name>", "App ISO-4 Name"),
+            arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+    /* KeySetting 1 (AMK Setting):
+       0:   Allow change master key
+       1:   Free Directory list access without master key
+            0: AMK auth needed for GetFileSettings and GetKeySettings
+            1: No AMK auth needed for GetFileIDs, GetISOFileIDs, GetFileSettings, GetKeySettings
+       2:   Free create/delete without master key
+            0:  CreateFile/DeleteFile only with AMK auth
+            1:  CreateFile/DeleteFile always
+       3:   Configuration changable
+            0: Configuration frozen
+            1: Configuration changable if authenticated with AMK (default)
+       4-7: ChangeKey Access Rights
+            0: Application master key needed (default)
+            0x1..0xD: Auth with specific key needed to change any key
+            0xE: Auth with the key to be changed (same KeyNo) is necessary to change a key
+            0xF: All Keys within this application are frozen
+
+    */
+    /* KeySetting 2:
+       0..3: Number of keys stored within the application (max. 14 keys
+       4:    RFU
+       5:    Use of 2 byte ISO FID, 0: No, 1: Yes
+       6..7: Crypto Method 00: DES/3DES, 01: 3K3DES, 10: AES
+       Example:
+            2E = FID, DES, 14 keys
+            6E = FID, 3K3DES, 14 keys
+            AE = FID, AES, 14 keys
+    */
+    int aidlength = 3;
+    int fidlength = 2;
+    uint8_t aid[3] = {0};
+    uint8_t fid[2] = {0};
+    uint8_t name[16] = {0};
+    uint8_t keysetting1=0;
+    uint8_t keysetting2=0;
+    int keylen1=1;
+    int keylen2=1;
+    int namelen=16;
+    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIGetHexWithReturn(2, fid, &fidlength);
+    CLIGetHexWithReturn(3, &keysetting1, &keylen1);
+    CLIGetHexWithReturn(4, &keysetting2, &keylen2);
+    CLIGetHexWithReturn(5, name, &namelen);
+    CLIParserFree();
+
+    if (aidlength < 3) {
+        PrintAndLogEx(ERR, "AID must have 3 bytes length.");
+        return PM3_EINVARG;
+    }
+
+    if (fidlength < 2) {
+        PrintAndLogEx(ERR, "FID must have 2 bytes length.");
+        return PM3_EINVARG;
+    }
+
+    if (keylen1 < 1) {
+        PrintAndLogEx(ERR, "Keysetting1 must have 1 byte length.");
+        return PM3_EINVARG;
+    }
+
+    if (keylen1 < 2) {
+        PrintAndLogEx(ERR, "Keysetting2 must have 1 byte length.");
+        return PM3_EINVARG;
+    }
+
+    if (namelen > 16) {
+        PrintAndLogEx(ERR, "Name has a max. of 16 bytes length.");
+        return PM3_EINVARG;
+    }
+
+    //90 ca 00 00 0e 3cb849 09 22 10e1 d27600 00850101 00
+    /*char name[]="Test";
+    uint8_t aid[]={0x12,0x34,0x56};
+    uint8_t fid[]={0x11,0x22};
+    uint8_t keysetting1=0xEE;
+    uint8_t keysetting2=0xEE;*/
+
+    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
+        PrintAndLogEx(WARNING, _RED_("   Creating root aid 000000 is forbidden."));
+        return PM3_ESOFT;
+    }
+
+    aidhdr_t aidhdr;
+    memcpy(aidhdr.aid,aid,sizeof(aid));
+    aidhdr.keysetting1=keysetting1;
+    aidhdr.keysetting2=keysetting2;
+    memcpy(aidhdr.fid,fid,sizeof(fid));
+    memcpy(aidhdr.name,name,sizeof(name));
+
+    return get_desfire_createapp(&aidhdr);
+}
+
+static int CmdHF14ADesFormatPICC(const char *Cmd) {
+    (void) Cmd; // Cmd is not used so far
+
+    sAPDU apdu = {0xFC, 0xF3, 0x10, 0x00, 0x00, NONE}; // fc f3 10
+    uint16_t sw = 0;
+    int recvlen=0;
+    int res=send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"),GetErrorString(res));
+        DropField();
+        return res;
+    }
+
+    return PM3_SUCCESS;
+}
+
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -481,7 +782,11 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "       Version: %s", getVersionStr(package->versionHW[3], package->versionHW[4]));
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionHW[5]));
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionHW[6]));
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "");// No data                              pm3:        no data available, no host frame available (not really an error)
+#define PM3_ENODATA           -98
+// Quit program                         client:     reserved, order to quit the program
+#define PM3_EFATAL            -99
+
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionSW[0]));
     PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionSW[1]);
@@ -608,22 +913,21 @@ char *getVersionStr(uint8_t major, uint8_t minor) {
     return buf;
 }
 
-void getKeySettings(uint8_t *aid) {
-
+int getKeySettings(uint8_t *aid) {
+    if (aid==NULL) return PM3_ESOFT;
+    int res=0;
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
 
         // CARD MASTER KEY
         //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-        if (get_desfire_select_application(aid) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
-            DropField();
-            return;
-        }
+        res=get_desfire_select_application(aid);
+        if (res!=PM3_SUCCESS) return res;
 
         // KEY Settings - AMK
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        if (get_desfire_keysettings(&key_setting, &num_keys) == PM3_SUCCESS) {
+        res=get_desfire_keysettings(&key_setting, &num_keys);
+        if (res == PM3_SUCCESS) {
             // number of Master keys (0x01)
             PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
 
@@ -660,15 +964,15 @@ void getKeySettings(uint8_t *aid) {
 
         // Authentication tests
         int res = test_desfire_authenticate();
-        if (res == PM3_ETIMEOUT) return;
+        if (res == PM3_ETIMEOUT) return res;
         PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
 
         res = test_desfire_authenticate_iso();
-        if (res == PM3_ETIMEOUT) return;
+        if (res == PM3_ETIMEOUT) return res;
         PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
 
         res = test_desfire_authenticate_aes();
-        if (res == PM3_ETIMEOUT) return;
+        if (res == PM3_ETIMEOUT) return res;
         PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
 
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
@@ -677,16 +981,14 @@ void getKeySettings(uint8_t *aid) {
 
         // AID - APPLICATION MASTER KEYS
         //PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-        if (get_desfire_select_application(aid) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
-            DropField();
-            return;
-        }
+        res=get_desfire_select_application(aid);
+        if (res!=PM3_SUCCESS) return res;
 
         // KEY Settings - AMK
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        if (get_desfire_keysettings(&key_setting, &num_keys) == PM3_SUCCESS) {
+        res=get_desfire_keysettings(&key_setting, &num_keys);
+        if (res == PM3_SUCCESS) {
             desfire_print_keysetting(key_setting, num_keys);
         } else {
             PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
@@ -716,6 +1018,7 @@ void getKeySettings(uint8_t *aid) {
     }
 
     DropField();
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14ADesEnumApplications(const char *Cmd) {
@@ -731,6 +1034,8 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
     dfname_t dfnames[255] = {0};
     uint8_t dfname_count = 0;
+
+    int res=0;
 
     if (get_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
@@ -771,14 +1076,14 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             }
         }
 
-        getKeySettings(aid);
+       res=getKeySettings(aid);
+       if (res!=PM3_SUCCESS)
+       {
+           PrintAndLogEx(WARNING, _RED_("   Can't get Key Settings for AID %X -> %s"),(aid[0]<<16)+(aid[1]<<8)+aid[0],GetErrorString(res));
+       }
 
-
-        if (get_desfire_select_application(aid) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
-            DropField();
-            return PM3_ESOFT;
-        }
+        res=get_desfire_select_application(aid);
+        if (res!=PM3_SUCCESS) return res;
 
         // Get File IDs
         if (get_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
@@ -830,6 +1135,8 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 //
 #define BUFSIZE 256
 static int CmdHF14ADesAuth(const char *Cmd) {
+    if (Cmd==NULL) return PM3_ESOFT;
+    int res=0;
     clearCommandBuffer();
     // NR  DESC     KEYLENGHT
     // ------------------------
@@ -938,20 +1245,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (get_desfire_select_application(aid) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't select AID"));
-        DropField();
-        return PM3_ESOFT;
-    }
+    res=get_desfire_select_application(aid);
+    if (res!=PM3_SUCCESS) return res;
 
     uint8_t file_ids[33] = {0};
     uint8_t file_ids_len = 0;
-    int res = get_desfire_fileids(file_ids, &file_ids_len);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Get file ids error.");
-        DropField();
-        return res;
-    }
+    res = get_desfire_fileids(file_ids, &file_ids_len);
+    if (res != PM3_SUCCESS) return res;
 
 
     // algo, keylength,
@@ -992,6 +1292,8 @@ static command_t CommandTable[] = {
     {"list",    CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
     {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
     {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
+    {"caid",    CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
+    {"fmtp",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
     {NULL, NULL, NULL, NULL}
@@ -1005,6 +1307,7 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdHFMFDes(const char *Cmd) {
     // flush
+    if (Cmd==NULL) return PM3_ESOFT;
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }

@@ -819,7 +819,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     case MFDES_GET_KEY_VERSION:
                         snprintf(exp, size, "GET KEY VERSION");
                         break;
-                    case MFDES_AUTHENTICATION_FRAME:
+                    case MFDES_ADDITIONAL_FRAME:
                         snprintf(exp, size, "AUTH FRAME / NEXT FRAME");
                         break;
                     default:
