@@ -450,7 +450,6 @@ static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
         if (recv_len != 56) {
             *signature_len = 0;
             DropField();
-            PrintAndLogEx(SUCCESS, "           Signature verified: %d " _GREEN_("successful"), recv_len);
             return PM3_ESOFT;
         } else {
             *signature_len = recv_len;
