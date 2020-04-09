@@ -355,6 +355,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_AUTHENTICATE_ISO          0x1A  // AUTHENTICATE_STANDARD
 #define MFDES_AUTHENTICATE_AES          0xAA
 #define MFDES_CREATE_APPLICATION        0xCA
+#define MFDES_DELETE_APPLICATION        0xDA
 #define MFDES_CREDIT                    0x0C
 #define MFDES_LIMITED_CREDIT            0x1C
 #define MFDES_DEBIT                     0xDC

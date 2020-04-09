@@ -580,7 +580,7 @@ static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
         if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
         if (file_ids_len==NULL) PrintAndLogEx(ERR, "FILE_IDS_LEN=NULL");
     }
-    if (dest==NULL || file_ids_len==NULL) return return PM3_EINVARG;
+    if (dest==NULL || file_ids_len==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00, NULL}; //0x6f
     int recv_len = 0;
     uint16_t sw = 0;
@@ -630,6 +630,20 @@ static int get_desfire_createapp(aidhdr_t* aidhdr) {
     int res=send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"),GetErrorString(res));
+        DropField();
+        return res;
+    }
+    return res;
+}
+
+static int get_desfire_deleteapp(uint8_t* aid) {
+    if (aid==NULL) return PM3_EINVARG;
+    sAPDU apdu = {0x90, MFDES_DELETE_APPLICATION, 0x00, 0x00, 3, aid}; // 0xDA
+    uint16_t sw = 0;
+    int recvlen=0;
+    int res=send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"),GetErrorString(res));
         DropField();
         return res;
     }
@@ -746,6 +760,40 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
     return get_desfire_createapp(&aidhdr);
 }
+
+static int CmdHF14ADesDeleteApp(const char *Cmd) {
+    clearCommandBuffer();
+
+    CLIParserInit("hf mfdes deleteaid",
+                  "Delete Application ID",
+                  "Usage:\n\t-a aid (3 bytes)\n\n"
+                  "Example:\n\thf mfdes deleteaid -a 123456\n"
+    );
+
+    void *argtable[] = {
+            arg_param_begin,
+            arg_strx0("aA",  "aid",    "<aid>", "App ID to delete"),
+            arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+    int aidlength = 3;
+    uint8_t aid[3] = {0};
+    CLIGetHexWithReturn(1, aid, &aidlength);
+    CLIParserFree();
+
+    if (aidlength < 3) {
+        PrintAndLogEx(ERR, "AID must have 3 bytes length.");
+        return PM3_EINVARG;
+    }
+
+    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
+        PrintAndLogEx(WARNING, _RED_("   Deleting root aid 000000 is forbidden."));
+        return PM3_ESOFT;
+    }
+
+    return get_desfire_deleteapp(aid);
+}
+
 
 static int CmdHF14ADesFormatPICC(const char *Cmd) {
     (void) Cmd; // Cmd is not used so far
@@ -1426,6 +1474,7 @@ static command_t CommandTable[] = {
     {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
     {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
     {"createaid",    CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
+    {"deleteaid",    CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},
     {"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
