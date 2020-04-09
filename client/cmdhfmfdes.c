@@ -172,7 +172,7 @@ static char* GetErrorString(int res)
 
 static int getstatus(int res, uint16_t * sw)
 {
-    if (sw==NULL) return PM3_ESOFT;
+    if (sw==NULL) return PM3_EINVARG;
 
     if (res==PM3_EAPDU_FAIL)
     {
@@ -254,7 +254,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
         if (sw==NULL) PrintAndLogEx(ERR, "SW=NULL");
         if (recv_len==NULL) PrintAndLogEx(ERR, "RECV_LEN=NULL");
     }
-    if (apdu==NULL || sw==NULL || recv_len==NULL) return PM3_ESOFT;
+    if (apdu==NULL || sw==NULL || recv_len==NULL) return PM3_EINVARG;
 
     *sw = 0;
     uint8_t data[255 * 5]  = {0x00};
@@ -343,7 +343,7 @@ static int desfire_print_freemem(uint32_t free_mem) {
 
 // init / disconnect, verified
 static int get_desfire_freemem(uint32_t *free_mem) {
-    if (free_mem==NULL) return PM3_ESOFT;
+    if (free_mem==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NULL}; // 0x6E
     int recv_len = 0;
     uint16_t sw = 0;
@@ -366,7 +366,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         if (uid==NULL) PrintAndLogEx(ERR, "UID=NULL");
         if (signature==NULL) PrintAndLogEx(ERR, "SIGNATURE=NULL");
     }
-    if (uid==NULL || signature==NULL) return PM3_ESOFT;
+    if (uid==NULL || signature==NULL) return PM3_EINVARG;
     // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
 
@@ -423,7 +423,7 @@ static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
         if (signature==NULL) PrintAndLogEx(ERR, "SIGNATURE=NULL");
         if (signature_len==NULL) PrintAndLogEx(ERR, "SIGNATURE_LEN=NULL");
     }
-    if (signature==NULL || signature_len==NULL) return PM3_ESOFT;
+    if (signature==NULL || signature_len==NULL) return PM3_EINVARG;
     uint8_t c = 0x00;
     sAPDU apdu = {0x90, MFDES_READSIG, 0x00, 0x00, 0x01, &c}; // 0x3C
     int recv_len = 0;
@@ -485,13 +485,11 @@ static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
         if (key_settings==NULL) PrintAndLogEx(ERR, "KEY_SETTINGS=NULL");
         if (num_keys==NULL) PrintAndLogEx(ERR, "NUM_KEYS=NULL");
     }
-    if (key_settings==NULL || num_keys==NULL) return PM3_ESOFT;
+    if (key_settings==NULL || num_keys==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NULL}; //0x45
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t data[2] = {0};
-    if (num_keys == NULL) return PM3_ESOFT;
-    if (key_settings == NULL) return PM3_ESOFT;
     int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0);
     if (res != PM3_SUCCESS) return res;
 
@@ -512,11 +510,10 @@ static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
     {
         if (num_versions==NULL) PrintAndLogEx(ERR, "NUM_VERSIONS=NULL");
     }
-    if (num_versions==NULL) return PM3_ESOFT;
+    if (num_versions==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
     int recv_len = 0;
     uint16_t sw = 0;
-    if (num_versions == NULL) return PM3_ESOFT;
     int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0);
     return res;
 }
@@ -529,12 +526,10 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
         if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
         if (app_ids_len==NULL) PrintAndLogEx(ERR, "APP_IDS_LEN=NULL");
     }
-    if (dest==NULL || app_ids_len==NULL) return PM3_ESOFT;
+    if (dest==NULL || app_ids_len==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00, NULL}; //0x6a
     int recv_len = 0;
     uint16_t sw = 0;
-    if (dest == NULL) return PM3_ESOFT;
-    if (app_ids_len == NULL) return PM3_ESOFT;
     int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0);
     if (res != PM3_SUCCESS) return res;
     *app_ids_len = (uint8_t)recv_len & 0xFF;
@@ -548,12 +543,10 @@ static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
         if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
         if (dfname_count==NULL) PrintAndLogEx(ERR, "DFNAME_COUNT=NULL");
     }
-    if (dest==NULL || dfname_count==NULL) return PM3_ESOFT;
+    if (dest==NULL || dfname_count==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00, NULL}; //0x6d
     int recv_len = 0;
     uint16_t sw = 0;
-    if (dest == NULL) return PM3_ESOFT;
-    if (dfname_count == NULL) return PM3_ESOFT;
     int res = send_desfire_cmd(&apdu, true, (uint8_t *)dest, &recv_len, &sw, sizeof(dfname_t));
     if (res != PM3_SUCCESS) return res;
     *dfname_count = recv_len;
@@ -567,7 +560,7 @@ static int get_desfire_select_application(uint8_t *aid) {
     {
         if (aid==NULL) PrintAndLogEx(ERR, "AID=NULL");
     }
-    if (aid==NULL) return PM3_ESOFT;
+    if (aid==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
     int recv_len = 0;
     uint16_t sw = 0;
@@ -587,12 +580,10 @@ static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
         if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
         if (file_ids_len==NULL) PrintAndLogEx(ERR, "FILE_IDS_LEN=NULL");
     }
-    if (dest==NULL || file_ids_len==NULL) return PM3_ESOFT;
+    if (dest==NULL || file_ids_len==NULL) return return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00, NULL}; //0x6f
     int recv_len = 0;
     uint16_t sw = 0;
-    if (dest == NULL) return PM3_ESOFT;
-    if (file_ids_len == NULL) return PM3_ESOFT;
     *file_ids_len = 0;
     int res = send_desfire_cmd(&apdu, false, dest, &recv_len, &sw, 0);
     if (res != PM3_SUCCESS) {
@@ -611,7 +602,7 @@ static int get_desfire_filesettings(uint8_t file_id, uint8_t *dest, int *destlen
         if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
         if (destlen==NULL) PrintAndLogEx(ERR, "DESTLEN=NULL");
     }
-    if (dest==NULL || destlen==NULL) return PM3_ESOFT;
+    if (dest==NULL || destlen==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, &file_id}; // 0xF5
     uint16_t sw = 0;
     int res=send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0);
@@ -632,7 +623,7 @@ typedef struct {
 } aidhdr_t;
 
 static int get_desfire_createapp(aidhdr_t* aidhdr) {
-    if (aidhdr==NULL) return PM3_ESOFT;
+    if (aidhdr==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_CREATE_APPLICATION, 0x00, 0x00, sizeof(aidhdr_t), (uint8_t*)aidhdr}; // 0xCA
     uint16_t sw = 0;
     int recvlen=0;
@@ -646,13 +637,12 @@ static int get_desfire_createapp(aidhdr_t* aidhdr) {
 }
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
-    if (Cmd==NULL) return PM3_ESOFT;
     clearCommandBuffer();
 
-    CLIParserInit("hf mfdes caid",
+    CLIParserInit("hf mfdes createaid",
                   "Create Application ID",
                   "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
-                  "Example:\n\thf mfdes caid -a 123456 -f 1122 -k 0F -l 2E -n AppName\n"
+                  "Example:\n\thf mfdes createaid -a 123456 -f 1122 -k 0F -l 2E -n AppName\n"
     );
 
     void *argtable[] = {
@@ -955,7 +945,7 @@ char *getVersionStr(uint8_t major, uint8_t minor) {
 }
 
 int getKeySettings(uint8_t *aid) {
-    if (aid==NULL) return PM3_ESOFT;
+    if (aid==NULL) return PM3_EINVARG;
     int res=0;
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
 
@@ -1279,7 +1269,6 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 //
 #define BUFSIZE 256
 static int CmdHF14ADesAuth(const char *Cmd) {
-    if (Cmd==NULL) return PM3_ESOFT;
     int res=0;
     clearCommandBuffer();
     // NR  DESC     KEYLENGHT
@@ -1436,8 +1425,8 @@ static command_t CommandTable[] = {
     {"list",    CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
     {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
     {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
-    {"caid",    CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
-    {"fmtp",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
+    {"createaid",    CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
+    {"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
     {NULL, NULL, NULL, NULL}
@@ -1451,7 +1440,6 @@ static int CmdHelp(const char *Cmd) {
 
 int CmdHFMFDes(const char *Cmd) {
     // flush
-    if (Cmd==NULL) return PM3_ESOFT;
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
