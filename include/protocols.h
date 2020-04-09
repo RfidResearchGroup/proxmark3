@@ -401,6 +401,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_E_EEPROM                  0xEE
 #define MFDES_E_FILE_NOT_FOUND          0xF0
 #define MFDES_E_FILE_INTEGRITY          0xF1
+#define MFDES_SIGNATURE                 0x90
 
 
 #define MFDES_CREATE_CYCLIC_RECORD_FILE 0xC0

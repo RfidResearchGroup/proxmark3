@@ -106,7 +106,7 @@ int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t
     if (sw)
         *sw = isw;
 
-    if (isw != 0x9000 && isw != status(MFDES_OPERATION_OK) && isw != status(MFDES_ADDITIONAL_FRAME) && isw != status(MFDES_NO_CHANGES)) {
+    if (isw != 0x9000 && isw != status(MFDES_OPERATION_OK) && isw != status(MFDES_SIGNATURE) && isw != status(MFDES_ADDITIONAL_FRAME) && isw != status(MFDES_NO_CHANGES)) {
         if (GetAPDULogging()) {
             if (isw >> 8 == 0x61) {
                 PrintAndLogEx(ERR, "APDU chaining len: 0x%02x -->", isw & 0xff);
@@ -259,7 +259,6 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
     int i = 1;
     int res = DESFIRESendApdu(select, true, *apdu, data, sizeof(data), &resplen, sw);
     if (res != PM3_SUCCESS) {
-        if (apdu->INS==MFDES_READSIG) return PM3_SUCCESS; //Fix me ! Error code 0x9190 ???
         if (g_debugMode>1) GetErrorString(res,sw);
         return res;
     }
@@ -451,6 +450,7 @@ static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
         if (recv_len != 56) {
             *signature_len = 0;
             DropField();
+            PrintAndLogEx(SUCCESS, "           Signature verified: %d " _GREEN_("successful"), recv_len);
             return PM3_ESOFT;
         } else {
             *signature_len = recv_len;
@@ -974,6 +974,9 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS)
         desfire_print_signature(package->uid, signature, signature_len, cardtype);
+    else{
+        PrintAndLogEx(WARNING, "--- " _YELLOW_("Couldn't verify signature."));
+    }
 
     // Master Key settings
     uint8_t master_aid[3] = {0x00, 0x00, 0x00};
