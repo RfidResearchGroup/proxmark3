@@ -352,8 +352,9 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 /*
                  // Current key is a 3DES key, change it to a DES key
                  if (arg1 == 2) {
-                cmd[0] = CHANGE_KEY;
-                cmd[1] = arg2;
+                cmd[0] = 0x90;
+                cmd[1] = CHANGE_KEY;
+                cmd[2] = arg2;
 
                 uint8_t newKey[16] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
 
@@ -382,20 +383,21 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                  buff3[x] = buff3[x] ^ buff2[x];
                  }
                  tdes_dec(&buff3, &buff3, skey->data);
-                 memcpy(cmd+18,buff3,8);
+                 memcpy(cmd+19,buff3,8);
 
                  // The command always times out on the first attempt, this will retry until a response
                  // is recieved.
                  len = 0;
                  while(!len) {
-                 len = DesfireAPDU(cmd,26,resp);
+                 len = DesfireAPDU(cmd,27,resp);
                  }
 
                  } else {
                     // Current key is a DES key, change it to a 3DES key
                     if (arg1 == 1) {
-                        cmd[0] = CHANGE_KEY;
-                        cmd[1] = arg2;
+                        cmd[0] = 0x90;
+                        cmd[1] = CHANGE_KEY;
+                        cmd[2] = arg2;
 
                         uint8_t newKey[16] = {0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f};
 
@@ -412,25 +414,25 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                         memcpy(buff3 + 1, &second, 1);
 
                 des_dec(&buff1, &buff1, skey->data);
-                memcpy(cmd+2,buff1,8);
+                memcpy(cmd+3,buff1,8);
 
                 for (int x = 0; x < 8; x++) {
                     buff2[x] = buff2[x] ^ buff1[x];
                 }
                 des_dec(&buff2, &buff2, skey->data);
-                memcpy(cmd+10,buff2,8);
+                memcpy(cmd+11,buff2,8);
 
                 for (int x = 0; x < 8; x++) {
                     buff3[x] = buff3[x] ^ buff2[x];
                 }
                 des_dec(&buff3, &buff3, skey->data);
-                memcpy(cmd+18,buff3,8);
+                memcpy(cmd+19,buff3,8);
 
                 // The command always times out on the first attempt, this will retry until a response
                 // is recieved.
                 len = 0;
                 while(!len) {
-                    len = DesfireAPDU(cmd,26,resp);
+                    len = DesfireAPDU(cmd,27,resp);
                 }
                     }
                  }
@@ -449,7 +451,137 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
         }
         break;
         case 2:
+            {
             //SendDesfireCommand(AUTHENTICATE_ISO, &arg2, resp);
+            uint8_t keybytes[16];
+            uint8_t RndA[8] = {0x00};
+            uint8_t RndB[8] = {0x00};
+
+            if (arg1 == 2) {
+                if (datain[1] == 0xff) {
+                    memcpy(keybytes, PICC_MASTER_KEY16, 16);
+                } else {
+                    memcpy(keybytes, datain + 1, datalen);
+                }
+            } else {
+                if (arg1 == 1) {
+                    if (datain[1] == 0xff) {
+                        uint8_t null_key_data8[8] = {0x00};
+                        memcpy(keybytes, null_key_data8, 8);
+                    } else {
+                        memcpy(keybytes, datain + 1, datalen);
+                    }
+                }
+            }
+
+            struct desfire_key defaultkey = {0};
+            desfirekey_t key = &defaultkey;
+
+            if (arg1 == 2)
+                Desfire_3des_key_new_with_version(keybytes, key);
+            else if (arg1 == 1)
+                Desfire_des_key_new(keybytes, key);
+
+            cmd[0] = AUTHENTICATE;
+            cmd[1] = arg2;  //keynumber
+            len = DesfireAPDU(cmd, 2, resp);
+
+            if (!len) {
+                if (DBGLEVEL >= DBG_ERROR) {
+                    DbpString("Authentication failed. Card timeout.");
+                }
+                OnError(3);
+                return;
+            }
+
+            if (resp[2] == (uint8_t)0xaf) {
+                DbpString("Authentication failed. Invalid key number.");
+                OnError(3);
+                return;
+            }
+
+            memcpy(encRndB, resp + 2, 8);
+            if (arg1 == 2)
+                tdes_dec(&decRndB, &encRndB, key->data);
+            else if (arg1 == 1)
+                des_dec(&decRndB, &encRndB, key->data);
+
+            memcpy(RndB, decRndB, 8);
+            rol(decRndB, 8);
+
+            // This should be random
+            uint8_t decRndA[8] = {0x00};
+            uint32_t value = prng_successor(GetTickCount(), 32);
+            num_to_bytes(value, 4, &decRndA[0]);
+            value = prng_successor(GetTickCount(), 32);
+            num_to_bytes(value, 4, &decRndA[4]);
+
+            memcpy(RndA, decRndA, 8);
+            uint8_t encRndA[8] = {0x00};
+
+            if (arg1 == 2)
+                tdes_dec(&encRndA, &decRndA, key->data);
+            else if (arg1 == 1)
+                des_dec(&encRndA, &decRndA, key->data);
+
+            memcpy(both, encRndA, 8);
+
+            for (int x = 0; x < 8; x++) {
+                decRndB[x] = decRndB[x] ^ encRndA[x];
+
+            }
+
+            if (arg1 == 2)
+                tdes_dec(&encRndB, &decRndB, key->data);
+            else if (arg1 == 1)
+                des_dec(&encRndB, &decRndB, key->data);
+
+            memcpy(both + 8, encRndB, 8);
+
+            cmd[0] = ADDITIONAL_FRAME;
+            memcpy(cmd + 1, both, 16);
+            len = DesfireAPDU(cmd, 1+16, resp);
+            if (!len) {
+                if (DBGLEVEL >= DBG_ERROR) {
+                    DbpString("Authentication failed. Card timeout.");
+                }
+                OnError(3);
+                return;
+            }
+
+            if (resp[1] == 0x00) {
+                struct desfire_key sessionKey = {0};
+                desfirekey_t skey = &sessionKey;
+                Desfire_session_key_new(RndA, RndB, key, skey);
+                //print_result("SESSION : ", skey->data, 8);
+
+                memcpy(encRndA, resp + 2, 8);
+
+                if (arg1 == 2)
+                    tdes_dec(&encRndA, &encRndA, key->data);
+                else if (arg1 == 1)
+                    des_dec(&encRndA, &encRndA, key->data);
+
+                rol(decRndA, 8);
+                for (int x = 0; x < 8; x++) {
+                    if (decRndA[x] != encRndA[x]) {
+                        DbpString("Authentication failed. Cannot verify PICC.");
+                        OnError(4);
+                        return;
+                    }
+                }
+
+                //OnSuccess();
+                if (arg1 == 2)
+                    reply_old(CMD_ACK, 1, 0, 0, skey->data, 16);
+                else if (arg1 == 1)
+                    reply_old(CMD_ACK, 1, 0, 0, skey->data, 8);
+            } else {
+                DbpString("Authentication failed.");
+                OnError(6);
+                return;
+                }
+            }
             break;
         case 3: {
             //defaultkey
