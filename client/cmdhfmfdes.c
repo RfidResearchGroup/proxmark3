@@ -782,11 +782,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "       Version: %s", getVersionStr(package->versionHW[3], package->versionHW[4]));
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionHW[5]));
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionHW[6]));
-    PrintAndLogEx(NORMAL, "");// No data                              pm3:        no data available, no host frame available (not really an error)
-#define PM3_ENODATA           -98
-// Quit program                         client:     reserved, order to quit the program
-#define PM3_EFATAL            -99
-
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionSW[0]));
     PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), package->versionSW[1]);
