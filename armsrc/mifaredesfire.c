@@ -436,7 +436,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                  }
                 */
 
-                OnSuccess();
+                //OnSuccess();
                 if (arg1 == 2)
                     reply_old(CMD_ACK, 1, 0, 0, skey->data, 16);
                 else if (arg1 == 1)
@@ -550,7 +550,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
         }
     }
 
-    OnSuccess();
+    //OnSuccess();
     reply_mix(CMD_ACK, 1, len, 0, resp, len);
 }
 
