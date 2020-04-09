@@ -16,6 +16,7 @@
 #include "commonutil.h"
 #include "util.h"
 #include "mifare.h"
+#include "ticks.h"
 
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
@@ -283,6 +284,11 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
 
             // This should be random
             uint8_t decRndA[8] = {0x00};
+            uint32_t value = prng_successor(GetTickCount(), 32);
+            num_to_bytes(value, 4, &decRndA[0]);
+            value = prng_successor(GetTickCount(), 32);
+            num_to_bytes(value, 4, &decRndA[4]);
+
             memcpy(RndA, decRndA, 8);
             uint8_t encRndA[8] = {0x00};
 
@@ -448,7 +454,6 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             //SendDesfireCommand(AUTHENTICATE_ISO, &arg2, resp);
             break;
         case 3: {
-
             //defaultkey
             uint8_t keybytes[16] = {0x00};
             if (datain[1] == 0xff) {
@@ -493,6 +498,14 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndB, decRndB);
             rol(decRndB, 16);
             uint8_t nonce[16] = {0x00};
+            uint32_t val = prng_successor(GetTickCount(), 32);
+            num_to_bytes(val, 4, &nonce[0]);
+            val = prng_successor(GetTickCount(), 32);
+            num_to_bytes(val, 4, &nonce[4]);
+            val = prng_successor(GetTickCount(), 32);
+            num_to_bytes(val, 4, &nonce[8]);
+            val = prng_successor(GetTickCount(), 32);
+            num_to_bytes(val, 4, &nonce[12]);
             memcpy(both, nonce, 16);
             memcpy(both + 16, decRndB, 16);
             uint8_t encBoth[32] = {0x00};
