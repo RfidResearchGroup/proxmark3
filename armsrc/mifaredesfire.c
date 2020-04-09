@@ -138,7 +138,7 @@ void MifareDesfireGetInformation() {
     memcpy(payload.uid, card.uid, sizeof(payload.uid));
 
     LED_A_ON();
-    uint8_t cmd[] = {GET_VERSION, 0x00, 0x00, 0x00};
+    uint8_t cmd[] = {0x90, GET_VERSION, 0x00, 0x00, 0x00};
     size_t cmd_len = sizeof(cmd);
 
     len =  DesfireAPDU(cmd, cmd_len, resp);
@@ -153,7 +153,7 @@ void MifareDesfireGetInformation() {
     memcpy(payload.versionHW, resp + 1, sizeof(payload.versionHW));
 
     // ADDITION_FRAME 1
-    cmd[0] = ADDITIONAL_FRAME;
+    cmd[1] = ADDITIONAL_FRAME;
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
@@ -247,18 +247,15 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             else if (arg1 == 1)
                 Desfire_des_key_new(keybytes, key);
 
-
-            cmd[0] = AUTHENTICATE;
-            cmd[1] = 0x0;
+            cmd[0] = 0x90;
+            cmd[1] = AUTHENTICATE;
             cmd[2] = 0x0;
-            cmd[3] = 0x1;
-            cmd[4] = arg2;  //keynumber
-            cmd[5] = 0x0;
-            len = DesfireAPDU(cmd, 6, resp);
+            cmd[3] = 0x0;
+            cmd[4] = 0x1;
+            cmd[5] = arg2;  //keynumber
+            cmd[6] = 0x0;
+            len = DesfireAPDU(cmd, 7, resp);
 
-            /*cmd[0] = AUTHENTICATE;
-            cmd[1] = arg2;  //keynumber
-            len = DesfireAPDU(cmd, 2, resp);*/
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -311,13 +308,14 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
 
             memcpy(both + 8, encRndB, 8);
 
-            cmd[0] = ADDITIONAL_FRAME;
-            cmd[1] = 0x00;
+            cmd[0] = 0x90;
+            cmd[1] = ADDITIONAL_FRAME;
             cmd[2] = 0x00;
-            cmd[3] = 0x10;
-            memcpy(cmd + 4, both, 16);
-            cmd[16+4]=0x0;
-            len = DesfireAPDU(cmd, 4+16+1, resp);
+            cmd[3] = 0x00;
+            cmd[4] = 0x10;
+            memcpy(cmd + 5, both, 16);
+            cmd[16+5]=0x0;
+            len = DesfireAPDU(cmd, 5+16+1, resp);
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -470,13 +468,14 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             uint8_t IV[16] = {0x00};
             mbedtls_aes_init(&ctx);
 
-            cmd[0] = AUTHENTICATE_AES;
-            cmd[1] = 0x0;
+            cmd[0] = 0x90;
+            cmd[1] = AUTHENTICATE_AES;
             cmd[2] = 0x0;
-            cmd[3] = 0x1;
-            cmd[4] = arg2;  //keynumber
-            cmd[5] = 0x0;
-            len = DesfireAPDU(cmd, 6, resp);
+            cmd[3] = 0x0;
+            cmd[4] = 0x1;
+            cmd[5] = arg2;  //keynumber
+            cmd[6] = 0x0;
+            len = DesfireAPDU(cmd, 7, resp);
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -518,14 +517,15 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             }
             mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, both, encBoth);
 
-            cmd[0] = ADDITIONAL_FRAME;
-            cmd[1] = 0x00;
+            cmd[0] = 0x90;
+            cmd[1] = ADDITIONAL_FRAME;
             cmd[2] = 0x00;
-            cmd[3] = 0x20;
-            memcpy(cmd + 4, encBoth, 32);
-            cmd[36]=0x0;
+            cmd[3] = 0x00;
+            cmd[4] = 0x20;
+            memcpy(cmd + 5, encBoth, 32);
+            cmd[32+5]=0x0;
 
-            len = DesfireAPDU(cmd, 37, resp);  // 4 + 32 + 1 == 37
+            len = DesfireAPDU(cmd, 5+32+1, resp);
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -594,7 +594,7 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
 // CreateAPDU
 size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 
-    size_t cmdlen = MIN(len + 4, PM3_CMD_DATA_SIZE - 1);
+    size_t cmdlen = MIN(len + 3, PM3_CMD_DATA_SIZE - 1);
 
     uint8_t cmd[cmdlen];
     memset(cmd, 0, cmdlen);
@@ -604,10 +604,10 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 
     if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("pcb_blocknum %d == %d ", pcb_blocknum, cmd[0] );
 
-    cmd[1] = 0x90;  //  CID: 0x00 //TODO: allow multiple selected cards
+    //cmd[1] = 0x90;  //  CID: 0x00 //TODO: allow multiple selected cards
 
-    memcpy(cmd + 2, datain, len);
-    AddCrc14A(cmd, len + 2);
+    memcpy(cmd + 1, datain, len);
+    AddCrc14A(cmd, len + 1);
     
 /*
 hf 14a apdu -sk 90 60 00 00 00
