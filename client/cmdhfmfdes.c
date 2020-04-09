@@ -62,6 +62,7 @@ static int CmdHelp(const char *Cmd);
 */
 
 int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, int max_result_len, int *result_len, uint16_t *sw) {
+
     *result_len = 0;
     if (sw) *sw = 0;
 
@@ -176,8 +177,8 @@ static desfire_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 
 //none
 static int test_desfire_authenticate() {
-    uint8_t c = 0x00;
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, &c}; // 0x0A, KEY 0
+    uint8_t data[] = {0x00};
+    sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, data}; // 0x0A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
     return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
@@ -185,8 +186,8 @@ static int test_desfire_authenticate() {
 
 // none
 static int test_desfire_authenticate_iso() {
-    uint8_t c = 0x00;
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, &c}; // 0x1A, KEY 0
+    uint8_t data[] = {0x00};
+    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, data}; // 0x1A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
     return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
@@ -194,8 +195,8 @@ static int test_desfire_authenticate_iso() {
 
 //none
 static int test_desfire_authenticate_aes() {
-    uint8_t c = 0x00;
-    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, &c}; // 0xAA, KEY 0
+    uint8_t data[] = {0x00};
+    sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, data}; // 0xAA, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
     return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
