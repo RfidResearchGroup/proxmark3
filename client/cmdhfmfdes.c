@@ -241,7 +241,7 @@ static int getstatus(int res, uint16_t * sw)
         }
       }
     } else {
-        PrintAndLogEx(ERR, "%s",GetErrorString(res));
+        PrintAndLogEx(ERR, "sw: 0x%04X, err: %s",*sw,GetErrorString(res));
     }
     return res;
 }
@@ -629,7 +629,7 @@ static int get_desfire_createapp(aidhdr_t* aidhdr) {
     int recvlen=0;
     int res=send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"),GetErrorString(res));
+        PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"),getstatus(res,&sw));
         DropField();
         return res;
     }
@@ -665,7 +665,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
             arg_strx0("fF",  "fid",    "<fid>", "File ID"),
             arg_strx0("kK",  "keysetting1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
             arg_strx0("lL",  "keysetting2",    "<keysetting2>", "Key Setting 2"),
-            arg_strx0("nN",  "name",    "<name>", "App ISO-4 Name"),
+            arg_str0("nN",  "name",    "<name>", "App ISO-4 Name"),
             arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, true);
@@ -711,7 +711,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     CLIGetHexWithReturn(2, fid, &fidlength);
     CLIGetHexWithReturn(3, &keysetting1, &keylen1);
     CLIGetHexWithReturn(4, &keysetting2, &keylen2);
-    CLIGetHexWithReturn(5, name, &namelen);
+    CLIGetStrWithReturn(5, name, &namelen);
     CLIParserFree();
 
     if (aidlength < 3) {
@@ -758,6 +758,10 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     memcpy(aidhdr.fid,fid,sizeof(fid));
     memcpy(aidhdr.name,name,sizeof(name));
 
+    uint8_t rootaid[3]={0x00,0x00,0x00};
+    int res=get_desfire_select_application(rootaid);
+    if (res!=PM3_SUCCESS) return res;
+
     return get_desfire_createapp(&aidhdr);
 }
 
@@ -791,6 +795,9 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    uint8_t rootaid[3]={0x00,0x00,0x00};
+    int res=get_desfire_select_application(rootaid);
+    if (res!=PM3_SUCCESS) return res;
     return get_desfire_deleteapp(aid);
 }
 
