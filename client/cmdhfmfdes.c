@@ -730,7 +730,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t file_ids[33] = {0};
     uint8_t file_ids_len = 0;
 
-    dfname_t dfnames[255] = {0};
+    dfname_t dfnames[255];
     uint8_t dfname_count = 0;
 
     if (get_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
