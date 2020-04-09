@@ -381,6 +381,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_ABORT_TRANSACTION         0xA7
 #define MFDES_AUTHENTICATION_FRAME      0xAF
 #define MFDES_ADDITIONAL_FRAME          0xAF
+#define MFDES_ADDITIONAL_FRAME_RESP     0x91AF
+#define MFDES_SUCCESS_FRAME_RESP        0x9100
+#define MFDES_EAUTH_RESP                0x91AE
+#define MFDES_ENO_SUCH_KEY_RESP         0x9140
 
 #define MFDES_READ_RECORDS              0xBB
 #define MFDES_READ_DATA                 0xBD
