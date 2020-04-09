@@ -62,6 +62,7 @@ static int CmdHelp(const char *Cmd);
 */
 
 int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, int max_result_len, int *result_len, uint16_t *sw) {
+
     *result_len = 0;
     if (sw) *sw = 0;
 
@@ -180,7 +181,7 @@ static int test_desfire_authenticate() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, &c}; // 0x0A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 // none
@@ -189,7 +190,7 @@ static int test_desfire_authenticate_iso() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, &c}; // 0x1A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 //none
@@ -198,7 +199,7 @@ static int test_desfire_authenticate_aes() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, &c}; // 0xAA, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 // --- FREE MEM
@@ -405,7 +406,7 @@ static int get_desfire_select_application(uint8_t *aid) {
     int recv_len = 0;
     uint16_t sw = 0;
     if (aid == NULL) return PM3_ESOFT;
-    return send_desfire_cmd(&apdu, true, NONE, &recv_len, &sw, sizeof(dfname_t));
+    return send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, sizeof(dfname_t));
 }
 
 // none
