@@ -820,18 +820,40 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 }
 
 
-/*
 static int CmdHF14ADesFormatPICC(const char *Cmd) {
     (void) Cmd; // Cmd is not used so far
+    CLIParserInit("hf mfdes formatpicc",
+                  "Formats MIFARE DESFire PICC to factory state",
+                  "Usage:\n\t-k PICC key (8 bytes)\n\n"
+                  "Example:\n\thf mfdes formatpicc -k 0000000000000000\n"
+    );
 
+    void *argtable[] = {
+            arg_param_begin,
+            arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
+            arg_param_end
+    };
+    CLIExecWithReturn(Cmd, argtable, true);
+
+    uint8_t key[8] = {0};
+    int keylen = 8;
+    CLIGetHexWithReturn(1, key, &keylen);
+    CLIParserFree();
+
+    if ((keylen < 8) || (keylen > 8)) {
+        PrintAndLogEx(ERR, "Specified key must have 8 bytes length.");
+        //SetAPDULogging(false);
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
     DropField();
-
-
-    int keylength=8;
-    uint8_t key[8]={0};
-    uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
-    memcpy(data + 1, key, keylength);
-    SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylength + 1);
+    uint8_t aid[3]={0};
+    int res=get_desfire_select_application(aid);
+    if (res!=PM3_SUCCESS) return res;
+    uint8_t data[25] = {keylen}; // max length: 1 + 24 (3k3DES)
+    memcpy(data + 1, key, keylen);
+    SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylen + 1);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
@@ -842,30 +864,24 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
     uint8_t isOK  = resp.oldarg[0] & 0xff;
     if (isOK) {
-        uint8_t *session_key = resp.data.asBytes;
-
-        PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
-        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(session_key, keylength));
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
-        //PrintAndLogEx(NORMAL, "  Expected   :B5 21 9E E8 1A A7 49 9D 21 96 68 7E 13 97 38 56");
+        uint8_t rdata[] = {0xFC};  // 0xFC
+        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(rdata), 0, rdata, sizeof(rdata));
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+            PrintAndLogEx(WARNING, "Client reset command execute timeout");
+            DropField();
+            return PM3_ETIMEOUT;
+        }
+        if (resp.oldarg[0]&0xFF){
+            PrintAndLogEx(INFO, "Card successfully reset");
+            return PM3_SUCCESS;
+        }
     } else {
-        PrintAndLogEx(WARNING, _RED_("Client command failed."));
-    }
-
-
-    sAPDU apdu = {0xFC, 0xF3, 0x10, 0x00, 0x00, NONE}; // fc f3 10
-    uint16_t sw = 0;
-    int recvlen=0;
-    int res=send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0,true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create format picc 0x%x -> %s"),sw,GetErrorString(res,&sw));
-        DropField();
-        return res;
+        PrintAndLogEx(WARNING, _RED_("Auth command failed."));
     }
 
     return PM3_SUCCESS;
 }
-*/
+
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
@@ -1370,6 +1386,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 #define BUFSIZE 256
 static int CmdHF14ADesAuth(const char *Cmd) {
     int res=0;
+    DropField();
     clearCommandBuffer();
     // NR  DESC     KEYLENGHT
     // ------------------------
@@ -1478,10 +1495,11 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (memcmp(aid,"\x00\x00\x00",3)!=0){
-        res=get_desfire_select_application(aid);
-        if (res!=PM3_SUCCESS) return res;
 
+    res=get_desfire_select_application(aid);
+    if (res!=PM3_SUCCESS) return res;
+
+    if (memcmp(aid,"\x00\x00\x00",3)!=0){
         uint8_t file_ids[33] = {0};
         uint8_t file_ids_len = 0;
         res = get_desfire_fileids(file_ids, &file_ids_len);
@@ -1528,7 +1546,7 @@ static command_t CommandTable[] = {
     {"auth",    CmdHF14ADesAuth,             IfPm3Iso14443a,  "Tries a MIFARE DesFire Authentication"},
     {"createaid",    CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application ID"},
     {"deleteaid",    CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application ID"},
-    //{"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
+    {"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
     {NULL, NULL, NULL, NULL}
