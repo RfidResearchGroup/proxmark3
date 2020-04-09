@@ -180,7 +180,7 @@ static int test_desfire_authenticate() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, &c}; // 0x0A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 // none
@@ -189,7 +189,7 @@ static int test_desfire_authenticate_iso() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, &c}; // 0x1A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 //none
@@ -198,7 +198,7 @@ static int test_desfire_authenticate_aes() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, &c}; // 0xAA, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NONE, &recv_len, &sw, 0);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0);
 }
 
 // --- FREE MEM
@@ -209,7 +209,7 @@ static int desfire_print_freemem(uint32_t free_mem) {
 
 // init / disconnect
 static int get_desfire_freemem(uint32_t *free_mem) {
-    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NONE}; // 0x6E
+    sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NULL}; // 0x6E
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t fmem[4] = {0};
@@ -334,7 +334,7 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 
 // none
 static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
-    sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NONE}; //0x45
+    sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NULL}; //0x45
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t data[2] = {0};
@@ -405,7 +405,7 @@ static int get_desfire_select_application(uint8_t *aid) {
     int recv_len = 0;
     uint16_t sw = 0;
     if (aid == NULL) return PM3_ESOFT;
-    return send_desfire_cmd(&apdu, true, NONE, &recv_len, &sw, sizeof(dfname_t));
+    return send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, sizeof(dfname_t));
 }
 
 // none
@@ -729,7 +729,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     uint8_t file_ids[33] = {0};
     uint8_t file_ids_len = 0;
 
-    dfname_t dfnames[255] = {0};
+    dfname_t dfnames[255];
     uint8_t dfname_count = 0;
 
     if (get_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
