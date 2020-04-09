@@ -974,7 +974,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS)
         desfire_print_signature(package->uid, signature, signature_len, cardtype);
     else{
-        PrintAndLogEx(WARNING, "--- " _YELLOW_("Couldn't verify signature."));
+        PrintAndLogEx(WARNING, "--- " _YELLOW_("Couldn't verify signature. Unknown public key ?"));
     }
 
     // Master Key settings
