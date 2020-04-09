@@ -121,10 +121,11 @@ int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t
     return PM3_SUCCESS;
 }
 
-static char *getstatus(uint16_t *sw) {
-    if (sw == NULL) return "--> sw argument error. This should never happen !";
-    if (((*sw >> 8) & 0xFF) == 0x91) {
-        switch (*sw & 0xFF) {
+static char* getstatus(uint16_t * sw)
+{
+    if (sw==NULL) return "--> sw argument error. This should never happen !";
+    if (((*sw>>8)&0xFF)==0x91){
+        switch (*sw&0xFF){
             case MFDES_E_OUT_OF_EEPROM:
                 return "Out of Eeprom, insufficient NV-Memory to complete command";
             case MFDES_E_ILLEGAL_COMMAND_CODE:
@@ -188,8 +189,9 @@ static char *getstatus(uint16_t *sw) {
     return "Unknown error";
 }
 
-static char *GetErrorString(int res, uint16_t *sw) {
-    switch (res) {
+static char* GetErrorString(int res,uint16_t* sw)
+{
+    switch(res){
         case PM3_EAPDU_FAIL:
             return getstatus(sw);
         case PM3_EUNDEF:
@@ -241,14 +243,15 @@ static char *GetErrorString(int res, uint16_t *sw) {
 }
 
 
-static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_len, uint16_t *sw, int splitbysize, bool readalldata) {
-    if (g_debugMode > 1) {
-        if (apdu == NULL) PrintAndLogEx(ERR, "APDU=NULL");
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (sw == NULL) PrintAndLogEx(ERR, "SW=NULL");
-        if (recv_len == NULL) PrintAndLogEx(ERR, "RECV_LEN=NULL");
+static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_len, uint16_t *sw, int splitbysize,bool readalldata) {
+    if (g_debugMode>1)
+    {
+        if (apdu==NULL) PrintAndLogEx(ERR, "APDU=NULL");
+        if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
+        if (sw==NULL) PrintAndLogEx(ERR, "SW=NULL");
+        if (recv_len==NULL) PrintAndLogEx(ERR, "RECV_LEN=NULL");
     }
-    if (apdu == NULL || sw == NULL || recv_len == NULL) return PM3_EINVARG;
+    if (apdu==NULL || sw==NULL || recv_len==NULL) return PM3_EINVARG;
 
     *sw = 0;
     uint8_t data[255 * 5]  = {0x00};
@@ -257,7 +260,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
     int i = 1;
     int res = DESFIRESendApdu(select, true, *apdu, data, sizeof(data), &resplen, sw);
     if (res != PM3_SUCCESS) {
-        if (g_debugMode > 1) GetErrorString(res, sw);
+        if (g_debugMode>1) GetErrorString(res,sw);
         return res;
     }
     if (dest != NULL) {
@@ -265,8 +268,9 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
     }
 
     pos += resplen;
-    if (!readalldata) {
-        if (*sw == status(MFDES_ADDITIONAL_FRAME)) {
+    if (!readalldata)
+    {
+        if (*sw==status(MFDES_ADDITIONAL_FRAME)) {
             apdu->INS = MFDES_ABORT_TRANSACTION;
             apdu->Lc = 0;
             apdu->P1 = 0;
@@ -278,13 +282,13 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
     }
     while (*sw == status(MFDES_ADDITIONAL_FRAME)) {
         apdu->INS = MFDES_ADDITIONAL_FRAME; //0xAF
-        apdu->Lc = 0;
-        apdu->P1 = 0;
-        apdu->P2 = 0;
+        apdu->Lc=0;
+        apdu->P1=0;
+        apdu->P2=0;
 
         res = DESFIRESendApdu(false, true, *apdu, data, sizeof(data), &resplen, sw);
-        if (res != PM3_SUCCESS) {
-            if (g_debugMode > 1) GetErrorString(res, sw);
+        if (res != PM3_SUCCESS){
+            if (g_debugMode>1) GetErrorString(res,sw);
             return res;
         }
         if (dest != NULL) {
@@ -296,7 +300,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
             }
         }
         pos += resplen;
-        if (*sw != status(MFDES_ADDITIONAL_FRAME)) break;
+        if (*sw!=status(MFDES_ADDITIONAL_FRAME)) break;
     }
     if (splitbysize) *recv_len = i;
     else {
@@ -328,7 +332,7 @@ static int test_desfire_authenticate() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, data}; // 0x0A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0,false);
 }
 
 // none, verified
@@ -337,7 +341,7 @@ static int test_desfire_authenticate_iso() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, data}; // 0x1A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0,false);
 }
 
 //none, verified
@@ -346,7 +350,7 @@ static int test_desfire_authenticate_aes() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, data}; // 0xAA, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
+    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0,false);
 }
 
 // --- FREE MEM, verified
@@ -357,13 +361,13 @@ static int desfire_print_freemem(uint32_t free_mem) {
 
 // init / disconnect, verified
 static int get_desfire_freemem(uint32_t *free_mem) {
-    if (free_mem == NULL) return PM3_EINVARG;
+    if (free_mem==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NULL}; // 0x6E
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t fmem[4] = {0};
 
-    int res = send_desfire_cmd(&apdu, true, fmem, &recv_len, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, true, fmem, &recv_len, &sw, 0,true);
     if (res == PM3_SUCCESS) {
         *free_mem = le24toh(fmem);
         return res;
@@ -375,11 +379,12 @@ static int get_desfire_freemem(uint32_t *free_mem) {
 
 // --- GET SIGNATURE, verified
 static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len, desfire_cardtype_t card_type) {
-    if (g_debugMode > 1) {
-        if (uid == NULL) PrintAndLogEx(ERR, "UID=NULL");
-        if (signature == NULL) PrintAndLogEx(ERR, "SIGNATURE=NULL");
+    if (g_debugMode>1)
+    {
+        if (uid==NULL) PrintAndLogEx(ERR, "UID=NULL");
+        if (signature==NULL) PrintAndLogEx(ERR, "SIGNATURE=NULL");
     }
-    if (uid == NULL || signature == NULL) return PM3_EINVARG;
+    if (uid==NULL || signature==NULL) return PM3_EINVARG;
     // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
 
@@ -431,16 +436,17 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
 
 // init / disconnect, verified
 static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
-    if (g_debugMode > 1) {
-        if (signature == NULL) PrintAndLogEx(ERR, "SIGNATURE=NULL");
-        if (signature_len == NULL) PrintAndLogEx(ERR, "SIGNATURE_LEN=NULL");
+    if (g_debugMode>1)
+    {
+        if (signature==NULL) PrintAndLogEx(ERR, "SIGNATURE=NULL");
+        if (signature_len==NULL) PrintAndLogEx(ERR, "SIGNATURE_LEN=NULL");
     }
-    if (signature == NULL || signature_len == NULL) return PM3_EINVARG;
+    if (signature==NULL || signature_len==NULL) return PM3_EINVARG;
     uint8_t c = 0x00;
     sAPDU apdu = {0x90, MFDES_READSIG, 0x00, 0x00, 0x01, &c}; // 0x3C
     int recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, signature, &recv_len, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, true, signature, &recv_len, &sw, 0,true);
     if (res == PM3_SUCCESS) {
         if (recv_len != 56) {
             *signature_len = 0;
@@ -492,16 +498,17 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 
 // none, verified
 static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
-    if (g_debugMode > 1) {
-        if (key_settings == NULL) PrintAndLogEx(ERR, "KEY_SETTINGS=NULL");
-        if (num_keys == NULL) PrintAndLogEx(ERR, "NUM_KEYS=NULL");
+    if (g_debugMode>1)
+    {
+        if (key_settings==NULL) PrintAndLogEx(ERR, "KEY_SETTINGS=NULL");
+        if (num_keys==NULL) PrintAndLogEx(ERR, "NUM_KEYS=NULL");
     }
-    if (key_settings == NULL || num_keys == NULL) return PM3_EINVARG;
+    if (key_settings==NULL || num_keys==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NULL}; //0x45
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t data[2] = {0};
-    int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0,true);
     if (res != PM3_SUCCESS) return res;
 
     *key_settings = data[0];
@@ -517,29 +524,31 @@ static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
 
 // none, verified
 static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
-    if (g_debugMode > 1) {
-        if (num_versions == NULL) PrintAndLogEx(ERR, "NUM_VERSIONS=NULL");
+    if (g_debugMode>1)
+    {
+        if (num_versions==NULL) PrintAndLogEx(ERR, "NUM_VERSIONS=NULL");
     }
-    if (num_versions == NULL) return PM3_EINVARG;
+    if (num_versions==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
     int recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0,true);
     return res;
 }
 
 
 // init / disconnect, verified
 static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (app_ids_len == NULL) PrintAndLogEx(ERR, "APP_IDS_LEN=NULL");
+    if (g_debugMode>1)
+    {
+        if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
+        if (app_ids_len==NULL) PrintAndLogEx(ERR, "APP_IDS_LEN=NULL");
     }
-    if (dest == NULL || app_ids_len == NULL) return PM3_EINVARG;
+    if (dest==NULL || app_ids_len==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00, NULL}; //0x6a
     int recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0,true);
     if (res != PM3_SUCCESS) return res;
     *app_ids_len = (uint8_t)recv_len & 0xFF;
     return res;
@@ -547,15 +556,16 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
 
 // init, verified
 static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (dfname_count == NULL) PrintAndLogEx(ERR, "DFNAME_COUNT=NULL");
+    if (g_debugMode>1)
+    {
+        if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
+        if (dfname_count==NULL) PrintAndLogEx(ERR, "DFNAME_COUNT=NULL");
     }
-    if (dest == NULL || dfname_count == NULL) return PM3_EINVARG;
+    if (dest==NULL || dfname_count==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_DF_NAMES, 0x00, 0x00, 0x00, NULL}; //0x6d
     int recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, (uint8_t *)dest, &recv_len, &sw, sizeof(dfname_t), true);
+    int res = send_desfire_cmd(&apdu, true, (uint8_t *)dest, &recv_len, &sw, sizeof(dfname_t),true);
     if (res != PM3_SUCCESS) return res;
     *dfname_count = recv_len;
     return res;
@@ -564,16 +574,17 @@ static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
 
 // init, verified
 static int get_desfire_select_application(uint8_t *aid) {
-    if (g_debugMode > 1) {
-        if (aid == NULL) PrintAndLogEx(ERR, "AID=NULL");
+    if (g_debugMode>1)
+    {
+        if (aid==NULL) PrintAndLogEx(ERR, "AID=NULL");
     }
-    if (aid == NULL) return PM3_EINVARG;
+    if (aid==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
     int recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, sizeof(dfname_t), true);
+    int res=send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, sizeof(dfname_t),true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't select AID 0x%X -> %s"), (aid[0] << 16) + (aid[1] << 8) + aid[2], GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't select AID 0x%X -> %s"),(aid[0]<<16)+(aid[1]<<8)+aid[2],GetErrorString(res,&sw));
         DropField();
         return res;
     }
@@ -582,18 +593,19 @@ static int get_desfire_select_application(uint8_t *aid) {
 
 // none, verified
 static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (file_ids_len == NULL) PrintAndLogEx(ERR, "FILE_IDS_LEN=NULL");
+    if (g_debugMode>1)
+    {
+        if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
+        if (file_ids_len==NULL) PrintAndLogEx(ERR, "FILE_IDS_LEN=NULL");
     }
-    if (dest == NULL || file_ids_len == NULL) return PM3_EINVARG;
+    if (dest==NULL || file_ids_len==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_FILE_IDS, 0x00, 0x00, 0x00, NULL}; //0x6f
     int recv_len = 0;
     uint16_t sw = 0;
     *file_ids_len = 0;
-    int res = send_desfire_cmd(&apdu, false, dest, &recv_len, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, false, dest, &recv_len, &sw, 0,true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't get file ids -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't get file ids -> %s"),GetErrorString(res,&sw));
         DropField();
         return res;
     }
@@ -603,16 +615,17 @@ static int get_desfire_fileids(uint8_t *dest, uint8_t *file_ids_len) {
 
 // none, verified
 static int get_desfire_filesettings(uint8_t file_id, uint8_t *dest, int *destlen) {
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (destlen == NULL) PrintAndLogEx(ERR, "DESTLEN=NULL");
+    if (g_debugMode>1)
+    {
+        if (dest==NULL) PrintAndLogEx(ERR, "DEST=NULL");
+        if (destlen==NULL) PrintAndLogEx(ERR, "DESTLEN=NULL");
     }
-    if (dest == NULL || destlen == NULL) return PM3_EINVARG;
+    if (dest==NULL || destlen==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, &file_id}; // 0xF5
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0, true);
+    int res=send_desfire_cmd(&apdu, false, dest, destlen, &sw, 0,true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't get file settings -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't get file settings -> %s"),GetErrorString(res,&sw));
         DropField();
         return res;
     }
@@ -627,28 +640,28 @@ typedef struct {
     uint8_t name[16];
 } aidhdr_t;
 
-static int get_desfire_createapp(aidhdr_t *aidhdr) {
-    if (aidhdr == NULL) return PM3_EINVARG;
-    sAPDU apdu = {0x90, MFDES_CREATE_APPLICATION, 0x00, 0x00, sizeof(aidhdr_t), (uint8_t *)aidhdr}; // 0xCA
+static int get_desfire_createapp(aidhdr_t* aidhdr) {
+    if (aidhdr==NULL) return PM3_EINVARG;
+    sAPDU apdu = {0x90, MFDES_CREATE_APPLICATION, 0x00, 0x00, sizeof(aidhdr_t), (uint8_t*)aidhdr}; // 0xCA
     uint16_t sw = 0;
-    int recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0, true);
+    int recvlen=0;
+    int res=send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0,true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"),GetErrorString(res,&sw));
         DropField();
         return res;
     }
     return res;
 }
 
-static int get_desfire_deleteapp(uint8_t *aid) {
-    if (aid == NULL) return PM3_EINVARG;
+static int get_desfire_deleteapp(uint8_t* aid) {
+    if (aid==NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_DELETE_APPLICATION, 0x00, 0x00, 3, aid}; // 0xDA
     uint16_t sw = 0;
-    int recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0, true);
+    int recvlen=0;
+    int res=send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0,true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"), GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"),GetErrorString(res,&sw));
         DropField();
         return res;
     }
@@ -662,16 +675,16 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
                   "Create Application ID",
                   "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
                   "Example:\n\thf mfdes createaid -a 123456 -f 1122 -k 0F -l 2E -n AppName\n"
-                 );
+    );
 
     void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("aA",  "aid",    "<aid>", "App ID to create"),
-        arg_strx0("fF",  "fid",    "<fid>", "File ID"),
-        arg_strx0("kK",  "keysetting1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
-        arg_strx0("lL",  "keysetting2",    "<keysetting2>", "Key Setting 2"),
-        arg_str0("nN",  "name",    "<name>", "App ISO-4 Name"),
-        arg_param_end
+            arg_param_begin,
+            arg_strx0("aA",  "aid",    "<aid>", "App ID to create"),
+            arg_strx0("fF",  "fid",    "<fid>", "File ID"),
+            arg_strx0("kK",  "keysetting1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
+            arg_strx0("lL",  "keysetting2",    "<keysetting2>", "Key Setting 2"),
+            arg_str0("nN",  "name",    "<name>", "App ISO-4 Name"),
+            arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, true);
     /* KeySetting 1 (AMK Setting):
@@ -707,11 +720,11 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     uint8_t aid[3] = {0};
     uint8_t fid[2] = {0};
     uint8_t name[16] = {0};
-    uint8_t keysetting1 = 0;
-    uint8_t keysetting2 = 0;
-    int keylen1 = 1;
-    int keylen2 = 1;
-    int namelen = 16;
+    uint8_t keysetting1=0;
+    uint8_t keysetting2=0;
+    int keylen1=1;
+    int keylen2=1;
+    int namelen=16;
     CLIGetHexWithReturn(1, aid, &aidlength);
     CLIGetHexWithReturn(2, fid, &fidlength);
     CLIGetHexWithReturn(3, &keysetting1, &keylen1);
@@ -757,15 +770,15 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     }
 
     aidhdr_t aidhdr;
-    memcpy(aidhdr.aid, aid, sizeof(aid));
-    aidhdr.keysetting1 = keysetting1;
-    aidhdr.keysetting2 = keysetting2;
-    memcpy(aidhdr.fid, fid, sizeof(fid));
-    memcpy(aidhdr.name, name, sizeof(name));
+    memcpy(aidhdr.aid,aid,sizeof(aid));
+    aidhdr.keysetting1=keysetting1;
+    aidhdr.keysetting2=keysetting2;
+    memcpy(aidhdr.fid,fid,sizeof(fid));
+    memcpy(aidhdr.name,name,sizeof(name));
 
-    uint8_t rootaid[3] = {0x00, 0x00, 0x00};
-    int res = get_desfire_select_application(rootaid);
-    if (res != PM3_SUCCESS) return res;
+    uint8_t rootaid[3]={0x00,0x00,0x00};
+    int res=get_desfire_select_application(rootaid);
+    if (res!=PM3_SUCCESS) return res;
 
     return get_desfire_createapp(&aidhdr);
 }
@@ -777,12 +790,12 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
                   "Delete Application ID",
                   "Usage:\n\t-a aid (3 bytes)\n\n"
                   "Example:\n\thf mfdes deleteaid -a 123456\n"
-                 );
+    );
 
     void *argtable[] = {
-        arg_param_begin,
-        arg_strx0("aA",  "aid",    "<aid>", "App ID to delete"),
-        arg_param_end
+            arg_param_begin,
+            arg_strx0("aA",  "aid",    "<aid>", "App ID to delete"),
+            arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, true);
     int aidlength = 3;
@@ -800,9 +813,9 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t rootaid[3] = {0x00, 0x00, 0x00};
-    int res = get_desfire_select_application(rootaid);
-    if (res != PM3_SUCCESS) return res;
+    uint8_t rootaid[3]={0x00,0x00,0x00};
+    int res=get_desfire_select_application(rootaid);
+    if (res!=PM3_SUCCESS) return res;
     return get_desfire_deleteapp(aid);
 }
 
@@ -813,12 +826,12 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
                   "Formats MIFARE DESFire PICC to factory state",
                   "Usage:\n\t-k PICC key (8 bytes)\n\n"
                   "Example:\n\thf mfdes formatpicc -k 0000000000000000\n"
-                 );
+    );
 
     void *argtable[] = {
-        arg_param_begin,
-        arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
-        arg_param_end
+            arg_param_begin,
+            arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
+            arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, true);
 
@@ -835,9 +848,9 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
     clearCommandBuffer();
     DropField();
-    uint8_t aid[3] = {0};
-    int res = get_desfire_select_application(aid);
-    if (res != PM3_SUCCESS) return res;
+    uint8_t aid[3]={0};
+    int res=get_desfire_select_application(aid);
+    if (res!=PM3_SUCCESS) return res;
     uint8_t data[25] = {keylen}; // max length: 1 + 24 (3k3DES)
     memcpy(data + 1, key, keylen);
     SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylen + 1);
@@ -858,7 +871,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
             DropField();
             return PM3_ETIMEOUT;
         }
-        if (resp.oldarg[0] & 0xFF) {
+        if (resp.oldarg[0]&0xFF){
             PrintAndLogEx(INFO, "Card successfully reset");
             return PM3_SUCCESS;
         }
@@ -961,7 +974,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS)
         desfire_print_signature(package->uid, signature, signature_len, cardtype);
-    else {
+    else{
         PrintAndLogEx(WARNING, "--- " _YELLOW_("Couldn't verify signature. Unknown public key ?"));
     }
 
@@ -1054,19 +1067,19 @@ char *getVersionStr(uint8_t major, uint8_t minor) {
 }
 
 int getKeySettings(uint8_t *aid) {
-    if (aid == NULL) return PM3_EINVARG;
-    int res = 0;
+    if (aid==NULL) return PM3_EINVARG;
+    int res=0;
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
 
         // CARD MASTER KEY
         //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-        res = get_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) return res;
+        res=get_desfire_select_application(aid);
+        if (res!=PM3_SUCCESS) return res;
 
         // KEY Settings - AMK
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        res = get_desfire_keysettings(&key_setting, &num_keys);
+        res=get_desfire_keysettings(&key_setting, &num_keys);
         if (res == PM3_SUCCESS) {
             // number of Master keys (0x01)
             PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
@@ -1121,13 +1134,13 @@ int getKeySettings(uint8_t *aid) {
 
         // AID - APPLICATION MASTER KEYS
         //PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-        res = get_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) return res;
+        res=get_desfire_select_application(aid);
+        if (res!=PM3_SUCCESS) return res;
 
         // KEY Settings - AMK
         uint8_t num_keys = 0;
         uint8_t key_setting = 0;
-        res = get_desfire_keysettings(&key_setting, &num_keys);
+        res=get_desfire_keysettings(&key_setting, &num_keys);
         if (res == PM3_SUCCESS) {
             desfire_print_keysetting(key_setting, num_keys);
         } else {
@@ -1161,8 +1174,9 @@ int getKeySettings(uint8_t *aid) {
     return PM3_SUCCESS;
 }
 
-static void DecodeFileType(uint8_t filetype) {
-    switch (filetype) {
+static void DecodeFileType(uint8_t filetype){
+    switch (filetype)
+    {
         case 0x00:
             PrintAndLogEx(INFO, "     File Type: 0x%02X -> Standard Data File", filetype);
             break;
@@ -1184,8 +1198,9 @@ static void DecodeFileType(uint8_t filetype) {
     }
 }
 
-static void DecodeComSet(uint8_t comset) {
-    switch (comset) {
+static void DecodeComSet(uint8_t comset){
+    switch (comset)
+    {
         case 0x00:
             PrintAndLogEx(INFO, "     Com.Setting: 0x%02X -> Plain", comset);
             break;
@@ -1201,10 +1216,11 @@ static void DecodeComSet(uint8_t comset) {
     }
 }
 
-static char *DecodeAccessValue(uint8_t value) {
-    char *car = (char *)malloc(255);
-    memset(car, 0x0, 255);
-    switch (value) {
+static char* DecodeAccessValue(uint8_t value)
+{
+    char* car=(char*)malloc(255);
+    memset(car,0x0,255);
+    switch(value){
         case 0xE:
             strcat(car, "(Free Access)");
             break;
@@ -1212,45 +1228,46 @@ static char *DecodeAccessValue(uint8_t value) {
             strcat(car, "(Denied Access)");
             break;
         default:
-            sprintf(car, "(Access Key: %d)", value);
+            sprintf(car,"(Access Key: %d)",value);
             break;
     }
     return car;
 }
 
-static void DecodeAccessRights(uint16_t accrights) {
-    int change_access_rights = accrights & 0xF;
-    int read_write_access = (accrights >> 4) & 0xF;
-    int write_access = (accrights >> 8) & 0xF;
-    int read_access = (accrights >> 12) & 0xF;
-    char *car = DecodeAccessValue(change_access_rights);
-    char *rwa = DecodeAccessValue(read_write_access);
-    char *wa = DecodeAccessValue(write_access);
-    char *ra = DecodeAccessValue(read_access);
-    PrintAndLogEx(INFO, "     Access Rights: 0x%04X - Change %s - RW %s - W %s - R %s", accrights, car, rwa, wa, ra);
+static void DecodeAccessRights(uint16_t accrights){
+    int change_access_rights=accrights&0xF;
+    int read_write_access=(accrights>>4)&0xF;
+    int write_access=(accrights>>8)&0xF;
+    int read_access=(accrights>>12)&0xF;
+    char* car=DecodeAccessValue(change_access_rights);
+    char* rwa=DecodeAccessValue(read_write_access);
+    char* wa=DecodeAccessValue(write_access);
+    char* ra=DecodeAccessValue(read_access);
+    PrintAndLogEx(INFO, "     Access Rights: 0x%04X - Change %s - RW %s - W %s - R %s", accrights,car,rwa,wa,ra);
     free(car);
     free(rwa);
     free(wa);
     free(ra);
 }
 
-static int DecodeFileSettings(uint8_t *filesettings, int fileset_len, int maclen) {
-    uint8_t filetype = filesettings[0];
-    uint8_t comset = filesettings[1];
+static int DecodeFileSettings(uint8_t* filesettings, int fileset_len, int maclen){
+    uint8_t filetype=filesettings[0];
+    uint8_t comset=filesettings[1];
 
-    uint16_t accrights = (filesettings[4] << 8) + filesettings[3];
-    if (fileset_len == 1 + 1 + 2 + 3 + maclen) {
-        int filesize = (filesettings[7] << 16) + (filesettings[6] << 8) + filesettings[5];
+    uint16_t accrights=(filesettings[4]<<8)+filesettings[3];
+    if (fileset_len==1+1+2+3+maclen)
+    {
+        int filesize=(filesettings[7]<<16)+(filesettings[6]<<8)+filesettings[5];
         DecodeFileType(filetype);
         DecodeComSet(comset);
         DecodeAccessRights(accrights);
         PrintAndLogEx(INFO, "     Filesize: %d", filesize);
         return PM3_SUCCESS;
-    } else if (fileset_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
-        int lowerlimit = (filesettings[8] << 24) + (filesettings[7] << 16) + (filesettings[6] << 8) + filesettings[5];
-        int upperlimit = (filesettings[12] << 24) + (filesettings[11] << 16) + (filesettings[10] << 8) + filesettings[9];
-        int limitcredvalue = (filesettings[16] << 24) + (filesettings[15] << 16) + (filesettings[14] << 8) + filesettings[13];
-        uint8_t limited_credit_enabled = filesettings[17];
+    } else if (fileset_len==1+1+2+4+4+4+1+maclen) {
+        int lowerlimit=(filesettings[8]<<24)+(filesettings[7]<<16)+(filesettings[6]<<8)+filesettings[5];
+        int upperlimit=(filesettings[12]<<24)+(filesettings[11]<<16)+(filesettings[10]<<8)+filesettings[9];
+        int limitcredvalue=(filesettings[16]<<24)+(filesettings[15]<<16)+(filesettings[14]<<8)+filesettings[13];
+        uint8_t limited_credit_enabled=filesettings[17];
         DecodeFileType(filetype);
         DecodeComSet(comset);
         DecodeAccessRights(accrights);
@@ -1274,7 +1291,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     dfname_t dfnames[255];
     uint8_t dfname_count = 0;
 
-    int res = 0;
+    int res=0;
 
     if (get_desfire_appids(app_ids, &app_ids_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
@@ -1315,10 +1332,10 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             }
         }
 
-        res = getKeySettings(aid);
-        if (res != PM3_SUCCESS) return res;
+       res=getKeySettings(aid);
+       if (res!=PM3_SUCCESS) return res;
 
-        res = get_desfire_select_application(aid);
+        res=get_desfire_select_application(aid);
 
 
         // Get File IDs
@@ -1330,9 +1347,9 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
                 uint8_t filesettings[20] = {0};
                 int fileset_len = 0;
                 int res = get_desfire_filesettings(j, filesettings, &fileset_len);
-                int maclen = 0; // To be implemented
+                int maclen=0; // To be implemented
                 if (res == PM3_SUCCESS) {
-                    if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
+                    if (DecodeFileSettings(filesettings,fileset_len,maclen)!=PM3_SUCCESS){
                         PrintAndLogEx(INFO, "  Settings [%u] %s", fileset_len, sprint_hex(filesettings, fileset_len));
                     }
                 }
@@ -1371,7 +1388,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 //
 #define BUFSIZE 256
 static int CmdHF14ADesAuth(const char *Cmd) {
-    int res = 0;
+    int res=0;
     DropField();
     clearCommandBuffer();
     // NR  DESC     KEYLENGHT
@@ -1482,10 +1499,10 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
 
 
-    res = get_desfire_select_application(aid);
-    if (res != PM3_SUCCESS) return res;
+    res=get_desfire_select_application(aid);
+    if (res!=PM3_SUCCESS) return res;
 
-    if (memcmp(aid, "\x00\x00\x00", 3) != 0) {
+    if (memcmp(aid,"\x00\x00\x00",3)!=0){
         uint8_t file_ids[33] = {0};
         uint8_t file_ids_len = 0;
         res = get_desfire_fileids(file_ids, &file_ids_len);

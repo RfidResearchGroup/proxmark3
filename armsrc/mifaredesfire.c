@@ -104,7 +104,7 @@ void MifareDesfireGetInformation() {
         uint8_t versionSW[7];
         uint8_t details[14];
     } PACKED payload;
-    
+
     /*
         1 = PCB                 1
         2 = cid                 2
@@ -179,7 +179,7 @@ void MifareDesfireGetInformation() {
     LED_B_ON();
     reply_ng(CMD_HF_DESFIRE_INFO, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
     LED_B_OFF();
-    
+
     // reset the pcb_blocknum,
     pcb_blocknum = 0;
     OnSuccess();
@@ -314,8 +314,8 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             cmd[3] = 0x00;
             cmd[4] = 0x10;
             memcpy(cmd + 5, both, 16);
-            cmd[16+5]=0x0;
-            len = DesfireAPDU(cmd, 5+16+1, resp);
+            cmd[16 + 5] = 0x0;
+            len = DesfireAPDU(cmd, 5 + 16 + 1, resp);
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -324,7 +324,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 return;
             }
 
-            if (resp[len-3] == 0x00) {
+            if (resp[len - 3] == 0x00) {
 
                 struct desfire_key sessionKey = {0};
                 desfirekey_t skey = &sessionKey;
@@ -450,8 +450,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             }
         }
         break;
-        case 2:
-            {
+        case 2: {
             //SendDesfireCommand(AUTHENTICATE_ISO, &arg2, resp);
             uint8_t keybytes[16];
             uint8_t RndA[8] = {0x00};
@@ -540,7 +539,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
 
             cmd[0] = ADDITIONAL_FRAME;
             memcpy(cmd + 1, both, 16);
-            len = DesfireAPDU(cmd, 1+16, resp);
+            len = DesfireAPDU(cmd, 1 + 16, resp);
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -580,9 +579,9 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 DbpString("Authentication failed.");
                 OnError(6);
                 return;
-                }
             }
-            break;
+        }
+        break;
         case 3: {
             //defaultkey
             uint8_t keybytes[16] = {0x00};
@@ -655,9 +654,9 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
             cmd[3] = 0x00;
             cmd[4] = 0x20;
             memcpy(cmd + 5, encBoth, 32);
-            cmd[32+5]=0x0;
+            cmd[32 + 5] = 0x0;
 
-            len = DesfireAPDU(cmd, 5+32+1, resp);
+            len = DesfireAPDU(cmd, 5 + 32 + 1, resp);
             if (!len) {
                 if (DBGLEVEL >= DBG_ERROR) {
                     DbpString("Authentication failed. Card timeout.");
@@ -666,7 +665,7 @@ void MifareDES_Auth1(uint8_t arg0, uint8_t arg1, uint8_t arg2,  uint8_t *datain)
                 return;
             }
 
-            if ((resp[1+16] == 0x91)&&(resp[1+16+1] == 0x00)) {
+            if ((resp[1 + 16] == 0x91) && (resp[1 + 16 + 1] == 0x00)) {
                 // Create AES Session key
                 struct desfire_key sessionKey = {0};
                 desfirekey_t skey = &sessionKey;
@@ -713,10 +712,10 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
     // if we received an I- or R(ACK)-Block with a block number equal to the
     // current block number, toggle the current block number
     if (len >= 4 // PCB+CID+CRC = 4 bytes
-             && ((resp[0] & 0xC0) == 0 // I-Block
-                 || (resp[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
-             && (resp[0] & 0x01) == pcb_blocknum) { // equal block numbers
-        pcb_blocknum ^= 1;  //toggle next block   
+            && ((resp[0] & 0xC0) == 0 // I-Block
+                || (resp[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
+            && (resp[0] & 0x01) == pcb_blocknum) { // equal block numbers
+        pcb_blocknum ^= 1;  //toggle next block
     }
 
     memcpy(dataout, resp, len);
@@ -734,18 +733,18 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
     cmd[0] = 0x02;  //  0x0A = send cid,  0x02 = no cid.
     cmd[0] |= pcb_blocknum; // OR the block number into the PCB
 
-    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("pcb_blocknum %d == %d ", pcb_blocknum, cmd[0] );
+    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("pcb_blocknum %d == %d ", pcb_blocknum, cmd[0]);
 
     //cmd[1] = 0x90;  //  CID: 0x00 //TODO: allow multiple selected cards
 
     memcpy(cmd + 1, datain, len);
     AddCrc14A(cmd, len + 1);
-    
-/*
-hf 14a apdu -sk 90 60 00 00 00
-hf 14a apdu -k 90 AF 00 00 00
-hf 14a apdu 90AF000000
-*/
+
+    /*
+    hf 14a apdu -sk 90 60 00 00 00
+    hf 14a apdu -k 90 AF 00 00 00
+    hf 14a apdu 90AF000000
+    */
     memcpy(dataout, cmd, cmdlen);
     return cmdlen;
 }
