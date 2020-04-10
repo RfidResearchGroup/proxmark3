@@ -853,18 +853,18 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     int res = get_desfire_select_application(aid);
     if (res != PM3_SUCCESS) return res;
     struct {
-            uint8_t mode;
-            uint8_t algo;
-            uint8_t keyno;
-            uint8_t key[24];
-            uint8_t keylen;
+        uint8_t mode;
+        uint8_t algo;
+        uint8_t keyno;
+        uint8_t key[24];
+        uint8_t keylen;
     } PACKED payload;
-    payload.keylen=keylen;
-    memcpy(payload.key,key,keylen);
-    payload.mode=MFDES_AUTH_PICC;
-    payload.algo=MFDES_ALGO_DES;
-    payload.keyno=0;
-    SendCommandNG(CMD_HF_DESFIRE_AUTH1,(uint8_t*)&payload,sizeof(payload));
+    payload.keylen = keylen;
+    memcpy(payload.key, key, keylen);
+    payload.mode = MFDES_AUTH_PICC;
+    payload.algo = MFDES_ALGO_DES;
+    payload.keyno = 0;
+    SendCommandNG(CMD_HF_DESFIRE_AUTH1, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_HF_DESFIRE_AUTH1, &resp, 3000)) {
@@ -873,23 +873,23 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isOK  = (resp.status==PM3_SUCCESS);
+    uint8_t isOK  = (resp.status == PM3_SUCCESS);
     if (isOK) {
         struct {
             uint8_t flags;
             uint8_t datalen;
             uint8_t datain[FRAME_PAYLOAD_SIZE];
         } PACKED payload;
-        payload.datain[0]=0xFC;
-        payload.flags=NONE;
-        payload.datalen=1;
-        SendCommandNG(CMD_HF_DESFIRE_COMMAND,(uint8_t*)&payload,sizeof(payload));
+        payload.datain[0] = 0xFC;
+        payload.flags = NONE;
+        payload.datalen = 1;
+        SendCommandNG(CMD_HF_DESFIRE_COMMAND, (uint8_t *)&payload, sizeof(payload));
         if (!WaitForResponseTimeout(CMD_HF_DESFIRE_COMMAND, &resp, 3000)) {
             PrintAndLogEx(WARNING, "Client reset command execute timeout");
             DropField();
             return PM3_ETIMEOUT;
         }
-        if (resp.status==PM3_SUCCESS) {
+        if (resp.status == PM3_SUCCESS) {
             /*struct r {
                 uint8_t len;
                 uint8_t data[RECEIVE_SIZE];
@@ -1528,12 +1528,12 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         uint8_t key[24];
         uint8_t keylen;
     } PACKED payload;
-    payload.keylen=keylength;
-    memcpy(payload.key,key,keylength);
-    payload.mode=cmdAuthMode;
-    payload.algo=cmdAuthAlgo;
-    payload.keyno=cmdKeyNo;
-    SendCommandNG(CMD_HF_DESFIRE_AUTH1,(uint8_t*)&payload,sizeof(payload));
+    payload.keylen = keylength;
+    memcpy(payload.key, key, keylength);
+    payload.mode = cmdAuthMode;
+    payload.algo = cmdAuthAlgo;
+    payload.keyno = cmdKeyNo;
+    SendCommandNG(CMD_HF_DESFIRE_AUTH1, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
 
