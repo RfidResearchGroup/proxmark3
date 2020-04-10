@@ -62,7 +62,7 @@ int settings_load (void) {
     // Set all defaults
 //    mySettings.os_windows_usecolor = false;
 //    mySettings.os_windows_useansicolor = false;
-    session.logging_level = 0;
+    session.client_debug_level = OFF;
     session.window_plot_xpos = 10;
     session.window_plot_ypos = 30;
     session.window_plot_hsize = 400;
@@ -125,10 +125,10 @@ void settings_save_callback (json_t *root) {
 //    JsonSaveBoolean (root,"os.windows.useAnsiColor",mySettings.os_windows_useansicolor);
     // Log level, convert to text
     // JsonSaveInt (root,"window.logging.level",mySettings.logging_level);
-    switch (session.logging_level) {
-        case 0: JsonSaveStr (root,"logging.level","off"); break;
-        case 1: JsonSaveStr (root,"logging.level","on"); break;
-        case 2: JsonSaveStr (root,"logging.level","full"); break;
+    switch (session.client_debug_level) {
+        case OFF: JsonSaveStr (root,"client.debug.level","off"); break;
+        case SIMPLE: JsonSaveStr (root,"client.debug.level","on"); break;
+        case FULL: JsonSaveStr (root,"client.debug.level","full"); break;
         default:
             JsonSaveStr (root,"logging.level","NORMAL");
     }
@@ -172,11 +172,10 @@ void settings_load_callback (json_t *root) {
         mySettings.os_windows_useansicolor = b1;
 */
     // Logging Level
-//    typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
-    if (json_unpack_ex(root,&up_error, 0, "{s:s}","logging.level",&s1) == 0) {        
-        if (strncmp (s1,"off",3) == 0) session.logging_level = 0;
-        if (strncmp (s1,"on",2) == 0) session.logging_level = 1;
-        if (strncmp (s1,"full",4) == 0) session.logging_level = 2;
+    if (json_unpack_ex(root,&up_error, 0, "{s:s}","client.debug.level",&s1) == 0) {        
+        if (strncmp (s1,"off",3) == 0) session.client_debug_level = OFF;
+        if (strncmp (s1,"simple",6) == 0) session.client_debug_level = SIMPLE;
+        if (strncmp (s1,"full",4) == 0) session.client_debug_level = FULL;
     }
 
     // window plot

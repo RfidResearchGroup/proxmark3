@@ -19,6 +19,7 @@
 
 typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
 typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
+typedef enum clientdebugLevel {OFF,SIMPLE,FULL} clientdebugLevel_t;
 
 typedef struct {
     bool settings_loaded;
@@ -33,7 +34,7 @@ typedef struct {
     int window_plot_ypos;
     int window_plot_hsize;
     int window_plot_wsize;
-    logLevel_t logging_level;
+    clientdebugLevel_t client_debug_level;
 } session_arg_t;
 
 extern session_arg_t session;

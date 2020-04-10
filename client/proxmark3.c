@@ -587,7 +587,8 @@ int main(int argc, char *argv[]) {
     settings_load ();
 
     // quick patch for debug level
-    g_debugMode = session.logging_level;
+    g_debugMode = session.client_debug_level;
+    PrintAndLogEx(ERR,"Emojo test [%d] :smile:",session.emoji_mode);
     // settings_save ();
     // End Settings
 
