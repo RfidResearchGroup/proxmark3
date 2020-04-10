@@ -632,7 +632,7 @@ static int get_desfire_createapp(aidhdr_t *aidhdr) {
     sAPDU apdu = {0x90, MFDES_CREATE_APPLICATION, 0x00, 0x00, sizeof(aidhdr_t), (uint8_t *)aidhdr}; // 0xCA
     uint16_t sw = 0;
     int recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"), GetErrorString(res, &sw));
         DropField();
@@ -646,7 +646,7 @@ static int get_desfire_deleteapp(uint8_t *aid) {
     sAPDU apdu = {0x90, MFDES_DELETE_APPLICATION, 0x00, 0x00, 3, aid}; // 0xDA
     uint16_t sw = 0;
     int recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"), GetErrorString(res, &sw));
         DropField();
