@@ -1271,7 +1271,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_DESFIRE_AUTH1: {
-            MifareDES_Auth1(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareDES_Auth1(packet->data.asBytes);
             break;
         }
         case CMD_HF_DESFIRE_AUTH2: {

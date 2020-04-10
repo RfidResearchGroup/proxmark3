@@ -37,6 +37,20 @@ uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x
 #define status(x) ( ((uint16_t)(0x91<<8)) + x )
 
 typedef enum {
+    MFDES_AUTH_DES = 1,
+    MFDES_AUTH_ISO = 2,
+    MFDES_AUTH_AES = 3,
+    MFDES_AUTH_PICC = 4
+} mifare_des_authmode_t;
+
+typedef enum {
+    MFDES_ALGO_DES = 1,
+    MFDES_ALGO_3DES = 2,
+    MFDES_ALGO_3K3DES = 3,
+    MFDES_ALGO_AES = 4
+} mifare_des_authalgo_t;
+
+typedef enum {
     UNKNOWN = 0,
     MF3ICD40,
     EV1,
@@ -838,18 +852,31 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     uint8_t aid[3] = {0};
     int res = get_desfire_select_application(aid);
     if (res != PM3_SUCCESS) return res;
-    uint8_t data[25] = {keylen}; // max length: 1 + 24 (3k3DES)
-    memcpy(data + 1, key, keylen);
-    SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylen + 1);
+    struct {
+            uint8_t isOK;
+            uint8_t mode;
+            uint8_t algo;
+            uint8_t keyno;
+            uint8_t key[24];
+            uint8_t keylen;
+            uint8_t sessionkey[24];
+    } PACKED payload;
+    payload.keylen=keylen;
+    memcpy(payload.key,key,keylen);
+    payload.mode=MFDES_AUTH_PICC;
+    payload.algo=MFDES_ALGO_DES;
+    payload.keyno=0;
+    //SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylen + 1);
+    SendCommandNG(CMD_HF_DESFIRE_AUTH1,(uint8_t*)&payload,sizeof(payload));
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+    if (!WaitForResponseTimeout(CMD_HF_DESFIRE_AUTH1, &resp, 3000)) {
         PrintAndLogEx(WARNING, "Client command execute timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isOK  = resp.oldarg[0] & 0xff;
+    uint8_t isOK  = (resp.status==PM3_SUCCESS);
     if (isOK) {
         uint8_t rdata[] = {0xFC};  // 0xFC
         SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(rdata), 0, rdata, sizeof(rdata));
@@ -1492,28 +1519,43 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         if (res != PM3_SUCCESS) return res;
     }
 
-    // algo, keylength,
-    uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
-    memcpy(data + 1, key, keylength);
-    SendCommandOLD(CMD_HF_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength + 1);
+    struct {
+        uint8_t isOK;
+        uint8_t mode;
+        uint8_t algo;
+        uint8_t keyno;
+        uint8_t key[24];
+        uint8_t keylen;
+        uint8_t sessionkey[24];
+    } PACKED payload;
+    payload.keylen=keylength;
+    memcpy(payload.key,key,keylength);
+    payload.mode=cmdAuthMode;
+    payload.algo=cmdAuthAlgo;
+    payload.keyno=cmdKeyNo;
+    //SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylen + 1);
+    SendCommandNG(CMD_HF_DESFIRE_AUTH1,(uint8_t*)&payload,sizeof(payload));
+
+    //uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
+    //memcpy(data + 1, key, keylength);
+    //SendCommandOLD(CMD_HF_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength + 1);
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+    if (!WaitForResponseTimeout(CMD_HF_DESFIRE_AUTH1, &resp, 3000)) {
         PrintAndLogEx(WARNING, "Client command execute timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isOK  = resp.oldarg[0] & 0xff;
+    uint8_t isOK  = (resp.status == PM3_SUCCESS);
     if (isOK) {
-        uint8_t *session_key = resp.data.asBytes;
+        uint8_t *session_key = payload.sessionkey;
 
         PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
         PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(session_key, keylength));
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
-        //PrintAndLogEx(NORMAL, "  Expected   :B5 21 9E E8 1A A7 49 9D 21 96 68 7E 13 97 38 56");
     } else {
-        PrintAndLogEx(WARNING, _RED_("Client command failed."));
+        PrintAndLogEx(WARNING, _RED_("Client command failed, reason: %d."), resp.status);
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
