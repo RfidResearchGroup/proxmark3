@@ -582,14 +582,10 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
     set_my_user_directory();
 
-    // Load Settings and assign
-    // This will allow the command line to override the settings.json values
-    settings_load ();
-    // quick patch for debug level
-    g_debugMode = session.logging_level;
-    
+    // Settings Load and Test
+    // settings_load ();
     // settings_save ();
-    
+    // printf ("Ver : %s\n",mySettings.version);
     // End Settings
     
     for (int i = 1; i < argc; i++) {

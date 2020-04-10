@@ -8,12 +8,28 @@
 //-----------------------------------------------------------------------------
 // Settings Functions
 //-----------------------------------------------------------------------------
-#ifndef SETTINGS_H_
-#define SETTINGS_H_
+#ifndef settings_h
+#define settings_h
 
 #include "fileutils.h"
 
 #define settingsFilename "settings.json"
+
+typedef struct {
+        bool loaded;
+        char version[20];
+        bool os_windows_usecolor;
+        bool os_windows_useansicolor;
+        int  window_xpos;
+        int  window_ypos;
+        int  window_hsize;
+        int  window_wsize;
+        bool use_emojis;
+        bool use_hints;        
+} settings_t;
+
+// Settings struct so as to be available to other modules by including settings.h
+settings_t mySettings; 
 
 int settings_load (void);
 int settings_save (void);

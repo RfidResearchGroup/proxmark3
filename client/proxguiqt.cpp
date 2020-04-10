@@ -26,7 +26,6 @@
 #include <string.h>
 #include "proxgui.h"
 #include <QtGui>
-#include "ui.h"
 
 extern "C" {
 #include "util_darwin.h"
@@ -169,12 +168,7 @@ void ProxWidget::vchange_dthr_down(int v) {
 }
 ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
-    
-    // Set the initail postion and size from settings
-    if (session.settings_loaded)
-        setGeometry (session.window_plot_xpos,session.window_plot_ypos,session.window_plot_wsize,session.window_plot_hsize);
-    else
-        resize(800, 400);
+    resize(800, 400);
 
     // Setup the controller widget
     controlWidget = new QWidget();
