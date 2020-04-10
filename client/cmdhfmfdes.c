@@ -1491,7 +1491,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("mM",  "type",   "Auth type (1=normal, 2=iso, 3=aes)", NULL),
+        arg_int0("mM",  "type",   "Auth type (1=normal, 2=iso, 3=aes, 4=picc)", NULL),
         arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)", NULL),
         arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("nN",  "keyno",  "Key number used for authentification", NULL),
