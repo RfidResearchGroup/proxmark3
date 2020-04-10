@@ -1052,7 +1052,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     uint8_t isOK  = resp.oldarg[0] & 0xff;
     if (isOK) {
         uint8_t rdata[] = {0xFC};  // 0xFC
-        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NULL, sizeof(rdata), 0, rdata, sizeof(rdata));
+        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(rdata), 0, rdata, sizeof(rdata));
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
             PrintAndLogEx(WARNING, "Client reset command execute timeout");
             DropField();
