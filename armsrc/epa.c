@@ -263,7 +263,7 @@ static void EPA_PACE_Collect_Nonce_Abort(uint8_t step, int func_return) {
     EPA_Finish();
 
     // send the USB packet
-    reply_mix(CMD_ACK, step, func_return, 0, 0, 0);
+    reply_old(CMD_ACK, step, func_return, 0, 0, 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -280,8 +280,12 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
      *   d:
      *       Encrypted nonce
      */
+
+    // return value of a function
+    int func_return = 0;
+
     // set up communication
-    int func_return = EPA_Setup();
+    func_return = EPA_Setup();
     if (func_return != 0) {
         EPA_PACE_Collect_Nonce_Abort(1, func_return);
         return;
@@ -331,7 +335,7 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
     EPA_Finish();
 
     // save received information
-    reply_mix(CMD_ACK, 0, func_return, 0, nonce, func_return);
+    reply_old(CMD_ACK, 0, func_return, 0, nonce, func_return);
 }
 
 //-----------------------------------------------------------------------------
@@ -443,7 +447,7 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
     if (c->oldarg[0] != 0) {
         // make sure it's not too big
         if (c->oldarg[2] > apdus_replay[c->oldarg[0] - 1].len) {
-            reply_mix(CMD_ACK, 1, 0, 0, NULL, 0);
+            reply_old(CMD_ACK, 1, 0, 0, NULL, 0);
         }
         memcpy(apdus_replay[c->oldarg[0] - 1].data + c->oldarg[1],
                c->data.asBytes,
@@ -454,7 +458,7 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
         } else {
             apdu_lengths_replay[c->oldarg[0] - 1] += c->oldarg[2];
         }
-        reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+        reply_old(CMD_ACK, 0, 0, 0, NULL, 0);
         return;
     }
 
@@ -465,7 +469,7 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
     func_return = EPA_Setup();
     if (func_return != 0) {
         EPA_Finish();
-        reply_mix(CMD_ACK, 2, func_return, 0, NULL, 0);
+        reply_old(CMD_ACK, 2, func_return, 0, NULL, 0);
         return;
     }
 
@@ -488,12 +492,12 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
                     || response_apdu[func_return - 4] != 0x90
                     || response_apdu[func_return - 3] != 0x00)) {
             EPA_Finish();
-            reply_mix(CMD_ACK, 3 + i, func_return, 0, timings, 20);
+            reply_old(CMD_ACK, 3 + i, func_return, 0, timings, 20);
             return;
         }
     }
     EPA_Finish();
-    reply_mix(CMD_ACK, 0, 0, 0, timings, 20);
+    reply_old(CMD_ACK, 0, 0, 0, timings, 20);
     return;
 }
 
@@ -502,13 +506,14 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
 // Returns 0 on success or a non-zero error code on failure
 //-----------------------------------------------------------------------------
 int EPA_Setup() {
+    uint8_t uid[10];
+    iso14a_card_select_t card_a_info;
 
     // first, look for type A cards
     // power up the field
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-    iso14a_card_select_t card_a_info;
-    int return_code = iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false);
-
+    // select the card
+    int return_code = iso14443a_select_card(uid, &card_a_info, NULL, true, 0, false);
     if (return_code == 1) {
         uint8_t pps_response[3];
         uint8_t pps_response_par[1];
@@ -523,14 +528,12 @@ int EPA_Setup() {
         return 0;
     }
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    
     // if we're here, there is no type A card, so we look for type B
     // power up the field
     iso14443b_setup();
     iso14b_card_select_t card_b_info;
+    // select the card
     return_code = iso14443b_select_card(&card_b_info);
-
     if (return_code == 0) {
         Dbprintf("ISO 14443 Type B");
         iso_type = 'b';

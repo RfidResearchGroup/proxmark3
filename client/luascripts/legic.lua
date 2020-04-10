@@ -91,20 +91,14 @@ CRC1  = crc8 over addr 0x00..0x03+0x07..0x0E (special 'gantner crc8')
 CRC2  = MCD + MSB0..2+ addr 0x06 + addr 0x05 + addr 0x07 + Stamp (regular Master-Token-CRC)
 --]]
 
---[[
-Known issues; needs to be fixed:
-* last byte in last segment is handled incorrectly when it is the last bytes on the card itself (MIM256: => byte 256)
---]]
-
 example = "script run legic"
-author  = "Mosci, uhei"
-version = "1.0.4"
+author  = "Mosci"
+version = "1.0.3"
 
 desc =
 [[
 
 This script helps you to read, create and modify Legic Prime Tags (MIM22, MIM256, MIM1024)
-The virtual tag (and therefore the file to be saved) is always a MIM1024 tag.
 it's kinda interactive with following commands in three categories:
 
     Data I/O                    Segment Manipulation                   Token-Data
@@ -114,8 +108,8 @@ it's kinda interactive with following commands in three categories:
                                 ed => edit   Segment Data           tk => toggle KGH-Flag
       File I/O                  rs => remove Segment
   -----------------             cc => check  Segment-CRC
-  lf => load bin File           ck => check  KGH
-  sf => save eml/bin File       ds => dump   Segments
+  lf => load   File             ck => check  KGH
+  sf => save   File             ds => dump   Segments
   xf => xor to File
 
 
@@ -134,8 +128,8 @@ it's kinda interactive with following commands in three categories:
                           without the need of changing anything - MCD,MSN,MCC will be read from the tag
                           before and applied to the output.
 
- lf: 'load file'        - load a (xored) binary file (*.bin) from the local Filesystem into the 'virtual inTag'
- sf: 'save file'        - saves the 'virtual inTag' to the local Filesystem as eml and bin (xored with Tag-MCC)
+ lf: 'load file'        - load a (xored) file from the local Filesystem into the 'virtual inTag'
+ sf: 'save file'        - saves the 'virtual inTag' to the local Filesystem (xored with Tag-MCC)
  xf: 'xor file'         - saves the 'virtual inTag' to the local Filesystem (xored with choosen MCC - use '00' for plain values)
 
  ct: 'copy tag'         - copy the 'virtual Tag' to a second 'virtual TAG' - not usefull yet, but inernally needed
@@ -246,16 +240,6 @@ end
 -- table check helper
 function istable(t)
   return type(t) == 'table'
-end
-
----
--- To have two char string for a byte
-local function padString(str)
-  if (#str == 1) then
-    return '0'..str
-  end
-
-  return str
 end
 
 ---
@@ -403,15 +387,15 @@ end
 function bytesToTag(bytes, tag)
     if istable(tag) == false then return oops("tag is no table in: bytesToTag ("..type(tag)..")") end
 
-    tag.MCD =padString(bytes[1]);
-    tag.MSN0=padString(bytes[2]);
-    tag.MSN1=padString(bytes[3]);
-    tag.MSN2=padString(bytes[4]);
-    tag.MCC =padString(bytes[5]);
-    tag.DCFl=padString(bytes[6]);
-    tag.DCFh=padString(bytes[7]);
-    tag.raw =padString(bytes[8]);
-    tag.SSC =padString(bytes[9]);
+    tag.MCD =bytes[1];
+    tag.MSN0=bytes[2];
+    tag.MSN1=bytes[3];
+    tag.MSN2=bytes[4];
+    tag.MCC =bytes[5];
+    tag.DCFl=bytes[6];
+    tag.DCFh=bytes[7];
+    tag.raw =bytes[8];
+    tag.SSC =bytes[9];
     tag.Type=getTokenType(tag.DCFl);
     tag.OLE=bbit("0x"..tag.DCFl,7,1)
     tag.WRP=("%d"):format(bbit("0x"..bytes[8],0,4))
@@ -516,26 +500,42 @@ function tagToBytes(tag)
     return bytes
   end
 
+--- PM3 I/O ---
+---
+-- read from pm3 into virtual-tag
+function readFromPM3()
+  local tag, bytes, infile
+    infile="legic.temp"
+    -- core.console("hf legic reader")
+    -- core.console("hf legic esave "..infile)
+    core.console("hf legic dump o "..infile)
+    tag=readFile(infile..".bin")
+    return tag
+end
+
+local function padString(str)
+  if (#str == 1) then
+    return '0'..str
+  end
+
+  return str
+end
 
 ---
---- PM3 I/O ---
 -- write virtual Tag to real Tag
 function writeToTag(tag)
     local bytes
+    local filename = 'MylegicClone.hex'
     local taglen = 22
-    local writeDCF = false
-    if(utils.confirm(acred.."\nPlace the (empty) Tag onto the PM3\nand confirm writing to this Tag: "..acoff) == false) then
+    if(utils.confirm(acred.."\nplace the (empty) Tag onto the PM3\nand confirm writing to this Tag: "..acoff) == false) then
         return
-    end
-    if(utils.confirm(acred.."\nShould the decremental field (DCF) be written?: "..acoff) == true) then
-        writeDCF = true
     end
 
     -- get used bytes / tag-len
     if (istable(tag.SEG)) then
         if (istable(tag.Bck)) then
             for i=0, #tag.SEG do
-                taglen = taglen + tag.SEG[i] . len
+                taglen = taglen + tag.SEG[i] . len + 5
             end
         end
         local uid_old = tag.MCD..tag.MSN0..tag.MSN1..tag.MSN2
@@ -571,32 +571,37 @@ function writeToTag(tag)
             bytes[22] = calcMtCrc(bytes)
         end
         if (bytes) then
-            bytes = xorBytes(bytes,tag.MCC)
+            print("write temp-file '"..filename.."'")
+            print(accyan)
+            writeFile(bytes, filename..".bin")
+            print(acoff)
         end
     end
-
 
     -- write data to file
     if (taglen > 0) then
         WriteBytes = input(acyellow.."enter number of bytes to write?"..acoff, taglen)
+        -- load file into pm3-buffer
+        if (type(filename) ~= "string") then
+            filename = input(acyellow.."filename to load to pm3-buffer?"..acoff, "legic.temp")
+        end
+
+        cmd = 'hf legic eload 2 '..filename
+        core.console(cmd)
         -- write pm3-buffer to Tag
-        for i=1, WriteBytes do
-            if (i > 7) then
-                cmd = ("hf legic wrbl o %02x d %s "):format(i-1, padString(bytes[i]))
+        for i=0, WriteBytes do
+            if (i > 6) then
+                cmd = ("hf legic write o %x d %s "):format(i, padString(bytes[i]))
                 print(acgreen..cmd..acoff)
                 core.console(cmd)
                 core.clearCommandBuffer()
-            elseif (i == 7) then
-                if (writeDCF) then
-                    -- write DCF in reverse order (requires 'mosci-patch')
-                    cmd = ('hf legic wrbl o 05 d %s%s'):format(padString(bytes[i-1]), padString(bytes[i]))
-                    print(acgreen..cmd..acoff)
-                    core.console(cmd)
-                    core.clearCommandBuffer()
-                else
-                    print(acgreen.."skip byte 0x05-0x06 - DCF"..acoff)
-                end
             elseif (i == 6) then
+                -- write DCF in reverse order (requires 'mosci-patch')
+                cmd = ('hf legic write o 05 d %s%s'):format(padString(bytes[i-1]), padString(bytes[i]))
+                print(acgreen..cmd..acoff)
+                core.console(cmd)
+                core.clearCommandBuffer()
+            elseif (i == 5) then
                 print(acgreen.."skip byte 0x05 - will be written next step"..acoff)
             else
                 print(acgreen.."skip byte 0x00-0x04 - unwritable area"..acoff)
@@ -636,12 +641,12 @@ end
 local function save_BIN(data, filename)
     local outfile
     local counter = 1
-    local ext = ".bin"
-    local fn = filename..ext
+    local ext = filename:match("^.+(%..+)$") or ''
+    local fn = filename
 
     -- Make sure we don't overwrite a file
     while file_check(fn) do
-        fn = filename..ext:gsub(ext, "-"..tostring(counter)..ext)
+        fn = filename:gsub(ext, tostring(counter)..ext)
         counter = counter + 1
     end
 
@@ -659,27 +664,26 @@ end
 ---
 -- write bytes to file
 function writeFile(bytes, filename)
-    local emlext = ".eml"
-    if (filename ~= 'MyLegicClone') then
-        if (file_check(filename..emlext)) then
-            local answer = confirm("\nthe output-file "..filename..emlext.." already exists!\nthis will delete the previous content!\ncontinue?")
+    if (filename ~= 'MylegicClone.hex') then
+        if (file_check(filename)) then
+            local answer = confirm("\nthe output-file "..filename.." already exists!\nthis will delete the previous content!\ncontinue?")
             if not answer then return print("user abort") end
         end
     end
     local line
     local bcnt = 0
-    local fho, err = io.open(filename..emlext, "w")
+    local fho, err = io.open(filename, "w")
     if err then
-        return oops("OOps ... failed to open output-file ".. filename..emlext)
+        return oops("OOps ... failed to open output-file ".. filename)
     end
 
     bytes = xorBytes(bytes, bytes[5])
 
     for i = 1, #bytes do
         if (bcnt == 0) then
-            line = padString(bytes[i])
+            line = bytes[i]
         elseif (bcnt <= 7) then
-            line = line.." "..padString(bytes[i])
+            line = line.." "..bytes[i]
         end
         if (bcnt == 7) then
             -- write line to new file
@@ -695,28 +699,13 @@ function writeFile(bytes, filename)
     -- save binary
     local fn_bin, fn_bin_num = save_BIN(bytes, filename)
 
-    print("\nwrote "..acyellow..(#bytes * 3)..acoff.." bytes to " ..acyellow..filename..emlext..acoff)
+    print("\nwrote "..acyellow..(#bytes * 3)..acoff.." bytes to " ..acyellow..filename..acoff)
 
     if fn_bin and fn_bin_num then
         print("\nwrote "..acyellow..fn_bin_num..acoff.." bytes to BINARY file "..acyellow..fn_bin..acoff)
     end
 
     return true
-end
-
----
--- read from pm3 into virtual-tag
-function readFromPM3()
-  local tag, bytes, infile
-    --infile="legic.temp"
-    infile=os.tmpname()
-    core.console("hf legic dump f "..infile)
-    tag=readFile(infile..".bin")
-    os.remove(infile)
-    os.remove(infile..".bin")
-    os.remove(infile..".eml")
-    os.remove(infile..".json")
-    return tag
 end
 
 --- Map related ---
@@ -2276,8 +2265,8 @@ function modifyHelp()
                                      ed => edit   Segment Data      tk => toggle KGH-Flag
          File I/O                    rs => remove Segment
      -----------------               cc => check  Segment-CRC
-     lf => load bin File             ck => check  KGH
-     sf => save eml/bin File         ds => dump   Segments
+     lf => load   File               ck => check  KGH
+     sf => save   File               ds => dump   Segments
      xf => xor to File
 
 
@@ -2363,10 +2352,10 @@ function modifyMode()
     -- save values of mainTAG to a file (xored with MCC of mainTAG)
     ["sf"] = function(x)
               if istable(inTAG) then
-                outfile = input("enter filename:", "hf-legic-"..inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2)
+                outfile = input("enter filename:", "legic.temp")
                 bytes = tagToBytes(inTAG)
                 --bytes=xorBytes(bytes, inTAG.MCC)
-                if (bytes) then
+                if bytes then
                   writeFile(bytes, outfile)
                 end
                end
@@ -2375,7 +2364,7 @@ function modifyMode()
     -- save values of mainTAG to a file (xored with 'specific' MCC)
     ["xf"] = function(x)
               if istable(inTAG) then
-                outfile = input("enter filename:", "hf-legic-"..inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2)
+                outfile = input("enter filename:", "legic.temp")
                 crc = input("enter new crc: ('00' for a plain dump)", inTAG.MCC)
                 print("obfuscate with: "..crc)
                 bytes=tagToBytes(inTAG)

@@ -44,7 +44,8 @@
 #include "emv/emvjson.h"
 
 // Load all settings into memory (struct)
-int settings_load (void) {
+int settings_load (void)
+{
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
     uint8_t dummyData = 0x00;
@@ -67,27 +68,25 @@ int settings_load (void) {
         int  window_ypos;
         int  window_hsize;
         int  window_wsize;
-        bool use_emojis
-        bool use_hints
     */
-    printf (" Settings Version : [%s]\n", mySettings.version);
-    printf (" os_windows_usecolor (bool) : [%d]\n", mySettings.os_windows_usecolor);
-    printf (" os_windows_useAnsicolor (bool) : [%d]\n", mySettings.os_windows_useansicolor);
-    printf (" window_xpos (int)  : [%d]\n", mySettings.window_xpos);
-    printf (" window_ypos (int)  : [%d]\n", mySettings.window_ypos);
-    printf (" window_hsize (int) : [%d]\n", mySettings.window_hsize);
-    printf (" window_wsize (int) : [%d]\n", mySettings.window_wsize);
-    printf (" use emoji (bool) : [%d]\n", mySettings.use_emojis);
-    printf (" use hints (bool) : [%d]\n", mySettings.use_hints);
+    printf (" Settings Version : [%s]\n",mySettings.version);
+    printf (" os_windows_usecolor (bool) : [%d]\n",mySettings.os_windows_usecolor);
+    printf (" os_windows_useAnsicolor (bool) : [%d]\n",mySettings.os_windows_useansicolor);
+    printf (" window_xpos (int)  : [%d]\n",mySettings.window_xpos);
+    printf (" window_ypos (int)  : [%d]\n",mySettings.window_ypos);
+    printf (" window_hsize (int) : [%d]\n",mySettings.window_hsize);
+    printf (" window_wsize (int) : [%d]\n",mySettings.window_wsize);
+
     return PM3_SUCCESS;
 }
 
 // Save all settings from memory (struct) to file
-int settings_save(void) {
+int settings_save (void)
+{
     // Note sure if backup has value ?
     char backupFilename[500];
 
-    snprintf(backupFilename, sizeof(backupFilename),"%s.bak",settingsFilename);
+    snprintf (backupFilename,sizeof(backupFilename),"%s.bak",settingsFilename);
 
     if (fileExists (backupFilename)) {
         if (remove (backupFilename) != 0) { 
@@ -106,14 +105,18 @@ int settings_save(void) {
     uint8_t dummyData = 0x00;
     size_t dummyDL = 0x00;
     
+    // int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen);
+
     if (saveFileJSON(settingsFilename, jsfSettings, &dummyData, dummyDL) == PM3_SUCCESS)
         PrintAndLogEx (NORMAL, "settings have been saved to \"%s\"",settingsFilename);
     
     return PM3_SUCCESS;
 }
 
-void settings_save_callback(json_t *root) {
-       
+void settings_save_callback (json_t *root)
+{
+      //      extern settings_t mySettings;
+        
             printf ("==> Save Settings\n");
             //JsonSaveStr(root, "FileType", "settings");
             //JsonSaveStr (root,"Test1.Test2","test settings");
@@ -128,24 +131,23 @@ void settings_save_callback(json_t *root) {
             */
             JsonSaveStr     (root,"FileType","settings");
             JsonSaveStr     (root,"version","1.0 Nov 2019");//mySettings.version);
-            JsonSaveBoolean (root,"os.windows.useColor", mySettings.os_windows_usecolor);
-            JsonSaveBoolean (root,"os.windows.useAnsiColor", mySettings.os_windows_useansicolor);
-            JsonSaveInt     (root,"window.xpos", mySettings.window_xpos);
-            JsonSaveInt     (root,"window.ypos", mySettings.window_ypos);
-            JsonSaveInt     (root,"window.hsize", mySettings.window_hsize);
-            JsonSaveInt     (root,"window.wsize", mySettings.window_wsize);    
-            JsonSaveBoolean (root,"client.useEmojis", mySettings.use_emojis);
-            JsonSaveBoolean (root,"client.useHints", mySettings.use_hints);
+            JsonSaveBoolean (root,"os.windows.useColor",mySettings.os_windows_usecolor);
+            JsonSaveBoolean (root,"os.windows.useAnsiColor",mySettings.os_windows_useansicolor);
+            JsonSaveInt     (root,"window.xpos",mySettings.window_xpos);
+            JsonSaveInt     (root,"window.ypos",mySettings.window_ypos);
+            JsonSaveInt     (root,"window.hsize",mySettings.window_hsize);
+            JsonSaveInt     (root,"window.wsize",mySettings.window_wsize);    
 }
 
-void settings_load_callback(json_t *root) {
-
+void settings_load_callback (json_t *root)
+{
+//     extern settings_t mySettings;
     json_error_t up_error = {0};
     int b1;
     int i1;
     const char *s1;
 
-    if (json_unpack_ex(root, &up_error , 0, "{s:s}","version", &s1) == 0)
+    if (json_unpack_ex(root, &up_error , 0, "{s:s}","version",&s1) == 0)
         strncpy (mySettings.version,s1,sizeof (mySettings.version) - 1);
     else
         strncpy (mySettings.version,"unknown",sizeof (mySettings.version) - 1);
@@ -178,17 +180,5 @@ void settings_load_callback(json_t *root) {
         mySettings.window_wsize = i1;
     else // default 
         mySettings.window_wsize = 0;
-    
-    // Use EMOJIS
-    if (json_unpack_ex(root,&up_error, 0, "{s:b}","client.useEmojis",&b1) == 0) 
-        mySettings.use_emojis = b1;
-    else // default 
-        mySettings.use_emojis = false;
-    
-    // Use Hints
-    if (json_unpack_ex(root,&up_error, 0, "{s:b}","client.useHints",&b1) == 0) 
-        mySettings.use_hints = b1;
-    else // default 
-        mySettings.use_hints = false;
 
 }

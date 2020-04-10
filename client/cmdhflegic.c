@@ -658,16 +658,6 @@ static int CmdLegicWrbl(const char *Cmd) {
             }
         }
     }
-
-    // OUT-OF-BOUNDS checks
-    // UID 4+1 bytes can't be written to.
-    if (offset < 5) {
-        if (data)
-            free(data);
-        PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
-        return PM3_EOUTOFBOUND;
-    }
-    
     //Validations
     if (errors || cmdp == 0) {
         if (data)
@@ -684,7 +674,14 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     legic_print_type(card.cardsize, 0);
 
-    if (len + offset > card.cardsize) {
+    // OUT-OF-BOUNDS checks
+    // UID 4+1 bytes can't be written to.
+    if (offset < 5) {
+        PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
+        return PM3_EOUTOFBOUND;
+    }
+
+    if (len + offset >= card.cardsize) {
         PrintAndLogEx(WARNING, "Out-of-bounds, Cardsize = %d, [offset+len = %d ]", card.cardsize, len + offset);
         return PM3_EOUTOFBOUND;
     }

@@ -57,7 +57,6 @@ struct tlvdb *GetPANFromTrack2(const struct tlv *track2);
 struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2);
 
 void SetAPDULogging(bool logging);
-bool GetAPDULogging(void);
 
 // exchange
 int EMVExchange(EMVCommandChannel channel, bool LeaveFieldON, sAPDU apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);

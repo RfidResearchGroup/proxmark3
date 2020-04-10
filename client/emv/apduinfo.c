@@ -503,17 +503,7 @@ void APDUPrint(APDUStruct apdu) {
 
 void APDUPrintEx(APDUStruct apdu, size_t maxdatalen) {
     PrintAndLogEx(INFO, "APDU: %scase=0x%02x cla=0x%02x ins=0x%02x p1=0x%02x p2=0x%02x Lc=0x%02x(%d) Le=0x%02x(%d)",
-                      apdu.extended_apdu ? "[e]" : "",
-                      apdu.case_type,
-                      apdu.cla,
-                      apdu.ins,
-                      apdu.p1,
-                      apdu.p2,
-                      apdu.lc,
-                      apdu.lc,
-                      apdu.le,
-                      apdu.le
-                  );
+                  apdu.extended_apdu ? "[e]" : "", apdu.case_type, apdu.cla, apdu.ins, apdu.p1, apdu.p2, apdu.lc, apdu.lc, apdu.le, apdu.le);
     if (maxdatalen > 0)
         PrintAndLogEx(INFO, "data: %s%s", sprint_hex(apdu.data, MIN(apdu.lc, maxdatalen)), apdu.lc > maxdatalen ? "..." : "");
 }

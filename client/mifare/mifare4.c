@@ -429,46 +429,6 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     return 0;
 }
 
-int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    uint8_t c[] = {0x3c, 0x00};
-    return intExchangeRAW14aPlus(c, sizeof(c), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
-}
-
-int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    uint8_t tmp[20] = {0};
-    uint8_t c[] = {0x60};
-    int res = intExchangeRAW14aPlus(c, sizeof(c), activateField, true, tmp, maxdataoutlen, dataoutlen);
-    if (res != 0) {
-        DropField();
-        *dataoutlen = 0;
-        return res;
-    }
-
-    memcpy(dataout, tmp + 1, (*dataoutlen - 3));
-
-    *dataoutlen = 0;
-    // MFDES_ADDITIONAL_FRAME
-    if (tmp[0] == 0xAF) {
-        c[0] = 0xAF;      
-        res = intExchangeRAW14aPlus(c, sizeof(c), false, true, tmp, maxdataoutlen, dataoutlen);
-        if (res == 0) {
-            
-            memcpy(dataout + 7, tmp + 1, (*dataoutlen - 3));
-            
-            // MFDES_ADDITIONAL_FRAME
-            res = intExchangeRAW14aPlus(c, sizeof(c), false, false, tmp, maxdataoutlen, dataoutlen);
-            if (res == 0) {
-                if (tmp[0] == 0x90) {
-                    memcpy(dataout + 7 + 7, tmp + 1, (*dataoutlen - 3));
-                    *dataoutlen = 28;
-                }
-            }
-        }
-    }
-    DropField();
-    return res;
-}
-
 // Mifare Memory Structure: up to 32 Sectors with 4 blocks each (1k and 2k cards),
 // plus evtl. 8 sectors with 16 blocks each (4k cards)
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo) {

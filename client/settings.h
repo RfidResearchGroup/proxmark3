@@ -24,8 +24,6 @@ typedef struct {
         int  window_ypos;
         int  window_hsize;
         int  window_wsize;
-        bool use_emojis;
-        bool use_hints;        
 } settings_t;
 
 // Settings struct so as to be available to other modules by including settings.h

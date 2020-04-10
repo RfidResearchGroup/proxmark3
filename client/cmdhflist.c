@@ -674,8 +674,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
-    if (applyIso14443a(exp, size, cmd, cmdsize) == 0) {
-       
+    if (!applyIso14443a(exp, size, cmd, cmdsize)) {
         // S-block 11xxx010
         if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
             switch ((cmd[0] & 0x30)) {
@@ -699,132 +698,123 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         }
         // I-block 000xCN1x
         else if ((cmd[0] & 0xC0) == 0x00) {
-
             // PCB [CID] [NAD] [INF] CRC CRC
             int pos = 1;
             if ((cmd[0] & 0x08) == 0x08)  // cid byte following
-                pos++;
-
+                pos = pos + 1;
             if ((cmd[0] & 0x04) == 0x04)  // nad byte following
-                pos++;
-                
-            for (uint8_t i = 0; i < 2; i++, pos++) {
-           
-                switch (cmd[pos]) {
-                    case MFDES_CREATE_APPLICATION:
-                        snprintf(exp, size, "CREATE APPLICATION");
-                        break;
-                    case MFDES_DELETE_APPLICATION:
-                        snprintf(exp, size, "DELETE APPLICATION");
-                        break;
-                    case MFDES_GET_APPLICATION_IDS:
-                        snprintf(exp, size, "GET APPLICATION IDS");
-                        break;
-                    case MFDES_SELECT_APPLICATION:
-                        snprintf(exp, size, "SELECT APPLICATION");
-                        break;
-                    case MFDES_FORMAT_PICC:
-                        snprintf(exp, size, "FORMAT PICC");
-                        break;
-                    case MFDES_GET_VERSION:
-                        snprintf(exp, size, "GET VERSION");
-                        break;
-                    case MFDES_READ_DATA:
-                        snprintf(exp, size, "READ DATA");
-                        break;
-                    case MFDES_WRITE_DATA:
-                        snprintf(exp, size, "WRITE DATA");
-                        break;
-                    case MFDES_GET_VALUE:
-                        snprintf(exp, size, "GET VALUE");
-                        break;
-                    case MFDES_CREDIT:
-                        snprintf(exp, size, "CREDIT");
-                        break;
-                    case MFDES_DEBIT:
-                        snprintf(exp, size, "DEBIT");
-                        break;
-                    case MFDES_LIMITED_CREDIT:
-                        snprintf(exp, size, "LIMITED CREDIT");
-                        break;
-                    case MFDES_WRITE_RECORD:
-                        snprintf(exp, size, "WRITE RECORD");
-                        break;
-                    case MFDES_READ_RECORDS:
-                        snprintf(exp, size, "READ RECORDS");
-                        break;
-                    case MFDES_CLEAR_RECORD_FILE:
-                        snprintf(exp, size, "CLEAR RECORD FILE");
-                        break;
-                    case MFDES_COMMIT_TRANSACTION:
-                        snprintf(exp, size, "COMMIT TRANSACTION");
-                        break;
-                    case MFDES_ABORT_TRANSACTION:
-                        snprintf(exp, size, "ABORT TRANSACTION");
-                        break;
-                    case MFDES_GET_FREE_MEMORY:
-                        snprintf(exp, size, "GET FREE MEMORY");
-                        break;
-                    case MFDES_GET_FILE_IDS:
-                        snprintf(exp, size, "GET FILE IDS");
-                        break;
-                    case MFDES_GET_DF_NAMES:
-                        snprintf(exp, size, "GET DF NAMES");
-                        break;
-                    case MFDES_GET_ISOFILE_IDS:
-                        snprintf(exp, size, "GET ISOFILE IDS");
-                        break;
-                    case MFDES_GET_FILE_SETTINGS:
-                        snprintf(exp, size, "GET FILE SETTINGS");
-                        break;
-                    case MFDES_CHANGE_FILE_SETTINGS:
-                        snprintf(exp, size, "CHANGE FILE SETTINGS");
-                        break;
-                    case MFDES_CREATE_STD_DATA_FILE:
-                        snprintf(exp, size, "CREATE STD DATA FILE");
-                        break;
-                    case MFDES_CREATE_BACKUP_DATA_FILE:
-                        snprintf(exp, size, "CREATE BACKUP DATA FILE");
-                        break;
-                    case MFDES_CREATE_VALUE_FILE:
-                        snprintf(exp, size, "CREATE VALUE FILE");
-                        break;
-                    case MFDES_CREATE_LINEAR_RECORD_FILE:
-                        snprintf(exp, size, "CREATE LINEAR RECORD FILE");
-                        break;
-                    case MFDES_CREATE_CYCLIC_RECORD_FILE:
-                        snprintf(exp, size, "CREATE CYCLIC RECORD FILE");
-                        break;
-                    case MFDES_DELETE_FILE:
-                        snprintf(exp, size, "DELETE FILE");
-                        break;
-                    case MFDES_AUTHENTICATE:
-                        snprintf(exp, size, "AUTH NATIVE (keyNo %d)", cmd[pos + 1]);
-                        break;  // AUTHENTICATE_NATIVE
-                    case MFDES_AUTHENTICATE_ISO:
-                        snprintf(exp, size, "AUTH ISO (keyNo %d)", cmd[pos + 1]);
-                        break;  // AUTHENTICATE_STANDARD
-                    case MFDES_AUTHENTICATE_AES:
-                        snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos + 1]);
-                        break;
-                    case MFDES_CHANGE_KEY_SETTINGS:
-                        snprintf(exp, size, "CHANGE KEY SETTINGS");
-                        break;
-                    case MFDES_GET_KEY_SETTINGS:
-                        snprintf(exp, size, "GET KEY SETTINGS");
-                        break;
-                    case MFDES_CHANGE_KEY:
-                        snprintf(exp, size, "CHANGE KEY");
-                        break;
-                    case MFDES_GET_KEY_VERSION:
-                        snprintf(exp, size, "GET KEY VERSION");
-                        break;
-                    case MFDES_AUTHENTICATION_FRAME:
-                        snprintf(exp, size, "AUTH FRAME / NEXT FRAME");
-                        break;
-                    default:
-                        break;
-                }
+                pos = pos + 1;
+            switch (cmd[pos]) {
+                case MFDES_CREATE_APPLICATION:
+                    snprintf(exp, size, "CREATE APPLICATION");
+                    break;
+                case MFDES_DELETE_APPLICATION:
+                    snprintf(exp, size, "DELETE APPLICATION");
+                    break;
+                case MFDES_GET_APPLICATION_IDS:
+                    snprintf(exp, size, "GET APPLICATION IDS");
+                    break;
+                case MFDES_SELECT_APPLICATION:
+                    snprintf(exp, size, "SELECT APPLICATION");
+                    break;
+                case MFDES_FORMAT_PICC:
+                    snprintf(exp, size, "FORMAT PICC");
+                    break;
+                case MFDES_GET_VERSION:
+                    snprintf(exp, size, "GET VERSION");
+                    break;
+                case MFDES_READ_DATA:
+                    snprintf(exp, size, "READ DATA");
+                    break;
+                case MFDES_WRITE_DATA:
+                    snprintf(exp, size, "WRITE DATA");
+                    break;
+                case MFDES_GET_VALUE:
+                    snprintf(exp, size, "GET VALUE");
+                    break;
+                case MFDES_CREDIT:
+                    snprintf(exp, size, "CREDIT");
+                    break;
+                case MFDES_DEBIT:
+                    snprintf(exp, size, "DEBIT");
+                    break;
+                case MFDES_LIMITED_CREDIT:
+                    snprintf(exp, size, "LIMITED CREDIT");
+                    break;
+                case MFDES_WRITE_RECORD:
+                    snprintf(exp, size, "WRITE RECORD");
+                    break;
+                case MFDES_READ_RECORDS:
+                    snprintf(exp, size, "READ RECORDS");
+                    break;
+                case MFDES_CLEAR_RECORD_FILE:
+                    snprintf(exp, size, "CLEAR RECORD FILE");
+                    break;
+                case MFDES_COMMIT_TRANSACTION:
+                    snprintf(exp, size, "COMMIT TRANSACTION");
+                    break;
+                case MFDES_ABORT_TRANSACTION:
+                    snprintf(exp, size, "ABORT TRANSACTION");
+                    break;
+                case MFDES_GET_FREE_MEMORY:
+                    snprintf(exp, size, "GET FREE MEMORY");
+                    break;
+                case MFDES_GET_FILE_IDS:
+                    snprintf(exp, size, "GET FILE IDS");
+                    break;
+                case MFDES_GET_ISOFILE_IDS:
+                    snprintf(exp, size, "GET ISOFILE IDS");
+                    break;
+                case MFDES_GET_FILE_SETTINGS:
+                    snprintf(exp, size, "GET FILE SETTINGS");
+                    break;
+                case MFDES_CHANGE_FILE_SETTINGS:
+                    snprintf(exp, size, "CHANGE FILE SETTINGS");
+                    break;
+                case MFDES_CREATE_STD_DATA_FILE:
+                    snprintf(exp, size, "CREATE STD DATA FILE");
+                    break;
+                case MFDES_CREATE_BACKUP_DATA_FILE:
+                    snprintf(exp, size, "CREATE BACKUP DATA FILE");
+                    break;
+                case MFDES_CREATE_VALUE_FILE:
+                    snprintf(exp, size, "CREATE VALUE FILE");
+                    break;
+                case MFDES_CREATE_LINEAR_RECORD_FILE:
+                    snprintf(exp, size, "CREATE LINEAR RECORD FILE");
+                    break;
+                case MFDES_CREATE_CYCLIC_RECORD_FILE:
+                    snprintf(exp, size, "CREATE CYCLIC RECORD FILE");
+                    break;
+                case MFDES_DELETE_FILE:
+                    snprintf(exp, size, "DELETE FILE");
+                    break;
+                case MFDES_AUTHENTICATE:
+                    snprintf(exp, size, "AUTH NATIVE (keyNo %d)", cmd[pos + 1]);
+                    break;  // AUTHENTICATE_NATIVE
+                case MFDES_AUTHENTICATE_ISO:
+                    snprintf(exp, size, "AUTH ISO (keyNo %d)", cmd[pos + 1]);
+                    break;  // AUTHENTICATE_STANDARD
+                case MFDES_AUTHENTICATE_AES:
+                    snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos + 1]);
+                    break;
+                case MFDES_CHANGE_KEY_SETTINGS:
+                    snprintf(exp, size, "CHANGE KEY SETTINGS");
+                    break;
+                case MFDES_GET_KEY_SETTINGS:
+                    snprintf(exp, size, "GET KEY SETTINGS");
+                    break;
+                case MFDES_CHANGE_KEY:
+                    snprintf(exp, size, "CHANGE KEY");
+                    break;
+                case MFDES_GET_KEY_VERSION:
+                    snprintf(exp, size, "GET KEY VERSION");
+                    break;
+                case MFDES_AUTHENTICATION_FRAME:
+                    snprintf(exp, size, "AUTH FRAME / NEXT FRAME");
+                    break;
+                default:
+                    break;
             }
         } else {
             // anything else

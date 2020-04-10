@@ -621,7 +621,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
     set_tracelen(BigBuf_max_traceLen());
 
     Dbprintf("Felica sniffing done, tracelen: %i, use hf list felica for annotations", BigBuf_get_traceLen());
-    reply_mix(CMD_ACK, 1, numbts, 0, 0, 0);
+    reply_old(CMD_ACK, 1, numbts, 0, 0, 0);
     LED_D_OFF();
 }
 
@@ -812,5 +812,5 @@ void felica_dump_lite_s() {
 
     //setting tracelen - important!  it was set by buffer overflow before
     set_tracelen(cnt);
-    reply_mix(CMD_ACK, isOK, cnt, 0, 0, 0);
+    reply_old(CMD_ACK, isOK, cnt, 0, 0, 0);
 }

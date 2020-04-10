@@ -193,7 +193,7 @@ static int usage_hf_14a_sim(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a sim t 1 u 11223344556677"));
 //  PrintAndLogEx(NORMAL, "          hf 14a sim t 1 u 11223445566778899AA\n");
-    return PM3_SUCCESS;
+    return 0;
 }
 static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer.");
@@ -203,7 +203,7 @@ static int usage_hf_14a_sniff(void) {
     PrintAndLogEx(NORMAL, "r - triggered by first 7-bit request from reader (REQ,WUP,...)");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("        hf 14a sniff c r"));
-    return PM3_SUCCESS;
+    return 0;
 }
 static int usage_hf_14a_raw(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a raw [-h] [-r] [-c] [-p] [-a] [-T] [-t] <milliseconds> [-b] <number of bits>  <0A 0B 0C ... hex>");
@@ -217,7 +217,7 @@ static int usage_hf_14a_raw(void) {
     PrintAndLogEx(NORMAL, "       -t    timeout in ms");
     PrintAndLogEx(NORMAL, "       -T    use Topaz protocol to send command");
     PrintAndLogEx(NORMAL, "       -3    ISO14443-3 select only (skip RATS)");
-    return PM3_SUCCESS;
+    return 0;
 }
 static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf 14a reader [k|s|x] [3]");
@@ -225,7 +225,7 @@ static int usage_hf_14a_reader(void) {
     PrintAndLogEx(NORMAL, "       s    silent (no messages)");
     PrintAndLogEx(NORMAL, "       x    just drop the signal field");
     PrintAndLogEx(NORMAL, "       3    ISO14443-3 select only (skip RATS)");
-    return PM3_SUCCESS;
+    return 0;
 }
 
 static int CmdHF14AList(const char *Cmd) {
@@ -580,7 +580,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
             // get ATS
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
-            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
+            SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, 2);
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                 if (!silentMode) PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
                 return 1;
@@ -674,7 +674,7 @@ static int SelectCard14443_4(bool disconnect, iso14a_card_select_t *card) {
     if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
         // get ATS
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
+        SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
         if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
             PrintAndLogEx(ERR, "Proxmark3 connection timeout.");
             return 1;
@@ -1237,7 +1237,7 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-    return PM3_SUCCESS;
+    return 0;
 }
 
 int CmdHF14A(const char *Cmd) {
@@ -1246,92 +1246,89 @@ int CmdHF14A(const char *Cmd) {
 }
 
 static void printTag(char *tag) {
-    PrintAndLogEx(SUCCESS, "POSSIBLE TYPE:" _YELLOW_("    %s"), tag);
+    PrintAndLogEx(SUCCESS, _YELLOW_("    %s"), tag);
 }
 
 
 typedef enum {
-    MTNONE = 0,
-    MTCLASSIC = 1,
-    MTMINI = 2,
-    MTDESFIRE = 4,
-    MTPLUS = 8,
-    MTULTRALIGHT = 16,
-    MTOTHER = 32
-} nxp_mifare_type_t;
+    mtNone = 0,
+    mtClassic = 1,
+    mtMini = 2,
+    mtDESFire = 4,
+    mtPlus = 8,
+    mtUltralight = 16,
+    mtOther = 32
+} nxp_mifare_type;
 
 // According to NXP AN10833 Rev 3.6 MIFARE Type Identification, Table  6
 int detect_nxp_card(uint8_t sak, uint16_t atqa) {
-    int type = MTNONE;
+    int type = mtNone;
 
     if (sak == 0x00) {
-        printTag("NTAG 20x / 21x / 21x TT / I2C plus");
-        printTag("MIFARE Ultralight / C / EV1 / Nano");
-        type = MTULTRALIGHT;
+        printTag("MIFARE Ultralight C / Ultralight CL2");
+        type = mtUltralight;
     }
 
     if (sak == 0x01) {
         printTag("TNP3xxx (Activision Game Appliance)");
-        type = MTCLASSIC;
+        type = mtOther;
     }
     if ((sak & 0x04) == 0x04) {
-        printTag("Any MIFARE CL1 / NTAG424DNA");
-        type |= MTDESFIRE;
+        printTag("Any MIFARE CL1");
+        type |= mtDESFire;
     }
     if ((sak & 0x08) == 0x08) {
         printTag("MIFARE Classic 1K / Classic 1K CL2");
         printTag("MIFARE Plus 2K / Plus EV1 2K");
         printTag("MIFARE Plus CL2 2K / Plus CL2 EV1 2K");
-        type |= MTCLASSIC;
-        type |= MTPLUS;
+        type |= mtClassic;
+        type |= mtPlus;
     }
     if ((sak & 0x09) == 0x09) {
         printTag("MIFARE Mini 0.3K / Mini CL2 0.3K");
-        type |= MTMINI;
+        type |= mtMini;
     }
     if ((sak & 0x10) == 0x10) {
         printTag("MIFARE Plus 2K / Plus CL2 2K");
-        type |= MTPLUS;
+        type |= mtPlus;
     }
     if ((sak & 0x11) == 0x11) {
         printTag("MIFARE Plus 4K / Plus CL2 4K");
-        type |= MTPLUS;
+        type |= mtPlus;
     }
     if ((sak & 0x18) == 0x18) {
         if (atqa == 0x0042) {
             printTag("MIFARE Plus 4K / Plus EV1 4K");
             printTag("MIFARE Plus CL2 4K / Plus CL2 EV1 4K");
-            type |= MTPLUS;
+            type |= mtPlus;
         } else {
             printTag("MIFARE Classic 4K / Classic 4K CL2");
-            type |= MTCLASSIC;
+            type |= mtClassic;
         }
 
     }
     if ((sak & 0x20) == 0x20) {
         if (atqa == 0x0344) {
             printTag("MIFARE DESFire EV1 2K/4K/8K / DESFire EV1 CL2 2K/4K/8K");
-            printTag("MIFARE NTAG424DNA");
-            type |= MTDESFIRE;
-        } else if (atqa == 0x0304) {
-            printTag("MIFARE NTAG424DNA (Random ID feature)");
-            type |= MTDESFIRE;
+            type |= mtDESFire;
         } else {
-            printTag("MIFARE Plus 2K/4K / Plus EV1 2K/4K");
-            printTag("MIFARE Plus CL2 2K/4K / Plus CL2 EV1 2K/4K");
-            type |= MTPLUS;
+            printTag("MIFARE Plus 2K / Plus EV1 2K");
+            printTag("MIFARE Plus 4K / Plus EV1 4K");
+            printTag("MIFARE Plus CL2 2K / Plus CL2 EV1 4K");
+            printTag("MIFARE Plus CL2 4K / Plus CL2 EV1 4K");
+            type |= mtPlus;
         }
     }
     if ((sak & 0x24) == 0x24) {
         if (atqa == 0x0344) {
             printTag("MIFARE DESFire CL1 / DESFire EV1 CL1");
-            type |= MTDESFIRE;
+            type |= mtDESFire;
         }
     }
     if ((sak & 0x28) == 0x28) {
         if (atqa == 0x0344) {
             printTag("MIFARE DESFire CL1 / DESFire EV1 CL1");
-            type |= MTDESFIRE;
+            type |= mtDESFire;
         }
     }
     return type;
@@ -1345,6 +1342,16 @@ typedef struct {
 
 const uidname uidmap[] = {
     // UID0, UID1, TEXT
+    {0x02, 0x00, "SR176"},
+    {0x02, 0x03, "SRIX4K"},
+    {0x02, 0x0C, "SRT512"},
+    {0x02, 0x0F, "SRI2K"},
+    {0x02, 0x1B, "25TB512-AC"},
+    {0x02, 0x3D, "SRIX4K"},
+    {0x02, 0x3F, "25TB02K"},
+    {0x02, 0x4D, "SRIX512"},
+    {0x02, 0x6D, "SRI512"},
+    {0x02, 0x7D, "SRI4K"},
     {0x02, 0x84, "M24SR64-Y"},
     {0x02, 0xA3, "25TA02KB-P"},
     {0x02, 0xC4, "25TA64K"},
@@ -1415,33 +1422,42 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isMifareDESFire = false;
     bool isMifarePlus = false;
     bool isMifareUltralight = false;
-    int nxptype = MTNONE;
+    int nxptype = mtNone;
     // Double & triple sized UID, can be mapped to a manufacturer.
     if (card.uidlen <= 4) {
         nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
-        
-        isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
-        isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
-        isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
-        isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
-       
-        if ((nxptype & MTOTHER) == MTOTHER)
-            isMifareClassic = true;
+        if ((nxptype & mtClassic) == mtClassic) isMifareClassic = true;
+        else isMifareClassic = false;
+        if ((nxptype & mtDESFire) == mtDESFire) {
+            isMifareDESFire = true;
+        } else {
+            isMifareDESFire = false;
+        }
+        if ((nxptype & mtPlus) == mtPlus) isMifarePlus = true;
+        else isMifarePlus = false;
+        if ((nxptype & mtUltralight) == mtUltralight) isMifareUltralight = true;
+        else isMifareUltralight = false;
+        if ((nxptype & mtOther) == mtOther) isMifareClassic = true;
     }
     if (card.uidlen > 4) {
-        PrintAndLogEx(SUCCESS, "MANUFACTURER:    " _YELLOW_("%s"), getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
+
+        PrintAndLogEx(SUCCESS, "Possible Type:");
         switch (card.uid[0]) {
             case 0x04: // NXP
                 nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
-                
-                isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
-                isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
-                isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
-                isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
-                
-                if ((nxptype & MTOTHER) == MTOTHER) 
-                    isMifareClassic = true;
-
+                if ((nxptype & mtClassic) == mtClassic) isMifareClassic = true;
+                else isMifareClassic = false;
+                if ((nxptype & mtDESFire) == mtDESFire) {
+                    isMifareDESFire = true;
+                } else {
+                    isMifareDESFire = false;
+                }
+                if ((nxptype & mtPlus) == mtPlus) isMifarePlus = true;
+                else isMifarePlus = false;
+                if ((nxptype & mtUltralight) == mtUltralight) isMifareUltralight = true;
+                else isMifareUltralight = false;
+                if ((nxptype & mtOther) == mtOther) isMifareClassic = true;
                 break;
             case 0x05: // Infineon
                 if ((card.uid[1] & 0xF0) == 0x10) {
@@ -1462,7 +1478,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             default:
                 getTagLabel(card.uid[0], card.uid[1]);
                 switch (card.sak) {
-                    case 0x00: {
+                    case 0x00:
                         isMifareClassic = false;
 
                         // ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
@@ -1491,30 +1507,23 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                             return select_status;
                         }
                         break;
-                    }
-                    case 0x0A: {
+                    case 0x0A:
                         printTag("FM11RF005SH (Shanghai Metro)");
                         break;
-                    }
-                    case 0x20: {
+                    case 0x20:
                         printTag("JCOP 31/41");
                         break;
-                    }
-                    case 0x28: {
+                    case 0x28:
                         printTag("JCOP31 or JCOP41 v2.3.1");
                         break;
-                    }
-                    case 0x38: {
+                    case 0x38:
                         printTag("Nokia 6212 or 6131");
                         break;
-                    }
-                    case 0x98: {
+                    case 0x98:
                         printTag("Gemplus MPCOS");
                         break;
-                    }
-                    default: {
+                    default:
                         break;
-                    }
                 }
                 break;
         }
@@ -1756,7 +1765,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
     }
 
-    if (isMifareClassic || isMifareUltralight) {
+    if (((card.sak & 0x08) == 0x08) || ((card.sak & 0x18) == 0x18)) {
         detect_classic_magic();
 
         if (isMifareClassic) {
@@ -1766,7 +1775,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             else if (res == 0)
                 PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
             else
-                PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
+                PrintAndLogEx(FAILED, "prng detection:  " _RED_("fail"));
 
             if (do_nack_test)
                 detect_classic_nackbug(false);
@@ -1780,6 +1789,5 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
     }
 
-    DropField();
     return select_status;
 }

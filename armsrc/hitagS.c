@@ -1407,7 +1407,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd) {
     set_tracing(false);
 
     lf_finalize();
-    reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
+    reply_old(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }
 
 /*
@@ -1624,7 +1624,7 @@ void WritePageHitagS(hitag_function htf, hitag_data *htd, int page) {
 
     lf_finalize();
 
-    reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
+    reply_old(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }
 
 /*
@@ -1860,5 +1860,5 @@ void check_challenges(bool file_given, uint8_t *data) {
 
     set_tracing(false);
     lf_finalize();
-    reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
+    reply_old(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }

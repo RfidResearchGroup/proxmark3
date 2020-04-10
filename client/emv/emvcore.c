@@ -136,10 +136,6 @@ void SetAPDULogging(bool logging) {
     APDULogging = logging;
 }
 
-bool GetAPDULogging(void) {
-    return APDULogging;
-}
-
 enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen) {
     char buf[100] = {0};
     if (AIDlen < 1)

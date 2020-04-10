@@ -618,11 +618,6 @@ typedef struct {
 #define PM3_EOUTOFBOUND       -17
 // exchange with card error             client/pm3: error when cant get answer from card or got an incorrect answer
 #define PM3_ECARDEXCHANGE     -18
-
-// Failed to create APDU,
-#define PM3_EAPDU_ENCODEFAIL  -19
-// APDU responded with a failure code
-#define PM3_EAPDU_FAIL        -20
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
