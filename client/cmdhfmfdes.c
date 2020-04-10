@@ -1493,7 +1493,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_param_begin,
         arg_int0("mM",  "type",   "Auth type (1=normal, 2=iso, 3=aes)", NULL),
         arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)", NULL),
-        arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification"),
+        arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("nN",  "keyno",  "Key number used for authentification", NULL),
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_param_end
@@ -1506,7 +1506,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(3, aid, &aidlength);
-
+    swap16(aid);
     uint8_t cmdKeyNo  = arg_get_int_def(4, 0);
 
     uint8_t key[24] = {0};
@@ -1643,6 +1643,18 @@ static command_t CommandTable[] = {
     {"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
+/*
+    ISO/IEC 7816 Cmds
+    'A4' Select
+    'B0' Read Binary
+    'D6' Update Binary
+    'B2' Read Records
+    'E2' Append Records
+    '84' Get Challenge
+    '88' Internal Authenticate
+    '82' External Authenticate
+
+*/
     {NULL, NULL, NULL, NULL}
 };
 
