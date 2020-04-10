@@ -21,6 +21,7 @@ typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLA
 typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
 
 typedef struct {
+    bool settings_loaded;
     bool stdinOnTTY;
     bool stdoutOnTTY;
     bool supports_colors;
@@ -28,6 +29,11 @@ typedef struct {
     bool pm3_present;
     bool help_dump_mode;
     bool show_hints;
+    int window_plot_xpos;
+    int window_plot_ypos;
+    int window_plot_hsize;
+    int window_plot_wsize;
+    logLevel_t logging_level;
 } session_arg_t;
 
 extern session_arg_t session;
