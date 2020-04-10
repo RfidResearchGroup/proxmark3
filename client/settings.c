@@ -155,7 +155,6 @@ void settings_load_callback (json_t *root) {
 
     // Logging Level
     if (json_unpack_ex(root,&up_error, 0, "{s:s}","client.debug.level",&s1) == 0) {
-        memset (tempStr,0x00,sizeof(tempStr));
         strncpy (tempStr,s1,sizeof(tempStr)-1);
         str_lower (tempStr);
         if (strncmp (tempStr,"off",3) == 0) session.client_debug_level = OFF;
@@ -175,7 +174,6 @@ void settings_load_callback (json_t *root) {
 
     // show options
     if (json_unpack_ex(root,&up_error, 0, "{s:s}","show.emoji",&s1) == 0) {
-        memset (tempStr,0x00,sizeof(tempStr));
         strncpy (tempStr,s1,sizeof(tempStr)-1);
         str_lower (tempStr);
         if (strncmp (tempStr,"alias",5) == 0) session.emoji_mode = ALIAS;
