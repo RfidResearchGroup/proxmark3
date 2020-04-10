@@ -59,6 +59,9 @@ int MFPReadBlock(mf4Session_t *session, bool plain, uint8_t blockNum, uint8_t bl
 int MFPWriteBlock(mf4Session_t *session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac);
 int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *dataout, bool verbose);
 
+int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
+int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
+
 const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data);
 
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo);
