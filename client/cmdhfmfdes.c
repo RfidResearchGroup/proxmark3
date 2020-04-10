@@ -236,7 +236,7 @@ static char *getstatus(uint16_t *sw) {
                 return "Application count is limited to 28, not addition CreateApplication possible";
 
             case MFDES_E_DUPLICATE:
-                return "Duplicate entry: File/Application does already exist";
+                return "Duplicate entry: File/Application/ISO Text does already exist";
 
             case MFDES_E_EEPROM:
                 return "Eeprom error due to loss of power, internal backup/rollback mechanism activated";
@@ -677,7 +677,7 @@ static int get_desfire_select_application(uint8_t *aid) {
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, true, NONE, &recv_len, &sw, sizeof(dfname_t), true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't select AID 0x%X -> %s"), (aid[0] << 16) + (aid[1] << 8) + aid[2], GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't select AID 0x%X -> %s"), (aid[2] << 16) + (aid[1] << 8) + aid[0], GetErrorString(res, &sw));
         DropField();
         return res;
     }
@@ -868,26 +868,37 @@ int getKeySettings(uint8_t *aid) {
     return PM3_SUCCESS;
 }
 
+static void swap24(uint8_t* data){
+    if (data==NULL) return;
+    uint8_t tmp=data[0];
+    data[0]=data[2];
+    data[2]=tmp;
+};
+
+static void swap16(uint8_t* data){
+        if (data==NULL) return;
+        uint8_t tmp=data[0];
+        data[0]=data[1];
+        data[1]=tmp;
+};
+
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
-    clearCommandBuffer();
-
     CLIParserInit("hf mfdes createaid",
                   "Create Application ID",
-                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
-                  "Example:\n\thf mfdes createaid -a 123456 -f 1122 -k 0F -l 2E -n AppName\n"
+                  "Usage:\n\thf mfdes createaid -a 123456 -f 1122 -k 0F -l 2E -n AppName\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("aA",  "aid",    "<aid>", "App ID to create"),
-        arg_strx0("fF",  "fid",    "<fid>", "File ID"),
+        arg_strx0("aA",  "aid",    "<aid>", "App ID to create as hex bytes ("),
+        arg_strx0("fF",  "fid",    "<fid>", "File ID to create"),
         arg_strx0("kK",  "keysetting1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
         arg_strx0("lL",  "keysetting2",    "<keysetting2>", "Key Setting 2"),
         arg_str0("nN",  "name",    "<name>", "App ISO-4 Name"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, false);
     /* KeySetting 1 (AMK Setting):
        0:   Allow change master key
        1:   Free Directory list access without master key
@@ -927,7 +938,9 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     int keylen2 = 1;
     int namelen = 16;
     CLIGetHexWithReturn(1, aid, &aidlength);
+    swap24(aid);
     CLIGetHexWithReturn(2, fid, &fidlength);
+    swap16(fid);
     CLIGetHexWithReturn(3, &keysetting1, &keylen1);
     CLIGetHexWithReturn(4, &keysetting2, &keylen2);
     CLIGetStrWithReturn(5, name, &namelen);
@@ -935,27 +948,27 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
     if (aidlength < 3) {
         PrintAndLogEx(ERR, "AID must have 3 bytes length.");
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
     if (fidlength < 2) {
         PrintAndLogEx(ERR, "FID must have 2 bytes length.");
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
     if (keylen1 < 1) {
         PrintAndLogEx(ERR, "Keysetting1 must have 1 byte length.");
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
     if (keylen1 < 1) {
         PrintAndLogEx(ERR, "Keysetting2 must have 1 byte length.");
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
     if (namelen > 16) {
         PrintAndLogEx(ERR, "Name has a max. of 16 bytes length.");
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
     //90 ca 00 00 0e 3cb849 09 22 10e1 d27600 00850101 00
@@ -985,8 +998,6 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 }
 
 static int CmdHF14ADesDeleteApp(const char *Cmd) {
-    clearCommandBuffer();
-
     CLIParserInit("hf mfdes deleteaid",
                   "Delete Application ID",
                   "Usage:\n\t-a aid (3 bytes)\n\n"
@@ -998,7 +1009,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         arg_strx0("aA",  "aid",    "<aid>", "App ID to delete"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, false);
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
@@ -1006,7 +1017,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 
     if (aidlength < 3) {
         PrintAndLogEx(ERR, "AID must have 3 bytes length.");
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
@@ -1022,7 +1033,6 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 
 
 static int CmdHF14ADesFormatPICC(const char *Cmd) {
-    (void) Cmd; // Cmd is not used so far
     CLIParserInit("hf mfdes formatpicc",
                   "Formats MIFARE DESFire PICC to factory state",
                   "Usage:\n\t-k PICC key (8 bytes)\n\n"
@@ -1034,7 +1044,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     uint8_t key[8] = {0};
     int keylen = 8;
@@ -1043,11 +1053,9 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
     if ((keylen < 8) || (keylen > 8)) {
         PrintAndLogEx(ERR, "Specified key must have 8 bytes length.");
-        //SetAPDULogging(false);
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
-    clearCommandBuffer();
     DropField();
     uint8_t aid[3] = {0};
     int res = get_desfire_select_application(aid);
@@ -1402,10 +1410,10 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
         }
 
-        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X %02X %02X"), aid[0], aid[1], aid[2]);
+        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
         for (int m = 0; m < dfname_count; m++) {
             if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
-                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X %02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[0], dfnames[m].fid[1], dfnames[m].name);
+                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
             }
         }
 
@@ -1467,7 +1475,6 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 static int CmdHF14ADesAuth(const char *Cmd) {
     int res = 0;
     DropField();
-    clearCommandBuffer();
     // NR  DESC     KEYLENGHT
     // ------------------------
     // 1 = DES      8
@@ -1491,7 +1498,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     uint8_t cmdAuthMode = arg_get_int_def(1, 0);
     uint8_t cmdAuthAlgo = arg_get_int_def(2, 0);
@@ -1509,37 +1516,37 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     if ((keylen < 8) || (keylen > 24)) {
         PrintAndLogEx(ERR, "Specified key must have 16 bytes length.");
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
     // AID
     if (aidlength != 3) {
         PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
     switch (cmdAuthMode) {
         case 1:
             if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                return PM3_EINVARG;
+                return PM3_SNONCES;
             }
             break;
         case 2:
             if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2 && cmdAuthAlgo != 3) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                return PM3_EINVARG;
+                return PM3_SNONCES;
             }
             break;
         case 3:
             if (cmdAuthAlgo != 4) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                return PM3_EINVARG;
+                return PM3_SNONCES;
             }
             break;
         default:
             PrintAndLogEx(WARNING, "Wrong Auth mode (%d) -> (1=normal, 2=iso, 3=aes)", cmdAuthMode);
-            return PM3_EINVARG;
+            return PM3_SNONCES;
     }
 
     switch (cmdAuthAlgo) {
@@ -1565,7 +1572,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     // KEY
     if (keylen != keylength) {
         PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
-        return PM3_EINVARG;
+        return PM3_SNONCES;
     }
 
 
@@ -1646,7 +1653,6 @@ static int CmdHelp(const char *Cmd) {
 }
 
 int CmdHFMFDes(const char *Cmd) {
-    // flush
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
