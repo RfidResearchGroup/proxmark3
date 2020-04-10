@@ -709,7 +709,6 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 pos++;
 
             for (uint8_t i = 0; i < 2; i++, pos++) {
-
                 switch (cmd[pos]) {
                     case MFDES_CREATE_APPLICATION:
                         snprintf(exp, size, "CREATE APPLICATION");
@@ -821,6 +820,9 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_ADDITIONAL_FRAME:
                         snprintf(exp, size, "AUTH FRAME / NEXT FRAME");
+                        break;
+                    case MFDES_READSIG:
+                        snprintf(exp, size, "READ SIGNATURE");
                         break;
                     default:
                         break;

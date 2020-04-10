@@ -14,10 +14,11 @@
 
 int CmdHFMFDes(const char *Cmd);
 
+/*
 char *getCardSizeStr(uint8_t fsize);
-char *getProtocolStr(uint8_t id);
 char *getVersionStr(uint8_t major, uint8_t minor);
 int getKeySettings(uint8_t *aid);
+*/
 
 // Ev1 card limits
 #define MAX_NUM_KEYS                0x0F
@@ -25,6 +26,14 @@ int getKeySettings(uint8_t *aid);
 #define MAX_FILE_COUNT              32
 #define MAX_FRAME_SIZE              60
 #define FRAME_PAYLOAD_SIZE          (MAX_FRAME_SIZE - 5)
+
+// Ev2 card limits
+
+// Ev3 card limits
+
+// Light card limits
+
+// Light Ev1 card limits
 
 #define NOT_YET_AUTHENTICATED       0xFF
 
