@@ -62,7 +62,7 @@ int settings_load (void) {
     // Set all defaults
 //    mySettings.os_windows_usecolor = false;
 //    mySettings.os_windows_useansicolor = false;
-    session.logging_level = NORMAL;
+    session.logging_level = 0;
     session.window_plot_xpos = 10;
     session.window_plot_ypos = 30;
     session.window_plot_hsize = 400;
@@ -126,15 +126,9 @@ void settings_save_callback (json_t *root) {
     // Log level, convert to text
     // JsonSaveInt (root,"window.logging.level",mySettings.logging_level);
     switch (session.logging_level) {
-        case NORMAL: JsonSaveStr (root,"logging.level","normal"); break;
-        case SUCCESS: JsonSaveStr (root,"logging.level","success"); break;
-        case INFO: JsonSaveStr (root,"logging.level","info"); break;
-        case FAILED: JsonSaveStr (root,"logging.level","failed"); break;
-        case WARNING: JsonSaveStr (root,"logging.level","warning"); break;
-        case ERR: JsonSaveStr (root,"logging.level","err"); break;
-        case DEBUG: JsonSaveStr (root,"logging.level","debug"); break;
-        case INPLACE: JsonSaveStr (root,"logging.level","inplace"); break;
-        case HINT: JsonSaveStr (root,"logging.level","hint"); break;
+        case 0: JsonSaveStr (root,"logging.level","off"); break;
+        case 1: JsonSaveStr (root,"logging.level","on"); break;
+        case 2: JsonSaveStr (root,"logging.level","full"); break;
         default:
             JsonSaveStr (root,"logging.level","NORMAL");
     }
@@ -180,15 +174,9 @@ void settings_load_callback (json_t *root) {
     // Logging Level
 //    typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
     if (json_unpack_ex(root,&up_error, 0, "{s:s}","logging.level",&s1) == 0) {        
-        if (strncasecmp (s1,"NORMAL",7) == 0) session.logging_level = NORMAL;
-        if (strncasecmp (s1,"SUCCESS",8) == 0) session.logging_level = SUCCESS;
-        if (strncasecmp (s1,"INFO",4) == 0) session.logging_level = INFO;
-        if (strncasecmp (s1,"FAILED",6) == 0) session.logging_level = FAILED;
-        if (strncasecmp (s1,"WARNING",7) == 0) session.logging_level = WARNING;
-        if (strncasecmp (s1,"ERR",3) == 0) session.logging_level = ERR;
-        if (strncasecmp (s1,"DEBUG",5) == 0) session.logging_level = DEBUG;
-        if (strncasecmp (s1,"INPLACE",7) == 0) session.logging_level = INPLACE;
-        if (strncasecmp (s1,"HINT",7) == 0) session.logging_level = HINT;
+        if (strncmp (s1,"off",3) == 0) session.logging_level = 0;
+        if (strncmp (s1,"on",2) == 0) session.logging_level = 1;
+        if (strncmp (s1,"full",4) == 0) session.logging_level = 2;
     }
 
     // window plot
@@ -214,11 +202,11 @@ void settings_load_callback (json_t *root) {
 */
     // show options
     // typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
-    if (json_unpack_ex(root,&up_error, 0, "{s:i}","show.emoji",&s1) == 0) {
-        if (strncasecmp (s1,"ALIAS",5) == 0) session.emoji_mode = ALIAS;
-        if (strncasecmp (s1,"EMOJI",5) == 0) session.emoji_mode = EMOJI;
-        if (strncasecmp (s1,"ALTTEXT",7) == 0) session.emoji_mode = ALTTEXT;
-        if (strncasecmp (s1,"ERASE",5) == 0) session.emoji_mode = ERASE;
+    if (json_unpack_ex(root,&up_error, 0, "{s:s}","show.emoji",&s1) == 0) {
+        if (strncmp (s1,"alias",5) == 0) session.emoji_mode = ALIAS;
+        if (strncmp (s1,"emoji",5) == 0) session.emoji_mode = EMOJI;
+        if (strncmp (s1,"alttext",7) == 0) session.emoji_mode = ALTTEXT;
+        if (strncmp (s1,"erase",5) == 0) session.emoji_mode = ERASE;
     }
     if (json_unpack_ex(root,&up_error, 0, "{s:b}","show.hints",&b1) == 0) 
         session.show_hints = b1;

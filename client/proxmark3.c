@@ -588,10 +588,9 @@ int main(int argc, char *argv[]) {
 
     // quick patch for debug level
     g_debugMode = session.logging_level;
-    
     // settings_save ();
     // End Settings
-    
+
     for (int i = 1; i < argc; i++) {
 
         if (argv[i][0] != '-') {
