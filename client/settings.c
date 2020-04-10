@@ -45,10 +45,9 @@
 //      Add the new setting to the session_arg_t; in ui.h
 //      Add the default value for the setting in the settings_load page below
 //      Update the  settings_load_callback to load your setting into the stucture
-//      Update the  settings_save_callback to enusre your setting gets saved (not used yet)
-//      Include "settingdata.h" (if needed) in the source file where you wish to use the setting
-//      use the setting as needed : mySettings.<setting name>
-//      Should use if (mySettings.loaded) { use settings } 
+//      Update the  settings_save_callback to enusre your setting gets saved when needed.
+//      use the setting as needed : session.<setting name>
+//      Can use (session.settings_loaded) to check if json settings file was used 
 //-----------------------------------------------------------------------------
 
 #include "settings.h"
@@ -60,20 +59,14 @@
 int settings_load (void) {
 
     // Set all defaults
-//    mySettings.os_windows_usecolor = false;
-//    mySettings.os_windows_useansicolor = false;
     session.client_debug_level = OFF;
     session.window_plot_xpos = 10;
     session.window_plot_ypos = 30;
     session.window_plot_hsize = 400;
     session.window_plot_wsize = 800;
-//    mySettings.window_xpos = 10;
-//    mySettings.window_ypos = 210;
-//    mySettings.window_hsize = 300;
-//    mySettings.window_wsize = 500;
-//    mySettings.show_emoji = ALIAS;
     session.emoji_mode = ALIAS;
     session.show_hints = false;
+    session.supports_colors = false;
     
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
@@ -83,10 +76,10 @@ int settings_load (void) {
     if (loadFileJSON(settingsFilename, &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
         session.settings_loaded = true;
     }
-    else // Save default/create settings.json file
-        settings_save ();
+    // Note, if session.settings_loaded == false then the settings_save 
+    // will be called in main () to save settings as set in defaults and main() checks.
 
-    return PM3_SUCCESS;
+   return PM3_SUCCESS;
 }
 
 // Save all settings from memory (struct) to file
@@ -120,14 +113,13 @@ int settings_save (void) {
 }
 
 void settings_save_callback (json_t *root) {
+
     JsonSaveStr (root,"FileType","settings");
-//    JsonSaveBoolean (root,"os.windows.useColor",mySettings.os_windows_usecolor);
-//    JsonSaveBoolean (root,"os.windows.useAnsiColor",mySettings.os_windows_useansicolor);
+
     // Log level, convert to text
-    // JsonSaveInt (root,"window.logging.level",mySettings.logging_level);
     switch (session.client_debug_level) {
         case OFF: JsonSaveStr (root,"client.debug.level","off"); break;
-        case SIMPLE: JsonSaveStr (root,"client.debug.level","on"); break;
+        case SIMPLE: JsonSaveStr (root,"client.debug.level","simple"); break;
         case FULL: JsonSaveStr (root,"client.debug.level","full"); break;
         default:
             JsonSaveStr (root,"logging.level","NORMAL");
@@ -138,10 +130,6 @@ void settings_save_callback (json_t *root) {
     JsonSaveInt (root,"window.plot.ypos",session.window_plot_ypos);
     JsonSaveInt (root,"window.plot.hsize",session.window_plot_hsize);
     JsonSaveInt (root,"window.plot.wsize",session.window_plot_wsize);
-//    JsonSaveInt (root,"window.xpos",mySettings.window_xpos);
-//    JsonSaveInt (root,"window.ypos",mySettings.window_ypos);
-//    JsonSaveInt (root,"window.hsize",mySettings.window_hsize);
-//    JsonSaveInt (root,"window.wsize",mySettings.window_wsize);
 
     // Emoji
     switch (session.emoji_mode) {
@@ -152,7 +140,10 @@ void settings_save_callback (json_t *root) {
         default:
             JsonSaveStr (root,"show.emoji","ALIAS");
     }
+
     JsonSaveBoolean (root,"show.hints",session.show_hints);
+
+    JsonSaveBoolean (root,"os.supports.colors",session.supports_colors);
 }
 
 void settings_load_callback (json_t *root) {
@@ -160,22 +151,16 @@ void settings_load_callback (json_t *root) {
     bool b1;
     int i1;
     const char *s1;
-    
-    // Left for example of a string json read
-//  if (json_unpack_ex(root, &up_error , 0, "{s:s}","version",&s1) == 0)
-//      strncpy (mySettings.version,s1,sizeof (mySettings.version) - 1);
-/*
-    // os.windows...
-    if (json_unpack_ex(root,&up_error, 0, "{s:b}","os.windows.useColor",&b1) == 0) 
-        mySettings.os_windows_usecolor = b1;
-    if (json_unpack_ex(root,&up_error, 0, "{s:b}","os.windows.useAnsiColor",&b1) == 0) 
-        mySettings.os_windows_useansicolor = b1;
-*/
+    char tempStr [500]; // to use str_lower() since json unpack uses const char *
+
     // Logging Level
-    if (json_unpack_ex(root,&up_error, 0, "{s:s}","client.debug.level",&s1) == 0) {        
-        if (strncmp (s1,"off",3) == 0) session.client_debug_level = OFF;
-        if (strncmp (s1,"simple",6) == 0) session.client_debug_level = SIMPLE;
-        if (strncmp (s1,"full",4) == 0) session.client_debug_level = FULL;
+    if (json_unpack_ex(root,&up_error, 0, "{s:s}","client.debug.level",&s1) == 0) {
+        memset (tempStr,0x00,sizeof(tempStr));
+        strncpy (tempStr,s1,sizeof(tempStr)-1);
+        str_lower (tempStr);
+        if (strncmp (tempStr,"off",3) == 0) session.client_debug_level = OFF;
+        if (strncmp (tempStr,"simple",6) == 0) session.client_debug_level = SIMPLE;
+        if (strncmp (tempStr,"full",4) == 0) session.client_debug_level = FULL;
     }
 
     // window plot
@@ -187,27 +172,22 @@ void settings_load_callback (json_t *root) {
         session.window_plot_hsize = i1;
     if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.plot.wsize",&i1) == 0) 
         session.window_plot_wsize = i1;
-/*
-    // window...
-    if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.xpos",&i1) == 0) 
-        mySettings.window_xpos = i1;
-    if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.ypos",&i1) == 0) 
-        mySettings.window_ypos = i1;
-    if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.hsize",&i1) == 0) 
-        mySettings.window_hsize = i1;
-    if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.wsize",&i1) == 0) 
-        mySettings.window_wsize = i1;
 
-*/
     // show options
-    // typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
     if (json_unpack_ex(root,&up_error, 0, "{s:s}","show.emoji",&s1) == 0) {
-        if (strncmp (s1,"alias",5) == 0) session.emoji_mode = ALIAS;
-        if (strncmp (s1,"emoji",5) == 0) session.emoji_mode = EMOJI;
-        if (strncmp (s1,"alttext",7) == 0) session.emoji_mode = ALTTEXT;
-        if (strncmp (s1,"erase",5) == 0) session.emoji_mode = ERASE;
+        memset (tempStr,0x00,sizeof(tempStr));
+        strncpy (tempStr,s1,sizeof(tempStr)-1);
+        str_lower (tempStr);
+        if (strncmp (tempStr,"alias",5) == 0) session.emoji_mode = ALIAS;
+        if (strncmp (tempStr,"emoji",5) == 0) session.emoji_mode = EMOJI;
+        if (strncmp (tempStr,"alttext",7) == 0) session.emoji_mode = ALTTEXT;
+        if (strncmp (tempStr,"erase",5) == 0) session.emoji_mode = ERASE;
     }
+
     if (json_unpack_ex(root,&up_error, 0, "{s:b}","show.hints",&b1) == 0) 
         session.show_hints = b1;
+
+    if (json_unpack_ex(root,&up_error, 0, "{s:b}","os.supports.colors",&b1) == 0) 
+        session.supports_colors = b1;
 
 }
