@@ -853,20 +853,17 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     int res = get_desfire_select_application(aid);
     if (res != PM3_SUCCESS) return res;
     struct {
-            uint8_t isOK;
             uint8_t mode;
             uint8_t algo;
             uint8_t keyno;
             uint8_t key[24];
             uint8_t keylen;
-            uint8_t sessionkey[24];
     } PACKED payload;
     payload.keylen=keylen;
     memcpy(payload.key,key,keylen);
     payload.mode=MFDES_AUTH_PICC;
     payload.algo=MFDES_ALGO_DES;
     payload.keyno=0;
-    //SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylen + 1);
     SendCommandNG(CMD_HF_DESFIRE_AUTH1,(uint8_t*)&payload,sizeof(payload));
     PacketResponseNG resp;
 
@@ -878,14 +875,26 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
     uint8_t isOK  = (resp.status==PM3_SUCCESS);
     if (isOK) {
-        uint8_t rdata[] = {0xFC};  // 0xFC
-        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(rdata), 0, rdata, sizeof(rdata));
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+        struct {
+            uint8_t flags;
+            uint8_t datalen;
+            uint8_t datain[FRAME_PAYLOAD_SIZE];
+        } PACKED payload;
+        payload.datain[0]=0xFC;
+        payload.flags=NONE;
+        payload.datalen=1;
+        SendCommandNG(CMD_HF_DESFIRE_COMMAND,(uint8_t*)&payload,sizeof(payload));
+        if (!WaitForResponseTimeout(CMD_HF_DESFIRE_COMMAND, &resp, 3000)) {
             PrintAndLogEx(WARNING, "Client reset command execute timeout");
             DropField();
             return PM3_ETIMEOUT;
         }
-        if (resp.oldarg[0] & 0xFF) {
+        if (resp.status==PM3_SUCCESS) {
+            /*struct r {
+                uint8_t len;
+                uint8_t data[RECEIVE_SIZE];
+            } PACKED;
+            struct r *rpayload = (struct r *)&resp.data.asBytes;*/
             PrintAndLogEx(INFO, "Card successfully reset");
             return PM3_SUCCESS;
         }
@@ -1407,7 +1416,6 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     // 2 = 3DES     16
     // 3 = 3K 3DES  24
     // 4 = AES      16
-    //SetAPDULogging(true);
     uint8_t keylength = 8;
 
     CLIParserInit("hf mfdes auth",
@@ -1443,14 +1451,12 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     if ((keylen < 8) || (keylen > 24)) {
         PrintAndLogEx(ERR, "Specified key must have 16 bytes length.");
-        //SetAPDULogging(false);
         return PM3_EINVARG;
     }
 
     // AID
     if (aidlength != 3) {
         PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
-        //SetAPDULogging(false);
         return PM3_EINVARG;
     }
 
@@ -1458,27 +1464,23 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         case 1:
             if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                //SetAPDULogging(false);
                 return PM3_EINVARG;
             }
             break;
         case 2:
             if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2 && cmdAuthAlgo != 3) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                //SetAPDULogging(false);
                 return PM3_EINVARG;
             }
             break;
         case 3:
             if (cmdAuthAlgo != 4) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                //SetAPDULogging(false);
                 return PM3_EINVARG;
             }
             break;
         default:
             PrintAndLogEx(WARNING, "Wrong Auth mode (%d) -> (1=normal, 2=iso, 3=aes)", cmdAuthMode);
-            //SetAPDULogging(false);
             return PM3_EINVARG;
     }
 
@@ -1520,25 +1522,19 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
 
     struct {
-        uint8_t isOK;
         uint8_t mode;
         uint8_t algo;
         uint8_t keyno;
         uint8_t key[24];
         uint8_t keylen;
-        uint8_t sessionkey[24];
     } PACKED payload;
     payload.keylen=keylength;
     memcpy(payload.key,key,keylength);
     payload.mode=cmdAuthMode;
     payload.algo=cmdAuthAlgo;
     payload.keyno=cmdKeyNo;
-    //SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylen + 1);
     SendCommandNG(CMD_HF_DESFIRE_AUTH1,(uint8_t*)&payload,sizeof(payload));
 
-    //uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
-    //memcpy(data + 1, key, keylength);
-    //SendCommandOLD(CMD_HF_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength + 1);
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_HF_DESFIRE_AUTH1, &resp, 3000)) {
@@ -1549,8 +1545,13 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     uint8_t isOK  = (resp.status == PM3_SUCCESS);
     if (isOK) {
-        uint8_t *session_key = payload.sessionkey;
+        struct r {
+            uint8_t sessionkeylen;
+            uint8_t sessionkey[24];
+        } PACKED;
 
+        struct r *rpayload = (struct r *)&resp.data.asBytes;
+        uint8_t *session_key = rpayload->sessionkey;
         PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
         PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(session_key, keylength));
         PrintAndLogEx(INFO, "-------------------------------------------------------------");

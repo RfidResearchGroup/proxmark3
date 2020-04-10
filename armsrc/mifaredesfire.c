@@ -52,29 +52,33 @@ bool InitDesfireCard() {
     return true;
 }
 
-void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
+void MifareSendCommand(uint8_t *datain) {
+    struct p {
+        uint8_t flags;
+        uint8_t datalen;
+        uint8_t datain[FRAME_PAYLOAD_SIZE];
+    } PACKED;
+    struct p *payload = (struct p *) datain;
 
-    uint8_t flags = arg0;
-    size_t datalen = arg1;
     uint8_t resp[RECEIVE_SIZE];
     memset(resp, 0, sizeof(resp));
 
     if (DBGLEVEL >= DBG_EXTENDED) {
-        Dbprintf(" flags : %02X", flags);
-        Dbprintf(" len   : %02X", datalen);
-        print_result(" RX    : ", datain, datalen);
+        Dbprintf(" flags : %02X", payload->flags);
+        Dbprintf(" len   : %02X", payload->datalen);
+        print_result(" RX    : ", payload->datain, payload->datalen);
     }
 
-    if (flags & CLEARTRACE)
+    if (payload->flags & CLEARTRACE)
         clear_trace();
 
-    if (flags & INIT) {
+    if (payload->flags & INIT) {
         if (!InitDesfireCard()) {
             return;
         }
     }
 
-    int len = DesfireAPDU(datain, datalen, resp);
+    int len = DesfireAPDU(payload->datain, payload->datalen, resp);
     if (DBGLEVEL >= DBG_EXTENDED)
         print_result("RESP <--: ", resp, len);
 
@@ -83,10 +87,21 @@ void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
         return;
     }
 
-    if (flags & DISCONNECT)
+    if (payload->flags & DISCONNECT)
         OnSuccess();
 
-    reply_mix(CMD_ACK, 1, len, 0, resp, len);
+    //reply_mix(CMD_ACK, 1, len, 0, resp, len);
+    LED_B_ON();
+    struct r {
+        uint8_t len;
+        uint8_t data[RECEIVE_SIZE];
+    } PACKED;
+
+    struct r rpayload;
+    rpayload.len=len;
+    memcpy(rpayload.data,resp,rpayload.len);
+    reply_ng(CMD_HF_DESFIRE_COMMAND, PM3_SUCCESS, (uint8_t *)&rpayload, sizeof(payload));
+    LED_B_OFF();
 }
 
 void MifareDesfireGetInformation() {
@@ -202,13 +217,11 @@ typedef enum {
 void MifareDES_Auth1(uint8_t *datain) {
     int len = 0;
     struct p {
-        uint8_t isOK;
         uint8_t mode;
         uint8_t algo;
         uint8_t keyno;
         uint8_t key[24];
         uint8_t keylen;
-        uint8_t sessionkey[24];
     } PACKED;
     struct p *payload = (struct p *) datain;
 
@@ -275,13 +288,6 @@ void MifareDES_Auth1(uint8_t *datain) {
 
     if (payload->algo==MFDES_ALGO_AES) {
             mbedtls_aes_init(&ctx);
-            if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
-                if (DBGLEVEL >= DBG_EXTENDED) {
-                    DbpString("mbedtls_aes_setkey_dec failed");
-                }
-                OnErrorNG(CMD_HF_DESFIRE_AUTH1,7);
-                return;
-            }
             Desfire_aes_key_new(keybytes, key);
     }
     else if (payload->algo == MFDES_ALGO_3DES) {
@@ -342,8 +348,16 @@ void MifareDES_Auth1(uint8_t *datain) {
     }
 
     // Part 3
-    if (payload->algo==MFDES_ALGO_AES)
+    if (payload->algo==MFDES_ALGO_AES) {
+        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
+            if (DBGLEVEL >= DBG_EXTENDED) {
+                DbpString("mbedtls_aes_setkey_dec failed");
+            }
+            OnErrorNG(CMD_HF_DESFIRE_AUTH1,7);
+            return;
+        }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndB, RndB);
+    }
     else if (payload->algo == MFDES_ALGO_3DES)
         tdes_dec(&RndB, &encRndB, key->data);
     else if (payload->algo == MFDES_ALGO_DES)
@@ -353,7 +367,6 @@ void MifareDES_Auth1(uint8_t *datain) {
     memcpy(rotRndB, RndB, payload->keylen);
     rol(rotRndB, payload->keylen);
 
-    //memcpy(RndA, decRndA, payload->keylen);
     uint8_t encRndA[16] = {0x00};
 
     // - Encrypt our response
@@ -434,10 +447,8 @@ void MifareDES_Auth1(uint8_t *datain) {
     struct desfire_key sessionKey = {0};
     desfirekey_t skey = &sessionKey;
     Desfire_session_key_new(RndA, RndB, key, skey);
-    memset(payload->sessionkey,0x0,24);
-    memcpy(payload->sessionkey,skey->data,payload->keylen);
-    print_result("SESSION : ", skey->data, payload->keylen);
-    print_result("SESSION : ", payload->sessionkey, payload->keylen);
+    if (DBGLEVEL >= DBG_EXTENDED)
+        print_result("SESSIONKEY : ", skey->data, payload->keylen);
 
     if (payload->mode != MFDES_AUTH_PICC) {
         memcpy(encRndA, resp + 1, payload->keylen);
@@ -453,12 +464,21 @@ void MifareDES_Auth1(uint8_t *datain) {
             des_dec(&encRndA, &encRndA, key->data);
     }
     else if (payload->mode==MFDES_AUTH_AES) {
-            mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndA, encRndA);
+        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
+            if (DBGLEVEL >= DBG_EXTENDED) {
+                DbpString("mbedtls_aes_setkey_dec failed");
+            }
+            OnErrorNG(CMD_HF_DESFIRE_AUTH1,7);
+            return;
+        }
+        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndA, encRndA);
     }
 
     rol(RndA, payload->keylen);
-    print_result("RndA : ", RndA, payload->keylen);
-    print_result("encRndA : ", encRndA, payload->keylen);
+    if (DBGLEVEL >= DBG_EXTENDED) {
+        print_result("RndA : ", RndA, payload->keylen);
+        print_result("encRndA : ", encRndA, payload->keylen);
+    }
     for (int x = 0; x < payload->keylen; x++) {
         if (RndA[x] != encRndA[x]) {
             DbpString("Authentication failed. Cannot verify Session Key.");
@@ -563,7 +583,15 @@ void MifareDES_Auth1(uint8_t *datain) {
     //reply_mix(CMD_ACK, 1, len, 0, resp, len);
 
     LED_B_ON();
-    reply_ng(CMD_HF_DESFIRE_AUTH1, PM3_SUCCESS, (uint8_t *)payload, sizeof(payload));
+    struct r {
+        uint8_t sessionkeylen;
+        uint8_t sessionkey[24];
+    } PACKED;
+
+    struct r rpayload;
+    rpayload.sessionkeylen=payload->keylen;
+    memcpy(rpayload.sessionkey,skey->data,rpayload.sessionkeylen);
+    reply_ng(CMD_HF_DESFIRE_AUTH1, PM3_SUCCESS, (uint8_t *)&rpayload, sizeof(payload));
     LED_B_OFF();
 }
 

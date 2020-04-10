@@ -14,7 +14,7 @@
 #include "common.h"
 
 bool InitDesfireCard();
-void MifareSendCommand(uint8_t arg0, uint8_t arg1, uint8_t *datain);
+void MifareSendCommand(uint8_t *datain);
 void MifareDesfireGetInformation();
 void MifareDES_Auth1(uint8_t *datain);
 void ReaderMifareDES(uint32_t param, uint32_t param2, uint8_t *datain);
