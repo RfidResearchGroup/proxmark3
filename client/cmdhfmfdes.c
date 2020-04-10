@@ -311,10 +311,10 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
         PrintAndLogEx(DEBUG, "APDU=NULL"); 
         return PM3_EINVARG;
     }
-    if (dest == NULL) {
+    /*if (dest == NULL) {
         PrintAndLogEx(DEBUG, "DEST=NULL");
         return PM3_EINVARG;
-    }
+    }*/
     if (sw == NULL) {
         PrintAndLogEx(DEBUG, "SW=NULL");
         return PM3_EINVARG;
@@ -675,7 +675,7 @@ static int get_desfire_select_application(uint8_t *aid) {
     sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
     int recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, sizeof(dfname_t), true);
+    int res = send_desfire_cmd(&apdu, true, NONE, &recv_len, &sw, sizeof(dfname_t), true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't select AID 0x%X -> %s"), (aid[0] << 16) + (aid[1] << 8) + aid[2], GetErrorString(res, &sw));
         DropField();
