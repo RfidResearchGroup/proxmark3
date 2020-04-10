@@ -438,7 +438,7 @@ void LegicRfInfo(void) {
     }
 
     // OK
-    reply_old(CMD_ACK, 1, 0, 0, (uint8_t *)&card, sizeof(legic_card_select_t));
+    reply_mix(CMD_ACK, 1, 0, 0, (uint8_t *)&card, sizeof(legic_card_select_t));
 
 OUT:
     switch_off();
@@ -513,7 +513,7 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
     }
 
     // OK
-    reply_old(CMD_ACK, 1, len, 0, legic_mem, len);
+    reply_mix(CMD_ACK, 1, len, 0, 0, 0);
 
 OUT:
     switch_off();
@@ -552,7 +552,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
     }
 
     // OK
-    reply_old(CMD_ACK, 1, len, 0, legic_mem, len);
+    reply_mix(CMD_ACK, 1, len, 0, 0, 0);
 
 OUT:
     switch_off();

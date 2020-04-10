@@ -18,7 +18,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [File not found](#file-not-found)
   * [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
   * [Usb cable](#usb-cable)
-  * [WSL 2  explorer.exe . doesnt work](WSL-2)
+  * [WSL 2  explorer.exe . doesnt work](#WSL-2)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
