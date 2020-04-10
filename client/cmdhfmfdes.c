@@ -908,7 +908,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-
+    DropField();
     SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
     PacketResponseNG resp;
 
@@ -1298,7 +1298,7 @@ static int DecodeFileSettings(uint8_t *filesettings, int fileset_len, int maclen
 
 static int CmdHF14ADesEnumApplications(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-
+    DropField();
 //    uint8_t isOK = 0x00;
     uint8_t aid[3] = {0};
     uint8_t app_ids[78] = {0};
