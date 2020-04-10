@@ -132,6 +132,9 @@ void MifareDesfireGetInformation() {
     clear_trace();
     set_tracing(true);
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    
+    // reset the pcb_blocknum,
+    pcb_blocknum = 0;
 
     // card select - information
     if (!iso14443a_select_card(NULL, &card, NULL, true, 0, false)) {

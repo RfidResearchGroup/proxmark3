@@ -52,12 +52,13 @@ typedef enum {
 
 typedef enum {
     UNKNOWN = 0,
-    MF3ICD40,
-    EV1,
-    EV2,
-    EV3,
-    LIGHT,
-} desfire_cardtype_t;
+    DESFIRE_MF3ICD40,
+    DESFIRE_EV1,
+    DESFIRE_EV2,
+    DESFIRE_EV3,
+    DESFIRE_LIGHT,
+    PLUS_EV1,
+} nxp_cardtype_t;
 
 typedef struct {
     uint8_t aid[3];
@@ -68,14 +69,65 @@ typedef struct {
 static int CmdHelp(const char *Cmd);
 
 /*
-         uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
-                int res = ExchangeRAW14a(cmd, sizeof(cmd), false, false, data, sizeof(data), &datalen, false);
-
-                if (!res && datalen > 1 && data[0] == 0x09) {
-                    SLmode = 0;
-                }
-
+  The 7 MSBits (= n) code the storage size itself based on 2^n,
+  the LSBit is set to '0' if the size is exactly 2^n
+    and set to '1' if the storage size is between 2^n and 2^(n+1).
+    For this version of DESFire the 7 MSBits are set to 0x0C (2^12 = 4096) and the LSBit is '0'.
 */
+static char *getCardSizeStr(uint8_t fsize) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+
+    uint16_t usize = 1 << ((fsize >> 1) + 1);
+    uint16_t lsize = 1 << (fsize >> 1);
+
+    // is  LSB set?
+    if (fsize & 1)
+        sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+    else
+        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
+    return buf;
+}
+
+static char *getProtocolStr(uint8_t id, bool hw) {
+
+   static char buf[50] = {0x00};
+    char *retStr = buf;
+
+    if (id == 0x04) {
+        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
+    } else if (id == 0x05) {
+      if (hw)
+            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") ")", id);
+        else
+            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+    } else {
+        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+    }
+    return buf;
+}
+
+static char *getVersionStr(uint8_t major, uint8_t minor) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+
+    if (major == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+    else if (major == 0x01 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV1") ")", major, minor);
+    else if (major == 0x12 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
+//    else if (major == 0x13 && minor == 0x00)
+//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);
+    else if (major == 0x30 && minor == 0x00)
+        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
+    else
+        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
+    return buf;
+}
+
 
 int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t *result, int max_result_len, int *result_len, uint16_t *sw) {
 
@@ -121,7 +173,7 @@ int DESFIRESendApdu(bool activate_field, bool leavefield_on, sAPDU apdu, uint8_t
     if (sw)
         *sw = isw;
 
-    if (isw != 0x9000 && isw != status(MFDES_OPERATION_OK) && isw != status(MFDES_SIGNATURE) && isw != status(MFDES_ADDITIONAL_FRAME) && isw != status(MFDES_NO_CHANGES)) {
+    if (isw != 0x9000 && isw != status(MFDES_S_OPERATION_OK) && isw != status(MFDES_S_SIGNATURE) && isw != status(MFDES_S_ADDITIONAL_FRAME) && isw != status(MFDES_S_NO_CHANGES)) {
         if (GetAPDULogging()) {
             if (isw >> 8 == 0x61) {
                 PrintAndLogEx(ERR, "APDU chaining len: 0x%02x -->", isw & 0xff);
@@ -254,15 +306,23 @@ static char *GetErrorString(int res, uint16_t *sw) {
     return "";
 }
 
-
 static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_len, uint16_t *sw, int splitbysize, bool readalldata) {
-    if (g_debugMode > 1) {
-        if (apdu == NULL) PrintAndLogEx(ERR, "APDU=NULL");
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (sw == NULL) PrintAndLogEx(ERR, "SW=NULL");
-        if (recv_len == NULL) PrintAndLogEx(ERR, "RECV_LEN=NULL");
+    if (apdu == NULL) {
+        PrintAndLogEx(DEBUG, "APDU=NULL"); 
+        return PM3_EINVARG;
     }
-    if (apdu == NULL || sw == NULL || recv_len == NULL) return PM3_EINVARG;
+    if (dest == NULL) {
+        PrintAndLogEx(DEBUG, "DEST=NULL");
+        return PM3_EINVARG;
+    }
+    if (sw == NULL) {
+        PrintAndLogEx(DEBUG, "SW=NULL");
+        return PM3_EINVARG;
+    }
+    if (recv_len == NULL) {
+        PrintAndLogEx(DEBUG, "RECV_LEN=NULL");
+        return PM3_EINVARG;
+    }
 
     *sw = 0;
     uint8_t data[255 * 5]  = {0x00};
@@ -271,7 +331,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
     int i = 1;
     int res = DESFIRESendApdu(select, true, *apdu, data, sizeof(data), &resplen, sw);
     if (res != PM3_SUCCESS) {
-        if (g_debugMode > 1) GetErrorString(res, sw);
+        PrintAndLogEx(DEBUG, "%s", GetErrorString(res, sw));
         return res;
     }
     if (dest != NULL) {
@@ -290,6 +350,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
         }
         return res;
     }
+
     while (*sw == status(MFDES_ADDITIONAL_FRAME)) {
         apdu->INS = MFDES_ADDITIONAL_FRAME; //0xAF
         apdu->Lc = 0;
@@ -298,9 +359,10 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
 
         res = DESFIRESendApdu(false, true, *apdu, data, sizeof(data), &resplen, sw);
         if (res != PM3_SUCCESS) {
-            if (g_debugMode > 1) GetErrorString(res, sw);
+            PrintAndLogEx(DEBUG, "%s", GetErrorString(res, sw));
             return res;
         }
+    
         if (dest != NULL) {
             if (splitbysize) {
                 memcpy(&dest[i * splitbysize], data, resplen);
@@ -310,33 +372,33 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
             }
         }
         pos += resplen;
+
         if (*sw != status(MFDES_ADDITIONAL_FRAME)) break;
     }
-    if (splitbysize) *recv_len = i;
-    else {
-        *recv_len = pos;
-    }
-    return PM3_SUCCESS;
 
+    *recv_len =  (splitbysize) ? i : pos;
+    return PM3_SUCCESS;
 }
 
-static desfire_cardtype_t getCardType(uint8_t major, uint8_t minor) {
+static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 
     if (major == 0x00)
-        return MF3ICD40;
-    else if (major == 0x01 && minor == 0x00)
-        return EV1;
-    else if (major == 0x12 && minor == 0x00)
-        return EV2;
-//    else if (major == 0x13 && minor == 0x00)
-//        return EV3;
-    else if (major == 0x30 && minor == 0x00)
-        return LIGHT;
-    else
-        return UNKNOWN;
+        return DESFIRE_MF3ICD40;
+    if (major == 0x01 && minor == 0x00)
+        return DESFIRE_EV1;
+    if (major == 0x12 && minor == 0x00)
+        return DESFIRE_EV2;
+//  if (major == 0x13 && minor == 0x00)
+//        return DESFIRE_EV3;
+    if (major == 0x30 && minor == 0x00)
+        return DESFIRE_LIGHT;
+    if (major == 0x11 &&  minor == 0x00 )
+        return PLUS_EV1;
+
+    return UNKNOWN;
 }
 
-//none, verified
+// -- test if card supports 0x0A
 static int test_desfire_authenticate() {
     uint8_t data[] = {0x00};
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, data}; // 0x0A, KEY 0
@@ -345,7 +407,7 @@ static int test_desfire_authenticate() {
     return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
 }
 
-// none, verified
+// -- test if card supports 0x1A
 static int test_desfire_authenticate_iso() {
     uint8_t data[] = {0x00};
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, data}; // 0x1A, KEY 0
@@ -354,7 +416,7 @@ static int test_desfire_authenticate_iso() {
     return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
 }
 
-//none, verified
+// -- test if card supports 0xAA
 static int test_desfire_authenticate_aes() {
     uint8_t data[] = {0x00};
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, data}; // 0xAA, KEY 0
@@ -363,37 +425,44 @@ static int test_desfire_authenticate_aes() {
     return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
 }
 
-// --- FREE MEM, verified
+// --- GET FREE MEM
 static int desfire_print_freemem(uint32_t free_mem) {
     PrintAndLogEx(SUCCESS, "   Available free memory on card         : " _GREEN_("%d bytes"), free_mem);
     return PM3_SUCCESS;
 }
 
-// init / disconnect, verified
 static int get_desfire_freemem(uint32_t *free_mem) {
     if (free_mem == NULL) return PM3_EINVARG;
+
     sAPDU apdu = {0x90, MFDES_GET_FREE_MEMORY, 0x00, 0x00, 0x00, NULL}; // 0x6E
+    *free_mem = 0;
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t fmem[4] = {0};
 
     int res = send_desfire_cmd(&apdu, true, fmem, &recv_len, &sw, 0, true);
-    if (res == PM3_SUCCESS) {
-        *free_mem = le24toh(fmem);
+
+    if (res != PM3_SUCCESS )
         return res;
-    }
-    *free_mem = 0;
+    
+    if (sw != status(MFDES_S_OPERATION_OK))
+        return PM3_ESOFT;
+    
+    *free_mem = le24toh(fmem);
     return res;
 }
 
+// --- GET SIGNATURE
+static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len, nxp_cardtype_t card_type) {
 
-// --- GET SIGNATURE, verified
-static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t signature_len, desfire_cardtype_t card_type) {
-    if (g_debugMode > 1) {
-        if (uid == NULL) PrintAndLogEx(ERR, "UID=NULL");
-        if (signature == NULL) PrintAndLogEx(ERR, "SIGNATURE=NULL");
+    if (uid == NULL) {
+        PrintAndLogEx(DEBUG, "UID=NULL");
+        return PM3_EINVARG;
     }
-    if (uid == NULL || signature == NULL) return PM3_EINVARG;
+    if (signature == NULL) {
+        PrintAndLogEx(DEBUG, "SIGNATURE=NULL");
+        return PM3_EINVARG;
+    }
     // DESFire Ev3  - wanted
     // ref:  MIFARE Desfire Originality Signature Validation
 
@@ -403,7 +472,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         {"NTAG413DNA, DESFire EV1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
         {"DESFire EV2",             "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
         {"NTAG424DNA, NTAG424DNATT, DESFire Light EV2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
-        {"DESFire Light EV1",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
+        {"DESFire Light",       "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
         {"Mifare Plus EV1",         "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
 
@@ -427,8 +496,8 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+//    PrintAndLogEx(NORMAL, "");
+//    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_desfire_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_desfire_public_keys[i].value);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 16);
@@ -443,34 +512,33 @@ static int desfire_print_signature(uint8_t *uid, uint8_t *signature, size_t sign
     return PM3_SUCCESS;
 }
 
-// init / disconnect, verified
 static int get_desfire_signature(uint8_t *signature, size_t *signature_len) {
-    if (g_debugMode > 1) {
-        if (signature == NULL) PrintAndLogEx(ERR, "SIGNATURE=NULL");
-        if (signature_len == NULL) PrintAndLogEx(ERR, "SIGNATURE_LEN=NULL");
+
+    if (signature == NULL) {
+        PrintAndLogEx(DEBUG, "SIGNATURE=NULL");
+        return PM3_EINVARG;
     }
-    if (signature == NULL || signature_len == NULL) return PM3_EINVARG;
-    uint8_t c = 0x00;
-    sAPDU apdu = {0x90, MFDES_READSIG, 0x00, 0x00, 0x01, &c}; // 0x3C
+    if (signature_len == NULL) {
+        PrintAndLogEx(DEBUG, "SIGNATURE_LEN=NULL");
+        return PM3_EINVARG;
+    }
+
+    uint8_t c[] = {0x00};
+    sAPDU apdu = {0x90, MFDES_READSIG, 0x00, 0x00, sizeof(c), c}; // 0x3C
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, true, signature, &recv_len, &sw, 0, true);
     if (res == PM3_SUCCESS) {
         if (recv_len != 56) {
             *signature_len = 0;
-            DropField();
-            return PM3_ESOFT;
+            res = PM3_ESOFT;
         } else {
             *signature_len = recv_len;
-
         }
-        DropField();
-        return PM3_SUCCESS;
     }
     DropField();
     return res;
 }
-
 
 // --- KEY SETTING
 static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
@@ -504,23 +572,29 @@ static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
     return PM3_SUCCESS;
 }
 
-// none, verified
 static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
-    if (g_debugMode > 1) {
-        if (key_settings == NULL) PrintAndLogEx(ERR, "KEY_SETTINGS=NULL");
-        if (num_keys == NULL) PrintAndLogEx(ERR, "NUM_KEYS=NULL");
+    if (key_settings == NULL) {
+        PrintAndLogEx(DEBUG, "KEY_SETTINGS=NULL");
+        return PM3_EINVARG;
     }
-    if (key_settings == NULL || num_keys == NULL) return PM3_EINVARG;
+    if (num_keys == NULL) {
+        PrintAndLogEx(DEBUG, "NUM_KEYS=NULL");
+        return PM3_EINVARG;
+    }
     sAPDU apdu = {0x90, MFDES_GET_KEY_SETTINGS, 0x00, 0x00, 0x00, NULL}; //0x45
     int recv_len = 0;
     uint16_t sw = 0;
     uint8_t data[2] = {0};
     int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0, true);
-    if (res != PM3_SUCCESS) return res;
+
+    if (res != PM3_SUCCESS )
+        return res;
+    if (sw != status(MFDES_S_OPERATION_OK))
+        return PM3_ESOFT;
 
     *key_settings = data[0];
     *num_keys = data[1];
-    return PM3_SUCCESS;
+    return res;
 }
 
 // --- KEY VERSION
@@ -529,37 +603,52 @@ static int desfire_print_keyversion(uint8_t key_idx, uint8_t key_version) {
     return PM3_SUCCESS;
 }
 
-// none, verified
 static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
-    if (g_debugMode > 1) {
-        if (num_versions == NULL) PrintAndLogEx(ERR, "NUM_VERSIONS=NULL");
+    if (num_versions == NULL) {
+        PrintAndLogEx(DEBUG, "NUM_VERSIONS=NULL");
+        return PM3_EINVARG;
     }
-    if (num_versions == NULL) return PM3_EINVARG;
     sAPDU apdu = {0x90, MFDES_GET_KEY_VERSION, 0x00, 0x00, 0x01, &curr_key}; //0x64
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0, true);
+    
+    if (res != PM3_SUCCESS )
+        return res;
+
+    if (sw != status(MFDES_S_OPERATION_OK))
+        return PM3_ESOFT;
+
     return res;
 }
 
-
-// init / disconnect, verified
+// --- GET APPIDS
 static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
-    if (g_debugMode > 1) {
-        if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
-        if (app_ids_len == NULL) PrintAndLogEx(ERR, "APP_IDS_LEN=NULL");
+    if (dest == NULL) {
+         PrintAndLogEx(DEBUG, "DEST=NULL");
+         return PM3_EINVARG;
     }
-    if (dest == NULL || app_ids_len == NULL) return PM3_EINVARG;
+    if (app_ids_len == NULL) {
+        PrintAndLogEx(DEBUG, "APP_IDS_LEN=NULL");
+        return PM3_EINVARG;
+    }
+
     sAPDU apdu = {0x90, MFDES_GET_APPLICATION_IDS, 0x00, 0x00, 0x00, NULL}; //0x6a
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0, true);
-    if (res != PM3_SUCCESS) return res;
+ 
+    if (res != PM3_SUCCESS )
+        return res;
+
+    if (sw != status(MFDES_S_OPERATION_OK))
+        return PM3_ESOFT;
+
     *app_ids_len = (uint8_t)recv_len & 0xFF;
     return res;
 }
 
-// init, verified
+// --- GET DF NAMES
 static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
     if (g_debugMode > 1) {
         if (dest == NULL) PrintAndLogEx(ERR, "DEST=NULL");
@@ -570,13 +659,14 @@ static int get_desfire_dfnames(dfname_t *dest, uint8_t *dfname_count) {
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, true, (uint8_t *)dest, &recv_len, &sw, sizeof(dfname_t), true);
-    if (res != PM3_SUCCESS) return res;
+    if (res != PM3_SUCCESS)
+        return res;
+    if (sw != status(MFDES_S_OPERATION_OK))
+        return PM3_ESOFT;
     *dfname_count = recv_len;
     return res;
 }
 
-
-// init, verified
 static int get_desfire_select_application(uint8_t *aid) {
     if (g_debugMode > 1) {
         if (aid == NULL) PrintAndLogEx(ERR, "AID=NULL");
@@ -646,7 +736,7 @@ static int get_desfire_createapp(aidhdr_t *aidhdr) {
     sAPDU apdu = {0x90, MFDES_CREATE_APPLICATION, 0x00, 0x00, sizeof(aidhdr_t), (uint8_t *)aidhdr}; // 0xCA
     uint16_t sw = 0;
     int recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't create aid -> %s"), GetErrorString(res, &sw));
         DropField();
@@ -660,7 +750,7 @@ static int get_desfire_deleteapp(uint8_t *aid) {
     sAPDU apdu = {0x90, MFDES_DELETE_APPLICATION, 0x00, 0x00, 3, aid}; // 0xDA
     uint16_t sw = 0;
     int recvlen = 0;
-    int res = send_desfire_cmd(&apdu, false, NONE, &recvlen, &sw, 0, true);
+    int res = send_desfire_cmd(&apdu, false, NULL, &recvlen, &sw, 0, true);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("   Can't delete aid -> %s"), GetErrorString(res, &sw));
         DropField();
@@ -668,6 +758,116 @@ static int get_desfire_deleteapp(uint8_t *aid) {
     }
     return res;
 }
+
+int getKeySettings(uint8_t *aid) {
+    if (aid == NULL) return PM3_EINVARG;
+
+    int res = 0;
+    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
+
+        // CARD MASTER KEY
+        //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
+        res = get_desfire_select_application(aid);
+        if (res != PM3_SUCCESS) return res;
+
+        // KEY Settings - AMK
+        uint8_t num_keys = 0;
+        uint8_t key_setting = 0;
+        res = get_desfire_keysettings(&key_setting, &num_keys);
+        if (res == PM3_SUCCESS) {
+            // number of Master keys (0x01)
+            PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
+
+            PrintAndLogEx(SUCCESS, "   [0x08] Configuration changeable       : %s", (key_setting & (1 << 3)) ? _GREEN_("YES") : "NO");
+            PrintAndLogEx(SUCCESS, "   [0x04] CMK required for create/delete : %s", (key_setting & (1 << 2)) ? _GREEN_("YES") : "NO");
+            PrintAndLogEx(SUCCESS, "   [0x02] Directory list access with CMK : %s", (key_setting & (1 << 1)) ? _GREEN_("YES") : "NO");
+            PrintAndLogEx(SUCCESS, "   [0x01] CMK is changeable              : %s", (key_setting & (1 << 0)) ? _GREEN_("YES") : "NO");
+        } else {
+            PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
+        }
+
+        const char *str = "   Operation of PICC master key          : " _YELLOW_("%s");
+
+        // 2 MSB denotes
+        switch (num_keys >> 6) {
+            case 0:
+                PrintAndLogEx(SUCCESS, str, "(3)DES");
+                break;
+            case 1:
+                PrintAndLogEx(SUCCESS, str, "3K3DES");
+                break;
+            case 2:
+                PrintAndLogEx(SUCCESS, str, "AES");
+                break;
+            default:
+                break;
+        }
+
+        uint8_t cmk_num_versions = 0;
+        if (get_desfire_keyversion(0, &cmk_num_versions) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "   PICC Master key Version               : " _YELLOW_("%d (0x%02x)"), cmk_num_versions, cmk_num_versions);
+            PrintAndLogEx(INFO, "   ----------------------------------------------------------");
+        }
+
+        // Authentication tests
+        int res = test_desfire_authenticate();
+        if (res == PM3_ETIMEOUT) return res;
+        PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
+
+        res = test_desfire_authenticate_iso();
+        if (res == PM3_ETIMEOUT) return res;
+        PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
+
+        res = test_desfire_authenticate_aes();
+        if (res == PM3_ETIMEOUT) return res;
+        PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
+
+        PrintAndLogEx(INFO, "-------------------------------------------------------------");
+
+    } else {
+
+        // AID - APPLICATION MASTER KEYS
+        //PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
+        res = get_desfire_select_application(aid);
+        if (res != PM3_SUCCESS) return res;
+
+        // KEY Settings - AMK
+        uint8_t num_keys = 0;
+        uint8_t key_setting = 0;
+        res = get_desfire_keysettings(&key_setting, &num_keys);
+        if (res == PM3_SUCCESS) {
+            desfire_print_keysetting(key_setting, num_keys);
+        } else {
+            PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
+        }
+
+        // KEY VERSION  - AMK
+        uint8_t num_version = 0;
+        if (get_desfire_keyversion(0, &num_version) == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "-------------------------------------------------------------");
+            PrintAndLogEx(INFO, "  Application keys");
+            desfire_print_keyversion(0, num_version);
+        } else {
+            PrintAndLogEx(WARNING, "   Can't read AID master key version. Trying all keys");
+        }
+
+        // From 0x01 to numOfKeys.  We already got 0x00. (AMK)
+        num_keys &= 0x3F;
+        if (num_keys > 1) {
+            for (uint8_t i = 0x01; i < num_keys; ++i) {
+                if (get_desfire_keyversion(i, &num_version) == PM3_SUCCESS) {
+                    desfire_print_keyversion(i, num_version);
+                } else {
+                    PrintAndLogEx(WARNING, "   Can't read key %d  (0x%02x) version", i, i);
+                }
+            }
+        }
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
     clearCommandBuffer();
@@ -929,13 +1129,12 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     struct p *package = (struct p *) resp.data.asBytes;
 
     if (resp.status != PM3_SUCCESS) {
-
         switch (package->isOK) {
             case 1:
                 PrintAndLogEx(WARNING, "Can't select card");
                 break;
             case 2:
-                PrintAndLogEx(WARNING, "Card is most likely not Desfire. Its UID has wrong size");
+                PrintAndLogEx(WARNING, "Card is most likely not DESFire. Wrong size UID");
                 break;
             case 3:
             default:
@@ -943,6 +1142,12 @@ static int CmdHF14ADesInfo(const char *Cmd) {
                 break;
         }
         return PM3_ESOFT;
+    }
+    
+    nxp_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
+    if (cardtype == PLUS_EV1) {
+        PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
+        return PM3_SUCCESS;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -958,7 +1163,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionHW[2]);
     PrintAndLogEx(INFO, "       Version: %s", getVersionStr(package->versionHW[3], package->versionHW[4]));
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionHW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionHW[6]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionHW[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionSW[0]));
@@ -966,7 +1171,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), package->versionSW[2]);
     PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  package->versionSW[3], package->versionSW[4]);
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(package->versionSW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionSW[6]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(package->versionSW[6], false));
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Card capabilities"));
@@ -990,32 +1195,36 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
 
-    // Signature originality check
-    uint8_t signature[56] = {0};
-    size_t signature_len = 0;
-    desfire_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
+    if (cardtype == DESFIRE_EV2 || cardtype == DESFIRE_LIGHT || cardtype == DESFIRE_EV3) {
+        // Signature originality check
+        uint8_t signature[56] = {0};
+        size_t signature_len = 0;
 
-    if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS)
-        desfire_print_signature(package->uid, signature, signature_len, cardtype);
-    else {
-        PrintAndLogEx(WARNING, "--- " _YELLOW_("Couldn't verify signature. Unknown public key ?"));
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));    
+        if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
+            desfire_print_signature(package->uid, signature, signature_len, cardtype);
+        } else {
+            PrintAndLogEx(WARNING, "--- Card doesn't support GetSignature cmd");
+        }
     }
 
     // Master Key settings
     uint8_t master_aid[3] = {0x00, 0x00, 0x00};
     getKeySettings(master_aid);
 
-    // Free memory on card
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Free memory"));
-    uint32_t free_mem = 0;
-    if (get_desfire_freemem(&free_mem) == PM3_SUCCESS) {
-        desfire_print_freemem(free_mem);
-    } else {
-        PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
+    if (cardtype != DESFIRE_LIGHT) {
+        // Free memory on card
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Free memory"));
+        uint32_t free_mem = 0;
+        if (get_desfire_freemem(&free_mem) == PM3_SUCCESS) {
+            desfire_print_freemem(free_mem);
+        } else {
+            PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
+        }
+        PrintAndLogEx(INFO, "-------------------------------------------------------------");
     }
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-
     /*
         Card Master key (CMK)        0x00 AID = 00 00 00 (card level)
         Application Master Key (AMK) 0x00 AID != 00 00 00
@@ -1035,167 +1244,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-/*
-  The 7 MSBits (= n) code the storage size itself based on 2^n,
-  the LSBit is set to '0' if the size is exactly 2^n
-    and set to '1' if the storage size is between 2^n and 2^(n+1).
-    For this version of DESFire the 7 MSBits are set to 0x0C (2^12 = 4096) and the LSBit is '0'.
-*/
-char *getCardSizeStr(uint8_t fsize) {
-
-    static char buf[40] = {0x00};
-    char *retStr = buf;
-
-    uint16_t usize = 1 << ((fsize >> 1) + 1);
-    uint16_t lsize = 1 << (fsize >> 1);
-
-    // is  LSB set?
-    if (fsize & 1)
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
-    else
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
-    return buf;
-}
-
-char *getProtocolStr(uint8_t id) {
-
-    static char buf[40] = {0x00};
-    char *retStr = buf;
-
-    if (id == 0x05)
-        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
-    else
-        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
-    return buf;
-}
-
-char *getVersionStr(uint8_t major, uint8_t minor) {
-
-    static char buf[40] = {0x00};
-    char *retStr = buf;
-
-    if (major == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire MF3ICD40") ")", major, minor);
-    else if (major == 0x01 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV1") ")", major, minor);
-    else if (major == 0x12 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
-//    else if (major == 0x13 && minor == 0x00)
-//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);
-    else if (major == 0x30 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
-    else
-        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
-    return buf;
-}
-
-int getKeySettings(uint8_t *aid) {
-    if (aid == NULL) return PM3_EINVARG;
-    int res = 0;
-    if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
-
-        // CARD MASTER KEY
-        //PrintAndLogEx(INFO, "--- " _CYAN_("CMK - PICC, Card Master Key settings"));
-        res = get_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) return res;
-
-        // KEY Settings - AMK
-        uint8_t num_keys = 0;
-        uint8_t key_setting = 0;
-        res = get_desfire_keysettings(&key_setting, &num_keys);
-        if (res == PM3_SUCCESS) {
-            // number of Master keys (0x01)
-            PrintAndLogEx(SUCCESS, "   Number of Masterkeys                  : " _YELLOW_("%u"), (num_keys & 0x3F));
-
-            PrintAndLogEx(SUCCESS, "   [0x08] Configuration changeable       : %s", (key_setting & (1 << 3)) ? _GREEN_("YES") : "NO");
-            PrintAndLogEx(SUCCESS, "   [0x04] CMK required for create/delete : %s", (key_setting & (1 << 2)) ? _GREEN_("YES") : "NO");
-            PrintAndLogEx(SUCCESS, "   [0x02] Directory list access with CMK : %s", (key_setting & (1 << 1)) ? _GREEN_("YES") : "NO");
-            PrintAndLogEx(SUCCESS, "   [0x01] CMK is changeable              : %s", (key_setting & (1 << 0)) ? _GREEN_("YES") : "NO");
-        } else {
-            PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
-        }
-
-        const char *str = "   Operation of PICC master key          : " _YELLOW_("%s");
-
-        // 2 MSB denotes
-        switch (num_keys >> 6) {
-            case 0:
-                PrintAndLogEx(SUCCESS, str, "(3)DES");
-                break;
-            case 1:
-                PrintAndLogEx(SUCCESS, str, "3K3DES");
-                break;
-            case 2:
-                PrintAndLogEx(SUCCESS, str, "AES");
-                break;
-            default:
-                break;
-        }
-
-        uint8_t cmk_num_versions = 0;
-        if (get_desfire_keyversion(0, &cmk_num_versions) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "   PICC Master key Version               : " _YELLOW_("%d (0x%02x)"), cmk_num_versions, cmk_num_versions);
-            PrintAndLogEx(INFO, "   ----------------------------------------------------------");
-        }
-
-        // Authentication tests
-        int res = test_desfire_authenticate();
-        if (res == PM3_ETIMEOUT) return res;
-        PrintAndLogEx(SUCCESS, "   [0x0A] Authenticate      : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-        res = test_desfire_authenticate_iso();
-        if (res == PM3_ETIMEOUT) return res;
-        PrintAndLogEx(SUCCESS, "   [0x1A] Authenticate ISO  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-        res = test_desfire_authenticate_aes();
-        if (res == PM3_ETIMEOUT) return res;
-        PrintAndLogEx(SUCCESS, "   [0xAA] Authenticate AES  : %s", (res == PM3_SUCCESS) ? _YELLOW_("YES") : "NO");
-
-        PrintAndLogEx(INFO, "-------------------------------------------------------------");
-
-    } else {
-
-        // AID - APPLICATION MASTER KEYS
-        //PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
-        res = get_desfire_select_application(aid);
-        if (res != PM3_SUCCESS) return res;
-
-        // KEY Settings - AMK
-        uint8_t num_keys = 0;
-        uint8_t key_setting = 0;
-        res = get_desfire_keysettings(&key_setting, &num_keys);
-        if (res == PM3_SUCCESS) {
-            desfire_print_keysetting(key_setting, num_keys);
-        } else {
-            PrintAndLogEx(WARNING, _RED_("   Can't read Application Master key settings"));
-        }
-
-        // KEY VERSION  - AMK
-        uint8_t num_version = 0;
-        if (get_desfire_keyversion(0, &num_version) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "-------------------------------------------------------------");
-            PrintAndLogEx(INFO, "  Application keys");
-            desfire_print_keyversion(0, num_version);
-        } else {
-            PrintAndLogEx(WARNING, "   Can't read AID master key version. Trying all keys");
-        }
-
-        // From 0x01 to numOfKeys.  We already got 0x00. (AMK)
-        num_keys &= 0x3F;
-        if (num_keys > 1) {
-            for (uint8_t i = 0x01; i < num_keys; ++i) {
-                if (get_desfire_keyversion(i, &num_version) == PM3_SUCCESS) {
-                    desfire_print_keyversion(i, num_version);
-                } else {
-                    PrintAndLogEx(WARNING, "   Can't read key %d  (0x%02x) version", i, i);
-                }
-            }
-        }
-    }
-
-    DropField();
-    return PM3_SUCCESS;
-}
 
 static void DecodeFileType(uint8_t filetype) {
     switch (filetype) {
@@ -1238,8 +1286,10 @@ static void DecodeComSet(uint8_t comset) {
 }
 
 static char *DecodeAccessValue(uint8_t value) {
-    char *car = (char *)malloc(255);
-    memset(car, 0x0, 255);
+    char *car = (char *)calloc(255, sizeof(char));
+    if (car == NULL)
+        return NULL;
+
     switch (value) {
         case 0xE:
             strcat(car, "(Free Access)");
@@ -1260,9 +1310,17 @@ static void DecodeAccessRights(uint16_t accrights) {
     int write_access = (accrights >> 8) & 0xF;
     int read_access = (accrights >> 12) & 0xF;
     char *car = DecodeAccessValue(change_access_rights);
+    if (car == NULL) return;
+
     char *rwa = DecodeAccessValue(read_write_access);
+    if (rwa == NULL) return;
+    
     char *wa = DecodeAccessValue(write_access);
+    if (wa == NULL) return;
+
     char *ra = DecodeAccessValue(read_access);
+    if (ra == NULL) return;
+
     PrintAndLogEx(INFO, "     Access Rights: 0x%04X - Change %s - RW %s - W %s - R %s", accrights, car, rwa, wa, ra);
     free(car);
     free(rwa);
@@ -1270,23 +1328,23 @@ static void DecodeAccessRights(uint16_t accrights) {
     free(ra);
 }
 
-static int DecodeFileSettings(uint8_t *filesettings, int fileset_len, int maclen) {
-    uint8_t filetype = filesettings[0];
-    uint8_t comset = filesettings[1];
+static int DecodeFileSettings(uint8_t *src, int src_len, int maclen) {
+    uint8_t filetype = src[0];
+    uint8_t comset = src[1];
 
-    uint16_t accrights = (filesettings[4] << 8) + filesettings[3];
-    if (fileset_len == 1 + 1 + 2 + 3 + maclen) {
-        int filesize = (filesettings[7] << 16) + (filesettings[6] << 8) + filesettings[5];
+    uint16_t accrights = (src[4] << 8) + src[3];
+    if (src_len == 1 + 1 + 2 + 3 + maclen) {
+        int filesize = (src[7] << 16) + (src[6] << 8) + src[5];
         DecodeFileType(filetype);
         DecodeComSet(comset);
         DecodeAccessRights(accrights);
         PrintAndLogEx(INFO, "     Filesize: %d", filesize);
         return PM3_SUCCESS;
-    } else if (fileset_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
-        int lowerlimit = (filesettings[8] << 24) + (filesettings[7] << 16) + (filesettings[6] << 8) + filesettings[5];
-        int upperlimit = (filesettings[12] << 24) + (filesettings[11] << 16) + (filesettings[10] << 8) + filesettings[9];
-        int limitcredvalue = (filesettings[16] << 24) + (filesettings[15] << 16) + (filesettings[14] << 8) + filesettings[13];
-        uint8_t limited_credit_enabled = filesettings[17];
+    } else if (src_len == 1 + 1 + 2 + 4 + 4 + 4 + 1 + maclen) {
+        int lowerlimit = (src[8] << 24) + (src[7] << 16) + (src[6] << 8) + src[5];
+        int upperlimit = (src[12] << 24) + (src[11] << 16) + (src[10] << 8) + src[9];
+        int limitcredvalue = (src[16] << 24) + (src[15] << 16) + (src[14] << 8) + src[13];
+        uint8_t limited_credit_enabled = src[17];
         DecodeFileType(filetype);
         DecodeComSet(comset);
         DecodeAccessRights(accrights);
@@ -1590,6 +1648,5 @@ static int CmdHelp(const char *Cmd) {
 int CmdHFMFDes(const char *Cmd) {
     // flush
     clearCommandBuffer();
-    //g_debugMode=2;
     return CmdsParse(CommandTable, Cmd);
 }

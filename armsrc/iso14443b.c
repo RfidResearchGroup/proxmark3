@@ -29,7 +29,7 @@
 # define FWT_TIMEOUT_14B 35312
 #endif
 #ifndef ISO14443B_DMA_BUFFER_SIZE
-# define ISO14443B_DMA_BUFFER_SIZE 256
+# define ISO14443B_DMA_BUFFER_SIZE 512 //changed this from 256
 #endif
 #ifndef RECEIVE_MASK
 # define RECEIVE_MASK  (ISO14443B_DMA_BUFFER_SIZE-1)
@@ -37,7 +37,7 @@
 
 // Guard Time (per 14443-2)
 #ifndef TR0
-# define TR0 0
+# define TR0 32 //this value equals 8 ETU = 32 ssp clk (w/ 424 khz)
 #endif
 
 // Synchronization time (per 14443-2)
@@ -261,6 +261,10 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
     // 80/fs < TR1 < 200/fs
     // 10 ETU < TR1 < 24 ETU
 
+    // Send TR1.
+    // 10-11 ETU * 4times samples ONES
+    for (int i = 0; i < 10; i++) { SEND4STUFFBIT(1); }
+
     // Send SOF.
     // 10-11 ETU * 4times samples ZEROS
     for (int i = 0; i < 10; i++) { SEND4STUFFBIT(0); }
@@ -307,7 +311,7 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
     //for(i = 0; i < 10; i++) { ToSendStuffBit(0); }
 
     // why this?
-    for (int i = 0; i < 40; i++) { SEND4STUFFBIT(1); }
+    for (int i = 0; i < 2; i++) { SEND4STUFFBIT(1); }
     //for(i = 0; i < 40; i++) { ToSendStuffBit(1); }
 
     // Convert from last byte pos to length
