@@ -34,22 +34,20 @@ uint8_t key_ones_data[16] = { 0x01 };
 uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
 uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
 
+typedef struct {
+    uint8_t mode;
+    uint8_t algo;
+    uint8_t keyno;
+    uint8_t keylen;
+    uint8_t key[24];
+} mfdes_authinput_t;
+
+typedef struct mfdes_auth_res {
+    uint8_t sessionkeylen;
+    uint8_t sessionkey[24];
+} mfdes_auth_res_t;
+
 #define status(x) ( ((uint16_t)(0x91<<8)) + x )
-
-typedef enum {
-    MFDES_AUTH_DES = 1,
-    MFDES_AUTH_ISO = 2,
-    MFDES_AUTH_AES = 3,
-    MFDES_AUTH_PICC = 4
-} mifare_des_authmode_t;
-
-typedef enum {
-    MFDES_ALGO_DES = 1,
-    MFDES_ALGO_3DES = 2,
-    MFDES_ALGO_2K3DES = 3,
-    MFDES_ALGO_3K3DES = 4,
-    MFDES_ALGO_AES = 5
-} mifare_des_authalgo_t;
 
 typedef enum {
     UNKNOWN = 0,
@@ -949,27 +947,27 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 
     if (aidlength < 3) {
         PrintAndLogEx(ERR, "AID must have 3 bytes length.");
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     if (fidlength < 2) {
         PrintAndLogEx(ERR, "FID must have 2 bytes length.");
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     if (keylen1 < 1) {
         PrintAndLogEx(ERR, "Keysetting1 must have 1 byte length.");
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     if (keylen1 < 1) {
         PrintAndLogEx(ERR, "Keysetting2 must have 1 byte length.");
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     if (namelen > 16) {
         PrintAndLogEx(ERR, "Name has a max. of 16 bytes length.");
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     //90 ca 00 00 0e 3cb849 09 22 10e1 d27600 00850101 00
@@ -1018,7 +1016,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 
     if (aidlength < 3) {
         PrintAndLogEx(ERR, "AID must have 3 bytes length.");
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     if (memcmp(aid, "\x00\x00\x00", 3) == 0) {
@@ -1054,20 +1052,15 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
     if ((keylen < 8) || (keylen > 8)) {
         PrintAndLogEx(ERR, "Specified key must have 8 bytes length.");
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     DropField();
     uint8_t aid[3] = {0};
     int res = get_desfire_select_application(aid);
     if (res != PM3_SUCCESS) return res;
-    struct {
-        uint8_t mode;
-        uint8_t algo;
-        uint8_t keyno;
-        uint8_t key[24];
-        uint8_t keylen;
-    } PACKED payload;
+
+    mfdes_authinput_t payload;
     payload.keylen = keylen;
     memcpy(payload.key, key, keylen);
     payload.mode = MFDES_AUTH_PICC;
@@ -1496,7 +1489,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     CLIParserInit("hf mfdes auth",
                   "Authenticates Mifare DESFire using Key",
                   "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=2K3DES, 4=3K3DES, 5=AES)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
-                  "Example:\n\thf mfdes auth -m 3 -t 5 -a 018380 -n 0 -k 00000000000000000000000000000000\n"
+                  "Example:\n\thf mfdes auth -m 3 -t 5 -a 838001 -n 0 -k 00000000000000000000000000000000\n"
                  );
 
     void *argtable[] = {
@@ -1516,7 +1509,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(3, aid, &aidlength);
-    swap16(aid);
+    swap24(aid);
     uint8_t cmdKeyNo  = arg_get_int_def(4, 0);
 
     uint8_t key[24] = {0};
@@ -1526,43 +1519,43 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     if ((keylen < 8) || (keylen > 24)) {
         PrintAndLogEx(ERR, "Specified key must have %d bytes length.", keylen);
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     // AID
     if (aidlength != 3) {
         PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
     switch (cmdAuthMode) {
         case MFDES_AUTH_DES:
             if (cmdAuthAlgo != MFDES_ALGO_DES && cmdAuthAlgo != MFDES_ALGO_3DES) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth des mode");
-                return PM3_SNONCES;
+                return PM3_EINVARG;
             }
             break;
         case MFDES_AUTH_ISO:
             if (cmdAuthAlgo != MFDES_ALGO_2K3DES && cmdAuthAlgo != MFDES_ALGO_3K3DES) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth iso mode");
-                return PM3_SNONCES;
+                return PM3_EINVARG;
             }
             break;
         case MFDES_AUTH_AES:
             if (cmdAuthAlgo != MFDES_ALGO_AES) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth aes mode");
-                return PM3_SNONCES;
+                return PM3_EINVARG;
             }
             break;
         case MFDES_AUTH_PICC:
             if (cmdAuthAlgo != MFDES_AUTH_DES) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth picc mode");
-                return PM3_SNONCES;
+                return PM3_EINVARG;
             }
             break;
         default:
             PrintAndLogEx(WARNING, "Wrong Auth mode (%d) -> (1=normal, 2=iso, 3=aes)", cmdAuthMode);
-            return PM3_SNONCES;
+            return PM3_EINVARG;
     }
 
     switch (cmdAuthAlgo) {
@@ -1592,7 +1585,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     // KEY
     if (keylen != keylength) {
         PrintAndLogEx(WARNING, "Key must include %d HEX symbols", keylength);
-        return PM3_SNONCES;
+        return PM3_EINVARG;
     }
 
 
@@ -1606,13 +1599,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         if (res != PM3_SUCCESS) return res;
     }
 
-    struct {
-        uint8_t mode;
-        uint8_t algo;
-        uint8_t keyno;
-        uint8_t key[24];
-        uint8_t keylen;
-    } PACKED payload;
+    mfdes_authinput_t payload;
     payload.keylen = keylength;
     memcpy(payload.key, key, keylength);
     payload.mode = cmdAuthMode;
@@ -1630,15 +1617,9 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     uint8_t isOK  = (resp.status == PM3_SUCCESS);
     if (isOK) {
-        struct r {
-            uint8_t sessionkeylen;
-            uint8_t sessionkey[24];
-        } PACKED;
-
-        struct r *rpayload = (struct r *)&resp.data.asBytes;
-        uint8_t *session_key = rpayload->sessionkey;
+        struct mfdes_auth_res *rpayload = (struct mfdes_auth_res *)&resp.data.asBytes;
         PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
-        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(session_key, keylength));
+        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload->sessionkey, keylength));
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
     } else {
         PrintAndLogEx(WARNING, _RED_("Auth command failed, reason: %d."), resp.status);
