@@ -212,7 +212,6 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
         sprintf(tmp, " ");
 
     // remove last space
-    --tmp;
     *tmp = '\0';
     return;
 }
