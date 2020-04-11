@@ -213,8 +213,9 @@ typedef enum {
 typedef enum {
     MFDES_ALGO_DES = 1,
     MFDES_ALGO_3DES = 2,
-    MFDES_ALGO_3K3DES = 3,
-    MFDES_ALGO_AES = 4
+    MFDES_ALGO_2K3DES = 3,
+    MFDES_ALGO_3K3DES = 4,
+    MFDES_ALGO_AES = 5
 } mifare_des_authalgo_t;
 
 void MifareDES_Auth1(uint8_t *datain) {
@@ -273,9 +274,9 @@ void MifareDES_Auth1(uint8_t *datain) {
     LED_C_OFF();
 
     if (payload->key == NULL) {
-        if (payload->algo == MFDES_AUTH_DES) {
+        if (payload->algo == MFDES_AUTH_DES)  {
             memcpy(keybytes, PICC_MASTER_KEY8, 8);
-        } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES) {
+        } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES || payload->algo == MFDES_ALGO_2K3DES) {
             memcpy(keybytes, PICC_MASTER_KEY16, 16);
         } else if (payload->algo == MFDES_ALGO_3DES) {
             memcpy(keybytes, PICC_MASTER_KEY24, 24);
@@ -291,11 +292,11 @@ void MifareDES_Auth1(uint8_t *datain) {
         mbedtls_aes_init(&ctx);
         Desfire_aes_key_new(keybytes, key);
     } else if (payload->algo == MFDES_ALGO_3DES) {
-        key->type = T_3DES;
         Desfire_3des_key_new_with_version(keybytes, key);
     } else if (payload->algo == MFDES_ALGO_DES) {
-        key->type = T_DES;
         Desfire_des_key_new(keybytes, key);
+    } else if (payload->algo == MFDES_ALGO_2K3DES) {
+        Desfire_2k3des_key_new_with_version(keybytes, key);
     } else if (payload->algo == MFDES_ALGO_3K3DES) {
         Desfire_3k3des_key_new_with_version(keybytes, key);
     }
@@ -372,6 +373,8 @@ void MifareDES_Auth1(uint8_t *datain) {
         tdes_dec(&RndB, &encRndB, key->data);
     else if (payload->algo == MFDES_ALGO_DES)
         des_dec(&RndB, &encRndB, key->data);
+    else if (payload->algo == MFDES_ALGO_2K3DES)
+        tdes_2key_dec(&RndB, &encRndB, 8, key->data, IV);
     else if (payload->algo == MFDES_ALGO_3K3DES)
         tdes_3key_dec(&RndB, &encRndB, 16, key->data, IV);
 
@@ -389,6 +392,9 @@ void MifareDES_Auth1(uint8_t *datain) {
         } else if (payload->algo == MFDES_ALGO_DES) {
             des_dec(&encRndA, &RndA, key->data);
             memcpy(both, encRndA, 8);
+        } else if (payload->algo == MFDES_ALGO_2K3DES) {
+            tdes_2key_dec(&encRndA, &RndA, 8, key->data, IV);
+            memcpy(both, encRndA, 8);
         } else if (payload->algo == MFDES_ALGO_3K3DES) {
             tdes_3key_dec(&encRndA, &RndA, 16, key->data, IV);
             memcpy(both, encRndA, 16);
@@ -404,6 +410,9 @@ void MifareDES_Auth1(uint8_t *datain) {
             memcpy(both + 8, encRndB, 8);
         } else if (payload->algo == MFDES_ALGO_DES) {
             des_dec(&encRndB, &rotRndB, key->data);
+            memcpy(both + 8, encRndB, 8);
+        } else if (payload->algo == MFDES_ALGO_2K3DES) {
+            tdes_2key_dec(&encRndB, &rotRndB, 8, key->data, IV);
             memcpy(both + 8, encRndB, 8);
         } else if (payload->algo == MFDES_ALGO_3K3DES) {
             tdes_3key_dec(&encRndB, &rotRndB, 16, key->data, IV);
@@ -485,6 +494,8 @@ void MifareDES_Auth1(uint8_t *datain) {
             tdes_dec(&encRndA, &encRndA, key->data);
         else if (payload->algo == MFDES_ALGO_DES)
             des_dec(&encRndA, &encRndA, key->data);
+        else if (payload->algo == MFDES_ALGO_2K3DES)
+            tdes_2key_dec(&encRndA, &encRndA, 8, key->data, IV);
         else if (payload->algo == MFDES_ALGO_3K3DES)
             tdes_3key_dec(&encRndA, &encRndA, 16, key->data, IV);
     } else if (payload->mode == MFDES_AUTH_AES) {
