@@ -210,10 +210,14 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     // shows plot window on the screen.
     show();
 
-    // Move controller widget below plot
-    controlWidget->move(x(), y() + frameSize().height());
-    controlWidget->resize(size().width(), 200);
-
+    if (session.settings_loaded)
+        controlWidget->setGeometry (session.window_overlay_xpos,session.window_overlay_ypos,session.window_overlay_wsize,session.window_overlay_hsize);
+    else {
+        // Move controller widget below plot
+        controlWidget->move(x(), y() + frameSize().height());
+        controlWidget->resize(size().width(), 200);
+    }
+    
     // Olverlays / slider window title
     QString ct = QString("[*]Slider [ %1 ]").arg((char *)gui_serial_port_name);
     controlWidget->setWindowTitle(ct);

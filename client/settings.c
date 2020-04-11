@@ -64,6 +64,10 @@ int settings_load (void) {
     session.window_plot_ypos = 30;
     session.window_plot_hsize = 400;
     session.window_plot_wsize = 800;
+    session.window_overlay_xpos = session.window_plot_xpos;
+    session.window_overlay_ypos = 20+session.window_plot_ypos + session.window_plot_hsize;
+    session.window_overlay_hsize = 200;
+    session.window_overlay_wsize = session.window_plot_wsize;
     session.emoji_mode = ALIAS;
     session.show_hints = false;
     session.supports_colors = false;
@@ -131,6 +135,12 @@ void settings_save_callback (json_t *root) {
     JsonSaveInt (root,"window.plot.hsize",session.window_plot_hsize);
     JsonSaveInt (root,"window.plot.wsize",session.window_plot_wsize);
 
+    // Overlay/Slider window
+    JsonSaveInt (root,"window.overlay.xpos",session.window_overlay_xpos);
+    JsonSaveInt (root,"window.overlay.ypos",session.window_overlay_ypos);
+    JsonSaveInt (root,"window.overlay.hsize",session.window_overlay_hsize);
+    JsonSaveInt (root,"window.overlay.wsize",session.window_overlay_wsize);
+
     // Emoji
     switch (session.emoji_mode) {
         case ALIAS: JsonSaveStr (root,"show.emoji","alias"); break;
@@ -171,6 +181,16 @@ void settings_load_callback (json_t *root) {
         session.window_plot_hsize = i1;
     if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.plot.wsize",&i1) == 0) 
         session.window_plot_wsize = i1;
+
+    // overlay/slider plot
+    if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.overlay.xpos",&i1) == 0) 
+        session.window_overlay_xpos = i1;
+    if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.overlay.ypos",&i1) == 0) 
+        session.window_overlay_ypos = i1;
+    if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.overlay.hsize",&i1) == 0) 
+        session.window_overlay_hsize = i1;
+    if (json_unpack_ex(root,&up_error, 0, "{s:i}","window.overlay.wsize",&i1) == 0) 
+        session.window_overlay_wsize = i1;
 
     // show options
     if (json_unpack_ex(root,&up_error, 0, "{s:s}","show.emoji",&s1) == 0) {

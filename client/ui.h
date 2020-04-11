@@ -34,6 +34,10 @@ typedef struct {
     int window_plot_ypos;
     int window_plot_hsize;
     int window_plot_wsize;
+    int window_overlay_xpos;
+    int window_overlay_ypos;
+    int window_overlay_hsize;
+    int window_overlay_wsize;
     clientdebugLevel_t client_debug_level;
 } session_arg_t;
 

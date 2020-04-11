@@ -30,7 +30,7 @@
 #include "settings.h"
 
 // Used to enable/disable use of settings json file
-// #define USE_SETTING_FILE
+#define USE_SETTING_FILE
 
 
 static void showBanner(void) {
