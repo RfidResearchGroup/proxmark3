@@ -29,6 +29,10 @@
 #include "flash.h"
 #include "settings.h"
 
+// Used to enable/disable use of settings json file
+// #define USE_SETTING_FILE
+
+
 static void showBanner(void) {
     g_printAndLog = PRINTANDLOG_PRINT;
 
@@ -489,12 +493,15 @@ finish2:
     return ret;
 }
 
+#ifndef USE_SETTING_FILE
+
 // Check if windows AnsiColor Support is enabled in the registery
 // [HKEY_CURRENT_USER\Console]
 //     "VirtualTerminalLevel"=dword:00000001
 // 2nd Key needs to be enabled...  This key takes the console out of legacy mode.
 // [HKEY_CURRENT_USER\Console]
 //     "ForceV2"=dword:00000001
+
 static bool DetectWindowsAnsiSupport(void) {
     bool ret = false;
 #if defined(_WIN32)
@@ -543,6 +550,8 @@ static bool DetectWindowsAnsiSupport(void) {
     return ret;
 }
 
+#endif
+
 int main(int argc, char *argv[]) {
     srand(time(0));
 
@@ -582,12 +591,17 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
     set_my_user_directory();
 
-    // Settings Load and Test
-    // settings_load ();
+#ifdef USE_SETTING_FILE
+    // Load Settings and assign
+    // This will allow the command line to override the settings.json values
+    settings_load ();
+
+    // quick patch for debug level
+    g_debugMode = session.client_debug_level;
     // settings_save ();
-    // printf ("Ver : %s\n",mySettings.version);
     // End Settings
-    
+#endif
+
     for (int i = 1; i < argc; i++) {
 
         if (argv[i][0] != '-') {
@@ -766,8 +780,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+#ifndef USE_SETTING_FILE
+  // comment next 2 lines to use session values set from settings_load
     session.supports_colors = DetectWindowsAnsiSupport();
     session.emoji_mode = ALTTEXT;
+#endif
 
     session.stdinOnTTY = isatty(STDIN_FILENO);
     session.stdoutOnTTY = isatty(STDOUT_FILENO);
@@ -836,6 +853,14 @@ int main(int argc, char *argv[]) {
     // ascii art only in interactive client
     if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
         showBanner();
+
+#ifdef USE_SETTING_FILE
+    // Save settings if not load from settings json file.
+    // Doing this here will ensure other checks and updates are saved to over rule default
+    // e.g. Linux color use check
+    if (!session.settings_loaded)
+        settings_save ();
+#endif
 
 #ifdef HAVE_GUI
 
