@@ -1359,6 +1359,15 @@ static int DecodeFileSettings(uint8_t *src, int src_len, int maclen) {
         DecodeAccessRights(accrights);
         PrintAndLogEx(INFO, "     Lower limit: %d - Upper limit: %d - limited credit value: %d - limited credit enabled: %d", lowerlimit, upperlimit, limitcredvalue, limited_credit_enabled);
         return PM3_SUCCESS;
+    } else if (src_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
+        int recordsize = (src[7] << 16) + (src[6] << 8) + src[5];
+        int maxrecords = (src[10] << 16) + (src[9] << 8) + src[8];
+        int currentrecord = (src[13] << 16) + (src[12] << 8) + src[11];
+        DecodeFileType(filetype);
+        DecodeComSet(comset);
+        DecodeAccessRights(accrights);
+        PrintAndLogEx(INFO, "     Record size: %d - MaxNumberRecords: %d - Current Number Records: %d", recordsize, maxrecords, currentrecord);
+        return PM3_SUCCESS;
     }
     return PM3_ESOFT;
 }
