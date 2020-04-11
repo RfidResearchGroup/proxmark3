@@ -92,13 +92,13 @@ static char *getCardSizeStr(uint8_t fsize) {
 
 static char *getProtocolStr(uint8_t id, bool hw) {
 
-   static char buf[50] = {0x00};
+    static char buf[50] = {0x00};
     char *retStr = buf;
 
     if (id == 0x04) {
         sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
     } else if (id == 0x05) {
-      if (hw)
+        if (hw)
             sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") ")", id);
         else
             sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
@@ -308,7 +308,7 @@ static char *GetErrorString(int res, uint16_t *sw) {
 
 static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_len, uint16_t *sw, int splitbysize, bool readalldata) {
     if (apdu == NULL) {
-        PrintAndLogEx(DEBUG, "APDU=NULL"); 
+        PrintAndLogEx(DEBUG, "APDU=NULL");
         return PM3_EINVARG;
     }
     /*if (dest == NULL) {
@@ -362,7 +362,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
             PrintAndLogEx(DEBUG, "%s", GetErrorString(res, sw));
             return res;
         }
-    
+
         if (dest != NULL) {
             if (splitbysize) {
                 memcpy(&dest[i * splitbysize], data, resplen);
@@ -376,7 +376,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
         if (*sw != status(MFDES_ADDITIONAL_FRAME)) break;
     }
 
-    *recv_len =  (splitbysize) ? i : pos;
+    *recv_len = (splitbysize) ? i : pos;
     return PM3_SUCCESS;
 }
 
@@ -392,7 +392,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 //        return DESFIRE_EV3;
     if (major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
-    if (major == 0x11 &&  minor == 0x00 )
+    if (major == 0x11 &&  minor == 0x00)
         return PLUS_EV1;
 
     return UNKNOWN;
@@ -442,12 +442,12 @@ static int get_desfire_freemem(uint32_t *free_mem) {
 
     int res = send_desfire_cmd(&apdu, true, fmem, &recv_len, &sw, 0, true);
 
-    if (res != PM3_SUCCESS )
+    if (res != PM3_SUCCESS)
         return res;
-    
+
     if (sw != status(MFDES_S_OPERATION_OK))
         return PM3_ESOFT;
-    
+
     *free_mem = le24toh(fmem);
     return res;
 }
@@ -587,7 +587,7 @@ static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
     uint8_t data[2] = {0};
     int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0, true);
 
-    if (res != PM3_SUCCESS )
+    if (res != PM3_SUCCESS)
         return res;
     if (sw != status(MFDES_S_OPERATION_OK))
         return PM3_ESOFT;
@@ -612,8 +612,8 @@ static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0, true);
-    
-    if (res != PM3_SUCCESS )
+
+    if (res != PM3_SUCCESS)
         return res;
 
     if (sw != status(MFDES_S_OPERATION_OK))
@@ -625,8 +625,8 @@ static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
 // --- GET APPIDS
 static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
     if (dest == NULL) {
-         PrintAndLogEx(DEBUG, "DEST=NULL");
-         return PM3_EINVARG;
+        PrintAndLogEx(DEBUG, "DEST=NULL");
+        return PM3_EINVARG;
     }
     if (app_ids_len == NULL) {
         PrintAndLogEx(DEBUG, "APP_IDS_LEN=NULL");
@@ -637,8 +637,8 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0, true);
- 
-    if (res != PM3_SUCCESS )
+
+    if (res != PM3_SUCCESS)
         return res;
 
     if (sw != status(MFDES_S_OPERATION_OK))
@@ -868,18 +868,18 @@ int getKeySettings(uint8_t *aid) {
     return PM3_SUCCESS;
 }
 
-static void swap24(uint8_t* data){
-    if (data==NULL) return;
-    uint8_t tmp=data[0];
-    data[0]=data[2];
-    data[2]=tmp;
+static void swap24(uint8_t *data) {
+    if (data == NULL) return;
+    uint8_t tmp = data[0];
+    data[0] = data[2];
+    data[2] = tmp;
 };
 
-static void swap16(uint8_t* data){
-        if (data==NULL) return;
-        uint8_t tmp=data[0];
-        data[0]=data[1];
-        data[1]=tmp;
+static void swap16(uint8_t *data) {
+    if (data == NULL) return;
+    uint8_t tmp = data[0];
+    data[0] = data[1];
+    data[1] = tmp;
 };
 
 
@@ -1151,7 +1151,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         }
         return PM3_ESOFT;
     }
-    
+
     nxp_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
     if (cardtype == PLUS_EV1) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
@@ -1209,7 +1209,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         size_t signature_len = 0;
 
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));    
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
         if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
             desfire_print_signature(package->uid, signature, signature_len, cardtype);
         } else {
@@ -1322,7 +1322,7 @@ static void DecodeAccessRights(uint16_t accrights) {
 
     char *rwa = DecodeAccessValue(read_write_access);
     if (rwa == NULL) return;
-    
+
     char *wa = DecodeAccessValue(write_access);
     if (wa == NULL) return;
 
@@ -1515,7 +1515,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     CLIParserFree();
 
     if ((keylen < 8) || (keylen > 24)) {
-        PrintAndLogEx(ERR, "Specified key must have 16 bytes length.");
+        PrintAndLogEx(ERR, "Specified key must have %d bytes length.", keylen);
         return PM3_SNONCES;
     }
 
@@ -1621,7 +1621,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(session_key, keylength));
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
     } else {
-        PrintAndLogEx(WARNING, _RED_("Client command failed, reason: %d."), resp.status);
+        PrintAndLogEx(WARNING, _RED_("Auth command failed, reason: %d."), resp.status);
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
@@ -1643,18 +1643,18 @@ static command_t CommandTable[] = {
     {"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
-/*
-    ISO/IEC 7816 Cmds
-    'A4' Select
-    'B0' Read Binary
-    'D6' Update Binary
-    'B2' Read Records
-    'E2' Append Records
-    '84' Get Challenge
-    '88' Internal Authenticate
-    '82' External Authenticate
+    /*
+        ISO/IEC 7816 Cmds
+        'A4' Select
+        'B0' Read Binary
+        'D6' Update Binary
+        'B2' Read Records
+        'E2' Append Records
+        '84' Get Challenge
+        '88' Internal Authenticate
+        '82' External Authenticate
 
-*/
+    */
     {NULL, NULL, NULL, NULL}
 };
 
