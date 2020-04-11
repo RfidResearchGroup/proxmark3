@@ -46,8 +46,9 @@ typedef enum {
 typedef enum {
     MFDES_ALGO_DES = 1,
     MFDES_ALGO_3DES = 2,
-    MFDES_ALGO_3K3DES = 3,
-    MFDES_ALGO_AES = 4
+    MFDES_ALGO_2K3DES = 3,
+    MFDES_ALGO_3K3DES = 4,
+    MFDES_ALGO_AES = 5
 } mifare_des_authalgo_t;
 
 typedef enum {
@@ -1485,14 +1486,14 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     CLIParserInit("hf mfdes auth",
                   "Authenticates Mifare DESFire using Key",
-                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
-                  "Example:\n\thf mfdes auth -m 3 -t 4 -a 018380 -n 0 -k 404142434445464748494a4b4c4d4e4f\n"
+                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=2K3DES, 4=3K3DES, 5=AES)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
+                  "Example:\n\thf mfdes auth -m 3 -t 5 -a 018380 -n 0 -k 00000000000000000000000000000000\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0("mM",  "type",   "Auth type (1=normal, 2=iso, 3=aes, 4=picc)", NULL),
-        arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)", NULL),
+        arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES, 3=2K3DES, 4=3K3DES, 5=AES)", NULL),
         arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("nN",  "keyno",  "Key number used for authentification", NULL),
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
@@ -1526,21 +1527,27 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
 
     switch (cmdAuthMode) {
-        case 1:
-            if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
+        case MFDES_AUTH_DES:
+            if (cmdAuthAlgo != MFDES_ALGO_DES && cmdAuthAlgo != MFDES_ALGO_3DES) {
+                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth des mode");
                 return PM3_SNONCES;
             }
             break;
-        case 2:
-            if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2 && cmdAuthAlgo != 3) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
+        case MFDES_AUTH_ISO:
+            if (cmdAuthAlgo != MFDES_ALGO_2K3DES && cmdAuthAlgo != MFDES_ALGO_3K3DES) {
+                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth iso mode");
                 return PM3_SNONCES;
             }
             break;
-        case 3:
-            if (cmdAuthAlgo != 4) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
+        case MFDES_AUTH_AES:
+            if (cmdAuthAlgo != MFDES_ALGO_AES) {
+                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth aes mode");
+                return PM3_SNONCES;
+            }
+            break;
+        case MFDES_AUTH_PICC:
+            if (cmdAuthAlgo != MFDES_AUTH_DES) {
+                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth picc mode");
                 return PM3_SNONCES;
             }
             break;
@@ -1550,20 +1557,24 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
 
     switch (cmdAuthAlgo) {
-        case 2:
+        case MFDES_ALGO_2K3DES:
+            keylength = 16;
+            PrintAndLogEx(NORMAL, "2 key 3DES selected");
+            break;
+        case MFDES_ALGO_3DES:
             keylength = 16;
             PrintAndLogEx(NORMAL, "3DES selected");
             break;
-        case 3:
+        case MFDES_ALGO_3K3DES:
             keylength = 24;
             PrintAndLogEx(NORMAL, "3 key 3DES selected");
             break;
-        case 4:
+        case MFDES_ALGO_AES:
             keylength = 16;
             PrintAndLogEx(NORMAL, "AES selected");
             break;
         default:
-            cmdAuthAlgo = 1;
+            cmdAuthAlgo = MFDES_ALGO_DES;
             keylength = 8;
             PrintAndLogEx(NORMAL, "DES selected");
             break;

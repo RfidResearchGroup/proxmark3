@@ -74,6 +74,14 @@ void Desfire_3k3des_key_new(const uint8_t value[24], desfirekey_t key) {
     Desfire_3k3des_key_new_with_version(data, key);
 }
 
+void Desfire_2k3des_key_new_with_version(const uint8_t value[16], desfirekey_t key) {
+    if (key != NULL) {
+        key->type = T_2K3DES;
+        memcpy(key->data, value, 16);
+        update_key_schedules(key);
+    }
+}
+
 void Desfire_3k3des_key_new_with_version(const uint8_t value[24], desfirekey_t key) {
     if (key != NULL) {
         key->type = T_3K3DES;
@@ -130,6 +138,13 @@ void Desfire_session_key_new(const uint8_t rnda[], const uint8_t rndb[], desfire
             Desfire_des_key_new_with_version(buffer, key);
             break;
         case T_3DES:
+            memcpy(buffer, rnda, 4);
+            memcpy(buffer + 4, rndb, 4);
+            memcpy(buffer + 8, rnda + 4, 4);
+            memcpy(buffer + 12, rndb + 4, 4);
+            Desfire_3des_key_new_with_version(buffer, key);
+            break;
+        case T_2K3DES:
             memcpy(buffer, rnda, 4);
             memcpy(buffer + 4, rndb, 4);
             memcpy(buffer + 8, rnda + 4, 4);
