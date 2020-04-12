@@ -253,9 +253,11 @@ void MifareDES_Auth1(uint8_t *datain) {
     // Default Keys
     uint8_t PICC_MASTER_KEY8[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t PICC_MASTER_KEY16[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                     0x00, 0x00};
+                                     0x00, 0x00
+                                    };
     uint8_t PICC_MASTER_KEY24[24] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                                    };
     //uint8_t null_key_data16[16] = {0x00};
     //uint8_t new_key_data8[8]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
     //uint8_t new_key_data16[16]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
@@ -389,18 +391,17 @@ void MifareDES_Auth1(uint8_t *datain) {
 
         des_dec(encRndB, rotRndB, key->data);
         memcpy(both + 8, encRndB, rndlen);
-    }
-    else if (payload->mode == MFDES_AUTH_ISO) {
+    } else if (payload->mode == MFDES_AUTH_ISO) {
         if (payload->algo == MFDES_ALGO_3DES) {
             uint8_t tmp[16] = {0x00};
             memcpy(tmp, RndA, rndlen);
             memcpy(tmp + rndlen, rotRndB, rndlen);
-            tdes_nxp_send(tmp, both, 16, key->data, IV,2);
+            tdes_nxp_send(tmp, both, 16, key->data, IV, 2);
         } else if (payload->algo == MFDES_ALGO_3K3DES) {
             uint8_t tmp[32] = {0x00};
             memcpy(tmp, RndA, rndlen);
             memcpy(tmp + rndlen, rotRndB, rndlen);
-            tdes_nxp_send(tmp, both, 32, key->data, IV,3);
+            tdes_nxp_send(tmp, both, 32, key->data, IV, 3);
         }
     } else if (payload->mode == MFDES_AUTH_AES) {
         uint8_t tmp[32] = {0x00};
@@ -476,9 +477,9 @@ void MifareDES_Auth1(uint8_t *datain) {
         if (payload->algo == MFDES_ALGO_DES)
             des_dec(encRndA, encRndA, key->data);
         else if (payload->algo == MFDES_ALGO_3DES)
-            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV,2);
+            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
         else if (payload->algo == MFDES_ALGO_3K3DES)
-            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV,3);
+            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
     } else if (payload->mode == MFDES_AUTH_AES) {
         if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
             if (DBGLEVEL >= DBG_EXTENDED) {
