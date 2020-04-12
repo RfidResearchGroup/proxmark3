@@ -1664,7 +1664,6 @@ static int CmdHF14ADesCreateStdFile(const char *Cmd) {
     }
 
     mfdes_file_t ft;
-    bool usefid = true;
     memcpy(ft.fid, fid, 2);
     memcpy(ft.filesize, filesize, 3);
     ft.fileno = fileno;
@@ -2347,6 +2346,9 @@ static command_t CommandTable[] = {
         '88' Internal Authenticate
         '82' External Authenticate
 
+     Write Data:
+     90  3d  00  00  16  01  00  00  00  0f  00  00  00  0f  20  00  3b  00  34  04  06  e1  04  0f  fe  00  00  00
+     90  3d  00  00  09  02  00  00  00  02  00  00  00  00  00
     */
     {NULL, NULL, NULL, NULL}
 };
