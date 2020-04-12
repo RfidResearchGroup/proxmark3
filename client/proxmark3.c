@@ -27,13 +27,58 @@
 #include "comms.h"
 #include "fileutils.h"
 #include "flash.h"
-#include "settings.h"
+#include "preferences.h"
 
-// Used to enable/disable use of settings json file
-// #define USE_SETTING_FILE
+// Used to enable/disable use of preferences json file
+// #define USE_PREFERENCE_FILE
 
+#ifdef _WIN32
+
+static void utf8_showBanner (void) {
+ 
+    char sq[] = { 0xE2,0x96,0x88,0x00 };   // square block
+    char tr[] = { 0xE2,0x95,0x97,0x00 };   // top rigth corner 
+    char tl[] = { 0xE2,0x95,0x94,0x00 };   // top left corner
+    char br[] = { 0xE2,0x95,0x9D,0x00 };   // bottom right corner
+    char bl[] = { 0xE2,0x95,0x9A,0x00 };   // bottom left corner
+    char hl[] = { 0xE2,0x95,0x90,0x00 };   // horiz line 
+    char vl[] = { 0xE2,0x95,0x91,0x00 };   // vert line
+    char msg1 [60];
+    char msg2 [60];
+    char msg3 [60];
+
+    strcpy (msg1,"    :snowflake:  iceman@icesql.net :coffee:");
+    strcpy (msg2,"   https://github.com/rfidresearchgroup/proxmark3/");
+    strcpy (msg3,"pre-release v4.0");
+
+    g_printAndLog = PRINTANDLOG_PRINT;
+
+    PrintAndLogEx(NORMAL, "\n");
+
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s   %s%s%s%s %s%s%s%s%s "),sq,sq,sq,sq,sq,sq,tr,sq,sq,sq,tr,sq,sq,sq,tr,sq,sq,sq,sq,tr);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s   %s%s%s%s"),sq,sq,tl,hl,hl,sq,sq,tr,sq,sq,sq,sq,tr,sq,sq,sq,sq,vl,hl,hl,sq,vl);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s%s"),sq,sq,sq,sq,sq,sq,tl,br,sq,sq,tl,sq,sq,sq,sq,tl,sq,sq,vl,sq,sq,sq,sq,tl,br);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")"%s",sq,sq,tr,hl,hl,hl,br,sq,sq,vl,bl,sq,sq,tl,br,sq,sq,vl,hl,hl,sq,vl,msg1);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")"%s",sq,sq,vl,sq,sq,vl,bl,hl,br,sq,sq,vl,sq,sq,sq,sq,tl,br,msg2);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")"%s",bl,hl,br,bl,hl,br,bl,hl,br,bl,hl,hl,hl,br,msg3);
+
+    PrintAndLogEx(NORMAL, "");
+    fflush(stdout);
+    g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+}
+
+#endif
 
 static void showBanner(void) {
+
+#ifdef _WIN32
+    // If on windows and using UTF-8 then we need utf-8 ascii art for banner.
+    if (GetConsoleCP() == 65001) {
+        utf8_showBanner ();
+        return;
+    }
+#endif
+
     g_printAndLog = PRINTANDLOG_PRINT;
 
     PrintAndLogEx(NORMAL, "\n");
@@ -59,6 +104,7 @@ static void showBanner(void) {
     fflush(stdout);
     g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 }
+
 
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
@@ -493,7 +539,7 @@ finish2:
     return ret;
 }
 
-#ifndef USE_SETTING_FILE
+#ifndef USE_PREFERENCE_FILE
 
 // Check if windows AnsiColor Support is enabled in the registery
 // [HKEY_CURRENT_USER\Console]
@@ -591,11 +637,14 @@ int main(int argc, char *argv[]) {
     set_my_executable_path();
     set_my_user_directory();
 
-#ifdef USE_SETTING_FILE
+#ifdef USE_PREFERENCE_FILE
     // Load Settings and assign
     // This will allow the command line to override the settings.json values
-    settings_load ();
-
+    preferences_load ();
+    // Change height/width (Rows,Cols) - Testing
+    // printf ("\e[8;50;100t");
+    // printf ("\e[3;50;50t"); // x,y
+    //printf ("Path : %s \n",my_user_directory);
     // quick patch for debug level
     g_debugMode = session.client_debug_level;
     // settings_save ();
@@ -780,7 +829,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-#ifndef USE_SETTING_FILE
+#ifndef USE_PREFERENCE_FILE
   // comment next 2 lines to use session values set from settings_load
     session.supports_colors = DetectWindowsAnsiSupport();
     session.emoji_mode = ALTTEXT;
@@ -854,12 +903,12 @@ int main(int argc, char *argv[]) {
     if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)
         showBanner();
 
-#ifdef USE_SETTING_FILE
+#ifdef USE_PREFERENCE_FILE
     // Save settings if not load from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if (!session.settings_loaded)
-        settings_save ();
+    if (!session.preferences_loaded)
+        preferences_save ();
 #endif
 
 #ifdef HAVE_GUI
