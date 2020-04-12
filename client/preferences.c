@@ -476,6 +476,7 @@ static int CmdPrefSet (const char *Cmd)
                 if (w != -99999) session.window_plot_wsize = w; 
                 // Need to work out how to change live....
                 // calling data plot seems to work
+                //plotwidget->MoveWindows ();
                 
                 showPlotPosState ();
                 break;
