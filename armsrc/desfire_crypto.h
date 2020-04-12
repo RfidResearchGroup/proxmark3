@@ -98,18 +98,9 @@ struct desfire_tag {
 };
 typedef struct desfire_tag *desfiretag_t;
 
-typedef unsigned long DES_KS[16][2];   /* Single-key DES key schedule */
-typedef unsigned long DES3_KS[48][2];  /* Triple-DES key schedule */
-
-extern int Asmversion; /* 1 if we're linked with an asm version, 0 if C */
-
 void crc32_ex(const uint8_t *data, const size_t len, uint8_t *crc);
 void crc32_append(uint8_t *data, const size_t len);
 
-void des_enc(void *out, const void *in, const void *key);
-void des_dec(void *out, const void *in, const void *key);
-void tdes_enc(void *out, void *in, const void *key);
-void tdes_dec(void *out, void *in, const uint8_t *key);
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
 void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
 void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key);
