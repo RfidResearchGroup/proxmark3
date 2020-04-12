@@ -24,7 +24,6 @@ void ShowGraphWindow(void);
 void HideGraphWindow(void);
 void RepaintGraphWindow(void);
 void MainGraphics(void);
-void SetWindowsPosition (void);
 void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);
 void ExitGraphics(void);
 #ifndef MAX_GRAPH_TRACE_LEN

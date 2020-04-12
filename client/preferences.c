@@ -24,7 +24,7 @@
 #include "cmdparser.h"
 #include <ctype.h>
 //#include "proxgui.h"
-extern void SetWindowsPosition (void);
+//extern void SetWindowsPosition (void);
 static int CmdHelp(const char *Cmd);
 
 // Load all settings into memory (struct)
@@ -445,7 +445,7 @@ static int CmdPrefSet (const char *Cmd)
                 // Need to work out how to change live....
                 // calling data plot seems to work
                 //plotwidget->MoveWindows ();
-                SetWindowsPosition();
+               // SetWindowsPosition();
                 showPlotPosState ();
                 break;
             case prefOVERLAY: 
@@ -468,7 +468,7 @@ static int CmdPrefSet (const char *Cmd)
                 if (y != -99999) session.window_overlay_ypos = y; 
                 if (h != -99999) session.window_overlay_hsize = h; 
                 if (w != -99999) session.window_overlay_wsize = w; 
-                SetWindowsPosition();
+               // SetWindowsPosition();
                 showOverlayPosState ();
                 // Need to work out how to change live....
                 break;
