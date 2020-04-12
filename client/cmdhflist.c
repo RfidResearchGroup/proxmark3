@@ -675,7 +675,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize) == 0) {
-       
+
         // S-block 11xxx010
         if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
             switch ((cmd[0] & 0x30)) {
@@ -707,9 +707,8 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
             if ((cmd[0] & 0x04) == 0x04)  // nad byte following
                 pos++;
-                
+
             for (uint8_t i = 0; i < 2; i++, pos++) {
-           
                 switch (cmd[pos]) {
                     case MFDES_CREATE_APPLICATION:
                         snprintf(exp, size, "CREATE APPLICATION");
@@ -819,8 +818,11 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     case MFDES_GET_KEY_VERSION:
                         snprintf(exp, size, "GET KEY VERSION");
                         break;
-                    case MFDES_AUTHENTICATION_FRAME:
+                    case MFDES_ADDITIONAL_FRAME:
                         snprintf(exp, size, "AUTH FRAME / NEXT FRAME");
+                        break;
+                    case MFDES_READSIG:
+                        snprintf(exp, size, "READ SIGNATURE");
                         break;
                     default:
                         break;

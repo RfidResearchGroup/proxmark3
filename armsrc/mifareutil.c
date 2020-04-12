@@ -697,7 +697,7 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
 int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
 
     int len;
-    uint8_t data[17] = {MFDES_AUTHENTICATION_FRAME};
+    uint8_t data[17] = {MFDES_ADDITIONAL_FRAME};
     memcpy(data + 1, key, 16);
 
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};

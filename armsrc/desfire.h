@@ -61,7 +61,8 @@ enum DESFIRE_CRYPTOALGO {
     T_DES = 0x00,
     T_3DES = 0x01,
     T_3K3DES = 0x02,
-    T_AES = 0x03
+    T_AES = 0x03,
+    T_2K3DES = 0x04
 };
 
 

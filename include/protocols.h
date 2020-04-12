@@ -349,26 +349,20 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // 6x xx = ERROR
 
 // MIFARE DESFire command set:
-
-
-#define MFDES_GET_VERSION               0x60
-
 #define MFDES_AUTHENTICATE              0x0A  // AUTHENTICATE_NATIVE
 #define MFDES_AUTHENTICATE_ISO          0x1A  // AUTHENTICATE_STANDARD
 #define MFDES_AUTHENTICATE_AES          0xAA
 
 #define MFDES_CREDIT                    0x0C
 #define MFDES_LIMITED_CREDIT            0x1C
-#define MFDES_DEBIT                     0xDC
-
 #define MFDES_WRITE_RECORD              0x3B
 #define MFDES_READSIG                   0x3C
 #define MFDES_WRITE_DATA                0x3D
-
 #define MFDES_GET_KEY_SETTINGS          0x45
 #define MFDES_CHANGE_KEY_SETTINGS       0x54
 #define MFDES_SELECT_APPLICATION        0x5A
 #define MFDES_CHANGE_FILE_SETTINGS      0x5F
+#define MFDES_GET_VERSION               0x60
 #define MFDES_GET_ISOFILE_IDS           0x61
 #define MFDES_GET_KEY_VERSION           0x64
 #define MFDES_GET_APPLICATION_IDS       0x6A
@@ -376,19 +370,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_GET_FREE_MEMORY           0x6E
 #define MFDES_GET_DF_NAMES              0x6D
 #define MFDES_GET_FILE_IDS              0x6F
-
-
 #define MFDES_ABORT_TRANSACTION         0xA7
-#define MFDES_AUTHENTICATION_FRAME      0xAF
 #define MFDES_ADDITIONAL_FRAME          0xAF
-#define MFDES_ADDITIONAL_FRAME_RESP     0x91AF
-#define MFDES_SUCCESS_FRAME_RESP        0x9100
-#define MFDES_EAUTH_RESP                0x91AE
-#define MFDES_ENO_SUCH_KEY_RESP         0x9140
-
 #define MFDES_READ_RECORDS              0xBB
 #define MFDES_READ_DATA                 0xBD
-
 #define MFDES_CREATE_CYCLIC_RECORD_FILE 0xC0
 #define MFDES_CREATE_LINEAR_RECORD_FILE 0xC1
 #define MFDES_CHANGE_KEY                0xC4
@@ -397,14 +382,40 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_CREATE_BACKUP_DATA_FILE   0xCB
 #define MFDES_CREATE_VALUE_FILE         0xCC
 #define MFDES_CREATE_STD_DATA_FILE      0xCD
-
-#define MFDES_CLEAR_RECORD_FILE         0xEB
-
 #define MFDES_DELETE_APPLICATION        0xDA
+#define MFDES_DEBIT                     0xDC
 #define MFDES_DELETE_FILE               0xDF
-
+#define MFDES_CLEAR_RECORD_FILE         0xEB
 #define MFDES_GET_FILE_SETTINGS         0xF5
 #define MFDES_FORMAT_PICC               0xFC
+
+
+// MIFARE DESFire status & error codes:
+#define MFDES_S_OPERATION_OK            0x00
+#define MFDES_S_NO_CHANGES              0x0C
+#define MFDES_S_SIGNATURE               0x90
+#define MFDES_S_ADDITIONAL_FRAME        0xAF
+
+#define MFDES_E_OUT_OF_EEPROM           0x0E
+#define MFDES_E_ILLEGAL_COMMAND_CODE    0x1C
+#define MFDES_E_INTEGRITY_ERROR         0x1E
+#define MFDES_E_NO_SUCH_KEY             0x40
+#define MFDES_E_LENGTH                  0x7E
+#define MFDES_E_PERMISSION_DENIED       0x9D
+#define MFDES_E_PARAMETER_ERROR         0x9E
+#define MFDES_E_APPLICATION_NOT_FOUND   0xA0
+#define MFDES_E_APPL_INTEGRITY          0xA1
+#define MFDES_E_AUTHENTIFICATION_ERROR  0xAE
+#define MFDES_E_BOUNDARY                0xBE
+#define MFDES_E_PICC_INTEGRITY          0xC1
+#define MFDES_E_COMMAND_ABORTED         0xCA
+#define MFDES_E_PICC_DISABLED           0xCD
+#define MFDES_E_COUNT                   0xCE
+#define MFDES_E_DUPLICATE               0xDE
+#define MFDES_E_EEPROM                  0xEE
+#define MFDES_E_FILE_NOT_FOUND          0xF0
+#define MFDES_E_FILE_INTEGRITY          0xF1
+
 
 // LEGIC Commands
 #define LEGIC_MIM_22                    0x0D

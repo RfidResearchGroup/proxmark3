@@ -2672,8 +2672,10 @@ void ReaderIso14443a(PacketCommandNG *c) {
     uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
     uint8_t par[MAX_PARITY_SIZE] = {0x00};
 
-    if ((param & ISO14A_CONNECT))
+    if ((param & ISO14A_CONNECT)) {
+        iso14_pcb_blocknum = 0;
         clear_trace();
+    }
 
     set_tracing(true);
 

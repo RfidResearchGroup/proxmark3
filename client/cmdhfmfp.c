@@ -27,10 +27,18 @@
 #include "protocols.h"
 #include "crypto/libpcrypto.h"
 
-
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
 uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
+
+typedef enum {
+    MFP_UNKNOWN = 0,
+    DESFIRE_MF3ICD40,
+    DESFIRE_EV1,
+    DESFIRE_EV2,
+    DESFIRE_EV3,
+    DESFIRE_LIGHT,
+    PLUS_EV1,
+} nxp_cardtype_t;
 
 static int CmdHelp(const char *Cmd);
 
@@ -56,15 +64,21 @@ static char *getCardSizeStr(uint8_t fsize) {
     return buf;
 }
 
-static char *getProtocolStr(uint8_t id) {
+static char *getProtocolStr(uint8_t id, bool hw) {
 
-    static char buf[40] = {0x00};
+    static char buf[50] = {0x00};
     char *retStr = buf;
 
-    if (id == 0x05)
-        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
-    else
+    if (id == 0x04) {
+        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
+    } else if (id == 0x05) {
+      if (hw)
+            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") ")", id);
+        else
+            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+    } else {
         sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+    }
     return buf;
 }
 
@@ -91,6 +105,59 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     return buf;
 }
 
+static char *getTypeStr(uint8_t type) {
+
+    static char buf[40] = {0x00};
+    char *retStr = buf;
+    
+    switch (type) {
+        case 1: 
+            sprintf(retStr, "0x%02X ( " _YELLOW_("DESFire") ")", type);
+            break;
+        case 2:
+            sprintf(retStr, "0x%02X ( " _YELLOW_("Plus") ")", type);
+            break;
+        case 3:
+            sprintf(retStr, "0x%02X ( " _YELLOW_("Ultralight") ")", type);
+            break;
+        case 4:
+            sprintf(retStr, "0x%02X ( " _YELLOW_("NTAG") ")", type);
+            break;
+        default:
+            break;
+    }
+    return buf;
+}
+
+static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
+   
+    // DESFire MF3ICD40
+    if (major == 0x00 &&  minor == 0x00 )
+        return DESFIRE_MF3ICD40;
+    
+    // DESFire EV1
+    if (major == 0x01 &&  minor == 0x00 )
+        return DESFIRE_EV1;
+
+    // DESFire EV2
+    if (major == 0x12 &&  minor == 0x00 )
+        return DESFIRE_EV2;
+
+    // DESFire EV3
+//    if (major == 0x13 &&  minor == 0x00 )
+//        return DESFIRE_EV3;
+
+    // DESFire Light
+    if (major == 0x30 &&  minor == 0x00 )
+        return DESFIRE_LIGHT;
+
+    // Plus EV1
+    if (major == 0x11 &&  minor == 0x00 )
+        return PLUS_EV1;
+
+    return MFP_UNKNOWN;
+}
+
 // --- GET SIGNATURE
 static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
 
@@ -115,13 +182,15 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
         if (is_valid)
             break;
     }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    
     if (is_valid == false) {
         PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_plus_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_plus_public_keys[i].value);
     PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 16);
@@ -162,19 +231,19 @@ static int plus_print_version(uint8_t *version) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), version[1]);
+    PrintAndLogEx(INFO, "          Type: %s", getTypeStr(version[1]));
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
     PrintAndLogEx(INFO, "       Version: %s", getVersionStr(version[3], version[4]));
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("0x%02X"), version[1]);
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
-    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  version[3], version[4]);
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6]));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[7]));
+    PrintAndLogEx(INFO, "          Type: %s", getTypeStr(version[8]));
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[9]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  version[10], version[11]);
+    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[12]));
+    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[13], false));
     return PM3_SUCCESS;
 }
 static int get_plus_version(uint8_t *version, int *version_len) {
@@ -235,17 +304,28 @@ static int CmdHFMFPInfo(const char *Cmd) {
     if (select_status == 1 || select_status == 2) {
 
         PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
-        
-        if (supportVersion && supportSignature) {
-            PrintAndLogEx(INFO, "          Tech: " _GREEN_("MIFARE Plus EV1"));
-        } else {
-            PrintAndLogEx(INFO, "          Tech: " _YELLOW_("MIFARE Plus SE/X"));
+
+        bool isPlus = false;
+
+        if (supportVersion) {
+
+            int cardtype = getCardType(version[3], version[4]);
+            
+            if (cardtype == 6) {
+                if (supportSignature) {
+                    PrintAndLogEx(INFO, "          Tech: " _GREEN_("MIFARE Plus EV1"));
+                } else {
+                    PrintAndLogEx(INFO, "          Tech: " _YELLOW_("MIFARE Plus SE/X"));
+                }
+                isPlus = true;
+            } else {
+                
+            }
         }
 
         // MIFARE Type Identification Procedure
         // https://www.nxp.com/docs/en/application-note/AN10833.pdf
         uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
-        bool isPlus = false;
 
         if (ATQA & 0x0004) {
             PrintAndLogEx(INFO, "          SIZE: " _GREEN_("2K") "(%s UID)", (ATQA & 0x0040) ? "7" : "4");
@@ -288,6 +368,10 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 // https://github.com/Proxmark/proxmark3/blob/master/client/luascripts/mifarePlus.lua#L161
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
+
+                // DESFire answers 0x1C
+                // Plus answers 0x0B, 0x09
+                PrintAndLogEx(INFO, "ICEE: %s", sprint_hex(data, datalen));
 
                 if (memcmp(data, "\x67\x00", 2) == 0) {
                     PrintAndLogEx(INFO, "\tMost likely a MIFARE DESFire tag"); 
@@ -1105,10 +1189,13 @@ static int CmdHFMFPChk(const char *Cmd) {
     if (keyListLen == 0) {
         PrintAndLogEx(ERR, "Key list is empty. Nothing to check.");
         return PM3_EINVARG;
+    } else {
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") "keys", keyListLen);
     }
 
     if (!verbose)
         printf("Search keys:");
+
     while (true) {
         res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
         if (res == PM3_EOPABORTED)
