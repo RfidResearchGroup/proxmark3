@@ -157,9 +157,12 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     int ibuf = 0;
     uint8_t tmp_buf[256] = {0};
     int res = CLIParamStrToBuf(argstr, tmp_buf, maxdatalen * 2, &ibuf); // *2 because here HEX
-    if (res || !ibuf){
+    if (res) {
         printf("Parameter error: buffer overflow.\n");
         fflush(stdout);
+        return res;
+    }
+    if (ibuf == 0) {
         return res;
     }
     
@@ -199,12 +202,13 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (!ibuf)
         return 0;
 
-    if (ibuf > maxdatalen)
+    if (ibuf > maxdatalen) {
+        fflush(stdout);
         return 2;
+    }
 
     memcpy(data, tmp_buf, ibuf);
     *datalen = ibuf;
-
     return 0;
 }
 
