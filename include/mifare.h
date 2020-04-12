@@ -90,9 +90,8 @@ typedef enum {
 typedef enum {
     MFDES_ALGO_DES = 1,
     MFDES_ALGO_3DES = 2,
-    MFDES_ALGO_2K3DES = 3,
-    MFDES_ALGO_3K3DES = 4,
-    MFDES_ALGO_AES = 5
+    MFDES_ALGO_3K3DES = 3,
+    MFDES_ALGO_AES = 4
 } mifare_des_authalgo_t;
 
 

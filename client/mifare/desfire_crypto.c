@@ -25,13 +25,252 @@
  * Recommendation for Block Cipher Modes of Operation: The CMAC Mode for Authentication
  * May 2005
  */
+#include "desfire_crypto.h"
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
-#include "desfire_crypto_disabled.h"
+#include "commonutil.h"
 #include "crc32.h"
-#include "printf.h"
-#include "desfire.h"
-#include "iso14443a.h"
 #include "mbedtls/aes.h"
+#include "mbedtls/des.h"
+#include "ui.h"
+#include "crc.h"
+#include "crc16.h"        // crc16 ccitt
+
+mbedtls_des_context ctx;
+mbedtls_des3_context ctx3;
+mbedtls_aes_context actx;
+
+#ifndef AddCrc14A
+# define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
+
+#define htole32(x) (x)
+#define CRC32_PRESET 0xFFFFFFFF
+
+static void crc32_byte(uint32_t *crc, const uint8_t value);
+
+static void crc32_byte(uint32_t *crc, const uint8_t value) {
+    /* x32 + x26 + x23 + x22 + x16 + x12 + x11 + x10 + x8 + x7 + x5 + x4 + x2 + x + 1 */
+    const uint32_t poly = 0xEDB88320;
+
+    *crc ^= value;
+    for (int current_bit = 7; current_bit >= 0; current_bit--) {
+        int bit_out = (*crc) & 0x00000001;
+        *crc >>= 1;
+        if (bit_out)
+            *crc ^= poly;
+    }
+}
+
+void crc32_ex(const uint8_t *data, const size_t len, uint8_t *crc) {
+    uint32_t desfire_crc = CRC32_PRESET;
+    for (size_t i = 0; i < len; i++) {
+        crc32_byte(&desfire_crc, data[i]);
+    }
+
+    *((uint32_t *)(crc)) = htole32(desfire_crc);
+}
+
+void crc32_append(uint8_t *data, const size_t len) {
+    crc32_ex(data, len, data + len);
+}
+
+static inline void update_key_schedules(desfirekey_t key);
+
+static inline void update_key_schedules(desfirekey_t key) {
+    // DES_set_key ((DES_cblock *)key->data, &(key->ks1));
+    // DES_set_key ((DES_cblock *)(key->data + 8), &(key->ks2));
+    // if (T_3K3DES == key->type) {
+    // DES_set_key ((DES_cblock *)(key->data + 16), &(key->ks3));
+    // }
+}
+
+/******************************************************************************/
+
+void des_encrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_setkey_enc(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, in, out);
+}
+
+void des_decrypt(void *out, const void *in, const void *key) {
+    mbedtls_des_setkey_dec(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, in, out);
+}
+
+void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
+    if (length % 8) return;
+    if (keymode == 2) mbedtls_des3_set2key_dec(&ctx3, key);
+    else mbedtls_des3_set3key_dec(&ctx3, key);
+
+    uint8_t i;
+    unsigned char temp[8];
+    uint8_t *tin = (uint8_t *) in;
+    uint8_t *tout = (uint8_t *) out;
+
+    while (length > 0) {
+        memcpy(temp, tin, 8);
+
+        mbedtls_des3_crypt_ecb(&ctx3, tin, tout);
+
+        for (i = 0; i < 8; i++)
+            tout[i] = (unsigned char)(tout[i] ^ iv[i]);
+
+        memcpy(iv, temp, 8);
+
+        tin  += 8;
+        tout += 8;
+        length -= 8;
+    }
+}
+
+void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
+    if (length % 8) return;
+    if (keymode == 2) mbedtls_des3_set2key_enc(&ctx3, key);
+    else mbedtls_des3_set3key_enc(&ctx3, key);
+
+    uint8_t i;
+    uint8_t *tin = (uint8_t *) in;
+    uint8_t *tout = (uint8_t *) out;
+
+    while (length > 0) {
+        for (i = 0; i < 8; i++)
+            tin[i] = (unsigned char)(tin[i] ^ iv[i]);
+
+        mbedtls_des3_crypt_ecb(&ctx3, tin, tout);
+
+        memcpy(iv, tout, 8);
+
+        tin  += 8;
+        tout += 8;
+        length -= 8;
+    }
+}
+
+
+void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key) {
+    uint8_t data[8];
+    memcpy(data, value, 8);
+    for (int n = 0; n < 8; n++)
+        data[n] &= 0xfe;
+    Desfire_des_key_new_with_version(data, key);
+}
+
+void Desfire_des_key_new_with_version(const uint8_t value[8], desfirekey_t key) {
+    if (key != NULL) {
+        key->type = T_DES;
+        memcpy(key->data, value, 8);
+        memcpy(key->data + 8, value, 8);
+        update_key_schedules(key);
+    }
+}
+
+void Desfire_3des_key_new(const uint8_t value[16], desfirekey_t key) {
+    uint8_t data[16];
+    memcpy(data, value, 16);
+    for (int n = 0; n < 8; n++)
+        data[n] &= 0xfe;
+    for (int n = 8; n < 16; n++)
+        data[n] |= 0x01;
+    Desfire_3des_key_new_with_version(data, key);
+}
+
+void Desfire_3des_key_new_with_version(const uint8_t value[16], desfirekey_t key) {
+    if (key != NULL) {
+        key->type = T_3DES;
+        memcpy(key->data, value, 16);
+        update_key_schedules(key);
+    }
+}
+
+void Desfire_3k3des_key_new(const uint8_t value[24], desfirekey_t key) {
+    uint8_t data[24];
+    memcpy(data, value, 24);
+    for (int n = 0; n < 8; n++)
+        data[n] &= 0xfe;
+    Desfire_3k3des_key_new_with_version(data, key);
+}
+
+void Desfire_3k3des_key_new_with_version(const uint8_t value[24], desfirekey_t key) {
+    if (key != NULL) {
+        key->type = T_3K3DES;
+        memcpy(key->data, value, 24);
+        update_key_schedules(key);
+    }
+}
+
+void Desfire_aes_key_new(const uint8_t value[16], desfirekey_t key) {
+    Desfire_aes_key_new_with_version(value, 0, key);
+}
+
+void Desfire_aes_key_new_with_version(const uint8_t value[16], uint8_t version, desfirekey_t key) {
+
+    if (key != NULL) {
+        memcpy(key->data, value, 16);
+        key->type = T_AES;
+        key->aes_version = version;
+    }
+}
+
+uint8_t Desfire_key_get_version(desfirekey_t key) {
+    uint8_t version = 0;
+
+    for (int n = 0; n < 8; n++) {
+        version |= ((key->data[n] & 1) << (7 - n));
+    }
+    return version;
+}
+
+void Desfire_key_set_version(desfirekey_t key, uint8_t version) {
+    for (int n = 0; n < 8; n++) {
+        uint8_t version_bit = ((version & (1 << (7 - n))) >> (7 - n));
+        key->data[n] &= 0xfe;
+        key->data[n] |= version_bit;
+        if (key->type == T_DES) {
+            key->data[n + 8] = key->data[n];
+        } else {
+            // Write ~version to avoid turning a 3DES key into a DES key
+            key->data[n + 8] &= 0xfe;
+            key->data[n + 8] |= ~version_bit;
+        }
+    }
+}
+
+void Desfire_session_key_new(const uint8_t rnda[], const uint8_t rndb[], desfirekey_t authkey, desfirekey_t key) {
+
+    uint8_t buffer[24];
+
+    switch (authkey->type) {
+        case T_DES:
+            memcpy(buffer, rnda, 4);
+            memcpy(buffer + 4, rndb, 4);
+            Desfire_des_key_new_with_version(buffer, key);
+            break;
+        case T_3DES:
+            memcpy(buffer, rnda, 4);
+            memcpy(buffer + 4, rndb, 4);
+            memcpy(buffer + 8, rnda + 4, 4);
+            memcpy(buffer + 12, rndb + 4, 4);
+            Desfire_3des_key_new_with_version(buffer, key);
+            break;
+        case T_3K3DES:
+            memcpy(buffer, rnda, 4);
+            memcpy(buffer + 4, rndb, 4);
+            memcpy(buffer + 8, rnda + 6, 4);
+            memcpy(buffer + 12, rndb + 6, 4);
+            memcpy(buffer + 16, rnda + 12, 4);
+            memcpy(buffer + 20, rndb + 12, 4);
+            Desfire_3k3des_key_new(buffer, key);
+            break;
+        case T_AES:
+            memcpy(buffer, rnda, 4);
+            memcpy(buffer + 4, rndb, 4);
+            memcpy(buffer + 8, rnda + 12, 4);
+            memcpy(buffer + 12, rndb + 12, 4);
+            Desfire_aes_key_new(buffer, key);
+            break;
+    }
+}
 
 static void xor(const uint8_t *ivect, uint8_t *data, const size_t len);
 static size_t key_macing_length(desfirekey_t key);
@@ -449,7 +688,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 
             do {
                 uint16_t crc_16 = 0x00;
-                uint32_t crc;
+                uint32_t crc = 0x00;
                 switch (DESFIRE(tag)->authentication_scheme) {
                     case AS_LEGACY:
                         AddCrc14A((uint8_t *)res, end_crc_pos);
@@ -508,7 +747,7 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 
             break;
         default:
-            Dbprintf("Unknown communication settings");
+            PrintAndLogEx(ERR, "Unknown communication settings");
             *nbytes = -1;
             res = NULL;
             break;
@@ -520,7 +759,6 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 
 void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect, MifareCryptoDirection direction, MifareCryptoOperation operation, size_t block_size) {
     uint8_t ovect[MAX_CRYPTO_BLOCK_SIZE];
-
     if (direction == MCD_SEND) {
         xor(ivect, data, block_size);
     } else {
@@ -534,40 +772,44 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
             switch (operation) {
                 case MCO_ENCYPHER:
                     //DES_ecb_encrypt ((DES_cblock *) data, (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
-                    des_enc(edata, data, key->data);
+                    des_encrypt(edata, data, key->data);
                     break;
                 case MCO_DECYPHER:
                     //DES_ecb_encrypt ((DES_cblock *) data, (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
-                    des_dec(edata, data, key->data);
+                    des_decrypt(edata, data, key->data);
                     break;
             }
             break;
         case T_3DES:
             switch (operation) {
                 case MCO_ENCYPHER:
+                    mbedtls_des3_set2key_enc(&ctx3, key->data);
+                    mbedtls_des3_crypt_ecb(&ctx3, data, edata);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
-                    tdes_enc(edata, data, key->data);
                     break;
                 case MCO_DECYPHER:
+                    mbedtls_des3_set2key_dec(&ctx3, key->data);
+                    mbedtls_des3_crypt_ecb(&ctx3, data, edata);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
-                    tdes_dec(data, edata, key->data);
                     break;
             }
             break;
         case T_3K3DES:
             switch (operation) {
                 case MCO_ENCYPHER:
-                    tdes_enc(edata, data, key->data);
+                    mbedtls_des3_set3key_enc(&ctx3, key->data);
+                    mbedtls_des3_crypt_ecb(&ctx3, data, edata);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_ENCRYPT);
                     break;
                 case MCO_DECYPHER:
-                    tdes_dec(data, edata, key->data);
+                    mbedtls_des3_set3key_dec(&ctx3, key->data);
+                    mbedtls_des3_crypt_ecb(&ctx3, data, edata);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
@@ -577,19 +819,17 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
         case T_AES:
             switch (operation) {
                 case MCO_ENCYPHER: {
-                    mbedtls_aes_context ctx;
-                    mbedtls_aes_init(&ctx);
-                    mbedtls_aes_setkey_enc(&ctx, key->data, 128);
-                    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, sizeof(edata), ivect, data, edata);
-                    mbedtls_aes_free(&ctx);
+                    mbedtls_aes_init(&actx);
+                    mbedtls_aes_setkey_enc(&actx, key->data, 128);
+                    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_ENCRYPT, sizeof(edata), ivect, data, edata);
+                    mbedtls_aes_free(&actx);
                     break;
                 }
                 case MCO_DECYPHER: {
-                    mbedtls_aes_context ctx;
-                    mbedtls_aes_init(&ctx);
-                    mbedtls_aes_setkey_dec(&ctx, key->data, 128);
-                    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, sizeof(edata), ivect, edata, data);
-                    mbedtls_aes_free(&ctx);
+                    mbedtls_aes_init(&actx);
+                    mbedtls_aes_setkey_dec(&actx, key->data, 128);
+                    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(edata), ivect, edata, data);
+                    mbedtls_aes_free(&actx);
                     break;
                 }
             }

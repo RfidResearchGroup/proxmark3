@@ -4,19 +4,18 @@
 #include "proxmark3_arm.h"
 #include "string.h"
 #include "BigBuf.h"
-#include "desfire_key.h"
 #include "mifareutil.h"
-#include "des.h"
+#include "desfire_crypto.h"
 #include "cmd.h"
 #include "dbprint.h"
 #include "fpgaloader.h"
 #include "iso14443a.h"
 #include "crc16.h"
-#include "mbedtls/aes.h"
 #include "commonutil.h"
 #include "util.h"
 #include "mifare.h"
 #include "ticks.h"
+#include "protocols.h"
 
 #define MAX_APPLICATION_COUNT 28
 #define MAX_FILE_COUNT 16
@@ -34,6 +33,8 @@ static  uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
 /*                                       PCB   CID   CMD    PAYLOAD    */
 //static uint8_t __res[MAX_FRAME_SIZE];
 
+struct desfire_key skey = {0};
+static desfirekey_t sessionkey = &skey;
 
 bool InitDesfireCard() {
 
@@ -158,7 +159,7 @@ void MifareDesfireGetInformation() {
     memcpy(payload.uid, card.uid, sizeof(payload.uid));
 
     LED_A_ON();
-    uint8_t cmd[] = {0x90, GET_VERSION, 0x00, 0x00, 0x00};
+    uint8_t cmd[] = {0x90, MFDES_GET_VERSION, 0x00, 0x00, 0x00};
     size_t cmd_len = sizeof(cmd);
 
     len =  DesfireAPDU(cmd, cmd_len, resp);
@@ -173,7 +174,7 @@ void MifareDesfireGetInformation() {
     memcpy(payload.versionHW, resp + 1, sizeof(payload.versionHW));
 
     // ADDITION_FRAME 1
-    cmd[1] = ADDITIONAL_FRAME;
+    cmd[1] = MFDES_ADDITIONAL_FRAME;
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
         print_result("ERROR <--: ", resp, len);
@@ -250,9 +251,13 @@ void MifareDES_Auth1(uint8_t *datain) {
     num_to_bytes(value, 4, &RndA[12]);
 
     // Default Keys
-    uint8_t PICC_MASTER_KEY8[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t PICC_MASTER_KEY16[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t PICC_MASTER_KEY24[24] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t PICC_MASTER_KEY8[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t PICC_MASTER_KEY16[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00
+                                    };
+    uint8_t PICC_MASTER_KEY24[24] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                                    };
     //uint8_t null_key_data16[16] = {0x00};
     //uint8_t new_key_data8[8]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
     //uint8_t new_key_data16[16]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
@@ -268,7 +273,7 @@ void MifareDES_Auth1(uint8_t *datain) {
     if (payload->key == NULL) {
         if (payload->algo == MFDES_AUTH_DES)  {
             memcpy(keybytes, PICC_MASTER_KEY8, 8);
-        } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES || payload->algo == MFDES_ALGO_2K3DES) {
+        } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES) {
             memcpy(keybytes, PICC_MASTER_KEY16, 16);
         } else if (payload->algo == MFDES_ALGO_3DES) {
             memcpy(keybytes, PICC_MASTER_KEY24, 24);
@@ -276,6 +281,7 @@ void MifareDES_Auth1(uint8_t *datain) {
     } else {
         memcpy(keybytes, payload->key, payload->keylen);
     }
+
 
     struct desfire_key defaultkey = {0};
     desfirekey_t key = &defaultkey;
@@ -287,18 +293,16 @@ void MifareDES_Auth1(uint8_t *datain) {
         Desfire_3des_key_new_with_version(keybytes, key);
     } else if (payload->algo == MFDES_ALGO_DES) {
         Desfire_des_key_new(keybytes, key);
-    } else if (payload->algo == MFDES_ALGO_2K3DES) {
-        Desfire_2k3des_key_new_with_version(keybytes, key);
     } else if (payload->algo == MFDES_ALGO_3K3DES) {
         Desfire_3k3des_key_new_with_version(keybytes, key);
     }
 
-    uint8_t subcommand = AUTHENTICATE;
+    uint8_t subcommand = MFDES_AUTHENTICATE;
 
     if (payload->mode == MFDES_AUTH_AES)
-        subcommand = AUTHENTICATE_AES;
+        subcommand = MFDES_AUTHENTICATE_AES;
     else if (payload->mode == MFDES_AUTH_ISO)
-        subcommand = AUTHENTICATE_ISO;
+        subcommand = MFDES_AUTHENTICATE_ISO;
 
     if (payload->mode != MFDES_AUTH_PICC) {
         // Let's send our auth command
@@ -311,7 +315,7 @@ void MifareDES_Auth1(uint8_t *datain) {
         cmd[6] = 0x0;
         len = DesfireAPDU(cmd, 7, resp);
     } else {
-        cmd[0] = AUTHENTICATE;
+        cmd[0] = MFDES_AUTHENTICATE;
         cmd[1] = payload->keyno;
         len = DesfireAPDU(cmd, 2, resp);
     }
@@ -324,7 +328,7 @@ void MifareDES_Auth1(uint8_t *datain) {
         return;
     }
 
-    if (resp[2] == (uint8_t)0xaf) {
+    if (resp[2] == (uint8_t)MFDES_ADDITIONAL_FRAME) {
         DbpString("Authentication failed. Invalid key number.");
         OnErrorNG(CMD_HF_DESFIRE_AUTH1, 3);
         return;
@@ -334,6 +338,8 @@ void MifareDES_Auth1(uint8_t *datain) {
     if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3K3DES) {
         expectedlen = 1 + 16 + 2 + 2;
     }
+
+    int rndlen = len - 1 - 2 - 2;
 
     if (len != expectedlen) {
         if (DBGLEVEL >= DBG_ERROR) {
@@ -346,9 +352,9 @@ void MifareDES_Auth1(uint8_t *datain) {
 
     // Part 2
     if (payload->mode != MFDES_AUTH_PICC) {
-        memcpy(encRndB, resp + 1, payload->keylen);
+        memcpy(encRndB, resp + 1, rndlen);
     } else {
-        memcpy(encRndB, resp + 2, payload->keylen);
+        memcpy(encRndB, resp + 2, rndlen);
     }
 
     // Part 3
@@ -361,60 +367,46 @@ void MifareDES_Auth1(uint8_t *datain) {
             return;
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndB, RndB);
-    } else if (payload->algo == MFDES_ALGO_3DES)
-        tdes_dec(RndB, encRndB, key->data);
-    else if (payload->algo == MFDES_ALGO_DES)
-        des_dec(RndB, encRndB, key->data);
-    else if (payload->algo == MFDES_ALGO_2K3DES)
-        tdes_2key_dec(RndB, encRndB, 8, key->data, IV);
+    } else if (payload->algo == MFDES_ALGO_DES)
+        des_decrypt(RndB, encRndB, key->data);
+    else if (payload->algo == MFDES_ALGO_3DES)
+        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
     else if (payload->algo == MFDES_ALGO_3K3DES)
-        tdes_3key_dec(RndB, encRndB, 16, key->data, IV);
+        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 3);
 
     // - Rotate RndB by 8 bits
-    memcpy(rotRndB, RndB, payload->keylen);
-    rol(rotRndB, payload->keylen);
+    memcpy(rotRndB, RndB, rndlen);
+    rol(rotRndB, rndlen);
 
     uint8_t encRndA[16] = {0x00};
 
     // - Encrypt our response
-    if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_ISO || payload->mode == MFDES_AUTH_PICC) {
-        if (payload->algo == MFDES_ALGO_3DES) {
-            tdes_dec(encRndA, RndA, key->data);
-            memcpy(both, encRndA, 8);
-        } else if (payload->algo == MFDES_ALGO_DES) {
-            des_dec(encRndA, RndA, key->data);
-            memcpy(both, encRndA, 8);
-        } else if (payload->algo == MFDES_ALGO_2K3DES) {
-            tdes_2key_dec(encRndA, RndA, 8, key->data, IV);
-            memcpy(both, encRndA, 8);
-        } else if (payload->algo == MFDES_ALGO_3K3DES) {
-            tdes_3key_dec(encRndA, RndA, 16, key->data, IV);
-            memcpy(both, encRndA, 16);
-        }
+    if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_PICC) {
+        des_decrypt(encRndA, RndA, key->data);
+        memcpy(both, encRndA, rndlen);
 
-
-        for (int x = 0; x < 8; x++) {
+        for (int x = 0; x < rndlen; x++) {
             rotRndB[x] = rotRndB[x] ^ encRndA[x];
         }
 
+        des_decrypt(encRndB, rotRndB, key->data);
+        memcpy(both + 8, encRndB, rndlen);
+    } else if (payload->mode == MFDES_AUTH_ISO) {
         if (payload->algo == MFDES_ALGO_3DES) {
-            tdes_dec(encRndB, rotRndB, key->data);
-            memcpy(both + 8, encRndB, 8);
-        } else if (payload->algo == MFDES_ALGO_DES) {
-            des_dec(encRndB, rotRndB, key->data);
-            memcpy(both + 8, encRndB, 8);
-        } else if (payload->algo == MFDES_ALGO_2K3DES) {
-            tdes_2key_dec(encRndB, rotRndB, 8, key->data, IV);
-            memcpy(both + 8, encRndB, 8);
+            uint8_t tmp[16] = {0x00};
+            memcpy(tmp, RndA, rndlen);
+            memcpy(tmp + rndlen, rotRndB, rndlen);
+            tdes_nxp_send(tmp, both, 16, key->data, IV, 2);
         } else if (payload->algo == MFDES_ALGO_3K3DES) {
-            tdes_3key_dec(encRndB, rotRndB, 16, key->data, IV);
-            memcpy(both + 16, encRndB, 16);
+            uint8_t tmp[32] = {0x00};
+            memcpy(tmp, RndA, rndlen);
+            memcpy(tmp + rndlen, rotRndB, rndlen);
+            tdes_nxp_send(tmp, both, 32, key->data, IV, 3);
         }
-
     } else if (payload->mode == MFDES_AUTH_AES) {
         uint8_t tmp[32] = {0x00};
-        memcpy(tmp, RndA, 16);
-        memcpy(tmp + 16, rotRndB, 16);
+        memcpy(tmp, RndA, rndlen);
+        memcpy(tmp + 16, rotRndB, rndlen);
         if (payload->algo == MFDES_ALGO_AES) {
             if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
                 if (DBGLEVEL >= DBG_EXTENDED) {
@@ -433,7 +425,7 @@ void MifareDES_Auth1(uint8_t *datain) {
     }
     if (payload->mode != MFDES_AUTH_PICC) {
         cmd[0] = 0x90;
-        cmd[1] = ADDITIONAL_FRAME;
+        cmd[1] = MFDES_ADDITIONAL_FRAME;
         cmd[2] = 0x00;
         cmd[3] = 0x00;
         cmd[4] = bothlen;
@@ -441,9 +433,9 @@ void MifareDES_Auth1(uint8_t *datain) {
         cmd[bothlen + 5] = 0x0;
         len = DesfireAPDU(cmd, 5 + bothlen + 1, resp);
     } else {
-        cmd[0] = ADDITIONAL_FRAME;
-        memcpy(cmd + 1, both, 16);
-        len = DesfireAPDU(cmd, 1 + 16, resp);
+        cmd[0] = MFDES_ADDITIONAL_FRAME;
+        memcpy(cmd + 1, both, bothlen);
+        len = DesfireAPDU(cmd, 1 + bothlen, resp);
     }
 
     if (!len) {
@@ -469,27 +461,25 @@ void MifareDES_Auth1(uint8_t *datain) {
     }
 
     // Part 4
-    struct desfire_key sessionKey = {0};
-    desfirekey_t skey = &sessionKey;
-    Desfire_session_key_new(RndA, RndB, key, skey);
+
+    Desfire_session_key_new(RndA, RndB, key, sessionkey);
+
     if (DBGLEVEL >= DBG_EXTENDED)
-        print_result("SESSIONKEY : ", sessionKey.data, payload->keylen);
+        print_result("SESSIONKEY : ", sessionkey->data, payload->keylen);
 
     if (payload->mode != MFDES_AUTH_PICC) {
-        memcpy(encRndA, resp + 1, payload->keylen);
+        memcpy(encRndA, resp + 1, rndlen);
     } else {
-        memcpy(encRndA, resp + 2, payload->keylen);
+        memcpy(encRndA, resp + 2, rndlen);
     }
 
     if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_PICC) {
-        if (payload->algo == MFDES_ALGO_3DES)
-            tdes_dec(encRndA, encRndA, key->data);
-        else if (payload->algo == MFDES_ALGO_DES)
-            des_dec(encRndA, encRndA, key->data);
-        else if (payload->algo == MFDES_ALGO_2K3DES)
-            tdes_2key_dec(encRndA, encRndA, 8, key->data, IV);
+        if (payload->algo == MFDES_ALGO_DES)
+            des_decrypt(encRndA, encRndA, key->data);
+        else if (payload->algo == MFDES_ALGO_3DES)
+            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
         else if (payload->algo == MFDES_ALGO_3K3DES)
-            tdes_3key_dec(encRndA, encRndA, 16, key->data, IV);
+            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
     } else if (payload->mode == MFDES_AUTH_AES) {
         if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
             if (DBGLEVEL >= DBG_EXTENDED) {
@@ -501,13 +491,13 @@ void MifareDES_Auth1(uint8_t *datain) {
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndA, encRndA);
     }
 
-    rol(RndA, payload->keylen);
+    rol(RndA, rndlen);
     if (DBGLEVEL >= DBG_EXTENDED) {
-        print_result("RndA : ", RndA, payload->keylen);
-        print_result("RndB: ", RndB, payload->keylen);
-        print_result("encRndA : ", encRndA, payload->keylen);
+        print_result("RndA : ", RndA, rndlen);
+        print_result("RndB: ", RndB, rndlen);
+        print_result("encRndA : ", encRndA, rndlen);
     }
-    for (int x = 0; x < payload->keylen; x++) {
+    for (int x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
             DbpString("Authentication failed. Cannot verify Session Key.");
             OnErrorNG(CMD_HF_DESFIRE_AUTH1, 4);
@@ -613,7 +603,7 @@ void MifareDES_Auth1(uint8_t *datain) {
     LED_B_ON();
     authres_t rpayload;
     rpayload.sessionkeylen = payload->keylen;
-    memcpy(rpayload.sessionkey, sessionKey.data, rpayload.sessionkeylen);
+    memcpy(rpayload.sessionkey, sessionkey->data, rpayload.sessionkeylen);
     reply_ng(CMD_HF_DESFIRE_AUTH1, PM3_SUCCESS, (uint8_t *)&rpayload, sizeof(rpayload));
     LED_B_OFF();
 }

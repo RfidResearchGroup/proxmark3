@@ -185,6 +185,7 @@ CMDSRCS =   crapto1/crapto1.c \
             mifare/mifare4.c \
             mifare/mad.c \
             mifare/ndef.c \
+            mifare/desfire_crypto.c \
             cmdanalyse.c \
             cmdhf.c \
             cmdhflist.c \

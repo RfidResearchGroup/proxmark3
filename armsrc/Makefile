@@ -26,10 +26,10 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
-#UNUSED: mifaresniff.c desfire_crypto.c
+#UNUSED: mifaresniff.c
 SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
-SRC_CRAPTO1 = crypto1.c des.c desfire_key.c mifaredesfire.c aes.c platform_util.c
+SRC_CRAPTO1 = crypto1.c des.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Rework des/3des/3k3des/aes auth. Port to mbedtls crypto library on device (@bkerler)
  - Port 'hf mfdes' Authentification to CommandNG structure, fix auth session key (@bkerler)
  - Updates `hf mfdes` functions, improved logging and added new commands (@bkerler)
  - Updated 'legic.lua' and 'legic_clone.lua' script - works with current command set (@Pizza_4u)
