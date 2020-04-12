@@ -88,6 +88,7 @@ class ProxWidget : public QWidget {
     void vchange_askedge(int v);
     void vchange_dthr_up(int v);
     void vchange_dthr_down(int v);
+    void SetWindowsPosition(void);
 };
 
 class WorkerThread : public QThread {
@@ -121,7 +122,7 @@ class ProxGuiQT : public QObject {
     void HideGraphWindow(void);
     void MainLoop(void);
     void Exit(void);
-
+    void SetWindowsPosition (void);
   private slots:
     void _ShowGraphWindow(void);
     void _RepaintGraphWindow(void);

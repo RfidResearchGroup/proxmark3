@@ -54,6 +54,9 @@ extern "C" void MainGraphics(void) {
 
     gui->MainLoop();
 }
+extern "C" void SetWindowsPosition (void) {
+    gui->SetWindowsPosition ();
+}
 
 extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 #ifdef Q_WS_X11

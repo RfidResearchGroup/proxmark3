@@ -914,7 +914,7 @@ int main(int argc, char *argv[]) {
         showBanner();
 
 #ifdef USE_PREFERENCE_FILE
-    // Save settings if not load from settings json file.
+    // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
     if (!session.preferences_loaded) {

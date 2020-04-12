@@ -128,7 +128,10 @@ ProxGuiQT::~ProxGuiQT(void) {
         plotapp = NULL;
     }
 }
-
+void ProxGuiQT::SetWindowsPosition (void)
+{
+    plotwidget->SetWindowsPosition ();
+}
 //--------------------
 void ProxWidget::applyOperation() {
     //printf("ApplyOperation()");
@@ -257,6 +260,13 @@ void ProxWidget::hideEvent(QHideEvent *event) {
 void ProxWidget::showEvent(QShowEvent *event) {
     controlWidget->show();
     plot->show();
+}
+void ProxWidget::SetWindowsPosition(void) {
+    printf ("Settings windows Pos\n");
+    if (session.preferences_loaded) {
+        setGeometry (session.window_plot_xpos,session.window_plot_ypos,session.window_plot_wsize,session.window_plot_hsize);
+        controlWidget->setGeometry (session.window_overlay_xpos,session.window_overlay_ypos,session.window_overlay_wsize,session.window_overlay_hsize);
+	}
 }
 
 //----------- Plotting
