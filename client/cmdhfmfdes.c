@@ -19,6 +19,7 @@
 #include "cmdhw.h"
 #include "cmdhf14a.h"
 #include "mbedtls/des.h"
+#include "mbedtls/aes.h"
 #include "crypto/libpcrypto.h"
 #include "protocols.h"
 #include "mifare.h"         // desfire raw command options
@@ -28,6 +29,11 @@
 #include "emv/emvcore.h"    // APDU logging
 #include "util_posix.h"     // msleep
 #include "mifare/mifare4.h" // MIFARE Authenticate / MAC
+#include "mifare/desfire_crypto.h"
+#include "crapto1/crapto1.h"
+
+struct desfire_key defaultkey = {0};
+static desfirekey_t sessionkey = &defaultkey;
 
 uint8_t key_zero_data[16] = { 0x00 };
 uint8_t key_ones_data[16] = { 0x01 };
@@ -331,6 +337,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
     int res = DESFIRESendApdu(select, true, *apdu, data, sizeof(data), &resplen, sw);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "%s", GetErrorString(res, sw));
+        DropField();
         return res;
     }
     if (dest != NULL) {
@@ -340,11 +347,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
     pos += resplen;
     if (!readalldata) {
         if (*sw == status(MFDES_ADDITIONAL_FRAME)) {
-            apdu->INS = MFDES_ABORT_TRANSACTION;
-            apdu->Lc = 0;
-            apdu->P1 = 0;
-            apdu->P2 = 0;
-            res = DESFIRESendApdu(false, true, *apdu, data, sizeof(data), &resplen, sw);
+            *recv_len=pos;
             return PM3_SUCCESS;
         }
         return res;
@@ -359,6 +362,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
         res = DESFIRESendApdu(false, true, *apdu, data, sizeof(data), &resplen, sw);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "%s", GetErrorString(res, sw));
+            DropField();
             return res;
         }
 
@@ -397,13 +401,303 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     return UNKNOWN;
 }
 
+int get_desfire_auth(mfdes_authinput_t* payload,mfdes_auth_res_t* rpayload)
+{
+    // 3 different way to authenticate   AUTH (CRC16) , AUTH_ISO (CRC32) , AUTH_AES (CRC32)
+    // 4 different crypto arg1   DES, 3DES, 3K3DES, AES
+    // 3 different communication modes,  PLAIN,MAC,CRYPTO
+
+    mbedtls_aes_context ctx;
+
+    uint8_t keybytes[24];
+    // Crypt constants
+    uint8_t IV[16] = {0x00};
+    uint8_t RndA[16] = {0x00};
+    uint8_t RndB[16] = {0x00};
+    uint8_t encRndB[16] = {0x00};
+    uint8_t rotRndB[16] = {0x00}; //RndB'
+    uint8_t both[32+1] = {0x00}; // ek/dk_keyNo(RndA+RndB')
+
+    // Generate Random Value
+    uint32_t ng=msclock();
+    uint32_t value = prng_successor(ng, 32);
+    num_to_bytes(value, 4, &RndA[0]);
+    value = prng_successor(ng, 32);
+    num_to_bytes(value, 4, &RndA[4]);
+    value = prng_successor(ng, 32);
+    num_to_bytes(value, 4, &RndA[8]);
+    value = prng_successor(ng, 32);
+    num_to_bytes(value, 4, &RndA[12]);
+
+    // Default Keys
+    uint8_t PICC_MASTER_KEY8[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t PICC_MASTER_KEY16[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t PICC_MASTER_KEY24[24] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    //uint8_t null_key_data16[16] = {0x00};
+    //uint8_t new_key_data8[8]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77};
+    //uint8_t new_key_data16[16]  = { 0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF};
+
+
+    // Part 1
+    if (payload->key == NULL) {
+        if (payload->algo == MFDES_AUTH_DES)  {
+            memcpy(keybytes, PICC_MASTER_KEY8, 8);
+        } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES) {
+            memcpy(keybytes, PICC_MASTER_KEY16, 16);
+        } else if (payload->algo == MFDES_ALGO_3DES) {
+            memcpy(keybytes, PICC_MASTER_KEY24, 24);
+        }
+    } else {
+        memcpy(keybytes, payload->key, payload->keylen);
+    }
+
+    struct desfire_key defaultkey = {0};
+    desfirekey_t key = &defaultkey;
+
+    if (payload->algo == MFDES_ALGO_AES) {
+        mbedtls_aes_init(&ctx);
+        Desfire_aes_key_new(keybytes, key);
+    } else if (payload->algo == MFDES_ALGO_3DES) {
+        Desfire_3des_key_new_with_version(keybytes, key);
+    } else if (payload->algo == MFDES_ALGO_DES) {
+        Desfire_des_key_new(keybytes, key);
+    } else if (payload->algo == MFDES_ALGO_3K3DES) {
+        Desfire_3k3des_key_new_with_version(keybytes, key);
+    }
+
+    uint8_t subcommand = MFDES_AUTHENTICATE;
+
+    if (payload->mode == MFDES_AUTH_AES)
+        subcommand = MFDES_AUTHENTICATE_AES;
+    else if (payload->mode == MFDES_AUTH_ISO)
+        subcommand = MFDES_AUTHENTICATE_ISO;
+
+    int recv_len = 0;
+    uint16_t sw = 0;
+    uint8_t recv_data[256]={0};
+
+    if (payload->mode != MFDES_AUTH_PICC) {
+        // Let's send our auth command
+        uint8_t data[] = {payload->keyno};
+        sAPDU apdu = {0x90, subcommand, 0x00, 0x00, 0x01, data};
+        int res = send_desfire_cmd(&apdu, false, recv_data, &recv_len, &sw, 0, false);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Sending auth command %02X " _RED_("failed"),subcommand);
+            return PM3_ESOFT;
+        }
+    } else if (payload->mode == MFDES_AUTH_PICC) {
+        /*cmd[0] = AUTHENTICATE;
+        cmd[1] = payload->keyno;
+        len = DesfireAPDU(cmd, 2, resp);
+         */
+    }
+
+    if (!recv_len) {
+        PrintAndLogEx(ERR,"Authentication failed. Card timeout.");
+        return PM3_ESOFT;
+    }
+
+    if (sw!=status(MFDES_ADDITIONAL_FRAME)) {
+        PrintAndLogEx(ERR,"Authentication failed. Invalid key number.");
+        return PM3_ESOFT;
+    }
+
+    int expectedlen = 8;
+    if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3K3DES) {
+        expectedlen = 16;
+    }
+
+    if (recv_len != expectedlen) {
+        PrintAndLogEx(ERR,"Authentication failed. Length of answer %d doesn't match algo length %d.", recv_len, expectedlen);
+        return PM3_ESOFT;
+    }
+    int rndlen=recv_len;
+
+    // Part 2
+    if (payload->mode != MFDES_AUTH_PICC) {
+        memcpy(encRndB, recv_data, rndlen);
+    } else {
+        memcpy(encRndB, recv_data + 2, rndlen);
+    }
+
+
+    // Part 3
+    if (payload->algo == MFDES_ALGO_AES) {
+        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
+            PrintAndLogEx(ERR,"mbedtls_aes_setkey_dec failed");
+            return PM3_ESOFT;
+        }
+        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndB, RndB);
+    }
+    else if (payload->algo == MFDES_ALGO_DES)
+        des_dec(RndB, encRndB, key->data);
+    else if (payload->algo == MFDES_ALGO_3DES)
+        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV,2);
+    else if (payload->algo == MFDES_ALGO_3K3DES) {
+        tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV,3);
+    }
+
+    if (g_debugMode>1){
+        PrintAndLogEx(INFO,"encRndB: %s",sprint_hex(encRndB,8));
+        PrintAndLogEx(INFO,"RndB: %s",sprint_hex(RndB,8));
+    }
+
+    // - Rotate RndB by 8 bits
+    memcpy(rotRndB, RndB, rndlen);
+    rol(rotRndB, rndlen);
+
+    uint8_t encRndA[16] = {0x00};
+
+    // - Encrypt our response
+    if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_PICC) {
+        des_dec(encRndA, RndA, key->data);
+        memcpy(both, encRndA, rndlen);
+
+        for (int x = 0; x < rndlen; x++) {
+            rotRndB[x] = rotRndB[x] ^ encRndA[x];
+        }
+
+        des_dec(encRndB, rotRndB, key->data);
+        memcpy(both + rndlen, encRndB, rndlen);
+    } else if (payload->mode == MFDES_AUTH_ISO) {
+        if (payload->algo == MFDES_ALGO_3DES) {
+            uint8_t tmp[16] = {0x00};
+            memcpy(tmp, RndA, rndlen);
+            memcpy(tmp + rndlen, rotRndB, rndlen);
+            if (g_debugMode>1) {
+                PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+                PrintAndLogEx(INFO, "Both: %s", sprint_hex(tmp, 16));
+            }
+            tdes_nxp_send(tmp, both, 16, key->data, IV,2);
+            if (g_debugMode>1) {
+                PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, 16));
+            }
+        } else if (payload->algo == MFDES_ALGO_3K3DES) {
+            uint8_t tmp[32] = {0x00};
+            memcpy(tmp, RndA, rndlen);
+            memcpy(tmp + rndlen, rotRndB, rndlen);
+            if (g_debugMode>1) {
+                PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+                PrintAndLogEx(INFO, "Both3k3: %s", sprint_hex(tmp, 32));
+            }
+            tdes_nxp_send(tmp, both, 32, key->data, IV,3);
+            if (g_debugMode>1) {
+                PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, 32));
+            }
+        }
+    } else if (payload->mode == MFDES_AUTH_AES) {
+        uint8_t tmp[32] = {0x00};
+        memcpy(tmp, RndA, rndlen);
+        memcpy(tmp + rndlen, rotRndB, rndlen);
+        if (g_debugMode>1) {
+            PrintAndLogEx(INFO, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
+            PrintAndLogEx(INFO, "Both3k3: %s", sprint_hex(tmp, 32));
+        }
+        if (payload->algo == MFDES_ALGO_AES) {
+            if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
+                PrintAndLogEx(ERR,"mbedtls_aes_setkey_enc failed");
+                return PM3_ESOFT;
+            }
+            mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, tmp, both);
+            if (g_debugMode>1) {
+                PrintAndLogEx(INFO, "EncBoth: %s", sprint_hex(both, 32));
+            }
+        }
+    }
+
+    int bothlen = 16;
+    if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3K3DES) {
+        bothlen = 32;
+    }
+    if (payload->mode != MFDES_AUTH_PICC) {
+        sAPDU apdu = {0x90, MFDES_ADDITIONAL_FRAME, 0x00, 0x00, bothlen, both};
+        int res = send_desfire_cmd(&apdu, false, recv_data, &recv_len, &sw, 0, false);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Sending auth command %02X " _RED_("failed"),subcommand);
+            return PM3_ESOFT;
+        }
+    } else {
+        /*cmd[0] = ADDITIONAL_FRAME;
+        memcpy(cmd + 1, both, 16);
+        len = DesfireAPDU(cmd, 1 + 16, resp);
+
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Sending auth command %02X " _RED_("failed"),subcommand);
+            return PM3_ESOFT;
+        }*/
+    }
+
+    if (!recv_len) {
+        PrintAndLogEx(ERR,"Authentication failed. Card timeout.");
+        return PM3_ESOFT;
+    }
+
+    if (payload->mode != MFDES_AUTH_PICC) {
+        if (sw!=status(MFDES_S_OPERATION_OK)) {
+            PrintAndLogEx(ERR,"Authentication failed.");
+            return PM3_ESOFT;
+        }
+    } else {
+        /*if (resp[1] != 0x00) {
+            PrintAndLogEx(ERR,"Authentication failed. Card timeout.");
+            return PM3_ESOFT;
+        }*/
+    }
+
+    // Part 4
+    Desfire_session_key_new(RndA, RndB, key, sessionkey);
+
+    if (payload->mode != MFDES_AUTH_PICC) {
+        memcpy(encRndA, recv_data, rndlen);
+    } else {
+        memcpy(encRndA, recv_data + 2, rndlen);
+    }
+
+    if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_ISO || payload->mode == MFDES_AUTH_PICC) {
+        if (payload->algo == MFDES_ALGO_DES)
+            des_dec(encRndA, encRndA, key->data);
+        else if (payload->algo == MFDES_ALGO_3DES)
+            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV,2);
+        else if (payload->algo == MFDES_ALGO_3K3DES)
+            tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV,3);
+    } else if (payload->mode == MFDES_AUTH_AES) {
+        if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
+            PrintAndLogEx(ERR,"mbedtls_aes_setkey_dec failed");
+            return PM3_ESOFT;
+        }
+        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, rndlen, IV, encRndA, encRndA);
+    }
+
+    rol(RndA, rndlen);
+    for (int x = 0; x < rndlen; x++) {
+        if (RndA[x] != encRndA[x]) {
+            PrintAndLogEx(ERR,"Authentication failed. Cannot verify Session Key.");
+            if (g_debugMode>1){
+                PrintAndLogEx(INFO,"Expected_RndA : %s", sprint_hex(RndA, rndlen));
+                PrintAndLogEx(INFO,"Generated_RndA : %s", sprint_hex(encRndA, rndlen));
+            }
+            return PM3_ESOFT;
+        }
+    }
+
+    rpayload->sessionkeylen = payload->keylen;
+    memcpy(rpayload->sessionkey, sessionkey->data, rpayload->sessionkeylen);
+    return PM3_SUCCESS;
+}
+
 // -- test if card supports 0x0A
 static int test_desfire_authenticate() {
     uint8_t data[] = {0x00};
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE, 0x00, 0x00, 0x01, data}; // 0x0A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
+    int res=send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
+    if (res==PM3_SUCCESS)
+        if (sw==status(MFDES_ADDITIONAL_FRAME)) {
+            DropField();
+            return res;
+        }
+    return res;
 }
 
 // -- test if card supports 0x1A
@@ -412,7 +706,13 @@ static int test_desfire_authenticate_iso() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_ISO, 0x00, 0x00, 0x01, data}; // 0x1A, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
+    int res=send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
+    if (res==PM3_SUCCESS)
+        if (sw==status(MFDES_ADDITIONAL_FRAME)) {
+            DropField();
+            return res;
+        }
+    return res;
 }
 
 // -- test if card supports 0xAA
@@ -421,7 +721,13 @@ static int test_desfire_authenticate_aes() {
     sAPDU apdu = {0x90, MFDES_AUTHENTICATE_AES, 0x00, 0x00, 0x01, data}; // 0xAA, KEY 0
     int recv_len = 0;
     uint16_t sw = 0;
-    return send_desfire_cmd(&apdu, false, NULL, &recv_len, &sw, 0, false);
+    int res=send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, 0, false);
+    if (res==PM3_SUCCESS)
+        if (sw==status(MFDES_ADDITIONAL_FRAME)) {
+            DropField();
+            return res;
+        }
+    return res;
 }
 
 // --- GET FREE MEM
@@ -1013,7 +1319,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
     CLIParserFree();
-
+    swap24(aid);
     if (aidlength < 3) {
         PrintAndLogEx(ERR, "AID must have 3 bytes length.");
         return PM3_EINVARG;
@@ -1488,14 +1794,16 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     CLIParserInit("hf mfdes auth",
                   "Authenticates Mifare DESFire using Key",
-                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=2K3DES, 4=3K3DES, 5=AES)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
-                  "Example:\n\thf mfdes auth -m 3 -t 5 -a 838001 -n 0 -k 00000000000000000000000000000000\n"
+                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES(2K2DES), 3=3K3DES, 5=AES)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
+                  "Example:\n\thf mfdes auth -m 3 -t 4 -a 808301 -n 0 -k 00000000000000000000000000000000 (AES)"
+                  "\n\thf mfdes auth -m 2 -t 2 -a 000000 -n 0 -k 00000000000000000000000000000000 (3DES)"
+                  "\n\thf mfdes auth -m 1 -t 1 -a 000000 -n 0 -k 0000000000000000 (DES)"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0("mM",  "type",   "Auth type (1=normal, 2=iso, 3=aes, 4=picc)", NULL),
-        arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES, 3=2K3DES, 4=3K3DES, 5=AES)", NULL),
+        arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES(2K2DES), 4=3K3DES, 5=AES)", NULL),
         arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("nN",  "keyno",  "Key number used for authentification", NULL),
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
@@ -1536,7 +1844,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
             }
             break;
         case MFDES_AUTH_ISO:
-            if (cmdAuthAlgo != MFDES_ALGO_2K3DES && cmdAuthAlgo != MFDES_ALGO_3K3DES) {
+            if (cmdAuthAlgo != MFDES_ALGO_3DES && cmdAuthAlgo != MFDES_ALGO_3K3DES) {
                 PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth iso mode");
                 return PM3_EINVARG;
             }
@@ -1559,13 +1867,9 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     }
 
     switch (cmdAuthAlgo) {
-        case MFDES_ALGO_2K3DES:
-            keylength = 16;
-            PrintAndLogEx(NORMAL, "2 key 3DES selected");
-            break;
         case MFDES_ALGO_3DES:
             keylength = 16;
-            PrintAndLogEx(NORMAL, "3DES selected");
+            PrintAndLogEx(NORMAL, "2 key 3DES selected");
             break;
         case MFDES_ALGO_3K3DES:
             keylength = 24;
@@ -1605,7 +1909,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     payload.mode = cmdAuthMode;
     payload.algo = cmdAuthAlgo;
     payload.keyno = cmdKeyNo;
-    SendCommandNG(CMD_HF_DESFIRE_AUTH1, (uint8_t *)&payload, sizeof(payload));
+    /*SendCommandNG(CMD_HF_DESFIRE_AUTH1, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
 
@@ -1614,15 +1918,15 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         DropField();
         return PM3_ETIMEOUT;
     }
-
-    uint8_t isOK  = (resp.status == PM3_SUCCESS);
-    if (isOK) {
-        struct mfdes_auth_res *rpayload = (struct mfdes_auth_res *)&resp.data.asBytes;
+    */
+    mfdes_auth_res_t rpayload;
+    if (get_desfire_auth(&payload,&rpayload)==PM3_SUCCESS)
+    {
         PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
-        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload->sessionkey, keylength));
+        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload.sessionkey, keylength));
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
     } else {
-        PrintAndLogEx(WARNING, _RED_("Auth command failed, reason: %d."), resp.status);
+        return PM3_ESOFT;
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
@@ -1633,8 +1937,48 @@ static int CmdHF14ADesList(const char *Cmd) {
     return CmdTraceList("des");
 }
 
+static int CmdTest(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    uint8_t IV[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    uint8_t key[16]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
+    /*[=] encRndB: 1A BE 10 8D 09 E0 18 13
+      [=] RndB: 57 9B 94 21 40 2C C6 D7
+      [=] 3keyenc: 6E 6A EB 86 6E 6A EB 86 9B 94 21 40 2C C6 D7 00
+                   6E 6A EB 86 6E 6A EB 86 9B 94 21 40 2C C6 D7 57
+      [=] Both: 32 B2 E4 1A 14 CF 8B 34 B4 F9 30 43 5B 68 A3 FD
+      [=] RndA: 6E 6A EB 86 6E 6A EB 86
+    */
+
+    uint8_t encRndB[8]={0x1A,0xBE,0x10,0x8D,0x09,0xE0,0x18,0x13};
+    /*
+    * RndB_enc:  DE 50 F9 23 10 CA F5 A5
+    * RndB:      4C 64 7E 56 72 E2 A6 51
+    * RndB_rot:  64 7E 56 72 E2 A6 51 4C
+    * RndA:      C9 6C E3 5E 4D 60 87 F2
+    * RndAB:     C9 6C E3 5E 4D 60 87 F2 64 7E 56 72 E2 A6 51 4C
+    * RndAB_enc: E0 06 16 66 87 04 D5 54 9C 8D 6A 13 A0 F8 FC ED
+     */
+    uint8_t RndB[8]={0};
+    uint8_t RndA[8]={0x6E,0x6A,0xEB,0x86,0x6E,0x6A,0xEB,0x86};
+    tdes_nxp_receive(encRndB, RndB, 8, key, IV,2);
+    uint8_t rotRndB[8]={0};
+    memcpy(rotRndB, RndB, 8);
+    rol(rotRndB, 8);
+    uint8_t tmp[16] = {0x00};
+    uint8_t both[16] = {0x00};
+    memcpy(tmp, RndA, 8);
+    memcpy(tmp + 8, rotRndB, 8);
+    PrintAndLogEx(INFO,"3keyenc: %s",sprint_hex(tmp,16));
+    PrintAndLogEx(SUCCESS, "  Res        : " _GREEN_("%s"), sprint_hex(IV,8));
+    tdes_nxp_send(tmp, both, 16, key, IV,2);
+    PrintAndLogEx(SUCCESS, "  Res        : " _GREEN_("%s"), sprint_hex(both,16));
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,                     AlwaysAvailable, "This help"},
+    {"test",    CmdTest,                     AlwaysAvailable, "Test"},
     {"info",    CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"list",    CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
     {"enum",    CmdHF14ADesEnumApplications, IfPm3Iso14443a,  "Tries enumerate all applications"},
