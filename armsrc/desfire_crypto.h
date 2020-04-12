@@ -2,7 +2,9 @@
 #define __DESFIRE_CRYPTO_H
 
 #include "common.h"
-#include "mifare.h" // structs
+#include "mifare.h"
+#include "mbedtls/aes.h"
+#include "mbedtls/des.h"
 //#include "../../armsrc/printf.h"
 //#include "../../armsrc/desfire.h"
 //#include "../../armsrc/iso14443a.h"
@@ -97,10 +99,10 @@ struct desfire_tag {
     uint32_t selected_application;
 };
 typedef struct desfire_tag *desfiretag_t;
-
 void crc32_ex(const uint8_t *data, const size_t len, uint8_t *crc);
 void crc32_append(uint8_t *data, const size_t len);
-
+void des_encrypt(void *out, const void *in, const void *key);
+void des_decrypt(void *out, const void *in, const void *key);
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
 void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
 void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key);

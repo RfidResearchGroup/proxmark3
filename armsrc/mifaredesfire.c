@@ -11,9 +11,7 @@
 #include "fpgaloader.h"
 #include "iso14443a.h"
 #include "crc16.h"
-#include "mbedtls/aes.h"
 #include "commonutil.h"
-#include "des.h"
 #include "util.h"
 #include "mifare.h"
 #include "ticks.h"
@@ -370,7 +368,7 @@ void MifareDES_Auth1(uint8_t *datain) {
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndB, RndB);
     } else if (payload->algo == MFDES_ALGO_DES)
-        des_dec(RndB, encRndB, key->data);
+        des_decrypt(RndB, encRndB, key->data);
     else if (payload->algo == MFDES_ALGO_3DES)
         tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
     else if (payload->algo == MFDES_ALGO_3K3DES)
@@ -384,14 +382,14 @@ void MifareDES_Auth1(uint8_t *datain) {
 
     // - Encrypt our response
     if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_PICC) {
-        des_dec(encRndA, RndA, key->data);
+        des_decrypt(encRndA, RndA, key->data);
         memcpy(both, encRndA, rndlen);
 
         for (int x = 0; x < rndlen; x++) {
             rotRndB[x] = rotRndB[x] ^ encRndA[x];
         }
 
-        des_dec(encRndB, rotRndB, key->data);
+        des_decrypt(encRndB, rotRndB, key->data);
         memcpy(both + 8, encRndB, rndlen);
     } else if (payload->mode == MFDES_AUTH_ISO) {
         if (payload->algo == MFDES_ALGO_3DES) {
@@ -477,7 +475,7 @@ void MifareDES_Auth1(uint8_t *datain) {
 
     if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_PICC) {
         if (payload->algo == MFDES_ALGO_DES)
-            des_dec(encRndA, encRndA, key->data);
+            des_decrypt(encRndA, encRndA, key->data);
         else if (payload->algo == MFDES_ALGO_3DES)
             tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
         else if (payload->algo == MFDES_ALGO_3K3DES)
