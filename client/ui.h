@@ -19,8 +19,10 @@
 
 typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
 typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
+typedef enum clientdebugLevel {OFF,SIMPLE,FULL} clientdebugLevel_t;
 
 typedef struct {
+    bool preferences_loaded;
     bool stdinOnTTY;
     bool stdoutOnTTY;
     bool supports_colors;
@@ -28,6 +30,15 @@ typedef struct {
     bool pm3_present;
     bool help_dump_mode;
     bool show_hints;
+    int window_plot_xpos;
+    int window_plot_ypos;
+    int window_plot_hsize;
+    int window_plot_wsize;
+    int window_overlay_xpos;
+    int window_overlay_ypos;
+    int window_overlay_hsize;
+    int window_overlay_wsize;
+    clientdebugLevel_t client_debug_level;
 } session_arg_t;
 
 extern session_arg_t session;

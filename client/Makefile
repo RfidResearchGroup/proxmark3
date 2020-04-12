@@ -253,7 +253,7 @@ CMDSRCS =   crapto1/crapto1.c \
             wiegand_formats.c \
             wiegand_formatutils.c \
             cardhelper.c \
-            settings.c
+            preferences.c
 
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )

@@ -1,0 +1,18 @@
+[
+    {
+        "AID": "D3494F",
+        "Vendor": "HID",
+        "Country": "United States",
+        "Name": "SIO DESFire Ev1",
+        "Description": "",
+        "Type": ""
+    },
+    {
+        "AID": "4F5931",
+        "Vendor": "Transport of London",
+        "Country": "UK",
+        "Name": "Oyster Card",
+        "Description": "",
+        "Type": ""
+    },
+]

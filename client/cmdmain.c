@@ -37,6 +37,7 @@
 #include "ui.h"
 #include "util_posix.h"
 #include "commonutil.h"   // ARRAYLEN
+#include "preferences.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -241,6 +242,11 @@ static int CmdRev(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdPref(const char *Cmd) {
+    CmdPreferences(Cmd);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,      AlwaysAvailable,         "This help. Use '<command> help' for details of a particular command."},
     {"auto",    CmdAuto,      IfPm3Present,           "Automated detection process for unknown tags"},
@@ -259,6 +265,7 @@ static command_t CommandTable[] = {
     {"wiegand", CmdWiegand,   AlwaysAvailable,         "{ Wiegand format manipulation... }"},
     {"",        CmdHelp,      AlwaysAvailable,         ""},
     {"hints",   CmdHints,     AlwaysAvailable,         "Turn hints on / off"},
+    {"pref",    CmdPref,      AlwaysAvailable,         "Edit preferences"},
     {"msleep",  CmdMsleep,    AlwaysAvailable,         "Add a pause in milliseconds"},
     {"rem",     CmdRem,       AlwaysAvailable,         "Add a text line in log file"},
     {"quit",    CmdQuit,      AlwaysAvailable,         ""},
