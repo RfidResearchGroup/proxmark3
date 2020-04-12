@@ -34,6 +34,19 @@ uint8_t key_ones_data[16] = { 0x01 };
 uint8_t key_defa_data[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
 uint8_t key_picc_data[16] = { 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f };
 
+typedef struct {
+    uint8_t mode;
+    uint8_t algo;
+    uint8_t keyno;
+    uint8_t keylen;
+    uint8_t key[24];
+} mfdes_authinput_t;
+
+typedef struct mfdes_auth_res {
+    uint8_t sessionkeylen;
+    uint8_t sessionkey[24];
+} mfdes_auth_res_t;
+
 #define status(x) ( ((uint16_t)(0x91<<8)) + x )
 
 typedef enum {
@@ -78,13 +91,13 @@ static char *getCardSizeStr(uint8_t fsize) {
 
 static char *getProtocolStr(uint8_t id, bool hw) {
 
-   static char buf[50] = {0x00};
+    static char buf[50] = {0x00};
     char *retStr = buf;
 
     if (id == 0x04) {
         sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
     } else if (id == 0x05) {
-      if (hw)
+        if (hw)
             sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") ")", id);
         else
             sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
@@ -222,7 +235,7 @@ static char *getstatus(uint16_t *sw) {
                 return "Application count is limited to 28, not addition CreateApplication possible";
 
             case MFDES_E_DUPLICATE:
-                return "Duplicate entry: File/Application does already exist";
+                return "Duplicate entry: File/Application/ISO Text does already exist";
 
             case MFDES_E_EEPROM:
                 return "Eeprom error due to loss of power, internal backup/rollback mechanism activated";
@@ -294,13 +307,13 @@ static char *GetErrorString(int res, uint16_t *sw) {
 
 static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_len, uint16_t *sw, int splitbysize, bool readalldata) {
     if (apdu == NULL) {
-        PrintAndLogEx(DEBUG, "APDU=NULL"); 
+        PrintAndLogEx(DEBUG, "APDU=NULL");
         return PM3_EINVARG;
     }
-    if (dest == NULL) {
+    /*if (dest == NULL) {
         PrintAndLogEx(DEBUG, "DEST=NULL");
         return PM3_EINVARG;
-    }
+    }*/
     if (sw == NULL) {
         PrintAndLogEx(DEBUG, "SW=NULL");
         return PM3_EINVARG;
@@ -348,7 +361,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
             PrintAndLogEx(DEBUG, "%s", GetErrorString(res, sw));
             return res;
         }
-    
+
         if (dest != NULL) {
             if (splitbysize) {
                 memcpy(&dest[i * splitbysize], data, resplen);
@@ -362,7 +375,7 @@ static int send_desfire_cmd(sAPDU *apdu, bool select, uint8_t *dest, int *recv_l
         if (*sw != status(MFDES_ADDITIONAL_FRAME)) break;
     }
 
-    *recv_len =  (splitbysize) ? i : pos;
+    *recv_len = (splitbysize) ? i : pos;
     return PM3_SUCCESS;
 }
 
@@ -378,7 +391,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 //        return DESFIRE_EV3;
     if (major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
-    if (major == 0x11 &&  minor == 0x00 )
+    if (major == 0x11 &&  minor == 0x00)
         return PLUS_EV1;
 
     return UNKNOWN;
@@ -428,12 +441,12 @@ static int get_desfire_freemem(uint32_t *free_mem) {
 
     int res = send_desfire_cmd(&apdu, true, fmem, &recv_len, &sw, 0, true);
 
-    if (res != PM3_SUCCESS )
+    if (res != PM3_SUCCESS)
         return res;
-    
+
     if (sw != status(MFDES_S_OPERATION_OK))
         return PM3_ESOFT;
-    
+
     *free_mem = le24toh(fmem);
     return res;
 }
@@ -573,7 +586,7 @@ static int get_desfire_keysettings(uint8_t *key_settings, uint8_t *num_keys) {
     uint8_t data[2] = {0};
     int res = send_desfire_cmd(&apdu, false, data, &recv_len, &sw, 0, true);
 
-    if (res != PM3_SUCCESS )
+    if (res != PM3_SUCCESS)
         return res;
     if (sw != status(MFDES_S_OPERATION_OK))
         return PM3_ESOFT;
@@ -598,8 +611,8 @@ static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, false, num_versions, &recv_len, &sw, 0, true);
-    
-    if (res != PM3_SUCCESS )
+
+    if (res != PM3_SUCCESS)
         return res;
 
     if (sw != status(MFDES_S_OPERATION_OK))
@@ -611,8 +624,8 @@ static int get_desfire_keyversion(uint8_t curr_key, uint8_t *num_versions) {
 // --- GET APPIDS
 static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
     if (dest == NULL) {
-         PrintAndLogEx(DEBUG, "DEST=NULL");
-         return PM3_EINVARG;
+        PrintAndLogEx(DEBUG, "DEST=NULL");
+        return PM3_EINVARG;
     }
     if (app_ids_len == NULL) {
         PrintAndLogEx(DEBUG, "APP_IDS_LEN=NULL");
@@ -623,8 +636,8 @@ static int get_desfire_appids(uint8_t *dest, uint8_t *app_ids_len) {
     int recv_len = 0;
     uint16_t sw = 0;
     int res = send_desfire_cmd(&apdu, true, dest, &recv_len, &sw, 0, true);
- 
-    if (res != PM3_SUCCESS )
+
+    if (res != PM3_SUCCESS)
         return res;
 
     if (sw != status(MFDES_S_OPERATION_OK))
@@ -661,9 +674,9 @@ static int get_desfire_select_application(uint8_t *aid) {
     sAPDU apdu = {0x90, MFDES_SELECT_APPLICATION, 0x00, 0x00, 0x03, aid}; //0x5a
     int recv_len = 0;
     uint16_t sw = 0;
-    int res = send_desfire_cmd(&apdu, true, NULL, &recv_len, &sw, sizeof(dfname_t), true);
+    int res = send_desfire_cmd(&apdu, true, NONE, &recv_len, &sw, sizeof(dfname_t), true);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, _RED_("   Can't select AID 0x%X -> %s"), (aid[0] << 16) + (aid[1] << 8) + aid[2], GetErrorString(res, &sw));
+        PrintAndLogEx(WARNING, _RED_("   Can't select AID 0x%X -> %s"), (aid[2] << 16) + (aid[1] << 8) + aid[0], GetErrorString(res, &sw));
         DropField();
         return res;
     }
@@ -854,26 +867,37 @@ int getKeySettings(uint8_t *aid) {
     return PM3_SUCCESS;
 }
 
+static void swap24(uint8_t *data) {
+    if (data == NULL) return;
+    uint8_t tmp = data[0];
+    data[0] = data[2];
+    data[2] = tmp;
+};
+
+static void swap16(uint8_t *data) {
+    if (data == NULL) return;
+    uint8_t tmp = data[0];
+    data[0] = data[1];
+    data[1] = tmp;
+};
+
 
 static int CmdHF14ADesCreateApp(const char *Cmd) {
-    clearCommandBuffer();
-
     CLIParserInit("hf mfdes createaid",
                   "Create Application ID",
-                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
-                  "Example:\n\thf mfdes createaid -a 123456 -f 1122 -k 0F -l 2E -n AppName\n"
+                  "Usage:\n\thf mfdes createaid -a 123456 -f 1122 -k 0F -l 2E -n AppName\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("aA",  "aid",    "<aid>", "App ID to create"),
-        arg_strx0("fF",  "fid",    "<fid>", "File ID"),
+        arg_strx0("aA",  "aid",    "<aid>", "App ID to create as hex bytes ("),
+        arg_strx0("fF",  "fid",    "<fid>", "File ID to create"),
         arg_strx0("kK",  "keysetting1",    "<keysetting1>", "Key Setting 1 (Application Master Key Settings)"),
         arg_strx0("lL",  "keysetting2",    "<keysetting2>", "Key Setting 2"),
         arg_str0("nN",  "name",    "<name>", "App ISO-4 Name"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, false);
     /* KeySetting 1 (AMK Setting):
        0:   Allow change master key
        1:   Free Directory list access without master key
@@ -913,7 +937,9 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     int keylen2 = 1;
     int namelen = 16;
     CLIGetHexWithReturn(1, aid, &aidlength);
+    swap24(aid);
     CLIGetHexWithReturn(2, fid, &fidlength);
+    swap16(fid);
     CLIGetHexWithReturn(3, &keysetting1, &keylen1);
     CLIGetHexWithReturn(4, &keysetting2, &keylen2);
     CLIGetStrWithReturn(5, name, &namelen);
@@ -971,8 +997,6 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
 }
 
 static int CmdHF14ADesDeleteApp(const char *Cmd) {
-    clearCommandBuffer();
-
     CLIParserInit("hf mfdes deleteaid",
                   "Delete Application ID",
                   "Usage:\n\t-a aid (3 bytes)\n\n"
@@ -984,7 +1008,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         arg_strx0("aA",  "aid",    "<aid>", "App ID to delete"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, false);
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
@@ -1008,7 +1032,6 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
 
 
 static int CmdHF14ADesFormatPICC(const char *Cmd) {
-    (void) Cmd; // Cmd is not used so far
     CLIParserInit("hf mfdes formatpicc",
                   "Formats MIFARE DESFire PICC to factory state",
                   "Usage:\n\t-k PICC key (8 bytes)\n\n"
@@ -1020,7 +1043,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     uint8_t key[8] = {0};
     int keylen = 8;
@@ -1029,36 +1052,51 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
     if ((keylen < 8) || (keylen > 8)) {
         PrintAndLogEx(ERR, "Specified key must have 8 bytes length.");
-        //SetAPDULogging(false);
         return PM3_EINVARG;
     }
 
-    clearCommandBuffer();
     DropField();
     uint8_t aid[3] = {0};
     int res = get_desfire_select_application(aid);
     if (res != PM3_SUCCESS) return res;
-    uint8_t data[25] = {keylen}; // max length: 1 + 24 (3k3DES)
-    memcpy(data + 1, key, keylen);
-    SendCommandOLD(CMD_HF_DESFIRE_AUTH1, 2, 1, 0, data, keylen + 1);
+
+    mfdes_authinput_t payload;
+    payload.keylen = keylen;
+    memcpy(payload.key, key, keylen);
+    payload.mode = MFDES_AUTH_PICC;
+    payload.algo = MFDES_ALGO_DES;
+    payload.keyno = 0;
+    SendCommandNG(CMD_HF_DESFIRE_AUTH1, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+    if (!WaitForResponseTimeout(CMD_HF_DESFIRE_AUTH1, &resp, 3000)) {
         PrintAndLogEx(WARNING, "Client command execute timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isOK  = resp.oldarg[0] & 0xff;
+    uint8_t isOK  = (resp.status == PM3_SUCCESS);
     if (isOK) {
-        uint8_t rdata[] = {0xFC};  // 0xFC
-        SendCommandMIX(CMD_HF_DESFIRE_COMMAND, NONE, sizeof(rdata), 0, rdata, sizeof(rdata));
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+        struct {
+            uint8_t flags;
+            uint8_t datalen;
+            uint8_t datain[FRAME_PAYLOAD_SIZE];
+        } PACKED payload;
+        payload.datain[0] = 0xFC;
+        payload.flags = NONE;
+        payload.datalen = 1;
+        SendCommandNG(CMD_HF_DESFIRE_COMMAND, (uint8_t *)&payload, sizeof(payload));
+        if (!WaitForResponseTimeout(CMD_HF_DESFIRE_COMMAND, &resp, 3000)) {
             PrintAndLogEx(WARNING, "Client reset command execute timeout");
             DropField();
             return PM3_ETIMEOUT;
         }
-        if (resp.oldarg[0] & 0xFF) {
+        if (resp.status == PM3_SUCCESS) {
+            /*struct r {
+                uint8_t len;
+                uint8_t data[RECEIVE_SIZE];
+            } PACKED;
+            struct r *rpayload = (struct r *)&resp.data.asBytes;*/
             PrintAndLogEx(INFO, "Card successfully reset");
             return PM3_SUCCESS;
         }
@@ -1072,7 +1110,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
 
 static int CmdHF14ADesInfo(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-
+    DropField();
     SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
     PacketResponseNG resp;
 
@@ -1107,7 +1145,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         }
         return PM3_ESOFT;
     }
-    
+
     nxp_cardtype_t cardtype = getCardType(package->versionHW[3], package->versionHW[4]);
     if (cardtype == PLUS_EV1) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
@@ -1165,7 +1203,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         size_t signature_len = 0;
 
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));    
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
         if (get_desfire_signature(signature, &signature_len) == PM3_SUCCESS) {
             desfire_print_signature(package->uid, signature, signature_len, cardtype);
         } else {
@@ -1278,7 +1316,7 @@ static void DecodeAccessRights(uint16_t accrights) {
 
     char *rwa = DecodeAccessValue(read_write_access);
     if (rwa == NULL) return;
-    
+
     char *wa = DecodeAccessValue(write_access);
     if (wa == NULL) return;
 
@@ -1314,13 +1352,22 @@ static int DecodeFileSettings(uint8_t *src, int src_len, int maclen) {
         DecodeAccessRights(accrights);
         PrintAndLogEx(INFO, "     Lower limit: %d - Upper limit: %d - limited credit value: %d - limited credit enabled: %d", lowerlimit, upperlimit, limitcredvalue, limited_credit_enabled);
         return PM3_SUCCESS;
+    } else if (src_len == 1 + 1 + 2 + 3 + 3 + 3 + maclen) {
+        int recordsize = (src[7] << 16) + (src[6] << 8) + src[5];
+        int maxrecords = (src[10] << 16) + (src[9] << 8) + src[8];
+        int currentrecord = (src[13] << 16) + (src[12] << 8) + src[11];
+        DecodeFileType(filetype);
+        DecodeComSet(comset);
+        DecodeAccessRights(accrights);
+        PrintAndLogEx(INFO, "     Record size: %d - MaxNumberRecords: %d - Current Number Records: %d", recordsize, maxrecords, currentrecord);
+        return PM3_SUCCESS;
     }
     return PM3_ESOFT;
 }
 
 static int CmdHF14ADesEnumApplications(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
-
+    DropField();
 //    uint8_t isOK = 0x00;
     uint8_t aid[3] = {0};
     uint8_t app_ids[78] = {0};
@@ -1366,10 +1413,10 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "--- " _CYAN_("AMK - Application Master Key settings"));
         }
 
-        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X %02X %02X"), aid[0], aid[1], aid[2]);
+        PrintAndLogEx(SUCCESS, "  AID : " _GREEN_("%02X%02X%02X"), aid[2], aid[1], aid[0]);
         for (int m = 0; m < dfname_count; m++) {
             if (dfnames[m].aid[0] == aid[0] && dfnames[m].aid[1] == aid[1] && dfnames[m].aid[2] == aid[2]) {
-                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X %02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[0], dfnames[m].fid[1], dfnames[m].name);
+                PrintAndLogEx(SUCCESS, "  -  DF " _YELLOW_("%02X%02X") " Name : " _YELLOW_("%s"), dfnames[m].fid[1], dfnames[m].fid[0], dfnames[m].name);
             }
         }
 
@@ -1387,7 +1434,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
                 uint8_t filesettings[20] = {0};
                 int fileset_len = 0;
-                int res = get_desfire_filesettings(j, filesettings, &fileset_len);
+                int res = get_desfire_filesettings(file_ids[j], filesettings, &fileset_len);
                 int maclen = 0; // To be implemented
                 if (res == PM3_SUCCESS) {
                     if (DecodeFileSettings(filesettings, fileset_len, maclen) != PM3_SUCCESS) {
@@ -1431,32 +1478,30 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 static int CmdHF14ADesAuth(const char *Cmd) {
     int res = 0;
     DropField();
-    clearCommandBuffer();
     // NR  DESC     KEYLENGHT
     // ------------------------
     // 1 = DES      8
     // 2 = 3DES     16
     // 3 = 3K 3DES  24
     // 4 = AES      16
-    //SetAPDULogging(true);
     uint8_t keylength = 8;
 
     CLIParserInit("hf mfdes auth",
                   "Authenticates Mifare DESFire using Key",
-                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
-                  "Example:\n\thf mfdes auth -m 3 -t 4 -a 018380 -n 0 -k 404142434445464748494a4b4c4d4e4f\n"
+                  "Usage:\n\t-m Auth type (1=normal, 2=iso, 3=aes)\n\t-t Crypt algo (1=DES, 2=3DES, 3=2K3DES, 4=3K3DES, 5=AES)\n\t-a aid (3 bytes)\n\t-n keyno\n\t-k key (8-24 bytes)\n\n"
+                  "Example:\n\thf mfdes auth -m 3 -t 5 -a 838001 -n 0 -k 00000000000000000000000000000000\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("mM",  "type",   "Auth type (1=normal, 2=iso, 3=aes)", NULL),
-        arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES, 3=3K3DES, 4=aes)", NULL),
-        arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification"),
+        arg_int0("mM",  "type",   "Auth type (1=normal, 2=iso, 3=aes, 4=picc)", NULL),
+        arg_int0("tT",  "algo",   "Crypt algo (1=DES, 2=3DES, 3=2K3DES, 4=3K3DES, 5=AES)", NULL),
+        arg_strx0("aA",  "aid",    "<aid>", "AID used for authentification (HEX 3 bytes)"),
         arg_int0("nN",  "keyno",  "Key number used for authentification", NULL),
         arg_str0("kK",  "key",     "<Key>", "Key for checking (HEX 16 bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(Cmd, argtable, true);
+    CLIExecWithReturn(Cmd, argtable, false);
 
     uint8_t cmdAuthMode = arg_get_int_def(1, 0);
     uint8_t cmdAuthAlgo = arg_get_int_def(2, 0);
@@ -1464,7 +1509,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     int aidlength = 3;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(3, aid, &aidlength);
-
+    swap24(aid);
     uint8_t cmdKeyNo  = arg_get_int_def(4, 0);
 
     uint8_t key[24] = {0};
@@ -1473,61 +1518,65 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     CLIParserFree();
 
     if ((keylen < 8) || (keylen > 24)) {
-        PrintAndLogEx(ERR, "Specified key must have 16 bytes length.");
-        //SetAPDULogging(false);
+        PrintAndLogEx(ERR, "Specified key must have %d bytes length.", keylen);
         return PM3_EINVARG;
     }
 
     // AID
     if (aidlength != 3) {
         PrintAndLogEx(WARNING, "aid must include %d HEX symbols", 3);
-        //SetAPDULogging(false);
         return PM3_EINVARG;
     }
 
     switch (cmdAuthMode) {
-        case 1:
-            if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                //SetAPDULogging(false);
+        case MFDES_AUTH_DES:
+            if (cmdAuthAlgo != MFDES_ALGO_DES && cmdAuthAlgo != MFDES_ALGO_3DES) {
+                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth des mode");
                 return PM3_EINVARG;
             }
             break;
-        case 2:
-            if (cmdAuthAlgo != 1 && cmdAuthAlgo != 2 && cmdAuthAlgo != 3) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                //SetAPDULogging(false);
+        case MFDES_AUTH_ISO:
+            if (cmdAuthAlgo != MFDES_ALGO_2K3DES && cmdAuthAlgo != MFDES_ALGO_3K3DES) {
+                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth iso mode");
                 return PM3_EINVARG;
             }
             break;
-        case 3:
-            if (cmdAuthAlgo != 4) {
-                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth mode");
-                //SetAPDULogging(false);
+        case MFDES_AUTH_AES:
+            if (cmdAuthAlgo != MFDES_ALGO_AES) {
+                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth aes mode");
+                return PM3_EINVARG;
+            }
+            break;
+        case MFDES_AUTH_PICC:
+            if (cmdAuthAlgo != MFDES_AUTH_DES) {
+                PrintAndLogEx(NORMAL, "Crypto algo not valid for the auth picc mode");
                 return PM3_EINVARG;
             }
             break;
         default:
             PrintAndLogEx(WARNING, "Wrong Auth mode (%d) -> (1=normal, 2=iso, 3=aes)", cmdAuthMode);
-            //SetAPDULogging(false);
             return PM3_EINVARG;
     }
 
     switch (cmdAuthAlgo) {
-        case 2:
+        case MFDES_ALGO_2K3DES:
+            keylength = 16;
+            PrintAndLogEx(NORMAL, "2 key 3DES selected");
+            break;
+        case MFDES_ALGO_3DES:
             keylength = 16;
             PrintAndLogEx(NORMAL, "3DES selected");
             break;
-        case 3:
+        case MFDES_ALGO_3K3DES:
             keylength = 24;
             PrintAndLogEx(NORMAL, "3 key 3DES selected");
             break;
-        case 4:
+        case MFDES_ALGO_AES:
             keylength = 16;
             PrintAndLogEx(NORMAL, "AES selected");
             break;
         default:
-            cmdAuthAlgo = 1;
+            cmdAuthAlgo = MFDES_ALGO_DES;
             keylength = 8;
             PrintAndLogEx(NORMAL, "DES selected");
             break;
@@ -1550,28 +1599,30 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         if (res != PM3_SUCCESS) return res;
     }
 
-    // algo, keylength,
-    uint8_t data[25] = {keylength}; // max length: 1 + 24 (3k3DES)
-    memcpy(data + 1, key, keylength);
-    SendCommandOLD(CMD_HF_DESFIRE_AUTH1, cmdAuthMode, cmdAuthAlgo, cmdKeyNo, data, keylength + 1);
+    mfdes_authinput_t payload;
+    payload.keylen = keylength;
+    memcpy(payload.key, key, keylength);
+    payload.mode = cmdAuthMode;
+    payload.algo = cmdAuthAlgo;
+    payload.keyno = cmdKeyNo;
+    SendCommandNG(CMD_HF_DESFIRE_AUTH1, (uint8_t *)&payload, sizeof(payload));
+
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) {
+    if (!WaitForResponseTimeout(CMD_HF_DESFIRE_AUTH1, &resp, 3000)) {
         PrintAndLogEx(WARNING, "Client command execute timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isOK  = resp.oldarg[0] & 0xff;
+    uint8_t isOK  = (resp.status == PM3_SUCCESS);
     if (isOK) {
-        uint8_t *session_key = resp.data.asBytes;
-
+        struct mfdes_auth_res *rpayload = (struct mfdes_auth_res *)&resp.data.asBytes;
         PrintAndLogEx(SUCCESS, "  Key        : " _GREEN_("%s"), sprint_hex(key, keylength));
-        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(session_key, keylength));
+        PrintAndLogEx(SUCCESS, "  SESSION    : " _GREEN_("%s"), sprint_hex(rpayload->sessionkey, keylength));
         PrintAndLogEx(INFO, "-------------------------------------------------------------");
-        //PrintAndLogEx(NORMAL, "  Expected   :B5 21 9E E8 1A A7 49 9D 21 96 68 7E 13 97 38 56");
     } else {
-        PrintAndLogEx(WARNING, _RED_("Client command failed."));
+        PrintAndLogEx(WARNING, _RED_("Auth command failed, reason: %d."), resp.status);
     }
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     return PM3_SUCCESS;
@@ -1593,6 +1644,18 @@ static command_t CommandTable[] = {
     {"formatpicc",    CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
 //    {"rdbl",    CmdHF14ADesRb,               IfPm3Iso14443a,  "Read MIFARE DesFire block"},
 //    {"wrbl",    CmdHF14ADesWb,               IfPm3Iso14443a,  "write MIFARE DesFire block"},
+    /*
+        ISO/IEC 7816 Cmds
+        'A4' Select
+        'B0' Read Binary
+        'D6' Update Binary
+        'B2' Read Records
+        'E2' Append Records
+        '84' Get Challenge
+        '88' Internal Authenticate
+        '82' External Authenticate
+
+    */
     {NULL, NULL, NULL, NULL}
 };
 
@@ -1603,7 +1666,6 @@ static int CmdHelp(const char *Cmd) {
 }
 
 int CmdHFMFDes(const char *Cmd) {
-    // flush
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }

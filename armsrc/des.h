@@ -104,6 +104,8 @@ void tdes_dec(void *out, void *in, const uint8_t *key);
 
 void tdes_2key_enc(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]);
 void tdes_2key_dec(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]);
+void tdes_3key_enc(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]);
+void tdes_3key_dec(void *out, const void *in, size_t length, const void *key, unsigned char iv[8]);
 
 // Copied from des.h in desfire imp.
 typedef unsigned long DES_KS[16][2];   /* Single-key DES key schedule */

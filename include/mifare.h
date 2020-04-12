@@ -80,6 +80,22 @@ typedef enum DESFIRE_COMMAND {
     BAR          = 0x10,
 } desfire_command_t;
 
+typedef enum {
+    MFDES_AUTH_DES = 1,
+    MFDES_AUTH_ISO = 2,
+    MFDES_AUTH_AES = 3,
+    MFDES_AUTH_PICC = 4
+} mifare_des_authmode_t;
+
+typedef enum {
+    MFDES_ALGO_DES = 1,
+    MFDES_ALGO_3DES = 2,
+    MFDES_ALGO_2K3DES = 3,
+    MFDES_ALGO_3K3DES = 4,
+    MFDES_ALGO_AES = 5
+} mifare_des_authalgo_t;
+
+
 //-----------------------------------------------------------------------------
 // ISO 14443B
 //-----------------------------------------------------------------------------
