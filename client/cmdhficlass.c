@@ -2096,9 +2096,9 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
         xor_div_key[i] = old_div_key[i] ^ new_div_key[i];
     }
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "Old div key : %s\n", sprint_hex(old_div_key, 8));
-        PrintAndLogEx(SUCCESS, "New div key : %s\n", sprint_hex(new_div_key, 8));
-        PrintAndLogEx(SUCCESS, "Xor div key : %s\n", sprint_hex(xor_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Old div key : %s", sprint_hex(old_div_key, 8));
+        PrintAndLogEx(SUCCESS, "New div key : %s", sprint_hex(new_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Xor div key : " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
     }
 }
 
@@ -2111,7 +2111,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     uint8_t dataLen = 0;
     char tempStr[50] = {0};
     bool givenCSN = false;
-    bool oldElite = false;
+    bool old_elite = false;
     bool elite = false;
     bool errors = false;
     uint8_t cmdp = 0;
@@ -2122,7 +2122,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
             case 'e':
                 dataLen = param_getstr(Cmd, cmdp, tempStr, sizeof(tempStr));
                 if (dataLen == 2)
-                    oldElite = true;
+                    old_elite = true;
                 elite = true;
                 cmdp++;
                 break;
@@ -2184,7 +2184,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
         }
     }
 
-    HFiClassCalcNewKey(CSN, OLDKEY, NEWKEY, xor_div_key, elite, oldElite, true);
+    HFiClassCalcNewKey(CSN, OLDKEY, NEWKEY, xor_div_key, elite, old_elite, true);
     return PM3_SUCCESS;
 }
 
