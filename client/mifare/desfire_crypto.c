@@ -446,25 +446,25 @@ void des_dec(void *out, const void *in, const void *key) {
 }
 */
 
-void tdes_3key_enc(void *out, void *in, const void *key) {
+void des3_3key_enc(void *out, void *in, const void *key) {
     des_enc(out,  in, (uint8_t *)key + 0);
     des_dec(out, out, (uint8_t *)key + 8);
     des_enc(out, out, (uint8_t *)key + 16);
 }
 
-void tdes_3key_dec(void *out, void *in, const uint8_t *key) {
+void des3_3key_dec(void *out, void *in, const uint8_t *key) {
     des_dec(out,  in, (uint8_t *)key + 16);
     des_enc(out, out, (uint8_t *)key + 8);
     des_dec(out, out, (uint8_t *)key + 0);
 }
 
-void tdes_2key_enc(void *out, void *in, const void *key) {
+void des3_2key_enc(void *out, void *in, const void *key) {
     des_enc(out,  in, (uint8_t *)key + 0);
     des_dec(out, out, (uint8_t *)key + 8);
     des_enc(out, out, (uint8_t *)key + 0);
 }
 
-void tdes_2key_dec(void *out, void *in, const uint8_t *key) {
+void des3_2key_dec(void *out, void *in, const uint8_t *key) {
     des_dec(out,  in, (uint8_t *)key + 0);
     des_enc(out, out, (uint8_t *)key + 8);
     des_dec(out, out, (uint8_t *)key + 0);
@@ -482,8 +482,8 @@ void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key,
     while (length > 0) {
         memcpy(temp, tin, 8);
 
-        if (keymode == 2) tdes_2key_dec(tout, tin, key);
-        else if (keymode == 3) tdes_3key_dec(tout, tin, key);
+        if (keymode == 2) des3_2key_dec(tout, tin, key);
+        else if (keymode == 3) des3_3key_dec(tout, tin, key);
 
         for (i = 0; i < 8; i++)
             tout[i] = (unsigned char)(tout[i] ^ iv[i]);
@@ -508,8 +508,8 @@ void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, un
         for (i = 0; i < 8; i++)
             tin[i] = (unsigned char)(tin[i] ^ iv[i]);
 
-        if (keymode == 2) tdes_2key_enc(tout, tin, key);
-        else if (keymode == 3) tdes_3key_enc(tout, tin, key);
+        if (keymode == 2) des3_2key_enc(tout, tin, key);
+        else if (keymode == 3) des3_3key_enc(tout, tin, key);
 
         memcpy(iv, tout, 8);
 
@@ -1160,26 +1160,26 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
-                    tdes_2key_enc(edata, data, key->data);
+                    des3_2key_enc(edata, data, key->data);
                     break;
                 case MCO_DECYPHER:
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
-                    tdes_2key_dec(data, edata, key->data);
+                    des3_2key_dec(data, edata, key->data);
                     break;
             }
             break;
         case T_3K3DES:
             switch (operation) {
                 case MCO_ENCYPHER:
-                    tdes_3key_enc(edata, data, key->data);
+                    des3_3key_enc(edata, data, key->data);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_ENCRYPT);
                     break;
                 case MCO_DECYPHER:
-                    tdes_3key_enc(data, edata, key->data);
+                    des3_3key_enc(data, edata, key->data);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);

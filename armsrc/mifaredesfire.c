@@ -13,6 +13,7 @@
 #include "crc16.h"
 #include "mbedtls/aes.h"
 #include "commonutil.h"
+#include "des.h"
 #include "util.h"
 #include "mifare.h"
 #include "ticks.h"

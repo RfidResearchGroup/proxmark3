@@ -43,37 +43,6 @@
 # define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
-#define htole32(x) (x)
-#define CRC32_PRESET 0xFFFFFFFF
-
-static void crc32_byte(uint32_t *crc, const uint8_t value);
-
-static void crc32_byte(uint32_t *crc, const uint8_t value) {
-    /* x32 + x26 + x23 + x22 + x16 + x12 + x11 + x10 + x8 + x7 + x5 + x4 + x2 + x + 1 */
-    const uint32_t poly = 0xEDB88320;
-
-    *crc ^= value;
-    for (int current_bit = 7; current_bit >= 0; current_bit--) {
-        int bit_out = (*crc) & 0x00000001;
-        *crc >>= 1;
-        if (bit_out)
-            *crc ^= poly;
-    }
-}
-
-void crc32_ex(const uint8_t *data, const size_t len, uint8_t *crc) {
-    uint32_t desfire_crc = CRC32_PRESET;
-    for (size_t i = 0; i < len; i++) {
-        crc32_byte(&desfire_crc, data[i]);
-    }
-
-    *((uint32_t *)(crc)) = htole32(desfire_crc);
-}
-
-void crc32_append(uint8_t *data, const size_t len) {
-    crc32_ex(data, len, data + len);
-}
-
 static inline void update_key_schedules(desfirekey_t key);
 
 static inline void update_key_schedules(desfirekey_t key) {
@@ -101,25 +70,25 @@ void des_dec(void *out, const void *in, const void *key) {
 }
 */
 
-void tdes_3key_enc(void *out, void *in, const void *key) {
+void des3_3key_enc(void *out, void *in, const void *key) {
     des_enc(out,  in, (uint8_t *)key + 0);
     des_dec(out, out, (uint8_t *)key + 8);
     des_enc(out, out, (uint8_t *)key + 16);
 }
 
-void tdes_3key_dec(void *out, void *in, const uint8_t *key) {
+void des3_3key_dec(void *out, void *in, const uint8_t *key) {
     des_dec(out,  in, (uint8_t *)key + 16);
     des_enc(out, out, (uint8_t *)key + 8);
     des_dec(out, out, (uint8_t *)key + 0);
 }
 
-void tdes_2key_enc(void *out, void *in, const void *key) {
+void des3_2key_enc(void *out, void *in, const void *key) {
     des_enc(out,  in, (uint8_t *)key + 0);
     des_dec(out, out, (uint8_t *)key + 8);
     des_enc(out, out, (uint8_t *)key + 0);
 }
 
-void tdes_2key_dec(void *out, void *in, const uint8_t *key) {
+void des3_2key_dec(void *out, void *in, const uint8_t *key) {
     des_dec(out,  in, (uint8_t *)key + 0);
     des_enc(out, out, (uint8_t *)key + 8);
     des_dec(out, out, (uint8_t *)key + 0);
@@ -137,8 +106,8 @@ void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key,
     while (length > 0) {
         memcpy(temp, tin, 8);
 
-        if (keymode == 2) tdes_2key_dec(tout, tin, key);
-        else if (keymode == 3) tdes_3key_dec(tout, tin, key);
+        if (keymode == 2) des3_2key_dec(tout, tin, key);
+        else if (keymode == 3) des3_3key_dec(tout, tin, key);
 
         for (i = 0; i < 8; i++)
             tout[i] = (unsigned char)(tout[i] ^ iv[i]);
@@ -163,8 +132,8 @@ void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, un
         for (i = 0; i < 8; i++)
             tin[i] = (unsigned char)(tin[i] ^ iv[i]);
 
-        if (keymode == 2) tdes_2key_enc(tout, tin, key);
-        else if (keymode == 3) tdes_3key_enc(tout, tin, key);
+        if (keymode == 2) des3_2key_enc(tout, tin, key);
+        else if (keymode == 3) des3_3key_enc(tout, tin, key);
 
         memcpy(iv, tout, 8);
 
@@ -815,26 +784,26 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
-                    tdes_2key_enc(edata, data, key->data);
+                    des3_2key_enc(edata, data, key->data);
                     break;
                 case MCO_DECYPHER:
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
-                    tdes_2key_dec(data, edata, key->data);
+                    des3_2key_dec(data, edata, key->data);
                     break;
             }
             break;
         case T_3K3DES:
             switch (operation) {
                 case MCO_ENCYPHER:
-                    tdes_3key_enc(edata, data, key->data);
+                    des3_3key_enc(edata, data, key->data);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_ENCRYPT);
                     break;
                 case MCO_DECYPHER:
-                    tdes_3key_enc(data, edata, key->data);
+                    des3_3key_enc(data, edata, key->data);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks3), DES_DECRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) edata, (DES_cblock *) data,  &(key->ks2), DES_ENCRYPT);
                     // DES_ecb_encrypt ((DES_cblock *) data,  (DES_cblock *) edata, &(key->ks1), DES_DECRYPT);
