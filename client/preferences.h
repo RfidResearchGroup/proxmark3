@@ -8,17 +8,18 @@
 //-----------------------------------------------------------------------------
 // Settings Functions
 //-----------------------------------------------------------------------------
-#ifndef SETTINGS_H_
-#define SETTINGS_H_
+#ifndef PREFERENCES_H_
+#define PREFERENCES_H_
 
 #include "fileutils.h"
 
-#define settingsFilename "settings.json"
+#define preferencesFilename "preferences.json"
 
-int settings_load (void);
-int settings_save (void);
+int CmdPreferences (const char *Cmd);
+int preferences_load (void);
+int preferences_save (void);
 
-void settings_save_callback (json_t *root);
-void settings_load_callback (json_t *root);
+void preferences_save_callback (json_t *root);
+void preferences_load_callback (json_t *root);
 
 #endif

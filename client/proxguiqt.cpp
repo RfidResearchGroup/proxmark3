@@ -170,7 +170,7 @@ void ProxWidget::vchange_dthr_down(int v) {
 ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
     // Set the initail postion and size from settings
-    if (session.settings_loaded)
+    if (session.preferences_loaded)
         setGeometry (session.window_plot_xpos,session.window_plot_ypos,session.window_plot_wsize,session.window_plot_hsize);
     else
         resize(800, 400);
@@ -210,14 +210,14 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     // shows plot window on the screen.
     show();
 
-    if (session.settings_loaded)
+    if (session.preferences_loaded)
         controlWidget->setGeometry (session.window_overlay_xpos,session.window_overlay_ypos,session.window_overlay_wsize,session.window_overlay_hsize);
     else {
         // Move controller widget below plot
         controlWidget->move(x(), y() + frameSize().height());
         controlWidget->resize(size().width(), 200);
     }
-    
+
     // Olverlays / slider window title
     QString ct = QString("[*]Slider [ %1 ]").arg((char *)gui_serial_port_name);
     controlWidget->setWindowTitle(ct);

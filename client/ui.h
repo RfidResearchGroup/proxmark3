@@ -22,7 +22,7 @@ typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
 typedef enum clientdebugLevel {OFF,SIMPLE,FULL} clientdebugLevel_t;
 
 typedef struct {
-    bool settings_loaded;
+    bool preferences_loaded;
     bool stdinOnTTY;
     bool stdoutOnTTY;
     bool supports_colors;
