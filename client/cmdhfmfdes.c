@@ -648,7 +648,7 @@ int get_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload) {
 
 
     // Part 1
-    if (payload->key == NULL) {
+    if (payload->key[0] == '\0') {
         if (payload->algo == MFDES_AUTH_DES)  {
             memcpy(keybytes, PICC_MASTER_KEY8, 8);
         } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES) {
@@ -1299,8 +1299,8 @@ typedef struct mfdes_file {
 } PACKED mfdes_file_t;
 
 static int get_desfire_create_std_file(mfdes_file_t *file) {
-    if (file->access_rights == NULL) return PM3_EINVARG;
-    if (file->filesize == NULL) return PM3_EINVARG;
+    if (file->access_rights[0] == '\0') return PM3_EINVARG;
+    if (file->filesize[0] == '\0') return PM3_EINVARG;
 
     sAPDU apdu = {0x90, MFDES_CREATE_STD_DATA_FILE, 0x00, 0x00, 1 + 2 + 1 + 2 + 3, (uint8_t *)file}; // 0xCD
 
