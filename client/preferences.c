@@ -32,8 +32,8 @@ static int setCmdHelp(const char *Cmd);
 
 // Load all settings into memory (struct)
 static char* prefGetFilename (void) {
-    static char Buffer[500+sizeof(preferencesFilename)+2] = {0};
-    char PATH[500] = {0};
+    static char Buffer[FILENAME_MAX+sizeof(preferencesFilename)+2] = {0};
+    char PATH[FILENAME_MAX] = {0};
     
     getcwd(PATH, sizeof(PATH));
 #ifdef _WIN32
@@ -78,7 +78,7 @@ int preferences_load (void) {
 // Save all settings from memory (struct) to file
 int preferences_save (void) {
     // Note sure if backup has value ?
-    char backupFilename[500+sizeof(preferencesFilename)+10] = {0};
+    char backupFilename[FILENAME_MAX+sizeof(preferencesFilename)+10] = {0};
 
     PrintAndLogEx(INFO,"Saving preferences ...");
     snprintf (backupFilename,sizeof(backupFilename)-1,"%s.bak",prefGetFilename());
