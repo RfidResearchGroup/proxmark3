@@ -334,12 +334,17 @@ void MifareDES_Auth1(uint8_t *datain) {
         return;
     }
 
+    int rndlen=8;
     int expectedlen = 1 + 8 + 2 + 2;
     if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3K3DES) {
         expectedlen = 1 + 16 + 2 + 2;
+        rndlen=16;
     }
 
-    int rndlen = len - 1 - 2 - 2;
+    if (payload->mode == MFDES_AUTH_PICC) {
+        expectedlen = 1 + 1 + 8 + 2;
+        rndlen=8;
+    }
 
     if (len != expectedlen) {
         if (DBGLEVEL >= DBG_ERROR) {
