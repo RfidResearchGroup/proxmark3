@@ -317,6 +317,7 @@ void showHintsState (prefShowOpt_t Opt){
 static int setCmdEmoji (const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
+    bool validValue = false;
     char strOpt[50];
     emojiMode_t newValue = session.emoji_mode;
 
@@ -328,22 +329,41 @@ static int setCmdEmoji (const char *Cmd) {
         if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
             str_lower(strOpt); // convert to lowercase
 
-            if (strncmp (strOpt,"help",4) == 0) usage_set_emoji();
-            if (strncmp (strOpt,"alias",5) == 0) newValue = ALIAS; 
-            if (strncmp (strOpt,"emoji",5) == 0) newValue = EMOJI;
-            if (strncmp (strOpt,"alttext",7) == 0) newValue = ALTTEXT;
-            if (strncmp (strOpt,"erase",5) == 0) newValue = ERASE;
-            
-            if (session.emoji_mode != newValue) {// changed 
-                showEmojiState (prefShowOLD);
-                session.emoji_mode = newValue;
-                showEmojiState (prefShowNEW);
+            if (strncmp (strOpt,"help",4) == 0)
+                return usage_set_emoji();
+            if (strncmp (strOpt,"alias",5) == 0) {
+                validValue = true;
+                newValue = ALIAS;
             }
-        } else {
-            // error
-        }            
+            if (strncmp (strOpt,"emoji",5) == 0) {
+                validValue = true;
+                newValue = EMOJI;
+            }
+            if (strncmp (strOpt,"alttext",7) == 0) {
+                validValue = true;
+                newValue = ALTTEXT;
+            }
+            if (strncmp (strOpt,"erase",5) == 0) {
+                validValue = true;
+                newValue = ERASE;
+            }
+
+            if (validValue) {
+                if (session.emoji_mode != newValue) {// changed 
+                    showEmojiState (prefShowOLD);
+                    session.emoji_mode = newValue;
+                    showEmojiState (prefShowNEW);
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showEmojiState (prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_emoji();
+            }
+        }
     }
-    
+
     return PM3_SUCCESS;
 }
 
@@ -351,6 +371,7 @@ static int setCmdColor (const char *Cmd)
 {
     uint8_t cmdp = 0;
     bool errors = false;
+    bool validValue = false;
     char strOpt[50];
     bool newValue = session.supports_colors;
 
@@ -362,17 +383,30 @@ static int setCmdColor (const char *Cmd)
         if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
             str_lower(strOpt); // convert to lowercase
 
-            if (strncmp (strOpt,"help",4) == 0) usage_set_color();
-            if (strncmp (strOpt,"off",3) == 0) newValue = false; 
-            if (strncmp (strOpt,"ansi",4) == 0) newValue = true;
-            
-            if (session.supports_colors != newValue) {// changed 
-                showColorState (prefShowOLD);
-                session.supports_colors = newValue;
-                showColorState (prefShowNEW);
+            if (strncmp (strOpt,"help",4) == 0) 
+                return usage_set_color();
+            if (strncmp (strOpt,"off",3) == 0) {
+                validValue = true;
+                newValue = false; 
             }
-        } else {
-            // error
+            if (strncmp (strOpt,"ansi",4) == 0) {
+                validValue = true;
+                newValue = true;
+            }
+
+            if (validValue) {
+                if (session.supports_colors != newValue) {// changed 
+                    showColorState (prefShowOLD);
+                    session.supports_colors = newValue;
+                    showColorState (prefShowNEW);
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showColorState (prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_color();
+            }
         }
     }
 
@@ -383,6 +417,7 @@ static int setCmdDebug (const char *Cmd)
 {
     uint8_t cmdp = 0;
     bool errors = false;
+    bool validValue = false;
     char strOpt[50];
     clientdebugLevel_t newValue = session.client_debug_level;
 
@@ -394,19 +429,35 @@ static int setCmdDebug (const char *Cmd)
         if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
             str_lower(strOpt); // convert to lowercase
 
-            if (strncmp (strOpt,"help",4) == 0) usage_set_debug();
-            if (strncmp (strOpt,"off",3) == 0) newValue = OFF; 
-            if (strncmp (strOpt,"simple",6) == 0) newValue = SIMPLE;
-            if (strncmp (strOpt,"full",4) == 0) newValue = FULL;
-
-            if (session.client_debug_level != newValue) {// changed 
-                showClientDebugState (prefShowOLD);
-                session.client_debug_level = newValue;
-                g_debugMode = newValue;
-                showClientDebugState (prefShowNEW);
+            if (strncmp (strOpt,"help",4) == 0) 
+                return usage_set_debug();
+            if (strncmp (strOpt,"off",3) == 0) {
+                validValue = true;
+                newValue = OFF;
+            }                
+            if (strncmp (strOpt,"simple",6) == 0) {
+                validValue = true;
+                newValue = SIMPLE;
             }
-        } else {
-            // error
+            if (strncmp (strOpt,"full",4) == 0) {
+                validValue = true;
+                newValue = FULL;
+            }
+
+            if (validValue) {
+                if (session.client_debug_level != newValue) {// changed 
+                    showClientDebugState (prefShowOLD);
+                    session.client_debug_level = newValue;
+                    g_debugMode = newValue;
+                    showClientDebugState (prefShowNEW);
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showClientDebugState (prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_debug();
+            }
         }
     }
 
@@ -417,6 +468,7 @@ static int setCmdHint (const char *Cmd)
 {
     uint8_t cmdp = 0;
     bool errors = false;
+    bool validValue = false;
     char strOpt[50];
     bool newValue = session.show_hints;
 
@@ -428,17 +480,30 @@ static int setCmdHint (const char *Cmd)
         if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
             str_lower(strOpt); // convert to lowercase
 
-            if (strncmp (strOpt,"help",4) == 0) usage_set_hints();
-            if (strncmp (strOpt,"off",3) == 0) newValue = false; 
-            if (strncmp (strOpt,"on",2) == 0) newValue = true;
-            
-            if (session.show_hints != newValue) {// changed 
-                showHintsState (prefShowOLD);
-                session.show_hints = newValue;
-                showHintsState (prefShowNEW);
+            if (strncmp (strOpt,"help",4) == 0) 
+                return usage_set_hints();
+            if (strncmp (strOpt,"off",3) == 0) {
+                validValue = true;
+                newValue = false; 
             }
-        } else {
-            // error
+            if (strncmp (strOpt,"on",2) == 0) {
+                validValue = true;
+                newValue = true;
+            }
+
+            if (validValue) {
+                if (session.show_hints != newValue) {// changed 
+                    showHintsState (prefShowOLD);
+                    session.show_hints = newValue;
+                    showHintsState (prefShowNEW);
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showHintsState (prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_hints();
+            }
         }
     }
 
