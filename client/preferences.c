@@ -23,6 +23,8 @@
 #include <string.h>
 #include "cmdparser.h"
 #include <ctype.h>
+#include <unistd.h>
+
 //#include "proxgui.h"
 //extern void SetWindowsPosition (void);
 static int CmdHelp(const char *Cmd);
@@ -30,16 +32,16 @@ static int setCmdHelp(const char *Cmd);
 
 // Load all settings into memory (struct)
 static char* prefGetFilename (void) {
-    static char Buffer[500];
-
-    getcwd(Buffer, sizeof(Buffer));
-#ifdef _WIN32
-    strncat (Buffer,"\\",sizeof(Buffer)-strlen(Buffer));
-#else
-    strncat (Buffer,"/",sizeof(Buffer)-strlen(Buffer));
-#endif    
-    strncat (Buffer,preferencesFilename,sizeof(Buffer)-strlen(Buffer));
+    static char Buffer[500+sizeof(preferencesFilename)+2] = {0};
+    char PATH[500] = {0};
     
+    getcwd(PATH, sizeof(PATH));
+#ifdef _WIN32
+    snprintf (Buffer,sizeof(Buffer)-1,"%s\\%s",PATH,preferencesFilename);
+#else
+    snprintf (Buffer,sizeof(Buffer)-1,"%s/%s",PATH,preferencesFilename);
+#endif    
+
     return Buffer;
 }
 
@@ -76,9 +78,9 @@ int preferences_load (void) {
 // Save all settings from memory (struct) to file
 int preferences_save (void) {
     // Note sure if backup has value ?
-    char backupFilename[500];
+    char backupFilename[500+sizeof(preferencesFilename)+10] = {0};
 
-    snprintf (backupFilename,sizeof(backupFilename),"%s.bak",prefGetFilename());
+    snprintf (backupFilename,sizeof(backupFilename)-1,"%s.bak",prefGetFilename());
 
     if (fileExists (backupFilename)) {
         if (remove (backupFilename) != 0) { 
