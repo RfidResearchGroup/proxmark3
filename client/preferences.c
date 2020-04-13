@@ -1,40 +1,7 @@
-/*****************************************************************************
- * WARNING
- *
- * THIS CODE IS CREATED FOR EXPERIMENTATION AND EDUCATIONAL USE ONLY.
- *
- * USAGE OF THIS CODE IN OTHER WAYS MAY INFRINGE UPON THE INTELLECTUAL
- * PROPERTY OF OTHER PARTIES, SUCH AS INSIDE SECURE AND HID GLOBAL,
- * AND MAY EXPOSE YOU TO AN INFRINGEMENT ACTION FROM THOSE PARTIES.
- *
- * THIS CODE SHOULD NEVER BE USED TO INFRINGE PATENTS OR INTELLECTUAL PROPERTY RIGHTS.
- *
- *****************************************************************************
- *
- * This file is part of loclass. It is a reconstructon of the cipher engine
- * used in iClass, and RFID techology.
- *
- * The implementation is based on the work performed by
- * Flavio D. Garcia, Gerhard de Koning Gans, Roel Verdult and
- * Milosch Meriac in the paper "Dismantling IClass".
- *
- * Copyright (C) 2014 Martin Holst Swende
- *
- * This is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation, or, at your option, any later version.
- *
- * This file is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with loclass.  If not, see <http://www.gnu.org/licenses/>.
- *
- *
- ****************************************************************************/
-
+//-----------------------------------------------------------------------------
+// This code is licensed to you under the terms of the GNU GPL, version 2 or,
+// at your option, any later version. See the LICENSE.txt file for the text of
+// the license.
 //-----------------------------------------------------------------------------
 // Preferences Functions
 //-----------------------------------------------------------------------------
@@ -56,14 +23,33 @@
 #include <string.h>
 #include "cmdparser.h"
 #include <ctype.h>
+#include <unistd.h>
 
+//#include "proxgui.h"
+//extern void SetWindowsPosition (void);
 static int CmdHelp(const char *Cmd);
+static int setCmdHelp(const char *Cmd);
 
 // Load all settings into memory (struct)
+static char* prefGetFilename (void) {
+    static char Buffer[FILENAME_MAX+sizeof(preferencesFilename)+2] = {0};
+    char PATH[FILENAME_MAX] = {0};
+    
+    getcwd(PATH, sizeof(PATH));
+#ifdef _WIN32
+    snprintf (Buffer,sizeof(Buffer)-1,"%s\\%s",PATH,preferencesFilename);
+#else
+    snprintf (Buffer,sizeof(Buffer)-1,"%s/%s",PATH,preferencesFilename);
+#endif    
+
+    return Buffer;
+}
+
 int preferences_load (void) {
 
     // Set all defaults
     session.client_debug_level = OFF;
+    session.window_changed = false;
     session.window_plot_xpos = 10;
     session.window_plot_ypos = 30;
     session.window_plot_hsize = 400;
@@ -76,12 +62,13 @@ int preferences_load (void) {
     session.show_hints = false;
     session.supports_colors = false;
     
+    
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
     uint8_t dummyData = 0x00;
     size_t dummyDL = 0x00;
     
-    if (loadFileJSON(preferencesFilename, &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
+    if (loadFileJSON(prefGetFilename(), &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
         session.preferences_loaded = true;
     }
     // Note, if session.settings_loaded == false then the settings_save 
@@ -93,9 +80,11 @@ int preferences_load (void) {
 // Save all settings from memory (struct) to file
 int preferences_save (void) {
     // Note sure if backup has value ?
-    char backupFilename[500];
 
-    snprintf (backupFilename,sizeof(backupFilename),"%s.bak",preferencesFilename);
+    char backupFilename[FILENAME_MAX+sizeof(preferencesFilename)+10] = {0};
+
+    PrintAndLogEx(INFO,"Saving preferences ...");
+    snprintf (backupFilename,sizeof(backupFilename)-1,"%s.bak",prefGetFilename());
 
     if (fileExists (backupFilename)) {
         if (remove (backupFilename) != 0) { 
@@ -104,9 +93,9 @@ int preferences_save (void) {
         }
     }
 
-    if (fileExists (preferencesFilename)) {
-        if (rename (preferencesFilename,backupFilename) != 0) {
-            PrintAndLogEx (FAILED, "Error - could not backup settings file \"%s\" to \"%s\"",preferencesFilename,backupFilename);
+    if (fileExists (prefGetFilename())) {
+        if (rename (prefGetFilename(),backupFilename) != 0) {
+            PrintAndLogEx (FAILED, "Error - could not backup settings file \"%s\" to \"%s\"",prefGetFilename(),backupFilename);
             return PM3_ESOFT;   
         }
     }
@@ -114,8 +103,8 @@ int preferences_save (void) {
     uint8_t dummyData = 0x00;
     size_t dummyDL = 0x00;
 
-    if (saveFileJSON(preferencesFilename, jsfSettings, &dummyData, dummyDL) != PM3_SUCCESS)
-        PrintAndLogEx (ERR, "Error saving preferences to \"%s\"",preferencesFilename);
+    if (saveFileJSON(prefGetFilename(), jsfSettings, &dummyData, dummyDL) != PM3_SUCCESS)
+        PrintAndLogEx (ERR, "Error saving preferences to \"%s\"",prefGetFilename());
 
     return PM3_SUCCESS;
 }
@@ -215,106 +204,99 @@ void preferences_load_callback (json_t *root) {
 }
 
 // Help Functions
-static int usage_pref_set() {
-    PrintAndLogEx(NORMAL, "Usage: pref set [(h)elp] [(e)moji ...] [(c)olor ...] [(hi)nts ...] [debug ...]");
-    PrintAndLogEx(NORMAL, "                [(p)lot ...] [(o)verlay ...]");
+
+static int usage_set_emoji() {
+    PrintAndLogEx(NORMAL, "Usage: pref set emoji <alias | emoji | alttext | erase>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     help                                             - This help");
-    PrintAndLogEx(NORMAL, "     emoji <(ali)as | (em)oji | (alt)text | (er)ase>  - Set the level of emoji support");
-    PrintAndLogEx(NORMAL, "                                                          alias : show alias");
-    PrintAndLogEx(NORMAL, "                                                          emoji : show emoji");
-    PrintAndLogEx(NORMAL, "                                                          alttext : show alternative text");
-    PrintAndLogEx(NORMAL, "                                                          erase : dont show any emoji");
-
-    PrintAndLogEx(NORMAL, "     color <(o)ff|(a)nsi>                             - Color support level");
-    PrintAndLogEx(NORMAL, "                                                          off : dont use color");
-    PrintAndLogEx(NORMAL, "                                                          ansi : use ansi color (linux, mac, windows terminal)");
-
-    PrintAndLogEx(NORMAL, "     hints <(of)f | on>                               - Show hints on/off");
-
-    PrintAndLogEx(NORMAL, "     debug <(o)ff | (s)imple | (f)ull>                - Client debug level");
-    PrintAndLogEx(NORMAL, "                                                          off : no debug output");
-    PrintAndLogEx(NORMAL, "                                                          simple : information level debug");
-    PrintAndLogEx(NORMAL, "                                                          full : full debug information");
-
-    PrintAndLogEx(NORMAL, "     plot [x <val>] [y <val>] [h <val>] [w <val>]     - Position the plot window");
-    PrintAndLogEx(NORMAL, "     overlay [x <val>] [y <val>] [h <val>] [w <val>]  - Position the overlay/slider window");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("alias")"       - Show alias for emoji");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("emoji")"       - Show amoji");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("alttext")"     - Show alt text for emoji");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("erase")"       - Dont show emoji or text");
 
     return PM3_SUCCESS;
 }
 
-static int usage_pref_show() {
-    PrintAndLogEx(NORMAL, "Usage: pref show [help] [emoji|color]");
+static int usage_set_color() {
+    PrintAndLogEx(NORMAL, "Usage: pref set color <off | ansi>");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "     help                - This help");
-    PrintAndLogEx(NORMAL, "     emoji               - show current settings for emoji");
-    PrintAndLogEx(NORMAL, "     color               - show current settings for color");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - Dont use colors");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("ansi")"        - Use ANSI colors");
+
+    return PM3_SUCCESS;
+}
+
+static int usage_set_debug() {
+    PrintAndLogEx(NORMAL, "Usage: pref set debug <off | simple | full>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - no debug messages");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("simple")"      - simple debug messages");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("full")"        - full debug messages");
+
+    return PM3_SUCCESS;
+}
+static int usage_set_hints() {
+    PrintAndLogEx(NORMAL, "Usage: pref set hints <off | on>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - Dont display hints");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("on")"          - Display hints");
 
     return PM3_SUCCESS;
 }
 
 // Preference Processing Functions
 typedef enum preferenceId {prefNONE,prefHELP,prefEMOJI,prefCOLOR,prefPLOT,prefOVERLAY,prefHINTS,prefCLIENTDEBUG} preferenceId_t;
+typedef enum prefShowOpt  {prefShowNone,prefShowOLD,prefShowNEW} prefShowOpt_t;
 
-// Enumerate text to ID
-preferenceId_t prefGetID (char* cmdOpt)
+const char *prefShowMsg (prefShowOpt_t Opt)
 {
-    str_lower (cmdOpt);
-
-    if (strncmp (cmdOpt,"hi",2) == 0) return prefHINTS;
-    if (strncmp (cmdOpt,"h",1) == 0) return prefHELP;
-    if (strncmp (cmdOpt,"e",1) == 0) return prefEMOJI;
-    if (strncmp (cmdOpt,"c",1) == 0) return prefCOLOR;
-    if (strncmp (cmdOpt,"p",1) == 0) return prefPLOT;
-    if (strncmp (cmdOpt,"o",1) == 0) return prefOVERLAY;
-    if (strncmp (cmdOpt,"d",1) == 0) return prefCLIENTDEBUG;
-
-    return NONE;
+    switch (Opt) {
+        case prefShowOLD:  return _YELLOW_("[old]"); //strncpy(Msg,"Before ",sizeof(Msg)-1); break;
+        case prefShowNEW: return _GREEN_("[new]"); // strncpy(Msg,"After  ",sizeof(Msg)-1); break;
+        case prefShowNone: return "";
+    }
+    
+    return "";
 }
 
-void showEmojiState (void) {
+void showEmojiState (prefShowOpt_t Opt) {
+
     switch (session.emoji_mode) {
-        case ALIAS: PrintAndLogEx(NORMAL, "    emoji.................. "_GREEN_("show alias"));
+        case ALIAS: PrintAndLogEx(NORMAL, "   %s emoji.................. "_GREEN_("alias"),prefShowMsg (Opt));
             break;
-        case EMOJI: PrintAndLogEx(NORMAL, "    emoji.................. "_GREEN_("show emoji"));
+        case EMOJI: PrintAndLogEx(NORMAL, "   %s emoji.................. "_GREEN_("emoji"),prefShowMsg (Opt));
             break;
-        case ALTTEXT: PrintAndLogEx(NORMAL, "    emoji.................. "_GREEN_("show alt text"));
+        case ALTTEXT: PrintAndLogEx(NORMAL, "   %s emoji.................. "_GREEN_("alttext"),prefShowMsg (Opt));
             break;
-        case ERASE: PrintAndLogEx(NORMAL, "    emoji.................. "_GREEN_("dont show emoji"));
+        case ERASE: PrintAndLogEx(NORMAL, "   %s emoji.................. "_GREEN_("erase"),prefShowMsg (Opt));
             break;
         default:
-            PrintAndLogEx(NORMAL, "    emoji.................. "_RED_("unknown"));
+            PrintAndLogEx(NORMAL, "   %s emoji.................. "_RED_("unknown"),prefShowMsg(Opt));
     }
 }
 
-void showColorState (void) {
-/*
-    switch (session.supports_colors) {
-        case false: PrintAndLogEx(NORMAL, "Color : "_GREEN_("off"));
-            break;
-        case true: PrintAndLogEx(NORMAL, "Color : "_GREEN_("ansi"));
-            break;
-        default:
-            PrintAndLogEx(NORMAL, "Color support set to : "_RED_("unknown"));
-    }
-*/
-    // this will change to 1 of a set from bool
+void showColorState (prefShowOpt_t Opt) {
+
     if (session.supports_colors)
-        PrintAndLogEx(NORMAL, "    color.................. "_GREEN_("ansi"));
+        PrintAndLogEx(NORMAL, "   %s color.................. "_GREEN_("ansi"),prefShowMsg(Opt));
     else
-        PrintAndLogEx(NORMAL, "    color.................. "_GREEN_("off"));
+        PrintAndLogEx(NORMAL, "   %s color.................. "_GREEN_("off"),prefShowMsg(Opt));
 }
 
-void showClientDebugState (void) {
+void showClientDebugState (prefShowOpt_t Opt) {
+    
     switch (session.client_debug_level) {
-        case OFF: PrintAndLogEx (NORMAL,"    client debug........... "_GREEN_("off"));
+        case OFF: PrintAndLogEx (NORMAL,"   %s client debug........... "_GREEN_("off"),prefShowMsg(Opt));
                 break;
-        case SIMPLE: PrintAndLogEx (NORMAL,"    client debug........... "_GREEN_("simple"));
+        case SIMPLE: PrintAndLogEx (NORMAL,"   %s client debug........... "_GREEN_("simple"),prefShowMsg(Opt));
                 break;
-        case FULL: PrintAndLogEx (NORMAL,"    client debug........... "_GREEN_("full"));
+        case FULL: PrintAndLogEx (NORMAL,"   %s client debug........... "_GREEN_("full"),prefShowMsg(Opt));
                 break;
         default:
-            PrintAndLogEx(NORMAL, "    client debug........... "_RED_("unknown"));
+            PrintAndLogEx(NORMAL, "   %s client debug........... "_RED_("unknown"),prefShowMsg(Opt));
     }
 }
 
@@ -328,19 +310,239 @@ void showOverlayPosState (void){
         session.window_overlay_xpos,session.window_overlay_ypos,session.window_overlay_hsize,session.window_overlay_wsize);
 }
 
-void showHintsState (void){
+void showHintsState (prefShowOpt_t Opt){
     if (session.show_hints)
-        PrintAndLogEx (NORMAL,"    Hints.................. "_GREEN_("on"));
+        PrintAndLogEx (NORMAL,"   %s Hints.................. "_GREEN_("on"),prefShowMsg(Opt));
     else
-        PrintAndLogEx (NORMAL,"    Hints.................. "_GREEN_("off"));
+        PrintAndLogEx (NORMAL,"   %s Hints.................. "_GREEN_("off"),prefShowMsg(Opt));
+}
+
+static int setCmdEmoji (const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = false;
+    bool validValue = false;
+    char strOpt[50];
+    emojiMode_t newValue = session.emoji_mode;
+
+    if (param_getchar(Cmd, cmdp) == 0x00) 
+        return usage_set_emoji();
+
+    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+
+        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
+            str_lower(strOpt); // convert to lowercase
+
+            if (strncmp (strOpt,"help",4) == 0)
+                return usage_set_emoji();
+            if (strncmp (strOpt,"alias",5) == 0) {
+                validValue = true;
+                newValue = ALIAS;
+            }
+            if (strncmp (strOpt,"emoji",5) == 0) {
+                validValue = true;
+                newValue = EMOJI;
+            }
+            if (strncmp (strOpt,"alttext",7) == 0) {
+                validValue = true;
+                newValue = ALTTEXT;
+            }
+            if (strncmp (strOpt,"erase",5) == 0) {
+                validValue = true;
+                newValue = ERASE;
+            }
+
+            if (validValue) {
+                if (session.emoji_mode != newValue) {// changed 
+                    showEmojiState (prefShowOLD);
+                    session.emoji_mode = newValue;
+                    showEmojiState (prefShowNEW);
+                    preferences_save ();
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showEmojiState (prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_emoji();
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int setCmdColor (const char *Cmd)
+{
+    uint8_t cmdp = 0;
+    bool errors = false;
+    bool validValue = false;
+    char strOpt[50];
+    bool newValue = session.supports_colors;
+
+    if (param_getchar(Cmd, cmdp) == 0x00) 
+        return usage_set_color();
+
+    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+
+        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
+            str_lower(strOpt); // convert to lowercase
+
+            if (strncmp (strOpt,"help",4) == 0) 
+                return usage_set_color();
+            if (strncmp (strOpt,"off",3) == 0) {
+                validValue = true;
+                newValue = false; 
+            }
+            if (strncmp (strOpt,"ansi",4) == 0) {
+                validValue = true;
+                newValue = true;
+            }
+
+            if (validValue) {
+                if (session.supports_colors != newValue) {// changed 
+                    showColorState (prefShowOLD);
+                    session.supports_colors = newValue;
+                    showColorState (prefShowNEW);
+                    preferences_save ();
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showColorState (prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_color();
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int setCmdDebug (const char *Cmd)
+{
+    uint8_t cmdp = 0;
+    bool errors = false;
+    bool validValue = false;
+    char strOpt[50];
+    clientdebugLevel_t newValue = session.client_debug_level;
+
+    if (param_getchar(Cmd, cmdp) == 0x00) 
+        return usage_set_debug();
+
+    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+
+        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
+            str_lower(strOpt); // convert to lowercase
+
+            if (strncmp (strOpt,"help",4) == 0) 
+                return usage_set_debug();
+            if (strncmp (strOpt,"off",3) == 0) {
+                validValue = true;
+                newValue = OFF;
+            }                
+            if (strncmp (strOpt,"simple",6) == 0) {
+                validValue = true;
+                newValue = SIMPLE;
+            }
+            if (strncmp (strOpt,"full",4) == 0) {
+                validValue = true;
+                newValue = FULL;
+            }
+
+            if (validValue) {
+                if (session.client_debug_level != newValue) {// changed 
+                    showClientDebugState (prefShowOLD);
+                    session.client_debug_level = newValue;
+                    g_debugMode = newValue;
+                    showClientDebugState (prefShowNEW);
+                    preferences_save ();
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showClientDebugState (prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_debug();
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int setCmdHint (const char *Cmd)
+{
+    uint8_t cmdp = 0;
+    bool errors = false;
+    bool validValue = false;
+    char strOpt[50];
+    bool newValue = session.show_hints;
+
+    if (param_getchar(Cmd, cmdp) == 0x00) 
+        return usage_set_hints();
+
+    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+
+        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
+            str_lower(strOpt); // convert to lowercase
+
+            if (strncmp (strOpt,"help",4) == 0) 
+                return usage_set_hints();
+            if (strncmp (strOpt,"off",3) == 0) {
+                validValue = true;
+                newValue = false; 
+            }
+            if (strncmp (strOpt,"on",2) == 0) {
+                validValue = true;
+                newValue = true;
+            }
+
+            if (validValue) {
+                if (session.show_hints != newValue) {// changed 
+                    showHintsState (prefShowOLD);
+                    session.show_hints = newValue;
+                    showHintsState (prefShowNEW);
+                    preferences_save ();
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showHintsState (prefShowNone);
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_hints();
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+static command_t setCommandTable[] = {
+    {"help",         setCmdHelp,         AlwaysAvailable, "This help"},
+    {"emoji",        setCmdEmoji,        AlwaysAvailable, "Set emoji display"},
+    {"color",        setCmdColor,        AlwaysAvailable, "Set color support"},
+    {"debug",        setCmdDebug,        AlwaysAvailable, "Set client debug level"},
+    {"hints",        setCmdHint,         AlwaysAvailable, "Set hint display"},
+    {NULL, NULL, NULL, NULL}
+};
+
+
+static int setCmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(setCommandTable);
+
+    return PM3_SUCCESS;
+}
+
+int CmdPrefSet (const char *Cmd)
+{
+    clearCommandBuffer();
+
+    return CmdsParse(setCommandTable, Cmd);   
 }
 
 static int CmdPrefShow (const char *Cmd) {
-    uint8_t cmdp = 0;
-    preferenceId_t CmdPref;
-    bool errors = false;
-    char strOpt[50];
-    
+
     PrintAndLogEx(NORMAL,"");
     PrintAndLogEx(NORMAL,_BLUE_("Preferences"));
     
@@ -349,203 +551,29 @@ static int CmdPrefShow (const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (param_getchar(Cmd, cmdp) == 0x00) { // No options - Show all
-        showEmojiState ();
-        showColorState ();
-        showPlotPosState ();
-        showOverlayPosState ();
-        showClientDebugState();
-        showHintsState ();
-    }
-    else {
-        
-        while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+    showEmojiState (prefShowNone);
+    showColorState (prefShowNone);
+   // showPlotPosState ();
+   // showOverlayPosState ();
+    showClientDebugState(prefShowNone);
+    showHintsState (prefShowNone);
 
-            if (param_getstr(Cmd, cmdp, strOpt, sizeof(strOpt)) != 0) {
-                CmdPref = prefGetID(strOpt);
-            }
-            else 
-                CmdPref = prefNONE;
-
-            switch (CmdPref) {
-                case prefHELP:
-                    return usage_pref_show();
-                case prefEMOJI: 
-                    showEmojiState ();
-                    break;
-                case prefCOLOR: // color
-                    showColorState ();
-                    break;
-                case prefPLOT: 
-                    showPlotPosState ();
-                    break;
-                case prefOVERLAY: 
-                    showOverlayPosState ();
-                    break;
-                case prefCLIENTDEBUG:
-                    showClientDebugState();
-                    break;
-                case prefHINTS:
-                    showHintsState();
-                    break;
-                case prefNONE:
-                    PrintAndLogEx (ERR,"Invalid option supplied");
-                    errors = true;
-                    break;
-                    // errors
-            }
-            cmdp ++;
-        }
-    }
     PrintAndLogEx(NORMAL,"");
+
     return PM3_SUCCESS;
 }
-
-static int CmdPrefSet (const char *Cmd)
-{
-    uint8_t cmdp = 0;
-    preferenceId_t CmdPref;
-    bool errors = false;
-    // char charOpt;
-    char strOpt[50];
-    int x,y,h,w;
-
-    if (param_getchar(Cmd, cmdp) == 0x00) 
-        return usage_pref_set();
-
-    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
-
-        if (param_getstr(Cmd, cmdp, strOpt, sizeof(strOpt)) != 0) {
-            CmdPref = prefGetID(strOpt);
-        }
-        else
-            CmdPref = prefNONE;
-        
-        switch (CmdPref) {
-            case prefHELP:
-                return usage_pref_set();
-            case prefEMOJI: 
-                showEmojiState ();
-                cmdp++;
-                if (param_getstr(Cmd, cmdp, strOpt, sizeof(strOpt)) != 0) {
-                    str_lower(strOpt);
-                    if (strncmp (strOpt,"ali",3) == 0) { session.emoji_mode = ALIAS; showEmojiState (); break; }
-                    if (strncmp (strOpt,"em",2) == 0)  { session.emoji_mode = EMOJI; showEmojiState (); break; }
-                    if (strncmp (strOpt,"alt",3) == 0) { session.emoji_mode = ALTTEXT; showEmojiState (); break; }
-                    if (strncmp (strOpt,"er",2) == 0)  { session.emoji_mode = ERASE; showEmojiState (); break; }
-                    // if we get this far, then an error in the mode
-                    PrintAndLogEx(ERR,"Invalid emoji option");
-                    errors = true;
-                }
-                else
-                    errors = true;
-                break;
-            case prefCOLOR: // color
-                showColorState ();
-                cmdp++;
-                if (param_getstr(Cmd, cmdp, strOpt, sizeof(strOpt)) != 0) {
-                    str_lower(strOpt);
-                    if (strncmp(strOpt,"a",1) == 0) { session.supports_colors = true; showColorState (); break; }
-                    if (strncmp(strOpt,"o",1) == 0) { session.supports_colors = false; showColorState (); break; }
-                    // if we get this far, then an error in the mode
-                    PrintAndLogEx(ERR,"Invalid color option");
-                    errors = true;
-                }
-                else    
-                    errors = true;
-                break;
-            case prefPLOT: 
-                showPlotPosState ();
-                cmdp++;
-                x = y = h = w = -99999; // Some invalid value
-                for (int i = 0; i < 4; i++) { // upto 4 values X, Y, H, WARNING
-                    if (param_getchar(Cmd, cmdp) != 0){
-                        switch (tolower(param_getchar(Cmd, cmdp++))) {
-                            case 'x': x = param_get32ex(Cmd,cmdp++,-99999,10); break; 
-                            case 'y': y = param_get32ex(Cmd,cmdp++,-99999,10); break; 
-                            case 'h': h = param_get32ex(Cmd,cmdp++,-99999,10); break; 
-                            case 'w': w = param_get32ex(Cmd,cmdp++,-99999,10); break; 
-                            default:
-                                errors = true;
-                        }
-                    }
-                }
-                if (x != -99999) session.window_plot_xpos = x; 
-                if (y != -99999) session.window_plot_ypos = y; 
-                if (h != -99999) session.window_plot_hsize = h; 
-                if (w != -99999) session.window_plot_wsize = w; 
-                // Need to work out how to change live....
-                // calling data plot seems to work
-                
-                showPlotPosState ();
-                break;
-            case prefOVERLAY: 
-                showOverlayPosState ();
-                cmdp++;
-                x = y = h = w = -99999; // Some invalid value
-                for (int i = 0; i < 4; i++) { // upto 4 values X, Y, H, WARNING
-                    if (param_getchar(Cmd, cmdp) != 0){
-                        switch (tolower(param_getchar(Cmd, cmdp++))) {
-                            case 'x': x = param_get32ex(Cmd,cmdp++,-99999,10); break; 
-                            case 'y': y = param_get32ex(Cmd,cmdp++,-99999,10); break; 
-                            case 'h': h = param_get32ex(Cmd,cmdp++,-99999,10); break; 
-                            case 'w': w = param_get32ex(Cmd,cmdp++,-99999,10); break; 
-                            default:
-                                errors = true;
-                        }
-                    }
-                }
-                if (x != -99999) session.window_overlay_xpos = x; 
-                if (y != -99999) session.window_overlay_ypos = y; 
-                if (h != -99999) session.window_overlay_hsize = h; 
-                if (w != -99999) session.window_overlay_wsize = w; 
-                showOverlayPosState ();
-                // Need to work out how to change live....
-                break;
-            case prefCLIENTDEBUG:
-                showClientDebugState();
-                cmdp++;
-                if (param_getstr(Cmd, cmdp, strOpt, sizeof(strOpt)) != 0) {
-                    str_lower(strOpt);
-                    if (strncmp(strOpt,"o",1) == 0) { session.client_debug_level = OFF; g_debugMode = OFF; showClientDebugState(); break; }
-                    if (strncmp(strOpt,"s",1) == 0) { session.client_debug_level = SIMPLE; g_debugMode = SIMPLE; showClientDebugState(); break; }
-                    if (strncmp(strOpt,"f",1) == 0) { session.client_debug_level = FULL; g_debugMode = FULL; showClientDebugState(); break; }
-                    // if we get this far, then an error in the mode
-                    PrintAndLogEx(ERR,"Invalid client debug option");
-                    errors = true;
-                }
-                else    
-                    errors = true;
-                break;
-            case prefHINTS:
-                showHintsState ();
-                cmdp++;
-                if (param_getstr(Cmd, cmdp, strOpt, sizeof(strOpt)) != 0) {
-                    str_lower(strOpt);
-                    if (strncmp(strOpt,"on",2) == 0) { session.show_hints = true; showHintsState (); break; }
-                    if (strncmp(strOpt,"of",2) == 0) { session.show_hints = false; showHintsState (); break; }
-                    // if we get this far, then an error in the mode
-                    PrintAndLogEx(ERR,"Invalid hint option");
-                    errors = true;
-                }
-                else    
-                    errors = true;
-                break;
-            case prefNONE:
-                PrintAndLogEx (ERR,"Invalid option supplied");
-                errors = true;
-                break;
-        }
-        cmdp ++;
-    }
+/*
+static int CmdPrefSave (const char *Cmd) {
     preferences_save();
+
     return PM3_SUCCESS;
 }
-
+*/
 static command_t CommandTable[] = {
     {"help",         CmdHelp,            AlwaysAvailable, "This help"},
     {"set",          CmdPrefSet,         AlwaysAvailable, "Set a preference"},
-    {"show",         CmdPrefShow,        AlwaysAvailable, "Show (a preference)"},
+    {"show",         CmdPrefShow,        AlwaysAvailable, "Show preferences"},
+//    {"save",         CmdPrefSave, AlwaysAvailable, "Save preferences now"},
     {NULL, NULL, NULL, NULL}
 };
 
