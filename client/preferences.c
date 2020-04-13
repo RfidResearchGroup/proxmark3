@@ -49,6 +49,7 @@ int preferences_load (void) {
 
     // Set all defaults
     session.client_debug_level = OFF;
+    session.window_changed = false;
     session.window_plot_xpos = 10;
     session.window_plot_ypos = 30;
     session.window_plot_hsize = 400;
@@ -60,6 +61,7 @@ int preferences_load (void) {
     session.emoji_mode = ALIAS;
     session.show_hints = false;
     session.supports_colors = false;
+    
     
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
@@ -78,6 +80,7 @@ int preferences_load (void) {
 // Save all settings from memory (struct) to file
 int preferences_save (void) {
     // Note sure if backup has value ?
+
     char backupFilename[FILENAME_MAX+sizeof(preferencesFilename)+10] = {0};
 
     PrintAndLogEx(INFO,"Saving preferences ...");
@@ -353,6 +356,7 @@ static int setCmdEmoji (const char *Cmd) {
                     showEmojiState (prefShowOLD);
                     session.emoji_mode = newValue;
                     showEmojiState (prefShowNEW);
+                    preferences_save ();
                 } else {
                     PrintAndLogEx(INFO,"nothing changed");
                     showEmojiState (prefShowNone);
@@ -399,6 +403,7 @@ static int setCmdColor (const char *Cmd)
                     showColorState (prefShowOLD);
                     session.supports_colors = newValue;
                     showColorState (prefShowNEW);
+                    preferences_save ();
                 } else {
                     PrintAndLogEx(INFO,"nothing changed");
                     showColorState (prefShowNone);
@@ -450,6 +455,7 @@ static int setCmdDebug (const char *Cmd)
                     session.client_debug_level = newValue;
                     g_debugMode = newValue;
                     showClientDebugState (prefShowNEW);
+                    preferences_save ();
                 } else {
                     PrintAndLogEx(INFO,"nothing changed");
                     showClientDebugState (prefShowNone);
@@ -496,6 +502,7 @@ static int setCmdHint (const char *Cmd)
                     showHintsState (prefShowOLD);
                     session.show_hints = newValue;
                     showHintsState (prefShowNEW);
+                    preferences_save ();
                 } else {
                     PrintAndLogEx(INFO,"nothing changed");
                     showHintsState (prefShowNone);
@@ -546,8 +553,8 @@ static int CmdPrefShow (const char *Cmd) {
 
     showEmojiState (prefShowNone);
     showColorState (prefShowNone);
-    showPlotPosState ();
-    showOverlayPosState ();
+   // showPlotPosState ();
+   // showOverlayPosState ();
     showClientDebugState(prefShowNone);
     showHintsState (prefShowNone);
 
@@ -555,18 +562,18 @@ static int CmdPrefShow (const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
+/*
 static int CmdPrefSave (const char *Cmd) {
     preferences_save();
 
     return PM3_SUCCESS;
 }
-
+*/
 static command_t CommandTable[] = {
     {"help",         CmdHelp,            AlwaysAvailable, "This help"},
     {"set",          CmdPrefSet,         AlwaysAvailable, "Set a preference"},
     {"show",         CmdPrefShow,        AlwaysAvailable, "Show preferences"},
-    {"save",         CmdPrefSave, AlwaysAvailable, "Save preferences now"},
+//    {"save",         CmdPrefSave, AlwaysAvailable, "Save preferences now"},
     {NULL, NULL, NULL, NULL}
 };
 

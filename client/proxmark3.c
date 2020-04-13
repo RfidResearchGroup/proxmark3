@@ -949,7 +949,8 @@ int main(int argc, char *argv[]) {
     }
 
 #ifdef USE_PREFERENCE_FILE
-    preferences_save ();
+    if (session.window_changed) // Plot/Overlay moved or resized
+        preferences_save ();
 #endif
     exit(EXIT_SUCCESS);
 }

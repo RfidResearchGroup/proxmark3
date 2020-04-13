@@ -28,6 +28,8 @@
 #include <QtGui>
 #include "ui.h"
 
+extern "C" int preferences_save (void);
+
 extern "C" {
 #include "util_darwin.h"
 }
@@ -145,11 +147,14 @@ SliderWidget::SliderWidget() {
 void SliderWidget::resizeEvent (QResizeEvent *event) {
     session.window_overlay_hsize = event->size().height();
     session.window_overlay_wsize = event->size().width();
+    session.window_changed = true;
+
 }
 
 void SliderWidget::moveEvent (QMoveEvent *event) {
     session.window_overlay_xpos = event->pos().x();
     session.window_overlay_ypos = event->pos().y();
+    session.window_changed = true;
 }
 
 //--------------------
@@ -246,6 +251,10 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     controlWidget->setWindowTitle(ct);
 
     controlWidget->show();
+    
+    // now that is up, reset pos/size change flags
+    session.window_changed = false;
+
 }
 
 // not 100% sure what i need in this block
@@ -268,6 +277,7 @@ ProxWidget::~ProxWidget(void) {
         plot = NULL;
     }
 }
+
 void ProxWidget::closeEvent(QCloseEvent *event) {
     event->ignore();
     this->hide();
@@ -284,11 +294,12 @@ void ProxWidget::showEvent(QShowEvent *event) {
 void ProxWidget::moveEvent(QMoveEvent *event) {
     session.window_plot_xpos = event->pos().x();
     session.window_plot_ypos = event->pos().y();
-    
+    session.window_changed = true;
 }
 void ProxWidget::resizeEvent(QResizeEvent *event) {
     session.window_plot_hsize = event->size().height();
     session.window_plot_wsize = event->size().width();
+    session.window_changed = true;
 }
 
 //----------- Plotting
