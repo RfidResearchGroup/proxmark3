@@ -1103,7 +1103,22 @@ static int handler_desfire_signature(uint8_t *signature, size_t *signature_len) 
 static int desfire_print_keysetting(uint8_t key_settings, uint8_t num_keys) {
 
     PrintAndLogEx(SUCCESS, "  AID Key settings           : 0x%02x", key_settings);
-    PrintAndLogEx(SUCCESS, "  Max number of keys in AID  : %d", num_keys & 0x3F);
+    // 2 MSB denotes
+    const char *str =                 "  Max key number and type    : %d, " _YELLOW_("%s");
+    switch (num_keys >> 6) {
+        case 0:
+            PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "(3)DES");
+            break;
+        case 1:
+            PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "3K3DES");
+            break;
+        case 2:
+            PrintAndLogEx(SUCCESS, str, num_keys & 0x3F, "AES");
+            break;
+        default:
+            break;
+    }
+    //PrintAndLogEx(SUCCESS, "  Max number of keys in AID  : %d", num_keys & 0x3F);
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "  Changekey Access rights");
 
