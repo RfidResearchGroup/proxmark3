@@ -133,7 +133,7 @@ class ProxGuiQT : public QObject {
     void HideGraphWindow(void);
     void MainLoop(void);
     void Exit(void);
-    void SetWindowsPosition (void);
+
   private slots:
     void _ShowGraphWindow(void);
     void _RepaintGraphWindow(void);
