@@ -1916,12 +1916,12 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
+    uint8_t fileno[] = {0};
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    CLIGetHexWithReturn(2, fileno, &filenolen);
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);

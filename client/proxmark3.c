@@ -844,10 +844,20 @@ int main(int argc, char *argv[]) {
     // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
     //   struct stat tmp_stat;
     //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+#ifdef USE_PREFERENCE_FILE
+        if (!session.preferences_loaded) {
+            if (session.stdinOnTTY && session.stdoutOnTTY) {
+                session.supports_colors = true;
+                session.emoji_mode = EMOJI;
+            }
+        }
+#else
     if (session.stdinOnTTY && session.stdoutOnTTY) {
         session.supports_colors = true;
         session.emoji_mode = EMOJI;
     }
+#endif
+
 #endif
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
@@ -904,11 +914,13 @@ int main(int argc, char *argv[]) {
         showBanner();
 
 #ifdef USE_PREFERENCE_FILE
-    // Save settings if not load from settings json file.
+    // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if (!session.preferences_loaded)
-        preferences_save ();
+    if (!session.preferences_loaded) {
+        preferences_save (); // Save defaults
+        session.preferences_loaded = true;
+    }
 #endif
 
 #ifdef HAVE_GUI
@@ -936,5 +948,9 @@ int main(int argc, char *argv[]) {
         CloseProxmark();
     }
 
+#ifdef USE_PREFERENCE_FILE
+    if (session.window_changed) // Plot/Overlay moved or resized
+        preferences_save ();
+#endif
     exit(EXIT_SUCCESS);
 }
