@@ -30,6 +30,7 @@ typedef struct {
     bool pm3_present;
     bool help_dump_mode;
     bool show_hints;
+    bool window_changed; // track if plot/overlay pos/size changed to save on exit
     int window_plot_xpos;
     int window_plot_ypos;
     int window_plot_hsize;

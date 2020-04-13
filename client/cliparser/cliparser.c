@@ -38,6 +38,7 @@ int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtable
     if (arg_nullcheck(argtable) != 0) {
         /* NULL entries were detected, some allocations must have failed */
         printf("ERROR: Insufficient memory\n");
+        fflush(stdout);
         return 2;
     }
     /* Parse the command line as defined by argtable[] */
@@ -54,6 +55,7 @@ int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtable
         if (programHelp)
             printf("%s \n", programHelp);
 
+        fflush(stdout);
         return 1;
     }
 
@@ -62,7 +64,7 @@ int CLIParserParseArg(int argc, char **argv, void *vargtable[], size_t vargtable
         /* Display the error details contained in the arg_end struct.*/
         arg_print_errors(stdout, ((struct arg_end *)argtable[vargtableLen - 1]), programName);
         printf("Try '%s --help' for more information.\n", programName);
-
+        fflush(stdout);
         return 3;
     }
 
@@ -155,18 +157,27 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     int ibuf = 0;
     uint8_t tmp_buf[256] = {0};
     int res = CLIParamStrToBuf(argstr, tmp_buf, maxdatalen * 2, &ibuf); // *2 because here HEX
-    if (res || !ibuf)
+    if (res) {
+        printf("Parameter error: buffer overflow.\n");
+        fflush(stdout);
         return res;
-
+    }
+    if (ibuf == 0) {
+        return res;
+    }
+    
     switch (param_gethex_to_eol((char *)tmp_buf, 0, data, maxdatalen, datalen)) {
         case 1:
             printf("Parameter error: Invalid HEX value.\n");
+            fflush(stdout);
             return 1;
         case 2:
             printf("Parameter error: parameter too large.\n");
+            fflush(stdout);
             return 2;
         case 3:
             printf("Parameter error: Hex string must have even number of digits.\n");
+            fflush(stdout);
             return 3;
     }
 
@@ -191,12 +202,13 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (!ibuf)
         return 0;
 
-    if (ibuf > maxdatalen)
+    if (ibuf > maxdatalen) {
+        fflush(stdout);
         return 2;
+    }
 
     memcpy(data, tmp_buf, ibuf);
     *datalen = ibuf;
-
     return 0;
 }
 
