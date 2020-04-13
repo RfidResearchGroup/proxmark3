@@ -30,7 +30,7 @@
 #include "preferences.h"
 
 // Used to enable/disable use of preferences json file
-#define USE_PREFERENCE_FILE
+// #define USE_PREFERENCE_FILE
 
 #ifdef _WIN32
 
