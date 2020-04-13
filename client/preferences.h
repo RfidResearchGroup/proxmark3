@@ -10,6 +10,7 @@
 
 #include "fileutils.h"
 
+// Current working directory will be prepended.
 #define preferencesFilename "preferences.json"
 
 int CmdPreferences (const char *Cmd);
