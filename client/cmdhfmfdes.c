@@ -648,7 +648,8 @@ int get_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload) {
 
 
     // Part 1
-    if (payload->key == NULL) {
+	// iceman:  I guess you want to determine if the key was set. Maybe check keylen instead? 0 = not set.
+    if (payload->key[0] == '\0') {
         if (payload->algo == MFDES_AUTH_DES)  {
             memcpy(keybytes, PICC_MASTER_KEY8, 8);
         } else if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3DES) {
@@ -1299,8 +1300,7 @@ typedef struct mfdes_file {
 } PACKED mfdes_file_t;
 
 static int get_desfire_create_std_file(mfdes_file_t *file) {
-    if (file->access_rights == NULL) return PM3_EINVARG;
-    if (file->filesize == NULL) return PM3_EINVARG;
+    if (file == NULL) return PM3_EINVARG;
 
     sAPDU apdu = {0x90, MFDES_CREATE_STD_DATA_FILE, 0x00, 0x00, 1 + 2 + 1 + 2 + 3, (uint8_t *)file}; // 0xCD
 
@@ -1609,12 +1609,12 @@ static int CmdHF14ADesCreateStdFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
+    uint8_t fileno[] = {0};
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    CLIGetHexWithReturn(2, fileno, &filenolen);
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
@@ -1666,7 +1666,7 @@ static int CmdHF14ADesCreateStdFile(const char *Cmd) {
     mfdes_file_t ft;
     memcpy(ft.fid, fid, 2);
     memcpy(ft.filesize, filesize, 3);
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
 

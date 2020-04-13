@@ -56,9 +56,19 @@ class Plot: public QWidget {
 };
 class ProxGuiQT;
 
+// Added class for SliderWidget to allow move/resize event override
+class SliderWidget : public QWidget {
+protected:
+    void resizeEvent (QResizeEvent *event);
+    void moveEvent (QMoveEvent *event);
+public:
+    SliderWidget();
+};
+
 /**
  * The window with plot and controls
  */
+
 class ProxWidget : public QWidget {
     Q_OBJECT; //needed for slot/signal classes
 
@@ -66,8 +76,8 @@ class ProxWidget : public QWidget {
     ProxGuiQT *master;
     Plot *plot;
     Ui::Form *opsController;
-    QWidget *controlWidget;
-
+//    QWidget *controlWidget;
+    SliderWidget *controlWidget;
   public:
     ProxWidget(QWidget *parent = 0, ProxGuiQT *master = NULL);
     ~ProxWidget(void);
@@ -78,6 +88,8 @@ class ProxWidget : public QWidget {
     void closeEvent(QCloseEvent *event);
     void showEvent(QShowEvent *event);
     void hideEvent(QHideEvent *event);
+    void moveEvent(QMoveEvent *event);
+    void resizeEvent(QResizeEvent *event);
     //  void mouseMoveEvent(QMouseEvent *event);
     //  void mousePressEvent(QMouseEvent *event) { mouseMoveEvent(event); }
     //  void keyPressEvent(QKeyEvent *event);
