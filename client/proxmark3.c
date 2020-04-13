@@ -948,5 +948,8 @@ int main(int argc, char *argv[]) {
         CloseProxmark();
     }
 
+#ifdef USE_PREFERENCE_FILE
+    preferences_save ();
+#endif
     exit(EXIT_SUCCESS);
 }

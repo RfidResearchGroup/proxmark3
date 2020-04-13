@@ -80,6 +80,7 @@ int preferences_save (void) {
     // Note sure if backup has value ?
     char backupFilename[500+sizeof(preferencesFilename)+10] = {0};
 
+    PrintAndLogEx(INFO,"Saving preferences ...");
     snprintf (backupFilename,sizeof(backupFilename)-1,"%s.bak",prefGetFilename());
 
     if (fileExists (backupFilename)) {
