@@ -32,6 +32,7 @@ static int setCmdHelp(const char *Cmd);
 
 // Load all settings into memory (struct)
 static char* prefGetFilename (void) {
+    /*
     static char Buffer[FILENAME_MAX+sizeof(preferencesFilename)+2] = {0};
     char PATH[FILENAME_MAX] = {0};
     
@@ -43,6 +44,8 @@ static char* prefGetFilename (void) {
 #endif    
 
     return Buffer;
+    */
+    return preferencesFilename;
 }
 
 int preferences_load (void) {
