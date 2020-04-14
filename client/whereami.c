@@ -154,19 +154,27 @@ int WAI_PREFIX(getModulePath)(char* out, int capacity, int* dirname_length)
 }
 */
 
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__CYGWIN__) || defined(__sun) || defined(WAI_USE_PROC_SELF_EXE)
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__linux__)
 #include <linux/limits.h>
+#else
+#include <limits.h>
+#endif
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
 #include <inttypes.h>
 
 #if !defined(WAI_PROC_SELF_EXE)
+#if defined(__sun)
+#define WAI_PROC_SELF_EXE "/proc/self/path/a.out"
+#else
 #define WAI_PROC_SELF_EXE "/proc/self/exe"
+#endif
 #endif
 
 WAI_FUNCSPEC
@@ -207,7 +215,11 @@ int WAI_PREFIX(getExecutablePath)(char *out, int capacity, int *dirname_length) 
 #endif
 
 #if !defined(WAI_PROC_SELF_MAPS)
+#if defined(__sun)
+#define WAI_PROC_SELF_MAPS "/proc/self/map"
+#else
 #define WAI_PROC_SELF_MAPS "/proc/self/maps"
+#endif
 #endif
 
 #if defined(__ANDROID__) || defined(ANDROID)
@@ -260,7 +272,7 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
                         char *begin;
                         char *p;
 
-                        begin = (char *)mmap(0, offset, PROT_READ, MAP_SHARED, fd, 0);
+            begin = (char*)mmap(0, offset + sizeof(p), PROT_READ, MAP_SHARED, fd, 0);
                         p = begin + offset;
 
                         while (p >= begin) { // scan backwards
@@ -276,7 +288,7 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
                                 break;
                             }
 
-                            p -= 4;
+                            --p;
                         }
 
                         munmap(begin, offset);
@@ -302,10 +314,14 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
         }
 
         fclose(maps);
+        maps = NULL;
 
         if (length != -1)
             break;
     }
+
+    if (maps)
+        fclose(maps);
 
     return length;
 }
