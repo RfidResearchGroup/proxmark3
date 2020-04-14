@@ -23,7 +23,8 @@
 #include <string.h>
 #include "cmdparser.h"
 #include <ctype.h>
-#include <unistd.h>
+// #include <unistd.h>
+#include <proxmark3.h>
 
 //#include "proxgui.h"
 //extern void SetWindowsPosition (void);
@@ -31,6 +32,14 @@ static int CmdHelp(const char *Cmd);
 static int setCmdHelp(const char *Cmd);
 
 // Load all settings into memory (struct)
+#ifdef _WIN32
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
+
 static char* prefGetFilename (void) {
     /*
     static char Buffer[FILENAME_MAX+sizeof(preferencesFilename)+2] = {0};
@@ -45,7 +54,24 @@ static char* prefGetFilename (void) {
 
     return Buffer;
     */
-    return preferencesFilename;
+    static char Buffer [FILENAME_MAX] = {0};
+    char *Path;
+    
+    // int searchHomeFilePath(char **foundpath, const char *filename, bool create_home);
+    if (searchHomeFilePath(&Path,preferencesFilename,false) == PM3_SUCCESS) {
+        snprintf(Buffer,sizeof(Buffer)-1,"%s",Path);
+    } else {
+        snprintf(Buffer,sizeof(Buffer)-1,"%s",preferencesFilename);
+    }
+        
+        
+    //printf ("%s [%s]\n",Buffer,get_my_user_directory() );
+    
+   // GetCurrentDir (Buffer,sizeof(Buffer));
+   // printf ("%s\n",Buffer, );
+    
+    return Buffer;
+    //return preferencesFilename;
 }
 
 int preferences_load (void) {
