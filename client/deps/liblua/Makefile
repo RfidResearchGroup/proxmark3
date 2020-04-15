@@ -21,7 +21,7 @@ PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris
 
 default: $(PLAT)
 
-include ../../Makefile.host
+include ../../../Makefile.host
 
 # Convenience targets for popular platforms
 ALL= all

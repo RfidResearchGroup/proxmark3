@@ -38,92 +38,6 @@
 #include "zlib.h"
 #include "fileutils.h"
 
-#if defined (__AVX512F__)
-#define malloc_bitarray malloc_bitarray_AVX512
-#define free_bitarray free_bitarray_AVX512
-#define bitcount bitcount_AVX512
-#define count_states count_states_AVX512
-#define bitarray_AND bitarray_AND_AVX512
-#define bitarray_low20_AND bitarray_low20_AND_AVX512
-#define count_bitarray_AND count_bitarray_AND_AVX512
-#define count_bitarray_low20_AND count_bitarray_low20_AND_AVX512
-#define bitarray_AND4 bitarray_AND4_AVX512
-#define bitarray_OR bitarray_OR_AVX512
-#define count_bitarray_AND2 count_bitarray_AND2_AVX512
-#define count_bitarray_AND3 count_bitarray_AND3_AVX512
-#define count_bitarray_AND4 count_bitarray_AND4_AVX512
-#elif defined (__AVX2__)
-#define malloc_bitarray malloc_bitarray_AVX2
-#define free_bitarray free_bitarray_AVX2
-#define bitcount bitcount_AVX2
-#define count_states count_states_AVX2
-#define bitarray_AND bitarray_AND_AVX2
-#define bitarray_low20_AND bitarray_low20_AND_AVX2
-#define count_bitarray_AND count_bitarray_AND_AVX2
-#define count_bitarray_low20_AND count_bitarray_low20_AND_AVX2
-#define bitarray_AND4 bitarray_AND4_AVX2
-#define bitarray_OR bitarray_OR_AVX2
-#define count_bitarray_AND2 count_bitarray_AND2_AVX2
-#define count_bitarray_AND3 count_bitarray_AND3_AVX2
-#define count_bitarray_AND4 count_bitarray_AND4_AVX2
-#elif defined (__AVX__)
-#define malloc_bitarray malloc_bitarray_AVX
-#define free_bitarray free_bitarray_AVX
-#define bitcount bitcount_AVX
-#define count_states count_states_AVX
-#define bitarray_AND bitarray_AND_AVX
-#define bitarray_low20_AND bitarray_low20_AND_AVX
-#define count_bitarray_AND count_bitarray_AND_AVX
-#define count_bitarray_low20_AND count_bitarray_low20_AND_AVX
-#define bitarray_AND4 bitarray_AND4_AVX
-#define bitarray_OR bitarray_OR_AVX
-#define count_bitarray_AND2 count_bitarray_AND2_AVX
-#define count_bitarray_AND3 count_bitarray_AND3_AVX
-#define count_bitarray_AND4 count_bitarray_AND4_AVX
-#elif defined (__SSE2__)
-#define malloc_bitarray malloc_bitarray_SSE2
-#define free_bitarray free_bitarray_SSE2
-#define bitcount bitcount_SSE2
-#define count_states count_states_SSE2
-#define bitarray_AND bitarray_AND_SSE2
-#define bitarray_low20_AND bitarray_low20_AND_SSE2
-#define count_bitarray_AND count_bitarray_AND_SSE2
-#define count_bitarray_low20_AND count_bitarray_low20_AND_SSE2
-#define bitarray_AND4 bitarray_AND4_SSE2
-#define bitarray_OR bitarray_OR_SSE2
-#define count_bitarray_AND2 count_bitarray_AND2_SSE2
-#define count_bitarray_AND3 count_bitarray_AND3_SSE2
-#define count_bitarray_AND4 count_bitarray_AND4_SSE2
-#elif defined (__MMX__)
-#define malloc_bitarray malloc_bitarray_MMX
-#define free_bitarray free_bitarray_MMX
-#define bitcount bitcount_MMX
-#define count_states count_states_MMX
-#define bitarray_AND bitarray_AND_MMX
-#define bitarray_low20_AND bitarray_low20_AND_MMX
-#define count_bitarray_AND count_bitarray_AND_MMX
-#define count_bitarray_low20_AND count_bitarray_low20_AND_MMX
-#define bitarray_AND4 bitarray_AND4_MMX
-#define bitarray_OR bitarray_OR_MMX
-#define count_bitarray_AND2 count_bitarray_AND2_MMX
-#define count_bitarray_AND3 count_bitarray_AND3_MMX
-#define count_bitarray_AND4 count_bitarray_AND4_MMX
-#else
-#define malloc_bitarray malloc_bitarray_NOSIMD
-#define free_bitarray free_bitarray_NOSIMD
-#define bitcount bitcount_NOSIMD
-#define count_states count_states_NOSIMD
-#define bitarray_AND bitarray_AND_NOSIMD
-#define bitarray_low20_AND bitarray_low20_AND_NOSIMD
-#define count_bitarray_AND count_bitarray_AND_NOSIMD
-#define count_bitarray_low20_AND count_bitarray_low20_AND_NOSIMD
-#define bitarray_AND4 bitarray_AND4_NOSIMD
-#define bitarray_OR bitarray_OR_NOSIMD
-#define count_bitarray_AND2 count_bitarray_AND2_NOSIMD
-#define count_bitarray_AND3 count_bitarray_AND3_NOSIMD
-#define count_bitarray_AND4 count_bitarray_AND4_NOSIMD
-#endif
-
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
 #define NUM_REDUCTION_WORKING_THREADS   (num_CPUs())
 
@@ -160,7 +74,6 @@ static float brute_force_per_second;
 
 
 static void get_SIMD_instruction_set(char *instruction_set) {
-#ifndef __MMX__
     switch (GetSIMDInstrAuto()) {
         case SIMD_AVX512:
             strcpy(instruction_set, "AVX512F");
@@ -181,8 +94,6 @@ static void get_SIMD_instruction_set(char *instruction_set) {
             strcpy(instruction_set, "no");
             break;
     }
-#endif
-    strcpy(instruction_set, "no");
 }
 
 

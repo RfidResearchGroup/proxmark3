@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
+    <generated>
+      <config projectName="proxmark3" targetName="jansson" />
+      <config projectName="proxmark3" targetName="amiibo" />
+      <config projectName="proxmark3" targetName="hardnested_tables" />
+      <config projectName="proxmark3" targetName="tinycbor" />
+      <config projectName="proxmark3" targetName="proxmark3" />
+      <config projectName="proxmark3" targetName="reveng" />
+      <config projectName="proxmark3" targetName="lua" />
+      <config projectName="proxmark3" targetName="z" />
+      <config projectName="proxmark3" targetName="mbedtls" />
+    </generated>
+  </component>
+  <component name="CMakeSettings" AUTO_RELOAD="true">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="30eb8c51-1132-4ab7-8d51-87a009000dcc" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/../armsrc/Standalone/hf_legic.c" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/Standalone/hf_legic.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/Standalone/lf_em4100emul.c" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/Standalone/lf_em4100emul.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/Standalone/lf_em4100rwc.c" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/Standalone/lf_em4100rwc.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/epa.c" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/epa.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/hitagS.c" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/hitagS.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/legicrf.c" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/legicrf.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/legicrf.h" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/legicrf.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/lfops.c" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/lfops.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/mifaredesfire.c" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/mifaredesfire.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../armsrc/util.h" beforeDir="false" afterPath="$PROJECT_DIR$/../armsrc/util.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deps/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/deps/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deps/amiitool/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/deps/amiitool/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deps/jansson/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/deps/jansson/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deps/liblua/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/deps/liblua/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deps/reveng/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/deps/reveng/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deps/tinycbor/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/deps/tinycbor/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cmdhfmf.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/cmdhfmf.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cmdhfmfhard.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/cmdhfmfhard.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hardnested/hardnested_bf_core.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/hardnested/hardnested_bf_core.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hardnested/hardnested_bruteforce.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/hardnested/hardnested_bruteforce.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mifare/desfire_crypto.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/mifare/desfire_crypto.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mifare/desfire_crypto.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/mifare/desfire_crypto.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../common/cardhelper.c" beforeDir="false" afterPath="$PROJECT_DIR$/../common/cardhelper.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../common/generator.c" beforeDir="false" afterPath="$PROJECT_DIR$/../common/generator.c" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="7zait0v3" />
+  </component>
+  <component name="ProjectId" id="1aXlhidgbQjJDPdxqYrf0sSLoP7" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="cf.first.check.clang-format" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src" />
+    </key>
+  </component>
+  <component name="RunManager" selected="CMake Application.hardnested_tables">
+    <configuration name="amiibo" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="amiibo" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="hardnested_tables" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="hardnested_tables" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="proxmark3" RUN_TARGET_NAME="hardnested_tables">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="jansson" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="jansson" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="lua" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="lua" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="mbedtls" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="mbedtls" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="proxmark3" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="proxmark3" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="proxmark3" RUN_TARGET_NAME="proxmark3">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="reveng" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="reveng" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="tinycbor" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="tinycbor" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="z" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="proxmark3" TARGET_NAME="z" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="CMake Application.amiibo" />
+      <item itemvalue="CMake Application.hardnested_tables" />
+      <item itemvalue="CMake Application.jansson" />
+      <item itemvalue="CMake Application.lua" />
+      <item itemvalue="CMake Application.mbedtls" />
+      <item itemvalue="CMake Application.proxmark3" />
+      <item itemvalue="CMake Application.reveng" />
+      <item itemvalue="CMake Application.tinycbor" />
+      <item itemvalue="CMake Application.z" />
+    </list>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="30eb8c51-1132-4ab7-8d51-87a009000dcc" name="Default Changelist" comment="" />
+      <created>1586889940907</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1586889940907</updated>
+      <workItem from="1586889941970" duration="432000" />
+      <workItem from="1586890384688" duration="13721000" />
+      <workItem from="1586952767746" duration="284000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="2" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="961" y="376" width="683" height="778" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1586899221106">
+      <screen x="50" y="27" width="2510" height="1413" />
+    </state>
+    <state x="961" y="376" width="683" height="778" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/50.27.2510.1413@50.27.2510.1413" timestamp="1586899221106" />
+    <state x="994" y="471" width="621" height="570" key="find.popup" timestamp="1586901786462">
+      <screen x="50" y="27" width="2510" height="1413" />
+    </state>
+    <state x="994" y="471" width="621" height="570" key="find.popup/50.27.2510.1413@50.27.2510.1413" timestamp="1586901786462" />
+    <state x="1298" y="334" key="search.everywhere.popup" timestamp="1586890117596">
+      <screen x="50" y="27" width="2510" height="1413" />
+    </state>
+    <state x="1298" y="334" key="search.everywhere.popup/50.27.2510.1413@50.27.2510.1413" timestamp="1586890117596" />
+  </component>
+</project>

@@ -78,26 +78,6 @@ THE SOFTWARE.
 #define DEBUG_KEY_ELIMINATION
 // #define DEBUG_BRUTE_FORCE
 
-#if defined (__AVX512F__)
-#define bitslice_test_nonces bitslice_test_nonces_AVX512
-#define  crack_states_bitsliced  crack_states_bitsliced_AVX512
-#elif defined (__AVX2__)
-#define bitslice_test_nonces bitslice_test_nonces_AVX2
-#define  crack_states_bitsliced  crack_states_bitsliced_AVX2
-#elif defined (__AVX__)
-#define bitslice_test_nonces bitslice_test_nonces_AVX
-#define  crack_states_bitsliced  crack_states_bitsliced_AVX
-#elif defined (__SSE2__)
-#define bitslice_test_nonces bitslice_test_nonces_SSE2
-#define  crack_states_bitsliced  crack_states_bitsliced_SSE2
-#elif defined (__MMX__)
-#define bitslice_test_nonces bitslice_test_nonces_MMX
-#define  crack_states_bitsliced  crack_states_bitsliced_MMX
-#else
-#define bitslice_test_nonces bitslice_test_nonces_NOSIMD
-#define  crack_states_bitsliced crack_states_bitsliced_NOSIMD
-#endif
-
 typedef enum {
     EVEN_STATE = 0,
     ODD_STATE = 1

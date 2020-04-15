@@ -19,4 +19,4 @@ LIB_A = tinycbor.a
 # Strange errors on Mingw when compiling with -O3
 CFLAGS ?= -Wall -Werror -O2
 
-include ../../Makefile.host
+include ../../../Makefile.host

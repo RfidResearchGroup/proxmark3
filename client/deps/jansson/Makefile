@@ -18,4 +18,4 @@ MYSRCS = \
 
 LIB_A = libjansson.a
 
-include ../../Makefile.host
+include ../../../Makefile.host

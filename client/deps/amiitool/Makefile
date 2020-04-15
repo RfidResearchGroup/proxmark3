@@ -1,5 +1,5 @@
 MYSRCPATHS =
-MYINCLUDES = -I. -I.. -I../jansson -I../../common/ -I../../include/
+MYINCLUDES = -I. -I.. -I../jansson -I../common/ -I../include/
 MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 MYDEFS =
 MYSRCS = \
@@ -9,7 +9,7 @@ MYSRCS = \
 
 LIB_A = libamiibo.a
 
-include ../../Makefile.host
+include ../../../Makefile.host
 
 # just for testing amiitool before complete migration into a lib:
 

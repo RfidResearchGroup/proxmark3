@@ -18,7 +18,7 @@ MYSRCS = \
 
 LIB_A = libreveng.a
 
-include ../../Makefile.host
+include ../../../Makefile.host
 
 CLEAN += bmptst
 

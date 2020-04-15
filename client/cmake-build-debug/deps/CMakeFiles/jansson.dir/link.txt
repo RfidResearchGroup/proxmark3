@@ -1,0 +1,2 @@
+/usr/bin/ar qc libjansson.a  CMakeFiles/jansson.dir/jansson/dump.c.o CMakeFiles/jansson.dir/jansson/error.c.o CMakeFiles/jansson.dir/jansson/hashtable.c.o CMakeFiles/jansson.dir/jansson/hashtable_seed.c.o CMakeFiles/jansson.dir/jansson/load.c.o CMakeFiles/jansson.dir/jansson/memory.c.o CMakeFiles/jansson.dir/jansson/pack_unpack.c.o CMakeFiles/jansson.dir/jansson/strbuffer.c.o CMakeFiles/jansson.dir/jansson/strconv.c.o CMakeFiles/jansson.dir/jansson/utf.c.o CMakeFiles/jansson.dir/jansson/path.c.o CMakeFiles/jansson.dir/jansson/value.c.o
+/usr/bin/ranlib libjansson.a
