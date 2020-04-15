@@ -29,6 +29,14 @@
 #include "flash.h"
 #include "preferences.h"
 
+#ifdef _WIN32
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
+
 // Used to enable/disable use of preferences json file
 // #define USE_PREFERENCE_FILE
 
@@ -391,16 +399,22 @@ static void set_my_executable_path(void) {
 }
 
 static const char *my_user_directory = NULL;
+static char _cwd_Buffer [FILENAME_MAX] = {0};
 
 const char *get_my_user_directory(void) {
     return my_user_directory;
 }
-
 static void set_my_user_directory(void) {
     my_user_directory = getenv("HOME");
+
     // if not found, default to current directory
-    if (my_user_directory == NULL)
-        my_user_directory = ".";
+    if (my_user_directory == NULL) {
+        my_user_directory = GetCurrentDir ( _cwd_Buffer,sizeof( _cwd_Buffer));
+        // change all slashs to / (windows should not care...
+        for (int i = 0; i < strlen(_cwd_Buffer); i++)
+            if (_cwd_Buffer[i] == '\\') _cwd_Buffer[i] = '/';
+  //      my_user_directory = ".";
+    }
 }
 
 static void show_help(bool showFullHelp, char *exec_name) {
@@ -844,10 +858,20 @@ int main(int argc, char *argv[]) {
     // For info, grep --color=auto is doing sth like this, plus test getenv("TERM") != "dumb":
     //   struct stat tmp_stat;
     //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
+#ifdef USE_PREFERENCE_FILE
+        if (!session.preferences_loaded) {
+            if (session.stdinOnTTY && session.stdoutOnTTY) {
+                session.supports_colors = true;
+                session.emoji_mode = EMOJI;
+            }
+        }
+#else
     if (session.stdinOnTTY && session.stdoutOnTTY) {
         session.supports_colors = true;
         session.emoji_mode = EMOJI;
     }
+#endif
+
 #endif
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
     if (speed == 0)
@@ -904,11 +928,13 @@ int main(int argc, char *argv[]) {
         showBanner();
 
 #ifdef USE_PREFERENCE_FILE
-    // Save settings if not load from settings json file.
+    // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if (!session.preferences_loaded)
-        preferences_save ();
+    if (!session.preferences_loaded) {
+        preferences_save (); // Save defaults
+        session.preferences_loaded = true;
+    }
 #endif
 
 #ifdef HAVE_GUI
@@ -936,5 +962,9 @@ int main(int argc, char *argv[]) {
         CloseProxmark();
     }
 
+#ifdef USE_PREFERENCE_FILE
+    if (session.window_changed) // Plot/Overlay moved or resized
+        preferences_save ();
+#endif
     exit(EXIT_SUCCESS);
 }

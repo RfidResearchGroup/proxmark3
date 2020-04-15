@@ -2734,7 +2734,6 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, true);
-  
     CLIGetHexWithReturn(1, key, &keylen);
     swapEndian = arg_get_lit(2);
     CLIParserFree();
@@ -2753,7 +2752,10 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
 
     // Get tag type
     TagTypeUL_t tagtype = GetHF14AMfU_Type();
-    if (tagtype == UL_ERROR) return PM3_ESOFT;
+    if (tagtype == UL_ERROR) {
+        PrintAndLogEx(WARNING, "No Ultraligth / NTAG based tag found");
+        return PM3_ESOFT;
+    }
 
     // Is tag UL/NTAG?
     
