@@ -1,11 +1,19 @@
 [
     {
+        "AID": "EEEE10",
+        "Vendor": "NFC Forum",
+        "Country": "US",
+        "Name": "NFC Forum NDEF Tag",
+        "Description": "(FID 03: Capability Container)",
+        "Type": "ndef"
+    },
+    {
         "AID": "D3494F",
         "Vendor": "HID",
         "Country": "United States",
         "Name": "SIO DESFire Ev1",
         "Description": "",
-        "Type": ""
+        "Type": "pacs"
     },
     {
         "AID": "4F5931",
@@ -13,7 +21,7 @@
         "Country": "UK",
         "Name": "Oyster Card",
         "Description": "",
-        "Type": ""
+        "Type": "transport"
     },
     {
         "AID": "422201",
@@ -21,7 +29,7 @@
         "Country": "Turkey",
         "Name": "Istanbulkart",
         "Description": "",
-        "Type": ""
+        "Type": "transport"
     },
     {
         "AID": "F21190",
@@ -29,6 +37,89 @@
         "Country": "US",
         "Name": "Clipper Card",
         "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "000357",
+        "Vendor": "LEGIC",
+        "Country": "DE",
+        "Name": "Legic",
+        "Description": "(FID 02: EF-CONF)",
+        "Type": ""
+    },   
+    {
+        "AID": "578000",
+        "Vendor": "NORTIC",
+        "Country": "",
+        "Name": "NORTIC Card Issuer",
+        "Description": "(FID 0C: Card Issuer Header)",
+        "Type": "transport"
+    },
+    {
+        "AID": "578001",
+        "Vendor": "NORTIC",
+        "Country": "",
+        "Name": "NORTIC Transport",
+        "Description": "(FIDs 01: Transport Product Retailer; 02: Transport Service Provider; 03: Transport Special Event; 04: Transport Stored Value; 05: Transport General Event Log; 06: Transport SV Reload Log; 0A: Transport Environment; 0C: Transport Card Holder",
+        "Type": "transport"
+    },
+    {
+        "AID": "784000",
+        "Vendor": "NO1",
+        "Country": "UAE",
+        "Name": "Nol Card/Dubai",
+        "Description": "Nol Card/Dubai",
         "Type": ""
     },
+    {
+        "AID": "956B19",
+        "Vendor": "PING PING",
+        "Country": "",
+        "Name": "PingPing Tag",
+        "Description": "PingPing Tag",
+        "Type": ""
+    },
+    {
+        "AID": "DB9800",
+        "Vendor": "PING PING",
+        "Country": "",
+        "Name": "PingPing Tag",
+        "Description": "PingPing Tag",
+        "Type": ""
+    },
+    {
+        "AID": "DB9801",
+        "Vendor": "PING PING",
+        "Country": "",
+        "Name": "PingPing Tag",
+        "Description": "PingPing Tag",
+        "Type": ""
+    },
+    {
+        "AID": "DB9802",
+        "Vendor": "PING PING",
+        "Country": "",
+        "Name": "PingPing Tag",
+        "Description": "PingPing Tag",
+        "Type": ""
+    },
+    {
+        "AID": "F21030",
+        "Vendor": "ORCA Card",
+        "Country": "",
+        "Name": "ORCA Card",
+        "Description": "(FIDs 02: Trip History; 04: current balance)",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21190",
+        "Vendor": "Clipper",
+        "Country": "US",
+        "Name": "Clipper Card/San Francisco Bay Area ",
+        "Description": "(FIDs 02: current balance; 04: Refill History; 08: Card Information; 0E: Trip History)
+FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Card Publisher)",
+        "Type": "transport"
+    },
+    
+
 ]
