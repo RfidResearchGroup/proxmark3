@@ -42,33 +42,33 @@
 
 #ifdef _WIN32
 
-static void utf8_showBanner(void) {
-
-    char sq[] = { 0xE2, 0x96, 0x88, 0x00 }; // square block
-    char tr[] = { 0xE2, 0x95, 0x97, 0x00 }; // top rigth corner
-    char tl[] = { 0xE2, 0x95, 0x94, 0x00 }; // top left corner
-    char br[] = { 0xE2, 0x95, 0x9D, 0x00 }; // bottom right corner
-    char bl[] = { 0xE2, 0x95, 0x9A, 0x00 }; // bottom left corner
-    char hl[] = { 0xE2, 0x95, 0x90, 0x00 }; // horiz line
-    char vl[] = { 0xE2, 0x95, 0x91, 0x00 }; // vert line
+static void utf8_showBanner (void) {
+ 
+    char sq[] = { 0xE2,0x96,0x88,0x00 };   // square block
+    char tr[] = { 0xE2,0x95,0x97,0x00 };   // top rigth corner 
+    char tl[] = { 0xE2,0x95,0x94,0x00 };   // top left corner
+    char br[] = { 0xE2,0x95,0x9D,0x00 };   // bottom right corner
+    char bl[] = { 0xE2,0x95,0x9A,0x00 };   // bottom left corner
+    char hl[] = { 0xE2,0x95,0x90,0x00 };   // horiz line 
+    char vl[] = { 0xE2,0x95,0x91,0x00 };   // vert line
     char msg1 [60];
     char msg2 [60];
     char msg3 [60];
 
-    strcpy(msg1, "    :snowflake:  iceman@icesql.net :coffee:");
-    strcpy(msg2, "   https://github.com/rfidresearchgroup/proxmark3/");
-    strcpy(msg3, "pre-release v4.0");
+    strcpy (msg1,"    :snowflake:  iceman@icesql.net :coffee:");
+    strcpy (msg2,"   https://github.com/rfidresearchgroup/proxmark3/");
+    strcpy (msg3,"pre-release v4.0");
 
     g_printAndLog = PRINTANDLOG_PRINT;
 
     PrintAndLogEx(NORMAL, "\n");
 
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s   %s%s%s%s %s%s%s%s%s "), sq, sq, sq, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, sq, tr);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s   %s%s%s%s"), sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, sq, sq, sq, sq, vl, hl, hl, sq, vl);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s%s"), sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, sq, sq, sq, sq, tl, br);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")"%s", sq, sq, tr, hl, hl, hl, br, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, hl, hl, sq, vl, msg1);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")"%s", sq, sq, vl, sq, sq, vl, bl, hl, br, sq, sq, vl, sq, sq, sq, sq, tl, br, msg2);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")"%s", bl, hl, br, bl, hl, br, bl, hl, br, bl, hl, hl, hl, br, msg3);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s   %s%s%s%s %s%s%s%s%s "),sq,sq,sq,sq,sq,sq,tr,sq,sq,sq,tr,sq,sq,sq,tr,sq,sq,sq,sq,tr);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s   %s%s%s%s"),sq,sq,tl,hl,hl,sq,sq,tr,sq,sq,sq,sq,tr,sq,sq,sq,sq,vl,hl,hl,sq,vl);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s%s"),sq,sq,sq,sq,sq,sq,tl,br,sq,sq,tl,sq,sq,sq,sq,tl,sq,sq,vl,sq,sq,sq,sq,tl,br);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")"%s",sq,sq,tr,hl,hl,hl,br,sq,sq,vl,bl,sq,sq,tl,br,sq,sq,vl,hl,hl,sq,vl,msg1);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")"%s",sq,sq,vl,sq,sq,vl,bl,hl,br,sq,sq,vl,sq,sq,sq,sq,tl,br,msg2);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")"%s",bl,hl,br,bl,hl,br,bl,hl,br,bl,hl,hl,hl,br,msg3);
 
     PrintAndLogEx(NORMAL, "");
     fflush(stdout);
@@ -82,7 +82,7 @@ static void showBanner(void) {
 #ifdef _WIN32
     // If on windows and using UTF-8 then we need utf-8 ascii art for banner.
     if (GetConsoleCP() == 65001) {
-        utf8_showBanner();
+        utf8_showBanner ();
         return;
     }
 #endif
@@ -654,7 +654,7 @@ int main(int argc, char *argv[]) {
 #ifdef USE_PREFERENCE_FILE
     // Load Settings and assign
     // This will allow the command line to override the settings.json values
-    preferences_load();
+    preferences_load ();
     // Change height/width (Rows,Cols) - Testing
     // printf ("\e[8;50;100t");
     // printf ("\e[3;50;50t"); // x,y
@@ -844,7 +844,7 @@ int main(int argc, char *argv[]) {
     }
 
 #ifndef USE_PREFERENCE_FILE
-    // comment next 2 lines to use session values set from settings_load
+  // comment next 2 lines to use session values set from settings_load
     session.supports_colors = DetectWindowsAnsiSupport();
     session.emoji_mode = ALTTEXT;
 #endif
@@ -859,12 +859,12 @@ int main(int argc, char *argv[]) {
     //   struct stat tmp_stat;
     //   if ((fstat (STDOUT_FILENO, &tmp_stat) == 0) && (S_ISCHR (tmp_stat.st_mode)) && isatty(STDIN_FILENO))
 #ifdef USE_PREFERENCE_FILE
-    if (!session.preferences_loaded) {
-        if (session.stdinOnTTY && session.stdoutOnTTY) {
-            session.supports_colors = true;
-            session.emoji_mode = EMOJI;
+        if (!session.preferences_loaded) {
+            if (session.stdinOnTTY && session.stdoutOnTTY) {
+                session.supports_colors = true;
+                session.emoji_mode = EMOJI;
+            }
         }
-    }
 #else
     if (session.stdinOnTTY && session.stdoutOnTTY) {
         session.supports_colors = true;
@@ -932,7 +932,7 @@ int main(int argc, char *argv[]) {
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
     if (!session.preferences_loaded) {
-        preferences_save();  // Save defaults
+        preferences_save (); // Save defaults
         session.preferences_loaded = true;
     }
 #endif
@@ -964,7 +964,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef USE_PREFERENCE_FILE
     if (session.window_changed) // Plot/Overlay moved or resized
-        preferences_save();
+        preferences_save ();
 #endif
     exit(EXIT_SUCCESS);
 }
