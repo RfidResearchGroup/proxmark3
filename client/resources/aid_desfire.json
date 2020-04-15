@@ -120,6 +120,20 @@
 FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Card Publisher)",
         "Type": "transport"
     },
-    
-
+    {
+        "AID": "F518F0",
+        "Vendor": "TELENOT",
+        "Country": "DE",
+        "Name": "TELENOT Tag",
+        "Description": "",
+        "Type": "alarm system"
+    },
+    {
+        "AID": "F38091",
+        "Vendor": "MICROTRONIC",
+        "Country": "CH",
+        "Name": "MICROTRONIC Tag",
+        "Description": "",
+        "Type": "payment system"
+    },
 ]
