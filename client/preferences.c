@@ -557,7 +557,7 @@ static int CmdPrefShow (const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL,"    Preference file........ "_GREEN_("%s"),prefGetFilename());
+    PrintAndLogEx(NORMAL,"    preference file........ "_GREEN_("%s"),prefGetFilename());
     showEmojiState (prefShowNone);
     showColorState (prefShowNone);
    // showPlotPosState ();
