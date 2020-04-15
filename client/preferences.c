@@ -41,40 +41,17 @@ static int setCmdHelp(const char *Cmd);
 #endif
 
 static char* prefGetFilename (void) {
-    /*
-    static char Buffer[FILENAME_MAX+sizeof(preferencesFilename)+2] = {0};
-    char PATH[FILENAME_MAX] = {0};
-    
-    getcwd(PATH, sizeof(PATH));
-#ifdef _WIN32
-    snprintf (Buffer,sizeof(Buffer)-1,"%s\\%s",PATH,preferencesFilename);
-#else
-    snprintf (Buffer,sizeof(Buffer)-1,"%s/%s",PATH,preferencesFilename);
-#endif    
-
-    return Buffer;
-    */
-    static char Buffer [FILENAME_MAX] = {0};
     char *Path;
-    
-    // int searchHomeFilePath(char **foundpath, const char *filename, bool create_home);
-    if (searchHomeFilePath(&Path,preferencesFilename,false) == PM3_SUCCESS) {
-        snprintf(Buffer,sizeof(Buffer)-1,"%s",Path);
-    } else {
-        snprintf(Buffer,sizeof(Buffer)-1,"%s",preferencesFilename);
-    }
-        
-        
-    //printf ("%s [%s]\n",Buffer,get_my_user_directory() );
-    
-   // GetCurrentDir (Buffer,sizeof(Buffer));
-   // printf ("%s\n",Buffer, );
-    
-    return Buffer;
-    //return preferencesFilename;
+
+   if (searchHomeFilePath(&Path,preferencesFilename,false) == PM3_SUCCESS)
+        return Path;
+    else
+        return preferencesFilename;
 }
 
 int preferences_load (void) {
+
+    PrintAndLogEx(INFO,"Looking for preferences...");
 
     // Set all defaults
     session.client_debug_level = OFF;
@@ -580,6 +557,7 @@ static int CmdPrefShow (const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    PrintAndLogEx(NORMAL,"    Preference file........ "_GREEN_("%s"),prefGetFilename());
     showEmojiState (prefShowNone);
     showColorState (prefShowNone);
    // showPlotPosState ();

@@ -29,8 +29,6 @@
 #include "flash.h"
 #include "preferences.h"
 
-// mwalker33 test code
-
 #ifdef _WIN32
 #include <direct.h>
 #define GetCurrentDir _getcwd
@@ -38,8 +36,6 @@
 #include <unistd.h>
 #define GetCurrentDir getcwd
 #endif
-
-// end test code
 
 // Used to enable/disable use of preferences json file
 #define USE_PREFERENCE_FILE
@@ -403,24 +399,20 @@ static void set_my_executable_path(void) {
 }
 
 static const char *my_user_directory = NULL;
-
-// mwalker33 test code
 static char _cwd_Buffer [FILENAME_MAX] = {0};
-// end test code
 
 const char *get_my_user_directory(void) {
     return my_user_directory;
 }
 static void set_my_user_directory(void) {
     my_user_directory = getenv("HOME");
+
     // if not found, default to current directory
     if (my_user_directory == NULL) {
-// mwalker33 test code
         my_user_directory = GetCurrentDir ( _cwd_Buffer,sizeof( _cwd_Buffer));
         // change all slashs to / (windows should not care...
         for (int i = 0; i < strlen(_cwd_Buffer); i++)
             if (_cwd_Buffer[i] == '\\') _cwd_Buffer[i] = '/';
-// end
   //      my_user_directory = ".";
     }
 }
