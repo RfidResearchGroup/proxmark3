@@ -1,5 +1,5 @@
 MYSRCPATHS =
-MYINCLUDES = -I. -I.. -I../jansson -I../common/ -I../include/
+MYINCLUDES = -I. -I.. -I../jansson -I../../../common -I../../../include
 MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 MYDEFS =
 MYSRCS = \
