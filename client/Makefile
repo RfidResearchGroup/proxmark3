@@ -130,6 +130,7 @@ CORESRCS =  uart_posix.c \
             util_posix.c \
             scandir.c \
             crc16.c \
+            crc32.c \
             comms.c
 
 CMDSRCS =   crapto1/crapto1.c \
@@ -200,7 +201,7 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdhfmfu.c \
             cmdhfmfp.c \
             cmdhfmfhard.c \
-            hardnested/hardnested_bruteforce.c \
+            deps/hardnested/hardnested_bruteforce.c \
             cmdhfmfdes.c \
             cmdhftopaz.c \
             cmdhffido.c \
@@ -258,13 +259,13 @@ CMDSRCS =   crapto1/crapto1.c \
 
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )
-    MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    MULTIARCHSRCS = deps/hardnested/hardnested_bf_core.c deps/hardnested/hardnested_bitarray_core.c
 endif
 ifneq ($(findstring amd64, $(cpu_arch)), )
-    MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    MULTIARCHSRCS = deps/hardnested/hardnested_bf_core.c deps/hardnested/hardnested_bitarray_core.c
 endif
 ifeq ($(MULTIARCHSRCS), )
-    CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    CMDSRCS += deps/hardnested/hardnested_bf_core.c deps/hardnested/hardnested_bitarray_core.c
 endif
 
 

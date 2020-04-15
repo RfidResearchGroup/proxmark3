@@ -25,6 +25,7 @@
 #include "mifare/ndef.h"
 #include "protocols.h"
 #include "util_posix.h"  // msclock
+#include "cmdhfmfhard.h"
 
 #define MFBLOCK_SIZE 16
 

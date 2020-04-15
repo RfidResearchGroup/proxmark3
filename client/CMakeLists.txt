@@ -5,6 +5,43 @@ set(CMAKE_CXX_STANDARD 14)
 
 find_package(Qt5 COMPONENTS Widgets Gui)
 
+SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+INCLUDE(FindSSE)
+#[[
+IF(SSE3_FOUND)
+    IF(SSSE3_FOUND)
+        SET(CXX_DFLAGS -msse3 -mssse3)
+    ENDIF(SSSE3_FOUND)
+ENDIF(SSE3_FOUND)
+
+IF(SSE4_2_FOUND)
+    SET(CXX_DFLAGS -msse4.2 -mpopcnt)
+ENDIF(SSE4_2_FOUND)
+ADD_DEFINITIONS(${CXX_DFLAGS})
+]]
+if(NOT SSE2_FOUND)
+    MESSAGE(STATUS "Could not find hardware support for SSE2 on this machine.")
+endif(NOT SSE2_FOUND)
+if(NOT SSE3_FOUND)
+    MESSAGE(STATUS "Could not find hardware support for SSE3 on this machine.")
+endif(NOT SSE3_FOUND)
+if(NOT SSSE3_FOUND)
+    MESSAGE(STATUS "Could not find hardware support for SSSE3 on this machine.")
+endif(NOT SSSE3_FOUND)
+if(NOT SSE4_1_FOUND)
+    MESSAGE(STATUS "Could not find hardware support for SSE4.1 on this machine.")
+endif(NOT SSE4_1_FOUND)
+if(NOT AVX_FOUND)
+    MESSAGE(STATUS "Could not find hardware support for AVX on this machine.")
+endif(NOT AVX_FOUND)
+if(NOT AVX2_FOUND)
+    MESSAGE(STATUS "Could not find hardware support for AVX2 on this machine.")
+endif(NOT AVX2_FOUND)
+if(NOT AVX512_FOUND)
+    MESSAGE(STATUS "Could not find hardware support for AVX512 on this machine.")
+endif(NOT AVX512_FOUND)
+
 add_subdirectory(deps)
 
 include_directories(
@@ -65,12 +102,8 @@ set (TARGET_SOURCES
         deps/cliparser/cliparser.c
         deps/cliparser/cliparser.h
         deps/cliparser/getopt.h
-        src/hardnested/hardnested_bitarray_core.c
-        src/hardnested/hardnested_bitarray_core.h
-        src/hardnested/hardnested_bruteforce.c
-        src/hardnested/hardnested_bruteforce.h
-        src/hardnested/hardnested_bf_core.c
-        src/hardnested/hardnested_bf_core.h
+        deps/hardnested/hardnested_bruteforce.c
+        deps/hardnested/hardnested_bruteforce.h
         src/crypto/asn1dump.c
         src/crypto/asn1dump.h
         src/crypto/asn1utils.c
@@ -317,6 +350,10 @@ set (TARGET_SOURCES
 set(ADDITIONAL_SRC "")
 set(ADDITIONAL_LNK "")
 
+set(X86_CPUS x86 x86_64 i686)
+
+message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
+
 if (APPLE)
     message("Apple device detected.")
     set(ADDITIONAL_SRC src/util_darwin.h  src/util_darwin.m ${ADDITIONAL_SRC})
@@ -346,9 +383,6 @@ if (Qt5_LIB)
             src/proxguiqt.h)
 endif (Qt5_LIB)
 
-add_executable(hardnested_tables
-        src/hardnested/hardnested_tables.c
-        )
 
 find_library(jansson REQUIRED)
 find_library(tinycbor REQUIRED)
@@ -356,9 +390,10 @@ find_library(lua REQUIRED)
 find_library(mbedtls REQUIRED)
 find_library(reveng REQUIRED)
 find_library(z REQUIRED)
+find_library(hardnested REQUIRED)
 
-target_include_directories(proxmark3 PUBLIC mbedtls jansson lua tinycbor amiibo reveng z)
-target_link_libraries(proxmark3 readline pthread m mbedtls jansson lua tinycbor amiibo reveng z ${ADDITIONAL_LNK})
+target_include_directories(proxmark3 PUBLIC mbedtls jansson lua tinycbor amiibo reveng z hardnested)
+target_link_libraries(proxmark3 readline pthread m mbedtls jansson lua tinycbor amiibo reveng z hardnested ${ADDITIONAL_LNK})
 
 install(TARGETS proxmark3 DESTINATION "bin")
 install(DIRECTORY cmdscripts lualibs luascripts resources dictionaries DESTINATION "share/proxmark3")

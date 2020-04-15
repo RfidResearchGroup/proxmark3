@@ -16,7 +16,6 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdhfmfhard.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -33,6 +32,7 @@
 #include "util_posix.h"
 #include "crapto1/crapto1.h"
 #include "parity.h"
+#include "hardnested/hardnested_bruteforce.h"
 #include "hardnested/hardnested_bf_core.h"
 #include "hardnested/hardnested_bitarray_core.h"
 #include "zlib.h"
