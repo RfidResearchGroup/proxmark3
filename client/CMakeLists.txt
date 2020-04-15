@@ -48,8 +48,8 @@ include_directories(
         ..
         SYSTEM
         deps
-        deps/common
-        deps/include
+        ../common
+        ../include
         deps/jansson
         deps/tinycbor
         deps/liblua
@@ -57,7 +57,7 @@ include_directories(
         deps/amiitool
         deps/cliparser
         deps/reveng
-        deps/common/zlib
+        ../common/zlib
         src
         src/uart
 )
@@ -68,35 +68,35 @@ include_directories(
 set (TARGET_SOURCES
         src/proxmark3.c
         src/proxmark3.h
-        deps/common/commonutil.c
-        deps/common/commonutil.h
-        deps/common/util_posix.c
-        deps/common/util_posix.h
-        deps/common/parity.c
-        deps/common/parity.h
-        deps/common/bucketsort.c
-        deps/common/bucketsort.h
-        deps/common/crapto1/crapto1.c
-        deps/common/crapto1/crapto1.h
-        deps/common/crapto1/crypto1.c
-        deps/common/crc.c
-        deps/common/crc.h
-        deps/common/crc16.c
-        deps/common/crc16.h
-        deps/common/crc32.c
-        deps/common/crc32.h
-        deps/common/crc64.c
-        deps/common/crc64.h
-        deps/common/lfdemod.c
-        deps/common/lfdemod.h
-        deps/common/legic_prng.c
-        deps/common/legic_prng.h
-        deps/common/iso15693tools.c
-        deps/common/iso15693tools.h
-        deps/common/cardhelper.c
-        deps/common/cardhelper.h
-        deps/common/generator.c
-        deps/common/generator.h
+        ../common/commonutil.c
+        ../common/commonutil.h
+        ../common/util_posix.c
+        ../common/util_posix.h
+        ../common/parity.c
+        ../common/parity.h
+        ../common/bucketsort.c
+        ../common/bucketsort.h
+        ../common/crapto1/crapto1.c
+        ../common/crapto1/crapto1.h
+        ../common/crapto1/crypto1.c
+        ../common/crc.c
+        ../common/crc.h
+        ../common/crc16.c
+        ../common/crc16.h
+        ../common/crc32.c
+        ../common/crc32.h
+        ../common/crc64.c
+        ../common/crc64.h
+        ../common/lfdemod.c
+        ../common/lfdemod.h
+        ../common/legic_prng.c
+        ../common/legic_prng.h
+        ../common/iso15693tools.c
+        ../common/iso15693tools.h
+        ../common/cardhelper.c
+        ../common/cardhelper.h
+        ../common/generator.c
+        ../common/generator.h
         deps/cliparser/argtable3.c
         deps/cliparser/argtable3.h
         deps/cliparser/cliparser.c
