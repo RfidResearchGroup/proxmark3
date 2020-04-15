@@ -17,7 +17,7 @@ include ../Makefile.defs
 INSTALLBIN = proxmark3
 INSTALLSHARE = cmdscripts lualibs luascripts resources dictionaries
 
-VPATH =  deps/common src/uart src deps
+VPATH =  ../common src/uart src deps
 vpath %.dic dictionaries
 OBJDIR = obj
 
@@ -44,13 +44,13 @@ AMIIBOLIBPATH = ./deps/amiitool
 AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
 
 # common libraries
-MBEDTLSLIBPATH = ./deps/common/mbedtls
+MBEDTLSLIBPATH = ../common/mbedtls
 MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
-ZLIBPATH = ./deps/common/zlib
+ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH)
-INCLUDES_CLIENT = -I./src -I./deps -I./deps/include -I./deps/common -I./deps/cliparser -I./src/uart $(LIBS)
+INCLUDES_CLIENT = -I./src -I./deps -I../include -I../common -I./deps/cliparser -I./src/uart $(LIBS)
 CFLAGS ?= -Wall -Werror -g -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
@@ -59,7 +59,7 @@ ifneq (,$(findstring MINGW,$(platform)))
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
 endif
 CXXFLAGS ?= -Wall -Werror -O3
-PM3CXXFLAGS = $(CXXFLAGS) -I./deps/include -I/.deps/cliparser
+PM3CXXFLAGS = $(CXXFLAGS) -I../include -I/.deps/cliparser
 
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
@@ -321,7 +321,7 @@ src/ui/ui_overlays.h: src/ui/overlays.ui
 	$(info [-] UIC $@)
 	$(Q)$(UIC) $^ > $@
 
-lualibs/pm3_cmd.lua: ./deps/include/pm3_cmd.h
+lualibs/pm3_cmd.lua: ../include/pm3_cmd.h
 	$(info [=] GEN $@)
 	$(Q)awk -f pm3_cmd_h2lua.awk $^ > $@
 
