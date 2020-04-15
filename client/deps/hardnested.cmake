@@ -33,8 +33,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -mno-sse2 -mno-avx -mno-avx2 -mno-avx512f)
 
     target_include_directories(hardnested_mmx PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
+            common
+            include
             hardnested)
 
     set_property(TARGET hardnested_mmx PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -48,8 +48,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -msse2 -mno-avx -mno-avx2 -mno-avx512f)
 
     target_include_directories(hardnested_sse2 PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
+            common
+            include
             hardnested)
 
     set_property(TARGET hardnested_sse2 PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -63,8 +63,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -msse2 -mavx -mno-avx2 -mno-avx512f)
 
     target_include_directories(hardnested_avx PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
+            common
+            include
             hardnested)
 
     set_property(TARGET hardnested_avx PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -78,8 +78,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -msse2 -mavx -mavx2 -mno-avx512f)
 
     target_include_directories(hardnested_avx2 PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
+            common
+            include
             hardnested)
 
     set_property(TARGET hardnested_avx2 PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -93,8 +93,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -msse2 -mavx -mavx2 -mavx512f)
 
     target_include_directories(hardnested_avx512 PRIVATE
-            ${PM3_ROOT}/common
-            ${PM3_ROOT}/client
+            common
+            include
             hardnested)
 
     set_property(TARGET hardnested_avx512 PROPERTY POSITION_INDEPENDENT_CODE ON)
