@@ -9,8 +9,8 @@ add_library(hardnested_nosimd OBJECT
         hardnested/hardnested_bitarray_core.c)
 
 target_include_directories(hardnested_nosimd PRIVATE
-        common
-        include
+        ../../common
+        ../../include
         hardnested)
 
 set(X86_CPUS x86 x86_64 i686)
@@ -33,8 +33,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -mno-sse2 -mno-avx -mno-avx2 -mno-avx512f)
 
     target_include_directories(hardnested_mmx PRIVATE
-            common
-            include
+            ../../common
+            ../../include
             hardnested)
 
     set_property(TARGET hardnested_mmx PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -48,8 +48,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -msse2 -mno-avx -mno-avx2 -mno-avx512f)
 
     target_include_directories(hardnested_sse2 PRIVATE
-            common
-            include
+            ../../common
+            ../../include
             hardnested)
 
     set_property(TARGET hardnested_sse2 PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -63,8 +63,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -msse2 -mavx -mno-avx2 -mno-avx512f)
 
     target_include_directories(hardnested_avx PRIVATE
-            common
-            include
+            ../../common
+            ../../include
             hardnested)
 
     set_property(TARGET hardnested_avx PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -78,8 +78,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -msse2 -mavx -mavx2 -mno-avx512f)
 
     target_include_directories(hardnested_avx2 PRIVATE
-            common
-            include
+            ../../common
+            ../../include
             hardnested)
 
     set_property(TARGET hardnested_avx2 PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -93,8 +93,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             -mmmx -msse2 -mavx -mavx2 -mavx512f)
 
     target_include_directories(hardnested_avx512 PRIVATE
-            common
-            include
+            ../../common
+            ../../include
             hardnested)
 
     set_property(TARGET hardnested_avx512 PROPERTY POSITION_INDEPENDENT_CODE ON)

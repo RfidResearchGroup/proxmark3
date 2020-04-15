@@ -2,14 +2,14 @@
 
 #amiitool:
 #gcc $(CFLAGS) \
-#amiitool.c $(MYSRCS) ../../common/commonutil.c ../ui.c -lreadline -lm ../../common/mbedtls/libmbedtls.a \
+#amiitool.c $(MYSRCS) ../../../../common/../../commonutil.c ../ui.c -lreadline -lm ../../../../common/mbedtls/libmbedtls.a \
 #-o amiitool
 
 set_property(SOURCE PROPERTY C_STANDARD 99)
 add_definitions(-D_ISOC99_SOURCE)
 include_directories(jansson)
-include_directories(common)
-include_directories(common/include)
+include_directories(../../common)
+include_directories(../../common/include)
 include_directories(amiitool)
 
 add_library(amiibo
