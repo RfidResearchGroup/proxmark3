@@ -23,7 +23,8 @@
 #include <string.h>
 #include "cmdparser.h"
 #include <ctype.h>
-#include <unistd.h>
+// #include <unistd.h>
+#include <proxmark3.h>
 
 //#include "proxgui.h"
 //extern void SetWindowsPosition (void);
@@ -31,24 +32,26 @@ static int CmdHelp(const char *Cmd);
 static int setCmdHelp(const char *Cmd);
 
 // Load all settings into memory (struct)
-static char* prefGetFilename (void) {
-    /*
-    static char Buffer[FILENAME_MAX+sizeof(preferencesFilename)+2] = {0};
-    char PATH[FILENAME_MAX] = {0};
-    
-    getcwd(PATH, sizeof(PATH));
 #ifdef _WIN32
-    snprintf (Buffer,sizeof(Buffer)-1,"%s\\%s",PATH,preferencesFilename);
+#include <direct.h>
+#define GetCurrentDir _getcwd
 #else
-    snprintf (Buffer,sizeof(Buffer)-1,"%s/%s",PATH,preferencesFilename);
-#endif    
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
 
-    return Buffer;
-    */
-    return preferencesFilename;
+static char* prefGetFilename (void) {
+    char *Path;
+
+   if (searchHomeFilePath(&Path,preferencesFilename,false) == PM3_SUCCESS)
+        return Path;
+    else
+        return preferencesFilename;
 }
 
 int preferences_load (void) {
+
+    PrintAndLogEx(INFO,"Looking for preferences...");
 
     // Set all defaults
     session.client_debug_level = OFF;
@@ -554,6 +557,7 @@ static int CmdPrefShow (const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    PrintAndLogEx(NORMAL,"    preference file........ "_GREEN_("%s"),prefGetFilename());
     showEmojiState (prefShowNone);
     showColorState (prefShowNone);
    // showPlotPosState ();
