@@ -34,8 +34,7 @@
 #include "ui.h"
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
-
-#include "../../deps/common/crc32.h"
+#include "crc32.h"
 
 mbedtls_des_context ctx;
 mbedtls_des3_context ctx3;
