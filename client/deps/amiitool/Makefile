@@ -15,5 +15,5 @@ include ../../../Makefile.host
 
 amiitool:
 	gcc $(CFLAGS) \
-	  amiitool.c $(MYSRCS) ../../common/commonutil.c ../ui.c -lreadline -lm ../../common/mbedtls/libmbedtls.a \
+	  amiitool.c $(MYSRCS) ../../../common/commonutil.c ../ui.c -lreadline -lm ../../../common/mbedtls/libmbedtls.a \
 	  -o amiitool
