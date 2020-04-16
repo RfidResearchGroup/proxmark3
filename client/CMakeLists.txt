@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.12.4)
 project(proxmark3)
 
 set(CMAKE_AUTOMOC ON)

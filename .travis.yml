@@ -4,29 +4,23 @@ language: c
 #default linux build env is: xenial
 compiler: gcc
 
+os:
+  - linux
+  - osx
+
+dist: xenial
+
+osx_image: xcode11
+
 # move some env variables to homebrew env
 env:
   global:
     - HOMEBREW_TRAVIS_BRANCH=$TRAVIS_BRANCH
     - HOMEBREW_TRAVIS_COMMIT=$TRAVIS_COMMIT
-
-# Test on Linux and MacOS
-matrix:
-  include:
-    - os: osx
-      osx_image: xcode11
-      env: MAKE_PARAMS='PLATFORM_EXTRAS='
-    - os: osx
-      osx_image: xcode11
-      env: MAKE_PARAMS='PLATFORM_EXTRAS=BTADDON'
-    - os: linux
-      dist: xenial
-      sudo: required
-      env: MAKE_PARAMS='PLATFORM_EXTRAS='
-    - os: linux
-      dist: xenial
-      sudo: required
-      env: MAKE_PARAMS='PLATFORM_EXTRAS=BTADDON'
+  jobs:
+    - TO_TEST=MAKEFILE MAKE_PARAMS='PLATFORM_EXTRAS='
+    - TO_TEST=MAKEFILE MAKE_PARAMS='PLATFORM_EXTRAS=BTADDON'
+    - TO_TEST=CMAKE
 
 addons:
   apt:
@@ -53,18 +47,17 @@ before_install:
   fi
 
 install:
-  if ! arm-none-eabi-gcc -v; then 
+  if ! arm-none-eabi-gcc -v; then
     echo "arm-none-eabi-gcc [ERROR]";
     travis_terminate 1;
   fi
-    
-  make clean;
-  make all V=1 "$MAKE_PARAMS";
 
 script:
-## start and run a test script
-  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    ./pm3test.sh;  
-  elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-    ./pm3test.sh;
-  fi
+  - if [ "$TO_TEST" = "MAKEFILE" ]; then
+      make clean && make V=1 "$MAKE_PARAMS";
+      ./pm3test.sh;
+    fi
+  - if [ "$TO_TEST" = "CMAKE" ]; then
+      mkdir -p client/build && ( cd client/build && cmake .. && make VERBOSE=1 );
+      PM3BIN=./client/build/proxmark3 ./pm3test.sh client;
+    fi
