@@ -83,8 +83,9 @@ enum {
     EMINCOUNT = 1,
     EMAXCOUNT,
     EBADINT,
-    // The same name define EOVERFLOW in errno.h on windows platform
-#ifdef __STDC_WANT_SECURE_LIB__
+
+// The same name define EOVERFLOW in errno.h on windows platform or android
+#if defined(__STDC_WANT_SECURE_LIB__) || defined(__ANDROID__) || defined(ANDROID)
     EOVERFLOW_,
 #else
     EOVERFLOW,
