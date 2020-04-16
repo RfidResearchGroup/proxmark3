@@ -52,8 +52,8 @@ size_t blocknr;
 bool end = false;
 //#define SENDBIT_TEST
 
-/* array index 3 2 1 0 // bytes in sim.bin file are 0 1 2 3 
-// UID is 0 1 2 3 // tag.uid is 3210 
+/* array index 3 2 1 0 // bytes in sim.bin file are 0 1 2 3
+// UID is 0 1 2 3 // tag.uid is 3210
 // datasheet HitagS_V11.pdf bytes in tables printed 3 2 1 0
 
 #db# UID: 5F C2 11 84
@@ -977,7 +977,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
     // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
     // external trigger rising edge, load RA on rising edge of TIOA.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK
-                              | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
+                             | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
 
     // Enable and reset counter
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -1051,7 +1051,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data) {
 
             // Enable and reset external trigger in timer for capturing future frames
             AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-            
+
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
             response = 0;

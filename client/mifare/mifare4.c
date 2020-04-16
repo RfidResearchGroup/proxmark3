@@ -449,12 +449,12 @@ int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int 
     *dataoutlen = 0;
     // MFDES_ADDITIONAL_FRAME
     if (tmp[0] == 0xAF) {
-        c[0] = 0xAF;      
+        c[0] = 0xAF;
         res = intExchangeRAW14aPlus(c, sizeof(c), false, true, tmp, maxdataoutlen, dataoutlen);
         if (res == 0) {
-            
+
             memcpy(dataout + 7, tmp + 1, (*dataoutlen - 3));
-            
+
             // MFDES_ADDITIONAL_FRAME
             res = intExchangeRAW14aPlus(c, sizeof(c), false, false, tmp, maxdataoutlen, dataoutlen);
             if (res == 0) {

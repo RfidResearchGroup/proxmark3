@@ -13,11 +13,11 @@
 // Current working directory will be prepended.
 #define preferencesFilename "preferences.json"
 
-int CmdPreferences (const char *Cmd);
-int preferences_load (void);
-int preferences_save (void);
+int CmdPreferences(const char *Cmd);
+int preferences_load(void);
+int preferences_save(void);
 
-void preferences_save_callback (json_t *root);
-void preferences_load_callback (json_t *root);
+void preferences_save_callback(json_t *root);
+void preferences_load_callback(json_t *root);
 
 #endif

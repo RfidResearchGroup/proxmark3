@@ -567,7 +567,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     PrintAndLogEx(SUCCESS, " UID: " _YELLOW_("%08x"), id);
 
     if (htf != RHT2F_UID_ONLY) {
-    
+
         // block3, 1 byte
         printHitagConfiguration(data[4 * 3]);
     }
@@ -681,7 +681,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
     if (ctmp == 'h') return 0; // usage_hitag_dump();
 
     PacketResponseNG resp;
- 
+
     PrintAndLogEx(SUCCESS, "Dumping tag memory...");
     uint8_t *data = resp.data.asBytes;
 
@@ -699,7 +699,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
 
 // Annotate HITAG protocol
-void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {  
+void annotateHitag1(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 }
 
 void annotateHitag2(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {

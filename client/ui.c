@@ -130,7 +130,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG 0'
     if (g_debugMode == 0 && level == DEBUG)
         return;
-    
+
     // skip HINT messages if client has hints turned off i.e. 'HINT 0'
     if (session.show_hints == false && level == HINT)
         return;
@@ -143,7 +143,8 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     FILE *stream = stdout;
     const char *spinner[] = {_YELLOW_("[\\]"), _YELLOW_("[|]"), _YELLOW_("[/]"), _YELLOW_("[-]")};
     const char *spinner_emoji[] = {" :clock1: ", " :clock2: ", " :clock3: ", " :clock4: ", " :clock5: ", " :clock6: ",
-                                   " :clock7: ", " :clock8: ", " :clock9: ", " :clock10: ", " :clock11: ", " :clock12: "};
+                                   " :clock7: ", " :clock8: ", " :clock9: ", " :clock10: ", " :clock11: ", " :clock12: "
+                                  };
     switch (level) {
         case ERR:
             if (session.emoji_mode == EMOJI)
@@ -433,7 +434,7 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
         const char *emojified_token = NULL;
         uint8_t emojified_token_length = 0;
         char *current_token = NULL;
-        uint8_t current_token_length=0;
+        uint8_t current_token_length = 0;
         char current_char;
         char *rdest = (char *)dest;
         char *rsrc = (char *)src;

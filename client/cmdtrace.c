@@ -394,13 +394,13 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case PROTO_HITAG1:
                 annotateHitag1(explanation, sizeof(explanation), frame, data_len);
-                break;            
+                break;
             case PROTO_HITAG2:
                 annotateHitag2(explanation, sizeof(explanation), frame, data_len);
-                break;            
-            case PROTO_HITAGS:            
+                break;
+            case PROTO_HITAGS:
                 annotateHitagS(explanation, sizeof(explanation), frame, data_len);
-                break;            
+                break;
             default:
                 break;
         }
@@ -611,7 +611,7 @@ int CmdTraceList(const char *Cmd) {
             else if (strcmp(type, "mf") == 0)       protocol = PROTO_MIFARE;
             else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
             else if (strcmp(type, "hitag2") == 0)    protocol = PROTO_HITAG2;
-            else if (strcmp(type, "hitags") == 0)    protocol = PROTO_HITAGS;            
+            else if (strcmp(type, "hitags") == 0)    protocol = PROTO_HITAGS;
             else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
             else if (strcmp(type, "lto") == 0)      protocol = LTO;
             else if (strcmp(type, "raw") == 0)      protocol = -1; //No crc, no annotations
@@ -694,7 +694,7 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(INFO, "Hitag1 / Hitag2 / HitagS - Timings in ETU (8us)");
         if (protocol == FELICA)
             PrintAndLogEx(INFO, "ISO18092 / FeliCa - Timings are not as accurate");
-        
+
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");

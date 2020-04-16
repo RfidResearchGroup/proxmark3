@@ -58,10 +58,10 @@ class ProxGuiQT;
 
 // Added class for SliderWidget to allow move/resize event override
 class SliderWidget : public QWidget {
-protected:
-    void resizeEvent (QResizeEvent *event);
-    void moveEvent (QMoveEvent *event);
-public:
+  protected:
+    void resizeEvent(QResizeEvent *event);
+    void moveEvent(QMoveEvent *event);
+  public:
     SliderWidget();
 };
 

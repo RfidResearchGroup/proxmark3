@@ -140,7 +140,7 @@ static int CmdFlashMemSpiFFSRemove(const char *Cmd) {
 
 static int CmdFlashMemSpiFFSRename(const char *Cmd) {
 
-    int len = strlen(Cmd);   
+    int len = strlen(Cmd);
     if (len < 1) {
         return usage_flashmemspiffs_rename();
     }
@@ -149,7 +149,7 @@ static int CmdFlashMemSpiFFSRename(const char *Cmd) {
     if (len  == 1 && ctmp == 'h') {
         return usage_flashmemspiffs_rename();
     }
-    
+
     char srcfilename[32] = {0};
     char destfilename[32] = {0};
     bool errors = false;
@@ -195,7 +195,7 @@ static int CmdFlashMemSpiFFSCopy(const char *Cmd) {
         return usage_flashmemspiffs_copy();
     }
 
-    
+
     char srcfilename[32] = {0};
     char destfilename[32] = {0};
     bool errors = false;
@@ -457,7 +457,8 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
 static command_t CommandTable[] = {
 
     {"help", CmdHelp, AlwaysAvailable, "This help"},
-    {"copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
+    {
+        "copy", CmdFlashMemSpiFFSCopy, IfPm3Flash,
         "Copy a file to another (destructively) in SPIFFS FileSystem in FlashMEM (spiffs)"
     },
     {"check", CmdFlashMemSpiFFSCheck, IfPm3Flash, "Check/try to defrag faulty/fragmented Filesystem"},

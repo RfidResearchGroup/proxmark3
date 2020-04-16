@@ -10,7 +10,7 @@ EMOJI_JSON_URL = 'https://raw.githubusercontent.com/github/gemoji/master/db/emoj
 
 def print_emoji(emoji_json):
     for alias in emoji_json['aliases']:
-        print('    {{":{0}:", "{1}"}}, // {2}'.format(alias, 
+        print('    {{":{0}:", "{1}"}}, // {2}'.format(alias,
 
 ''.join('\\x{:02x}'.format(b) for b in emoji_json['emoji'].encode('utf8')),
 

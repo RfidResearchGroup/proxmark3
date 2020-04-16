@@ -72,7 +72,7 @@ static char *getProtocolStr(uint8_t id, bool hw) {
     if (id == 0x04) {
         sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
     } else if (id == 0x05) {
-      if (hw)
+        if (hw)
             sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") ")", id);
         else
             sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
@@ -109,9 +109,9 @@ static char *getTypeStr(uint8_t type) {
 
     static char buf[40] = {0x00};
     char *retStr = buf;
-    
+
     switch (type) {
-        case 1: 
+        case 1:
             sprintf(retStr, "0x%02X ( " _YELLOW_("DESFire") ")", type);
             break;
         case 2:
@@ -130,17 +130,17 @@ static char *getTypeStr(uint8_t type) {
 }
 
 static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
-   
+
     // DESFire MF3ICD40
-    if (major == 0x00 &&  minor == 0x00 )
+    if (major == 0x00 &&  minor == 0x00)
         return DESFIRE_MF3ICD40;
-    
+
     // DESFire EV1
-    if (major == 0x01 &&  minor == 0x00 )
+    if (major == 0x01 &&  minor == 0x00)
         return DESFIRE_EV1;
 
     // DESFire EV2
-    if (major == 0x12 &&  minor == 0x00 )
+    if (major == 0x12 &&  minor == 0x00)
         return DESFIRE_EV2;
 
     // DESFire EV3
@@ -148,11 +148,11 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 //        return DESFIRE_EV3;
 
     // DESFire Light
-    if (major == 0x30 &&  minor == 0x00 )
+    if (major == 0x30 &&  minor == 0x00)
         return DESFIRE_LIGHT;
 
     // Plus EV1
-    if (major == 0x11 &&  minor == 0x00 )
+    if (major == 0x11 &&  minor == 0x00)
         return PLUS_EV1;
 
     return MFP_UNKNOWN;
@@ -162,7 +162,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
 
     // ref:  MIFARE Plus EV1 Originality Signature Validation
-    #define PUBLIC_PLUS_ECDA_KEYLEN 57
+#define PUBLIC_PLUS_ECDA_KEYLEN 57
     const ecdsa_publickey_t nxp_plus_public_keys[] = {
         {"Mifare Plus EV1",             "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"}
     };
@@ -185,7 +185,7 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    
+
     if (is_valid == false) {
         PrintAndLogEx(SUCCESS, "Signature verification " _RED_("failed"));
         return PM3_ESOFT;
@@ -212,7 +212,7 @@ static int get_plus_signature(uint8_t *signature, int *signature_len) {
     uint8_t data[59] = {0};
     int resplen = 0, retval = PM3_SUCCESS;
     MFPGetSignature(true, false, data, sizeof(data), &resplen);
-       
+
     if (resplen == 59) {
         memcpy(signature, data + 1, 56);
         *signature_len = 56;
@@ -227,7 +227,7 @@ static int get_plus_signature(uint8_t *signature, int *signature_len) {
 static int plus_print_version(uint8_t *version) {
     PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(version + 14, 7));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(version + 21, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") "/ " _GREEN_("20%02x"), version[7+7+7+5], version[7+7+7+5+1]);
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") "/ " _GREEN_("20%02x"), version[7 + 7 + 7 + 5], version[7 + 7 + 7 + 5 + 1]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
@@ -247,7 +247,7 @@ static int plus_print_version(uint8_t *version) {
     return PM3_SUCCESS;
 }
 static int get_plus_version(uint8_t *version, int *version_len) {
-    
+
     int resplen = 0, retval = PM3_SUCCESS;
     mfpSetVerboseMode(false);
     MFPGetVersion(true, false, version, *version_len, &resplen);
@@ -282,7 +282,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         // info about 14a part
         infoHF14A(false, false, false);
     }
-    
+
     // Mifare Plus info
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -310,7 +310,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         if (supportVersion) {
 
             int cardtype = getCardType(version[3], version[4]);
-            
+
             if (cardtype == 6) {
                 if (supportSignature) {
                     PrintAndLogEx(INFO, "          Tech: " _GREEN_("MIFARE Plus EV1"));
@@ -319,7 +319,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 }
                 isPlus = true;
             } else {
-                
+
             }
         }
 
@@ -374,7 +374,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 PrintAndLogEx(INFO, "ICEE: %s", sprint_hex(data, datalen));
 
                 if (memcmp(data, "\x67\x00", 2) == 0) {
-                    PrintAndLogEx(INFO, "\tMost likely a MIFARE DESFire tag"); 
+                    PrintAndLogEx(INFO, "\tMost likely a MIFARE DESFire tag");
                     PrintAndLogEx(HINT, "Hint:  Try " _YELLOW_("`hf mfdes info`"));
                     DropField();
                     return PM3_SUCCESS;
@@ -390,11 +390,11 @@ static int CmdHFMFPInfo(const char *Cmd) {
             // How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
             PrintAndLogEx(INFO, "--- " _CYAN_("Security Level (SL)"));
 
-            if (SLmode != 0xFF )
+            if (SLmode != 0xFF)
                 PrintAndLogEx(SUCCESS, "       SL mode: " _YELLOW_("SL%d"), SLmode);
             else
                 PrintAndLogEx(WARNING, "       SL mode: " _YELLOW_("unknown"));
-            switch(SLmode) {
+            switch (SLmode) {
                 case 0:
                     PrintAndLogEx(INFO, "  SL 0: initial delivery configuration, used for card personalization");
                     break;

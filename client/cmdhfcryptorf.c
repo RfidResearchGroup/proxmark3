@@ -25,86 +25,86 @@ static int CmdHelp(const char *Cmd);
 
 static int usage_hf_cryptorf_info(void) {
     PrintAndLogEx(NORMAL, "Usage: hf cryptorf info [h] [v]\n"
-            "Options:\n"
-            "    h    this help\n"
-            "    v    verbose\n"
-            "\n"
-            "Example:\n"
-            _YELLOW_("    hf cryptorf info")
-            );
+                  "Options:\n"
+                  "    h    this help\n"
+                  "    v    verbose\n"
+                  "\n"
+                  "Example:\n"
+                  _YELLOW_("    hf cryptorf info")
+                 );
     return PM3_SUCCESS;
 }
 static int usage_hf_cryptorf_reader(void) {
     PrintAndLogEx(NORMAL, "Usage: hf cryptorf reader [h] [v]\n"
-            "Options:\n"
-            "    h    this help\n"
-            "    v    verbose\n"
-            "\n"
-            "Example:\n"
-            _YELLOW_("    hf cryptorf reader")
-            );
+                  "Options:\n"
+                  "    h    this help\n"
+                  "    v    verbose\n"
+                  "\n"
+                  "Example:\n"
+                  _YELLOW_("    hf cryptorf reader")
+                 );
     return PM3_SUCCESS;
 }
 static int usage_hf_cryptorf_sniff(void) {
     PrintAndLogEx(NORMAL, "It get data from the field and saves it into command buffer\n"
-            "Buffer accessible from command " _YELLOW_("'hf list cryptorf'") "\n"
-            "Usage: hf cryptorf sniff [h]\n"
-            "Options:\n"
-            "    h    this help\n"
-            "\n"
-            "Example:\n"
-            _YELLOW_("    hf cryptorf sniff")
-            );
+                  "Buffer accessible from command " _YELLOW_("'hf list cryptorf'") "\n"
+                  "Usage: hf cryptorf sniff [h]\n"
+                  "Options:\n"
+                  "    h    this help\n"
+                  "\n"
+                  "Example:\n"
+                  _YELLOW_("    hf cryptorf sniff")
+                 );
     return PM3_SUCCESS;
 }
 static int usage_hf_cryptorf_sim(void) {
     PrintAndLogEx(NORMAL, "Emulating CryptoRF tag with 4 UID / PUPI\n"
-            "Usage: hf cryptorf sim [h] [u <uid>]\n"
-            "Options:\n"
-            "    h    this help\n"
-            "    u    4byte UID/PUPI\n"
-            "\n"
-            "Example:\n"
-            _YELLOW_("    hf cryptorf sim")
-            );
+                  "Usage: hf cryptorf sim [h] [u <uid>]\n"
+                  "Options:\n"
+                  "    h    this help\n"
+                  "    u    4byte UID/PUPI\n"
+                  "\n"
+                  "Example:\n"
+                  _YELLOW_("    hf cryptorf sim")
+                 );
     return PM3_SUCCESS;
 }
 static int usage_hf_cryptorf_dump(void) {
     PrintAndLogEx(NORMAL, "This command dumps the contents of a ISO-14443-B tag and save it to file\n"
-            "\n"
-            "Usage: hf cryptorf dump [h] [card memory] <f filname> \n"
-            "Options:\n"
-            "    h         this help\n"
-            "    f <name>  filename,  if no <name> UID will be used as filename\n"
-            "\n"
-            "Examples:\n"
-            "\thf cryptorf dump\n"
-            "\thf cryptorf dump f mydump");
+                  "\n"
+                  "Usage: hf cryptorf dump [h] [card memory] <f filname> \n"
+                  "Options:\n"
+                  "    h         this help\n"
+                  "    f <name>  filename,  if no <name> UID will be used as filename\n"
+                  "\n"
+                  "Examples:\n"
+                  "\thf cryptorf dump\n"
+                  "\thf cryptorf dump f mydump");
     return PM3_SUCCESS;
 }
 static int usage_hf_cryptorf_eload(void) {
     PrintAndLogEx(NORMAL, "It loads a binary dump into emulator memory\n"
-            "Usage:  hf cryptorf eload [f <file name w/o `.eml`>]\n"
-            "Options:\n"
-            "    h         this help\n"
-            "    f <name>  filename,  if no <name> UID will be used as filename\n"
-            "\n"
-            "Examples:\n"
-            _YELLOW_("        hf cryptorf eload f filename")
-            );
+                  "Usage:  hf cryptorf eload [f <file name w/o `.eml`>]\n"
+                  "Options:\n"
+                  "    h         this help\n"
+                  "    f <name>  filename,  if no <name> UID will be used as filename\n"
+                  "\n"
+                  "Examples:\n"
+                  _YELLOW_("        hf cryptorf eload f filename")
+                 );
     return PM3_SUCCESS;
 }
 static int usage_hf_cryptorf_esave(void) {
     PrintAndLogEx(NORMAL, "It saves bin/eml/json dump file of emulator memory\n"
-            " Usage:  hf cryptorf esave [f <file name w/o `.eml`>]\n"
-            "Options:\n"
-            "    h         this help\n"
-            "    f <name>  filename,  if no <name> UID will be used as filename\n"
-            "\n"
-            "Examples:\n"
-            _YELLOW_("        hf cryptorf esave ")
-            _YELLOW_("        hf cryptorf esave f filename")
-            );
+                  " Usage:  hf cryptorf esave [f <file name w/o `.eml`>]\n"
+                  "Options:\n"
+                  "    h         this help\n"
+                  "    f <name>  filename,  if no <name> UID will be used as filename\n"
+                  "\n"
+                  "Examples:\n"
+                  _YELLOW_("        hf cryptorf esave ")
+                  _YELLOW_("        hf cryptorf esave f filename")
+                 );
     return PM3_SUCCESS;
 }
 
@@ -379,7 +379,7 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
             case 'h' :
                 return usage_hf_cryptorf_eload();
             case 'f' :
-               if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
+                if (param_getstr(Cmd, cmdp + 1, filename, FILE_PATH_SIZE) >= FILE_PATH_SIZE) {
                     PrintAndLogEx(FAILED, "Filename too long");
                     errors = true;
                     break;
@@ -414,26 +414,26 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
 
-/*
-    // fast push mode
-    conn.block_after_ACK = true;
+    /*
+        // fast push mode
+        conn.block_after_ACK = true;
 
-    //Send to device
-    uint32_t bytes_sent = 0;
-    uint32_t bytes_remaining  = bytes_read;
+        //Send to device
+        uint32_t bytes_sent = 0;
+        uint32_t bytes_remaining  = bytes_read;
 
-    while (bytes_remaining > 0) {
-        uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
-        if (bytes_in_packet == bytes_remaining) {
-            // Disable fast mode on last packet
-            conn.block_after_ACK = false;
+        while (bytes_remaining > 0) {
+            uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
+            if (bytes_in_packet == bytes_remaining) {
+                // Disable fast mode on last packet
+                conn.block_after_ACK = false;
+            }
+            clearCommandBuffer();
+            SendCommandOLD(CMD_HF_CRYPTORF_EML_MEMSET, bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);
+            bytes_remaining -= bytes_in_packet;
+            bytes_sent += bytes_in_packet;
         }
-        clearCommandBuffer();
-        SendCommandOLD(CMD_HF_CRYPTORF_EML_MEMSET, bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);
-        bytes_remaining -= bytes_in_packet;
-        bytes_sent += bytes_in_packet;
-    }
-*/  
+    */
     free(data);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Done");
@@ -524,10 +524,10 @@ int CmdHFCryptoRF(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-// Print extented information about tag.  
+// Print extented information about tag.
 int infoHFCryptoRF(bool verbose) {
-    
-     int res = PM3_ESOFT;
+
+    int res = PM3_ESOFT;
 
     // 14b get and print UID only (general info)
     clearCommandBuffer();

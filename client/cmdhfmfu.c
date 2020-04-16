@@ -64,7 +64,7 @@ static int usage_hf_mfu_info(void) {
 static int usage_hf_mfu_dump(void) {
     PrintAndLogEx(NORMAL, "Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
     PrintAndLogEx(NORMAL, "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
-    PrintAndLogEx(NORMAL, "and saves binary dump into the file " _YELLOW_("`filename.bin`") "or " _YELLOW_("`cardUID.bin`") );
+    PrintAndLogEx(NORMAL, "and saves binary dump into the file " _YELLOW_("`filename.bin`") "or " _YELLOW_("`cardUID.bin`"));
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l f <filename w/o .bin> p <page#> q <#pages>");
     PrintAndLogEx(NORMAL, "  Options :");
@@ -89,8 +89,8 @@ static int usage_hf_mfu_restore(void) {
     PrintAndLogEx(NORMAL, "  Options :");
     PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
     PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID " _BLUE_("-MAGIC TAG ONLY-") );
-    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature " _BLUE_("-MAGIC NTAG 21* ONLY-") );
+    PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID " _BLUE_("-MAGIC TAG ONLY-"));
+    PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature " _BLUE_("-MAGIC NTAG 21* ONLY-"));
     PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires " _YELLOW_("'e'") "parameter to work");
     PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w .bin") "to restore");
     PrintAndLogEx(NORMAL, "");
@@ -135,7 +135,7 @@ static int usage_hf_mfu_wrbl(void) {
 }
 
 static int usage_hf_mfu_eload(void) {
-    PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`") );
+    PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`"));
     PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run dumptoemul-mfu`") "to convert the .bin to the eml");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
     PrintAndLogEx(NORMAL, "  Options:");
@@ -526,7 +526,7 @@ static int ul_print_default(uint8_t *data) {
     else
         PrintAndLogEx(NORMAL, "      BCC1: %02X, crc should be %02X", data[8], crc1);
 
-    PrintAndLogEx(SUCCESS, "  Internal: %02X ( %s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default") );
+    PrintAndLogEx(SUCCESS, "  Internal: %02X ( %s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
 
     PrintAndLogEx(SUCCESS, "      Lock: %s - %s",
                   sprint_hex(data + 10, 2),
@@ -545,7 +545,7 @@ static int ndef_get_maxsize(uint8_t *data) {
     // no NDEF message
     if (data[0] != 0xE1)
         return 0;
-    
+
     if (data[2] == 0x06)
         return 48;
     else if (data[2] == 0x12)
@@ -865,7 +865,7 @@ static int ulev1_print_counters() {
 
 static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
 
-    #define PUBLIC_ECDA_KEYLEN 33
+#define PUBLIC_ECDA_KEYLEN 33
     // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
     // ref: AN11350 NTAG 21x Originality Signature Validation
     // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
@@ -878,64 +878,64 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
         {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
         {"MICRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
     };
-    
-/*  
-    uint8_t nxp_mfu_public_keys[6][PUBLIC_ECDA_KEYLEN] = {
-        // UL, NTAG21x and NDEF
-        {
-            0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
-            0xfe, 0x3d, 0xc1, 0x0e, 0x5d, 0xe6, 0x8a, 0x49,
-            0x9b, 0x1c, 0x20, 0x2d, 0xb5, 0xb1, 0x32, 0x39,
-            0x3e, 0x89, 0xed, 0x19, 0xfe, 0x5b, 0xe8, 0xbc, 0x61
-        },
-        // UL EV1
-        {
-            0x04, 0x90, 0x93, 0x3b, 0xdc, 0xd6, 0xe9, 0x9b,
-            0x4e, 0x25, 0x5e, 0x3d, 0xa5, 0x53, 0x89, 0xa8,
-            0x27, 0x56, 0x4e, 0x11, 0x71, 0x8e, 0x01, 0x72,
-            0x92, 0xfa, 0xf2, 0x32, 0x26, 0xa9, 0x66, 0x14, 0xb8
-        },
-        // unknown. Needs identification
-        {
-            0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
-            0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
-            0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
-            0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
-        },
-        // unknown. Needs identification
-        {
-            0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
-            0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
-            0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
-            0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
-        },
-        // manufacturer public key
-        {
-            0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
-            0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
-            0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
-            0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
-        },
-        // MIKRON public key.
-        {
-            0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
-            0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
-            0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
-            0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2 
-        }
-    };
-*/
+
+    /*
+        uint8_t nxp_mfu_public_keys[6][PUBLIC_ECDA_KEYLEN] = {
+            // UL, NTAG21x and NDEF
+            {
+                0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
+                0xfe, 0x3d, 0xc1, 0x0e, 0x5d, 0xe6, 0x8a, 0x49,
+                0x9b, 0x1c, 0x20, 0x2d, 0xb5, 0xb1, 0x32, 0x39,
+                0x3e, 0x89, 0xed, 0x19, 0xfe, 0x5b, 0xe8, 0xbc, 0x61
+            },
+            // UL EV1
+            {
+                0x04, 0x90, 0x93, 0x3b, 0xdc, 0xd6, 0xe9, 0x9b,
+                0x4e, 0x25, 0x5e, 0x3d, 0xa5, 0x53, 0x89, 0xa8,
+                0x27, 0x56, 0x4e, 0x11, 0x71, 0x8e, 0x01, 0x72,
+                0x92, 0xfa, 0xf2, 0x32, 0x26, 0xa9, 0x66, 0x14, 0xb8
+            },
+            // unknown. Needs identification
+            {
+                0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
+                0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
+                0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
+                0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
+            },
+            // unknown. Needs identification
+            {
+                0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
+                0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
+                0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
+                0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
+            },
+            // manufacturer public key
+            {
+                0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
+                0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
+                0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
+                0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
+            },
+            // MIKRON public key.
+            {
+                0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
+                0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
+                0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
+                0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
+            }
+        };
+    */
     uint8_t i;
     int res;
     bool is_valid = false;
-    for (i = 0; i< ARRAYLEN(nxp_mfu_public_keys); i++) {
+    for (i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
 
         int dl = 0;
         uint8_t key[PUBLIC_ECDA_KEYLEN];
         param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
-        
+
         res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
-    
+
         is_valid = (res == 0);
         if (is_valid)
             break;
@@ -2721,7 +2721,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     uint8_t key[16] = {0x00};
     uint8_t *p_key = key;
     uint8_t pack[4] = {0, 0, 0, 0};
-    
+
     CLIParserInit("hf mfu ndef",
                   "Prints NFC Data Exchange Format (NDEF)",
                   "Usage:\n\thf mfu ndef -> shows NDEF data\n"
@@ -2737,8 +2737,8 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     CLIGetHexWithReturn(1, key, &keylen);
     swapEndian = arg_get_lit(2);
     CLIParserFree();
-    
-    switch(keylen) {
+
+    switch (keylen) {
         case 0:
             break;
         case 4:
@@ -2758,13 +2758,13 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     }
 
     // Is tag UL/NTAG?
-    
+
     // Swap endianness
     if (swapEndian && hasAuthKey) p_key = SwapEndian64(key, keylen, (keylen == 16) ? 8 : 4);
 
     // Select and Auth
     if (ul_auth_select(&card, tagtype, hasAuthKey, p_key, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
-  
+
     // read pages 0,1,2,3 (should read 4pages)
     status = ul_read(0, data, sizeof(data));
     if (status == -1) {
@@ -2783,20 +2783,20 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
         // max datasize;
         maxsize = ndef_get_maxsize(data + 12);
     }
-    
+
     // iceman: maybe always take MIN of tag identified size vs NDEF reported size?
     // fix: UL_EV1 48bytes != NDEF reported size
     for (uint8_t i = 0; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
         if (tagtype & UL_TYPES_ARRAY[i]) {
-            
-            if (maxsize != (UL_MEMORY_ARRAY[i] * 4) ) {
+
+            if (maxsize != (UL_MEMORY_ARRAY[i] * 4)) {
                 PrintAndLogEx(INFO, "Tag reported size vs NDEF reported size mismatch. Using smallest value");
             }
             maxsize = MIN(maxsize, (UL_MEMORY_ARRAY[i] * 4));
             break;
         }
     }
-                
+
     // allocate mem
     uint8_t *records = calloc(maxsize, sizeof(uint8_t));
     if (records == NULL) {
@@ -2805,7 +2805,7 @@ static int CmdHF14MfuNDEF(const char *Cmd) {
     }
 
     // read NDEF records.
-    for(uint16_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
+    for (uint16_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
         status = ul_read(4 + j, records + i, 16);
         if (status == -1) {
             DropField();

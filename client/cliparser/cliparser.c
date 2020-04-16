@@ -165,7 +165,7 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (ibuf == 0) {
         return res;
     }
-    
+
     switch (param_gethex_to_eol((char *)tmp_buf, 0, data, maxdatalen, datalen)) {
         case 1:
             printf("Parameter error: Invalid HEX value.\n");

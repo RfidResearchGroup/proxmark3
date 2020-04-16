@@ -28,7 +28,7 @@
 #include <QtGui>
 #include "ui.h"
 
-extern "C" int preferences_save (void);
+extern "C" int preferences_save(void);
 
 extern "C" {
 #include "util_darwin.h"
@@ -132,26 +132,26 @@ ProxGuiQT::~ProxGuiQT(void) {
 }
 
 // -------------------------------------------------
-// Slider Widget form based on a class to enable 
+// Slider Widget form based on a class to enable
 // Event override functions
 // -------------------------------------------------
 
-SliderWidget::SliderWidget() {   
+SliderWidget::SliderWidget() {
     // Set the initail postion and size from settings
     if (session.preferences_loaded)
-        setGeometry (session.window_overlay_xpos,session.window_overlay_ypos,session.window_overlay_wsize,session.window_overlay_hsize);
+        setGeometry(session.window_overlay_xpos, session.window_overlay_ypos, session.window_overlay_wsize, session.window_overlay_hsize);
     else
         resize(800, 400);
 }
 
-void SliderWidget::resizeEvent (QResizeEvent *event) {
+void SliderWidget::resizeEvent(QResizeEvent *event) {
     session.window_overlay_hsize = event->size().height();
     session.window_overlay_wsize = event->size().width();
     session.window_changed = true;
 
 }
 
-void SliderWidget::moveEvent (QMoveEvent *event) {
+void SliderWidget::moveEvent(QMoveEvent *event) {
     session.window_overlay_xpos = event->pos().x();
     session.window_overlay_ypos = event->pos().y();
     session.window_changed = true;
@@ -199,12 +199,12 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
     // Set the initail postion and size from settings
     if (session.preferences_loaded)
-        setGeometry (session.window_plot_xpos,session.window_plot_ypos,session.window_plot_wsize,session.window_plot_hsize);
+        setGeometry(session.window_plot_xpos, session.window_plot_ypos, session.window_plot_wsize, session.window_plot_hsize);
     else
         resize(800, 400);
 
     // Setup the controller widget
-    controlWidget = new SliderWidget ();//new QWidget();
+    controlWidget = new SliderWidget(); //new QWidget();
     opsController = new Ui::Form();
     opsController->setupUi(controlWidget);
     //Due to quirks in QT Designer, we need to fiddle a bit
@@ -224,7 +224,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     QObject::connect(opsController->horizontalSlider_dirthr_down, SIGNAL(valueChanged(int)), this, SLOT(vchange_dthr_down(int)));
     QObject::connect(opsController->horizontalSlider_askedge, SIGNAL(valueChanged(int)), this, SLOT(vchange_askedge(int)));
 
-    controlWidget->setGeometry (session.window_overlay_xpos,session.window_overlay_ypos,session.window_overlay_wsize,session.window_overlay_hsize);
+    controlWidget->setGeometry(session.window_overlay_xpos, session.window_overlay_ypos, session.window_overlay_wsize, session.window_overlay_hsize);
 
     // Set up the plot widget, which does the actual plotting
     plot = new Plot(this);
@@ -240,7 +240,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     show();
 
     // Set Slider/Overlay position if no settings.
-    if (!session.preferences_loaded){
+    if (!session.preferences_loaded) {
         // Move controller widget below plot
         controlWidget->move(x(), y() + frameSize().height());
         controlWidget->resize(size().width(), 200);
@@ -251,7 +251,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     controlWidget->setWindowTitle(ct);
 
     controlWidget->show();
-    
+
     // now that is up, reset pos/size change flags
     session.window_changed = false;
 

@@ -312,13 +312,13 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
                 uint8_t utf8 = (ndef->Payload[0] >> 7);
                 uint8_t lc_len = ndef->Payload[0] & 0x3F;
                 PrintAndLogEx(INFO,
-                      "\tUTF %d\t: " _GREEN_("%.*s") ", " _GREEN_("%.*s"),
-                      (utf8 == 0) ? 8 : 16,
-                      lc_len,
-                      ndef->Payload + 1,
-                      (int)ndef->PayloadLen - 1 - lc_len,
-                      ndef->Payload + 1 + lc_len
-                );
+                              "\tUTF %d\t: " _GREEN_("%.*s") ", " _GREEN_("%.*s"),
+                              (utf8 == 0) ? 8 : 16,
+                              lc_len,
+                              ndef->Payload + 1,
+                              (int)ndef->PayloadLen - 1 - lc_len,
+                              ndef->Payload + 1 + lc_len
+                             );
             }
 
             if (!strncmp((char *)ndef->Type, "U", ndef->TypeLen)) {

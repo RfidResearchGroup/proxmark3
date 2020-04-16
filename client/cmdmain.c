@@ -197,13 +197,13 @@ static int CmdHints(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 'h') return usage_hints();
 
-    if (strlen(Cmd) > 1){     
-       str_lower((char *)Cmd);
-       if (str_startswith(Cmd, "of")) {
+    if (strlen(Cmd) > 1) {
+        str_lower((char *)Cmd);
+        if (str_startswith(Cmd, "of")) {
             session.show_hints = false;
-       } else {
+        } else {
             session.show_hints = true;
-       }      
+        }
     } else if (strlen(Cmd) == 1) {
         if (param_getchar(Cmd, 0) != 0x00) {
             ms = param_get32ex(Cmd, 0, 0, 10);
@@ -214,7 +214,7 @@ static int CmdHints(const char *Cmd) {
             }
         }
     }
-    
+
     PrintAndLogEx(INFO, "Hints are %s", (session.show_hints) ? "ON" : "OFF");
     return PM3_SUCCESS;
 }

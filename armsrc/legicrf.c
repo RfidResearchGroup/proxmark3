@@ -404,7 +404,7 @@ bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 //
 // Only this functions are public / called from appmain.c
 //-----------------------------------------------------------------------------
-legic_card_select_t* getLegicCardInfo(void) {
+legic_card_select_t *getLegicCardInfo(void) {
     return &card;
 }
 
@@ -471,7 +471,7 @@ int LegicRfReaderEx(uint16_t offset, uint16_t len, uint8_t iv) {
             goto OUT;
         }
         legic_mem[i] = byte;
-        
+
         if (i < 4) {
             card.uid[i] = byte;
         }
@@ -506,7 +506,7 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
             goto OUT;
         }
         legic_mem[i] = byte;
-        
+
         if (i < 4) {
             card.uid[i] = byte;
         }

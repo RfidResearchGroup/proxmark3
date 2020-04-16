@@ -185,7 +185,7 @@ static bool legic_xor(uint8_t *data, uint16_t cardsize) {
     }
 
 
-    for(uint16_t i = 22; i < cardsize; i++) {
+    for (uint16_t i = 22; i < cardsize; i++) {
         data[i] ^= crc;
     }
     PrintAndLogEx(SUCCESS, "(De)Obsfuscation done");
@@ -241,7 +241,7 @@ static int CmdLegicInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " ( %s)",
                   data[0],
-                  sprint_hex(data +1, 3),
+                  sprint_hex(data + 1, 3),
                   data[4],
                   (calc_crc == crc) ? _GREEN_("OK") : _RED_("Fail")
                  );
@@ -667,7 +667,7 @@ static int CmdLegicWrbl(const char *Cmd) {
         PrintAndLogEx(WARNING, "Out-of-bounds, bytes 0-1-2-3-4 can't be written to. Offset = %d", offset);
         return PM3_EOUTOFBOUND;
     }
-    
+
     //Validations
     if (errors || cmdp == 0) {
         if (data)
@@ -1088,7 +1088,7 @@ static int CmdLegicRestore(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    if (shall_obsfuscate){
+    if (shall_obsfuscate) {
         legic_xor(data, card.cardsize);
     }
 

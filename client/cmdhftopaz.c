@@ -514,7 +514,7 @@ int readTopazUid(bool verbose) {
     uint8_t rid_response[8];
     uint8_t *uid_echo = &rid_response[2];
     uint8_t rall_response[124];
- 
+
     int status = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), verbose);
     if (status == PM3_ESOFT) {
         if (verbose) PrintAndLogEx(ERR, "Error: couldn't receive ATQA");
@@ -543,7 +543,7 @@ int readTopazUid(bool verbose) {
     memcpy(topaz_tag.uid, rall_response + 2, 7);
     memcpy(topaz_tag.data_blocks, rall_response + 2, 0x0f * 8);
 
-    // printing 
+    // printing
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "UID  : %02x %02x %02x %02x %02x %02x %02x",
                   topaz_tag.uid[6],
@@ -557,7 +557,7 @@ int readTopazUid(bool verbose) {
     PrintAndLogEx(SUCCESS, "       UID[6] (Manufacturer Byte) = " _YELLOW_("%02x")", Manufacturer: " _YELLOW_("%s"),
                   topaz_tag.uid[6],
                   getTagInfo(topaz_tag.uid[6])
-                  );
+                 );
 
     PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", atqa[1], atqa[0]);
 

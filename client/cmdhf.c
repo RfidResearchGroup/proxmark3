@@ -86,8 +86,8 @@ int CmdHFSearch(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_search();
 
-    int res = PM3_ESOFT; 
-    
+    int res = PM3_ESOFT;
+
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
@@ -150,17 +150,17 @@ int CmdHFSearch(const char *Cmd) {
             res = PM3_SUCCESS;
         }
     }
-/*    
-    // 14b and iclass is the longest test (put last)
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, "Searching for CryptoRF tag...");
-    if (IfPm3Iso14443b()) {
-        if (readHFCryptoRF(false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") "found\n");
-            res = PM3_SUCCESS;
+    /*
+        // 14b and iclass is the longest test (put last)
+        PROMPT_CLEARLINE;
+        PrintAndLogEx(INPLACE, "Searching for CryptoRF tag...");
+        if (IfPm3Iso14443b()) {
+            if (readHFCryptoRF(false) == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") "found\n");
+                res = PM3_SUCCESS;
+            }
         }
-    }
-*/
+    */
 
     // 14b and iclass is the longest test (put last)
     PROMPT_CLEARLINE;

@@ -1419,12 +1419,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     // Double & triple sized UID, can be mapped to a manufacturer.
     if (card.uidlen <= 4) {
         nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
-        
+
         isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
         isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
         isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
         isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
-       
+
         if ((nxptype & MTOTHER) == MTOTHER)
             isMifareClassic = true;
     }
@@ -1433,13 +1433,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         switch (card.uid[0]) {
             case 0x04: // NXP
                 nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]));
-                
+
                 isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
                 isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
                 isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
                 isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
-                
-                if ((nxptype & MTOTHER) == MTOTHER) 
+
+                if ((nxptype & MTOTHER) == MTOTHER)
                     isMifareClassic = true;
 
                 break;

@@ -374,7 +374,7 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
             JsonSaveStr(root, "FileType", "14b");
             JsonSaveBufAsHexCompact(root, "raw", data, datalen);
             break;
-        }            
+        }
         case jsf15: {
             JsonSaveStr(root, "FileType", "15693");
             JsonSaveBufAsHexCompact(root, "raw", data, datalen);
@@ -426,8 +426,8 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
                 }
             }
             break;
-        case jsfSettings: 
-            preferences_save_callback (root);
+        case jsfSettings:
+            preferences_save_callback(root);
             break;
         default:
             break;
@@ -867,8 +867,8 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         }
         *datalen = sptr;
     }
-    if (!strcmp(ctype,"settings")) {
-        preferences_load_callback (root);
+    if (!strcmp(ctype, "settings")) {
+        preferences_load_callback(root);
     }
     PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:

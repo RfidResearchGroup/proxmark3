@@ -212,8 +212,8 @@ static int CmdHF15Help(const char *Cmd);
 
 static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
 
-    #define PUBLIC_ECDA_KEYLEN 33
-   const ecdsa_publickey_t nxp_15693_public_keys[] = {
+#define PUBLIC_ECDA_KEYLEN 33
+    const ecdsa_publickey_t nxp_15693_public_keys[] = {
         {"NXP Mifare Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
         {"Manufacturer Mifare Classic MFC1C14_x", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
         {"NXP ICODE DNA, ICODE SLIX2", "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
@@ -222,55 +222,55 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         {"NXP NTAG21x (2013)", "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
         {"MICRON Public key", "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
     };
-/*
-    uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
-        // ICODE SLIX2 / DNA
-        {
-            0x04, 0x88, 0x78, 0xA2, 0xA2, 0xD3, 0xEE, 0xC3,
-            0x36, 0xB4, 0xF2, 0x61, 0xA0, 0x82, 0xBD, 0x71,
-            0xF9, 0xBE, 0x11, 0xC4, 0xE2, 0xE8, 0x96, 0x64,
-            0x8B, 0x32, 0xEF, 0xA5, 0x9C, 0xEA, 0x6E, 0x59, 0xF0
-        },
-        // unknown. Needs identification
-        {
-            0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
-            0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
-            0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
-            0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
-        },
-        // unknown. Needs identification
-        {
-            0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
-            0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
-            0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
-            0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
-        },
-        // manufacturer public key
-        {
-            0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
-            0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
-            0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
-            0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
-        },
-        // MIKRON public key.
-        {
-            0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
-            0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
-            0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
-            0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
-        }
-    };
-*/
+    /*
+        uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
+            // ICODE SLIX2 / DNA
+            {
+                0x04, 0x88, 0x78, 0xA2, 0xA2, 0xD3, 0xEE, 0xC3,
+                0x36, 0xB4, 0xF2, 0x61, 0xA0, 0x82, 0xBD, 0x71,
+                0xF9, 0xBE, 0x11, 0xC4, 0xE2, 0xE8, 0x96, 0x64,
+                0x8B, 0x32, 0xEF, 0xA5, 0x9C, 0xEA, 0x6E, 0x59, 0xF0
+            },
+            // unknown. Needs identification
+            {
+                0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
+                0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
+                0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
+                0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
+            },
+            // unknown. Needs identification
+            {
+                0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
+                0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
+                0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
+                0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
+            },
+            // manufacturer public key
+            {
+                0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
+                0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
+                0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
+                0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
+            },
+            // MIKRON public key.
+            {
+                0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
+                0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
+                0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
+                0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
+            }
+        };
+    */
 
     uint8_t i;
     int res;
     bool is_valid = false;
-    for (i = 0; i< ARRAYLEN(nxp_15693_public_keys); i++) {
+    for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
 
         int dl = 0;
         uint8_t key[PUBLIC_ECDA_KEYLEN];
-        param_gethex_to_eol(nxp_15693_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);        
-        
+        param_gethex_to_eol(nxp_15693_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
+
         res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, false);
         is_valid = (res == 0);
         if (is_valid)
@@ -589,7 +589,7 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
                 return false;
             }
             memcpy(&req[tmpreqlen], uid, sizeof(uid));
-            PrintAndLogEx(SUCCESS, "Detected UID " _GREEN_("%s"), iso15693_sprintUID(NULL,uid));
+            PrintAndLogEx(SUCCESS, "Detected UID " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
             tmpreqlen += sizeof(uid);
             break;
         default:
@@ -602,7 +602,7 @@ static bool prepareHF15Cmd(char **cmd, uint16_t *reqlen, uint8_t *arg1, uint8_t 
                 uid[7 - i] = temp & 0xff;
             }
 
-            PrintAndLogEx(SUCCESS, "Using UID " _GREEN_("%s"), iso15693_sprintUID(NULL,uid));
+            PrintAndLogEx(SUCCESS, "Using UID " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
             memcpy(&req[tmpreqlen], uid, sizeof(uid));
             tmpreqlen +=  sizeof(uid);
             break;
@@ -931,7 +931,7 @@ static int CmdHF15Info(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "      TYPE: " _YELLOW_("%s"), getTagInfo_15(recv + 2));
-    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), iso15693_sprintUID(NULL,uid));
+    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     PrintAndLogEx(SUCCESS, "   SYSINFO: %s", sprint_hex(recv, status - 2));
 
     // DSFID
@@ -1003,7 +1003,7 @@ static int CmdHF15Sim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL,uid));
+    PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, uid));
 
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_ISO15693_SIMULATE, 0, 0, 0, uid, 8);
@@ -1201,7 +1201,7 @@ static int CmdHF15Dump(const char *Cmd) {
     }
     // detect blocksize from card :)
 
-    PrintAndLogEx(SUCCESS, "Reading memory from tag UID " _YELLOW_("%s"), iso15693_sprintUID(NULL,uid));
+    PrintAndLogEx(SUCCESS, "Reading memory from tag UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, uid));
 
     int blocknum = 0;
     uint8_t *recv = NULL;
@@ -1271,7 +1271,7 @@ static int CmdHF15Dump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\n");
 
     size_t datalen = blocknum * 4;
-    saveFile(filename, ".bin", data, datalen); 
+    saveFile(filename, ".bin", data, datalen);
     saveFileEML(filename, data, datalen, 4);
     saveFileJSON(filename, jsf15, data, datalen);
     return PM3_SUCCESS;
@@ -1446,7 +1446,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     }
 
     // skip status byte
-    int start = 1; 
+    int start = 1;
     int stop = (pagecount + 1) * 5;
     int currblock = pagenum;
     // print response
@@ -1680,7 +1680,7 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     if ((f = fopen(filename, "rb")) == NULL) {
-        
+
         PrintAndLogEx(WARNING, "Could not find file %s", filename);
         return PM3_EFILE;
     }
@@ -1762,7 +1762,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Input new UID | " _YELLOW_("%s"), iso15693_sprintUID(NULL,uid));
+    PrintAndLogEx(SUCCESS, "Input new UID | " _YELLOW_("%s"), iso15693_sprintUID(NULL, uid));
 
     if (!getUID(oldUid)) {
         PrintAndLogEx(FAILED, "Can't get old/current UID.");

@@ -580,7 +580,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             }
             uint8_t num_mac  = resp.oldarg[1];
             bool success = (NUM_CSNS == num_mac);
-            PrintAndLogEx( (success) ? SUCCESS : WARNING, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
+            PrintAndLogEx((success) ? SUCCESS : WARNING, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
 
             if (num_mac == 0)
                 break;
@@ -939,7 +939,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
             if (aa1_encryption == RFU || aa1_encryption == None)
                 continue;
-                
+
             // Decrypted block 7,8,9 if configured.
             if (blocknum > 6 && blocknum <= 6 + numblocks4userid && memcmp(enc_data, empty, 8) != 0) {
                 if (use_sc) {
@@ -1329,7 +1329,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
             break;
     }
     // dump cmd switch off at device when finised.
-            
+
     uint32_t blocksRead = resp.oldarg[1];
     uint8_t isOK = resp.oldarg[0] & 0xff;
     if (!isOK && !blocksRead) {
@@ -2009,11 +2009,11 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
             case 'e':
                 endblock = param_get8ex(Cmd, cmdp + 1, 0, 10);
                 cmdp += 2;
-                break;     
+                break;
             case 'v':
                 verbose = true;
                 cmdp++;
-                break;                
+                break;
             default:
                 PrintAndLogEx(WARNING, "unknown parameter '%c'\n", param_getchar(Cmd, cmdp));
                 errors = true;
@@ -2047,7 +2047,7 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
     }
     size_t bytes_read = fread(dump, 1, fsize, f);
     fclose(f);
-    
+
     if (verbose) {
         PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, (uint16_t)(bytes_read >> 3), (uint16_t)(bytes_read >> 3));

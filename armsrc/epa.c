@@ -524,7 +524,7 @@ int EPA_Setup() {
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    
+
     // if we're here, there is no type A card, so we look for type B
     // power up the field
     iso14443b_setup();

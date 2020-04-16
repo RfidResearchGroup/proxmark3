@@ -272,7 +272,7 @@ int WAI_PREFIX(getModulePath)(char *out, int capacity, int *dirname_length) {
                         char *begin;
                         char *p;
 
-            begin = (char*)mmap(0, offset + sizeof(p), PROT_READ, MAP_SHARED, fd, 0);
+                        begin = (char *)mmap(0, offset + sizeof(p), PROT_READ, MAP_SHARED, fd, 0);
                         p = begin + offset;
 
                         while (p >= begin) { // scan backwards

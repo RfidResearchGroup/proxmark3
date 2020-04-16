@@ -19,7 +19,7 @@
 
 typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
 typedef enum emojiMode {ALIAS, EMOJI, ALTTEXT, ERASE} emojiMode_t;
-typedef enum clientdebugLevel {OFF,SIMPLE,FULL} clientdebugLevel_t;
+typedef enum clientdebugLevel {OFF, SIMPLE, FULL} clientdebugLevel_t;
 
 typedef struct {
     bool preferences_loaded;

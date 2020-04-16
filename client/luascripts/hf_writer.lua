@@ -25,7 +25,7 @@ desc = [[
 
     Works with both 4 and 7 bytes NXP MIFARE Classic 1K cards.
     The script also has the possibility to change UID and permanent lock uid on magic Gen3 cards.
-    
+
     It supports the following functionality.
 
     1. Write it to the same  of current card UID.
@@ -33,7 +33,7 @@ desc = [[
     3. Change uid to match dump on magic Gen3 card.
     4. Permanent lock UID on magic Gen3 card.
     5. Erase all data at the card and set the FF FF FF FF FF FF keys, and Access Conditions to 78778800.
-    
+
     Script works in a wizard styled way.
 ]]
 example = [[
@@ -88,7 +88,7 @@ local function GetUID()
     return read14a.read(true, true).uid
 end
 ---
--- 
+--
 local function dropfield()
     read14a.disconnect()
     core.clearCommandBuffer()
@@ -121,25 +121,25 @@ local function main(args)
     local length = 25
     local e = 16
     -- Detect 7 byte card
-    if string.len(GetUID()) == 14 then 
+    if string.len(GetUID()) == 14 then
         length = 31
         e = 22
-    end 
+    end
     dropfield()
 
     ---List all EML files in /client
     local dumpEML = "find '.' -iname '*dump.eml' -type f"
-    local p = assert(io.popen(dumpEML))    
+    local p = assert(io.popen(dumpEML))
     for _ in p:lines() do
-    
+
         -- The length of eml file
-        if string.len(_) == length then 
+        if string.len(_) == length then
             num_dumps = num_dumps + 1
              -- cut UID from eml file
             files[num_dumps] = string.sub(_, 9, e)
             print(' '..num_dumps..' | '..files[num_dumps])
         end
-    end 
+    end
     p.close()
 
     if num_dumps == 0 then return oops("Didn't find any dump files") end
@@ -153,45 +153,45 @@ local function main(args)
 
     local no = tonumber(io.read())
     print(tab)
-    print(' You have been selected card dump ' .. no .. ', with UID : '..files[no])  
+    print(' You have been selected card dump ' .. no .. ', with UID : '..files[no])
 
     --- Load eml file
     local dumpfile = assert(io.open('./hf-mf-' .. files[no] .. '-dump.eml', 'r'))
     for _ in dumpfile:lines() do table.insert(eml, _); end
     dumpfile.close()
 
-    --- Extract B key from EML file    
+    --- Extract B key from EML file
     local b = 0
     for i = 1, #eml do
         if (i % 4 == 0) then
             repeat
                 b = b + 1
                 -- Cut key from block
-                b_keys[b] = string.sub(eml[i], (#eml[i] - 11), #eml[i]) 
+                b_keys[b] = string.sub(eml[i], (#eml[i] - 11), #eml[i])
             until b % 4 == 0
         end
-    end 
+    end
     print(tab)
     dbg(b_keys)
     dbg(eml)
 
-    --- Change UID on certain version of magic Gen3 card.  
+    --- Change UID on certain version of magic Gen3 card.
     if (utils.confirm(' Change UID ?') == true) then
         wait()
         --core.console('hf 14a raw -s -c -t 2000 90f0cccc10'..tostring(eml[1]))
         print('hf 14a raw -s -c -t 2000 90f0cccc10'..tostring(eml[1]))
         print(tab)
         print(' The new card UID : ' .. GetUID())
-    end 
-    print(tab)  
-    
+    end
+    print(tab)
+
     --- Lock UID
     if (utils.confirm(' Permanent lock UID ? (card can never change uid again) ') == true) then
         wait()
         core.console('hf 14a raw -s -c -t 2000 90fd111100')
-    end 
+    end
     print(tab)
-    
+
     --- Writing blocks
     local default_key = 'FFFFFFFFFFFF'
     local default_key_blk = 'FFFFFFFFFFFF78778800FFFFFFFFFFFF'
