@@ -17,7 +17,7 @@ include ../Makefile.defs
 INSTALLBIN = proxmark3
 INSTALLSHARE = cmdscripts lualibs luascripts resources dictionaries
 
-VPATH = ../common uart
+VPATH =  ../common src/uart src deps
 vpath %.dic dictionaries
 OBJDIR = obj
 
@@ -32,15 +32,15 @@ ifneq ($(platform),Darwin)
 endif
 
 # local libraries
-LUALIBPATH = ./liblua
+LUALIBPATH = ./deps/liblua
 LUALIB = $(LUALIBPATH)/liblua.a
-JANSSONLIBPATH = ./jansson
+JANSSONLIBPATH = ./deps/jansson
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
-CBORLIBPATH = ./tinycbor
+CBORLIBPATH = ./deps/tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
-REVENGPATH = ./reveng
+REVENGPATH = ./deps/reveng
 REVENGLIB = $(REVENGPATH)/libreveng.a
-AMIIBOLIBPATH = ./amiitool
+AMIIBOLIBPATH = ./deps/amiitool
 AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
 
 # common libraries
@@ -50,7 +50,7 @@ ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH)
-INCLUDES_CLIENT = -I. -I../include -I../common -Iuart $(LIBS)
+INCLUDES_CLIENT = -I./src -I./deps -I../include -I../common -I./deps/cliparser -I./src/uart $(LIBS)
 CFLAGS ?= -Wall -Werror -g -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
@@ -59,7 +59,7 @@ ifneq (,$(findstring MINGW,$(platform)))
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
 endif
 CXXFLAGS ?= -Wall -Werror -O3
-PM3CXXFLAGS = $(CXXFLAGS) -I../include
+PM3CXXFLAGS = $(CXXFLAGS) -I../include -I/.deps/cliparser
 
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
@@ -130,6 +130,7 @@ CORESRCS =  uart_posix.c \
             util_posix.c \
             scandir.c \
             crc16.c \
+            crc32.c \
             comms.c
 
 CMDSRCS =   crapto1/crapto1.c \
@@ -200,7 +201,7 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdhfmfu.c \
             cmdhfmfp.c \
             cmdhfmfhard.c \
-            hardnested/hardnested_bruteforce.c \
+            deps/hardnested/hardnested_bruteforce.c \
             cmdhfmfdes.c \
             cmdhftopaz.c \
             cmdhffido.c \
@@ -258,13 +259,13 @@ CMDSRCS =   crapto1/crapto1.c \
 
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring 86, $(cpu_arch)), )
-    MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    MULTIARCHSRCS = deps/hardnested/hardnested_bf_core.c deps/hardnested/hardnested_bitarray_core.c
 endif
 ifneq ($(findstring amd64, $(cpu_arch)), )
-    MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    MULTIARCHSRCS = deps/hardnested/hardnested_bf_core.c deps/hardnested/hardnested_bitarray_core.c
 endif
 ifeq ($(MULTIARCHSRCS), )
-    CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
+    CMDSRCS += deps/hardnested/hardnested_bf_core.c deps/hardnested/hardnested_bitarray_core.c
 endif
 
 
@@ -310,13 +311,13 @@ proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS)
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LDLIBS)  -o $@
 
-proxgui.cpp: ui/ui_overlays.h
+src/proxgui.cpp: src/ui/ui_overlays.h
 
-proxguiqt.moc.cpp: proxguiqt.h
+src/proxguiqt.moc.cpp: src/proxguiqt.h
 	$(info [-] MOC $@)
 	$(Q)$(MOC) -o$@ $^
 
-ui/ui_overlays.h: ui/overlays.ui
+src/ui/ui_overlays.h: src/ui/overlays.ui
 	$(info [-] UIC $@)
 	$(Q)$(UIC) $^ > $@
 
