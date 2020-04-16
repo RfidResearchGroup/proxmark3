@@ -1,25 +1,23 @@
 cmake_minimum_required(VERSION 3.16)
 project(proxmark3)
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+if(CMAKE_VERSION VERSION_LESS "3.7.0")
+    set(CMAKE_INCLUDE_CURRENT_DIR ON)
+endif()
+
 set(CMAKE_CXX_STANDARD 14)
 
-find_package(Qt5 COMPONENTS Widgets Gui)
+#set(Qt5_DIR "/opt/Qt/5.13.0/gcc_64/lib/cmake/Qt5")
+
+find_package(Qt5 COMPONENTS Core Widgets Gui)
 
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 INCLUDE(FindSSE)
-#[[
-IF(SSE3_FOUND)
-    IF(SSSE3_FOUND)
-        SET(CXX_DFLAGS -msse3 -mssse3)
-    ENDIF(SSSE3_FOUND)
-ENDIF(SSE3_FOUND)
-
-IF(SSE4_2_FOUND)
-    SET(CXX_DFLAGS -msse4.2 -mpopcnt)
-ENDIF(SSE4_2_FOUND)
-ADD_DEFINITIONS(${CXX_DFLAGS})
-]]
 if(NOT SSE2_FOUND)
     MESSAGE(STATUS "Could not find hardware support for SSE2 on this machine.")
 endif(NOT SSE2_FOUND)
@@ -317,7 +315,6 @@ set (TARGET_SOURCES
         src/flash.h
         src/graph.c
         src/graph.h
-        src/guidummy.cpp
         src/preferences.c
         src/preferences.h
         src/pm3_binlib.c
@@ -367,22 +364,33 @@ endif (MINGW)
 
 set(CMAKE_CXX_FLAGS "-Wall -Werror -O3")
 
+
+if(NOT Qt5_FOUND)
+    message("Qt5 library not found, not building gui")
+    set(TARGET_SOURCES
+            src/guidummy.cpp
+            ${TARGET_SOURCES})
+endif(NOT Qt5_FOUND)
+if (Qt5_FOUND)
+    message("Qt5 library found, building gui :)")
+    set (TARGET_SOURCES
+            src/proxgui.cpp
+            src/proxgui.h
+            src/proxguiqt.cpp
+            src/proxguiqt.h
+            ${TARGET_SOURCES})
+    add_custom_command(OUTPUT src/proxguiqt.moc.cpp
+            COMMAND "$(MOC) -o src/proxguiqt.moc.cpp proxguiqt.h"
+            COMMENT "Creating src/proxguiqt.moc.cpp"
+            )
+    add_definitions("-DHAVE_GUI")
+    set(ADDITIONAL_LNK Qt5::Core Qt5::Widgets Qt5::Gui ${ADDITIONAL_LNK})
+endif (Qt5_FOUND)
+
 add_executable(
         proxmark3
         ${TARGET_SOURCES}
 )
-
-if(NOT Qt5_LIB)
-    message("Qt5 library not found, not building gui")
-endif()
-if (Qt5_LIB)
-    add_executable(proxguiqt
-            src/proxgui.cpp
-            src/proxgui.h
-            src/proxguiqt.cpp
-            src/proxguiqt.h)
-endif (Qt5_LIB)
-
 
 find_library(jansson REQUIRED)
 find_library(tinycbor REQUIRED)
@@ -406,11 +414,6 @@ add_custom_command(OUTPUT lualibs/pm3_cmd.lua
 add_custom_command(OUTPUT lualibs/mfc_default_keys.lua
         COMMAND "awk -f default_keys_dic2lua.awk mfc_default_keys.dic >  lualibs/mfc_default_keys.lua"
         COMMENT "Creating lualibs/mfc_default_keys.lua"
-        )
-
-add_custom_command(OUTPUT src/proxguiqt.moc.cpp
-        COMMAND "$(MOC) -o src/proxguiqt.moc.cpp proxguiqt.h"
-        COMMENT "Creating src/proxguiqt.moc.cpp"
         )
 
 add_custom_command(OUTPUT src/ui/ui_overlays.h
