@@ -416,11 +416,6 @@ add_custom_command(OUTPUT lualibs/mfc_default_keys.lua
         COMMENT "Creating lualibs/mfc_default_keys.lua"
         )
 
-add_custom_command(OUTPUT src/ui/ui_overlays.h
-        COMMAND "$(UIC) src/ui/overlays.ui > src/ui/ui_overlays.h"
-        COMMENT "Creating ui/ui_overlays.h"
-        )
-
 #"make package" will trigger this
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Iceman")
