@@ -249,4 +249,12 @@ FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Ca
         "Description": "",
         "Type": "student"
     },
+    {
+        "AID": "F001D0",
+        "Vendor": "Arabako Foru Aldundia",
+        "Country": "",
+        "Name": "BAT",
+        "Description": "",
+        "Type": "transport"
+    },    
 }
