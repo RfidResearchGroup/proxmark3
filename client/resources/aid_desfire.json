@@ -120,6 +120,141 @@
 FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Card Publisher)",
         "Type": "transport"
     },
-    
+    {
+        "AID": "F518F0",
+        "Vendor": "TELENOT",
+        "Country": "DE",
+        "Name": "TELENOT Tag",
+        "Description": "",
+        "Type": "alarm system"
+    },
+    {
+        "AID": "F38091",
+        "Vendor": "MICROTRONIC",
+        "Country": "CH",
+        "Name": "MICROTRONIC Tag",
+        "Description": "",
+        "Type": "payment system"
+    },
 
-]
+    {
+        "AID": "F88280",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+    {
+        "AID": "F5217D",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+    {
+        "AID": "F48EF1",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+    {
+        "AID": "535501",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+    {
+        "AID": "535502",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+    {
+        "AID": "535503",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },    
+    {
+        "AID": "535504",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+        {
+        "AID": "535505",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+        {
+        "AID": "535506",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+    {
+        "AID": "535507",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+        {
+        "AID": "535508",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+    {
+        "AID": "535509",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+        {
+        "AID": "53550A",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+        {
+        "AID": "53550B",
+        "Vendor": "TU Delft",
+        "Country": "NL",
+        "Name": "Uni Delft",
+        "Description": "",
+        "Type": "student"
+    },
+    {
+        "AID": "F001D0",
+        "Vendor": "Arabako Foru Aldundia",
+        "Country": "",
+        "Name": "BAT",
+        "Description": "",
+        "Type": "transport"
+    },    
+}

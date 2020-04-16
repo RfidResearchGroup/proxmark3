@@ -20,7 +20,7 @@
 #include "legicrf.h"
 #include "legicrfsim.h"
 #include "legic.h"          // legic_card_select_t struct
-#include "spiffs.h"         // flashmem 
+#include "spiffs.h"         // flashmem
 
 
 /*
@@ -47,7 +47,7 @@
 void DownloadLogInstructions() {
     Dbprintf("");
     Dbprintf("[=] List all dumps from flash:");
-    Dbprintf("[=]   " _YELLOW_("-") "mem spiffs tree");    
+    Dbprintf("[=]   " _YELLOW_("-") "mem spiffs tree");
     Dbprintf("");
     Dbprintf("[=] To save a dump file from flash to client:");
     Dbprintf("[=]   " _YELLOW_("-") "mem spiffs dump o hf-legic-UID-dump.bin f hf-legic-UID-dump.bin");
@@ -60,15 +60,15 @@ void save_dump_to_file(legic_card_select_t *p_card) {
     // legic functions puts it memory in Emulator reserved memory.
     uint8_t *mem = BigBuf_get_EM_addr();
 
-    char *preferredName = (char*)BigBuf_malloc(30);
+    char *preferredName = (char *)BigBuf_malloc(30);
     if (preferredName == NULL) {
         goto OUT;
     }
-    
+
     sprintf(preferredName, "hf-legic-%02X%02X%02X%02X-dump", p_card->uid[0], p_card->uid[1], p_card->uid[2], p_card->uid[3]);
     uint16_t preferredNameLen = strlen(preferredName);
 
-    char *filename = (char*)BigBuf_malloc(preferredNameLen + 4 + 1 + 10);
+    char *filename = (char *)BigBuf_malloc(preferredNameLen + 4 + 1 + 10);
     if (filename == NULL) {
         goto OUT;
     }
@@ -106,7 +106,7 @@ void RunMod() {
     DbpString("[=] press and HOLD button to exit standalone mode");
     for (;;) {
         WDT_HIT();
-       
+
         //exit from hf_legic,  send usbcommand
         if (data_available()) break;
 
@@ -136,18 +136,18 @@ void RunMod() {
 
         //simulate if read successfully
         if (read_success != PM3_ESOFT) {
-            
+
             legic_card_select_t *p_card;
             p_card = getLegicCardInfo();
-            if (p_card->cardsize == 0) 
+            if (p_card->cardsize == 0)
                 continue;
-    
+
             save_dump_to_file(p_card);
 
             LED_D_ON();
             uint8_t ct;
-            switch(p_card->tagtype) {
-               case 0x0D:
+            switch (p_card->tagtype) {
+                case 0x0D:
                     ct = 0;
                     break;
                 case 0x1D:
@@ -156,7 +156,7 @@ void RunMod() {
                 case 0x3D:
                     ct = 2;
                     break;
-                default: 
+                default:
                     continue;
             }
 
