@@ -69,24 +69,14 @@ int preferences_load(void) {
 
 
     // default save path 
-    if (get_my_user_directory() != NULL) {
-        if (session.default_savepath != NULL)
-            free(session.default_savepath);
-        session.default_savepath = (char *)calloc(strlen(get_my_user_directory()) + 1, sizeof(uint8_t));
+    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
+        session.default_savepath = (char *)realloc(session.default_savepath, strlen(get_my_user_directory()) + 1); //, sizeof(uint8_t));
         strcpy(session.default_savepath, get_my_user_directory());
-    //if (session.file_savepath == NULL) {
-
     } else {
-        session.default_savepath = (char *)calloc(2, sizeof(uint8_t));
+        session.default_savepath = (char *)realloc(session.default_savepath,2); // 2, sizeof(uint8_t));
         strcpy(session.default_savepath, ".");
     }
-/*
-    if (get_my_user_directory ()!= NULL) {
-        strncpy (session.file_savepath,get_my_user_directory(),sizeof(session.file_savepath)-1);
-    } else { 
-        strncpy (session.file_savepath,".",sizeof(session.file_savepath)-1);
-    }
-*/
+
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
     uint8_t dummyData = 0x00;
@@ -112,7 +102,6 @@ int preferences_save(void) {
 
     fnLen = strlen(prefGetFilename()) + 5; // .bak\0
     backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
-//    snprintf (backupFilename,sizeof(backupFilename)-1,"%s.bak",prefGetFilename());
     snprintf(backupFilename, fnLen, "%s.bak", prefGetFilename());
 
     if (fileExists(backupFilename)) {
