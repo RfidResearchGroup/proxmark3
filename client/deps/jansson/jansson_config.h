@@ -33,9 +33,13 @@
 #define JSON_INTEGER_IS_LONG_LONG 1
 
 /* If locale.h and localeconv() are available, define to 1,
-   otherwise to 0. */
+   otherwise to 0.  tips: android don't support localeconv()
+*/
+#if defined(__ANDROID__) || defined(ANDROID)
+#define JSON_HAVE_LOCALECONV 0
+#else
 #define JSON_HAVE_LOCALECONV 1
-
+#endif
 /* If __atomic builtins are available they will be used to manage
    reference counts of json_t. */
 #define JSON_HAVE_ATOMIC_BUILTINS 1

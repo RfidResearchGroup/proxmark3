@@ -21,15 +21,21 @@
 #include <stdio.h> // for Mingw readline
 #include <stdarg.h>
 #include <stdlib.h>
+
+#ifndef ANDROID
 #include <readline/readline.h>
+#endif
+
 #include <complex.h>
 #include "util.h"
 #include "proxmark3.h"  // PROXLOG
 #include "fileutils.h"
 #include "pm3_cmd.h"
+
 #ifdef _WIN32
 # include <direct.h>    // _mkdir
 #endif
+
 #include <time.h>
 #include "emojis.h"
 #include "emojis_alt.h"
