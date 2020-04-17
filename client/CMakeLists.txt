@@ -377,7 +377,6 @@ if (APPLE)
     message("Apple device detected.")
     set(ADDITIONAL_SRC src/util_darwin.h  src/util_darwin.m ${ADDITIONAL_SRC})
     set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
-    set_target_properties(proxmark3 PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
 endif (APPLE)
 
 if (MINGW)
@@ -395,16 +394,19 @@ if(NOT Qt5_FOUND)
 endif(NOT Qt5_FOUND)
 if (Qt5_FOUND)
     message("Qt5 library found, building gui :)")
+
+    add_custom_command(OUTPUT src/proxguiqt.moc.cpp
+            COMMAND "$(MOC) -o src/proxguiqt.moc.cpp proxguiqt.h"
+            COMMENT "Creating src/proxguiqt.moc.cpp"
+            )
+
     set (TARGET_SOURCES
             src/proxgui.cpp
             src/proxgui.h
             src/proxguiqt.cpp
             src/proxguiqt.h
             ${TARGET_SOURCES})
-    add_custom_command(OUTPUT src/proxguiqt.moc.cpp
-            COMMAND "$(MOC) -o src/proxguiqt.moc.cpp proxguiqt.h"
-            COMMENT "Creating src/proxguiqt.moc.cpp"
-            )
+
     add_definitions("-DHAVE_GUI")
     set(ADDITIONAL_LNK Qt5::Core Qt5::Widgets Qt5::Gui ${ADDITIONAL_LNK})
 endif (Qt5_FOUND)
@@ -414,6 +416,11 @@ add_executable(
         ${TARGET_SOURCES}
         ${ADDITIONAL_SRC}
 )
+
+if (APPLE)
+    set_target_properties(proxmark3 PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
+endif (APPLE)
+
 
 find_library(jansson REQUIRED)
 find_library(tinycbor REQUIRED)
