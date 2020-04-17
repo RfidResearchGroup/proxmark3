@@ -27,7 +27,7 @@ set(QT_PACKAGELIST
     Qt5Gui
 )
 foreach(_qt_package IN LISTS QT_PACKAGELIST)
-    find_package(${_qt_package} REQUIRED ${QT_FIND_PACKAGE_OPTIONS})
+    find_package(${_qt_package} ${QT_FIND_PACKAGE_OPTIONS})
 endforeach()
 
 set(Qt5_FOUND ON)
