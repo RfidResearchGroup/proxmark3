@@ -390,6 +390,7 @@ endif (Qt5_FOUND)
 add_executable(
         proxmark3
         ${TARGET_SOURCES}
+        ${ADDITIONAL_SRC}
 )
 
 find_library(jansson REQUIRED)
