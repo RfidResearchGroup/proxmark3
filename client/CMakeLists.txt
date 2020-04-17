@@ -11,9 +11,24 @@ endif()
 
 set(CMAKE_CXX_STANDARD 14)
 
-#set(Qt5_DIR "/opt/Qt/5.13.0/gcc_64/lib/cmake/Qt5")
-
-find_package(Qt5 COMPONENTS Core Widgets Gui)
+if(APPLE AND EXISTS /usr/local/opt/qt5)
+        # Homebrew installs Qt5 (up to at least 5.11.0) in
+        # /usr/local/qt5. Ensure that it can be found by CMake
+        # since it is not in the default /usr/local prefix.
+        # Add it to PATHS so that it doesn't override the
+        # CMAKE_PREFIX_PATH environment variable.
+        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
+        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
+        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
+endif()
+set(QT_PACKAGELIST
+        Qt5Core
+        Qt5Widgets
+        Qt5Gui
+)
+foreach(_qt_package IN LISTS QT_PACKAGELIST)
+        find_package(${_qt_package} REQUIRED ${QT_FIND_PACKAGE_OPTIONS})
+endforeach()
 
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
