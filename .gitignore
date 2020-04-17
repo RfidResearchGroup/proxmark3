@@ -37,6 +37,9 @@ Makefile.platform
 # Cache for detecting platform def changes
 .Makefile.options.cache
 
+# cmake
+client/build/
+
 !client/resources/hardnested/*.bin
 !client/resources/hardnested_tables/*.z
 client/src/ui/ui_overlays.h
