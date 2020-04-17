@@ -408,6 +408,7 @@ static int CmdHFTopazInfo(const char *Cmd) {
     char ctmp = tolower(param_getchar(Cmd, 0));
     if (ctmp == 's') verbose = false;
 
+
     int status = readTopazUid(verbose);
     if (status != PM3_SUCCESS)
         return status;
@@ -462,6 +463,7 @@ static int CmdHFTopazInfo(const char *Cmd) {
 
     topaz_print_NDEF(&topaz_tag.data_blocks[1][0], TOPAZ_STATIC_MEMORY);
 
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     topaz_switch_off_field();
     return PM3_SUCCESS;
 }
@@ -545,7 +547,9 @@ int readTopazUid(bool verbose) {
 
     // printing
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "UID  : %02x %02x %02x %02x %02x %02x %02x",
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(SUCCESS, "  UID: %02x %02x %02x %02x %02x %02x %02x",
                   topaz_tag.uid[6],
                   topaz_tag.uid[5],
                   topaz_tag.uid[4],
@@ -554,24 +558,24 @@ int readTopazUid(bool verbose) {
                   topaz_tag.uid[1],
                   topaz_tag.uid[0]);
 
-    PrintAndLogEx(SUCCESS, "       UID[6] (Manufacturer Byte) = " _YELLOW_("%02x")", Manufacturer: " _YELLOW_("%s"),
+    PrintAndLogEx(SUCCESS, "      UID[6] (Manufacturer Byte) = " _YELLOW_("%02x")", Manufacturer: " _YELLOW_("%s"),
                   topaz_tag.uid[6],
                   getTagInfo(topaz_tag.uid[6])
                  );
 
-    PrintAndLogEx(SUCCESS, "ATQA : %02x %02x", atqa[1], atqa[0]);
+    PrintAndLogEx(SUCCESS, " ATQA: %02x %02x", atqa[1], atqa[0]);
 
     topaz_tag.HR01[0] = rid_response[0];
     topaz_tag.HR01[1] = rid_response[1];
 
     // ToDo: CRC check
-    PrintAndLogEx(SUCCESS, "HR0  : %02x (%sa Topaz tag (%scapable of carrying a NDEF message), %s memory map)",
+    PrintAndLogEx(SUCCESS, "  HR0: %02x (%sa Topaz tag (%scapable of carrying a NDEF message), %s memory map)",
                   rid_response[0],
                   (rid_response[0] & 0xF0) == 0x10 ? "" : "not ",
                   (rid_response[0] & 0xF0) == 0x10 ? "" : "not ",
                   (rid_response[0] & 0x0F) == 0x01 ? "static" : "dynamic");
 
-    PrintAndLogEx(SUCCESS, "HR1  : %02x", rid_response[1]);
+    PrintAndLogEx(SUCCESS, "  HR1: %02x", rid_response[1]);
 
     topaz_switch_off_field();
     return PM3_SUCCESS;
