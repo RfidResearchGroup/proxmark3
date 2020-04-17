@@ -418,7 +418,8 @@ add_executable(
 )
 
 if (APPLE)
-    set_target_properties(proxmark3 PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
+    set_target_properties(proxmark3 PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks, -L/usr/local/opt/readline/lib")
+    set_target_properties(proxmark3 PROPERTIES COMPILE_FLAGS "-I/usr/local/opt/readline/include")
 endif (APPLE)
 
 
