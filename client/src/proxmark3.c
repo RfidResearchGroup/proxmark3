@@ -38,7 +38,7 @@
 #endif
 
 // Used to enable/disable use of preferences json file
-// #define USE_PREFERENCE_FILE
+#define USE_PREFERENCE_FILE
 
 #ifdef _WIN32
 
@@ -414,13 +414,14 @@ static void set_my_executable_path(void) {
 }
 
 static const char *my_user_directory = NULL;
-static char _cwd_Buffer [FILENAME_MAX] = {0};
+// static char _cwd_Buffer [FILENAME_MAX] = {0};
 
 const char *get_my_user_directory(void) {
     return my_user_directory;
 }
+
 static void set_my_user_directory(void) {
-    my_user_directory = getenv("HOME");
+/*    my_user_directory = getenv("HOME");
 
     // if not found, default to current directory
     if (my_user_directory == NULL) {
@@ -429,6 +430,38 @@ static void set_my_user_directory(void) {
         for (int i = 0; i < strlen(_cwd_Buffer); i++)
             if (_cwd_Buffer[i] == '\\') _cwd_Buffer[i] = '/';
         //      my_user_directory = ".";
+    }
+*/
+    my_user_directory = getenv("HOME");
+
+    // if not found, default to current directory
+    if (my_user_directory == NULL) {
+
+        char *cwd_Buffer = NULL;
+        uint16_t pathLen = FILENAME_MAX; // should be a good starting point
+        bool error = false;
+        
+        cwd_Buffer = (char *)calloc(pathLen, sizeof(uint8_t));
+
+        while (!error && (GetCurrentDir (cwd_Buffer,pathLen) == NULL)) {
+            if (errno == ERANGE) {  // Need bigger buffer
+                pathLen += 10;      // if buffer was too small add 10 characters and try again
+                cwd_Buffer = realloc(cwd_Buffer, pathLen);
+            } else {
+                error = true;
+                free (cwd_Buffer);
+                cwd_Buffer = NULL;
+            }
+            printf ("Len... %d\n",pathLen);
+        }
+
+        if (!error) {
+          
+            for (int i = 0; i < strlen(cwd_Buffer); i++)
+                if (cwd_Buffer[i] == '\\') cwd_Buffer[i] = '/';
+
+            my_user_directory = cwd_Buffer;
+        }
     }
 }
 
@@ -949,7 +982,19 @@ int main(int argc, char *argv[]) {
     if (!session.preferences_loaded) {
         preferences_save();  // Save defaults
         session.preferences_loaded = true;
+    } else {
+        // Set device debug level
+        PrintAndLogEx(INFO,"setting device debug loglevel");
+        if (session.pm3_present) {
+           SendCommandNG(CMD_SET_DBGMODE, &session.device_debug_level, 1);
+           PacketResponseNG resp;
+            if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false)
+                PrintAndLogEx (INFO,"failed to set device debug loglevel");
+        }
+        else
+            PrintAndLogEx(WARNING,"Proxmark3 not ready to set debug level");
     }
+    
 #endif
 
 #ifdef HAVE_GUI

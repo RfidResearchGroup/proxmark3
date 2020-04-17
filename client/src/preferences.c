@@ -23,11 +23,9 @@
 #include <string.h>
 #include "cmdparser.h"
 #include <ctype.h>
-// #include <unistd.h>
+#include <dirent.h>
 #include <proxmark3.h>
 
-//#include "proxgui.h"
-//extern void SetWindowsPosition (void);
 static int CmdHelp(const char *Cmd);
 static int setCmdHelp(const char *Cmd);
 
@@ -54,7 +52,8 @@ int preferences_load(void) {
     PrintAndLogEx(INFO, "Looking for preferences...");
 
     // Set all defaults
-    session.client_debug_level = OFF;
+    session.client_debug_level = cdbOFF;
+    session.device_debug_level = ddbOFF;
     session.window_changed = false;
     session.window_plot_xpos = 10;
     session.window_plot_ypos = 30;
@@ -69,6 +68,25 @@ int preferences_load(void) {
     session.supports_colors = false;
 
 
+    // default save path 
+    if (get_my_user_directory() != NULL) {
+        if (session.default_savepath != NULL)
+            free(session.default_savepath);
+        session.default_savepath = (char *)calloc(strlen(get_my_user_directory()) + 1, sizeof(uint8_t));
+        strcpy(session.default_savepath, get_my_user_directory());
+    //if (session.file_savepath == NULL) {
+
+    } else {
+        session.default_savepath = (char *)calloc(2, sizeof(uint8_t));
+        strcpy(session.default_savepath, ".");
+    }
+/*
+    if (get_my_user_directory ()!= NULL) {
+        strncpy (session.file_savepath,get_my_user_directory(),sizeof(session.file_savepath)-1);
+    } else { 
+        strncpy (session.file_savepath,".",sizeof(session.file_savepath)-1);
+    }
+*/
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
     uint8_t dummyData = 0x00;
@@ -87,10 +105,15 @@ int preferences_load(void) {
 int preferences_save(void) {
     // Note sure if backup has value ?
 
-    char backupFilename[FILENAME_MAX + sizeof(preferencesFilename) + 10] = {0};
+    char *backupFilename = NULL;// [FILENAME_MAX+sizeof(preferencesFilename)+10] = {0};
+    int  fnLen = 0;
 
     PrintAndLogEx(INFO, "Saving preferences ...");
-    snprintf(backupFilename, sizeof(backupFilename) - 1, "%s.bak", prefGetFilename());
+
+    fnLen = strlen(prefGetFilename()) + 5; // .bak\0
+    backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
+//    snprintf (backupFilename,sizeof(backupFilename)-1,"%s.bak",prefGetFilename());
+    snprintf(backupFilename, fnLen, "%s.bak", prefGetFilename());
 
     if (fileExists(backupFilename)) {
         if (remove(backupFilename) != 0) {
@@ -112,6 +135,9 @@ int preferences_save(void) {
     if (saveFileJSON(prefGetFilename(), jsfSettings, &dummyData, dummyDL) != PM3_SUCCESS)
         PrintAndLogEx(ERR, "Error saving preferences to \"%s\"", prefGetFilename());
 
+    if (backupFilename != NULL)
+        free(backupFilename);
+
     return PM3_SUCCESS;
 }
 
@@ -119,40 +145,13 @@ void preferences_save_callback(json_t *root) {
 
     JsonSaveStr(root, "FileType", "settings");
 
-    // Log level, convert to text
-    switch (session.client_debug_level) {
-        case OFF:
-            JsonSaveStr(root, "client.debug.level", "off");
-            break;
-        case SIMPLE:
-            JsonSaveStr(root, "client.debug.level", "simple");
-            break;
-        case FULL:
-            JsonSaveStr(root, "client.debug.level", "full");
-            break;
-        default:
-            JsonSaveStr(root, "logging.level", "NORMAL");
-    }
-
-    // Plot window
-    JsonSaveInt(root, "window.plot.xpos", session.window_plot_xpos);
-    JsonSaveInt(root, "window.plot.ypos", session.window_plot_ypos);
-    JsonSaveInt(root, "window.plot.hsize", session.window_plot_hsize);
-    JsonSaveInt(root, "window.plot.wsize", session.window_plot_wsize);
-
-    // Overlay/Slider window
-    JsonSaveInt(root, "window.overlay.xpos", session.window_overlay_xpos);
-    JsonSaveInt(root, "window.overlay.ypos", session.window_overlay_ypos);
-    JsonSaveInt(root, "window.overlay.hsize", session.window_overlay_hsize);
-    JsonSaveInt(root, "window.overlay.wsize", session.window_overlay_wsize);
-
     // Emoji
     switch (session.emoji_mode) {
         case ALIAS:
             JsonSaveStr(root, "show.emoji", "alias");
             break;
         case EMOJI:
-            JsonSaveStr(root, "show.emoji", "emoji");
+            JsonSaveStr(root,"show.emoji","emoji");
             break;
         case ALTTEXT:
             JsonSaveStr(root, "show.emoji", "alttext");
@@ -167,6 +166,56 @@ void preferences_save_callback(json_t *root) {
     JsonSaveBoolean(root, "show.hints", session.show_hints);
 
     JsonSaveBoolean(root, "os.supports.colors", session.supports_colors);
+
+    JsonSaveStr(root, "file.default.savepath", session.default_savepath);
+
+    // Plot window
+    JsonSaveInt(root, "window.plot.xpos", session.window_plot_xpos);
+    JsonSaveInt(root, "window.plot.ypos", session.window_plot_ypos);
+    JsonSaveInt(root, "window.plot.hsize", session.window_plot_hsize);
+    JsonSaveInt(root, "window.plot.wsize", session.window_plot_wsize);
+
+    // Overlay/Slider window
+    JsonSaveInt(root, "window.overlay.xpos", session.window_overlay_xpos);
+    JsonSaveInt(root, "window.overlay.ypos", session.window_overlay_ypos);
+    JsonSaveInt(root, "window.overlay.hsize", session.window_overlay_hsize);
+    JsonSaveInt(root, "window.overlay.wsize", session.window_overlay_wsize);
+
+    // Log level, convert to text
+    switch (session.client_debug_level) {
+        case cdbOFF:
+            JsonSaveStr(root, "client.debug.level", "off");
+            break;
+        case cdbSIMPLE:
+            JsonSaveStr(root, "client.debug.level", "simple");
+            break;
+        case cdbFULL:
+            JsonSaveStr(root, "client.debug.level", "full");
+            break;
+        default:
+            JsonSaveStr(root, "logging.level", "NORMAL");
+    }
+
+    switch (session.device_debug_level) {
+        case ddbOFF:
+            JsonSaveStr(root, "device.debug.level", "off");
+            break;
+        case ddbERROR:
+            JsonSaveStr(root, "device.debug.level", "error");
+            break;
+        case ddbINFO:
+            JsonSaveStr(root, "device.debug.level", "info");
+            break;
+        case ddbDEBUG:
+            JsonSaveStr(root, "device.debug.level", "debug");
+            break;
+        case ddbEXTENDED:
+            JsonSaveStr(root, "device.debug.level", "extended");
+            break;
+        default:
+            JsonSaveStr(root, "logging.level", "NORMAL");
+    }
+
 }
 
 void preferences_load_callback(json_t *root) {
@@ -180,11 +229,19 @@ void preferences_load_callback(json_t *root) {
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "client.debug.level", &s1) == 0) {
         strncpy(tempStr, s1, sizeof(tempStr) - 1);
         str_lower(tempStr);
-        if (strncmp(tempStr, "off", 3) == 0) session.client_debug_level = OFF;
-        if (strncmp(tempStr, "simple", 6) == 0) session.client_debug_level = SIMPLE;
-        if (strncmp(tempStr, "full", 4) == 0) session.client_debug_level = FULL;
+        if (strncmp(tempStr, "off", 3) == 0) session.client_debug_level = cdbOFF;
+        if (strncmp(tempStr, "simple", 6) == 0) session.client_debug_level = cdbSIMPLE;
+        if (strncmp(tempStr, "full", 4) == 0) session.client_debug_level = cdbFULL;
     }
 
+    // default save path
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.savepath", &s1) == 0) {
+        if (session.default_savepath != NULL)
+            free(session.default_savepath);
+        session.default_savepath = (char *)calloc(strlen(s1) + 1, sizeof(uint8_t));
+        strcpy(session.default_savepath,s1);
+    }
+    
     // window plot
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.xpos", &i1) == 0)
         session.window_plot_xpos = i1;
@@ -221,6 +278,17 @@ void preferences_load_callback(json_t *root) {
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "os.supports.colors", &b1) == 0)
         session.supports_colors = b1;
 
+    // Logging Level
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "device.debug.level", &s1) == 0) {
+        strncpy(tempStr, s1, sizeof(tempStr) - 1);
+        str_lower(tempStr);
+        if (strncmp(tempStr, "off", 3) == 0) session.device_debug_level = ddbOFF;
+        if (strncmp(tempStr, "error", 5) == 0) session.device_debug_level = ddbERROR;
+        if (strncmp(tempStr, "info", 4) == 0) session.device_debug_level = ddbINFO;
+        if (strncmp(tempStr, "debug", 5) == 0) session.device_debug_level = ddbDEBUG;
+        if (strncmp(tempStr, "extended", 8) == 0) session.device_debug_level = ddbEXTENDED;
+    }
+
 }
 
 // Help Functions
@@ -248,7 +316,7 @@ static int usage_set_color() {
 }
 
 static int usage_set_debug() {
-    PrintAndLogEx(NORMAL, "Usage: pref set debug <off | simple | full>");
+    PrintAndLogEx(NORMAL, "Usage: pref set clientdebug <off | simple | full>");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
     PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - no debug messages");
@@ -257,6 +325,20 @@ static int usage_set_debug() {
 
     return PM3_SUCCESS;
 }
+
+static int usage_set_devicedebug() {
+    PrintAndLogEx(NORMAL, "Usage: pref set devicedebug <off | error | info | debug | extended>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - no debug messages");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("error")"       - error messages");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("info")"        - info messages");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("debug")"       - debug messages");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("extended")"    - extended debug messages");
+
+    return PM3_SUCCESS;
+}
+
 static int usage_set_hints() {
     PrintAndLogEx(NORMAL, "Usage: pref set hints <off | on>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -267,16 +349,26 @@ static int usage_set_hints() {
     return PM3_SUCCESS;
 }
 
-// Preference Processing Functions
-typedef enum preferenceId {prefNONE, prefHELP, prefEMOJI, prefCOLOR, prefPLOT, prefOVERLAY, prefHINTS, prefCLIENTDEBUG} preferenceId_t;
-typedef enum prefShowOpt  {prefShowNone, prefShowOLD, prefShowNEW} prefShowOpt_t;
+static int usage_set_savePath() {
+    PrintAndLogEx(NORMAL, "Usage: pref set defaultsavepath <path>");
+    PrintAndLogEx(NORMAL, "Options:");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("<path>")"      - default save path");
 
-const char *prefShowMsg(prefShowOpt_t Opt) {
+    return PM3_SUCCESS;
+}
+
+// Preference Processing Functions
+// typedef enum preferenceId {prefNONE,prefHELP,prefEMOJI,prefCOLOR,prefPLOT,prefOVERLAY,prefHINTS,prefCLIENTDEBUG} preferenceId_t;
+typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW} prefShowOpt_t;
+
+const char *prefShowMsg(prefShowOpt_t Opt)
+{
     switch (Opt) {
         case prefShowOLD:
-            return _YELLOW_("[old]"); //strncpy(Msg,"Before ",sizeof(Msg)-1); break;
+            return _YELLOW_("[old]"); 
         case prefShowNEW:
-            return _GREEN_("[new]"); // strncpy(Msg,"After  ",sizeof(Msg)-1); break;
+            return _GREEN_("[new]"); 
         case prefShowNone:
             return "";
     }
@@ -309,19 +401,19 @@ void showColorState(prefShowOpt_t Opt) {
     if (session.supports_colors)
         PrintAndLogEx(NORMAL, "   %s color.................. "_GREEN_("ansi"), prefShowMsg(Opt));
     else
-        PrintAndLogEx(NORMAL, "   %s color.................. "_GREEN_("off"), prefShowMsg(Opt));
+        PrintAndLogEx(NORMAL, "   %s color.................. "_WHITE_("off"), prefShowMsg(Opt));
 }
 
 void showClientDebugState(prefShowOpt_t Opt) {
 
     switch (session.client_debug_level) {
-        case OFF:
-            PrintAndLogEx(NORMAL, "   %s client debug........... "_GREEN_("off"), prefShowMsg(Opt));
+        case cdbOFF:
+            PrintAndLogEx(NORMAL, "   %s client debug........... "_WHITE_("off"), prefShowMsg(Opt));
             break;
-        case SIMPLE:
+        case cdbSIMPLE:
             PrintAndLogEx(NORMAL, "   %s client debug........... "_GREEN_("simple"), prefShowMsg(Opt));
             break;
-        case FULL:
+        case cdbFULL:
             PrintAndLogEx(NORMAL, "   %s client debug........... "_GREEN_("full"), prefShowMsg(Opt));
             break;
         default:
@@ -329,7 +421,33 @@ void showClientDebugState(prefShowOpt_t Opt) {
     }
 }
 
-void showPlotPosState(void) {
+void showDeviceDebugState(prefShowOpt_t Opt) {
+    switch (session.device_debug_level) {
+        case ddbOFF:
+            PrintAndLogEx(NORMAL, "   %s device debug........... "_WHITE_("off"), prefShowMsg(Opt));
+            break;
+        case ddbERROR:
+            PrintAndLogEx(NORMAL, "   %s device debug........... "_GREEN_("error"), prefShowMsg(Opt));
+            break;
+        case ddbINFO:
+            PrintAndLogEx(NORMAL, "   %s device debug........... "_GREEN_("info"), prefShowMsg(Opt));
+            break;
+        case ddbDEBUG:
+            PrintAndLogEx(NORMAL, "   %s device debug........... "_GREEN_("debug"), prefShowMsg(Opt));
+            break;
+        case ddbEXTENDED:
+            PrintAndLogEx(NORMAL, "   %s device debug........... "_GREEN_("extended"), prefShowMsg(Opt));
+            break;
+        default:
+            PrintAndLogEx(NORMAL, "   %s device debug........... "_RED_("unknown"), prefShowMsg(Opt));
+    }
+}
+
+void showSavePathState(prefShowOpt_t Opt) {
+    PrintAndLogEx(NORMAL, "   %s default save path...... "_GREEN_("%s"), prefShowMsg(Opt), session.default_savepath);
+}
+
+void showPlotPosState(void){
     PrintAndLogEx(NORMAL, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   session.window_plot_xpos, session.window_plot_ypos, session.window_plot_hsize, session.window_plot_wsize);
 }
@@ -341,9 +459,9 @@ void showOverlayPosState(void) {
 
 void showHintsState(prefShowOpt_t Opt) {
     if (session.show_hints)
-        PrintAndLogEx(NORMAL, "   %s Hints.................. "_GREEN_("on"), prefShowMsg(Opt));
+        PrintAndLogEx(NORMAL, "   %s hints.................. "_GREEN_("on"), prefShowMsg(Opt));
     else
-        PrintAndLogEx(NORMAL, "   %s Hints.................. "_GREEN_("off"), prefShowMsg(Opt));
+        PrintAndLogEx(NORMAL, "   %s hints.................. "_WHITE_("off"), prefShowMsg(Opt));
 }
 
 static int setCmdEmoji(const char *Cmd) {
@@ -465,15 +583,15 @@ static int setCmdDebug(const char *Cmd) {
                 return usage_set_debug();
             if (strncmp(strOpt, "off", 3) == 0) {
                 validValue = true;
-                newValue = OFF;
+                newValue = cdbOFF;
             }
             if (strncmp(strOpt, "simple", 6) == 0) {
                 validValue = true;
-                newValue = SIMPLE;
+                newValue = cdbSIMPLE;
             }
             if (strncmp(strOpt, "full", 4) == 0) {
                 validValue = true;
-                newValue = FULL;
+                newValue = cdbFULL;
             }
 
             if (validValue) {
@@ -497,7 +615,74 @@ static int setCmdDebug(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int setCmdHint(const char *Cmd) {
+static int setCmdDeviceDebug (const char *Cmd)
+{
+    uint8_t cmdp = 0;
+    bool errors = false;
+    bool validValue = false;
+    char strOpt[50];
+    devicedebugLevel_t newValue = session.device_debug_level;
+
+    if (param_getchar(Cmd, cmdp) == 0x00) 
+        return usage_set_devicedebug ();
+
+    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+
+        if (param_getstr(Cmd, cmdp++, strOpt, sizeof(strOpt)) != 0) {
+            str_lower(strOpt); // convert to lowercase
+
+            if (strncmp (strOpt,"help",4) == 0) 
+                return usage_set_devicedebug();
+            if (strncmp (strOpt,"off",3) == 0) {
+                validValue = true;
+                newValue = ddbOFF;
+            }                
+            if (strncmp (strOpt,"error",5) == 0) {
+                validValue = true;
+                newValue = ddbERROR;
+            }
+            if (strncmp (strOpt,"info",4) == 0) {
+                validValue = true;
+                newValue = ddbINFO;
+            }
+            if (strncmp (strOpt,"debug",5) == 0) {
+                validValue = true;
+                newValue = ddbDEBUG;
+            }
+            if (strncmp (strOpt,"extended",8) == 0) {
+                validValue = true;
+                newValue = ddbEXTENDED;
+            }
+
+            if (validValue) {
+                if (session.device_debug_level != newValue) {// changed 
+                    showDeviceDebugState (prefShowOLD);
+                    session.device_debug_level = newValue;
+                    showDeviceDebugState (prefShowNEW);
+                    preferences_save ();
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showDeviceDebugState (prefShowNone);
+                }
+                if (session.pm3_present) {
+                    PrintAndLogEx (INFO,"setting device debug loglevel");
+                    SendCommandNG(CMD_SET_DBGMODE, &session.device_debug_level, 1);
+                    PacketResponseNG resp;
+                    if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false)
+                        PrintAndLogEx (INFO,"failed to set device debug loglevel");
+                }
+            } else {
+                PrintAndLogEx(ERR,"invalid option");
+                return usage_set_devicedebug();
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int setCmdHint (const char *Cmd)
+{
     uint8_t cmdp = 0;
     bool errors = false;
     bool validValue = false;
@@ -543,12 +728,74 @@ static int setCmdHint(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int setCmdSavePath (const char *Cmd) {
+    uint8_t cmdp = 0;
+    bool errors = false;
+    // bool validValue = false;
+    char *strOpt = NULL;
+    int  optLen = 0;
+    char *newValue = NULL;
+    
+    if (param_getchar(Cmd, cmdp) == 0x00) 
+        return usage_set_savePath();
+
+    while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
+        if (strOpt != NULL) 
+            free (strOpt);
+        
+        optLen = param_getlength(Cmd, cmdp)+1;
+        strOpt = (char *)calloc(optLen+1, sizeof(uint8_t));
+        if (param_getstr(Cmd, cmdp++, strOpt, optLen) != 0) {
+            str_lower(strOpt); // convert to lowercase
+
+            if (strncmp (strOpt,"help",4) == 0) 
+                return usage_set_savePath();
+            else {
+                // not help, must be the path....
+                
+                // param_getstr(Cmd, cmdp++, newValue, sizeof(newValue));
+                if (newValue == NULL)
+                    free(newValue);
+                newValue = (char *)calloc(strlen(strOpt)+1, sizeof(uint8_t));
+                strcpy (newValue,strOpt);
+                
+                if (strcmp (newValue,session.default_savepath) != 0) {
+
+                    // check if new path exists
+                    if (fileExists (newValue)) {
+                        showSavePathState (prefShowOLD);
+                        if (session.default_savepath != NULL)
+                            free (session.default_savepath);
+                        session.default_savepath = (char *)calloc(strlen(newValue)+1, sizeof(uint8_t));
+                        strcpy (session.default_savepath,newValue);
+                        showSavePathState (prefShowNEW);
+                        preferences_save ();
+                    } else {
+                        PrintAndLogEx (ERR,"path does not exist");
+                    }
+                } else {
+                    PrintAndLogEx(INFO,"nothing changed");
+                    showSavePathState (prefShowNone);
+                }
+            }
+        }
+    }
+
+    // clean up
+    if (strOpt != NULL) free (strOpt);
+    if (newValue != NULL) free (newValue);
+
+    return PM3_SUCCESS;
+}
+
 static command_t setCommandTable[] = {
     {"help",         setCmdHelp,         AlwaysAvailable, "This help"},
     {"emoji",        setCmdEmoji,        AlwaysAvailable, "Set emoji display"},
-    {"color",        setCmdColor,        AlwaysAvailable, "Set color support"},
-    {"debug",        setCmdDebug,        AlwaysAvailable, "Set client debug level"},
     {"hints",        setCmdHint,         AlwaysAvailable, "Set hint display"},
+    {"color",        setCmdColor,        AlwaysAvailable, "Set color support"},
+    {"defaultsavepath", setCmdSavePath,  AlwaysAvailable, "Set default save path"},
+    {"clientdebug",  setCmdDebug,        AlwaysAvailable, "Set client debug level"},
+    {"devicedebug",  setCmdDeviceDebug,  AlwaysAvailable, "Set device debug level"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -569,21 +816,22 @@ int CmdPrefSet(const char *Cmd) {
 static int CmdPrefShow(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, _BLUE_("Preferences"));
-
-    if (!session. preferences_loaded) {
-        PrintAndLogEx(ERR, "Preferneces not loaded");
+    PrintAndLogEx(NORMAL, _CYAN_("Preferences"));
+    
+    if (!session.preferences_loaded) {
+        PrintAndLogEx (ERR, "Preferneces not loaded");
         return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "    preference file........ "_GREEN_("%s"), prefGetFilename());
     showEmojiState(prefShowNone);
-    showColorState(prefShowNone);
-    // showPlotPosState ();
-    // showOverlayPosState ();
-    showClientDebugState(prefShowNone);
     showHintsState(prefShowNone);
-
+    showColorState(prefShowNone);
+   // showPlotPosState ();
+   // showOverlayPosState ();
+    showSavePathState(prefShowNone);
+    showClientDebugState(prefShowNone);
+    showDeviceDebugState(prefShowNone);
     PrintAndLogEx(NORMAL, "");
 
     return PM3_SUCCESS;
@@ -599,7 +847,6 @@ static command_t CommandTable[] = {
     {"help",         CmdHelp,            AlwaysAvailable, "This help"},
     {"set",          CmdPrefSet,         AlwaysAvailable, "Set a preference"},
     {"show",         CmdPrefShow,        AlwaysAvailable, "Show preferences"},
-//    {"save",         CmdPrefSave, AlwaysAvailable, "Save preferences now"},
     {NULL, NULL, NULL, NULL}
 };
 
