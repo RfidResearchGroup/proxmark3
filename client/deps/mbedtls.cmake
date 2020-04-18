@@ -1,5 +1,4 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
-include_directories(../../common)
 
 add_library(mbedtls
         ../../common/mbedtls/aes.c
@@ -46,3 +45,5 @@ add_library(mbedtls
         ../../common/mbedtls/x509_crl.c
         ../../common/mbedtls/x509_crt.c
         )
+
+target_include_directories(mbedtls PRIVATE ../../common)
