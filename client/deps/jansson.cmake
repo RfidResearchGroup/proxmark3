@@ -1,6 +1,4 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
-add_definitions(-DHAVE_STDINT_H)
-include_directories(jansson)
 
 add_library(jansson
         jansson/dump.c
@@ -16,3 +14,5 @@ add_library(jansson
         jansson/path.c
         jansson/value.c
 )
+
+target_compile_definitions(jansson PRIVATE HAVE_STDINT_H)

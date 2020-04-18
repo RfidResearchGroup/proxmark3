@@ -1,5 +1,4 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
-add_definitions(-DHAVE_STDINT_H)
 include_directories(../../common)
 
 add_library(mbedtls
