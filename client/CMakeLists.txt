@@ -26,12 +26,9 @@ set(QT_PACKAGELIST
     Qt5Widgets
     Qt5Gui
 )
-foreach(_qt_package IN LISTS QT_PACKAGELIST)
-    find_package(${_qt_package} ${QT_FIND_PACKAGE_OPTIONS})
-endforeach()
-
 set(Qt5_FOUND ON)
 foreach(_qt_package IN LISTS QT_PACKAGELIST)
+    find_package(${_qt_package} ${QT_FIND_PACKAGE_OPTIONS})
     if(NOT ${_qt_package}_FOUND)
         set(Qt5_FOUND OFF)
     endif(NOT ${_qt_package}_FOUND)
