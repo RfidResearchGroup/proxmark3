@@ -20,8 +20,6 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_compile_options(hardnested_nosimd BEFORE PRIVATE
             -mno-mmx -mno-sse2 -mno-avx -mno-avx2 -mno-avx512f)
 
-    set_property(TARGET hardnested_nosimd PROPERTY POSITION_INDEPENDENT_CODE ON)
-
     ## x86 / MMX
     add_library(hardnested_mmx OBJECT
             hardnested/hardnested_bf_core.c
@@ -34,8 +32,6 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_include_directories(hardnested_mmx PRIVATE
             ../../common
             ../../include)
-
-    set_property(TARGET hardnested_mmx PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     ## x86 / SSE2
     add_library(hardnested_sse2 OBJECT
@@ -50,8 +46,6 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             ../../common
             ../../include)
 
-    set_property(TARGET hardnested_sse2 PROPERTY POSITION_INDEPENDENT_CODE ON)
-
     ## x86 / AVX
     add_library(hardnested_avx OBJECT
             hardnested/hardnested_bf_core.c
@@ -64,8 +58,6 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_include_directories(hardnested_avx PRIVATE
             ../../common
             ../../include)
-
-    set_property(TARGET hardnested_avx PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     ## x86 / AVX2
     add_library(hardnested_avx2 OBJECT
@@ -80,8 +72,6 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             ../../common
             ../../include)
 
-    set_property(TARGET hardnested_avx2 PROPERTY POSITION_INDEPENDENT_CODE ON)
-
     ## x86 / AVX512
     add_library(hardnested_avx512 OBJECT
             hardnested/hardnested_bf_core.c
@@ -94,8 +84,6 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     target_include_directories(hardnested_avx512 PRIVATE
             ../../common
             ../../include)
-
-    set_property(TARGET hardnested_avx512 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     set(SIMD_TARGETS
             $<TARGET_OBJECTS:hardnested_mmx>
