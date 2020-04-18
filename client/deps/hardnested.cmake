@@ -1,5 +1,4 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
-include_directories(hardnested)
 
 ## CPU-specific code
 ## These are mostly for x86-based architectures, which is not useful for many Android devices.
@@ -9,8 +8,7 @@ add_library(hardnested_nosimd OBJECT
 
 target_include_directories(hardnested_nosimd PRIVATE
         ../../common
-        ../../include
-        hardnested)
+        ../../include)
 
 set(X86_CPUS x86 x86_64 i686)
 
@@ -33,8 +31,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(hardnested_mmx PRIVATE
             ../../common
-            ../../include
-            hardnested)
+            ../../include)
 
     set_property(TARGET hardnested_mmx PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -48,8 +45,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(hardnested_sse2 PRIVATE
             ../../common
-            ../../include
-            hardnested)
+            ../../include)
 
     set_property(TARGET hardnested_sse2 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -63,8 +59,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(hardnested_avx PRIVATE
             ../../common
-            ../../include
-            hardnested)
+            ../../include)
 
     set_property(TARGET hardnested_avx PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -78,8 +73,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(hardnested_avx2 PRIVATE
             ../../common
-            ../../include
-            hardnested)
+            ../../include)
 
     set_property(TARGET hardnested_avx2 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -93,8 +87,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
 
     target_include_directories(hardnested_avx512 PRIVATE
             ../../common
-            ../../include
-            hardnested)
+            ../../include)
 
     set_property(TARGET hardnested_avx512 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
