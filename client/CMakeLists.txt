@@ -224,12 +224,6 @@ if (MINGW)
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
 endif (MINGW)
 
-if(NOT Qt5_FOUND)
-    message("Qt5 library not found, not building gui")
-    set(TARGET_SOURCES
-            src/guidummy.cpp
-            ${TARGET_SOURCES})
-endif(NOT Qt5_FOUND)
 if (Qt5_FOUND)
     message("Qt5 library found, building gui :)")
     set (TARGET_SOURCES
@@ -239,6 +233,11 @@ if (Qt5_FOUND)
 
     add_definitions("-DHAVE_GUI")
     set(ADDITIONAL_LNK Qt5::Core Qt5::Widgets Qt5::Gui ${ADDITIONAL_LNK})
+else (Qt5_FOUND)
+    message("Qt5 library not found, not building gui")
+    set(TARGET_SOURCES
+            src/guidummy.cpp
+            ${TARGET_SOURCES})
 endif (Qt5_FOUND)
 
 add_executable(
