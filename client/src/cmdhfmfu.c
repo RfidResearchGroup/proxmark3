@@ -2695,7 +2695,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = 0;
     uint8_t teardata[8] = {0x00};
-    uint8_t interval = 500; // time in us
+    uint32_t interval = 500; // time in us
     uint32_t timeLimit = 3000; // time in us
     uint32_t startTime = 0; // time in us
 
@@ -2712,7 +2712,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'i':
-                interval = param_get8(Cmd, cmdp + 1);
+                interval = param_get32ex(Cmd, cmdp + 1, interval, 10);
                 if (interval <= 0) {
                     PrintAndLogEx(WARNING, "Wrong interval number");
                     errors = true;
@@ -2720,7 +2720,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 cmdp += 2;
                 break;
             case 'l':
-                timeLimit = param_get32ex(Cmd, cmdp + 1, 2000, 10);
+                timeLimit = param_get32ex(Cmd, cmdp + 1, timeLimit, 10);
                 if (timeLimit < interval) {
                     PrintAndLogEx(WARNING, "Wrong time limit number");
                     errors = true;
