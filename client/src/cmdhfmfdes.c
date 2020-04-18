@@ -639,7 +639,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     if (major == 0x11 &&  minor == 0x00)
         return PLUS_EV1;
 
-    return UNKNOWN;
+    return DESFIRE_UNKNOWN;
 }
 
 int handler_desfire_auth(mfdes_authinput_t *payload, mfdes_auth_res_t *rpayload, bool defaultkey) {
