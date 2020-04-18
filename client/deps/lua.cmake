@@ -1,26 +1,3 @@
-add_definitions(-DLUA_COMPAT_ALL $(SYSCFLAGS))
-include_directories(liblua)
-
-set(SYSCFLAGS "-DLUA_COMPAT_ALL")
-
-if (UNIX)
-    set(SYSCFLAGS "-DLUA_USE_LINUX")
-endif (UNIX)
-
-if (WIN32)
-    set(SYSCFLAGS "-DLUA_USE_LINUX")
-endif (WIN32)
-
-if (MINGW)
-    set(SYSCFLAGS "-DLUA_COMPAT_ALL $(SYSCFLAGS)")
-endif (MINGW)
-
-if (APPLE)
-    set(SYSCFLAGS "-DLUA_USE_MACOSX")
-endif (APPLE)
-
-add_definitions($(SYSCFLAGS))
-
 add_library(lua
         liblua/lapi.c
         liblua/lcode.c
@@ -56,3 +33,13 @@ add_library(lua
         liblua/linit.c
 )
 
+target_compile_definitions(lua PRIVATE LUA_COMPAT_ALL)
+
+if (NOT MINGW)
+    if (APPLE)
+        target_compile_definitions(lua PRIVATE LUA_USE_MACOSX)
+    else (APPLE)
+        target_compile_definitions(lua PRIVATE LUA_USE_LINUX)
+        target_link_libraries(lua INTERFACE dl)
+    endif (APPLE)
+endif (NOT MINGW)
