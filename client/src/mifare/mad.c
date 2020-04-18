@@ -236,7 +236,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool verbose, bool *haveMAD2) {
     };
 
     return 0;
-};
+}
 
 int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
     PrintAndLogEx(NORMAL, "16 MAD2");
@@ -255,4 +255,4 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool verbose) {
     };
 
     return 0;
-};
+}

@@ -54,6 +54,8 @@ INCLUDES_CLIENT = -I./src -I./deps -I../include -I../common -I./deps/cliparser -
 CFLAGS ?= -Wall -Werror -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
+# WIP Testing
+#PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local
 ifneq (,$(findstring MINGW,$(platform)))
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
