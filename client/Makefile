@@ -112,6 +112,7 @@ ifneq ($(QTLDLIBS),)
     QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp
     QTGUIOBJS = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
     PM3CFLAGS += -DHAVE_GUI
+    PM3CXXFLAGS += -DQT_NO_DEBUG
 else
     QTGUISRCS = guidummy.cpp
     QTGUIOBJS = $(OBJDIR)/guidummy.o
