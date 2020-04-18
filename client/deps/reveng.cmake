@@ -1,6 +1,4 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
-add_definitions(-DPRESETS)
-include_directories(reveng)
 include_directories(.)
 
 add_library(reveng
@@ -13,3 +11,4 @@ add_library(reveng
         reveng/reveng.c
 )
 
+target_compile_definitions(reveng PRIVATE PRESETS)
