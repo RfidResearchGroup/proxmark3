@@ -28,7 +28,7 @@ POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 BINDIR := .
 OBJDIR := obj
 
-MYOBJS = $(MYSRCS:%.c=$(OBJDIR)/%.o)
+MYOBJS ?= $(MYSRCS:%.c=$(OBJDIR)/%.o)
 CLEAN = $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
 
 all: $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))

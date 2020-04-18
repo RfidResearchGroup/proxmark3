@@ -109,5 +109,11 @@ else ()
 endif ()
 
 add_library(hardnested STATIC
+        hardnested/hardnested_bruteforce.c
         $<TARGET_OBJECTS:hardnested_nosimd>
         ${SIMD_TARGETS})
+target_include_directories(hardnested PRIVATE
+        ../../common
+        ../../include
+        ../src
+        jansson)
