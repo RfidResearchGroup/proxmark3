@@ -232,12 +232,6 @@ if(NOT Qt5_FOUND)
 endif(NOT Qt5_FOUND)
 if (Qt5_FOUND)
     message("Qt5 library found, building gui :)")
-
-    add_custom_command(OUTPUT src/proxguiqt.moc.cpp
-            COMMAND "$(MOC) -o src/proxguiqt.moc.cpp proxguiqt.h"
-            COMMENT "Creating src/proxguiqt.moc.cpp"
-            )
-
     set (TARGET_SOURCES
             src/proxgui.cpp
             src/proxguiqt.cpp
