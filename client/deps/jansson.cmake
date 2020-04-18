@@ -16,3 +16,4 @@ add_library(jansson STATIC
 )
 
 target_compile_definitions(jansson PRIVATE HAVE_STDINT_H)
+target_include_directories(jansson INTERFACE jansson)

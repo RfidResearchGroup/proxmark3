@@ -64,24 +64,6 @@ endif(NOT AVX512_FOUND)
 
 add_subdirectory(deps)
 
-include_directories(
-        ..
-        SYSTEM
-        deps
-        ../common
-        ../include
-        deps/jansson
-        deps/tinycbor
-        deps/liblua
-        client/deps/mbedtls/include
-        deps/amiitool
-        deps/cliparser
-        deps/reveng
-        ../common/zlib
-        src
-        src/uart
-)
-
 #file(GLOB_RECURSE TARGET_HEADERS ${CMAKE_CURRENT_LIST_DIR}/src/*.h)
 #file(GLOB_RECURSE TARGET_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
 
@@ -272,6 +254,15 @@ add_executable(
         proxmark3
         ${TARGET_SOURCES}
         ${ADDITIONAL_SRC}
+)
+
+target_include_directories(proxmark3 PRIVATE
+        ..
+        ../common
+        ../include
+        deps
+        src
+        src/uart
 )
 
 if (APPLE)

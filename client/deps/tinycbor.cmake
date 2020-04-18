@@ -8,3 +8,6 @@ add_library(tinycbor STATIC
         tinycbor/cbortojson.c
         tinycbor/cborvalidation.c
         )
+
+target_include_directories(tinycbor INTERFACE tinycbor)
+

@@ -43,3 +43,5 @@ if (NOT MINGW)
         target_link_libraries(lua INTERFACE dl)
     endif (APPLE)
 endif (NOT MINGW)
+
+target_include_directories(lua INTERFACE liblua)
