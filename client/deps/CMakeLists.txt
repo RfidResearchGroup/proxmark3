@@ -1,0 +1,8 @@
+include(tinycbor.cmake)
+include(jansson.cmake)
+include(lua.cmake)
+include(mbedtls.cmake)
+include(amiibo.cmake)
+include(reveng.cmake)
+include(zlib.cmake)
+include(hardnested.cmake)

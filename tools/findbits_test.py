@@ -1,6 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
-from itertools import imap
 import unittest, sys, findbits
 
 class TestFindBits(unittest.TestCase):
@@ -46,7 +45,7 @@ class TestFindBits(unittest.TestCase):
 
     def commutative_test(self, operation, cases):
         self.unary_operation_test(operation, cases)
-        self.unary_operation_test(operation, imap(reversed, cases))
+        self.unary_operation_test(operation, map(reversed, cases))
 
     def unary_operation_test(self, operation, cases):
         for case_in, case_out in cases:

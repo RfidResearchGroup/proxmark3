@@ -1,32 +1,39 @@
--- Run me like this: proxmark3 /dev/rfcomm0 -l ./hf_bruteforce.lua
+-- Run me like this (connected via USB): ./pm3 -l hf_bruteforce.lua
+-- Run me like this (connected via Blueshark addon): ./client/proxmark3 /dev/rfcomm0 -l ./hf_bruteforce.lua
 
 local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
-author = 'Keld Norman'
-version = 'v1.0.0'
-desc = [[
-
+author = 'Daniel Underhay (updated), Keld Norman(original)'
+version = 'v2.0.1'
+desc =[[
+This script bruteforces 4 or 7 byte UID Mifare classic card numbers.
 ]]
-example = [[
-    --  (the above example would bruteforce card number, starting at 1, ending at 10, and waiting 1 second between each card)
+example =[[
+Bruteforce a 4 byte UID Mifare classic card number, starting at 11223344, ending at 11223346.
 
-    script run hf_bruteforce -s 1 -e 10 -t 1000
+    script run hf_bruteforce -s 0x11223344 -e 0x11223346 -t 1000 -x mfc
+
+Bruteforce a 7 byte UID Mifare Ultralight card number, starting at 11223344556677, ending at 11223344556679.
+
+    script run hf_bruteforce -s 0x11223344556677 -e 0x11223344556679 -t 1000 -x mfu
 ]]
 usage = [[
-
-script run hf_bruteforce -s start_id -e end_id -t timeout -d direction
-
-Arguments:
+script run hf_bruteforce [-s <start_id>] [-e <end_id>] [-t <timeout>] [-x <mifare_card_type>]
+]]
+arguments = [[
     -h       this help
     -s       0-0xFFFFFFFF         start id
     -e       0-0xFFFFFFFF         end id
-    -t       0-99999, pause      timeout (ms) between cards (use the word 'pause' to wait for user input)
+    -t       0-99999, pause       timeout (ms) between cards
+                                  (use the word 'pause' to wait for user input)
+    -x       mfc, mfu             mifare type:
+                                    mfc for Mifare Classic (default)
+                                    mfu for Mifare Ultralight EV1
 ]]
 
-
 local DEBUG = true
-
 ---
 -- Debug print function
 local function dbg(args)
@@ -55,46 +62,57 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
--- Exit message
-local function exitMsg(msg)
+--- Print user message
+local function msg(msg)
  print( string.rep('--',20) )
+ print('')
  print(msg)
+ print('')
  print( string.rep('--',20) )
- print()
 end
 ---
 -- Start
 local function main(args)
 
-    print( string.rep('--',20) )
-    print( string.rep('--',20) )
-    print()
     local timeout = 0
     local start_id = 0
-    local end_id = 0xFFFFFFFF
+    local end_id = 0xFFFFFFFFFFFFFF
+    local mftype = 'mfc'
 
-    for o, a in getopt.getopt(args, 'e:s:t:h') do
+    for o, a in getopt.getopt(args, 'e:s:t:x:h') do
         if o == 's' then start_id = a end
         if o == 'e' then end_id = a end
         if o == 't' then timeout = a end
+        if o == 'x' then mftype = a end
         if o == 'h' then return print(usage) end
     end
 
     -- template
-	local command = 'hf 14a sim t 1 u %08X'
+    local command = ''
 
-	print(' Bruteforcing MFC card numbers from 00000000 to FFFFFFFF using delay: '..timeout)
-    print('')
-    print( string.rep('--',20) )
+    if mftype == 'mfc' then
+        command = 'hf 14a sim t 1 u %014x'
+        msg('Bruteforcing Mifare Classic card numbers')
+    elseif mftype == 'mfu' then
+        command = 'hf 14a sim t 2 u %014x'
+        msg('Bruteforcing Mifare Ultralight card numbers')
+    else
+        return print(usage)
+    end
+
+    if command == '' then return print(usage) end
 
     for n = start_id, end_id do
         local c = string.format( command, n )
-        print(' Running: "'..c..'"')
+        print('Running: "'..c..'"')
         core.console(c)
 		core.console('msleep '..timeout);
         core.console('hw ping')
@@ -102,4 +120,3 @@ local function main(args)
 
 end
 main(args)
-

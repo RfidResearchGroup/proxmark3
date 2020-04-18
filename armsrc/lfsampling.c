@@ -81,7 +81,7 @@ void setSamplingConfig(sample_config *sc) {
         printConfig();
 }
 
-sample_config *getSamplingConfig() {
+sample_config *getSamplingConfig(void) {
     return &config;
 }
 
@@ -93,6 +93,7 @@ sample_config *getSamplingConfig() {
 void pushBit(BitstreamOut *stream, uint8_t bit) {
     int bytepos = stream->position >> 3; // divide by 8
     int bitpos = stream->position & 7;
+    *(stream->buffer + bytepos) &= ~(1 << (7 - bitpos));
     *(stream->buffer + bytepos) |= (bit > 0) << (7 - bitpos);
     stream->position++;
     stream->numbits++;
@@ -105,18 +106,32 @@ BitstreamOut data = {0, 0, 0};
 sampling_t samples = {0, 0, 0, 0};
 
 void initSampleBuffer(uint32_t *sample_size) {
+    initSampleBufferEx(sample_size, false);
+}
 
-    if (sample_size == NULL || *sample_size == 0) {
-        *sample_size = BigBuf_max_traceLen();
+void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
+
+    BigBuf_free();
+
+    // We can't erase the buffer now, it would drastically delay the acquisition
+
+    if (use_malloc) {
+
+        if (sample_size == NULL || *sample_size == 0) {
+            *sample_size = BigBuf_max_traceLen();
+            data.buffer = BigBuf_get_addr();
+        } else {
+            *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
+            data.buffer = BigBuf_malloc(*sample_size);
+
+        }
+
     } else {
-        *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
+        if (sample_size == NULL || *sample_size == 0) {
+            *sample_size = BigBuf_max_traceLen();
+        }
+        data.buffer = BigBuf_get_addr();
     }
-
-    // use a bitstream to handle the output
-    data.buffer = BigBuf_get_addr();
-
-// We can't erase the buffer now, it would drastically delay the acquisition
-//    memset(data.buffer, 0, *sample_size);
 
     //
     samples.dec_counter = 0;
@@ -127,6 +142,10 @@ void initSampleBuffer(uint32_t *sample_size) {
 
 uint32_t getSampleCounter() {
     return samples.total_saved;
+}
+
+void logSampleSimple(uint8_t sample) {
+    logSample(sample, config.decimation, config.bits_per_sample, config.averaging);
 }
 
 void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg) {
@@ -187,7 +206,7 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
 *                  0 or 95 ==> 125 kHz
 *
 **/
-void LFSetupFPGAForADC(int divisor, bool lf_field) {
+void LFSetupFPGAForADC(int divisor, bool reader_field) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     if ((divisor == 1) || (divisor < 0) || (divisor > 255))
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_134); //~134kHz
@@ -196,14 +215,17 @@ void LFSetupFPGAForADC(int divisor, bool lf_field) {
     else
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | (lf_field ? FPGA_LF_ADC_READER_FIELD : 0));
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | (reader_field ? FPGA_LF_ADC_READER_FIELD : 0));
 
     // Connect the A/D to the peak-detected low-frequency path.
     SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
     // 50ms for the resonant antenna to settle.
-    SpinDelay(50);
+    if (reader_field)
+        SpinDelay(50);
+
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc();
+
     // start a 1.5ticks is 1us
     StartTicks();
 }
@@ -231,11 +253,11 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     uint32_t cancel_counter = 0;
     int16_t checked = 0;
 
-    while (true) {
+    while (!BUTTON_PRESS()) {
 
         // only every 1000th times, in order to save time when collecting samples.
         if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
+            if (data_available()) {
                 checked = -1;
                 break;
             } else {
@@ -320,11 +342,11 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
     return DoAcquisition(1, 8, 0, trigger_threshold, verbose, sample_size, cancel_after, 0);
 }
 
-uint32_t ReadLF(bool activeField, bool verbose, uint32_t sample_size) {
+uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size) {
     if (verbose)
         printConfig();
 
-    LFSetupFPGAForADC(config.divisor, activeField);
+    LFSetupFPGAForADC(config.divisor, reader_field);
     uint32_t ret = DoAcquisition_config(verbose, sample_size);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     return ret;

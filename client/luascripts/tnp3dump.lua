@@ -6,11 +6,12 @@ local utils = require('utils')
 local md5 = require('md5')
 local dumplib = require('html_dumplib')
 local toys = require('default_toys')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
-desc =[[
+version = 'v1.0.2'
+desc = [[
 This script will try to dump the contents of a Mifare TNP3xxx card.
 It will need a valid KeyA in order to find the other keys and decode the card.
 ]]
@@ -26,9 +27,9 @@ example = [[
     script run tnp3dump -k aabbccddeeff -n -o myfile
 ]]
 usage = [[
-script run tnp3dump -k <key> -n -p -o <filename>
-
-Arguments:
+script run tnp3dump [-h] [-k <key>] [-n] [-p] [-o <filename>]
+]]
+arguments = [[
     -h             : this help
     -k <key>       : Sector 0 Key A.
     -n             : Use the nested cmd to find all keys
@@ -69,9 +70,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- Exit message

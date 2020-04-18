@@ -1291,7 +1291,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
                     cardnum = (lo >> 1) & 0x7FFFF;
                     fac = ((hi & 0xF) << 12) | (lo >> 20);
                 }
-                Dbprintf("TAG ID: %x%08x (%d) - Format Len: %dbit - FC: %d - Card: %d",
+                Dbprintf("TAG ID: " _GREEN_("%x%08x (%d)") "- Format Len: " _GREEN_("%d") "bit - FC: " _GREEN_("%d") "- Card: "_GREEN_("%d"),
                          hi,
                          lo,
                          (lo >> 1) & 0xFFFF,
@@ -2040,7 +2040,7 @@ void T55xx_ChkPwds(uint8_t flags) {
     if (isok != sizeof(counter))
         goto OUT;
 
-    pwdCount = counter[1] << 8 | counter[0];
+    pwdCount = (uint16_t)(counter[1] << 8 | counter[0]);
 
     if (pwdCount == 0 || pwdCount == 0xFFFF)
         goto OUT;
@@ -2399,13 +2399,13 @@ void SendForward(uint8_t fwd_bit_count) {
     TurnReadLF_off(EM_START_GAP);
     TurnReadLFOn(18 * 8);
 
-    // now start writting with bitbanging the antenna.
+    // now start writting with bitbanging the antenna. (each bit should be 32*8 total length)
     while (fwd_bit_sz-- > 0) { //prepare next bit modulation
         if (((*fwd_write_ptr++) & 1) == 1) {
             WaitUS(32 * 8);
         } else {
             TurnReadLF_off(23 * 8);
-            TurnReadLFOn(18 * 8);
+            TurnReadLFOn((32 - 23) * 8);
         }
     }
 }

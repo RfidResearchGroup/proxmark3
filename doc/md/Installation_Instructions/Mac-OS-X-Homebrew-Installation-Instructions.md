@@ -13,7 +13,8 @@ For further questions about Mac & Homebrew,  contact @Chrisfu  (https://github.c
   - (Optional) `export HOMEBREW_PROXMARK3_PLATFORM=xxxxxx` to specify [platform](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform), default value is `PM3RDV4` if none
   - `brew install proxmark3` for stable release 
   - `brew install --HEAD proxmark3` for latest non-stable from GitHub (use this if previous command fails)
-  - `brew install --with-blueshark proxmark3` for blueshark support
+  - `brew install --with-blueshark proxmark3` for blueshark support, stable release
+  - `brew install --HEAD --with-blueshark proxmark3` for blueshark support, latest non-stable from GitHub (use this if previous command fails)
 
 For more info, go to https://github.com/RfidResearchGroup/homebrew-proxmark3
 
@@ -33,7 +34,7 @@ brew upgrade --fetch-HEAD proxmark3
 
 ## Flash the BOOTROM & FULLIMAGE
 
-With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're un bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
+With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're in bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
 
 In principle, the helper script `pm3-flash-all` should auto-detect your port, so you can just try:
 
@@ -85,6 +86,12 @@ These instructions will show how to setup the environment on OSX to the point wh
 brew install readline qt5 pkgconfig
 brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 ```
+3. (optional) Install makefile dependencies:
+```
+brew install recode
+brew install astyle
+```
+
 
 ## Compile and use the project
 

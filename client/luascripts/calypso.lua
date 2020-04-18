@@ -3,10 +3,11 @@ local getopt = require('getopt')
 local lib14b = require('read14b')
 local utils = require('utils')
 local iso7816 = require('7816_error')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This is a script to communicate with a CALYSPO / 14443b tag using the '14b raw' commands
 ]]
@@ -16,8 +17,8 @@ example = [[
 ]]
 usage = [[
 script run calypso -h -b
-
-Arguments:
+]]
+arguments = [[
       h   this helptext
       b   raw bytes to send
 ]]
@@ -66,9 +67,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 -- helper function,  give current count of items in lua-table.

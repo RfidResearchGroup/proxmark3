@@ -1,12 +1,12 @@
 local cmds = require('commands')
 local lib14a = require('read14a')
 local getopt = require('getopt')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = 'Dominic Celiano'
-version = 'v1.0.1'
-desc =
-[[
+version = 'v1.0.2'
+desc = [[
 Purpose: Lua script to communicate with the Mifare Plus EV1, including personalization (setting the keys) and proximity check. Manually edit the file to add to the commands you can send the card.
 Please read the NXP manual before running this script to prevent making irreversible changes. Also note:
     - The Mifare Plus must start in SL0 for personalization. Card can then be moved to SL1 or SL3.
@@ -15,13 +15,12 @@ Please read the NXP manual before running this script to prevent making irrevers
 Small changes can be to made this script to communicate with the Mifare Plus S, X, or SE.
 ]]
 example = [[
-    -- default
-    script run mifareplus
+    1. script run mifareplus
 ]]
 usage = [[
-script run mifareplus -h
-
-Arguments:
+script run mifareplus [-h]
+]]
+arguments = [[
     -h             : this help
 ]]
 
@@ -57,9 +56,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 ---
 -- Used to send raw data to the firmware to subsequently forward the data to the card.

@@ -61,7 +61,8 @@ enum DESFIRE_CRYPTOALGO {
     T_DES = 0x00,
     T_3DES = 0x01,
     T_3K3DES = 0x02,
-    T_AES = 0x03
+    T_AES = 0x03,
+    T_2K3DES = 0x04
 };
 
 
@@ -150,6 +151,7 @@ enum DESFIRE_CMD {
     GET_FREE_MEMORY                     = 0x6e,
     GET_FILE_IDS                        = 0x6f,
     GET_FILE_SETTINGS                   = 0xf5,
+    GET_DF_NAMES                        = 0x6d,
     CHANGE_FILE_SETTINGS                = 0x5f,
     CREATE_STD_DATA_FILE                = 0xcd,
     CREATE_BACKUP_DATA_FILE             = 0xcb,

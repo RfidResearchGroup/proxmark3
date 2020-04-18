@@ -34,7 +34,7 @@
 // XYZ 3D printing
 // Vinglock
 //------------------------------------
-static void transform_D(uint8_t *ru) {
+void transform_D(uint8_t *ru) {
 
     const uint32_t c_D[] = {
         0x6D835AFC, 0x7D15CD97, 0x0942B409, 0x32F9C923, 0xA811FB02, 0x64F121E8,
@@ -49,16 +49,15 @@ static void transform_D(uint8_t *ru) {
     uint8_t p = 0;
     uint32_t v1 = ((ru[3] << 24) | (ru[2] << 16) | (ru[1] << 8) | ru[0]) + c_D[p++];
     uint32_t v2 = ((ru[7] << 24) | (ru[6] << 16) | (ru[5] << 8) | ru[4]) + c_D[p++];
-
     for (i = 0; i < 12; i += 2) {
-        uint32_t xor1 = v1 ^ v2;
-        uint32_t t1 = ROTL(xor1, v2 & 0x1F) + c_D[p++];
-        uint32_t xor2 = v2 ^ t1;
-        uint32_t t2 = ROTL(xor2, t1 & 0x1F) + c_D[p++];
-        uint32_t xor3 = t1 ^ t2;
-        uint32_t xor4 = t2 ^ v1;
-        v1 = ROTL(xor3, t2 & 0x1F) + c_D[p++];
-        v2 = ROTL(xor4, v1 & 0x1F) + c_D[p++];
+        uint32_t tempA = v1 ^ v2;
+        uint32_t t1 = PM3_ROTL(tempA, v2 & 0x1F) + c_D[p++];
+        uint32_t tempB = v2 ^ t1;
+        uint32_t t2 = PM3_ROTL(tempB, t1 & 0x1F) + c_D[p++];
+        tempA = t1 ^ t2;
+        v1 = PM3_ROTL(tempA, t2 & 0x1F) + c_D[p++];
+        tempB = t2 ^ v1;
+        v2 = PM3_ROTL(tempB, v1 & 0x1F) + c_D[p++];
     }
 
     //Re-use ru
@@ -130,17 +129,23 @@ uint32_t ul_ev1_pwdgenC(uint8_t *uid) {
 
 // XYZ 3d printing pwd generation algo nickname D.
 uint32_t ul_ev1_pwdgenD(uint8_t *uid) {
+
     uint8_t i;
-    uint8_t r = (uid[1] + uid[3] + uid[5]) & 7; // rotation offset
-    uint8_t ru[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; // rotated UID
+    // rotation offset
+    uint8_t r = (uid[1] + uid[3] + uid[5]) & 7;
+
+    // rotated UID
+    uint8_t ru[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     for (i = 0; i < 7; i++)
         ru[(i + r) & 7] = uid[i];
 
     transform_D(ru);
 
+    // offset
+    r = (ru[0] + ru[2] + ru[4] + ru[6]) & 3;
+
     // calc key
     uint32_t pwd = 0;
-    r = (ru[0] + ru[2] + ru[4] + ru[6]) & 3; // offset
     for (i = 0; i < 4; i++)
         pwd = ru[i + r] + (pwd << 8);
 
@@ -412,43 +417,56 @@ int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {
 //------------------------------------
 int generator_selftest() {
 
-    PrintAndLogEx(SUCCESS, "Generators selftest");
-    PrintAndLogEx(SUCCESS, "-------------------");
+#define NUM_OF_TEST     5
 
-    bool success;
+    PrintAndLogEx(INFO, "PWD / KEY generator selftest");
+    PrintAndLogEx(INFO, "----------------------------");
+
+    bool success = false;
+    uint8_t testresult = 0;
 
     uint8_t uid1[] = {0x04, 0x11, 0x12, 0x11, 0x12, 0x11, 0x10};
     uint32_t pwd1 = ul_ev1_pwdgenA(uid1);
     success = (pwd1 == 0x8432EB17);
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X | %s", sprint_hex(uid1, 7), pwd1, success ? "OK" : "->8432EB17<-");
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid1, 7), pwd1, success ? "OK" : "->8432EB17<-");
 
     uint8_t uid2[] = {0x04, 0x1f, 0x98, 0xea, 0x1e, 0x3e, 0x81};
     uint32_t pwd2 = ul_ev1_pwdgenB(uid2);
     success = (pwd2 == 0x5fd37eca);
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X | %s", sprint_hex(uid2, 7), pwd2, success ? "OK" : "->5fd37eca<--");
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid2, 7), pwd2, success ? "OK" : "->5fd37eca<--");
 
     uint8_t uid3[] = {0x04, 0x62, 0xB6, 0x8A, 0xB4, 0x42, 0x80};
     uint32_t pwd3 = ul_ev1_pwdgenC(uid3);
     success = (pwd3 == 0x5a349515);
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X | %s", sprint_hex(uid3, 7), pwd3, success ? "OK" : "->5a349515<--");
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid3, 7), pwd3, success ? "OK" : "->5a349515<--");
 
     uint8_t uid4[] = {0x04, 0xC5, 0xDF, 0x4A, 0x6D, 0x51, 0x80};
     uint32_t pwd4 = ul_ev1_pwdgenD(uid4);
     success = (pwd4 == 0x72B1EC61);
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X | %s", sprint_hex(uid4, 7), pwd4, success ? "OK" : "->72B1EC61<--");
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid4, 7), pwd4, success ? "OK" : "->72B1EC61<--");
 
 //    uint8_t uid5[] = {0x11, 0x22, 0x33, 0x44};
 //    uint64_t key1 = mfc_algo_a(uid5);
 //    success = (key1 == 0xD1E2AA68E39A);
-//    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" | %s", sprint_hex(uid5, 4), key1, success ? "OK" : "->D1E2AA68E39A<--");
+//    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" - %s", sprint_hex(uid5, 4), key1, success ? "OK" : "->D1E2AA68E39A<--");
 
     uint8_t uid6[] = {0x74, 0x57, 0xCA, 0xA9};
     uint64_t key6 = 0;
     mfc_algo_sky_one(uid6, 15, 0, &key6);
     success = (key6 == 0x82c7e64bc565);
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" | %s", sprint_hex(uid6, 4), key6, success ? "OK" : "->82C7E64BC565<--");
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %"PRIx64" - %s", sprint_hex(uid6, 4), key6, success ? "OK" : "->82C7E64BC565<--");
 
-    PrintAndLogEx(SUCCESS, "-------------------");
+    PrintAndLogEx(SUCCESS, "------------------- Selftest %s", (testresult == NUM_OF_TEST) ? "OK" : "fail");
     return PM3_SUCCESS;
 }
 

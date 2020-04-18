@@ -42,6 +42,7 @@
 #include "Standalone/standalone.h"
 #include "util.h"
 #include "ticks.h"
+#include "commonutil.h"
 
 #ifdef WITH_LCD
 #include "LCD.h"
@@ -208,12 +209,11 @@ void MeasureAntennaTuning(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER_RX_XCORR);
     SpinDelay(50);
 
+#if defined RDV4
+    payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+#else
     payload.v_hf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-
-    // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-    if (payload.v_hf > MAX_ADC_HF_VOLTAGE - 300) {
-        payload.v_hf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
-    }
+#endif
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
@@ -222,16 +222,13 @@ void MeasureAntennaTuning(void) {
 
 // Measure HF in milliVolt
 uint16_t MeasureAntennaTuningHfData(void) {
-    uint16_t volt = 0;
-    uint16_t avg = AvgAdc(ADC_CHAN_HF);
-    volt = (MAX_ADC_HF_VOLTAGE * avg) >> 10;
-    bool use_high = (volt > MAX_ADC_HF_VOLTAGE - 300);
 
-    if (use_high) {
-        volt = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
-//        volt = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
-    }
-    return volt;
+#if defined RDV4
+    return (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+#else
+    return (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+#endif
+
 }
 
 // Measure LF in milliVolt
@@ -532,7 +529,6 @@ void ListenReaderField(uint8_t limit) {
     uint16_t lf_av = 0, lf_av_new, lf_baseline = 0, lf_max = 0;
     uint16_t hf_av = 0, hf_av_new,  hf_baseline = 0, hf_max = 0;
     uint16_t mode = 1, display_val, display_max;
-    bool use_high = false;
 
     // switch off FPGA - we don't want to measure our own signal
     // 20180315 - iceman,  why load this before and then turn off?
@@ -549,15 +545,12 @@ void ListenReaderField(uint8_t limit) {
 
     if (limit == HF_ONLY) {
 
-        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
-
+#if defined RDV4
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        // RDV40 will hit the roof, try other ADC channel used in that hardware revision.
-        use_high = (((MAX_ADC_HF_VOLTAGE * hf_max) >> 10) > MAX_ADC_HF_VOLTAGE - 300);
-        if (use_high) {
-            hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
-        }
-
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF_RDV40);
+#else
+        hf_av = hf_max = AvgAdc(ADC_CHAN_HF);
+#endif
         Dbprintf("HF 13.56MHz Baseline: %dmV", (MAX_ADC_HF_VOLTAGE * hf_av) >> 10);
         hf_baseline = hf_av;
     }
@@ -608,8 +601,11 @@ void ListenReaderField(uint8_t limit) {
                     LED_B_OFF();
             }
 
-            hf_av_new = (use_high) ? AvgAdc(ADC_CHAN_HF_RDV40) :  AvgAdc(ADC_CHAN_HF);
-
+#if defined RDV4
+            hf_av_new = AvgAdc(ADC_CHAN_HF_RDV40);
+#else
+            hf_av_new = AvgAdc(ADC_CHAN_HF);
+#endif
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
                 Dbprintf("HF 13.56MHz Field Change: %5dmV", (MAX_ADC_HF_VOLTAGE * hf_av_new) >> 10);
@@ -726,12 +722,20 @@ static void PacketReceived(PacketCommandNG *packet) {
             setT55xxConfig(packet->oldarg[0], (t55xx_configurations_t *) packet->data.asBytes);
             break;
         }
-        case CMD_LF_SAMPLING_GET_CONFIG: {
+        case CMD_LF_SAMPLING_PRINT_CONFIG: {
             printConfig();
             break;
         }
+        case CMD_LF_SAMPLING_GET_CONFIG: {
+            sample_config *config = getSamplingConfig();
+            reply_ng(CMD_LF_SAMPLING_GET_CONFIG, PM3_SUCCESS, (uint8_t *)config, sizeof(sample_config));
+            break;
+        }
         case CMD_LF_SAMPLING_SET_CONFIG: {
-            setSamplingConfig((sample_config *) packet->data.asBytes);
+            sample_config c;
+            memcpy(&c, packet->data.asBytes, sizeof(sample_config));
+            setSamplingConfig(&c);
+//            setSamplingConfig((sample_config *) packet->data.asBytes);
             break;
         }
         case CMD_LF_ACQ_RAW_ADC: {
@@ -930,12 +934,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_HITAG
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
-            SniffHitag();
-//            SniffHitag(packet->oldarg[0]);
+            SniffHitag2();
+//            SniffHitag2(packet->oldarg[0]);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
-            SimulateHitagTag((bool)packet->oldarg[0], packet->data.asBytes);
+            SimulateHitag2((bool)packet->oldarg[0], packet->data.asBytes);
             break;
         }
         case CMD_LF_HITAG_READER: { // Reader for Hitag tags, args = type and function
@@ -1176,6 +1180,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareChkKeys_fast(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
+        case CMD_HF_MIFARE_CHKKEYS_FILE: {
+            struct p {
+                uint8_t filename[32];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareChkKeys_file(payload->filename);
+            break;
+        }
         case CMD_HF_MIFARE_SIMULATE: {
             struct p {
                 uint16_t flags;
@@ -1236,6 +1248,17 @@ static void PacketReceived(PacketCommandNG *packet) {
 //            SniffMifare(packet->oldarg[0]);
 //            break;
 //        }
+        case CMD_HF_MIFARE_PERSONALIZE_UID: {
+            struct p {
+                uint8_t keytype;
+                uint8_t pers_option;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            uint64_t authkey = bytes_to_num(payload->key, 6);
+            MifarePersonalizeUID(payload->keytype, payload->pers_option, authkey);
+            break;
+        }
         case CMD_HF_MIFARE_SETMOD: {
             MifareSetMod(packet->data.asBytes);
             break;
@@ -1248,7 +1271,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_DESFIRE_AUTH1: {
-            MifareDES_Auth1(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareDES_Auth1(packet->data.asBytes);
             break;
         }
         case CMD_HF_DESFIRE_AUTH2: {
@@ -1264,7 +1287,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_DESFIRE_COMMAND: {
-            MifareSendCommand(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            MifareSendCommand(packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFARE_NACK_DETECT: {

@@ -404,6 +404,10 @@ bool write_byte(uint16_t index, uint8_t byte, uint8_t addr_sz) {
 //
 // Only this functions are public / called from appmain.c
 //-----------------------------------------------------------------------------
+legic_card_select_t *getLegicCardInfo(void) {
+    return &card;
+}
+
 void LegicRfInfo(void) {
     // configure ARM and FPGA
     init_reader(false);
@@ -434,11 +438,49 @@ void LegicRfInfo(void) {
     }
 
     // OK
-    reply_old(CMD_ACK, 1, 0, 0, (uint8_t *)&card, sizeof(legic_card_select_t));
+    reply_mix(CMD_ACK, 1, 0, 0, (uint8_t *)&card, sizeof(legic_card_select_t));
 
 OUT:
     switch_off();
     StopTicks();
+}
+
+int LegicRfReaderEx(uint16_t offset, uint16_t len, uint8_t iv) {
+
+    int res = PM3_SUCCESS;
+
+    // configure ARM and FPGA
+    init_reader(false);
+
+    // establish shared secret and detect card type
+    uint8_t card_type = setup_phase(iv);
+    if (init_card(card_type, &card) != 0) {
+        res = PM3_ESOFT;
+        goto OUT;
+    }
+
+    // do not read beyond card memory
+    if (len + offset > card.cardsize) {
+        len = card.cardsize - offset;
+    }
+
+    for (uint16_t i = 0; i < len; ++i) {
+        int16_t byte = read_byte(offset + i, card.cmdsize);
+        if (byte == -1) {
+            res = PM3_EOVFLOW;
+            goto OUT;
+        }
+        legic_mem[i] = byte;
+
+        if (i < 4) {
+            card.uid[i] = byte;
+        }
+    }
+
+OUT:
+    switch_off();
+    StopTicks();
+    return res;
 }
 
 void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
@@ -464,10 +506,14 @@ void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv) {
             goto OUT;
         }
         legic_mem[i] = byte;
+
+        if (i < 4) {
+            card.uid[i] = byte;
+        }
     }
 
     // OK
-    reply_old(CMD_ACK, 1, len, 0, legic_mem, len);
+    reply_mix(CMD_ACK, 1, len, 0, 0, 0);
 
 OUT:
     switch_off();
@@ -506,7 +552,7 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
     }
 
     // OK
-    reply_old(CMD_ACK, 1, len, 0, legic_mem, len);
+    reply_mix(CMD_ACK, 1, len, 0, 0, 0);
 
 OUT:
     switch_off();

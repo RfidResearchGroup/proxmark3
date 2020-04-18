@@ -13,6 +13,11 @@
 
 #include "common.h"
 
+// PRIx64 definition missing with gcc-arm-none-eabi v8?
+#ifndef PRIx64
+#define PRIx64 "llx"
+#endif
+
 // Basic macros
 
 #ifndef SHORT_COIL

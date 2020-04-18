@@ -18,7 +18,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "protocols.h"
-#include "des.h"
+#include "desfire_crypto.h"
 
 int DBGLEVEL = DBG_ERROR;
 
@@ -194,8 +194,8 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
     uint32_t save_timeout = iso14a_get_timeout();
 
     // set timeout for authentication response
-    if (save_timeout > 106)
-        iso14a_set_timeout(106);
+    if (save_timeout > 103)
+        iso14a_set_timeout(103);
 
     // Receive 4 byte tag answer
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
@@ -296,7 +296,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     memcpy(enc_random_b, resp + 1, 8);
 
     // decrypt nonce.
-    tdes_2key_dec((void *)random_b, (void *)enc_random_b, sizeof(random_b), (const void *)key, IV);
+    tdes_nxp_receive((void *)enc_random_b, (void *)random_b, sizeof(random_b), (const void *)key, IV, 2);
     rol(random_b, 8);
     memcpy(rnd_ab, random_a, 8);
     memcpy(rnd_ab + 8, random_b, 8);
@@ -316,7 +316,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     }
 
     // encrypt    out, in, length, key, iv
-    tdes_2key_enc(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
+    tdes_nxp_send(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b, 2);
 
     len = mifare_sendcmd(MIFARE_ULC_AUTH_2, rnd_ab, sizeof(rnd_ab), resp, respPar, NULL);
     if (len != 11) {
@@ -329,7 +329,7 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     memcpy(enc_resp, resp + 1, 8);
 
     // decrypt    out, in, length, key, iv
-    tdes_2key_dec(resp_random_a, enc_resp, 8, key, enc_random_b);
+    tdes_nxp_receive(enc_resp, resp_random_a, 8, key, enc_random_b, 2);
     if (memcmp(resp_random_a, random_a, 8) != 0) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("failed authentication");
         return 0;
@@ -697,7 +697,7 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
 int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
 
     int len;
-    uint8_t data[17] = {MFDES_AUTHENTICATION_FRAME};
+    uint8_t data[17] = {MFDES_ADDITIONAL_FRAME};
     memcpy(data + 1, key, 16);
 
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};

@@ -2,10 +2,11 @@ local cmds = require('commands')
 local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils = require('utils')
+local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = 'Kevin'
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This is a script that reads LTO-CM  ISO14443a tags.
 It starts from block 0 and ends at default block 254.
@@ -19,8 +20,8 @@ example = [[
 ]]
 usage = [[
 script run lto_dump -h -s -e
-
-Arguments:
+]]
+arguments = [[
       h   this helptext
       s   start block in decimal
       e   end block in decimal
@@ -58,9 +59,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 
 local function sendRaw(rawdata, options)

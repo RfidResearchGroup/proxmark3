@@ -1,9 +1,10 @@
 local getopt = require('getopt')
 local utils =  require('utils')
+local ansicolors = require('ansicolors')
 
 copyright = ''
 author = "Iceman"
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This script tries to set UID on a mifare Ultralight magic card which either
  - answers to chinese backdoor commands
@@ -17,9 +18,9 @@ example = [[
      script run ul_uid -b -u 11223344556677
 ]]
 usage = [[
-script run ul_uid -h -b -u <uid>
-
-Arguments:
+script run ul_uid [-h] [-b] [-u <uid>]
+]]
+arguments = [[
     -h             : this help
     -u <UID>       : UID (14 hexsymbols)
     -b             : write to brickable magic tag
@@ -55,9 +56,12 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print('Example usage')
-    print(example)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
     print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 --
 --- Set UID on magic command enabled

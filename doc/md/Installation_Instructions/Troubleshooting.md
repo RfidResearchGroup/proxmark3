@@ -18,6 +18,7 @@ Always use the latest repository commits from *master* branch. There are always 
   * [File not found](#file-not-found)
   * [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
   * [Usb cable](#usb-cable)
+  * [WSL 2  explorer.exe . doesnt work](#WSL-2)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -164,3 +165,11 @@ If you get warnings related to pixmap or pixbuf such as *Pixbuf theme: Cannot lo
 It's needed to have a good USB cable to connect Proxmark3 to USB. If you have stability problems (Proxmark3 resets, firmware hangs, especially firmware hangs just after start, etc.) 
 
 - check your cable with a USB tester (or try to change it). It needs to have a resistance smaller or equal to 0.3 Ohm.
+
+## WSL 2
+When ```explorer.exe .``` doesn't work.  
+Trying to access the dump files created in WSL,  you will need to run ```explorer.exe .```  but sometimes this doesn't work.
+[As seen here](https://github.com/microsoft/WSL/issues/4027)  they suggest checking the following registry value for *P9NP*
+
+[<img src="http://www.icedev.se/proxmark3/rdv40/wsl2_p9np.png">](www.icedev.se/proxmark3/rdv40/wsl2_p9np.png)
+

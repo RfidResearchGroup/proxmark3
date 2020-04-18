@@ -537,7 +537,13 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
         // find reader field
         if (cardSTATE == MFEMUL_NOFIELD) {
-            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF)) >> 10;
+
+#if defined RDV4
+            vHf = (MAX_ADC_HF_VOLTAGE_RDV40 * AvgAdc(ADC_CHAN_HF_RDV40)) >> 10;
+#else
+            vHf = (MAX_ADC_HF_VOLTAGE * AvgAdc(ADC_CHAN_HF)) >> 10;
+#endif
+
             if (vHf > MF_MINFIELDV) {
                 cardSTATE_TO_IDLE();
                 LED_A_ON();
@@ -551,7 +557,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
         int res = EmGetCmd(receivedCmd, &receivedCmd_len, receivedCmd_par);
 
         if (res == 2) { //Field is off!
-            FpgaDisableTracing();
+            //FpgaDisableTracing();
             LEDsoff();
             cardSTATE = MFEMUL_NOFIELD;
             if (DBGLEVEL >= DBG_EXTENDED)
@@ -589,14 +595,16 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
         }
 
         switch (cardSTATE) {
-            case MFEMUL_NOFIELD:
+            case MFEMUL_NOFIELD: {
                 if (DBGLEVEL >= DBG_EXTENDED)
                     Dbprintf("MFEMUL_NOFIELD");
                 break;
-            case MFEMUL_HALTED:
+            }
+            case MFEMUL_HALTED: {
                 if (DBGLEVEL >= DBG_EXTENDED)
                     Dbprintf("MFEMUL_HALTED");
                 break;
+            }
             case MFEMUL_IDLE: {
                 LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                 if (DBGLEVEL >= DBG_EXTENDED)
@@ -700,8 +708,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             // WORK
             case MFEMUL_WORK: {
 
-                if (DBGLEVEL >= DBG_EXTENDED)
+                if (DBGLEVEL >= DBG_EXTENDED) {
                     Dbprintf("[MFEMUL_WORK] Enter in case");
+                }
 
                 if (receivedCmd_len == 0) {
                     if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] NO CMD received");
@@ -712,13 +721,14 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 if (encrypted_data) {
                     // decrypt seqence
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, receivedCmd_dec);
-                    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Decrypt seqence");
+                    if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Decrypt sequence");
                 } else {
                     // Data in clear
                     memcpy(receivedCmd_dec, receivedCmd, receivedCmd_len);
                 }
 
-                if (!CheckCrc14A(receivedCmd_dec, receivedCmd_len)) { // all commands must have a valid CRC
+                // all commands must have a valid CRC
+                if (!CheckCrc14A(receivedCmd_dec, receivedCmd_len)) {
                     EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                     FpgaDisableTracing();
 
@@ -732,16 +742,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     // RCV: 60 XX => Using KEY A
                     // RCV: 61 XX => Using KEY B
                     // XX: Block number
-
-                    // iceman,  u8 can never be larger than 256
-                    // if authenticating to a block that shouldn't exist - as long as we are not doing the reader attack
-                    if (((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)) {
-                        EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                        FpgaDisableTracing();
-
-                        if (DBGLEVEL >= DBG_EXTENDED) Dbprintf("Reader tried to operate (0x%02x) on out of range block: %d (0x%02x), nacking", receivedCmd_dec[0], receivedCmd_dec[1], receivedCmd_dec[1]);
-                        break;
-                    }
 
                     authTimer = GetTickCount();
 
@@ -1255,8 +1255,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
     }  // End While Loop
 
+    FpgaDisableTracing();
 
     // NR AR ATTACK
+    // mfkey32 
     if (((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) && (DBGLEVEL >= DBG_INFO)) {
         for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
             if (ar_nr_collected[i] == 2) {
@@ -1272,7 +1274,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             }
         }
     }
-
+    
+    // mfkey32 v2
     for (uint8_t i = ATTACK_KEY_COUNT; i < ATTACK_KEY_COUNT * 2; i++) {
         if (ar_nr_collected[i] == 2) {
             Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i < ATTACK_KEY_COUNT / 2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
@@ -1291,7 +1294,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     if (DBGLEVEL >= DBG_ERROR) {
         Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", get_tracing(), BigBuf_get_traceLen());
     }
-
 
     if ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {  // Interactive mode flag, means we need to send ACK
         //Send the collected ar_nr in the response

@@ -17,7 +17,7 @@ include ../Makefile.defs
 INSTALLBIN = proxmark3
 INSTALLSHARE = cmdscripts lualibs luascripts resources dictionaries
 
-VPATH = ../common uart
+VPATH =  ../common src/uart src deps
 vpath %.dic dictionaries
 OBJDIR = obj
 
@@ -32,16 +32,18 @@ ifneq ($(platform),Darwin)
 endif
 
 # local libraries
-LUALIBPATH = ./liblua
+LUALIBPATH = ./deps/liblua
 LUALIB = $(LUALIBPATH)/liblua.a
-JANSSONLIBPATH = ./jansson
+JANSSONLIBPATH = ./deps/jansson
 JANSSONLIB = $(JANSSONLIBPATH)/libjansson.a
-CBORLIBPATH = ./tinycbor
+CBORLIBPATH = ./deps/tinycbor
 CBORLIB = $(CBORLIBPATH)/tinycbor.a
-REVENGPATH = ./reveng
+REVENGPATH = ./deps/reveng
 REVENGLIB = $(REVENGPATH)/libreveng.a
-AMIIBOLIBPATH = ./amiitool
+AMIIBOLIBPATH = ./deps/amiitool
 AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
+HARDNESTEDPATH = ./deps/hardnested
+HARDNESTEDLIB = $(HARDNESTEDPATH)/libhardnested.a
 
 # common libraries
 MBEDTLSLIBPATH = ../common/mbedtls
@@ -49,17 +51,19 @@ MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
 ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
-LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH)
-INCLUDES_CLIENT = -I. -I../include -I../common -Iuart $(LIBS)
-CFLAGS ?= -Wall -Werror -g -O3
+LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH)
+INCLUDES_CLIENT = -I./src -I./deps -I../include -I../common -I./deps/cliparser -I./src/uart $(LIBS)
+CFLAGS ?= -Wall -Werror -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
+# WIP Testing
+#PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local
 ifneq (,$(findstring MINGW,$(platform)))
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
 endif
 CXXFLAGS ?= -Wall -Werror -O3
-PM3CXXFLAGS = $(CXXFLAGS) -I../include
+PM3CXXFLAGS = $(CXXFLAGS) -I../include -I/.deps/cliparser
 
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
@@ -112,6 +116,7 @@ ifneq ($(QTLDLIBS),)
     QTGUISRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp
     QTGUIOBJS = $(OBJDIR)/proxgui.o $(OBJDIR)/proxguiqt.o $(OBJDIR)/proxguiqt.moc.o
     PM3CFLAGS += -DHAVE_GUI
+    PM3CXXFLAGS += -DQT_NO_DEBUG
 else
     QTGUISRCS = guidummy.cpp
     QTGUIOBJS = $(OBJDIR)/guidummy.o
@@ -130,6 +135,7 @@ CORESRCS =  uart_posix.c \
             util_posix.c \
             scandir.c \
             crc16.c \
+            crc32.c \
             comms.c
 
 CMDSRCS =   crapto1/crapto1.c \
@@ -185,6 +191,7 @@ CMDSRCS =   crapto1/crapto1.c \
             mifare/mifare4.c \
             mifare/mad.c \
             mifare/ndef.c \
+            mifare/desfire_crypto.c \
             cmdanalyse.c \
             cmdhf.c \
             cmdhflist.c \
@@ -199,12 +206,12 @@ CMDSRCS =   crapto1/crapto1.c \
             cmdhfmfu.c \
             cmdhfmfp.c \
             cmdhfmfhard.c \
-            hardnested/hardnested_bruteforce.c \
             cmdhfmfdes.c \
             cmdhftopaz.c \
             cmdhffido.c \
             cmdhffelica.c \
             cmdhfthinfilm.c \
+            cmdhfcryptorf.c \
             cmdhflto.c \
             cmdhw.c \
             cmdlf.c \
@@ -250,45 +257,15 @@ CMDSRCS =   crapto1/crapto1.c \
             bucketsort.c \
             flash.c \
             wiegand_formats.c \
-            wiegand_formatutils.c
+            wiegand_formatutils.c \
+            cardhelper.c \
+            preferences.c
 
-cpu_arch = $(shell uname -m)
-ifneq ($(findstring 86, $(cpu_arch)), )
-    MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
-endif
-ifneq ($(findstring amd64, $(cpu_arch)), )
-    MULTIARCHSRCS = hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
-endif
-ifeq ($(MULTIARCHSRCS), )
-    CMDSRCS += hardnested/hardnested_bf_core.c hardnested/hardnested_bitarray_core.c
-endif
 
 
 COREOBJS = $(CORESRCS:%.c=$(OBJDIR)/%.o)
 CMDOBJS = $(CMDSRCS:%.c=$(OBJDIR)/%.o)
 OBJCOBJS = $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
-MULTIARCHOBJS = $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
-            $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_MMX.o) \
-            $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_SSE2.o) \
-            $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX.o) \
-            $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX2.o)
-
-SUPPORTS_AVX512 :=  $(shell echo | gcc -E -mavx512f - > /dev/null 2>&1 && echo "True" )
-
-HARD_SWITCH_NOSIMD = -mno-mmx -mno-sse2 -mno-avx -mno-avx2
-HARD_SWITCH_MMX = -mmmx -mno-sse2 -mno-avx -mno-avx2
-HARD_SWITCH_SSE2 = -mmmx -msse2 -mno-avx -mno-avx2
-HARD_SWITCH_AVX = -mmmx -msse2 -mavx -mno-avx2
-HARD_SWITCH_AVX2 = -mmmx -msse2 -mavx -mavx2
-HARD_SWITCH_AVX512 = -mmmx -msse2 -mavx -mavx2 -mavx512f
-ifeq "$(SUPPORTS_AVX512)" "True"
-    HARD_SWITCH_NOSIMD += -mno-avx512f
-    HARD_SWITCH_MMX += -mno-avx512f
-    HARD_SWITCH_SSE2 += -mno-avx512f
-    HARD_SWITCH_AVX += -mno-avx512f
-    HARD_SWITCH_AVX2 += -mno-avx512f
-    MULTIARCHOBJS +=  $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX512.o)
-endif
 
 BINS = proxmark3
 CLEAN = $(BINS) *.moc.cpp ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
@@ -301,18 +278,18 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) $(AMIIBOLIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(QTLDLIBS)
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) $(AMIIBOLIB) $(HARDNESTEDLIB)  lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
-	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(MULTIARCHOBJS) $(LDLIBS)  -o $@
+	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LDLIBS)  -o $@
 
-proxgui.cpp: ui/ui_overlays.h
+src/proxgui.cpp: src/ui/ui_overlays.h
 
-proxguiqt.moc.cpp: proxguiqt.h
+src/proxguiqt.moc.cpp: src/proxguiqt.h
 	$(info [-] MOC $@)
 	$(Q)$(MOC) -o$@ $^
 
-ui/ui_overlays.h: ui/overlays.ui
+src/ui/ui_overlays.h: src/ui/overlays.ui
 	$(info [-] UIC $@)
 	$(Q)$(UIC) $^ > $@
 
@@ -332,6 +309,7 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(CBORLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDPATH) clean
 
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
@@ -376,6 +354,10 @@ $(REVENGLIB):
 	$(info [*] MAKE reveng)
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) all
 
+$(HARDNESTEDLIB):
+	$(info [*] MAKE hardnested)
+	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDPATH) all
+
 $(AMIIBOLIB):
 	$(info [*] MAKE amiibo)
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) all
@@ -393,42 +375,6 @@ $(ZLIB):
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
-
-$(OBJDIR)/%_NOSIMD.o : %.c $(OBJDIR)/%_NOSIMD.d
-	$(info [-] CC(NOSIMD) $<)
-	$(Q)$(MKDIR) $(dir $@)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_NOSIMD.Td) $(PM3CFLAGS) $(HARD_SWITCH_NOSIMD) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_NOSIMD.Td $(OBJDIR)/$*_NOSIMD.d && $(TOUCH) $@
-
-$(OBJDIR)/%_MMX.o : %.c $(OBJDIR)/%_MMX.d
-	$(info [-] CC(MMX) $<)
-	$(Q)$(MKDIR) $(dir $@)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_MMX.Td) $(PM3CFLAGS) $(HARD_SWITCH_MMX) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_MMX.Td $(OBJDIR)/$*_MMX.d && $(TOUCH) $@
-
-$(OBJDIR)/%_SSE2.o : %.c $(OBJDIR)/%_SSE2.d
-	$(info [-] CC(SSE2) $<)
-	$(Q)$(MKDIR) $(dir $@)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_SSE2.Td) $(PM3CFLAGS) $(HARD_SWITCH_SSE2) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_SSE2.Td $(OBJDIR)/$*_SSE2.d && $(TOUCH) $@
-
-$(OBJDIR)/%_AVX.o : %.c $(OBJDIR)/%_AVX.d
-	$(info [-] CC(AVX) $<)
-	$(Q)$(MKDIR) $(dir $@)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_AVX.Td $(OBJDIR)/$*_AVX.d && $(TOUCH) $@
-
-$(OBJDIR)/%_AVX2.o : %.c $(OBJDIR)/%_AVX2.d
-	$(info [-] CC(AVX2) $<)
-	$(Q)$(MKDIR) $(dir $@)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX2.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX2) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_AVX2.Td $(OBJDIR)/$*_AVX2.d && $(TOUCH) $@
-
-$(OBJDIR)/%_AVX512.o : %.c $(OBJDIR)/%_AVX512.d
-	$(info [-] CC(AVX512) $<)
-	$(Q)$(MKDIR) $(dir $@)
-	$(Q)$(CC) $(DEPFLAGS:%.Td=%_AVX512.Td) $(PM3CFLAGS) $(HARD_SWITCH_AVX512) -c -o $@ $<
-	$(Q)$(MV) -f $(OBJDIR)/$*_AVX512.Td $(OBJDIR)/$*_AVX512.d && $(TOUCH) $@
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
@@ -452,7 +398,6 @@ $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(Q)$(POSTCOMPILE)
 
 DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(REVENGSRCS)) \
-	$(patsubst %.o, %.d, $(MULTIARCHOBJS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
 	$(OBJDIR)/proxmark3.d

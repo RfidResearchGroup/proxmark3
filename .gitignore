@@ -10,6 +10,7 @@
 .profile
 *.log
 *.eml
+*.html
 *.o
 *.a
 *.d
@@ -20,6 +21,7 @@
 *.dll
 *.moc.cpp
 *.z
+*.gz
 *.Td
 *.DS_Store
 *.exe
@@ -28,16 +30,20 @@ version.c
 *.json
 *.old
 *.swp
+*.json.bak
 
 # new build file for add-ons.
 Makefile.platform
 # Cache for detecting platform def changes
 .Makefile.options.cache
 
-!client/hardnested/*.bin
-!client/hardnested/tables/*.z
-client/ui/ui_overlays.h
-client/reveng/bmptst
+# cmake
+client/build/
+
+!client/resources/hardnested/*.bin
+!client/resources/hardnested_tables/*.z
+client/src/ui/ui_overlays.h
+client/deps/reveng/bmptst
 
 hardnested_stats.txt
 proxmark3
@@ -62,10 +68,14 @@ fpga/*
 !fpga/xst_hf.scr
 !fpga/go.bat
 !fpga/sim.tcl
+# offcial dumps folder
+dumps/*
 
 #client/*
 # my own traces folder
 client/traces/*
+# my own dumps folder
+client/dumps/*
 *.ice
 *.new
 armsrc/TEMP EMV/*

@@ -10,6 +10,7 @@
 #include "lfsampling.h"
 #include "fpgaloader.h"
 #include "ticks.h"
+#include "dbprint.h"
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
@@ -22,7 +23,7 @@
 // as a counting signal. TIMER_CLOCK3 = MCK/32, MCK is running at 48 MHz, so the timer is running at 48/32 = 1500 kHz
 // Carrier period (T0) have duration of 8 microseconds (us), which is 1/125000 per second (125 kHz frequency)
 // T0 = timer/carrier = 1500kHz/125kHz = 1500000/125000 = 6
-#define T0 3
+//#define HITAG_T0 3
 
 //////////////////////////////////////////////////////////////////////////////
 // Global variables
@@ -46,25 +47,53 @@ bool lf_test_periods(size_t expected, size_t count) {
 // Low frequency (LF) adc passthrough functionality
 //////////////////////////////////////////////////////////////////////////////
 uint8_t previous_adc_val = 0;
+uint8_t adc_avg = 0;
+
+void lf_sample_mean(void) {
+    uint8_t periods = 0;
+    uint32_t adc_sum = 0;
+    while (periods < 32) {
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            adc_sum += AT91C_BASE_SSC->SSC_RHR;
+            periods++;
+        }
+    }
+    // division by 32
+    adc_avg = adc_sum >> 5;
+
+    if (DBGLEVEL >= DBG_EXTENDED)
+        Dbprintf("LF ADC average %u", adc_avg);
+}
 
 size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
     size_t periods = 0;
     volatile uint8_t adc_val;
-    //uint8_t avg_peak = 140, avg_through = 96;
-    uint8_t avg_peak = 130, avg_through = 106;
+    uint8_t avg_peak = adc_avg + 3, avg_through = adc_avg - 3;
+//    int16_t checked = 0;
 
     while (!BUTTON_PRESS()) {
-        // Watchdog hit
+
+        // only every 100th times, in order to save time when collecting samples.
+        /*
+                if (checked == 1000) {
+                    if (data_available()) {
+                        break;
+                    } else {
+                        checked = 0;
+                    }
+                }
+                ++checked;
+        */
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             adc_val = AT91C_BASE_SSC->SSC_RHR;
             periods++;
 
-            if (logging) logSample(adc_val, 1, 8, 0);
+            if (logging) logSampleSimple(adc_val);
 
             // Only test field changes if state of adc values matter
-            if (!wait) {
+            if (wait == false) {
                 // Test if we are locating a field modulation (100% ASK = complete field drop)
                 if (detect_gap) {
                     // Only return when the field completely dissapeared
@@ -86,12 +115,12 @@ size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
                     }
                 }
             }
-
             previous_adc_val = adc_val;
-            if (periods == max) return 0;
+
+            if (periods >= max) return 0;
         }
     }
-    if (logging) logSample(255, 1, 8, 0);
+    if (logging) logSampleSimple(0xFF);
     return 0;
 }
 
@@ -104,36 +133,55 @@ size_t lf_detect_gap(size_t max) {
 }
 
 void lf_reset_counter() {
+
     // TODO: find out the correct reset settings for tag and reader mode
-    if (reader_mode) {
-        // Reset values for reader mode
-        rising_edge = false;
-        previous_adc_val = 0xFF;
-    } else {
-        // Reset values for tag/transponder mode
-        rising_edge = false;
-        previous_adc_val = 0xFF;
-    }
+//    if (reader_mode) {
+    // Reset values for reader mode
+    rising_edge = false;
+    previous_adc_val = 0xFF;
+
+//    } else {
+    // Reset values for tag/transponder mode
+//        rising_edge = false;
+//        previous_adc_val = 0xFF;
+//    }
 }
 
 bool lf_get_tag_modulation() {
     return (rising_edge == false);
 }
 
+bool lf_get_reader_modulation() {
+    return rising_edge;
+}
+
 void lf_wait_periods(size_t periods) {
     lf_count_edge_periods_ex(periods, true, false);
 }
 
-void lf_init(bool reader) {
+void lf_init(bool reader, bool simulate) {
+
+    StopTicks();
+
     reader_mode = reader;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); //125Khz
+    sample_config *sc = getSamplingConfig();
+    sc->decimation = 1;
+    sc->averaging = 0;
+
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
     if (reader) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
     } else {
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+        if (simulate)
+//            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+        else
+            // Sniff
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
+
     }
 
     // Connect the A/D to the peak-detected low-frequency path.
@@ -143,7 +191,11 @@ void lf_init(bool reader) {
     FpgaSetupSsc();
 
     // When in reader mode, give the field a bit of time to settle.
-    if (reader) SpinDelay(50);
+    // 313T0 = 313 * 8us = 2504us = 2.5ms  Hitag2 tags needs to be fully powered.
+    if (reader) {
+        // 10 ms
+        SpinDelay(10);
+    }
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
@@ -168,8 +220,12 @@ void lf_init(bool reader) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // Prepare data trace
-    if (logging) initSampleBuffer(NULL);
+    uint32_t bufsize = 10000;
 
+    // use malloc
+    if (logging) initSampleBufferEx(&bufsize, true);
+
+    lf_sample_mean();
 }
 
 void lf_finalize() {
@@ -184,34 +240,36 @@ void lf_finalize() {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     LEDsoff();
+
+    StartTicks();
 }
 
 size_t lf_detect_field_drop(size_t max) {
     size_t periods = 0;
-    volatile uint8_t adc_val;
-    int16_t checked = 0;
+//    int16_t checked = 0;
 
-    while (true) {
+    while (!BUTTON_PRESS()) {
 
-        // only every 1000th times, in order to save time when collecting samples.
-        if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) {
-                checked = -1;
-                break;
-            } else {
-                checked = 0;
-            }
-        }
-        ++checked;
+        /*
+                // only every 1000th times, in order to save time when collecting samples.
+                if (checked == 1000) {
+                    if (data_available()) {
+                        checked = -1;
+                        break;
+                    } else {
+                        checked = 0;
+                    }
+                }
+                ++checked;
+        */
 
-        // Watchdog hit
         WDT_HIT();
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             periods++;
-            adc_val = AT91C_BASE_SSC->SSC_RHR;
+            volatile uint8_t adc_val = AT91C_BASE_SSC->SSC_RHR;
 
-            if (logging) logSample(adc_val, 1, 8, 0);
+            if (logging) logSampleSimple(adc_val);
 
             if (adc_val == 0) {
                 rising_edge = false;
@@ -224,7 +282,7 @@ size_t lf_detect_field_drop(size_t max) {
     return 0;
 }
 
-inline void lf_modulation(bool modulation) {
+void lf_modulation(bool modulation) {
     if (modulation) {
         HIGH(GPIO_SSC_DOUT);
     } else {
@@ -232,16 +290,24 @@ inline void lf_modulation(bool modulation) {
     }
 }
 
-inline void lf_manchester_send_bit(uint8_t bit) {
+// simulation
+static void lf_manchester_send_bit(uint8_t bit) {
     lf_modulation(bit != 0);
     lf_wait_periods(16);
     lf_modulation(bit == 0);
-    lf_wait_periods(16);
+    lf_wait_periods(32);
 }
 
+// simulation
 bool lf_manchester_send_bytes(const uint8_t *frame, size_t frame_len) {
 
     LED_B_ON();
+
+    lf_manchester_send_bit(1);
+    lf_manchester_send_bit(1);
+    lf_manchester_send_bit(1);
+    lf_manchester_send_bit(1);
+    lf_manchester_send_bit(1);
 
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
