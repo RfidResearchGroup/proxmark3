@@ -139,7 +139,7 @@ static bool is_directory(const char *filename) {
 #ifdef _WIN32
 #define make_dir(a) _mkdir(a)
 #else
-#define make_dir(a) mkdir(a,0x755)
+#define make_dir(a) mkdir(a,0755)
 #endif
 bool create_path(const char *dirname) {
 
