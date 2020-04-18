@@ -139,21 +139,21 @@ ProxGuiQT::~ProxGuiQT(void) {
 SliderWidget::SliderWidget() {
     // Set the initail postion and size from settings
     if (session.preferences_loaded)
-        setGeometry(session.window_overlay_xpos, session.window_overlay_ypos, session.window_overlay_wsize, session.window_overlay_hsize);
+        setGeometry(session.overlay.x, session.overlay.y, session.overlay.w, session.overlay.h);
     else
         resize(800, 400);
 }
 
 void SliderWidget::resizeEvent(QResizeEvent *event) {
-    session.window_overlay_hsize = event->size().height();
-    session.window_overlay_wsize = event->size().width();
+    session.overlay.h = event->size().height();
+    session.overlay.w = event->size().width();
     session.window_changed = true;
 
 }
 
 void SliderWidget::moveEvent(QMoveEvent *event) {
-    session.window_overlay_xpos = event->pos().x();
-    session.window_overlay_ypos = event->pos().y();
+    session.overlay.x = event->pos().x();
+    session.overlay.y = event->pos().y();
     session.window_changed = true;
 }
 
@@ -199,7 +199,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
     // Set the initail postion and size from settings
     if (session.preferences_loaded)
-        setGeometry(session.window_plot_xpos, session.window_plot_ypos, session.window_plot_wsize, session.window_plot_hsize);
+        setGeometry(session.plot.x, session.plot.y, session.plot.w, session.plot.h);
     else
         resize(800, 400);
 
@@ -224,7 +224,7 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     QObject::connect(opsController->horizontalSlider_dirthr_down, SIGNAL(valueChanged(int)), this, SLOT(vchange_dthr_down(int)));
     QObject::connect(opsController->horizontalSlider_askedge, SIGNAL(valueChanged(int)), this, SLOT(vchange_askedge(int)));
 
-    controlWidget->setGeometry(session.window_overlay_xpos, session.window_overlay_ypos, session.window_overlay_wsize, session.window_overlay_hsize);
+    controlWidget->setGeometry(session.overlay.x, session.overlay.y, session.overlay.w, session.overlay.h);
 
     // Set up the plot widget, which does the actual plotting
     plot = new Plot(this);
@@ -292,13 +292,13 @@ void ProxWidget::showEvent(QShowEvent *event) {
     plot->show();
 }
 void ProxWidget::moveEvent(QMoveEvent *event) {
-    session.window_plot_xpos = event->pos().x();
-    session.window_plot_ypos = event->pos().y();
+    session.plot.x = event->pos().x();
+    session.plot.y = event->pos().y();
     session.window_changed = true;
 }
 void ProxWidget::resizeEvent(QResizeEvent *event) {
-    session.window_plot_hsize = event->size().height();
-    session.window_plot_wsize = event->size().width();
+    session.plot.h = event->size().height();
+    session.plot.w = event->size().width();
     session.window_changed = true;
 }
 

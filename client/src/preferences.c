@@ -55,14 +55,14 @@ int preferences_load(void) {
     session.client_debug_level = cdbOFF;
     session.device_debug_level = ddbOFF;
     session.window_changed = false;
-    session.window_plot_xpos = 10;
-    session.window_plot_ypos = 30;
-    session.window_plot_hsize = 400;
-    session.window_plot_wsize = 800;
-    session.window_overlay_xpos = session.window_plot_xpos;
-    session.window_overlay_ypos = 60 + session.window_plot_ypos + session.window_plot_hsize;
-    session.window_overlay_hsize = 200;
-    session.window_overlay_wsize = session.window_plot_wsize;
+    session.plot.x = 10;
+    session.plot.y = 30;
+    session.plot.h = 400;
+    session.plot.w = 800;
+    session.overlay.x = session.plot.x;
+    session.overlay.y = 60 + session.plot.y + session.plot.h;
+    session.overlay.h = 200;
+    session.overlay.w = session.plot.w;
     session.emoji_mode = ALIAS;
     session.show_hints = false;
     session.supports_colors = false;
@@ -70,11 +70,27 @@ int preferences_load(void) {
 
     // default save path 
     if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
-        session.default_savepath = (char *)realloc(session.default_savepath, strlen(get_my_user_directory()) + 1); //, sizeof(uint8_t));
-        strcpy(session.default_savepath, get_my_user_directory());
+        session.defaultPaths[spDefault] = (char *)realloc(session.defaultPaths[spDefault], strlen(get_my_user_directory()) + 1); //, sizeof(uint8_t));
+        strcpy(session.defaultPaths[spDefault], get_my_user_directory());
     } else {
-        session.default_savepath = (char *)realloc(session.default_savepath,2); // 2, sizeof(uint8_t));
-        strcpy(session.default_savepath, ".");
+        session.defaultPaths[spDefault] = (char *)realloc(session.defaultPaths[spDefault], 2); // 2, sizeof(uint8_t));
+        strcpy(session.defaultPaths[spDefault], ".");
+    }
+    // default dump path 
+    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
+        session.defaultPaths[spDump] = (char *)realloc(session.defaultPaths[spDump], strlen(get_my_user_directory()) + 1); //, sizeof(uint8_t));
+        strcpy(session.defaultPaths[spDump], get_my_user_directory());
+    } else {
+        session.defaultPaths[spDump] = (char *)realloc(session.defaultPaths[spDump], 2); // 2, sizeof(uint8_t));
+        strcpy(session.defaultPaths[spDump], ".");
+    }
+    // default save path 
+    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
+        session.defaultPaths[spTrace] = (char *)realloc(session.defaultPaths[spTrace], strlen(get_my_user_directory()) + 1); //, sizeof(uint8_t));
+        strcpy(session.defaultPaths[spTrace], get_my_user_directory());
+    } else {
+        session.defaultPaths[spTrace] = (char *)realloc(session.defaultPaths[spTrace], 2); // 2, sizeof(uint8_t));
+        strcpy(session.defaultPaths[spTrace], ".");
     }
 
     // loadFileJson wants these, so pass in place holder values, though not used
@@ -156,19 +172,21 @@ void preferences_save_callback(json_t *root) {
 
     JsonSaveBoolean(root, "os.supports.colors", session.supports_colors);
 
-    JsonSaveStr(root, "file.default.savepath", session.default_savepath);
+    JsonSaveStr(root, "file.default.savepath", session.defaultPaths[spDefault]);
+    JsonSaveStr(root, "file.default.dumppath", session.defaultPaths[spDump]);
+    JsonSaveStr(root, "file.default.tracepath", session.defaultPaths[spTrace]);
 
     // Plot window
-    JsonSaveInt(root, "window.plot.xpos", session.window_plot_xpos);
-    JsonSaveInt(root, "window.plot.ypos", session.window_plot_ypos);
-    JsonSaveInt(root, "window.plot.hsize", session.window_plot_hsize);
-    JsonSaveInt(root, "window.plot.wsize", session.window_plot_wsize);
+    JsonSaveInt(root, "window.plot.xpos", session.plot.x);
+    JsonSaveInt(root, "window.plot.ypos", session.plot.y);
+    JsonSaveInt(root, "window.plot.hsize", session.plot.h);
+    JsonSaveInt(root, "window.plot.wsize", session.plot.w);
 
     // Overlay/Slider window
-    JsonSaveInt(root, "window.overlay.xpos", session.window_overlay_xpos);
-    JsonSaveInt(root, "window.overlay.ypos", session.window_overlay_ypos);
-    JsonSaveInt(root, "window.overlay.hsize", session.window_overlay_hsize);
-    JsonSaveInt(root, "window.overlay.wsize", session.window_overlay_wsize);
+    JsonSaveInt(root, "window.overlay.xpos", session.overlay.x);
+    JsonSaveInt(root, "window.overlay.ypos", session.overlay.y);
+    JsonSaveInt(root, "window.overlay.hsize", session.overlay.h);
+    JsonSaveInt(root, "window.overlay.wsize", session.overlay.w);
 
     // Log level, convert to text
     switch (session.client_debug_level) {
@@ -225,31 +243,39 @@ void preferences_load_callback(json_t *root) {
 
     // default save path
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.savepath", &s1) == 0) {
-        if (session.default_savepath != NULL)
-            free(session.default_savepath);
-        session.default_savepath = (char *)calloc(strlen(s1) + 1, sizeof(uint8_t));
-        strcpy(session.default_savepath,s1);
+        session.defaultPaths[spDefault] = realloc(session.defaultPaths[spDefault], strlen(s1) + 1);
+        strcpy(session.defaultPaths[spDefault], s1);
+    }
+    // default dump path
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.dumppath", &s1) == 0) {
+        session.defaultPaths[spDump] = realloc(session.defaultPaths[spDump],strlen(s1) + 1);
+        strcpy(session.defaultPaths[spDump],s1);
+    }
+    // default trace path
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.tracepath", &s1) == 0) {
+        session.defaultPaths[spTrace] = realloc(session.defaultPaths[spTrace],strlen(s1) + 1);
+        strcpy(session.defaultPaths[spTrace],s1);
     }
     
     // window plot
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.xpos", &i1) == 0)
-        session.window_plot_xpos = i1;
+        session.plot.x = i1;
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.ypos", &i1) == 0)
-        session.window_plot_ypos = i1;
+        session.plot.y = i1;
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.hsize", &i1) == 0)
-        session.window_plot_hsize = i1;
+        session.plot.h = i1;
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.wsize", &i1) == 0)
-        session.window_plot_wsize = i1;
+        session.plot.w = i1;
 
     // overlay/slider plot
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.overlay.xpos", &i1) == 0)
-        session.window_overlay_xpos = i1;
+        session.overlay.x = i1;
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.overlay.ypos", &i1) == 0)
-        session.window_overlay_ypos = i1;
+        session.overlay.y = i1;
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.overlay.hsize", &i1) == 0)
-        session.window_overlay_hsize = i1;
+        session.overlay.h = i1;
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.overlay.wsize", &i1) == 0)
-        session.window_overlay_wsize = i1;
+        session.overlay.w = i1;
 
     // show options
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "show.emoji", &s1) == 0) {
@@ -338,11 +364,14 @@ static int usage_set_hints() {
     return PM3_SUCCESS;
 }
 
-static int usage_set_savePath() {
-    PrintAndLogEx(NORMAL, "Usage: pref set defaultsavepath <path>");
+static int usage_set_savePaths() {
+    PrintAndLogEx(NORMAL, "Usage: pref set savepaths [help] [create] [default <path>] [dump <path>] [trace <path>]");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
-    PrintAndLogEx(NORMAL, "     "_GREEN_("<path>")"      - default save path");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("create")"      - Create directory if it does not exist");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("default")"     - Deafult path");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("dump")"        - Dump path");
+    PrintAndLogEx(NORMAL, "     "_GREEN_("trace")"       - Trace help");
 
     return PM3_SUCCESS;
 }
@@ -433,17 +462,23 @@ void showDeviceDebugState(prefShowOpt_t Opt) {
 }
 
 void showSavePathState(prefShowOpt_t Opt) {
-    PrintAndLogEx(NORMAL, "   %s default save path...... "_GREEN_("%s"), prefShowMsg(Opt), session.default_savepath);
+    PrintAndLogEx(NORMAL, "   %s default save path...... "_GREEN_("%s"), prefShowMsg(Opt), session.defaultPaths[spDefault]);
+}
+void showDumpPathState(prefShowOpt_t Opt) {
+    PrintAndLogEx(NORMAL, "   %s dump save path......... "_GREEN_("%s"), prefShowMsg(Opt), session.defaultPaths[spDump]);
+}
+void showTracePathState(prefShowOpt_t Opt) {
+    PrintAndLogEx(NORMAL, "   %s trace save path........ "_GREEN_("%s"), prefShowMsg(Opt), session.defaultPaths[spTrace]);
 }
 
 void showPlotPosState(void){
     PrintAndLogEx(NORMAL, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
-                  session.window_plot_xpos, session.window_plot_ypos, session.window_plot_hsize, session.window_plot_wsize);
+                  session.plot.x, session.plot.y, session.plot.h, session.plot.w);
 }
 
 void showOverlayPosState(void) {
     PrintAndLogEx(NORMAL, "    Slider/Overlay window.. X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
-                  session.window_overlay_xpos, session.window_overlay_ypos, session.window_overlay_hsize, session.window_overlay_wsize);
+                  session.overlay.x, session.overlay.y, session.overlay.h, session.overlay.w);
 }
 
 void showHintsState(prefShowOpt_t Opt) {
@@ -717,54 +752,100 @@ static int setCmdHint (const char *Cmd)
     return PM3_SUCCESS;
 }
 
-static int setCmdSavePath (const char *Cmd) {
+static int setCmdSavePaths (const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
     // bool validValue = false;
     char *strOpt = NULL;
     int  optLen = 0;
     char *newValue = NULL;
+    bool createDir = false;
     
     if (param_getchar(Cmd, cmdp) == 0x00) 
-        return usage_set_savePath();
+        return usage_set_savePaths();
 
     while ((param_getchar(Cmd, cmdp) != 0x00) && !errors) {
-        if (strOpt != NULL) 
-            free (strOpt);
-        
+
         optLen = param_getlength(Cmd, cmdp)+1;
-        strOpt = (char *)calloc(optLen+1, sizeof(uint8_t));
+        strOpt = (char *)realloc(strOpt,optLen+1);//, sizeof(uint8_t));
+
         if (param_getstr(Cmd, cmdp++, strOpt, optLen) != 0) {
             str_lower(strOpt); // convert to lowercase
 
-            if (strncmp (strOpt,"help",4) == 0) 
-                return usage_set_savePath();
-            else {
-                // not help, must be the path....
-                
-                // param_getstr(Cmd, cmdp++, newValue, sizeof(newValue));
-                if (newValue == NULL)
-                    free(newValue);
-                newValue = (char *)calloc(strlen(strOpt)+1, sizeof(uint8_t));
-                strcpy (newValue,strOpt);
-                
-                if (strcmp (newValue,session.default_savepath) != 0) {
+            if (strncmp(strOpt, "help", 4) == 0) 
+                return usage_set_savePaths();
 
-                    // check if new path exists
-                    if (fileExists (newValue)) {
-                        showSavePathState (prefShowOLD);
-                        if (session.default_savepath != NULL)
-                            free (session.default_savepath);
-                        session.default_savepath = (char *)calloc(strlen(newValue)+1, sizeof(uint8_t));
-                        strcpy (session.default_savepath,newValue);
-                        showSavePathState (prefShowNEW);
-                        preferences_save ();
+            if (strncmp(strOpt, "create", 6) == 0) {
+                // check if 2 more options.
+                if (param_getlength(Cmd, cmdp+1) == 0) // should have min 2 more options 
+                    return usage_set_savePaths();
+                createDir = true;
+            } else {
+                if ((strncmp(strOpt, "default", 7) == 0) ||
+                    (strncmp(strOpt, "dump", 4) == 0) ||
+                    (strncmp(strOpt, "trace", 7) == 0)) {
+
+                    // Get Path
+                    optLen = param_getlength(Cmd, cmdp) + 1;
+                    newValue = (char *)realloc(newValue, optLen+1);
+                    if (param_getstr(Cmd, cmdp++, newValue, optLen) == 0) {
+                        PrintAndLogEx(INFO, "missing %s path",strOpt);
+                        return usage_set_savePaths();
+                    }
+                    // remove trailing slash.
+                    if ((newValue[strlen(newValue)-1] == '/') || (newValue[strlen(newValue)-1] == '\\'))
+                        newValue[strlen(newValue)-1] = 0x00;
+
+                    // Check path
+                    if (!fileExists(newValue) && !createDir) {
+                        PrintAndLogEx(ERR,"path does not exist... "_RED_("%s"),newValue);
                     } else {
-                        PrintAndLogEx (ERR,"path does not exist");
+                        // do we need to create it
+                        if (!fileExists(newValue))
+                            create_path (newValue); //mkdir (newValue,0x777);
+
+                        // Default
+                        if (strncmp(strOpt, "default", 7) == 0) {
+                            if (strcmp(newValue, session.defaultPaths[spDefault]) != 0) {
+                                showSavePathState(prefShowOLD);
+                                session.defaultPaths[spDefault] = (char *)realloc(session.defaultPaths[spDefault], strlen(newValue) + 1);
+                                strcpy (session.defaultPaths[spDefault],newValue);
+                                showSavePathState(prefShowNEW);
+                                preferences_save();
+                            } else {
+                                PrintAndLogEx(INFO, "nothing changed");
+                                showSavePathState(prefShowNone);
+                            }
+                        }
+                        // Dump
+                        if (strncmp(strOpt, "dump", 4) == 0) {
+                            if (strcmp(newValue, session.defaultPaths[spDump]) != 0) {
+                                showDumpPathState(prefShowOLD);
+                                session.defaultPaths[spDump] = (char *)realloc(session.defaultPaths[spDump], strlen(newValue) + 1);
+                                strcpy (session.defaultPaths[spDump],newValue);
+                                showDumpPathState(prefShowNEW);
+                                preferences_save();
+                            } else {
+                                PrintAndLogEx(INFO, "nothing changed");
+                                showDumpPathState(prefShowNone);
+                            }
+                        }
+                        // Trace
+                        if (strncmp(strOpt, "trace", 7) == 0) {
+                            if (strcmp(newValue, session.defaultPaths[spTrace]) != 0) {
+                                showTracePathState(prefShowOLD);
+                                session.defaultPaths[spTrace] = (char *)realloc(session.defaultPaths[spTrace], strlen(newValue) + 1);
+                                strcpy (session.defaultPaths[spTrace],newValue);
+                                showTracePathState(prefShowNEW);
+                                preferences_save();
+                            } else {
+                                PrintAndLogEx(INFO, "nothing changed");
+                                showTracePathState(prefShowNone);
+                            }
+                        }
                     }
                 } else {
-                    PrintAndLogEx(INFO,"nothing changed");
-                    showSavePathState (prefShowNone);
+                    return usage_set_savePaths();
                 }
             }
         }
@@ -778,13 +859,13 @@ static int setCmdSavePath (const char *Cmd) {
 }
 
 static command_t setCommandTable[] = {
-    {"help",         setCmdHelp,         AlwaysAvailable, "This help"},
-    {"emoji",        setCmdEmoji,        AlwaysAvailable, "Set emoji display"},
-    {"hints",        setCmdHint,         AlwaysAvailable, "Set hint display"},
-    {"color",        setCmdColor,        AlwaysAvailable, "Set color support"},
-    {"defaultsavepath", setCmdSavePath,  AlwaysAvailable, "Set default save path"},
-    {"clientdebug",  setCmdDebug,        AlwaysAvailable, "Set client debug level"},
-    {"devicedebug",  setCmdDeviceDebug,  AlwaysAvailable, "Set device debug level"},
+    {"help",             setCmdHelp,          AlwaysAvailable, "This help"},
+    {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
+    {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},
+    {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
+    {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "Set default save paths"},
+    {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
+    {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -819,6 +900,8 @@ static int CmdPrefShow(const char *Cmd) {
    // showPlotPosState ();
    // showOverlayPosState ();
     showSavePathState(prefShowNone);
+    showDumpPathState(prefShowNone);
+    showTracePathState(prefShowNone);
     showClientDebugState(prefShowNone);
     showDeviceDebugState(prefShowNone);
     PrintAndLogEx(NORMAL, "");
