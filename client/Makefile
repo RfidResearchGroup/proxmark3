@@ -51,7 +51,7 @@ ZLIB = $(OBJDIR)/libz.a
 
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH)
 INCLUDES_CLIENT = -I./src -I./deps -I../include -I../common -I./deps/cliparser -I./src/uart $(LIBS)
-CFLAGS ?= -Wall -Werror -g -O3
+CFLAGS ?= -Wall -Werror -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local
