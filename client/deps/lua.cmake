@@ -1,4 +1,4 @@
-add_library(lua
+add_library(lua STATIC
         liblua/lapi.c
         liblua/lcode.c
         liblua/lctype.c

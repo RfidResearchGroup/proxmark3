@@ -7,7 +7,7 @@
 
 set_property(SOURCE PROPERTY C_STANDARD 99)
 
-add_library(amiibo
+add_library(amiibo STATIC
         amiitool/amiibo.c
         amiitool/drbg.c
         amiitool/keygen.c

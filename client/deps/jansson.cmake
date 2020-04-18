@@ -1,6 +1,6 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
 
-add_library(jansson
+add_library(jansson STATIC
         jansson/dump.c
         jansson/error.c
         jansson/hashtable.c

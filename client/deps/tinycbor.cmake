@@ -1,4 +1,4 @@
-add_library(tinycbor
+add_library(tinycbor STATIC
         tinycbor/cborencoder.c
         tinycbor/cborencoder_close_container_checked.c
         tinycbor/cborerrorstrings.c

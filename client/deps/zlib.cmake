@@ -1,6 +1,6 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
 
-add_library(z
+add_library(z STATIC
         ../../common/zlib/deflate.c
         ../../common/zlib/adler32.c
         ../../common/zlib/trees.c

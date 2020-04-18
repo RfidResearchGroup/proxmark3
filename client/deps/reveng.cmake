@@ -1,6 +1,6 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
 
-add_library(reveng
+add_library(reveng STATIC
         reveng/bmpbit.c
         reveng/cli.c
         reveng/getopt.c
