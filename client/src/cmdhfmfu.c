@@ -236,11 +236,11 @@ static int usage_hf_mfu_pwdgen(void) {
 
 static int usage_hf_mfu_otp_tearoff(void) {
     PrintAndLogEx(NORMAL, "Tear-off test against OTP block (no 3) on MFU tags - More help sooner or later\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear b <block number> i <intervalTime> l <limitTime> s <startTime> \n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear b <block number> i <intervalTime> l <limitTime> s <startTime> d <data before> t <data after>\n");
     PrintAndLogEx(NORMAL, "Options:");
     PrintAndLogEx(NORMAL, "  b <no>    : (optional) block to run the test -  default block: 8 (not OTP for safety)");
-    PrintAndLogEx(NORMAL, "  i <time>  : (optional) time interval to increase in each test - default 5 us");
-    PrintAndLogEx(NORMAL, "  l <time>  : (optional) limit time to run the test - default 2000 us");
+    PrintAndLogEx(NORMAL, "  i <time>  : (optional) time interval to increase in each test - default 500 us");
+    PrintAndLogEx(NORMAL, "  l <time>  : (optional) limit time to run the test - default 3000 us");
     PrintAndLogEx(NORMAL, "  s <time>  : (optional) start time to run the test - default 0 us");
     PrintAndLogEx(NORMAL, "  d <data>  : (optional) data to full-write before trying the OTP test - default 0x00");
     PrintAndLogEx(NORMAL, "  t <data>  : (optional) data to write while running the OTP test - default 0x00");
@@ -2695,8 +2695,8 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = 0;
     uint8_t teardata[8] = {0x00};
-    uint8_t interval = 5; // time in us
-    uint32_t timeLimit = 2000; // time in us
+    uint8_t interval = 500; // time in us
+    uint32_t timeLimit = 3000; // time in us
     uint32_t startTime = 0; // time in us
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
