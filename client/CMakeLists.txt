@@ -61,9 +61,6 @@ endif(NOT AVX512_FOUND)
 
 add_subdirectory(deps)
 
-#file(GLOB_RECURSE TARGET_HEADERS ${CMAKE_CURRENT_LIST_DIR}/src/*.h)
-#file(GLOB_RECURSE TARGET_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
-
 set (TARGET_SOURCES
         src/proxmark3.c
         ../common/commonutil.c
