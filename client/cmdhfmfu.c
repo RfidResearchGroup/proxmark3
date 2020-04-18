@@ -223,12 +223,21 @@ static int usage_hf_mfu_pwdgen(void) {
 }
 
 static int usage_hf_mfu_otp_tearoff(void) {
-    PrintAndLogEx(NORMAL, "Tear-off test against OTP block on MFU tags - More help sooner or later\n");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear [h]");
+    PrintAndLogEx(NORMAL, "Tear-off test against OTP block (no 3) on MFU tags - More help sooner or later\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear b <block number> i <intervalTime> l <limitTime> s <startTime> \n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       : this help");
+    PrintAndLogEx(NORMAL, "  b <no>    : (optional) block to run the test -  default block: 8 (not OTP for safety)");
+    PrintAndLogEx(NORMAL, "  i <time>  : (optional) time interval to increase in each test - default 5 us");
+    PrintAndLogEx(NORMAL, "  l <time>  : (optional) limit time to run the test - default 2000 us");
+    PrintAndLogEx(NORMAL, "  s <time>  : (optional) start time to run the test - default 0 us");
+    PrintAndLogEx(NORMAL, "  d <data>  : (optional) data to full-write before trying the OTP test - default 0x00");
+    PrintAndLogEx(NORMAL, "  t <data>  : (optional) data to write while running the OTP test - default 0x00");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, "        hf mfu otptear");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 8 i 100 l 3000 s 1000");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 1 l 200");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 100 l 2500 s 200 d FFFFFFFF t EEEEEEEE");
     return PM3_SUCCESS;
 }
 
@@ -2614,28 +2623,132 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 // Moebius et al
 //
 static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
+    uint8_t blockNoUint = 8;
     uint8_t cmdp = 0;
     bool errors = 0;
-    uint32_t len = strtol(Cmd, NULL, 0);
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+    uint8_t teardata[8] = {0x00};
+    uint8_t interval = 5; // time in us
+    uint32_t timeLimit = 2000; // time in us
+    uint32_t startTime = 0; // time in us
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_hf_mfu_otp_tearoff();
+            case 'b':
+                blockNoUint = param_get8(Cmd, cmdp + 1);
+                if (blockNoUint < 0) {
+                    PrintAndLogEx(WARNING, "Wrong block number");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 'i':
+                interval = param_get8(Cmd, cmdp + 1);
+                if (interval <= 0) {
+                    PrintAndLogEx(WARNING, "Wrong interval number");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 'l':
+                timeLimit = param_get32ex(Cmd, cmdp + 1, 2000, 10);
+                if (timeLimit < interval) {
+                    PrintAndLogEx(WARNING, "Wrong time limit number");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 's':
+                startTime = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                if (startTime > (timeLimit - interval)) {
+                    PrintAndLogEx(WARNING, "Wrong start time number");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 'd':
+                if (param_gethex(Cmd, cmdp + 1, teardata, 8)) {
+                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 't':
+                if (param_gethex(Cmd, cmdp + 1, teardata + 4, 8)) {
+                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
             default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
                 break;
         }
     }
 
     if (errors) return usage_hf_mfu_otp_tearoff();
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MFU_OTP_TEAROFF, data, len);
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
-        PrintAndLogEx(WARNING, "Failed");
-        return PM3_ESOFT;
+    uint32_t actualTime = startTime;
+    printf("\nStarting TearOff test - Selected Block no: %d ...\n", blockNoUint);
+
+    while (actualTime <= (timeLimit - interval)) {
+        printf("\nTrying attack at: %d us\n", actualTime);
+        printf("\n.....\n");
+        printf("\nReading block before attack: \n");
+
+        clearCommandBuffer();
+        SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        PacketResponseNG resp;
+
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            uint8_t isOK = resp.oldarg[0] & 0xff;
+            if (isOK) {
+                uint8_t *d = resp.data.asBytes;
+                PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
+                PrintAndLogEx(NORMAL, "-----------------------------");
+                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNoUint, blockNoUint, sprint_hex(d, 4), sprint_ascii(d, 4));
+            }
+        }
+
+        printf("\n.....\n");
+        clearCommandBuffer();
+
+        SendCommandOLD(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
+        if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
+            PrintAndLogEx(WARNING, "Failed");
+            return PM3_ESOFT;
+        }
+
+
+        printf("\nReading block after attack: \n");
+
+        clearCommandBuffer();
+        SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            uint8_t isOK = resp.oldarg[0] & 0xff;
+            if (isOK) {
+                uint8_t *d = resp.data.asBytes;
+                PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
+                PrintAndLogEx(NORMAL, "-----------------------------");
+                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNoUint, blockNoUint, sprint_hex(d, 4), sprint_ascii(d, 4));
+            }
+        }
+
+        uint8_t d0, d1, d2, d3;
+        d0 = *resp.data.asBytes;
+        d1 = *(resp.data.asBytes + 1);
+        d2 = *(resp.data.asBytes + 2);
+        d3 = *(resp.data.asBytes + 3);
+/*  TEMPORALLY DISABLED
+        if ((d0 != 0xFF) || (d1 != 0xFF) || (d2 != 0xFF) || (d3 = ! 0xFF)) {
+            PrintAndLogEx(NORMAL, "---------------------------------");
+            PrintAndLogEx(NORMAL, "        EFFECT AT: %d us", actualTime);
+            PrintAndLogEx(NORMAL, "---------------------------------\n");
+        }
+*/
+        actualTime += interval;
     }
     return PM3_SUCCESS;
 }
@@ -2671,4 +2784,3 @@ int CmdHFMFUltra(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
