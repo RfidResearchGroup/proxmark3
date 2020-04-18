@@ -9,6 +9,7 @@ add_library(hardnested_nosimd OBJECT
 target_include_directories(hardnested_nosimd PRIVATE
         ../../common
         ../../include)
+target_compile_options(hardnested_nosimd PRIVATE -Wall -Werror -O3)
 
 set(X86_CPUS x86 x86_64 i686)
 
@@ -26,6 +27,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             hardnested/hardnested_bf_core.c
             hardnested/hardnested_bitarray_core.c)
 
+    target_compile_options(hardnested_mmx PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_mmx BEFORE PRIVATE
             -mmmx -mno-sse2 -mno-avx -mno-avx2 -mno-avx512f)
 
@@ -40,6 +42,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             hardnested/hardnested_bf_core.c
             hardnested/hardnested_bitarray_core.c)
 
+    target_compile_options(hardnested_sse2 PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_sse2 BEFORE PRIVATE
             -mmmx -msse2 -mno-avx -mno-avx2 -mno-avx512f)
 
@@ -54,6 +57,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             hardnested/hardnested_bf_core.c
             hardnested/hardnested_bitarray_core.c)
 
+    target_compile_options(hardnested_avx PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_avx BEFORE PRIVATE
             -mmmx -msse2 -mavx -mno-avx2 -mno-avx512f)
 
@@ -68,6 +72,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             hardnested/hardnested_bf_core.c
             hardnested/hardnested_bitarray_core.c)
 
+    target_compile_options(hardnested_avx2 PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_avx2 BEFORE PRIVATE
             -mmmx -msse2 -mavx -mavx2 -mno-avx512f)
 
@@ -82,6 +87,7 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             hardnested/hardnested_bf_core.c
             hardnested/hardnested_bitarray_core.c)
 
+    target_compile_options(hardnested_avx512 PRIVATE -Wall -Werror -O3)
     target_compile_options(hardnested_avx512 BEFORE PRIVATE
             -mmmx -msse2 -mavx -mavx2 -mavx512f)
 

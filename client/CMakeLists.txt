@@ -224,9 +224,6 @@ if (MINGW)
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
 endif (MINGW)
 
-set(CMAKE_CXX_FLAGS "-Wall -Werror -O3")
-
-
 if(NOT Qt5_FOUND)
     message("Qt5 library not found, not building gui")
     set(TARGET_SOURCES
@@ -255,6 +252,8 @@ add_executable(
         ${TARGET_SOURCES}
         ${ADDITIONAL_SRC}
 )
+
+target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
 
 target_include_directories(proxmark3 PRIVATE
         ..

@@ -45,3 +45,4 @@ if (NOT MINGW)
 endif (NOT MINGW)
 
 target_include_directories(lua INTERFACE liblua)
+target_compile_options(lua PRIVATE -Wall -Werror -O3)

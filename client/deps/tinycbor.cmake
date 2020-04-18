@@ -10,4 +10,4 @@ add_library(tinycbor STATIC
         )
 
 target_include_directories(tinycbor INTERFACE tinycbor)
-
+target_compile_options(tinycbor PRIVATE -Wall -Werror -O2)

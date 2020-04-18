@@ -11,3 +11,4 @@ add_library(z STATIC
 )
 
 target_compile_definitions(z PRIVATE Z_SOLO NO_GZIP ZLIB_PM3_TUNED)
+target_compile_options(z PRIVATE -Wall -Werror -O3)
