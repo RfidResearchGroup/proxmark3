@@ -21,7 +21,7 @@
 #include "graph.h"               // for graph data
 #include "comms.h"
 #include "lfdemod.h"             // for demod code
-#include "../loclass/cipherutils.h" // for decimating samples in getsamples
+#include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem4x.h"           // askem410xdecode
 #include "fileutils.h"           // searchFile
 #include "mifare/ndef.h"

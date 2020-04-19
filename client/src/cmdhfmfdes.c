@@ -20,7 +20,7 @@
 #include "cmdhf14a.h"
 #include "mbedtls/des.h"
 #include "mbedtls/aes.h"
-#include "../crypto/libpcrypto.h"
+#include "crypto/libpcrypto.h"
 #include "protocols.h"
 #include "mifare.h"         // desfire raw command options
 #include "cmdtrace.h"

@@ -29,7 +29,7 @@
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
 #include "iso15693tools.h"
-#include "../crypto/libpcrypto.h"
+#include "crypto/libpcrypto.h"
 #include "graph.h"
 #include "crc16.h"             // iso15 crc
 #include "cmddata.h"           // getsamples

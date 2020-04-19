@@ -15,7 +15,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "uart.h"
+#include "uart/uart.h"
 #include "ui.h"
 #include "crc16.h"
 #include "util_posix.h" // msclock

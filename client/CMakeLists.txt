@@ -244,7 +244,6 @@ target_include_directories(proxmark3 PRIVATE
         ../common
         ../include
         src
-        src/uart
 )
 
 if (APPLE)

@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include "cmdparser.h"
 #include "commonutil.h"
-#include "../crypto/libpcrypto.h"
+#include "crypto/libpcrypto.h"
 #include "mbedtls/des.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
