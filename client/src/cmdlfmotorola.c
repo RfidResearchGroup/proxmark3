@@ -23,7 +23,7 @@
 #include "protocols.h"  // t55xx defines
 #include "cmdlft55xx.h" // clone..
 #include "cmdlf.h"      // cmdlfconfig
-#include "cliparser/cliparser.h" // cli parse input
+#include "cliparser.h" // cli parse input
 
 
 static int CmdHelp(const char *Cmd);

@@ -25,7 +25,7 @@
 #include "cmdlfem4x.h"           // askem410xdecode
 #include "fileutils.h"           // searchFile
 #include "mifare/ndef.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 
 uint8_t DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t DemodBufferLen = 0;

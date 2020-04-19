@@ -19,8 +19,8 @@
 #include "cmdtrace.h"
 #include "emv/dump.h"
 #include "mifare/mifaredefault.h"          // mifare default key array
-#include "cliparser/cliparser.h"           // argtable
-#include "hardnested/hardnested_bf_core.h" // SetSIMDInstr
+#include "cliparser.h"           // argtable
+#include "hardnested_bf_core.h" // SetSIMDInstr
 #include "mifare/mad.h"
 #include "mifare/ndef.h"
 #include "protocols.h"

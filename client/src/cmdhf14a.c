@@ -19,7 +19,7 @@
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"        // clearCommandBuffer
 #include "cmdtrace.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "cmdhfmf.h"
 #include "cmdhfmfu.h"
 #include "emv/emvcore.h"

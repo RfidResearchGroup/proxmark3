@@ -105,3 +105,4 @@ target_include_directories(hardnested PRIVATE
         ../../include
         ../src
         jansson)
+target_include_directories(hardnested INTERFACE hardnested)

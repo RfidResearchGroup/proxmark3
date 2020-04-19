@@ -20,7 +20,7 @@
 #include "protocols.h"
 #include "generator.h"
 #include "mifare/ndef.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 
 
 #define MAX_UL_BLOCKS       0x0F

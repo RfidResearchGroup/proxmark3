@@ -19,7 +19,7 @@
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "graph.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "commonutil.h"
 #include "ui.h"         // PrintAndLog
 #include "lfdemod.h"    // parityTest, bitbytes_to_byte

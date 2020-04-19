@@ -80,7 +80,6 @@ set (TARGET_SOURCES
         ../common/generator.c
         deps/cliparser/argtable3.c
         deps/cliparser/cliparser.c
-        deps/hardnested/hardnested_bruteforce.c
         src/crypto/asn1dump.c
         src/crypto/asn1utils.c
         src/crypto/libpcrypto.c
@@ -246,7 +245,7 @@ target_include_directories(proxmark3 PRIVATE
         ..
         ../common
         ../include
-        deps
+        deps/cliparser
         src
         src/uart
 )
@@ -265,8 +264,7 @@ find_library(reveng REQUIRED)
 find_library(z REQUIRED)
 find_library(hardnested REQUIRED)
 
-target_include_directories(proxmark3 PUBLIC mbedtls jansson lua tinycbor amiibo reveng z hardnested)
-target_link_libraries(proxmark3 readline pthread m mbedtls jansson lua tinycbor amiibo reveng z hardnested ${ADDITIONAL_LNK})
+target_link_libraries(proxmark3 PRIVATE readline pthread m mbedtls jansson lua tinycbor amiibo reveng z hardnested ${ADDITIONAL_LNK})
 
 install(TARGETS proxmark3 DESTINATION "bin")
 install(DIRECTORY cmdscripts lualibs luascripts resources dictionaries DESTINATION "share/proxmark3")

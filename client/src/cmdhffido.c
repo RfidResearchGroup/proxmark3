@@ -30,7 +30,7 @@
 #include "proxmark3.h"
 #include "emv/emvcore.h"
 #include "emv/emvjson.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "../crypto/asn1utils.h"
 #include "../crypto/libpcrypto.h"
 #include "fido/cbortools.h"

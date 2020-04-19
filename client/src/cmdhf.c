@@ -16,7 +16,7 @@
 #include <ctype.h>          // tolower
 
 #include "cmdparser.h"      // command_t
-#include "cliparser/cliparser.h"  // parse
+#include "cliparser.h"  // parse
 #include "comms.h"          // clearCommandBuffer
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A

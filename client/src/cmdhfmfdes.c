@@ -24,7 +24,7 @@
 #include "protocols.h"
 #include "mifare.h"         // desfire raw command options
 #include "cmdtrace.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "emv/apduinfo.h"   // APDU manipulation / errorcodes
 #include "emv/emvcore.h"    // APDU logging
 #include "util_posix.h"     // msleep

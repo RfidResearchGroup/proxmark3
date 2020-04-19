@@ -17,7 +17,7 @@ include ../Makefile.defs
 INSTALLBIN = proxmark3
 INSTALLSHARE = cmdscripts lualibs luascripts resources dictionaries
 
-VPATH =  ../common src/uart src deps
+VPATH =  ../common src/uart src
 vpath %.dic dictionaries
 OBJDIR = obj
 
@@ -52,7 +52,7 @@ ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
 LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH)
-INCLUDES_CLIENT = -I./src -I./deps -I../include -I../common -I./deps/cliparser -I./src/uart $(LIBS)
+INCLUDES_CLIENT = -I./src -I../include -I../common -I./deps/cliparser -I./src/uart $(LIBS)
 CFLAGS ?= -Wall -Werror -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
@@ -63,7 +63,7 @@ ifneq (,$(findstring MINGW,$(platform)))
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
 endif
 CXXFLAGS ?= -Wall -Werror -O3
-PM3CXXFLAGS = $(CXXFLAGS) -I../include -I/.deps/cliparser
+PM3CXXFLAGS = $(CXXFLAGS) -I../include
 
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
@@ -150,8 +150,8 @@ CMDSRCS =   crapto1/crapto1.c \
             crypto/asn1dump.c \
             crypto/libpcrypto.c\
             crypto/asn1utils.c\
-            cliparser/argtable3.c\
-            cliparser/cliparser.c\
+            deps/cliparser/argtable3.c\
+            deps/cliparser/cliparser.c\
             loclass/cipher.c \
             loclass/cipherutils.c \
             loclass/ikeys.c \

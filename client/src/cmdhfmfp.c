@@ -19,7 +19,7 @@
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
 #include "mifare/ndef.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "emv/dump.h"
 #include "mifare/mifaredefault.h"
 #include "util_posix.h"

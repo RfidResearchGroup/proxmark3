@@ -17,7 +17,7 @@
 #include "cmdtrace.h"
 #include "emvjson.h"
 #include "test/cryptotest.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 #include "cmdparser.h"
 #include "proxmark3.h"
 #include "emv_roca.h"
