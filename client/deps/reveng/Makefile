@@ -10,7 +10,6 @@ MYDEFS = -DPRESETS
 MYSRCS = \
 	bmpbit.c \
 	cli.c \
-	getopt.c \
 	model.c \
 	poly.c \
 	preset.c \

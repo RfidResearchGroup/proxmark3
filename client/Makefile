@@ -44,6 +44,8 @@ AMIIBOLIBPATH = ./deps/amiitool
 AMIIBOLIB = $(AMIIBOLIBPATH)/libamiibo.a
 HARDNESTEDPATH = ./deps/hardnested
 HARDNESTEDLIB = $(HARDNESTEDPATH)/libhardnested.a
+CLIPARSERPATH = ./deps/cliparser
+CLIPARSERLIB = $(CLIPARSERPATH)/libcliparser.a
 
 # common libraries
 MBEDTLSLIBPATH = ../common/mbedtls
@@ -51,8 +53,8 @@ MBEDTLSLIB = $(OBJDIR)/libmbedtls.a
 ZLIBPATH = ../common/zlib
 ZLIB = $(OBJDIR)/libz.a
 
-LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH)
-INCLUDES_CLIENT = -I./src -I../include -I../common -I./deps/cliparser -I./src/uart $(LIBS)
+LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) -I$(ZLIBPATH) -I$(REVENGPATH) -I$(AMIIBOLIBPATH) -I$(HARDNESTEDPATH) -I$(CLIPARSERPATH)
+INCLUDES_CLIENT = -I./src -I../include -I../common -I./src/uart $(LIBS)
 CFLAGS ?= -Wall -Werror -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
@@ -150,8 +152,6 @@ CMDSRCS =   crapto1/crapto1.c \
             crypto/asn1dump.c \
             crypto/libpcrypto.c\
             crypto/asn1utils.c\
-            deps/cliparser/argtable3.c\
-            deps/cliparser/cliparser.c\
             loclass/cipher.c \
             loclass/cipherutils.c \
             loclass/ikeys.c \
@@ -278,8 +278,8 @@ all: $(BINS)
 all-static: LDLIBS:=-static $(LDLIBS)
 all-static: $(BINS)
 
-proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(QTLDLIBS)
-proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) $(AMIIBOLIB) $(HARDNESTEDLIB)  lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
+proxmark3: LDLIBS+=$(LUALIB) $(JANSSONLIB) $(MBEDTLSLIB) $(CBORLIB) $(ZLIB) $(REVENGLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) $(QTLDLIBS)
+proxmark3: $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LUALIB) $(JANSSONLIB) $(CBORLIB) $(REVENGLIB) $(MBEDTLSLIB) $(ZLIB) $(AMIIBOLIB) $(HARDNESTEDLIB) $(CLIPARSERLIB) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
 	$(Q)$(LD) $(LDFLAGS) $(OBJDIR)/proxmark3.o $(COREOBJS) $(CMDOBJS) $(OBJCOBJS) $(QTGUIOBJS) $(LDLIBS)  -o $@
 
@@ -310,6 +310,7 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERPATH) clean
 
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
@@ -362,6 +363,10 @@ $(AMIIBOLIB):
 	$(info [*] MAKE amiibo)
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) all
 
+$(CLIPARSERLIB):
+	$(info [*] MAKE cliparser)
+	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERPATH) all
+
 # common libraries:
 $(MBEDTLSLIB):
 	$(info [*] MAKE mbedtls)
@@ -397,7 +402,7 @@ $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
-DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS) $(REVENGSRCS)) \
+DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(CORESRCS) $(CMDSRCS)) \
 	$(patsubst %.cpp, $(OBJDIR)/%.d, $(QTGUISRCS)) \
 	$(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS)) \
 	$(OBJDIR)/proxmark3.d

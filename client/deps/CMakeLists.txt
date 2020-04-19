@@ -1,3 +1,4 @@
+include(cliparser.cmake)
 include(tinycbor.cmake)
 include(jansson.cmake)
 include(lua.cmake)
