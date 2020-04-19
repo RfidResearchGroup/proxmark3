@@ -1,5 +1,3 @@
-set_property(SOURCE PROPERTY C_STANDARD 99)
-
 add_library(hardnested_nosimd OBJECT
         hardnested/hardnested_bf_core.c
         hardnested/hardnested_bitarray_core.c)

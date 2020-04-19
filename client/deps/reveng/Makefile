@@ -5,7 +5,7 @@
 
 MYSRCPATHS =
 MYINCLUDES = -I../cliparser
-MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYCFLAGS =
 MYDEFS = -DPRESETS
 MYSRCS = \
 	bmpbit.c \

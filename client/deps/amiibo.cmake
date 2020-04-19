@@ -5,8 +5,6 @@
 #amiitool.c $(MYSRCS) ../../../../common/../../commonutil.c ../ui.c -lreadline -lm ../../../../common/mbedtls/libmbedtls.a \
 #-o amiitool
 
-set_property(SOURCE PROPERTY C_STANDARD 99)
-
 add_library(amiibo STATIC
         amiitool/amiibo.c
         amiitool/drbg.c

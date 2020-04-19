@@ -57,7 +57,7 @@ LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) 
 INCLUDES_CLIENT = -I./src -I../include -I../common -I../common_fpga $(LIBS)
 CFLAGS ?= -Wall -Werror -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
-PM3CFLAGS = $(CFLAGS) -std=c99 $(INCLUDES_CLIENT)
+PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)
 # WIP Testing
 #PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local
@@ -101,7 +101,7 @@ ifneq ($(SKIPQT),1)
         MOC = $(shell pkg-config --variable=moc_location QtCore)
         UIC = $(shell pkg-config --variable=uic_location QtCore)
     else
-        PM3CXXFLAGS += -std=c++11 -fPIC
+        PM3CXXFLAGS += -fPIC
     endif
     ifeq ($(QTINCLUDES), )
     # if both pkg-config commands failed, search in common places
@@ -111,7 +111,7 @@ ifneq ($(SKIPQT),1)
             ifneq ($(wildcard $(QTDIR)/include/QtWidgets),)
                 QTINCLUDES += -I$(QTDIR)/include/QtWidgets
                 QTLDLIBS = -L$(QTDIR)/lib -lQt5Widgets -lQt5Gui -lQt5Core
-                PM3CXXFLAGS += -std=c++11 -fPIC
+                PM3CXXFLAGS += -fPIC
             endif
             MOC = $(QTDIR)/bin/moc
             UIC = $(QTDIR)/bin/uic

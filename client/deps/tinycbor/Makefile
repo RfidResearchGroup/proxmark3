@@ -1,7 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES =
 # Strange errors on Mingw when compiling with C99
-#MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 MYCFLAGS =
 MYDEFS =
 MYSRCS = \

@@ -1,6 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES = -I../../../common -I../../../include -I../../src -I../jansson
-MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYCFLAGS =
 MYDEFS =
 MYSRCS = hardnested_bruteforce.c
 

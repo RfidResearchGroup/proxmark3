@@ -12,8 +12,6 @@ if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
 
-set(CMAKE_CXX_STANDARD 14)
-
 if(APPLE AND EXISTS /usr/local/opt/qt5)
     # Homebrew installs Qt5 (up to at least 5.11.0) in
     # /usr/local/qt5. Ensure that it can be found by CMake

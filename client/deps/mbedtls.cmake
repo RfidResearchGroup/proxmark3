@@ -1,5 +1,3 @@
-set_property(SOURCE PROPERTY C_STANDARD 99)
-
 add_library(mbedtls STATIC
         ../../common/mbedtls/aes.c
         ../../common/mbedtls/asn1parse.c
