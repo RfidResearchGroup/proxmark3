@@ -67,31 +67,23 @@ int preferences_load(void) {
     session.show_hints = false;
     session.supports_colors = false;
 
+    // default save path 
+    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+        setDefaultPath (spDefault, get_my_user_directory());
+    else
+        setDefaultPath (spDefault, ".");
 
-    // default save path 
-    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
-        session.defaultPaths[spDefault] = (char *)realloc(session.defaultPaths[spDefault], strlen(get_my_user_directory()) + 1); //, sizeof(uint8_t));
-        strcpy(session.defaultPaths[spDefault], get_my_user_directory());
-    } else {
-        session.defaultPaths[spDefault] = (char *)realloc(session.defaultPaths[spDefault], 2); // 2, sizeof(uint8_t));
-        strcpy(session.defaultPaths[spDefault], ".");
-    }
     // default dump path 
-    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
-        session.defaultPaths[spDump] = (char *)realloc(session.defaultPaths[spDump], strlen(get_my_user_directory()) + 1); //, sizeof(uint8_t));
-        strcpy(session.defaultPaths[spDump], get_my_user_directory());
-    } else {
-        session.defaultPaths[spDump] = (char *)realloc(session.defaultPaths[spDump], 2); // 2, sizeof(uint8_t));
-        strcpy(session.defaultPaths[spDump], ".");
-    }
-    // default save path 
-    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
-        session.defaultPaths[spTrace] = (char *)realloc(session.defaultPaths[spTrace], strlen(get_my_user_directory()) + 1); //, sizeof(uint8_t));
-        strcpy(session.defaultPaths[spTrace], get_my_user_directory());
-    } else {
-        session.defaultPaths[spTrace] = (char *)realloc(session.defaultPaths[spTrace], 2); // 2, sizeof(uint8_t));
-        strcpy(session.defaultPaths[spTrace], ".");
-    }
+    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+        setDefaultPath (spDump, get_my_user_directory());
+    else
+        setDefaultPath (spDump, ".");
+
+    // default dump path 
+    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+        setDefaultPath (spTrace, get_my_user_directory());
+    else
+        setDefaultPath (spTrace, ".");
 
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
@@ -242,21 +234,17 @@ void preferences_load_callback(json_t *root) {
     }
 
     // default save path
-    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.savepath", &s1) == 0) {
-        session.defaultPaths[spDefault] = realloc(session.defaultPaths[spDefault], strlen(s1) + 1);
-        strcpy(session.defaultPaths[spDefault], s1);
-    }
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.savepath", &s1) == 0)
+        setDefaultPath (spDefault,s1);
+
     // default dump path
-    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.dumppath", &s1) == 0) {
-        session.defaultPaths[spDump] = realloc(session.defaultPaths[spDump],strlen(s1) + 1);
-        strcpy(session.defaultPaths[spDump],s1);
-    }
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.dumppath", &s1) == 0)
+        setDefaultPath (spDump,s1);
+
     // default trace path
-    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.tracepath", &s1) == 0) {
-        session.defaultPaths[spTrace] = realloc(session.defaultPaths[spTrace],strlen(s1) + 1);
-        strcpy(session.defaultPaths[spTrace],s1);
-    }
-    
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.tracepath", &s1) == 0)
+        setDefaultPath (spTrace,s1);
+
     // window plot
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.xpos", &i1) == 0)
         session.plot.x = i1;
@@ -461,16 +449,33 @@ void showDeviceDebugState(prefShowOpt_t Opt) {
     }
 }
 
-void showSavePathState(prefShowOpt_t Opt) {
-    PrintAndLogEx(NORMAL, "   %s default save path...... "_GREEN_("%s"), prefShowMsg(Opt), session.defaultPaths[spDefault]);
+void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
+
+    char tempStr[50];
+
+    switch (pathIndex) {
+        case spDefault: 
+            strcpy (tempStr,"default save path......");
+            break;
+        case spDump:
+            strcpy (tempStr,"dump save path.........");
+            break;
+        case spTrace:
+            strcpy (tempStr,"trace save path........");
+            break;
+        default:
+            strcpy (tempStr,_RED_("unknown")" save path......");
+    }
+    PrintAndLogEx(NORMAL, "   %s %s "_GREEN_("%s"), prefShowMsg(Opt), tempStr, session.defaultPaths[pathIndex]);
 }
+/*
 void showDumpPathState(prefShowOpt_t Opt) {
     PrintAndLogEx(NORMAL, "   %s dump save path......... "_GREEN_("%s"), prefShowMsg(Opt), session.defaultPaths[spDump]);
 }
 void showTracePathState(prefShowOpt_t Opt) {
     PrintAndLogEx(NORMAL, "   %s trace save path........ "_GREEN_("%s"), prefShowMsg(Opt), session.defaultPaths[spTrace]);
 }
-
+*/
 void showPlotPosState(void){
     PrintAndLogEx(NORMAL, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   session.plot.x, session.plot.y, session.plot.h, session.plot.w);
@@ -760,6 +765,8 @@ static int setCmdSavePaths (const char *Cmd) {
     int  optLen = 0;
     char *newValue = NULL;
     bool createDir = false;
+    savePaths_t pathItem = spItemCount;
+    
     
     if (param_getchar(Cmd, cmdp) == 0x00) 
         return usage_set_savePaths();
@@ -804,45 +811,67 @@ static int setCmdSavePaths (const char *Cmd) {
                         if (!fileExists(newValue))
                             create_path (newValue); //mkdir (newValue,0x777);
 
-                        // Default
-                        if (strncmp(strOpt, "default", 7) == 0) {
-                            if (strcmp(newValue, session.defaultPaths[spDefault]) != 0) {
-                                showSavePathState(prefShowOLD);
-                                session.defaultPaths[spDefault] = (char *)realloc(session.defaultPaths[spDefault], strlen(newValue) + 1);
-                                strcpy (session.defaultPaths[spDefault],newValue);
-                                showSavePathState(prefShowNEW);
+                        pathItem = spItemCount;
+                        if (strncmp(strOpt, "default", 7) == 0) pathItem = spDefault;
+                        if (strncmp(strOpt, "dump", 4) == 0) pathItem = spDump;
+                        if (strncmp(strOpt, "trace", 7) == 0) pathItem = spTrace;
+                        
+                        if (pathItem < spItemCount) {
+                            if (strcmp(newValue, session.defaultPaths[pathItem]) != 0) {
+                                showSavePathState(pathItem, prefShowOLD);
+                                setDefaultPath (pathItem, newValue);
+                                showSavePathState(pathItem, prefShowNEW);
                                 preferences_save();
                             } else {
                                 PrintAndLogEx(INFO, "nothing changed");
-                                showSavePathState(prefShowNone);
+                                showSavePathState(pathItem, prefShowNone);
+                            }
+                        }
+                         
+                       /*
+                        // Default
+                        if (strncmp(strOpt, "default", 7) == 0) {
+                            if (strcmp(newValue, session.defaultPaths[spDefault]) != 0) {
+                                showSavePathState(spDefault, prefShowOLD);
+                                setDefaultPath (spDefault, newValue);
+//                                session.defaultPaths[spDefault] = (char *)realloc(session.defaultPaths[spDefault], strlen(newValue) + 1);
+//                                strcpy (session.defaultPaths[spDefault],newValue);
+                                showSavePathState(spDefault, prefShowNEW);
+                                preferences_save();
+                            } else {
+                                PrintAndLogEx(INFO, "nothing changed");
+                                showSavePathState(spDefault, prefShowNone);
                             }
                         }
                         // Dump
                         if (strncmp(strOpt, "dump", 4) == 0) {
                             if (strcmp(newValue, session.defaultPaths[spDump]) != 0) {
-                                showDumpPathState(prefShowOLD);
-                                session.defaultPaths[spDump] = (char *)realloc(session.defaultPaths[spDump], strlen(newValue) + 1);
-                                strcpy (session.defaultPaths[spDump],newValue);
-                                showDumpPathState(prefShowNEW);
+                                showSavePathState(spDump, prefShowOLD);
+                                setDefaultPath (spDump, newValue);
+//                                session.defaultPaths[spDump] = (char *)realloc(session.defaultPaths[spDump], strlen(newValue) + 1);
+//                                strcpy (session.defaultPaths[spDump],newValue);
+                                showSavePathState(spDump, prefShowNEW);
                                 preferences_save();
                             } else {
                                 PrintAndLogEx(INFO, "nothing changed");
-                                showDumpPathState(prefShowNone);
+                                showSavePathState(spDump, prefShowNone);
                             }
                         }
                         // Trace
                         if (strncmp(strOpt, "trace", 7) == 0) {
                             if (strcmp(newValue, session.defaultPaths[spTrace]) != 0) {
-                                showTracePathState(prefShowOLD);
-                                session.defaultPaths[spTrace] = (char *)realloc(session.defaultPaths[spTrace], strlen(newValue) + 1);
-                                strcpy (session.defaultPaths[spTrace],newValue);
-                                showTracePathState(prefShowNEW);
+                                showSavePathState(spTrace, prefShowOLD);
+                                setDefaultPath (spTrace, newValue);
+//                              session.defaultPaths[spTrace] = (char *)realloc(session.defaultPaths[spTrace], strlen(newValue) + 1);
+//                                strcpy (session.defaultPaths[spTrace],newValue);
+                                showSavePathState(spTrace,prefShowNEW);
                                 preferences_save();
                             } else {
                                 PrintAndLogEx(INFO, "nothing changed");
-                                showTracePathState(prefShowNone);
+                                showSavePathState(spTrace,prefShowNone);
                             }
                         }
+                        */
                     }
                 } else {
                     return usage_set_savePaths();
@@ -899,9 +928,9 @@ static int CmdPrefShow(const char *Cmd) {
     showColorState(prefShowNone);
    // showPlotPosState ();
    // showOverlayPosState ();
-    showSavePathState(prefShowNone);
-    showDumpPathState(prefShowNone);
-    showTracePathState(prefShowNone);
+    showSavePathState(spDefault, prefShowNone);
+    showSavePathState(spDump, prefShowNone);
+    showSavePathState(spTrace, prefShowNone);
     showClientDebugState(prefShowNone);
     showDeviceDebugState(prefShowNone);
     PrintAndLogEx(NORMAL, "");

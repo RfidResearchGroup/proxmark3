@@ -139,7 +139,7 @@ static bool is_directory(const char *filename) {
 #ifdef _WIN32
 #define make_dir(a) _mkdir(a)
 #else
-#define make_dir(a) mkdir(a,0755)
+#define make_dir(a) mkdir(a,0755) //note 0755 MUST have leading 0 for octal linux file permissions
 #endif
 bool create_path(const char *dirname) {
 
@@ -190,6 +190,24 @@ bool create_path(const char *dirname) {
     return true;
 }
 
+bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
+
+    if (pathIndex < spItemCount) {
+        if ((Path == NULL) && (session.defaultPaths[pathIndex] != NULL)) {
+            free (session.defaultPaths[pathIndex]);
+            session.defaultPaths[pathIndex] = NULL;
+        }
+
+        if (Path != NULL) {
+            session.defaultPaths[pathIndex] = (char *)realloc(session.defaultPaths[pathIndex], strlen(Path) + 1);
+            strcpy(session.defaultPaths[pathIndex], Path);
+        }
+    } else {
+        return false;
+    }
+
+    return true;
+}
 
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
