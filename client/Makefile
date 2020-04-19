@@ -269,8 +269,8 @@ OBJCOBJS = $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 
 BINS = proxmark3
 CLEAN = $(BINS) src/*.moc.cpp src/ui/ui_overlays.h lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
-# transition: make sure old flasher is gone too
-CLEAN += flasher
+# transition: cleaning also old path stuff
+CLEAN += flasher *.moc.cpp ui/ui_overlays.h
 
 # need to assign dependancies to build these first...
 all: $(BINS)
