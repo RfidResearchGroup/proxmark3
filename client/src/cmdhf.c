@@ -39,7 +39,7 @@
 #include "ui.h"
 #include "cmddata.h"
 #include "graph.h"
-#include "../../common_fpga/fpga.h"
+#include "fpga.h"
 
 static int CmdHelp(const char *Cmd);
 

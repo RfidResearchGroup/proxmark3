@@ -240,8 +240,8 @@ add_executable(
 target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
 
 target_include_directories(proxmark3 PRIVATE
-        ..
         ../common
+        ../common_fpga
         ../include
         src
 )
