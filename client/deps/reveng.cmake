@@ -10,6 +10,6 @@ add_library(reveng STATIC
 )
 
 target_compile_definitions(reveng PRIVATE PRESETS)
-target_include_directories(reveng PRIVATE .)
+target_include_directories(reveng PRIVATE ../cliparser)
 target_include_directories(reveng INTERFACE reveng)
 target_compile_options(reveng PRIVATE -Wall -Werror -O3)

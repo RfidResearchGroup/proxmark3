@@ -4,7 +4,7 @@
 # Add -DPRESETS  to compile with preset models (edit config.h)
 
 MYSRCPATHS =
-MYINCLUDES = -I. -I..
+MYINCLUDES = -I../cliparser
 MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 MYDEFS = -DPRESETS
 MYSRCS = \

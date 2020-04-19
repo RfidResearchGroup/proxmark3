@@ -53,7 +53,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "cliparser/getopt.h"
+#include "getopt.h"
 #ifdef _WIN32
 #  include <io.h>
 #  include <fcntl.h>
