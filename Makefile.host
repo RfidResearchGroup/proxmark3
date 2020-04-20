@@ -39,7 +39,7 @@ clean:
 ifneq (,$(MYCLEANOLDPATH))
 	    $(Q)$(RM) $(foreach f,$(CLEAN),$(MYCLEANOLDPATH)/$(f))
 	    $(Q)$(RMDIR) $(MYCLEANOLDPATH)/$(OBJDIR)
-	    $(Q)$(RMDIR_SOFT) $(MYCLEANOLDPATH)
+	    $(Q)$(RMDIR_SOFT) $(MYCLEANOLDPATH) 2>/dev/null || true
 endif
 
 install: all
