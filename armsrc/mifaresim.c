@@ -1258,7 +1258,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     FpgaDisableTracing();
 
     // NR AR ATTACK
-    // mfkey32 
+    // mfkey32
     if (((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) && (DBGLEVEL >= DBG_INFO)) {
         for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
             if (ar_nr_collected[i] == 2) {
@@ -1274,7 +1274,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             }
         }
     }
-    
+
     // mfkey32 v2
     for (uint8_t i = ATTACK_KEY_COUNT; i < ATTACK_KEY_COUNT * 2; i++) {
         if (ar_nr_collected[i] == 2) {

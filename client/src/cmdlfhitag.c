@@ -22,14 +22,14 @@
 
 static int CmdHelp(const char *Cmd);
 
-static char* getHitagTypeStr(uint32_t uid) {
+static char *getHitagTypeStr(uint32_t uid) {
     //uid s/n        ********
-    uint8_t type = (uid >> 4) & 0xF;   
-    switch(type) {
+    uint8_t type = (uid >> 4) & 0xF;
+    switch (type) {
         case 1:
             return "PCF 7936";
         case 2:
-            return "PCF 7946";            
+            return "PCF 7946";
         case 3:
             return "PCF 7947";
         case 4:

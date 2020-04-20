@@ -2804,18 +2804,18 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             }
         }
 
-/*  TEMPORALLY DISABLED
-        uint8_t d0, d1, d2, d3;
-        d0 = *resp.data.asBytes;
-        d1 = *(resp.data.asBytes + 1);
-        d2 = *(resp.data.asBytes + 2);
-        d3 = *(resp.data.asBytes + 3);
-        if ((d0 != 0xFF) || (d1 != 0xFF) || (d2 != 0xFF) || (d3 = ! 0xFF)) {
-            PrintAndLogEx(NORMAL, "---------------------------------");
-            PrintAndLogEx(NORMAL, "        EFFECT AT: %d us", actualTime);
-            PrintAndLogEx(NORMAL, "---------------------------------\n");
-        }
-*/
+        /*  TEMPORALLY DISABLED
+                uint8_t d0, d1, d2, d3;
+                d0 = *resp.data.asBytes;
+                d1 = *(resp.data.asBytes + 1);
+                d2 = *(resp.data.asBytes + 2);
+                d3 = *(resp.data.asBytes + 3);
+                if ((d0 != 0xFF) || (d1 != 0xFF) || (d2 != 0xFF) || (d3 = ! 0xFF)) {
+                    PrintAndLogEx(NORMAL, "---------------------------------");
+                    PrintAndLogEx(NORMAL, "        EFFECT AT: %d us", actualTime);
+                    PrintAndLogEx(NORMAL, "---------------------------------\n");
+                }
+        */
         actualTime += interval;
     }
     return PM3_SUCCESS;
