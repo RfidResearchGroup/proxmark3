@@ -827,51 +827,6 @@ static int setCmdSavePaths (const char *Cmd) {
                                 showSavePathState(pathItem, prefShowNone);
                             }
                         }
-                         
-                       /*
-                        // Default
-                        if (strncmp(strOpt, "default", 7) == 0) {
-                            if (strcmp(newValue, session.defaultPaths[spDefault]) != 0) {
-                                showSavePathState(spDefault, prefShowOLD);
-                                setDefaultPath (spDefault, newValue);
-//                                session.defaultPaths[spDefault] = (char *)realloc(session.defaultPaths[spDefault], strlen(newValue) + 1);
-//                                strcpy (session.defaultPaths[spDefault],newValue);
-                                showSavePathState(spDefault, prefShowNEW);
-                                preferences_save();
-                            } else {
-                                PrintAndLogEx(INFO, "nothing changed");
-                                showSavePathState(spDefault, prefShowNone);
-                            }
-                        }
-                        // Dump
-                        if (strncmp(strOpt, "dump", 4) == 0) {
-                            if (strcmp(newValue, session.defaultPaths[spDump]) != 0) {
-                                showSavePathState(spDump, prefShowOLD);
-                                setDefaultPath (spDump, newValue);
-//                                session.defaultPaths[spDump] = (char *)realloc(session.defaultPaths[spDump], strlen(newValue) + 1);
-//                                strcpy (session.defaultPaths[spDump],newValue);
-                                showSavePathState(spDump, prefShowNEW);
-                                preferences_save();
-                            } else {
-                                PrintAndLogEx(INFO, "nothing changed");
-                                showSavePathState(spDump, prefShowNone);
-                            }
-                        }
-                        // Trace
-                        if (strncmp(strOpt, "trace", 7) == 0) {
-                            if (strcmp(newValue, session.defaultPaths[spTrace]) != 0) {
-                                showSavePathState(spTrace, prefShowOLD);
-                                setDefaultPath (spTrace, newValue);
-//                              session.defaultPaths[spTrace] = (char *)realloc(session.defaultPaths[spTrace], strlen(newValue) + 1);
-//                                strcpy (session.defaultPaths[spTrace],newValue);
-                                showSavePathState(spTrace,prefShowNEW);
-                                preferences_save();
-                            } else {
-                                PrintAndLogEx(INFO, "nothing changed");
-                                showSavePathState(spTrace,prefShowNone);
-                            }
-                        }
-                        */
                     }
                 } else {
                     return usage_set_savePaths();
