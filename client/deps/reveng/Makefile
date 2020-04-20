@@ -17,6 +17,9 @@ MYSRCS = \
 
 LIB_A = libreveng.a
 
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../reveng
+
 include ../../../Makefile.host
 
 CLEAN += bmptst

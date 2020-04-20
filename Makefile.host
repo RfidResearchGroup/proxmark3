@@ -36,6 +36,11 @@ all: $(foreach bin,$(MYLIBS) $(BINS) $(LIB_A),$(BINDIR)/$(bin))
 clean:
 	$(Q)$(RM) $(CLEAN)
 	$(Q)$(RMDIR) $(OBJDIR)
+ifneq (,$(MYCLEANOLDPATH))
+	    $(Q)$(RM) $(foreach f,$(CLEAN),$(MYCLEANOLDPATH)/$(f))
+	    $(Q)$(RMDIR) $(MYCLEANOLDPATH)/$(OBJDIR)
+	    $(Q)$(RMDIR_SOFT) $(MYCLEANOLDPATH)
+endif
 
 install: all
 ifneq (,$(INSTALLTOOLS))
