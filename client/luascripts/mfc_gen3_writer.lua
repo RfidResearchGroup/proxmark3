@@ -38,7 +38,7 @@ desc = [[
 
     Works with both 4 and 7 bytes NXP MIFARE Classic 1K cards.
     The script also has the possibility to change UID and permanent lock uid on magic Gen3 cards.
-    
+
     It supports the following functionality.
 
     1. Write it to the same  of current card UID.
@@ -46,7 +46,7 @@ desc = [[
     3. Change uid to match dump on magic Gen3 card.
     4. Permanent lock UID on magic Gen3 card.
     5. Erase all data at the card and set the FF FF FF FF FF FF keys, and Access Conditions to 78778800.
-    
+
     Script works in a wizard styled way.
 ]]
 example = [[
@@ -283,10 +283,10 @@ local function main(args)
     --
     ---
     -------------------------------
-    -- Extract B key from EML file 
+    -- Extract B key from EML file
     -------------------------------
     ---
-    --  
+    --
     local b = 0
     for i = 1, #eml do
         if (i % 4 == 0) then
@@ -312,7 +312,7 @@ local function main(args)
         core.console(piswords_uid_change .. tostring(eml[1]))
         print(tab)
         print(' The new card UID : ' .. GetUID())
-    end 
+    end
     print(tab)
     --checkmagic()
     --
