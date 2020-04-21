@@ -93,9 +93,11 @@ Description:
      * the script will wait for a Proxmark to be connected (same as option -w of the client).
     You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     Don't use this script if you want to work offline or with the BT addon.
+    To see a list of available ports, use --list.
 
 Usage:
     $SCRIPT [-n <N>] [-f] [-c <command>]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i]
+    $SCRIPT --list
 
 See "$CLIENT -h" for more details on options.
 EOF
@@ -124,9 +126,11 @@ Description:
     The usage is similar to the old proxmark3-flasher binary, except that the correct port name will be automatically guessed.
     You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
+    To see a list of available ports, use --list.
 
 Usage:
     $SCRIPT [-n <N>] [-b] image.elf [image.elf...]
+    $SCRIPT --list
 
 Options:
     -b         Enable flashing of bootloader area (DANGEROUS)
@@ -147,9 +151,11 @@ Description:
     The correct port name will be automatically guessed and the stock bootloader and firmware image will be flashed.
     You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
+    To see a list of available ports, use --list.
 
 Usage:
     $SCRIPT [-n <N>]
+    $SCRIPT --list
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
@@ -164,9 +170,11 @@ Description:
     The correct port name will be automatically guessed and the stock firmware image will be flashed.
     You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
+    To see a list of available ports, use --list.
 
 Usage:
     $SCRIPT [-n <N>]
+    $SCRIPT --list
 EOF
   }
 elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
@@ -181,9 +189,11 @@ Description:
     The correct port name will be automatically guessed and the stock bootloader will be flashed.
     You can also specify a first option -n N to access the Nth Proxmark3 connected on USB.
     If this doesn't work, you'll have to use manually the proxmark3 client, see "$CLIENT -h".
+    To see a list of available ports, use --list.
 
 Usage:
     $SCRIPT [-n <N>]
+    $SCRIPT --list
 EOF
   }
 else
