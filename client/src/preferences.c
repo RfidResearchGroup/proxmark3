@@ -790,7 +790,7 @@ static int setCmdSavePaths (const char *Cmd) {
             } else {
                 if ((strncmp(strOpt, "default", 7) == 0) ||
                     (strncmp(strOpt, "dump", 4) == 0) ||
-                    (strncmp(strOpt, "trace", 7) == 0)) {
+                    (strncmp(strOpt, "trace", 5) == 0)) {
 
                     // Get Path
                     optLen = param_getlength(Cmd, cmdp) + 1;
@@ -814,7 +814,7 @@ static int setCmdSavePaths (const char *Cmd) {
                         pathItem = spItemCount;
                         if (strncmp(strOpt, "default", 7) == 0) pathItem = spDefault;
                         if (strncmp(strOpt, "dump", 4) == 0) pathItem = spDump;
-                        if (strncmp(strOpt, "trace", 7) == 0) pathItem = spTrace;
+                        if (strncmp(strOpt, "trace", 5) == 0) pathItem = spTrace;
                         
                         if (pathItem < spItemCount) {
                             if (strcmp(newValue, session.defaultPaths[pathItem]) != 0) {
