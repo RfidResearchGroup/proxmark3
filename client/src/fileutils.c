@@ -426,6 +426,44 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
                 }
             }
             break;
+        case jsfMfDesfireKeys:
+            JsonSaveStr(root, "FileType", "mfdes");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[11], 2);
+            uint8_t datslen = data[13];
+            if (datslen > 0)
+                JsonSaveBufAsHexCompact(root, "$.Card.ATS", &data[14], datslen);
+
+            uint8_t dvdata[4][0xE][24 + 1] = {{{0}}};
+            memcpy(dvdata, &data[14 + datslen], 4 * 0xE * (24 + 1));
+
+            for (int i = 0; i < (int)datalen; i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+
+                if (dvdata[0][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.DES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[0][i][1], 8);
+                }
+
+                if (dvdata[1][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.3DES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[1][i][1], 16);
+                }
+                if (dvdata[2][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.AES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[2][i][1], 16);
+                }
+                if (dvdata[3][i][0]) {
+                    memset(path, 0x00, sizeof(path));
+                    sprintf(path, "$.K3KDES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[3][i][1], 24);
+                }
+            }
+            break;
         case jsfSettings:
             preferences_save_callback(root);
             break;
