@@ -33,6 +33,7 @@ function get_pm3_list_Linux {
         fi
     done
     if $FINDBTDONGLE; then
+        # check if the HC-06-USB white dongle is present (still, that doesn't tell us if it's paired with a Proxmark3...)
         for DEV in $(find /dev/ttyUSB* 2>/dev/null); do
             if udevadm info -q property -n "$DEV" |grep -q "ID_MODEL=CP2104_USB_to_UART_Bridge_Controller"; then
                 PM3LIST+=("$DEV")
@@ -40,8 +41,14 @@ function get_pm3_list_Linux {
         done
     fi
     if $FINDBTDIRECT; then
-        for DEV in $(rfcomm -a|grep " 20:19:0[45]"|sed 's/:.*//'); do
-            PM3LIST+=("/dev/$DEV")
+        # check if the MAC of a Proxmark3 was bound to a local rfcomm interface
+        for DEVMAC in $(rfcomm -a|grep " 20:19:0[45]"|sed 's/^\(.*\): \([0-9:]*\) .*/\1@\2/'); do
+            DEV=${DEVMAC/@*/}
+            MAC=${DEVMAC/*@/}
+            # check if Proxmark3 is actually present
+            if hcitool name "$MAC" | grep -q "PM3"; then
+                PM3LIST+=("/dev/$DEV")
+            fi
         done
     fi
 }
