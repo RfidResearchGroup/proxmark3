@@ -35,7 +35,7 @@
 #include "hardnested_bruteforce.h"
 #include "hardnested_bf_core.h"
 #include "hardnested_bitarray_core.h"
-#include "zlib.h"
+#include "zlib/zlib.h"
 #include "fileutils.h"
 
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
