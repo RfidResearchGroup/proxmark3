@@ -66,9 +66,9 @@ static void utf8_showBanner(void) {
     PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s   %s%s%s%s %s%s%s%s%s "), sq, sq, sq, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, tr, sq, sq, sq, sq, tr);
     PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s   %s%s%s%s"), sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, sq, sq, sq, sq, vl, hl, hl, sq, vl);
     PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s %s%s%s%s%s%s"), sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, sq, sq, sq, sq, tl, br);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")"%s", sq, sq, tr, hl, hl, hl, br, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, hl, hl, sq, vl, msg1);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")"%s", sq, sq, vl, sq, sq, vl, bl, hl, br, sq, sq, vl, sq, sq, sq, sq, tl, br, msg2);
-    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")"%s", bl, hl, br, bl, hl, br, bl, hl, br, bl, hl, hl, hl, br, msg3);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s %s%s%s%s%s%s%s%s%s%s%s   %s%s%s%s")" %s", sq, sq, tr, hl, hl, hl, br, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, hl, hl, sq, vl, msg1);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s %s%s%s %s%s%s %s%s%s%s%s%s")" %s", sq, sq, vl, sq, sq, vl, bl, hl, br, sq, sq, vl, sq, sq, sq, sq, tl, br, msg2);
+    PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s     %s%s%s     %s%s%s %s%s%s%s%s ")" %s", bl, hl, br, bl, hl, br, bl, hl, br, bl, hl, hl, hl, br, msg3);
 
     PrintAndLogEx(NORMAL, "");
     fflush(stdout);
@@ -94,9 +94,9 @@ static void showBanner(void) {
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╗ ███╗   ███╗ ████╗ "));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██╔══██╗████╗ ████║   ══█║"));
     PrintAndLogEx(NORMAL, "  " _BLUE_("██████╔╝██╔████╔██║ ████╔╝"));
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "    :snowflake:  iceman@icesql.net :coffee:");
-    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "   https://github.com/rfidresearchgroup/proxmark3/");
-    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") "pre-release v4.0");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██╔═══╝ ██║╚██╔╝██║   ══█║") "     :snowflake:  iceman@icesql.net :coffee:");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("██║     ██║ ╚═╝ ██║ ████╔╝") "    https://github.com/rfidresearchgroup/proxmark3/");
+    PrintAndLogEx(NORMAL, "  " _BLUE_("╚═╝     ╚═╝     ╚═╝ ╚═══╝ ") " pre-release v4.0");
 #else
     PrintAndLogEx(NORMAL, "  ======. ===.   ===. ====.");
     PrintAndLogEx(NORMAL, "  ==...==.====. ====.   ..=.");
@@ -117,14 +117,11 @@ static void showBanner(void) {
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
-        if (session.supports_colors)
-            rl_set_prompt(PROXPROMPT_OFFLINE_COLOR);
-        else
-            rl_set_prompt(PROXPROMPT_OFFLINE);
+        rl_set_prompt(PROXPROMPT_OFFLINE);
 
         rl_forced_update_display();
         CloseProxmark();
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Use "_YELLOW_("\"hw connect\"") "to reconnect\n");
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
     }
     return 0;
 }
@@ -213,7 +210,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        const char *prompt = (session.supports_colors) ? PROXPROMPT_CON_COLOR : PROXPROMPT_CON;
+        const char *prompt = PROXPROMPT_CON;
 
 check_script:
         // If there is a script file
@@ -277,11 +274,11 @@ check_script:
                     rl_event_hook = check_comm;
                     if (session.pm3_present) {
                         if (conn.send_via_fpc_usart == false)
-                            prompt = (session.supports_colors) ? PROXPROMPT_USB_COLOR : PROXPROMPT_USB;
+                            prompt = PROXPROMPT_USB;
                         else
-                            prompt = (session.supports_colors) ? PROXPROMPT_FPC_COLOR : PROXPROMPT_FPC;
+                            prompt = PROXPROMPT_FPC;
                     } else {
-                        prompt = (session.supports_colors) ? PROXPROMPT_OFFLINE_COLOR : PROXPROMPT_OFFLINE;
+                        prompt = PROXPROMPT_OFFLINE;
                     }
                     cmd = readline(prompt);
                     fflush(NULL);
@@ -452,7 +449,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      %s                                    -- runs the pm3 client in OFFLINE mode", exec_name);
         PrintAndLogEx(NORMAL, "\n  to execute different commands from terminal:\n");
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -c \"hf mf chk 1* ?\"   -- execute cmd and quit client", exec_name);
-        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")"and quit client", exec_name);
+        PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -l hf_read            -- execute lua script " _YELLOW_("`hf_read`")" and quit client", exec_name);
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" -s mycmds.txt         -- execute each pm3 cmd in file and quit client", exec_name);
         PrintAndLogEx(NORMAL, "\n  to flash fullimage and bootloader:\n");
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H" --flash --unlock-bootloader --image bootrom.elf --image fullimage.elf", exec_name);
@@ -671,7 +668,7 @@ int main(int argc, char *argv[]) {
             // For backward compatibility we accept direct port
             if (port != NULL) {
                 // We got already one
-                PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got " _YELLOW_("%s") " as port and now we got also: " _YELLOW_("%s") "\n", port, argv[i]);
+                PrintAndLogEx(ERR, _RED_("ERROR:") " cannot parse command line. We got " _YELLOW_("%s") " as port and now we got also: " _YELLOW_("%s") "\n", port, argv[i]);
                 show_help(false, exec_name);
                 return 1;
             }
@@ -682,13 +679,13 @@ int main(int argc, char *argv[]) {
         // port
         if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--port") == 0) {
             if (i + 1 == argc) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "missing port specification after -p\n");
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing port specification after -p\n");
                 show_help(false, exec_name);
                 return 1;
             }
             if (port != NULL) {
                 // We got already one
-                PrintAndLogEx(ERR, _RED_("ERROR:") "cannot parse command line. We got " _YELLOW_("%s") " as port and now we got also: " _YELLOW_("%s") "\n", port, argv[i + 1]);
+                PrintAndLogEx(ERR, _RED_("ERROR:") " cannot parse command line. We got " _YELLOW_("%s") " as port and now we got also: " _YELLOW_("%s") "\n", port, argv[i + 1]);
                 show_help(false, exec_name);
                 return 1;
             }
@@ -726,13 +723,13 @@ int main(int argc, char *argv[]) {
         // set debugmode
         if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
             if (i + 1 == argc) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "missing debugmode specification after -d\n");
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing debugmode specification after -d\n");
                 show_help(false, exec_name);
                 return 1;
             }
             int demod = atoi(argv[i + 1]);
             if (demod < 0 || demod > 2) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "invalid debugmode: -d " _YELLOW_("%s") "\n", argv[i + 1]);
+                PrintAndLogEx(ERR, _RED_("ERROR:") " invalid debugmode: -d " _YELLOW_("%s") "\n", argv[i + 1]);
                 return 1;
             }
             g_debugMode = demod;
@@ -750,13 +747,13 @@ int main(int argc, char *argv[]) {
         // set baudrate
         if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--baud") == 0) {
             if (i + 1 == argc) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "missing baud specification after -b\n");
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing baud specification after -b\n");
                 show_help(false, exec_name);
                 return 1;
             }
             uint64_t tmpspeed = strtoul(argv[i + 1], NULL, 10);
             if ((tmpspeed == ULONG_MAX) || (tmpspeed == 0)) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "invalid baudrate: -b " _YELLOW_("%s") "\n", argv[i + 1]);
+                PrintAndLogEx(ERR, _RED_("ERROR:") " invalid baudrate: -b " _YELLOW_("%s") "\n", argv[i + 1]);
                 return 1;
             }
             speed = tmpspeed;
@@ -773,7 +770,7 @@ int main(int argc, char *argv[]) {
         // execute pm3 command
         if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--command") == 0) {
             if (i + 1 == argc) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "missing command specification after -c\n");
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing command specification after -c\n");
                 show_help(false, exec_name);
                 return 1;
             }
@@ -784,7 +781,7 @@ int main(int argc, char *argv[]) {
         // execute pm3 command file
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--script-file") == 0) {
             if (i + 1 == argc) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "missing script file specification after -s\n");
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing script file specification after -s\n");
                 show_help(false, exec_name);
                 return 1;
             }
@@ -796,7 +793,7 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--lua") == 0) {
             addLuaExec = true;
             if (i + 1 == argc) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "missing lua script specification after -l\n");
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing lua script specification after -l\n");
                 show_help(false, exec_name);
                 return 1;
             }
@@ -825,11 +822,11 @@ int main(int argc, char *argv[]) {
         // flash file
         if (strcmp(argv[i], "--image") == 0) {
             if (flash_num_files == FLASH_MAX_FILES) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "too many --image, please use it max %i times\n", FLASH_MAX_FILES);
+                PrintAndLogEx(ERR, _RED_("ERROR:") " too many --image, please use it max %i times\n", FLASH_MAX_FILES);
                 return 1;
             }
             if (i + 1 == argc) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") "missing image specification after --image\n");
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing image specification after --image\n");
                 show_help(false, exec_name);
                 return 1;
             }
@@ -838,7 +835,7 @@ int main(int argc, char *argv[]) {
         }
 
         // We got an unknown parameter
-        PrintAndLogEx(ERR, _RED_("ERROR:") "invalid parameter: " _YELLOW_("%s") "\n", argv[i]);
+        PrintAndLogEx(ERR, _RED_("ERROR:") " invalid parameter: " _YELLOW_("%s") "\n", argv[i]);
         show_help(false, exec_name);
         return 1;
     }
@@ -888,7 +885,7 @@ int main(int argc, char *argv[]) {
 
         if (strlen(script_cmd) == 0) {
             script_cmd = NULL;
-            PrintAndLogEx(ERR, _RED_("ERROR:") "execute command: " _YELLOW_("command not found") ".\n");
+            PrintAndLogEx(ERR, _RED_("ERROR:") " execute command: " _YELLOW_("command not found") ".\n");
             return 2;
         } else {
             if (addLuaExec) {
@@ -913,7 +910,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark\n");
+        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
         CloseProxmark();
     }
 
@@ -921,7 +918,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
 
     if (!session.pm3_present)
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") "mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
+        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
 
     // ascii art only in interactive client
     if (!script_cmds_file && !script_cmd && session.stdinOnTTY && session.stdoutOnTTY && !flash_mode)

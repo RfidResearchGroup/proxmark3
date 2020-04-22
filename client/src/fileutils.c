@@ -181,7 +181,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to binary file " _YELLOW_("%s"), datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -224,7 +224,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     }
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32) "blocks to text file " _YELLOW_("%s"), blocks, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32) " blocks to text file " _YELLOW_("%s"), blocks, fileName);
 
 out:
     free(fileName);
@@ -522,7 +522,7 @@ int saveFileWAVE(const char *preferredName, int *data, size_t datalen) {
     }
     fclose(wave_file);
 
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
 
 out:
     free(fileName);
@@ -549,7 +549,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") "bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
 
 out:
     free(fileName);
@@ -648,7 +648,7 @@ int loadFile(const char *preferredName, const char *suffix, void *data, size_t m
     memcpy((data), dump, bytes_read);
     free(dump);
 
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
 
     *datalen = bytes_read;
 
@@ -704,7 +704,7 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 
     *datalen = bytes_read;
 
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
     return PM3_SUCCESS;
 }
 
@@ -755,7 +755,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") "bytes from text file " _YELLOW_("%s"), counter, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file " _YELLOW_("%s"), counter, fileName);
 
     if (datalen)
         *datalen = counter;
@@ -1005,7 +1005,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     }
     fclose(f);
     if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
 
     if (datalen)
         *datalen = counter;
@@ -1097,7 +1097,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         memset(line, 0, sizeof(line));
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") "keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
 
 out:
     free(path);

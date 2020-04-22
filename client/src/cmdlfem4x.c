@@ -489,7 +489,7 @@ static int CmdEM410xSim(const char *Cmd) {
 
     param_getdec(Cmd, 1, &clk);
 
-    PrintAndLogEx(SUCCESS, "Starting simulating UID "_YELLOW_("%02X%02X%02X%02X%02X")"clock: "_YELLOW_("%d"), uid[0], uid[1], uid[2], uid[3], uid[4], clk);
+    PrintAndLogEx(SUCCESS, "Starting simulating UID "_YELLOW_("%02X%02X%02X%02X%02X")" clock: "_YELLOW_("%d"), uid[0], uid[1], uid[2], uid[3], uid[4], clk);
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation");
 
     ConstructEM410xEmulGraph(Cmd, clk);
@@ -580,7 +580,7 @@ static int CmdEM410xBrute(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded "_YELLOW_("%d")" UIDs from "_YELLOW_("%s")", pause delay:"_YELLOW_("%d")"ms", uidcnt, filename, delay);
+    PrintAndLogEx(SUCCESS, "Loaded "_YELLOW_("%d")" UIDs from "_YELLOW_("%s")", pause delay:"_YELLOW_("%d")" ms", uidcnt, filename, delay);
 
     // loop
     for (uint32_t c = 0; c < uidcnt; ++c) {
@@ -701,7 +701,7 @@ static int CmdEM410xWrite(const char *Cmd) {
 
     SendCommandMIX(CMD_LF_EM410X_WRITE, card, (uint32_t)(id >> 32), (uint32_t)id, NULL, 0);
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x_read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x_read`") " to verify");
     return PM3_SUCCESS;
 }
 
@@ -1041,7 +1041,7 @@ static int CmdEM4x50Write(const char *Cmd) {
     PrintAndLogEx(NORMAL, "no implemented yet");
 //
 //    PrintAndLogEx(SUCCESS, "Done");
-//    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50_read`") "to verify");
+//    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50_read`") " to verify");
     return PM3_SUCCESS;
 }
 
@@ -1442,7 +1442,7 @@ static int CmdEM4x05Write(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Success writing to tag");
 
     PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05_read`") "to verify");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05_read`") " to verify");
     return status;
 }
 static int CmdEM4x05Wipe(const char *Cmd) {

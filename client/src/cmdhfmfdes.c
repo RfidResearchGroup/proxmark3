@@ -330,9 +330,9 @@ static char *getCardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
+        sprintf(retStr, "0x%02X (" _YELLOW_("%d - %d bytes") ")", fsize, usize, lsize);
     else
-        sprintf(retStr, "0x%02X ( " _YELLOW_("%d bytes") ")", fsize, lsize);
+        sprintf(retStr, "0x%02X (" _YELLOW_("%d bytes") ")", fsize, lsize);
     return buf;
 }
 
@@ -342,14 +342,14 @@ static char *getProtocolStr(uint8_t id, bool hw) {
     char *retStr = buf;
 
     if (id == 0x04) {
-        sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
+        sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
     } else if (id == 0x05) {
         if (hw)
-            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") ")", id);
+            sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-2, 14443-3") ")", id);
         else
-            sprintf(retStr, "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+            sprintf(retStr, "0x%02X (" _YELLOW_("ISO 14443-3, 14443-4") ")", id);
     } else {
-        sprintf(retStr, "0x%02X ( " _YELLOW_("Unknown") ")", id);
+        sprintf(retStr, "0x%02X (" _YELLOW_("Unknown") ")", id);
     }
     return buf;
 }
@@ -360,17 +360,17 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     char *retStr = buf;
 
     if (major == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire MF3ICD40") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire MF3ICD40") ")", major, minor);
     else if (major == 0x01 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV1") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV1") ")", major, minor);
     else if (major == 0x12 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV2") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV2") ")", major, minor);
 //    else if (major == 0x13 && minor == 0x00)
-//        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire EV3") ")", major, minor);
+//        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire EV3") ")", major, minor);
     else if (major == 0x30 && minor == 0x00)
-        sprintf(retStr, "%x.%x ( " _YELLOW_("DESFire Light") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("DESFire Light") ")", major, minor);
     else
-        sprintf(retStr, "%x.%x ( " _YELLOW_("Unknown") ")", major, minor);
+        sprintf(retStr, "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
     return buf;
 }
 
@@ -2853,11 +2853,11 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(package->uid, sizeof(package->uid)));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(package->details + 7, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") "/ " _GREEN_("20%02x"), package->details[12], package->details[13]);
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), package->details[12], package->details[13]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(package->versionHW[0]));
@@ -3239,7 +3239,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-- Mifare DESFire Enumerate applications --------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's');
+    PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " application%c", app_ids_len / 3, (app_ids_len == 3) ? ' ' : 's');
 
     for (int i = 0; i < app_ids_len; i += 3) {
 
@@ -3273,7 +3273,7 @@ static int CmdHF14ADesEnumApplications(const char *Cmd) {
 
         // Get File IDs
         if (handler_desfire_fileids(file_ids, &file_ids_len) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") "file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
+            PrintAndLogEx(SUCCESS, " Tag report " _GREEN_("%d") " file%c", file_ids_len, (file_ids_len == 1) ? ' ' : 's');
             for (int j = file_ids_len - 1; j >= 0; j--) {
                 PrintAndLogEx(SUCCESS, "   Fileid %d (0x%02x)", file_ids[j], file_ids[j]);
 
@@ -3876,21 +3876,21 @@ static int CmdHF14aDesChk(const char *Cmd) {
         PrintAndLogEx(ERR, "Aes key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") "aes keys", aeskeyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " aes keys", aeskeyListLen);
     }
 
     if (deskeyListLen == 0) {
         PrintAndLogEx(ERR, "Des key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") "des keys", deskeyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " des keys", deskeyListLen);
     }
 
     if (k3kkeyListLen == 0) {
         PrintAndLogEx(ERR, "K3k key list is empty. Nothing to check.");
         return PM3_EINVARG;
     } else {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") "k3kdes keys", k3kkeyListLen);
+        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%zu") " k3kdes keys", k3kkeyListLen);
     }
 
     if (!verbose)

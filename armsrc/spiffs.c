@@ -545,14 +545,14 @@ void rdv40_spiffs_safe_print_fsinfo() {
     DbpString(_BLUE_("Flash Memory FileSystem Info (SPIFFS)"));
 
 
-    Dbprintf("  Logical Block Size........." _YELLOW_("%d")"bytes", fsinfo.blockSize);
-    Dbprintf("  Logical Page Size.........." _YELLOW_("%d")"bytes", fsinfo.pageSize);
+    Dbprintf("  Logical Block Size........." _YELLOW_("%d")" bytes", fsinfo.blockSize);
+    Dbprintf("  Logical Page Size.........." _YELLOW_("%d")" bytes", fsinfo.pageSize);
     Dbprintf("");
-    Dbprintf("  Max Open Files............." _YELLOW_("%d")"file descriptors", fsinfo.maxOpenFiles);
-    Dbprintf("  Max Path Length............" _YELLOW_("%d")"chars", fsinfo.maxPathLength);
+    Dbprintf("  Max Open Files............." _YELLOW_("%d")" file descriptors", fsinfo.maxOpenFiles);
+    Dbprintf("  Max Path Length............" _YELLOW_("%d")" chars", fsinfo.maxPathLength);
     DbpString("");
     Dbprintf("  filesystem    size      used        available    use%    mounted");
-    Dbprintf("  spiffs        %6d B      %6d B    %6d B"_YELLOW_("%2d%")"   /"
+    Dbprintf("  spiffs        %6d B      %6d B    %6d B"_YELLOW_("%2d%")"    /"
              , fsinfo.totalBytes
              , fsinfo.usedBytes
              , fsinfo.freeBytes

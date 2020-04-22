@@ -68,7 +68,7 @@ static int usage_hw_setmux(void) {
 
 static int usage_hw_connect(void) {
     PrintAndLogEx(NORMAL, "Connects to a Proxmark3 device via specified serial port");
-    PrintAndLogEx(NORMAL, "Baudrate here is only for physical UART or UART-BT, " _YELLOW_("not")"for USB-CDC or blue shark add-on");
+    PrintAndLogEx(NORMAL, "Baudrate here is only for physical UART or UART-BT, " _YELLOW_("not")" for USB-CDC or blue shark add-on");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Usage:  hw connect [h] [p <port>] [b <baudrate>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -541,7 +541,7 @@ static int CmdPing(const char *Cmd) {
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         if (len) {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") "and content is %s", error ? _RED_("NOT ok") : _GREEN_("OK"));
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " and content is %s", error ? _RED_("NOT ok") : _GREEN_("OK"));
         } else {
             PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
         }
@@ -593,7 +593,7 @@ static int CmdConnect(const char *Cmd) {
     OpenProxmark(port, false, 10, false, baudrate);
 
     if (session.pm3_present && (TestProxmark() != PM3_SUCCESS)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") "cannot communicate with the Proxmark3\n");
+        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");
         CloseProxmark();
         return PM3_ENOTTY;
     }

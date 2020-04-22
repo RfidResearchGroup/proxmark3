@@ -235,12 +235,12 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl, int flash_
 
     fd = fopen(name, "rb");
     if (!fd) {
-        PrintAndLogEx(ERR, _RED_("Could not open file") "%s  >>> ", name);
+        PrintAndLogEx(ERR, _RED_("Could not open file") " %s  >>> ", name);
         res = PM3_EFILE;
         goto fail;
     }
 
-    PrintAndLogEx(SUCCESS, _BLUE_("Loading ELF file") _YELLOW_("%s"), name);
+    PrintAndLogEx(SUCCESS, _BLUE_("Loading ELF file") _YELLOW_(" %s"), name);
 
     if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
         PrintAndLogEx(ERR, "Error while reading ELF file header");
@@ -336,7 +336,7 @@ static int get_proxmark_state(uint32_t *state) {
             *state = resp.oldarg[0];
             break;
         default:
-            PrintAndLogEx(ERR, _RED_("Error:") "Couldn't get Proxmark3 state, bad response type: 0x%04x", resp.cmd);
+            PrintAndLogEx(ERR, _RED_("Error:") " Couldn't get Proxmark3 state, bad response type: 0x%04x", resp.cmd);
             return PM3_EFATAL;
             break;
     }
@@ -378,12 +378,12 @@ static int enter_bootloader(char *serial_port_name) {
             PrintAndLogEx(NORMAL, " " _GREEN_("Found"));
             return PM3_SUCCESS;
         } else {
-            PrintAndLogEx(ERR, _RED_("Error:") "Proxmark3 not found.");
+            PrintAndLogEx(ERR, _RED_("Error:") " Proxmark3 not found.");
             return PM3_ETIMEOUT;
         }
     }
 
-    PrintAndLogEx(ERR, _RED_("Error:") "Unknown Proxmark3 mode");
+    PrintAndLogEx(ERR, _RED_("Error:") " Unknown Proxmark3 mode");
     return PM3_EFATAL;
 }
 
@@ -401,7 +401,7 @@ static int wait_for_ack(PacketResponseNG *ack) {
 }
 
 static void flash_suggest_update_bootloader(void) {
-    PrintAndLogEx(ERR, _RED_("It is recommended that you first " _YELLOW_("update your bootloader") _RED_("alone,")));
+    PrintAndLogEx(ERR, _RED_("It is recommended that you first" _YELLOW_(" update your bootloader") _RED_(" alone,")));
     PrintAndLogEx(ERR, _RED_("reboot the Proxmark3 then only update the main firmware") "\n");
 }
 
@@ -454,7 +454,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         }
     } else {
         PrintAndLogEx(ERR, _RED_("====================== OBS ! ==========================================="));
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("CMD_BL_VERSION") _RED_("command")));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new" _YELLOW_(" CMD_BL_VERSION") _RED_(" command")));
         flash_suggest_update_bootloader();
     }
 
@@ -463,7 +463,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
 
     int mem_avail = chipid_to_mem_avail(chipinfo);
     if (mem_avail != 0) {
-        PrintAndLogEx(INFO, "Available memory on this board: "_YELLOW_("%uK") "bytes\n", mem_avail);
+        PrintAndLogEx(INFO, "Available memory on this board: "_YELLOW_("%uK") " bytes\n", mem_avail);
         if (mem_avail > 256) {
             if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(BL_VERSION_1_0_0)) {
                 PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================"));
@@ -477,7 +477,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
     } else {
         PrintAndLogEx(INFO, "Available memory on this board: "_RED_("UNKNOWN")"\n");
         PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================================"));
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("CHIP_INFO") _RED_("command")));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new" _YELLOW_(" CHIP_INFO") _RED_(" command")));
         flash_suggest_update_bootloader();
     }
 
@@ -497,7 +497,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         return wait_for_ack(&resp);
     } else {
         PrintAndLogEx(ERR, _RED_("====================== OBS ! ========================================"));
-        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new " _YELLOW_("START_FLASH") _RED_("command")));
+        PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new" _YELLOW_(" START_FLASH") _RED_(" command")));
         flash_suggest_update_bootloader();
     }
     return PM3_SUCCESS;

@@ -558,11 +558,11 @@ bool OpenProxmark(void *port, bool wait_for_port, int timeout, bool flash_mode, 
 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") "invalid serial port " _YELLOW_("%s"), portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " invalid serial port " _YELLOW_("%s"), portname);
         sp = NULL;
         return false;
     } else if (sp == CLAIMED_SERIAL_PORT) {
-        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") "serial port " _YELLOW_("%s") " is claimed by another process", portname);
+        PrintAndLogEx(WARNING, "\n" _RED_("ERROR:") " serial port " _YELLOW_("%s") " is claimed by another process", portname);
         sp = NULL;
         return false;
     } else {
@@ -641,7 +641,7 @@ int TestProxmark(void) {
 
     PrintAndLogEx(INFO, "Communicating with PM3 over %s%s",
                   conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
-                  memcmp(conn.serial_port_name, "tcp:", 4) == 0 ? "over " _YELLOW_("TCP") : "");
+                  memcmp(conn.serial_port_name, "tcp:", 4) == 0 ? " over " _YELLOW_("TCP") : "");
 
     if (conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", conn.uart_speed);

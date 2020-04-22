@@ -127,7 +127,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             }
         }
 
-        PrintAndLogEx(SUCCESS, "found " _YELLOW_("%u") "candidate key%s", keycount, (keycount > 1) ? "s." : ".");
+        PrintAndLogEx(SUCCESS, "found " _YELLOW_("%u") " candidate key%s", keycount, (keycount > 1) ? "s." : ".");
 
         *key = UINT64_C(-1);
         uint8_t keyBlock[PM3_CMD_DATA_SIZE];
@@ -510,7 +510,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
 
-    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "key candidates", keycnt);
+    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") " key candidates", keycnt);
 
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
@@ -536,7 +536,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") "]",
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") " ]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)
@@ -644,7 +644,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
 
-    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") "key candidates", keycnt);
+    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") " key candidates", keycnt);
 
     memset(resultKey, 0, 6);
     uint64_t key64 = -1;
@@ -711,7 +711,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") "]",
+            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _YELLOW_("%s") " ]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)

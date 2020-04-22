@@ -111,9 +111,9 @@ static int usage_hitag_reader(void) {
     PrintAndLogEx(NORMAL, "   Hitag1 (1*)");
     PrintAndLogEx(NORMAL, "      Not implemented");
     PrintAndLogEx(NORMAL, "   Hitag2 (2*)");
-    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: " _YELLOW_("4D494B52") "(\"MIKR\")");
+    PrintAndLogEx(NORMAL, "      21 <password>    Read all pages, password mode. Default: " _YELLOW_("4D494B52") " (\"MIKR\")");
     PrintAndLogEx(NORMAL, "      22 <nr> <ar>     Read all pages, challenge mode");
-    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: " _YELLOW_("4F4E4D494B52") "(\"ONMIKR\")");
+    PrintAndLogEx(NORMAL, "      23 <key>         Read all pages, crypto mode. Key format: ISK high + ISK low. Default: " _YELLOW_("4F4E4D494B52") " (\"ONMIKR\")");
     PrintAndLogEx(NORMAL, "      25               Test recorded authentications");
     PrintAndLogEx(NORMAL, "      26               Just read UID");
     return PM3_SUCCESS;
@@ -512,7 +512,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
         return PM3_ESOFT;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "     UID: " _GREEN_("%08X"), uid);
     PrintAndLogEx(SUCCESS, "    TYPE: " _GREEN_("%s"), getHitagTypeStr(uid));

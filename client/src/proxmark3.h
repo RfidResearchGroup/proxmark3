@@ -14,17 +14,13 @@
 
 #include "common.h"
 
-#define PROXPROMPT_CON "[con] pm3 --> "
-#define PROXPROMPT_CON_COLOR "[\001\033[1;32m\002con\001\033[0m\002] pm3 --> "
+#define PROXPROMPT_CON "[" _BOLD_GREEN_("con") "] pm3 --> "
 
-#define PROXPROMPT_USB "[usb] pm3 --> "
-#define PROXPROMPT_USB_COLOR "[\001\033[1;32m\002usb\001\033[0m\002] pm3 --> "
+#define PROXPROMPT_USB "[" _BOLD_GREEN_("usb") "] pm3 --> "
 
-#define PROXPROMPT_FPC "[fpc] pm3 --> "
-#define PROXPROMPT_FPC_COLOR "[\001\033[1;32m\002fpc\001\033[0m\002] pm3 --> "
+#define PROXPROMPT_FPC "[" _BOLD_GREEN_("fpc") "] pm3 --> "
 
-#define PROXPROMPT_OFFLINE "[offline] pm3 --> "
-#define PROXPROMPT_OFFLINE_COLOR "[\001\033[1;31m\002offline\001\033[0m\002] pm3 --> "
+#define PROXPROMPT_OFFLINE "[" _BOLD_RED_("offline") "] pm3 --> "
 
 #define PROXHISTORY "history.txt"
 #define PROXLOG "log_%Y%m%d.txt"

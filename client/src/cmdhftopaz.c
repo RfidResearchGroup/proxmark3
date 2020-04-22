@@ -414,7 +414,7 @@ static int CmdHFTopazInfo(const char *Cmd) {
         return status;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Static Data blocks " _YELLOW_("0x00") "to " _YELLOW_("0x0C")":");
+    PrintAndLogEx(SUCCESS, "Static Data blocks " _YELLOW_("0x00") " to " _YELLOW_("0x0C")":");
     PrintAndLogEx(NORMAL, "block# | offset | Data                    | Locked");
     PrintAndLogEx(NORMAL, "-------+--------+-------------------------+------------");
     char line[80];
@@ -547,7 +547,7 @@ int readTopazUid(bool verbose) {
 
     // printing
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "  UID: %02x %02x %02x %02x %02x %02x %02x",
                   topaz_tag.uid[6],

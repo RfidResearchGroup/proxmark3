@@ -316,7 +316,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     }
 
     if (USART_BAUD_RATE != atoi(BTADDON_BAUD_NUM)) {
-        PrintAndLogEx(WARNING, _RED_("WARNING:") "current Proxmark3 firmware has default USART baudrate = %i", USART_BAUD_RATE);
+        PrintAndLogEx(WARNING, _RED_("WARNING:") " current Proxmark3 firmware has default USART baudrate = %i", USART_BAUD_RATE);
         PrintAndLogEx(WARNING, "Current btfactory implementation is hardcoded to " BTADDON_BAUD_NUM " bauds");
         return PM3_ENOTIMPL;
     }
