@@ -156,30 +156,30 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             if (session.emoji_mode == EMOJI)
                 strncpy(prefix,  _RED_("[!!]") " :rotating_light: ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _RED_("[!!]"), sizeof(prefix) - 1);
+                strncpy(prefix, _RED_("[!!] "), sizeof(prefix) - 1);
             stream = stderr;
             break;
         case FAILED:
             if (session.emoji_mode == EMOJI)
                 strncpy(prefix, _RED_("[-]") " :no_entry: ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _RED_("[-]"), sizeof(prefix) - 1);
+                strncpy(prefix, _RED_("[-] "), sizeof(prefix) - 1);
             break;
         case DEBUG:
-            strncpy(prefix, _BLUE_("[#]"), sizeof(prefix) - 1);
+            strncpy(prefix, _BLUE_("[#] "), sizeof(prefix) - 1);
             break;
         case HINT:
         case SUCCESS:
-            strncpy(prefix, _GREEN_("[+]"), sizeof(prefix) - 1);
+            strncpy(prefix, _GREEN_("[+] "), sizeof(prefix) - 1);
             break;
         case WARNING:
             if (session.emoji_mode == EMOJI)
                 strncpy(prefix, _CYAN_("[!]") " :warning:  ", sizeof(prefix) - 1);
             else
-                strncpy(prefix, _CYAN_("[!]"), sizeof(prefix) - 1);
+                strncpy(prefix, _CYAN_("[!] "), sizeof(prefix) - 1);
             break;
         case INFO:
-            strncpy(prefix, _YELLOW_("[=]"), sizeof(prefix) - 1);
+            strncpy(prefix, _YELLOW_("[=] "), sizeof(prefix) - 1);
             break;
         case INPLACE:
             if (session.emoji_mode == EMOJI) {
@@ -278,7 +278,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
             } else {
 
                 if (session.supports_colors) {
-                    printf(_YELLOW_("[=]") "Session log " _YELLOW_("%s") "\n", my_logfile_path);
+                    printf(_YELLOW_("[=] ") "Session log " _YELLOW_("%s") "\n", my_logfile_path);
                 } else {
                     printf("[=] Session log %s\n", my_logfile_path);
                 }

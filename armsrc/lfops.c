@@ -196,7 +196,7 @@ static uint32_t GetT55xxClockBit(uint32_t clock) {
 
 void printT55xxConfig(void) {
 
-#define PRN_NA   sprintf(s  + strlen(s), _RED_("N/A") "| ");
+#define PRN_NA   sprintf(s  + strlen(s), _RED_("N/A") " | ");
 
     DbpString(_BLUE_("LF T55XX config"));
     Dbprintf("           [r]               [a]   [b]   [c]   [d]   [e]   [f]   [g]");
@@ -211,16 +211,16 @@ void printT55xxConfig(void) {
 
         switch (i) {
             case T55XX_DLMODE_FIXED :
-                sprintf(s, _YELLOW_("fixed bit length") _GREEN_("(default)") "|");
+                sprintf(s, _YELLOW_("fixed bit length") _GREEN_(" (default)") " |");
                 break;
             case T55XX_DLMODE_LLR :
-                sprintf(s, _YELLOW_("    long leading reference") "|");
+                sprintf(s, _YELLOW_("    long leading reference") " |");
                 break;
             case T55XX_DLMODE_LEADING_ZERO :
-                sprintf(s, _YELLOW_("              leading zero") "|");
+                sprintf(s, _YELLOW_("              leading zero") " |");
                 break;
             case T55XX_DLMODE_1OF4 :
-                sprintf(s, _YELLOW_("   1 of 4 coding reference") "|");
+                sprintf(s, _YELLOW_("   1 of 4 coding reference") " |");
                 break;
             default:
                 break;
@@ -1291,7 +1291,7 @@ void CmdHIDdemodFSK(int findone, uint32_t *high, uint32_t *low, int ledcontrol) 
                     cardnum = (lo >> 1) & 0x7FFFF;
                     fac = ((hi & 0xF) << 12) | (lo >> 20);
                 }
-                Dbprintf("TAG ID: " _GREEN_("%x%08x (%d)") "- Format Len: " _GREEN_("%d") "bit - FC: " _GREEN_("%d") "- Card: "_GREEN_("%d"),
+                Dbprintf("TAG ID: " _GREEN_("%x%08x (%d)") " - Format Len: " _GREEN_("%d") " bit - FC: " _GREEN_("%d") " - Card: "_GREEN_("%d"),
                          hi,
                          lo,
                          (lo >> 1) & 0xFFFF,

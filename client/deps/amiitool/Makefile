@@ -9,6 +9,9 @@ MYSRCS = \
 
 LIB_A = libamiibo.a
 
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../amiitool
+
 include ../../../Makefile.host
 
 # just for testing amiitool before complete migration into a lib:

@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include "cmdparser.h"
 #include "commonutil.h"
-#include "../crypto/libpcrypto.h"
+#include "crypto/libpcrypto.h"
 #include "mbedtls/des.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
@@ -20,7 +20,7 @@
 #include "protocols.h"
 #include "generator.h"
 #include "mifare/ndef.h"
-#include "cliparser/cliparser.h"
+#include "cliparser.h"
 
 
 #define MAX_UL_BLOCKS       0x0F
@@ -64,13 +64,13 @@ static int usage_hf_mfu_info(void) {
 static int usage_hf_mfu_dump(void) {
     PrintAndLogEx(NORMAL, "Reads all pages from Ultralight, Ultralight-C, Ultralight EV1");
     PrintAndLogEx(NORMAL, "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216");
-    PrintAndLogEx(NORMAL, "and saves binary dump into the file " _YELLOW_("`filename.bin`") "or " _YELLOW_("`cardUID.bin`"));
+    PrintAndLogEx(NORMAL, "and saves binary dump into the file " _YELLOW_("`filename.bin`") " or " _YELLOW_("`cardUID.bin`"));
     PrintAndLogEx(NORMAL, "It autodetects card type.\n");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu dump k <key> l f <filename w/o .bin> p <page#> q <#pages>");
     PrintAndLogEx(NORMAL, "  Options :");
     PrintAndLogEx(NORMAL, "  k <key> : (optional) key for authentication [UL-C 16bytes, EV1/NTAG 4bytes]");
     PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
-    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w/o .bin") "to save the dump as");
+    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w/o .bin") " to save the dump as");
     PrintAndLogEx(NORMAL, "  p <pg>  : starting Page number to manually set a page to start the dump at");
     PrintAndLogEx(NORMAL, "  q <qty> : number of Pages to manually set how many pages to dump");
     PrintAndLogEx(NORMAL, "");
@@ -91,8 +91,8 @@ static int usage_hf_mfu_restore(void) {
     PrintAndLogEx(NORMAL, "  l       : (optional) swap entered key's endianness");
     PrintAndLogEx(NORMAL, "  s       : (optional) enable special write UID " _BLUE_("-MAGIC TAG ONLY-"));
     PrintAndLogEx(NORMAL, "  e       : (optional) enable special write version/signature " _BLUE_("-MAGIC NTAG 21* ONLY-"));
-    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires " _YELLOW_("'e'") "parameter to work");
-    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w .bin") "to restore");
+    PrintAndLogEx(NORMAL, "  r       : (optional) use the password found in dumpfile to configure tag. requires " _YELLOW_("'e'") " parameter to work");
+    PrintAndLogEx(NORMAL, "  f <fn>  : " _YELLOW_("filename w .bin") " to restore");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("       hf mfu restore s f myfile"));
@@ -136,7 +136,7 @@ static int usage_hf_mfu_wrbl(void) {
 
 static int usage_hf_mfu_eload(void) {
     PrintAndLogEx(NORMAL, "It loads emul dump from the file " _YELLOW_("`filename.eml`"));
-    PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run dumptoemul-mfu`") "to convert the .bin to the eml");
+    PrintAndLogEx(NORMAL, "Hint: See " _YELLOW_("`script run dumptoemul-mfu`") " to convert the .bin to the eml");
     PrintAndLogEx(NORMAL, "Usage:  hf mfu eload u <file name w/o `.eml`> [numblocks]");
     PrintAndLogEx(NORMAL, "  Options:");
     PrintAndLogEx(NORMAL, "    h          : this help");
@@ -198,7 +198,7 @@ static int usage_hf_mfu_ucsetuid(void) {
     PrintAndLogEx(NORMAL, "Usage:  hf mfu setuid <uid (14 hex symbols)>");
     PrintAndLogEx(NORMAL, "       [uid] - (14 hex symbols)");
     PrintAndLogEx(NORMAL, "\n");
-    PrintAndLogEx(NORMAL, "This only works for " _BLUE_("Magic Ultralight") "tags.");
+    PrintAndLogEx(NORMAL, "This only works for " _BLUE_("Magic Ultralight") " tags.");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, "Examples:");
     PrintAndLogEx(NORMAL, _YELLOW_("         hf mfu setuid 11223344556677"));
@@ -235,13 +235,21 @@ static int usage_hf_mfu_pwdgen(void) {
 }
 
 static int usage_hf_mfu_otp_tearoff(void) {
-    PrintAndLogEx(NORMAL, "Tear-off test against OTP block on MFU tags.");
-    PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear [h]");
+    PrintAndLogEx(NORMAL, "Tear-off test against OTP block (no 3) on MFU tags - More help sooner or later\n");
+    PrintAndLogEx(NORMAL, "Usage:  hf mfu otptear b <block number> i <intervalTime> l <limitTime> s <startTime> d <data before> t <data after>\n");
     PrintAndLogEx(NORMAL, "Options:");
-    PrintAndLogEx(NORMAL, "    h       : this help");
-    PrintAndLogEx(NORMAL, "Examples:");
-    PrintAndLogEx(NORMAL, _YELLOW_("        hf mfu otptear"));
+    PrintAndLogEx(NORMAL, "  b <no>    : (optional) block to run the test -  default block: 8 (not OTP for safety)");
+    PrintAndLogEx(NORMAL, "  i <time>  : (optional) time interval to increase in each test - default 500 us");
+    PrintAndLogEx(NORMAL, "  l <time>  : (optional) limit time to run the test - default 3000 us");
+    PrintAndLogEx(NORMAL, "  s <time>  : (optional) start time to run the test - default 0 us");
+    PrintAndLogEx(NORMAL, "  d <data>  : (optional) data to full-write before trying the OTP test - default 0x00");
+    PrintAndLogEx(NORMAL, "  t <data>  : (optional) data to write while running the OTP test - default 0x00");
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 8 i 100 l 3000 s 1000");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 1 l 200");
+    PrintAndLogEx(NORMAL, "        hf mfu otptear b 3 i 100 l 2500 s 200 d FFFFFFFF t EEEEEEEE");
     return PM3_SUCCESS;
 }
 
@@ -516,17 +524,17 @@ static int ul_print_default(uint8_t *data) {
     // CT (cascade tag byte) 0x88 xor SN0 xor SN1 xor SN2
     int crc0 = 0x88 ^ uid[0] ^ uid[1] ^ uid[2];
     if (data[3] == crc0)
-        PrintAndLogEx(SUCCESS, "      BCC0: %02X ( " _GREEN_("ok") ")", data[3]);
+        PrintAndLogEx(SUCCESS, "      BCC0: %02X (" _GREEN_("ok") ")", data[3]);
     else
         PrintAndLogEx(NORMAL, "      BCC0: %02X, crc should be %02X", data[3], crc0);
 
     int crc1 = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
     if (data[8] == crc1)
-        PrintAndLogEx(SUCCESS, "      BCC1: %02X ( " _GREEN_("ok") ")", data[8]);
+        PrintAndLogEx(SUCCESS, "      BCC1: %02X (" _GREEN_("ok") ")", data[8]);
     else
         PrintAndLogEx(NORMAL, "      BCC1: %02X, crc should be %02X", data[8], crc1);
 
-    PrintAndLogEx(SUCCESS, "  Internal: %02X ( %s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+    PrintAndLogEx(SUCCESS, "  Internal: %02X (%s)", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
 
     PrintAndLogEx(SUCCESS, "      Lock: %s - %s",
                   sprint_hex(data + 10, 2),
@@ -635,10 +643,10 @@ static int ndef_print_CC(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "  Additional feature information");
     PrintAndLogEx(SUCCESS, "  %02X", data[3]);
     PrintAndLogEx(SUCCESS, "  00000000");
-    PrintAndLogEx(SUCCESS, "  xxx      - %02X: RFU ( %s)", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(SUCCESS, "  xxx      - %02X: RFU (%s)", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(SUCCESS, "     x     - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
     PrintAndLogEx(SUCCESS, "      x    - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "       xx  - %02X: RFU ( %s)", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(SUCCESS, "       xx  - %02X: RFU (%s)", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(SUCCESS, "         x - %02X: IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
     return PM3_SUCCESS;
 }
@@ -1187,7 +1195,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     if (tagtype == UL_ERROR) return PM3_ESOFT;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") "---------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --------------------------");
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
     ul_print_type(tagtype, 6);
 
@@ -1353,7 +1361,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") "|| Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") " || Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1363,7 +1371,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenC(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") "|| Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") " || Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -1383,7 +1391,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 key = default_pwd_pack[i];
                 len = ulev1_requestAuthentication(key, pack, sizeof(pack));
                 if (len > -1) {
-                    PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") "|| Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                    PrintAndLogEx(SUCCESS, "Found a default password: " _GREEN_("%s") " || Pack: %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
                     break;
                 } else {
                     if (ul_auth_select(&card, tagtype, hasAuthKey, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
@@ -2683,28 +2691,132 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 // Moebius et al
 //
 static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
+    uint8_t blockNoUint = 8;
     uint8_t cmdp = 0;
     bool errors = 0;
-    uint32_t len = strtol(Cmd, NULL, 0);
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+    uint8_t teardata[8] = {0x00};
+    uint32_t interval = 500; // time in us
+    uint32_t timeLimit = 3000; // time in us
+    uint32_t startTime = 0; // time in us
 
     while (param_getchar(Cmd, cmdp) != 0x00 && !errors) {
         switch (tolower(param_getchar(Cmd, cmdp))) {
             case 'h':
                 return usage_hf_mfu_otp_tearoff();
+            case 'b':
+                blockNoUint = param_get8(Cmd, cmdp + 1);
+                if (blockNoUint < 0) {
+                    PrintAndLogEx(WARNING, "Wrong block number");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 'i':
+                interval = param_get32ex(Cmd, cmdp + 1, interval, 10);
+                if (interval <= 0) {
+                    PrintAndLogEx(WARNING, "Wrong interval number");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 'l':
+                timeLimit = param_get32ex(Cmd, cmdp + 1, timeLimit, 10);
+                if (timeLimit < interval) {
+                    PrintAndLogEx(WARNING, "Wrong time limit number");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 's':
+                startTime = param_get32ex(Cmd, cmdp + 1, 0, 10);
+                if (startTime > (timeLimit - interval)) {
+                    PrintAndLogEx(WARNING, "Wrong start time number");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 'd':
+                if (param_gethex(Cmd, cmdp + 1, teardata, 8)) {
+                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
+            case 't':
+                if (param_gethex(Cmd, cmdp + 1, teardata + 4, 8)) {
+                    PrintAndLogEx(WARNING, "Block data must include 8 HEX symbols");
+                    errors = true;
+                }
+                cmdp += 2;
+                break;
             default:
+                PrintAndLogEx(WARNING, "Unknown parameter '%c'", param_getchar(Cmd, cmdp));
+                errors = true;
                 break;
         }
     }
 
     if (errors) return usage_hf_mfu_otp_tearoff();
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MFU_OTP_TEAROFF, data, len);
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
-        PrintAndLogEx(WARNING, "Failed");
-        return PM3_ESOFT;
+    uint32_t actualTime = startTime;
+    printf("\nStarting TearOff test - Selected Block no: %d ...\n", blockNoUint);
+
+    while (actualTime <= (timeLimit - interval)) {
+        printf("\nTrying attack at: %d us\n", actualTime);
+        printf("\n.....\n");
+        printf("\nReading block before attack: \n");
+
+        clearCommandBuffer();
+        SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        PacketResponseNG resp;
+
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            uint8_t isOK = resp.oldarg[0] & 0xff;
+            if (isOK) {
+                uint8_t *d = resp.data.asBytes;
+                PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
+                PrintAndLogEx(NORMAL, "-----------------------------");
+                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNoUint, blockNoUint, sprint_hex(d, 4), sprint_ascii(d, 4));
+            }
+        }
+
+        printf("\n.....\n");
+        clearCommandBuffer();
+
+        SendCommandOLD(CMD_HF_MFU_OTP_TEAROFF, blockNoUint, actualTime, 0, teardata, 8);
+        if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 4000)) {
+            PrintAndLogEx(WARNING, "Failed");
+            return PM3_ESOFT;
+        }
+
+
+        printf("\nReading block after attack: \n");
+
+        clearCommandBuffer();
+        SendCommandOLD(CMD_HF_MIFAREU_READBL, blockNoUint, 0, 0, NULL, 0);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            uint8_t isOK = resp.oldarg[0] & 0xff;
+            if (isOK) {
+                uint8_t *d = resp.data.asBytes;
+                PrintAndLogEx(NORMAL, "\nBlock#  | Data        | Ascii");
+                PrintAndLogEx(NORMAL, "-----------------------------");
+                PrintAndLogEx(NORMAL, "%02d/0x%02X | %s| %s\n", blockNoUint, blockNoUint, sprint_hex(d, 4), sprint_ascii(d, 4));
+            }
+        }
+
+        /*  TEMPORALLY DISABLED
+                uint8_t d0, d1, d2, d3;
+                d0 = *resp.data.asBytes;
+                d1 = *(resp.data.asBytes + 1);
+                d2 = *(resp.data.asBytes + 2);
+                d3 = *(resp.data.asBytes + 3);
+                if ((d0 != 0xFF) || (d1 != 0xFF) || (d2 != 0xFF) || (d3 = ! 0xFF)) {
+                    PrintAndLogEx(NORMAL, "---------------------------------");
+                    PrintAndLogEx(NORMAL, "        EFFECT AT: %d us", actualTime);
+                    PrintAndLogEx(NORMAL, "---------------------------------\n");
+                }
+        */
+        actualTime += interval;
     }
     return PM3_SUCCESS;
 }

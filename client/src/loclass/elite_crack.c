@@ -475,7 +475,7 @@ int calculateMasterKey(uint8_t first16bytes[], uint64_t master_key[]) {
         memcpy(master_key, key64, 8);
 
     if (memcmp(z_0, result, 4) != 0) {
-        PrintAndLogEx(WARNING, _RED_("Failed to verify") "calculated master key (k_cus)! Something is wrong.");
+        PrintAndLogEx(WARNING, _RED_("Failed to verify") " calculated master key (k_cus)! Something is wrong.");
         return 1;
     } else {
         PrintAndLogEx(NORMAL, "\n");
@@ -511,7 +511,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 
 
     if (errors) {
-        PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim 2`") "again and collect new data");
+        PrintAndLogEx(ERR, "loclass exiting. Try run " _YELLOW_("`hf iclass sim 2`") " again and collect new data");
         return 1;
     }
 

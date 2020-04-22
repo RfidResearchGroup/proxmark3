@@ -308,7 +308,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(INFO, "downloading "_YELLOW_("%u") "bytes from spiffs (flashmem)", len);
+    PrintAndLogEx(INFO, "downloading "_YELLOW_("%u") " bytes from spiffs (flashmem)", len);
     if (!GetFromDevice(SPIFFS, dump, len, start_index, (uint8_t *)destfilename, 32, NULL, -1, true)) {
         PrintAndLogEx(FAILED, "ERROR; downloading from spiffs(flashmemory)");
         free(dump);
@@ -449,7 +449,7 @@ static int CmdFlashMemSpiFFSLoad(const char *Cmd) {
     free(data);
 
     if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") "bytes to file "_GREEN_("%s"), datalen, destfilename);
+        PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") " bytes to file "_GREEN_("%s"), datalen, destfilename);
 
     return res;
 }

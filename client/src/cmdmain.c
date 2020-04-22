@@ -140,7 +140,7 @@ static int lf_search_plus(const char *Cmd) {
         // Try to change config!
         uint32_t d;
         d = config.divisor = default_divisor[i];
-        PrintAndLogEx(INFO, "-->  trying  ( " _GREEN_("%d.%02d kHz")")", 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
+        PrintAndLogEx(INFO, "-->  trying  (" _GREEN_("%d.%02d kHz")")", 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
 
         retval = lf_config(&config);
         if (retval != PM3_SUCCESS)
@@ -174,7 +174,7 @@ static int CmdAuto(const char *Cmd) {
         return ret;
 
     PrintAndLogEx(INFO, "Failed both LF / HF SEARCH,");
-    PrintAndLogEx(INFO, "Trying " _YELLOW_("`lf read`") "and save a trace for you");
+    PrintAndLogEx(INFO, "Trying " _YELLOW_("`lf read`") " and save a trace for you");
 
     CmdPlot("");
     lf_read(false, 40000);

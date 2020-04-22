@@ -14,6 +14,9 @@ SYSCFLAGS=
 
 LIB_A= liblua.a
 
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../liblua
+
 # Your platform. See PLATS for possible values.
 PLAT= none
 

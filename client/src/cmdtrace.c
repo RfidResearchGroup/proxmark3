@@ -662,7 +662,7 @@ int CmdTraceList(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") "bytes)", traceLen);
+    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", traceLen);
 
     /*
     if (protocol == FELICA) {
@@ -674,7 +674,7 @@ int CmdTraceList(const char *Cmd) {
             tracepos = printHexLine(tracepos, traceLen, trace, protocol);
         }
     } else {
-        PrintAndLogEx(INFO, _YELLOW_("Start") "= Start of Start Bit, " _YELLOW_("End") "= End of last modulation. " _YELLOW_("Src") "= Source of Transfer");
+        PrintAndLogEx(INFO, _YELLOW_("Start") " = Start of Start Bit, " _YELLOW_("End") " = End of last modulation. " _YELLOW_("Src") " = Source of Transfer");
         if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ || protocol == LTO)
             PrintAndLogEx(INFO, "ISO14443A - All times are in carrier periods (1/13.56MHz)");
         if (protocol == THINFILM)

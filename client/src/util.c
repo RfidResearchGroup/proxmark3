@@ -941,7 +941,7 @@ char *str_ndup(const char *src, size_t len) {
  * Returns the number of nibbles (4 bits) entered.
  */
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str) {
-    int n = 0, i = 0;
+    unsigned int n = 0, i = 0;
 
     while (sscanf(&str[i++], "%1x", &n) == 1) {
         *hi2 = (*hi2 << 4) | (*hi >> 28);

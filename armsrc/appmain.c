@@ -333,7 +333,7 @@ void printConnSpeed(void) {
 
     Dbprintf("  Time elapsed............%dms", delta_time);
     Dbprintf("  Bytes transferred.......%d", bytes_transferred);
-    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") "bytes/s", 1000 * bytes_transferred / delta_time);
+    Dbprintf("  Transfer Speed PM3 -> Client = " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / delta_time);
 }
 
 /**
@@ -1295,7 +1295,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MFU_OTP_TEAROFF: {
-            MifareU_Otp_Tearoff();
+            MifareU_Otp_Tearoff(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFARE_STATIC_NONCE: {

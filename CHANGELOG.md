@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added Mifare Ultralight tear off experiment (@cintainfinita and @fukmar)
  - Added Mifare Desfire Read/Write/Create files/records/values functionality and several fixes to `hf mfdes` (@bkerler)
  - Added CreateStdFile command to Mifare `hf mfdes` (@bkerler)
  - Rework des/3des/3k3des/aes auth. Port to mbedtls crypto library on device (@bkerler)

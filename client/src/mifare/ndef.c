@@ -219,7 +219,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
     }
 
     return PM3_SUCCESS;
-};
+}
 
 // https://github.com/nfcpy/ndeflib/blob/master/src/ndef/signature.py#L292
 static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
@@ -283,7 +283,7 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
     }
 
     return PM3_SUCCESS;
-};
+}
 
 static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
     PrintAndLogEx(SUCCESS, "\tsignature version : \t" _GREEN_("0x%02x"), sig[0]);

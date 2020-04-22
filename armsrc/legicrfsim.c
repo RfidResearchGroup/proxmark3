@@ -465,7 +465,7 @@ void LegicRfSimulate(uint8_t cardtype) {
     }
 
     LED_A_ON();
-    DbpString("[=] Starting Legic emulator, press " _YELLOW_("button") "to end");
+    DbpString("[=] Starting Legic emulator, press " _YELLOW_("button") " to end");
     while (!BUTTON_PRESS() && !data_available()) {
         WDT_HIT();
 

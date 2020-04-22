@@ -32,10 +32,10 @@
 #include "util_posix.h"
 #include "crapto1/crapto1.h"
 #include "parity.h"
-#include "hardnested/hardnested_bruteforce.h"
-#include "hardnested/hardnested_bf_core.h"
-#include "hardnested/hardnested_bitarray_core.h"
-#include "zlib.h"
+#include "hardnested_bruteforce.h"
+#include "hardnested_bf_core.h"
+#include "hardnested_bitarray_core.h"
+#include "zlib/zlib.h"
 #include "fileutils.h"
 
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())

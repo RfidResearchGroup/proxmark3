@@ -92,7 +92,7 @@ int JsonSaveInt(json_t *root, const char *path, int value) {
 
 int JsonSaveStr(json_t *root, const char *path, const char *value) {
     return JsonSaveJsonObject(root, path, json_string(value));
-};
+}
 
 int JsonSaveBoolean(json_t *root, const char *path, bool value) {
     return JsonSaveJsonObject(root, path, json_boolean(value));
@@ -298,7 +298,7 @@ int JsonLoadBufAsHex(json_t *elm, const char *path, uint8_t *data, size_t maxbuf
         return 2;
 
     return 0;
-};
+}
 
 bool ParamLoadFromJson(struct tlvdb *tlv) {
     json_t *root;

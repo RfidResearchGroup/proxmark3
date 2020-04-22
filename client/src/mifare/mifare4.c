@@ -88,7 +88,7 @@ const char *mfGetAccessConditionsDesc(uint8_t blockn, uint8_t *data) {
     };
 
     return StaticNone;
-};
+}
 /*
 static int CalculateEncIVCommand(mf4Session_t *session, uint8_t *iv, bool verbose) {
     memcpy(&iv[0], &session->TI, 4);

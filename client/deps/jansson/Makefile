@@ -18,4 +18,7 @@ MYSRCS = \
 
 LIB_A = libjansson.a
 
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../jansson
+
 include ../../../Makefile.host

@@ -19,10 +19,10 @@
 #include "util_posix.h"
 #include "comms.h"
 #include "mbedtls/des.h"
-#include "../loclass/cipherutils.h"
-#include "../loclass/cipher.h"
-#include "../loclass/ikeys.h"
-#include "../loclass/elite_crack.h"
+#include "loclass/cipherutils.h"
+#include "loclass/cipher.h"
+#include "loclass/ikeys.h"
+#include "loclass/elite_crack.h"
 #include "fileutils.h"
 #include "protocols.h"
 #include "cardhelper.h"
@@ -927,7 +927,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         uint32_t limit = MIN(applimit, decryptedlen / 8);
 
         if (decryptedlen / 8 != applimit) {
-            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%zu") "vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
+            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%zu") " vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
             PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * 8);
         }
         uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
@@ -1415,7 +1415,7 @@ static int CmdHFiClassReader_Dump(const char *Cmd) {
     // print the dump
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(tag_data, 8));
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(tag_data, 8));
     printIclassDumpContents(tag_data, 1, (gotBytes / 8), gotBytes);
 
     if (filename[0] == 0) {
@@ -2052,11 +2052,11 @@ static int CmdHFiClassReadTagFile(const char *Cmd) {
         PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, (uint16_t)(bytes_read >> 3), (uint16_t)(bytes_read >> 3));
         PrintAndLogEx(INFO, "Printing blocks from");
-        PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") "end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
+        PrintAndLogEx(INFO, "start " _YELLOW_("0x%02x") " end " _YELLOW_("0x%02x"), (startblock == 0) ? 6 : startblock, endblock);
     }
     uint8_t *csn = dump;
     PrintAndLogEx(INFO, "------+--+-------------------------+----------");
-    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") "|", sprint_hex(csn, 8));
+    PrintAndLogEx(INFO, " CSN  |00| " _GREEN_("%s") " |", sprint_hex(csn, 8));
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
     free(dump);
     return PM3_SUCCESS;
@@ -2223,7 +2223,7 @@ static int loadKeys(char *filename) {
         memcpy(iClass_Key_Table[i], dump + (i * 8), 8);
 
     free(dump);
-    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") "keys from %s", i, filename);
+    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from %s", i, filename);
     return PM3_SUCCESS;
 }
 
@@ -2440,7 +2440,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     if (use_raw)
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_(" raw mode"));
 
-    PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") "key", (use_credit_key) ? "CREDIT" : "DEBIT");
+    PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key", (use_credit_key) ? "CREDIT" : "DEBIT");
     PrintAndLogEx(SUCCESS, "Tag info");
     PrintAndLogEx(SUCCESS, "CSN     | %s", sprint_hex(CSN, sizeof(CSN)));
     PrintAndLogEx(SUCCESS, "CCNR    | %s", sprint_hex(CCNR, sizeof(CCNR)));
@@ -2714,7 +2714,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
             if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
                 memcpy(iClass_Key_Table[i], item->key, 8);
-                PrintAndLogEx(SUCCESS, "Added key to keyslot [%d] - "_YELLOW_("`hf iclass managekeys p`")"to view", i);
+                PrintAndLogEx(SUCCESS, "Added key to keyslot [%d] - "_YELLOW_("`hf iclass managekeys p`")" to view", i);
                 break;
             }
         }

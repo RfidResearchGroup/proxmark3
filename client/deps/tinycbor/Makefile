@@ -16,6 +16,9 @@ MYSRCS = \
 
 LIB_A = tinycbor.a
 
+# Transition: remove old directories and objects
+MYCLEANOLDPATH = ../../tinycbor
+
 # Strange errors on Mingw when compiling with -O3
 CFLAGS ?= -Wall -Werror -O2
 
