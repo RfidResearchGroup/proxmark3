@@ -31,6 +31,7 @@ version.c
 *.old
 *.swp
 *.json.bak
+*.pyc
 
 # new build file for add-ons.
 Makefile.platform
@@ -39,6 +40,13 @@ Makefile.platform
 
 # cmake
 client/build/
+
+# Coverity
+cov-int/
+.coverity.conf
+
+# profiling
+*.gcno
 
 !client/resources/hardnested/*.bin
 !client/resources/hardnested_tables/*.z
