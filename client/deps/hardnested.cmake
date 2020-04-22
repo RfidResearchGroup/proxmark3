@@ -1,22 +1,25 @@
 set_property(SOURCE PROPERTY C_STANDARD 99)
 
-## CPU-specific code
-## These are mostly for x86-based architectures, which is not useful for many Android devices.
 add_library(hardnested_nosimd OBJECT
         hardnested/hardnested_bf_core.c
         hardnested/hardnested_bitarray_core.c)
 
+target_compile_options(hardnested_nosimd PRIVATE -Wall -Werror -O3)
+
 target_include_directories(hardnested_nosimd PRIVATE
         ../../common
         ../../include)
-target_compile_options(hardnested_nosimd PRIVATE -Wall -Werror -O3)
 
-set(X86_CPUS x86 x86_64 i686)
+## CPU-specific code
+## These are mostly for x86-based architectures, which is not useful for many Android devices.
+## Mingw platforms: AMD64
+set(X86_CPUS x86 x86_64 i686 AMD64)
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
 
 if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
     message(STATUS "Building optimised x86/x86_64 binaries")
+
     target_compile_options(hardnested_nosimd BEFORE PRIVATE
             -mno-mmx -mno-sse2 -mno-avx -mno-avx2 -mno-avx512f)
 
