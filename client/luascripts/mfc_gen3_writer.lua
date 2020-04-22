@@ -150,7 +150,21 @@ end
 --
 ---
 -------------------------------
--- Check 0xFFFFFFFFFFFF key for tag (MFC)
+-- Return key code 00/01 to string
+-------------------------------
+---
+--
+local function KeyAB()
+	if default_key_type == '00' then
+    	return 'KeyA'
+	else
+    	return 'KeyB'
+	end
+end
+--
+---
+-------------------------------
+-- Check response from Proxmark
 -------------------------------
 ---
 --
@@ -162,17 +176,19 @@ local function getblockdata(response)
     end
 end
 --
+---
+-------------------------------
+-- Check 0xFFFFFFFFFFFF key for tag (MFC)
+-------------------------------
+---
+--
 local function checkkey()
     local status = 0
     for i = 1, #eml do
-        cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_READBL, data = ('%02s%02s%s'):format((i-1), default_key_type, default_key)}
+        cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_READBL, data = ('%02x%02x%s'):format((i-1), default_key_type, default_key)}
         if (getblockdata(cmd:sendNG(false)) == true) then
             status = status + 1
-            if default_key_type == '00' then
-                print(('%s %02s %s %s %s'):format('Block:', (i-1), 'KeyA', default_key, 'OK'))
-            else
-                print(('%s %02s %s %s %s'):format('Block:', (i-1), 'KeyB', default_key, 'OK'))
-            end
+                print(('%s %02s %s %s %s'):format(' ', (i-1), KeyAB(), default_key, 'OK'))
         else
             break
         end
@@ -328,8 +344,11 @@ local function main(args)
     end
     --
     print(tab)
+    print(' Going to check the all ' .. KeyAB() .. ' by ' .. default_key)
+    print(tab)
     --
     if checkkey() == true then
+    	print(tab)
         if (utils.confirm(' Card is Empty. Write selected dump to card ?') == true) then
             for i = 1, #eml do
                 core.console(string.format(cmd_wrbl, (i-1), default_key, eml[i]))
