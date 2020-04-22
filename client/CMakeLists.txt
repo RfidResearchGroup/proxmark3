@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
@@ -28,7 +24,7 @@ set(QT_PACKAGELIST
 )
 set(Qt5_FOUND ON)
 foreach(_qt_package IN LISTS QT_PACKAGELIST)
-    find_package(${_qt_package} ${QT_FIND_PACKAGE_OPTIONS})
+    find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
     if(NOT ${_qt_package}_FOUND)
         set(Qt5_FOUND OFF)
     endif(NOT ${_qt_package}_FOUND)
@@ -217,6 +213,9 @@ endif (MINGW)
 
 if (Qt5_FOUND)
     message("Qt5 library found, building gui :)")
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOUIC ON)
     set (TARGET_SOURCES
             src/proxgui.cpp
             src/proxguiqt.cpp
