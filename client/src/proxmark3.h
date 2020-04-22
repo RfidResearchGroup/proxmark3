@@ -22,6 +22,8 @@
 
 #define PROXPROMPT_OFFLINE "[" _BOLD_RED_("offline") "] pm3 --> "
 
+#define PROXPROMPT_MAX_SIZE sizeof(PROXPROMPT_OFFLINE)
+
 #define PROXHISTORY "history.txt"
 #define PROXLOG "log_%Y%m%d.txt"
 #define MAX_NESTED_CMDSCRIPT 10
