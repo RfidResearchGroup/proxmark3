@@ -16,11 +16,11 @@
 
 #define PROXPROMPT_MAX_SIZE 255
 
-#define PROXPROMPT_COMPOSE "[" "%s" "] pm3 %s--> "
+#define PROXPROMPT_COMPOSE "[" "%s%s" "] pm3 --> "
 
-#define PROXPROMPT_CTX_SCRIPTFILE  "(" _YELLOW_("script") ")"
-#define PROXPROMPT_CTX_SCRIPTCMD   "(" _YELLOW_("command") ")"
-#define PROXPROMPT_CTX_STDIN       "(" _YELLOW_("stdin") ")"
+#define PROXPROMPT_CTX_SCRIPTFILE  "|" _GREEN_("script")
+#define PROXPROMPT_CTX_SCRIPTCMD   "|" _GREEN_("script")
+#define PROXPROMPT_CTX_STDIN       "|" _GREEN_("script")
 #define PROXPROMPT_CTX_INTERACTIVE ""
 
 #define PROXPROMPT_DEV_USB     _BOLD_GREEN_("usb")
