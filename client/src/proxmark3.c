@@ -113,12 +113,22 @@ static void showBanner(void) {
     g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 }
 
+static const char *prompt_dev = "";
+static const char *prompt_ctx = "";
+
+static void prompt_compose(char *buf, size_t buflen, const char *prompt_ctx, const char *prompt_dev) {
+    snprintf(buf, buflen-1, PROXPROMPT_COMPOSE, prompt_dev, prompt_ctx);
+}
 
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && session.pm3_present) {
-        rl_set_prompt(PROXPROMPT_OFFLINE);
-
+        prompt_dev = PROXPROMPT_DEV_OFFLINE;
+        char prompt[PROXPROMPT_MAX_SIZE] = {0};
+        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
+        char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
+        memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
+        rl_set_prompt(prompt_filtered);
         rl_forced_update_display();
         CloseProxmark();
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
@@ -210,7 +220,14 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     // loops every time enter is pressed...
     while (1) {
         bool printprompt = false;
-        const char *prompt = PROXPROMPT_CON;
+        if (session.pm3_present) {
+            if (conn.send_via_fpc_usart == false)
+                prompt_dev = PROXPROMPT_DEV_USB;
+            else
+                prompt_dev = PROXPROMPT_DEV_FPC;
+        } else {
+            prompt_dev = PROXPROMPT_DEV_OFFLINE;
+        }
 
 check_script:
         // If there is a script file
@@ -225,7 +242,7 @@ check_script:
                     break;
                 goto check_script;
             } else {
-
+                prompt_ctx = PROXPROMPT_CTX_SCRIPTFILE;
                 // remove linebreaks
                 strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
@@ -236,6 +253,7 @@ check_script:
         } else {
             // If there is a script command
             if (execCommand) {
+                prompt_ctx = PROXPROMPT_CTX_SCRIPTCMD;
 
                 cmd = str_dup(script_cmd);
                 if (cmd != NULL)
@@ -255,6 +273,7 @@ check_script:
 
                 // if there is a pipe from stdin
                 if (stdinOnPipe) {
+                    prompt_ctx = PROXPROMPT_CTX_STDIN;
 
                     // clear array
                     memset(script_cmd_buf, 0, sizeof(script_cmd_buf));
@@ -271,15 +290,10 @@ check_script:
                         printprompt = true;
 
                 } else {
+                    prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
                     rl_event_hook = check_comm;
-                    if (session.pm3_present) {
-                        if (conn.send_via_fpc_usart == false)
-                            prompt = PROXPROMPT_USB;
-                        else
-                            prompt = PROXPROMPT_FPC;
-                    } else {
-                        prompt = PROXPROMPT_OFFLINE;
-                    }
+                    char prompt[PROXPROMPT_MAX_SIZE] = {0};
+                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !session.supports_colors);
                     cmd = readline(prompt_filtered);
@@ -312,6 +326,8 @@ check_script:
                 if (!printprompt) {
                     g_printAndLog = PRINTANDLOG_LOG;
                 }
+                char prompt[PROXPROMPT_MAX_SIZE] = {0};
+                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
                 PrintAndLogEx(NORMAL, "%s%s", prompt, cmd);
                 g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 
