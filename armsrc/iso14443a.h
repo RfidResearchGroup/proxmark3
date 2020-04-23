@@ -112,6 +112,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
 void RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(uint8_t tagType, uint8_t flags, uint8_t *data);
+bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_info_t **responses, uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages);
 void iso14443a_antifuzz(uint32_t flags);
 void ReaderIso14443a(PacketCommandNG *c);
 void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing);
@@ -136,6 +137,7 @@ int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision
 int EmSendPrecompiledCmd(tag_response_info_t *p_response);
 
 bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *max_buffer_size);
+bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffer_size);
 
 bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
                 uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
