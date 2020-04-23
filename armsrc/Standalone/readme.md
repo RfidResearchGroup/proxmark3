@@ -140,4 +140,13 @@ The final steps is to
 When compiling you will see a header showing what configurations your project compiled with.
 Make sure it says your standalone mode name.  
 
+## Submitting your code
+
+Once you're ready to share your mode, please
+
+* add a line in CHANGELOG.md
+* add your mode in the modes table in doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md
+
+and submit your PR.
+
 Happy hacking!
