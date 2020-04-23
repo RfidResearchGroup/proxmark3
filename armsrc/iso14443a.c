@@ -837,7 +837,7 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
 // stop when button is pressed or client usb connection resets
 // or return TRUE when command is captured
 //-----------------------------------------------------------------------------
-static bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
+bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
