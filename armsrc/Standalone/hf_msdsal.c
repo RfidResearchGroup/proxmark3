@@ -48,7 +48,7 @@ void ModInfo(void) {
 *
 *
 * Reading or emulating ISO-14443A technology is not limited to payment cards. This example 
-* was not only designed to make a replay attack, but to open new possibilities in the ISO-144434 
+* was not only designed to make a replay attack, but to open new possibilities in the ISO-14443A 
 * technologies. Be brave enough to share your knowledge & inspire others. Salvador Mendoza.
 */
 
