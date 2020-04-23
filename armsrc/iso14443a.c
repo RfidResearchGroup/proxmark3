@@ -873,7 +873,7 @@ static bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *
     return false;
 }
 
-static bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffer_size)  {
+bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffer_size)  {
     // Example response, answer to MIFARE Classic read block will be 16 bytes + 2 CRC = 18 bytes
     // This will need the following byte array for a modulation sequence
     //    144        data bits (18 * 8)
