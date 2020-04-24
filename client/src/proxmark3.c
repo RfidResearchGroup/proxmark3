@@ -117,7 +117,7 @@ static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
 
 static void prompt_compose(char *buf, size_t buflen, const char *prompt_ctx, const char *prompt_dev) {
-    snprintf(buf, buflen-1, PROXPROMPT_COMPOSE, prompt_dev, prompt_ctx);
+    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, prompt_dev, prompt_ctx);
 }
 
 static int check_comm(void) {
