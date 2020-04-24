@@ -85,6 +85,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy 
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
 | HF_LEGIC        | HF Legic Prime standalone - uhei
+| HF_MSDSAL       | EMV Read and emulation - Salvador Mendoza
 
 By default `STANDALONE=LF_SAMYRUN`.
 
