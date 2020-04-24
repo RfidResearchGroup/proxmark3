@@ -57,11 +57,16 @@ LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) 
 INCLUDES_CLIENT = -I./src -I../include -I../common -I../common_fpga $(LIBS)
 CFLAGS ?= -Wall -Werror -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
-PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
+PM3CFLAGS = $(CFLAGS) -std=c99 $(INCLUDES_CLIENT)
 # WIP Testing
 #PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local
 ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    # FTR __USE_MINGW_ANSI_STDIO seems deprecated in Mingw32
+    # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
+    PM3CFLAGS += -D_ISOC99_SOURCE
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
 endif
 CXXFLAGS ?= -Wall -Werror -O3
