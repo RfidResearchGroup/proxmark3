@@ -136,6 +136,8 @@ static bool is_directory(const char *filename) {
  * @param dirname
  * @return
  */
+// Not used...
+/*
 #ifdef _WIN32
 #define make_dir(a) _mkdir(a)
 #else
@@ -189,7 +191,7 @@ bool create_path(const char *dirname) {
     }
     return true;
 }
-
+*/
 bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
 
     if (pathIndex < spItemCount) {

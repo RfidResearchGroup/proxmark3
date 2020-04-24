@@ -74,7 +74,7 @@ typedef enum {
 } DumpFileType_t;
 
 int fileExists(const char *filename);
-bool create_path(const char *dirname);
+//bool create_path(const char *dirname);
 bool setDefaultPath (savePaths_t pathIndex,const char *Path);  // set a path in the path list session.defaultPaths
 
 

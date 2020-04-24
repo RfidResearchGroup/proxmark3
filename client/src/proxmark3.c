@@ -703,10 +703,6 @@ int main(int argc, char *argv[]) {
     // Load Settings and assign
     // This will allow the command line to override the settings.json values
     preferences_load();
-    // Change height/width (Rows,Cols) - Testing
-    // printf ("\e[8;50;100t");
-    // printf ("\e[3;50;50t"); // x,y
-    //printf ("Path : %s \n",my_user_directory);
     // quick patch for debug level
     g_debugMode = session.client_debug_level;
     // settings_save ();
@@ -980,9 +976,10 @@ int main(int argc, char *argv[]) {
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
     if (!session.preferences_loaded) {
+        PrintAndLogEx (INFO,"Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
         session.preferences_loaded = true;
-    } else {
+    } /* else {
         // Set device debug level
         PrintAndLogEx(INFO,"setting device debug loglevel");
         if (session.pm3_present) {
@@ -994,7 +991,7 @@ int main(int argc, char *argv[]) {
         else
             PrintAndLogEx(WARNING,"Proxmark3 not ready to set debug level");
     }
-    
+    */
 #endif
 
 #ifdef HAVE_GUI

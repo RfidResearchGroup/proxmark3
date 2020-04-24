@@ -49,11 +49,9 @@ static char *prefGetFilename(void) {
 
 int preferences_load(void) {
 
-    PrintAndLogEx(INFO, "Looking for preferences...");
-
     // Set all defaults
     session.client_debug_level = cdbOFF;
-    session.device_debug_level = ddbOFF;
+  //  session.device_debug_level = ddbOFF;
     session.window_changed = false;
     session.plot.x = 10;
     session.plot.y = 30;
@@ -67,6 +65,11 @@ int preferences_load(void) {
     session.show_hints = false;
     session.supports_colors = false;
 
+    setDefaultPath (spDefault, "");
+    setDefaultPath (spDump, "");
+    setDefaultPath (spTrace, "");
+
+/*
     // default save path 
     if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
         setDefaultPath (spDefault, get_my_user_directory());
@@ -84,14 +87,19 @@ int preferences_load(void) {
         setDefaultPath (spTrace, get_my_user_directory());
     else
         setDefaultPath (spTrace, ".");
+*/
 
     // loadFileJson wants these, so pass in place holder values, though not used
     // in settings load;
     uint8_t dummyData = 0x00;
     size_t dummyDL = 0x00;
 
-    if (loadFileJSON(prefGetFilename(), &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
-        session.preferences_loaded = true;
+    // to better control json cant find file error msg.
+    if (fileExists(prefGetFilename())) {
+        PrintAndLogEx(INFO, "Loading Preferences %s",prefGetFilename());
+        if (loadFileJSON(prefGetFilename(), &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
+            session.preferences_loaded = true;
+        }
     }
     // Note, if session.settings_loaded == false then the settings_save
     // will be called in main () to save settings as set in defaults and main() checks.
@@ -194,7 +202,7 @@ void preferences_save_callback(json_t *root) {
         default:
             JsonSaveStr(root, "logging.level", "NORMAL");
     }
-
+/*
     switch (session.device_debug_level) {
         case ddbOFF:
             JsonSaveStr(root, "device.debug.level", "off");
@@ -214,7 +222,7 @@ void preferences_save_callback(json_t *root) {
         default:
             JsonSaveStr(root, "logging.level", "NORMAL");
     }
-
+*/
 }
 
 void preferences_load_callback(json_t *root) {
@@ -280,7 +288,7 @@ void preferences_load_callback(json_t *root) {
 
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "os.supports.colors", &b1) == 0)
         session.supports_colors = b1;
-
+/*
     // Logging Level
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "device.debug.level", &s1) == 0) {
         strncpy(tempStr, s1, sizeof(tempStr) - 1);
@@ -291,7 +299,7 @@ void preferences_load_callback(json_t *root) {
         if (strncmp(tempStr, "debug", 5) == 0) session.device_debug_level = ddbDEBUG;
         if (strncmp(tempStr, "extended", 8) == 0) session.device_debug_level = ddbEXTENDED;
     }
-
+*/
 }
 
 // Help Functions
@@ -328,7 +336,7 @@ static int usage_set_debug() {
 
     return PM3_SUCCESS;
 }
-
+/*
 static int usage_set_devicedebug() {
     PrintAndLogEx(NORMAL, "Usage: pref set devicedebug <off | error | info | debug | extended>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -341,7 +349,7 @@ static int usage_set_devicedebug() {
 
     return PM3_SUCCESS;
 }
-
+*/
 static int usage_set_hints() {
     PrintAndLogEx(NORMAL, "Usage: pref set hints <off | on>");
     PrintAndLogEx(NORMAL, "Options:");
@@ -426,7 +434,7 @@ void showClientDebugState(prefShowOpt_t Opt) {
             PrintAndLogEx(NORMAL, "   %s client debug........... "_RED_("unknown"), prefShowMsg(Opt));
     }
 }
-
+/*
 void showDeviceDebugState(prefShowOpt_t Opt) {
     switch (session.device_debug_level) {
         case ddbOFF:
@@ -448,7 +456,7 @@ void showDeviceDebugState(prefShowOpt_t Opt) {
             PrintAndLogEx(NORMAL, "   %s device debug........... "_RED_("unknown"), prefShowMsg(Opt));
     }
 }
-
+*/
 void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
 
     char tempStr[50];
@@ -466,16 +474,12 @@ void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
         default:
             strcpy (tempStr,_RED_("unknown")" save path......");
     }
-    PrintAndLogEx(NORMAL, "   %s %s "_GREEN_("%s"), prefShowMsg(Opt), tempStr, session.defaultPaths[pathIndex]);
+    if ((session.defaultPaths[pathIndex] == NULL) || (strcmp(session.defaultPaths[pathIndex],"") == 0))
+        PrintAndLogEx(NORMAL, "   %s %s "_WHITE_("not set"), prefShowMsg(Opt),tempStr);
+    else
+        PrintAndLogEx(NORMAL, "   %s %s "_GREEN_("%s"), prefShowMsg(Opt), tempStr, session.defaultPaths[pathIndex]);
 }
-/*
-void showDumpPathState(prefShowOpt_t Opt) {
-    PrintAndLogEx(NORMAL, "   %s dump save path......... "_GREEN_("%s"), prefShowMsg(Opt), session.defaultPaths[spDump]);
-}
-void showTracePathState(prefShowOpt_t Opt) {
-    PrintAndLogEx(NORMAL, "   %s trace save path........ "_GREEN_("%s"), prefShowMsg(Opt), session.defaultPaths[spTrace]);
-}
-*/
+
 void showPlotPosState(void){
     PrintAndLogEx(NORMAL, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   session.plot.x, session.plot.y, session.plot.h, session.plot.w);
@@ -643,7 +647,7 @@ static int setCmdDebug(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
+/*
 static int setCmdDeviceDebug (const char *Cmd)
 {
     uint8_t cmdp = 0;
@@ -709,7 +713,7 @@ static int setCmdDeviceDebug (const char *Cmd)
 
     return PM3_SUCCESS;
 }
-
+*/
 static int setCmdHint (const char *Cmd)
 {
     uint8_t cmdp = 0;
@@ -808,8 +812,8 @@ static int setCmdSavePaths (const char *Cmd) {
                         PrintAndLogEx(ERR,"path does not exist... "_RED_("%s"),newValue);
                     } else {
                         // do we need to create it
-                        if (!fileExists(newValue))
-                            create_path (newValue); //mkdir (newValue,0x777);
+                    //    if (!fileExists(newValue))
+                    //        create_path (newValue); //mkdir (newValue,0x777);
 
                         pathItem = spItemCount;
                         if (strncmp(strOpt, "default", 7) == 0) pathItem = spDefault;
@@ -847,9 +851,9 @@ static command_t setCommandTable[] = {
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
     {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
-    {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "Set default save paths"},
+    {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
     {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
-    {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
+  //  {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -870,24 +874,25 @@ int CmdPrefSet(const char *Cmd) {
 static int CmdPrefShow(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, _CYAN_("Preferences"));
+    PrintAndLogEx(NORMAL, _CYAN_("Preferences loaded from %s"),prefGetFilename());
     
     if (!session.preferences_loaded) {
         PrintAndLogEx (ERR, "Preferneces not loaded");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "    preference file........ "_GREEN_("%s"), prefGetFilename());
+    // PrintAndLogEx(NORMAL, "    preference file........ "_GREEN_("%s"), prefGetFilename());
     showEmojiState(prefShowNone);
     showHintsState(prefShowNone);
     showColorState(prefShowNone);
    // showPlotPosState ();
    // showOverlayPosState ();
-    showSavePathState(spDefault, prefShowNone);
-    showSavePathState(spDump, prefShowNone);
-    showSavePathState(spTrace, prefShowNone);
+  //  showSavePathState(spDefault, prefShowNone);
+  //  showSavePathState(spDump, prefShowNone);
+  //  showSavePathState(spTrace, prefShowNone);
+
     showClientDebugState(prefShowNone);
-    showDeviceDebugState(prefShowNone);
+//    showDeviceDebugState(prefShowNone);
     PrintAndLogEx(NORMAL, "");
 
     return PM3_SUCCESS;
