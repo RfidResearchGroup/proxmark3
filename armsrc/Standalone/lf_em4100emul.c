@@ -85,7 +85,7 @@ void RunMod() {
     Dbprintf("[=] >>  LF EM4100 simulator started  <<");
 
     int selected = 0; //selected slot after start
-    slots_count = sizeof(low) / sizeof(low[0]);
+    slots_count = ARRAYLEN(low);
     bba = BigBuf_get_addr();
     for (;;) {
         WDT_HIT();
