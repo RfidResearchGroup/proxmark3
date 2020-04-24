@@ -68,15 +68,15 @@ Add your mode to the `Makefile.hal` help and modes list:
 | LF_FOO          | My foobar mode will make you coffee    |
 +----------------------------------------------------------+
 
-STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_FOO
-STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG
+STANDALONE_MODES := LF_... LF_FOO
+STANDALONE_MODES += HF_...
 ```
 
 If your mode is using one of the unique features of the RDV4, add it to the proper list:
 
 ```
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG
+STANDALONE_MODES_REQ_FLASH :=
 ```
 
 ## Update MAKEFILE.INC

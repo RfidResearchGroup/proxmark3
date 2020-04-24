@@ -1,5 +1,5 @@
 # Default standalone if no standalone specified
-DEFAULT_STANDALONE=LF_SAMYRUN
+DEFAULT_STANDALONE=HF_MSDSAL
 HELP_EXAMPLE_STANDALONE=HF_YOUNG 
 # (you can set explicitly STANDALONE= to disable standalone modes)
 STANDALONE?=$(DEFAULT_STANDALONE)

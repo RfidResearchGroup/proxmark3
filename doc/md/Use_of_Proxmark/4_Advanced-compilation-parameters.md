@@ -72,22 +72,22 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | STANDALONE      | DESCRIPTION                            |
 |-----------------|----------------------------------------|
 |                 | No standalone mode
-| LF_SAMYRUN (def)| HID26 read/clone/sim - Samy Kamkar
 | LF_ICERUN       | standalone mode skeleton - Iceman
-| LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz
-| LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
-| HF_YOUNG        | Mifare sniff/simulation - Craig Young
-| HF_MATTYRUN     | Mifare sniff/clone - Matías A. Ré Medina
-| HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
-| HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
-| HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
-| LF_ICEHID       | LF HID collector to flashmem - Iceman
-| LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy 
+| LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
+| LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
+| LF_ICEHID       | LF HID collector to flashmem - Iceman
+| LF_SAMYRUN      | HID26 read/clone/sim - Samy Kamkar
+| LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz
+| HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
+| HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
+| HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
 | HF_LEGIC        | HF Legic Prime standalone - uhei
-| HF_MSDSAL       | EMV Read and emulation - Salvador Mendoza
+| HF_MATTYRUN     | Mifare sniff/clone - Matías A. Ré Medina
+| HF_MSDSAL  (def)| EMV Read and emulation - Salvador Mendoza
+| HF_YOUNG        | Mifare sniff/simulation - Craig Young
 
-By default `STANDALONE=LF_SAMYRUN`.
+By default `STANDALONE=HF_MSDSAL`.
 
 ## Next step
 
