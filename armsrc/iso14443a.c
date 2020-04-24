@@ -837,7 +837,7 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
 // stop when button is pressed or client usb connection resets
 // or return TRUE when command is captured
 //-----------------------------------------------------------------------------
-static bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
+bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
@@ -873,7 +873,7 @@ static bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *
     return false;
 }
 
-static bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffer_size)  {
+bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffer_size)  {
     // Example response, answer to MIFARE Classic read block will be 16 bytes + 2 CRC = 18 bytes
     // This will need the following byte array for a modulation sequence
     //    144        data bits (18 * 8)
@@ -919,7 +919,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     }
 }
 
-static bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_info_t **responses, uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
+bool SimulateIso14443aInit(int tagType, int flags, uint8_t *data, tag_response_info_t **responses, uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
     static uint8_t rATQA[2] = { 0x00 };
