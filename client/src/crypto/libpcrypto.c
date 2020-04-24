@@ -10,6 +10,7 @@
 //-----------------------------------------------------------------------------
 
 #include "crypto/libpcrypto.h"
+#include "crypto/asn1utils.h"
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -23,7 +24,6 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/error.h>
-#include <crypto/asn1utils.h>
 #include <util.h>
 
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
