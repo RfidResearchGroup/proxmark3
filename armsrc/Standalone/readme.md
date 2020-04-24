@@ -58,7 +58,7 @@ This leads to your next step, your DEFINE name needed in Makefile.
 
 ## Update MAKEFILE.HAL
 
-Add your mode to the `Makefile.hal` help and modes list:
+Add your mode to the `Makefile.hal` help and modes list (alphabetically):
 ```
 +==========================================================+
 | STANDALONE      | DESCRIPTION                            |

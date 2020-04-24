@@ -77,8 +77,8 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
 | LF_ICEHID       | LF HID collector to flashmem - Iceman
-| LF_SAMYRUN      | HID26 read/clone/sim - Samy Kamkar
 | LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz
+| LF_SAMYRUN      | HID26 read/clone/sim - Samy Kamkar
 | HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato

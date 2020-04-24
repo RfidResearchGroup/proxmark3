@@ -1,6 +1,6 @@
 # Default standalone if no standalone specified
 DEFAULT_STANDALONE=HF_MSDSAL
-HELP_EXAMPLE_STANDALONE=HF_YOUNG 
+HELP_EXAMPLE_STANDALONE=LF_SAMYRUN
 # (you can set explicitly STANDALONE= to disable standalone modes)
 STANDALONE?=$(DEFAULT_STANDALONE)
 STANDALONE_REQ_DEFS=
@@ -11,35 +11,8 @@ define KNOWN_STANDALONE_DEFINITIONS
 +==========================================================+
 | (empty)         | No standalone mode                     |
 +----------------------------------------------------------+
-| LF_SAMYRUN      | HID26 read/clone/sim                   |
-| (default)       | - Samy Kamkar                          |
-+----------------------------------------------------------+
 | LF_SKELETON     | standalone mode skeleton               |
 |                 | - iceman                               |
-+----------------------------------------------------------+
-| LF_PROXBRUTE    | HID ProxII bruteforce                  |
-|                 | - Brad Antoniewicz                     |
-+----------------------------------------------------------+
-| LF_HIDBRUTE     | HID corporate 1000 bruteforce          |
-|                 | - Federico dotta & Maurizio Agazzini   |
-+----------------------------------------------------------+
-| HF_YOUNG        | Mifare sniff/simulation                |
-|                 | - Craig Young                          |
-+----------------------------------------------------------+
-| HF_MATTYRUN     | Mifare sniff/clone                     |
-|                 | - Matías A. Ré Medina                  |
-+----------------------------------------------------------+
-| HF_COLIN        | Mifare ultra fast sniff/sim/clone      |
-| (RDV4 only)     | - Colin Brigato                        |
-+----------------------------------------------------------+
-| HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
-| (RDV4 only)     | storing in flashmem - Bogito           |
-+----------------------------------------------------------+
-| HF_14ASNIFF     | 14a sniff to flashmem                  |
-| (RDV4 only)     |                                        |
-+----------------------------------------------------------+
-| LF_ICEHID       | LF HID collector to flashmem           |
-| (RDV4 only)     |                                        |
 +----------------------------------------------------------+
 | LF_EM4100EMUL   | Simulate predefined em4100 tags only   |
 |                 |                                        |
@@ -47,18 +20,45 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_EM4100RWC    | Read/simulate em4100 tags & clone it   |
 |                 | to T555x tags                          |
 +----------------------------------------------------------+
+| LF_HIDBRUTE     | HID corporate 1000 bruteforce          |
+|                 | - Federico dotta & Maurizio Agazzini   |
++----------------------------------------------------------+
+| LF_ICEHID       | LF HID collector to flashmem           |
+| (RDV4 only)     |                                        |
++----------------------------------------------------------+
+| LF_PROXBRUTE    | HID ProxII bruteforce                  |
+|                 | - Brad Antoniewicz                     |
++----------------------------------------------------------+
+| LF_SAMYRUN      | HID26 read/clone/sim                   |
+|                 | - Samy Kamkar                          |
++----------------------------------------------------------+
+| HF_14ASNIFF     | 14a sniff to flashmem                  |
+| (RDV4 only)     |                                        |
++----------------------------------------------------------+
+| HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
+| (RDV4 only)     | storing in flashmem - Bogito           |
++----------------------------------------------------------+
+| HF_COLIN        | Mifare ultra fast sniff/sim/clone      |
+| (RDV4 only)     | - Colin Brigato                        |
++----------------------------------------------------------+
 | HF_LEGIC        | Read/simulate Legic Prime tags         |
 |                 | storing in flashmem                    |
 +----------------------------------------------------------+
+| HF_MATTYRUN     | Mifare sniff/clone                     |
+|                 | - Matías A. Ré Medina                  |
++----------------------------------------------------------+
 | HF_MSDSAL       | Read and emulate MSD Visa cards        |
-|                 | - Salvador Mendoza                     |
+| (default)       | - Salvador Mendoza                     |
++----------------------------------------------------------+
+| HF_YOUNG        | Mifare sniff/simulation                |
+|                 | - Craig Young                          |
 +----------------------------------------------------------+
 endef
 
-STANDALONE_MODES := LF_SAMYRUN LF_SKELETON LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID LF_EM4100EMUL LF_EM4100RWC
-STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG HF_14ASNIFF HF_LEGIC HF_MSDSAL
+STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RWC LF_HIDBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN
+STANDALONE_MODES += HF_14ASNIFF HF_BOG HF_COLIN HF_LEGIC HF_MATTYRUN HF_MSDSAL HF_YOUNG
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG HF_14ASNIFF LF_ICEHID
+STANDALONE_MODES_REQ_FLASH := LF_ICEHID HF_14ASNIFF HF_BOG HF_COLIN
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)
