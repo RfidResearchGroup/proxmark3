@@ -1,9 +1,9 @@
 # Generic standalone Mode injection of source code
 
 SRC_STANDALONE = placeholder.c
-# WITH_STANDALONE_LF_ICERUN
-ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
-    SRC_STANDALONE = lf_icerun.c
+# WITH_STANDALONE_LF_SKELETON
+ifneq (,$(findstring WITH_STANDALONE_LF_SKELETON,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_skeleton.c
 endif
 # WITH_STANDALONE_LF_SAMYRUN
 ifneq (,$(findstring WITH_STANDALONE_LF_SAMYRUN,$(APP_CFLAGS)))

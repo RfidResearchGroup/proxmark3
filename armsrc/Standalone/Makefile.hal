@@ -14,7 +14,7 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_SAMYRUN      | HID26 read/clone/sim                   |
 | (default)       | - Samy Kamkar                          |
 +----------------------------------------------------------+
-| LF_ICERUN       | standalone mode skeleton               |
+| LF_SKELETON     | standalone mode skeleton               |
 |                 | - iceman                               |
 +----------------------------------------------------------+
 | LF_PROXBRUTE    | HID ProxII bruteforce                  |
@@ -55,7 +55,7 @@ define KNOWN_STANDALONE_DEFINITIONS
 +----------------------------------------------------------+
 endef
 
-STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID LF_EM4100EMUL LF_EM4100RWC
+STANDALONE_MODES := LF_SAMYRUN LF_SKELETON LF_PROXBRUTE LF_HIDBRUTE LF_ICEHID LF_EM4100EMUL LF_EM4100RWC
 STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG HF_14ASNIFF HF_LEGIC HF_MSDSAL
 STANDALONE_MODES_REQ_SMARTCARD :=
 STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG HF_14ASNIFF LF_ICEHID

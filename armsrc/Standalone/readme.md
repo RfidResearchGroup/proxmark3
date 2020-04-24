@@ -3,7 +3,7 @@
 This contains functionality for different StandAlone modes. The fullimage will be built given the correct compiler flags used. Build targets for these files are contained in `Makefile.inc` and `Makefile.hal`
 
 If you want to implement a new standalone mode, you need to implement the methods provided in `standalone.h`.
-Have a look at the skeleton standalone mode called IceRun, in the files `lf_icerun.c lf_icerun.h`.
+Have a look at the skeleton standalone mode, in the file `lf_skeleton.c`.
 
 As it is now, you can only have one standalone mode installed at the time.  
 
@@ -83,9 +83,9 @@ STANDALONE_MODES_REQ_FLASH :=
 Add your source code files like the following sample in the `Makefile.inc`
 
 ```
-# WITH_STANDALONE_LF_ICERUN
-ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
-    SRC_STANDALONE = lf_icerun.c
+# WITH_STANDALONE_LF_SKELETON
+ifneq (,$(findstring WITH_STANDALONE_LF_SKELETON,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_skeleton.c
 endif
 
 # WITH_STANDALONE_LF_FOO

@@ -224,7 +224,7 @@ void RunMod() {
     for (;;) {
         WDT_HIT();
 
-        // exit from IceRun,   send a usbcommand.
+        // exit from RunMod, send a usbcommand.
         if (data_available()) break;
 
         // Was our button held down or pressed?

@@ -72,7 +72,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | STANDALONE      | DESCRIPTION                            |
 |-----------------|----------------------------------------|
 |                 | No standalone mode
-| LF_ICERUN       | standalone mode skeleton - Iceman
+| LF_SKELETON     | standalone mode skeleton - Iceman
 | LF_EM4100EMUL   | LF EM4100 simulator standalone mode - temskiy
 | LF_EM4100RWC    | LF EM4100 read/write/clone mode - temskiy
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
