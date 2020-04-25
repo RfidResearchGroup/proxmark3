@@ -3,7 +3,7 @@
 This contains functionality for different StandAlone modes. The fullimage will be built given the correct compiler flags used. Build targets for these files are contained in `Makefile.inc` and `Makefile.hal`
 
 If you want to implement a new standalone mode, you need to implement the methods provided in `standalone.h`.
-Have a look at the skeleton standalone mode called IceRun, in the files `lf_icerun.c lf_icerun.h`.
+Have a look at the skeleton standalone mode, in the file `lf_skeleton.c`.
 
 As it is now, you can only have one standalone mode installed at the time.  
 
@@ -58,7 +58,7 @@ This leads to your next step, your DEFINE name needed in Makefile.
 
 ## Update MAKEFILE.HAL
 
-Add your mode to the `Makefile.hal` help and modes list:
+Add your mode to the `Makefile.hal` help and modes list (alphabetically):
 ```
 +==========================================================+
 | STANDALONE      | DESCRIPTION                            |
@@ -68,24 +68,24 @@ Add your mode to the `Makefile.hal` help and modes list:
 | LF_FOO          | My foobar mode will make you coffee    |
 +----------------------------------------------------------+
 
-STANDALONE_MODES := LF_SAMYRUN LF_ICERUN LF_PROXBRUTE LF_HIDBRUTE LF_FOO
-STANDALONE_MODES += HF_YOUNG HF_MATTYRUN HF_COLIN HF_BOG
+STANDALONE_MODES := LF_... LF_FOO
+STANDALONE_MODES += HF_...
 ```
 
 If your mode is using one of the unique features of the RDV4, add it to the proper list:
 
 ```
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := HF_COLIN HF_BOG
+STANDALONE_MODES_REQ_FLASH :=
 ```
 
 ## Update MAKEFILE.INC
 Add your source code files like the following sample in the `Makefile.inc`
 
 ```
-# WITH_STANDALONE_LF_ICERUN
-ifneq (,$(findstring WITH_STANDALONE_LF_ICERUN,$(APP_CFLAGS)))
-    SRC_STANDALONE = lf_icerun.c
+# WITH_STANDALONE_LF_SKELETON
+ifneq (,$(findstring WITH_STANDALONE_LF_SKELETON,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_skeleton.c
 endif
 
 # WITH_STANDALONE_LF_FOO
@@ -139,5 +139,14 @@ The final steps is to
 
 When compiling you will see a header showing what configurations your project compiled with.
 Make sure it says your standalone mode name.  
+
+## Submitting your code
+
+Once you're ready to share your mode, please
+
+* add a line in CHANGELOG.md
+* add your mode in the modes table in doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md
+
+and submit your PR.
 
 Happy hacking!

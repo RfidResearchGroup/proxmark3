@@ -117,7 +117,7 @@ static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
 
 static void prompt_compose(char *buf, size_t buflen, const char *prompt_ctx, const char *prompt_dev) {
-    snprintf(buf, buflen-1, PROXPROMPT_COMPOSE, prompt_dev, prompt_ctx);
+    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, prompt_dev, prompt_ctx);
 }
 
 static int check_comm(void) {
@@ -186,8 +186,6 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     }
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
-
-    PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
 
     if (session.pm3_present) {
         // cache Version information now:

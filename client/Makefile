@@ -57,11 +57,16 @@ LIBS = -I$(LUALIBPATH) -I$(MBEDTLSLIBPATH) -I$(JANSSONLIBPATH) -I$(CBORLIBPATH) 
 INCLUDES_CLIENT = -I./src -I../include -I../common -I../common_fpga $(LIBS)
 CFLAGS ?= -Wall -Werror -O3
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
-PM3CFLAGS = $(CFLAGS) -std=c99 -D_ISOC99_SOURCE $(INCLUDES_CLIENT)
+PM3CFLAGS = $(CFLAGS) $(INCLUDES_CLIENT)
 # WIP Testing
 #PM3CFLAGS = $(CFLAGS) -std=c11 -pedantic $(INCLUDES_CLIENT)
 PREFIX ?= /usr/local
 ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    # FTR __USE_MINGW_ANSI_STDIO seems deprecated in Mingw32
+    # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
+    PM3CFLAGS += -D_ISOC99_SOURCE
     PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
 endif
 CXXFLAGS ?= -Wall -Werror -O3
@@ -77,6 +82,8 @@ else
     LDFLAGS += -framework Foundation -framework AppKit
     LDLIBS := -L/usr/local/opt/readline/lib $(LDLIBS)
     LIBS := -I/usr/local/opt/readline/include $(LIBS)
+    # cf brew info qt: qt not symlinked anymore
+    PKG_CONFIG_PATH := PKG_CONFIG_PATH=/usr/local/opt/qt/lib/pkgconfig
 else
     LUALIB +=  -ldl
     LUAPLATFORM = linux
@@ -85,18 +92,19 @@ endif
 
 ifneq ($(SKIPQT),1)
     # Check for correctly configured Qt5
-    QTINCLUDES = $(shell pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
-    QTLDLIBS = $(shell pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
-    MOC = $(shell pkg-config --variable=host_bins Qt5Core)/moc
-    UIC = $(shell pkg-config --variable=host_bins Qt5Core)/uic
+    QTINCLUDES = $(shell $(PKG_CONFIG_PATH) pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
+    QTLDLIBS = $(shell $(PKG_CONFIG_PATH) pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
+    MOC = $(shell $(PKG_CONFIG_PATH) pkg-config --variable=host_bins Qt5Core)/moc
+    UIC = $(shell $(PKG_CONFIG_PATH) pkg-config --variable=host_bins Qt5Core)/uic
     ifeq ($(QTINCLUDES), )
     # if Qt5 not found check for correctly configured Qt4
-        QTINCLUDES = $(shell pkg-config --cflags QtCore QtGui 2>/dev/null)
-        QTLDLIBS = $(shell pkg-config --libs QtCore QtGui 2>/dev/null)
-        MOC = $(shell pkg-config --variable=moc_location QtCore)
-        UIC = $(shell pkg-config --variable=uic_location QtCore)
+        QTINCLUDES = $(shell $(PKG_CONFIG_PATH) pkg-config --cflags QtCore QtGui 2>/dev/null)
+        QTLDLIBS = $(shell $(PKG_CONFIG_PATH) pkg-config --libs QtCore QtGui 2>/dev/null)
+        MOC = $(shell $(PKG_CONFIG_PATH) pkg-config --variable=moc_location QtCore)
+        UIC = $(shell $(PKG_CONFIG_PATH) pkg-config --variable=uic_location QtCore)
     else
-        PM3CXXFLAGS += -std=c++11 -fPIC
+        # On OSX Qt5 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
+        PM3CXXFLAGS += -fPIC -std=c++11
     endif
     ifeq ($(QTINCLUDES), )
     # if both pkg-config commands failed, search in common places
@@ -106,7 +114,7 @@ ifneq ($(SKIPQT),1)
             ifneq ($(wildcard $(QTDIR)/include/QtWidgets),)
                 QTINCLUDES += -I$(QTDIR)/include/QtWidgets
                 QTLDLIBS = -L$(QTDIR)/lib -lQt5Widgets -lQt5Gui -lQt5Core
-                PM3CXXFLAGS += -std=c++11 -fPIC
+                PM3CXXFLAGS += -fPIC -std=c++11
             endif
             MOC = $(QTDIR)/bin/moc
             UIC = $(QTDIR)/bin/uic

@@ -1,11 +1,16 @@
+# MINGW:
+#  On ProxSpace 3.4:
+#    cmake -G"MSYS Makefiles" ..
+#  On Proxspace 3.3 or less, you need to install cmake:
+#    pacman -S mingw-w64-x86_64-cmake
+#    /mingw64/bin/cmake -G"MSYS Makefiles" ..
+
 cmake_minimum_required(VERSION 3.10)
 project(proxmark3)
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
-
-set(CMAKE_CXX_STANDARD 14)
 
 if(APPLE AND EXISTS /usr/local/opt/qt5)
     # Homebrew installs Qt5 (up to at least 5.11.0) in
@@ -31,29 +36,6 @@ foreach(_qt_package IN LISTS QT_PACKAGELIST)
 endforeach()
 
 SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
-INCLUDE(FindSSE)
-if(NOT SSE2_FOUND)
-    MESSAGE(STATUS "Could not find hardware support for SSE2 on this machine.")
-endif(NOT SSE2_FOUND)
-if(NOT SSE3_FOUND)
-    MESSAGE(STATUS "Could not find hardware support for SSE3 on this machine.")
-endif(NOT SSE3_FOUND)
-if(NOT SSSE3_FOUND)
-    MESSAGE(STATUS "Could not find hardware support for SSSE3 on this machine.")
-endif(NOT SSSE3_FOUND)
-if(NOT SSE4_1_FOUND)
-    MESSAGE(STATUS "Could not find hardware support for SSE4.1 on this machine.")
-endif(NOT SSE4_1_FOUND)
-if(NOT AVX_FOUND)
-    MESSAGE(STATUS "Could not find hardware support for AVX on this machine.")
-endif(NOT AVX_FOUND)
-if(NOT AVX2_FOUND)
-    MESSAGE(STATUS "Could not find hardware support for AVX2 on this machine.")
-endif(NOT AVX2_FOUND)
-if(NOT AVX512_FOUND)
-    MESSAGE(STATUS "Could not find hardware support for AVX512 on this machine.")
-endif(NOT AVX512_FOUND)
 
 add_subdirectory(deps)
 
@@ -207,10 +189,6 @@ if (APPLE)
     set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
 endif (APPLE)
 
-if (MINGW)
-    set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
-endif (MINGW)
-
 if (Qt5_FOUND)
     message("Qt5 library found, building gui :)")
     set(CMAKE_AUTOMOC ON)
@@ -237,6 +215,17 @@ add_executable(
 )
 
 target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
+
+if (MINGW)
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    # FTR __USE_MINGW_ANSI_STDIO seems deprecated in Mingw32
+    # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
+    target_compile_definitions(proxmark3 PRIVATE _ISOC99_SOURCE)
+
+    set(CMAKE_C_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
+endif (MINGW)
 
 target_include_directories(proxmark3 PRIVATE
         ../common

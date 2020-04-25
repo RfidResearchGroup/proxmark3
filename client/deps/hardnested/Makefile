@@ -1,6 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES = -I../../../common -I../../../include -I../../src -I../jansson
-MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYCFLAGS =
 MYDEFS =
 MYSRCS = hardnested_bruteforce.c
 
@@ -24,7 +24,7 @@ MYOBJS += $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
             $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX.o) \
             $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_AVX2.o)
 
-SUPPORTS_AVX512 :=  $(shell echo | gcc -E -mavx512f - > /dev/null 2>&1 && echo "True" )
+SUPPORTS_AVX512 :=  $(shell echo | $(CC) -E -mavx512f - > /dev/null 2>&1 && echo "True" )
 
 HARD_SWITCH_NOSIMD = -mno-mmx -mno-sse2 -mno-avx -mno-avx2
 HARD_SWITCH_MMX = -mmmx -mno-sse2 -mno-avx -mno-avx2

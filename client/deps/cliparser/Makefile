@@ -1,6 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES = -I../../../common -I../../../include -I../../src
-MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
+MYCFLAGS =
 MYDEFS =
 MYSRCS = \
 	argtable3.c \
