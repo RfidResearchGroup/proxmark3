@@ -65,9 +65,9 @@ int preferences_load(void) {
     session.show_hints = false;
     session.supports_colors = false;
 
-    setDefaultPath (spDefault, "");
-    setDefaultPath (spDump, "");
-    setDefaultPath (spTrace, "");
+//    setDefaultPath (spDefault, "");
+//    setDefaultPath (spDump, "");
+//    setDefaultPath (spTrace, "");
 
 /*
     // default save path 
@@ -172,9 +172,9 @@ void preferences_save_callback(json_t *root) {
 
     JsonSaveBoolean(root, "os.supports.colors", session.supports_colors);
 
-    JsonSaveStr(root, "file.default.savepath", session.defaultPaths[spDefault]);
-    JsonSaveStr(root, "file.default.dumppath", session.defaultPaths[spDump]);
-    JsonSaveStr(root, "file.default.tracepath", session.defaultPaths[spTrace]);
+ //   JsonSaveStr(root, "file.default.savepath", session.defaultPaths[spDefault]);
+ //   JsonSaveStr(root, "file.default.dumppath", session.defaultPaths[spDump]);
+ //   JsonSaveStr(root, "file.default.tracepath", session.defaultPaths[spTrace]);
 
     // Plot window
     JsonSaveInt(root, "window.plot.xpos", session.plot.x);
@@ -240,7 +240,7 @@ void preferences_load_callback(json_t *root) {
         if (strncmp(tempStr, "simple", 6) == 0) session.client_debug_level = cdbSIMPLE;
         if (strncmp(tempStr, "full", 4) == 0) session.client_debug_level = cdbFULL;
     }
-
+/*
     // default save path
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.savepath", &s1) == 0)
         setDefaultPath (spDefault,s1);
@@ -252,7 +252,7 @@ void preferences_load_callback(json_t *root) {
     // default trace path
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "file.default.tracepath", &s1) == 0)
         setDefaultPath (spTrace,s1);
-
+*/
     // window plot
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "window.plot.xpos", &i1) == 0)
         session.plot.x = i1;
@@ -359,7 +359,7 @@ static int usage_set_hints() {
 
     return PM3_SUCCESS;
 }
-
+/*
 static int usage_set_savePaths() {
     PrintAndLogEx(NORMAL, "Usage: pref set savepaths [help] [create] [default <path>] [dump <path>] [trace <path>]");
     PrintAndLogEx(NORMAL, "Options:");
@@ -371,7 +371,7 @@ static int usage_set_savePaths() {
 
     return PM3_SUCCESS;
 }
-
+*/
 // Preference Processing Functions
 // typedef enum preferenceId {prefNONE,prefHELP,prefEMOJI,prefCOLOR,prefPLOT,prefOVERLAY,prefHINTS,prefCLIENTDEBUG} preferenceId_t;
 typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW} prefShowOpt_t;
@@ -457,6 +457,7 @@ void showDeviceDebugState(prefShowOpt_t Opt) {
     }
 }
 */
+/*
 void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
 
     char tempStr[50];
@@ -479,7 +480,7 @@ void showSavePathState(savePaths_t pathIndex, prefShowOpt_t Opt) {
     else
         PrintAndLogEx(NORMAL, "   %s %s "_GREEN_("%s"), prefShowMsg(Opt), tempStr, session.defaultPaths[pathIndex]);
 }
-
+*/
 void showPlotPosState(void){
     PrintAndLogEx(NORMAL, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   session.plot.x, session.plot.y, session.plot.h, session.plot.w);
@@ -760,7 +761,7 @@ static int setCmdHint (const char *Cmd)
 
     return PM3_SUCCESS;
 }
-
+/*
 static int setCmdSavePaths (const char *Cmd) {
     uint8_t cmdp = 0;
     bool errors = false;
@@ -845,13 +846,13 @@ static int setCmdSavePaths (const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
+*/
 static command_t setCommandTable[] = {
     {"help",             setCmdHelp,          AlwaysAvailable, "This help"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
     {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
-    {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
+  //  {"defaultsavepaths", setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
     {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
   //  {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
     {NULL, NULL, NULL, NULL}

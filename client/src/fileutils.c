@@ -192,6 +192,7 @@ bool create_path(const char *dirname) {
     return true;
 }
 */
+/*
 bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
 
     if (pathIndex < spItemCount) {
@@ -210,7 +211,7 @@ bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
 
     return true;
 }
-
+*/
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
