@@ -187,8 +187,6 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 
-    PrintAndLogEx(DEBUG, "ISATTY/STDIN_FILENO == %s\n", (stdinOnPipe) ? "true" : "false");
-
     if (session.pm3_present) {
         // cache Version information now:
         if (execCommand || script_cmds_file || stdinOnPipe)
