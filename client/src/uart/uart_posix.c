@@ -194,7 +194,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         if (connect(localsocket, (struct sockaddr *) &remote, len) == -1) {
-            free(localsocket);
+            close(localsocket);
             free(sp);
             return INVALID_SERIAL_PORT;
         }
