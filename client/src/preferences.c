@@ -122,6 +122,7 @@ int preferences_save(void) {
     char* backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
     if (backupFilename == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
+        free(fn);
         return PM3_EMALLOC;
     }
     snprintf(backupFilename, fnLen, "%s.bak", fn);
