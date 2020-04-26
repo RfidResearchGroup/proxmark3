@@ -49,6 +49,7 @@
 #include "util.h"
 #ifdef _WIN32
 #include "scandir.h"
+#include <direct.h>
 #endif
 
 #define PATH_MAX_LENGTH 200
@@ -130,7 +131,87 @@ static bool is_directory(const char *filename) {
     return S_ISDIR(st.st_mode) != 0;
 }
 
+/**
+ * @brief create a new directory.
+ * @param dirname
+ * @return
+ */
+// Not used...
+/*
+#ifdef _WIN32
+#define make_dir(a) _mkdir(a)
+#else
+#define make_dir(a) mkdir(a,0755) //note 0755 MUST have leading 0 for octal linux file permissions
+#endif
+bool create_path(const char *dirname) {
 
+    if (dirname == NULL) // nothing to do
+        return false;
+
+    if ((strlen(dirname) == 1) && (dirname[0] == '/'))
+        return true; 
+
+    if ((strlen(dirname) == 2) && (dirname[1] == ':'))
+        return true;
+
+    if (fileExists(dirname) == 0) {
+
+        char *bs = strrchr(dirname, '\\');
+        char *fs = strrchr(dirname, '/');
+
+        if ((bs == NULL) && (fs != NULL)) {
+            *fs = 0x00;
+            create_path (dirname);
+            *fs = '/';
+        }
+
+        if ((bs != NULL) && (fs == NULL)) {
+            *bs = 0x00;
+            create_path (dirname);
+            *bs = '\\';
+        }
+
+        if ((bs != NULL) && (fs != NULL)) {
+            if (strlen (bs) > strlen (fs)) {
+                *fs = 0x00; // No slash
+                create_path (dirname);
+                *fs = '/';
+            } else {
+                *bs = 0x00;
+                create_path (dirname);
+                *bs = '\\';
+            }
+
+        }
+
+        if (make_dir(dirname) != 0) {
+           PrintAndLogEx(ERR, "could not create directory.... "_RED_("%s"),dirname);
+           return false;
+        }
+    }
+    return true;
+}
+*/
+/*
+bool setDefaultPath (savePaths_t pathIndex,const char *Path) {
+
+    if (pathIndex < spItemCount) {
+        if ((Path == NULL) && (session.defaultPaths[pathIndex] != NULL)) {
+            free (session.defaultPaths[pathIndex]);
+            session.defaultPaths[pathIndex] = NULL;
+        }
+
+        if (Path != NULL) {
+            session.defaultPaths[pathIndex] = (char *)realloc(session.defaultPaths[pathIndex], strlen(Path) + 1);
+            strcpy(session.defaultPaths[pathIndex], Path);
+        }
+    } else {
+        return false;
+    }
+
+    return true;
+}
+*/
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
@@ -905,10 +986,10 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
         }
         *datalen = sptr;
     }
+    PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
     if (!strcmp(ctype, "settings")) {
         preferences_load_callback(root);
     }
-    PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), fileName);
 out:
     json_decref(root);
     free(fileName);
