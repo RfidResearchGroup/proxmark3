@@ -149,7 +149,7 @@ bool create_path(const char *dirname) {
         return false;
 
     if ((strlen(dirname) == 1) && (dirname[0] == '/'))
-        return true; 
+        return true;
 
     if ((strlen(dirname) == 2) && (dirname[1] == ':'))
         return true;

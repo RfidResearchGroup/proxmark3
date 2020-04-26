@@ -419,17 +419,17 @@ const char *get_my_user_directory(void) {
 }
 
 static void set_my_user_directory(void) {
-/*    my_user_directory = getenv("HOME");
+    /*    my_user_directory = getenv("HOME");
 
-    // if not found, default to current directory
-    if (my_user_directory == NULL) {
-        my_user_directory = GetCurrentDir(_cwd_Buffer, sizeof(_cwd_Buffer));
-        // change all slashs to / (windows should not care...
-        for (int i = 0; i < strlen(_cwd_Buffer); i++)
-            if (_cwd_Buffer[i] == '\\') _cwd_Buffer[i] = '/';
-        //      my_user_directory = ".";
-    }
-*/
+        // if not found, default to current directory
+        if (my_user_directory == NULL) {
+            my_user_directory = GetCurrentDir(_cwd_Buffer, sizeof(_cwd_Buffer));
+            // change all slashs to / (windows should not care...
+            for (int i = 0; i < strlen(_cwd_Buffer); i++)
+                if (_cwd_Buffer[i] == '\\') _cwd_Buffer[i] = '/';
+            //      my_user_directory = ".";
+        }
+    */
     my_user_directory = getenv("HOME");
 
     // if not found, default to current directory
@@ -438,23 +438,23 @@ static void set_my_user_directory(void) {
         char *cwd_Buffer = NULL;
         uint16_t pathLen = FILENAME_MAX; // should be a good starting point
         bool error = false;
-        
+
         cwd_Buffer = (char *)calloc(pathLen, sizeof(uint8_t));
 
-        while (!error && (GetCurrentDir (cwd_Buffer,pathLen) == NULL)) {
+        while (!error && (GetCurrentDir(cwd_Buffer, pathLen) == NULL)) {
             if (errno == ERANGE) {  // Need bigger buffer
                 pathLen += 10;      // if buffer was too small add 10 characters and try again
                 cwd_Buffer = realloc(cwd_Buffer, pathLen);
             } else {
                 error = true;
-                free (cwd_Buffer);
+                free(cwd_Buffer);
                 cwd_Buffer = NULL;
             }
-            printf ("Len... %d\n",pathLen);
+            printf("Len... %d\n", pathLen);
         }
 
         if (!error) {
-          
+
             for (int i = 0; i < strlen(cwd_Buffer); i++)
                 if (cwd_Buffer[i] == '\\') cwd_Buffer[i] = '/';
 
@@ -980,7 +980,7 @@ int main(int argc, char *argv[]) {
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
     if (!session.preferences_loaded) {
-        PrintAndLogEx (INFO,"Creating initial preferences file");  // json save reports file name, so just info msg here
+        PrintAndLogEx(INFO, "Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
         session.preferences_loaded = true;
     } /* else {
