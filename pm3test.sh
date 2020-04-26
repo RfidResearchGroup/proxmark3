@@ -116,7 +116,9 @@ while true; do
   if ! CheckExecute "lf awid test"        "$PM3BIN -c 'data load traces/AWID-15-259.pm3;lf search 1'" "AWID ID found"; then break; fi
   if ! CheckExecute "lf securakey test"   "$PM3BIN -c 'data load traces/securakey-64169.pm3;lf search 1 '" "Securakey ID found"; then break; fi
   if ! CheckExecute "lf keri test"        "$PM3BIN -c 'data load traces/keri.pm3;lf search 1'" "Pyramid ID found"; then break; fi
-  if ! CheckExecute "lf HID LF Prox test" "$PM3BIN -c 'data load traces/hid-proxCardII-05512-11432784-1.pm3;lf search 1'" "HID Prox ID found"; then break; fi
+  if ! CheckExecute "lf HID Prox test" "$PM3BIN -c 'data load traces/hid-proxCardII-05512-11432784-1.pm3;lf search 1'" "HID Prox ID found"; then break; fi
+  if ! CheckExecute "lf Paradox test"     "$PM3BIN -c 'data load traces/Paradox-96_40426-APJN08.pm3;lf search 1'" "Paradox ID found"; then break; fi
+  if ! CheckExecute "lf IO Prox test"     "$PM3BIN -c 'data load traces/ioprox-XSF-01-3B-44725.pm3;lf search 1'" "IO Prox ID found"; then break; fi
 
   printf "\n${C_BLUE}Testing HF:${C_NC}\n"
   if ! CheckExecute "hf mf offline text"               "$PM3BIN -c 'hf mf'" "at_enc"; then break; fi
