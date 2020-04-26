@@ -17,6 +17,12 @@ endif
 
 CFLAGS ?= -Wall -Werror -O3
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
+ifneq (,$(findstring MINGW,$(platform)))
+    # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
+    # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
+    CFLAGS += -D_ISOC99_SOURCE
+    PM3CFLAGS += -mno-ms-bitfields -fexec-charset=cp850
+endif
 
 vpath %.c $(MYSRCPATHS)
 
