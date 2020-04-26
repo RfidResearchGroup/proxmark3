@@ -96,7 +96,7 @@ int preferences_load(void) {
 
     // to better control json cant find file error msg.
     if (fileExists(prefGetFilename())) {
-        PrintAndLogEx(INFO, "Loading Preferences %s",prefGetFilename());
+        PrintAndLogEx(INFO, "Loading Preferences...");
         if (loadFileJSON(prefGetFilename(), &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
             session.preferences_loaded = true;
         }
@@ -114,7 +114,7 @@ int preferences_save(void) {
     char *backupFilename = NULL;// [FILENAME_MAX+sizeof(preferencesFilename)+10] = {0};
     int  fnLen = 0;
 
-    PrintAndLogEx(INFO, "Saving preferences ...");
+    PrintAndLogEx(INFO, "Saving Preferences...");
 
     fnLen = strlen(prefGetFilename()) + 5; // .bak\0
     backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));

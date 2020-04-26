@@ -908,6 +908,12 @@ int main(int argc, char *argv[]) {
             session.supports_colors = true;
             session.emoji_mode = EMOJI;
         }
+    } else {
+        // even if prefs, we disable colors if stdin or stdout is not a TTY
+        if ((! session.stdinOnTTY) || (! session.stdoutOnTTY)) {
+            session.supports_colors = false;
+            session.emoji_mode = ALTTEXT;
+        }
     }
 #else
     if (session.stdinOnTTY && session.stdoutOnTTY) {
