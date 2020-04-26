@@ -2180,6 +2180,7 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
+
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
@@ -2219,7 +2220,7 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
     int len = 0;
     res = handler_desfire_getvalue(&value, &len);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Successfully read value from File %d:", fileno);
+        PrintAndLogEx(SUCCESS, "Successfully read value from File %u:", fileno);
         PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
         PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
         for (int i = 0; i < len; i += 16) {
@@ -2360,7 +2361,9 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
     CLIGetHexWithReturn(1, aid, &aidlength);
 
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &value.fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+    value.fileno = fileno[0];
 
     int vlength = 0x0;
     CLIParamHexToBuf(arg_get_str(3), value.value, 4, &vlength);
@@ -2427,12 +2430,6 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
 
 static int CmdHF14ADesWriteData(const char *Cmd) {
 
-    uint8_t *data = (uint8_t *)calloc(0xFFFF, sizeof(uint8_t));
-    if (data == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
     CLIParserInit("hf mfdes writedata",
                   "Write data to File",
                   "Usage:"
@@ -2464,6 +2461,11 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     CLIParamHexToBuf(arg_get_str(3), offset, 3, &offsetlength);
 
     int dlength = 0xFFFF;
+    uint8_t *data = (uint8_t *)calloc(0xFFFF, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(ERR, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     CLIParamHexToBuf(arg_get_str(4), data, 0xFFFF, &dlength);
 
     int type = arg_get_int(5);
