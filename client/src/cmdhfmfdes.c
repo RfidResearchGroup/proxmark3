@@ -1952,12 +1952,14 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
@@ -1968,7 +1970,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "Fileno must be lower 0x1F.");
         return PM3_EINVARG;
     }
@@ -1986,10 +1988,12 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         return res;
     }
 
-    res = handler_desfire_clearrecordfile(fileno);
+    res = handler_desfire_clearrecordfile(fileno[0]);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully cleared record file.");
-    } else PrintAndLogEx(ERR, "Error on deleting file : %d", res);
+    } else {
+        PrintAndLogEx(ERR, "Error on deleting file : %d", res);
+    }
     DropField();
     return res;
 }
@@ -2008,12 +2012,14 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
@@ -2024,7 +2030,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "Fileno must be lower 0x1F.");
         return PM3_EINVARG;
     }
@@ -2042,10 +2048,12 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         return res;
     }
 
-    res = handler_desfire_deletefile(fileno);
+    res = handler_desfire_deletefile(fileno[0]);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Successfully deleted file..");
-    } else PrintAndLogEx(ERR, "Error on deleting file : %d", res);
+    } else {
+        PrintAndLogEx(ERR, "Error on deleting file : %d", res);
+    }
     DropField();
     return res;
 }
@@ -2069,22 +2077,27 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
+
     uint8_t comset = arg_get_int(4);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(5, ar, &arlength);
+
     int fsizelen = 0;
     uint8_t filesize[3] = {0};
     CLIGetHexWithReturn(6, filesize, &fsizelen);
+
     bool isbackup = arg_get_lit(7);
     CLIParserFree();
 
@@ -2097,7 +2110,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
         return PM3_EINVARG;
     }
@@ -2137,7 +2150,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     mfdes_file_t ft;
     memcpy(ft.fid, fid, 2);
     memcpy(ft.filesize, filesize, 3);
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
 
@@ -2167,21 +2180,22 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
     CLIParserFree();
 
     if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
+        PrintAndLogEx(ERR, "File number is missing");
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno[0] > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         return PM3_EINVARG;
     }
 
@@ -2200,7 +2214,8 @@ static int CmdHF14ADesGetValueData(const char *Cmd) {
         return res;
     }
     mfdes_value_t value;
-    value.fileno = fileno;
+    value.fileno = fileno[0];
+
     int len = 0;
     res = handler_desfire_getvalue(&value, &len);
     if (res == PM3_SUCCESS) {
@@ -2235,38 +2250,42 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int offsetlength = 0;
     uint8_t offset[3] = {0};
     CLIParamHexToBuf(arg_get_str(3), offset, 3, &offsetlength);
+
     int flength = 0;
     uint8_t filesize[3] = {0};
     CLIParamHexToBuf(arg_get_str(4), filesize, 3, &flength);
+
     int type = arg_get_int(5);
     CLIParserFree();
 
     if (type > 1) {
-        PrintAndLogEx(ERR, "Invalid file type (0=Standard/Backup, 1=Record).");
+        PrintAndLogEx(ERR, "Invalid file type (0=Standard/Backup, 1=Record)");
         return PM3_EINVARG;
     }
 
     if (offsetlength != 3 && offsetlength != 0) {
-        PrintAndLogEx(ERR, "Offset needs 3 hex bytes.");
+        PrintAndLogEx(ERR, "Offset needs 3 hex bytes");
         return PM3_EINVARG;
     }
 
     if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
+        PrintAndLogEx(ERR, "File number is missing");
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno[0] > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         return PM3_EINVARG;
     }
 
@@ -2290,15 +2309,18 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     mfdes_data_t ft;
     memcpy(ft.offset, offset, 3);
     memcpy(ft.length, filesize, 3);
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
+
     int bytestoread = le24toh(filesize);
+
     if (bytestoread == 0) bytestoread = 0xFFFFFF;
-    uint8_t *data = (uint8_t *)malloc(bytestoread);
+
+    uint8_t *data = (uint8_t *)calloc(bytestoread, sizeof(uint8_t));
     if (data != NULL) {
         ft.data = data;
         res = handler_desfire_readdata(&ft, type);
         if (res == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Successfully read data from File %d:", ft.fileno);
+            PrintAndLogEx(SUCCESS, "Successfully read data from file %d:", ft.fileno);
             PrintAndLogEx(NORMAL, "\nOffset  | Data                                            | Ascii");
             PrintAndLogEx(NORMAL, "----------------------------------------------------------------------------");
             int len = le24toh(ft.length);
@@ -2329,15 +2351,20 @@ static int CmdHF14ADesChangeValue(const char *Cmd) {
         arg_int0("mM", "mode", "<mode>", "Mode (0=Credit, 1=LimitedCredit, 2=Debit)"),
         arg_param_end
     };
+
     mfdes_value_t value;
     CLIExecWithReturn(Cmd, argtable, false);
+
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
     CLIGetHexWithReturn(2, &value.fileno, &filenolen);
+
     int vlength = 0x0;
     CLIParamHexToBuf(arg_get_str(3), value.value, 4, &vlength);
+
     int mode = arg_get_int(4);
     CLIParserFree();
     swap24(aid);
@@ -2428,9 +2455,9 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
 
-    uint8_t fileno;
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
 
     int offsetlength = 0;
     uint8_t offset[3] = {0};
@@ -2470,7 +2497,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         if (data) free(data);
         return PM3_EINVARG;
@@ -2495,7 +2522,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
     memcpy(ft.offset, offset, 3);
     htole24(dlength, ft.length);
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
 
     if (data != NULL) {
         ft.data = data;
@@ -2532,25 +2559,31 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     int fidlength = 0;
     uint8_t fid[2] = {0};
     CLIParamHexToBuf(arg_get_str(3), fid, 2, &fidlength);
+
     uint8_t comset = arg_get_int(4);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(5, ar, &arlength);
+
     int rsizelen = 0;
     uint8_t recordsize[3] = {0};
     CLIGetHexWithReturn(6, recordsize, &rsizelen);
+
     int msizelen = 0;
     uint8_t maxnumrecords[3] = {0};
     CLIGetHexWithReturn(7, maxnumrecords, &msizelen);
+
     bool cyclic = arg_get_lit(8);
     CLIParserFree();
 
@@ -2574,7 +2607,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
+    if (fileno[0] > 0x1F) {
         PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
         return PM3_EINVARG;
     }
@@ -2613,7 +2646,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     }
 
     mfdes_linear_t ft;
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
     memcpy(ft.fid, fid, 2);
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
@@ -2651,25 +2684,31 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(Cmd, argtable, false);
-    uint8_t fileno;
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(1, aid, &aidlength);
+
     int filenolen = 0;
-    CLIGetHexWithReturn(2, &fileno, &filenolen);
+    uint8_t fileno[1] = {0};
+    CLIGetHexWithReturn(2, fileno, &filenolen);
+
     uint8_t comset = arg_get_int(3);
     int arlength = 0;
     uint8_t ar[2] = {0};
     CLIGetHexWithReturn(4, ar, &arlength);
+
     int lllen = 0;
     uint8_t lowerlimit[4] = {0};
     CLIGetHexWithReturn(5, lowerlimit, &lllen);
+
     int ullen = 0;
     uint8_t upperlimit[4] = {0};
     CLIGetHexWithReturn(6, upperlimit, &ullen);
+
     int vllen = 0;
     uint8_t value[4] = {0};
     CLIGetHexWithReturn(7, value, &vllen);
+
     int limitedlen = 0;
     uint8_t limited = 0;
     CLIGetHexWithReturn(8, &limited, &limitedlen);
@@ -2682,37 +2721,37 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     swap32(value);
 
     if (filenolen != 1) {
-        PrintAndLogEx(ERR, "File number is missing.");
+        PrintAndLogEx(ERR, "File number is missing");
         return PM3_EINVARG;
     }
 
-    if (fileno > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F).");
+    if (fileno[0] > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (0x00-0x1F)");
         return PM3_EINVARG;
     }
 
     if (comset != 0 && comset != 1 && comset != 3) {
-        PrintAndLogEx(ERR, "Communication setting must be either 0=Plain, 1=Plain+MAC or 3=Encrypt.");
+        PrintAndLogEx(ERR, "Communication setting must be either 0=Plain, 1=Plain+MAC or 3=Encrypt");
         return PM3_EINVARG;
     }
 
     if (arlength != 2) {
-        PrintAndLogEx(ERR, "Access rights must have 2 hex bytes length.");
+        PrintAndLogEx(ERR, "Access rights must have 2 hex bytes length");
         return PM3_EINVARG;
     }
 
     if (lllen != 4) {
-        PrintAndLogEx(ERR, "Lower limit must have 4 hex bytes length.");
+        PrintAndLogEx(ERR, "Lower limit must have 4 hex bytes length");
         return PM3_EINVARG;
     }
 
     if (ullen != 4) {
-        PrintAndLogEx(ERR, "Upper limit must have 4 hex bytes length.");
+        PrintAndLogEx(ERR, "Upper limit must have 4 hex bytes length");
         return PM3_EINVARG;
     }
 
     if (vllen != 4) {
-        PrintAndLogEx(ERR, "Value must have 4 hex bytes length.");
+        PrintAndLogEx(ERR, "Value must have 4 hex bytes length");
         return PM3_EINVARG;
     }
 
@@ -2734,7 +2773,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     }
 
     mfdes_value_file_t ft;
-    ft.fileno = fileno;
+    ft.fileno = fileno[0];
     ft.comset = comset;
     memcpy(ft.access_rights, ar, 2);
     memcpy(ft.lowerlimit, lowerlimit, 4);
@@ -2804,10 +2843,13 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
             uint8_t datalen;
             uint8_t datain[FRAME_PAYLOAD_SIZE];
         } PACKED payload_raw;
+
         payload_raw.datain[0] = 0xFC;
         payload_raw.flags = NONE;
         payload_raw.datalen = 1;
+
         SendCommandNG(CMD_HF_DESFIRE_COMMAND, (uint8_t *)&payload_raw, sizeof(payload_raw));
+
         if (!WaitForResponseTimeout(CMD_HF_DESFIRE_COMMAND, &resp, 3000)) {
             PrintAndLogEx(WARNING, "Client reset command execute timeout");
             DropField();
