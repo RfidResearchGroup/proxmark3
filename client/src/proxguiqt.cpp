@@ -349,11 +349,11 @@ void Plot::setMaxAndStart(int *buffer, size_t len, QRect plotRect) {
         GraphStart = startMax;
     }
     if (GraphStart > len) return;
-    int vMin = INT_MAX, vMax = INT_MIN, v = 0;
+    int vMin = INT_MAX, vMax = INT_MIN;
     uint32_t sample_index = GraphStart ;
     for (; sample_index < len && xCoordOf(sample_index, plotRect) < plotRect.right() ; sample_index++) {
 
-        v = buffer[sample_index];
+        int v = buffer[sample_index];
         if (v < vMin) vMin = v;
         if (v > vMax) vMax = v;
     }
@@ -381,7 +381,7 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
     first_delta_x += BitStart * PlotGridX;
     if (BitStart > (int)len) return;
     int delta_x = 0;
-    int v = 0;
+//    int v = 0;
     //printf("first_delta_x %i, grid_delta_x %i, DemodStart %i, BitStart %i\n",first_delta_x,grid_delta_x,DemodStart, BitStart);
 
     painter->setPen(getColor(graphNum));
@@ -393,9 +393,9 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
     delta_x = 0;
     int clk = first_delta_x;
     for (int i = BitStart; i < (int)len && xCoordOf(delta_x + DemodStart, plotRect) < plotRect.right(); i++) {
-        for (int ii = 0; ii < (clk) && i < (int)len && xCoordOf(DemodStart + delta_x + ii, plotRect) < plotRect.right() ; ii++) {
-            x = xCoordOf(DemodStart + delta_x + ii, plotRect);
-            v = buffer[i] * 200 - 100;
+        for (int j = 0; j < (clk) && i < (int)len && xCoordOf(DemodStart + delta_x + j, plotRect) < plotRect.right() ; j++) {
+            x = xCoordOf(DemodStart + delta_x + j, plotRect);
+            int v = buffer[i] * 200 - 100;
 
             y = yCoordOf(v, plotRect, absVMax);
 
@@ -405,7 +405,7 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
                 QRect f(QPoint(x - 3, y - 3), QPoint(x + 3, y + 3));
                 painter->fillRect(f, QColor(100, 255, 100));
             }
-            if (ii == (int)clk / 2) {
+            if (j == (int)clk / 2) {
                 //print label
                 sprintf(str, "%u", buffer[i]);
                 painter->drawText(x - 8, y + ((buffer[i] > 0) ? 18 : -6), str);
@@ -482,7 +482,7 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     //Graph annotations
     painter->drawPath(penPath);
     char str[200];
-    sprintf(str, "max=%d  min=%d  mean=%d  n=%d/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
+    sprintf(str, "max=%d  min=%d  mean=%d  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
             vMax, vMin, vMean, i, len, buffer[CursorAPos], buffer[CursorBPos]);
     painter->drawText(20, annotationRect.bottom() - 23 - 20 * graphNum, str);
 
@@ -595,7 +595,7 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //Draw annotations
     char str[200];
-    sprintf(str, "@%d  dt=%d [%2.2f] zoom=%2.2f  CursorAPos=%d  CursorBPos=%d  GridX=%d  GridY=%d (%s) GridXoffset=%d",
+    sprintf(str, "@%u  dt=%u [%2.2f] zoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%d  GridY=%d (%s) GridXoffset=%d",
             GraphStart,
             CursorBPos - CursorAPos,
             ((int32_t)(CursorBPos - CursorAPos)) / CursorScaleFactor,
