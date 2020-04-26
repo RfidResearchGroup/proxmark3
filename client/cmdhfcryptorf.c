@@ -58,11 +58,10 @@ static int usage_hf_cryptorf_sniff(void) {
     return PM3_SUCCESS;
 }
 static int usage_hf_cryptorf_sim(void) {
-    PrintAndLogEx(NORMAL, "Emulating CryptoRF tag with 4 UID / PUPI\n"
-            "Usage: hf cryptorf sim [h] [u <uid>]\n"
+    PrintAndLogEx(NORMAL, "Emulating CryptoRF tag with emulator memory\n"
+            "Usage: hf cryptorf sim [h] \n"
             "Options:\n"
             "    h    this help\n"
-            "    u    4byte UID/PUPI\n"
             "\n"
             "Example:\n"
             _YELLOW_("    hf cryptorf sim")
@@ -124,13 +123,8 @@ static int CmdHFCryptoRFSim(const char *Cmd) {
     char cmdp = tolower(param_getchar(Cmd, 0));
     if (cmdp == 'h') return usage_hf_cryptorf_sim();
 
-    uint32_t pupi = 0;
-    if (cmdp == 'u') {
-        pupi = param_get32ex(Cmd, 1, 0, 16);
-    }
-
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_SIMULATE, pupi, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_CRYPTORF_SIM, 0, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
@@ -152,23 +146,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     int8_t retry = 3;
     PacketResponseNG resp;
 
-    // test for 14b SR
-    while (retry--) {
-
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT, 0, 0, NULL, 0);
-        if (WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
-
-            uint8_t status = resp.oldarg[0];
-            if (status == 0) {
-                memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
-                return true;
-            }
-        }
-    } // retry
-
-    // test 14b standard
-    retry = 3;
+    // test
     while (retry--) {
 
         clearCommandBuffer();

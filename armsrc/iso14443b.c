@@ -1808,7 +1808,7 @@ void RAMFUNC getCRFResponse(uint8_t *cmd) {
             break;
         }
         default : {
-            Dbprintf("unknown or not implemented command %02x", cmd[0]);
+            Dbprintf("unknown or unimplemented command %02x", cmd[0]);
             response.cmd = 0x00;
             response.ack = 0x01;
             response.body = 0x00;
@@ -1834,7 +1834,7 @@ void RAMFUNC getCRFResponse(uint8_t *cmd) {
 
 //We implement use this function for the CryptoRF tag simulation
 //It is based on same principles as the original function, there are changes for the response construction, encoding and transmit
-void SimulateIso14443b_CRF_Tag(void) {
+void SimulateCryptoRFIso14443bTag(void) {
     // setup device.
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // connect Demodulated Signal to ADC:
@@ -1856,7 +1856,7 @@ void SimulateIso14443b_CRF_Tag(void) {
     uint16_t len, cmdsReceived = 0;
     uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
 
-    //all values are encoded previously beforehand
+    //all values are encoded beforehand
     static uint8_t encodedSOF[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
     static uint8_t encodedEOF[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
 
@@ -2050,13 +2050,14 @@ void SimulateIso14443b_CRF_Tag(void) {
         }
 
         if (receivedCmd[0] == CRYPTORF_CHECK_PASSWORD && enc_activated) {
-            //grind the password at the password index
+            //grind the password at the password index - we will never check the password, any password is accepted
+	    //just going through the encryption engine for correctness
             uint8_t *pswd_addr = sys_mem + 0xB0 + (receivedCmd[1] & 0x0F) * 8 + ((receivedCmd[1] & 0xF0) ? 5 : 1);
             cm_password(pswd_addr, pass_dummy, &s);
         }
 
         //this is not the actual usage of send checksum command
-        //system uses incorrect checksum to make tag get out of encrypted communication mode
+        //usually incorrect checksum is used to make tag get out of encrypted communication mode
         if (receivedCmd[0] == CRYPTORF_SEND_CHECKSUM) {
             auth_activated = 0;
             enc_activated = 0;

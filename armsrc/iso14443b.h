@@ -32,7 +32,7 @@ uint8_t iso14443b_select_card(iso14b_card_select_t *card);
 uint8_t iso14443b_select_card_srx(iso14b_card_select_t *card);
 
 void SimulateIso14443bTag(uint32_t pupi);
-void SimulateIso14443b_CRF_Tag(void);
+void SimulateCryptoRFIso14443bTag(void);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void ReadSTMemoryIso14443b(uint8_t numofblocks);
 void RAMFUNC SniffIso14443b(void);
