@@ -313,5 +313,12 @@ FFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Ca
         "Description": "Campus Card",
         "Type": "student"
     },
-}
+    {
+        "AID": "C26001",
+        "Vendor": "CAR2GO",
+        "Country": "DE",
+        "Name": "MemberCard",
+        "Description": "CAR2GO - Member Card",
+        "Type": "carsharing"
+    }
 ]
