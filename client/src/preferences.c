@@ -39,10 +39,10 @@ static int setCmdHelp(const char *Cmd);
 #endif
 
 static char *prefGetFilename(void) {
-    char *Path;
+    char *path;
 
-    if (searchHomeFilePath(&Path, preferencesFilename, false) == PM3_SUCCESS)
-        return Path;
+    if (searchHomeFilePath(&path, preferencesFilename, false) == PM3_SUCCESS)
+        return path;
     else
         return preferencesFilename;
 }
@@ -95,12 +95,14 @@ int preferences_load(void) {
     size_t dummyDL = 0x00;
 
     // to better control json cant find file error msg.
-    if (fileExists(prefGetFilename())) {
+    char* fn = prefGetFilename();
+    if (fileExists(fn)) {
         PrintAndLogEx(INFO, "Loading Preferences...");
-        if (loadFileJSON(prefGetFilename(), &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
+        if (loadFileJSON(fn, &dummyData, sizeof(dummyData), &dummyDL) == PM3_SUCCESS) {
             session.preferences_loaded = true;
         }
     }
+    free(fn);
     // Note, if session.settings_loaded == false then the settings_save
     // will be called in main () to save settings as set in defaults and main() checks.
 
@@ -111,25 +113,33 @@ int preferences_load(void) {
 int preferences_save(void) {
     // Note sure if backup has value ?
 
-    char *backupFilename = NULL;// [FILENAME_MAX+sizeof(preferencesFilename)+10] = {0};
-    int  fnLen = 0;
-
     PrintAndLogEx(INFO, "Saving Preferences...");
 
-    fnLen = strlen(prefGetFilename()) + 5; // .bak\0
-    backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
-    snprintf(backupFilename, fnLen, "%s.bak", prefGetFilename());
+    char* fn = prefGetFilename();
+    int fnLen = strlen(fn) + 5; // .bak\0
+
+    // [FILENAME_MAX+sizeof(preferencesFilename)+10]
+    char* backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
+    if (backupFilename == NULL) {
+        PrintAndLogEx(ERR, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    snprintf(backupFilename, fnLen, "%s.bak", fn);
 
     if (fileExists(backupFilename)) {
         if (remove(backupFilename) != 0) {
             PrintAndLogEx(FAILED, "Error - could not delete old settings backup file \"%s\"", backupFilename);
+            free(fn);
+            free(backupFilename);
             return PM3_ESOFT;
         }
     }
 
-    if (fileExists(prefGetFilename())) {
-        if (rename(prefGetFilename(), backupFilename) != 0) {
+    if (fileExists(fn)) {
+        if (rename(fn, backupFilename) != 0) {
             PrintAndLogEx(FAILED, "Error - could not backup settings file \"%s\" to \"%s\"", prefGetFilename(), backupFilename);
+            free(fn);
+            free(backupFilename);
             return PM3_ESOFT;
         }
     }
@@ -137,12 +147,11 @@ int preferences_save(void) {
     uint8_t dummyData = 0x00;
     size_t dummyDL = 0x00;
 
-    if (saveFileJSON(prefGetFilename(), jsfSettings, &dummyData, dummyDL) != PM3_SUCCESS)
-        PrintAndLogEx(ERR, "Error saving preferences to \"%s\"", prefGetFilename());
+    if (saveFileJSON(fn, jsfSettings, &dummyData, dummyDL) != PM3_SUCCESS)
+        PrintAndLogEx(ERR, "Error saving preferences to \"%s\"", fn);
 
-    if (backupFilename != NULL)
-        free(backupFilename);
-
+    free(fn);
+    free(backupFilename);
     return PM3_SUCCESS;
 }
 
@@ -312,7 +321,6 @@ static int usage_set_emoji() {
     PrintAndLogEx(NORMAL, "     "_GREEN_("emoji")"       - Show amoji");
     PrintAndLogEx(NORMAL, "     "_GREEN_("alttext")"     - Show alt text for emoji");
     PrintAndLogEx(NORMAL, "     "_GREEN_("erase")"       - Dont show emoji or text");
-
     return PM3_SUCCESS;
 }
 
@@ -322,7 +330,6 @@ static int usage_set_color() {
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
     PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - Dont use colors");
     PrintAndLogEx(NORMAL, "     "_GREEN_("ansi")"        - Use ANSI colors");
-
     return PM3_SUCCESS;
 }
 
@@ -333,7 +340,6 @@ static int usage_set_debug() {
     PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - no debug messages");
     PrintAndLogEx(NORMAL, "     "_GREEN_("simple")"      - simple debug messages");
     PrintAndLogEx(NORMAL, "     "_GREEN_("full")"        - full debug messages");
-
     return PM3_SUCCESS;
 }
 /*
@@ -356,7 +362,6 @@ static int usage_set_hints() {
     PrintAndLogEx(NORMAL, "     "_GREEN_("help")"        - This help");
     PrintAndLogEx(NORMAL, "     "_GREEN_("off")"         - Dont display hints");
     PrintAndLogEx(NORMAL, "     "_GREEN_("on")"          - Display hints");
-
     return PM3_SUCCESS;
 }
 /*
@@ -847,33 +852,25 @@ static int setCmdSavePaths (const char *Cmd) {
 */
 
 int getCmdHelp(const char *Cmd) {
-
     return PM3_SUCCESS;
 }
 
 int getCmdEmoji(const char *Cmd) {
-
     showEmojiState(prefShowNone);
-
     return PM3_SUCCESS;
 }
 
 int getCmdHint(const char *Cmd) {
-
     showHintsState(prefShowNone);
-
     return PM3_SUCCESS;
 }
 
 int getCmdColor(const char *Cmd) {
-
     showColorState(prefShowNone);
-
     return PM3_SUCCESS;
 }
 
 int getCmdDebug(const char *Cmd) {
-
     showClientDebugState(prefShowNone);
     return PM3_SUCCESS;
 }
@@ -903,29 +900,29 @@ static command_t setCommandTable[] = {
 static int setCmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(setCommandTable);
-
     return PM3_SUCCESS;
 }
 
 int CmdPrefGet(const char *Cmd) {
     clearCommandBuffer();
-
     return CmdsParse(getCommandTable, Cmd);
 }
 
 int CmdPrefSet(const char *Cmd) {
     clearCommandBuffer();
-
     return CmdsParse(setCommandTable, Cmd);
 }
 
 static int CmdPrefShow(const char *Cmd) {
 
+    char* fn = prefGetFilename();
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, _CYAN_("Preferences loaded from %s"), prefGetFilename());
+    PrintAndLogEx(NORMAL, _CYAN_("Preferences loaded from %s"), fn);
+
+    free(fn);
 
     if (!session.preferences_loaded) {
-        PrintAndLogEx(ERR, "Preferneces not loaded");
+        PrintAndLogEx(ERR, "Preferences not loaded");
         return PM3_ESOFT;
     }
 
@@ -942,13 +939,11 @@ static int CmdPrefShow(const char *Cmd) {
     showClientDebugState(prefShowNone);
 //    showDeviceDebugState(prefShowNone);
     PrintAndLogEx(NORMAL, "");
-
     return PM3_SUCCESS;
 }
 /*
 static int CmdPrefSave (const char *Cmd) {
     preferences_save();
-
     return PM3_SUCCESS;
 }
 */
@@ -963,12 +958,10 @@ static command_t CommandTable[] = {
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
-
     return PM3_SUCCESS;
 }
 
 int CmdPreferences(const char *Cmd) {
     clearCommandBuffer();
-
     return CmdsParse(CommandTable, Cmd);
 }
