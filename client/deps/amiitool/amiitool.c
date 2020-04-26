@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    nfc3d_amiibo_keys amiiboKeys;
+    nfc3d_amiibo_keys amiiboKeys = {0};
     if (! LoadAmiikey(amiiboKeys, keyfile))
         return 5;
 
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
                 return 3;
             }
         }
-        size_t readPages = fread(original, 4, NTAG215_SIZE / 4, f);
+        readPages = fread(original, 4, NTAG215_SIZE / 4, f);
         if (readPages < NFC3D_AMIIBO_SIZE / 4) {
             fprintf(stderr, "Could not read from save\n");
             fclose(f);

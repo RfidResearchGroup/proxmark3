@@ -1024,7 +1024,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                     active_select = true;
                     break;
                 case 'b':
-                    sscanf(Cmd + i + 2, "%d", &temp);
+                    sscanf(Cmd + i + 2, "%u", &temp);
                     numbits = temp & 0xFFFF;
                     i += 3;
                     while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }
@@ -1032,7 +1032,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                     break;
                 case 't':
                     bTimeout = true;
-                    sscanf(Cmd + i + 2, "%d", &temp);
+                    sscanf(Cmd + i + 2, "%u", &temp);
                     timeout = temp;
                     i += 3;
                     while (Cmd[i] != ' ' && Cmd[i] != '\0') { i++; }

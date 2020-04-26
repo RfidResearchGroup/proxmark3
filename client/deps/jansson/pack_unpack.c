@@ -185,7 +185,7 @@ static char *read_string(scanner_t *s, va_list *ap,
             length = va_arg(*ap, size_t);
         } else {
             prev_token(s);
-            length = s->has_error ? 0 : strlen(str);
+            length = s->has_error == 1 ? 0 : strlen(str);
         }
 
         if (!s->has_error && strbuffer_append_bytes(&strbuff, str, length) == -1) {

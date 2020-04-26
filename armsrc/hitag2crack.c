@@ -32,7 +32,7 @@ bool hitag2_crack(uint8_t *response, uint8_t *nrarhex) {
     uint8_t uid[32];
     uint8_t nrar[64];
     uint8_t e_firstcmd[10];
-    uint8_t e_page0cmd[10];
+//    uint8_t e_page0cmd[10];
     uint8_t keybits[42];
     uint8_t pagehex[9];
     uint8_t temp[20];
@@ -298,7 +298,6 @@ bool hitag2crack_read_page(uint8_t *responsestr, uint8_t pagenum, uint8_t *nrar,
     uint8_t e_responsestr[9];
     uint8_t e_response[32];
     uint8_t response[32];
-    int i;
 
     if (pagenum > 7) {
         UserMessage("hitag2crack_read_page:\r\n invalid pagenum\r\n");
@@ -354,7 +353,6 @@ bool hitag2crack_send_e_cmd(uint8_t *responsestr, uint8_t *nrar, uint8_t *cmd, i
 //    uint8_t tmp[37];
     uint8_t uid[9];
     uint8_t e_page3str[9];
-    int ret = 0;
 
     // get the UID
     if (!hitag2_get_uid(uid)) {
