@@ -181,11 +181,11 @@ int main(int argc, char *argv[]) {
 }
 
 void *find_state(void *thread_d) {
-    size_t thread = (size_t)thread_d;
+    uint64_t thread = (uint64_t)thread_d;
 
-    for (size_t index = thread; index < layer_0_found; index += thread_count) {
+    for (uint64_t index = thread; index < layer_0_found; index += thread_count) {
         if (((index / thread_count) & 0xFF) == 0)
-            printf("Thread %zu slice %zu/%zu\n", thread, index / thread_count / 256 + 1, layer_0_found / thread_count / 256);
+            printf("Thread %" PRIu64 " slice %" PRIu64 "/%" PRIu64 "\n", thread, index / thread_count / 256 + 1, layer_0_found / thread_count / 256);
         uint64_t state0 = candidates[index];
         bitslice(state0 >> 2, &state[0], 46, false);
         for (size_t bit = 0; bit < 8; bit++) {
