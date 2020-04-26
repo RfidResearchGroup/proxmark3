@@ -411,7 +411,7 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;
     }
-*/  
+*/
     free(data);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Done");
@@ -502,21 +502,27 @@ int CmdHFCryptoRF(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-// Print extented information about tag.  
+// Print extented information about tag.
 int infoHFCryptoRF(bool verbose) {
-    
-     int res = PM3_ESOFT;
 
-    // 14b get and print UID only (general info)
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+    int res = PM3_ESOFT;
+    int8_t retry = 3;
     PacketResponseNG resp;
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
-        if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
-        switch_off_field_cryptorf();
-        return false;
-    }
+    // test
+    while (retry--) {
+
+	// 14b get and print UID only (general info)
+	clearCommandBuffer();
+	SendCommandMIX(CMD_HF_ISO14443B_COMMAND, ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT, 0, 0, NULL, 0);
+
+	if (!WaitForResponseTimeout(CMD_ACK, &resp, TIMEOUT)) {
+	    if (verbose) PrintAndLogEx(WARNING, "command execution timeout");
+	    switch_off_field_cryptorf();
+	    if(retry == 0) return false;
+	}
+
+    } //retry
 
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
