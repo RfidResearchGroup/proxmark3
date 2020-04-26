@@ -847,6 +847,50 @@ static int setCmdSavePaths (const char *Cmd) {
     return PM3_SUCCESS;
 }
 */
+
+int getCmdHelp (const char *Cmd) {
+    
+    return PM3_SUCCESS;
+}
+
+int getCmdEmoji (const char *Cmd) {
+
+    showEmojiState(prefShowNone);
+
+    return PM3_SUCCESS;
+}
+
+int getCmdHint (const char *Cmd) {
+
+    showHintsState(prefShowNone);
+
+    return PM3_SUCCESS;
+}
+
+int getCmdColor (const char *Cmd) {
+
+    showColorState(prefShowNone);
+
+    return PM3_SUCCESS;
+}
+
+int getCmdDebug (const char *Cmd) {
+
+    showClientDebugState(prefShowNone);
+    return PM3_SUCCESS;
+}
+
+static command_t getCommandTable[] = {
+//     {"help",             getCmdHelp,          AlwaysAvailable, "This help"},
+    {"emoji",            getCmdEmoji,         AlwaysAvailable, "Get emoji display preference"},
+    {"hints",            getCmdHint,          AlwaysAvailable, "Get hint display preference"},
+    {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
+  //  {"defaultsavepaths", getCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
+    {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
+  //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
+    {NULL, NULL, NULL, NULL}
+};
+
 static command_t setCommandTable[] = {
     {"help",             setCmdHelp,          AlwaysAvailable, "This help"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
@@ -858,12 +902,17 @@ static command_t setCommandTable[] = {
     {NULL, NULL, NULL, NULL}
 };
 
-
 static int setCmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(setCommandTable);
 
     return PM3_SUCCESS;
+}
+
+int CmdPrefGet(const char *Cmd) {
+    clearCommandBuffer();
+
+    return CmdsParse(getCommandTable, Cmd);
 }
 
 int CmdPrefSet(const char *Cmd) {
@@ -907,8 +956,9 @@ static int CmdPrefSave (const char *Cmd) {
 */
 static command_t CommandTable[] = {
     {"help",         CmdHelp,            AlwaysAvailable, "This help"},
+    {"get",          CmdPrefGet,         AlwaysAvailable, "Get a preference"},
     {"set",          CmdPrefSet,         AlwaysAvailable, "Set a preference"},
-    {"show",         CmdPrefShow,        AlwaysAvailable, "Show preferences"},
+    {"show",         CmdPrefShow,        AlwaysAvailable, "Show all preferences"},
     {NULL, NULL, NULL, NULL}
 };
 
